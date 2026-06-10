@@ -1,0 +1,51 @@
+/*
+ * Sovereign Design System — semantic tokens.
+ *
+ * Contextual roles mapped from primitives. THIS is the theming surface: dark
+ * mode and tenant theming work by overriding these values at :root (or under
+ * [data-theme]) — no component changes required. Every value here references a
+ * primitive token; none is a hardcoded literal (except shadows, which compose
+ * rgba layers).
+ *
+ * Identity is monochrome: the accent is near-black on light, near-white on dark.
+ * A tenant gives Sovereign its own colour by overriding --sv-color-accent.
+ */
+:root {
+  --sv-color-surface: var(--sv-white);
+  --sv-color-surface-sunken: var(--sv-grey-50);
+  --sv-color-surface-raised: var(--sv-white);
+
+  --sv-color-text-primary: var(--sv-grey-950);
+  --sv-color-text-muted: var(--sv-grey-500);
+  --sv-color-text-on-accent: var(--sv-white);
+
+  --sv-color-border: var(--sv-grey-200);
+  --sv-color-border-strong: var(--sv-grey-300);
+
+  --sv-color-accent: var(--sv-grey-900);
+  --sv-color-accent-hover: var(--sv-grey-700);
+
+  --sv-color-focus-ring: var(--sv-grey-900);
+
+  --sv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --sv-color-surface: var(--sv-grey-950);
+  --sv-color-surface-sunken: var(--sv-grey-900);
+  --sv-color-surface-raised: var(--sv-grey-900);
+
+  --sv-color-text-primary: var(--sv-grey-50);
+  --sv-color-text-muted: var(--sv-grey-400);
+  --sv-color-text-on-accent: var(--sv-grey-950);
+
+  --sv-color-border: var(--sv-grey-800);
+  --sv-color-border-strong: var(--sv-grey-700);
+
+  --sv-color-accent: var(--sv-grey-50);
+  --sv-color-accent-hover: var(--sv-grey-200);
+
+  --sv-color-focus-ring: var(--sv-grey-100);
+
+  --sv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.5);
+}

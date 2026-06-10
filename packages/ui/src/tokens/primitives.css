@@ -1,0 +1,56 @@
+/*
+ * Sovereign Design System — primitive tokens.
+ *
+ * Raw, context-free scales: the palette, spacing, type, and radii. These are
+ * fixed — tenant theming never overrides primitives (it overrides the semantic
+ * layer in semantic.css). Plugin code should reference SEMANTIC colour tokens,
+ * not these primitives directly.
+ */
+:root {
+  /* Neutral grey scale (monochrome identity) */
+  --sv-white: #ffffff;
+  --sv-black: #000000;
+  --sv-grey-50: #fafafa;
+  --sv-grey-100: #f4f4f5;
+  --sv-grey-200: #e4e4e7;
+  --sv-grey-300: #d4d4d8;
+  --sv-grey-400: #a1a1aa;
+  --sv-grey-500: #71717a;
+  --sv-grey-600: #52525b;
+  --sv-grey-700: #3f3f46;
+  --sv-grey-800: #27272a;
+  --sv-grey-900: #18181b;
+  --sv-grey-950: #09090b;
+
+  /* Spacing scale (4px base) */
+  --sv-space-1: 0.25rem;
+  --sv-space-2: 0.5rem;
+  --sv-space-3: 0.75rem;
+  --sv-space-4: 1rem;
+  --sv-space-5: 1.25rem;
+  --sv-space-6: 1.5rem;
+  --sv-space-8: 2rem;
+  --sv-space-10: 2.5rem;
+  --sv-space-12: 3rem;
+  --sv-space-16: 4rem;
+
+  /* Typography */
+  --sv-font-family:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --sv-font-family-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --sv-font-size-xs: 0.75rem;
+  --sv-font-size-sm: 0.875rem;
+  --sv-font-size-md: 1rem;
+  --sv-font-size-lg: 1.125rem;
+  --sv-font-size-xl: 1.25rem;
+  --sv-font-size-2xl: 1.5rem;
+  --sv-font-weight-regular: 400;
+  --sv-font-weight-medium: 500;
+  --sv-font-weight-semibold: 600;
+
+  /* Border radii */
+  --sv-radius-sm: 0.25rem;
+  --sv-radius-md: 0.375rem;
+  --sv-radius-lg: 0.5rem;
+  --sv-radius-full: 9999px;
+}

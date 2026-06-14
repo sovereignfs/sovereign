@@ -60,6 +60,13 @@ they are authoritative over assumptions:
   (writable dir or served asset dir), a new native dep, or anything affecting
   `next build`/standalone output — call it out in the same turn and update the
   relevant config (or ask), rather than letting it drift behind the code.
+- **Docs are part of the change.** Changing the manifest schema
+  (`packages/manifest`), the SDK surface (`packages/sdk`), or env vars
+  (`.env.example`) means updating the matching doc in the same PR —
+  `docs/plugin-development.md` (manifest fields, permissions, SDK methods) and
+  `docs/self-hosting.md` (env vars). The `runtime/src/docs-parity.test.ts` parity
+  test enforces the enumerable parts (every field/permission/SDK key/env var must
+  appear in its doc) and fails CI otherwise; review covers the prose.
 - **Version bumps** are part of the PR — bump the relevant `package.json`(s)
   in the same branch, following semver tied to the change type:
   - `fix/` → **patch** (0.0.x)
@@ -526,7 +533,8 @@ pnpm install:plugins    # clone sovereign/community plugins declared in sovereig
 - ✅ Task 0.5.04 — `sv` CLI core commands (platform → 0.6.0): `bin/sv.ts` (`citty` + `consola`, run via `tsx`; `pnpm sv <cmd>` or the `./bin/sv` shim). A **thin orchestrator** — commands delegate to the existing scripts and `pnpm`/`turbo` (one source of truth per operation): `install`/`generate`/`build`/`dev` shell out, `serve` orchestrates both `next start` processes with mutual teardown (Docker stays canonical for prod), `plugin add <repo>` shallow-clones into a temp dir under `plugins/`, derives the destination from the manifest `id` (`validateManifest`), then composes, and `plugin remove <id>` guards the built-in platform plugins (`account`/`console`/`launcher`) before deleting + re-composing. Pure logic in `bin/helpers.ts` (unit-tested). Vitest `include` extended to `bin/**`. SRS §2.2 (merged to `main`).
 - ✅ Task 0.5.05 (SDK surface) — `sdk.db.getClient()` implemented (`@sovereignfs/sdk` → 0.7.0). Last v1 SDK stub is gone: `getClient()` now returns the live platform Drizzle instance from `getPlatformDb()` — **async** (`Promise<DrizzleClient>`, same dialect-agnostic reason as `getConfig()`); `DrizzleClient` stays opaque (`unknown`) so the published SDK takes no dialect dependency. `sdk.auth.getSession()` now populates `tenantId` with `DEFAULT_TENANT_ID` (v1 single-tenant). `sdk.platform`/`sdk.mailer` were already implemented directly in `packages/sdk` (the doc's "runtime injects impls / SDK re-exports" model is obsolete — `packages/sdk/src/*.ts` import `@sovereignfs/db`/`@sovereignfs/mailer` directly). Migration note in `docs/upgrade.md`. SRS §3.6 (merged to `main`).
 - ✅ Task 0.5.05b — local session verification in middleware (AUTH-05; `runtime` → 0.6.0). Auth server enables better-auth's signed cookie cache (`session.cookieCache`, 300s); the runtime middleware verifies the `session_data` cookie offline via `getCookieCache` (`better-auth/cookies`, Edge-safe) + the pure `verifiedUserFromCache`/`resolveAuthSecret` in `runtime/src/session-verify.ts`, falling back to `/api/verify` (which now re-emits better-auth's `Set-Cookie`, forwarded by the middleware so the cache self-refreshes). Secret = `SOVEREIGN_AUTH_SECRET ?? AUTH_SECRET`; runtime services in all compose files get `AUTH_SECRET`. `better-auth` added as a runtime dep. SRS AUTH-05/06 (merged to `main`).
-- ⏳ Next: Task 0.5.06 — Documentation. Branch from an up-to-date `main`.
+- ✅ Task 0.5.06 — Documentation: new `docs/plugin-development.md` (file structure, full manifest reference, SDK usage, local dev, DB conventions, registry) and `docs/architecture.md` (contributor summary of SRS §3); expanded `README.md` (features, quick start, monorepo layout, docs index); completeness passes on `docs/self-hosting.md` (every `.env.example` var documented) and `docs/upgrade.md` (platform v0.3→v0.4→v0.5 notes). **Anti-drift:** `runtime/src/docs-parity.test.ts` asserts every manifest field, permission, SDK surface, and env var is documented (manifest exposes `manifestFieldNames`); CLAUDE.md "docs are part of the change" convention. SRS NFR-10 (merged to `main`).
+- ⏳ Next: Task 0.5.07 — CI pipeline (`.github/workflows/ci.yml` + `publish.yml`). Branch from an up-to-date `main`.
 - ⏳ Spec complete: Shell sidebar three-section architecture (PLT-11–PLT-15, SRS updated).
 - ⏳ Spec complete: Plainwrite sovereign plugin (`docs/plugins/plainwrite.md`, v0.2 — provider + SSG adapters).
 - ⏳ Spec complete: API Composer sovereign plugin (`docs/plugins/api-composer.md`) — GUI API builder, `/api` namespace (PLT-16, Task 0.5.08).

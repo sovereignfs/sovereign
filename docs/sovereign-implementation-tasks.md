@@ -866,9 +866,16 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 0.5.06 — Documentation
+### Task 0.5.06 — Documentation **[done]**
 
 **Goal:** Complete self-hosting and plugin developer documentation.
+
+> **Delivered.** `docs/plugin-development.md` and `docs/architecture.md` written;
+> `README.md` expanded; `docs/self-hosting.md` and `docs/upgrade.md` completed
+> (platform v0.3→v0.4→v0.5 notes). A docs-parity test
+> (`runtime/src/docs-parity.test.ts`) + a "docs are part of the change" CLAUDE.md
+> convention keep manifest fields, permissions, the SDK surface, and env vars in
+> sync with the code.
 
 **Deliverables:**
 

@@ -69,22 +69,22 @@ runtime container.
 All variables live in a single `.env` at the repo root. Copy `.env.example`
 to get started — every variable is documented there.
 
-| Variable                  | Required | Default                      | Description                                                                                                                        |
-| ------------------------- | -------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `AUTH_SECRET`             | **yes**  | —                            | Secret key for the auth server. Generate with `openssl rand -base64 32`. Never share or commit.                                    |
-| `SOVEREIGN_ADMIN_KEY`     | **yes**  | —                            | Shared secret for runtime↔auth internal admin API calls (Console user/plugin management). Generate with `openssl rand -base64 32`. |
-| `NEXT_PUBLIC_RUNTIME_URL` | **yes**  | `http://localhost:3000`      | Public URL of the runtime — used by the auth server to redirect users after login.                                                 |
-| `AUTH_INVITE_ONLY`        | no       | `false`                      | When `true`, registration requires a valid invite token. The first user is exempt.                                                 |
-| `AUTH_DATABASE_URL`       | no       | `file:./data/auth.db`        | Auth server database. SQLite file path (relative paths resolve against the repo root) or a `postgres://` URL.                      |
-| `DATABASE_URL`            | no       | `file:./data/sovereign.db`   | Runtime database. SQLite file path (relative paths resolve against the repo root) or a `postgres://` URL.                          |
-| `DB_DIALECT`              | no       | `sqlite`                     | Set to `postgres` when using PostgreSQL.                                                                                           |
-| `SMTP_HOST`               | no       | —                            | SMTP server host. Leave unset to disable email (the app still runs).                                                               |
-| `SMTP_PORT`               | no       | `587`                        | SMTP port.                                                                                                                         |
-| `SMTP_USER`               | no       | —                            | SMTP username.                                                                                                                     |
-| `SMTP_PASS`               | no       | —                            | SMTP password.                                                                                                                     |
-| `SMTP_FROM`               | no       | —                            | Sender address, e.g. `Sovereign <noreply@example.com>`.                                                                            |
-| `RUNTIME_PORT`            | no       | `3000` (dev) / `4000` (prod) | Host port the runtime container is mapped to.                                                                                      |
-| `SOVEREIGN_AUTH_SECRET`   | no       | —                            | Shared JWT secret for local session verification (v0.5+). Leave unset for now.                                                     |
+| Variable                  | Required | Default                      | Description                                                                                                                                                                       |
+| ------------------------- | -------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTH_SECRET`             | **yes**  | —                            | Signing secret for the auth server. The runtime also reads it to verify the session cookie locally (AUTH-05). Generate with `openssl rand -base64 32`. Never share or commit.     |
+| `SOVEREIGN_ADMIN_KEY`     | **yes**  | —                            | Shared secret for runtime↔auth internal admin API calls (Console user/plugin management). Generate with `openssl rand -base64 32`.                                                |
+| `NEXT_PUBLIC_RUNTIME_URL` | **yes**  | `http://localhost:3000`      | Public URL of the runtime — used by the auth server to redirect users after login.                                                                                                |
+| `AUTH_INVITE_ONLY`        | no       | `false`                      | When `true`, registration requires a valid invite token. The first user is exempt.                                                                                                |
+| `AUTH_DATABASE_URL`       | no       | `file:./data/auth.db`        | Auth server database. SQLite file path (relative paths resolve against the repo root) or a `postgres://` URL.                                                                     |
+| `DATABASE_URL`            | no       | `file:./data/sovereign.db`   | Runtime database. SQLite file path (relative paths resolve against the repo root) or a `postgres://` URL.                                                                         |
+| `DB_DIALECT`              | no       | `sqlite`                     | Set to `postgres` when using PostgreSQL.                                                                                                                                          |
+| `SMTP_HOST`               | no       | —                            | SMTP server host. Leave unset to disable email (the app still runs).                                                                                                              |
+| `SMTP_PORT`               | no       | `587`                        | SMTP port.                                                                                                                                                                        |
+| `SMTP_USER`               | no       | —                            | SMTP username.                                                                                                                                                                    |
+| `SMTP_PASS`               | no       | —                            | SMTP password.                                                                                                                                                                    |
+| `SMTP_FROM`               | no       | —                            | Sender address, e.g. `Sovereign <noreply@example.com>`.                                                                                                                           |
+| `RUNTIME_PORT`            | no       | `3000` (dev) / `4000` (prod) | Host port the runtime container is mapped to.                                                                                                                                     |
+| `SOVEREIGN_AUTH_SECRET`   | no       | `AUTH_SECRET`                | Secret for local session verification (AUTH-05). Must equal the auth server's signing secret, so it defaults to `AUTH_SECRET` — set it only to run a deliberately distinct value. |
 
 ---
 

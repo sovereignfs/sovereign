@@ -20,6 +20,12 @@ function buildOptions(): BetterAuthOptions {
       // 1 day). In a self-hosted workspace users stay signed in for weeks, so
       // viewing/managing your own sessions must not require recent re-auth.
       freshAge: 0,
+      // Sign a short-lived snapshot of the session+user into a `session_data`
+      // cookie so the runtime middleware can verify requests locally (HMAC,
+      // shared secret) without a /api/verify round-trip per request (SRS
+      // AUTH-05). maxAge bounds how stale a role change / deactivation can be
+      // before the runtime falls back to /api/verify.
+      cookieCache: { enabled: true, maxAge: 300 },
     },
     emailAndPassword: {
       enabled: true,

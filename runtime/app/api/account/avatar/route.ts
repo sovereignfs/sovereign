@@ -56,5 +56,19 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: 'failed to update profile image' }, { status: 502 });
   }
 
-  return NextResponse.json({ url });
+  // The chrome and profile page read the avatar from the session snapshot, which
+  // the middleware now serves from better-auth's signed cookie cache (AUTH-05).
+  // That snapshot is stale until the cache window passes, so invalidate it here:
+  // the next request falls back to /api/verify and picks up the new image right
+  // away. The session token itself is untouched — this only drops the cache.
+  const res = NextResponse.json({ url });
+  res.cookies.set('better-auth.session_data', '', { maxAge: 0, path: '/' });
+  // The `__Secure-`-prefixed name (production, HTTPS) can only be unset with the
+  // Secure attribute, so clear it explicitly rather than via delete().
+  res.cookies.set('__Secure-better-auth.session_data', '', {
+    maxAge: 0,
+    path: '/',
+    secure: true,
+  });
+  return res;
 }

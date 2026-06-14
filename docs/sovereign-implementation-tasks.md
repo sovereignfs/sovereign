@@ -849,11 +849,11 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 0.5.05b — Local JWT middleware (AUTH-05) **[split from 0.5.05]**
+### Task 0.5.05b — Local session verification in middleware (AUTH-05) **[split from 0.5.05; done]**
 
-**Goal:** Replace the runtime middleware's per-request `/api/verify` round-trip to the auth server with **local** verification of a signed token, using `SOVEREIGN_AUTH_SECRET`.
+**Goal:** Replace the runtime middleware's per-request `/api/verify` round-trip to the auth server with **local** verification of the session, using the shared secret.
 
-**Notes:** Security-sensitive. better-auth currently issues DB-backed session cookies with no JWT or cookie-cache configured, so this requires (a) auth-side token issuance the runtime can verify offline (e.g. better-auth JWT/cookie-cache, signed with the shared secret) and (b) Edge-compatible verification in `runtime/middleware.ts` (e.g. `jose`), preserving the current behaviour (redirect to `/login` on failure; inject `x-sovereign-user-*` headers; `adminOnly` 403, disabled-plugin 404, root-plugin rewrite). The existing `/api/verify` flow is correct and stays until this lands.
+**Delivered:** The auth server enables better-auth's signed cookie cache (`session.cookieCache`, `maxAge` 300s), which sets a `session_data` cookie holding session+user HMAC-signed with `AUTH_SECRET`. The runtime middleware verifies it offline via `getCookieCache` (`better-auth/cookies`, Edge-safe) plus the pure `verifiedUserFromCache`/`resolveAuthSecret` helpers (`runtime/src/session-verify.ts`), using `SOVEREIGN_AUTH_SECRET ?? AUTH_SECRET` (local verify skipped when neither is set — no insecure default). On a cache miss it falls back to `/api/verify` (AUTH-06), which now re-emits better-auth's `Set-Cookie`, forwarded by the middleware so the cache self-refreshes. All prior behaviour is preserved (`/login` redirect, `x-sovereign-user-*` headers, `adminOnly` 403, disabled-plugin 404, root-plugin rewrite). Trade-off: role/active changes are stale for at most `maxAge`. Runtime services in all compose files now receive `AUTH_SECRET`.
 
 **SRS reference:** AUTH-05
 

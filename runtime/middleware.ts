@@ -1,6 +1,13 @@
+import { getCookieCache } from 'better-auth/cookies';
 import { type NextRequest, NextResponse } from 'next/server';
 import { getInstalledPlugins } from '@/src/registry';
 import { decidePluginRoute, underPrefix } from '@/src/route-guard';
+import {
+  type CachedSessionData,
+  type VerifiedSession,
+  resolveAuthSecret,
+  verifiedUserFromCache,
+} from '@/src/session-verify';
 
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
 
@@ -52,28 +59,82 @@ async function fetchRootPluginPrefix(): Promise<string | null> {
 }
 
 /**
- * Session gate + plugin route protection. Verifies the request against the auth
- * server's /api/verify (v0.3 approach; SRS AUTH-05 targets local JWT
- * verification at v0.5). On success the verified user is injected as request
- * headers for downstream server components; otherwise the request is redirected
- * to /login. Routes under an `adminOnly` plugin's prefix are reachable only by
+ * Verify the request's session **locally** from better-auth's signed
+ * `session_data` cookie cache — no network call (SRS AUTH-05). The cookie is
+ * HMAC-signed with the shared auth secret, so a forged one cannot pass. Returns
+ * null when no secret is configured or no valid cache cookie is present, so the
+ * caller falls back to `/api/verify`. The cookie name carries the `__Secure-`
+ * prefix in production; try both so the read works in dev and prod regardless of
+ * NODE_ENV drift.
+ */
+async function verifyFromCookieCache(request: NextRequest): Promise<VerifiedSession | null> {
+  const secret = resolveAuthSecret();
+  if (!secret) return null;
+  for (const isSecure of [undefined, true, false] as const) {
+    const cached = (await getCookieCache(request, {
+      secret,
+      ...(isSecure === undefined ? {} : { isSecure }),
+    }).catch(() => null)) as CachedSessionData | null;
+    const session = verifiedUserFromCache(cached);
+    if (session) return session;
+  }
+  return null;
+}
+
+/**
+ * Verify the request against the auth server's /api/verify (AUTH-06) — the
+ * fallback when local verification has no cookie to read (e.g. a session that
+ * predates cookie-cache rollout, or just past the cache window). Returns the
+ * session plus better-auth's Set-Cookie headers, which the caller forwards so
+ * the `session_data` cache (re)installs and subsequent requests verify locally.
+ *
+ * Fails closed: a non-OK response *or* an unreachable auth server (fetch
+ * throws) returns null, so the caller redirects to /login rather than crashing
+ * the request with a 500.
+ */
+async function verifyViaAuthServer(
+  request: NextRequest,
+): Promise<{ session: VerifiedSession; setCookies: string[] } | null> {
+  try {
+    const verify = await fetch(`${AUTH_URL}/api/verify`, {
+      headers: { cookie: request.headers.get('cookie') ?? '' },
+    });
+    if (!verify.ok) return null;
+    const payload = (await verify.json()) as VerifiedSession;
+    return { session: payload, setCookies: verify.headers.getSetCookie() };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Session gate + plugin route protection. Verifies the session locally from the
+ * signed cookie cache and falls back to the auth server's /api/verify (SRS
+ * AUTH-05/06). On success the verified user is injected as request headers for
+ * downstream server components; otherwise the request is redirected to /login.
+ * Routes under an `adminOnly` plugin's prefix are reachable only by
  * `platform:admin` — everyone else gets 403 (SRS §3.4, PLT-03). Routes under a
  * disabled plugin's prefix return 404 (SRS CON-07, PLT-04).
  */
 export async function middleware(request: NextRequest): Promise<NextResponse> {
-  const verify = await fetch(`${AUTH_URL}/api/verify`, {
-    headers: { cookie: request.headers.get('cookie') ?? '' },
-  });
-
-  if (!verify.ok) {
-    return NextResponse.redirect(new URL('/login', request.url));
+  let session = await verifyFromCookieCache(request);
+  let setCookies: string[] = [];
+  if (!session) {
+    const fallback = await verifyViaAuthServer(request);
+    if (!fallback) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    session = fallback.session;
+    setCookies = fallback.setCookies;
   }
+  const { user, expiresAt } = session;
 
-  const payload = (await verify.json()) as {
-    user: { id: string; email: string; name: string | null; image: string | null; role: string };
-    expiresAt: number;
+  // Forward any Set-Cookie from the fallback so the signed cookie cache
+  // (re)installs — subsequent requests then verify locally without a round-trip.
+  const withCookies = (response: NextResponse): NextResponse => {
+    for (const cookie of setCookies) response.headers.append('set-cookie', cookie);
+    return response;
   };
-  const { user, expiresAt } = payload;
 
   const { pathname } = request.nextUrl;
   const installedPlugins = getInstalledPlugins();
@@ -84,10 +145,10 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     const disabledIds = await fetchDisabledPluginIds();
     const decision = decidePluginRoute(pathname, installedPlugins, disabledIds, user.role);
     if (decision === 'not-found') {
-      return new NextResponse('Not Found', { status: 404 });
+      return withCookies(new NextResponse('Not Found', { status: 404 }));
     }
     if (decision === 'forbidden') {
-      return new NextResponse('Forbidden', { status: 403 });
+      return withCookies(new NextResponse('Forbidden', { status: 403 }));
     }
   }
 
@@ -107,11 +168,13 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (pathname === '/') {
     const rootPrefix = await fetchRootPluginPrefix();
     if (rootPrefix && rootPrefix !== '/') {
-      return NextResponse.rewrite(new URL(rootPrefix, request.url), { request: { headers } });
+      return withCookies(
+        NextResponse.rewrite(new URL(rootPrefix, request.url), { request: { headers } }),
+      );
     }
   }
 
-  return NextResponse.next({ request: { headers } });
+  return withCookies(NextResponse.next({ request: { headers } }));
 }
 
 export const config = {

@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { sdk } from '@sovereignfs/sdk';
 import { validatePasswordChange } from './_lib/password';
 
@@ -10,6 +10,22 @@ const SELF_URL = 'http://localhost:3000';
 
 async function sessionCookie(): Promise<string> {
   return (await headers()).get('cookie') ?? '';
+}
+
+/**
+ * Drop better-auth's signed session-cache cookie (`session_data`) after a
+ * profile change. The runtime middleware verifies sessions from that cookie
+ * locally (AUTH-05), so without this the chrome/profile keep showing the old
+ * name until the cache window expires. Clearing it forces the next request to
+ * re-verify via /api/verify and pick up the change immediately; the session
+ * token itself is untouched.
+ */
+async function invalidateSessionCache(): Promise<void> {
+  const jar = await cookies();
+  jar.set('better-auth.session_data', '', { maxAge: 0, path: '/' });
+  // The `__Secure-`-prefixed name (production, HTTPS) can only be unset with the
+  // Secure attribute, so clear it explicitly rather than via delete().
+  jar.set('__Secure-better-auth.session_data', '', { maxAge: 0, path: '/', secure: true });
 }
 
 /** Change the display name (ACC-02). Delegates to better-auth's update-user. */
@@ -31,6 +47,7 @@ export async function updateDisplayNameAction(formData: FormData): Promise<void>
     body: JSON.stringify({ name }),
   });
   if (!res.ok) throw new Error(`Failed to update display name: ${res.status}`);
+  await invalidateSessionCache();
   revalidatePath('/account/profile');
 }
 

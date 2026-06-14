@@ -457,9 +457,31 @@ pnpm install:plugins    # clone sovereign/community plugins declared in sovereig
   orchestrator, which composes plugins (writes the registry, copies plugin
   `app/` trees), then runs the generate watcher + `next dev` on `:3000`. Both
   apps load the single root `.env` via `loadEnvConfig`. The runtime middleware
-  verifies each request against the auth server's `/api/verify`
-  (`SOVEREIGN_AUTH_URL`) and injects `x-sovereign-user-*` headers;
-  `SOVEREIGN_AUTH_SECRET` (local JWT verify) is a v0.5 concern.
+  injects `x-sovereign-user-*` headers from the verified session.
+- **Middleware verifies sessions locally, then falls back to `/api/verify`**
+  (AUTH-05, Task 0.5.05b). The auth server enables better-auth's **signed cookie
+  cache** (`session.cookieCache`, `maxAge` 300s) — a `better-auth.session_data`
+  cookie holding session+user, HMAC-signed with `AUTH_SECRET`. The middleware
+  verifies it offline via `getCookieCache` from `better-auth/cookies` (Edge-safe;
+  pure logic in `runtime/src/session-verify.ts`, `verifiedUserFromCache`), using
+  `resolveAuthSecret()` = `SOVEREIGN_AUTH_SECRET ?? AUTH_SECRET` (must equal the
+  auth signing secret; if neither is set, local verify is skipped — never a
+  default). On a cache miss it falls back to `/api/verify` (`SOVEREIGN_AUTH_URL`,
+  AUTH-06) and **forwards better-auth's `Set-Cookie`** so the cache self-refreshes.
+  Trade-off: role/active changes are stale up to `maxAge` (then the cache cookie
+  expires → fallback). `/api/verify` returns the same payload shape; the runtime
+  service now needs `AUTH_SECRET` in every compose file.
+- **Profile self-mutations must invalidate the `session_data` cache cookie.**
+  The chrome and Account page render the user's name/avatar from the cached
+  session snapshot (`x-sovereign-user-*` headers), so a self-change would
+  otherwise not appear until `maxAge` elapses. Any path that updates the current
+  user's session-visible fields clears both `better-auth.session_data` and
+  `__Secure-better-auth.session_data` (`maxAge: 0`, the secure variant with
+  `Secure`) so the next request re-verifies fresh via `/api/verify` — done in the
+  avatar upload route (`runtime/app/api/account/avatar/route.ts`) and the
+  display-name action (`plugins/account/app/actions.ts`). The session token is
+  untouched (no logout). Admin-driven changes to _other_ users (role/deactivate)
+  remain bounded by `maxAge`.
 
 ## Environment notes
 
@@ -503,7 +525,8 @@ pnpm install:plugins    # clone sovereign/community plugins declared in sovereig
 - ✅ Task 0.5.03 — Postgres validation (SQLite↔Postgres parity, NFR-03; delivered in 4 PRs). The platform data layer is **async** (Postgres has no sync query) and `sdk.platform.getConfig()` is now async; `packages/db` wires the pg driver + a dialect-tagged `PlatformDb` wrapper + `schema/postgres` (bigint timestamps) + dialect-aware bootstrap DDL; `apps/auth` runs better-auth on a pg `Pool` with dialect-agnostic query helpers (quoted `"user"`, boolean/date normalisation). Postgres opt-in via the **`docker-compose.postgres.yml` overlay** (adds a `postgres` service, wires both apps). Env-gated `*.pg.test.ts` parity tests (`TEST_DATABASE_URL`). **Live-validated** end-to-end on Postgres 16: register → admin role → authenticated request → plugin toggle, all on a fresh pg. `docs/self-hosting.md` documents the Postgres setup + switch procedure (merged to `main`).
 - ✅ Task 0.5.04 — `sv` CLI core commands (platform → 0.6.0): `bin/sv.ts` (`citty` + `consola`, run via `tsx`; `pnpm sv <cmd>` or the `./bin/sv` shim). A **thin orchestrator** — commands delegate to the existing scripts and `pnpm`/`turbo` (one source of truth per operation): `install`/`generate`/`build`/`dev` shell out, `serve` orchestrates both `next start` processes with mutual teardown (Docker stays canonical for prod), `plugin add <repo>` shallow-clones into a temp dir under `plugins/`, derives the destination from the manifest `id` (`validateManifest`), then composes, and `plugin remove <id>` guards the built-in platform plugins (`account`/`console`/`launcher`) before deleting + re-composing. Pure logic in `bin/helpers.ts` (unit-tested). Vitest `include` extended to `bin/**`. SRS §2.2 (merged to `main`).
 - ✅ Task 0.5.05 (SDK surface) — `sdk.db.getClient()` implemented (`@sovereignfs/sdk` → 0.7.0). Last v1 SDK stub is gone: `getClient()` now returns the live platform Drizzle instance from `getPlatformDb()` — **async** (`Promise<DrizzleClient>`, same dialect-agnostic reason as `getConfig()`); `DrizzleClient` stays opaque (`unknown`) so the published SDK takes no dialect dependency. `sdk.auth.getSession()` now populates `tenantId` with `DEFAULT_TENANT_ID` (v1 single-tenant). `sdk.platform`/`sdk.mailer` were already implemented directly in `packages/sdk` (the doc's "runtime injects impls / SDK re-exports" model is obsolete — `packages/sdk/src/*.ts` import `@sovereignfs/db`/`@sovereignfs/mailer` directly). Migration note in `docs/upgrade.md`. SRS §3.6 (merged to `main`).
-- ⏳ Next: Task 0.5.05b — **local JWT middleware (AUTH-05)**, split out from 0.5.05 as its own security-sensitive task: replace the runtime middleware's `/api/verify` round-trip with local JWT verification using `SOVEREIGN_AUTH_SECRET`. Needs auth-side JWT issuance (better-auth currently uses DB-backed session cookies — no JWT/cookie-cache configured) + Edge-compatible (`jose`) verification on the runtime. Branch from an up-to-date `main`.
+- ✅ Task 0.5.05b — local session verification in middleware (AUTH-05; `runtime` → 0.6.0). Auth server enables better-auth's signed cookie cache (`session.cookieCache`, 300s); the runtime middleware verifies the `session_data` cookie offline via `getCookieCache` (`better-auth/cookies`, Edge-safe) + the pure `verifiedUserFromCache`/`resolveAuthSecret` in `runtime/src/session-verify.ts`, falling back to `/api/verify` (which now re-emits better-auth's `Set-Cookie`, forwarded by the middleware so the cache self-refreshes). Secret = `SOVEREIGN_AUTH_SECRET ?? AUTH_SECRET`; runtime services in all compose files get `AUTH_SECRET`. `better-auth` added as a runtime dep. SRS AUTH-05/06 (merged to `main`).
+- ⏳ Next: Task 0.5.06 — Documentation. Branch from an up-to-date `main`.
 - ⏳ Spec complete: Shell sidebar three-section architecture (PLT-11–PLT-15, SRS updated).
 - ⏳ Spec complete: Plainwrite sovereign plugin (`docs/plugins/plainwrite.md`, v0.2 — provider + SSG adapters).
 - ⏳ Spec complete: API Composer sovereign plugin (`docs/plugins/api-composer.md`) — GUI API builder, `/api` namespace (PLT-16, Task 0.5.08).

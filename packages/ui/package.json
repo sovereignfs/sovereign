@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Sovereign Design System — design tokens and React components.",
-  "license": "AGPL-3.0",
+  "license": "AGPL-3.0-or-later",
   "publishConfig": {
     "access": "public"
   },

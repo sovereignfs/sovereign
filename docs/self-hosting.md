@@ -74,6 +74,7 @@ to get started — every variable is documented there.
 | `AUTH_SECRET`             | **yes**  | —                            | Signing secret for the auth server. The runtime also reads it to verify the session cookie locally (AUTH-05). Generate with `openssl rand -base64 32`. Never share or commit.     |
 | `SOVEREIGN_ADMIN_KEY`     | **yes**  | —                            | Shared secret for runtime↔auth internal admin API calls (Console user/plugin management). Generate with `openssl rand -base64 32`.                                                |
 | `NEXT_PUBLIC_RUNTIME_URL` | **yes**  | `http://localhost:3000`      | Public URL of the runtime — used by the auth server to redirect users after login.                                                                                                |
+| `SOVEREIGN_AUTH_URL`      | no       | `http://localhost:3001`      | Where the runtime reaches the auth server. Docker Compose sets it to the internal service name (`http://auth:3001`) automatically — only set it for non-Docker/native runs.       |
 | `AUTH_INVITE_ONLY`        | no       | `false`                      | When `true`, registration requires a valid invite token. The first user is exempt.                                                                                                |
 | `AUTH_DATABASE_URL`       | no       | `file:./data/auth.db`        | Auth server database. SQLite file path (relative paths resolve against the repo root) or a `postgres://` URL.                                                                     |
 | `DATABASE_URL`            | no       | `file:./data/sovereign.db`   | Runtime database. SQLite file path (relative paths resolve against the repo root) or a `postgres://` URL.                                                                         |
@@ -85,6 +86,8 @@ to get started — every variable is documented there.
 | `SMTP_FROM`               | no       | —                            | Sender address, e.g. `Sovereign <noreply@example.com>`.                                                                                                                           |
 | `RUNTIME_PORT`            | no       | `3000` (dev) / `4000` (prod) | Host port the runtime container is mapped to.                                                                                                                                     |
 | `SOVEREIGN_AUTH_SECRET`   | no       | `AUTH_SECRET`                | Secret for local session verification (AUTH-05). Must equal the auth server's signing secret, so it defaults to `AUTH_SECRET` — set it only to run a deliberately distinct value. |
+| `MAILPIT_SMTP_PORT`       | no       | `1025`                       | Dev only — host port for the Mailpit SMTP listener in `docker-compose.yml`.                                                                                                       |
+| `MAILPIT_UI_PORT`         | no       | `8025`                       | Dev only — host port for the Mailpit web inbox in `docker-compose.yml`.                                                                                                           |
 
 ---
 
@@ -249,7 +252,8 @@ After the first user registers, invite new users via the Console:
 
 ## Upgrading
 
-See `docs/upgrade.md` for version-specific migration notes (Task 0.5.06).
+See the [upgrade guide](upgrade.md) for version-specific migration notes,
+including platform-release notes and any required configuration changes.
 
 The general upgrade process:
 

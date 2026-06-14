@@ -27,7 +27,7 @@ export const permissionSchema = z.enum([
  * `.strict()` rejects unknown keys so manifest typos fail the build rather than
  * being silently ignored. Forward compatibility is handled by `schemaVersion`.
  */
-export const manifestSchema = z
+const manifestObjectSchema = z
   .object({
     schemaVersion: z.number().int().positive(),
     id: z.string().min(1),
@@ -47,8 +47,19 @@ export const manifestSchema = z
     }),
     repository: z.string().url().optional(),
   })
-  .strict()
-  .refine((m) => m.type === 'platform' || m.repository !== undefined, {
+  .strict();
+
+export const manifestSchema = manifestObjectSchema.refine(
+  (m) => m.type === 'platform' || m.repository !== undefined,
+  {
     message: 'repository is required when type is "sovereign" or "community"',
     path: ['repository'],
-  });
+  },
+);
+
+/**
+ * Manifest field names, sourced from the schema so docs and tooling share one
+ * source of truth (e.g. the docs-parity test that asserts every field is
+ * documented in `docs/plugin-development.md`). Order matches the schema.
+ */
+export const manifestFieldNames: string[] = Object.keys(manifestObjectSchema.shape);

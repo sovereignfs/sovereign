@@ -47,6 +47,15 @@ const PLUGINS_DIR = join(ROOT, 'plugins');
 // the sidebar shell. `(plugins)` is a URL-transparent route group; the public
 // path is the plugin's routePrefix.
 const PLATFORM_PLUGINS_DIR = join(ROOT, 'runtime', 'app', '(platform)', '(plugins)');
+// Overlay-shell interception copies (RFC 0001) compose under the @modal
+// parallel-route slot *inside* the (plugins) group, as `(.)<routePrefix>`, so an
+// overlay plugin's interception copy and its full-page fallback are
+// folder-siblings within the same group (required for Next.js `(.)` interception
+// to resolve). The slot's hand-written default.tsx + layout.tsx (Dialog chrome)
+// live alongside and are preserved.
+const MODAL_DIR = join(PLATFORM_PLUGINS_DIR, '@modal');
+// Committed files inside (plugins) that the clear step must never delete.
+const PLUGINS_DIR_KEEP = new Set(['.gitignore', 'layout.tsx', '@modal']);
 const REGISTRY_FILE = join(ROOT, 'runtime', 'generated', 'registry.ts');
 
 interface PluginEntry {
@@ -112,9 +121,20 @@ export const registry: SovereignManifest[] = ${JSON.stringify(manifests, null, 2
   writeFileSync(REGISTRY_FILE, content);
 }
 
-/** Route group a plugin composes into, chosen by its `shell` mode. */
-function targetGroupDir(manifest: SovereignManifest): string {
+/**
+ * The destination directories a plugin's `app/` tree composes into, chosen by
+ * its `shell` mode (RFC 0001):
+ *   - `default` (or omitted) → the `(plugins)` group (full page under the shell).
+ *   - `overlay` → BOTH the `(plugins)` group (full-page fallback for hard loads)
+ *     AND the `@modal/(modal)/(.)<segment>` interception copy (soft-nav dialog).
+ *   - `minimal` → not yet wired; fails loudly.
+ * Exits the process with a clear error for unsupported/invalid combinations.
+ */
+function composeTargets(manifest: SovereignManifest): string[] {
   const shell = manifest.shell ?? 'default';
+  const routeSegment = manifest.routePrefix.replace(/^\/+/, '');
+  const fallback = join(PLATFORM_PLUGINS_DIR, routeSegment);
+
   if (shell === 'minimal') {
     console.error(
       `[generate] plugin ${manifest.id} declares shell: "minimal", which is not yet ` +
@@ -122,20 +142,39 @@ function targetGroupDir(manifest: SovereignManifest): string {
     );
     process.exit(1);
   }
-  return PLATFORM_PLUGINS_DIR;
+
+  if (shell === 'overlay') {
+    // The (.) interception convention matches a same-level URL segment, so an
+    // overlay plugin's routePrefix must be a single segment in v1.
+    if (routeSegment.includes('/')) {
+      console.error(
+        `[generate] plugin ${manifest.id} declares shell: "overlay" with a multi-segment ` +
+          `routePrefix "${manifest.routePrefix}". Overlay plugins must use a single-segment ` +
+          'routePrefix (e.g. /console) so the interception route resolves correctly.',
+      );
+      process.exit(1);
+    }
+    return [fallback, join(MODAL_DIR, `(.)${routeSegment}`)];
+  }
+
+  return [fallback];
 }
 
-// Every route group plugins may compose into. Listed so each is cleared before
-// composition; `(fullscreen)` for minimal-shell plugins is added when needed.
-const GROUP_DIRS = [PLATFORM_PLUGINS_DIR];
-
 function composePlugins(plugins: PluginEntry[]): void {
-  // Remove previously composed plugins from every group (keep each .gitignore).
-  for (const groupDir of GROUP_DIRS) {
-    mkdirSync(groupDir, { recursive: true });
-    for (const entry of readdirSync(groupDir)) {
-      if (entry === '.gitignore') continue;
-      rmSync(join(groupDir, entry), { recursive: true, force: true });
+  // Clear composed plugin segments from the (plugins) group, keeping the
+  // hand-written files (the .gitignore, the overlay-slot host layout.tsx, and
+  // the @modal slot dir — its interception copies are cleared separately below).
+  mkdirSync(PLATFORM_PLUGINS_DIR, { recursive: true });
+  for (const entry of readdirSync(PLATFORM_PLUGINS_DIR)) {
+    if (PLUGINS_DIR_KEEP.has(entry)) continue;
+    rmSync(join(PLATFORM_PLUGINS_DIR, entry), { recursive: true, force: true });
+  }
+  // Clear only the generated interception copies in the @modal slot — the
+  // hand-written default.tsx, layout.tsx (Dialog chrome), and .gitignore stay.
+  mkdirSync(MODAL_DIR, { recursive: true });
+  for (const entry of readdirSync(MODAL_DIR)) {
+    if (entry.startsWith('(.)')) {
+      rmSync(join(MODAL_DIR, entry), { recursive: true, force: true });
     }
   }
 
@@ -143,10 +182,10 @@ function composePlugins(plugins: PluginEntry[]): void {
     const srcApp = join(PLUGINS_DIR, dir, 'app');
     if (!existsSync(srcApp)) continue;
     // The public path is the manifest routePrefix, not the source dir name.
-    const routeSegment = manifest.routePrefix.replace(/^\/+/, '');
-    const dest = join(targetGroupDir(manifest), routeSegment);
-    mkdirSync(dirname(dest), { recursive: true });
-    cpSync(srcApp, dest, { recursive: true });
+    for (const dest of composeTargets(manifest)) {
+      mkdirSync(dirname(dest), { recursive: true });
+      cpSync(srcApp, dest, { recursive: true });
+    }
   }
 }
 

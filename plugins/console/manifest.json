@@ -7,7 +7,7 @@
   "type": "platform",
   "runtime": "native",
   "routePrefix": "/console",
-  "shell": "default",
+  "shell": "overlay",
   "adminOnly": true,
   "icon": "icon.svg",
   "permissions": ["auth:session", "db:readWrite", "mailer:send"],

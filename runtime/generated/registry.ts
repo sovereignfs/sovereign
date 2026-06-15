@@ -16,7 +16,7 @@ export const registry: SovereignManifest[] = [
       "auth:session",
       "db:readWrite"
     ],
-    "shell": "default",
+    "shell": "overlay",
     "icon": "icon.svg",
     "compatibility": {
       "minPlatformVersion": "0.4.0"
@@ -36,7 +36,7 @@ export const registry: SovereignManifest[] = [
       "db:readWrite",
       "mailer:send"
     ],
-    "shell": "default",
+    "shell": "overlay",
     "adminOnly": true,
     "icon": "icon.svg",
     "compatibility": {

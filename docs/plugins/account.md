@@ -48,7 +48,7 @@ grid only.
 | `type`                             | `platform`                     |
 | `runtime`                          | `native`                       |
 | `routePrefix`                      | `/account`                     |
-| `shell`                            | `default`                      |
+| `shell`                            | `overlay`                      |
 | `adminOnly`                        | omitted (`false`)              |
 | `icon`                             | `icon.svg`                     |
 | `permissions`                      | `auth:session`, `db:readWrite` |
@@ -66,7 +66,7 @@ Proposed `manifest.json`:
   "type": "platform",
   "runtime": "native",
   "routePrefix": "/account",
-  "shell": "default",
+  "shell": "overlay",
   "icon": "icon.svg",
   "permissions": ["auth:session", "db:readWrite"],
   "compatibility": {
@@ -198,9 +198,11 @@ record in `packages/db` (maintained by the platform, not this plugin) holds the
 Account consumes `@sovereignfs/ui` exclusively.
 
 **Layout:** Three-tab navigation within the plugin (Profile / Security /
-Preferences). Uses the default shell (sidebar + content area on desktop; header
-
-- content + footer on mobile).
+Preferences). Uses `shell: overlay` (RFC 0001): clicking the avatar opens Account
+as a dialog over the current page (a full-screen sheet on mobile); a hard load of
+`/account` renders the full-page fallback. The three tabs navigate within the
+dialog. Because the root plugin serves `/` as a full page, an overlay plugin is
+not eligible as the root plugin (CON-11).
 
 **Net-new primitives likely needed in `packages/ui`:**
 

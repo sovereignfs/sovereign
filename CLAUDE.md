@@ -171,6 +171,21 @@ pnpm lint:fix        # run ESLint with auto-fix
   and are gitignored by a `.gitignore` inside each route group — never edit or
   commit them. Source of truth is always `plugins/[id]/app/`. `shell: minimal` (a
   chrome-free group) is not wired yet; the generate script fails loudly on it.
+  **`shell: overlay` (RFC 0001, Task 0.5.09) composes TWICE:** the full-page
+  fallback under `(plugins)/<routePrefix>/` (same as default) **and** an
+  interception copy under `(plugins)/@modal/(.)<routePrefix>/`. The `@modal`
+  parallel-route slot lives **inside** `(plugins)` (hosted by a committed
+  `(plugins)/layout.tsx` that renders `{children}{modal}`) so the interceptor and
+  the fallback are folder-siblings in the same route group — interception across
+  the group boundary from `(platform)` fails at runtime with `initialTree is not
+iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
+  `@modal/layout.tsx` (the `Dialog` chrome; renders the Dialog only when
+  `useSelectedLayoutSegment()` is an intercepted segment, never null, so no empty
+  scrim on ordinary pages) are **committed**; the `@modal/(.)*` copies are
+  generated and gitignored (the `(plugins)/.gitignore` keeps `layout.tsx` +
+  `@modal/{default,layout}.tsx`, ignores the rest). Overlay `routePrefix` must be
+  a single segment, and overlay plugins are ineligible as the root plugin
+  (CON-11) — `validateRootPlugin` rejects `shell: 'overlay'`.
 - **`adminOnly` routes are gated in the runtime middleware.** A request under an
   admin-only plugin's `routePrefix` from a non-`platform:admin` user returns 403
   (SRS §3.4, PLT-03).
@@ -550,7 +565,8 @@ pnpm install:plugins    # clone sovereign/community plugins declared in sovereig
 - ✅ Task 0.5.06 — Documentation: new `docs/plugin-development.md` (file structure, full manifest reference, SDK usage, local dev, DB conventions, registry) and `docs/architecture.md` (contributor summary of SRS §3); expanded `README.md` (features, quick start, monorepo layout, docs index); completeness passes on `docs/self-hosting.md` (every `.env.example` var documented) and `docs/upgrade.md` (platform v0.3→v0.4→v0.5 notes). **Anti-drift:** `runtime/src/docs-parity.test.ts` asserts every manifest field, permission, SDK surface, and env var is documented (manifest exposes `manifestFieldNames`); CLAUDE.md "docs are part of the change" convention. SRS NFR-10 (merged to `main`).
 - ✅ Task 0.5.07 — CI pipeline: `.github/workflows/ci.yml` (PR-only — `pull_request` against `main` + `workflow_call`, **no push trigger**; every job skips while the PR is a draft and runs on `ready_for_review`/subsequent pushes via `if: github.event_name != 'pull_request' || github.event.pull_request.draft == false`) with six jobs — `format`/`lint`/`typecheck`/`generate-validate`/`build`/`test`. The `test` job wires a **Postgres 16 service** + `TEST_DATABASE_URL` so the env-gated `*.pg.test.ts` parity suites run (not skipped). Shared toolchain setup is a composite action (`.github/actions/setup`). `.github/workflows/publish.yml` publishes on per-package tags (`sdk-v*.*.*` → `@sovereignfs/sdk`, `ui-v*.*.*` → `@sovereignfs/ui`), gated by reusing `ci.yml` via `workflow_call`; needs the `NPM_TOKEN` repo secret. **`@sovereignfs/ui` npm packaging finalised** (deferred from 0.3.07): `package.json` `publishConfig` repoints `exports`/`types` to `dist/` on publish (workspace dev still uses `src`), and `tsup.config.ts`'s `onSuccess` copies CSS into `dist/` (CSS Modules flattened by basename to match esbuild's bundled imports — unique per `<Component>.module.css`, build fails on a basename collision; token CSS keeps its tree). **Caveat:** `@sovereignfs/sdk` is not yet npm-installable — its `dist` imports the `private` `@sovereignfs/db`/`@sovereignfs/mailer`; making sdk publishable (bundle via `noExternal`, or publish those deps) is a separate follow-up before any `sdk-v*` tag (merged to `main`).
 - ✅ Task 0.5.08 — Public `/api` namespace delegation (PLT-16; `runtime` → 0.7.0, `@sovereignfs/manifest` → 0.5.0): manifest gains an optional `apiProvider` flag + a shared `findApiProvider(manifests)` resolver; the generate script fails the build if two plugins declare it. The runtime splits `/api/*` into reserved runtime segments (`account`/`admin`/`health`/`plugins`, in `RESERVED_API_SEGMENTS`, guarded by a dir-parity test) and the public namespace `/api/<slug>/*`, which the middleware handles **before** the session gate — rewriting to the provider's `<routePrefix>/serve/<slug>/<path>` (preserving query string) or returning 404 when no enabled provider is installed. Pure logic in `runtime/src/api-namespace.ts` (unit-tested). SRS PLT-16 (merged to `main`).
-- ⏳ Next: Task 0.5.09 — Overlay shell mode (RFC 0001; `[parallel]`). Branch from an up-to-date `main`.
+- ✅ Task 0.5.09 — Overlay shell mode (RFC 0001; `@sovereignfs/manifest` → 0.6.0, `@sovereignfs/ui` → 0.2.0, `runtime` → 0.8.0): `shell` enum gains `overlay`; new `@sovereignfs/ui` `Dialog` primitive (scrim + panel, sizes, Esc/scrim-click dismissal, focus trap, mobile full-screen sheet; `--sv-color-scrim` + `--sv-shadow-overlay` tokens). The runtime hosts a `@modal` parallel-route slot **inside `(plugins)`** (committed `(plugins)/layout.tsx` + `@modal/{default,layout}.tsx`); the generate script composes overlay plugins twice (full-page fallback + `@modal/(.)<routePrefix>` interception copy). Console + Account migrated to `shell: overlay`. Root-plugin eligibility (CON-11) now excludes overlay (`validateRootPlugin`). Live-verified: soft-nav opens the plugin as a dialog over the current page (which stays mounted), sub-routes stay in the dialog, Esc/scrim dismiss via `router.back()`, hard load renders the full page. SRS §3.8/§3.9, CON-11 (merged to `main`).
+- ⏳ Next: Task 0.5.10 — Cross-plugin data sharing (consent-gated, RFC 0002; `[future]`). Branch from an up-to-date `main`.
 - ⏳ Spec complete: Shell sidebar three-section architecture (PLT-11–PLT-15, SRS updated).
 - ⏳ Spec complete: Plainwrite sovereign plugin (`docs/plugins/plainwrite.md`, v0.2 — provider + SSG adapters).
 - ⏳ Spec complete: API Composer sovereign plugin (`docs/plugins/api-composer.md`) — GUI API builder, `/api` namespace (PLT-16, Task 0.5.08).

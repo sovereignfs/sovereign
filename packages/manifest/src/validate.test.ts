@@ -83,6 +83,11 @@ describe('validateManifest', () => {
     expect(res.valid).toBe(true);
   });
 
+  it('accepts shell: "overlay" (RFC 0001)', () => {
+    const res = validateManifest({ ...base, shell: 'overlay' });
+    expect(res.valid).toBe(true);
+  });
+
   it('accepts the reserved cross-plugin data-sharing permissions (RFC 0002)', () => {
     const res = validateManifest({
       ...base,

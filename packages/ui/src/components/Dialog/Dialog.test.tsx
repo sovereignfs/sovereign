@@ -57,4 +57,13 @@ describe('Dialog', () => {
     );
     expect(screen.getByRole('dialog').className).toContain('full');
   });
+
+  it('supports the sm size', () => {
+    render(
+      <Dialog open onClose={() => {}} size="sm" aria-label="Small">
+        Body
+      </Dialog>,
+    );
+    expect(screen.getByRole('dialog').className).toContain('sm');
+  });
 });

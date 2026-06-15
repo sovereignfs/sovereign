@@ -42,6 +42,13 @@ const manifestObjectSchema = z
     routePrefix: z.string().min(1).startsWith('/', 'routePrefix must start with "/"'),
     permissions: z.array(permissionSchema),
     shell: z.enum(['default', 'minimal', 'overlay']).optional(),
+    shellConfig: z
+      .object({
+        /** Dialog size for `shell: overlay` plugins (default `lg`). */
+        overlaySize: z.enum(['sm', 'md', 'lg']).optional(),
+      })
+      .strict()
+      .optional(),
     adminOnly: z.boolean().optional(),
     apiProvider: z.boolean().optional(),
     icon: z.string().optional(),
@@ -52,13 +59,15 @@ const manifestObjectSchema = z
   })
   .strict();
 
-export const manifestSchema = manifestObjectSchema.refine(
-  (m) => m.type === 'platform' || m.repository !== undefined,
-  {
+export const manifestSchema = manifestObjectSchema
+  .refine((m) => m.type === 'platform' || m.repository !== undefined, {
     message: 'repository is required when type is "sovereign" or "community"',
     path: ['repository'],
-  },
-);
+  })
+  .refine((m) => m.shellConfig?.overlaySize === undefined || m.shell === 'overlay', {
+    message: 'shellConfig.overlaySize is only valid when shell is "overlay"',
+    path: ['shellConfig', 'overlaySize'],
+  });
 
 /**
  * Manifest field names, sourced from the schema so docs and tooling share one

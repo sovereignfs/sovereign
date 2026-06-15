@@ -1,6 +1,10 @@
 .shell {
+  /* Single source for the sidebar width — fed to the grid and to the overlay
+     dialog's scrim inset so dialogs start at the sidebar's right edge. */
+  --sv-shell-sidebar-width: 64px;
+  --sv-dialog-inset-left: var(--sv-shell-sidebar-width);
   display: grid;
-  grid-template-columns: 64px 1fr;
+  grid-template-columns: var(--sv-shell-sidebar-width) 1fr;
   min-height: 100vh;
 }
 
@@ -99,6 +103,8 @@
 
 @media (max-width: 768px) {
   .shell {
+    /* No sidebar on mobile — overlay dialogs span the full width. */
+    --sv-dialog-inset-left: 0;
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr auto;
   }

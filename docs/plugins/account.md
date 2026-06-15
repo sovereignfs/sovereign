@@ -106,11 +106,12 @@ or reuse an ACC-\* id.
 
 #### Credentials
 
-| ID     | Requirement                                                                                                                                                   |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ACC-04 | Change password. Requires current password confirmation. Delegates the credential update to `better-auth`. The current session is preserved after the change. |
-| ACC-05 | View active sessions: device/browser hint, IP address, last-active timestamp, and whether the session is the current one.                                     |
-| ACC-06 | Revoke any active session except the current one.                                                                                                             |
+| ID     | Requirement                                                                                                                                                                                                                                                                                                                                                                |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ACC-04 | Change password. Requires current password confirmation. Delegates the credential update to `better-auth`. The current session is preserved after the change.                                                                                                                                                                                                              |
+| ACC-05 | View active sessions: device/browser hint, IP address, last-active timestamp, and whether the session is the current one.                                                                                                                                                                                                                                                  |
+| ACC-06 | Revoke any active session except the current one.                                                                                                                                                                                                                                                                                                                          |
+| ACC-11 | Sign out of the current session ("Log out"): ends the active session via `better-auth` and clears the session-cache cookies so it takes effect immediately, then redirects to login. Complements ACC-06 (which revokes other sessions only). Implements AUTH-02 in the Account UI; the same action is also reachable from the shell avatar menu. Scheduled as Task 0.5.11. |
 
 #### Preferences
 
@@ -210,7 +211,11 @@ Preferences). Uses the default shell (sidebar + content area on desktop; header
 - **Segmented control** — three-option horizontal toggle for Light / Dark /
   System mode. Reusable for other multi-choice preference settings.
 - **Session row** — a table row showing session metadata with a contextual
-  "Revoke" action. Could generalise to other "active credential" listings.
+  "Revoke" action for other sessions and a "Log out" action for the current one
+  (ACC-11). Could generalise to other "active credential" listings.
+
+The current-session "Log out" (ACC-11) shares the platform logout action with the
+shell **avatar menu** (the primary entry point); see Task 0.5.11.
 
 ---
 
@@ -226,6 +231,13 @@ with revoke, timezone setting, appearance toggle.
 **Done when:** A user can update their display name, upload an avatar, change
 their password, revoke other sessions, set their timezone, and toggle light/dark
 mode — with all preferences persisted and applied immediately.
+
+### Logout (ACC-11) — Task 0.5.11
+
+Self sign-out, closing the long-standing AUTH-02 gap (specified but never built).
+Adds `sdk.auth.signOut()` and a "Log out" action on the current-session row,
+sharing the platform logout flow with the shell avatar menu (better-auth
+sign-out + session-cache-cookie clear + redirect to login). Sequenced after v0.1.
 
 ### v0.2 — Security and customisation (ACC-09–10)
 
@@ -272,3 +284,4 @@ customisation (pin/unpin/reorder) — see ACC-10.
 | 0.1     | Jun 2026 | Initial draft — per-user profile and preferences plugin.                                                                                                                                                                                                                                                                                   |
 | 0.1     | Jun 2026 | Part 1 implemented (Task 0.4.06): Profile (ACC-01/02/03) + Preferences (ACC-07/08). Resolved Q1 (avatar → disk + Next route) and Q4 (theme → `account_prefs` + `sv-theme` cookie + pre-paint inline script). Deviation: components live under `app/_components/` (composition copies only `app/`). Security (ACC-04–06) follows in part 2. |
 | 0.1     | Jun 2026 | Part 2 implemented (Task 0.4.06): Security tab — password change (ACC-04) + active-session list/revoke (ACC-05/06). Extended `sdk.auth` with `changePassword`/`listSessions`/`revokeSession` (wrap better-auth with cookie + Origin). v0.1 complete.                                                                                       |
+| 0.1     | Jun 2026 | Specified ACC-11 (self sign-out / "Log out") to close the AUTH-02 gap — current-session Log out action + shell avatar menu, `sdk.auth.signOut()`, better-auth sign-out + session-cache-cookie clear. Scheduled as Task 0.5.11 (not yet implemented).                                                                                       |

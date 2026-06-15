@@ -95,8 +95,9 @@ Declared capabilities. The v1-functional ones:
 
 Reserved for post-v1 (declaring them is allowed; the backing surfaces throw
 `NotImplementedError` until implemented): `storage:readWrite`,
-`notifications:send`, `events:publish`, `events:subscribe`, and the cross-plugin
-data-sharing pair `data:provide` / `data:consume` (RFC 0002).
+`notifications:send`, `events:publish`, `events:subscribe`, the cross-plugin
+data-sharing pair `data:provide` / `data:consume` (RFC 0002), and
+`activity:write` (record activity-log events via `sdk.activity`, RFC 0005).
 
 ### Example `manifest.json`
 
@@ -148,7 +149,9 @@ The SDK surface (`sdk.*`):
 - **`platform`** — `getConfig()` → `{ tenantName, inviteOnly, version }`
   (await it).
 - **Reserved** (throw `NotImplementedError` in v1): `storage`, `notifications`,
-  `events`, and `data` (cross-plugin data sharing, RFC 0002).
+  `events`, `data` (cross-plugin data sharing, RFC 0002), and `activity`
+  (activity log — `activity.log(entry)` records a scoped event; the runtime
+  injects the actor/tenant/plugin, RFC 0005).
 
 ### The SDK boundary rule
 

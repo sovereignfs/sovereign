@@ -1,0 +1,104 @@
+name: CI
+
+# Validation runs only on pull requests targeting `main`. There is no push
+# trigger: `main` is gated pre-merge by the PR, and rebase-merge lands each
+# reviewed commit verbatim. `workflow_call` lets publish.yml reuse this as a
+# pre-publish gate on tagged commits.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_call:
+
+# Cancel superseded runs on the same ref (e.g. rapid pushes to a PR).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+# Every job carries the same guard: skip while the PR is a draft, run once it is
+# marked ready for review (and on pushes thereafter). The guard always passes
+# when this workflow is invoked via workflow_call (no pull_request context), so
+# the publish gate still runs.
+jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm format:check
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm typecheck
+
+  generate-validate:
+    name: Generate & validate registry
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # `pnpm generate` validates every manifest (exits non-zero on an invalid
+      # one) and writes runtime/generated/registry.ts; the runtime typecheck then
+      # proves the generated file is valid TypeScript.
+      - run: pnpm generate
+      - run: pnpm --filter @sovereignfs/runtime typecheck
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    # A throwaway Postgres so the env-gated *.pg.test.ts parity suites run in CI
+    # instead of skipping (NFR-03). SQLite tests need no service.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sovereign
+          POSTGRES_PASSWORD: sovereign
+          POSTGRES_DB: sovereign_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sovereign"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DATABASE_URL: postgres://sovereign:sovereign@localhost:5432/sovereign_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm test

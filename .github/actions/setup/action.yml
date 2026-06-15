@@ -1,0 +1,20 @@
+name: Setup toolchain
+description: Install pnpm + Node (with pnpm store cache) and the workspace dependencies.
+
+runs:
+  using: composite
+  steps:
+    # pnpm/action-setup reads the version from the root package.json
+    # "packageManager" field — no version pin needed here.
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Install Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile

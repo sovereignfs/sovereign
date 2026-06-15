@@ -293,9 +293,12 @@ Plugins compose only under their own `routePrefix`, so the top-level
   `/api-composer/serve/<segment>/*` (`app/serve/[slug]/[...path]/route.ts`).
 - If no provider plugin is installed, `/api/*` returns 404.
 
-The exact registration mechanism (likely a manifest flag; one provider per
-instance in v1) is an open question resolved when the platform task is
-implemented — see Open questions §1.
+The registration mechanism is the **`apiProvider: true` manifest flag**
+(implemented in the platform, PLT-16 / Task 0.5.08). Exactly one provider is
+allowed per instance — the generate script fails the build on a second — and the
+middleware rewrites `/api/<slug>/*` to the provider's serve route
+(`<routePrefix>/serve/<slug>/*`), exempt from the session gate. So this plugin
+declares `apiProvider: true` and serves `app/serve/[slug]/[[...path]]/route.ts`.
 
 ### API keys
 
@@ -547,13 +550,12 @@ endpoints under the `/api` namespace.
 
 ## Open questions
 
-1. **`/api/*` delegation mechanism (PLT-16).** How does the runtime know which
-   plugin serves the `/api` namespace? Recommendation: an `apiProvider` manifest
-   flag; the generate script and middleware wire the rewrite
-   (`/api/:slug/*` → provider's serve route); exactly one provider per instance
-   in v1 (the generate script fails loudly on two). The exact manifest shape is
-   decided when the platform task is implemented — coordinate with the manifest
-   schema (`packages/manifest`).
+1. **Resolved (Task 0.5.08) — `/api/*` delegation mechanism (PLT-16).** The
+   runtime knows the provider via the `apiProvider: true` manifest flag
+   (`packages/manifest`). The generate script and middleware wire the rewrite
+   (`/api/<slug>/*` → provider's `<routePrefix>/serve/<slug>/*`); exactly one
+   provider per instance (the generate script fails loudly on two), and `/api/*`
+   returns 404 when no enabled provider is installed.
 
 2. **Dialect-agnostic JSON filtering.** Filtering/sorting on JSON document
    fields differs between SQLite (`json_extract`) and Postgres (`jsonb`

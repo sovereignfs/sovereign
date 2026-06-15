@@ -54,6 +54,13 @@ user as `x-sovereign-user-*` headers for downstream server components, enforces
 `adminOnly` (403) and disabled-plugin (404) rules, and serves the configured
 root plugin at `/`. Plugin routes are composed into the App Router at build time.
 
+The runtime also reserves the top-level `/api/*` namespace (PLT-16). Its own
+first-level segments (`account`, `admin`, `health`, `plugins`) keep normal
+session-gated handling; every other `/api/<slug>/*` is the **public** namespace —
+handled before the session gate (unauthenticated; the serving plugin owns auth)
+and rewritten to the single `apiProvider` plugin's serve route
+(`<routePrefix>/serve/<slug>/<path>`), or 404 when no enabled provider exists.
+
 ## Plugin system & manifest (SRS §3.5, §3.8, §3.9)
 
 Each plugin ships a strict `manifest.json` (validated at build — invalid manifest

@@ -1,5 +1,7 @@
 # Sovereign
 
+[![CI](https://github.com/sovereignfs/sovereign/actions/workflows/ci.yml/badge.svg)](https://github.com/sovereignfs/sovereign/actions/workflows/ci.yml)
+
 Sovereign is a modular, self-hostable workspace runtime for running personal or
 organisational software under one roof. It provides the shared platform pieces
 applications need — authentication, data access, email, and UI — while allowing
@@ -82,7 +84,8 @@ bin/sv            the sv CLI
 - [Upgrade guide](docs/upgrade.md) — versioned changes, migration notes, and
   compatibility guidance.
 - [Contributing](CONTRIBUTING.md) — development workflow, project conventions,
-  and contribution expectations.
+  and contribution expectations. CI runs the full check suite on every
+  (non-draft) pull request.
 - [Concept · Plan · SRS](docs/sovereign-proposal-plan-srs.md) and the
   [implementation task breakdown](docs/sovereign-implementation-tasks.md) —
   product specification, scope, and implementation roadmap.

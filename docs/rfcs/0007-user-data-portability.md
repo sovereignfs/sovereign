@@ -246,6 +246,7 @@ skipped / warnings).
 
 ## Changelog
 
-| Version | Date     | Change                                                                            |
-| ------- | -------- | --------------------------------------------------------------------------------- |
-| 0.1     | Jun 2026 | Initial draft; proposes reserved `sdk.portability` + `data:export`/`data:import`. |
+| Version | Date     | Change                                                                                    |
+| ------- | -------- | ----------------------------------------------------------------------------------------- |
+| 0.1     | Jun 2026 | Initial draft; proposes reserved `sdk.portability` + `data:export`/`data:import`.         |
+| 1.0     | Jun 2026 | Accepted; incorporated into SRS §3.16, §5 (`data:export`/`data:import`), and Task 0.5.14. |

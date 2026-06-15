@@ -22,15 +22,20 @@ defaults:
   run:
     shell: bash
 
-# Every job carries the same guard: skip while the PR is a draft, run once it is
-# marked ready for review (and on pushes thereafter). The guard always passes
-# when this workflow is invoked via workflow_call (no pull_request context), so
-# the publish gate still runs.
+# Every job carries the same guard: skip while the PR is a draft OR carries the
+# `skip-ci` label, run once it is marked ready for review without that label (and
+# on pushes thereafter). Because label add/remove is not in the trigger types,
+# toggling `skip-ci` takes effect on the next push/sync/reopen/ready, not on an
+# in-flight run. The guard always passes when this workflow is invoked via
+# workflow_call (no pull_request context), so the publish gate still runs.
 jobs:
   format:
     name: Format
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -39,7 +44,10 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -48,7 +56,10 @@ jobs:
   typecheck:
     name: Typecheck
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -57,7 +68,10 @@ jobs:
   generate-validate:
     name: Generate & validate registry
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -70,7 +84,10 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -79,7 +96,10 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
     # A throwaway Postgres so the env-gated *.pg.test.ts parity suites run in CI
     # instead of skipping (NFR-03). SQLite tests need no service.
     services:

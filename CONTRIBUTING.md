@@ -83,7 +83,8 @@ docker rm -f sov-test-pg
 ```
 
 These tests drop and recreate their own tables, so point them only at a
-disposable database. CI gains a Postgres service that runs them in Task 0.5.07.
+disposable database. CI runs them too — its `test` job starts a Postgres service
+and sets `TEST_DATABASE_URL`, so the parity suites execute on every PR.
 
 ---
 
@@ -129,6 +130,29 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>
 - PRs are merged with **rebase and merge** — no squash, no merge commits.
 - Fix commit messages before the PR is merged; correcting them after means
   rewriting `main`.
+
+### Continuous integration
+
+CI runs automatically on every pull request targeting `main`
+(`.github/workflows/ci.yml`). There is no push-to-`main` trigger — `main` is
+validated pre-merge by the PR. Six jobs run in parallel:
+
+| Job                 | Checks                                                             |
+| ------------------- | ------------------------------------------------------------------ |
+| `format`            | `prettier --check`                                                 |
+| `lint`              | ESLint (incl. the SDK import-boundary rule)                        |
+| `typecheck`         | `tsc --noEmit` across the workspace                                |
+| `generate-validate` | `pnpm generate` (manifest validation) + the generated registry TS  |
+| `build`             | `turbo build` (production)                                         |
+| `test`              | `vitest run` with a Postgres service (runs the `*.pg.test.ts` too) |
+
+**While a PR is a draft, all jobs are skipped** — marking it _Ready for review_
+runs them. To skip CI on demand you have three options:
+
+- keep the PR a **draft**;
+- add the **`skip-ci` label** to the PR (takes effect on the next push, since a
+  label change alone does not re-trigger the workflow);
+- put **`[skip ci]`** (or `[ci skip]`, `[no ci]`) in the head commit message.
 
 ---
 

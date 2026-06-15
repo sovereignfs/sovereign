@@ -1012,7 +1012,172 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 1.0.01 — Registry contribution process
+### Task 0.5.11 — Logout / self sign-out
+
+**Goal:** Implement AUTH-02 self sign-out across the SDK, the shell chrome, and the Account plugin. The requirement was specified but never built — the shell exposes the avatar only as a link to `/account`, `sdk.auth` has no `signOut`, and session revoke (ACC-06) excludes the current session.
+
+**Deliverables:**
+
+- SDK: `sdk.auth.signOut()` → `POST /api/auth/sign-out` on the auth server (forwarding the session cookie + the `Origin` header, per the better-auth CSRF rule already used by `change-password`/`update-user`)
+- Runtime: a logout server action / route that calls sign-out, then clears both `better-auth.session_data` and `__Secure-better-auth.session_data` cache cookies (`maxAge: 0`) and `redirect('/login?signedout=1')`
+- Shell chrome: an avatar **popover menu** (`runtime/app/(platform)/layout.tsx`, the PLT-11 account slot) — a small `"use client"` component with an Account link + Log out; replaces the bare avatar link. Keyboard-accessible (`aria-expanded`, Esc, click-outside)
+- Account: the Security tab's current-session row gains a **Log out** action (Revoke stays for other sessions, ACC-06); the control is a progressive-enhancement form POST (works without JS)
+- `/login` shows a "You've been signed out" notice when `?signedout=1`
+
+**Dependencies:** Task 0.4.06 (Account / Security tab), Task 0.5.05b (the `session_data` signed cookie-cache mechanism)
+
+**SRS reference:** AUTH-02, ACC-11, `docs/plugins/account.md`; CLAUDE.md "Profile self-mutations must invalidate the `session_data` cache cookie"
+
+**Review checklist:**
+
+- Clicking Log out (from the avatar menu or the Security row) ends the session and redirects to `/login`
+- After logout, protected routes redirect to login **immediately** — no stale window up to `cookieCache` `maxAge` (both cache cookies cleared)
+- Other-session revoke (ACC-06) still works and still cannot revoke the current session via the Revoke control
+- The avatar menu is keyboard-accessible and dismissable; the Account-page control works with JS disabled
+- `sdk.auth.signOut()` sends the `Origin` header (no `MISSING_OR_NULL_ORIGIN`)
+
+---
+
+### Task 0.5.12 — Activity log (RFC 0005) **[future]**
+
+**Goal:** Implement the scoped activity log specified in RFC 0005 / SRS §3.14. The reserved `sdk.activity.log()` surface and the `activity:write` permission already exist as stubs; this task makes them real.
+
+**Deliverables:**
+
+- Platform DB: an `activity_log` table (both dialects + parity) — `id`, `tenant_id`, `actor_id`, `actor_type`, `action`, `subject_user_id`, `target_type`/`target_id`, `plugin_id`, `visibility`, `summary`, `metadata`, `created_at`; indexes on `(tenant_id, created_at)`, `actor_id`, `subject_user_id`; a `recordActivity()` helper
+- Capture points at the existing mutations (Console user mgmt, plugin enable/disable, settings, Account self-mutations) and **auth login/session at the runtime verify boundary** (not in `apps/auth`)
+- SDK: implement `sdk.activity.log()` against the runtime (replace the stub), injecting actor/tenant/plugin
+- UI: Account **Activity** tab (personal feed) and Console **Activity** view (platform-wide, admin-only)
+
+**Dependencies:** Task 0.5.05 (`sdk.db`), Task 0.5.05b (verify boundary)
+
+**SRS reference:** RFC 0005, SRS §3.14, §5 (`activity:write`)
+
+**Review checklist:**
+
+- A non-admin sees only their own + concerning-them events; an admin sees the whole tenant in Console
+- Plugin `log()` cannot forge actor/tenant or write `visibility: 'admin'`
+- Login/session events are recorded without `apps/auth` touching the platform DB
+
+---
+
+### Task 0.5.13 — Deployment & upgrade strategy (RFC 0006) **[future]**
+
+**Goal:** Implement the tiered, low-downtime upgrade model from RFC 0006 / SRS §3.15. Depends on the CI pipeline (Task 0.5.07) for image publishing.
+
+**Deliverables:**
+
+- CI builds + pushes semver-tagged runtime/auth images; `docker-compose.prod.yml` references `image:` tags pinned by `SOVEREIGN_VERSION` (build-from-source kept as a fallback)
+- Graceful shutdown (SIGTERM draining + `stop_grace_period`) in both standalone servers; blue-green documented as the advanced path
+- drizzle-kit migrations under expand-contract: `drizzle.config`, `packages/db/migrations/`, load-bearing `runMigrations`, `schema_migrations` ledger, single-writer advisory lock, fail-fast
+- `sv backup`/`sv restore` (dialect-aware, DB + avatars) + automatic pre-upgrade snapshot; tag-pinned rollback procedure
+- Startup version gate (downgrade guard) surfaced in `/api/admin/health`
+- Docs: `docs/self-hosting.md` + `docs/upgrade.md` rewrite
+
+**Dependencies:** Task 0.5.07 (CI / image registry)
+
+**SRS reference:** RFC 0006, SRS §3.15, NFR-01/04/10
+
+**Review checklist:**
+
+- An upgrade is `pull` + recreate (no host build); rollback = repin previous tag + `sv restore`
+- A failed migration leaves the DB un-served and the pre-upgrade snapshot intact
+- Graceful restart drops no in-flight requests behind the reverse proxy
+
+---
+
+### Task 0.5.14 — User data portability (RFC 0007) **[future]**
+
+**Goal:** Implement self-service export/import/migration from RFC 0007 / SRS §3.16. The reserved `sdk.portability` surface and `data:export`/`data:import` permissions land as stubs first (sequenced after RFC 0005's stubs).
+
+**Deliverables:**
+
+- SDK: `sdk.portability.provideExport`/`provideImport` (replace stubs), runtime-mediated with injected user/tenant
+- Runtime: export assembler + import validator (format/schema-version checks, ID remap), plugin-resolver registry, versioned-ZIP streaming, owner gating
+- Account: a **Data** tab — export (download) + import/restore (upload) with a per-section result summary
+- Reference plugins implement export/import resolvers
+- Export/import events audited via `sdk.activity` (Task 0.5.12)
+
+**Dependencies:** Task 0.5.05 (`sdk.db`), Task 0.5.12 (audit), Task 1.0.01 (optional bundle encryption, post-v1)
+
+**SRS reference:** RFC 0007, SRS §3.16, §5 (`data:export`/`data:import`)
+
+**Review checklist:**
+
+- Export produces a versioned ZIP (`manifest.json` + `platform/` + `plugins/<id>/`); a plugin only ever exports/imports the current user's own data
+- Import remaps IDs (no FK breakage), is additive by default, and skips unknown plugins with a warning
+- Cross-instance import maps the subject user to the target instance's current user
+
+---
+
+### Task 0.5.15 — Security hardening, Tier 0 + Tier 1 (RFC 0008)
+
+**Goal:** Ship the no-crypto-machinery hardening tiers of RFC 0008 / SRS §3.17 in v1: security headers + threat-model doc (Tier 0) and transport hardening (Tier 1). At-rest encryption and beyond (Tiers 2–4) are deferred post-v1 to Task 1.0.01.
+
+**Deliverables:**
+
+- Tier 0: security headers (CSP/HSTS/X-Frame-Options/X-Content-Type-Options/Referrer-Policy/Permissions-Policy) in both Next configs + `runtime/middleware.ts`; cookie-hardening review; codify the no-telemetry guarantee; new `docs/security.md` (threat model + self-hoster hardening checklist)
+- Tier 1: Postgres `sslmode=require` + cert handling in `packages/db`; enforce TLS/HSTS at the edge (documented + required); optional shared-secret/mTLS on the internal runtime↔auth channel
+- No new app secrets or native deps in this task (those arrive with Tier 2 in Task 1.0.01)
+
+**Dependencies:** none hard (TLS/HSTS doc assumes the reverse proxy already in `docs/self-hosting.md`)
+
+**SRS reference:** RFC 0008 (Tiers 0–1), SRS §3.17, NFR-02/07/08
+
+**Review checklist:**
+
+- Every response carries the security headers; CSP does not break the runtime/auth UIs or the inline theme script
+- Postgres connects over TLS when `sslmode=require`; `docs/security.md` documents the threat model and the hardening checklist
+- No behaviour change to the existing session/cookie flow
+
+---
+
+### Task 0.5.16 — Test organization (RFC 0010) **[parallel]**
+
+**Goal:** Apply the boundary-based test layout from RFC 0010. Mechanical; one pass.
+
+**Deliverables:**
+
+- Move flat-co-located test files into per-directory `__tests__/` folders within their packages
+- Add root `/__tests__/{integration,e2e}` scaffolding (README); reserve `/__tests__/visual`
+- Update `vitest.config.ts` `include` globs (`**/__tests__/**/*.test.{ts,tsx}` + root `__tests__/**`); keep `classNameStrategy` + jsdom pragma
+- Filename-suffix conventions (`*.integration.test.ts`, `*.visual.test.tsx`, `*.e2e.ts`) + `test:*` scripts
+- Update CLAUDE.md ("co-located `*.test.ts`") + the CONTRIBUTING testing section
+
+**Dependencies:** none (mechanical)
+
+**SRS reference:** RFC 0010
+
+**Review checklist:**
+
+- `pnpm test` discovers all relocated tests; `*.pg.test.ts`, docs-parity, and schema-parity stay package-local and still run/skip as before
+- The suite is never left half-moved (single PR)
+
+---
+
+### Task 0.5.17 — Icon system (RFC 0011) **[future]**
+
+**Goal:** Adopt Lucide as the icon language per RFC 0011, via a generated zero-dependency SVG set behind a Sovereign `<Icon>`.
+
+**Deliverables:**
+
+- A name list + generation script emitting curated Lucide icons as inline RSC-safe SVG components into the design system; `lucide` as a **devDependency only** (no runtime/peer dep); ISC `NOTICE`
+- `<Icon>` component (typed `name` union, size/color bound to `--sv-` tokens, a11y) exported from the design system
+- Replace the chrome monograms/`⚙` emoji with `<Icon>`; render plugin manifest `icon.svg` in `PluginTile`/sidebar safely (`<img>`/sanitized, monogram fallback)
+- Docs: `docs/design-system.md` (Icon) + `docs/plugin-development.md`
+
+**Dependencies:** Task 0.4.06 (chrome/Account), Task 0.4.05 (Launcher tiles)
+
+**SRS reference:** RFC 0011
+
+**Review checklist:**
+
+- The published design system carries no runtime/peer icon dependency; icons recolor via `currentColor`/tokens and theme correctly
+- Adding an icon is "add a name + regenerate"; plugin SVGs are never injected as raw HTML
+
+---
+
+### Task 0.5.18 — Registry contribution process
 
 **Goal:** Define and document the process for submitting a community plugin to `registry/plugins.json`.
 
@@ -1032,7 +1197,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 1.0.02 — Stable SDK and semver commitment
+### Task 0.5.19 — Stable SDK and semver commitment
 
 **Goal:** SDK API review, cleanup, and semver commitment documented.
 
@@ -1052,6 +1217,39 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 - Semver policy documented and linked from README
 
 ---
+
+## Phase v1.0+ — Post-release / future
+
+> Work scheduled **after** the v1.0 public release. Items here are post-v1 regardless of when their reserved-stub groundwork lands.
+
+### Task 1.0.01 — Encryption at rest & field-level, Tier 2–4 (RFC 0008) **[post-v1]**
+
+**Goal:** The deferred, crypto-heavy tiers of RFC 0008 / SRS §3.17 — shipped **after v1**. Tier 2 (at-rest encryption + key management), Tier 3 (field-level via `sdk.crypto`), and the charting of Tier 4 (zero-knowledge E2EE). The reserved `sdk.crypto` surface + `crypto:use` permission land as `NotImplementedError` stubs first (after RFC 0005's stubs).
+
+**Deliverables:**
+
+- Tier 2: local-keyfile envelope key management (master KEK → wrapped DEKs; fail-fast when enabled); SQLCipher DB encryption (`better-sqlite3-multiple-ciphers`); encrypted backups (amends Task 0.5.13) + encrypted export bundles (amends Task 0.5.14); avatar/blob encryption
+- Tier 3: `sdk.crypto` field-level encrypt/decrypt (per-user DEK) + `crypto:use` enforcement; optional blind indexes
+- Tier 4: zero-knowledge E2EE remains charted (per-plugin opt-in, aligned with the federation direction) — not built
+- New env vars (`SOVEREIGN_ENCRYPTION`, key/keyfile, backup passphrase) → `.env.example` + `docs/self-hosting.md` + docs-parity; **Docker/native-dep impact** (SQLCipher in image build + `allowBuilds`)
+
+**Dependencies:** Task 0.5.15 (Tier 0–1), Task 0.5.13 (backups), Task 0.5.14 (exports)
+
+**SRS reference:** RFC 0008 (Tiers 2–4), SRS §3.17, §5 (`crypto:use`), NFR-02/07/08/09
+
+**Review checklist:**
+
+- A stolen disk / leaked backup yields ciphertext; the docs state plainly that server-held keys do not defend against a curious operator or RCE
+- Encryption is opt-in and fails fast when enabled without a key; rotation re-wraps DEKs without bulk re-encryption
+- Field-level encryption is gated by `crypto:use`; encrypted columns document the search/sort caveat
+
+---
+
+_Version 1.16 — June 2026. Planning change (renumber): moved **Registry contribution process** → **Task 0.5.18** and **Stable SDK and semver commitment** → **Task 0.5.19** into the pre-v1 Phase v0.5 (they are the run-up-to-1.0 deliverables). Introduced a **Phase v1.0+ — Post-release / future** heading and renumbered the encryption work from Task 0.5.18 to **Task 1.0.01 — Encryption at rest & field-level, Tier 2–4 (RFC 0008)** `[post-v1]` so a task's number prefix now matches its phase (0.5.x = pre-v1, 1.0.x = post-release). Cross-references updated (Tasks 0.5.14/0.5.15). Mirrored in SRS v0.24. Earlier notes retained._
+
+_Version 1.15 — June 2026. Planning change: phased RFC 0008 across v1 / post-v1. **Task 0.5.15** is retitled **"Security hardening, Tier 0 + Tier 1"** (security headers + `docs/security.md` threat model + transport/TLS/Postgres SSL) and ships in v1. New **Task 0.5.18 — Encryption at rest & field-level, Tier 2–4 (RFC 0008)** `[future / post-v1]` holds key management + SQLCipher at-rest + encrypted backups/exports + avatar encryption + `sdk.crypto` field-level (the reserved `sdk.crypto`/`crypto:use` stubs land there); zero-knowledge E2EE stays charted. SRS v0.23 mirrors the split (§3.17 phasing note + updated decision row). Earlier notes retained._
+
+_Version 1.14 — June 2026. Planning change (no task completed, no version bumps): incorporated RFCs 0005, 0006, 0007, 0008, 0010, and 0011 into the build plan. Added **Task 0.5.11 — Logout / self sign-out** (AUTH-02/ACC-11), **Task 0.5.12 — Activity log** (RFC 0005), **Task 0.5.13 — Deployment & upgrade strategy** (RFC 0006), **Task 0.5.14 — User data portability** (RFC 0007), **Task 0.5.15 — Security & encryption architecture** (RFC 0008), **Task 0.5.16 — Test organization** (RFC 0010), and **Task 0.5.17 — Icon system** (RFC 0011). Corresponding SRS edits land in SRS v0.22 (§3.14–§3.17, §5 reserved permissions `activity:write`/`data:export`/`data:import`/`crypto:use`, decision-log rows). RFC 0009 (package codenames) was **withdrawn/deferred** — no task. All reserved SDK surfaces/permissions are additive stubs; the mechanisms land in their respective tasks. Earlier notes retained._
 
 _Version 1.13 — June 2026. Changes from v1.12: reserved the cross-plugin data-sharing surface (RFC 0002, SRS §3.13). Added **Task 0.5.10 — Cross-plugin data sharing (consent-gated)** `[future]` — implements the consent-gated, pull-based, read-only mechanism (consent grants + audit log, manifest `data.*` declarations, runtime resolution, `packages/ui` consent prompt, Account/Console management); depends on `sdk.db` (Task 0.5.05). Landing now (additive, no behaviour change): the reserved `sdk.data` stub (`query`/`provide` → `NotImplementedError`) and `ConsentRequiredError` in `packages/sdk`, and the reserved `data:provide`/`data:consume` permissions in `packages/manifest`, with tests; `@sovereignfs/sdk` → 0.5.0, `@sovereignfs/manifest` → 0.3.0. Also git-/Prettier-ignores `/local/` (private working area). Earlier notes retained._
 

@@ -7,11 +7,19 @@
  * while the panel and its close button stay put. The scrim's padding is the
  * fixed margin `lg` leaves around the viewport; `sm`/`md` are centered and cap
  * to that available space on short screens. On mobile every size becomes a
- * full-screen sheet. */
+ * full-screen sheet.
+ *
+ * `--sv-dialog-inset-left` lets a host inset the scrim past a fixed left nav
+ * rail (e.g. the platform sidebar) so the overlay's left margin is measured
+ * from the rail, not the viewport edge, and the rail stays visible/usable.
+ * Defaults to 0 (full-viewport scrim) for standalone use. */
 
 .scrim {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--sv-dialog-inset-left, 0);
   z-index: 100;
   display: flex;
   align-items: center;

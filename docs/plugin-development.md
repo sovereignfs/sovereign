@@ -182,7 +182,8 @@ The SDK surface (`sdk.*`):
   - `getSession()` → `Session | null`; `requireSession()` → `Session` (throws
     `NotAuthenticatedError` if unauthenticated).
   - `changePassword({ currentPassword, newPassword })`,
-    `listSessions()`, `revokeSession(token)`.
+    `listSessions()`, `revokeSession(token)`, `signOut()` (ends the current
+    session; the caller redirects afterwards).
   ```ts
   const { user } = await sdk.auth.requireSession();
   // user.id, user.email, user.name, user.image, user.role, user.tenantId

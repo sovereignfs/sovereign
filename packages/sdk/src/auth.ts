@@ -102,3 +102,17 @@ export async function revokeSession(token: string): Promise<void> {
     throw await authError(res, 'Failed to revoke session');
   }
 }
+
+/**
+ * Sign the current user out (SRS AUTH-02): ends the active session on the auth
+ * server. The caller is responsible for clearing the runtime's `session_data`
+ * cache cookies and redirecting — the platform's logout route does both.
+ */
+export async function signOut(): Promise<void> {
+  // Pass an empty body so `authFetch` sends `Content-Type: application/json` —
+  // better-auth's sign-out rejects requests without it (415).
+  const res = await authFetch('/api/auth/sign-out', 'POST', {});
+  if (!res.ok) {
+    throw await authError(res, 'Failed to sign out');
+  }
+}

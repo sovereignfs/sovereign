@@ -280,6 +280,7 @@ A future `sdk.activity.list(query)` (plugins reading their own emitted events) i
 
 ## Changelog
 
-| Version | Date     | Change                                                                     |
-| ------- | -------- | -------------------------------------------------------------------------- |
-| 0.1     | Jun 2026 | Initial draft; reserved `sdk.activity` stub + `activity:write` permission. |
+| Version | Date     | Change                                                                         |
+| ------- | -------- | ------------------------------------------------------------------------------ |
+| 0.1     | Jun 2026 | Initial draft; reserved `sdk.activity` stub + `activity:write` permission.     |
+| 1.0     | Jun 2026 | Accepted; incorporated into SRS §3.14, §5 (`activity:write`), and Task 0.5.12. |

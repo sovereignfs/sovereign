@@ -158,6 +158,7 @@ is unaffected.
 
 ## Changelog
 
-| Version | Date     | Change                                                                         |
-| ------- | -------- | ------------------------------------------------------------------------------ |
-| 0.1     | Jun 2026 | Initial draft; Lucide via a generated zero-dependency SVG set behind `<Icon>`. |
+| Version | Date     | Change                                                                           |
+| ------- | -------- | -------------------------------------------------------------------------------- |
+| 0.1     | Jun 2026 | Initial draft; Lucide via a generated zero-dependency SVG set behind `<Icon>`.   |
+| 1.0     | Jun 2026 | Accepted; incorporated into the build plan (Task 0.5.17) and a decision-log row. |

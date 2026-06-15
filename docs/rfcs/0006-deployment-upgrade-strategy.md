@@ -260,6 +260,7 @@ net that turns rollback from "hope" into a procedure.
 
 ## Changelog
 
-| Version | Date     | Change         |
-| ------- | -------- | -------------- |
-| 0.1     | Jun 2026 | Initial draft. |
+| Version | Date     | Change                                                 |
+| ------- | -------- | ------------------------------------------------------ |
+| 0.1     | Jun 2026 | Initial draft.                                         |
+| 1.0     | Jun 2026 | Accepted; incorporated into SRS §3.15 and Task 0.5.13. |

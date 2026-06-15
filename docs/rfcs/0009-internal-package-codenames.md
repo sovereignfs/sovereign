@@ -133,6 +133,7 @@ leaves the build broken in between), and **must precede first npm publish**.
 
 ## Changelog
 
-| Version | Date     | Change                                                                          |
-| ------- | -------- | ------------------------------------------------------------------------------- |
-| 0.1     | Jun 2026 | Initial draft; renames ui→mosaic, mailer→dispatch (multi-channel), db→database. |
+| Version | Date     | Change                                                                                                               |
+| ------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Jun 2026 | Initial draft; renames ui→mosaic, mailer→dispatch (multi-channel), db→database.                                      |
+| —       | Jun 2026 | Withdrawn / deferred; not incorporated. The pre-publish rename window stays open — revisit before first npm publish. |

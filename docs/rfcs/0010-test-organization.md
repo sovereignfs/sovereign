@@ -145,6 +145,7 @@ half-moved.
 
 ## Changelog
 
-| Version | Date     | Change                                                                          |
-| ------- | -------- | ------------------------------------------------------------------------------- |
-| 0.1     | Jun 2026 | Initial draft; boundary-based layout, per-dir `__tests__/`, root `/__tests__/`. |
+| Version | Date     | Change                                                                           |
+| ------- | -------- | -------------------------------------------------------------------------------- |
+| 0.1     | Jun 2026 | Initial draft; boundary-based layout, per-dir `__tests__/`, root `/__tests__/`.  |
+| 1.0     | Jun 2026 | Accepted; incorporated into the build plan (Task 0.5.16) and a decision-log row. |

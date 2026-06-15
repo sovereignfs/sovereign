@@ -78,6 +78,11 @@ describe('validateManifest', () => {
     expect(res.valid).toBe(true);
   });
 
+  it('accepts a manifest that declares apiProvider (PLT-16)', () => {
+    const res = validateManifest({ ...base, apiProvider: true });
+    expect(res.valid).toBe(true);
+  });
+
   it('accepts the reserved cross-plugin data-sharing permissions (RFC 0002)', () => {
     const res = validateManifest({
       ...base,

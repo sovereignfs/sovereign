@@ -39,7 +39,7 @@ import {
 } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateManifest, type SovereignManifest } from '@sovereignfs/manifest';
+import { findApiProvider, validateManifest, type SovereignManifest } from '@sovereignfs/manifest';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PLUGINS_DIR = join(ROOT, 'plugins');
@@ -84,6 +84,19 @@ function readPlugins(): PluginEntry[] {
   }
 
   plugins.sort((a, b) => a.manifest.id.localeCompare(b.manifest.id));
+
+  // PLT-16: at most one plugin may serve the public /api/* namespace. Fail
+  // loudly rather than picking one non-deterministically at request time.
+  const { duplicates } = findApiProvider(plugins.map((p) => p.manifest));
+  if (duplicates.length > 1) {
+    console.error(
+      '[generate] more than one plugin declares apiProvider: true — exactly one ' +
+        'API provider is allowed per instance (PLT-16):',
+    );
+    for (const m of duplicates) console.error(`  - ${m.id}`);
+    process.exit(1);
+  }
+
   return plugins;
 }
 

@@ -208,6 +208,20 @@ pnpm lint:fix        # run ESLint with auto-fix
   rule forbids plugins importing `runtime/src` or internal packages. The route
   is session-gated (middleware injects `x-sovereign-user-role`) and role-filters
   via `selectLauncherPlugins`; `sdk.db` replaces this fetch in Task 0.5.05.
+- **The `/api/*` namespace is split: reserved runtime segments vs. the public
+  provider namespace (PLT-16).** The runtime serves its own first-level segments
+  — `account`, `admin`, `health`, `plugins` (`runtime/app/api/*`) — listed in
+  `RESERVED_API_SEGMENTS` (`runtime/src/api-namespace.ts`); a parity test asserts
+  the set matches the on-disk dirs, so a new runtime API route can't silently
+  become delegatable. Every other `/api/<slug>/*` is the **public** namespace:
+  the middleware handles it **before** the session gate (it is unauthenticated —
+  the provider owns auth, e.g. API keys), rewriting to the single registered
+  provider's serve route `<routePrefix>/serve/<slug>/<path>`, or 404 when no
+  enabled provider is installed. The provider is the one plugin with
+  `apiProvider: true` in its manifest; **exactly one per instance** — the
+  generate script fails the build on a second one (`findApiProvider` in
+  `@sovereignfs/manifest` is the shared resolver). Never add a new
+  `runtime/app/api/*` segment without adding it to `RESERVED_API_SEGMENTS`.
 - **Server-to-server calls to better-auth (`/api/auth/*`) must send an `Origin`
   header** equal to the auth base URL (`SOVEREIGN_AUTH_URL`) — better-auth
   enforces a CSRF origin check and rejects originless POSTs with
@@ -535,7 +549,8 @@ pnpm install:plugins    # clone sovereign/community plugins declared in sovereig
 - ✅ Task 0.5.05b — local session verification in middleware (AUTH-05; `runtime` → 0.6.0). Auth server enables better-auth's signed cookie cache (`session.cookieCache`, 300s); the runtime middleware verifies the `session_data` cookie offline via `getCookieCache` (`better-auth/cookies`, Edge-safe) + the pure `verifiedUserFromCache`/`resolveAuthSecret` in `runtime/src/session-verify.ts`, falling back to `/api/verify` (which now re-emits better-auth's `Set-Cookie`, forwarded by the middleware so the cache self-refreshes). Secret = `SOVEREIGN_AUTH_SECRET ?? AUTH_SECRET`; runtime services in all compose files get `AUTH_SECRET`. `better-auth` added as a runtime dep. SRS AUTH-05/06 (merged to `main`).
 - ✅ Task 0.5.06 — Documentation: new `docs/plugin-development.md` (file structure, full manifest reference, SDK usage, local dev, DB conventions, registry) and `docs/architecture.md` (contributor summary of SRS §3); expanded `README.md` (features, quick start, monorepo layout, docs index); completeness passes on `docs/self-hosting.md` (every `.env.example` var documented) and `docs/upgrade.md` (platform v0.3→v0.4→v0.5 notes). **Anti-drift:** `runtime/src/docs-parity.test.ts` asserts every manifest field, permission, SDK surface, and env var is documented (manifest exposes `manifestFieldNames`); CLAUDE.md "docs are part of the change" convention. SRS NFR-10 (merged to `main`).
 - ✅ Task 0.5.07 — CI pipeline: `.github/workflows/ci.yml` (PR-only — `pull_request` against `main` + `workflow_call`, **no push trigger**; every job skips while the PR is a draft and runs on `ready_for_review`/subsequent pushes via `if: github.event_name != 'pull_request' || github.event.pull_request.draft == false`) with six jobs — `format`/`lint`/`typecheck`/`generate-validate`/`build`/`test`. The `test` job wires a **Postgres 16 service** + `TEST_DATABASE_URL` so the env-gated `*.pg.test.ts` parity suites run (not skipped). Shared toolchain setup is a composite action (`.github/actions/setup`). `.github/workflows/publish.yml` publishes on per-package tags (`sdk-v*.*.*` → `@sovereignfs/sdk`, `ui-v*.*.*` → `@sovereignfs/ui`), gated by reusing `ci.yml` via `workflow_call`; needs the `NPM_TOKEN` repo secret. **`@sovereignfs/ui` npm packaging finalised** (deferred from 0.3.07): `package.json` `publishConfig` repoints `exports`/`types` to `dist/` on publish (workspace dev still uses `src`), and `tsup.config.ts`'s `onSuccess` copies CSS into `dist/` (CSS Modules flattened by basename to match esbuild's bundled imports — unique per `<Component>.module.css`, build fails on a basename collision; token CSS keeps its tree). **Caveat:** `@sovereignfs/sdk` is not yet npm-installable — its `dist` imports the `private` `@sovereignfs/db`/`@sovereignfs/mailer`; making sdk publishable (bundle via `noExternal`, or publish those deps) is a separate follow-up before any `sdk-v*` tag (merged to `main`).
-- ⏳ Next: Task 0.5.08 — Public `/api` namespace delegation (PLT-16; `[parallel]`). Branch from an up-to-date `main`.
+- ✅ Task 0.5.08 — Public `/api` namespace delegation (PLT-16; `runtime` → 0.7.0, `@sovereignfs/manifest` → 0.5.0): manifest gains an optional `apiProvider` flag + a shared `findApiProvider(manifests)` resolver; the generate script fails the build if two plugins declare it. The runtime splits `/api/*` into reserved runtime segments (`account`/`admin`/`health`/`plugins`, in `RESERVED_API_SEGMENTS`, guarded by a dir-parity test) and the public namespace `/api/<slug>/*`, which the middleware handles **before** the session gate — rewriting to the provider's `<routePrefix>/serve/<slug>/<path>` (preserving query string) or returning 404 when no enabled provider is installed. Pure logic in `runtime/src/api-namespace.ts` (unit-tested). SRS PLT-16 (merged to `main`).
+- ⏳ Next: Task 0.5.09 — Overlay shell mode (RFC 0001; `[parallel]`). Branch from an up-to-date `main`.
 - ⏳ Spec complete: Shell sidebar three-section architecture (PLT-11–PLT-15, SRS updated).
 - ⏳ Spec complete: Plainwrite sovereign plugin (`docs/plugins/plainwrite.md`, v0.2 — provider + SSG adapters).
 - ⏳ Spec complete: API Composer sovereign plugin (`docs/plugins/api-composer.md`) — GUI API builder, `/api` namespace (PLT-16, Task 0.5.08).

@@ -1,5 +1,6 @@
 import { getCookieCache } from 'better-auth/cookies';
 import { type NextRequest, NextResponse } from 'next/server';
+import { decideApiNamespace, isPublicApiPath } from '@/src/api-namespace';
 import { getInstalledPlugins } from '@/src/registry';
 import { decidePluginRoute, underPrefix } from '@/src/route-guard';
 import {
@@ -117,6 +118,26 @@ async function verifyViaAuthServer(
  * disabled plugin's prefix return 404 (SRS CON-07, PLT-04).
  */
 export async function middleware(request: NextRequest): Promise<NextResponse> {
+  const { pathname } = request.nextUrl;
+
+  // Public `/api/*` namespace (PLT-16): handled before the session gate — these
+  // routes are unauthenticated (the provider plugin owns auth, e.g. API keys).
+  // Delegate `/api/<slug>/*` to the registered provider's serve route, or 404
+  // when none is installed/enabled. Reserved runtime segments (account, admin,
+  // health, plugins) are not public and fall through to the normal flow below.
+  if (isPublicApiPath(pathname)) {
+    const disabledIds = await fetchDisabledPluginIds();
+    const decision = decideApiNamespace(pathname, getInstalledPlugins(), disabledIds);
+    if (decision.kind === 'not-found') {
+      return new NextResponse('Not Found', { status: 404 });
+    }
+    if (decision.kind === 'rewrite') {
+      const target = new URL(decision.target, request.url);
+      target.search = request.nextUrl.search;
+      return NextResponse.rewrite(target);
+    }
+  }
+
   let session = await verifyFromCookieCache(request);
   let setCookies: string[] = [];
   if (!session) {
@@ -136,7 +157,6 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return response;
   };
 
-  const { pathname } = request.nextUrl;
   const installedPlugins = getInstalledPlugins();
 
   // Only consult plugin status when the path is actually under a plugin prefix.

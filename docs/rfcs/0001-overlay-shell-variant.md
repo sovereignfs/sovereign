@@ -214,8 +214,9 @@ New primitives (also independently useful):
 
 ## Changelog
 
-| Version | Date     | Change                                                                                                                                     |
-| ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0.1     | Jun 2026 | Initial draft.                                                                                                                             |
-| 1.0     | Jun 2026 | Accepted; incorporated into SRS (§3.8/§3.9/§5/CON-11 + decision log) and Task 0.5.09.                                                      |
-| 1.1     | Jun 2026 | Post-implementation: resolved open questions 2 (manifest `shellConfig.overlaySize`) and 4 (`router.replace` for intra-overlay navigation). |
+| Version | Date     | Change                                                                                                                                                                                              |
+| ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Jun 2026 | Initial draft.                                                                                                                                                                                      |
+| 1.0     | Jun 2026 | Accepted; incorporated into SRS (§3.8/§3.9/§5/CON-11 + decision log) and Task 0.5.09.                                                                                                               |
+| 1.1     | Jun 2026 | Post-implementation: resolved open questions 2 (manifest `shellConfig.overlaySize`) and 4 (`router.replace` for intra-overlay navigation).                                                          |
+| 1.2     | Jun 2026 | Post-implementation: the `Dialog` scrim insets its left edge past the platform sidebar (`--sv-dialog-inset-left`), so overlay dialogs start at the sidebar's right edge and leave the rail visible. |

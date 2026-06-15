@@ -949,6 +949,12 @@ interface SovereignManifest {
   // If true, plugin requires platform:admin role (console:access capability)
   adminOnly?: boolean;
 
+  // If true, this plugin serves the public /api/* namespace (PLT-16). At most
+  // one provider per instance; the runtime rewrites /api/<slug>/* to the
+  // provider's serve route (<routePrefix>/serve/<slug>/*), exempt from the
+  // session gate. With no provider installed, /api/* returns 404.
+  apiProvider?: boolean;
+
   // Minimum Sovereign platform version required
   compatibility: {
     minPlatformVersion: string;

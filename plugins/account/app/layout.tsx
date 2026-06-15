@@ -15,7 +15,9 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
         <h1 className={styles.title}>Account</h1>
         <nav className={styles.tabs} aria-label="Account sections">
           {tabs.map((tab) => (
-            <Link key={tab.href} href={tab.href} className={styles.tab}>
+            // `replace` (not push) so switching tabs inside the overlay dialog
+            // doesn't stack history entries — closing then dismisses in one step.
+            <Link key={tab.href} href={tab.href} replace className={styles.tab}>
               {tab.label}
             </Link>
           ))}

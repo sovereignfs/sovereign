@@ -17,6 +17,9 @@ export const registry: SovereignManifest[] = [
       "db:readWrite"
     ],
     "shell": "overlay",
+    "shellConfig": {
+      "overlaySize": "lg"
+    },
     "icon": "icon.svg",
     "compatibility": {
       "minPlatformVersion": "0.4.0"
@@ -37,6 +40,9 @@ export const registry: SovereignManifest[] = [
       "mailer:send"
     ],
     "shell": "overlay",
+    "shellConfig": {
+      "overlaySize": "lg"
+    },
     "adminOnly": true,
     "icon": "icon.svg",
     "compatibility": {

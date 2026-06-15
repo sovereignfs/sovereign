@@ -8,6 +8,9 @@
   "runtime": "native",
   "routePrefix": "/account",
   "shell": "overlay",
+  "shellConfig": {
+    "overlaySize": "lg"
+  },
   "icon": "icon.svg",
   "permissions": ["auth:session", "db:readWrite"],
   "compatibility": {

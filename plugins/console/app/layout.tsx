@@ -25,7 +25,10 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
         <h1 className={styles.title}>Console</h1>
         <nav className={styles.nav} aria-label="Console sections">
           {sections.map((section) => (
-            <Link key={section.href} href={section.href} className={styles.navLink}>
+            // `replace` (not push) so switching sections inside the overlay
+            // dialog doesn't stack history entries — closing then dismisses in
+            // one step.
+            <Link key={section.href} href={section.href} replace className={styles.navLink}>
               {section.label}
             </Link>
           ))}

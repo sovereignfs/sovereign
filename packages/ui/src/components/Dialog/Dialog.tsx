@@ -3,7 +3,7 @@
 import { type ReactNode, useCallback, useEffect, useRef } from 'react';
 import styles from './Dialog.module.css';
 
-export type DialogSize = 'md' | 'lg' | 'full';
+export type DialogSize = 'sm' | 'md' | 'lg' | 'full';
 
 export interface DialogProps {
   /** Whether the dialog is shown. When false, nothing renders. */

@@ -136,7 +136,7 @@ shell.
 
 New primitives (also independently useful):
 
-- **`Dialog`** — scrim + panel, sizes (`md` / `lg` / `full`), Esc and
+- **`Dialog`** — scrim + panel, sizes (`sm` / `md` / `lg` / `full`), Esc and
   scrim-click dismissal, focus trap, `--sv-*` tokens only.
 - **`Sheet`** — the mobile full-screen variant (may be a `Dialog` responsive
   mode rather than a separate component — implementation detail).
@@ -184,18 +184,21 @@ New primitives (also independently useful):
    full-page fallback (proposed). Alternative: render the root plugin with the
    overlay already open on top. The fallback is simpler and ships first;
    "overlay restored over root" can be revisited later without breaking URLs.
-2. **Per-plugin size hint.** Should the manifest carry a dialog size
-   (`shellOptions: { size: 'md' | 'lg' | 'full' }`) or does the runtime pick
-   one size for all overlays in v1? Recommendation: one size in v1, hint later
-   if needed.
+2. **Per-plugin size hint.** ~~Should the manifest carry a dialog size or does
+   the runtime pick one size for all overlays in v1?~~ **Resolved (post-0.5.09):**
+   the manifest carries an optional `shellConfig.overlaySize` (`sm` | `md` |
+   `lg`, default `lg`); the `@modal` slot resolves it from the selected
+   interception segment.
 3. **Unsaved-state dismissal.** Esc/scrim-click closes the dialog; a plugin
    mid-form may want to confirm. Does v1 accept close-loses-state (plugins
    should save eagerly, as Account does), or do we need an SDK hook to block
    dismissal? Recommendation: accept in v1; revisit with evidence.
-4. **History stacking.** Navigating between several sub-routes inside an
+4. **History stacking.** ~~Navigating between several sub-routes inside an
    overlay builds history entries; closing via `router.back()` then steps
-   through them. Evaluate whether close should instead jump to the
-   pre-overlay entry (`history.go(-n)` bookkeeping or `router.replace`).
+   through them.~~ **Resolved (post-0.5.09):** intra-overlay tab/section links
+   use `<Link replace>`, so the overlay occupies a single history entry and one
+   `router.back()` dismisses straight to the pre-overlay page. Documented as a
+   convention for third-party overlay plugins in `docs/plugin-development.md`.
 5. **Interception edge cases.** Confirm interception behaves correctly across
    the `(plugins)` route-group boundary and with the composed-copies model on
    the current Next.js version (prototype before accepting).
@@ -211,7 +214,8 @@ New primitives (also independently useful):
 
 ## Changelog
 
-| Version | Date     | Change                                                                                |
-| ------- | -------- | ------------------------------------------------------------------------------------- |
-| 0.1     | Jun 2026 | Initial draft.                                                                        |
-| 1.0     | Jun 2026 | Accepted; incorporated into SRS (§3.8/§3.9/§5/CON-11 + decision log) and Task 0.5.09. |
+| Version | Date     | Change                                                                                                                                     |
+| ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | Jun 2026 | Initial draft.                                                                                                                             |
+| 1.0     | Jun 2026 | Accepted; incorporated into SRS (§3.8/§3.9/§5/CON-11 + decision log) and Task 0.5.09.                                                      |
+| 1.1     | Jun 2026 | Post-implementation: resolved open questions 2 (manifest `shellConfig.overlaySize`) and 4 (`router.replace` for intra-overlay navigation). |

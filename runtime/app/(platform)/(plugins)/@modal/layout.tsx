@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react';
 import { useRouter, useSelectedLayoutSegment } from 'next/navigation';
 import { Dialog } from '@sovereignfs/ui';
+import { getInstalledPlugins } from '@/src/registry';
+import { overlaySizeForSegment } from '@/src/overlay';
 
 /**
  * Dialog chrome for overlay-shell plugins (RFC 0001). The generate script
@@ -17,7 +19,13 @@ import { Dialog } from '@sovereignfs/ui';
  * return a valid element (never null) so the router tree stays intact.
  *
  * Dismissal is `router.back()`: the soft navigation that opened the overlay sits
- * on top of the previous page in history, so going back restores it intact.
+ * on top of the previous page in history, so going back restores it intact. For
+ * this to dismiss in a single step, the plugin's own intra-overlay navigation
+ * (tab switches) must use `replace`, not `push` — otherwise each tab adds a
+ * history entry and `router.back()` only unwinds one of them.
+ *
+ * The dialog size comes from the plugin's manifest `overlaySize` (resolved from
+ * the selected interception segment), defaulting to `lg`.
  */
 export default function ModalSlotLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -26,8 +34,10 @@ export default function ModalSlotLayout({ children }: { children: ReactNode }) {
 
   if (!open) return <>{children}</>;
 
+  const size = overlaySizeForSegment(segment, getInstalledPlugins());
+
   return (
-    <Dialog open onClose={() => router.back()} size="lg" aria-label="Overlay">
+    <Dialog open onClose={() => router.back()} size={size} aria-label="Overlay">
       {children}
     </Dialog>
   );

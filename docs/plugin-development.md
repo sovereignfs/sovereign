@@ -68,6 +68,7 @@ serves at `/tasks/lists`.
 | `routePrefix`   | string starting with `/`                                                | yes                                  | URL prefix the plugin serves under, e.g. `/tasks`. The single source of truth for the plugin's URL.                                                                 |
 | `permissions`   | array of permission strings                                             | yes (may be `[]`)                    | SDK capabilities the plugin declares (see below).                                                                                                                   |
 | `shell`         | `default` \| `minimal` \| `overlay`                                     | no                                   | Presentation mode. `default` = full page under the platform sidebar; `overlay` = dialog over the current page (see below); `minimal` is reserved (not wired in v1). |
+| `shellConfig`   | object (see below)                                                      | no                                   | Per-shell tuning. Holds `overlaySize` (`sm` \| `md` \| `lg`, default `lg`) for `shell: overlay` plugins. Only valid when `shell` is `overlay`.                      |
 | `adminOnly`     | boolean                                                                 | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                             |
 | `apiProvider`   | boolean                                                                 | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                       |
 | `icon`          | string                                                                  | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                                                                                |
@@ -133,6 +134,15 @@ You write ordinary pages; the platform handles the rest:
   as a normal full page — the URL is identical either way.
 - The runtime owns the dialog chrome (scrim, close button, Esc/scrim-click
   dismissal); your pages never implement a modal shell.
+- The dialog size is set by `shellConfig.overlaySize` (`sm` | `md` | `lg`,
+  default `lg`).
+
+**Intra-overlay navigation must use `replace`.** The dialog is dismissed with
+`router.back()`, which unwinds exactly one history entry. If your in-dialog tab
+or section links push new entries (the `<Link>` default), each one stacks on
+history and a single dismiss only steps back one tab instead of closing the
+dialog. Use `<Link replace>` (or `router.replace`) for navigation _within_ an
+overlay plugin so closing always returns to the page the dialog opened over.
 
 Constraints: an overlay plugin's `routePrefix` must be a **single segment**
 (e.g. `/account`), and an overlay plugin is **not eligible as the root plugin**

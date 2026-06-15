@@ -88,6 +88,23 @@ describe('validateManifest', () => {
     expect(res.valid).toBe(true);
   });
 
+  it('accepts shellConfig.overlaySize when shell is "overlay"', () => {
+    const res = validateManifest({
+      ...base,
+      shell: 'overlay',
+      shellConfig: { overlaySize: 'md' },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects shellConfig.overlaySize without shell: "overlay"', () => {
+    const res = validateManifest({ ...base, shellConfig: { overlaySize: 'md' } });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('overlaySize');
+    }
+  });
+
   it('accepts the reserved cross-plugin data-sharing permissions (RFC 0002)', () => {
     const res = validateManifest({
       ...base,

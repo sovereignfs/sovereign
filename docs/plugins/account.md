@@ -49,6 +49,7 @@ grid only.
 | `runtime`                          | `native`                       |
 | `routePrefix`                      | `/account`                     |
 | `shell`                            | `overlay`                      |
+| `shellConfig`                      | `{ overlaySize: "lg" }`        |
 | `adminOnly`                        | omitted (`false`)              |
 | `icon`                             | `icon.svg`                     |
 | `permissions`                      | `auth:session`, `db:readWrite` |
@@ -67,6 +68,7 @@ Proposed `manifest.json`:
   "runtime": "native",
   "routePrefix": "/account",
   "shell": "overlay",
+  "shellConfig": { "overlaySize": "lg" },
   "icon": "icon.svg",
   "permissions": ["auth:session", "db:readWrite"],
   "compatibility": {

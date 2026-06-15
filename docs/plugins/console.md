@@ -65,6 +65,7 @@ SDK. Its own `db/schema.ts` is empty.
 | `runtime`     | `native`                                      |
 | `routePrefix` | `/console`                                    |
 | `shell`       | `overlay`                                     |
+| `shellConfig` | `{ overlaySize: "lg" }`                       |
 | `adminOnly`   | `true`                                        |
 | `icon`        | `icon.svg`                                    |
 | `database`    | `shared` (omitted — `shared` is the default)  |
@@ -83,6 +84,7 @@ Proposed `manifest.json`:
   "runtime": "native",
   "routePrefix": "/console",
   "shell": "overlay",
+  "shellConfig": { "overlaySize": "lg" },
   "adminOnly": true,
   "icon": "icon.svg",
   "permissions": ["auth:session", "db:readWrite", "mailer:send"],
@@ -110,7 +112,9 @@ Notes:
 - `shell: overlay` (RFC 0001): clicking the ⚙ opens Console as a dialog over the
   current page; a hard load of `/console` renders the full-page fallback. The
   `adminOnly` 403 gate applies identically in both modes (it is enforced by URL
-  prefix in the middleware, before presentation).
+  prefix in the middleware, before presentation). `shellConfig.overlaySize: "lg"`
+  sizes the dialog (fixed box, fills the viewport minus a margin); Console's
+  section tabs navigate with `replace` so a single dismiss closes the dialog.
 
 ## Access control
 

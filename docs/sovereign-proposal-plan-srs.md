@@ -560,7 +560,7 @@ For `sovereign` and `community` plugins, `"repository"` is required. The install
 
 - `"default"` — full shell chrome visible. Applied when the field is omitted.
 - `"minimal"` — all shell chrome hidden. Content area fills the full viewport. Useful for immersive plugins, dashboards, or full-bleed layouts.
-- `"overlay"` — the plugin renders as a dismissable dialog **over** the current page rather than navigating away from it (a quick, interruption-style layer for settings-like or quick-capture plugins; Console and Account are the motivating cases). URLs are real and unchanged; a hard/direct load renders the plugin as a full page (the `default`-shell fallback). Implemented via App Router parallel + intercepting routes — the plugin's `app/` tree composes twice (an interception copy for soft navigation, a full-page fallback for hard loads). The runtime owns the dialog chrome; plugins write ordinary pages and flip one manifest field. See RFC 0001.
+- `"overlay"` — the plugin renders as a dismissable dialog **over** the current page rather than navigating away from it (a quick, interruption-style layer for settings-like or quick-capture plugins; Console and Account are the motivating cases). URLs are real and unchanged; a hard/direct load renders the plugin as a full page (the `default`-shell fallback). Implemented via App Router parallel + intercepting routes — the plugin's `app/` tree composes twice (an interception copy for soft navigation, a full-page fallback for hard loads). The runtime owns the dialog chrome; plugins write ordinary pages and flip one manifest field. The dialog size is plugin-declared via `shellConfig.overlaySize` (`sm`/`md`/`lg`, default `lg`) and is a fixed box that does not resize with its content. Dismissal is a single `router.back()`, so a plugin's intra-overlay navigation (tabs/sections) must use `replace` to keep the overlay on one history entry. See RFC 0001.
 
 The runtime reads the active plugin's `shell` value from the registry on each navigation and applies the appropriate layout. The shell mode is per-plugin — navigating between plugins transitions the layout accordingly.
 
@@ -941,6 +941,13 @@ interface SovereignManifest {
   // "overlay" — renders as a dismissable dialog over the current page; full-page fallback on hard navigation (RFC 0001).
   shell?: 'default' | 'minimal' | 'overlay';
 
+  // Per-shell tuning. Only valid when shell is "overlay" (validation rejects it otherwise).
+  // overlaySize sets the dialog size: "lg" (default) fills the viewport minus a fixed margin;
+  // "md"/"sm" are progressively smaller fixed, centred boxes. Sizes are fixed (never content-driven).
+  shellConfig?: {
+    overlaySize?: 'sm' | 'md' | 'lg';
+  };
+
   // Path to an SVG icon file within the plugin directory (e.g. "icon.svg").
   // Used in the sidebar middle section and the Launcher grid.
   // If omitted, the runtime generates a monogram from the plugin name's initials.
@@ -1040,6 +1047,8 @@ type Permission =
 | Jun 2026 | Package codenames (RFC 0009 — `ui`→`mosaic`, `mailer`→`dispatch`, `db`→`database`) withdrawn/deferred                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Reconsidered and not pursued at this time. The pre-publish rename window stays open (nothing is on npm yet), so it can be revisited before first publish without breakage. RFC 0009 marked Withdrawn.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 ---
+
+_Version 0.25 — June 2026. Post-implementation refinement of the overlay shell (Task 0.5.09, RFC 0001 open questions 2 & 4 resolved): §5 manifest reference gains the optional `shellConfig` object with `overlaySize` (`sm`/`md`/`lg`, default `lg`, valid only for `shell: "overlay"`); §3.8 records that overlay dialogs are fixed-size (never content-driven) and that intra-overlay navigation must use `replace` so a single `router.back()` dismisses the dialog. No new requirement or permission; implementation-only (already merged)._
 
 _Version 0.24 — June 2026. Changes from v0.23 (build-plan renumber, mirrored from implementation-tasks v1.16): the §3.17 phasing note and the RFC 0008 decision-log row now point the post-v1 encryption work to **Task 1.0.01** (was 0.5.18). Registry contribution + Stable-SDK/semver moved into pre-v1 (Tasks 0.5.18/0.5.19); the encryption Tier 2–4 work moved under a new **Phase v1.0+ — Post-release / future** as Task 1.0.01, so task-number prefixes now track phases (0.5.x pre-v1, 1.0.x post-release). No requirement or permission change._
 

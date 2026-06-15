@@ -149,6 +149,12 @@ With Caddy in front, the runtime handles all public traffic (including
 redirecting to the auth server's login page internally). TLS is handled by
 Caddy automatically.
 
+**TLS is required in production.** Sovereign sets `Strict-Transport-Security`
+(HSTS) and other security headers on every response in production, and serves
+session cookies with the `Secure` attribute — both assume HTTPS. Terminate TLS
+at the reverse proxy and redirect HTTP → HTTPS. See
+[security.md](security.md) for the full threat model and hardening checklist.
+
 ---
 
 ## PostgreSQL
@@ -157,6 +163,20 @@ SQLite is the zero-config default and is fine for personal and small-group use.
 For larger or higher-concurrency deployments, run the whole stack on PostgreSQL
 instead — the only change is the database connection (NFR-03), no application
 code differs.
+
+### Postgres over TLS
+
+For any non-local Postgres, encrypt the connection by adding an `sslmode` query
+parameter to `DATABASE_URL` / `AUTH_DATABASE_URL`:
+
+- `?sslmode=require` — encrypt without verifying the server certificate.
+- `?sslmode=verify-full` — encrypt **and** verify the certificate. Point the
+  standard libpq `PGSSLROOTCERT` environment variable at a CA PEM file so the
+  certificate can be validated.
+
+Example: `postgres://user:pass@db.example.com:5432/sovereign?sslmode=verify-full`.
+Without an `sslmode` (or with `sslmode=disable`) the connection is unencrypted —
+only acceptable when the database is reached over a trusted local network.
 
 ### With Docker (recommended)
 

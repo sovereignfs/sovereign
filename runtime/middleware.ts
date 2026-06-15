@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { decideApiNamespace, isPublicApiPath } from '@/src/api-namespace';
 import { getInstalledPlugins } from '@/src/registry';
 import { decidePluginRoute, underPrefix } from '@/src/route-guard';
+import { buildContentSecurityPolicy, generateNonce } from '@/src/security';
 import {
   type CachedSessionData,
   type VerifiedSession,
@@ -120,6 +121,19 @@ async function verifyViaAuthServer(
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
+  // Per-request CSP nonce (RFC 0008 Tier 0). Next reads the nonce from the
+  // request's Content-Security-Policy header and applies it to its own inline
+  // scripts; the root layout reads `x-nonce` for the pre-paint theme script.
+  // `applyCsp` stamps the policy on every response leaving this middleware.
+  const nonce = generateNonce();
+  const csp = buildContentSecurityPolicy(nonce, {
+    isProd: process.env.NODE_ENV === 'production',
+  });
+  const applyCsp = (response: NextResponse): NextResponse => {
+    response.headers.set('content-security-policy', csp);
+    return response;
+  };
+
   // Public `/api/*` namespace (PLT-16): handled before the session gate — these
   // routes are unauthenticated (the provider plugin owns auth, e.g. API keys).
   // Delegate `/api/<slug>/*` to the registered provider's serve route, or 404
@@ -129,12 +143,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     const disabledIds = await fetchDisabledPluginIds();
     const decision = decideApiNamespace(pathname, getInstalledPlugins(), disabledIds);
     if (decision.kind === 'not-found') {
-      return new NextResponse('Not Found', { status: 404 });
+      return applyCsp(new NextResponse('Not Found', { status: 404 }));
     }
     if (decision.kind === 'rewrite') {
       const target = new URL(decision.target, request.url);
       target.search = request.nextUrl.search;
-      return NextResponse.rewrite(target);
+      return applyCsp(NextResponse.rewrite(target));
     }
   }
 
@@ -143,7 +157,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (!session) {
     const fallback = await verifyViaAuthServer(request);
     if (!fallback) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      return applyCsp(NextResponse.redirect(new URL('/login', request.url)));
     }
     session = fallback.session;
     setCookies = fallback.setCookies;
@@ -165,14 +179,18 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     const disabledIds = await fetchDisabledPluginIds();
     const decision = decidePluginRoute(pathname, installedPlugins, disabledIds, user.role);
     if (decision === 'not-found') {
-      return withCookies(new NextResponse('Not Found', { status: 404 }));
+      return applyCsp(withCookies(new NextResponse('Not Found', { status: 404 })));
     }
     if (decision === 'forbidden') {
-      return withCookies(new NextResponse('Forbidden', { status: 403 }));
+      return applyCsp(withCookies(new NextResponse('Forbidden', { status: 403 })));
     }
   }
 
   const headers = new Headers(request.headers);
+  // Pass the nonce to the rendered request: Next reads it from the CSP request
+  // header for its scripts; the layout reads `x-nonce` for the theme script.
+  headers.set('x-nonce', nonce);
+  headers.set('content-security-policy', csp);
   headers.set('x-sovereign-user-id', user.id);
   headers.set('x-sovereign-user-email', user.email);
   headers.set('x-sovereign-user-role', user.role);
@@ -188,13 +206,15 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (pathname === '/') {
     const rootPrefix = await fetchRootPluginPrefix();
     if (rootPrefix && rootPrefix !== '/') {
-      return withCookies(
-        NextResponse.rewrite(new URL(rootPrefix, request.url), { request: { headers } }),
+      return applyCsp(
+        withCookies(
+          NextResponse.rewrite(new URL(rootPrefix, request.url), { request: { headers } }),
+        ),
       );
     }
   }
 
-  return withCookies(NextResponse.next({ request: { headers } }));
+  return applyCsp(withCookies(NextResponse.next({ request: { headers } })));
 }
 
 export const config = {

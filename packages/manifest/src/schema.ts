@@ -41,7 +41,7 @@ const manifestObjectSchema = z
     runtime: z.enum(['native', 'static', 'iframe-local', 'iframe-remote', 'external']),
     routePrefix: z.string().min(1).startsWith('/', 'routePrefix must start with "/"'),
     permissions: z.array(permissionSchema),
-    shell: z.enum(['default', 'minimal']).optional(),
+    shell: z.enum(['default', 'minimal', 'overlay']).optional(),
     adminOnly: z.boolean().optional(),
     apiProvider: z.boolean().optional(),
     icon: z.string().optional(),

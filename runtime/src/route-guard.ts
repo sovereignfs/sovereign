@@ -10,6 +10,7 @@ export interface PluginRouteInfo {
   id: string;
   routePrefix: string;
   adminOnly?: boolean;
+  shell?: string;
 }
 
 export type RouteDecision = 'ok' | 'not-found' | 'forbidden';

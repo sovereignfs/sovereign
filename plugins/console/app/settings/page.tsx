@@ -13,6 +13,7 @@ interface PluginRow {
   id: string;
   name: string;
   adminOnly: boolean;
+  shell: string;
   enabled: boolean;
 }
 
@@ -32,8 +33,9 @@ export default async function SettingsPage() {
     adminGet<PluginRow[]>('/api/admin/plugins'),
   ]);
 
-  // Only installed, enabled, non-adminOnly plugins are eligible roots (CON-11).
-  const rootCandidates = plugins.filter((p) => p.enabled && !p.adminOnly);
+  // Only installed, enabled, non-adminOnly, non-overlay plugins are eligible
+  // roots (CON-11): `/` is served as a full page, which overlay plugins cannot.
+  const rootCandidates = plugins.filter((p) => p.enabled && !p.adminOnly && p.shell !== 'overlay');
   const rootInstalled = rootCandidates.some((p) => p.id === settings.rootPluginId);
 
   return (

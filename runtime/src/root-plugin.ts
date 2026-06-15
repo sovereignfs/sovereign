@@ -2,12 +2,13 @@ import type { PluginRouteInfo } from './route-guard';
 
 export type RootPluginValidation =
   | { ok: true }
-  | { ok: false; reason: 'not-installed' | 'disabled' | 'admin-only' };
+  | { ok: false; reason: 'not-installed' | 'disabled' | 'admin-only' | 'overlay' };
 
 /**
  * Whether a plugin may be configured as the root plugin (SRS CON-11): it must
- * be installed, enabled, and not adminOnly (every signed-in user lands on `/`,
- * so an admin-gated root would 403 regular users).
+ * be installed, enabled, not adminOnly (every signed-in user lands on `/`, so an
+ * admin-gated root would 403 regular users), and not an `overlay` plugin (the
+ * root serves `/` as a full page, which overlay plugins cannot — RFC 0001).
  */
 export function validateRootPlugin(
   pluginId: string,
@@ -18,6 +19,7 @@ export function validateRootPlugin(
   if (!plugin) return { ok: false, reason: 'not-installed' };
   if (disabledIds.has(pluginId)) return { ok: false, reason: 'disabled' };
   if (plugin.adminOnly) return { ok: false, reason: 'admin-only' };
+  if (plugin.shell === 'overlay') return { ok: false, reason: 'overlay' };
   return { ok: true };
 }
 

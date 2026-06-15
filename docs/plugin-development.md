@@ -55,24 +55,24 @@ serves at `/tasks/lists`.
 `manifest.json` is validated at build time against a strict schema
 (`packages/manifest`); unknown keys fail the build. Every field:
 
-| Field           | Type                                                                    | Required                             | Description                                                                                                   |
-| --------------- | ----------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `schemaVersion` | integer                                                                 | yes                                  | Manifest format version. Currently `1`.                                                                       |
-| `id`            | string                                                                  | yes                                  | Globally-unique reverse-DNS id, e.g. `io.example.tasks`. Also the install directory name.                     |
-| `name`          | string                                                                  | yes                                  | Human-readable name shown in the sidebar and Launcher.                                                        |
-| `version`       | string                                                                  | yes                                  | Plugin version (semver recommended).                                                                          |
-| `description`   | string                                                                  | no                                   | Short description.                                                                                            |
-| `database`      | `shared` \| `isolated`                                                  | no                                   | Data isolation model. v1 supports `shared` (the default behaviour); `isolated` is reserved (RFC 0004).        |
-| `type`          | `platform` \| `sovereign` \| `community`                                | yes                                  | Origin/trust tier (see below).                                                                                |
-| `runtime`       | `native` \| `static` \| `iframe-local` \| `iframe-remote` \| `external` | yes                                  | Execution model. v1 plugins use `native`; the others are reserved for future runtimes.                        |
-| `routePrefix`   | string starting with `/`                                                | yes                                  | URL prefix the plugin serves under, e.g. `/tasks`. The single source of truth for the plugin's URL.           |
-| `permissions`   | array of permission strings                                             | yes (may be `[]`)                    | SDK capabilities the plugin declares (see below).                                                             |
-| `shell`         | `default` \| `minimal`                                                  | no                                   | Chrome to render in. `default` = platform sidebar; `minimal` is reserved (not wired in v1).                   |
-| `adminOnly`     | boolean                                                                 | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                       |
-| `apiProvider`   | boolean                                                                 | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below. |
-| `icon`          | string                                                                  | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                          |
-| `compatibility` | object `{ minPlatformVersion: string }`                                 | yes                                  | Minimum platform version the plugin supports.                                                                 |
-| `repository`    | string (URL)                                                            | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                     |
+| Field           | Type                                                                    | Required                             | Description                                                                                                                                                         |
+| --------------- | ----------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion` | integer                                                                 | yes                                  | Manifest format version. Currently `1`.                                                                                                                             |
+| `id`            | string                                                                  | yes                                  | Globally-unique reverse-DNS id, e.g. `io.example.tasks`. Also the install directory name.                                                                           |
+| `name`          | string                                                                  | yes                                  | Human-readable name shown in the sidebar and Launcher.                                                                                                              |
+| `version`       | string                                                                  | yes                                  | Plugin version (semver recommended).                                                                                                                                |
+| `description`   | string                                                                  | no                                   | Short description.                                                                                                                                                  |
+| `database`      | `shared` \| `isolated`                                                  | no                                   | Data isolation model. v1 supports `shared` (the default behaviour); `isolated` is reserved (RFC 0004).                                                              |
+| `type`          | `platform` \| `sovereign` \| `community`                                | yes                                  | Origin/trust tier (see below).                                                                                                                                      |
+| `runtime`       | `native` \| `static` \| `iframe-local` \| `iframe-remote` \| `external` | yes                                  | Execution model. v1 plugins use `native`; the others are reserved for future runtimes.                                                                              |
+| `routePrefix`   | string starting with `/`                                                | yes                                  | URL prefix the plugin serves under, e.g. `/tasks`. The single source of truth for the plugin's URL.                                                                 |
+| `permissions`   | array of permission strings                                             | yes (may be `[]`)                    | SDK capabilities the plugin declares (see below).                                                                                                                   |
+| `shell`         | `default` \| `minimal` \| `overlay`                                     | no                                   | Presentation mode. `default` = full page under the platform sidebar; `overlay` = dialog over the current page (see below); `minimal` is reserved (not wired in v1). |
+| `adminOnly`     | boolean                                                                 | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                             |
+| `apiProvider`   | boolean                                                                 | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                       |
+| `icon`          | string                                                                  | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                                                                                |
+| `compatibility` | object `{ minPlatformVersion: string }`                                 | yes                                  | Minimum platform version the plugin supports.                                                                                                                       |
+| `repository`    | string (URL)                                                            | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                           |
 
 ### `type`
 
@@ -117,6 +117,26 @@ APIs. A plugin that sets `apiProvider: true` becomes the instance's API provider
 - The segments the runtime serves itself — `account`, `admin`, `health`,
   `plugins` — are reserved and never delegated; a provider must reject them (and
   any future runtime segment) as slugs.
+
+### `shell: overlay` (RFC 0001)
+
+An `overlay` plugin renders as a **dismissable dialog over the current page**
+instead of a full-page navigation — ideal for settings, quick-capture, or
+pickers the user opens mid-task and wants to dismiss back to where they were.
+
+You write ordinary pages; the platform handles the rest:
+
+- A soft (in-app) navigation to the plugin opens it in a dialog layered over the
+  current page, which stays mounted (no lost scroll/state). Navigating between
+  the plugin's own sub-routes stays inside the dialog.
+- A hard load (deep link, refresh, post-login redirect) renders the same pages
+  as a normal full page — the URL is identical either way.
+- The runtime owns the dialog chrome (scrim, close button, Esc/scrim-click
+  dismissal); your pages never implement a modal shell.
+
+Constraints: an overlay plugin's `routePrefix` must be a **single segment**
+(e.g. `/account`), and an overlay plugin is **not eligible as the root plugin**
+(CON-11) — the root serves `/` as a full page.
 
 ### Example `manifest.json`
 

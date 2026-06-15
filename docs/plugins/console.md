@@ -64,7 +64,7 @@ SDK. Its own `db/schema.ts` is empty.
 | `type`        | `platform`                                    |
 | `runtime`     | `native`                                      |
 | `routePrefix` | `/console`                                    |
-| `shell`       | `default`                                     |
+| `shell`       | `overlay`                                     |
 | `adminOnly`   | `true`                                        |
 | `icon`        | `icon.svg`                                    |
 | `database`    | `shared` (omitted — `shared` is the default)  |
@@ -82,7 +82,7 @@ Proposed `manifest.json`:
   "type": "platform",
   "runtime": "native",
   "routePrefix": "/console",
-  "shell": "default",
+  "shell": "overlay",
   "adminOnly": true,
   "icon": "icon.svg",
   "permissions": ["auth:session", "db:readWrite", "mailer:send"],
@@ -107,6 +107,10 @@ Notes:
   mobile footer launcher), visible to `platform:admin` only (PLT-11). Console is
   shell chrome — it never appears in the sidebar middle section or the Launcher
   grid (LCH-04).
+- `shell: overlay` (RFC 0001): clicking the ⚙ opens Console as a dialog over the
+  current page; a hard load of `/console` renders the full-page fallback. The
+  `adminOnly` 403 gate applies identically in both modes (it is enforced by URL
+  prefix in the middleware, before presentation).
 
 ## Access control
 

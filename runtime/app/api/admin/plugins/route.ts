@@ -19,6 +19,7 @@ export async function GET(request: Request): Promise<Response> {
     type: manifest.type,
     routePrefix: manifest.routePrefix,
     adminOnly: manifest.adminOnly ?? false,
+    shell: manifest.shell ?? 'default',
     enabled: statusMap.get(manifest.id) ?? true,
   }));
 

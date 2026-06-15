@@ -3,7 +3,8 @@ import { resolveRootRoutePrefix, validateRootPlugin } from './root-plugin';
 import type { PluginRouteInfo } from './route-guard';
 
 const plugins: PluginRouteInfo[] = [
-  { id: 'fs.sovereign.console', routePrefix: '/console', adminOnly: true },
+  { id: 'fs.sovereign.console', routePrefix: '/console', adminOnly: true, shell: 'overlay' },
+  { id: 'fs.sovereign.account', routePrefix: '/account', shell: 'overlay' },
   { id: 'fs.sovereign.launcher', routePrefix: '/launcher' },
   { id: 'fs.example.tasks', routePrefix: '/tasks' },
 ];
@@ -34,6 +35,13 @@ describe('validateRootPlugin', () => {
     expect(validateRootPlugin('fs.sovereign.console', plugins, none)).toEqual({
       ok: false,
       reason: 'admin-only',
+    });
+  });
+
+  it('rejects an overlay plugin (RFC 0001 — root serves a full page)', () => {
+    expect(validateRootPlugin('fs.sovereign.account', plugins, none)).toEqual({
+      ok: false,
+      reason: 'overlay',
     });
   });
 });

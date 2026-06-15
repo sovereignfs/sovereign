@@ -25,6 +25,7 @@ describe('sdk', () => {
     expect(typeof sdk.events.subscribe).toBe('function');
     expect(typeof sdk.data.query).toBe('function');
     expect(typeof sdk.data.provide).toBe('function');
+    expect(typeof sdk.activity.log).toBe('function');
   });
 
   it('db.getClient returns the live platform Drizzle instance', async () => {
@@ -54,6 +55,10 @@ describe('sdk', () => {
       NotImplementedError,
     );
     expect(() => sdk.data.provide('c', async () => [])).toThrow(NotImplementedError);
+  });
+
+  it('reserved activity-log surface (RFC 0005) throws NotImplementedError', () => {
+    expect(() => sdk.activity.log({ action: 'list.created' })).toThrow(NotImplementedError);
   });
 
   it('exports NotAuthenticatedError and ConsentRequiredError', () => {

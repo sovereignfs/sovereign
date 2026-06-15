@@ -1,7 +1,28 @@
 import { isAbsolute, resolve } from 'node:path';
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { createClient, resolveSqlitePath } from './client';
+import { createClient, pgSslMode, resolveSqlitePath } from './client';
+
+describe('pgSslMode', () => {
+  it('returns null when sslmode is absent or disabled', () => {
+    expect(pgSslMode('postgres://u:p@host:5432/db')).toBeNull();
+    expect(pgSslMode('postgres://u:p@host:5432/db?sslmode=disable')).toBeNull();
+  });
+
+  it('returns "require" for require/prefer/allow (encrypt, no verify)', () => {
+    expect(pgSslMode('postgres://u:p@host/db?sslmode=require')).toBe('require');
+    expect(pgSslMode('postgres://u:p@host/db?sslmode=prefer')).toBe('require');
+  });
+
+  it('returns "verify" for verify-ca/verify-full', () => {
+    expect(pgSslMode('postgres://u:p@host/db?sslmode=verify-ca')).toBe('verify');
+    expect(pgSslMode('postgres://u:p@host/db?sslmode=verify-full')).toBe('verify');
+  });
+
+  it('returns null for an unparseable url', () => {
+    expect(pgSslMode('not a url')).toBeNull();
+  });
+});
 
 describe('resolveSqlitePath', () => {
   it('passes :memory: through untouched', () => {

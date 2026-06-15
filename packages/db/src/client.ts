@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import Database from 'better-sqlite3';
 import { type BetterSQLite3Database, drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
@@ -50,9 +50,42 @@ export function createClient(config: DbConfig = {}): PlatformDb {
   }
 
   // node-postgres: the pool connects lazily, so constructing it never blocks or
-  // throws here — the first query establishes the connection.
-  const pool = new Pool({ connectionString: resolved.url });
+  // throws here — the first query establishes the connection. TLS is driven by
+  // the connection string's `sslmode` (RFC 0008 Tier 1).
+  const pool = new Pool({ connectionString: resolved.url, ssl: pgSsl(resolved.url) });
   return { dialect: 'postgres', db: drizzlePg(pool, { schema: pgSchema }) };
+}
+
+/**
+ * Normalise the `sslmode` query param of a Postgres URL to the posture the
+ * driver should take (RFC 0008 Tier 1):
+ *   - absent / `disable` → `null` (no TLS),
+ *   - `verify-ca` / `verify-full` → `'verify'` (encrypt and verify the server cert),
+ *   - anything else (`require`/`prefer`/`allow`) → `'require'` (encrypt, no verify).
+ * Pure (no I/O) so it is unit-testable; `pgSsl` adds the CA file read.
+ */
+export function pgSslMode(url: string): 'require' | 'verify' | null {
+  let sslmode: string | null;
+  try {
+    sslmode = new URL(url).searchParams.get('sslmode');
+  } catch {
+    return null;
+  }
+  if (!sslmode || sslmode === 'disable') return null;
+  return sslmode === 'verify-ca' || sslmode === 'verify-full' ? 'verify' : 'require';
+}
+
+/**
+ * node-postgres `ssl` option for a connection string. `verify-*` modes verify
+ * the server certificate (supply the CA PEM via the standard `PGSSLROOTCERT`
+ * env var); `require` encrypts without verification. `false` disables TLS.
+ */
+function pgSsl(url: string): false | { rejectUnauthorized: boolean; ca?: string } {
+  const mode = pgSslMode(url);
+  if (mode === null) return false;
+  const caPath = process.env.PGSSLROOTCERT;
+  const ca = caPath ? readFileSync(caPath, 'utf8') : undefined;
+  return { rejectUnauthorized: mode === 'verify', ...(ca ? { ca } : {}) };
 }
 
 /**

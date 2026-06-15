@@ -200,7 +200,12 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   `Dialog` renders **fixed-size boxes** (each size sets width AND height, content
   scrolls inside) so the dialog never resizes as its content changes between
   tabs — `lg` fills the viewport minus a fixed margin, `md`/`sm` are fixed and
-  centred; on mobile every size is a full-screen sheet.
+  centred; on mobile every size is a full-screen sheet. The `Dialog` scrim is
+  full-viewport by default but offsets its left edge by the
+  `--sv-dialog-inset-left` CSS var (default `0`); the shell sets it to the
+  sidebar width (`--sv-shell-sidebar-width`, reset to `0` on mobile) on `.shell`
+  so overlay dialogs start at the sidebar's right edge and leave the rail
+  visible/usable — never hardcode the sidebar width into the `Dialog`.
 - **`adminOnly` routes are gated in the runtime middleware.** A request under an
   admin-only plugin's `routePrefix` from a non-`platform:admin` user returns 403
   (SRS §3.4, PLT-03).

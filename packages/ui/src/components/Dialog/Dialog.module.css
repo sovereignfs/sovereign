@@ -1,6 +1,13 @@
 /* Dialog — scrim + centered panel. Tokens only (z-index is structural, not a
- * theming value, so it has no token). On mobile the panel fills the viewport as
- * a full-screen sheet regardless of the `size` variant. */
+ * theming value, so it has no token).
+ *
+ * Each size is a FIXED box (width AND height) — the panel never grows or
+ * shrinks with its content, so switching views inside it (e.g. overlay-plugin
+ * tabs) keeps the dialog the exact same size. Overflow scrolls inside `.content`
+ * while the panel and its close button stay put. The scrim's padding is the
+ * fixed margin `lg` leaves around the viewport; `sm`/`md` are centered and cap
+ * to that available space on short screens. On mobile every size becomes a
+ * full-screen sheet. */
 
 .scrim {
   position: fixed;
@@ -9,44 +16,55 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--sv-space-4);
+  padding: var(--sv-space-8);
   background: var(--sv-color-scrim);
-  overflow-y: auto;
 }
 
 .panel {
   position: relative;
-  width: 100%;
-  max-height: calc(100vh - var(--sv-space-8));
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--sv-color-surface-raised);
   color: var(--sv-color-text-primary);
   border: 1px solid var(--sv-color-border);
   border-radius: var(--sv-radius-lg);
   box-shadow: var(--sv-shadow-overlay);
+}
+
+.content {
+  flex: 1 1 auto;
+  overflow-y: auto;
   padding: var(--sv-space-6);
 }
 
+/* Fixed sizes. `max-*: 100%` caps to the scrim's content box (viewport minus
+ * margin) so a size never overflows a small viewport. */
 .sm {
-  max-width: 24rem;
+  width: 24rem;
+  height: 28rem;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .md {
-  max-width: 32rem;
+  width: 36rem;
+  height: 42rem;
+  max-width: 100%;
+  max-height: 100%;
 }
 
-.lg {
-  max-width: 48rem;
-}
-
+.lg,
 .full {
-  max-width: 64rem;
+  width: 100%;
+  height: 100%;
 }
 
 .close {
   position: absolute;
   top: var(--sv-space-3);
   right: var(--sv-space-3);
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -71,7 +89,7 @@
   outline-offset: 2px;
 }
 
-/* Mobile: full-screen sheet (RFC 0001 §3). */
+/* Mobile: full-screen sheet (RFC 0001 §3) — every size fills the viewport. */
 @media (max-width: 640px) {
   .scrim {
     padding: 0;
@@ -82,8 +100,9 @@
   .md,
   .lg,
   .full {
+    width: 100%;
+    height: 100%;
     max-width: none;
-    min-height: 100vh;
     max-height: none;
     border: none;
     border-radius: 0;

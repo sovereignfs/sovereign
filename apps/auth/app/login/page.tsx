@@ -1,7 +1,8 @@
 'use client';
 
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, Suspense, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
 import styles from '../auth.module.css';
@@ -9,6 +10,16 @@ import styles from '../auth.module.css';
 const RUNTIME_URL = process.env.NEXT_PUBLIC_RUNTIME_URL ?? 'http://localhost:3000';
 
 export default function LoginPage() {
+  // useSearchParams must sit under a Suspense boundary (Next 15).
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
+  const signedOut = useSearchParams().get('signedout') === '1';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +42,11 @@ export default function LoginPage() {
     <main className={styles.page}>
       <div className={styles.card}>
         <h1 className={styles.title}>Sign in to Sovereign</h1>
+        {signedOut ? (
+          <p className={styles.notice} role="status">
+            You&rsquo;ve been signed out.
+          </p>
+        ) : null}
         <form className={styles.form} onSubmit={onSubmit}>
           <label className={styles.field}>
             <span className={styles.label}>Email</span>

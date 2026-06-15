@@ -15,6 +15,7 @@ describe('sdk', () => {
     expect(typeof sdk.auth.changePassword).toBe('function');
     expect(typeof sdk.auth.listSessions).toBe('function');
     expect(typeof sdk.auth.revokeSession).toBe('function');
+    expect(typeof sdk.auth.signOut).toBe('function');
     expect(typeof sdk.db.getClient).toBe('function');
     expect(typeof sdk.mailer.send).toBe('function');
     expect(typeof sdk.platform.getConfig).toBe('function');

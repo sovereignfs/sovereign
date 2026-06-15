@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import Link from 'next/link';
 import { getInstalledPlugins } from '@/src/registry';
 import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
+import { AccountMenu } from './_components/AccountMenu';
 import styles from './shell.module.css';
 
 function monogram(name: string): string {
@@ -50,9 +51,11 @@ export default async function PlatformLayout({ children }: { children: ReactNode
               ⚙
             </Link>
           ) : null}
-          <Link href="/account" className={styles.avatar} title="Account" aria-label="Account">
-            {accountAvatar}
-          </Link>
+          <AccountMenu
+            avatar={accountAvatar}
+            triggerClassName={styles.avatar}
+            placement="sidebar"
+          />
         </div>
       </aside>
 
@@ -60,9 +63,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
         <Link href="/" className={styles.mobileBrand} aria-label="Sovereign home">
           Sovereign
         </Link>
-        <Link href="/account" className={styles.avatar} aria-label="Account">
-          {accountAvatar}
-        </Link>
+        <AccountMenu avatar={accountAvatar} triggerClassName={styles.avatar} placement="header" />
       </header>
 
       <main className={styles.content}>{children}</main>

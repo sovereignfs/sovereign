@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/sdk",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "type": "module",
   "description": "Sovereign SDK — the plugin↔platform contract (types and interfaces).",
   "license": "AGPL-3.0-or-later",

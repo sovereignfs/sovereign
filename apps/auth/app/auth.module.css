@@ -48,6 +48,16 @@
   border-radius: var(--sv-radius-md);
 }
 
+.notice {
+  margin-bottom: var(--sv-space-4);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+  background-color: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+}
+
 .footer {
   margin-top: var(--sv-space-6);
   font-size: var(--sv-font-size-sm);

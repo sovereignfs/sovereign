@@ -27,7 +27,14 @@ export function SessionList({ sessions }: { sessions: ActiveSession[] }) {
             </span>
           </div>
           {session.current ? (
-            <span className={styles.help}>Current</span>
+            // The current session can't be revoked via ACC-06; logging out ends
+            // it instead. Plain form POST to the runtime logout route so it
+            // works without JS (it clears the session-cache cookies + redirects).
+            <form action="/api/account/logout" method="post">
+              <button type="submit" className={styles.revokeButton}>
+                Log out
+              </button>
+            </form>
           ) : (
             <form action={revokeSessionAction}>
               <input type="hidden" name="token" value={session.token} />

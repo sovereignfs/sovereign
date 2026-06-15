@@ -5,7 +5,17 @@
   "description": "Sovereign Design System — design tokens and React components.",
   "license": "AGPL-3.0-or-later",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./tokens.css": "./dist/tokens.css",
+      "./tokens/primitives.css": "./dist/tokens/primitives.css",
+      "./tokens/semantic.css": "./dist/tokens/semantic.css"
+    }
   },
   "exports": {
     ".": "./src/index.ts",

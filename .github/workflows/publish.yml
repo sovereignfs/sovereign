@@ -1,0 +1,61 @@
+name: Publish
+
+# The two public packages have independent release cycles, so each is published
+# from its own tag pattern:
+#   sdk-vX.Y.Z → @sovereignfs/sdk
+#   ui-vX.Y.Z  → @sovereignfs/ui
+# All other @sovereignfs/* packages are private and never published.
+on:
+  push:
+    tags:
+      - 'sdk-v*.*.*'
+      - 'ui-v*.*.*'
+
+permissions:
+  contents: read
+
+jobs:
+  # Re-run the full validation suite on the tagged commit; nothing publishes
+  # unless it passes.
+  validate:
+    uses: ./.github/workflows/ci.yml
+
+  sdk:
+    name: Publish @sovereignfs/sdk
+    needs: validate
+    if: startsWith(github.ref, 'refs/tags/sdk-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @sovereignfs/sdk build
+      # `pnpm publish` fails if this version is already on npm, so a tag without
+      # a matching version bump is rejected automatically.
+      - run: pnpm --filter @sovereignfs/sdk publish --no-git-checks --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  ui:
+    name: Publish @sovereignfs/ui
+    needs: validate
+    if: startsWith(github.ref, 'refs/tags/ui-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @sovereignfs/ui build
+      - run: pnpm --filter @sovereignfs/ui publish --no-git-checks --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

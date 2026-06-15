@@ -47,5 +47,11 @@ runtime/public/fallback-*.js
 .env.*
 !.env.example
 
+# Claude Code — ignore per-machine/local files; shared config (settings.json,
+# commands/, agents/) may be committed. launch.json is a local dev-server
+# convenience (mirrors `pnpm dev`), kept out of the shared repo.
+.claude/settings.local.json
+.claude/launch.json
+
 # OS
 .DS_Store

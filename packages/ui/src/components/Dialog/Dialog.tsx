@@ -97,7 +97,10 @@ export function Dialog({
         <button type="button" className={styles.close} aria-label="Close" onClick={onClose}>
           ×
         </button>
-        {children}
+        {/* The panel is a fixed-size box; only this region scrolls, so the
+            panel never resizes with its content and the close button stays
+            pinned. */}
+        <div className={styles.content}>{children}</div>
       </div>
     </div>
   );

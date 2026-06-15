@@ -93,7 +93,9 @@ variables are available globally to every plugin.
 | `--sv-color-accent`         | grey-900        | grey-50         | Brand / interaction colour |
 | `--sv-color-accent-hover`   | grey-700        | grey-200        | Accent hover state         |
 | `--sv-color-focus-ring`     | grey-900        | grey-100        | Focus outline              |
+| `--sv-color-scrim`          | composed rgba   | composed rgba   | Dialog backdrop overlay    |
 | `--sv-shadow-card`          | composed shadow | composed shadow | Card elevation             |
+| `--sv-shadow-overlay`       | composed shadow | composed shadow | Dialog / overlay elevation |
 
 ## Building a component
 

@@ -1,0 +1,86 @@
+/* Dialog — scrim + centered panel. Tokens only (z-index is structural, not a
+ * theming value, so it has no token). On mobile the panel fills the viewport as
+ * a full-screen sheet regardless of the `size` variant. */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sv-space-4);
+  background: var(--sv-color-scrim);
+  overflow-y: auto;
+}
+
+.panel {
+  position: relative;
+  width: 100%;
+  max-height: calc(100vh - var(--sv-space-8));
+  overflow-y: auto;
+  background: var(--sv-color-surface-raised);
+  color: var(--sv-color-text-primary);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+  box-shadow: var(--sv-shadow-overlay);
+  padding: var(--sv-space-6);
+}
+
+.md {
+  max-width: 32rem;
+}
+
+.lg {
+  max-width: 48rem;
+}
+
+.full {
+  max-width: 64rem;
+}
+
+.close {
+  position: absolute;
+  top: var(--sv-space-3);
+  right: var(--sv-space-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sv-space-8);
+  height: var(--sv-space-8);
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-xl);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--sv-color-surface-sunken);
+  color: var(--sv-color-text-primary);
+}
+
+.close:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Mobile: full-screen sheet (RFC 0001 §3). */
+@media (max-width: 640px) {
+  .scrim {
+    padding: 0;
+  }
+
+  .panel,
+  .md,
+  .lg,
+  .full {
+    max-width: none;
+    min-height: 100vh;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+  }
+}

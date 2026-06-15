@@ -4,8 +4,8 @@
  * Contextual roles mapped from primitives. THIS is the theming surface: dark
  * mode and tenant theming work by overriding these values at :root (or under
  * [data-theme]) — no component changes required. Every value here references a
- * primitive token; none is a hardcoded literal (except shadows, which compose
- * rgba layers).
+ * primitive token; none is a hardcoded literal (except shadows and the scrim,
+ * which compose rgba layers).
  *
  * Identity is monochrome: the accent is near-black on light, near-white on dark.
  * A tenant gives Sovereign its own colour by overriding --sv-color-accent.
@@ -27,7 +27,12 @@
 
   --sv-color-focus-ring: var(--sv-grey-900);
 
+  /* Overlay surfaces (Dialog/Sheet): the scrim behind a dialog and the panel's
+     elevation shadow. Composed rgba layers, like --sv-shadow-card. */
+  --sv-color-scrim: rgba(0, 0, 0, 0.5);
+
   --sv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
+  --sv-shadow-overlay: 0 10px 38px rgba(0, 0, 0, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
 }
 
 [data-theme='dark'] {
@@ -47,5 +52,8 @@
 
   --sv-color-focus-ring: var(--sv-grey-100);
 
+  --sv-color-scrim: rgba(0, 0, 0, 0.65);
+
   --sv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.5);
+  --sv-shadow-overlay: 0 10px 38px rgba(0, 0, 0, 0.6), 0 6px 12px rgba(0, 0, 0, 0.5);
 }

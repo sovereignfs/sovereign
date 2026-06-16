@@ -8,18 +8,26 @@ import { activity, events, notifications, storage } from './unimplemented';
 /**
  * The Sovereign SDK — the only contract between a plugin and the platform.
  *
- * The full v1 surface — `auth`, `db`, `mailer`, `platform` — is implemented
- * (`auth`/`mailer` in Task 0.4.02; `platform`/`db` in Task 0.5.x).
- * `data` (cross-plugin data sharing, RFC 0002), `activity` (activity log,
- * RFC 0005), `storage`, `notifications`, and `events` are reserved — declared
- * but not yet implemented.
+ * **Stable surface (covered by the v1.0.0 semver guarantee** — see
+ * `docs/sdk-stability.md`): `auth`, `db`, `mailer`, `platform`. These are
+ * implemented and will not change in breaking ways without a major bump +
+ * migration note (NFR-04).
+ *
+ * **Experimental / reserved (NOT covered by the stability guarantee):** `data`
+ * (cross-plugin data sharing, RFC 0002), `activity` (activity log, RFC 0005),
+ * `storage`, `notifications`, `events`. They are declared so the contract is
+ * visible, but every call throws `NotImplementedError` until the backing
+ * mechanism ships — their shape may change before then. Do not depend on them
+ * in a v1 plugin.
  */
 export const sdk = {
+  // Stable (v1.0.0).
   auth,
-  data,
   db,
   mailer,
   platform,
+  // Experimental / reserved — throw until implemented; shape may change.
+  data,
   storage,
   notifications,
   events,

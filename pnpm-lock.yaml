@@ -12,6 +12,9 @@ catalogs:
     '@types/react-dom':
       specifier: ^19.0.0
       version: 19.2.3
+    '@types/semver':
+      specifier: ^7.7.0
+      version: 7.7.1
     next:
       specifier: ^15.0.0
       version: 15.5.19
@@ -21,6 +24,9 @@ catalogs:
     react-dom:
       specifier: ^19.0.0
       version: 19.2.7
+    semver:
+      specifier: ^7.7.2
+      version: 7.8.3
     tsup:
       specifier: ^8.5.1
       version: 8.5.1
@@ -185,6 +191,9 @@ importers:
 
   packages/manifest:
     dependencies:
+      semver:
+        specifier: 'catalog:'
+        version: 7.8.3
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -192,6 +201,9 @@ importers:
       '@sovereignfs/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
+      '@types/semver':
+        specifier: 'catalog:'
+        version: 7.7.1
       tsup:
         specifier: 'catalog:'
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.15)(tsx@4.22.4)(typescript@5.9.3)(yaml@2.9.0)
@@ -2080,6 +2092,9 @@ packages:
 
   '@types/resolve@1.20.2':
     resolution: {integrity: sha512-60BCwRFOZCQhDncwQdxxeOEEkbc5dIMccYLwbxsS4TUNeVECQ/pBJ0j09mrHOl/JJvpRPGwO9SvE4nR2Nb/a4Q==}
+
+  '@types/semver@7.7.1':
+    resolution: {integrity: sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA==}
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
@@ -6119,6 +6134,8 @@ snapshots:
       csstype: 3.2.3
 
   '@types/resolve@1.20.2': {}
+
+  '@types/semver@7.7.1': {}
 
   '@types/trusted-types@2.0.7': {}
 

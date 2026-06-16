@@ -36,10 +36,21 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateManifest, validateRegistryEntry } from '@sovereignfs/manifest';
+import { checkCompatibility, validateManifest, validateRegistryEntry } from '@sovereignfs/manifest';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REGISTRY_PATH = join(ROOT, 'registry', 'plugins.json');
+
+function readPlatformVersion(): string {
+  try {
+    const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')) as {
+      version?: string;
+    };
+    return typeof pkg.version === 'string' ? pkg.version : '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
 
 export interface CliArgs {
   check: boolean;
@@ -176,6 +187,11 @@ export function validateEntry(entry: unknown): EntryResult {
       }
       if (manifest.manifest.type === 'platform') {
         errors.push('platform plugins are not listed in the registry');
+      }
+      // Advisory compat check against the running platform version (RFC 0024).
+      const compat = checkCompatibility(manifest.manifest, readPlatformVersion());
+      for (const w of compat.warnings) {
+        console.warn(`[validate-registry] advisory ${e.id}: ${w}`);
       }
     }
     if (!existsSync(join(dir, 'LICENSE')) && !existsSync(join(dir, 'LICENSE.md'))) {

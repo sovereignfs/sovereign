@@ -5,7 +5,9 @@
  * resolution and the platform-plugin removal guard — is unit-testable in
  * isolation, mirroring the `scripts/install-plugins.ts` split.
  */
-import { validateManifest } from '@sovereignfs/manifest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { checkCompatibility, validateManifest } from '@sovereignfs/manifest';
 
 /**
  * Directory names of the platform plugins that ship inside this monorepo. They
@@ -21,13 +23,27 @@ export function assertRemovablePlugin(id: string): void {
   }
 }
 
+/** Read the platform version from the workspace root package.json. */
+export function readPlatformVersion(workspaceRoot: string): string {
+  try {
+    const raw = readFileSync(join(workspaceRoot, 'package.json'), 'utf8');
+    return (JSON.parse(raw) as { version?: string }).version ?? '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+
 /**
- * Parse and validate a cloned plugin's `manifest.json` contents and return its
- * declared `id` — the directory name the plugin composes under (the same key
- * `generate-registry.ts` and the gitignore allowlist use). Throws on malformed
- * JSON or a manifest that fails validation.
+ * Parse and validate a cloned plugin's `manifest.json` contents, check its
+ * compatibility with the running platform, and return its declared `id` —
+ * the directory name the plugin composes under. Throws on malformed JSON,
+ * a manifest that fails validation, or a manifest that is incompatible with
+ * the current platform version.
  */
-export function resolvePluginIdFromManifest(rawManifestJson: string): string {
+export function resolvePluginIdFromManifest(
+  rawManifestJson: string,
+  workspaceRoot: string,
+): string {
   let json: unknown;
   try {
     json = JSON.parse(rawManifestJson);
@@ -38,5 +54,17 @@ export function resolvePluginIdFromManifest(rawManifestJson: string): string {
   if (!result.valid) {
     throw new Error(`Invalid manifest.json:\n${result.errors.map((e) => `  - ${e}`).join('\n')}`);
   }
+
+  const platformVersion = readPlatformVersion(workspaceRoot);
+  const compat = checkCompatibility(result.manifest, platformVersion);
+  if (!compat.compatible) {
+    throw new Error(
+      `Cannot install plugin "${result.manifest.id}" — incompatible with this platform:\n  ${compat.reason}`,
+    );
+  }
+  for (const w of compat.warnings) {
+    console.warn(`Warning: ${w}`);
+  }
+
   return result.manifest.id;
 }

@@ -87,7 +87,7 @@ serves at `/tasks/lists`.
 | `adminOnly`     | boolean                                                                 | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                  |
 | `apiProvider`   | boolean                                                                 | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                            |
 | `icon`          | string                                                                  | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                                                                                                                                                     |
-| `compatibility` | object `{ minPlatformVersion: string }`                                 | yes                                  | Minimum platform version the plugin supports.                                                                                                                                                                                            |
+| `compatibility` | object (see below)                                                      | yes                                  | Platform version constraints. Hard-gates install/boot on `minPlatformVersion`; surfaces an advisory warning in Console/health when the platform exceeds the optional `maxPlatformVersion`.                                               |
 | `repository`    | string (URL)                                                            | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                |
 
 ### `type`
@@ -162,6 +162,42 @@ overlay plugin so closing always returns to the page the dialog opened over.
 Constraints: an overlay plugin's `routePrefix` must be a **single segment**
 (e.g. `/account`), and an overlay plugin is **not eligible as the root plugin**
 (CON-11) — the root serves `/` as a full page.
+
+### `compatibility` (RFC 0024)
+
+Every manifest must declare a `compatibility` object that tells the platform what
+versions it can run on:
+
+| Sub-field            | Type   | Required | Description                                                                                                                                                                                                                                              |
+| -------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `minPlatformVersion` | semver | yes      | The oldest platform version this plugin supports. **Hard-enforced** — the plugin is disabled at install, build, and boot if the running platform is below this version.                                                                                  |
+| `maxPlatformVersion` | semver | no       | The newest platform version the plugin has been tested against. **Advisory only** — the plugin still loads on a newer platform, but Console and the health endpoint surface a warning so the operator knows the plugin is running in untested territory. |
+
+Both values must be valid [semver](https://semver.org/) strings (e.g. `"0.6.0"`).
+
+**Enforcement tiers:**
+
+1. **Build** — `pnpm generate` / `scripts/generate-registry.ts` rejects a plugin
+   that declares a `minPlatformVersion` higher than the running platform, so a CI
+   build fails before producing an incompatible image.
+2. **Install** — `sv plugin add` and `scripts/install-plugins.ts` reject the plugin
+   with a human-readable error.
+3. **Boot** — on startup, the runtime checks every installed plugin; incompatible
+   ones are **disabled in `plugin_status`** (same effect as an operator pressing
+   Disable in Console) and a reason is surfaced in the Console Plugins page
+   ("Incompatible — cannot enable") and the admin health endpoint
+   (`incompatiblePlugins[]`).
+
+```json
+"compatibility": {
+  "minPlatformVersion": "0.5.0",
+  "maxPlatformVersion": "1.0.0"
+}
+```
+
+Set `minPlatformVersion` to the earliest platform release your plugin was built
+and tested against. Omit `maxPlatformVersion` unless you have a specific reason
+to warn operators (e.g. the next major uses a breaking SDK change).
 
 ### Example `manifest.json`
 

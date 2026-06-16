@@ -39,10 +39,26 @@ import {
 } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { findApiProvider, validateManifest, type SovereignManifest } from '@sovereignfs/manifest';
+import {
+  checkCompatibility,
+  findApiProvider,
+  validateManifest,
+  type SovereignManifest,
+} from '@sovereignfs/manifest';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PLUGINS_DIR = join(ROOT, 'plugins');
+
+function readPlatformVersion(): string {
+  try {
+    return (
+      (JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')) as { version?: string })
+        .version ?? '0.0.0'
+    );
+  } catch {
+    return '0.0.0';
+  }
+}
 // Default-shell plugins compose under the platform route group so they inherit
 // the sidebar shell. `(plugins)` is a URL-transparent route group; the public
 // path is the plugin's routePrefix.
@@ -88,6 +104,16 @@ function readPlugins(): PluginEntry[] {
       for (const message of result.errors) console.error(`  - ${message}`);
       process.exit(1);
     }
+
+    const compat = checkCompatibility(result.manifest, readPlatformVersion());
+    if (!compat.compatible) {
+      console.error(
+        `[generate] incompatible plugin ${result.manifest.id} (${relative(ROOT, manifestPath)}):`,
+      );
+      console.error(`  ${compat.reason}`);
+      process.exit(1);
+    }
+    for (const w of compat.warnings) console.warn(`[generate] warning: ${w}`);
 
     plugins.push({ dir: entry.name, manifest: result.manifest });
   }

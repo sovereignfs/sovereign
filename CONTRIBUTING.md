@@ -8,6 +8,7 @@ you need to get started.
 - [Development setup](#development-setup)
 - [Branching and commits](#branching-and-commits)
 - [Pull requests](#pull-requests)
+- [Proposing a feature (RFCs)](#proposing-a-feature-rfcs)
 - [Contributor Licence Agreement](#contributor-licence-agreement)
 - [Building a plugin](#building-a-plugin)
 
@@ -153,6 +154,37 @@ runs them. To skip CI on demand you have three options:
 - add the **`skip-ci` label** to the PR (takes effect on the next push, since a
   label change alone does not re-trigger the workflow);
 - put **`[skip ci]`** (or `[ci skip]`, `[no ci]`) in the head commit message.
+
+---
+
+## Proposing a feature (RFCs)
+
+Have a feature request or an idea to improve Sovereign? Two paths, depending on how
+fleshed-out it is:
+
+- **Just an idea or a request?** Open a GitHub **issue / feature request**. That's
+  the right place to float something, gather interest, and discuss whether it fits.
+- **Want to spell it out properly?** Write an **RFC** and open a pull request adding
+  it to [`docs/rfcs/`](docs/rfcs/). This path is for proposals that need a detailed
+  plan — a design, motivation, alternatives, and tradeoffs worth reviewing as a
+  document. An accepted RFC becomes the reference the implementation follows.
+
+The two aren't exclusive: many RFCs start life as an issue and graduate to a written
+proposal once the idea is worth detailing.
+
+**Writing an RFC:**
+
+1. Copy [`docs/rfcs/TEMPLATE.md`](docs/rfcs/TEMPLATE.md) to
+   `docs/rfcs/NNNN-short-slug.md`, where `NNNN` is the next unused four-digit number
+   (check the highest in the index — withdrawn numbers are not reused).
+2. **Follow the same structure as the existing RFCs** — keep the template's section
+   skeleton and frontmatter; [RFC 0008](docs/rfcs/0008-security-encryption-architecture.md)
+   and [RFC 0013](docs/rfcs/0013-mobile-responsiveness-pwa.md) are good examples of
+   the house style.
+3. **Update the index** — add a row to [`docs/rfcs/README.md`](docs/rfcs/README.md)
+   so your RFC shows up in the status-at-a-glance table.
+4. Open the PR as a `docs/` change (`pnpm format` first — Prettier governs the
+   markdown). New RFCs land as **Draft**; status changes as discussion concludes.
 
 ---
 

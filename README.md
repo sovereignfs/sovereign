@@ -88,9 +88,11 @@ bin/sv            the sv CLI
 - [Contributing](CONTRIBUTING.md) — development workflow, project conventions,
   and contribution expectations. CI runs the full check suite on every
   (non-draft) pull request.
+- [RFCs](docs/rfcs/README.md) — design proposals with a status-at-a-glance
+  index; the individual files hold motivation, design, and impact.
 - [Concept · Plan · SRS](docs/sovereign-proposal-plan-srs.md) and the
-  [implementation task breakdown](docs/sovereign-implementation-tasks.md) —
-  product specification, scope, and implementation roadmap.
+  [roadmap](docs/roadmap.md) — product specification, scope, and the milestone
+  (Pre-v1 / v1) build plan.
 
 ## License
 

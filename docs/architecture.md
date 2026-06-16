@@ -101,6 +101,11 @@ cross-plugin data sharing via `sdk.data` (SRS §3.13, RFC 0002), and at-rest /
 field-level / zero-knowledge encryption (SRS §3.17 Tiers 2–4, RFC 0008) are
 designed but out of scope for v1.
 
+## Design proposals (RFCs)
+
+Cross-cutting design decisions are recorded as RFCs in [`docs/rfcs/`](rfcs/README.md).
+See the [RFC index](rfcs/README.md) for the status of each at a glance.
+
 ## Repository layout
 
 See the monorepo structure in the [README](../README.md#monorepo-layout) and the

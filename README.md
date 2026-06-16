@@ -67,6 +67,7 @@ packages/
   tsconfig/       shared TypeScript configs
 runtime/          the platform shell: middleware, plugin host, SDK bridge
 plugins/          built-in platform plugins (console, launcher, account)
+registry/         public plugin index (plugins.json) + submission process
 scripts/          install-plugins, generate-registry, dev orchestrator
 bin/sv            the sv CLI
 ```

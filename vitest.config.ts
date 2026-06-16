@@ -17,6 +17,8 @@ export default defineConfig({
       // Repo-level scripts and the sv CLI.
       'scripts/__tests__/**/*.test.{ts,tsx}',
       'bin/__tests__/**/*.test.{ts,tsx}',
+      // The public plugin registry index (registry/plugins.json validation).
+      'registry/__tests__/**/*.test.{ts,tsx}',
       // Root __tests__/ tree: cross-service integration, e2e, visual (future).
       '__tests__/**/*.test.{ts,tsx}',
     ],

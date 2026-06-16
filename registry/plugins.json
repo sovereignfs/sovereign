@@ -1,0 +1,25 @@
+{
+  "registryVersion": 1,
+  "plugins": [
+    {
+      "schemaVersion": 1,
+      "id": "fs.sovereign.console",
+      "name": "Console",
+      "version": "0.1.0",
+      "description": "Platform administration: users, plugins, settings, and system health.",
+      "type": "platform",
+      "runtime": "native",
+      "routePrefix": "/console",
+      "shell": "overlay",
+      "shellConfig": {
+        "overlaySize": "lg"
+      },
+      "adminOnly": true,
+      "icon": "icon.svg",
+      "permissions": ["auth:session", "db:readWrite", "mailer:send"],
+      "compatibility": {
+        "minPlatformVersion": "0.4.0"
+      }
+    }
+  ]
+}

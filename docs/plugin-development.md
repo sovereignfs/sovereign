@@ -269,6 +269,24 @@ from `sovereign.plugins.json`:
 }
 ```
 
-A formal registry and contribution/review process is planned for v1.0 (see the
-roadmap in [roadmap.md](roadmap.md)).
-Until then, share your repository URL and instances add it as above.
+### Submitting to the registry
+
+The [`registry/plugins.json`](../registry/plugins.json) file is the public index
+of installable plugins — listing there makes a plugin discoverable. The registry
+indexes manifests; it does not host or bundle your code, which stays in your own
+repository.
+
+To submit, add your plugin's manifest as an entry in `registry/plugins.json` and
+open a pull request. In short, a submission must:
+
+- have a **valid manifest** (it is validated against the schema by the
+  `registry/__tests__` suite, which fails CI on an invalid entry);
+- point `repository` at a **public** git URL;
+- include a **`LICENSE`** file in that repository;
+- declare a **compatible** `compatibility.minPlatformVersion`;
+- use a **globally-unique** `id`.
+
+The full process, requirements, and PR template are in
+[`registry/CONTRIBUTING.md`](../registry/CONTRIBUTING.md). Until your plugin is
+listed, you can still share your repository URL and instances add it to
+`sovereign.plugins.json` as above.

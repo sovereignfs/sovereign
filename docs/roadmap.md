@@ -1188,7 +1188,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.18 — Registry contribution process
+#### ✅ Task 0.5.18 — Registry contribution process
 
 **Goal:** Define and document the process for submitting a community plugin to `registry/plugins.json`.
 
@@ -1581,7 +1581,9 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 
 ---
 
-_Version 1.19 — June 2026. **Task 0.5.16 — Test organization (RFC 0010)** completed and merged. All 36 test files moved from flat co-location into per-directory `__tests__/` folders; root `__tests__/{integration,e2e,visual}/` scaffold added; `vitest.config.ts` globs updated; `test:unit`/`test:integration`/`test:e2e` scripts added; CLAUDE.md + CONTRIBUTING.md updated. No version bumps (chore). Earlier notes retained._
+_Version 1.20 — June 2026. **Task 0.5.18 — Registry contribution process** completed and merged. New `registry/plugins.json` public discovery index (seeded with Console as the platform entry) + `registry/CONTRIBUTING.md` submission requirements + a directory-based `.github/PULL_REQUEST_TEMPLATE/registry-submission.md` + a `registry/__tests__` suite that validates every entry against the manifest schema (wired into `vitest.config.ts`) + a "Submitting to the registry" section in `docs/plugin-development.md`. No version bumps (docs/scaffolding). Earlier notes retained._
+
+_Version 1.19 — June 2026. **Task 0.5.16 — Test organization (RFC 0010)** completed and merged. All 36 test files moved from flat co-location into per-directory `__tests__/` folders; root `__tests__/{integration,e2e,visual}/` scaffold added; `vitest.config.ts` globs updated; `test:unit`/`test:integration`/`test:e2e` scripts added; CLAUDE.md + CONTRIBUTING.md updated. No version bumps (chore). Earlier notes retained._ All 36 test files moved from flat co-location into per-directory `__tests__/` folders; root `__tests__/{integration,e2e,visual}/` scaffold added; `vitest.config.ts` globs updated; `test:unit`/`test:integration`/`test:e2e` scripts added; CLAUDE.md + CONTRIBUTING.md updated. No version bumps (chore). Earlier notes retained.\_
 
 _Version 1.18 — June 2026. Planning change (no task completed, no version bumps): RFC 0003 (plugin monetization) and RFC 0004 (per-plugin database) both accepted. Tasks 1.0.07 and 1.0.08 promoted from exploratory placeholders to fully scoped post-v1 tasks; deliverables, dependencies, and review checklists filled out. RFC index updated (Draft → Accepted). Earlier notes retained._
 

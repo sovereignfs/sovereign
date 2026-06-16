@@ -20,9 +20,11 @@ lives in your plugin's `manifest.json`. The registry file is:
 }
 ```
 
-The platform's own chrome plugins (e.g. Console) seed the list as `type:
-"platform"` entries; community submissions are `type: "sovereign"` or
-`"community"`.
+The registry lists only **third-party** plugins — entries must be `type:
+"sovereign"` or `type: "community"`. The built-in platform plugins (Console,
+Launcher, Account) are **not** listed: they ship inside the platform and are
+always present, so there is nothing to discover or install. The array starts
+empty and grows as community plugins are submitted.
 
 ## Requirements
 

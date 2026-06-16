@@ -1,8 +1,13 @@
-# Sovereign — Implementation Task Breakdown
+# Sovereign — Roadmap
 
 **Version:** 1.0\
 **Date:** June 2026\
-**Purpose:** Session-by-session task guide for Claude Code. Each task is a single PR. Reference `sovereign-proposal-plan-srs.md` for architectural decisions and rationale.
+**Purpose:** The single source of truth for Sovereign's build plan — implementation tasks grouped by release milestone (**Pre-v1**, **v1**). Each task is a single PR. Completed (merged) tasks are marked **✅**. Reference `sovereign-proposal-plan-srs.md` for architectural decisions and rationale.
+
+> **Note.** This roadmap is the build plan; it replaces the former
+> `sovereign-implementation-tasks.md` (now retired). Completed tasks are marked
+> **✅**; unfinished tasks are listed in priority order under each milestone.
+> Incorporating the open RFCs (0012–0024) as scheduled tasks is an ongoing pass.
 
 ---
 
@@ -24,9 +29,15 @@ Tasks are sequenced — each depends on the previous unless marked **[parallel]*
 
 ---
 
-## Phase v0.3 — Foundation
+## Pre-v1
 
-### Task 0.3.01 — Monorepo scaffold
+Everything that ships to reach the **v1.0** release — foundations (v0.3), the
+platform chrome plugins (v0.4), and polish/self-hosting (v0.5). Tasks already
+implemented keep their original order, numbering, and phase grouping.
+
+### Phase v0.3 — Foundation
+
+#### ✅ Task 0.3.01 — Monorepo scaffold
 
 **Goal:** Bare monorepo structure with pnpm workspaces and Turborepo configured. No application code.
 
@@ -50,7 +61,7 @@ Tasks are sequenced — each depends on the previous unless marked **[parallel]*
 
 ---
 
-### Task 0.3.02 — Shared TypeScript config
+#### ✅ Task 0.3.02 — Shared TypeScript config
 
 **Goal:** Centralised TypeScript configuration inherited by all packages and apps.
 
@@ -71,7 +82,7 @@ Tasks are sequenced — each depends on the previous unless marked **[parallel]*
 
 ---
 
-### Task 0.3.03 — Code quality tooling
+#### ✅ Task 0.3.03 — Code quality tooling
 
 **Goal:** Establish consistent code formatting and linting across the entire
 monorepo before any application code is written. All subsequent tasks inherit
@@ -120,7 +131,7 @@ Code quality section. No Biome — ESLint is required for the custom
 
 ---
 
-### Task 0.3.04 — `packages/db` — Drizzle client factory
+#### ✅ Task 0.3.04 — `packages/db` — Drizzle client factory
 
 **Goal:** Shared database package providing a Drizzle client factory that supports both SQLite and PostgreSQL via a dialect flag.
 
@@ -153,7 +164,7 @@ Code quality section. No Biome — ESLint is required for the custom
 
 ---
 
-### Task 0.3.05 — `packages/manifest` — schema and validation
+#### ✅ Task 0.3.05 — `packages/manifest` — schema and validation
 
 **Goal:** Manifest schema package providing TypeScript types and a validation function.
 
@@ -180,7 +191,7 @@ Code quality section. No Biome — ESLint is required for the custom
 
 ---
 
-### Task 0.3.06 — `packages/mailer` — SMTP abstraction
+#### ✅ Task 0.3.06 — `packages/mailer` — SMTP abstraction
 
 **Goal:** Thin mailer package wrapping nodemailer with a simple `send()` interface.
 
@@ -217,7 +228,7 @@ Code quality section. No Biome — ESLint is required for the custom
 
 ---
 
-### Task 0.3.07 — `packages/ui` — Sovereign Design System scaffold
+#### ✅ Task 0.3.07 — `packages/ui` — Sovereign Design System scaffold
 
 **Goal:** Sovereign Design System scaffold — two-tier CSS custom property token
 architecture and one primitive component to validate the setup. This package is
@@ -298,7 +309,7 @@ externalised `.css` imports resolve inside `dist/`) is finalised in Task 0.5.07.
 
 ---
 
-### Task 0.3.08 — `packages/sdk` — interface definitions
+#### ✅ Task 0.3.08 — `packages/sdk` — interface definitions
 
 **Goal:** SDK package with full interface definitions for v1 surface. Implementations are stubs at this stage — real implementations come in later tasks.
 
@@ -341,7 +352,7 @@ and `files` fields pointing to `dist/`.
 
 ---
 
-### Task 0.3.09 — `apps/auth` — better-auth server **[parallel with 0.3.10]**
+#### ✅ Task 0.3.09 — `apps/auth` — better-auth server **[parallel with 0.3.10]**
 
 **Goal:** Self-contained auth server wrapping better-auth. Handles login, logout, registration, session verification, and its own login/registration UI. Owns its identity database; does **not** use `packages/db` (SRS §3.3).
 
@@ -385,7 +396,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-### Task 0.3.10 — Runtime scaffold **[parallel with 0.3.09]**
+#### ✅ Task 0.3.10 — Runtime scaffold **[parallel with 0.3.09]**
 
 **Goal:** Sovereign Core Next.js app scaffold with shell layout, middleware, and root placeholder page. No plugins wired yet.
 
@@ -438,7 +449,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-### Task 0.3.11 — Generate script
+#### ✅ Task 0.3.11 — Generate script
 
 **Goal:** Pre-build script that reads plugin manifests, validates them, and injects plugin routes into the runtime.
 
@@ -480,7 +491,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-### Task 0.3.12 — Docker Compose for local dev
+#### ✅ Task 0.3.12 — Docker Compose for local dev
 
 **Goal:** Docker Compose setup orchestrating runtime and auth server for local development.
 
@@ -511,9 +522,9 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-## Phase v0.4 — Platform Plugins (Console, Launcher, Account)
+### Phase v0.4 — Platform Plugins (Console, Launcher, Account)
 
-### Task 0.4.01 — Console plugin scaffold
+#### ✅ Task 0.4.01 — Console plugin scaffold
 
 **Goal:** Console plugin directory structure, manifest, and basic routing wired into the runtime via the generate script.
 
@@ -537,7 +548,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-### Task 0.4.02 — Console: user management
+#### ✅ Task 0.4.02 — Console: user management
 
 **Goal:** User list, invite, role change, and deactivate/reactivate.
 
@@ -559,7 +570,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-### Task 0.4.03 — Console: plugin management
+#### ✅ Task 0.4.03 — Console: plugin management
 
 **Goal:** Installed plugin list with enable/disable toggle.
 
@@ -580,7 +591,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-### Task 0.4.04 — Console: tenant settings, system health, and root plugin config
+#### ✅ Task 0.4.04 — Console: tenant settings, system health, and root plugin config
 
 **Goal:** Tenant name configuration, invite-only toggle, system health dashboard, and admin-configurable root plugin.
 
@@ -611,7 +622,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-### Task 0.4.05 — Launcher plugin
+#### ✅ Task 0.4.05 — Launcher plugin
 
 **Goal:** Platform home screen that lists all installed plugins, serving as the default root page at `/`.
 
@@ -640,7 +651,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-### Task 0.4.06 — Account plugin
+#### ✅ Task 0.4.06 — Account plugin
 
 **Goal:** Per-user profile, preferences, and credential management for all authenticated users.
 
@@ -674,9 +685,9 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-## Phase v0.5 — Polish and Self-Hosting
+### Phase v0.5 — Polish and Self-Hosting
 
-### Task 0.5.00 — `scripts/install-plugins.ts` — plugin install script
+#### ✅ Task 0.5.00 — `scripts/install-plugins.ts` — plugin install script
 
 **Goal:** Full implementation of the install script stubbed in Task 0.3.01.
 
@@ -709,7 +720,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 - `pnpm generate` runs automatically after install
 - Script fails clearly if a repository URL is unreachable
 
-### Task 0.5.01 — PWA configuration
+#### ✅ Task 0.5.01 — PWA configuration
 
 **Goal:** Runtime configured as an installable PWA.
 
@@ -730,7 +741,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-### Task 0.5.02 — Production Docker image
+#### ✅ Task 0.5.02 — Production Docker image
 
 **Goal:** Separate production Docker images for runtime and auth, each built
 from Next.js standalone output.
@@ -767,7 +778,7 @@ from Next.js standalone output.
 
 ---
 
-### Task 0.5.03 — Postgres validation
+#### ✅ Task 0.5.03 — Postgres validation
 
 **Goal:** Confirm full parity between SQLite and Postgres deployments.
 
@@ -788,7 +799,7 @@ from Next.js standalone output.
 
 ---
 
-### Task 0.5.04 — `sv` CLI — core commands
+#### ✅ Task 0.5.04 — `sv` CLI — core commands
 
 **Goal:** `sv` CLI with essential commands for managing a Sovereign deployment.
 
@@ -825,7 +836,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 0.5.05 — SDK implementations (db and platform)
+#### ✅ Task 0.5.05 — SDK implementations (db and platform)
 
 **Goal:** Complete remaining SDK implementations. `sdk.auth` and `sdk.mailer` were wired in Task 0.4.02. This task completes `sdk.db` and `sdk.platform`.
 
@@ -849,7 +860,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 0.5.05b — Local session verification in middleware (AUTH-05) **[split from 0.5.05; done]**
+#### ✅ Task 0.5.05b — Local session verification in middleware (AUTH-05) **[split from 0.5.05; done]**
 
 **Goal:** Replace the runtime middleware's per-request `/api/verify` round-trip to the auth server with **local** verification of the session, using the shared secret.
 
@@ -866,7 +877,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 0.5.06 — Documentation **[done]**
+#### ✅ Task 0.5.06 — Documentation **[done]**
 
 **Goal:** Complete self-hosting and plugin developer documentation.
 
@@ -895,7 +906,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 0.5.07 — CI pipeline
+#### ✅ Task 0.5.07 — CI pipeline
 
 **Goal:** GitHub Actions pipelines for continuous validation and npm publishing.
 
@@ -938,7 +949,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 - A tag without a corresponding version bump in the package's `package.json`
   fails the publish (version already exists on npm)
 
-### Task 0.5.08 — Public `/api` namespace delegation **[parallel]**
+#### ✅ Task 0.5.08 — Public `/api` namespace delegation **[parallel]**
 
 **Goal:** Reserve the top-level `/api/*` namespace for plugin-served public APIs, per PLT-16. Required before the API Composer plugin (`docs/plugins/api-composer.md`) can serve its generated APIs.
 
@@ -960,7 +971,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 0.5.09 — Overlay shell mode **[parallel]**
+#### ✅ Task 0.5.09 — Overlay shell mode **[parallel]**
 
 **Goal:** Add the `overlay` shell mode from RFC 0001 (SRS §3.8/§3.9) — a plugin renders as a dismissable dialog over the current page, with a full-page fallback on hard navigation — and migrate Console and Account to it. A v0.5 polish item; no hard dependency on the other v0.5 tasks, but it needs the `packages/ui` `Dialog` primitive. Console and Account already ship as `default`/full-page, so this is a retrofit.
 
@@ -987,32 +998,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 0.5.10 — Cross-plugin data sharing (consent-gated) **[future]**
-
-**Goal:** Implement the consent-gated, pull-based, read-only cross-plugin data-sharing mechanism specified in RFC 0002 / SRS §3.13. The reserved `sdk.data` surface and the `data:provide`/`data:consume` permissions already exist as stubs; this task makes them real. Depends on `sdk.db` (Task 0.5.05).
-
-**Deliverables:**
-
-- Manifest: optional `data.provides[]` / `data.consumes[]` declarations (provider id, contract, version, scope) in `packages/manifest`, with validation + tests
-- Platform DB: `consent_grants` (consumer, provider, contract, user, granted_at, revoked_at, scope) and `data_access_log` tables, both with `tenant_id`
-- Runtime: provider-resolver registry, consent enforcement, tenant/user scoping, audit logging; routes `sdk.data.query` to the provider's registered resolver
-- SDK: implement `sdk.data.query`/`provide` against the runtime (replace the stubs); raise `ConsentRequiredError` when no active grant exists
-- UI: a consent-prompt dialog primitive in `packages/ui`; grant management in Account (own grants) and oversight in Console
-- The mechanism is generic — no plugin is special-cased
-
-**SRS reference:** RFC 0002, SRS §3.13, §5 (manifest `data.*`)
-
-**Review checklist:**
-
-- A consumer `query` without a grant raises `ConsentRequiredError` and surfaces a consent prompt; granting consent then returns the provider's data
-- Reads are read-only, scoped to the requesting user + tenant, and recorded in the audit log
-- Revoking a grant immediately blocks subsequent reads
-- A consumer cannot reach a provider's raw tables — only its registered contract resolver
-- Existing plugins (no `data.*` declared) are unaffected
-
----
-
-### Task 0.5.11 — Logout / self sign-out
+#### ✅ Task 0.5.11 — Logout / self sign-out
 
 **Goal:** Implement AUTH-02 self sign-out across the SDK, the shell chrome, and the Account plugin. The requirement was specified but never built — the shell exposes the avatar only as a link to `/account`, `sdk.auth` has no `signOut`, and session revoke (ACC-06) excludes the current session.
 
@@ -1038,7 +1024,54 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 0.5.12 — Activity log (RFC 0005) **[future]**
+#### ✅ Task 0.5.15 — Security hardening, Tier 0 + Tier 1 (RFC 0008)
+
+**Goal:** Ship the no-crypto-machinery hardening tiers of RFC 0008 / SRS §3.17 in v1: security headers + threat-model doc (Tier 0) and transport hardening (Tier 1). At-rest encryption and beyond (Tiers 2–4) are deferred post-v1 to Task 1.0.01.
+
+**Deliverables:**
+
+- Tier 0: security headers (CSP/HSTS/X-Frame-Options/X-Content-Type-Options/Referrer-Policy/Permissions-Policy) in both Next configs + `runtime/middleware.ts`; cookie-hardening review; codify the no-telemetry guarantee; new `docs/security.md` (threat model + self-hoster hardening checklist)
+- Tier 1: Postgres `sslmode=require` + cert handling in `packages/db`; enforce TLS/HSTS at the edge (documented + required); optional shared-secret/mTLS on the internal runtime↔auth channel
+- No new app secrets or native deps in this task (those arrive with Tier 2 in Task 1.0.01)
+
+**Dependencies:** none hard (TLS/HSTS doc assumes the reverse proxy already in `docs/self-hosting.md`)
+
+**SRS reference:** RFC 0008 (Tiers 0–1), SRS §3.17, NFR-02/07/08
+
+**Review checklist:**
+
+- Every response carries the security headers; CSP does not break the runtime/auth UIs or the inline theme script
+- Postgres connects over TLS when `sslmode=require`; `docs/security.md` documents the threat model and the hardening checklist
+- No behaviour change to the existing session/cookie flow
+
+---
+
+#### Task 0.5.10 — Cross-plugin data sharing (consent-gated)
+
+**Goal:** Implement the consent-gated, pull-based, read-only cross-plugin data-sharing mechanism specified in RFC 0002 / SRS §3.13. The reserved `sdk.data` surface and the `data:provide`/`data:consume` permissions already exist as stubs; this task makes them real. Depends on `sdk.db` (Task 0.5.05).
+
+**Deliverables:**
+
+- Manifest: optional `data.provides[]` / `data.consumes[]` declarations (provider id, contract, version, scope) in `packages/manifest`, with validation + tests
+- Platform DB: `consent_grants` (consumer, provider, contract, user, granted_at, revoked_at, scope) and `data_access_log` tables, both with `tenant_id`
+- Runtime: provider-resolver registry, consent enforcement, tenant/user scoping, audit logging; routes `sdk.data.query` to the provider's registered resolver
+- SDK: implement `sdk.data.query`/`provide` against the runtime (replace the stubs); raise `ConsentRequiredError` when no active grant exists
+- UI: a consent-prompt dialog primitive in `packages/ui`; grant management in Account (own grants) and oversight in Console
+- The mechanism is generic — no plugin is special-cased
+
+**SRS reference:** RFC 0002, SRS §3.13, §5 (manifest `data.*`)
+
+**Review checklist:**
+
+- A consumer `query` without a grant raises `ConsentRequiredError` and surfaces a consent prompt; granting consent then returns the provider's data
+- Reads are read-only, scoped to the requesting user + tenant, and recorded in the audit log
+- Revoking a grant immediately blocks subsequent reads
+- A consumer cannot reach a provider's raw tables — only its registered contract resolver
+- Existing plugins (no `data.*` declared) are unaffected
+
+---
+
+#### Task 0.5.12 — Activity log (RFC 0005)
 
 **Goal:** Implement the scoped activity log specified in RFC 0005 / SRS §3.14. The reserved `sdk.activity.log()` surface and the `activity:write` permission already exist as stubs; this task makes them real.
 
@@ -1061,7 +1094,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 0.5.13 — Deployment & upgrade strategy (RFC 0006) **[future]**
+#### Task 0.5.13 — Deployment & upgrade strategy (RFC 0006)
 
 **Goal:** Implement the tiered, low-downtime upgrade model from RFC 0006 / SRS §3.15. Depends on the CI pipeline (Task 0.5.07) for image publishing.
 
@@ -1086,7 +1119,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 0.5.14 — User data portability (RFC 0007) **[future]**
+#### Task 0.5.14 — User data portability (RFC 0007)
 
 **Goal:** Implement self-service export/import/migration from RFC 0007 / SRS §3.16. The reserved `sdk.portability` surface and `data:export`/`data:import` permissions land as stubs first (sequenced after RFC 0005's stubs).
 
@@ -1110,29 +1143,29 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 0.5.15 — Security hardening, Tier 0 + Tier 1 (RFC 0008)
+#### Task 0.5.17 — Icon system (RFC 0011)
 
-**Goal:** Ship the no-crypto-machinery hardening tiers of RFC 0008 / SRS §3.17 in v1: security headers + threat-model doc (Tier 0) and transport hardening (Tier 1). At-rest encryption and beyond (Tiers 2–4) are deferred post-v1 to Task 1.0.01.
+**Goal:** Adopt Lucide as the icon language per RFC 0011, via a generated zero-dependency SVG set behind a Sovereign `<Icon>`.
 
 **Deliverables:**
 
-- Tier 0: security headers (CSP/HSTS/X-Frame-Options/X-Content-Type-Options/Referrer-Policy/Permissions-Policy) in both Next configs + `runtime/middleware.ts`; cookie-hardening review; codify the no-telemetry guarantee; new `docs/security.md` (threat model + self-hoster hardening checklist)
-- Tier 1: Postgres `sslmode=require` + cert handling in `packages/db`; enforce TLS/HSTS at the edge (documented + required); optional shared-secret/mTLS on the internal runtime↔auth channel
-- No new app secrets or native deps in this task (those arrive with Tier 2 in Task 1.0.01)
+- A name list + generation script emitting curated Lucide icons as inline RSC-safe SVG components into the design system; `lucide` as a **devDependency only** (no runtime/peer dep); ISC `NOTICE`
+- `<Icon>` component (typed `name` union, size/color bound to `--sv-` tokens, a11y) exported from the design system
+- Replace the chrome monograms/`⚙` emoji with `<Icon>`; render plugin manifest `icon.svg` in `PluginTile`/sidebar safely (`<img>`/sanitized, monogram fallback)
+- Docs: `docs/design-system.md` (Icon) + `docs/plugin-development.md`
 
-**Dependencies:** none hard (TLS/HSTS doc assumes the reverse proxy already in `docs/self-hosting.md`)
+**Dependencies:** Task 0.4.06 (chrome/Account), Task 0.4.05 (Launcher tiles)
 
-**SRS reference:** RFC 0008 (Tiers 0–1), SRS §3.17, NFR-02/07/08
+**SRS reference:** RFC 0011
 
 **Review checklist:**
 
-- Every response carries the security headers; CSP does not break the runtime/auth UIs or the inline theme script
-- Postgres connects over TLS when `sslmode=require`; `docs/security.md` documents the threat model and the hardening checklist
-- No behaviour change to the existing session/cookie flow
+- The published design system carries no runtime/peer icon dependency; icons recolor via `currentColor`/tokens and theme correctly
+- Adding an icon is "add a name + regenerate"; plugin SVGs are never injected as raw HTML
 
 ---
 
-### Task 0.5.16 — Test organization (RFC 0010) **[parallel]**
+#### Task 0.5.16 — Test organization (RFC 0010) **[parallel]**
 
 **Goal:** Apply the boundary-based test layout from RFC 0010. Mechanical; one pass.
 
@@ -1155,29 +1188,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 0.5.17 — Icon system (RFC 0011) **[future]**
-
-**Goal:** Adopt Lucide as the icon language per RFC 0011, via a generated zero-dependency SVG set behind a Sovereign `<Icon>`.
-
-**Deliverables:**
-
-- A name list + generation script emitting curated Lucide icons as inline RSC-safe SVG components into the design system; `lucide` as a **devDependency only** (no runtime/peer dep); ISC `NOTICE`
-- `<Icon>` component (typed `name` union, size/color bound to `--sv-` tokens, a11y) exported from the design system
-- Replace the chrome monograms/`⚙` emoji with `<Icon>`; render plugin manifest `icon.svg` in `PluginTile`/sidebar safely (`<img>`/sanitized, monogram fallback)
-- Docs: `docs/design-system.md` (Icon) + `docs/plugin-development.md`
-
-**Dependencies:** Task 0.4.06 (chrome/Account), Task 0.4.05 (Launcher tiles)
-
-**SRS reference:** RFC 0011
-
-**Review checklist:**
-
-- The published design system carries no runtime/peer icon dependency; icons recolor via `currentColor`/tokens and theme correctly
-- Adding an icon is "add a name + regenerate"; plugin SVGs are never injected as raw HTML
-
----
-
-### Task 0.5.18 — Registry contribution process
+#### Task 0.5.18 — Registry contribution process
 
 **Goal:** Define and document the process for submitting a community plugin to `registry/plugins.json`.
 
@@ -1197,7 +1208,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-### Task 0.5.19 — Stable SDK and semver commitment
+#### Task 0.5.19 — Stable SDK and semver commitment
 
 **Goal:** SDK API review, cleanup, and semver commitment documented.
 
@@ -1218,11 +1229,188 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-## Phase v1.0+ — Post-release / future
+#### Task 0.5.20 — SDK distribution & plugin isolation boundary (RFC 0023)
+
+**Goal:** Decide and implement the published-SDK model. Plugins are host-composed fragments with no standalone runtime and the SDK is in-process host glue, so publish `@sovereignfs/sdk` as a **types-first contract** (host-provided/guarded impls, no `db`/`mailer` dependency) — which also dissolves the private-deps blocker — or drop the "published" designation if isolated authoring isn't pursued.
+
+**Deliverables:**
+
+- Restructure `packages/sdk`: published artifact is the typed API surface; implementations are host-provided and throw a clear "runs inside the Sovereign runtime" error outside it; `@sovereignfs/db`/`@sovereignfs/mailer` stay `private` (no bundling)
+- `publish.yml` `sdk-v*` path works against the restructured package; the SRS decision-log "no runtime dependencies" claim becomes literally true
+- Document the plugin **isolation boundary** (author/typecheck ✅, build-as-app/run ❌) in `docs/plugin-development.md`; rewrite the CLAUDE.md caveat; drop the `noExternal`-bundle plan
+
+**Dependencies:** pairs with Task 0.5.19 (stable SDK); unblocks Task 0.5.27
+
+**SRS reference:** RFC 0023; supersedes the SDK-publish prerequisite in RFC 0017
+
+**Review checklist:**
+
+- A standalone plugin repo type-checks against the published SDK with no `db`/`mailer` install
+- The published SDK has zero runtime dependencies; impls fail clearly if executed outside the runtime
+
+---
+
+#### Task 0.5.21 — Plugin compatibility & versioning (RFC 0024)
+
+**Goal:** Make the dormant `schemaVersion` and `compatibility.minPlatformVersion` fields functional, add an advisory `maxPlatformVersion`, and enforce compatibility consistently.
+
+**Deliverables:**
+
+- `packages/manifest`: add `semver`; validate `min`/`maxPlatformVersion` as semver; add `CURRENT_MANIFEST_SCHEMA_VERSION` (accept ≤ current, reject unknown-higher); add optional `maxPlatformVersion`; a pure `checkCompatibility(manifest, platformVersion)` resolver (manifest **minor** bump)
+- Wire the resolver at four points: install (`sv plugin add`/`install-plugins`) + build (`generate-registry`) **refuse** incompatible; **boot disables + surfaces** (Console/health); registry filters (Task 0.5.18)
+- Advisory `maxPlatformVersion` = warning, non-blocking; docs in `docs/plugin-development.md` + `docs/self-hosting.md` (+ docs-parity for the new field)
+
+**Dependencies:** coordinates with RFC 0006's boot gate (Task 0.5.13)
+
+**SRS reference:** RFC 0024
+
+**Review checklist:**
+
+- A too-new `minPlatformVersion` fails at install/build with a clear message; an incompatible installed plugin is disabled (not bricking) at boot and shown in health
+- `schemaVersion` higher than current is rejected; older is accepted
+
+---
+
+#### Task 0.5.22 — Plugin-scoped environment variables (RFC 0018)
+
+**Goal:** Let a plugin declare and supply its own env vars in plugin scope without touching monorepo files, with secrets never baked into artifacts.
+
+**Deliverables:**
+
+- Manifest `env` field: `KEY → { description, required?, secret?, scope: 'build'|'runtime', default? }` (`default` rejected on `secret`); manifest **minor** bump + docs-parity
+- Auto-namespacing `SV_PLUGIN_<SLUG>_<KEY>`; a scoped `sdk.env.get('KEY')` accessor; `NEXT_PUBLIC_SV_PLUGIN_*` for build-scope client values
+- `generate-registry` merges manifest defaults + a plugin-local `.env` (dev only), namespaces, validates (no committed secrets, no collisions), emits a generated gitignored loader + an operator-facing list of required secret keys
+- Production secrets are operator-supplied at runtime via the namespaced container env; never baked
+
+**Dependencies:** the `sdk.env` surface (SDK)
+
+**SRS reference:** RFC 0018
+
+**Review checklist:**
+
+- A plugin reads its own keys via `sdk.env.get` unprefixed and cannot read platform/other-plugin keys via the accessor
+- A committed secret value fails the build; secret keys never appear in the image
+
+---
+
+#### Task 0.5.23 — Test setup & seeding (RFC 0019)
+
+**Goal:** A test-data foundation — in-code fixtures/factories plus an idempotent seed with per-role test users — and the dev/prod mode concept.
+
+**Deliverables:**
+
+- In-code fixtures/factories (user/tenant/plugin-status/notification) for unit/integration, placed per RFC 0010's layout
+- `sv seed` (`scripts/seed.ts`): idempotent baseline data + per-role test users (admin, user; known passwords via `better-auth/crypto`), **hard-gated to non-prod**
+- Document the disposable dev/test DB (config-only via `DATABASE_URL`/`AUTH_DATABASE_URL`); align with the RFC 0010 e2e tier; establish dev (default locally) vs prod mode
+
+**Dependencies:** Task 0.5.16 (test-org layout)
+
+**SRS reference:** RFC 0019
+
+**Review checklist:**
+
+- `sv seed` is idempotent and refuses to run against a prod DB; documented test users can log in
+- Fixtures need no running instance or DB
+
+---
+
+#### Task 0.5.24 — Minimal shell mode (RFC 0014)
+
+**Goal:** Wire the third `shell` mode — `minimal` (chrome-free, full-bleed) — which currently fails the build.
+
+**Deliverables:**
+
+- A new top-level `(minimal)` route group (sibling of `(platform)`) with a committed chrome-free `layout.tsx` (force-dynamic for the CSP nonce; `100dvh` + safe-area per RFC 0013) + `.gitignore`
+- `generate-registry`: replace the `minimal` build-fail with a compose target (`(minimal)/<routeSegment>`, multi-segment allowed) + clear step; compose/parity tests
+- Root-plugin eligibility keeps minimal allowed (kiosk) with the no-chrome/no-nav caveat + a nav-contract convention documented; CLAUDE.md note
+
+**Dependencies:** builds on the RFC 0001 composition model
+
+**SRS reference:** RFC 0014
+
+**Review checklist:**
+
+- A `shell: minimal` plugin composes to `(minimal)/` and renders chrome-free; the session gate still applies
+- It is not wrapped by the `(platform)` shell
+
+---
+
+#### Task 0.5.25 — Mobile responsiveness & PWA hardening (RFC 0013)
+
+**Goal:** Harden the mobile and PWA experience across the three shell modes.
+
+**Deliverables:**
+
+- Default shell (mobile): footer → an action button opening a dismissable bottom **Drawer** (plugin nav); header gains the active-plugin title; Console moves into the avatar menu
+- Overlay: `--sv-dialog-inset-top` keeps the header visible above the mobile sheet
+- Cross-cutting: unify the 640/768 breakpoints; `100vh` → `100dvh`; `viewport-fit=cover` + `env(safe-area-inset-*)`; 44px touch targets + `--sv-touch-target-min`; manifest polish (`display_override`/`shortcuts`/`screenshots`/`orientation`, immersive iOS status bar)
+- `packages/ui`: a `Drawer` primitive + tokens (additive **minor**); the first responsive section in `docs/design-system.md`
+
+**Dependencies:** relates to Task 0.5.24 (minimal safe-area)
+
+**SRS reference:** RFC 0013
+
+**Review checklist:**
+
+- The mobile footer opens the Drawer; an open overlay keeps the header visible; safe areas are respected in standalone
+- One documented breakpoint; the shell uses `dvh`
+
+---
+
+#### Task 0.5.26 — Passkeys & TOTP MFA (RFC 0012)
+
+**Goal:** Add TOTP MFA (authenticator-app only) and passkeys (2FA + passwordless) on better-auth's first-party plugins.
+
+**Deliverables:**
+
+- `apps/auth`: enable `two-factor` (`totp` + `backupCodes`, no email/SMS OTP) and add `@better-auth/passkey` (rpID/rpName/origin); multi-step login (`twoFactorRedirect`) + passwordless `signIn.passkey()`
+- Account Security tab: TOTP enrollment (QR + one-time backup codes), passkey add/list/remove; password re-prompt for sensitive changes (given `freshAge: 0`)
+- Recovery ladder: backup codes → Console admin reset → `sv` CLI break-glass for a locked-out sole admin
+- Session-cache invalidation on factor changes; document the WebAuthn rpID/origin production constraint + the new env vars
+
+**Dependencies:** Task 0.4.06 (Account/Security), Task 0.5.05b (cookie cache)
+
+**SRS reference:** RFC 0012
+
+**Review checklist:**
+
+- A user enrolls TOTP/passkey and is challenged at login; passwordless sign-in works; backup codes + admin reset recover a lost factor
+- No SMS/email OTP path exists
+
+---
+
+#### Task 0.5.27 — Plugin starter template & example plugins (RFC 0017)
+
+**Goal:** A frictionless plugin on-ramp — one canonical starter skeleton delivered three ways, plus capability-demo example plugins that double as test fixtures.
+
+**Deliverables:**
+
+- One canonical skeleton via a GitHub **template repo** (`sovereign-plugin-template`), a **`sv plugin new <name>`** command, and an **`npm create @sovereignfs/plugin`** initializer
+- Capability-demo example plugins (`example-basic`, `example-api`, …) that also serve as runtime test fixtures (composition, route-guard, `apiProvider`)
+- Consolidated naming/conventions; tie-in to the registry (Task 0.5.18); the dev/test loop is runtime-hosted (RFC 0023 — no standalone run)
+
+**Dependencies:** Task 0.5.20 (types-first SDK publish), Task 0.5.18 (registry), Tasks 0.5.16/0.5.23 (fixtures)
+
+**SRS reference:** RFC 0017
+
+**Review checklist:**
+
+- A new plugin scaffolds and runs against a local Sovereign from any of the three entry points
+- Example plugins compose and double as fixtures
+
+---
+
+## v1
+
+The v1.0 release line and post-release work — net-new features, the capability
+work the SRS §3.4 designates a “future version”, advanced operations, and
+exploratory proposals (added as tasks but gated on RFC acceptance).
+
+### Phase v1.0+ — Post-release / future
 
 > Work scheduled **after** the v1.0 public release. Items here are post-v1 regardless of when their reserved-stub groundwork lands.
 
-### Task 1.0.01 — Encryption at rest & field-level, Tier 2–4 (RFC 0008) **[post-v1]**
+#### Task 1.0.01 — Encryption at rest & field-level, Tier 2–4 (RFC 0008) **[post-v1]**
 
 **Goal:** The deferred, crypto-heavy tiers of RFC 0008 / SRS §3.17 — shipped **after v1**. Tier 2 (at-rest encryption + key management), Tier 3 (field-level via `sdk.crypto`), and the charting of Tier 4 (zero-knowledge E2EE). The reserved `sdk.crypto` surface + `crypto:use` permission land as `NotImplementedError` stubs first (after RFC 0005's stubs).
 
@@ -1244,6 +1432,158 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 - Field-level encryption is gated by `crypto:use`; encrypted columns document the search/sort caveat
 
 ---
+
+#### Task 1.0.02 — Platform roles & capabilities (RFC 0021) **[post-v1]**
+
+**Goal:** Grow the two-role model into a capability-based model with named role presets and a protected `platform:owner` — the SRS §3.4 "future version" with database-driven capability assignment.
+
+**Deliverables:**
+
+- Capabilities as the enforcement unit; built-in presets owner/admin/auditor/user (hardcoded defaults) + a DB-driven override layer
+- `platform:owner`: the first user becomes owner (amends AUTH-08 + a migration for existing instances), sole holder of `role:assign`, protected (closes the missing last-admin guard)
+- Centralize role/capability constants + a `hasCapability`/`requireCapability` resolver (replacing the ~6 binary `platform:admin` checks); carry effective capabilities in the signed session cache for the Edge gate; SDK helper; Console assignment UI (audited via RFC 0005)
+
+**Dependencies:** Task 0.5.12 (audit), Task 0.5.05b (session cache)
+
+**SRS reference:** RFC 0021, SRS §3.4
+
+**Review checklist:**
+
+- An auditor sees a read-only Console; the owner cannot be locked out; capability changes propagate within the cookie-cache window
+- `adminOnly` maps to a capability gate
+
+---
+
+#### Task 1.0.03 — Plugin-declared capabilities (RFC 0022) **[post-v1]**
+
+**Goal:** Let plugins declare namespaced capabilities (`splitify:create-group`) enforced intra-plugin via the SDK.
+
+**Deliverables:**
+
+- Manifest `capabilities` declaration (auto-namespaced by slug, optional `defaultGrant`), validated at build (manifest **minor**)
+- `sdk.auth.hasCapability` resolves plugin capabilities; enforcement is inside the plugin (not the platform route gate)
+- The assignment/storage model (platform-stored vs plugin-managed — the central open question) + docs
+
+**Dependencies:** Task 1.0.02 (capability model)
+
+**SRS reference:** RFC 0022
+
+**Review checklist:**
+
+- A plugin gates a feature on its own capability via the SDK; the platform route gate does not enforce plugin capabilities
+
+---
+
+#### Task 1.0.04 — Notification Center (RFC 0015) **[post-v1]**
+
+**Goal:** A per-user notification inbox with a bell + panel, toasts, the `sdk.notifications` send surface, and admin broadcast.
+
+**Deliverables:**
+
+- Tenant-scoped `notifications` table (read/unread/dismiss) + notification prefs; clearly differentiated from the activity log
+- Implement `sdk.notifications.send` (send-only for plugins; runtime injects source/tenant); platform-owned fan-out (inbox + toast if active)
+- Bell + panel in chrome (sidebar/header, RFC 0011 icon, RFC 0013 Drawer on mobile) + a `Toast` primitive; `/api/account/notifications` routes
+- Admin broadcast with guardrails (audited via RFC 0005, rate-limited, audience-scoped, user opt-out); admin-selectable transport (polling default / WebSocket) + per-user poll interval
+
+**Dependencies:** Task 0.5.05 (`sdk.db`), Task 0.5.12 (audit), Task 0.5.17 (icons)
+
+**SRS reference:** RFC 0015
+
+**Review checklist:**
+
+- A plugin send appears in the inbox + bell badge + a toast; an admin broadcast reaches all users and is audited; users can mute the announcement category
+
+---
+
+#### Task 1.0.05 — Web Push notifications (RFC 0016) **[post-v1]**
+
+**Goal:** Background delivery of inbox notifications via Web Push (VAPID + service worker).
+
+**Deliverables:**
+
+- VAPID keys as optional no-default env secrets (push disabled when unset); a `customWorkerSrc` push/`notificationclick` handler; `push_subscriptions` table + helpers
+- Account opt-in (permission + subscribe) with the iOS-installed-PWA caveat; `web-push` send on the RFC 0015 fan-out (subject to category prefs); prune on `410`
+- Plugins never touch push — the platform fans out from the inbox
+
+**Dependencies:** Task 1.0.04 (Notification Center)
+
+**SRS reference:** RFC 0016
+
+**Review checklist:**
+
+- Enabling push delivers a background notification; an unsubscribed device gets none; secrets stay in env (push off when unset)
+
+---
+
+#### Task 1.0.06 — Production dev-mode & diagnostics (RFC 0020) **[post-v1]**
+
+**Goal:** Validate features on a production instance against a mock database without touching real data, plus local no-telemetry diagnostics.
+
+**Deliverables:**
+
+- A request-scoped dev-mode switch (`AsyncLocalStorage`, never global) → the mock DB for the toggled request only; env-gated off by default, secret-authenticated, visibly flagged, audited (RFC 0005); the mock DB seeded by `sv seed`
+- Resolve the auth-server mock-DB crux (or scope v1 to data-only mock)
+- Structured logging (`LOG_LEVEL`, stdout only) + a richer admin `/api/admin/health` — reconciled with the no-telemetry guarantee
+
+**Dependencies:** Task 0.5.23 (seed), Task 0.5.12 (audit)
+
+**SRS reference:** RFC 0020
+
+**Review checklist:**
+
+- A dev-mode request reads only the mock DB; concurrent real requests are unaffected; nothing egresses
+
+---
+
+#### Task 1.0.07 — Plugin monetization (RFC 0003) **[post-v1]**
+
+**Goal:** Let plugin authors monetize plugins via a manifest-declared model + author-signed entitlement gating. RFC 0003 accepted.
+
+**Deliverables:**
+
+- Manifest `monetization` object (`model`/`interval`/`tiers`/`license.publicKey`); validation + tests; `@sovereignfs/manifest` minor bump
+- Reserved `sdk.billing`/`entitlements` surface (stub throwing `NotImplementedError`) + `EntitlementRequiredError`; `@sovereignfs/sdk` minor bump
+- Entitlement gating in runtime middleware by `routePrefix` (paywall / `402`), mirroring the disabled-plugin pattern; `entitlements` table with `tenant_id`
+- `PaymentProvider` adapter interface; manual/bank, Stripe, and PayPal adapters (hosted checkout + webhooks); offline signature verification against author public key
+- Subscription management in Account (purchase/import license, active subscriptions, renewal/cancel); entitlement oversight + manual-payment confirmation in Console
+- Paywall page (runtime-owned); plugin key-rotation support; docs
+
+**Dependencies:** Task 0.5.08 (API namespace — webhook endpoints), Task 0.5.05 (`sdk.db`)
+
+**SRS reference:** RFC 0003
+
+**Review checklist:**
+
+- A `recurring` plugin is paywalled without an entitlement; a signed license grants access; a Stripe webhook renews the entitlement; manual import works with no gateway
+
+---
+
+#### Task 1.0.08 — Per-plugin database (RFC 0004) **[post-v1]**
+
+**Goal:** Let a plugin opt into a dedicated database (`database: "isolated"`) rather than sharing the platform DB. RFC 0004 accepted.
+
+**Deliverables:**
+
+- SQLite: dedicated file per isolated plugin (`data/plugins/<pluginId>.db`) via `createClient`; per-plugin client registry (lazy, keyed by id); per-store migration-tracking table
+- Postgres: schema-per-plugin (`CREATE SCHEMA`, `search_path`); provision on first use, `DROP SCHEMA … CASCADE` on uninstall; no extra pool (single connection)
+- Migration runner routes each plugin's migrations to its resolved store (shared → platform DB; isolated → dedicated store)
+- `sdk.db.getClient()` transparently returns the shared or dedicated client per the plugin's `database` setting
+- Plugin lifecycle hooks: provision on first `getClient()`, drop on uninstall/purge; per-plugin backup/export path
+- SRS §3.7/§4.6/§5 updated ("not implemented" → "opt-in isolated model")
+
+**Dependencies:** Task 0.5.03 (Postgres), Task 0.5.05 (`sdk.db`)
+
+**SRS reference:** RFC 0004
+
+**Review checklist:**
+
+- `database: "isolated"` plugin gets its own SQLite file; uninstall drops it entirely; `shared` plugin is unaffected; Postgres schema-per-plugin provisions and drops cleanly
+
+---
+
+_Version 1.18 — June 2026. Planning change (no task completed, no version bumps): RFC 0003 (plugin monetization) and RFC 0004 (per-plugin database) both accepted. Tasks 1.0.07 and 1.0.08 promoted from exploratory placeholders to fully scoped post-v1 tasks; deliverables, dependencies, and review checklists filled out. RFC index updated (Draft → Accepted). Earlier notes retained._
+
+_Version 1.17 — June 2026. Planning change (no task completed, no version bumps): cross-checked all RFCs against the roadmap and incorporated the unscheduled ones. **Pre-v1** gained Tasks 0.5.20 (SDK distribution & isolation, RFC 0023), 0.5.21 (plugin compatibility & versioning, RFC 0024), 0.5.22 (plugin-scoped env, RFC 0018), 0.5.23 (test setup & seeding, RFC 0019), 0.5.24 (minimal shell, RFC 0014), 0.5.25 (mobile/PWA hardening, RFC 0013), 0.5.26 (passkeys & TOTP MFA, RFC 0012), 0.5.27 (plugin starter & examples, RFC 0017). **v1 / post-release** gained Tasks 1.0.02 (platform roles & capabilities, RFC 0021), 1.0.03 (plugin-declared capabilities, RFC 0022), 1.0.04 (Notification Center, RFC 0015), 1.0.05 (Web Push, RFC 0016), 1.0.06 (production dev-mode & diagnostics, RFC 0020), and exploratory 1.0.07 (plugin monetization, RFC 0003) / 1.0.08 (per-plugin database, RFC 0004). RFC 0009 stays withdrawn (no task). All are documentation-first Draft RFCs; phasing/ordering may change as they are scheduled and accepted. Earlier notes retained._
 
 _Version 1.16 — June 2026. Planning change (renumber): moved **Registry contribution process** → **Task 0.5.18** and **Stable SDK and semver commitment** → **Task 0.5.19** into the pre-v1 Phase v0.5 (they are the run-up-to-1.0 deliverables). Introduced a **Phase v1.0+ — Post-release / future** heading and renumbered the encryption work from Task 0.5.18 to **Task 1.0.01 — Encryption at rest & field-level, Tier 2–4 (RFC 0008)** `[post-v1]` so a task's number prefix now matches its phase (0.5.x = pre-v1, 1.0.x = post-release). Cross-references updated (Tasks 0.5.14/0.5.15). Mirrored in SRS v0.24. Earlier notes retained._
 

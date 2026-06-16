@@ -16,8 +16,9 @@ they are authoritative over assumptions:
 
 - `docs/sovereign-proposal-plan-srs.md` — Concept, Plan, Architecture, SRS,
   manifest reference, decision log.
-- `docs/sovereign-implementation-tasks.md` — The build plan: ~22 sequenced
-  tasks (v0.3 → v0.4 → v0.5 → v1.0). Each task = one branch = one PR.
+- `docs/roadmap.md` — The build plan: sequenced tasks grouped by release
+  milestone (Pre-v1, v1); completed tasks marked ✅. Each task = one branch =
+  one PR.
 
 ## Working conventions
 

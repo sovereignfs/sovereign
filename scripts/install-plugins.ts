@@ -15,7 +15,7 @@
  * plugins (console/launcher/account) live in this repo and are not listed here;
  * cloned plugins are gitignored (they have their own repositories).
  *
- * See: docs/sovereign-implementation-tasks.md — Task 0.5.00.
+ * See: docs/roadmap.md — Task 0.5.00.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';

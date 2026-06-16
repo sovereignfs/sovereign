@@ -1,6 +1,8 @@
 import { headers } from 'next/headers';
-import { DEFAULT_TENANT_ID } from '@sovereignfs/db';
 import { NotAuthenticatedError } from './errors';
+
+// v1 is single-tenant; every session belongs to this tenant id.
+const DEFAULT_TENANT_ID = 'default';
 import { markCurrentSessions, type RawSession } from './sessions';
 import type { ActiveSession, ChangePasswordInput, Session } from './types';
 

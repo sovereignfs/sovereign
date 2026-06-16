@@ -1,14 +1,19 @@
 {
   "name": "@sovereignfs/sdk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "Sovereign SDK — the plugin↔platform contract (types and interfaces).",
   "license": "AGPL-3.0-or-later",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": "./src/index.ts"
   },
@@ -19,10 +24,6 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@sovereignfs/db": "workspace:*",
-    "@sovereignfs/mailer": "workspace:*"
   },
   "peerDependencies": {
     "next": ">=15.0.0"

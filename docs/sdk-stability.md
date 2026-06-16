@@ -48,8 +48,21 @@ When one of these is implemented, it graduates into the stable surface with a
 
 ## Distribution
 
-The stable API is the **typed contract**; SDK implementations run inside the
-Sovereign runtime. The npm packaging that lets a standalone plugin repo
-type-check against the published SDK without pulling in internal packages is
-finalised in Task 0.5.20 (RFC 0023). Until that tag ships, consume the SDK from
-within the monorepo.
+`@sovereignfs/sdk` is a **types-first contract** with **zero runtime
+dependencies**. Implementations are host-provided by the Sovereign runtime at
+startup (`runtime/instrumentation.ts` registers them via `provideHost()`); when
+the SDK is called from a composed plugin route, the host's copy always executes,
+not the caller's installed copy.
+
+This means:
+
+- A standalone plugin repo can install `@sovereignfs/sdk` as a devDependency
+  and type-check against its surface without pulling in platform-internal
+  packages (`@sovereignfs/db`, `@sovereignfs/mailer`, etc. — those stay
+  `private` and are never bundled into the published SDK).
+- The SDK's methods are not meaningful outside the runtime. Calling them from a
+  process with no registered host throws `"@sovereignfs/sdk: no runtime host is
+registered"`. The dev/test loop is always runtime-hosted.
+
+See `docs/plugin-development.md` → [Plugin isolation boundary](#plugin-isolation-boundary)
+for the full authoring ✅ / build ❌ / run ❌ table.

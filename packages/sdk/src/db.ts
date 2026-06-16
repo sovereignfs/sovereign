@@ -1,4 +1,4 @@
-import { getPlatformDb } from '@sovereignfs/db';
+import { requireHost } from './host';
 import type { DrizzleClient } from './types';
 
 /**
@@ -10,5 +10,5 @@ import type { DrizzleClient } from './types';
  * reads complete synchronously).
  */
 export async function getClient(): Promise<DrizzleClient> {
-  return (await getPlatformDb()).db;
+  return requireHost().db.getClient();
 }

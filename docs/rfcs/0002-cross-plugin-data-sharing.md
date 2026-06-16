@@ -1,10 +1,10 @@
 # RFC 0002 — Cross-plugin data sharing
 
-**Status:** Draft\
+**Status:** Accepted\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** SDK (`packages/sdk`), manifest schema (`packages/manifest`), runtime, `packages/ui`, Console/Account\
-**Incorporated into plan:** Partially — the **reserved `sdk.data` surface** (stub) and the `data:provide` / `data:consume` permissions are added now (they throw `NotImplementedError`, like the other reserved surfaces). The consent model, manifest data-contract declarations, runtime resolution, audit log, and consent UI are **deferred** until this RFC is accepted and scheduled.
+**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.10. The **reserved `sdk.data` surface** (stub) and the `data:provide` / `data:consume` permissions already landed (they throw `NotImplementedError`, like the other reserved surfaces); the full mechanism — consent model, manifest data-contract declarations, runtime resolution, audit log, and consent UI — lands in that task.
 
 ---
 
@@ -144,16 +144,16 @@ plugin may be a provider, a consumer, or both.
 
 ## Impact when accepted (deferred — beyond the reserved stub already landed)
 
-| Where                                    | Change                                                                                      |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `packages/manifest`                      | Add the optional `data.provides[]` / `data.consumes[]` declarations; tests; **minor** bump. |
-| `packages/sdk`                           | Implement `sdk.data.query`/`provide` against the runtime (replace the stub).                |
-| Runtime                                  | Provider-resolver registry, consent enforcement, user/tenant scoping, audit log.            |
-| Platform DB                              | `consent_grants` + `data_access_log` tables (with `tenant_id`).                             |
-| `packages/ui`                            | Consent-prompt dialog primitive.                                                            |
-| Console / Account                        | Manage/revoke grants (Account: own grants; Console: audit/oversight).                       |
-| SRS §3 / §5                              | Promote the mechanism from "post-v1 plan" to specified; manifest reference for `data.*`.    |
-| `docs/sovereign-implementation-tasks.md` | The implementation task (already stubbed as a future task entry).                           |
+| Where               | Change                                                                                      |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| `packages/manifest` | Add the optional `data.provides[]` / `data.consumes[]` declarations; tests; **minor** bump. |
+| `packages/sdk`      | Implement `sdk.data.query`/`provide` against the runtime (replace the stub).                |
+| Runtime             | Provider-resolver registry, consent enforcement, user/tenant scoping, audit log.            |
+| Platform DB         | `consent_grants` + `data_access_log` tables (with `tenant_id`).                             |
+| `packages/ui`       | Consent-prompt dialog primitive.                                                            |
+| Console / Account   | Manage/revoke grants (Account: own grants; Console: audit/oversight).                       |
+| SRS §3 / §5         | Promote the mechanism from "post-v1 plan" to specified; manifest reference for `data.*`.    |
+| `docs/roadmap.md`   | The implementation task (already stubbed as a future task entry).                           |
 
 ## Alternatives considered
 
@@ -200,3 +200,4 @@ plugin may be a provider, a consumer, or both.
 | Version | Date     | Change                                                          |
 | ------- | -------- | --------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; reserved `sdk.data` stub + `data:*` permissions. |
+| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.10.              |

@@ -198,19 +198,19 @@ doc-only draft.)
 
 ## Impact when accepted (deferred — beyond the reserved stub)
 
-| Where                                    | Change                                                                      |
-| ---------------------------------------- | --------------------------------------------------------------------------- |
-| runtime                                  | Security headers (next config + middleware); avatar decrypt-on-serve.       |
-| `apps/auth`                              | DB encryption; security headers.                                            |
-| `packages/db`                            | SQLCipher driver option; Postgres SSL; envelope/key-management helpers.     |
-| `packages/sdk`                           | Implement `sdk.crypto` (replace the stub) against the runtime per-user DEK. |
-| `packages/manifest`                      | Enforce `crypto:use`.                                                       |
-| `bin/sv`                                 | Encrypt backup archives.                                                    |
-| RFC 0006 / RFC 0007                      | Amend to encrypted backups / encrypted export bundles.                      |
-| `.env.example`, `docs/self-hosting.md`   | New encryption env vars + setup/rotation/recovery procedures.               |
-| `docs/security.md` (new)                 | Threat model + hardening checklist.                                         |
-| SRS §3 / §4                              | New `SEC-xx` requirement IDs + decision-log entry.                          |
-| `docs/sovereign-implementation-tasks.md` | Sequenced tasks (Tier 0 → 1 → 2 → 3 → 4).                                   |
+| Where                                  | Change                                                                      |
+| -------------------------------------- | --------------------------------------------------------------------------- |
+| runtime                                | Security headers (next config + middleware); avatar decrypt-on-serve.       |
+| `apps/auth`                            | DB encryption; security headers.                                            |
+| `packages/db`                          | SQLCipher driver option; Postgres SSL; envelope/key-management helpers.     |
+| `packages/sdk`                         | Implement `sdk.crypto` (replace the stub) against the runtime per-user DEK. |
+| `packages/manifest`                    | Enforce `crypto:use`.                                                       |
+| `bin/sv`                               | Encrypt backup archives.                                                    |
+| RFC 0006 / RFC 0007                    | Amend to encrypted backups / encrypted export bundles.                      |
+| `.env.example`, `docs/self-hosting.md` | New encryption env vars + setup/rotation/recovery procedures.               |
+| `docs/security.md` (new)               | Threat model + hardening checklist.                                         |
+| SRS §3 / §4                            | New `SEC-xx` requirement IDs + decision-log entry.                          |
+| `docs/roadmap.md`                      | Sequenced tasks (Tier 0 → 1 → 2 → 3 → 4).                                   |
 
 ## Alternatives considered
 

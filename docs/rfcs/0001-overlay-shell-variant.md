@@ -161,7 +161,7 @@ New primitives (also independently useful):
 | `runtime/app/(platform)/`                            | `@modal` slot: `default.tsx`, dialog `layout.tsx`; layout renders the slot.                                                                          |
 | `packages/ui`                                        | `Dialog` (and mobile sheet behaviour).                                                                                                               |
 | `docs/plugins/console.md`, `docs/plugins/account.md` | Manifests flip to `shell: "overlay"`; UI sections updated.                                                                                           |
-| `docs/sovereign-implementation-tasks.md`             | A wiring task (suggested: land with or just before the Account plugin task, so Account ships overlay-first and Console migrates in the same change). |
+| `docs/roadmap.md`                                    | A wiring task (suggested: land with or just before the Account plugin task, so Account ships overlay-first and Console migrates in the same change). |
 | `CLAUDE.md`                                          | Hard-rule note: the shell route-group mapping gains the overlay compose target.                                                                      |
 
 ## Alternatives considered

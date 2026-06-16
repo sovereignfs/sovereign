@@ -216,16 +216,16 @@ A future `sdk.activity.list(query)` (plugins reading their own emitted events) i
 
 ## Impact when accepted (deferred — beyond the reserved stub already landed)
 
-| Where                                    | Change                                                                                     |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `packages/manifest`                      | Enforce `activity:write`; tests.                                                           |
-| `packages/sdk`                           | Implement `sdk.activity.log()` against the runtime (replace the stub).                     |
-| `packages/db`                            | `activity_log` table (both dialects + parity) + `recordActivity()` helper + bootstrap DDL. |
-| Runtime                                  | Capture points, verify-boundary login capture, `sdk.activity` write-mediation, read APIs.  |
-| Console                                  | `/console/activity` admin view (filters, pagination).                                      |
-| Account                                  | `/activity` personal-feed tab.                                                             |
-| SRS §3 / §4                              | Promote to specified; new `ALG-xx` functional requirements + decision-log entry.           |
-| `docs/sovereign-implementation-tasks.md` | The implementation task entry (sequenced).                                                 |
+| Where               | Change                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------ |
+| `packages/manifest` | Enforce `activity:write`; tests.                                                           |
+| `packages/sdk`      | Implement `sdk.activity.log()` against the runtime (replace the stub).                     |
+| `packages/db`       | `activity_log` table (both dialects + parity) + `recordActivity()` helper + bootstrap DDL. |
+| Runtime             | Capture points, verify-boundary login capture, `sdk.activity` write-mediation, read APIs.  |
+| Console             | `/console/activity` admin view (filters, pagination).                                      |
+| Account             | `/activity` personal-feed tab.                                                             |
+| SRS §3 / §4         | Promote to specified; new `ALG-xx` functional requirements + decision-log entry.           |
+| `docs/roadmap.md`   | The implementation task entry (sequenced).                                                 |
 
 ## Alternatives considered
 

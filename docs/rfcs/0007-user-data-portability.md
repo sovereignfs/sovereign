@@ -188,15 +188,15 @@ skipped / warnings).
 
 ## Impact when accepted (deferred — beyond the reserved stub)
 
-| Where                                    | Change                                                                                                    |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `packages/sdk`                           | Implement `sdk.portability` against the runtime (replace the stub).                                       |
-| `packages/manifest`                      | Enforce `data:export` / `data:import`.                                                                    |
-| Runtime                                  | Export assembler, import validator + ID remap, plugin-resolver registry, ZIP streaming, owner gating.     |
-| Account                                  | "Data" tab + actions/routes.                                                                              |
-| Reference plugins                        | Implement export/import resolvers (Tasks, Splitify, …).                                                   |
-| SRS §3 / §5                              | Promote to specified; new `POR-xx` requirement IDs + decision-log entry; manifest reference for `data:*`. |
-| `docs/sovereign-implementation-tasks.md` | The sequenced implementation task.                                                                        |
+| Where               | Change                                                                                                    |
+| ------------------- | --------------------------------------------------------------------------------------------------------- |
+| `packages/sdk`      | Implement `sdk.portability` against the runtime (replace the stub).                                       |
+| `packages/manifest` | Enforce `data:export` / `data:import`.                                                                    |
+| Runtime             | Export assembler, import validator + ID remap, plugin-resolver registry, ZIP streaming, owner gating.     |
+| Account             | "Data" tab + actions/routes.                                                                              |
+| Reference plugins   | Implement export/import resolvers (Tasks, Splitify, …).                                                   |
+| SRS §3 / §5         | Promote to specified; new `POR-xx` requirement IDs + decision-log entry; manifest reference for `data:*`. |
+| `docs/roadmap.md`   | The sequenced implementation task.                                                                        |
 
 ## Alternatives considered
 

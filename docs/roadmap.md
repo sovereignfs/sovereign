@@ -1194,7 +1194,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 **Deliverables:**
 
-- `registry/plugins.json` — initial structure with console as the only platform entry
+- `registry/plugins.json` — initial structure (`{ registryVersion, plugins[] }`); lists only third-party `sovereign`/`community` plugins (built-in platform plugins are never registered — they ship in-repo), so the array starts empty and grows by submission
 - `registry/CONTRIBUTING.md` — submission requirements: manifest must be valid, repository must be public, must include LICENSE file, must target compatible platform version
 - PR template for registry submissions
 - `docs/plugin-development.md` updated with registry submission section
@@ -1581,7 +1581,7 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 
 ---
 
-_Version 1.20 — June 2026. **Task 0.5.18 — Registry contribution process** completed and merged. New `registry/plugins.json` public discovery index (seeded with Console as the platform entry) + `registry/CONTRIBUTING.md` submission requirements + a directory-based `.github/PULL_REQUEST_TEMPLATE/registry-submission.md` + a `registry/__tests__` suite that validates every entry against the manifest schema (wired into `vitest.config.ts`) + a "Submitting to the registry" section in `docs/plugin-development.md`. No version bumps (docs/scaffolding). Earlier notes retained._
+_Version 1.20 — June 2026. **Task 0.5.18 — Registry contribution process** completed and merged. New `registry/plugins.json` public discovery index — lists only third-party `sovereign`/`community` plugins (built-in platform plugins are never registered; the array starts empty and grows by submission) + `registry/CONTRIBUTING.md` submission requirements + a directory-based `.github/PULL_REQUEST_TEMPLATE/registry-submission.md` + a `registry/__tests__` suite that validates every entry against the manifest schema and asserts each is `sovereign`/`community` (wired into `vitest.config.ts`) + a "Submitting to the registry" section in `docs/plugin-development.md`. No version bumps (docs/scaffolding). Earlier notes retained._
 
 _Version 1.19 — June 2026. **Task 0.5.16 — Test organization (RFC 0010)** completed and merged. All 36 test files moved from flat co-location into per-directory `__tests__/` folders; root `__tests__/{integration,e2e,visual}/` scaffold added; `vitest.config.ts` globs updated; `test:unit`/`test:integration`/`test:e2e` scripts added; CLAUDE.md + CONTRIBUTING.md updated. No version bumps (chore). Earlier notes retained._ All 36 test files moved from flat co-location into per-directory `__tests__/` folders; root `__tests__/{integration,e2e,visual}/` scaffold added; `vitest.config.ts` globs updated; `test:unit`/`test:integration`/`test:e2e` scripts added; CLAUDE.md + CONTRIBUTING.md updated. No version bumps (chore). Earlier notes retained.\_
 

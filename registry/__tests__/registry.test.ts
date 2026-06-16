@@ -20,9 +20,8 @@ describe('registry/plugins.json', () => {
     expect(registry.registryVersion).toBe(1);
   });
 
-  it('has a non-empty plugins array', () => {
+  it('has a plugins array (may be empty before any community submission)', () => {
     expect(Array.isArray(registry.plugins)).toBe(true);
-    expect(registry.plugins.length).toBeGreaterThan(0);
   });
 
   it('every entry is a valid plugin manifest', () => {
@@ -33,13 +32,15 @@ describe('registry/plugins.json', () => {
     }
   });
 
+  it('lists only third-party plugins — built-in platform plugins are never registered', () => {
+    for (const entry of registry.plugins) {
+      const { id, type } = entry as { id?: string; type?: string };
+      expect(['sovereign', 'community'], `${id ?? '<unknown>'} has type "${type}"`).toContain(type);
+    }
+  });
+
   it('has no duplicate plugin ids', () => {
     const ids = registry.plugins.map((p) => (p as { id: string }).id);
     expect(new Set(ids).size).toBe(ids.length);
-  });
-
-  it('includes the Console platform plugin as the seed entry', () => {
-    const ids = registry.plugins.map((p) => (p as { id: string }).id);
-    expect(ids).toContain('fs.sovereign.console');
   });
 });

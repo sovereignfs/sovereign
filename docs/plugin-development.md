@@ -273,18 +273,33 @@ from `sovereign.plugins.json`:
 
 The [`registry/plugins.json`](../registry/plugins.json) file is the public index
 of installable plugins — listing there makes a plugin discoverable. The registry
-indexes manifests; it does not host or bundle your code, which stays in your own
-repository.
+stores a **thin record** per plugin — a pointer to your source plus display
+metadata — **not** a copy of your manifest. The manifest stays in your repository
+and is fetched from there at install time, so it never drifts out of sync with
+the registry. An entry is:
 
-To submit, add your plugin's manifest as an entry in `registry/plugins.json` and
-open a pull request. In short, a submission must:
+```jsonc
+{
+  "id": "io.example.tasks",
+  "repository": { "type": "git", "url": "https://github.com/you/sovereign-plugin-tasks" },
+  "name": "Tasks",
+  "description": "A simple task manager.",
+  "tags": ["productivity"], // optional
+}
+```
 
-- have a **valid manifest** (it is validated against the schema by the
-  `registry/__tests__` suite, which fails CI on an invalid entry);
-- point `repository` at a **public** git URL;
-- include a **`LICENSE`** file in that repository;
-- declare a **compatible** `compatibility.minPlatformVersion`;
-- use a **globally-unique** `id`.
+Operational fields (`version`, `permissions`, `compatibility`, …) are **not**
+duplicated in the registry; they come from the fetched manifest. A submission
+must:
+
+- be a **valid registry entry** (validated by the `registry/__tests__` suite via
+  `validateRegistryEntry`, which fails CI on an invalid entry);
+- point `repository` at a **public/accessible** source (`{ type: "git", url }`,
+  or `{ type: "path", url }` for a first-party/local source);
+- have a **valid manifest** at that source (`type: "sovereign"`/`"community"`),
+  validated when the plugin is installed;
+- include a **`LICENSE`** file in that source, a **compatible**
+  `compatibility.minPlatformVersion`, and a **globally-unique** `id`.
 
 The full process, requirements, and PR template are in
 [`registry/CONTRIBUTING.md`](../registry/CONTRIBUTING.md). Until your plugin is

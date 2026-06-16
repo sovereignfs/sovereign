@@ -75,3 +75,32 @@ export const manifestSchema = manifestObjectSchema
  * documented in `docs/plugin-development.md`). Order matches the schema.
  */
 export const manifestFieldNames: string[] = Object.keys(manifestObjectSchema.shape);
+
+/**
+ * A registry entry — one record in the public plugin index
+ * (`registry/plugins.json`). Deliberately a **thin pointer**, not a copy of the
+ * manifest: it carries the source location plus display metadata for browsing,
+ * and the authoritative manifest is fetched from the source at install time
+ * (`scripts/install-plugins.ts` / `sv plugin add`). Keeping it thin avoids the
+ * manifest drifting between the plugin's own repo and the registry.
+ *
+ * `repository.type` is the **source kind** (`git` clone URL, or a `path` for a
+ * local/first-party source) — not the manifest's plugin `type`.
+ */
+const registrySourceSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('git'), url: z.string().url() }).strict(),
+  z.object({ type: z.literal('path'), url: z.string().min(1) }).strict(),
+]);
+
+export const registryEntrySchema = z
+  .object({
+    id: z.string().min(1),
+    repository: registrySourceSchema,
+    name: z.string().min(1),
+    description: z.string().min(1),
+    tags: z.array(z.string().min(1)).optional(),
+  })
+  .strict();
+
+/** Registry-entry field names, sourced from the schema (parity with docs/tooling). */
+export const registryEntryFieldNames: string[] = Object.keys(registryEntrySchema.shape);

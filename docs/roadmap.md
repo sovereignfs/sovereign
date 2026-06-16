@@ -1194,8 +1194,9 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 **Deliverables:**
 
-- `registry/plugins.json` — initial structure (`{ registryVersion, plugins[] }`); lists only third-party `sovereign`/`community` plugins (built-in platform plugins are never registered — they ship in-repo), so the array starts empty and grows by submission
-- `registry/CONTRIBUTING.md` — submission requirements: manifest must be valid, repository must be public, must include LICENSE file, must target compatible platform version
+- `registry/plugins.json` — initial structure (`{ registryVersion, plugins[] }`); each entry is a **thin record** `{ id, repository: { type, url }, name, description, tags? }`, **not** a copy of the manifest (the manifest is fetched from the source). Lists only third-party plugins (built-in platform plugins are never registered — they ship in-repo); the array starts empty and grows by submission
+- A `registryEntrySchema` + `validateRegistryEntry` in `@sovereignfs/manifest` (reused by the registry test and future tooling — `generate-registry` filters, `sv plugin add <id>`)
+- `registry/CONTRIBUTING.md` — submission requirements: valid registry entry, valid manifest at the (public) source, LICENSE file, compatible platform version, unique id
 - PR template for registry submissions
 - `docs/plugin-development.md` updated with registry submission section
 
@@ -1203,8 +1204,8 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 **Review checklist:**
 
-- `plugins.json` validates against manifest schema
-- Submission requirements are clear and enforceable via manifest validation
+- Registry entries validate against the registry-entry schema (`registry/__tests__`, fails CI on an invalid entry); the source manifest is fetched & validated at install time
+- Submission requirements are clear and enforceable
 
 ---
 
@@ -1581,7 +1582,7 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 
 ---
 
-_Version 1.20 — June 2026. **Task 0.5.18 — Registry contribution process** completed and merged. New `registry/plugins.json` public discovery index — lists only third-party `sovereign`/`community` plugins (built-in platform plugins are never registered; the array starts empty and grows by submission) + `registry/CONTRIBUTING.md` submission requirements + a directory-based `.github/PULL_REQUEST_TEMPLATE/registry-submission.md` + a `registry/__tests__` suite that validates every entry against the manifest schema and asserts each is `sovereign`/`community` (wired into `vitest.config.ts`) + a "Submitting to the registry" section in `docs/plugin-development.md`. No version bumps (docs/scaffolding). Earlier notes retained._
+_Version 1.20 — June 2026. **Task 0.5.18 — Registry contribution process** completed and merged. New `registry/plugins.json` public discovery index — each entry is a **thin record** `{ id, repository: { type: git|path, url }, name, description, tags? }` (a pointer to the source + display metadata, **not** a copy of the manifest; the manifest is fetched from the source at install time, avoiding drift). Lists only third-party plugins; the array starts empty and grows by submission. Adds `registryEntrySchema` + `validateRegistryEntry` to `@sovereignfs/manifest` (**0.7.0 → 0.8.0**, additive `feat`), used by `registry/__tests__` (wired into `vitest.config.ts`) + `registry/CONTRIBUTING.md` + a directory-based `.github/PULL_REQUEST_TEMPLATE/registry-submission.md` + a "Submitting to the registry" section in `docs/plugin-development.md`. Earlier notes retained._
 
 _Version 1.19 — June 2026. **Task 0.5.16 — Test organization (RFC 0010)** completed and merged. All 36 test files moved from flat co-location into per-directory `__tests__/` folders; root `__tests__/{integration,e2e,visual}/` scaffold added; `vitest.config.ts` globs updated; `test:unit`/`test:integration`/`test:e2e` scripts added; CLAUDE.md + CONTRIBUTING.md updated. No version bumps (chore). Earlier notes retained._ All 36 test files moved from flat co-location into per-directory `__tests__/` folders; root `__tests__/{integration,e2e,visual}/` scaffold added; `vitest.config.ts` globs updated; `test:unit`/`test:integration`/`test:e2e` scripts added; CLAUDE.md + CONTRIBUTING.md updated. No version bumps (chore). Earlier notes retained.\_
 

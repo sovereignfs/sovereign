@@ -1,10 +1,15 @@
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
   PLATFORM_PLUGIN_DIRS,
   assertRemovablePlugin,
+  readPlatformVersion,
   resolvePluginIdFromManifest,
 } from '../helpers';
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
 describe('assertRemovablePlugin', () => {
   it.each(PLATFORM_PLUGIN_DIRS)('refuses to remove the platform plugin %s', (id) => {
@@ -17,6 +22,17 @@ describe('assertRemovablePlugin', () => {
     expect(() => {
       assertRemovablePlugin('fs.example.tasks');
     }).not.toThrow();
+  });
+});
+
+describe('readPlatformVersion', () => {
+  it('returns the platform version from the workspace root package.json', () => {
+    const v = readPlatformVersion(ROOT);
+    expect(v).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  it('returns "0.0.0" when the path has no package.json', () => {
+    expect(readPlatformVersion('/tmp/nonexistent-12345')).toBe('0.0.0');
   });
 });
 
@@ -34,14 +50,31 @@ describe('resolvePluginIdFromManifest', () => {
   });
 
   it('returns the id from a valid manifest', () => {
-    expect(resolvePluginIdFromManifest(validManifest)).toBe('fs.example.tasks');
+    expect(resolvePluginIdFromManifest(validManifest, ROOT)).toBe('fs.example.tasks');
   });
 
   it('throws on invalid JSON', () => {
-    expect(() => resolvePluginIdFromManifest('{ not json')).toThrow(/not valid JSON/);
+    expect(() => resolvePluginIdFromManifest('{ not json', ROOT)).toThrow(/not valid JSON/);
   });
 
   it('throws when the manifest fails validation', () => {
-    expect(() => resolvePluginIdFromManifest('{}')).toThrow(/Invalid manifest\.json/);
+    expect(() => resolvePluginIdFromManifest('{}', ROOT)).toThrow(/Invalid manifest\.json/);
+  });
+
+  it('throws when the plugin requires a newer platform', () => {
+    const future = JSON.stringify({
+      schemaVersion: 1,
+      id: 'fs.example.future',
+      name: 'Future Plugin',
+      version: '1.0.0',
+      type: 'platform',
+      runtime: 'native',
+      routePrefix: '/future',
+      permissions: [],
+      compatibility: { minPlatformVersion: '999.0.0' },
+    });
+    expect(() => resolvePluginIdFromManifest(future, ROOT)).toThrow(
+      /incompatible with this platform/,
+    );
   });
 });

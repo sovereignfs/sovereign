@@ -270,6 +270,26 @@ After the first user registers, invite new users via the Console:
 
 ---
 
+## Plugin compatibility
+
+On every startup the runtime checks each installed plugin's
+`compatibility.minPlatformVersion` against the running platform. If a plugin
+requires a newer platform it is **automatically disabled** — the same as if you
+had pressed Disable in Console — and a reason appears:
+
+- **Console → Plugins** — the plugin row shows an "Incompatible" badge and the
+  specific reason (e.g. "requires platform ≥ 0.8.0, running 0.7.0"). The Enable
+  toggle is locked until the platform is upgraded.
+- **Admin health endpoint** (`/api/admin/health` with your `SOVEREIGN_ADMIN_KEY`)
+  — the `incompatiblePlugins` array lists every auto-disabled plugin and its
+  reason.
+
+An advisory warning (non-blocking) appears when the platform version exceeds the
+plugin's optional `maxPlatformVersion`. The plugin keeps running; the warning is
+a signal to test the plugin against the newer platform and publish an update.
+
+---
+
 ## Upgrading
 
 See the [upgrade guide](upgrade.md) for version-specific migration notes,

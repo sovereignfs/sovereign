@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/manifest",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "description": "Plugin manifest schema, types, and validation for Sovereign.",
@@ -13,10 +13,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "semver": "catalog:",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",
+    "@types/semver": "catalog:",
     "tsup": "catalog:",
     "typescript": "catalog:"
   }

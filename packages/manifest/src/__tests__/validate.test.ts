@@ -112,4 +112,51 @@ describe('validateManifest', () => {
     });
     expect(res.valid).toBe(true);
   });
+
+  // RFC 0024 — compatibility field validation
+  it('rejects schemaVersion greater than the current maximum (RFC 0024)', () => {
+    const res = validateManifest({ ...base, schemaVersion: 999 });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('schemaVersion');
+    }
+  });
+
+  it('rejects a non-semver string in minPlatformVersion (RFC 0024)', () => {
+    const res = validateManifest({
+      ...base,
+      compatibility: { minPlatformVersion: 'latest' },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('semver');
+    }
+  });
+
+  it('rejects a non-semver string in maxPlatformVersion (RFC 0024)', () => {
+    const res = validateManifest({
+      ...base,
+      compatibility: { minPlatformVersion: '0.4.0', maxPlatformVersion: 'v2.x' },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('semver');
+    }
+  });
+
+  it('accepts compatibility with both min and max versions (RFC 0024)', () => {
+    const res = validateManifest({
+      ...base,
+      compatibility: { minPlatformVersion: '0.4.0', maxPlatformVersion: '1.0.0' },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects unknown fields inside compatibility (RFC 0024)', () => {
+    const res = validateManifest({
+      ...base,
+      compatibility: { minPlatformVersion: '0.4.0', unknownField: true },
+    });
+    expect(res.valid).toBe(false);
+  });
 });

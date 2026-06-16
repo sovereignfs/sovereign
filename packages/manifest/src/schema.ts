@@ -1,4 +1,13 @@
+import semver from 'semver';
 import { z } from 'zod';
+
+/**
+ * The manifest format version this platform understands. Manifests with a
+ * higher `schemaVersion` are rejected at build/install time — the platform
+ * must be upgraded to handle them. Manifests with a lower version are accepted
+ * for backward compatibility as the format evolves.
+ */
+export const CURRENT_MANIFEST_SCHEMA_VERSION = 1;
 
 /**
  * SDK capabilities a plugin may declare. Mirrors the `Permission` union in
@@ -21,6 +30,15 @@ export const permissionSchema = z.enum([
   'admin:*',
 ]);
 
+/** Validate that a string is a valid semver string (e.g. "0.6.0"). */
+const semverString = (label: string) =>
+  z
+    .string()
+    .min(1)
+    .refine((v) => semver.valid(v) !== null, {
+      message: `${label} must be a valid semver string (e.g. "0.6.0")`,
+    });
+
 /**
  * The plugin manifest schema — the single source of truth for both runtime
  * validation and the exported TypeScript types (see ./types). Mirrors
@@ -31,7 +49,14 @@ export const permissionSchema = z.enum([
  */
 const manifestObjectSchema = z
   .object({
-    schemaVersion: z.number().int().positive(),
+    schemaVersion: z
+      .number()
+      .int()
+      .positive()
+      .max(
+        CURRENT_MANIFEST_SCHEMA_VERSION,
+        `schemaVersion must be ≤ ${CURRENT_MANIFEST_SCHEMA_VERSION} (this platform's maximum). Upgrade the platform to use a newer manifest format.`,
+      ),
     id: z.string().min(1),
     name: z.string().min(1),
     version: z.string().min(1),
@@ -52,9 +77,17 @@ const manifestObjectSchema = z
     adminOnly: z.boolean().optional(),
     apiProvider: z.boolean().optional(),
     icon: z.string().optional(),
-    compatibility: z.object({
-      minPlatformVersion: z.string().min(1),
-    }),
+    compatibility: z
+      .object({
+        /** Minimum platform version this plugin requires (semver). Hard-enforced at install/build/boot. */
+        minPlatformVersion: semverString('minPlatformVersion'),
+        /**
+         * Maximum platform version this plugin has been tested against (semver). Advisory only —
+         * the plugin still loads on a newer platform but surfaces a warning in Console/health.
+         */
+        maxPlatformVersion: semverString('maxPlatformVersion').optional(),
+      })
+      .strict(),
     repository: z.string().url().optional(),
   })
   .strict();

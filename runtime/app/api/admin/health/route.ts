@@ -4,6 +4,7 @@ import { pingDb, resolveDialect, resolveSqlitePath } from '@sovereignfs/db';
 import { sdk } from '@sovereignfs/sdk';
 import { checkAdminKey } from '@/src/admin-guard';
 import { getPlatformDb } from '@/src/db';
+import { getIncompatiblePlugins } from '@/src/plugin-compat';
 
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
 
@@ -16,6 +17,8 @@ interface HealthReport {
     sizeBytes: number | null;
   };
   auth: { status: 'ok' | 'unreachable' };
+  /** Plugins disabled at boot due to platform-version incompatibility (RFC 0024). */
+  incompatiblePlugins: Array<{ id: string; reason: string }>;
   uptimeSeconds: number;
 }
 
@@ -50,10 +53,16 @@ export async function GET(request: Request): Promise<Response> {
     authStatus = 'unreachable';
   }
 
+  const incompatiblePlugins = [...getIncompatiblePlugins().entries()].map(([id, reason]) => ({
+    id,
+    reason,
+  }));
+
   const report: HealthReport = {
     platformVersion: (await sdk.platform.getConfig()).version,
     database: { dialect: resolved.dialect, status: dbStatus, sizeBytes },
     auth: { status: authStatus },
+    incompatiblePlugins,
     uptimeSeconds: Math.floor(process.uptime()),
   };
   return NextResponse.json(report);

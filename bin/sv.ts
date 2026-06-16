@@ -142,7 +142,7 @@ const pluginAdd = defineCommand({
 
     let id: string;
     try {
-      id = resolvePluginIdFromManifest(readFileSync(manifestPath, 'utf8'));
+      id = resolvePluginIdFromManifest(readFileSync(manifestPath, 'utf8'), ROOT);
     } catch (error) {
       cleanup();
       consola.error((error as Error).message);

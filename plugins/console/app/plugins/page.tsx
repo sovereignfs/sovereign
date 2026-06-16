@@ -10,6 +10,8 @@ interface PluginRow {
   routePrefix: string;
   adminOnly: boolean;
   enabled: boolean;
+  compatibilityError: string | null;
+  compatibilityWarnings: string[];
 }
 
 async function getPlugins(): Promise<PluginRow[]> {
@@ -76,22 +78,47 @@ export default async function PluginsPage() {
                 <td className={styles.td}>
                   {plugin.enabled ? (
                     <span className={styles.badgeActive}>Enabled</span>
+                  ) : plugin.compatibilityError ? (
+                    <span className={styles.badgeDeactivated} title={plugin.compatibilityError}>
+                      Incompatible
+                    </span>
                   ) : (
                     <span className={styles.badgeDeactivated}>Disabled</span>
+                  )}
+                  {plugin.compatibilityWarnings.length > 0 && (
+                    <span
+                      className={styles.adminOnlyNote}
+                      title={plugin.compatibilityWarnings.join('\n')}
+                    >
+                      {' '}
+                      ⚠ version advisory
+                    </span>
                   )}
                 </td>
 
                 <td className={styles.td}>
-                  <form action={togglePluginAction}>
-                    <input type="hidden" name="pluginId" value={plugin.id} />
-                    <input type="hidden" name="enabled" value={plugin.enabled ? 'false' : 'true'} />
-                    <button
-                      type="submit"
-                      className={plugin.enabled ? styles.deactivateButton : styles.reactivateButton}
-                    >
-                      {plugin.enabled ? 'Disable' : 'Enable'}
-                    </button>
-                  </form>
+                  {plugin.compatibilityError ? (
+                    <span className={styles.adminOnlyNote} title={plugin.compatibilityError}>
+                      Incompatible — cannot enable
+                    </span>
+                  ) : (
+                    <form action={togglePluginAction}>
+                      <input type="hidden" name="pluginId" value={plugin.id} />
+                      <input
+                        type="hidden"
+                        name="enabled"
+                        value={plugin.enabled ? 'false' : 'true'}
+                      />
+                      <button
+                        type="submit"
+                        className={
+                          plugin.enabled ? styles.deactivateButton : styles.reactivateButton
+                        }
+                      >
+                        {plugin.enabled ? 'Disable' : 'Enable'}
+                      </button>
+                    </form>
+                  )}
                 </td>
               </tr>
             ))}

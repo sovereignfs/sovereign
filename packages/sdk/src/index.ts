@@ -34,6 +34,8 @@ export const sdk = {
   activity,
 };
 
+export { provideHost } from './host';
+export type { SdkHost } from './host';
 export { NotImplementedError, NotAuthenticatedError, ConsentRequiredError } from './errors';
 export type { DataContractRef, DataContractResolver } from './data';
 export type {

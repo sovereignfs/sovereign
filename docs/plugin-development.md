@@ -24,6 +24,21 @@ If you are deploying an instance rather than building a plugin, see
   come from `@sovereignfs/sdk`. The design system comes from `@sovereignfs/ui`.
   Importing from `runtime/src` is forbidden and enforced by ESLint.
 
+## Plugin isolation boundary
+
+What a plugin can do **in isolation** (without a full platform checkout):
+
+| Stage                     | Isolated? | Why                                                                                                         |
+| ------------------------- | :-------: | ----------------------------------------------------------------------------------------------------------- |
+| Author / edit             |    ✅     | Write TypeScript/TSX against `@sovereignfs/sdk` + `@sovereignfs/ui` types.                                  |
+| Type-check / lint         |    ✅     | `tsc --noEmit` / ESLint need only those types — no platform internals required.                             |
+| Build as a standalone app |    ❌     | A plugin's `app/` is a route-group **fragment** with no root layout, no `next.config`, no shell.            |
+| Run / test                |    ❌     | Needs the host: middleware-injected headers (`getSession`), `getPlatformDb`, the auth server, shell chrome. |
+
+**Authoring in a standalone repo:** Install `@sovereignfs/sdk` and `@sovereignfs/ui` as devDependencies for types. The SDK is a types-first contract — its implementations are host-provided by the Sovereign runtime when your plugin routes execute. The published package has zero runtime dependencies on platform internals.
+
+**The dev/test loop is always runtime-hosted.** Use `sv plugin add <repo>` or `sovereign.plugins.json` to run your plugin inside a platform checkout, then `pnpm dev`. There is no standalone `next build` or `next dev` path for a plugin. See [Local development](#local-development) below.
+
 ## File structure
 
 A plugin lives in one directory. Minimal shape (modelled on the built-in

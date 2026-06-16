@@ -5,6 +5,22 @@ follows [Semantic Versioning](https://semver.org); see
 [`docs/sdk-stability.md`](../../docs/sdk-stability.md) for the stability policy
 and which parts of the surface the guarantee covers.
 
+## 1.1.0
+
+**Types-first contract — zero runtime dependencies** (RFC 0023, Task 0.5.20).
+
+- The published package no longer depends on `@sovereignfs/db` or
+  `@sovereignfs/mailer`. Platform implementations are **host-provided**: the
+  Sovereign runtime registers them at startup via `provideHost()`, so the SDK
+  itself has no platform internals to bundle.
+- New export: `provideHost(host: SdkHost)` / `SdkHost` type — for the runtime;
+  plugin code does not call this.
+- Calling `sdk.db`, `sdk.mailer`, or `sdk.platform` outside the runtime (no
+  host registered) now throws `"@sovereignfs/sdk: no runtime host is
+registered"` with a clear message.
+- No change to the plugin-facing API. The stable surface (`auth`, `db`,
+  `mailer`, `platform`) is identical to 1.0.0.
+
 ## 1.0.0
 
 **Stable release.** The v1 SDK surface is now covered by the semver guarantee:

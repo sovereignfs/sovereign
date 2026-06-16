@@ -1,0 +1,39 @@
+name: Registry validate
+
+# Runs ONLY when a PR touches the registry (path filter below), so ordinary
+# code PRs don't pay the cost of cloning external plugin sources. Validates
+# every registry entry against the schema, fetches each plugin's source, checks
+# its manifest + LICENSE, and verifies the committed provenance hash is fresh
+# (`registry:check`). Authors generate that hash locally with
+# `pnpm registry:validate`.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'registry/**'
+
+concurrency:
+  group: registry-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  validate:
+    name: Validate registry entries
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # Verify-only: fails if any entry is invalid, its source/manifest/LICENSE
+      # is missing, or its committed provenance hash is stale.
+      - run: pnpm registry:check

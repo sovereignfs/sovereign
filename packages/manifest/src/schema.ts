@@ -79,18 +79,49 @@ export const manifestFieldNames: string[] = Object.keys(manifestObjectSchema.sha
 /**
  * A registry entry — one record in the public plugin index
  * (`registry/plugins.json`). Deliberately a **thin pointer**, not a copy of the
- * manifest: it carries the source location plus display metadata for browsing,
- * and the authoritative manifest is fetched from the source at install time
+ * manifest: it carries the source location plus display/attribution metadata,
+ * and the authoritative manifest is fetched from the source
  * (`scripts/install-plugins.ts` / `sv plugin add`). Keeping it thin avoids the
  * manifest drifting between the plugin's own repo and the registry.
  *
- * `repository.type` is the **source kind** (`git` clone URL, or a `path` for a
- * local/first-party source) — not the manifest's plugin `type`.
+ * `repository.type` is the **source kind** (`git` clone URL, optionally pinned
+ * to a `ref`; or a `path` for a local/first-party source) — not the manifest's
+ * plugin `type`.
  */
 const registrySourceSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('git'), url: z.string().url() }).strict(),
+  z
+    .object({
+      type: z.literal('git'),
+      url: z.string().url(),
+      /** Optional tag/branch/commit to pin; defaults to the repo's default branch. */
+      ref: z.string().min(1).optional(),
+    })
+    .strict(),
   z.object({ type: z.literal('path'), url: z.string().min(1) }).strict(),
 ]);
+
+const registryAuthorSchema = z
+  .object({
+    name: z.string().min(1),
+    email: z.string().email().optional(),
+    url: z.string().url().optional(),
+  })
+  .strict();
+
+/**
+ * Provenance written by the registry validation script (`scripts/validate-registry.ts`)
+ * and re-verified in CI: the resolved commit the plugin was validated at, and a
+ * content hash over the plugin's source tree at that commit. Optional in the
+ * schema (a hand-written entry has none until the script runs); the validation
+ * script's `--check` mode requires it present and matching.
+ */
+const registryProvenanceSchema = z
+  .object({
+    commit: z.string().min(1),
+    contentHash: z.string().regex(/^sha256:[0-9a-f]{64}$/, 'must be "sha256:<64 hex chars>"'),
+    validatedAt: z.string().min(1),
+  })
+  .strict();
 
 export const registryEntrySchema = z
   .object({
@@ -98,7 +129,12 @@ export const registryEntrySchema = z
     repository: registrySourceSchema,
     name: z.string().min(1),
     description: z.string().min(1),
-    tags: z.array(z.string().min(1)).optional(),
+    author: registryAuthorSchema,
+    homepage: z.string().url().optional(),
+    /** SPDX licence identifier, e.g. "MIT" or "AGPL-3.0-or-later". */
+    license: z.string().min(1),
+    keywords: z.array(z.string().min(1)).optional(),
+    provenance: registryProvenanceSchema.optional(),
   })
   .strict();
 

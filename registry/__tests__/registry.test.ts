@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateManifest } from '@sovereignfs/manifest';
+import { validateRegistryEntry } from '@sovereignfs/manifest';
 import { describe, expect, it } from 'vitest';
 
 // This test file lives in registry/__tests__/, so walk up one level to read
@@ -24,18 +24,15 @@ describe('registry/plugins.json', () => {
     expect(Array.isArray(registry.plugins)).toBe(true);
   });
 
-  it('every entry is a valid plugin manifest', () => {
+  // Entries are thin records — { id, repository, name, description, tags? } — not
+  // full manifests; the manifest is fetched and validated from the source at
+  // install time. The registry lists only third-party plugins; built-in platform
+  // plugins ship in-repo and have no standalone source, so they never appear here.
+  it('every entry is a valid registry entry', () => {
     for (const entry of registry.plugins) {
-      const result = validateManifest(entry);
+      const result = validateRegistryEntry(entry);
       const id = (entry as { id?: string }).id ?? '<unknown>';
       expect(result.valid, `${id}: ${result.valid ? '' : result.errors.join('; ')}`).toBe(true);
-    }
-  });
-
-  it('lists only third-party plugins — built-in platform plugins are never registered', () => {
-    for (const entry of registry.plugins) {
-      const { id, type } = entry as { id?: string; type?: string };
-      expect(['sovereign', 'community'], `${id ?? '<unknown>'} has type "${type}"`).toContain(type);
     }
   });
 

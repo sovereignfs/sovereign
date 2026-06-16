@@ -10,51 +10,77 @@ This document is the submission process. For how to _build_ a plugin, see
 
 ## What gets listed
 
-Each entry in `plugins.json` is a plugin **manifest** — the same object that
-lives in your plugin's `manifest.json`. The registry file is:
+Each entry in `plugins.json` is a **thin record** — a pointer to your plugin's
+source plus a little display metadata. It is **not** a copy of your manifest:
+the manifest stays in your repository and is fetched from there at install time,
+so it can never drift out of sync with the registry. An entry looks like:
 
 ```jsonc
 {
   "registryVersion": 1,
-  "plugins": [{ "schemaVersion": 1, "id": "io.example.tasks", "name": "Tasks" /* … */ }],
+  "plugins": [
+    {
+      "id": "io.example.tasks",
+      "repository": { "type": "git", "url": "https://github.com/you/sovereign-plugin-tasks" },
+      "name": "Tasks",
+      "description": "A simple task manager.",
+      "tags": ["productivity"], // optional
+    },
+  ],
 }
 ```
 
-The registry lists only **third-party** plugins — entries must be `type:
-"sovereign"` or `type: "community"`. The built-in platform plugins (Console,
-Launcher, Account) are **not** listed: they ship inside the platform and are
-always present, so there is nothing to discover or install. The array starts
-empty and grows as community plugins are submitted.
+Fields:
+
+- **`id`** — globally-unique reverse-DNS id (matches your manifest's `id`).
+- **`repository`** — where the plugin lives: `{ "type": "git", "url": "<clone URL>" }`,
+  or `{ "type": "path", "url": "<path>" }` for a first-party/local source. This
+  is the source the manifest is fetched from.
+- **`name`**, **`description`** — display metadata so the index is browsable
+  without fetching every manifest.
+- **`tags`** _(optional)_ — discovery keywords.
+
+Operational fields (`version`, `permissions`, `routePrefix`, `compatibility`, …)
+are **not** duplicated here — they come from the fetched manifest.
+
+The registry lists only **third-party** plugins. The built-in platform plugins
+(Console, Launcher, Account) are **not** listed: they ship inside the platform,
+have no standalone source, and are always present. The array starts empty and
+grows as community plugins are submitted.
 
 ## Requirements
 
 A submission is accepted only if **all** of the following hold. The first is
 checked automatically by the registry test suite (`registry/__tests__`); the
-rest are verified during review.
+rest are verified during review against your plugin's source.
 
-1. **Valid manifest.** Your entry must validate against the manifest schema
-   (`@sovereignfs/manifest`). Run `pnpm test` — the registry test validates
-   every entry and fails CI on an invalid one. Unknown keys are rejected, so
-   typos fail fast.
-2. **Public repository.** `repository` must be a public git URL (required for
-   `sovereign`/`community` types). Operators install from it directly.
-3. **LICENSE file.** The repository must include a `LICENSE` file. Any
+1. **Valid registry entry.** Your entry must validate against the registry-entry
+   schema (`validateRegistryEntry` in `@sovereignfs/manifest`). Run `pnpm test` —
+   the registry test validates every entry and fails CI on an invalid one.
+   Unknown keys are rejected, so typos fail fast.
+2. **Valid manifest at the source.** The `manifest.json` in your repository must
+   itself be a valid manifest (`type: "sovereign"` or `"community"`). The
+   platform validates it when the plugin is installed (`sv plugin add` /
+   `pnpm install:plugins` both run `validateManifest`); a reviewer confirms it.
+3. **Public / accessible source.** A `git` source must be a public clone URL;
+   operators install from it directly.
+4. **LICENSE file.** The source repository must include a `LICENSE` file. Any
    OSI-approved licence is fine; proprietary/commercial plugins must still state
    their terms in a `LICENSE`.
-4. **Compatible platform version.** `compatibility.minPlatformVersion` must be a
-   real, released platform version your plugin actually supports. Do not claim a
-   version you have not tested against.
-5. **Unique id.** `id` must be globally unique (reverse-DNS, e.g.
+5. **Compatible platform version.** Your manifest's
+   `compatibility.minPlatformVersion` must be a real, released platform version
+   your plugin actually supports. Do not claim a version you have not tested
+   against.
+6. **Unique id.** `id` must be globally unique (reverse-DNS, e.g.
    `io.example.tasks`) and not collide with an existing entry.
-6. **Honest metadata.** `name`, `description`, and `version` must describe the
+7. **Honest metadata.** `name`, `description`, and `tags` must describe the
    plugin accurately.
 
 ## How to submit
 
 1. **Fork** this repository.
 2. **Add your entry** to the `plugins` array in
-   [`registry/plugins.json`](plugins.json). Keep the array sorted is not
-   required, but do not reformat unrelated entries.
+   [`registry/plugins.json`](plugins.json). Do not reformat unrelated entries.
 3. **Validate locally:** `pnpm test` (the registry suite must pass) and
    `pnpm format` (Prettier governs the JSON).
 4. **Open a pull request** using the registry submission template:

@@ -1194,9 +1194,11 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 **Deliverables:**
 
-- `registry/plugins.json` — initial structure (`{ registryVersion, plugins[] }`); each entry is a **thin record** `{ id, repository: { type, url }, name, description, tags? }`, **not** a copy of the manifest (the manifest is fetched from the source). Lists only third-party plugins (built-in platform plugins are never registered — they ship in-repo); the array starts empty and grows by submission
-- A `registryEntrySchema` + `validateRegistryEntry` in `@sovereignfs/manifest` (reused by the registry test and future tooling — `generate-registry` filters, `sv plugin add <id>`)
-- `registry/CONTRIBUTING.md` — submission requirements: valid registry entry, valid manifest at the (public) source, LICENSE file, compatible platform version, unique id
+- `registry/plugins.json` — initial structure (`{ registryVersion, plugins[] }`); each entry is a **thin record** `{ id, repository: { type, url, ref? }, name, description, author, license, homepage?, keywords?, provenance? }`, **not** a copy of the manifest (the manifest is fetched from the source). Lists only third-party plugins (built-in platform plugins are never registered — they ship in-repo); the array starts empty and grows by submission
+- A `registryEntrySchema` + `validateRegistryEntry` in `@sovereignfs/manifest` (reused by the registry test, the validation script, and future tooling — `generate-registry` filters, `sv plugin add <id>`)
+- `scripts/validate-registry.ts` (`pnpm registry:validate` / `registry:check`): clones each entry's source at its pinned ref, validates the source manifest + LICENSE, computes a sha256 content-hash over the source tree, and records `provenance` (resolved commit + hash + timestamp); `--check` mode verifies the committed provenance without writing
+- A `.github/workflows/registry-validate.yml` CI job gated by `paths: ['registry/**']` — runs `pnpm registry:check` only when the registry changes
+- `registry/CONTRIBUTING.md` — submission requirements: valid registry entry, valid manifest at the (public) source, LICENSE file, compatible platform version, unique id, fresh provenance
 - PR template for registry submissions
 - `docs/plugin-development.md` updated with registry submission section
 
@@ -1204,7 +1206,8 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 **Review checklist:**
 
-- Registry entries validate against the registry-entry schema (`registry/__tests__`, fails CI on an invalid entry); the source manifest is fetched & validated at install time
+- Registry entries validate against the registry-entry schema (`registry/__tests__`, fails CI on an invalid entry)
+- `pnpm registry:validate` fetches the source, validates the manifest + LICENSE, and pins a content hash; `registry:check` (CI, on `registry/` changes only) fails on a missing/stale hash
 - Submission requirements are clear and enforceable
 
 ---
@@ -1582,7 +1585,7 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 
 ---
 
-_Version 1.20 — June 2026. **Task 0.5.18 — Registry contribution process** completed and merged. New `registry/plugins.json` public discovery index — each entry is a **thin record** `{ id, repository: { type: git|path, url }, name, description, tags? }` (a pointer to the source + display metadata, **not** a copy of the manifest; the manifest is fetched from the source at install time, avoiding drift). Lists only third-party plugins; the array starts empty and grows by submission. Adds `registryEntrySchema` + `validateRegistryEntry` to `@sovereignfs/manifest` (**0.7.0 → 0.8.0**, additive `feat`), used by `registry/__tests__` (wired into `vitest.config.ts`) + `registry/CONTRIBUTING.md` + a directory-based `.github/PULL_REQUEST_TEMPLATE/registry-submission.md` + a "Submitting to the registry" section in `docs/plugin-development.md`. Earlier notes retained._
+_Version 1.20 — June 2026. **Task 0.5.18 — Registry contribution process** completed and merged. New `registry/plugins.json` public discovery index — each entry is a **thin record** `{ id, repository: { type: git|path, url }, name, description, tags? }` (a pointer to the source + display metadata, **not** a copy of the manifest; the manifest is fetched from the source at install time, avoiding drift). Lists only third-party plugins; the array starts empty and grows by submission. Adds `registryEntrySchema` + `validateRegistryEntry` to `@sovereignfs/manifest` (**0.7.0 → 0.8.0**, additive `feat`). Entries carry author/license/homepage/keywords + an optional pinned `repository.ref`. A validation pipeline — `scripts/validate-registry.ts` (`pnpm registry:validate` / `registry:check`) — clones each source, validates its manifest + LICENSE, and records `provenance` (resolved commit + sha256 content hash over the source tree); a `.github/workflows/registry-validate.yml` job gated by `paths: ['registry/**']` re-verifies on registry changes only. Used by `registry/__tests__` (wired into `vitest.config.ts`) + `registry/CONTRIBUTING.md` + a directory-based `.github/PULL_REQUEST_TEMPLATE/registry-submission.md` + a "Submitting to the registry" section in `docs/plugin-development.md`. Earlier notes retained._
 
 _Version 1.19 — June 2026. **Task 0.5.16 — Test organization (RFC 0010)** completed and merged. All 36 test files moved from flat co-location into per-directory `__tests__/` folders; root `__tests__/{integration,e2e,visual}/` scaffold added; `vitest.config.ts` globs updated; `test:unit`/`test:integration`/`test:e2e` scripts added; CLAUDE.md + CONTRIBUTING.md updated. No version bumps (chore). Earlier notes retained._ All 36 test files moved from flat co-location into per-directory `__tests__/` folders; root `__tests__/{integration,e2e,visual}/` scaffold added; `vitest.config.ts` globs updated; `test:unit`/`test:integration`/`test:e2e` scripts added; CLAUDE.md + CONTRIBUTING.md updated. No version bumps (chore). Earlier notes retained.\_
 

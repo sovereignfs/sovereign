@@ -24,6 +24,8 @@
     "test:e2e": "vitest run __tests__/e2e --passWithNoTests",
     "generate": "tsx scripts/generate-registry.ts",
     "install:plugins": "tsx scripts/install-plugins.ts",
+    "registry:validate": "tsx scripts/validate-registry.ts",
+    "registry:check": "tsx scripts/validate-registry.ts --check",
     "sv": "tsx bin/sv.ts",
     "prepare": "simple-git-hooks"
   },

@@ -12,13 +12,14 @@ See registry/CONTRIBUTING.md for the full requirements.
 
 ## Requirements checklist
 
-- [ ] My entry is a valid **registry entry** (`{ id, repository: { type, url }, name, description, tags? }`) — `pnpm test` passes (the `registry` suite validates every entry)
+- [ ] My entry is a valid **registry entry** (`{ id, repository, name, description, author, license, ... }`) — `pnpm test` passes (the `registry` suite validates every entry)
+- [ ] I ran **`pnpm registry:validate`** and committed the `provenance` it wrote (`pnpm registry:check` passes)
 - [ ] My `repository` source is **public/accessible** (a `git` source is a public clone URL)
-- [ ] My repository's `manifest.json` is a **valid manifest** with `type: "sovereign"` or `"community"`
-- [ ] The repository includes a `LICENSE` file
+- [ ] My source's `manifest.json` is a **valid manifest** with `type: "sovereign"` or `"community"` and an `id` matching this entry
+- [ ] The source includes a `LICENSE` file, and `license` is its SPDX identifier
 - [ ] My manifest's `compatibility.minPlatformVersion` is a released version my plugin actually supports
 - [ ] `id` is globally unique (reverse-DNS) and does not collide with an existing entry
-- [ ] `name`, `description`, and `tags` accurately describe the plugin
+- [ ] `name`, `description`, `author`, and `keywords` accurately describe the plugin
 - [ ] I ran `pnpm format` (Prettier governs `plugins.json`) and did not reformat unrelated entries
 
 ## Notes

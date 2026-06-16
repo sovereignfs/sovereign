@@ -281,10 +281,17 @@ the registry. An entry is:
 ```jsonc
 {
   "id": "io.example.tasks",
-  "repository": { "type": "git", "url": "https://github.com/you/sovereign-plugin-tasks" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/you/sovereign-plugin-tasks",
+    "ref": "v1.0.0",
+  },
   "name": "Tasks",
   "description": "A simple task manager.",
-  "tags": ["productivity"], // optional
+  "author": { "name": "Ada Lovelace", "email": "ada@example.com" },
+  "license": "MIT", // SPDX identifier
+  "keywords": ["productivity"], // optional
+  // "provenance" is added by `pnpm registry:validate` — do not hand-write it.
 }
 ```
 
@@ -294,14 +301,19 @@ must:
 
 - be a **valid registry entry** (validated by the `registry/__tests__` suite via
   `validateRegistryEntry`, which fails CI on an invalid entry);
-- point `repository` at a **public/accessible** source (`{ type: "git", url }`,
+- point `repository` at a **public/accessible** source (`{ type: "git", url, ref? }`,
   or `{ type: "path", url }` for a first-party/local source);
-- have a **valid manifest** at that source (`type: "sovereign"`/`"community"`),
-  validated when the plugin is installed;
-- include a **`LICENSE`** file in that source, a **compatible**
-  `compatibility.minPlatformVersion`, and a **globally-unique** `id`.
+- have a **valid manifest** at that source (`type: "sovereign"`/`"community"`,
+  `id` matching the entry);
+- include a **`LICENSE`** file in that source, an SPDX **`license`**, an
+  **`author`**, a **compatible** `compatibility.minPlatformVersion`, and a
+  **globally-unique** `id`.
 
-The full process, requirements, and PR template are in
+Before opening the PR, run **`pnpm registry:validate`**: it clones your source,
+checks the manifest and LICENSE, hashes the source tree, and writes a
+`provenance` block (resolved commit + content hash) into your entry. The
+**Registry validate** CI job re-runs `pnpm registry:check` to confirm the hash
+is fresh. The full process, requirements, and PR template are in
 [`registry/CONTRIBUTING.md`](../registry/CONTRIBUTING.md). Until your plugin is
 listed, you can still share your repository URL and instances add it to
 `sovereign.plugins.json` as above.

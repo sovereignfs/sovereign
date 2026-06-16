@@ -78,6 +78,8 @@ bin/sv            the sv CLI
   and production setup.
 - [Plugin development](docs/plugin-development.md) — SDK usage, plugin structure,
   manifests, routing, and runtime integration.
+- [SDK stability](docs/sdk-stability.md) — the `@sovereignfs/sdk` semver policy
+  and which parts of the surface are stable vs experimental.
 - [Architecture](docs/architecture.md) — platform boundaries, package layout, and
   how the runtime, plugins, auth, and data layers connect.
 - [Security](docs/security.md) — threat model, the no-telemetry guarantee,

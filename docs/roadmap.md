@@ -1165,7 +1165,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.16 — Test organization (RFC 0010) **[parallel]**
+#### ✅ Task 0.5.16 — Test organization (RFC 0010) **[parallel]**
 
 **Goal:** Apply the boundary-based test layout from RFC 0010. Mechanical; one pass.
 
@@ -1580,6 +1580,8 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 - `database: "isolated"` plugin gets its own SQLite file; uninstall drops it entirely; `shared` plugin is unaffected; Postgres schema-per-plugin provisions and drops cleanly
 
 ---
+
+_Version 1.19 — June 2026. **Task 0.5.16 — Test organization (RFC 0010)** completed and merged. All 36 test files moved from flat co-location into per-directory `__tests__/` folders; root `__tests__/{integration,e2e,visual}/` scaffold added; `vitest.config.ts` globs updated; `test:unit`/`test:integration`/`test:e2e` scripts added; CLAUDE.md + CONTRIBUTING.md updated. No version bumps (chore). Earlier notes retained._
 
 _Version 1.18 — June 2026. Planning change (no task completed, no version bumps): RFC 0003 (plugin monetization) and RFC 0004 (per-plugin database) both accepted. Tasks 1.0.07 and 1.0.08 promoted from exploratory placeholders to fully scoped post-v1 tasks; deliverables, dependencies, and review checklists filled out. RFC index updated (Draft → Accepted). Earlier notes retained._
 

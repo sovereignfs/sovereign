@@ -71,6 +71,22 @@ message instead of using a local inbox.
 `pnpm test` runs the whole suite on **SQLite** with no external services — this
 is what CI runs by default and what you should run before a PR.
 
+**Test layout (RFC 0010):** Tests live in `__tests__/` subdirectories directly
+inside the directory that contains the source they cover (e.g.
+`packages/db/src/__tests__/client.test.ts` tests `packages/db/src/client.ts`).
+The root `__tests__/integration/`, `__tests__/e2e/`, and `__tests__/visual/`
+directories are reserved for future cross-service, browser-driven, and visual
+tests respectively — they are empty scaffolds today.
+
+Granular script variants:
+
+```bash
+pnpm test              # run the full suite (SQLite, no external services)
+pnpm test:unit         # same with verbose per-test output
+pnpm test:integration  # cross-service integration tests (root __tests__/integration/)
+pnpm test:e2e          # end-to-end tests (root __tests__/e2e/)
+```
+
 The platform is dialect-agnostic (SQLite or Postgres, NFR-03), so there are also
 **Postgres parity tests** (files named `*.pg.test.ts`). They are **skipped
 unless** `TEST_DATABASE_URL` points at a Postgres instance, so the default run

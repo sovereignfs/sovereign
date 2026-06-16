@@ -84,10 +84,21 @@ opaque so the published SDK takes no dialect dependency.
 The runtime is an installable PWA. The web manifest and icons are committed
 source; the service worker is generated at build and disabled in dev.
 
+## Security (SRS §3.17, RFC 0008)
+
+v1 ships the hardening tiers: static security headers + HSTS (production) via
+each app's `next.config.ts`, and a **strict, nonce-based Content-Security-Policy**
+set per-request in middleware (no `'unsafe-inline'` for scripts). Postgres
+connects over TLS from the connection string's `sslmode`. Sovereign sends **no
+telemetry**. Threat model and a self-hoster hardening checklist live in
+[security.md](security.md). At-rest, field-level, and zero-knowledge encryption
+(Tiers 2–4) are specified but post-v1 (Task 1.0.01).
+
 ## Post-v1 (specified, not built)
 
-Native mobile via a Capacitor shell + `sdk.device.*` (SRS §3.12) and
-consent-gated cross-plugin data sharing via `sdk.data` (SRS §3.13, RFC 0002) are
+Native mobile via a Capacitor shell + `sdk.device.*` (SRS §3.12), consent-gated
+cross-plugin data sharing via `sdk.data` (SRS §3.13, RFC 0002), and at-rest /
+field-level / zero-knowledge encryption (SRS §3.17 Tiers 2–4, RFC 0008) are
 designed but out of scope for v1.
 
 ## Repository layout

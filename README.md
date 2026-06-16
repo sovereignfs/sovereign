@@ -79,6 +79,8 @@ bin/sv            the sv CLI
   manifests, routing, and runtime integration.
 - [Architecture](docs/architecture.md) — platform boundaries, package layout, and
   how the runtime, plugins, auth, and data layers connect.
+- [Security](docs/security.md) — threat model, the no-telemetry guarantee,
+  security headers/CSP, and a self-hoster hardening checklist.
 - [Design system](docs/design-system.md) — shared UI tokens, components, and
   conventions for platform and plugin interfaces.
 - [Upgrade guide](docs/upgrade.md) — versioned changes, migration notes, and

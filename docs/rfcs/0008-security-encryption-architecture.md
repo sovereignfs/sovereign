@@ -266,7 +266,8 @@ doc-only draft.)
 
 ## Changelog
 
-| Version | Date     | Change                                                                                                                             |
-| ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | Jun 2026 | Initial draft; threat model + tiered encryption roadmap; proposes reserved `sdk.crypto` + `crypto:use`.                            |
-| 1.0     | Jun 2026 | Accepted (phased); incorporated into SRS §3.17, §5 (`crypto:use`); Tier 0/1 → Task 0.5.15 (v1), Tiers 2–4 → Task 1.0.01 (post-v1). |
+| Version | Date     | Change                                                                                                                                                                                                        |
+| ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Jun 2026 | Initial draft; threat model + tiered encryption roadmap; proposes reserved `sdk.crypto` + `crypto:use`.                                                                                                       |
+| 1.0     | Jun 2026 | Accepted (phased); incorporated into SRS §3.17, §5 (`crypto:use`); Tier 0/1 → Task 0.5.15 (v1), Tiers 2–4 → Task 1.0.01 (post-v1).                                                                            |
+| 1.1     | Jun 2026 | **Tier 0/1 implemented** (Task 0.5.15): static security headers + HSTS (prod) and a strict nonce-based CSP on both apps; Postgres TLS via `sslmode`; new `docs/security.md`. Tiers 2–4 remain in Task 1.0.01. |

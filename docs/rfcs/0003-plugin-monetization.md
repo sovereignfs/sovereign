@@ -1,10 +1,10 @@
 # RFC 0003 — Plugin monetization
 
-**Status:** Draft\
+**Status:** Accepted\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Manifest schema (`packages/manifest`), SDK (`packages/sdk`), runtime middleware, plugin registry, `packages/ui`, Console/Account, SRS\
-**Incorporated into plan:** No — this document proposes; the SRS, manifest, SDK, and implementation tasks are updated only when this RFC is accepted.
+**Incorporated into plan:** Yes — scheduled as roadmap Task 1.0.07. No implementation has landed yet; the `monetization` manifest field, `sdk.billing` stub, entitlement gating, payment-provider adapters, and subscription UX all land in that task.
 
 ---
 
@@ -210,18 +210,18 @@ plugins are not core — and avoids making the project a payment intermediary.
 
 ## Impact when accepted (deferred — no edits yet)
 
-| Where                                    | Change                                                                                                       |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `packages/manifest`                      | Optional `monetization` object (model/interval/tiers/license); validation + tests; **minor** bump.           |
-| `packages/sdk`                           | Reserved `sdk.billing`/`entitlements` surface (stub) + `EntitlementRequiredError`; **minor** bump.           |
-| Runtime middleware + a Node route        | Entitlement gating by `routePrefix` (paywall / `402`), mirroring the disabled-plugin gating pattern.         |
-| Runtime                                  | `PaymentProvider` adapter interface; manual/bank, Stripe, PayPal adapters; webhook endpoints + verification. |
-| Platform DB                              | `entitlements` (+ a payments/transactions ledger), with `tenant_id`.                                         |
-| Plugin registry                          | Publish author identity + license public key(s); key rotation.                                               |
-| `packages/ui`                            | Paywall / pricing components; subscription-management UI.                                                    |
-| Console / Account                        | Subscription management (Account) and entitlement oversight + manual-payment confirmation (Console).         |
-| SRS §1.4 / §4.6 / §1.7                   | Clarify that monetization (licensing plumbing, not a hosted marketplace) is in scope; reconcile wording.     |
-| `docs/sovereign-implementation-tasks.md` | A phased implementation task (manifest + entitlement gating first; providers; subscription UX).              |
+| Where                             | Change                                                                                                       |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `packages/manifest`               | Optional `monetization` object (model/interval/tiers/license); validation + tests; **minor** bump.           |
+| `packages/sdk`                    | Reserved `sdk.billing`/`entitlements` surface (stub) + `EntitlementRequiredError`; **minor** bump.           |
+| Runtime middleware + a Node route | Entitlement gating by `routePrefix` (paywall / `402`), mirroring the disabled-plugin gating pattern.         |
+| Runtime                           | `PaymentProvider` adapter interface; manual/bank, Stripe, PayPal adapters; webhook endpoints + verification. |
+| Platform DB                       | `entitlements` (+ a payments/transactions ledger), with `tenant_id`.                                         |
+| Plugin registry                   | Publish author identity + license public key(s); key rotation.                                               |
+| `packages/ui`                     | Paywall / pricing components; subscription-management UI.                                                    |
+| Console / Account                 | Subscription management (Account) and entitlement oversight + manual-payment confirmation (Console).         |
+| SRS §1.4 / §4.6 / §1.7            | Clarify that monetization (licensing plumbing, not a hosted marketplace) is in scope; reconcile wording.     |
+| `docs/roadmap.md`                 | A phased implementation task (manifest + entitlement gating first; providers; subscription UX).              |
 
 ## Alternatives considered
 
@@ -270,6 +270,8 @@ plugins are not core — and avoids making the project a payment intermediary.
 
 ## Changelog
 
-| Version | Date     | Change         |
-| ------- | -------- | -------------- |
-| 0.1     | Jun 2026 | Initial draft. |
+| Version | Date     | Change                                                                                       |
+| ------- | -------- | -------------------------------------------------------------------------------------------- |
+| 0.1     | Jun 2026 | Initial draft.                                                                               |
+| 0.2     | Jun 2026 | Added to the roadmap as exploratory Task 1.0.07 (gated on acceptance; still Draft).          |
+| 0.3     | Jun 2026 | RFC accepted; status updated to Accepted; Task 1.0.07 now scheduled (no implementation yet). |

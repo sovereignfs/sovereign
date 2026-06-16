@@ -1,10 +1,10 @@
 # RFC 0004 — Per-plugin database
 
-**Status:** Draft\
+**Status:** Accepted\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Manifest schema (`packages/manifest`), DB layer (`packages/db`), migration runner, runtime SDK bridge (`sdk.db`), SRS\
-**Incorporated into plan:** No — this document proposes; the SRS, manifest, DB layer, and implementation tasks are updated only when this RFC is accepted.
+**Incorporated into plan:** Yes — scheduled as roadmap Task 1.0.08. No implementation has landed yet; SQLite file isolation, Postgres schema isolation, per-plugin client registry, per-store migration routing, and lifecycle/backup hooks all land in that task.
 
 ---
 
@@ -148,7 +148,7 @@ CASCADE`) — a single, total deletion.
 | Runtime SDK bridge                       | `sdk.db.getClient()` returns the shared or dedicated client per the plugin's `database` setting.                 |
 | Plugin lifecycle (Console / install)     | Provision on first use; drop store on uninstall/purge; per-plugin backup/export hooks.                           |
 | SRS §3.7 / §4.6 / §5 / decision log      | Update "no per-plugin DBs" / "not implemented" wording; record the opt-in isolated model and its default-shared. |
-| `docs/sovereign-implementation-tasks.md` | A phased implementation task (SQLite file isolation first; Postgres schema; lifecycle/backup).                   |
+| `docs/roadmap.md`                        | A phased implementation task (SQLite file isolation first; Postgres schema; lifecycle/backup).                   |
 
 ## Alternatives considered
 
@@ -194,6 +194,8 @@ CASCADE`) — a single, total deletion.
 
 ## Changelog
 
-| Version | Date     | Change         |
-| ------- | -------- | -------------- |
-| 0.1     | Jun 2026 | Initial draft. |
+| Version | Date     | Change                                                                                       |
+| ------- | -------- | -------------------------------------------------------------------------------------------- |
+| 0.1     | Jun 2026 | Initial draft.                                                                               |
+| 0.2     | Jun 2026 | Added to the roadmap as exploratory Task 1.0.08 (gated on acceptance; still Draft).          |
+| 0.3     | Jun 2026 | RFC accepted; status updated to Accepted; Task 1.0.08 now scheduled (no implementation yet). |

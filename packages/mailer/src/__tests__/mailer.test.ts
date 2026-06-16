@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import nodemailer, { type Transporter } from 'nodemailer';
-import { createMailer } from './mailer';
+import { createMailer } from '../mailer';
 
 vi.mock('nodemailer', () => ({
   default: { createTransport: vi.fn() },

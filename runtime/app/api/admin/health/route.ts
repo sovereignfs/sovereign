@@ -1,10 +1,10 @@
 import { statSync } from 'node:fs';
 import { NextResponse } from 'next/server';
 import { pingDb, resolveDialect, resolveSqlitePath } from '@sovereignfs/db';
-import { sdk } from '@sovereignfs/sdk';
 import { checkAdminKey } from '@/src/admin-guard';
 import { getPlatformDb } from '@/src/db';
 import { getIncompatiblePlugins } from '@/src/plugin-compat';
+import { getPlatformVersion } from '@/src/platform-version';
 
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
 
@@ -59,7 +59,7 @@ export async function GET(request: Request): Promise<Response> {
   }));
 
   const report: HealthReport = {
-    platformVersion: (await sdk.platform.getConfig()).version,
+    platformVersion: getPlatformVersion(),
     database: { dialect: resolved.dialect, status: dbStatus, sizeBytes },
     auth: { status: authStatus },
     incompatiblePlugins,

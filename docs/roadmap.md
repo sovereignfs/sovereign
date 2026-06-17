@@ -998,6 +998,31 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
+#### Task 0.5.10 — Cross-plugin data sharing (consent-gated)
+
+**Goal:** Implement the consent-gated, pull-based, read-only cross-plugin data-sharing mechanism specified in RFC 0002 / SRS §3.13. The reserved `sdk.data` surface and the `data:provide`/`data:consume` permissions already exist as stubs; this task makes them real. Depends on `sdk.db` (Task 0.5.05).
+
+**Deliverables:**
+
+- Manifest: optional `data.provides[]` / `data.consumes[]` declarations (provider id, contract, version, scope) in `packages/manifest`, with validation + tests
+- Platform DB: `consent_grants` (consumer, provider, contract, user, granted_at, revoked_at, scope) and `data_access_log` tables, both with `tenant_id`
+- Runtime: provider-resolver registry, consent enforcement, tenant/user scoping, audit logging; routes `sdk.data.query` to the provider's registered resolver
+- SDK: implement `sdk.data.query`/`provide` against the runtime (replace the stubs); raise `ConsentRequiredError` when no active grant exists
+- UI: a consent-prompt dialog primitive in `packages/ui`; grant management in Account (own grants) and oversight in Console
+- The mechanism is generic — no plugin is special-cased
+
+**SRS reference:** RFC 0002, SRS §3.13, §5 (manifest `data.*`)
+
+**Review checklist:**
+
+- A consumer `query` without a grant raises `ConsentRequiredError` and surfaces a consent prompt; granting consent then returns the provider's data
+- Reads are read-only, scoped to the requesting user + tenant, and recorded in the audit log
+- Revoking a grant immediately blocks subsequent reads
+- A consumer cannot reach a provider's raw tables — only its registered contract resolver
+- Existing plugins (no `data.*` declared) are unaffected
+
+---
+
 #### ✅ Task 0.5.11 — Logout / self sign-out
 
 **Goal:** Implement AUTH-02 self sign-out across the SDK, the shell chrome, and the Account plugin. The requirement was specified but never built — the shell exposes the avatar only as a link to `/account`, `sdk.auth` has no `signOut`, and session revoke (ACC-06) excludes the current session.
@@ -1021,53 +1046,6 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 - Other-session revoke (ACC-06) still works and still cannot revoke the current session via the Revoke control
 - The avatar menu is keyboard-accessible and dismissable; the Account-page control works with JS disabled
 - `sdk.auth.signOut()` sends the `Origin` header (no `MISSING_OR_NULL_ORIGIN`)
-
----
-
-#### ✅ Task 0.5.15 — Security hardening, Tier 0 + Tier 1 (RFC 0008)
-
-**Goal:** Ship the no-crypto-machinery hardening tiers of RFC 0008 / SRS §3.17 in v1: security headers + threat-model doc (Tier 0) and transport hardening (Tier 1). At-rest encryption and beyond (Tiers 2–4) are deferred post-v1 to Task 1.0.01.
-
-**Deliverables:**
-
-- Tier 0: security headers (CSP/HSTS/X-Frame-Options/X-Content-Type-Options/Referrer-Policy/Permissions-Policy) in both Next configs + `runtime/middleware.ts`; cookie-hardening review; codify the no-telemetry guarantee; new `docs/security.md` (threat model + self-hoster hardening checklist)
-- Tier 1: Postgres `sslmode=require` + cert handling in `packages/db`; enforce TLS/HSTS at the edge (documented + required); optional shared-secret/mTLS on the internal runtime↔auth channel
-- No new app secrets or native deps in this task (those arrive with Tier 2 in Task 1.0.01)
-
-**Dependencies:** none hard (TLS/HSTS doc assumes the reverse proxy already in `docs/self-hosting.md`)
-
-**SRS reference:** RFC 0008 (Tiers 0–1), SRS §3.17, NFR-02/07/08
-
-**Review checklist:**
-
-- Every response carries the security headers; CSP does not break the runtime/auth UIs or the inline theme script
-- Postgres connects over TLS when `sslmode=require`; `docs/security.md` documents the threat model and the hardening checklist
-- No behaviour change to the existing session/cookie flow
-
----
-
-#### Task 0.5.10 — Cross-plugin data sharing (consent-gated)
-
-**Goal:** Implement the consent-gated, pull-based, read-only cross-plugin data-sharing mechanism specified in RFC 0002 / SRS §3.13. The reserved `sdk.data` surface and the `data:provide`/`data:consume` permissions already exist as stubs; this task makes them real. Depends on `sdk.db` (Task 0.5.05).
-
-**Deliverables:**
-
-- Manifest: optional `data.provides[]` / `data.consumes[]` declarations (provider id, contract, version, scope) in `packages/manifest`, with validation + tests
-- Platform DB: `consent_grants` (consumer, provider, contract, user, granted_at, revoked_at, scope) and `data_access_log` tables, both with `tenant_id`
-- Runtime: provider-resolver registry, consent enforcement, tenant/user scoping, audit logging; routes `sdk.data.query` to the provider's registered resolver
-- SDK: implement `sdk.data.query`/`provide` against the runtime (replace the stubs); raise `ConsentRequiredError` when no active grant exists
-- UI: a consent-prompt dialog primitive in `packages/ui`; grant management in Account (own grants) and oversight in Console
-- The mechanism is generic — no plugin is special-cased
-
-**SRS reference:** RFC 0002, SRS §3.13, §5 (manifest `data.*`)
-
-**Review checklist:**
-
-- A consumer `query` without a grant raises `ConsentRequiredError` and surfaces a consent prompt; granting consent then returns the provider's data
-- Reads are read-only, scoped to the requesting user + tenant, and recorded in the audit log
-- Revoking a grant immediately blocks subsequent reads
-- A consumer cannot reach a provider's raw tables — only its registered contract resolver
-- Existing plugins (no `data.*` declared) are unaffected
 
 ---
 
@@ -1143,25 +1121,25 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.17 — Icon system (RFC 0011)
+#### ✅ Task 0.5.15 — Security hardening, Tier 0 + Tier 1 (RFC 0008)
 
-**Goal:** Adopt Lucide as the icon language per RFC 0011, via a generated zero-dependency SVG set behind a Sovereign `<Icon>`.
+**Goal:** Ship the no-crypto-machinery hardening tiers of RFC 0008 / SRS §3.17 in v1: security headers + threat-model doc (Tier 0) and transport hardening (Tier 1). At-rest encryption and beyond (Tiers 2–4) are deferred post-v1 to Task 1.0.01.
 
 **Deliverables:**
 
-- A name list + generation script emitting curated Lucide icons as inline RSC-safe SVG components into the design system; `lucide` as a **devDependency only** (no runtime/peer dep); ISC `NOTICE`
-- `<Icon>` component (typed `name` union, size/color bound to `--sv-` tokens, a11y) exported from the design system
-- Replace the chrome monograms/`⚙` emoji with `<Icon>`; render plugin manifest `icon.svg` in `PluginTile`/sidebar safely (`<img>`/sanitized, monogram fallback)
-- Docs: `docs/design-system.md` (Icon) + `docs/plugin-development.md`
+- Tier 0: security headers (CSP/HSTS/X-Frame-Options/X-Content-Type-Options/Referrer-Policy/Permissions-Policy) in both Next configs + `runtime/middleware.ts`; cookie-hardening review; codify the no-telemetry guarantee; new `docs/security.md` (threat model + self-hoster hardening checklist)
+- Tier 1: Postgres `sslmode=require` + cert handling in `packages/db`; enforce TLS/HSTS at the edge (documented + required); optional shared-secret/mTLS on the internal runtime↔auth channel
+- No new app secrets or native deps in this task (those arrive with Tier 2 in Task 1.0.01)
 
-**Dependencies:** Task 0.4.06 (chrome/Account), Task 0.4.05 (Launcher tiles)
+**Dependencies:** none hard (TLS/HSTS doc assumes the reverse proxy already in `docs/self-hosting.md`)
 
-**SRS reference:** RFC 0011
+**SRS reference:** RFC 0008 (Tiers 0–1), SRS §3.17, NFR-02/07/08
 
 **Review checklist:**
 
-- The published design system carries no runtime/peer icon dependency; icons recolor via `currentColor`/tokens and theme correctly
-- Adding an icon is "add a name + regenerate"; plugin SVGs are never injected as raw HTML
+- Every response carries the security headers; CSP does not break the runtime/auth UIs or the inline theme script
+- Postgres connects over TLS when `sslmode=require`; `docs/security.md` documents the threat model and the hardening checklist
+- No behaviour change to the existing session/cookie flow
 
 ---
 
@@ -1185,6 +1163,28 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 - `pnpm test` discovers all relocated tests; `*.pg.test.ts`, docs-parity, and schema-parity stay package-local and still run/skip as before
 - The suite is never left half-moved (single PR)
+
+---
+
+#### Task 0.5.17 — Icon system (RFC 0011)
+
+**Goal:** Adopt Lucide as the icon language per RFC 0011, via a generated zero-dependency SVG set behind a Sovereign `<Icon>`.
+
+**Deliverables:**
+
+- A name list + generation script emitting curated Lucide icons as inline RSC-safe SVG components into the design system; `lucide` as a **devDependency only** (no runtime/peer dep); ISC `NOTICE`
+- `<Icon>` component (typed `name` union, size/color bound to `--sv-` tokens, a11y) exported from the design system
+- Replace the chrome monograms/`⚙` emoji with `<Icon>`; render plugin manifest `icon.svg` in `PluginTile`/sidebar safely (`<img>`/sanitized, monogram fallback)
+- Docs: `docs/design-system.md` (Icon) + `docs/plugin-development.md`
+
+**Dependencies:** Task 0.4.06 (chrome/Account), Task 0.4.05 (Launcher tiles)
+
+**SRS reference:** RFC 0011
+
+**Review checklist:**
+
+- The published design system carries no runtime/peer icon dependency; icons recolor via `currentColor`/tokens and theme correctly
+- Adding an icon is "add a name + regenerate"; plugin SVGs are never injected as raw HTML
 
 ---
 
@@ -1212,7 +1212,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.19 — Stable SDK and semver commitment
+#### Task 0.5.19 — Stable SDK and semver commitment (review before start, might have already done this)
 
 **Goal:** SDK API review, cleanup, and semver commitment documented.
 
@@ -1233,7 +1233,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.20 — SDK distribution & plugin isolation boundary (RFC 0023)
+#### Task 0.5.20 — SDK distribution & plugin isolation boundary (RFC 0023) (review before start, might have already done this)
 
 **Goal:** Decide and implement the published-SDK model. Plugins are host-composed fragments with no standalone runtime and the SDK is in-process host glue, so publish `@sovereignfs/sdk` as a **types-first contract** (host-provided/guarded impls, no `db`/`mailer` dependency) — which also dissolves the private-deps blocker — or drop the "published" designation if isolated authoring isn't pursued.
 
@@ -1254,7 +1254,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.21 — Plugin compatibility & versioning (RFC 0024)
+#### Task 0.5.21 — Plugin compatibility & versioning (RFC 0024) (review before start, might have already done this)
 
 **Goal:** Make the dormant `schemaVersion` and `compatibility.minPlatformVersion` fields functional, add an advisory `maxPlatformVersion`, and enforce compatibility consistently.
 
@@ -1404,6 +1404,160 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
+### Phase v0.6 — User roles & capabilities
+
+#### Task 0.6.01 — Platform roles & capabilities (RFC 0021)
+
+**Goal:** Grow the two-role model into a capability-based model with named role presets and a protected `platform:owner` — the SRS §3.4 "future version" with database-driven capability assignment.
+
+**Deliverables:**
+
+- Capabilities as the enforcement unit; built-in presets owner/admin/auditor/user (hardcoded defaults) + a DB-driven override layer
+- `platform:owner`: the first user becomes owner (amends AUTH-08 + a migration for existing instances), sole holder of `role:assign`, protected (closes the missing last-admin guard)
+- Centralize role/capability constants + a `hasCapability`/`requireCapability` resolver (replacing the ~6 binary `platform:admin` checks); carry effective capabilities in the signed session cache for the Edge gate; SDK helper; Console assignment UI (audited via RFC 0005)
+
+**Dependencies:** Task 0.5.12 (audit), Task 0.5.05b (session cache)
+
+**SRS reference:** RFC 0021, SRS §3.4
+
+**Review checklist:**
+
+- An auditor sees a read-only Console; the owner cannot be locked out; capability changes propagate within the cookie-cache window
+- `adminOnly` maps to a capability gate
+
+---
+
+#### Task 0.6.02 — Plugin-declared capabilities (RFC 0022)
+
+**Goal:** Let plugins declare namespaced capabilities (`splitify:create-group`) enforced intra-plugin via the SDK.
+
+**Deliverables:**
+
+- Manifest `capabilities` declaration (auto-namespaced by slug, optional `defaultGrant`), validated at build (manifest **minor**)
+- `sdk.auth.hasCapability` resolves plugin capabilities; enforcement is inside the plugin (not the platform route gate)
+- The assignment/storage model (platform-stored vs plugin-managed — the central open question) + docs
+
+**Dependencies:** Task 1.0.02 (capability model)
+
+**SRS reference:** RFC 0022
+
+**Review checklist:**
+
+- A plugin gates a feature on its own capability via the SDK; the platform route gate does not enforce plugin capabilities
+
+---
+
+### Phase v0.7 — Notifications
+
+#### Task 0.7.01 — Notification Center (RFC 0015)
+
+**Goal:** A per-user notification inbox with a bell + panel, toasts, the `sdk.notifications` send surface, and admin broadcast.
+
+**Deliverables:**
+
+- Tenant-scoped `notifications` table (read/unread/dismiss) + notification prefs; clearly differentiated from the activity log
+- Implement `sdk.notifications.send` (send-only for plugins; runtime injects source/tenant); platform-owned fan-out (inbox + toast if active)
+- Bell + panel in chrome (sidebar/header, RFC 0011 icon, RFC 0013 Drawer on mobile) + a `Toast` primitive; `/api/account/notifications` routes
+- Admin broadcast with guardrails (audited via RFC 0005, rate-limited, audience-scoped, user opt-out); admin-selectable transport (polling default / WebSocket) + per-user poll interval
+
+**Dependencies:** Task 0.5.05 (`sdk.db`), Task 0.5.12 (audit), Task 0.5.17 (icons)
+
+**SRS reference:** RFC 0015
+
+**Review checklist:**
+
+- A plugin send appears in the inbox + bell badge + a toast; an admin broadcast reaches all users and is audited; users can mute the announcement category
+
+---
+
+#### Task Task 0.7.02 — Web Push notifications (RFC 0016)
+
+**Goal:** Background delivery of inbox notifications via Web Push (VAPID + service worker).
+
+**Deliverables:**
+
+- VAPID keys as optional no-default env secrets (push disabled when unset); a `customWorkerSrc` push/`notificationclick` handler; `push_subscriptions` table + helpers
+- Account opt-in (permission + subscribe) with the iOS-installed-PWA caveat; `web-push` send on the RFC 0015 fan-out (subject to category prefs); prune on `410`
+- Plugins never touch push — the platform fans out from the inbox
+
+**Dependencies:** Task 1.0.04 (Notification Center)
+
+**SRS reference:** RFC 0016
+
+**Review checklist:**
+
+- Enabling push delivers a background notification; an unsubscribed device gets none; secrets stay in env (push off when unset)
+
+---
+
+### Phase v0.8 — Plugin isolation & Live debuging
+
+#### Task 1.0.06 — Production dev-mode & diagnostics (RFC 0020)
+
+**Goal:** Validate features on a production instance against a mock database without touching real data, plus local no-telemetry diagnostics.
+
+**Deliverables:**
+
+- A request-scoped dev-mode switch (`AsyncLocalStorage`, never global) → the mock DB for the toggled request only; env-gated off by default, secret-authenticated, visibly flagged, audited (RFC 0005); the mock DB seeded by `sv seed`
+- Resolve the auth-server mock-DB crux (or scope v1 to data-only mock)
+- Structured logging (`LOG_LEVEL`, stdout only) + a richer admin `/api/admin/health` — reconciled with the no-telemetry guarantee
+
+**Dependencies:** Task 0.5.23 (seed), Task 0.5.12 (audit)
+
+**SRS reference:** RFC 0020
+
+**Review checklist:**
+
+- A dev-mode request reads only the mock DB; concurrent real requests are unaffected; nothing egresses
+
+---
+
+#### Task 1.0.07 — Plugin monetization (RFC 0003)
+
+**Goal:** Let plugin authors monetize plugins via a manifest-declared model + author-signed entitlement gating. RFC 0003 accepted.
+
+**Deliverables:**
+
+- Manifest `monetization` object (`model`/`interval`/`tiers`/`license.publicKey`); validation + tests; `@sovereignfs/manifest` minor bump
+- Reserved `sdk.billing`/`entitlements` surface (stub throwing `NotImplementedError`) + `EntitlementRequiredError`; `@sovereignfs/sdk` minor bump
+- Entitlement gating in runtime middleware by `routePrefix` (paywall / `402`), mirroring the disabled-plugin pattern; `entitlements` table with `tenant_id`
+- `PaymentProvider` adapter interface; manual/bank, Stripe, and PayPal adapters (hosted checkout + webhooks); offline signature verification against author public key
+- Subscription management in Account (purchase/import license, active subscriptions, renewal/cancel); entitlement oversight + manual-payment confirmation in Console
+- Paywall page (runtime-owned); plugin key-rotation support; docs
+
+**Dependencies:** Task 0.5.08 (API namespace — webhook endpoints), Task 0.5.05 (`sdk.db`)
+
+**SRS reference:** RFC 0003
+
+**Review checklist:**
+
+- A `recurring` plugin is paywalled without an entitlement; a signed license grants access; a Stripe webhook renews the entitlement; manual import works with no gateway
+
+---
+
+#### Task 1.0.08 — Per-plugin database (RFC 0004)
+
+**Goal:** Let a plugin opt into a dedicated database (`database: "isolated"`) rather than sharing the platform DB. RFC 0004 accepted.
+
+**Deliverables:**
+
+- SQLite: dedicated file per isolated plugin (`data/plugins/<pluginId>.db`) via `createClient`; per-plugin client registry (lazy, keyed by id); per-store migration-tracking table
+- Postgres: schema-per-plugin (`CREATE SCHEMA`, `search_path`); provision on first use, `DROP SCHEMA … CASCADE` on uninstall; no extra pool (single connection)
+- Migration runner routes each plugin's migrations to its resolved store (shared → platform DB; isolated → dedicated store)
+- `sdk.db.getClient()` transparently returns the shared or dedicated client per the plugin's `database` setting
+- Plugin lifecycle hooks: provision on first `getClient()`, drop on uninstall/purge; per-plugin backup/export path
+- SRS §3.7/§4.6/§5 updated ("not implemented" → "opt-in isolated model")
+
+**Dependencies:** Task 0.5.03 (Postgres), Task 0.5.05 (`sdk.db`)
+
+**SRS reference:** RFC 0004
+
+**Review checklist:**
+
+- `database: "isolated"` plugin gets its own SQLite file; uninstall drops it entirely; `shared` plugin is unaffected; Postgres schema-per-plugin provisions and drops cleanly
+
+---
+
 ## v1
 
 The v1.0 release line and post-release work — net-new features, the capability
@@ -1434,154 +1588,6 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 - A stolen disk / leaked backup yields ciphertext; the docs state plainly that server-held keys do not defend against a curious operator or RCE
 - Encryption is opt-in and fails fast when enabled without a key; rotation re-wraps DEKs without bulk re-encryption
 - Field-level encryption is gated by `crypto:use`; encrypted columns document the search/sort caveat
-
----
-
-#### Task 1.0.02 — Platform roles & capabilities (RFC 0021) **[post-v1]**
-
-**Goal:** Grow the two-role model into a capability-based model with named role presets and a protected `platform:owner` — the SRS §3.4 "future version" with database-driven capability assignment.
-
-**Deliverables:**
-
-- Capabilities as the enforcement unit; built-in presets owner/admin/auditor/user (hardcoded defaults) + a DB-driven override layer
-- `platform:owner`: the first user becomes owner (amends AUTH-08 + a migration for existing instances), sole holder of `role:assign`, protected (closes the missing last-admin guard)
-- Centralize role/capability constants + a `hasCapability`/`requireCapability` resolver (replacing the ~6 binary `platform:admin` checks); carry effective capabilities in the signed session cache for the Edge gate; SDK helper; Console assignment UI (audited via RFC 0005)
-
-**Dependencies:** Task 0.5.12 (audit), Task 0.5.05b (session cache)
-
-**SRS reference:** RFC 0021, SRS §3.4
-
-**Review checklist:**
-
-- An auditor sees a read-only Console; the owner cannot be locked out; capability changes propagate within the cookie-cache window
-- `adminOnly` maps to a capability gate
-
----
-
-#### Task 1.0.03 — Plugin-declared capabilities (RFC 0022) **[post-v1]**
-
-**Goal:** Let plugins declare namespaced capabilities (`splitify:create-group`) enforced intra-plugin via the SDK.
-
-**Deliverables:**
-
-- Manifest `capabilities` declaration (auto-namespaced by slug, optional `defaultGrant`), validated at build (manifest **minor**)
-- `sdk.auth.hasCapability` resolves plugin capabilities; enforcement is inside the plugin (not the platform route gate)
-- The assignment/storage model (platform-stored vs plugin-managed — the central open question) + docs
-
-**Dependencies:** Task 1.0.02 (capability model)
-
-**SRS reference:** RFC 0022
-
-**Review checklist:**
-
-- A plugin gates a feature on its own capability via the SDK; the platform route gate does not enforce plugin capabilities
-
----
-
-#### Task 1.0.04 — Notification Center (RFC 0015) **[post-v1]**
-
-**Goal:** A per-user notification inbox with a bell + panel, toasts, the `sdk.notifications` send surface, and admin broadcast.
-
-**Deliverables:**
-
-- Tenant-scoped `notifications` table (read/unread/dismiss) + notification prefs; clearly differentiated from the activity log
-- Implement `sdk.notifications.send` (send-only for plugins; runtime injects source/tenant); platform-owned fan-out (inbox + toast if active)
-- Bell + panel in chrome (sidebar/header, RFC 0011 icon, RFC 0013 Drawer on mobile) + a `Toast` primitive; `/api/account/notifications` routes
-- Admin broadcast with guardrails (audited via RFC 0005, rate-limited, audience-scoped, user opt-out); admin-selectable transport (polling default / WebSocket) + per-user poll interval
-
-**Dependencies:** Task 0.5.05 (`sdk.db`), Task 0.5.12 (audit), Task 0.5.17 (icons)
-
-**SRS reference:** RFC 0015
-
-**Review checklist:**
-
-- A plugin send appears in the inbox + bell badge + a toast; an admin broadcast reaches all users and is audited; users can mute the announcement category
-
----
-
-#### Task 1.0.05 — Web Push notifications (RFC 0016) **[post-v1]**
-
-**Goal:** Background delivery of inbox notifications via Web Push (VAPID + service worker).
-
-**Deliverables:**
-
-- VAPID keys as optional no-default env secrets (push disabled when unset); a `customWorkerSrc` push/`notificationclick` handler; `push_subscriptions` table + helpers
-- Account opt-in (permission + subscribe) with the iOS-installed-PWA caveat; `web-push` send on the RFC 0015 fan-out (subject to category prefs); prune on `410`
-- Plugins never touch push — the platform fans out from the inbox
-
-**Dependencies:** Task 1.0.04 (Notification Center)
-
-**SRS reference:** RFC 0016
-
-**Review checklist:**
-
-- Enabling push delivers a background notification; an unsubscribed device gets none; secrets stay in env (push off when unset)
-
----
-
-#### Task 1.0.06 — Production dev-mode & diagnostics (RFC 0020) **[post-v1]**
-
-**Goal:** Validate features on a production instance against a mock database without touching real data, plus local no-telemetry diagnostics.
-
-**Deliverables:**
-
-- A request-scoped dev-mode switch (`AsyncLocalStorage`, never global) → the mock DB for the toggled request only; env-gated off by default, secret-authenticated, visibly flagged, audited (RFC 0005); the mock DB seeded by `sv seed`
-- Resolve the auth-server mock-DB crux (or scope v1 to data-only mock)
-- Structured logging (`LOG_LEVEL`, stdout only) + a richer admin `/api/admin/health` — reconciled with the no-telemetry guarantee
-
-**Dependencies:** Task 0.5.23 (seed), Task 0.5.12 (audit)
-
-**SRS reference:** RFC 0020
-
-**Review checklist:**
-
-- A dev-mode request reads only the mock DB; concurrent real requests are unaffected; nothing egresses
-
----
-
-#### Task 1.0.07 — Plugin monetization (RFC 0003) **[post-v1]**
-
-**Goal:** Let plugin authors monetize plugins via a manifest-declared model + author-signed entitlement gating. RFC 0003 accepted.
-
-**Deliverables:**
-
-- Manifest `monetization` object (`model`/`interval`/`tiers`/`license.publicKey`); validation + tests; `@sovereignfs/manifest` minor bump
-- Reserved `sdk.billing`/`entitlements` surface (stub throwing `NotImplementedError`) + `EntitlementRequiredError`; `@sovereignfs/sdk` minor bump
-- Entitlement gating in runtime middleware by `routePrefix` (paywall / `402`), mirroring the disabled-plugin pattern; `entitlements` table with `tenant_id`
-- `PaymentProvider` adapter interface; manual/bank, Stripe, and PayPal adapters (hosted checkout + webhooks); offline signature verification against author public key
-- Subscription management in Account (purchase/import license, active subscriptions, renewal/cancel); entitlement oversight + manual-payment confirmation in Console
-- Paywall page (runtime-owned); plugin key-rotation support; docs
-
-**Dependencies:** Task 0.5.08 (API namespace — webhook endpoints), Task 0.5.05 (`sdk.db`)
-
-**SRS reference:** RFC 0003
-
-**Review checklist:**
-
-- A `recurring` plugin is paywalled without an entitlement; a signed license grants access; a Stripe webhook renews the entitlement; manual import works with no gateway
-
----
-
-#### Task 1.0.08 — Per-plugin database (RFC 0004) **[post-v1]**
-
-**Goal:** Let a plugin opt into a dedicated database (`database: "isolated"`) rather than sharing the platform DB. RFC 0004 accepted.
-
-**Deliverables:**
-
-- SQLite: dedicated file per isolated plugin (`data/plugins/<pluginId>.db`) via `createClient`; per-plugin client registry (lazy, keyed by id); per-store migration-tracking table
-- Postgres: schema-per-plugin (`CREATE SCHEMA`, `search_path`); provision on first use, `DROP SCHEMA … CASCADE` on uninstall; no extra pool (single connection)
-- Migration runner routes each plugin's migrations to its resolved store (shared → platform DB; isolated → dedicated store)
-- `sdk.db.getClient()` transparently returns the shared or dedicated client per the plugin's `database` setting
-- Plugin lifecycle hooks: provision on first `getClient()`, drop on uninstall/purge; per-plugin backup/export path
-- SRS §3.7/§4.6/§5 updated ("not implemented" → "opt-in isolated model")
-
-**Dependencies:** Task 0.5.03 (Postgres), Task 0.5.05 (`sdk.db`)
-
-**SRS reference:** RFC 0004
-
-**Review checklist:**
-
-- `database: "isolated"` plugin gets its own SQLite file; uninstall drops it entirely; `shared` plugin is unaffected; Postgres schema-per-plugin provisions and drops cleanly
 
 ---
 

@@ -7,21 +7,11 @@
  * middleware gate treats them as disabled) and their reasons are stored in the
  * in-memory `plugin-compat.ts` module (read by the health + admin API routes).
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { findWorkspaceRoot, getPlatformDb, setPluginEnabled } from '@sovereignfs/db';
+import { getPlatformDb, setPluginEnabled } from '@sovereignfs/db';
 import { checkCompatibility } from '@sovereignfs/manifest';
 import { getInstalledPlugins } from './registry';
 import { markIncompatible, recordWarnings } from './plugin-compat';
-
-function getPlatformVersion(): string {
-  try {
-    const raw = readFileSync(join(findWorkspaceRoot(), 'package.json'), 'utf8');
-    return (JSON.parse(raw) as { version?: string }).version ?? '0.0.0';
-  } catch {
-    return '0.0.0';
-  }
-}
+import { getPlatformVersion } from './platform-version';
 
 export async function checkBootCompatibility(): Promise<void> {
   const platformVersion = getPlatformVersion();

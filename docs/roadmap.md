@@ -1404,6 +1404,86 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
+#### Task 0.5.28 — Accessibility audit & a11y contract (RFC 0025)
+
+**Goal:** Reach WCAG 2.1 AA on all platform-owned UI, add automated a11y linting,
+and deliver the plugin developer a11y contract per RFC 0025.
+
+**Deliverables:**
+
+- `eslint-plugin-jsx-a11y` (recommended ruleset) added to `eslint.config.ts`;
+  applied to `runtime/`, `apps/auth/`, `packages/ui/`, and `plugins/`; `pnpm lint`
+  and the CI `lint` job pass with no suppressions
+- `packages/ui`: four new semantic tokens (`--sv-color-error`, `--sv-color-error-text`,
+  `--sv-color-success`, `--sv-color-success-text`) paired with icon/text convention;
+  `prefers-reduced-motion` applied to animated components (Dialog, future Drawer/Toast);
+  `:focus-visible` outline via `--sv-color-focus-ring` codified on all interactive
+  components (`@sovereignfs/ui` **minor** bump)
+- Audit + fix: runtime shell chrome, `apps/auth` login/registration, Console,
+  Launcher, and Account against WCAG 2.1 AA — roles, labels, keyboard interactions,
+  focus order, color contrast
+- `docs/design-system.md`: contrast commitment table (4.5:1 text, 3:1 UI components)
+  for all semantic color pairs; focus-visible token guidance; per-component a11y
+  spec (roles, keyboard table, ARIA attributes, focus order)
+- `docs/plugin-development.md`: new "Accessibility" section (semantic HTML, form
+  labels, icon `aria-hidden`/`aria-label` convention, color independence, keyboard
+  operability, custom widget ARIA patterns, live regions, `prefers-reduced-motion`)
+- `docs/sovereign-proposal-plan-srs.md`: NFR-11 — WCAG 2.1 AA for platform-owned UI
+
+**Dependencies:** Task 0.5.17 (Icon a11y convention), Task 0.5.25 (touch targets)
+
+**SRS reference:** RFC 0025, NFR-11
+
+**Review checklist:**
+
+- `pnpm lint` passes with `eslint-plugin-jsx-a11y` enabled; no inline suppressions
+- Keyboard-only navigation covers: log in, open and close an overlay plugin, navigate
+  Console user list, change a setting in Account
+- Every semantic color pair documented in `docs/design-system.md` meets 4.5:1 text
+  contrast and 3:1 UI-component contrast
+- Plugin dev guide "Accessibility" section covers all items from RFC 0025
+
+---
+
+#### Task 0.5.29 — Non-Docker production deployment, Phase 1 — PM2 (RFC 0026)
+
+**Goal:** Ship the PM2 deployment path as the first-class non-Docker fallback
+(RFC 0026 Phase 1). Operators who can't or won't use Docker get a documented,
+supported path to production.
+
+**Deliverables:**
+
+- `bin/sv.ts`: health-gate in `sv serve` — poll auth `GET /api/health`
+  (`http://127.0.0.1:3001` by default, derived from `SOVEREIGN_AUTH_URL`) with a
+  30-second timeout before spawning the runtime process; log the wait via
+  `consola.info`; exit non-zero with a clear error on timeout; unit-tested in
+  `bin/__tests__/`
+- `bin/sv.ts`: new `sv setup pm2 [--dir <install-dir>] [--env-file <path>]`
+  sub-command; template-fill logic in `bin/helpers.ts`; unit-tested
+- `docs/examples/pm2.example.config.js` — canonical PM2 ecosystem config (same
+  output as `sv setup pm2` with default arguments)
+- `docs/self-hosting.md`: new "Non-Docker deployment (PM2)" section covering
+  Node.js version requirement, build steps, `pm2 startup`/`pm2 save` for boot
+  persistence, env-var differences table (Docker vs non-Docker), data-directory
+  setup, upgrade procedure, and reverse-proxy references (reuse existing snippets)
+- SRS §3.1: PM2 added as a supported non-Docker deployment model
+
+**Dependencies:** `sv serve` exists (Task 0.5.04); `sv backup`/`restore`
+(Task 0.5.13) referenced in the upgrade procedure but not a hard blocker
+
+**SRS reference:** RFC 0026 Phase 1, SRS §3.1
+
+**Review checklist:**
+
+- `sv serve` logs the health-gate wait and exits cleanly if auth never becomes
+  healthy within 30 s; unit test covers the poll logic
+- `sv setup pm2` produces a valid PM2 ecosystem config with correct paths, env,
+  and `HOSTNAME=127.0.0.1` on the auth entry
+- `docs/self-hosting.md` PM2 section is self-contained: a reader with Node.js,
+  pnpm, and PM2 installed can follow it to a running instance without Docker
+
+---
+
 ### Phase v0.6 — User roles & capabilities
 
 #### Task 0.6.01 — Platform roles & capabilities (RFC 0021)
@@ -1555,6 +1635,42 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 **Review checklist:**
 
 - `database: "isolated"` plugin gets its own SQLite file; uninstall drops it entirely; `shared` plugin is unaffected; Postgres schema-per-plugin provisions and drops cleanly
+
+---
+
+#### Task 1.0.09 — Non-Docker production deployment, Phase 2 — systemd (RFC 0026) **[post-v1]**
+
+**Goal:** Add systemd as a zero-extra-dependency alternative to PM2 for Linux
+server operators (RFC 0026 Phase 2). Phase 1 (PM2) must ship first.
+
+**Deliverables:**
+
+- `bin/sv.ts`: `sv setup systemd [--user <user>] [--dir <dir>] [--env-file <path>]`
+  sub-command writing two pre-filled unit files to the current directory; template
+  logic in `bin/helpers.ts`; unit-tested
+- `docs/examples/sovereign-auth.service`, `docs/examples/sovereign-runtime.service`
+  — canonical unit files (same as `sv setup systemd` defaults): `User=sovereign`,
+  `WorkingDirectory=`, `EnvironmentFile=`, `HOSTNAME=127.0.0.1` on auth,
+  `ExecStartPre` health-poll on the runtime unit, `Restart=on-failure`
+- `docs/self-hosting.md`: "Non-Docker deployment (systemd)" section alongside the
+  PM2 section; covers account creation, `EnvironmentFile` setup, `systemctl enable`,
+  log access via `journalctl`, and the upgrade procedure
+- Document `sv serve` as a valid single-process target under either PM2 or systemd
+  (simplest path for minimal init systems)
+- SRS §3.1: systemd noted as the recommended Linux-native alternative to PM2
+
+**Dependencies:** Task 0.5.29 (Phase 1 — PM2 and `sv serve` health-gate must be
+in place)
+
+**SRS reference:** RFC 0026 Phase 2, SRS §3.1
+
+**Review checklist:**
+
+- `sv setup systemd` produces two syntactically valid unit files with correct
+  `WorkingDirectory`, `EnvironmentFile`, `HOSTNAME`, and `ExecStartPre` health-poll
+- `systemctl start sovereign-runtime` waits for `sovereign-auth` to pass its health
+  check before the runtime process starts
+- `docs/self-hosting.md` systemd section is self-contained alongside the PM2 section
 
 ---
 

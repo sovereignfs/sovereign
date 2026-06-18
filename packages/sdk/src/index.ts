@@ -1,9 +1,10 @@
 import * as auth from './auth';
+import { activity } from './activity';
 import { data } from './data';
 import * as db from './db';
 import * as mailer from './mailer';
 import * as platform from './platform';
-import { activity, events, notifications, storage } from './unimplemented';
+import { events, notifications, storage } from './unimplemented';
 
 /**
  * The Sovereign SDK — the only contract between a plugin and the platform.
@@ -15,10 +16,9 @@ import { activity, events, notifications, storage } from './unimplemented';
  *
  * **Experimental / reserved (NOT covered by the stability guarantee):** `data`
  * (cross-plugin data sharing, RFC 0002), `activity` (activity log, RFC 0005),
- * `storage`, `notifications`, `events`. They are declared so the contract is
- * visible, but every call throws `NotImplementedError` until the backing
- * mechanism ships — their shape may change before then. Do not depend on them
- * in a v1 plugin.
+ * `storage`, `notifications`, `events`. `data` and `activity` are implemented;
+ * `storage`, `notifications`, and `events` throw `NotImplementedError` until
+ * their backing mechanisms ship. Their shape may change before they stabilise.
  */
 export const sdk = {
   // Stable (v1.0.0).

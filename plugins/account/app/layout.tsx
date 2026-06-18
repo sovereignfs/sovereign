@@ -7,6 +7,7 @@ const tabs = [
   { href: '/account/security', label: 'Security' },
   { href: '/account/preferences', label: 'Preferences' },
   { href: '/account/data', label: 'Data' },
+  { href: '/account/activity', label: 'Activity' },
 ];
 
 export default function AccountLayout({ children }: { children: ReactNode }) {

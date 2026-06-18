@@ -134,9 +134,38 @@ export const dataAccessLog = sqliteTable('data_access_log', {
   rowCount: integer('row_count').notNull(),
 });
 
+/**
+ * Platform-wide durable audit log (RFC 0005). Append-only — never updated or
+ * deleted by application code. Each row captures one actor performing one
+ * action, with a visibility flag that controls whether the event appears in
+ * the personal user feed (`'user'`) or only in the admin console feed (`'admin'`).
+ *
+ * Indexes (created by bootstrap DDL):
+ *   (tenant_id, created_at DESC) — feed queries
+ *   (actor_id) — filter by actor
+ *   (subject_user_id) — personal-feed query (`WHERE subject_user_id = :self OR actor_id = :self`)
+ */
+export const activityLog = sqliteTable('activity_log', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  actorId: text('actor_id'),
+  actorType: text('actor_type').notNull(), // 'user' | 'system' | 'plugin'
+  action: text('action').notNull(),
+  subjectUserId: text('subject_user_id'),
+  targetType: text('target_type'),
+  targetId: text('target_id'),
+  pluginId: text('plugin_id'),
+  visibility: text('visibility').notNull(), // 'admin' | 'user'
+  summary: text('summary'),
+  metadata: text('metadata'), // JSON string or null
+  createdAt: integer('created_at').notNull(),
+});
+
 export type AccountPrefs = typeof accountPrefs.$inferSelect;
 export type NewAccountPrefs = typeof accountPrefs.$inferInsert;
 export type ConsentGrant = typeof consentGrants.$inferSelect;
 export type NewConsentGrant = typeof consentGrants.$inferInsert;
 export type DataAccessLogEntry = typeof dataAccessLog.$inferSelect;
 export type NewDataAccessLogEntry = typeof dataAccessLog.$inferInsert;
+export type ActivityLog = typeof activityLog.$inferSelect;
+export type NewActivityLog = typeof activityLog.$inferInsert;

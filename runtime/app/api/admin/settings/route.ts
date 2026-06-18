@@ -8,6 +8,7 @@ import {
   setTenantName,
 } from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
+import { logActivity } from '@/src/activity';
 import { getPlatformDb } from '@/src/db';
 import { getInstalledPlugins } from '@/src/registry';
 import { validateRootPlugin } from '@/src/root-plugin';
@@ -44,6 +45,7 @@ export async function PATCH(request: Request): Promise<Response> {
     rootPluginId?: string;
   };
   const db = await getPlatformDb();
+  const actorId = request.headers.get('x-sovereign-user-id');
 
   if (body.tenantName !== undefined) {
     const name = body.tenantName.trim();
@@ -51,6 +53,14 @@ export async function PATCH(request: Request): Promise<Response> {
       return NextResponse.json({ error: 'tenantName must not be empty' }, { status: 400 });
     }
     await setTenantName(db, name);
+    void logActivity({
+      actorId,
+      actorType: 'user',
+      action: 'settings.tenant_name_changed',
+      visibility: 'admin',
+      summary: `Tenant name changed to "${name}"`,
+      metadata: { tenantName: name },
+    });
   }
 
   if (body.rootPluginId !== undefined) {
@@ -63,6 +73,14 @@ export async function PATCH(request: Request): Promise<Response> {
       );
     }
     await setPlatformSetting(db, 'root_plugin_id', body.rootPluginId);
+    void logActivity({
+      actorId,
+      actorType: 'user',
+      action: 'settings.root_plugin_changed',
+      visibility: 'admin',
+      summary: `Root plugin changed to ${body.rootPluginId}`,
+      metadata: { rootPluginId: body.rootPluginId },
+    });
   }
 
   if (body.inviteOnly !== undefined) {
@@ -86,6 +104,14 @@ export async function PATCH(request: Request): Promise<Response> {
       );
     }
     await setPlatformSetting(db, 'invite_only', String(body.inviteOnly));
+    void logActivity({
+      actorId,
+      actorType: 'user',
+      action: 'settings.invite_only_changed',
+      visibility: 'admin',
+      summary: `Invite-only ${body.inviteOnly ? 'enabled' : 'disabled'}`,
+      metadata: { inviteOnly: body.inviteOnly },
+    });
   }
 
   return NextResponse.json(await readSettings());

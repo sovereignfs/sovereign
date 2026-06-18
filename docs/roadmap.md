@@ -1043,26 +1043,19 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.12 — Activity log (RFC 0005)
+#### ✅ Task 0.5.12 — Activity log (RFC 0005)
 
-**Goal:** Implement the scoped activity log specified in RFC 0005 / SRS §3.14. The reserved `sdk.activity.log()` surface and the `activity:write` permission already exist as stubs; this task makes them real.
+**Delivered:**
 
-**Deliverables:**
+- `activity_log` table in both SQLite and Postgres schemas (parity-tested); `recordActivity()`, `listUserActivity()`, `listAdminActivity()` helpers in `@sovereignfs/db` (→ 0.9.0); bootstrap DDL with three indexes
+- `sdk.activity.log()` implemented (no longer a stub): reads actor/plugin from request headers via the `SdkHost.activity.log()` contract; runtime injects actor type and namespaces action by plugin ID; `activity:write` permission documented (`@sovereignfs/sdk` → 1.3.0)
+- Capture points: Console user-management actions (invite, role change, deactivate/reactivate), admin plugin enable/disable, admin settings changes (tenant name, root plugin, invite-only), Account self-mutations (display name, password change, session revoke, avatar)
+- API routes: `GET /api/account/activity` (personal feed, session-gated) and `GET /api/admin/activity` (platform-wide, admin-key-gated with `actorId`/`action`/`limit` filters)
+- Account **Activity** tab (`/account/activity`) — personal feed, all users; Console **Activity** nav entry + page (`/console/activity`) — platform-wide feed with actor, action, summary, scope columns
+- `runtime/src/activity.ts` `logActivity()` — fire-and-forget wrapper used by runtime routes; never throws so a log failure never blocks the primary action
+- `runtime` → 0.14.0; `plugins/account` → 0.4.0; `plugins/console` → 0.5.0
 
-- Platform DB: an `activity_log` table (both dialects + parity) — `id`, `tenant_id`, `actor_id`, `actor_type`, `action`, `subject_user_id`, `target_type`/`target_id`, `plugin_id`, `visibility`, `summary`, `metadata`, `created_at`; indexes on `(tenant_id, created_at)`, `actor_id`, `subject_user_id`; a `recordActivity()` helper
-- Capture points at the existing mutations (Console user mgmt, plugin enable/disable, settings, Account self-mutations) and **auth login/session at the runtime verify boundary** (not in `apps/auth`)
-- SDK: implement `sdk.activity.log()` against the runtime (replace the stub), injecting actor/tenant/plugin
-- UI: Account **Activity** tab (personal feed) and Console **Activity** view (platform-wide, admin-only)
-
-**Dependencies:** Task 0.5.05 (`sdk.db`), Task 0.5.05b (verify boundary)
-
-**SRS reference:** RFC 0005, SRS §3.14, §5 (`activity:write`)
-
-**Review checklist:**
-
-- A non-admin sees only their own + concerning-them events; an admin sees the whole tenant in Console
-- Plugin `log()` cannot forge actor/tenant or write `visibility: 'admin'`
-- Login/session events are recorded without `apps/auth` touching the platform DB
+**Deferred:** Login/session-established capture at the runtime verify boundary (Edge runtime cannot write the platform DB; deferred to a follow-on task per RFC 0005 §3 open question).
 
 ---
 

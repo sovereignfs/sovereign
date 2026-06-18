@@ -47,6 +47,11 @@ services:
       # better-auth base URL — must be the browser-reachable address so
       # callback and cookie URLs resolve in the browser after login.
       AUTH_BASE_URL: '${AUTH_BASE_URL:-http://localhost:3001}'
+      # Internal Docker service address trusted for server-to-server CSRF checks.
+      # The runtime sends Origin: http://auth:3001 for internal calls; adding it
+      # here ensures those calls are accepted even when AUTH_BASE_URL is the
+      # public domain.
+      AUTH_TRUSTED_ORIGINS: '${AUTH_TRUSTED_ORIGINS:-http://auth:3001}'
       NEXT_PUBLIC_RUNTIME_URL: '${NEXT_PUBLIC_RUNTIME_URL:-http://localhost:3000}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
     volumes:

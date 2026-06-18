@@ -17,6 +17,13 @@ export interface AuthEnv {
   baseUrl: string;
   /** Shared secret for runtime→auth admin API calls. No default — must be set. */
   adminKey: string;
+  /**
+   * Additional origins trusted for CSRF checks, beyond baseUrl. Set to the
+   * internal Docker service address (http://auth:3001) so server-to-server
+   * calls from the runtime — which send Origin: SOVEREIGN_AUTH_URL — are
+   * accepted even when baseUrl is set to the public domain.
+   */
+  trustedOrigins: string[];
 }
 
 let cached: AuthEnv | undefined;
@@ -33,6 +40,10 @@ export function getEnv(): AuthEnv {
     inviteOnly: process.env.AUTH_INVITE_ONLY === 'true',
     baseUrl: process.env.AUTH_BASE_URL ?? 'http://localhost:3001',
     adminKey: required('SOVEREIGN_ADMIN_KEY'),
+    trustedOrigins: (process.env.AUTH_TRUSTED_ORIGINS ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
   };
   return cached;
 }

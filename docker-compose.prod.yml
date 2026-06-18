@@ -18,14 +18,21 @@ services:
       context: .
       dockerfile: apps/auth/Dockerfile
     container_name: sovereign-auth
-    expose:
-      - '3001'
+    ports:
+      - '${AUTH_PORT:-4001}:3001'
     restart: unless-stopped
     environment:
       AUTH_SECRET: '${AUTH_SECRET}'
       AUTH_DATABASE_URL: '${AUTH_DATABASE_URL:-file:./data/auth.db}'
       AUTH_INVITE_ONLY: '${AUTH_INVITE_ONLY:-false}'
-      AUTH_BASE_URL: '${AUTH_BASE_URL:-http://auth:3001}'
+      # Set AUTH_BASE_URL to your public domain, e.g. https://auth.example.com
+      # or https://example.com (if auth is served via a path prefix on the same
+      # domain). This is what better-auth uses for callbacks and cookie domain.
+      AUTH_BASE_URL: '${AUTH_BASE_URL}'
+      # Internal Docker service address trusted for CSRF checks on server-to-server
+      # calls from the runtime (which sends Origin: http://auth:3001). Always set
+      # this when AUTH_BASE_URL is a public domain different from the service name.
+      AUTH_TRUSTED_ORIGINS: '${AUTH_TRUSTED_ORIGINS:-http://auth:3001}'
       NEXT_PUBLIC_RUNTIME_URL: '${NEXT_PUBLIC_RUNTIME_URL}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
     volumes:

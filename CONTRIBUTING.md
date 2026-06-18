@@ -35,6 +35,20 @@ assigned `platform:admin`.
 `SOVEREIGN_AUTH_SECRET` have no defaults — the server will not start without
 them. See `.env.example` for all required variables.
 
+**Full Docker stack:** To run the containerised stack for local QA (not for
+active code development — use `pnpm dev` for that):
+
+```bash
+docker compose up --build
+```
+
+The runtime is exposed on `:3000` and the auth server on `:3001`. In Compose,
+the runtime reaches auth internally via `http://auth:3001`, but browser
+redirects (login page) use `SOVEREIGN_AUTH_PUBLIC_URL` (defaults to
+`http://localhost:3001`), which is the host-reachable address. If you change
+the auth host port with `AUTH_PORT=`, set `SOVEREIGN_AUTH_PUBLIC_URL`
+accordingly in your `.env`.
+
 **Code quality hooks:** The pre-commit hook runs Prettier and ESLint on staged
 files automatically. Run `pnpm format` and `pnpm lint` at any time to check
 your working tree manually.

@@ -33,17 +33,20 @@ services:
     # writes to the host `./data` bind mount work regardless of host ownership.
     # (Prod uses a named volume instead and keeps the non-root user.)
     user: root
-    # Internal only — not reachable from the host, only from the runtime
-    # container via http://auth:3001 on the shared network.
-    expose:
-      - '3001'
+    # Exposed to the host so the browser can reach the auth login UI directly.
+    # The runtime redirects to SOVEREIGN_AUTH_PUBLIC_URL (localhost:3001) for
+    # browser-facing redirects, while keeping SOVEREIGN_AUTH_URL=http://auth:3001
+    # for internal server-to-server calls. Dev-only: production keeps auth
+    # internal (docker-compose.prod.yml uses expose, not ports).
+    ports:
+      - '${AUTH_PORT:-3001}:3001'
     environment:
       AUTH_SECRET: '${AUTH_SECRET}'
       AUTH_DATABASE_URL: '${AUTH_DATABASE_URL:-file:./data/auth.db}'
       AUTH_INVITE_ONLY: '${AUTH_INVITE_ONLY:-false}'
-      # better-auth base URL — internal service address used for server-side
-      # cookie domain and callback construction.
-      AUTH_BASE_URL: '${AUTH_BASE_URL:-http://auth:3001}'
+      # better-auth base URL — must be the browser-reachable address so
+      # callback and cookie URLs resolve in the browser after login.
+      AUTH_BASE_URL: '${AUTH_BASE_URL:-http://localhost:3001}'
       NEXT_PUBLIC_RUNTIME_URL: '${NEXT_PUBLIC_RUNTIME_URL:-http://localhost:3000}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
     volumes:
@@ -65,6 +68,11 @@ services:
       # Overrides the .env value (which points to localhost for native dev).
       # Inside Docker, the runtime reaches auth via the internal service name.
       SOVEREIGN_AUTH_URL: 'http://auth:3001'
+      # Browser-facing URL for auth redirects (login/logout). Differs from
+      # SOVEREIGN_AUTH_URL because browsers can't resolve the internal service
+      # name "auth". Defaults to localhost in dev; set to your public domain
+      # in production when not using the internal service name.
+      SOVEREIGN_AUTH_PUBLIC_URL: '${SOVEREIGN_AUTH_PUBLIC_URL:-http://localhost:3001}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
       # Shared signing secret — the runtime verifies the auth server's session
       # cookie locally with it (SRS AUTH-05); must match the auth service.

@@ -1,3 +1,4 @@
+import type { DataContractRef, DataContractResolver } from './data';
 import type { DrizzleClient, MailOptions, PlatformConfig } from './types';
 
 /**
@@ -14,6 +15,21 @@ export interface SdkHost {
   };
   platform: {
     getConfig(): Promise<PlatformConfig>;
+  };
+  data: {
+    /** Register a resolver for a contract this plugin provides. */
+    provide(contract: string, resolver: DataContractResolver): void;
+    /**
+     * Query a provider plugin's contract for the current user.
+     * `consumerId` and `userId` are read from request headers by the SDK caller.
+     */
+    query(
+      ref: DataContractRef,
+      consumerId: string | null,
+      userId: string | null,
+      tenantId: string,
+      params: unknown,
+    ): Promise<unknown[]>;
   };
 }
 

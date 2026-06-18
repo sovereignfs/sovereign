@@ -88,6 +88,47 @@ const manifestObjectSchema = z
         maxPlatformVersion: semverString('maxPlatformVersion').optional(),
       })
       .strict(),
+    /**
+     * Cross-plugin data sharing declarations (RFC 0002). Declare the contracts
+     * this plugin exposes (`provides`) and the ones it reads from other plugins
+     * (`consumes`). Both require the matching `data:provide` / `data:consume`
+     * permission to be listed in `permissions`.
+     */
+    data: z
+      .object({
+        /** Contracts this plugin exposes for other plugins to read (consent-gated). */
+        provides: z
+          .array(
+            z
+              .object({
+                /** Stable contract name (e.g. `"expenses"`). Should be globally unique — prefix with your plugin slug. */
+                contract: z.string().min(1),
+                /** Contract major version. Increment on breaking schema changes. */
+                version: z.number().int().positive(),
+                /** Human-readable description shown on the consent prompt. */
+                description: z.string().optional(),
+              })
+              .strict(),
+          )
+          .optional(),
+        /** Contracts this plugin reads from other plugins (requires user consent). */
+        consumes: z
+          .array(
+            z
+              .object({
+                /** The manifest `id` of the plugin that provides the contract. */
+                providerId: z.string().min(1),
+                /** Contract name (must match the provider's declaration). */
+                contract: z.string().min(1),
+                /** Contract major version (must match the provider's declaration). */
+                version: z.number().int().positive(),
+              })
+              .strict(),
+          )
+          .optional(),
+      })
+      .strict()
+      .optional(),
     repository: z.string().url().optional(),
   })
   .strict();

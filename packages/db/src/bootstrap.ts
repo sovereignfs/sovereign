@@ -47,5 +47,27 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       theme TEXT NOT NULL DEFAULT 'system',
       updated_at ${ts} NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS consent_grants (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      consumer_id TEXT NOT NULL,
+      provider_id TEXT NOT NULL,
+      contract TEXT NOT NULL,
+      version INTEGER NOT NULL,
+      granted_at ${ts} NOT NULL,
+      revoked_at ${ts}
+    )`,
+    `CREATE TABLE IF NOT EXISTS data_access_log (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      consumer_id TEXT NOT NULL,
+      provider_id TEXT NOT NULL,
+      contract TEXT NOT NULL,
+      version INTEGER NOT NULL,
+      accessed_at ${ts} NOT NULL,
+      row_count INTEGER NOT NULL
+    )`,
   ];
 }

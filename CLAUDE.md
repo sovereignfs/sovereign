@@ -41,13 +41,13 @@ they are authoritative over assumptions:
   them in branch names, commit messages, or PR titles/descriptions. Refer to the
   work by what it does, not its task number.
 - **Commits** end with a `Co-Authored-By` trailer specific to the tool used:
-  - **Claude Code:** `Co-Authored-By: Claude Code <noreply@anthropic.com>`
-  - **OpenCode:** `Co-Authored-By: Open Code <noreply@opencode.ai>`
-- **PRs** target `main`; body ends with the matching attribution line
-  (tool-specific as above). Describe what changed and why, and cite relevant
-  SRS sections — but no task numbers. Also, the body ends with AI attribution
-  line depending on the tool that used (Claude Code or Open Code;
-  refer "Commits" section for the exact line.)
+  - **Claude Code:** end with the trailer (model-agnostic — do not use a specific model name,
+    as multiple models may contribute to one task): `Co-Authored-By: Claude Code <noreply@anthropic.com>`
+  - **OpenCode:** end with the trailer (model-agnostic — do not use a specific model name,
+    as multiple models may contribute to one task): `Co-Authored-By: Open Code <noreply@opencode.ai>`
+- **PRs** target `main`; body ends with the Claude Code attribution line.
+  Describe what changed and why, and cite relevant SRS sections — but no task numbers.
+  🤖 Generated with [Claude Code](https://claude.com/claude-code)
 - **Merge strategy: rebase and merge** (never squash, never create a merge
   commit). Keeps history linear — each task's commit lands on `main` verbatim.
 - **Fix commit messages BEFORE merging the PR.** Once a squash-merge lands on

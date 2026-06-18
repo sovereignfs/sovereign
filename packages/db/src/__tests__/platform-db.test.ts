@@ -121,7 +121,8 @@ describe('activity log helpers (RFC 0005)', () => {
 
     const rows = await listAdminActivity(db);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({
+    const row0 = rows[0];
+    expect(row0).toMatchObject({
       id: 'evt-1',
       actorId: 'u1',
       actorType: 'user',
@@ -129,7 +130,7 @@ describe('activity log helpers (RFC 0005)', () => {
       visibility: 'admin',
       summary: 'Plugin enabled',
     });
-    expect(rows[0].createdAt).toBeGreaterThan(0);
+    expect(row0?.createdAt).toBeGreaterThan(0);
   });
 
   it('listUserActivity returns only user-scoped events for the given user', async () => {
@@ -209,7 +210,7 @@ describe('activity log helpers (RFC 0005)', () => {
 
     const rows = await listAdminActivity(db, { actorId: 'u1' });
     expect(rows).toHaveLength(1);
-    expect(rows[0].id).toBe('evt-u1');
+    expect(rows[0]?.id).toBe('evt-u1');
   });
 
   it('listAdminActivity filters by action', async () => {
@@ -231,7 +232,7 @@ describe('activity log helpers (RFC 0005)', () => {
 
     const rows = await listAdminActivity(db, { action: 'plugin.enabled' });
     expect(rows).toHaveLength(1);
-    expect(rows[0].id).toBe('evt-a');
+    expect(rows[0]?.id).toBe('evt-a');
   });
 
   it('listAdminActivity respects the limit', async () => {
@@ -268,8 +269,8 @@ describe('activity log helpers (RFC 0005)', () => {
     );
 
     const rows = await listAdminActivity(db);
-    expect(rows[0].id).toBe('evt-newer');
-    expect(rows[1].id).toBe('evt-older');
+    expect(rows[0]?.id).toBe('evt-newer');
+    expect(rows[1]?.id).toBe('evt-older');
   });
 
   it('serialises metadata as JSON and returns it as a string', async () => {
@@ -283,8 +284,8 @@ describe('activity log helpers (RFC 0005)', () => {
       metadata: { tenantName: 'Acme', enabled: true },
     });
 
-    const [row] = await listAdminActivity(db);
-    expect(JSON.parse(row.metadata ?? 'null')).toEqual({ tenantName: 'Acme', enabled: true });
+    const rows = await listAdminActivity(db);
+    expect(JSON.parse(rows[0]?.metadata ?? 'null')).toEqual({ tenantName: 'Acme', enabled: true });
   });
 
   it('handles null optional fields gracefully', async () => {
@@ -297,12 +298,13 @@ describe('activity log helpers (RFC 0005)', () => {
       visibility: 'admin',
     });
 
-    const [row] = await listAdminActivity(db);
-    expect(row.actorId).toBeNull();
-    expect(row.subjectUserId).toBeNull();
-    expect(row.targetType).toBeNull();
-    expect(row.summary).toBeNull();
-    expect(row.metadata).toBeNull();
+    const rows = await listAdminActivity(db);
+    const row = rows[0];
+    expect(row?.actorId).toBeNull();
+    expect(row?.subjectUserId).toBeNull();
+    expect(row?.targetType).toBeNull();
+    expect(row?.summary).toBeNull();
+    expect(row?.metadata).toBeNull();
   });
 });
 

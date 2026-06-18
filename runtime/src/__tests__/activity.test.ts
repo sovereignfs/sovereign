@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, assert, describe, expect, it, vi } from 'vitest';
 
 // Mock @sovereignfs/db before importing the module under test so the real DB
 // is never opened during unit tests.
@@ -30,7 +30,9 @@ describe('logActivity', () => {
     });
 
     expect(recordActivity).toHaveBeenCalledOnce();
-    const [pdb, input] = vi.mocked(recordActivity).mock.calls[0];
+    const call = vi.mocked(recordActivity).mock.calls[0];
+    assert(call !== undefined, 'recordActivity was not called');
+    const [pdb, input] = call;
     expect(pdb).toBe(mockPdb);
     expect(input.actorId).toBe('u1');
     expect(input.action).toBe('plugin.enabled');

@@ -6,10 +6,11 @@ Unscheduled bugs, hotfixes, and operational issues that fall outside the main ro
 
 ## Docker dev setup: auth server unreachable from browser
 
-**Status:** Open\
+**Status:** Done\
 **Severity:** High (blocks login in Docker Compose dev)\
 **Discovered:** June 2026\
-**Context:** Local development via `docker compose up --build`
+**Context:** Local development via `docker compose up --build`\
+**Resolved:** June 2026 — implemented Option A (expose port) plus a new `SOVEREIGN_AUTH_PUBLIC_URL` env var so server-side and browser-facing URLs can be configured independently without touching `SOVEREIGN_AUTH_URL`. Files changed: `docker-compose.yml`, `runtime/app/login/route.ts`, `.env.example`, `CONTRIBUTING.md`.
 
 ### Symptom
 
@@ -88,12 +89,12 @@ Create an optional dev profile that exposes auth; production keeps it internal.
 
 ### Implementation Checklist
 
-- [ ] Choose an option (A for quick unblock, B for correct design, C for interim)
-- [ ] Modify the necessary files per the option
-- [ ] Test login flow end-to-end: `docker compose up`, open `http://localhost:3000`, click Sign in, complete auth, session valid on runtime
-- [ ] Verify no changes to production Compose files (`docker-compose.prod.yml` stays unchanged)
-- [ ] Update `docs/CONTRIBUTING.md` if the dev setup changes
-- [ ] Close this task once the fix is verified and documented
+- [x] Choose an option (A for quick unblock, B for correct design, C for interim)
+- [x] Modify the necessary files per the option
+- [x] Test login flow end-to-end: `docker compose up`, open `http://localhost:3000`, click Sign in, complete auth, session valid on runtime
+- [x] Verify no changes to production Compose files (`docker-compose.prod.yml` stays unchanged)
+- [x] Update `CONTRIBUTING.md` with Docker dev setup notes
+- [x] Close this task once the fix is verified and documented
 
 ---
 

@@ -8,10 +8,11 @@ import {
   getPlatformDb,
   getPlatformSetting,
   logDataAccess,
+  recordActivity,
 } from '@sovereignfs/db';
 import { createMailer } from '@sovereignfs/mailer';
 import { ConsentRequiredError, provideHost } from '@sovereignfs/sdk';
-import type { DataContractRef, DataContractResolver } from '@sovereignfs/sdk';
+import type { ActivityLogEntry, DataContractRef, DataContractResolver } from '@sovereignfs/sdk';
 
 let _version: string | undefined;
 
@@ -117,6 +118,24 @@ provideHost({
       );
 
       return rows;
+    },
+  },
+  activity: {
+    async log(entry: ActivityLogEntry, actorId: string | null, pluginId: string | null) {
+      const pdb = await getPlatformDb();
+      await recordActivity(pdb, {
+        id: randomUUID(),
+        actorId: actorId ?? null,
+        actorType: pluginId ? 'plugin' : 'user',
+        action: pluginId ? `${pluginId}:${entry.action}` : entry.action,
+        subjectUserId: entry.subjectUserId ?? null,
+        targetType: entry.targetType ?? null,
+        targetId: entry.targetId ?? null,
+        pluginId: pluginId ?? null,
+        visibility: 'user',
+        summary: entry.summary ?? null,
+        metadata: entry.metadata ?? null,
+      });
     },
   },
 });

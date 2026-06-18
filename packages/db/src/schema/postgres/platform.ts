@@ -99,3 +99,19 @@ export const dataAccessLog = pgTable('data_access_log', {
   accessedAt: bigint('accessed_at', { mode: 'number' }).notNull(),
   rowCount: integer('row_count').notNull(),
 });
+
+export const activityLog = pgTable('activity_log', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  actorId: text('actor_id'),
+  actorType: text('actor_type').notNull(),
+  action: text('action').notNull(),
+  subjectUserId: text('subject_user_id'),
+  targetType: text('target_type'),
+  targetId: text('target_id'),
+  pluginId: text('plugin_id'),
+  visibility: text('visibility').notNull(),
+  summary: text('summary'),
+  metadata: text('metadata'),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+});

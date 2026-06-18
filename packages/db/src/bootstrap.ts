@@ -69,5 +69,26 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       accessed_at ${ts} NOT NULL,
       row_count INTEGER NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS activity_log (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      actor_id TEXT,
+      actor_type TEXT NOT NULL,
+      action TEXT NOT NULL,
+      subject_user_id TEXT,
+      target_type TEXT,
+      target_id TEXT,
+      plugin_id TEXT,
+      visibility TEXT NOT NULL,
+      summary TEXT,
+      metadata TEXT,
+      created_at ${ts} NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS activity_log_tenant_created
+       ON activity_log (tenant_id, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS activity_log_actor
+       ON activity_log (actor_id)`,
+    `CREATE INDEX IF NOT EXISTS activity_log_subject
+       ON activity_log (subject_user_id)`,
   ];
 }

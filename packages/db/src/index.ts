@@ -10,20 +10,25 @@ export {
   getDefaultTenant,
   getPlatformDb,
   getPlatformSetting,
+  listAdminActivity,
   listAllConsentGrants,
   listConsentGrants,
   listDisabledPluginIds,
   listPluginStatus,
+  listUserActivity,
   logDataAccess,
   pingDb,
+  recordActivity,
   revokeConsentGrant,
   setAccountPrefs,
   setPlatformSetting,
   setPluginEnabled,
   setTenantName,
   type AccountPrefsValue,
+  type ActivityLogRow,
   type ConsentGrantRow,
   type PlatformDb,
+  type RecordActivityInput,
 } from './platform-db';
 export { resolveDialect, type Dialect, type ResolvedDialect } from './dialect';
 export { runMigrations } from './migrate';
@@ -46,4 +51,6 @@ export type {
   NewConsentGrant,
   DataAccessLogEntry,
   NewDataAccessLogEntry,
+  ActivityLog,
+  NewActivityLog,
 } from './schema/sqlite/platform';

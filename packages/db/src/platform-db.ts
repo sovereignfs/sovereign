@@ -306,6 +306,109 @@ export async function logDataAccess(
   );
 }
 
+// ─── Activity log helpers (RFC 0005) ─────────────────────────────────────────
+
+export interface ActivityLogRow {
+  id: string;
+  tenantId: string;
+  actorId: string | null;
+  actorType: string;
+  action: string;
+  subjectUserId: string | null;
+  targetType: string | null;
+  targetId: string | null;
+  pluginId: string | null;
+  visibility: string;
+  summary: string | null;
+  metadata: string | null;
+  createdAt: number;
+}
+
+export interface RecordActivityInput {
+  id: string;
+  actorId?: string | null;
+  actorType: 'user' | 'system' | 'plugin';
+  action: string;
+  subjectUserId?: string | null;
+  targetType?: string | null;
+  targetId?: string | null;
+  pluginId?: string | null;
+  visibility: 'admin' | 'user';
+  summary?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+/** Append one row to the activity log. Stamps `created_at` and `tenant_id`. */
+export async function recordActivity(pdb: PlatformDb, input: RecordActivityInput): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  const meta = input.metadata != null ? JSON.stringify(input.metadata) : null;
+  await dbRun(
+    pdb,
+    sql`INSERT INTO activity_log
+          (id, tenant_id, actor_id, actor_type, action,
+           subject_user_id, target_type, target_id, plugin_id,
+           visibility, summary, metadata, created_at)
+        VALUES
+          (${input.id}, ${DEFAULT_TENANT_ID}, ${input.actorId ?? null},
+           ${input.actorType}, ${input.action},
+           ${input.subjectUserId ?? null}, ${input.targetType ?? null},
+           ${input.targetId ?? null}, ${input.pluginId ?? null},
+           ${input.visibility}, ${input.summary ?? null}, ${meta}, ${now})`,
+  );
+}
+
+/**
+ * Personal activity feed — events where the given user is actor or subject,
+ * visibility = 'user'. Newest-first, limited to `limit` rows.
+ */
+export async function listUserActivity(
+  pdb: PlatformDb,
+  userId: string,
+  limit = 50,
+): Promise<ActivityLogRow[]> {
+  return dbAll<ActivityLogRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", actor_id AS "actorId",
+               actor_type AS "actorType", action,
+               subject_user_id AS "subjectUserId", target_type AS "targetType",
+               target_id AS "targetId", plugin_id AS "pluginId",
+               visibility, summary, metadata, created_at AS "createdAt"
+        FROM activity_log
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND visibility = 'user'
+          AND (actor_id = ${userId} OR subject_user_id = ${userId})
+        ORDER BY created_at DESC
+        LIMIT ${limit}`,
+  );
+}
+
+/**
+ * Admin (platform-wide) activity feed — all rows for the tenant, newest-first,
+ * limited to `limit` rows. Optionally filtered by `actorId` or `action`.
+ */
+export async function listAdminActivity(
+  pdb: PlatformDb,
+  options: { actorId?: string; action?: string; limit?: number } = {},
+): Promise<ActivityLogRow[]> {
+  const limit = options.limit ?? 100;
+  const actorFilter = options.actorId ?? null;
+  const actionFilter = options.action ?? null;
+  return dbAll<ActivityLogRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", actor_id AS "actorId",
+               actor_type AS "actorType", action,
+               subject_user_id AS "subjectUserId", target_type AS "targetType",
+               target_id AS "targetId", plugin_id AS "pluginId",
+               visibility, summary, metadata, created_at AS "createdAt"
+        FROM activity_log
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND (${actorFilter} IS NULL OR actor_id = ${actorFilter})
+          AND (${actionFilter} IS NULL OR action = ${actionFilter})
+        ORDER BY created_at DESC
+        LIMIT ${limit}`,
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Account-plugin preferences with their defaults (SRS ACC-07/08). */

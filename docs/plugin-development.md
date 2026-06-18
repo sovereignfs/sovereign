@@ -113,9 +113,10 @@ Declared capabilities. The v1-functional ones:
 | `data:consume` | Read data from another plugin's contracts, subject to user consent (RFC 0002, `sdk.data`). |
 | `admin:*`      | Administrative capabilities (platform plugins).                                            |
 
+| `activity:write` | Record activity-log events via `sdk.activity.log()` (RFC 0005). |
+
 Reserved (declaring them is allowed; the backing surfaces throw `NotImplementedError` until
-implemented): `storage:readWrite`, `notifications:send`, `events:publish`, `events:subscribe`,
-and `activity:write` (record activity-log events via `sdk.activity`, RFC 0005).
+implemented): `storage:readWrite`, `notifications:send`, `events:publish`, `events:subscribe`.
 
 ### `apiProvider` and the public `/api/*` namespace (PLT-16)
 
@@ -321,9 +322,22 @@ The SDK surface (`sdk.*`):
 resolver)` registers a resolver; `sdk.data.query(ref, params)` reads from
   another plugin's contract (throws `ConsentRequiredError` without a user grant).
   See the [`data` manifest field section](#data--cross-plugin-data-sharing-rfc-0002) above.
+- **`activity`** — `sdk.activity.log(entry)` records a scoped audit event
+  (RFC 0005). The runtime injects the actor identity, tenant, and plugin so a
+  plugin cannot forge actor context. Plugin-sourced events are always
+  `user`-scoped (visible to the acting user in their Activity feed, and to
+  admins in the Console feed). Requires `activity:write` in the manifest.
+  ```ts
+  await sdk.activity.log({
+    action: 'list.created',
+    targetType: 'list',
+    targetId: newList.id,
+    summary: `Created list "${newList.title}"`,
+    metadata: { title: newList.title },
+  });
+  ```
 - **Reserved** (throw `NotImplementedError` in v1): `storage`, `notifications`,
-  `events`, and `activity` (activity log — `activity.log(entry)` records a
-  scoped event; the runtime injects the actor/tenant/plugin, RFC 0005).
+  `events`.
 
 ### The SDK boundary rule
 

@@ -1,5 +1,5 @@
 import type { DataContractRef, DataContractResolver } from './data';
-import type { DrizzleClient, MailOptions, PlatformConfig } from './types';
+import type { ActivityLogEntry, DrizzleClient, MailOptions, PlatformConfig } from './types';
 
 /**
  * The host interface that the Sovereign runtime provides to the SDK.
@@ -30,6 +30,14 @@ export interface SdkHost {
       tenantId: string,
       params: unknown,
     ): Promise<unknown[]>;
+  };
+  activity: {
+    /**
+     * Record one activity event.
+     * `actorId`, `pluginId`, and `tenantId` are injected by the runtime host
+     * from request headers so plugins cannot forge actor identity.
+     */
+    log(entry: ActivityLogEntry, actorId: string | null, pluginId: string | null): Promise<void>;
   };
 }
 

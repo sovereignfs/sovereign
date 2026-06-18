@@ -48,6 +48,10 @@ export async function updateDisplayNameAction(formData: FormData): Promise<void>
   });
   if (!res.ok) throw new Error(`Failed to update display name: ${res.status}`);
   await invalidateSessionCache();
+  void sdk.activity.log({
+    action: 'account.display_name_changed',
+    summary: 'Display name updated',
+  });
   revalidatePath('/account/profile');
 }
 
@@ -96,6 +100,7 @@ export async function changePasswordAction(
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'Failed to change password.' };
   }
+  void sdk.activity.log({ action: 'account.password_changed', summary: 'Password changed' });
   return { ok: true };
 }
 
@@ -106,5 +111,6 @@ export async function revokeSessionAction(formData: FormData): Promise<void> {
   const isCurrent = formData.get('current') === 'true';
   if (!token || isCurrent) return;
   await sdk.auth.revokeSession(token);
+  void sdk.activity.log({ action: 'account.session_revoked', summary: 'Session revoked' });
   revalidatePath('/account/security');
 }

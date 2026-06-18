@@ -1,9 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { sdk } from '@sovereignfs/sdk';
+import { logActivity } from '@/src/activity';
 
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+
+async function actorId(): Promise<string | null> {
+  return (await headers()).get('x-sovereign-user-id');
+}
 
 async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
@@ -26,6 +32,17 @@ export async function changeRoleAction(formData: FormData): Promise<void> {
     body: JSON.stringify({ role }),
   });
   if (!res.ok) throw new Error(`Failed to change role: ${res.status}`);
+  void logActivity({
+    actorId: await actorId(),
+    actorType: 'user',
+    action: 'user.role_changed',
+    subjectUserId: userId,
+    targetType: 'user',
+    targetId: userId,
+    visibility: 'user',
+    summary: `Role changed to ${role}`,
+    metadata: { role },
+  });
   revalidatePath('/console/users');
 }
 
@@ -38,6 +55,16 @@ export async function toggleActiveAction(formData: FormData): Promise<void> {
     body: JSON.stringify({ active }),
   });
   if (!res.ok) throw new Error(`Failed to update user status: ${res.status}`);
+  void logActivity({
+    actorId: await actorId(),
+    actorType: 'user',
+    action: active ? 'user.reactivated' : 'user.deactivated',
+    subjectUserId: userId,
+    targetType: 'user',
+    targetId: userId,
+    visibility: 'user',
+    summary: active ? 'User reactivated' : 'User deactivated',
+  });
   revalidatePath('/console/users');
 }
 
@@ -78,6 +105,15 @@ export async function sendInviteAction(
       'Use the email address this invitation was sent to when registering.',
     ].join('\n'),
     html: `<p>You have been invited to join this Sovereign instance.</p><p><a href="${registerUrl}">Create your account</a></p><p>Use the email address this invitation was sent to when registering.</p>`,
+  });
+
+  void logActivity({
+    actorId: await actorId(),
+    actorType: 'user',
+    action: 'user.invited',
+    visibility: 'admin',
+    summary: `Invited ${email}`,
+    metadata: { email },
   });
 
   return { success: true, token, email };

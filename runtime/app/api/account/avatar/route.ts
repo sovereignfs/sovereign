@@ -2,6 +2,7 @@ import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { NextResponse } from 'next/server';
 import { validateAvatar } from '@/src/account';
+import { logActivity } from '@/src/activity';
 import { avatarsDir } from '@/src/avatars';
 
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
@@ -55,6 +56,14 @@ export async function POST(request: Request): Promise<Response> {
   if (!authRes.ok) {
     return NextResponse.json({ error: 'failed to update profile image' }, { status: 502 });
   }
+
+  void logActivity({
+    actorId: userId,
+    actorType: 'user',
+    action: 'account.avatar_changed',
+    visibility: 'user',
+    summary: 'Avatar updated',
+  });
 
   // The chrome and profile page read the avatar from the session snapshot, which
   // the middleware now serves from better-auth's signed cookie cache (AUTH-05).

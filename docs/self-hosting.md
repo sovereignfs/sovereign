@@ -50,17 +50,27 @@ platform admin. If `AUTH_INVITE_ONLY=true`, skip ahead to the
 
 ## Service topology
 
+**Dev** (`docker-compose.yml`):
+
 ```
-Browser → localhost:3000 (runtime)
-                │
-                └─ internal network ──► auth:3001  (auth server)
+Browser → localhost:3000 (runtime)   localhost:3001 (auth — dev only)
+                │                              │
+                └─────── internal network ─────┘
                                    ──► mailpit:1025 (dev email, SMTP)
 ```
 
-The **auth server is not mapped to a host port** — it is only reachable on the
-internal Docker network. The runtime is the single public entry point. In
-production, place a reverse proxy (nginx, Caddy, Traefik) in front of the
-runtime container.
+**Prod** (`docker-compose.prod.yml`):
+
+```
+Browser → localhost:4000 (runtime)   localhost:4001 (auth — for local QA)
+                │                              │
+                └─────── internal network ─────┘
+```
+
+Both the runtime and the auth server are mapped to host ports in both Compose
+files. In production, place a reverse proxy (nginx, Caddy, Traefik) in front
+of the runtime port only — auth should not be directly reachable from the
+internet. Override `AUTH_PORT` and `RUNTIME_PORT` to use different host ports.
 
 ---
 
@@ -127,8 +137,9 @@ How that directory is persisted depends on the compose file:
 ## Production deployment
 
 Use `docker-compose.prod.yml` for production. It differs from the dev file in
-three ways: the runtime host port defaults to `4000`, both services restart
-automatically on failure, and Mailpit is absent (configure real SMTP instead).
+three ways: host ports default to `4000` (runtime) and `4001` (auth), both
+services restart automatically on failure, and Mailpit is absent (configure
+real SMTP instead).
 
 ```bash
 cp .env.example .env
@@ -139,9 +150,9 @@ docker compose -f docker-compose.prod.yml up --build -d
 
 ### Reverse proxy
 
-The auth server is internal-only. To make the login flow work end-to-end from
-a browser, you need a reverse proxy that puts the runtime on your domain.
-A minimal **Caddy** example:
+Place a reverse proxy in front of the runtime port (`4000`) only — the auth
+port (`4001`) should not be directly reachable from the internet (it is
+firewalled at the host or load balancer level). A minimal **Caddy** example:
 
 ```
 your-domain.com {

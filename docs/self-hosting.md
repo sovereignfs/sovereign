@@ -14,6 +14,21 @@ internal network, with the runtime exposed as the single public entry point.
 
 ---
 
+## Which Compose file to use
+
+There are two Compose files — make sure you're using the right one:
+
+| File                      | Command                                                   | Runtime port | Auth port | Use for                  |
+| ------------------------- | --------------------------------------------------------- | ------------ | --------- | ------------------------ |
+| `docker-compose.yml`      | `docker compose up --build`                               | **3000**     | **3001**  | Local development and QA |
+| `docker-compose.prod.yml` | `docker compose -f docker-compose.prod.yml up --build -d` | **4000**     | **4001**  | Production deployments   |
+
+Running `docker compose up --build` without `-f` always uses `docker-compose.yml`
+(the dev file, ports 3000/3001). If you see 3000/3001 when you expected 4000/4001,
+you are running the dev file.
+
+---
+
 ## Quick start (local machine)
 
 ```bash
@@ -36,7 +51,7 @@ NEXT_PUBLIC_RUNTIME_URL=http://localhost:3000
 ```
 
 ```bash
-# 3. Start
+# 3. Start (dev — ports 3000 / 3001)
 docker compose up --build
 ```
 
@@ -136,15 +151,18 @@ How that directory is persisted depends on the compose file:
 
 ## Production deployment
 
-Use `docker-compose.prod.yml` for production. It differs from the dev file in
-three ways: host ports default to `4000` (runtime) and `4001` (auth), both
-services restart automatically on failure, and Mailpit is absent (configure
-real SMTP instead).
+> **Important:** always pass `-f docker-compose.prod.yml` explicitly. Omitting
+> it runs the dev file (`docker-compose.yml`) on ports 3000/3001.
+
+`docker-compose.prod.yml` differs from the dev file in three ways: host ports
+default to `4000` (runtime) and `4001` (auth), both services restart
+automatically on failure, and Mailpit is absent (configure real SMTP instead).
 
 ```bash
 cp .env.example .env
-# Edit .env — set AUTH_SECRET, NEXT_PUBLIC_RUNTIME_URL, SMTP_*, etc.
+# Edit .env — set AUTH_SECRET, NEXT_PUBLIC_RUNTIME_URL, AUTH_BASE_URL, SMTP_*, etc.
 
+# Prod — ports 4000 / 4001
 docker compose -f docker-compose.prod.yml up --build -d
 ```
 

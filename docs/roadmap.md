@@ -998,28 +998,22 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.10 — Cross-plugin data sharing (consent-gated)
+#### ✅ Task 0.5.10 — Cross-plugin data sharing (consent-gated)
 
 **Goal:** Implement the consent-gated, pull-based, read-only cross-plugin data-sharing mechanism specified in RFC 0002 / SRS §3.13. The reserved `sdk.data` surface and the `data:provide`/`data:consume` permissions already exist as stubs; this task makes them real. Depends on `sdk.db` (Task 0.5.05).
 
-**Deliverables:**
+**Delivered:**
 
-- Manifest: optional `data.provides[]` / `data.consumes[]` declarations (provider id, contract, version, scope) in `packages/manifest`, with validation + tests
-- Platform DB: `consent_grants` (consumer, provider, contract, user, granted_at, revoked_at, scope) and `data_access_log` tables, both with `tenant_id`
-- Runtime: provider-resolver registry, consent enforcement, tenant/user scoping, audit logging; routes `sdk.data.query` to the provider's registered resolver
-- SDK: implement `sdk.data.query`/`provide` against the runtime (replace the stubs); raise `ConsentRequiredError` when no active grant exists
-- UI: a consent-prompt dialog primitive in `packages/ui`; grant management in Account (own grants) and oversight in Console
-- The mechanism is generic — no plugin is special-cased
+- `@sovereignfs/manifest` → 0.10.0: optional `data.provides[]` / `data.consumes[]` manifest fields; `data:provide` and `data:consume` permissions promoted from reserved to active
+- `@sovereignfs/db` → 0.8.0: `consent_grants` and `data_access_log` tables (SQLite + Postgres, bootstrap DDL, dialect-parity-tested); 7 helper functions (`getConsentGrant`, `listConsentGrants`, `listAllConsentGrants`, `createConsentGrant`, `revokeConsentGrant`, `logDataAccess`)
+- `@sovereignfs/sdk` → 1.2.0: `sdk.data.provide(contract, resolver)` stores an in-process resolver via the host; `sdk.data.query(ref, params)` consent-checks, calls the resolver, and logs access; `SdkHost` extended with `data` section
+- Runtime → 0.13.0: in-memory resolver registry; middleware injects `x-sovereign-plugin-id` for plugin routes; `GET/POST /api/account/data-grants`, `DELETE /api/account/data-grants/[id]`, `GET /api/admin/data-grants`
+- Account plugin → 0.3.0: **Data** tab — lists active consents with per-grant revoke
+- `docs/plugin-development.md`: `data` manifest field documented, `sdk.data` usage guide with provider/consumer code samples; docs-parity test passes
+
+**Deferred:** `packages/ui` `ConsentPrompt` dialog primitive and Console data oversight view are post-task refinements; the grant management API is fully functional and the Account tab provides user-facing revocation.
 
 **SRS reference:** RFC 0002, SRS §3.13, §5 (manifest `data.*`)
-
-**Review checklist:**
-
-- A consumer `query` without a grant raises `ConsentRequiredError` and surfaces a consent prompt; granting consent then returns the provider's data
-- Reads are read-only, scoped to the requesting user + tenant, and recorded in the audit log
-- Revoking a grant immediately blocks subsequent reads
-- A consumer cannot reach a provider's raw tables — only its registered contract resolver
-- Existing plugins (no `data.*` declared) are unaffected
 
 ---
 

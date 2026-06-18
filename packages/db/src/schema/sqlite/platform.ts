@@ -101,5 +101,42 @@ export type PluginStatus = typeof pluginStatus.$inferSelect;
 export type NewPluginStatus = typeof pluginStatus.$inferInsert;
 export type PlatformSetting = typeof platformSettings.$inferSelect;
 export type NewPlatformSetting = typeof platformSettings.$inferInsert;
+/**
+ * User consent grants for cross-plugin data sharing (RFC 0002). A grant allows
+ * `consumer_id` to read `contract` data from `provider_id` on behalf of `user_id`.
+ * Revoked grants set `revoked_at`; active grants have `revoked_at` = null.
+ */
+export const consentGrants = sqliteTable('consent_grants', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  consumerId: text('consumer_id').notNull(),
+  providerId: text('provider_id').notNull(),
+  contract: text('contract').notNull(),
+  version: integer('version').notNull(),
+  grantedAt: integer('granted_at').notNull(),
+  revokedAt: integer('revoked_at'),
+});
+
+/**
+ * Immutable audit log for every cross-plugin data access (RFC 0002). Written
+ * when a provider resolver is successfully invoked; never deleted.
+ */
+export const dataAccessLog = sqliteTable('data_access_log', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  consumerId: text('consumer_id').notNull(),
+  providerId: text('provider_id').notNull(),
+  contract: text('contract').notNull(),
+  version: integer('version').notNull(),
+  accessedAt: integer('accessed_at').notNull(),
+  rowCount: integer('row_count').notNull(),
+});
+
 export type AccountPrefs = typeof accountPrefs.$inferSelect;
 export type NewAccountPrefs = typeof accountPrefs.$inferInsert;
+export type ConsentGrant = typeof consentGrants.$inferSelect;
+export type NewConsentGrant = typeof consentGrants.$inferInsert;
+export type DataAccessLogEntry = typeof dataAccessLog.$inferSelect;
+export type NewDataAccessLogEntry = typeof dataAccessLog.$inferInsert;

@@ -1,4 +1,4 @@
-import { bigint, boolean, pgTable, primaryKey, text } from 'drizzle-orm/pg-core';
+import { bigint, boolean, integer, pgTable, primaryKey, text } from 'drizzle-orm/pg-core';
 
 /**
  * Platform schema (Postgres dialect). A 1:1 mirror of `../sqlite/platform.ts` —
@@ -74,4 +74,28 @@ export const accountPrefs = pgTable('account_prefs', {
   timezone: text('timezone').notNull().default('UTC'),
   theme: text('theme').notNull().default('system'), // 'system' | 'light' | 'dark'
   updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+});
+
+export const consentGrants = pgTable('consent_grants', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  consumerId: text('consumer_id').notNull(),
+  providerId: text('provider_id').notNull(),
+  contract: text('contract').notNull(),
+  version: integer('version').notNull(),
+  grantedAt: bigint('granted_at', { mode: 'number' }).notNull(),
+  revokedAt: bigint('revoked_at', { mode: 'number' }),
+});
+
+export const dataAccessLog = pgTable('data_access_log', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  consumerId: text('consumer_id').notNull(),
+  providerId: text('provider_id').notNull(),
+  contract: text('contract').notNull(),
+  version: integer('version').notNull(),
+  accessedAt: bigint('accessed_at', { mode: 'number' }).notNull(),
+  rowCount: integer('row_count').notNull(),
 });

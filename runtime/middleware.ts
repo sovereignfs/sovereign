@@ -198,6 +198,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (user.name != null) headers.set('x-sovereign-user-name', user.name);
   if (user.image != null) headers.set('x-sovereign-user-image', user.image);
 
+  // Inject the current plugin ID so sdk.data.query() knows the consumer (RFC 0002).
+  const currentPlugin = installedPlugins.find((plugin) =>
+    underPrefix(pathname, plugin.routePrefix),
+  );
+  if (currentPlugin) headers.set('x-sovereign-plugin-id', currentPlugin.id);
+
   // Serve the configured root plugin in place at `/` (PLT-14) — the URL stays
   // `/` while the plugin's route renders, and the plugin is still reachable at
   // its own routePrefix. Falls through to the placeholder home page when no

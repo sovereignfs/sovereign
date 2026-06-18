@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { platformBootstrapStatements } from './bootstrap';
 import { type PlatformDb, createClient } from './client';
-import { dbGet, dbRun } from './exec';
+import { dbAll, dbGet, dbRun } from './exec';
 import * as pg from './schema/postgres';
 import * as sqlite from './schema/sqlite';
 
@@ -173,6 +173,140 @@ export async function setPluginEnabled(
     .values({ pluginId, tenantId: DEFAULT_TENANT_ID, enabled, updatedAt: now })
     .onConflictDoUpdate({ target: pg.pluginStatus.pluginId, set: { enabled, updatedAt: now } });
 }
+
+// ─── Cross-plugin data sharing helpers (RFC 0002) ────────────────────────────
+
+export interface ConsentGrantRow {
+  id: string;
+  userId: string;
+  consumerId: string;
+  providerId: string;
+  contract: string;
+  version: number;
+  grantedAt: number;
+  revokedAt: number | null;
+}
+
+/**
+ * Find the active consent grant for a (user, consumer, provider, contract, version) tuple.
+ * Returns undefined when no active grant exists.
+ */
+export async function getConsentGrant(
+  pdb: PlatformDb,
+  userId: string,
+  consumerId: string,
+  providerId: string,
+  contract: string,
+  version: number,
+): Promise<ConsentGrantRow | undefined> {
+  return dbGet<ConsentGrantRow>(
+    pdb,
+    sql`SELECT id, user_id AS "userId", consumer_id AS "consumerId",
+               provider_id AS "providerId", contract, version,
+               granted_at AS "grantedAt", revoked_at AS "revokedAt"
+        FROM consent_grants
+        WHERE user_id = ${userId}
+          AND consumer_id = ${consumerId}
+          AND provider_id = ${providerId}
+          AND contract = ${contract}
+          AND version = ${version}
+          AND revoked_at IS NULL
+        LIMIT 1`,
+  );
+}
+
+/** List all active consent grants for a user. */
+export async function listConsentGrants(
+  pdb: PlatformDb,
+  userId: string,
+): Promise<ConsentGrantRow[]> {
+  return dbAll<ConsentGrantRow>(
+    pdb,
+    sql`SELECT id, user_id AS "userId", consumer_id AS "consumerId",
+               provider_id AS "providerId", contract, version,
+               granted_at AS "grantedAt", revoked_at AS "revokedAt"
+        FROM consent_grants
+        WHERE user_id = ${userId}
+          AND revoked_at IS NULL
+        ORDER BY granted_at DESC`,
+  );
+}
+
+/** List all active consent grants across all users (admin view). */
+export async function listAllConsentGrants(pdb: PlatformDb): Promise<ConsentGrantRow[]> {
+  return dbAll<ConsentGrantRow>(
+    pdb,
+    sql`SELECT id, user_id AS "userId", consumer_id AS "consumerId",
+               provider_id AS "providerId", contract, version,
+               granted_at AS "grantedAt", revoked_at AS "revokedAt"
+        FROM consent_grants
+        WHERE revoked_at IS NULL
+        ORDER BY granted_at DESC`,
+  );
+}
+
+/** Create a new consent grant (idempotent — does nothing if an active grant already exists). */
+export async function createConsentGrant(
+  pdb: PlatformDb,
+  id: string,
+  userId: string,
+  consumerId: string,
+  providerId: string,
+  contract: string,
+  version: number,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO consent_grants
+          (id, tenant_id, user_id, consumer_id, provider_id, contract, version, granted_at)
+        VALUES
+          (${id}, ${DEFAULT_TENANT_ID}, ${userId}, ${consumerId}, ${providerId},
+           ${contract}, ${version}, ${now})
+        ON CONFLICT (id) DO NOTHING`,
+  );
+}
+
+/** Soft-delete a consent grant by setting revoked_at. No-op if already revoked. */
+export async function revokeConsentGrant(
+  pdb: PlatformDb,
+  id: string,
+  userId: string,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE consent_grants
+        SET revoked_at = ${now}
+        WHERE id = ${id}
+          AND user_id = ${userId}
+          AND revoked_at IS NULL`,
+  );
+}
+
+/** Append an immutable data-access audit log entry (RFC 0002). */
+export async function logDataAccess(
+  pdb: PlatformDb,
+  id: string,
+  userId: string,
+  consumerId: string,
+  providerId: string,
+  contract: string,
+  version: number,
+  rowCount: number,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO data_access_log
+          (id, tenant_id, user_id, consumer_id, provider_id, contract, version, accessed_at, row_count)
+        VALUES
+          (${id}, ${DEFAULT_TENANT_ID}, ${userId}, ${consumerId}, ${providerId},
+           ${contract}, ${version}, ${now}, ${rowCount})`,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 /** Account-plugin preferences with their defaults (SRS ACC-07/08). */
 export interface AccountPrefsValue {

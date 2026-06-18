@@ -1,13 +1,17 @@
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   findWorkspaceRoot,
+  getConsentGrant,
   getDefaultTenant,
   getPlatformDb,
   getPlatformSetting,
+  logDataAccess,
 } from '@sovereignfs/db';
 import { createMailer } from '@sovereignfs/mailer';
-import { provideHost } from '@sovereignfs/sdk';
+import { ConsentRequiredError, provideHost } from '@sovereignfs/sdk';
+import type { DataContractRef, DataContractResolver } from '@sovereignfs/sdk';
 
 let _version: string | undefined;
 
@@ -29,6 +33,13 @@ function getPlatformVersion(): string {
 }
 
 const _mailer = createMailer();
+
+/**
+ * In-process registry for cross-plugin data resolvers (RFC 0002).
+ * Keyed by contract name. Populated by provider plugins calling
+ * `sdk.data.provide('contract', resolver)`. Resets on server restart.
+ */
+const _resolverRegistry = new Map<string, DataContractResolver>();
 
 provideHost({
   db: {
@@ -53,6 +64,59 @@ provideHost({
         inviteOnly: inviteOnly === 'true',
         version: getPlatformVersion(),
       };
+    },
+  },
+  data: {
+    provide(contract: string, resolver: DataContractResolver): void {
+      _resolverRegistry.set(contract, resolver);
+    },
+    async query(
+      ref: DataContractRef,
+      consumerId: string | null,
+      userId: string | null,
+      _tenantId: string,
+      params: unknown,
+    ): Promise<unknown[]> {
+      if (!userId) throw new ConsentRequiredError();
+      if (!consumerId) {
+        throw new Error(
+          'sdk.data.query() requires a plugin route context (x-sovereign-plugin-id header missing).',
+        );
+      }
+
+      const pdb = await getPlatformDb();
+      const grant = await getConsentGrant(
+        pdb,
+        userId,
+        consumerId,
+        ref.providerId,
+        ref.contract,
+        ref.version,
+      );
+      if (!grant) throw new ConsentRequiredError();
+
+      const resolver = _resolverRegistry.get(ref.contract);
+      if (!resolver) {
+        throw new Error(
+          `sdk.data.query(): no resolver registered for contract "${ref.contract}". ` +
+            `The provider plugin (${ref.providerId}) must call sdk.data.provide() before consumers can query it.`,
+        );
+      }
+
+      const rows = await resolver(params);
+
+      await logDataAccess(
+        pdb,
+        randomUUID(),
+        userId,
+        consumerId,
+        ref.providerId,
+        ref.contract,
+        ref.version,
+        rows.length,
+      );
+
+      return rows;
     },
   },
 });

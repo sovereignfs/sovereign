@@ -88,6 +88,7 @@ serves at `/tasks/lists`.
 | `apiProvider`   | boolean                                                                 | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                            |
 | `icon`          | string                                                                  | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                                                                                                                                                     |
 | `compatibility` | object (see below)                                                      | yes                                  | Platform version constraints. Hard-gates install/boot on `minPlatformVersion`; surfaces an advisory warning in Console/health when the platform exceeds the optional `maxPlatformVersion`.                                               |
+| `data`          | object (see below)                                                      | no                                   | Cross-plugin data sharing declarations (RFC 0002). Declare the contracts this plugin exposes (`data.provides`) and the ones it reads (`data.consumes`). Requires the matching `data:provide` / `data:consume` permissions.               |
 | `repository`    | string (URL)                                                            | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                |
 
 ### `type`
@@ -102,19 +103,19 @@ serves at `/tasks/lists`.
 
 Declared capabilities. The v1-functional ones:
 
-| Permission     | Grants                                             |
-| -------------- | -------------------------------------------------- |
-| `auth:session` | Read the current session via `sdk.auth`.           |
-| `db:readWrite` | Read/write access to the platform DB via `sdk.db`. |
-| `db:readOnly`  | Read-only DB access.                               |
-| `mailer:send`  | Send email via `sdk.mailer`.                       |
-| `admin:*`      | Administrative capabilities (platform plugins).    |
+| Permission     | Grants                                                                                     |
+| -------------- | ------------------------------------------------------------------------------------------ |
+| `auth:session` | Read the current session via `sdk.auth`.                                                   |
+| `db:readWrite` | Read/write access to the platform DB via `sdk.db`.                                         |
+| `db:readOnly`  | Read-only DB access.                                                                       |
+| `mailer:send`  | Send email via `sdk.mailer`.                                                               |
+| `data:provide` | Expose read-only data contracts for other plugins to query (RFC 0002, `sdk.data`).         |
+| `data:consume` | Read data from another plugin's contracts, subject to user consent (RFC 0002, `sdk.data`). |
+| `admin:*`      | Administrative capabilities (platform plugins).                                            |
 
-Reserved for post-v1 (declaring them is allowed; the backing surfaces throw
-`NotImplementedError` until implemented): `storage:readWrite`,
-`notifications:send`, `events:publish`, `events:subscribe`, the cross-plugin
-data-sharing pair `data:provide` / `data:consume` (RFC 0002), and
-`activity:write` (record activity-log events via `sdk.activity`, RFC 0005).
+Reserved (declaring them is allowed; the backing surfaces throw `NotImplementedError` until
+implemented): `storage:readWrite`, `notifications:send`, `events:publish`, `events:subscribe`,
+and `activity:write` (record activity-log events via `sdk.activity`, RFC 0005).
 
 ### `apiProvider` and the public `/api/*` namespace (PLT-16)
 
@@ -199,6 +200,73 @@ Set `minPlatformVersion` to the earliest platform release your plugin was built
 and tested against. Omit `maxPlatformVersion` unless you have a specific reason
 to warn operators (e.g. the next major uses a breaking SDK change).
 
+### `data` — cross-plugin data sharing (RFC 0002)
+
+Declare the contracts your plugin exposes or reads. Both directions are
+consent-gated: the current user must explicitly grant a consumer permission to
+read a provider's data. Consent is managed in the **Account → Data** tab.
+
+**Sub-fields:**
+
+| Field           | Type  | Description                                                                                                       |
+| --------------- | ----- | ----------------------------------------------------------------------------------------------------------------- |
+| `data.provides` | array | Contracts this plugin exposes. Each entry: `contract` (string), `version` (int), `description` (optional string). |
+| `data.consumes` | array | Contracts this plugin reads. Each entry: `providerId` (manifest id), `contract` (string), `version` (int).        |
+
+**Provider** — expose a contract and register its resolver:
+
+```json
+"permissions": ["db:readWrite", "data:provide"],
+"data": {
+  "provides": [
+    { "contract": "expenses", "version": 1, "description": "Expense records for this user." }
+  ]
+}
+```
+
+```ts
+// In a Server Component or route handler that runs when the plugin loads:
+sdk.data.provide('expenses', async ({ since }: { since?: string }) => {
+  const db = await sdk.db.getClient();
+  return db.query.expenses.findMany({
+    where: (t, { gte }) => (since ? gte(t.date, since) : undefined),
+  });
+});
+```
+
+**Consumer** — declare what you read and query it (throws `ConsentRequiredError`
+when the user has not yet granted consent):
+
+```json
+"permissions": ["data:consume"],
+"data": {
+  "consumes": [
+    { "providerId": "com.example.finance", "contract": "expenses", "version": 1 }
+  ]
+}
+```
+
+```ts
+import { ConsentRequiredError } from '@sovereignfs/sdk';
+
+try {
+  const rows = await sdk.data.query(
+    { providerId: 'com.example.finance', contract: 'expenses', version: 1 },
+    { since: '2025-01-01' },
+  );
+} catch (e) {
+  if (e instanceof ConsentRequiredError) {
+    // Direct the user to Account → Data to grant consent.
+  }
+}
+```
+
+**Resolver registration timing:** resolvers are in-process and reset on server
+restart. Call `sdk.data.provide()` from a server-side handler (Server Component,
+Route Handler) that executes when the plugin is first loaded. Consumers can only
+query after the provider has registered — if you receive a resolver-not-found
+error, the provider plugin has not yet served a request in the current process.
+
 ### Example `manifest.json`
 
 ```json
@@ -249,10 +317,13 @@ The SDK surface (`sdk.*`):
   unconfigured.
 - **`platform`** — `getConfig()` → `{ tenantName, inviteOnly, version }`
   (await it).
+- **`data`** — cross-plugin data sharing (RFC 0002). `sdk.data.provide(contract,
+resolver)` registers a resolver; `sdk.data.query(ref, params)` reads from
+  another plugin's contract (throws `ConsentRequiredError` without a user grant).
+  See the [`data` manifest field section](#data--cross-plugin-data-sharing-rfc-0002) above.
 - **Reserved** (throw `NotImplementedError` in v1): `storage`, `notifications`,
-  `events`, `data` (cross-plugin data sharing, RFC 0002), and `activity`
-  (activity log — `activity.log(entry)` records a scoped event; the runtime
-  injects the actor/tenant/plugin, RFC 0005).
+  `events`, and `activity` (activity log — `activity.log(entry)` records a
+  scoped event; the runtime injects the actor/tenant/plugin, RFC 0005).
 
 ### The SDK boundary rule
 

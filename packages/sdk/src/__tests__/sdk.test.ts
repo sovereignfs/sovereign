@@ -5,6 +5,7 @@ import { ConsentRequiredError, NotAuthenticatedError, NotImplementedError, sdk }
 // A minimal mock host — lets us test SDK delegation without a real runtime.
 const mockDbClient = { select: () => ({}), insert: () => ({}) };
 const mockConfig = { tenantName: 'Test Workspace', inviteOnly: false, version: '0.6.0' };
+const mockDataResolvers = new Map<string, (...args: unknown[]) => Promise<unknown[]>>();
 
 beforeAll(() => {
   provideHost({
@@ -23,6 +24,14 @@ beforeAll(() => {
         return mockConfig;
       },
     },
+    data: {
+      provide(contract, resolver) {
+        mockDataResolvers.set(contract, resolver as (...args: unknown[]) => Promise<unknown[]>);
+      },
+      async query(_ref, _consumerId, _userId, _tenantId, _params) {
+        return [];
+      },
+    },
   });
 });
 
@@ -39,14 +48,17 @@ describe('sdk surface', () => {
     expect(typeof sdk.platform.getConfig).toBe('function');
   });
 
+  it('exposes the stable data surface (RFC 0002)', () => {
+    expect(typeof sdk.data.query).toBe('function');
+    expect(typeof sdk.data.provide).toBe('function');
+  });
+
   it('exposes the experimental / reserved surface', () => {
     expect(typeof sdk.storage.put).toBe('function');
     expect(typeof sdk.storage.get).toBe('function');
     expect(typeof sdk.notifications.send).toBe('function');
     expect(typeof sdk.events.publish).toBe('function');
     expect(typeof sdk.events.subscribe).toBe('function');
-    expect(typeof sdk.data.query).toBe('function');
-    expect(typeof sdk.data.provide).toBe('function');
     expect(typeof sdk.activity.log).toBe('function');
   });
 });
@@ -92,11 +104,10 @@ describe('sdk — experimental surfaces throw NotImplementedError', () => {
     expect(() => sdk.events.subscribe('e', () => undefined)).toThrow(NotImplementedError);
   });
 
-  it('data.query / data.provide (RFC 0002)', () => {
-    expect(() => sdk.data.query({ providerId: 'p', contract: 'c', version: 1 })).toThrow(
-      NotImplementedError,
-    );
-    expect(() => sdk.data.provide('c', async () => [])).toThrow(NotImplementedError);
+  it('data.provide delegates to the registered host (RFC 0002)', () => {
+    const resolver = async () => [{ id: 1 }];
+    sdk.data.provide('test-contract', resolver);
+    expect(mockDataResolvers.get('test-contract')).toBe(resolver);
   });
 
   it('activity.log (RFC 0005)', () => {

@@ -5,6 +5,20 @@ follows [Semantic Versioning](https://semver.org); see
 [`docs/sdk-stability.md`](../../docs/sdk-stability.md) for the stability policy
 and which parts of the surface the guarantee covers.
 
+## 1.5.0
+
+**New surface: `sdk.env`** (plugin-scoped environment variables, RFC 0018 / Task
+0.5.22). Experimental — not covered by the v1 stability guarantee.
+
+- `sdk.env.get(key)` reads the calling plugin's `SV_PLUGIN_<SLUG>_<KEY>` env
+  var, determined from the `x-sovereign-plugin-id` header that the runtime
+  middleware injects. Returns `null` when absent or called outside a plugin
+  route. Server-side only (uses `next/headers`).
+- For build-scope (`NEXT_PUBLIC_SV_PLUGIN_*`) vars, read `process.env` directly
+  in client components — Next.js inlines NEXT*PUBLIC*\* at build time.
+- Variables are declared in the manifest `env` field (`@sovereignfs/manifest`
+  ≥ 0.12.0). The platform namespaces and validates them at generate time.
+
 ## 1.4.0
 
 **New surface: `sdk.portability`** (user data export/import, RFC 0007 / Task

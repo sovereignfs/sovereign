@@ -14,4 +14,5 @@ export {
 } from './validate';
 export { findApiProvider, type ApiProviderResult } from './api-provider';
 export { checkCompatibility, type CompatibilityResult } from './compatibility';
+export { toEnvSlug, toEnvVarName } from './env-utils';
 export type { SovereignManifest, Permission, RegistryEntry } from './types';

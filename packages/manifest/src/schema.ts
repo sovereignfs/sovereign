@@ -133,6 +133,53 @@ const manifestObjectSchema = z
       .strict()
       .optional(),
     repository: z.string().url().optional(),
+    /**
+     * Plugin-scoped environment variables (RFC 0018). Each key must be
+     * UPPER_CASE_WITH_UNDERSCORES. The platform namespaces them automatically:
+     * `scope: 'runtime'` → `SV_PLUGIN_<SLUG>_<KEY>`;
+     * `scope: 'build'`   → `NEXT_PUBLIC_SV_PLUGIN_<SLUG>_<KEY>`.
+     */
+    env: z
+      .record(
+        z
+          .string()
+          .regex(
+            /^[A-Z][A-Z0-9_]*$/,
+            'env key must start with a capital letter and contain only capital letters, digits, and underscores',
+          ),
+        z
+          .object({
+            /** Human-readable description shown to operators and in generated docs. */
+            description: z.string().min(1),
+            /** When `true`, the platform fails or warns when the var is absent. */
+            required: z.boolean().optional(),
+            /** When `true`, the value must never be committed or appear in generated artifacts. */
+            secret: z.boolean().optional(),
+            /**
+             * `runtime` — server-side only; set as `SV_PLUGIN_<SLUG>_<KEY>` in the container env.
+             * `build`   — inlined at `next build`; set as `NEXT_PUBLIC_SV_PLUGIN_<SLUG>_<KEY>`.
+             *             Never use for secrets (the value is bundled into client code).
+             */
+            scope: z.enum(['build', 'runtime']),
+            /**
+             * Default value applied when the var is absent. Not allowed on `secret` vars
+             * (a secret with a default would be committed to the manifest).
+             */
+            default: z.string().optional(),
+          })
+          .strict()
+          .refine((v) => !(v.secret === true && v.default !== undefined), {
+            message:
+              'default is not allowed on secret env vars — a default value would be committed to the manifest',
+            path: ['default'],
+          })
+          .refine((v) => !(v.secret === true && v.scope === 'build'), {
+            message:
+              'secret env vars cannot use scope "build" — NEXT_PUBLIC_ vars are bundled into client code',
+            path: ['scope'],
+          }),
+      )
+      .optional(),
   })
   .strict();
 

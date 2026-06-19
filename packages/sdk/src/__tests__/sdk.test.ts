@@ -77,6 +77,10 @@ describe('sdk surface', () => {
     expect(typeof sdk.portability.provideImport).toBe('function');
   });
 
+  it('exposes the env surface (RFC 0018)', () => {
+    expect(typeof sdk.env.get).toBe('function');
+  });
+
   it('exposes the experimental / reserved surface', () => {
     expect(typeof sdk.storage.put).toBe('function');
     expect(typeof sdk.storage.get).toBe('function');

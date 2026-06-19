@@ -231,6 +231,17 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   sidebar width (`--sv-shell-sidebar-width`, reset to `0` on mobile) on `.shell`
   so overlay dialogs start at the sidebar's right edge and leave the rail
   visible/usable — never hardcode the sidebar width into the `Dialog`.
+- **`shell: minimal` (RFC 0014, Task 0.5.24) composes into `runtime/app/(minimal)/`** — a
+  chrome-free, full-bleed route group (no sidebar, header, or footer). The committed
+  `(minimal)/layout.tsx` applies `100dvh` and safe-area insets; generated composed routes
+  land alongside it (gitignored by `(minimal)/.gitignore` which keeps `layout.tsx` and
+  `minimal.module.css`). The session gate still applies — the middleware enforces auth
+  before the plugin renders. Multi-segment `routePrefix` is allowed (unlike overlay, which
+  must be single-segment). **`minimal` plugins ARE eligible as the root plugin** (kiosk use
+  case — `validateRootPlugin` accepts `shell: 'minimal'`); when used as root there is no
+  platform nav, so the plugin must provide its own navigation back to `/launcher` or other
+  routes if needed. Never reintroduce `process.exit(1)` for the minimal case in
+  `generate-registry.ts` — it is wired.
 - **`adminOnly` routes are gated in the runtime middleware.** A request under an
   admin-only plugin's `routePrefix` from a non-`platform:admin` user returns 403
   (SRS §3.4, PLT-03).

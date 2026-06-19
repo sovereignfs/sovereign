@@ -16,8 +16,9 @@
  * inherits the right layout from the route tree (no per-request branching):
  *   - `default` (or omitted) → `runtime/app/(platform)/(plugins)/<routePrefix>/`,
  *     which sits under the platform sidebar shell.
- *   - `minimal` → not yet implemented (a chrome-free group lands with the first
- *     minimal plugin); the script fails loudly rather than mis-composing one.
+ *   - `minimal` → `runtime/app/(minimal)/<routeSegment>` — chrome-free,
+ *     full-bleed; multi-segment routePrefix allowed (e.g. /kiosk/display).
+ *     The session gate still applies (middleware is not bypassed).
  *
  * The route segment is the manifest `routePrefix` (not the source directory
  * name), so `routePrefix` is the single source of truth for a plugin's URL.
@@ -75,6 +76,10 @@ const PLATFORM_PLUGINS_DIR = join(ROOT, 'runtime', 'app', '(platform)', '(plugin
 const MODAL_DIR = join(PLATFORM_PLUGINS_DIR, '@modal');
 // Committed files inside (plugins) that the clear step must never delete.
 const PLUGINS_DIR_KEEP = new Set(['.gitignore', 'layout.tsx', '@modal']);
+// Minimal-shell plugins compose under (minimal) — chrome-free, full-bleed (RFC 0014).
+const MINIMAL_DIR = join(ROOT, 'runtime', 'app', '(minimal)');
+// Committed files inside (minimal) that the clear step must never delete.
+const MINIMAL_DIR_KEEP = new Set(['.gitignore', 'layout.tsx', 'minimal.module.css']);
 const REGISTRY_FILE = join(ROOT, 'runtime', 'generated', 'registry.ts');
 
 interface PluginEntry {
@@ -152,12 +157,13 @@ export const registry: SovereignManifest[] = ${JSON.stringify(manifests, null, 2
 
 /**
  * The destination directories a plugin's `app/` tree composes into, chosen by
- * its `shell` mode (RFC 0001):
+ * its `shell` mode (RFC 0001, RFC 0014):
  *   - `default` (or omitted) → the `(plugins)` group (full page under the shell).
  *   - `overlay` → BOTH the `(plugins)` group (full-page fallback for hard loads)
  *     AND the `@modal/(modal)/(.)<segment>` interception copy (soft-nav dialog).
- *   - `minimal` → not yet wired; fails loudly.
- * Exits the process with a clear error for unsupported/invalid combinations.
+ *   - `minimal` → the `(minimal)` group (chrome-free, full-bleed). Multi-segment
+ *     routePrefix is allowed (unlike overlay, which must be single-segment).
+ * Exits the process with a clear error for invalid combinations.
  */
 function composeTargets(manifest: SovereignManifest): string[] {
   const shell = manifest.shell ?? 'default';
@@ -165,11 +171,7 @@ function composeTargets(manifest: SovereignManifest): string[] {
   const fallback = join(PLATFORM_PLUGINS_DIR, routeSegment);
 
   if (shell === 'minimal') {
-    console.error(
-      `[generate] plugin ${manifest.id} declares shell: "minimal", which is not yet ` +
-        'supported — a chrome-free route group lands with the first minimal plugin.',
-    );
-    process.exit(1);
+    return [join(MINIMAL_DIR, routeSegment)];
   }
 
   if (shell === 'overlay') {
@@ -205,6 +207,13 @@ function composePlugins(plugins: PluginEntry[]): void {
     if (entry.startsWith('(.)')) {
       rmSync(join(MODAL_DIR, entry), { recursive: true, force: true });
     }
+  }
+  // Clear composed route segments from the (minimal) group, keeping the
+  // committed layout.tsx, minimal.module.css, and .gitignore.
+  mkdirSync(MINIMAL_DIR, { recursive: true });
+  for (const entry of readdirSync(MINIMAL_DIR)) {
+    if (MINIMAL_DIR_KEEP.has(entry)) continue;
+    rmSync(join(MINIMAL_DIR, entry), { recursive: true, force: true });
   }
 
   for (const { dir, manifest } of plugins) {

@@ -20,6 +20,20 @@ const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
 const SELF_URL = 'http://localhost:3000';
 
 /**
+ * The browser-facing auth origin (scheme + host + port) for the CSP form-action
+ * allowance — same value the /login and logout routes redirect to. Returns
+ * undefined if the URL can't be parsed (CSP then falls back to 'self' only).
+ */
+function authPublicOrigin(): string | undefined {
+  const url = process.env.SOVEREIGN_AUTH_PUBLIC_URL ?? process.env.SOVEREIGN_AUTH_URL ?? AUTH_URL;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Middleware runs on the Edge runtime, which cannot open the SQLite database.
  * Plugin enabled/disabled state is fetched from the runtime's own
  * /api/admin/plugins/disabled route (Node runtime, excluded from this
@@ -128,6 +142,10 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const nonce = generateNonce();
   const csp = buildContentSecurityPolicy(nonce, {
     isProd: process.env.NODE_ENV === 'production',
+    // Allow the logout form's cross-origin redirect to the auth login page
+    // (form-action checks the whole redirect chain). Same browser-facing auth
+    // URL the /login and logout routes redirect to.
+    authFormActionOrigin: authPublicOrigin(),
   });
   const applyCsp = (response: NextResponse): NextResponse => {
     response.headers.set('content-security-policy', csp);
@@ -157,7 +175,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (!session) {
     const fallback = await verifyViaAuthServer(request);
     if (!fallback) {
-      return applyCsp(NextResponse.redirect(new URL('/login', request.url)));
+      // 303 (See Other), not the NextResponse.redirect default of 307. A 307
+      // preserves the request method, so an unauthenticated POST to a gated
+      // route (e.g. the logout form once the session has lapsed, or any plugin
+      // form submit) would redirect as POST /login — and /login only handles
+      // GET, returning 405. 303 forces the browser to GET /login instead.
+      return applyCsp(NextResponse.redirect(new URL('/login', request.url), 303));
     }
     session = fallback.session;
     setCookies = fallback.setCookies;

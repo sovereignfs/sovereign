@@ -29,11 +29,23 @@ export function generateNonce(): string {
  * injection is low-risk. `upgrade-insecure-requests` is production-only so it
  * never rewrites `http://localhost` subresources in dev.
  */
-export function buildContentSecurityPolicy(nonce: string, opts: { isProd: boolean }): string {
+export function buildContentSecurityPolicy(
+  nonce: string,
+  opts: { isProd: boolean; authFormActionOrigin?: string },
+): string {
   // Dev only: Next/webpack evaluate modules with eval() (eval-source-map), which
   // a strict script-src would block (no hydration). Production uses real bundles
   // — never ship 'unsafe-eval'.
   const devEval = opts.isProd ? '' : ` 'unsafe-eval'`;
+
+  // The logout form (and any auth-bound form) lives on the runtime origin but
+  // its POST 303-redirects to the auth server's login page on a *different*
+  // origin (e.g. http://localhost:3001 / your auth domain). Browsers check
+  // form-action against every URL in the submission's redirect chain, so the
+  // auth origin must be allowed or the redirect is silently blocked (the page
+  // just flickers and stays put). 'self' alone is not enough.
+  const formAction = ["'self'", opts.authFormActionOrigin].filter(Boolean).join(' ');
+
   const directives = [
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' ${THEME_SCRIPT_CSP_HASH}${devEval}`,
@@ -45,7 +57,7 @@ export function buildContentSecurityPolicy(nonce: string, opts: { isProd: boolea
     `manifest-src 'self'`,
     `object-src 'none'`,
     `base-uri 'self'`,
-    `form-action 'self'`,
+    `form-action ${formAction}`,
     `frame-ancestors 'none'`,
     `frame-src 'none'`,
     ...(opts.isProd ? [`upgrade-insecure-requests`] : []),

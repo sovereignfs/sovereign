@@ -5,6 +5,21 @@ follows [Semantic Versioning](https://semver.org); see
 [`docs/sdk-stability.md`](../../docs/sdk-stability.md) for the stability policy
 and which parts of the surface the guarantee covers.
 
+## 1.4.0
+
+**New surface: `sdk.portability`** (user data export/import, RFC 0007 / Task
+0.5.14). Experimental — not covered by the v1 stability guarantee.
+
+- `sdk.portability.provideExport(resolver)` / `provideImport(handler)` let a
+  plugin contribute its slice of a user's data to export and accept it back on
+  import. Runtime-mediated: the runtime supplies the user/tenant context, so a
+  plugin only ever touches the current user's own data. Both are async (they
+  read the calling plugin's id from the request context).
+- New exported types: `ExportContext`, `ImportContext`, `PluginExportSection`,
+  `ExportResolver`, `ImportHandler`.
+- Requires the manifest `data:export` / `data:import` permissions
+  (`@sovereignfs/manifest` ≥ 0.11.0).
+
 ## 1.3.1
 
 **Fix: host registration is now shared across Next.js bundles.**

@@ -6,6 +6,8 @@ import { ConsentRequiredError, NotAuthenticatedError, NotImplementedError, sdk }
 const mockDbClient = { select: () => ({}), insert: () => ({}) };
 const mockConfig = { tenantName: 'Test Workspace', inviteOnly: false, version: '0.6.0' };
 const mockDataResolvers = new Map<string, (...args: unknown[]) => Promise<unknown[]>>();
+const mockExporters = new Map<string, unknown>();
+const mockImporters = new Map<string, unknown>();
 
 beforeAll(() => {
   provideHost({
@@ -37,6 +39,14 @@ beforeAll(() => {
         /* no-op */
       },
     },
+    portability: {
+      provideExport(pluginId, resolver) {
+        mockExporters.set(pluginId, resolver);
+      },
+      provideImport(pluginId, handler) {
+        mockImporters.set(pluginId, handler);
+      },
+    },
   });
 });
 
@@ -60,6 +70,11 @@ describe('sdk surface', () => {
 
   it('exposes the activity surface (RFC 0005)', () => {
     expect(typeof sdk.activity.log).toBe('function');
+  });
+
+  it('exposes the portability surface (RFC 0007)', () => {
+    expect(typeof sdk.portability.provideExport).toBe('function');
+    expect(typeof sdk.portability.provideImport).toBe('function');
   });
 
   it('exposes the experimental / reserved surface', () => {

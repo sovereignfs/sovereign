@@ -1,4 +1,5 @@
 import type { DataContractRef, DataContractResolver } from './data';
+import type { ExportResolver, ImportHandler } from './portability';
 import type { ActivityLogEntry, DrizzleClient, MailOptions, PlatformConfig } from './types';
 
 /**
@@ -38,6 +39,15 @@ export interface SdkHost {
      * from request headers so plugins cannot forge actor identity.
      */
     log(entry: ActivityLogEntry, actorId: string | null, pluginId: string | null): Promise<void>;
+  };
+  portability: {
+    /**
+     * Register a plugin's export resolver, keyed by `pluginId` (resolved by the
+     * SDK from the request context). The runtime invokes it at export time.
+     */
+    provideExport(pluginId: string, resolver: ExportResolver): void;
+    /** Register a plugin's import handler, keyed by `pluginId`. */
+    provideImport(pluginId: string, handler: ImportHandler): void;
   };
 }
 

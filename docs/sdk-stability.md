@@ -35,12 +35,19 @@ errors (`NotAuthenticatedError`, `NotImplementedError`, `ConsentRequiredError`).
 
 ## What is NOT covered (experimental / reserved)
 
-These surfaces are **declared** so the eventual contract is visible, but they are
-**not implemented in v1** — every call throws `NotImplementedError`. Their shape
-may change before they ship, so a v1 plugin must not depend on them:
+These surfaces are **experimental** — they are implemented and usable, but their
+shape may still change before v1.0.0 stable. Changes follow the same
+minor/major bump discipline as stable surfaces, but an additive change
+(e.g. a new field on a callback argument) may ship without a minor bump in this
+group during the pre-v1 hardening period:
 
 - `sdk.data` — consent-gated cross-plugin data sharing (RFC 0002).
 - `sdk.activity` — activity log (RFC 0005).
+- `sdk.portability` — user data export/import (RFC 0007, `data:export`/`data:import` permissions).
+
+These surfaces are **reserved** (not yet implemented — every call throws
+`NotImplementedError`). Their shape may change before they ship:
+
 - `sdk.storage`, `sdk.notifications`, `sdk.events` — reserved post-v1 surfaces.
 
 When one of these is implemented, it graduates into the stable surface with a

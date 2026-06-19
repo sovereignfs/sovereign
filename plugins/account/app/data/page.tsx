@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { PortabilityPanel } from '../_components/PortabilityPanel';
 import styles from '../account.module.css';
 
 interface ConsentGrant {
@@ -106,6 +107,8 @@ export default function DataPage() {
           </ul>
         )}
       </section>
+
+      <PortabilityPanel />
     </div>
   );
 }

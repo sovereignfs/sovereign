@@ -467,9 +467,23 @@ const restore = defineCommand({
   },
 });
 
+const seed = defineCommand({
+  meta: {
+    name: 'seed',
+    description: 'Seed the dev database with test users (non-production only)',
+  },
+  run() {
+    const result = spawnSync('pnpm', ['tsx', join(SCRIPTS_DIR, 'seed.ts')], {
+      cwd: ROOT,
+      stdio: 'inherit',
+    });
+    if (result.status !== 0) process.exit(result.status ?? 1);
+  },
+});
+
 const main = defineCommand({
   meta: { name: 'sv', description: 'Sovereign deployment CLI' },
-  subCommands: { install, generate, build, dev, serve, backup, restore, plugin },
+  subCommands: { install, generate, build, dev, serve, seed, backup, restore, plugin },
 });
 
 void runMain(main);

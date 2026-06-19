@@ -53,6 +53,28 @@ accordingly in your `.env`.
 files automatically. Run `pnpm format` and `pnpm lint` at any time to check
 your working tree manually.
 
+### Dev database seed
+
+`sv seed` inserts two known-password test users into the auth database so you
+can sign in immediately without registering manually:
+
+| Email             | Password             | Role             |
+| ----------------- | -------------------- | ---------------- |
+| `admin@dev.local` | `admin-dev-password` | `platform:admin` |
+| `user@dev.local`  | `user-dev-password`  | `platform:user`  |
+
+```bash
+pnpm sv seed
+```
+
+The seed is **idempotent** — running it twice is safe (existing rows are left
+untouched). It is hard-blocked in production (`NODE_ENV=production`) unless
+`SOVEREIGN_SEED_ALLOW_PROD=true` is set on a throwaway test database.
+
+The seed also ensures the platform database is bootstrapped (tenant row, plugin
+status table, etc.), so it works on a fresh checkout before `pnpm dev` has ever
+run.
+
 ### Email in development
 
 The mailer speaks plain SMTP, so to actually see the emails the app sends in

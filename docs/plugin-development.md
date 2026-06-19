@@ -135,7 +135,7 @@ serves at `/tasks/lists`.
 | `runtime`       | `native` \| `static` \| `iframe-local` \| `iframe-remote` \| `external` | yes                                  | Execution model. v1 plugins use `native`; the others are reserved for future runtimes.                                                                                                                                                   |
 | `routePrefix`   | string starting with `/`                                                | yes                                  | URL prefix the plugin serves under, e.g. `/tasks`. The single source of truth for the plugin's URL.                                                                                                                                      |
 | `permissions`   | array of permission strings                                             | yes (may be `[]`)                    | SDK capabilities the plugin declares (see below).                                                                                                                                                                                        |
-| `shell`         | `default` \| `minimal` \| `overlay`                                     | no                                   | Presentation mode. `default` = full page under the platform sidebar; `overlay` = dialog over the current page (see below); `minimal` is reserved (not wired in v1).                                                                      |
+| `shell`         | `default` \| `minimal` \| `overlay`                                     | no                                   | Presentation mode. `default` = full page under the platform sidebar; `overlay` = dialog over the current page (see below); `minimal` = chrome-free, full-bleed (see below).                                                              |
 | `shellConfig`   | object (see below)                                                      | no                                   | Per-shell tuning. Holds `overlaySize` (`sm` \| `md` \| `lg`, default `lg`) for `shell: overlay` plugins. Only valid when `shell` is `overlay`.                                                                                           |
 | `adminOnly`     | boolean                                                                 | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                  |
 | `apiProvider`   | boolean                                                                 | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                            |
@@ -220,6 +220,32 @@ overlay plugin so closing always returns to the page the dialog opened over.
 Constraints: an overlay plugin's `routePrefix` must be a **single segment**
 (e.g. `/account`), and an overlay plugin is **not eligible as the root plugin**
 (CON-11) — the root serves `/` as a full page.
+
+### `shell: minimal` (RFC 0014)
+
+A `minimal` plugin renders **chrome-free and full-bleed** — no sidebar, no
+header, no footer. The plugin owns the entire viewport. Useful for kiosk
+displays, immersive media players, or any full-screen experience where the
+platform shell would be intrusive.
+
+```json
+{ "shell": "minimal" }
+```
+
+- The plugin composes into `runtime/app/(minimal)/` so it inherits a
+  simple, chrome-free layout (`100dvh`, safe-area insets).
+- The **session gate still applies** — the middleware enforces authentication
+  before the plugin renders. `minimal` does not bypass auth.
+- Unlike `overlay`, a multi-segment `routePrefix` is allowed (e.g. `/kiosk/display`).
+- A `minimal` plugin **may be configured as the root plugin** (kiosk use
+  case). When set as root, `/` renders the plugin full-bleed — be aware there
+  is no nav affordance back to the Launcher or other plugins unless the plugin
+  provides it.
+
+**Nav convention for minimal root plugins:** if your plugin is the root and
+other plugins are installed, provide your own navigation (a menu, a link to
+`/launcher`, etc.). The platform shell is absent, so users have no other way to
+reach the Launcher or Console.
 
 ### `compatibility` (RFC 0024)
 

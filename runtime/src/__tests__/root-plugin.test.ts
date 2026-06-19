@@ -7,6 +7,7 @@ const plugins: PluginRouteInfo[] = [
   { id: 'fs.sovereign.account', routePrefix: '/account', shell: 'overlay' },
   { id: 'fs.sovereign.launcher', routePrefix: '/launcher' },
   { id: 'fs.example.tasks', routePrefix: '/tasks' },
+  { id: 'fs.example.kiosk', routePrefix: '/kiosk', shell: 'minimal' },
 ];
 const none = new Set<string>();
 
@@ -43,6 +44,10 @@ describe('validateRootPlugin', () => {
       ok: false,
       reason: 'overlay',
     });
+  });
+
+  it('allows a minimal plugin as root (kiosk use case, RFC 0014)', () => {
+    expect(validateRootPlugin('fs.example.kiosk', plugins, none)).toEqual({ ok: true });
   });
 });
 

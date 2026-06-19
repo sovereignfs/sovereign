@@ -1,0 +1,7 @@
+.root {
+  min-height: 100dvh;
+  /* Safe-area insets for notched/rounded devices (RFC 0013, Task 0.5.25).
+     padding-top/bottom reserved for the upcoming mobile-hardening pass. */
+  padding-right: env(safe-area-inset-right);
+  padding-left: env(safe-area-inset-left);
+}

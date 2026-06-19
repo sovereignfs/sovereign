@@ -1199,7 +1199,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.19 — Stable SDK and semver commitment (review before start, might have already done this)
+#### ✅ Task 0.5.19 — Stable SDK and semver commitment
 
 **Goal:** SDK API review, cleanup, and semver commitment documented.
 
@@ -1220,7 +1220,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.20 — SDK distribution & plugin isolation boundary (RFC 0023) (review before start, might have already done this)
+#### ✅ Task 0.5.20 — SDK distribution & plugin isolation boundary (RFC 0023)
 
 **Goal:** Decide and implement the published-SDK model. Plugins are host-composed fragments with no standalone runtime and the SDK is in-process host glue, so publish `@sovereignfs/sdk` as a **types-first contract** (host-provided/guarded impls, no `db`/`mailer` dependency) — which also dissolves the private-deps blocker — or drop the "published" designation if isolated authoring isn't pursued.
 
@@ -1241,7 +1241,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.21 — Plugin compatibility & versioning (RFC 0024) (review before start, might have already done this)
+#### ✅ Task 0.5.21 — Plugin compatibility & versioning (RFC 0024)
 
 **Goal:** Make the dormant `schemaVersion` and `compatibility.minPlatformVersion` fields functional, add an advisory `maxPlatformVersion`, and enforce compatibility consistently.
 
@@ -1262,7 +1262,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.22 — Plugin-scoped environment variables (RFC 0018)
+#### ~~Task 0.5.22 — Plugin-scoped environment variables (RFC 0018)~~ (skipped)
 
 **Goal:** Let a plugin declare and supply its own env vars in plugin scope without touching monorepo files, with secrets never baked into artifacts.
 
@@ -1284,7 +1284,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.23 — Test setup & seeding (RFC 0019)
+#### ✅ Task 0.5.23 — Test setup & seeding (RFC 0019)
 
 **Goal:** A test-data foundation — in-code fixtures/factories plus an idempotent seed with per-role test users — and the dev/prod mode concept.
 

@@ -36,3 +36,4 @@ for the full process.
 | [0024](0024-plugin-compatibility.md)             | Plugin compatibility & versioning     | Accepted             | Yes — Task 0.5.21                                            |
 | [0025](0025-accessibility.md)                    | Accessibility (WCAG 2.1 AA)           | Accepted             | Yes — Task 0.5.28                                            |
 | [0026](0026-non-docker-deployment.md)            | Non-Docker production deployment      | Accepted             | Yes (phased) — Task 0.5.29 (Phase 1) + Task 1.0.09 (Phase 2) |
+| [0027](0027-white-labeling.md)                   | White-labeling (tenant branding)      | Draft                | No — design only, scheduling deferred                        |

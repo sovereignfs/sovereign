@@ -10,14 +10,20 @@
  * Monorepo-internal in v1 — no global npm install path (SRS §2.2).
  */
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, renameSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { defineCommand, runMain } from 'citty';
 import { consola } from 'consola';
 
-import { assertRemovablePlugin, resolvePluginIdFromManifest } from './helpers';
+import {
+  assertRemovablePlugin,
+  defaultArchivePath,
+  detectDialect,
+  readPlatformVersion,
+  resolvePluginIdFromManifest,
+} from './helpers';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPTS_DIR = join(ROOT, 'scripts');
@@ -193,9 +199,215 @@ const plugin = defineCommand({
   subCommands: { add: pluginAdd, remove: pluginRemove },
 });
 
+const backup = defineCommand({
+  meta: {
+    name: 'backup',
+    description: 'Snapshot the platform data (databases + avatars) to a timestamped archive',
+  },
+  args: {
+    dataDir: {
+      type: 'string',
+      description: 'Path to the data directory (default: ./data)',
+      default: join(ROOT, 'data'),
+    },
+    out: {
+      type: 'string',
+      description: 'Output archive path (default: ./backups/sovereign-backup-<ts>-v<ver>.tar.gz)',
+    },
+  },
+  run({ args }) {
+    const dataDir = resolve(args.dataDir);
+    const version = readPlatformVersion(ROOT);
+    const archivePath = resolve(args.out ?? defaultArchivePath(ROOT, version));
+    const archiveDir = dirname(archivePath);
+
+    if (!existsSync(dataDir)) {
+      consola.error(`Data directory not found: ${dataDir}`);
+      process.exit(1);
+    }
+
+    mkdirSync(archiveDir, { recursive: true });
+
+    const dbUrl = process.env.DATABASE_URL ?? `file:${join(dataDir, 'sovereign.db')}`;
+    const dialect = detectDialect(dbUrl);
+
+    if (dialect === 'postgres') {
+      // Postgres: use pg_dump for a consistent snapshot.
+      consola.start(`Creating Postgres backup → ${archivePath}`);
+      // Dump both databases to a temp directory, then tar them up.
+      const tmp = mkdtempSync(join(archiveDir, '.sv-backup-'));
+      const cleanup = (): void => rmSync(tmp, { recursive: true, force: true });
+      try {
+        const pgUrl = dbUrl;
+        const authPgUrl = process.env.AUTH_DATABASE_URL ?? pgUrl.replace(/\/[^/]+$/, '/auth');
+        const dumpResult = spawnSync(
+          'pg_dump',
+          ['--format=custom', `--file=${join(tmp, 'sovereign.pgdump')}`, pgUrl],
+          { stdio: 'inherit' },
+        );
+        if (dumpResult.status !== 0) {
+          cleanup();
+          consola.error('pg_dump failed for platform database.');
+          process.exit(1);
+        }
+        const authDumpResult = spawnSync(
+          'pg_dump',
+          ['--format=custom', `--file=${join(tmp, 'auth.pgdump')}`, authPgUrl],
+          { stdio: 'inherit' },
+        );
+        if (authDumpResult.status !== 0) {
+          cleanup();
+          consola.error('pg_dump failed for auth database.');
+          process.exit(1);
+        }
+        // Include avatars if they exist.
+        const avatarsDir = join(dataDir, 'avatars');
+        const tarArgs = ['-czf', archivePath, '-C', tmp, '.'];
+        if (existsSync(avatarsDir)) {
+          tarArgs.push('-C', dataDir, 'avatars');
+        }
+        const tarResult = spawnSync('tar', tarArgs, { stdio: 'inherit' });
+        cleanup();
+        if (tarResult.status !== 0) {
+          consola.error('tar failed creating archive.');
+          process.exit(1);
+        }
+      } catch (err) {
+        cleanup();
+        throw err;
+      }
+    } else {
+      // SQLite: archive the whole data directory with paths *relative to it*
+      // (note `-C dataDir .`). Two reasons this matters:
+      //  1. Portability — the archive stores `./sovereign.db`, not an absolute
+      //     host path, so `sv restore` can target any data dir, on any machine
+      //     or inside a container (/app/data). Absolute paths would only restore
+      //     to the exact path they were taken from.
+      //  2. Consistency — it captures the `-wal`/`-shm` sidecars alongside each
+      //     `.db`. In WAL mode recent commits live in the `-wal` file; backing
+      //     up the `.db` alone would silently drop them. SQLite recovers from
+      //     the trio on next open.
+      consola.start(`Creating SQLite backup → ${archivePath}`);
+      const tarResult = spawnSync('tar', ['-czf', archivePath, '-C', dataDir, '.'], {
+        stdio: 'inherit',
+      });
+      if (tarResult.status !== 0) {
+        consola.error('tar failed creating archive.');
+        process.exit(1);
+      }
+    }
+
+    consola.success(`Backup saved → ${archivePath}`);
+  },
+});
+
+const restore = defineCommand({
+  meta: {
+    name: 'restore',
+    description: 'Restore a backup archive created by `sv backup`',
+  },
+  args: {
+    archive: {
+      type: 'positional',
+      required: true,
+      description: 'Path to the .tar.gz backup archive',
+    },
+    dataDir: {
+      type: 'string',
+      description: 'Restore destination (default: ./data)',
+      default: join(ROOT, 'data'),
+    },
+  },
+  run({ args }) {
+    const archivePath = resolve(args.archive);
+    const dataDir = resolve(args.dataDir);
+
+    if (!existsSync(archivePath)) {
+      consola.error(`Archive not found: ${archivePath}`);
+      process.exit(1);
+    }
+
+    mkdirSync(dataDir, { recursive: true });
+
+    const dbUrl = process.env.DATABASE_URL ?? `file:${join(dataDir, 'sovereign.db')}`;
+    const dialect = detectDialect(dbUrl);
+
+    consola.warn(
+      `This will overwrite data in ${dataDir}. ` +
+        'Stop the server before restoring to avoid data corruption.',
+    );
+
+    if (dialect === 'postgres') {
+      // Extract the dump files then pg_restore them.
+      const tmp = mkdtempSync(join(dataDir, '.sv-restore-'));
+      const cleanup = (): void => rmSync(tmp, { recursive: true, force: true });
+      try {
+        const extractResult = spawnSync('tar', ['-xzf', archivePath, '-C', tmp], {
+          stdio: 'inherit',
+        });
+        if (extractResult.status !== 0) {
+          cleanup();
+          consola.error('tar extraction failed.');
+          process.exit(1);
+        }
+
+        const pgUrl = dbUrl;
+        const authPgUrl = process.env.AUTH_DATABASE_URL ?? pgUrl.replace(/\/[^/]+$/, '/auth');
+
+        for (const [dumpFile, url] of [
+          ['sovereign.pgdump', pgUrl],
+          ['auth.pgdump', authPgUrl],
+        ] as const) {
+          const dumpPath = join(tmp, dumpFile);
+          if (!existsSync(dumpPath)) continue;
+          const result = spawnSync(
+            'pg_restore',
+            ['--clean', '--if-exists', `--dbname=${url}`, dumpPath],
+            { stdio: 'inherit' },
+          );
+          if (result.status !== 0) {
+            cleanup();
+            consola.error(`pg_restore failed for ${dumpFile}.`);
+            process.exit(1);
+          }
+        }
+
+        // Restore avatars if present in the archive.
+        const avatarsSrc = join(tmp, 'avatars');
+        if (existsSync(avatarsSrc)) {
+          rmSync(join(dataDir, 'avatars'), { recursive: true, force: true });
+          const mvResult = spawnSync('mv', [avatarsSrc, join(dataDir, 'avatars')], {
+            stdio: 'inherit',
+          });
+          if (mvResult.status !== 0) {
+            cleanup();
+            consola.error('Failed to restore avatars.');
+            process.exit(1);
+          }
+        }
+        cleanup();
+      } catch (err) {
+        cleanup();
+        throw err;
+      }
+    } else {
+      // SQLite: extract the archive (relative paths) into the data directory.
+      const extractResult = spawnSync('tar', ['-xzf', archivePath, '-C', dataDir], {
+        stdio: 'inherit',
+      });
+      if (extractResult.status !== 0) {
+        consola.error('tar extraction failed.');
+        process.exit(1);
+      }
+    }
+
+    consola.success('Restore complete. Restart the server to apply.');
+  },
+});
+
 const main = defineCommand({
   meta: { name: 'sv', description: 'Sovereign deployment CLI' },
-  subCommands: { install, generate, build, dev, serve, plugin },
+  subCommands: { install, generate, build, dev, serve, backup, restore, plugin },
 });
 
 void runMain(main);

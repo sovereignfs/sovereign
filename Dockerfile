@@ -42,6 +42,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/runtime/.next/static ./runtime/.n
 # public/ holds the PWA assets generated at build (sw.js, workbox-*, fallback-*,
 # manifest.json, icons).
 COPY --from=builder --chown=nextjs:nodejs /app/runtime/public ./runtime/public
+# Platform DB migrations — not traced by Next.js (runtime data, not imports).
+COPY --from=builder --chown=nextjs:nodejs /app/packages/db/migrations ./packages/db/migrations
+# Workspace root marker: the standalone server.js calls process.chdir(__dirname)
+# which moves cwd from /app to /app/runtime. findWorkspaceRoot() then walks up
+# and stops here (/app/pnpm-workspace.yaml), returning /app — so migration
+# folder paths and SQLite file paths resolve correctly against /app rather than
+# falling back to the post-chdir /app/runtime.
+COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 # SQLite + avatars persist here (mounted as a volume). The relative DB path
 # resolves against the cwd (/app) at runtime, so it must be writable by the

@@ -83,9 +83,26 @@ they are authoritative over assumptions:
   `@sovereignfs/sdk` and `@sovereignfs/ui` — they are public contracts for
   plugin developers.
 
-  The **platform version** in the root `package.json` tracks the roadmap
-  milestones (v0.3.x → v0.4.x → v0.5.x → v1.0.x). Bump it when a phase
-  milestone is reached.
+  The **platform version** in the root `package.json` is **frozen at `0.6.x`
+  through the entire pre-v1 hardening period.** Do **not** bump it minor-by-minor
+  per task or roadmap milestone — that would imply progress toward a 1.0 the
+  platform has not earned yet. The single `1.0.0` release is reserved for the
+  hardened, public-ready platform; only then does the major change. Until then
+  the platform version stays `0.6.x` (a patch bump is acceptable for a
+  platform-wide fix, but most tasks leave it untouched). This is intentionally
+  decoupled from the roadmap phase numbers (`0.3.x`/`0.4.x`/`0.5.x` task IDs are
+  tracking labels, not the product version). The downgrade guard, plugin
+  compatibility gates (RFC 0024), and `/api/admin/health` all read this value, so
+  keeping it stable also keeps those stable.
+
+  **Per-package versions are independent of the platform version.** Internal,
+  private packages (`@sovereignfs/db`, `runtime`, `auth`, `manifest`, `mailer`,
+  plugins) follow normal semver tied to the change type above and **may cross
+  `1.0.0`** on a breaking change — their versions are internal, not the
+  user-facing product version (e.g. `@sovereignfs/db` is `1.0.0`). The published
+  packages **`@sovereignfs/sdk`** (already `1.x`, the stable contract) and
+  **`@sovereignfs/ui`** follow their own public semver per NFR-04 and are
+  **exempt** from the platform's "stay under v1" rule.
 
 ## Code quality
 
@@ -333,9 +350,23 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   inherits the image's `/app/data` ownership so SQLite/avatar writes work with
   zero host `chown` (a bind mount keeps host ownership and breaks non-root writes
   on Linux — macOS VirtioFS hides this). Dev (`docker-compose.yml`) keeps the
-  `./data` bind mount (runs as root). The relative SQLite path resolves against
-  cwd (`/app`) because `findWorkspaceRoot()` falls back to cwd when no
-  `pnpm-workspace.yaml` ancestor exists — the standalone case.
+  `./data` bind mount (runs as root). The named volume is **pinned with an
+  explicit `name: sovereign_data`** so Compose doesn't prefix it with the project
+  (checkout-dir) name — the documented backup/restore commands reference it by
+  that exact name.
+- **Both standalone images COPY `pnpm-workspace.yaml` into `/app`** (runtime and
+  `apps/auth` Dockerfiles). Next.js standalone `server.js` calls
+  `process.chdir(__dirname)` at boot, moving cwd to `/app/runtime` (or
+  `/app/apps/auth`). `findWorkspaceRoot()` walks up from cwd and stops at the
+  `pnpm-workspace.yaml` marker, returning `/app` — so **relative SQLite paths**
+  (`sovereign.db`, `auth.db`) and the **drizzle migrations folder**
+  (`packages/db/migrations/`, runtime only) resolve against `/app`, i.e. the
+  mounted `/app/data` volume. **Without the marker** `findWorkspaceRoot()` falls
+  back to the post-`chdir` cwd and the DBs land at `/app/runtime/data` /
+  `/app/apps/auth/data` — OUTSIDE the volume: data does not persist across
+  container recreates and is missing from backups, and the runtime fails to boot
+  (`Can't find meta/_journal.json`). Never drop the `pnpm-workspace.yaml` COPY
+  from either Dockerfile.
 
 ## Design system (`packages/ui`)
 
@@ -628,7 +659,8 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 - ✅ Task 0.5.21 — Plugin compatibility & versioning (RFC 0024; `@sovereignfs/manifest` → 0.9.0, `runtime` → 0.12.0). `schemaVersion` hard-gated to ≤ `CURRENT_MANIFEST_SCHEMA_VERSION` in the manifest schema; `compatibility` gains `semverString`-validated `minPlatformVersion` (hard) and optional `maxPlatformVersion` (advisory). Pure `checkCompatibility(manifest, platformVersion)` in `packages/manifest/src/compatibility.ts` (unit-tested). **Four enforcement tiers:** (1) build — `scripts/generate-registry.ts` exits 1 on hard failure, warns on advisory; (2) install — `sv plugin add` and `scripts/install-plugins.ts` (via `pnpm generate`) reject incompatible plugins; (3) boot — `runtime/src/boot-compat.ts` (called from `runtime/instrumentation.ts` `register()` under `NEXT_RUNTIME === 'nodejs'`) disables incompatible plugins via `setPluginEnabled(false)` and stores reasons in the in-memory `runtime/src/plugin-compat.ts` module; (4) registry advisory — `scripts/validate-registry.ts` logs advisory warnings for entries with `maxPlatformVersion` exceeded. `GET /api/admin/plugins` response gains `compatibilityError`/`compatibilityWarnings` per plugin; `GET /api/admin/health` gains `incompatiblePlugins[]`. Console Plugins page shows an "Incompatible" badge, tooltip with the reason, and locks the toggle for boot-disabled plugins. Registry validation logs advisory warnings. `semver` + `@types/semver` added to the pnpm catalog. `docs/plugin-development.md` gets a full `### compatibility (RFC 0024)` sub-section (sub-field table + enforcement tiers + example); `docs/self-hosting.md` gets a "Plugin compatibility" section. SRS RFC 0024 (merged to `main`).
 - ✅ Task 0.5.10 — Cross-plugin data sharing (RFC 0002; `@sovereignfs/manifest` → 0.10.0, `@sovereignfs/db` → 0.8.0, `@sovereignfs/sdk` → 1.2.0, `runtime` → 0.13.0, account plugin → 0.3.0). Manifest gains optional `data.provides[]` / `data.consumes[]`; `data:provide` / `data:consume` promoted from reserved to active. DB gains `consent_grants` (soft-deleted user consents) + `data_access_log` (immutable audit trail) tables with 7 helper functions. SDK: `sdk.data.provide(contract, resolver)` stores an in-process resolver via the host; `sdk.data.query(ref, params)` reads consumer plugin ID from `x-sovereign-plugin-id` header (injected by middleware), checks consent in DB, calls resolver, logs access. Runtime: in-memory resolver registry in `sdk-host.ts`; middleware injects `x-sovereign-plugin-id` for plugin routes; `GET/POST /api/account/data-grants`, `DELETE /api/account/data-grants/[id]`, `GET /api/admin/data-grants`. Account plugin gains a **Data** tab listing active consents with per-grant revocation. `docs/plugin-development.md` documents the full provider/consumer pattern. PR #61 (pending merge).
 - ✅ Task 0.5.12 — Activity log (RFC 0005; `@sovereignfs/db` → 0.9.0, `@sovereignfs/sdk` → 1.3.0, `runtime` → 0.14.0, account → 0.4.0, console → 0.5.0). `activity_log` table in both dialects with `recordActivity()`, `listUserActivity()`, `listAdminActivity()` helpers; bootstrap DDL with 3 indexes. `sdk.activity.log()` implemented via `SdkHost.activity`; runtime injects actor/plugin/tenant from request headers; action namespaced by plugin ID for plugin-sourced events. Capture points: Console user management (invite/role/deactivate), plugin enable/disable, settings changes, Account self-mutations (display name, password, session revoke, avatar). API routes: `GET /api/account/activity` (personal feed) and `GET /api/admin/activity` (platform-wide with filters). Account **Activity** tab + Console **Activity** section. `runtime/src/activity.ts` `logActivity()` — fire-and-forget wrapper for runtime routes. Login capture deferred (Edge runtime cannot write platform DB; RFC 0005 open question).
-- ⏳ Next: Task 0.5.13 — Deployment & upgrade strategy (RFC 0006), then Task 0.5.14, Task 0.5.17 in sequence. Task 0.5.22 (plugin-scoped env vars) was not implemented; it can be skipped for now per the prior routing decision.
+- ✅ Task 0.5.13 — Deployment & upgrade strategy (RFC 0006; `@sovereignfs/db` → 1.0.0, `runtime` → 0.15.0; platform version **held at 0.6.0** — see the frozen-platform-version policy above). Drizzle-kit migrations replace interim DDL bootstrap: `packages/db/migrations/{sqlite,postgres}/` + `drizzle.config.ts` / `drizzle.config.pg.ts` + `db:generate` script; `runMigrations(pdb)` now returns `MigrationResult`; `getLastMigrationResult()` exported for downgrade surfacing. `sv backup`/`sv restore` CLI commands (SQLite: tar of db files + avatars; Postgres: pg_dump/pg_restore + avatars). Published Docker images via `.github/workflows/publish-images.yml` (GHCR, `v*.*.*` tags; build-from-source fallback retained). `stop_grace_period: 30s` on both prod services. Downgrade guard: `platform_version` key in `platform_settings` compared on every startup; `GET /api/admin/health` surfaces `downgradeWarning` when running binary is older than stored DB version. `docs/upgrade.md` rewritten with step-by-step upgrade/rollback procedure. Also in this branch: Docker dev auth redirect fix (`AUTH_TRUSTED_ORIGINS`, `SOVEREIGN_AUTH_PUBLIC_URL`); prod auth port 4001; compose file comparison table in `docs/self-hosting.md`; migrations `COPY`-ed in `Dockerfile` runner stage. **Full dev / docker-dev / docker-prod verification pass fixed several bugs:** (1) migration SQL had a stray `--> statement-breakpoint` inside the leading comment → drizzle's "no statements" error (removed); (2) **both** standalone Dockerfiles now COPY `pnpm-workspace.yaml` so `findWorkspaceRoot()` resolves to `/app` after the standalone `process.chdir` — previously `auth.db` (and `sovereign.db`) landed at `/app/apps/auth/data` / `/app/runtime/data`, **outside the named volume**, so auth users/sessions did not persist across recreates and were absent from backups (pre-existing, now fixed + persistence verified); (3) `apps/auth/src/env.ts` `baseUrl` uses `||` not `??` (Compose interpolates unset `${AUTH_BASE_URL}` to `''`, which `??` ignored → empty baseURL → "Invalid origin" on prod login) and prod compose now defaults `AUTH_BASE_URL`/`SOVEREIGN_AUTH_PUBLIC_URL` to the host-reachable `localhost:${AUTH_PORT:-4001}` (`apps/auth` → 0.5.2); (4) `sv backup` now archives the data dir with **relative paths** (`tar -C dataDir .`) capturing `-wal`/`-shm` sidecars — absolute paths broke cross-host/container restore and dropped WAL commits; (5) downgrade guard keeps the **high-water-mark** version (skips the version write on a detected downgrade) so the warning persists every startup until resolved; (6) prod named volume pinned `name: sovereign_data` so it isn't project-prefixed (docs reference it by that name). Verified end-to-end: login + session gating + CSRF enforcement (bad origin still 403), admin health, downgrade warning, backup/restore round-trip across all three modes.
+- ⏳ Next: Task 0.5.14 — User data portability (RFC 0007), then Task 0.5.17 in sequence. Task 0.5.22 (plugin-scoped env vars) was not implemented; it can be skipped for now per the prior routing decision.
 
 Keep this file current: update the Status section as tasks complete, and add any
 new load-bearing convention that future sessions must not violate.

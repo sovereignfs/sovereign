@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import { platformBootstrapStatements } from './bootstrap';
 import { type PlatformDb, createClient } from './client';
 import { dbAll, dbGet, dbRun } from './exec';
+import { runMigrations, type MigrationResult } from './migrate';
 import * as pg from './schema/postgres';
 import * as sqlite from './schema/sqlite';
 
@@ -44,18 +45,33 @@ export async function bootstrapPlatformDb(pdb: PlatformDb): Promise<void> {
 }
 
 let _dbPromise: Promise<PlatformDb> | null = null;
+let _migrationResult: MigrationResult | null = null;
 
 /**
- * The platform database, initialised once per process from the environment
- * (DATABASE_URL / DB_DIALECT) with tables bootstrapped and seed rows present.
- * The initialisation promise is memoised so bootstrap runs exactly once even
- * under concurrent first calls.
+ * The result of the last `runMigrations()` call. Null until the first call to
+ * `getPlatformDb()` resolves. Used by the admin health route to surface
+ * downgrade warnings.
+ */
+export function getLastMigrationResult(): MigrationResult | null {
+  return _migrationResult;
+}
+
+/**
+ * The platform database, migrated and seeded, memoised per process.
+ *
+ * `runMigrations()` is the load-bearing startup path: it applies all pending
+ * drizzle-kit migrations, then inserts required seed rows. `bootstrapPlatformDb()`
+ * is retained for direct use in tests (which operate on `:memory:` databases
+ * and call it explicitly rather than going through this singleton).
+ *
+ * The promise is memoised so migrations run exactly once even under concurrent
+ * first calls.
  */
 export function getPlatformDb(): Promise<PlatformDb> {
   if (!_dbPromise) {
     _dbPromise = (async () => {
       const pdb = createClient();
-      await bootstrapPlatformDb(pdb);
+      _migrationResult = await runMigrations(pdb);
       return pdb;
     })();
   }

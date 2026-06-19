@@ -5,11 +5,34 @@ import { describe, expect, it } from 'vitest';
 import {
   PLATFORM_PLUGIN_DIRS,
   assertRemovablePlugin,
+  defaultArchivePath,
+  detectDialect,
   readPlatformVersion,
   resolvePluginIdFromManifest,
 } from '../helpers';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+
+describe('detectDialect', () => {
+  it.each([
+    ['postgres://user:pass@host:5432/db', 'postgres'],
+    ['postgresql://user@host/db', 'postgres'],
+    ['file:./data/sovereign.db', 'sqlite'],
+    ['/absolute/path/sovereign.db', 'sqlite'],
+    [':memory:', 'sqlite'],
+  ])('classifies %s as %s', (url, expected) => {
+    expect(detectDialect(url)).toBe(expected);
+  });
+});
+
+describe('defaultArchivePath', () => {
+  it('builds a timestamped, version-tagged path under backups/', () => {
+    const p = defaultArchivePath('/srv/sovereign', '1.2.3');
+    expect(p).toMatch(
+      /\/srv\/sovereign\/backups\/sovereign-backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-v1\.2\.3\.tar\.gz$/,
+    );
+  });
+});
 
 describe('assertRemovablePlugin', () => {
   it.each(PLATFORM_PLUGIN_DIRS)('refuses to remove the platform plugin %s', (id) => {

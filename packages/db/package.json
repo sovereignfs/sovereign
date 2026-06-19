@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/db",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Drizzle client factory, platform schema, and migration runner for Sovereign.",
@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate --config=drizzle.config.ts && drizzle-kit generate --config=drizzle.config.pg.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",
@@ -21,6 +22,7 @@
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
     "@types/pg": "^8.20.0",
+    "drizzle-kit": "^0.31.10",
     "tsup": "catalog:",
     "typescript": "catalog:"
   }

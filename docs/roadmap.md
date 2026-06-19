@@ -1559,27 +1559,7 @@ supported path to production.
 
 ### Phase v0.8 — Plugin isolation & Live debuging
 
-#### Task 0.8.01 — Production dev-mode & diagnostics (RFC 0020)
-
-**Goal:** Validate features on a production instance against a mock database without touching real data, plus local no-telemetry diagnostics.
-
-**Deliverables:**
-
-- A request-scoped dev-mode switch (`AsyncLocalStorage`, never global) → the mock DB for the toggled request only; env-gated off by default, secret-authenticated, visibly flagged, audited (RFC 0005); the mock DB seeded by `sv seed`
-- Resolve the auth-server mock-DB crux (or scope v1 to data-only mock)
-- Structured logging (`LOG_LEVEL`, stdout only) + a richer admin `/api/admin/health` — reconciled with the no-telemetry guarantee
-
-**Dependencies:** Task 0.5.23 (seed), Task 0.5.12 (audit)
-
-**SRS reference:** RFC 0020
-
-**Review checklist:**
-
-- A dev-mode request reads only the mock DB; concurrent real requests are unaffected; nothing egresses
-
----
-
-#### Task 0.8.02 — Plugin monetization (RFC 0003)
+#### Task 0.8.01 — Plugin monetization (RFC 0003)
 
 **Goal:** Let plugin authors monetize plugins via a manifest-declared model + author-signed entitlement gating. RFC 0003 accepted.
 
@@ -1602,7 +1582,7 @@ supported path to production.
 
 ---
 
-#### Task 0.8.03 — Per-plugin database (RFC 0004)
+#### Task 0.8.02 — Per-plugin database (RFC 0004)
 
 **Goal:** Let a plugin opt into a dedicated database (`database: "isolated"`) rather than sharing the platform DB. RFC 0004 accepted.
 
@@ -1625,7 +1605,7 @@ supported path to production.
 
 ---
 
-#### Task 0.8.04 — Non-Docker production deployment, Phase 2 — systemd (RFC 0026) **[post-v1]**
+#### Task 0.8.03 — Non-Docker production deployment, Phase 2 — systemd (RFC 0026) **[post-v1]**
 
 **Goal:** Add systemd as a zero-extra-dependency alternative to PM2 for Linux
 server operators (RFC 0026 Phase 2). Phase 1 (PM2) must ship first.
@@ -1691,6 +1671,26 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 - A stolen disk / leaked backup yields ciphertext; the docs state plainly that server-held keys do not defend against a curious operator or RCE
 - Encryption is opt-in and fails fast when enabled without a key; rotation re-wraps DEKs without bulk re-encryption
 - Field-level encryption is gated by `crypto:use`; encrypted columns document the search/sort caveat
+
+---
+
+#### Task 1.0.02 — Production dev-mode & diagnostics (RFC 0020)
+
+**Goal:** Validate features on a production instance against a mock database without touching real data, plus local no-telemetry diagnostics.
+
+**Deliverables:**
+
+- A request-scoped dev-mode switch (`AsyncLocalStorage`, never global) → the mock DB for the toggled request only; env-gated off by default, secret-authenticated, visibly flagged, audited (RFC 0005); the mock DB seeded by `sv seed`
+- Resolve the auth-server mock-DB crux (or scope v1 to data-only mock)
+- Structured logging (`LOG_LEVEL`, stdout only) + a richer admin `/api/admin/health` — reconciled with the no-telemetry guarantee
+
+**Dependencies:** Task 0.5.23 (seed), Task 0.5.12 (audit)
+
+**SRS reference:** RFC 0020
+
+**Review checklist:**
+
+- A dev-mode request reads only the mock DB; concurrent real requests are unaffected; nothing egresses
 
 ---
 

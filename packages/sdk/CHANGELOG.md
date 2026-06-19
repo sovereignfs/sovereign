@@ -5,6 +5,18 @@ follows [Semantic Versioning](https://semver.org); see
 [`docs/sdk-stability.md`](../../docs/sdk-stability.md) for the stability policy
 and which parts of the surface the guarantee covers.
 
+## 1.3.1
+
+**Fix: host registration is now shared across Next.js bundles.**
+
+- The registered platform host (`provideHost()`) is stored on `globalThis` under
+  a `Symbol.for` key instead of a module-level variable. Next.js compiles
+  instrumentation, route handlers, and server actions into separate bundles
+  (and dev HMR re-evaluates modules), so a module-level singleton could read
+  `null` in one bundle while set in another — causing host-backed calls from
+  plugin server actions (e.g. `sdk.activity.log()`) to throw "no runtime host is
+  registered" even though the runtime had registered it. No API change.
+
 ## 1.1.0
 
 **Types-first contract — zero runtime dependencies** (RFC 0023, Task 0.5.20).

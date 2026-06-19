@@ -41,7 +41,26 @@ export interface SdkHost {
   };
 }
 
-let _host: SdkHost | null = null;
+/**
+ * The host is stored on `globalThis` under a `Symbol.for` key, NOT a plain
+ * module-level variable. Next.js compiles instrumentation, route handlers, and
+ * server actions into separate bundles, each of which can get its own instance
+ * of this module — and dev HMR re-evaluates it on edits, resetting any
+ * module-level state. With a per-module `let`, `provideHost()` (called once from
+ * `runtime/instrumentation.ts`) would set the host on one instance while a
+ * plugin server action reads `null` from another, throwing "no runtime host".
+ * A `Symbol.for`-keyed global is shared across every module instance in the same
+ * Node process, so the single registration is always visible.
+ */
+const HOST_KEY = Symbol.for('@sovereignfs/sdk:host');
+
+interface HostHolder {
+  [HOST_KEY]?: SdkHost | null;
+}
+
+function holder(): HostHolder {
+  return globalThis as unknown as HostHolder;
+}
 
 /**
  * Register the platform host implementation. Called once at runtime startup
@@ -51,7 +70,7 @@ let _host: SdkHost | null = null;
  * should never need to call this.
  */
 export function provideHost(host: SdkHost): void {
-  _host = host;
+  holder()[HOST_KEY] = host;
 }
 
 /**
@@ -59,12 +78,13 @@ export function provideHost(host: SdkHost): void {
  * (i.e. the SDK is being executed outside the Sovereign runtime).
  */
 export function requireHost(): SdkHost {
-  if (!_host) {
+  const host = holder()[HOST_KEY];
+  if (!host) {
     throw new Error(
       '@sovereignfs/sdk: no runtime host is registered. ' +
         'SDK methods run inside the Sovereign runtime — start the platform with `pnpm dev` ' +
         'or `pnpm sv dev` and ensure the plugin is installed.',
     );
   }
-  return _host;
+  return host;
 }

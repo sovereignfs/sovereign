@@ -40,15 +40,19 @@ cd Sovereign
 cp .env.example .env
 ```
 
-Open `.env` and set at minimum:
+Open `.env` and set at minimum the two required secrets (both have no default —
+the apps refuse to start without them):
 
 ```env
-# Required — generate a secret with: openssl rand -base64 32
+# Generate each with: openssl rand -base64 32
 AUTH_SECRET=your-secret-here
-
-# The public URL users hit in their browser (no trailing slash)
-NEXT_PUBLIC_RUNTIME_URL=http://localhost:3000
+SOVEREIGN_ADMIN_KEY=your-admin-key-here
 ```
+
+Leave `NEXT_PUBLIC_RUNTIME_URL` and `SOVEREIGN_AUTH_URL` unset for local use — the
+Compose files fill in the right host-reachable values per environment (dev →
+:3000/:3001, prod → :4000/:4001). You only set `NEXT_PUBLIC_RUNTIME_URL` (and
+`AUTH_BASE_URL`) for a real deployment, to your public domain.
 
 ```bash
 # 3. Start (dev — ports 3000 / 3001)
@@ -94,29 +98,29 @@ internet. Override `AUTH_PORT` and `RUNTIME_PORT` to use different host ports.
 All variables live in a single `.env` at the repo root. Copy `.env.example`
 to get started — every variable is documented there.
 
-| Variable                    | Required | Default                      | Description                                                                                                                                                                                                                                                                   |
-| --------------------------- | -------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AUTH_SECRET`               | **yes**  | —                            | Signing secret for the auth server. The runtime also reads it to verify the session cookie locally (AUTH-05). Generate with `openssl rand -base64 32`. Never share or commit.                                                                                                 |
-| `SOVEREIGN_ADMIN_KEY`       | **yes**  | —                            | Shared secret for runtime↔auth internal admin API calls (Console user/plugin management). Generate with `openssl rand -base64 32`.                                                                                                                                            |
-| `NEXT_PUBLIC_RUNTIME_URL`   | **yes**  | `http://localhost:3000`      | Public URL of the runtime — used by the auth server to redirect users after login.                                                                                                                                                                                            |
-| `SOVEREIGN_AUTH_URL`        | no       | `http://localhost:3001`      | Where the runtime reaches the auth server for server-side API calls. Docker Compose sets it to the internal service name (`http://auth:3001`) automatically — only set it for non-Docker/native runs.                                                                         |
-| `SOVEREIGN_AUTH_PUBLIC_URL` | no       | `SOVEREIGN_AUTH_URL`         | Browser-facing base URL for auth redirects (login page). Needed when `SOVEREIGN_AUTH_URL` is an internal hostname the browser can't resolve (e.g. Docker's `http://auth:3001`). Set to the host-reachable URL such as `http://localhost:3001` or your public domain.          |
-| `AUTH_BASE_URL`             | no       | `http://localhost:3001`      | Public base URL of the auth server. Set to your public domain in production (e.g. `https://auth.example.com`). Used by better-auth for callback construction and CSRF origin validation.                                                                                      |
-| `AUTH_TRUSTED_ORIGINS`      | no       | —                            | Comma-separated list of origins trusted for CSRF checks in addition to `AUTH_BASE_URL`. In Docker deployments, set to `http://auth:3001` so server-to-server calls from the runtime (avatar upload, password change) are accepted when `AUTH_BASE_URL` is your public domain. |
-| `AUTH_INVITE_ONLY`          | no       | `false`                      | When `true`, registration requires a valid invite token. The first user is exempt.                                                                                                                                                                                            |
-| `AUTH_DATABASE_URL`         | no       | `file:./data/auth.db`        | Auth server database. SQLite file path (relative paths resolve against the repo root) or a `postgres://` URL.                                                                                                                                                                 |
-| `DATABASE_URL`              | no       | `file:./data/sovereign.db`   | Runtime database. SQLite file path (relative paths resolve against the repo root) or a `postgres://` URL.                                                                                                                                                                     |
-| `DB_DIALECT`                | no       | `sqlite`                     | Set to `postgres` when using PostgreSQL.                                                                                                                                                                                                                                      |
-| `SMTP_HOST`                 | no       | —                            | SMTP server host. Leave unset to disable email (the app still runs).                                                                                                                                                                                                          |
-| `SMTP_PORT`                 | no       | `587`                        | SMTP port.                                                                                                                                                                                                                                                                    |
-| `SMTP_USER`                 | no       | —                            | SMTP username.                                                                                                                                                                                                                                                                |
-| `SMTP_PASS`                 | no       | —                            | SMTP password.                                                                                                                                                                                                                                                                |
-| `SMTP_FROM`                 | no       | —                            | Sender address, e.g. `Sovereign <noreply@example.com>`.                                                                                                                                                                                                                       |
-| `RUNTIME_PORT`              | no       | `3000` (dev) / `4000` (prod) | Host port the runtime container is mapped to.                                                                                                                                                                                                                                 |
-| `AUTH_PORT`                 | no       | `3001` (dev) / `4001` (prod) | Host port the auth container is mapped to.                                                                                                                                                                                                                                    |
-| `SOVEREIGN_AUTH_SECRET`     | no       | `AUTH_SECRET`                | Secret for local session verification (AUTH-05). Must equal the auth server's signing secret, so it defaults to `AUTH_SECRET` — set it only to run a deliberately distinct value.                                                                                             |
-| `MAILPIT_SMTP_PORT`         | no       | `1025`                       | Dev only — host port for the Mailpit SMTP listener in `docker-compose.yml`.                                                                                                                                                                                                   |
-| `MAILPIT_UI_PORT`           | no       | `8025`                       | Dev only — host port for the Mailpit web inbox in `docker-compose.yml`.                                                                                                                                                                                                       |
+| Variable                    | Required | Default                        | Description                                                                                                                                                                                                                                                                                                                                                                                                     |
+| --------------------------- | -------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTH_SECRET`               | **yes**  | —                              | Signing secret for the auth server. The runtime also reads it to verify the session cookie locally (AUTH-05). Generate with `openssl rand -base64 32`. Never share or commit.                                                                                                                                                                                                                                   |
+| `SOVEREIGN_ADMIN_KEY`       | **yes**  | —                              | Shared secret for runtime↔auth internal admin API calls (Console user/plugin management). Generate with `openssl rand -base64 32`.                                                                                                                                                                                                                                                                              |
+| `NEXT_PUBLIC_RUNTIME_URL`   | no       | per env (dev :3000/prod :4000) | Browser-facing public URL of the runtime — the auth server redirects users here after login. The Compose files default it per environment (dev → `http://localhost:3000`, prod → `http://localhost:4000`); leave it unset locally. **Set it to your public domain (e.g. `https://example.com`) in a real deployment.** Read server-side at request time, so the container env is honoured (not baked at build). |
+| `SOVEREIGN_AUTH_URL`        | no       | `http://localhost:3001`        | Where the runtime reaches the auth server for server-side API calls. Docker Compose sets it to the internal service name (`http://auth:3001`) automatically — only set it for non-Docker/native runs.                                                                                                                                                                                                           |
+| `SOVEREIGN_AUTH_PUBLIC_URL` | no       | `SOVEREIGN_AUTH_URL`           | Browser-facing base URL for auth redirects (login page). Needed when `SOVEREIGN_AUTH_URL` is an internal hostname the browser can't resolve (e.g. Docker's `http://auth:3001`). Set to the host-reachable URL such as `http://localhost:3001` or your public domain.                                                                                                                                            |
+| `AUTH_BASE_URL`             | no       | `http://localhost:3001`        | Public base URL of the auth server. Set to your public domain in production (e.g. `https://auth.example.com`). Used by better-auth for callback construction and CSRF origin validation.                                                                                                                                                                                                                        |
+| `AUTH_TRUSTED_ORIGINS`      | no       | —                              | Comma-separated list of origins trusted for CSRF checks in addition to `AUTH_BASE_URL`. In Docker deployments, set to `http://auth:3001` so server-to-server calls from the runtime (avatar upload, password change) are accepted when `AUTH_BASE_URL` is your public domain.                                                                                                                                   |
+| `AUTH_INVITE_ONLY`          | no       | `false`                        | When `true`, registration requires a valid invite token. The first user is exempt.                                                                                                                                                                                                                                                                                                                              |
+| `AUTH_DATABASE_URL`         | no       | `file:./data/auth.db`          | Auth server database. SQLite file path (relative paths resolve against the repo root) or a `postgres://` URL.                                                                                                                                                                                                                                                                                                   |
+| `DATABASE_URL`              | no       | `file:./data/sovereign.db`     | Runtime database. SQLite file path (relative paths resolve against the repo root) or a `postgres://` URL.                                                                                                                                                                                                                                                                                                       |
+| `DB_DIALECT`                | no       | `sqlite`                       | Set to `postgres` when using PostgreSQL.                                                                                                                                                                                                                                                                                                                                                                        |
+| `SMTP_HOST`                 | no       | —                              | SMTP server host. Leave unset to disable email (the app still runs).                                                                                                                                                                                                                                                                                                                                            |
+| `SMTP_PORT`                 | no       | `587`                          | SMTP port.                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `SMTP_USER`                 | no       | —                              | SMTP username.                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `SMTP_PASS`                 | no       | —                              | SMTP password.                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `SMTP_FROM`                 | no       | —                              | Sender address, e.g. `Sovereign <noreply@example.com>`.                                                                                                                                                                                                                                                                                                                                                         |
+| `RUNTIME_PORT`              | no       | `3000` (dev) / `4000` (prod)   | Host port the runtime container is mapped to.                                                                                                                                                                                                                                                                                                                                                                   |
+| `AUTH_PORT`                 | no       | `3001` (dev) / `4001` (prod)   | Host port the auth container is mapped to.                                                                                                                                                                                                                                                                                                                                                                      |
+| `SOVEREIGN_AUTH_SECRET`     | no       | `AUTH_SECRET`                  | Secret for local session verification (AUTH-05). Must equal the auth server's signing secret, so it defaults to `AUTH_SECRET` — set it only to run a deliberately distinct value.                                                                                                                                                                                                                               |
+| `MAILPIT_SMTP_PORT`         | no       | `1025`                         | Dev only — host port for the Mailpit SMTP listener in `docker-compose.yml`.                                                                                                                                                                                                                                                                                                                                     |
+| `MAILPIT_UI_PORT`           | no       | `8025`                         | Dev only — host port for the Mailpit web inbox in `docker-compose.yml`.                                                                                                                                                                                                                                                                                                                                         |
 
 ---
 
@@ -160,7 +164,8 @@ automatically on failure, and Mailpit is absent (configure real SMTP instead).
 
 ```bash
 cp .env.example .env
-# Edit .env — set AUTH_SECRET, NEXT_PUBLIC_RUNTIME_URL, AUTH_BASE_URL, SMTP_*, etc.
+# Edit .env — set AUTH_SECRET and SOVEREIGN_ADMIN_KEY (required), plus SMTP_* and,
+# for a real deployment, NEXT_PUBLIC_RUNTIME_URL + AUTH_BASE_URL (your domain).
 
 # Prod — ports 4000 / 4001
 docker compose -f docker-compose.prod.yml up --build -d
@@ -168,22 +173,25 @@ docker compose -f docker-compose.prod.yml up --build -d
 
 ### Testing the production stack locally (no reverse proxy)
 
-To smoke-test `docker-compose.prod.yml` on your own machine without a domain or
-proxy, set these in `.env` so the browser-facing redirects point at the mapped
-host ports:
+To smoke-test `docker-compose.prod.yml` on your own machine, just set the two
+required secrets (`AUTH_SECRET`, `SOVEREIGN_ADMIN_KEY`) and leave the URL
+variables unset. The prod Compose file defaults all the browser-facing URLs to
+the mapped host ports, so the flow works end to end without a domain or proxy:
 
-```bash
-NEXT_PUBLIC_RUNTIME_URL=http://localhost:4000   # auth redirects users back here after login
-# SOVEREIGN_AUTH_PUBLIC_URL defaults to http://localhost:4001 (the mapped auth
-# port) when AUTH_BASE_URL is unset, so login redirects are browser-reachable.
-```
+- `AUTH_BASE_URL` / `SOVEREIGN_AUTH_PUBLIC_URL` → `http://localhost:4001`
+- `NEXT_PUBLIC_RUNTIME_URL` → `http://localhost:4000`
+
+> **Important:** do not leave a hardcoded `NEXT_PUBLIC_RUNTIME_URL` or
+> `SOVEREIGN_AUTH_URL` in `.env` (the dev `:3000`/`:3001` values from older
+> setups). `.env` is shared by both Compose files, and a value set there
+> overrides the per-environment defaults — so the prod stack would redirect to
+> the dev port. `.env.example` leaves them commented for exactly this reason.
 
 Then open <http://localhost:4000>. The runtime redirects you to
-`http://localhost:4001/login` (reachable), **not** the internal `http://auth:3001`.
-The `[better-auth] Base URL is not set` warning is expected in this mode —
-better-auth derives its base URL from the request host; set `AUTH_BASE_URL` to
-silence it. In a real deployment behind a reverse proxy, set `AUTH_BASE_URL` (and
-optionally `SOVEREIGN_AUTH_PUBLIC_URL`) to your public auth domain.
+`http://localhost:4001/login` (reachable, **not** the internal `http://auth:3001`),
+and after you sign in or register the auth server sends you back to
+`http://localhost:4000`. In a real deployment behind a reverse proxy, set
+`AUTH_BASE_URL` and `NEXT_PUBLIC_RUNTIME_URL` to your public domain(s).
 
 ### Reverse proxy
 
@@ -238,7 +246,7 @@ at it:
 
 ```bash
 cp .env.example .env
-# Set AUTH_SECRET, SOVEREIGN_ADMIN_KEY, NEXT_PUBLIC_RUNTIME_URL, and at minimum
+# Set AUTH_SECRET and SOVEREIGN_ADMIN_KEY (required), and at minimum
 # POSTGRES_PASSWORD. POSTGRES_USER / POSTGRES_DB default to "sovereign".
 
 docker compose -f docker-compose.prod.yml -f docker-compose.postgres.yml up --build -d

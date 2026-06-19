@@ -46,7 +46,11 @@ services:
       # calls from the runtime (which sends Origin: http://auth:3001). Always set
       # this when AUTH_BASE_URL is a public domain different from the service name.
       AUTH_TRUSTED_ORIGINS: '${AUTH_TRUSTED_ORIGINS:-http://auth:3001}'
-      NEXT_PUBLIC_RUNTIME_URL: '${NEXT_PUBLIC_RUNTIME_URL}'
+      # Public runtime URL the auth server redirects browsers back to after
+      # login/registration. Your public domain in a real deployment; defaults to
+      # the mapped runtime host port so local prod testing redirects to :4000
+      # (not the dev :3000 left in .env).
+      NEXT_PUBLIC_RUNTIME_URL: '${NEXT_PUBLIC_RUNTIME_URL:-http://localhost:${RUNTIME_PORT:-4000}}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
     volumes:
       # Named volume (not a host bind mount): Docker initialises it with the
@@ -88,7 +92,7 @@ services:
       # Shared signing secret — the runtime verifies the auth server's session
       # cookie locally with it (SRS AUTH-05); must match the auth service.
       AUTH_SECRET: '${AUTH_SECRET}'
-      NEXT_PUBLIC_RUNTIME_URL: '${NEXT_PUBLIC_RUNTIME_URL}'
+      NEXT_PUBLIC_RUNTIME_URL: '${NEXT_PUBLIC_RUNTIME_URL:-http://localhost:${RUNTIME_PORT:-4000}}'
       DATABASE_URL: '${DATABASE_URL:-file:./data/sovereign.db}'
       DB_DIALECT: '${DB_DIALECT:-sqlite}'
       SMTP_HOST: '${SMTP_HOST:-}'

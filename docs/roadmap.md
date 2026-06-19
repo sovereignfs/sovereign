@@ -1262,7 +1262,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ~~Task 0.5.22 — Plugin-scoped environment variables (RFC 0018)~~ (skipped)
+#### Task 0.5.22 — Plugin-scoped environment variables (RFC 0018)
 
 **Goal:** Let a plugin declare and supply its own env vars in plugin scope without touching monorepo files, with secrets never baked into artifacts.
 

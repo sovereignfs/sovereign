@@ -166,6 +166,25 @@ cp .env.example .env
 docker compose -f docker-compose.prod.yml up --build -d
 ```
 
+### Testing the production stack locally (no reverse proxy)
+
+To smoke-test `docker-compose.prod.yml` on your own machine without a domain or
+proxy, set these in `.env` so the browser-facing redirects point at the mapped
+host ports:
+
+```bash
+NEXT_PUBLIC_RUNTIME_URL=http://localhost:4000   # auth redirects users back here after login
+# SOVEREIGN_AUTH_PUBLIC_URL defaults to http://localhost:4001 (the mapped auth
+# port) when AUTH_BASE_URL is unset, so login redirects are browser-reachable.
+```
+
+Then open <http://localhost:4000>. The runtime redirects you to
+`http://localhost:4001/login` (reachable), **not** the internal `http://auth:3001`.
+The `[better-auth] Base URL is not set` warning is expected in this mode —
+better-auth derives its base URL from the request host; set `AUTH_BASE_URL` to
+silence it. In a real deployment behind a reverse proxy, set `AUTH_BASE_URL` (and
+optionally `SOVEREIGN_AUTH_PUBLIC_URL`) to your public auth domain.
+
 ### Reverse proxy
 
 Place a reverse proxy in front of the runtime port (`4000`) only — the auth

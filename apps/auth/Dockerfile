@@ -37,9 +37,18 @@ RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
 # The auth app ships no public/ directory.
 COPY --from=builder --chown=nextjs:nodejs /app/apps/auth/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/auth/.next/static ./apps/auth/.next/static
+# Workspace root marker: the standalone server.js calls process.chdir(__dirname),
+# moving cwd to /app/apps/auth. The auth DB path resolver (apps/auth/src/db.ts)
+# walks up looking for pnpm-workspace.yaml and stops here (/app), so auth.db
+# resolves to /app/data/auth.db — the mounted volume. Without this marker it
+# would fall back to the post-chdir cwd and write to /app/apps/auth/data/auth.db,
+# OUTSIDE the volume: users/sessions would not persist across container recreates
+# and would be missing from backups.
+COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 # auth.db persists here (mounted as a volume). The relative DB path resolves
-# against the cwd (/app) at runtime, so it must be writable by the runner.
+# against the workspace root (/app, via the marker above), so it must be
+# writable by the non-root runner.
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
 USER nextjs

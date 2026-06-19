@@ -1,0 +1,75 @@
+name: Publish Docker Images
+
+# Publishes semver-tagged images to GHCR on every `v*.*.*` tag push.
+# Requires the `packages: write` permission on the GitHub token — no external
+# secrets needed; GHCR uses the built-in GITHUB_TOKEN for authentication.
+#
+# Image names:
+#   ghcr.io/<owner>/sovereign-runtime:<tag>
+#   ghcr.io/<owner>/sovereign-auth:<tag>
+#
+# Tags applied per release:
+#   v1.2.3   — exact version
+#   v1.2     — rolling minor
+#   v1       — rolling major
+#   latest   — rolling latest
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # Re-run the full validation suite before publishing any image.
+  validate:
+    uses: ./.github/workflows/ci.yml
+
+  build-and-push:
+    name: Build and push ${{ matrix.name }}
+    needs: validate
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: sovereign-runtime
+            dockerfile: Dockerfile
+          - name: sovereign-auth
+            dockerfile: apps/auth/Dockerfile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.name }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

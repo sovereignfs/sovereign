@@ -1,19 +1,28 @@
 # Production Docker Compose.
 #
-# Usage:  docker compose -f docker-compose.prod.yml up -d
+# Usage:
+#   # Build from source (no SOVEREIGN_VERSION needed):
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+#   # Pull published images (set SOVEREIGN_VERSION to a release tag, e.g. v0.15.0):
+#   SOVEREIGN_VERSION=v0.15.0 docker compose -f docker-compose.prod.yml up -d
 #
 # Mailpit is dev-only and is absent here. Configure a real SMTP provider via
 # the SMTP_* environment variables in your .env file.
 #
-# The auth server is internal-only — it is not mapped to a host port. Place a
-# reverse proxy (nginx, Caddy, Traefik) in front of the runtime container and
-# route all traffic through it. See docs/self-hosting.md for full instructions.
+# Only the runtime container is exposed to the internet (via a reverse proxy).
+# The auth server binds on the internal Docker bridge network only.
+# See docs/self-hosting.md for full setup instructions.
 #
 # Quick start:
 #   cp .env.example .env            # fill in AUTH_SECRET and all required vars
 #   docker compose -f docker-compose.prod.yml up --build -d
 services:
   auth:
+    # When SOVEREIGN_VERSION is set, pull the published image from GHCR.
+    # Without it, build from source in this repo (the fallback for forks and
+    # air-gapped environments).
+    image: ${SOVEREIGN_VERSION:+ghcr.io/kasunben/sovereign-auth:${SOVEREIGN_VERSION}}
     build:
       context: .
       dockerfile: apps/auth/Dockerfile
@@ -21,14 +30,18 @@ services:
     ports:
       - '${AUTH_PORT:-4001}:3001'
     restart: unless-stopped
+    stop_grace_period: 30s
     environment:
       AUTH_SECRET: '${AUTH_SECRET}'
       AUTH_DATABASE_URL: '${AUTH_DATABASE_URL:-file:./data/auth.db}'
       AUTH_INVITE_ONLY: '${AUTH_INVITE_ONLY:-false}'
-      # Set AUTH_BASE_URL to your public domain, e.g. https://auth.example.com
-      # or https://example.com (if auth is served via a path prefix on the same
-      # domain). This is what better-auth uses for callbacks and cookie domain.
-      AUTH_BASE_URL: '${AUTH_BASE_URL}'
+      # Public URL where browsers reach the auth server — better-auth uses it for
+      # callbacks, cookie domain, and the CSRF origin check on login. Set this to
+      # your public domain in a real deployment, e.g. https://auth.example.com
+      # (or https://example.com if auth is path-prefixed on the same domain).
+      # Defaults to the mapped auth host port so local prod testing works without
+      # a proxy: the browser posts from localhost:4001, which must match baseURL.
+      AUTH_BASE_URL: '${AUTH_BASE_URL:-http://localhost:${AUTH_PORT:-4001}}'
       # Internal Docker service address trusted for CSRF checks on server-to-server
       # calls from the runtime (which sends Origin: http://auth:3001). Always set
       # this when AUTH_BASE_URL is a public domain different from the service name.
@@ -38,8 +51,8 @@ services:
     volumes:
       # Named volume (not a host bind mount): Docker initialises it with the
       # image's /app/data ownership, so the non-root runner can write SQLite +
-      # avatars with zero host-side setup. Back up with `docker run --rm -v
-      # sovereign_data:/data -v "$PWD":/backup alpine tar czf /backup/data.tgz -C /data .`
+      # avatars with zero host-side setup. Back up with `sv backup` before
+      # every upgrade.
       - sovereign_data:/app/data
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3001/api/health']
@@ -51,6 +64,7 @@ services:
       - sovereign_net
 
   runtime:
+    image: ${SOVEREIGN_VERSION:+ghcr.io/kasunben/sovereign-runtime:${SOVEREIGN_VERSION}}
     build:
       context: .
       dockerfile: Dockerfile
@@ -58,8 +72,18 @@ services:
     ports:
       - '${RUNTIME_PORT:-4000}:3000'
     restart: unless-stopped
+    stop_grace_period: 30s
     environment:
+      # Internal address for server-to-server calls (runtime → auth) over the
+      # Docker bridge network. Never browser-reachable.
       SOVEREIGN_AUTH_URL: 'http://auth:3001'
+      # Browser-facing auth URL for login redirects — must be reachable from the
+      # user's browser (unlike SOVEREIGN_AUTH_URL above, the internal service
+      # name). Precedence: an explicit SOVEREIGN_AUTH_PUBLIC_URL wins; otherwise
+      # it falls back to AUTH_BASE_URL (your public auth domain in a real
+      # deployment); otherwise to the mapped auth host port so local prod testing
+      # works without a reverse proxy (browser → localhost:4001, not auth:3001).
+      SOVEREIGN_AUTH_PUBLIC_URL: '${SOVEREIGN_AUTH_PUBLIC_URL:-${AUTH_BASE_URL:-http://localhost:${AUTH_PORT:-4001}}}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
       # Shared signing secret — the runtime verifies the auth server's session
       # cookie locally with it (SRS AUTH-05); must match the auth service.
@@ -90,6 +114,11 @@ services:
 
 volumes:
   sovereign_data:
+    # Pin the external volume name so it is not prefixed with the Compose project
+    # name (which defaults to the checkout directory). This keeps it a stable,
+    # predictable `sovereign_data` regardless of where the repo is cloned — the
+    # backup/restore commands in docs/ reference it by this exact name.
+    name: sovereign_data
 
 networks:
   sovereign_net:

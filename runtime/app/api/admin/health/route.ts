@@ -1,6 +1,6 @@
 import { statSync } from 'node:fs';
 import { NextResponse } from 'next/server';
-import { pingDb, resolveDialect, resolveSqlitePath } from '@sovereignfs/db';
+import { getLastMigrationResult, pingDb, resolveDialect, resolveSqlitePath } from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
 import { getPlatformDb } from '@/src/db';
 import { getIncompatiblePlugins } from '@/src/plugin-compat';
@@ -19,6 +19,12 @@ interface HealthReport {
   auth: { status: 'ok' | 'unreachable' };
   /** Plugins disabled at boot due to platform-version incompatibility (RFC 0024). */
   incompatiblePlugins: Array<{ id: string; reason: string }>;
+  /**
+   * Set when the running binary is older than the version that last wrote to
+   * the database — a downgrade was detected. Operators should restore a backup
+   * or upgrade to at least the indicated version.
+   */
+  downgradeWarning: { detectedVersion: string; runningVersion: string } | null;
   uptimeSeconds: number;
 }
 
@@ -58,11 +64,21 @@ export async function GET(request: Request): Promise<Response> {
     reason,
   }));
 
+  const migrationResult = getLastMigrationResult();
+  const downgradeWarning =
+    migrationResult?.downgradeDetected && migrationResult.previousVersion
+      ? {
+          detectedVersion: migrationResult.previousVersion,
+          runningVersion: migrationResult.currentVersion,
+        }
+      : null;
+
   const report: HealthReport = {
     platformVersion: getPlatformVersion(),
     database: { dialect: resolved.dialect, status: dbStatus, sizeBytes },
     auth: { status: authStatus },
     incompatiblePlugins,
+    downgradeWarning,
     uptimeSeconds: Math.floor(process.uptime()),
   };
   return NextResponse.json(report);

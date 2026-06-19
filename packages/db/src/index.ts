@@ -8,6 +8,7 @@ export {
   getAccountPrefs,
   getConsentGrant,
   getDefaultTenant,
+  getLastMigrationResult,
   getPlatformDb,
   getPlatformSetting,
   listAdminActivity,
@@ -31,7 +32,7 @@ export {
   type RecordActivityInput,
 } from './platform-db';
 export { resolveDialect, type Dialect, type ResolvedDialect } from './dialect';
-export { runMigrations } from './migrate';
+export { runMigrations, type MigrationResult } from './migrate';
 
 export * as schema from './schema/sqlite';
 export type {

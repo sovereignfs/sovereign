@@ -38,7 +38,11 @@ export function getEnv(): AuthEnv {
     secret: required('AUTH_SECRET'),
     databaseUrl: process.env.AUTH_DATABASE_URL ?? 'file:./data/auth.db',
     inviteOnly: process.env.AUTH_INVITE_ONLY === 'true',
-    baseUrl: process.env.AUTH_BASE_URL ?? 'http://localhost:3001',
+    // `||` (not `??`): Docker Compose interpolates an unset `${AUTH_BASE_URL}`
+    // to an empty string, which `??` would not catch — leaving better-auth with
+    // an empty baseURL and failing the CSRF origin check on login. Treat empty
+    // the same as unset and fall back to the default.
+    baseUrl: process.env.AUTH_BASE_URL || 'http://localhost:3001',
     adminKey: required('SOVEREIGN_ADMIN_KEY'),
     trustedOrigins: (process.env.AUTH_TRUSTED_ORIGINS ?? '')
       .split(',')

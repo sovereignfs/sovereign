@@ -9,6 +9,24 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { checkCompatibility, validateManifest } from '@sovereignfs/manifest';
 
+// ---------------------------------------------------------------------------
+// Backup helpers
+// ---------------------------------------------------------------------------
+
+/** Parse the DATABASE_URL to decide the dialect. */
+export function detectDialect(url: string): 'sqlite' | 'postgres' {
+  return url.startsWith('postgres://') || url.startsWith('postgresql://') ? 'postgres' : 'sqlite';
+}
+
+/**
+ * Build the default backup archive path:
+ *   <cwd>/backups/sovereign-backup-<timestamp>-v<version>.tar.gz
+ */
+export function defaultArchivePath(workspaceRoot: string, version: string): string {
+  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  return join(workspaceRoot, 'backups', `sovereign-backup-${ts}-v${version}.tar.gz`);
+}
+
 /**
  * Directory names of the platform plugins that ship inside this monorepo. They
  * are committed (gitignore-allowlisted) and load-bearing — `sv plugin remove`

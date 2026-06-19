@@ -1059,7 +1059,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.13 — Deployment & upgrade strategy (RFC 0006)
+#### ✅ Task 0.5.13 — Deployment & upgrade strategy (RFC 0006)
 
 **Goal:** Implement the tiered, low-downtime upgrade model from RFC 0006 / SRS §3.15. Depends on the CI pipeline (Task 0.5.07) for image publishing.
 
@@ -1370,7 +1370,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.27 — Plugin starter template & example plugins (RFC 0017)
+#### ✅ Task 0.5.27 — Plugin starter template & example plugins (RFC 0017)
 
 **Goal:** A frictionless plugin on-ramp — one canonical starter skeleton delivered three ways, plus capability-demo example plugins that double as test fixtures.
 
@@ -1559,7 +1559,7 @@ supported path to production.
 
 ### Phase v0.8 — Plugin isolation & Live debuging
 
-#### Task 1.0.06 — Production dev-mode & diagnostics (RFC 0020)
+#### Task 0.8.01 — Production dev-mode & diagnostics (RFC 0020)
 
 **Goal:** Validate features on a production instance against a mock database without touching real data, plus local no-telemetry diagnostics.
 
@@ -1579,7 +1579,7 @@ supported path to production.
 
 ---
 
-#### Task 1.0.07 — Plugin monetization (RFC 0003)
+#### Task 0.8.02 — Plugin monetization (RFC 0003)
 
 **Goal:** Let plugin authors monetize plugins via a manifest-declared model + author-signed entitlement gating. RFC 0003 accepted.
 
@@ -1602,7 +1602,7 @@ supported path to production.
 
 ---
 
-#### Task 1.0.08 — Per-plugin database (RFC 0004)
+#### Task 0.8.03 — Per-plugin database (RFC 0004)
 
 **Goal:** Let a plugin opt into a dedicated database (`database: "isolated"`) rather than sharing the platform DB. RFC 0004 accepted.
 
@@ -1625,7 +1625,7 @@ supported path to production.
 
 ---
 
-#### Task 1.0.09 — Non-Docker production deployment, Phase 2 — systemd (RFC 0026) **[post-v1]**
+#### Task 0.8.04 — Non-Docker production deployment, Phase 2 — systemd (RFC 0026) **[post-v1]**
 
 **Goal:** Add systemd as a zero-extra-dependency alternative to PM2 for Linux
 server operators (RFC 0026 Phase 2). Phase 1 (PM2) must ship first.

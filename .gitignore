@@ -28,6 +28,8 @@ dist/
 !/plugins/account/
 !/plugins/console/
 !/plugins/launcher/
+!/plugins/example-basic/
+!/plugins/example-api/
 
 # PWA service worker + Workbox bundles, generated into runtime/public by
 # @ducanh2912/next-pwa at build time. Never committed (the manifest + icons are).

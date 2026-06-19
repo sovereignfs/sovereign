@@ -1084,7 +1084,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.14 — User data portability (RFC 0007)
+#### ✅ Task 0.5.14 — User data portability (RFC 0007)
 
 **Goal:** Implement self-service export/import/migration from RFC 0007 / SRS §3.16. The reserved `sdk.portability` surface and `data:export`/`data:import` permissions land as stubs first (sequenced after RFC 0005's stubs).
 

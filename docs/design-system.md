@@ -77,6 +77,7 @@ variables are available globally to every plugin.
 | Font size     | `--sv-font-size-xs`, `-sm`, `-md`, `-lg`, `-xl`, `-2xl`                      |
 | Font weight   | `--sv-font-weight-regular` (400), `-medium` (500), `-semibold` (600)         |
 | Radius        | `--sv-radius-sm`, `-md`, `-lg`, `-full`                                      |
+| Icon size     | `--sv-icon-size-sm` (16px), `-md` (20px), `-lg` (24px)                       |
 
 ### Semantic tokens (`src/tokens/semantic.css`)
 
@@ -116,6 +117,84 @@ variables are available globally to every plugin.
    exposes its key props.
 
 `Button` is the reference implementation of all of the above.
+
+## Icon system (RFC 0011)
+
+The design system ships a curated set of **[Lucide](https://lucide.dev)** icons as
+inline, RSC-safe SVG components. `lucide` is a build-time devDependency only — the
+published `@sovereignfs/ui` package carries zero runtime or peer icon dependencies.
+
+### `<Icon>` component
+
+```tsx
+import { Icon } from '@sovereignfs/ui';
+
+// Decorative — described by surrounding text; hidden from screen readers.
+<Icon name="house" size="lg" aria-hidden />
+
+// Meaningful — standalone affordance; announced by screen readers.
+<Icon name="log-out" size="md" aria-label="Sign out" />
+```
+
+**Props:**
+
+| Prop          | Type                   | Default  | Description                                                   |
+| ------------- | ---------------------- | -------- | ------------------------------------------------------------- |
+| `name`        | `IconName`             | required | Name from the curated icon set                                |
+| `size`        | `"sm" \| "md" \| "lg"` | `"md"`   | Binds to `--sv-icon-size-*` tokens (16 / 20 / 24px)           |
+| `className`   | `string`               | —        | Additional CSS class on the SVG                               |
+| `aria-hidden` | `true`                 | —        | Decorative use — provide one of `aria-hidden` or `aria-label` |
+| `aria-label`  | `string`               | —        | Meaningful use — adds `role="img"` automatically              |
+
+**Color** follows `currentColor` — an icon inherits the text color of its container
+and recolors with theme changes automatically. No extra CSS required.
+
+### Token binding
+
+Icons use the `--sv-icon-size-*` primitive scale tokens:
+
+| Token               | Value | Use                           |
+| ------------------- | ----- | ----------------------------- |
+| `--sv-icon-size-sm` | 16px  | Inline with body text         |
+| `--sv-icon-size-md` | 20px  | Standard affordance (default) |
+| `--sv-icon-size-lg` | 24px  | Prominent / standalone        |
+
+### Curated icon set
+
+The icon list lives in `scripts/icon-list.ts`. To add an icon:
+
+1. Add the Lucide kebab-case name to the list.
+2. Run `pnpm generate:icons`.
+3. Commit the new file in `packages/ui/src/components/Icon/icons/` alongside the
+   updated `index.ts`.
+
+The set is intentionally small — add only icons the platform chrome or plugin
+ecosystem actively uses.
+
+**Current icons:** `house`, `settings`, `log-out`, `chevron-right/left/down/up`,
+`x`, `check`, `plus`, `trash-2`, `pencil`, `rotate-ccw`, `search`, `user`,
+`shield`, `lock`, `eye`, `eye-off`, `mail`, `bell`, `activity`, `package`,
+`grid-2x2`, `info`, `alert-triangle`.
+
+### Plugin-identity icons vs UI-affordance icons
+
+There is an explicit split between two kinds of icons:
+
+- **UI-affordance icons** (home, settings, close, …) — use `<Icon name="…">`.
+- **Plugin-identity icons** — the author-supplied `icon.svg` in the plugin's root
+  directory, wired into the Launcher tile and sidebar via
+  `<img src="/plugin-icons/<id>.svg" alt="">`. **Never** injected with
+  `dangerouslySetInnerHTML` — SVG from third-party plugins is untrusted markup
+  (RFC 0008 §4). The monogram is the fallback when a plugin ships no `icon.svg`.
+
+Plugin icons are copied to `runtime/public/plugin-icons/` by the generate script
+at dev startup and build time, served statically at `/plugin-icons/<id>.svg`
+without a session gate.
+
+### Lucide license
+
+Lucide is ISC-licensed. The attribution is in `packages/ui/NOTICE`, which ships
+with the published package.
 
 ## Theming
 

@@ -1,0 +1,22 @@
+.root {
+  display: inline-block;
+  flex-shrink: 0;
+  /* Prevent the inline-block from adding line-height whitespace below the SVG. */
+  line-height: 0;
+  /* Color follows the surrounding text via currentColor — no token needed. */
+}
+
+.sm {
+  width: var(--sv-icon-size-sm);
+  height: var(--sv-icon-size-sm);
+}
+
+.md {
+  width: var(--sv-icon-size-md);
+  height: var(--sv-icon-size-md);
+}
+
+.lg {
+  width: var(--sv-icon-size-lg);
+  height: var(--sv-icon-size-lg);
+}

@@ -66,3 +66,18 @@ registered"`. The dev/test loop is always runtime-hosted.
 
 See `docs/plugin-development.md` → [Plugin isolation boundary](#plugin-isolation-boundary)
 for the full authoring ✅ / build ❌ / run ❌ table.
+
+## Published packages summary
+
+Three packages from this monorepo are published to npm:
+
+| Package                      | Purpose                             | Policy                                                                                  |
+| ---------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------- |
+| `@sovereignfs/sdk`           | Plugin↔platform contract (types)    | Strict semver (this document)                                                           |
+| `@sovereignfs/ui`            | Design system (components + tokens) | Same strict semver as SDK (NFR-04)                                                      |
+| `@sovereignfs/create-plugin` | CLI scaffolding tool                | Semver; CLI tools follow patch/minor/major but have no library compatibility obligation |
+
+`@sovereignfs/create-plugin` is invoked via `npm create @sovereignfs/plugin`.
+It is a dev tool, not a runtime library — plugin code never imports it, so
+breaking changes follow standard semver without the additional "patch must
+never break" constraint that applies to sdk and ui.

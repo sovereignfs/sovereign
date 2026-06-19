@@ -86,6 +86,12 @@
   object-fit: cover;
 }
 
+.pluginIconImg {
+  width: var(--sv-icon-size-lg);
+  height: var(--sv-icon-size-lg);
+  object-fit: contain;
+}
+
 .content {
   padding: var(--sv-space-8);
 }

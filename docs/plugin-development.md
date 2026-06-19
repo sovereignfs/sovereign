@@ -350,12 +350,48 @@ packages (`db`, `manifest`, `mailer`) directly — only `@sovereignfs/sdk` and
 Build your interface with the Sovereign Design System (`@sovereignfs/ui`):
 
 ```ts
-import { Button, Card, Input, Badge } from '@sovereignfs/ui';
+import { Button, Input, Dialog, Icon } from '@sovereignfs/ui';
 ```
 
 Design tokens (`--sv-*` CSS custom properties) are injected globally by the
 runtime shell — reference them directly in your CSS, e.g.
 `color: var(--sv-color-text-primary)`. See [design-system.md](design-system.md).
+
+#### Using icons
+
+```tsx
+import { Icon } from '@sovereignfs/ui';
+
+// Decorative (described by surrounding text — hide from screen readers)
+<Icon name="trash-2" size="md" aria-hidden />
+
+// Meaningful (standalone — add a screen-reader label)
+<Icon name="log-out" aria-label="Sign out" />
+```
+
+Available sizes: `"sm"` (16px), `"md"` (20px, default), `"lg"` (24px). Color
+follows `currentColor` automatically — icons inherit the surrounding text color
+and recolor with theme changes.
+
+The full icon list is in `scripts/icon-list.ts`. To request a new icon for the
+platform set, open an issue; to use an icon not in the set today, copy the SVG
+inline in your plugin (Lucide icons are ISC-licensed).
+
+#### Plugin-identity icons vs UI-affordance icons
+
+Your plugin's `icon.svg` (the `icon` manifest field) is your plugin's **identity**
+— it appears in the Launcher tile and the sidebar. It is rendered as
+`<img src="/plugin-icons/<id>.svg" alt="">` by the platform, never as raw SVG, so
+arbitrary SVG features (scripts, foreignObject) are inert.
+
+For UI-affordance icons _within_ your plugin UI, use `<Icon name="…">` from
+`@sovereignfs/ui`. Do **not** use `dangerouslySetInnerHTML` to inject third-party
+SVG content — this is an XSS vector.
+
+**Guidance for your `icon.svg`:** draw a `24×24` `viewBox="0 0 24 24"` stroke
+icon with `fill="none" stroke="currentColor" stroke-width="2"` so your icon sits
+visually with the Lucide-based platform icons. The monogram (first two initials of
+your plugin name) is shown as a fallback when no `icon.svg` is present.
 
 ## Database
 

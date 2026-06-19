@@ -54,6 +54,12 @@
   font-weight: var(--sv-font-weight-semibold);
 }
 
+.tileIconImg {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
 .tileName {
   font-size: var(--sv-font-size-md);
   font-weight: var(--sv-font-weight-medium);

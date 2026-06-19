@@ -48,6 +48,7 @@ import {
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PLUGINS_DIR = join(ROOT, 'plugins');
+const PLUGIN_ICONS_DIR = join(ROOT, 'runtime', 'public', 'plugin-icons');
 
 function readPlatformVersion(): string {
   try {
@@ -215,10 +216,33 @@ function composePlugins(plugins: PluginEntry[]): void {
   }
 }
 
+/**
+ * Copy each plugin's `icon.svg` into `runtime/public/plugin-icons/<id>.svg`
+ * so it can be served statically at `/plugin-icons/<id>.svg` without a session
+ * gate. The directory is gitignored (generated artifact, same as composed routes).
+ */
+function copyPluginIcons(plugins: PluginEntry[]): void {
+  mkdirSync(PLUGIN_ICONS_DIR, { recursive: true });
+  // Clear stale icons from removed plugins.
+  for (const entry of readdirSync(PLUGIN_ICONS_DIR)) {
+    const id = entry.replace(/\.svg$/, '');
+    if (!plugins.some((p) => p.manifest.id === id)) {
+      rmSync(join(PLUGIN_ICONS_DIR, entry), { force: true });
+    }
+  }
+  for (const { dir, manifest } of plugins) {
+    const src = join(PLUGINS_DIR, dir, 'icon.svg');
+    if (existsSync(src)) {
+      cpSync(src, join(PLUGIN_ICONS_DIR, `${manifest.id}.svg`));
+    }
+  }
+}
+
 function generate(): void {
   const plugins = readPlugins();
   writeRegistry(plugins);
   composePlugins(plugins);
+  copyPluginIcons(plugins);
   console.log(`[generate] ${String(plugins.length)} plugin(s) composed.`);
 }
 

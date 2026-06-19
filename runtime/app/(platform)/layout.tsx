@@ -1,13 +1,18 @@
 import type { ReactNode } from 'react';
 import { headers } from 'next/headers';
 import Link from 'next/link';
+import { Icon } from '@sovereignfs/ui';
 import { getInstalledPlugins } from '@/src/registry';
 import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
 import { AccountMenu } from './_components/AccountMenu';
 import styles from './shell.module.css';
 
 function monogram(name: string): string {
-  return name.slice(0, 2).toUpperCase();
+  const trimmed = name.trim();
+  if (!trimmed) return '';
+  const [first = '', second = ''] = trimmed.split(/\s+/);
+  const initials = second ? first.charAt(0) + second.charAt(0) : first.slice(0, 2);
+  return initials.toUpperCase();
 }
 
 export default async function PlatformLayout({ children }: { children: ReactNode }) {
@@ -24,6 +29,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   ) : (
     <span aria-hidden="true">{monogram(userLabel)}</span>
   );
+
   // Middle section: one icon per non-chrome plugin. Chrome plugins (Launcher,
   // Console, Account) are reached via the home `/`, ⚙, and avatar links below
   // (SRS PLT-12). Full root-plugin-first ordering lands with the shell
@@ -32,7 +38,16 @@ export default async function PlatformLayout({ children }: { children: ReactNode
 
   const pluginIcons = plugins.map((plugin) => (
     <Link key={plugin.id} href={plugin.routePrefix} className={styles.icon} title={plugin.name}>
-      {monogram(plugin.name)}
+      {plugin.icon ? (
+        <img
+          src={`/plugin-icons/${plugin.id}.svg`}
+          alt=""
+          aria-hidden
+          className={styles.pluginIconImg}
+        />
+      ) : (
+        <span aria-hidden="true">{monogram(plugin.name)}</span>
+      )}
     </Link>
   ));
 
@@ -40,7 +55,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
     <div className={styles.shell}>
       <aside className={styles.sidebar} aria-label="Primary navigation">
         <Link href="/" className={styles.brand} aria-label="Sovereign home">
-          S
+          <Icon name="house" size="lg" aria-hidden />
         </Link>
         <nav className={styles.plugins} aria-label="Plugins">
           {pluginIcons}
@@ -48,7 +63,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
         <div className={styles.chrome}>
           {isAdmin ? (
             <Link href="/console" className={styles.icon} title="Console" aria-label="Console">
-              ⚙
+              <Icon name="settings" size="lg" aria-hidden />
             </Link>
           ) : null}
           <AccountMenu
@@ -72,7 +87,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
         {pluginIcons}
         {isAdmin ? (
           <Link href="/console" className={styles.icon} aria-label="Console">
-            ⚙
+            <Icon name="settings" size="lg" aria-hidden />
           </Link>
         ) : null}
       </nav>

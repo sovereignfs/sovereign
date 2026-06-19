@@ -1153,7 +1153,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.17 — Icon system (RFC 0011)
+#### ✅ Task 0.5.17 — Icon system (RFC 0011)
 
 **Goal:** Adopt Lucide as the icon language per RFC 0011, via a generated zero-dependency SVG set behind a Sovereign `<Icon>`.
 

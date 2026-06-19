@@ -164,6 +164,8 @@ Declared capabilities. The v1-functional ones:
 | `mailer:send`  | Send email via `sdk.mailer`.                                                               |
 | `data:provide` | Expose read-only data contracts for other plugins to query (RFC 0002, `sdk.data`).         |
 | `data:consume` | Read data from another plugin's contracts, subject to user consent (RFC 0002, `sdk.data`). |
+| `data:export`  | Participate in a user's data export bundle — `sdk.portability.provideExport()` (RFC 0007). |
+| `data:import`  | Participate in a data import/restore — `sdk.portability.provideImport()` (RFC 0007).       |
 | `admin:*`      | Administrative capabilities (platform plugins).                                            |
 
 | `activity:write` | Record activity-log events via `sdk.activity.log()` (RFC 0005). |
@@ -389,6 +391,36 @@ resolver)` registers a resolver; `sdk.data.query(ref, params)` reads from
     metadata: { title: newList.title },
   });
   ```
+- **`portability`** — participate in user-initiated data export/import (RFC 0007).
+  Register an export resolver (`sdk.portability.provideExport(resolver)`) and/or
+  an import handler (`sdk.portability.provideImport(handler)`) from a server-side
+  handler (Server Component, Route Handler, or Server Action). The resolver
+  receives an `ExportContext { userId, tenantId }` and must return a
+  `PluginExportSection { pluginId, schemaVersion, data, blobs? }`. The handler
+  receives the stored section plus an `ImportContext { userId, tenantId,
+remapId(originalId) }` — use `remapId` to translate stored IDs to fresh ones
+  for the importing account (referential integrity). Declare `data:export` and/or
+  `data:import` in the manifest; the runtime skips unregistered or un-permitted
+  plugins silently.
+
+  ```ts
+  // Server Component or Route Handler in your plugin:
+  import { sdk } from '@sovereignfs/sdk';
+
+  await sdk.portability.provideExport(async ({ userId }) => ({
+    pluginId: 'io.example.tasks',
+    schemaVersion: 1,
+    data: { tasks: await myDb.getTasksForUser(userId) },
+  }));
+
+  await sdk.portability.provideImport(async (section, { userId, remapId }) => {
+    const { tasks } = section.data as { tasks: { id: string; title: string }[] };
+    for (const task of tasks) {
+      await myDb.createTask({ id: remapId(task.id), userId, title: task.title });
+    }
+  });
+  ```
+
 - **Reserved** (throw `NotImplementedError` in v1): `storage`, `notifications`,
   `events`.
 

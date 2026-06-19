@@ -11,9 +11,10 @@ export const CURRENT_MANIFEST_SCHEMA_VERSION = 1;
 
 /**
  * SDK capabilities a plugin may declare. Mirrors the `Permission` union in
- * SRS §5. Several are reserved for post-v1 (storage, notifications, events,
- * cross-plugin data sharing — `data:provide` / `data:consume`, RFC 0002 — and
- * the activity log — `activity:write`, RFC 0005).
+ * SRS §5. Several are reserved for post-v1 (storage, notifications, events).
+ * Cross-plugin data sharing (`data:provide` / `data:consume`, RFC 0002), the
+ * activity log (`activity:write`, RFC 0005), and user data portability
+ * (`data:export` / `data:import`, RFC 0007) are implemented.
  */
 export const permissionSchema = z.enum([
   'auth:session',
@@ -26,6 +27,8 @@ export const permissionSchema = z.enum([
   'events:subscribe',
   'data:provide',
   'data:consume',
+  'data:export',
+  'data:import',
   'activity:write',
   'admin:*',
 ]);

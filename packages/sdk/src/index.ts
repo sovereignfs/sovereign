@@ -4,6 +4,7 @@ import { data } from './data';
 import * as db from './db';
 import * as mailer from './mailer';
 import * as platform from './platform';
+import { portability } from './portability';
 import { events, notifications, storage } from './unimplemented';
 
 /**
@@ -16,9 +17,10 @@ import { events, notifications, storage } from './unimplemented';
  *
  * **Experimental / reserved (NOT covered by the stability guarantee):** `data`
  * (cross-plugin data sharing, RFC 0002), `activity` (activity log, RFC 0005),
- * `storage`, `notifications`, `events`. `data` and `activity` are implemented;
- * `storage`, `notifications`, and `events` throw `NotImplementedError` until
- * their backing mechanisms ship. Their shape may change before they stabilise.
+ * `portability` (user data export/import, RFC 0007), `storage`, `notifications`,
+ * `events`. `data`, `activity`, and `portability` are implemented; `storage`,
+ * `notifications`, and `events` throw `NotImplementedError` until their backing
+ * mechanisms ship. Their shape may change before they stabilise.
  */
 export const sdk = {
   // Stable (v1.0.0).
@@ -26,18 +28,26 @@ export const sdk = {
   db,
   mailer,
   platform,
-  // Experimental / reserved — throw until implemented; shape may change.
+  // Experimental / reserved — shape may change; some throw until implemented.
   data,
   storage,
   notifications,
   events,
   activity,
+  portability,
 };
 
 export { provideHost } from './host';
 export type { SdkHost } from './host';
 export { NotImplementedError, NotAuthenticatedError, ConsentRequiredError } from './errors';
 export type { DataContractRef, DataContractResolver } from './data';
+export type {
+  ExportContext,
+  ImportContext,
+  PluginExportSection,
+  ExportResolver,
+  ImportHandler,
+} from './portability';
 export type {
   Session,
   SessionUser,

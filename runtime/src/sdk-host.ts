@@ -12,7 +12,14 @@ import {
 } from '@sovereignfs/db';
 import { createMailer } from '@sovereignfs/mailer';
 import { ConsentRequiredError, provideHost } from '@sovereignfs/sdk';
-import type { ActivityLogEntry, DataContractRef, DataContractResolver } from '@sovereignfs/sdk';
+import type {
+  ActivityLogEntry,
+  DataContractRef,
+  DataContractResolver,
+  ExportResolver,
+  ImportHandler,
+} from '@sovereignfs/sdk';
+import { registerExporter, registerImporter } from './portability/registry';
 
 let _version: string | undefined;
 
@@ -136,6 +143,14 @@ provideHost({
         summary: entry.summary ?? null,
         metadata: entry.metadata ?? null,
       });
+    },
+  },
+  portability: {
+    provideExport(pluginId: string, resolver: ExportResolver): void {
+      registerExporter(pluginId, resolver);
+    },
+    provideImport(pluginId: string, handler: ImportHandler): void {
+      registerImporter(pluginId, handler);
     },
   },
 });

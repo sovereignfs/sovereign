@@ -23,6 +23,7 @@ import {
   detectDialect,
   readPlatformVersion,
   resolvePluginIdFromManifest,
+  scaffoldPlugin,
 } from './helpers';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -113,6 +114,67 @@ const serve = defineCommand({
   },
 });
 
+const pluginNew = defineCommand({
+  meta: { name: 'new', description: 'Scaffold a new plugin from the canonical skeleton' },
+  args: {
+    id: {
+      type: 'positional',
+      required: true,
+      description: 'Reverse-DNS plugin ID, e.g. io.example.my-plugin',
+    },
+    name: {
+      type: 'string',
+      description: 'Display name (default: derived from the ID)',
+    },
+    description: {
+      type: 'string',
+      description: 'Short plugin description',
+    },
+    route: {
+      type: 'string',
+      description: 'Route prefix, e.g. /my-plugin (default: /<last-id-segment>)',
+    },
+    out: {
+      type: 'string',
+      description: 'Parent directory for the new plugin (default: ./plugins inside the workspace)',
+    },
+  },
+  run({ args }) {
+    const { id } = args;
+    const segments = id.split('.');
+    const slug = segments.at(-1) ?? id;
+    const name = args.name ?? slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const routePrefix = args.route ?? `/${slug}`;
+    const outDir = resolve(args.out ?? PLUGINS_DIR);
+
+    if (!routePrefix.startsWith('/')) {
+      consola.error(`Route prefix must start with "/": ${routePrefix}`);
+      process.exit(1);
+    }
+
+    let dir: string;
+    try {
+      dir = scaffoldPlugin({
+        id,
+        name,
+        description: args.description ?? '',
+        routePrefix,
+        outDir,
+        workspaceDeps: outDir === resolve(PLUGINS_DIR),
+      });
+    } catch (error) {
+      consola.error((error as Error).message);
+      process.exit(1);
+    }
+
+    consola.success(`Scaffolded "${id}" → ${dir}`);
+    consola.info('Next steps:');
+    consola.info('  1. Update repository in manifest.json.');
+    consola.info('  2. Run `pnpm generate` to compose the plugin into the runtime.');
+    consola.info('  3. Run `pnpm dev` to start the dev server.');
+  },
+});
+
 const pluginAdd = defineCommand({
   meta: { name: 'add', description: 'Clone a plugin from a git repository and compose it' },
   args: {
@@ -195,8 +257,8 @@ const pluginRemove = defineCommand({
 });
 
 const plugin = defineCommand({
-  meta: { name: 'plugin', description: 'Add or remove individual plugins' },
-  subCommands: { add: pluginAdd, remove: pluginRemove },
+  meta: { name: 'plugin', description: 'Scaffold, add, or remove individual plugins' },
+  subCommands: { new: pluginNew, add: pluginAdd, remove: pluginRemove },
 });
 
 const backup = defineCommand({

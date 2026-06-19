@@ -10,6 +10,59 @@ If you are deploying an instance rather than building a plugin, see
 [self-hosting.md](self-hosting.md). For the platform internals, see
 [architecture.md](architecture.md).
 
+## Getting started
+
+Three ways to scaffold a new plugin from the canonical skeleton:
+
+### 1. `sv plugin new` — inside a Sovereign monorepo checkout
+
+```bash
+pnpm sv plugin new io.example.my-plugin
+# Options:
+#   --name <name>         Display name (default: derived from ID)
+#   --description <text>  Short plugin description
+#   --route <prefix>      Route prefix, e.g. /my-plugin (default: /<last-id-segment>)
+#   --out <dir>           Parent directory (default: ./plugins)
+```
+
+Creates `plugins/io.example.my-plugin/` with the canonical skeleton and uses
+`workspace:*` / `catalog:` references so the plugin is immediately runnable
+with `pnpm dev`.
+
+### 2. `npm create @sovereignfs/plugin` — standalone plugin repository
+
+```bash
+npm create @sovereignfs/plugin
+# or: pnpm create @sovereignfs/plugin
+# or: yarn create @sovereignfs/plugin
+```
+
+Interactive: asks for plugin ID, display name, description, and route prefix.
+Creates a directory in the current folder with the same skeleton, but using
+`latest` npm references for all dependencies. Commit the directory, push to
+GitHub, then install it in your Sovereign instance via `sv plugin add`.
+
+### 3. GitHub template repository
+
+Fork [`sovereignfs/sovereign-plugin-template`](https://github.com/sovereignfs/sovereign-plugin-template)
+to create a pre-wired plugin repository with the same skeleton and a CI
+workflow. Edit the manifest, implement your `app/page.tsx`, then install with
+`sv plugin add <your-repo-url>`.
+
+### Example plugins
+
+Two reference plugins ship with the platform and are composed automatically.
+They are enabled by default and serve as both documentation and runtime
+test fixtures:
+
+| Plugin ID                    | Route            | What it shows                                  |
+| ---------------------------- | ---------------- | ---------------------------------------------- |
+| `fs.sovereign.example-basic` | `/example-basic` | Session reading, `@sovereignfs/ui`, CSS tokens |
+| `fs.sovereign.example-api`   | `/example-api`   | API provider serve-route pattern (PLT-16)      |
+
+Browse `plugins/example-basic/` and `plugins/example-api/` in the monorepo
+for fully-working code to adapt.
+
 ## How plugins work
 
 - **Native runtime.** A v1 plugin is plain Next.js App Router code (server
@@ -411,12 +464,16 @@ Get a client with `await sdk.db.getClient()` and query through your schema.
 
 Run a plugin against a local platform checkout:
 
-1. **Add it** — either clone with the CLI:
+1. **Create it** — scaffold a new plugin skeleton (monorepo context):
+   ```bash
+   pnpm sv plugin new io.example.my-plugin
+   ```
+   or install an existing plugin from its repository:
    ```bash
    pnpm sv plugin add https://github.com/you/sovereign-plugin-foo
    ```
    or declare it in `sovereign.plugins.json` and run `pnpm install:plugins`.
-   Both clone into `plugins/<id>/` and compose it.
+   All paths clone into `plugins/<id>/` and compose it.
 2. **Develop** — `pnpm dev` starts the runtime (`:3000`) and auth (`:3001`).
    Edits under `plugins/<id>/app/` are re-composed and hot-reloaded
    automatically.

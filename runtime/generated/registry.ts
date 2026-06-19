@@ -51,6 +51,42 @@ export const registry: SovereignManifest[] = [
   },
   {
     "schemaVersion": 1,
+    "id": "fs.sovereign.example-api",
+    "name": "Example: API",
+    "version": "0.1.0",
+    "description": "Reference plugin showing the API provider serve-route pattern. Set apiProvider: true to activate /api/* delegation.",
+    "type": "platform",
+    "runtime": "native",
+    "routePrefix": "/example-api",
+    "permissions": [
+      "auth:session"
+    ],
+    "shell": "default",
+    "icon": "icon.svg",
+    "compatibility": {
+      "minPlatformVersion": "0.6.0"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "id": "fs.sovereign.example-basic",
+    "name": "Example: Basic",
+    "version": "0.1.0",
+    "description": "A minimal reference plugin demonstrating SDK usage, session reading, and design system components.",
+    "type": "platform",
+    "runtime": "native",
+    "routePrefix": "/example-basic",
+    "permissions": [
+      "auth:session"
+    ],
+    "shell": "default",
+    "icon": "icon.svg",
+    "compatibility": {
+      "minPlatformVersion": "0.6.0"
+    }
+  },
+  {
+    "schemaVersion": 1,
     "id": "fs.sovereign.launcher",
     "name": "Launcher",
     "version": "0.1.0",

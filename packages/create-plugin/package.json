@@ -1,0 +1,28 @@
+{
+  "name": "@sovereignfs/create-plugin",
+  "version": "0.1.0",
+  "description": "Scaffold a new Sovereign plugin — run via `npm create @sovereignfs/plugin`",
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "bin": {
+    "create-plugin": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@sovereignfs/tsconfig": "workspace:*",
+    "tsup": "catalog:",
+    "typescript": "catalog:"
+  }
+}

@@ -1,6 +1,7 @@
-import { resolve, dirname } from 'node:path';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   PLATFORM_PLUGIN_DIRS,
@@ -9,6 +10,7 @@ import {
   detectDialect,
   readPlatformVersion,
   resolvePluginIdFromManifest,
+  scaffoldPlugin,
 } from '../helpers';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -99,5 +101,107 @@ describe('resolvePluginIdFromManifest', () => {
     expect(() => resolvePluginIdFromManifest(future, ROOT)).toThrow(
       /incompatible with this platform/,
     );
+  });
+});
+
+describe('scaffoldPlugin', () => {
+  const tmpDir = join(
+    resolve(dirname(fileURLToPath(import.meta.url)), '../..'),
+    'data',
+    '.scaffold-test',
+  );
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('creates the canonical skeleton with the correct files', () => {
+    const dir = scaffoldPlugin({
+      id: 'io.example.test-plugin',
+      name: 'Test Plugin',
+      description: 'A test scaffold',
+      routePrefix: '/test-plugin',
+      outDir: tmpDir,
+    });
+
+    expect(dir).toBe(join(tmpDir, 'io.example.test-plugin'));
+    expect(existsSync(join(dir, 'manifest.json'))).toBe(true);
+    expect(existsSync(join(dir, 'package.json'))).toBe(true);
+    expect(existsSync(join(dir, 'tsconfig.json'))).toBe(true);
+    expect(existsSync(join(dir, 'icon.svg'))).toBe(true);
+    expect(existsSync(join(dir, 'app', 'page.tsx'))).toBe(true);
+    expect(existsSync(join(dir, 'app', 'test-plugin.module.css'))).toBe(true);
+  });
+
+  it('writes a valid manifest with the supplied fields', () => {
+    const dir = scaffoldPlugin({
+      id: 'io.example.my-app',
+      name: 'My App',
+      description: 'My description',
+      routePrefix: '/my-app',
+      outDir: tmpDir,
+    });
+
+    const manifest = JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    expect(manifest.id).toBe('io.example.my-app');
+    expect(manifest.name).toBe('My App');
+    expect(manifest.routePrefix).toBe('/my-app');
+    expect(manifest.schemaVersion).toBe(1);
+    expect(manifest.type).toBe('sovereign');
+    expect(manifest.runtime).toBe('native');
+    expect(manifest.shell).toBe('default');
+  });
+
+  it('uses workspace:* refs when workspaceDeps is true', () => {
+    const dir = scaffoldPlugin({
+      id: 'io.example.ws-plugin',
+      name: 'WS Plugin',
+      description: '',
+      routePrefix: '/ws-plugin',
+      outDir: tmpDir,
+      workspaceDeps: true,
+    });
+
+    const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as {
+      dependencies: Record<string, string>;
+    };
+    expect(pkg.dependencies['@sovereignfs/sdk']).toBe('workspace:*');
+  });
+
+  it('uses latest refs when workspaceDeps is false', () => {
+    const dir = scaffoldPlugin({
+      id: 'io.example.npm-plugin',
+      name: 'NPM Plugin',
+      description: '',
+      routePrefix: '/npm-plugin',
+      outDir: tmpDir,
+    });
+
+    const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as {
+      dependencies: Record<string, string>;
+    };
+    expect(pkg.dependencies['@sovereignfs/sdk']).toBe('latest');
+  });
+
+  it('throws when the output directory already exists', () => {
+    scaffoldPlugin({
+      id: 'io.example.dup-plugin',
+      name: 'Dup',
+      description: '',
+      routePrefix: '/dup-plugin',
+      outDir: tmpDir,
+    });
+    expect(() =>
+      scaffoldPlugin({
+        id: 'io.example.dup-plugin',
+        name: 'Dup',
+        description: '',
+        routePrefix: '/dup-plugin',
+        outDir: tmpDir,
+      }),
+    ).toThrow(/already exists/);
   });
 });

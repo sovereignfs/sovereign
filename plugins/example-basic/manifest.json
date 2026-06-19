@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "fs.sovereign.example-basic",
+  "name": "Example: Basic",
+  "version": "0.1.0",
+  "description": "A minimal reference plugin demonstrating SDK usage, session reading, and design system components.",
+  "type": "platform",
+  "runtime": "native",
+  "routePrefix": "/example-basic",
+  "shell": "default",
+  "icon": "icon.svg",
+  "permissions": ["auth:session"],
+  "compatibility": {
+    "minPlatformVersion": "0.6.0"
+  }
+}

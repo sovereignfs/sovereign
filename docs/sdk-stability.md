@@ -44,6 +44,7 @@ group during the pre-v1 hardening period:
 - `sdk.data` — consent-gated cross-plugin data sharing (RFC 0002).
 - `sdk.activity` — activity log (RFC 0005).
 - `sdk.portability` — user data export/import (RFC 0007, `data:export`/`data:import` permissions).
+- `sdk.env` — plugin-scoped environment variable accessor (RFC 0018). `sdk.env.get(key)` reads `SV_PLUGIN_<SLUG>_<KEY>` scoped to the calling plugin; server-side only.
 
 These surfaces are **reserved** (not yet implemented — every call throws
 `NotImplementedError`). Their shape may change before they ship:

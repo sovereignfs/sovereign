@@ -1305,7 +1305,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.24 — Minimal shell mode (RFC 0014)
+#### ✅ Task 0.5.24 — Minimal shell mode (RFC 0014)
 
 **Goal:** Wire the third `shell` mode — `minimal` (chrome-free, full-bleed) — which currently fails the build.
 

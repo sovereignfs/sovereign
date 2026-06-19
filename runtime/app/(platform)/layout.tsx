@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { headers } from 'next/headers';
 import Link from 'next/link';
+import { Icon } from '@sovereignfs/ui';
 import { getInstalledPlugins } from '@/src/registry';
 import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
 import { AccountMenu } from './_components/AccountMenu';
@@ -62,7 +63,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
         <div className={styles.chrome}>
           {isAdmin ? (
             <Link href="/console" className={styles.icon} title="Console" aria-label="Console">
-              ⚙
+              <Icon name="settings" size="lg" aria-hidden />
             </Link>
           ) : null}
           <AccountMenu
@@ -86,7 +87,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
         {pluginIcons}
         {isAdmin ? (
           <Link href="/console" className={styles.icon} aria-label="Console">
-            ⚙
+            <Icon name="settings" size="lg" aria-hidden />
           </Link>
         ) : null}
       </nav>

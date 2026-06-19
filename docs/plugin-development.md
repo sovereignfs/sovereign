@@ -142,6 +142,7 @@ serves at `/tasks/lists`.
 | `icon`          | string                                                                  | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                                                                                                                                                     |
 | `compatibility` | object (see below)                                                      | yes                                  | Platform version constraints. Hard-gates install/boot on `minPlatformVersion`; surfaces an advisory warning in Console/health when the platform exceeds the optional `maxPlatformVersion`.                                               |
 | `data`          | object (see below)                                                      | no                                   | Cross-plugin data sharing declarations (RFC 0002). Declare the contracts this plugin exposes (`data.provides`) and the ones it reads (`data.consumes`). Requires the matching `data:provide` / `data:consume` permissions.               |
+| `env`           | object (see below)                                                      | no                                   | Plugin-scoped environment variable declarations (RFC 0018). Keys are auto-namespaced to `SV_PLUGIN_<SLUG>_<KEY>`; read them via `sdk.env.get('KEY')` in server code.                                                                     |
 | `repository`    | string (URL)                                                            | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                |
 
 ### `type`
@@ -323,6 +324,79 @@ Route Handler) that executes when the plugin is first loaded. Consumers can only
 query after the provider has registered — if you receive a resolver-not-found
 error, the provider plugin has not yet served a request in the current process.
 
+### `env` — plugin-scoped environment variables (RFC 0018)
+
+Plugins can declare environment variables in the manifest `env` object. Each key
+must be `UPPER_CASE`. The platform auto-namespaces them so they cannot collide
+with platform or other-plugin vars.
+
+| Sub-field     | Type                 | Required | Description                                                                                                                                                |
+| ------------- | -------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `description` | string               | yes      | Human-readable description shown to operators.                                                                                                             |
+| `scope`       | `runtime` \| `build` | yes      | `runtime` → `SV_PLUGIN_<SLUG>_<KEY>` (server-side only). `build` → `NEXT_PUBLIC_SV_PLUGIN_<SLUG>_<KEY>` (inlined at `next build`; do not use for secrets). |
+| `required`    | boolean              | no       | When `true`, the platform warns at startup if the var is absent.                                                                                           |
+| `secret`      | boolean              | no       | When `true`, the value must never appear in the manifest `default` or the plugin's `.env` file.                                                            |
+| `default`     | string               | no       | Default value applied when the var is absent. Not allowed on `secret` vars.                                                                                |
+
+**Example declaration:**
+
+```json
+{
+  "env": {
+    "API_KEY": {
+      "description": "Third-party API key",
+      "secret": true,
+      "scope": "runtime",
+      "required": true
+    },
+    "API_URL": {
+      "description": "API base URL",
+      "scope": "runtime",
+      "default": "https://api.example.com"
+    },
+    "MAP_TOKEN": { "description": "Public map token", "scope": "build" }
+  }
+}
+```
+
+The effective namespaced keys for a plugin with `id: "io.example.tasks"`:
+
+| Manifest key | Namespaced key                                     |
+| ------------ | -------------------------------------------------- |
+| `API_KEY`    | `SV_PLUGIN_IO_EXAMPLE_TASKS_API_KEY`               |
+| `API_URL`    | `SV_PLUGIN_IO_EXAMPLE_TASKS_API_URL`               |
+| `MAP_TOKEN`  | `NEXT_PUBLIC_SV_PLUGIN_IO_EXAMPLE_TASKS_MAP_TOKEN` |
+
+**Reading vars in server code** (`scope: "runtime"`):
+
+```ts
+import { sdk } from '@sovereignfs/sdk';
+
+// In a Server Component, Route Handler, or Server Action:
+const apiKey = await sdk.env.get('API_KEY'); // → string | null
+```
+
+`sdk.env.get` reads `SV_PLUGIN_<SLUG>_<KEY>` scoped to the calling plugin
+(determined from the `x-sovereign-plugin-id` header the middleware injects).
+A plugin can only read its own declared vars — not platform vars or other
+plugins' vars.
+
+**Reading build-scope vars** (`scope: "build"`) in client components:
+
+```ts
+// Client Component — use process.env directly (Next.js inlines NEXT_PUBLIC_* at build time).
+// Replace IO_EXAMPLE_TASKS with your plugin's derived slug.
+const token = process.env.NEXT_PUBLIC_SV_PLUGIN_IO_EXAMPLE_TASKS_MAP_TOKEN;
+```
+
+**Operator setup:** operators set secret vars in the container environment
+before starting the platform. The platform logs a warning at startup for any
+`required` vars that are absent.
+
+**Dev workflow:** create a `plugins/<dir>/.env` file (gitignored) for local
+non-secret values. The generate script reads it and merges it as defaults.
+Secret vars must always be set in the actual environment — never in `.env`.
+
 ### Example `manifest.json`
 
 ```json
@@ -421,6 +495,11 @@ remapId(originalId) }` — use `remapId` to translate stored IDs to fresh ones
   });
   ```
 
+- **`env`** — plugin-scoped environment variables (RFC 0018). `sdk.env.get(key)`
+  reads the calling plugin's `SV_PLUGIN_<SLUG>_<KEY>` env var, identified by
+  the `x-sovereign-plugin-id` request header. Returns `null` when absent or
+  called outside a plugin route. Declare vars in the manifest `env` field
+  (see above). Server-side only (uses `next/headers`).
 - **Reserved** (throw `NotImplementedError` in v1): `storage`, `notifications`,
   `events`.
 

@@ -187,6 +187,38 @@ runs them. To skip CI on demand you have three options:
 
 ---
 
+## Publishing a package
+
+Three packages are published to npm from this monorepo. Each has an
+independent release cycle triggered by a version-specific Git tag:
+
+| Package                      | Tag pattern            | Trigger command example        |
+| ---------------------------- | ---------------------- | ------------------------------ |
+| `@sovereignfs/sdk`           | `sdk-vX.Y.Z`           | `git tag sdk-v1.3.1`           |
+| `@sovereignfs/ui`            | `ui-vX.Y.Z`            | `git tag ui-v0.5.1`            |
+| `@sovereignfs/create-plugin` | `create-plugin-vX.Y.Z` | `git tag create-plugin-v0.1.0` |
+
+**Steps:**
+
+1. Bump the version in the package's `package.json` and update its
+   `CHANGELOG.md` in a PR (the version bump is part of the feature/fix PR,
+   not a separate one).
+2. Once the PR is merged, tag the resulting commit on `main` and push the tag:
+   ```bash
+   git tag <tag>
+   git push origin <tag>
+   ```
+3. `.github/workflows/publish.yml` picks up the tag, re-runs the full CI suite
+   (via `workflow_call`), then builds and publishes the package using the
+   `NPM_TOKEN` repository secret. The publish step uses `pnpm publish
+--no-git-checks --access public`, so it rejects the tag if the version
+   is already on npm (protection against accidental re-publishes).
+
+All other `@sovereignfs/*` packages are `"private": true` and are never
+published.
+
+---
+
 ## Proposing a feature (RFCs)
 
 Have a feature request or an idea to improve Sovereign? Two paths, depending on how

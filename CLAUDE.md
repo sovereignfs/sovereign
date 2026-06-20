@@ -68,6 +68,11 @@ they are authoritative over assumptions:
   `docs/self-hosting.md` (env vars). The `runtime/src/docs-parity.test.ts` parity
   test enforces the enumerable parts (every field/permission/SDK key/env var must
   appear in its doc) and fails CI otherwise; review covers the prose.
+  **The parity test is one-directional** (`.env.example` → `self-hosting.md`); it
+  does not catch env vars consumed by the code but absent from `.env.example`.
+  That direction is a human convention: every env var read from `process.env` in
+  either app must be declared (or commented-out) in `.env.example`, even if it
+  has a safe default, so operators know it exists.
 - **Version bumps** are part of the PR — bump the relevant `package.json`(s)
   in the same branch, following semver tied to the change type:
   - `fix/` → **patch** (0.0.x)

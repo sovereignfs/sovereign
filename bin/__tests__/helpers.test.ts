@@ -1,14 +1,17 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   PLATFORM_PLUGIN_DIRS,
   assertRemovablePlugin,
+  authHealthUrl,
   defaultArchivePath,
   detectDialect,
+  pollUntilHealthy,
   readPlatformVersion,
+  renderPm2Config,
   resolvePluginIdFromManifest,
   scaffoldPlugin,
 } from '../helpers';
@@ -203,5 +206,88 @@ describe('scaffoldPlugin', () => {
         outDir: tmpDir,
       }),
     ).toThrow(/already exists/);
+  });
+});
+
+describe('authHealthUrl', () => {
+  it('uses the default loopback URL when SOVEREIGN_AUTH_URL is unset', () => {
+    expect(authHealthUrl({})).toBe('http://127.0.0.1:3001/api/health');
+  });
+
+  it('derives the URL from SOVEREIGN_AUTH_URL', () => {
+    expect(authHealthUrl({ SOVEREIGN_AUTH_URL: 'http://auth:3001' })).toBe(
+      'http://auth:3001/api/health',
+    );
+  });
+
+  it('strips a trailing slash before appending the path', () => {
+    expect(authHealthUrl({ SOVEREIGN_AUTH_URL: 'http://auth:3001/' })).toBe(
+      'http://auth:3001/api/health',
+    );
+  });
+});
+
+describe('pollUntilHealthy', () => {
+  it('returns true when the first fetch succeeds', async () => {
+    const fetchFn = vi.fn().mockResolvedValue({ ok: true });
+    const result = await pollUntilHealthy('http://localhost/health', 5_000, fetchFn);
+    expect(result).toBe(true);
+    expect(fetchFn).toHaveBeenCalledOnce();
+  });
+
+  it('retries on failure and returns true once healthy', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('ECONNREFUSED'))
+      .mockResolvedValue({ ok: true });
+    const result = await pollUntilHealthy('http://localhost/health', 5_000, fetchFn);
+    expect(result).toBe(true);
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns false when the timeout elapses without a healthy response', async () => {
+    const fetchFn = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'));
+    const result = await pollUntilHealthy('http://localhost/health', 100, fetchFn);
+    expect(result).toBe(false);
+  });
+});
+
+describe('renderPm2Config', () => {
+  it('includes both sovereign-auth and sovereign-runtime apps', () => {
+    const config = renderPm2Config({ dir: '/opt/sovereign' });
+    expect(config).toContain("name: 'sovereign-auth'");
+    expect(config).toContain("name: 'sovereign-runtime'");
+  });
+
+  it('sets the auth HOSTNAME to 127.0.0.1', () => {
+    const config = renderPm2Config({ dir: '/opt/sovereign' });
+    // Auth block comes before runtime; check the loopback binding is in auth section.
+    const authIdx = config.indexOf("name: 'sovereign-auth'");
+    const runtimeIdx = config.indexOf("name: 'sovereign-runtime'");
+    const authSection = config.slice(authIdx, runtimeIdx);
+    expect(authSection).toContain("HOSTNAME: '127.0.0.1'");
+  });
+
+  it('sets the runtime HOSTNAME to 0.0.0.0', () => {
+    const config = renderPm2Config({ dir: '/opt/sovereign' });
+    const runtimeIdx = config.indexOf("name: 'sovereign-runtime'");
+    const runtimeSection = config.slice(runtimeIdx);
+    expect(runtimeSection).toContain("HOSTNAME: '0.0.0.0'");
+  });
+
+  it('embeds the correct standalone server.js paths', () => {
+    const config = renderPm2Config({ dir: '/opt/sovereign' });
+    expect(config).toContain('/opt/sovereign/apps/auth/.next/standalone/apps/auth/server.js');
+    expect(config).toContain('/opt/sovereign/runtime/.next/standalone/runtime/server.js');
+  });
+
+  it('includes the env_file entry when provided', () => {
+    const config = renderPm2Config({ dir: '/opt/sovereign', envFile: '/opt/sovereign/.env' });
+    expect(config).toContain("env_file: '/opt/sovereign/.env'");
+  });
+
+  it('omits env_file when not provided', () => {
+    const config = renderPm2Config({ dir: '/opt/sovereign' });
+    expect(config).not.toContain('env_file');
   });
 });

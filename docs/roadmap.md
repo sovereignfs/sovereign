@@ -1432,7 +1432,7 @@ and deliver the plugin developer a11y contract per RFC 0025.
 
 ---
 
-#### Task 0.5.29 — Non-Docker production deployment, Phase 1 — PM2 (RFC 0026)
+#### ✅ Task 0.5.29 — Non-Docker production deployment, Phase 1 — PM2 (RFC 0026)
 
 **Goal:** Ship the PM2 deployment path as the first-class non-Docker fallback
 (RFC 0026 Phase 1). Operators who can't or won't use Docker get a documented,

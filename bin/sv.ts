@@ -10,7 +10,15 @@
  * Monorepo-internal in v1 — no global npm install path (SRS §2.2).
  */
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -19,9 +27,12 @@ import { consola } from 'consola';
 
 import {
   assertRemovablePlugin,
+  authHealthUrl,
   defaultArchivePath,
   detectDialect,
+  pollUntilHealthy,
   readPlatformVersion,
+  renderPm2Config,
   resolvePluginIdFromManifest,
   scaffoldPlugin,
 } from './helpers';
@@ -78,7 +89,7 @@ const dev = defineCommand({
 
 const serve = defineCommand({
   meta: { name: 'serve', description: 'Start the runtime and auth server in production mode' },
-  run() {
+  async run() {
     // No single pnpm/turbo task starts both production servers, so orchestrate
     // the two `next start` processes directly — same mutual-teardown pattern as
     // scripts/dev.ts. Docker remains the canonical production path.
@@ -108,9 +119,20 @@ const serve = defineCommand({
       shutdown(0);
     });
 
-    consola.start('Starting Sovereign (runtime :3000, auth :3001) …');
-    start(['start', '--port', '3000'], join(ROOT, 'runtime'));
+    consola.start('Starting auth server (:3001) …');
     start(['start', '--port', '3001'], join(ROOT, 'apps', 'auth'));
+
+    const healthUrl = authHealthUrl();
+    consola.info(`Waiting for auth to become healthy at ${healthUrl} …`);
+    const ready = await pollUntilHealthy(healthUrl, 30_000);
+    if (!ready) {
+      consola.error('Auth server did not become healthy within 30 s. Aborting.');
+      shutdown(1);
+      return;
+    }
+
+    consola.start('Starting runtime (:3000) …');
+    start(['start', '--port', '3000'], join(ROOT, 'runtime'));
   },
 });
 
@@ -499,9 +521,46 @@ const user = defineCommand({
   subCommands: { 'reset-mfa': userResetMfa },
 });
 
+const setupPm2 = defineCommand({
+  meta: {
+    name: 'pm2',
+    description: 'Write a PM2 ecosystem config for the production standalone build',
+  },
+  args: {
+    dir: {
+      type: 'string',
+      description:
+        'Absolute path to the Sovereign installation directory (default: workspace root)',
+    },
+    'env-file': {
+      type: 'string',
+      description: 'Path to a .env file PM2 should load for both processes',
+    },
+    out: {
+      type: 'string',
+      description: 'Output file path (default: <dir>/ecosystem.config.js)',
+    },
+  },
+  run({ args }) {
+    const dir = resolve(args.dir ?? ROOT);
+    const envFile = args['env-file'] ? resolve(args['env-file']) : undefined;
+    const outPath = resolve(args.out ?? join(dir, 'ecosystem.config.js'));
+    const config = renderPm2Config({ dir, envFile });
+    writeFileSync(outPath, config, 'utf8');
+    consola.success(`PM2 ecosystem config written to ${outPath}`);
+    consola.info('Start with: pm2 start ecosystem.config.js');
+    consola.info('Persist across reboots: pm2 startup && pm2 save');
+  },
+});
+
+const setup = defineCommand({
+  meta: { name: 'setup', description: 'Generate deployment configuration files' },
+  subCommands: { pm2: setupPm2 },
+});
+
 const main = defineCommand({
   meta: { name: 'sv', description: 'Sovereign deployment CLI' },
-  subCommands: { install, generate, build, dev, serve, seed, backup, restore, plugin, user },
+  subCommands: { install, generate, build, dev, serve, seed, backup, restore, plugin, user, setup },
 });
 
 void runMain(main);

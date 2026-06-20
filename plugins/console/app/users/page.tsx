@@ -78,6 +78,11 @@ export default async function UsersPage() {
                     <div className={styles.userCell}>
                       <span className={styles.userName}>{member.name ?? '—'}</span>
                       <span className={styles.userEmail}>{member.email}</span>
+                      {member.id && (
+                        <span className={styles.userId} title="User ID — click to select all">
+                          {member.id}
+                        </span>
+                      )}
                     </div>
                   </td>
 

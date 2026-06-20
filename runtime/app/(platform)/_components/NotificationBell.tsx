@@ -123,7 +123,12 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
         aria-expanded={open}
         aria-haspopup="dialog"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          setOpen((o) => {
+            if (!o) void fetchNotifications();
+            return !o;
+          });
+        }}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

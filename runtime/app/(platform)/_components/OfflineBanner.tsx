@@ -7,9 +7,12 @@ import styles from './OfflineBanner.module.css';
 type Status = 'online' | 'offline' | 'reconnected';
 
 export function OfflineBanner() {
-  const [status, setStatus] = useState<Status>(() =>
-    typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'online',
-  );
+  // Always initialise to 'online' so the server-rendered HTML matches the
+  // first client render. navigator.onLine is checked in useEffect (client-only)
+  // to pick up the case where the user loads the page while already offline
+  // (e.g. from the service-worker cache). The imperceptible one-frame delay
+  // before the banner appears is preferable to a hydration mismatch.
+  const [status, setStatus] = useState<Status>('online');
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -19,6 +22,11 @@ export function OfflineBanner() {
         dismissTimer.current = null;
       }
     };
+
+    // Sync with actual connectivity state after hydration.
+    if (!navigator.onLine) {
+      setStatus('offline');
+    }
 
     const handleOffline = () => {
       clearDismiss();

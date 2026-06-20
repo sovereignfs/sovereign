@@ -1,0 +1,134 @@
+/* Toast — transient notification snackbar.
+ *
+ * Renders a fixed stack anchored to the bottom-right of the viewport. Each
+ * toast slides in from the right, then auto-dismisses after `duration` ms.
+ *
+ * Category variants map to the semantic status tokens (info/success/warning/
+ * error) so the visual language is consistent with banners and badges.
+ * The announcement category uses the accent colour (neutral brand highlight).
+ * `security` matches the error palette — draws maximum attention. */
+
+.region {
+  position: fixed;
+  bottom: var(--sv-space-6);
+  right: var(--sv-space-6);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+  width: 320px;
+  max-width: calc(100vw - var(--sv-space-12));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-3) var(--sv-space-4);
+  background: var(--sv-color-surface-raised);
+  color: var(--sv-color-text-primary);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  box-shadow: var(--sv-shadow-overlay);
+  pointer-events: all;
+  animation: toastIn 200ms ease-out;
+}
+
+.toast.exiting {
+  animation: toastOut 200ms ease-in forwards;
+}
+
+/* Category colour bar on the left edge */
+.toast::before {
+  content: '';
+  display: block;
+  flex: 0 0 3px;
+  align-self: stretch;
+  border-radius: 2px;
+  background: var(--sv-color-border-strong);
+}
+
+.toast.info::before {
+  background: var(--sv-color-accent);
+}
+
+.toast.success::before {
+  background: var(--sv-color-success-text);
+}
+
+.toast.warning::before {
+  background: var(--sv-color-warning-text);
+}
+
+.toast.error::before,
+.toast.security::before {
+  background: var(--sv-color-error-text);
+}
+
+.toast.announcement::before {
+  background: var(--sv-color-accent);
+}
+
+.body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--sv-font-size-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--sv-color-text-primary);
+}
+
+.message {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-secondary);
+  margin-top: var(--sv-space-1);
+  line-height: 1.4;
+}
+
+.close {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--sv-color-text-tertiary);
+  line-height: 1;
+  font-size: var(--sv-font-size-base);
+}
+
+.close:hover {
+  color: var(--sv-color-text-primary);
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .toast.exiting {
+    animation: none;
+  }
+}

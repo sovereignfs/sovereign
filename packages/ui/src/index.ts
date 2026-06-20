@@ -8,3 +8,5 @@ export { Dialog } from './components/Dialog/Dialog';
 export type { DialogProps, DialogSize } from './components/Dialog/Dialog';
 export { Drawer } from './components/Drawer/Drawer';
 export type { DrawerProps } from './components/Drawer/Drawer';
+export { ToastProvider, useToast } from './components/Toast/Toast';
+export type { ToastItem, ToastContextValue } from './components/Toast/Toast';

@@ -663,6 +663,8 @@ The runtime's middleware reads the session cookie and verifies it (v0.3: a call 
 
 `@ducanh2912/next-pwa` is added to the runtime. The PWA shell is installable from the browser. The service worker caches the shell and static assets for offline availability. Plugin data is not cached offline in v1.
 
+**Offline connectivity banner (Task 0.5.30):** When a user is already in an authenticated session and the network drops, a thin fixed banner (`position: fixed; top: 0; z-index: 200`) slides in with an amber "No internet connection" state. On reconnection it flashes green "Back online" for 3 s, after which the service worker's `reloadOnOnline` triggers a full page reload to restore fresh content. The banner uses `navigator.onLine` + `window` `offline`/`online` events. SSR safety: the component always initialises to `'online'` (matching the server render) and reads the real state in `useEffect` — reading browser APIs during render or in a `useState` initializer causes a hydration mismatch. The banner is wired into both `(platform)` and `(minimal)` shell layouts; the `/offline` fallback page is excluded (it is the hard-offline landing).
+
 ### 3.12 Native Mobile App (post-v1 plan)
 
 Native mobile support is deferred to post-v1 but the approach is decided:
@@ -1134,6 +1136,8 @@ type Permission =
 | Jun 2026 | Storybook 8 chosen for `@sovereignfs/ui` design system documentation (Task 1.0.08, post-v1). No RFC — pure developer tooling, no runtime surface, no SDK/manifest/DB change. `@storybook/nextjs` (Vite builder) with `addon-a11y`, `addon-viewport`, `addon-themes`. Token Gallery story + one story per component. CI `storybook-build` job with a11y enforcement. RSC stories deferred until Storybook RSC support matures.                                                                                                                                                                                | Alternatives considered: **Ladle** (fast, Vite-native, but minimal addon ecosystem — no a11y addon), **Histoire** (Vue-first, React support immature), **Docz** (stagnant since 2022). Storybook 8 is the only option with mature CSS Modules support (`@storybook/nextjs`), a production-ready a11y addon (`addon-a11y`), dark mode toggling for CSS custom property themes, and widespread team familiarity. Scoped to `packages/ui` because App Router RSC components cannot be rendered in Storybook without significant workarounds; client-component stories in `runtime` added as a follow-on.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 ---
+
+_Version 0.29 — June 2026. Offline connectivity banner (Task 0.5.30). §3.11 extended with the soft-offline detection model, banner behaviour, and the SSR-safe `useState` initialisation rule. `@sovereignfs/ui` → 0.7.0 (warning/success status colour tokens — `--sv-color-warning-*` / `--sv-color-success-*`); `runtime` → 0.20.0._
 
 _Version 0.28 — June 2026. Storybook for `@sovereignfs/ui` added as post-v1 Task 1.0.08. Decision-log row added. No architecture section needed (developer tooling only — no runtime surface, SDK, permission, or schema change)._
 

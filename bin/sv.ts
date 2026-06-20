@@ -104,7 +104,10 @@ const serve = defineCommand({
     };
 
     const start = (args: string[], cwd: string): void => {
-      const child = spawn('next', args, { cwd, stdio: 'inherit' });
+      // Resolve `next` from the package's own node_modules rather than relying
+      // on it being on PATH (it never is for local workspace installs).
+      const nextBin = join(cwd, 'node_modules', '.bin', 'next');
+      const child = spawn(nextBin, args, { cwd, stdio: 'inherit' });
       children.add(child);
       child.on('exit', (code) => {
         children.delete(child);

@@ -7,7 +7,9 @@ import { getInstalledPlugins } from '@/src/registry';
 import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
 import { AccountMenu } from './_components/AccountMenu';
 import { ActivePluginTitle } from './_components/ActivePluginTitle';
+import { ClientShell } from './_components/ClientShell';
 import { MobileNav } from './_components/MobileNav';
+import { NotificationBell } from './_components/NotificationBell';
 import { OfflineBanner } from './_components/OfflineBanner';
 import styles from './shell.module.css';
 
@@ -66,49 +68,53 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   }));
 
   return (
-    <div className={styles.shell}>
-      <OfflineBanner />
-      <aside className={styles.sidebar} aria-label="Primary navigation">
-        <Link href="/" className={styles.brand} aria-label="Sovereign home">
-          S
-        </Link>
-        <nav className={styles.plugins} aria-label="Plugins">
-          {pluginIcons}
-        </nav>
-        <div className={styles.chrome}>
-          {isAdmin ? (
-            <Link href="/console" className={styles.icon} title="Console" aria-label="Console">
-              <Icon name="settings" size="lg" aria-hidden />
-            </Link>
-          ) : null}
+    <ClientShell>
+      <div className={styles.shell}>
+        <OfflineBanner />
+        <aside className={styles.sidebar} aria-label="Primary navigation">
+          <Link href="/" className={styles.brand} aria-label="Sovereign home">
+            S
+          </Link>
+          <nav className={styles.plugins} aria-label="Plugins">
+            {pluginIcons}
+          </nav>
+          <div className={styles.chrome}>
+            <NotificationBell />
+            {isAdmin ? (
+              <Link href="/console" className={styles.icon} title="Console" aria-label="Console">
+                <Icon name="settings" size="lg" aria-hidden />
+              </Link>
+            ) : null}
+            <AccountMenu
+              avatar={accountAvatar}
+              triggerClassName={styles.avatar}
+              placement="sidebar"
+            />
+          </div>
+        </aside>
+
+        {/* Mobile header: brand · active-plugin title · bell · avatar menu (RFC 0013).
+            Console is added to the avatar menu for admins (no sidebar on mobile). */}
+        <header className={styles.mobileHeader}>
+          <Link href="/" className={styles.mobileBrand} aria-label="Sovereign home">
+            Sovereign
+          </Link>
+          <ActivePluginTitle plugins={allPluginList} />
+          <NotificationBell />
           <AccountMenu
             avatar={accountAvatar}
             triggerClassName={styles.avatar}
-            placement="sidebar"
+            placement="header"
+            showConsole={isAdmin}
           />
-        </div>
-      </aside>
+        </header>
 
-      {/* Mobile header: brand · active-plugin title · avatar menu (RFC 0013).
-          Console is added to the avatar menu for admins (no sidebar on mobile). */}
-      <header className={styles.mobileHeader}>
-        <Link href="/" className={styles.mobileBrand} aria-label="Sovereign home">
-          Sovereign
-        </Link>
-        <ActivePluginTitle plugins={allPluginList} />
-        <AccountMenu
-          avatar={accountAvatar}
-          triggerClassName={styles.avatar}
-          placement="header"
-          showConsole={isAdmin}
-        />
-      </header>
+        <main className={styles.content}>{children}</main>
 
-      <main className={styles.content}>{children}</main>
-
-      {/* Mobile footer: single "Apps" button opens a Drawer (RFC 0013).
-          Replaces the persistent icon strip which clutters small viewports. */}
-      <MobileNav plugins={pluginList} />
-    </div>
+        {/* Mobile footer: single "Apps" button opens a Drawer (RFC 0013).
+            Replaces the persistent icon strip which clutters small viewports. */}
+        <MobileNav plugins={pluginList} />
+      </div>
+    </ClientShell>
   );
 }

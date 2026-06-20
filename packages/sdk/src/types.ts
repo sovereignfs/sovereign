@@ -77,3 +77,27 @@ export interface ActivityLogEntry {
  * plugins type their own queries through their schema.
  */
 export type DrizzleClient = unknown;
+
+/**
+ * Input to `sdk.notifications.send()` (RFC 0015).
+ * The runtime auto-populates `source`, `sourceType`, and `tenantId` from
+ * request context — plugins never set those.
+ */
+export interface SendNotificationInput {
+  /** User ID of the intended recipient. */
+  recipientUserId: string;
+  /** Short notification headline. */
+  title: string;
+  /** Optional longer body text. */
+  body?: string;
+  /** In-app route to navigate to when the notification is clicked. */
+  url?: string;
+  /**
+   * Category tag — drives mute preferences.
+   * Built-in categories: `'info'` (default), `'announcement'`, `'security'`.
+   * Custom plugin categories are allowed; `'security'` cannot be muted.
+   */
+  category?: string;
+  /** Optional `<Icon>` name from `@sovereignfs/ui` to show on the notification. */
+  icon?: string;
+}

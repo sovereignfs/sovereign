@@ -163,6 +163,57 @@ export const activityLog = sqliteTable('activity_log', {
 
 export type AccountPrefs = typeof accountPrefs.$inferSelect;
 export type NewAccountPrefs = typeof accountPrefs.$inferInsert;
+
+/**
+ * Per-user notification inbox (RFC 0015). Tenant-scoped; mutable lifecycle
+ * (read / dismissed by the recipient). Distinct from `activity_log` which is
+ * append-only audit trail.
+ *
+ * Indexes (bootstrap DDL):
+ *   (tenant_id, recipient_user_id, created_at DESC) — user inbox feed
+ *   (tenant_id, recipient_user_id, read_at)         — unread count
+ */
+export const notifications = sqliteTable('notifications', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  recipientUserId: text('recipient_user_id').notNull(),
+  /** Plugin id, `'platform'`, or `'admin'`. Set by the runtime, not forgeable by plugins. */
+  source: text('source').notNull(),
+  /** `'plugin'` | `'platform'` | `'admin'` */
+  sourceType: text('source_type').notNull(),
+  title: text('title').notNull(),
+  body: text('body'),
+  /** In-app route the user is taken to when they click the notification. */
+  url: text('url'),
+  /** Drives mute prefs: `'info'` | `'announcement'` | `'security'` | custom. */
+  category: text('category').notNull().default('info'),
+  /** Optional `<Icon>` name override. */
+  icon: text('icon'),
+  /** Unix seconds when the recipient read it; null = unread. */
+  readAt: integer('read_at'),
+  /** Unix seconds when the recipient dismissed it; null = not dismissed. */
+  dismissedAt: integer('dismissed_at'),
+  createdAt: integer('created_at').notNull(),
+});
+
+/**
+ * Per-user notification preferences (RFC 0015).
+ * One row per user; upserted on change.
+ */
+export const notificationPrefs = sqliteTable('notification_prefs', {
+  userId: text('user_id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  /** JSON array of category strings the user has muted, e.g. `["announcement"]`. */
+  mutedCategories: text('muted_categories').notNull().default('[]'),
+  /** Client poll interval in seconds (15 / 30 / 60). Ignored in SSE mode. */
+  pollIntervalSecs: integer('poll_interval_secs').notNull().default(30),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type NewNotification = typeof notifications.$inferInsert;
+export type NotificationPrefs = typeof notificationPrefs.$inferSelect;
+export type NewNotificationPrefs = typeof notificationPrefs.$inferInsert;
 export type ConsentGrant = typeof consentGrants.$inferSelect;
 export type NewConsentGrant = typeof consentGrants.$inferInsert;
 export type DataAccessLogEntry = typeof dataAccessLog.$inferSelect;

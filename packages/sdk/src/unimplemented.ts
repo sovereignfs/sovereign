@@ -14,12 +14,6 @@ export const storage = {
   },
 };
 
-export const notifications = {
-  send(_userId: string, _message: string): Promise<void> {
-    throw new NotImplementedError('sdk.notifications.send() is not implemented in Sovereign v1.');
-  },
-};
-
 export const events = {
   publish(_event: string, _payload: unknown): Promise<void> {
     throw new NotImplementedError('sdk.events.publish() is not implemented in Sovereign v1.');

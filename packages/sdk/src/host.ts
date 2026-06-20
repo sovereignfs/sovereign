@@ -1,6 +1,12 @@
 import type { DataContractRef, DataContractResolver } from './data';
 import type { ExportResolver, ImportHandler } from './portability';
-import type { ActivityLogEntry, DrizzleClient, MailOptions, PlatformConfig } from './types';
+import type {
+  ActivityLogEntry,
+  DrizzleClient,
+  MailOptions,
+  PlatformConfig,
+  SendNotificationInput,
+} from './types';
 
 /**
  * The host interface that the Sovereign runtime provides to the SDK.
@@ -48,6 +54,14 @@ export interface SdkHost {
     provideExport(pluginId: string, resolver: ExportResolver): void;
     /** Register a plugin's import handler, keyed by `pluginId`. */
     provideImport(pluginId: string, handler: ImportHandler): void;
+  };
+  notifications: {
+    /**
+     * Deliver one notification to a user. The runtime injects `source`,
+     * `sourceType`, and `tenantId` from the request context so the plugin only
+     * supplies the payload fields.
+     */
+    send(input: SendNotificationInput, pluginId: string): Promise<void>;
   };
 }
 

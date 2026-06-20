@@ -172,8 +172,10 @@ Declared capabilities. The v1-functional ones:
 
 | `activity:write` | Record activity-log events via `sdk.activity.log()` (RFC 0005). |
 
+| `notifications:send` | Send notifications to users via `sdk.notifications.send()` (RFC 0015). |
+
 Reserved (declaring them is allowed; the backing surfaces throw `NotImplementedError` until
-implemented): `storage:readWrite`, `notifications:send`, `events:publish`, `events:subscribe`.
+implemented): `storage:readWrite`, `events:publish`, `events:subscribe`.
 
 ### `apiProvider` and the public `/api/*` namespace (PLT-16)
 
@@ -486,6 +488,48 @@ In this example, `com.acme.myapp:create-item` is granted to all users
 automatically; `com.acme.myapp:admin-panel` is not granted by default and the
 plugin must manage who receives it.
 
+### `notifications` — Notification Center (RFC 0015)
+
+Plugins can send in-app notifications to users by declaring the `notifications:send` permission
+and calling `sdk.notifications.send()`. Notifications appear in the bell icon in the platform
+chrome; users see toasts for new items and can manage preferences in **Account → Notifications**.
+
+```json
+{
+  "permissions": ["notifications:send"]
+}
+```
+
+```ts
+// Inside a plugin server action or route handler (server-side only):
+import { sdk } from '@sovereignfs/sdk';
+import { headers } from 'next/headers';
+
+await sdk.notifications.send(
+  {
+    recipientUserId: userId,
+    title: 'Your export is ready',
+    body: 'Click to download your data archive.',
+    url: '/myPlugin/exports',
+    category: 'info', // 'info' | 'announcement' | 'security' | custom
+    icon: 'download', // optional <Icon> name from @sovereignfs/ui
+  },
+  await headers(), // pass the request headers so the runtime can read the plugin ID
+);
+```
+
+**Categories and muting:**
+
+| Category       | Notes                                                             |
+| -------------- | ----------------------------------------------------------------- |
+| `info`         | Default. Users can mute.                                          |
+| `announcement` | Admin-broadcast category. Users can mute.                         |
+| `security`     | High-priority (password change, MFA change). **Cannot be muted.** |
+| _custom_       | Any other string. Users can mute.                                 |
+
+**Runtime enforcement:** the `source` and `sourceType` fields are stamped by the runtime from the
+calling plugin's `x-sovereign-plugin-id` header — plugins cannot forge sender identity.
+
 ### Example `manifest.json`
 
 ```json
@@ -601,8 +645,13 @@ remapId(originalId) }` — use `remapId` to translate stored IDs to fresh ones
   the `x-sovereign-plugin-id` request header. Returns `null` when absent or
   called outside a plugin route. Declare vars in the manifest `env` field
   (see above). Server-side only (uses `next/headers`).
-- **Reserved** (throw `NotImplementedError` in v1): `storage`, `notifications`,
-  `events`.
+- **`notifications`** — Notification Center (RFC 0015). `sdk.notifications.send(input, requestHeaders)`
+  delivers a notification to a user's inbox. Requires the `notifications:send` manifest
+  permission. The runtime injects `source` (plugin ID) and `sourceType` automatically —
+  plugins supply `recipientUserId`, `title`, and optionally `body`, `url`, `category`,
+  and `icon`. Users can mute categories (except `security`) in their Account Notifications
+  tab. See [notifications (RFC 0015)](#notifications-rfc-0015) below.
+- **Reserved** (throw `NotImplementedError` in v1): `storage`, `events`.
 
 ### The SDK boundary rule
 

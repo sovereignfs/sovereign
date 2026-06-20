@@ -17,6 +17,7 @@ const sections = [
   { href: '/console/settings', label: 'Settings' },
   { href: '/console/health', label: 'Health' },
   { href: '/console/activity', label: 'Activity' },
+  { href: '/console/broadcast', label: 'Broadcast' },
 ];
 
 export default function ConsoleLayout({ children }: { children: ReactNode }) {

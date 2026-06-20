@@ -1547,7 +1547,7 @@ supported path to production.
 
 ### Phase v0.7 — Notifications
 
-#### Task 0.7.01 — Notification Center (RFC 0015)
+#### ✅ Task 0.7.01 — Notification Center (RFC 0015)
 
 **Goal:** A per-user notification inbox with a bell + panel, toasts, the `sdk.notifications` send surface, and admin broadcast.
 

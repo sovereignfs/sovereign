@@ -46,11 +46,12 @@ group during the pre-v1 hardening period:
 - `sdk.activity` — activity log (RFC 0005).
 - `sdk.portability` — user data export/import (RFC 0007, `data:export`/`data:import` permissions).
 - `sdk.env` — plugin-scoped environment variable accessor (RFC 0018). `sdk.env.get(key)` reads `SV_PLUGIN_<SLUG>_<KEY>` scoped to the calling plugin; server-side only.
+- `sdk.notifications` — Notification Center (RFC 0015). `sdk.notifications.send()` delivers in-app notifications to users; requires the `notifications:send` manifest permission. Polling default (30s), SSE optional.
 
 These surfaces are **reserved** (not yet implemented — every call throws
 `NotImplementedError`). Their shape may change before they ship:
 
-- `sdk.storage`, `sdk.notifications`, `sdk.events` — reserved post-v1 surfaces.
+- `sdk.storage`, `sdk.events` — reserved post-v1 surfaces.
 
 When one of these is implemented, it graduates into the stable surface with a
 **minor** release (additive), and this document is updated.

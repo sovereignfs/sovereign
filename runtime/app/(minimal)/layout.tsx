@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { OfflineBanner } from '../(platform)/_components/OfflineBanner';
 import styles from './minimal.module.css';
 
 /**
@@ -15,5 +16,10 @@ import styles from './minimal.module.css';
 export const dynamic = 'force-dynamic';
 
 export default function MinimalLayout({ children }: { children: ReactNode }) {
-  return <div className={styles.root}>{children}</div>;
+  return (
+    <div className={styles.root}>
+      <OfflineBanner />
+      {children}
+    </div>
+  );
 }

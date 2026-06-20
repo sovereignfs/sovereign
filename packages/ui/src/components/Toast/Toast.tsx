@@ -1,6 +1,15 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import styles from './Toast.module.css';
 
 export interface ToastItem {
@@ -64,8 +73,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const value = useMemo(() => ({ show, dismiss }), [show, dismiss]);
+
   return (
-    <ToastContext.Provider value={{ show, dismiss }}>
+    <ToastContext.Provider value={value}>
       {children}
       <ol
         className={styles.region}

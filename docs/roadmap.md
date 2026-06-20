@@ -1520,15 +1520,19 @@ supported path to production.
 
 ---
 
-#### Task 0.6.02 — Plugin-declared capabilities (RFC 0022)
+#### Task 0.6.02 — Plugin-declared capabilities (RFC 0022) ✅
 
 **Goal:** Let plugins declare namespaced capabilities (`splitify:create-group`) enforced intra-plugin via the SDK.
 
 **Deliverables:**
 
-- Manifest `capabilities` declaration (auto-namespaced by slug, optional `defaultGrant`), validated at build (manifest **minor**)
-- `sdk.auth.hasCapability` resolves plugin capabilities; enforcement is inside the plugin (not the platform route gate)
-- The assignment/storage model (platform-stored vs plugin-managed — the central open question) + docs
+- ✅ Manifest `capabilities` field: optional record of `{ description?, defaultGrant?: 'all'|'none' }` (kebab-case keys), validated at build — `@sovereignfs/manifest` → 0.13.0
+- ✅ `pluginCapabilityName(pluginId, capName)` helper in `@sovereignfs/manifest` for auto-namespacing to `<pluginId>:<capName>`
+- ✅ Generate script emits `runtime/generated/plugin-capabilities.ts` with `PLUGIN_CAPABILITIES` and `ALL_GRANTED_PLUGIN_CAPS` (caps with `defaultGrant: 'all'`)
+- ✅ Middleware appends `ALL_GRANTED_PLUGIN_CAPS` to the session capabilities array — `sdk.auth.hasCapability(session, '<pluginId>:<capName>')` works without a DB lookup for defaultGrant caps
+- ✅ v1 storage model decided and documented: `defaultGrant: 'all'` = auto-granted by middleware; `'none'` = plugin manages grants via `sdk.db` + its own table
+- ✅ `example-basic` plugin demonstrates the pattern: declares `view-advanced` with `defaultGrant: 'all'`, gates the UI section with `sdk.auth.hasCapability`
+- ✅ `docs/plugin-development.md` — `capabilities` manifest field table row + full `### capabilities (RFC 0022)` section (storage model, code example, constraint note that enforcement is inside the plugin)
 
 **Dependencies:** Task 1.0.02 (capability model)
 
@@ -1536,7 +1540,8 @@ supported path to production.
 
 **Review checklist:**
 
-- A plugin gates a feature on its own capability via the SDK; the platform route gate does not enforce plugin capabilities
+- ✅ A plugin gates a feature on its own capability via the SDK; the platform route gate does not enforce plugin capabilities
+- ✅ 364 tests pass; lint, typecheck, and format clean
 
 ---
 

@@ -2,6 +2,7 @@ import { getCookieCache } from 'better-auth/cookies';
 import { type NextRequest, NextResponse } from 'next/server';
 import { decideApiNamespace, isPublicApiPath } from '@/src/api-namespace';
 import { capabilitiesForRole } from '@/src/capabilities';
+import { ALL_GRANTED_PLUGIN_CAPS } from '@/generated/plugin-capabilities';
 import { getInstalledPlugins } from '@/src/registry';
 import { decidePluginRoute, underPrefix } from '@/src/route-guard';
 import { buildContentSecurityPolicy, generateNonce } from '@/src/security';
@@ -218,7 +219,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   headers.set('x-sovereign-user-id', user.id);
   headers.set('x-sovereign-user-email', user.email);
   headers.set('x-sovereign-user-role', user.role);
-  headers.set('x-sovereign-user-capabilities', JSON.stringify(capabilitiesForRole(user.role)));
+  const platformCaps = capabilitiesForRole(user.role);
+  const allCaps =
+    ALL_GRANTED_PLUGIN_CAPS.length > 0
+      ? [...platformCaps, ...ALL_GRANTED_PLUGIN_CAPS]
+      : platformCaps;
+  headers.set('x-sovereign-user-capabilities', JSON.stringify(allCaps));
   headers.set('x-sovereign-session-expires-at', String(expiresAt));
   if (user.name != null) headers.set('x-sovereign-user-name', user.name);
   if (user.image != null) headers.set('x-sovereign-user-image', user.image);

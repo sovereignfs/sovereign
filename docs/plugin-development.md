@@ -143,6 +143,7 @@ serves at `/tasks/lists`.
 | `compatibility` | object (see below)                                                      | yes                                  | Platform version constraints. Hard-gates install/boot on `minPlatformVersion`; surfaces an advisory warning in Console/health when the platform exceeds the optional `maxPlatformVersion`.                                               |
 | `data`          | object (see below)                                                      | no                                   | Cross-plugin data sharing declarations (RFC 0002). Declare the contracts this plugin exposes (`data.provides`) and the ones it reads (`data.consumes`). Requires the matching `data:provide` / `data:consume` permissions.               |
 | `env`           | object (see below)                                                      | no                                   | Plugin-scoped environment variable declarations (RFC 0018). Keys are auto-namespaced to `SV_PLUGIN_<SLUG>_<KEY>`; read them via `sdk.env.get('KEY')` in server code.                                                                     |
+| `capabilities`  | object (see below)                                                      | no                                   | Plugin-declared capabilities (RFC 0022). Each key is a local name auto-namespaced to `<pluginId>:<capName>`; enforce access inside the plugin via `sdk.auth.hasCapability`.                                                              |
 | `repository`    | string (URL)                                                            | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                |
 
 ### `type`
@@ -422,6 +423,68 @@ before starting the platform. The platform logs a warning at startup for any
 **Dev workflow:** create a `plugins/<dir>/.env` file (gitignored) for local
 non-secret values. The generate script reads it and merges it as defaults.
 Secret vars must always be set in the actual environment — never in `.env`.
+
+### `capabilities` — plugin-declared capabilities (RFC 0022)
+
+Plugins can declare their own fine-grained capabilities that gate features
+inside the plugin. Each key is a **local capability name** (lowercase
+kebab-case); the platform auto-namespaces it to `<pluginId>:<capName>` to keep
+names globally unique.
+
+| Sub-field      | Type                | Required | Description                                                                    |
+| -------------- | ------------------- | -------- | ------------------------------------------------------------------------------ |
+| `description`  | string              | no       | Human-readable description of what the capability grants.                      |
+| `defaultGrant` | `'all'` \| `'none'` | no       | Who gets the capability by default. See below. Defaults to `'none'` if absent. |
+
+**`defaultGrant` values:**
+
+- `'all'` — every authenticated user automatically receives the capability.
+  The platform injects it into `session.user.capabilities` alongside the
+  platform-role capabilities, so `sdk.auth.hasCapability(session, cap)` works
+  without any DB call.
+- `'none'` (default) — no one is granted the capability by default. The plugin
+  manages grants itself — use `sdk.db` to store per-user grants in the plugin's
+  own table and check them with `sdk.auth.hasCapability` after loading the grant
+  from the DB.
+
+**Enforcement is inside the plugin, not the platform route gate.** The platform
+never blocks a route because a plugin capability is absent — it only injects the
+capabilities list. Plugins enforce feature access in their own server components
+or API routes:
+
+```ts
+// In a Server Component or route handler:
+import { sdk } from '@sovereignfs/sdk';
+
+// The namespaced capability: '<pluginId>:<localName>'
+const CAP_CREATE = 'com.acme.myapp:create-item';
+
+export default async function Page() {
+  const session = await sdk.auth.getSession();
+  if (!sdk.auth.hasCapability(session, CAP_CREATE)) {
+    return <p>You do not have permission to create items.</p>;
+  }
+  // ... render the guarded UI
+}
+```
+
+**Manifest example:**
+
+```json
+"capabilities": {
+  "create-item": {
+    "description": "Create items in the list.",
+    "defaultGrant": "all"
+  },
+  "admin-panel": {
+    "description": "Access the admin configuration panel."
+  }
+}
+```
+
+In this example, `com.acme.myapp:create-item` is granted to all users
+automatically; `com.acme.myapp:admin-panel` is not granted by default and the
+plugin must manage who receives it.
 
 ### Example `manifest.json`
 

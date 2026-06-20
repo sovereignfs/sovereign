@@ -95,6 +95,12 @@
   object-fit: contain;
 }
 
+/* SVG plugin icons are loaded as <img> and cannot inherit currentColor.
+   Invert in dark mode so black strokes become white against the dark sidebar. */
+:global([data-theme='dark']) .pluginIconImg {
+  filter: invert(1);
+}
+
 .content {
   padding: var(--sv-space-8);
 }

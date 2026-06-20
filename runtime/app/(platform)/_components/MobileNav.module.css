@@ -130,6 +130,10 @@
   object-fit: contain;
 }
 
+:global([data-theme='dark']) .drawerIconImg {
+  filter: invert(1);
+}
+
 .drawerItemName {
   flex: 1;
   overflow: hidden;

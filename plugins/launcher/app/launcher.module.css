@@ -60,6 +60,10 @@
   object-fit: contain;
 }
 
+:global([data-theme='dark']) .tileIconImg {
+  filter: invert(1);
+}
+
 .tileName {
   font-size: var(--sv-font-size-md);
   font-weight: var(--sv-font-weight-medium);

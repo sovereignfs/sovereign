@@ -107,6 +107,27 @@ For source builds, `git checkout <previous-commit>` before rebuilding.
 The root `package.json` version tracks roadmap milestones. Notes below call out
 any required configuration changes, schema changes, or action required.
 
+### v0.23 → v0.24
+
+- **Web Push notifications (RFC 0016).** Background push delivery for the in-app inbox.
+  A new `push_subscriptions` table is created by the Drizzle migration automatically on
+  startup — **no manual schema change required**.
+- **No action required for most operators.** Push is opt-in and silently disabled when
+  VAPID keys are absent. The in-app bell continues to work without any configuration.
+- **To enable push:** generate a VAPID key pair once per deployment and add to `.env`:
+  ```bash
+  npx web-push generate-vapid-keys
+  # then add to .env:
+  # VAPID_PUBLIC_KEY=<base64url public key>
+  # VAPID_PRIVATE_KEY=<base64url private key>
+  # VAPID_CONTACT=mailto:admin@example.com
+  ```
+  Users then opt in per-device via Account → Notifications → "Enable push notifications".
+  Push respects per-user muted-category preferences (set in Account → Notifications).
+- **Stale subscriptions are pruned automatically.** When a push service returns `410 Gone`
+  (device unregistered or browser cleared), the subscription is deleted from the DB.
+- **`@sovereignfs/db` → 1.2.0** (minor — `push_subscriptions` table + 6 helper functions).
+
 ### v0.22 → v0.23
 
 - **Notification Center (RFC 0015).** In-app per-user notifications with a bell icon in the

@@ -530,6 +530,12 @@ await sdk.notifications.send(
 **Runtime enforcement:** the `source` and `sourceType` fields are stamped by the runtime from the
 calling plugin's `x-sovereign-plugin-id` header — plugins cannot forge sender identity.
 
+**Web Push fan-out (RFC 0016):** when an operator configures VAPID keys, the platform
+automatically delivers a background push notification to every subscribed device for the
+recipient — on top of the in-app bell delivery. Plugins call the same `sdk.notifications.send()`
+API regardless; the push fan-out is invisible and requires no plugin changes. Users opt in and
+out per-device via **Account → Notifications → Enable push notifications**.
+
 ### Example `manifest.json`
 
 ```json

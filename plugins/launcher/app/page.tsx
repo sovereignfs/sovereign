@@ -32,7 +32,7 @@ async function getPlugins(): Promise<LauncherPlugin[]> {
 
 export default async function LauncherPage() {
   const [plugins, session] = await Promise.all([getPlugins(), sdk.auth.getSession()]);
-  const isAdmin = session?.user.role === 'platform:admin';
+  const isAdmin = sdk.auth.hasCapability(session, 'console:access');
 
   const mainPlugins = plugins.filter((p) => !p.adminOnly);
   const adminPlugins = plugins.filter((p) => p.adminOnly);

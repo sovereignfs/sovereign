@@ -24,7 +24,8 @@ published plugin contract). Changes are recorded in each package's
 **Stable surface** — covered by the semver guarantee above:
 
 - `sdk.auth` — session and account (`getSession`, `requireSession`,
-  `changePassword`, `listSessions`, `revokeSession`, `signOut`).
+  `changePassword`, `listSessions`, `revokeSession`, `signOut`,
+  `hasCapability(session, capability)`).
 - `sdk.db` — the platform Drizzle client (`getClient`).
 - `sdk.mailer` — transactional email (`send`).
 - `sdk.platform` — instance configuration (`getConfig`).

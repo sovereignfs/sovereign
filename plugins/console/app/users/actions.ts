@@ -24,9 +24,16 @@ async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
 }
 
 export async function changeRoleAction(formData: FormData): Promise<void> {
-  await sdk.auth.requireSession();
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'role:assign')) {
+    throw new Error('Insufficient privileges to assign roles.');
+  }
   const userId = formData.get('userId') as string;
-  const role = formData.get('role') as 'platform:admin' | 'platform:user';
+  const role = formData.get('role') as
+    | 'platform:owner'
+    | 'platform:admin'
+    | 'platform:auditor'
+    | 'platform:user';
   const res = await adminFetch(`/api/admin/users/${userId}`, {
     method: 'PATCH',
     body: JSON.stringify({ role }),
@@ -47,7 +54,10 @@ export async function changeRoleAction(formData: FormData): Promise<void> {
 }
 
 export async function toggleActiveAction(formData: FormData): Promise<void> {
-  await sdk.auth.requireSession();
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'user:manage')) {
+    throw new Error('Insufficient privileges to manage users.');
+  }
   const userId = formData.get('userId') as string;
   const active = formData.get('active') === 'true';
   const res = await adminFetch(`/api/admin/users/${userId}`, {

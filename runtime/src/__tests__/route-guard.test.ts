@@ -51,13 +51,15 @@ describe('decidePluginRoute', () => {
     );
   });
 
-  it('returns forbidden for an adminOnly plugin without platform:admin', () => {
+  it('returns forbidden for an adminOnly plugin without console:access', () => {
     expect(decidePluginRoute('/console', plugins, none, 'platform:user')).toBe('forbidden');
     expect(decidePluginRoute('/console/users', plugins, none, 'platform:user')).toBe('forbidden');
   });
 
-  it('allows an adminOnly plugin for platform:admin', () => {
+  it('allows an adminOnly plugin for roles with console:access', () => {
     expect(decidePluginRoute('/console', plugins, none, 'platform:admin')).toBe('ok');
+    expect(decidePluginRoute('/console', plugins, none, 'platform:owner')).toBe('ok');
+    expect(decidePluginRoute('/console', plugins, none, 'platform:auditor')).toBe('ok');
   });
 
   it('disabled wins over adminOnly — 404 even for admins', () => {

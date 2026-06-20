@@ -13,6 +13,9 @@ export async function getSession(): Promise<Session | null> {
   const h = await headers();
   const id = h.get('x-sovereign-user-id');
   if (!id) return null;
+  const role = h.get('x-sovereign-user-role') ?? 'platform:user';
+  const capsRaw = h.get('x-sovereign-user-capabilities');
+  const capabilities: readonly string[] = capsRaw ? (JSON.parse(capsRaw) as string[]) : [];
   return {
     user: {
       id,
@@ -22,10 +25,20 @@ export async function getSession(): Promise<Session | null> {
       email: h.get('x-sovereign-user-email') ?? '',
       name: h.get('x-sovereign-user-name') ?? null,
       image: h.get('x-sovereign-user-image') ?? null,
-      role: h.get('x-sovereign-user-role') ?? 'platform:user',
+      role,
+      capabilities,
     },
     expiresAt: Number(h.get('x-sovereign-session-expires-at') ?? 0),
   };
+}
+
+/**
+ * Return true if the given session has the named capability (RFC 0021).
+ * Plugins should call this instead of comparing `session.user.role` directly
+ * to avoid coupling to the role-preset details.
+ */
+export function hasCapability(session: Session | null, capability: string): boolean {
+  return session?.user.capabilities.includes(capability) ?? false;
 }
 
 /** Returns the current user session, throwing `NotAuthenticatedError` if unauthenticated. */

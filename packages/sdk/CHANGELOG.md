@@ -5,6 +5,29 @@ follows [Semantic Versioning](https://semver.org); see
 [`docs/sdk-stability.md`](../../docs/sdk-stability.md) for the stability policy
 and which parts of the surface the guarantee covers.
 
+## 1.6.0
+
+**RFC 0021 — Platform roles & capabilities.** Stable surface addition.
+
+- `SessionUser` gains a `capabilities: readonly string[]` field populated from
+  the `x-sovereign-user-capabilities` header injected by the middleware. Plugins
+  should inspect this rather than comparing `user.role` directly.
+- `sdk.auth.hasCapability(session, capability)` → `boolean` — returns true if
+  the session grants the named capability. Synchronous. Works with `null` (returns
+  false), so it is safe to call with `await sdk.auth.getSession()` without a null
+  guard.
+
+```ts
+const session = await sdk.auth.requireSession();
+if (sdk.auth.hasCapability(session, 'user:manage')) {
+  // current user can manage other users
+}
+```
+
+Defined capabilities (v1): `plugin:access`, `profile:manage`, `console:access`,
+`user:view`, `user:manage`, `plugin:manage`, `tenant:view`, `tenant:configure`,
+`health:view`, `activity:view`, `role:assign`.
+
 ## 1.5.0
 
 **New surface: `sdk.env`** (plugin-scoped environment variables, RFC 0018 / Task

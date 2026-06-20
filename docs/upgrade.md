@@ -107,6 +107,26 @@ For source builds, `git checkout <previous-commit>` before rebuilding.
 The root `package.json` version tracks roadmap milestones. Notes below call out
 any required configuration changes, schema changes, or action required.
 
+### v0.20 → v0.21
+
+- **Platform roles expanded to four (RFC 0021).** The `platform:admin` role is
+  preserved; two new roles are added: `platform:owner` (full privileges, including
+  `role:assign`) and `platform:auditor` (read-only Console access).
+- **Automatic migration:** on first startup after upgrading, the auth server
+  promotes the oldest `platform:admin` user to `platform:owner` if no owner
+  exists yet. No manual action required.
+- **Existing `platform:admin` users retain all their current capabilities.**
+  The admin preset loses only `role:assign` (the ability to assign roles), which
+  is now owner-exclusive. If you need role assignment to remain with an existing
+  admin, promote them to owner via Console → Users.
+- **`platform:owner` is protected:** the owner's role and account active state
+  cannot be changed via the admin API. Use Console → Users (as the owner) or
+  the `sv user reset-mfa` CLI for break-glass operations.
+- **SDK `@sovereignfs/sdk` 1.6.0:** `SessionUser` gains `capabilities`, and
+  `sdk.auth.hasCapability(session, cap)` is added. Plugin authors can use this
+  instead of checking `user.role` directly. Both are backward-compatible
+  additive additions.
+
 ### v0.19 → v0.20
 
 - **TOTP and passkey MFA available.** No configuration is required for existing

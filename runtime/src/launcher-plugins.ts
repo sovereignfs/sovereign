@@ -1,3 +1,4 @@
+import { hasCapability } from './capabilities';
 import type { PluginRouteInfo } from './route-guard';
 
 /**
@@ -32,16 +33,16 @@ export interface LauncherPluginInput extends PluginRouteInfo {
 /**
  * Select the plugins a user should see in the Launcher (SRS LCH-01/03/04):
  * installed, enabled (not in `disabledIds`), and not platform chrome. Admin-only
- * plugins are included only for `platform:admin` — non-admins never receive
- * them. Each result carries `adminOnly` so the Launcher can render the admin
- * tiles in their own section.
+ * plugins are included only for users with `console:access` — non-admins never
+ * receive them. Each result carries `adminOnly` so the Launcher can render the
+ * admin tiles in their own section.
  */
 export function selectLauncherPlugins(
   plugins: readonly LauncherPluginInput[],
   disabledIds: ReadonlySet<string>,
   role: string,
 ): LauncherPlugin[] {
-  const isAdmin = role === 'platform:admin';
+  const isAdmin = hasCapability(role, 'console:access');
   return plugins
     .filter((p) => !CHROME_PLUGIN_IDS.has(p.id))
     .filter((p) => !disabledIds.has(p.id))

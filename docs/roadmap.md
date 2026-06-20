@@ -1498,7 +1498,7 @@ supported path to production.
 
 ### Phase v0.6 — User roles & capabilities
 
-#### Task 0.6.01 — Platform roles & capabilities (RFC 0021)
+#### ✅ Task 0.6.01 — Platform roles & capabilities (RFC 0021)
 
 **Goal:** Grow the two-role model into a capability-based model with named role presets and a protected `platform:owner` — the SRS §3.4 "future version" with database-driven capability assignment.
 
@@ -1514,8 +1514,9 @@ supported path to production.
 
 **Review checklist:**
 
-- An auditor sees a read-only Console; the owner cannot be locked out; capability changes propagate within the cookie-cache window
-- `adminOnly` maps to a capability gate
+- ✅ An auditor sees a read-only Console; the owner cannot be locked out; capability changes propagate within the cookie-cache window
+- ✅ `adminOnly` maps to a capability gate
+- ✅ All 355 tests pass; lint and typecheck clean
 
 ---
 

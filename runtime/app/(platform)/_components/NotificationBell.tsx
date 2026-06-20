@@ -4,6 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@sovereignfs/ui';
 import styles from './NotificationBell.module.css';
 
+// Module-level singletons shared across all NotificationBell instances (sidebar + header are
+// both mounted in the same page). This ensures exactly one toast fires per new notification
+// regardless of how many bell components are polling concurrently.
+const seenIds = new Set<string>();
+let initialFetchDone = false;
+
 interface NotificationItem {
   id: string;
   title: string;
@@ -28,8 +34,6 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
   const [unreadCount, setUnreadCount] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  // Track which IDs we've already toasted so we don't re-toast on refetch.
-  const seenIds = useRef<Set<string>>(new Set());
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -37,12 +41,16 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
       if (!res.ok) return;
       const data = (await res.json()) as NotificationResponse;
 
-      // Toast new (unseen) notifications.
+      // Capture before the loop: both bells may start an initial fetch concurrently, but
+      // JS is single-threaded so only one runs at a time. The first to finish sets
+      // initialFetchDone = true; the second sees isFirstFetch = false but all IDs are
+      // already in seenIds, so it finds nothing new and toasts nothing.
+      const isFirstFetch = !initialFetchDone;
+
       for (const item of data.notifications) {
-        if (!seenIds.current.has(item.id)) {
-          seenIds.current.add(item.id);
-          // Only show a toast for unread items that came in after the initial load.
-          if (item.readAt == null && seenIds.current.size > 1) {
+        if (!seenIds.has(item.id)) {
+          seenIds.add(item.id);
+          if (!isFirstFetch && item.readAt == null) {
             toast.show({
               title: item.title,
               message: item.body ?? undefined,
@@ -51,6 +59,8 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
           }
         }
       }
+
+      initialFetchDone = true;
 
       setItems(data.notifications);
       setUnreadCount(data.unreadCount);

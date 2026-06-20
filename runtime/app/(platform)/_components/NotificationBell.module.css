@@ -46,9 +46,7 @@
 }
 
 .panel {
-  position: absolute;
-  top: calc(100% + var(--sv-space-2));
-  right: 0;
+  position: fixed;
   z-index: 150;
   width: 340px;
   max-height: 480px;
@@ -61,12 +59,26 @@
   overflow: hidden;
 }
 
-/* On mobile the panel goes full-width, anchored to the right */
-@media (max-width: 768px) {
-  .panel {
-    right: calc(-1 * var(--sv-space-4));
-    width: calc(100vw - var(--sv-space-8));
-  }
+/*
+ * Sidebar placement: panel opens to the RIGHT of the sidebar rail,
+ * aligned near the bottom of the viewport.
+ */
+.panelSidebar {
+  left: calc(var(--sv-shell-sidebar-width, 64px) + var(--sv-space-2));
+  bottom: var(--sv-space-4);
+  top: auto;
+  right: auto;
+}
+
+/*
+ * Header placement (mobile): panel drops below the sticky header,
+ * spanning most of the viewport width.
+ */
+.panelHeader {
+  top: calc(var(--sv-shell-header-height, 60px) + var(--sv-space-2));
+  left: var(--sv-space-4);
+  right: var(--sv-space-4);
+  width: auto;
 }
 
 .header {

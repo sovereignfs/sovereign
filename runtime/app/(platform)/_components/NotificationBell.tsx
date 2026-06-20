@@ -21,7 +21,7 @@ interface NotificationResponse {
 
 const POLL_INTERVAL_MS = 30_000;
 
-export function NotificationBell() {
+export function NotificationBell({ placement = 'header' }: { placement?: 'sidebar' | 'header' }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -153,7 +153,7 @@ export function NotificationBell() {
           role="dialog"
           aria-label="Notifications"
           aria-modal="false"
-          className={styles.panel}
+          className={`${styles.panel} ${placement === 'sidebar' ? styles.panelSidebar : styles.panelHeader}`}
         >
           <div className={styles.header}>
             <span className={styles.headerTitle}>Notifications</span>

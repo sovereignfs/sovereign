@@ -36,7 +36,7 @@ describe.skipIf(!PG_URL)('auth server on Postgres', () => {
     expect(getAuthDialect()).toBe('postgres');
   });
 
-  it('makes the first registered user a platform admin (create hook)', async () => {
+  it('makes the first registered user a platform owner (create hook)', async () => {
     const { getAuth } = await import('../auth');
     const auth = getAuth();
     await auth.api.signUpEmail({
@@ -53,7 +53,7 @@ describe.skipIf(!PG_URL)('auth server on Postgres', () => {
       'SELECT id, email, name, role, active, "createdAt" FROM "user" ORDER BY "createdAt" ASC',
     );
     expect(rows.map((r) => [r.email, r.role])).toEqual([
-      ['admin@example.com', 'platform:admin'],
+      ['admin@example.com', 'platform:owner'],
       ['bob@example.com', 'platform:user'],
     ]);
     expect(typeof rows[0]?.active).toBe('boolean');

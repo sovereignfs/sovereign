@@ -55,5 +55,9 @@ runtime/public/fallback-*.js
 .claude/settings.local.json
 .claude/launch.json
 
+# Claude Code memory — private persistent context for the AI assistant.
+# Machine-local; never committed (would conflict across sessions/users).
+memory/
+
 # OS
 .DS_Store

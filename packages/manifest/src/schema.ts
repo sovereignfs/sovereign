@@ -214,6 +214,80 @@ const manifestObjectSchema = z
           }),
       )
       .optional(),
+    /**
+     * Plugin monetization model (RFC 0003). Optional — omitting it (or setting
+     * `model: "free"`) means the plugin is free to all users. Only `sovereign` and
+     * `community` plugins may declare a paid model; platform plugins are always free.
+     *
+     * The platform gates the plugin's `routePrefix` by entitlement. A valid signed
+     * license must be present (imported via Account → Billing or a payment provider
+     * checkout) for `one_time`, `recurring`, and `pay_what_you_want` models.
+     */
+    monetization: z
+      .object({
+        /**
+         * `free` — default; no entitlement required.
+         * `one_time` — single payment grants perpetual access.
+         * `recurring` — active subscription required; billed every `interval`.
+         * `pay_what_you_want` — user-chosen amount; grants access like `one_time`.
+         */
+        model: z.enum(['free', 'one_time', 'recurring', 'pay_what_you_want']),
+        /** Required when `model` is `"recurring"`. The billing cycle length. */
+        interval: z.enum(['day', 'week', 'month', 'year']).optional(),
+        /**
+         * Named access levels. A plugin may define multiple tiers (e.g. Basic/Pro)
+         * with different prices. The active tier is recorded in the entitlement so
+         * the plugin can gate features accordingly via `sdk.billing.getEntitlement()`.
+         * Price `amount` is in ISO 4217 minor units (e.g. cents for USD).
+         */
+        tiers: z
+          .array(
+            z
+              .object({
+                /** Stable tier identifier (lowercase, no spaces). */
+                id: z.string().regex(/^[a-z][a-z0-9_-]*$/, 'tier id must be lowercase'),
+                /** Human-readable tier name shown in the paywall UI. */
+                name: z.string().min(1),
+                /** Price for this tier. */
+                price: z
+                  .object({
+                    /** Price in minor units (e.g. 500 = $5.00). */
+                    amount: z.number().int().nonnegative(),
+                    /** ISO 4217 currency code (e.g. "USD", "EUR"). */
+                    currency: z
+                      .string()
+                      .length(3)
+                      .regex(/^[A-Z]{3}$/, 'currency must be a 3-letter ISO 4217 code'),
+                  })
+                  .strict(),
+              })
+              .strict(),
+          )
+          .optional(),
+        /**
+         * License verification public key. The author holds the private key and
+         * signs entitlement tokens with it; the platform verifies offline.
+         * Value is the raw 32-byte Ed25519 public key encoded as base64url.
+         * Required when `model` is not `"free"`.
+         */
+        license: z
+          .object({
+            /** Base64url-encoded raw Ed25519 public key (32 bytes, 43 chars). */
+            publicKey: z.string().min(43).max(44),
+          })
+          .strict()
+          .optional(),
+      })
+      .strict()
+      .refine((m) => m.model !== 'recurring' || m.interval !== undefined, {
+        message: 'interval is required when model is "recurring"',
+        path: ['interval'],
+      })
+      .refine((m) => m.model === 'free' || m.license !== undefined, {
+        message: 'license.publicKey is required for paid monetization models',
+        path: ['license'],
+      })
+      .optional(),
   })
   .strict();
 
@@ -225,6 +299,10 @@ export const manifestSchema = manifestObjectSchema
   .refine((m) => m.shellConfig?.overlaySize === undefined || m.shell === 'overlay', {
     message: 'shellConfig.overlaySize is only valid when shell is "overlay"',
     path: ['shellConfig', 'overlaySize'],
+  })
+  .refine((m) => m.type !== 'platform' || m.monetization === undefined, {
+    message: 'platform plugins cannot declare monetization — they are always free',
+    path: ['monetization'],
   });
 
 /**

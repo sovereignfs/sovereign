@@ -107,6 +107,33 @@ For source builds, `git checkout <previous-commit>` before rebuilding.
 The root `package.json` version tracks roadmap milestones. Notes below call out
 any required configuration changes, schema changes, or action required.
 
+### v0.24 → v0.25
+
+- **Plugin monetization (RFC 0003).** Plugin authors can now declare a `monetization`
+  field in `manifest.json` to gate access with signed Ed25519 license tokens. A new
+  `entitlements` table is created by the Drizzle migration automatically on startup —
+  **no manual schema change required**.
+- **No action required for most operators.** Plugins without a `monetization` field
+  (or with `model: "free"`) are completely unaffected. Monetization is opt-in by plugin
+  authors.
+- **Users with a paid plugin:** if a user lacks an entitlement for a plugin, they are
+  redirected to the plugin's paywall page (`/paywall/<pluginId>`) where they can paste
+  a signed license token obtained from the plugin author. Once imported, access is
+  granted immediately without restart. Users can manage their licenses in
+  Account → Billing.
+- **Admins:** Console → Entitlements shows all entitlements across all users. Admin
+  key-authenticated `GET /api/admin/entitlements` returns the full list or (with
+  `?userId=`) the set of paywalled plugin IDs for a specific user (used by the
+  middleware).
+- **No Stripe / payment gateway required in v1.** The platform implements only the
+  offline Ed25519 license-token model (manual flow). Webhook integration with Stripe
+  or other gateways is a post-v1 concern; plugin authors who want automated
+  billing today can build their own webhook handler.
+- **`@sovereignfs/db` → 1.3.0** (minor — `entitlements` table + 7 helper functions).
+- **`@sovereignfs/sdk` → 1.8.0** (minor — `sdk.billing` stub: `getEntitlement()` and
+  `requireEntitlement()` exported; `EntitlementRequiredError` exported).
+- **`@sovereignfs/manifest` → 0.14.0** (minor — `monetization` manifest field).
+
 ### v0.23 → v0.24
 
 - **Web Push notifications (RFC 0016).** Background push delivery for the in-app inbox.

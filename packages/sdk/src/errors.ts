@@ -30,3 +30,17 @@ export class ConsentRequiredError extends Error {
     this.name = 'ConsentRequiredError';
   }
 }
+
+/**
+ * Thrown by `sdk.billing.requireEntitlement()` when the current user has no
+ * valid (active, unexpired) entitlement for the calling plugin (RFC 0003).
+ * The runtime middleware also enforces this at the route level, so most plugins
+ * never need to call `requireEntitlement()` directly — it is for in-plugin
+ * feature gating by tier.
+ */
+export class EntitlementRequiredError extends Error {
+  constructor(message = 'An active entitlement is required to access this feature.') {
+    super(message);
+    this.name = 'EntitlementRequiredError';
+  }
+}

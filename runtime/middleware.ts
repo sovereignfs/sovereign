@@ -4,7 +4,7 @@ import { decideApiNamespace, isPublicApiPath } from '@/src/api-namespace';
 import { capabilitiesForRole } from '@/src/capabilities';
 import { ALL_GRANTED_PLUGIN_CAPS } from '@/generated/plugin-capabilities';
 import { getInstalledPlugins } from '@/src/registry';
-import { decidePluginRoute, underPrefix } from '@/src/route-guard';
+import { decidePluginRoute, matchedPluginId, underPrefix } from '@/src/route-guard';
 import { buildContentSecurityPolicy, generateNonce } from '@/src/security';
 import {
   type CachedSessionData,
@@ -52,6 +52,25 @@ async function fetchDisabledPluginIds(): Promise<Set<string>> {
     if (!res.ok) return new Set();
     const { disabled } = (await res.json()) as { disabled: string[] };
     return new Set(disabled);
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * Returns the set of paid plugin IDs for which the given user has no active
+ * entitlement (RFC 0003). Fails open — if the fetch errors, no plugin is
+ * paywalled (same conservative approach as disabled-plugin gating).
+ */
+async function fetchPaywalledPluginIds(userId: string): Promise<Set<string>> {
+  try {
+    const res = await fetch(
+      `${SELF_URL}/api/admin/entitlements?userId=${encodeURIComponent(userId)}`,
+      { headers: { authorization: `Bearer ${process.env.SOVEREIGN_ADMIN_KEY ?? ''}` } },
+    );
+    if (!res.ok) return new Set();
+    const { paywalled } = (await res.json()) as { paywalled: string[] };
+    return new Set(paywalled);
   } catch {
     return new Set();
   }
@@ -201,13 +220,36 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // Only consult plugin status when the path is actually under a plugin prefix.
   const underPlugin = installedPlugins.some((plugin) => underPrefix(pathname, plugin.routePrefix));
   if (underPlugin) {
-    const disabledIds = await fetchDisabledPluginIds();
-    const decision = decidePluginRoute(pathname, installedPlugins, disabledIds, user.role);
+    const [disabledIds, paywallIds] = await Promise.all([
+      fetchDisabledPluginIds(),
+      fetchPaywalledPluginIds(user.id),
+    ]);
+    const decision = decidePluginRoute(
+      pathname,
+      installedPlugins,
+      disabledIds,
+      user.role,
+      paywallIds,
+    );
     if (decision === 'not-found') {
       return applyCsp(withCookies(new NextResponse('Not Found', { status: 404 })));
     }
     if (decision === 'forbidden') {
       return applyCsp(withCookies(new NextResponse('Forbidden', { status: 403 })));
+    }
+    if (decision === 'paywall') {
+      const pluginId = matchedPluginId(pathname, installedPlugins) ?? '';
+      // API routes under a paywalled plugin return 402; page routes redirect to the paywall.
+      if (pathname.startsWith('/api/')) {
+        return applyCsp(withCookies(new NextResponse('Payment Required', { status: 402 })));
+      }
+      return applyCsp(
+        withCookies(
+          NextResponse.redirect(new URL(`/paywall/${encodeURIComponent(pluginId)}`, request.url), {
+            status: 303,
+          }),
+        ),
+      );
     }
   }
 

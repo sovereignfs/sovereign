@@ -144,6 +144,7 @@ serves at `/tasks/lists`.
 | `data`          | object (see below)                                                      | no                                   | Cross-plugin data sharing declarations (RFC 0002). Declare the contracts this plugin exposes (`data.provides`) and the ones it reads (`data.consumes`). Requires the matching `data:provide` / `data:consume` permissions.               |
 | `env`           | object (see below)                                                      | no                                   | Plugin-scoped environment variable declarations (RFC 0018). Keys are auto-namespaced to `SV_PLUGIN_<SLUG>_<KEY>`; read them via `sdk.env.get('KEY')` in server code.                                                                     |
 | `capabilities`  | object (see below)                                                      | no                                   | Plugin-declared capabilities (RFC 0022). Each key is a local name auto-namespaced to `<pluginId>:<capName>`; enforce access inside the plugin via `sdk.auth.hasCapability`.                                                              |
+| `monetization`  | object (see below)                                                      | no                                   | Monetization model (RFC 0003). Declares the billing model, tiers, and the author's Ed25519 public key for offline license verification. Only `sovereign`/`community` plugins may declare this.                                           |
 | `repository`    | string (URL)                                                            | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                |
 
 ### `type`
@@ -536,6 +537,64 @@ recipient — on top of the in-app bell delivery. Plugins call the same `sdk.not
 API regardless; the push fan-out is invisible and requires no plugin changes. Users opt in and
 out per-device via **Account → Notifications → Enable push notifications**.
 
+### `monetization` — plugin monetization (RFC 0003)
+
+Plugins can declare a monetization model to require users to hold a valid signed
+license before accessing the plugin's routes. Platform plugins (`type: "platform"`)
+are always free and may not declare `monetization`.
+
+```jsonc
+"monetization": {
+  "model": "recurring",       // "free" | "one_time" | "recurring" | "pay_what_you_want"
+  "interval": "month",        // required when model is "recurring"
+  "tiers": [                  // optional — omit for single-price plugins
+    { "id": "basic", "name": "Basic", "price": { "amount": 500,  "currency": "USD" } },
+    { "id": "pro",   "name": "Pro",   "price": { "amount": 1500, "currency": "USD" } }
+  ],
+  "license": {
+    // Raw 32-byte Ed25519 public key (base64url). The author signs license tokens
+    // with the corresponding private key; the platform verifies offline.
+    "publicKey": "<base64url Ed25519 public key>"
+  }
+}
+```
+
+**Monetization models:**
+
+| Model               | Description                                                          |
+| ------------------- | -------------------------------------------------------------------- |
+| `free`              | Default — no entitlement required. Equivalent to omitting the field. |
+| `one_time`          | Single payment grants perpetual access.                              |
+| `recurring`         | Active subscription required (billed every `interval`).              |
+| `pay_what_you_want` | User-chosen amount ≥ optional floor; grants access like `one_time`.  |
+
+**How it works:** the runtime middleware checks for an active entitlement before
+serving the plugin's `routePrefix`. If no valid license exists, the user is
+redirected to the platform paywall page (`/paywall/<pluginId>`), which shows the
+tiers and prices and lets the user import a license token. API routes under the
+prefix return `402 Payment Required`.
+
+**License tokens** are issued by the plugin author's billing system on confirmed
+payment. The token format is `<base64url(JSON payload)>.<base64url(Ed25519 signature)>`.
+Verification happens **offline** against the public key in the manifest — no
+call to any Sovereign service or author service is needed. For recurring licenses,
+`expiresAt` is set in the payload and renewal issues a new token.
+
+**Manual / bank transfer flow:** the author confirms payment out of band and sends
+the token directly to the user, who imports it via the paywall page or
+**Account → Billing**.
+
+**In-plugin tier gating:** if your plugin has tiers and you want to gate specific
+features by tier, use `sdk.billing.getEntitlement()` inside server components. The
+route-level access check (entitlement exists + not expired) is done automatically
+by the middleware — `requireEntitlement()` is only needed for fine-grained
+in-plugin checks.
+
+> **`sdk.billing` is reserved** — the stub is in place but the live implementation
+> ships in a future release. `sdk.billing.getEntitlement()` and
+> `sdk.billing.requireEntitlement()` throw `NotImplementedError` until then.
+> Route-level access (middleware gating) is fully functional now.
+
 ### Example `manifest.json`
 
 ```json
@@ -657,6 +716,15 @@ remapId(originalId) }` — use `remapId` to translate stored IDs to fresh ones
   plugins supply `recipientUserId`, `title`, and optionally `body`, `url`, `category`,
   and `icon`. Users can mute categories (except `security`) in their Account Notifications
   tab. See [notifications (RFC 0015)](#notifications-rfc-0015) below.
+- **`billing`** — plugin monetization / entitlement gating (RFC 0003).
+  `sdk.billing.getEntitlement(headers)` returns the current user's active
+  entitlement for the calling plugin (tier + expiry), or `null` if none exists.
+  `sdk.billing.requireEntitlement(headers)` throws `EntitlementRequiredError`
+  when absent. Route-level access is gated automatically by the middleware —
+  these helpers are only needed for **in-plugin feature gating by tier**.
+  See [`monetization` manifest field](#monetization--plugin-monetization-rfc-0003) above.
+  > **Reserved** — stubs are in place; the live implementation ships in a future
+  > release. Both methods throw `NotImplementedError` until then.
 - **Reserved** (throw `NotImplementedError` in v1): `storage`, `events`.
 
 ### The SDK boundary rule

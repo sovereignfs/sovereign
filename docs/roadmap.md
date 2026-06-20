@@ -1590,7 +1590,7 @@ supported path to production.
 
 ### Phase v0.8 — Plugin isolation & Live debuging
 
-#### Task 0.8.01 — Plugin monetization (RFC 0003)
+#### ✅ Task 0.8.01 — Plugin monetization (RFC 0003)
 
 **Goal:** Let plugin authors monetize plugins via a manifest-declared model + author-signed entitlement gating. RFC 0003 accepted.
 

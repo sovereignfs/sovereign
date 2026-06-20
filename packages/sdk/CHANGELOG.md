@@ -5,6 +5,31 @@ follows [Semantic Versioning](https://semver.org); see
 [`docs/sdk-stability.md`](../../docs/sdk-stability.md) for the stability policy
 and which parts of the surface the guarantee covers.
 
+## 1.8.0
+
+**New export: `sdk.billing` stubs and `EntitlementRequiredError`** (RFC 0003 / Task 0.8.01).
+Reserved — not yet covered by the v1 stability guarantee.
+
+- `sdk.billing.getEntitlement(pluginId)` — returns the current user's active entitlement
+  for a plugin, or `null` if none. Reserved stub: throws `NotImplementedError`.
+- `sdk.billing.requireEntitlement(pluginId)` — asserts the current user holds an
+  entitlement; throws `EntitlementRequiredError` if not. Reserved stub: throws
+  `NotImplementedError`.
+- New export: `EntitlementRequiredError` (extends `Error`, `name: 'EntitlementRequiredError'`).
+
+Plugin authors who want entitlement-aware rendering can `catch (e)` on `requireEntitlement`
+and branch accordingly. The middleware's paywall redirect operates independently of
+`sdk.billing` — access is blocked at the routing layer before a plugin renders.
+
+## 1.7.0
+
+**New surface: `sdk.notifications`** (RFC 0015 / Task 0.7.01). Experimental.
+
+- `sdk.notifications.send(input, requestHeaders)` delivers an in-app notification to one
+  or more users. Requires the `notifications:send` manifest permission. `requestHeaders`
+  is the `ReadonlyHeaders` from `next/headers` (used to source the plugin ID).
+- New exported type: `SendNotificationInput`.
+
 ## 1.6.0
 
 **RFC 0021 — Platform roles & capabilities.** Stable surface addition.

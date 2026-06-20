@@ -7,7 +7,7 @@ import * as mailer from './mailer';
 import { notifications } from './notifications';
 import * as platform from './platform';
 import { portability } from './portability';
-import { events, storage } from './unimplemented';
+import { billing, events, storage } from './unimplemented';
 
 /**
  * The Sovereign SDK — the only contract between a plugin and the platform.
@@ -20,10 +20,11 @@ import { events, storage } from './unimplemented';
  * **Experimental / reserved (NOT covered by the stability guarantee):** `data`
  * (cross-plugin data sharing, RFC 0002), `activity` (activity log, RFC 0005),
  * `portability` (user data export/import, RFC 0007), `env` (plugin-scoped env
- * vars, RFC 0018), `notifications` (notification center, RFC 0015), `storage`,
+ * vars, RFC 0018), `notifications` (notification center, RFC 0015),
+ * `billing` (plugin monetization / entitlement gating, RFC 0003), `storage`,
  * `events`. `data`, `activity`, `portability`, `env`, and `notifications` are
- * implemented; `storage` and `events` throw `NotImplementedError` until their
- * backing mechanisms ship. Their shape may change before they stabilise.
+ * implemented; `billing`, `storage`, and `events` throw `NotImplementedError`
+ * until their backing mechanisms ship. Their shape may change before they stabilise.
  */
 export const sdk = {
   // Stable (v1.0.0).
@@ -39,11 +40,17 @@ export const sdk = {
   activity,
   portability,
   env,
+  billing,
 };
 
 export { provideHost } from './host';
 export type { SdkHost } from './host';
-export { NotImplementedError, NotAuthenticatedError, ConsentRequiredError } from './errors';
+export {
+  NotImplementedError,
+  NotAuthenticatedError,
+  ConsentRequiredError,
+  EntitlementRequiredError,
+} from './errors';
 export type { DataContractRef, DataContractResolver } from './data';
 export type {
   ExportContext,

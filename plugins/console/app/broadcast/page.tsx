@@ -38,7 +38,7 @@ export default function BroadcastPage() {
     setResult(null);
 
     try {
-      const res = await fetch('/api/admin/broadcast', {
+      const res = await fetch('/api/account/broadcast', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },

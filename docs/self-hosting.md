@@ -221,6 +221,115 @@ at the reverse proxy and redirect HTTP → HTTPS. See
 
 ---
 
+## Non-Docker deployment (PM2)
+
+Docker Compose is the canonical and recommended production path. If you cannot
+use Docker (shared hosting, some VPS environments, corporate policy), PM2 is
+the supported alternative.
+
+**Prerequisites:** Node.js ≥ 20, pnpm 11+, [PM2](https://pm2.keymetrics.io/)
+(`npm install -g pm2`).
+
+### Build the standalone output
+
+```bash
+git clone https://github.com/sovereignfs/sovereign.git /opt/sovereign
+cd /opt/sovereign
+cp .env.example .env
+# Edit .env — set AUTH_SECRET and SOVEREIGN_ADMIN_KEY (required),
+# plus NEXT_PUBLIC_RUNTIME_URL and AUTH_BASE_URL to your public domain.
+pnpm install
+pnpm build          # produces runtime/.next/standalone/ and apps/auth/.next/standalone/
+```
+
+The build emits two standalone servers:
+
+| Server  | Standalone entry point                           |
+| ------- | ------------------------------------------------ |
+| Runtime | `runtime/.next/standalone/runtime/server.js`     |
+| Auth    | `apps/auth/.next/standalone/apps/auth/server.js` |
+
+You must copy the static assets and public directory alongside the standalone
+output (Next.js does not include them automatically):
+
+```bash
+# Runtime static assets
+cp -r runtime/.next/static runtime/.next/standalone/runtime/.next/static
+cp -r runtime/public runtime/.next/standalone/runtime/public
+
+# Auth static assets
+cp -r apps/auth/.next/static apps/auth/.next/standalone/apps/auth/.next/static
+```
+
+### Generate and start the PM2 config
+
+```bash
+# Write ecosystem.config.js into /opt/sovereign/
+pnpm sv setup pm2 --dir /opt/sovereign --env-file /opt/sovereign/.env
+
+# Start both processes
+pm2 start /opt/sovereign/ecosystem.config.js
+
+# Persist across reboots
+pm2 startup   # follow the printed instruction to install the startup hook
+pm2 save
+```
+
+The generated config binds the **auth server to `127.0.0.1:3001`** (loopback
+only — not publicly reachable) and the **runtime to `0.0.0.0:3000`**. Place
+Caddy or nginx in front of port `3000` for TLS (see [Reverse proxy](#reverse-proxy) above).
+
+`sv serve` uses a 30-second health-gate: it starts the auth server, waits until
+`GET /api/health` returns 2xx, then starts the runtime. The PM2 ecosystem config
+starts both independently — PM2's auto-restart handles the startup race; if the
+runtime starts before auth is ready, it will be restarted automatically.
+
+### Environment variable differences (Docker vs PM2)
+
+| Variable                    | Docker Compose                                | PM2 / native                                  |
+| --------------------------- | --------------------------------------------- | --------------------------------------------- |
+| `SOVEREIGN_AUTH_URL`        | `http://auth:3001` (internal service name)    | `http://127.0.0.1:3001` (loopback)            |
+| `SOVEREIGN_AUTH_PUBLIC_URL` | `http://localhost:4001` or your public domain | `http://localhost:3001` or your public domain |
+| `NEXT_PUBLIC_RUNTIME_URL`   | `http://localhost:4000` or your public domain | `http://localhost:3000` or your public domain |
+| `AUTH_BASE_URL`             | your public domain                            | your public domain                            |
+| `AUTH_TRUSTED_ORIGINS`      | `http://auth:3001` (internal service name)    | not needed (same host)                        |
+
+### Data directory
+
+Create a writable data directory before starting:
+
+```bash
+mkdir -p /opt/sovereign/data
+```
+
+SQLite databases land in `data/` automatically (same behaviour as Docker). Set
+`SOVEREIGN_DATA_DIR` in `.env` if you want them elsewhere. Avatars are stored at
+`data/avatars/`.
+
+### Upgrade procedure (PM2)
+
+```bash
+cd /opt/sovereign
+git pull
+pnpm install
+pnpm build
+
+# Copy updated static assets (same commands as initial build above)
+cp -r runtime/.next/static runtime/.next/standalone/runtime/.next/static
+cp -r runtime/public runtime/.next/standalone/runtime/public
+cp -r apps/auth/.next/static apps/auth/.next/standalone/apps/auth/.next/static
+
+pm2 reload ecosystem.config.js   # zero-downtime reload where possible
+```
+
+Back up before upgrading (see [Backups and restore](#backups-and-restore) below):
+
+```bash
+pnpm sv backup
+```
+
+---
+
 ## PostgreSQL
 
 SQLite is the zero-config default and is fine for personal and small-group use.

@@ -224,11 +224,52 @@ at the reverse proxy and redirect HTTP → HTTPS. See
 
 ---
 
-## Non-Docker deployment (PM2)
+## Non-Docker deployment
 
 Docker Compose is the canonical and recommended production path. If you cannot
-use Docker (shared hosting, some VPS environments, corporate policy), PM2 is
-the supported alternative.
+use Docker (shared hosting, some VPS environments, corporate policy), two
+non-Docker options are supported: `sv serve` for simple single-server use, and
+PM2 for production deployments that need process supervision and auto-restart.
+
+**Both options require a production build first** (see [Build the standalone
+output](#build-the-standalone-output) below).
+
+### `sv serve` — simple foreground start
+
+`sv serve` is the quickest way to run Sovereign without Docker. It starts both
+servers in the foreground, gates the runtime startup on auth becoming healthy,
+and tears both down on Ctrl+C or either process exiting.
+
+**Use it for:** local production testing, single-server staging, or any
+environment where a foreground process is acceptable.
+
+**Do not use it for:** production deployments that must survive reboots or
+server restarts — use PM2 (below) or Docker Compose instead.
+
+```bash
+# After pnpm build:
+pnpm sv serve
+```
+
+`sv serve`:
+
+1. Starts the auth server (`next start --port 3001`) in the background.
+2. Polls `GET /api/health` on the auth server for up to 30 seconds.
+3. Starts the runtime (`next start --port 3000`) once auth is healthy.
+4. Forwards SIGINT / SIGTERM to both processes and exits when either exits.
+
+> **Note:** `sv serve` runs `next start` from each package's `node_modules/.bin/`
+> — `next` does not need to be on your system `PATH`.
+
+> **Important:** `sv serve` serves the **built** output in
+> `runtime/.next/standalone/` and `apps/auth/.next/standalone/`. Run
+> `pnpm build` before every `sv serve` call. Source changes have no effect
+> until you rebuild.
+
+### PM2 — production process supervision
+
+PM2 provides auto-restart on crash, startup hooks, and log management. Use it
+for any deployment that must survive server reboots.
 
 **Prerequisites:** Node.js ≥ 20, pnpm 11+, [PM2](https://pm2.keymetrics.io/)
 (`npm install -g pm2`).
@@ -282,12 +323,12 @@ The generated config binds the **auth server to `127.0.0.1:3001`** (loopback
 only — not publicly reachable) and the **runtime to `0.0.0.0:3000`**. Place
 Caddy or nginx in front of port `3000` for TLS (see [Reverse proxy](#reverse-proxy) above).
 
-`sv serve` uses a 30-second health-gate: it starts the auth server, waits until
-`GET /api/health` returns 2xx, then starts the runtime. The PM2 ecosystem config
-starts both independently — PM2's auto-restart handles the startup race; if the
-runtime starts before auth is ready, it will be restarted automatically.
+PM2 starts both processes independently — PM2's auto-restart handles the startup
+race: if the runtime starts before auth is ready, PM2 will restart it automatically.
+This is different from `sv serve`, which gates the runtime on auth being healthy
+before spawning it.
 
-### Environment variable differences (Docker vs PM2)
+### Environment variable differences (Docker vs non-Docker)
 
 | Variable                    | Docker Compose                                | PM2 / native                                  |
 | --------------------------- | --------------------------------------------- | --------------------------------------------- |
@@ -309,7 +350,26 @@ SQLite databases land in `data/` automatically (same behaviour as Docker). Set
 `SOVEREIGN_DATA_DIR` in `.env` if you want them elsewhere. Avatars are stored at
 `data/avatars/`.
 
-### Upgrade procedure (PM2)
+### Upgrade procedure (non-Docker)
+
+**`sv serve`:**
+
+```bash
+cd /opt/sovereign
+git pull
+pnpm install
+pnpm build
+
+# Copy updated static assets (same commands as initial build above)
+cp -r runtime/.next/static runtime/.next/standalone/runtime/.next/static
+cp -r runtime/public runtime/.next/standalone/runtime/public
+cp -r apps/auth/.next/static apps/auth/.next/standalone/apps/auth/.next/static
+
+# Restart (stop the running sv serve with Ctrl+C first, then):
+pnpm sv serve
+```
+
+**PM2:**
 
 ```bash
 cd /opt/sovereign

@@ -18,6 +18,7 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,11 +26,27 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
     setError(null);
     const result = await authClient.signIn.email({ email, password });
     setLoading(false);
-    if (result.error) {
+    // twoFactorClient handles the 2FA redirect automatically when it detects
+    // the twoFactorRedirect flag — the page navigates to /login/2fa; no
+    // explicit check is needed here.
+    if (result?.error) {
       setError(result.error.message ?? 'Sign in failed.');
-      return;
+    } else if (result?.data) {
+      window.location.href = runtimeUrl;
     }
-    window.location.href = runtimeUrl;
+  }
+
+  async function onPasskeySignIn() {
+    setPasskeyLoading(true);
+    setError(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await (authClient.signIn as any).passkey();
+    setPasskeyLoading(false);
+    if (result?.error) {
+      setError(result.error.message ?? 'Passkey sign-in failed.');
+    } else if (result?.data) {
+      window.location.href = runtimeUrl;
+    }
   }
 
   return (
@@ -67,6 +84,12 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
             {loading ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
+        <div className={styles.divider} aria-hidden="true">
+          or
+        </div>
+        <Button variant="secondary" onClick={onPasskeySignIn} disabled={passkeyLoading}>
+          {passkeyLoading ? 'Waiting for passkey…' : 'Sign in with a passkey'}
+        </Button>
         <p className={styles.footer}>
           No account?{' '}
           <Link className={styles.link} href="/register">

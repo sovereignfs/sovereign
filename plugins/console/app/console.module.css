@@ -258,6 +258,21 @@
   background-color: color-mix(in srgb, var(--sv-color-accent) 8%, transparent);
 }
 
+.resetMfaButton {
+  padding: var(--sv-space-1) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-sm);
+  background-color: transparent;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+  cursor: pointer;
+}
+
+.resetMfaButton:hover {
+  color: var(--sv-color-text-primary);
+  border-color: var(--sv-color-text-muted);
+}
+
 /* ── Primary action button ──────────────────────────────────────────────── */
 
 .actionButton {

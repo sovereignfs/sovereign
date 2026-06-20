@@ -5,6 +5,7 @@ import { authGet, authRun } from '@/src/db';
 interface PatchBody {
   role?: string;
   active?: boolean;
+  resetMfa?: boolean;
 }
 
 export async function PATCH(
@@ -29,6 +30,19 @@ export async function PATCH(
   if ('active' in body) {
     await authRun('UPDATE "user" SET active = ?, "updatedAt" = ? WHERE id = ?', [
       body.active,
+      now,
+      id,
+    ]);
+  }
+
+  // Admin MFA reset: clears TOTP secret and backup codes from twoFactor table,
+  // and removes all registered passkeys. The user's next login will succeed
+  // without MFA, after which they can re-enroll (RFC 0012 break-glass).
+  if (body.resetMfa) {
+    await authRun('DELETE FROM "twoFactor" WHERE "userId" = ?', [id]);
+    await authRun('DELETE FROM "passkey" WHERE "userId" = ?', [id]);
+    await authRun('UPDATE "user" SET "twoFactorEnabled" = ?, "updatedAt" = ? WHERE id = ?', [
+      false,
       now,
       id,
     ]);

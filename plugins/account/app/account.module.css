@@ -263,6 +263,80 @@
   display: none;
 }
 
+/* ── Button row ─────────────────────────────────────────────────────────── */
+
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sv-space-2);
+  align-items: center;
+}
+
+/* ── TOTP ───────────────────────────────────────────────────────────────── */
+
+.totpStatus {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+}
+
+.statusEnabled {
+  color: var(--sv-color-accent);
+  font-weight: var(--sv-font-weight-medium);
+}
+
+.statusDisabled {
+  color: var(--sv-color-text-muted);
+}
+
+.totpQrBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  align-items: flex-start;
+}
+
+.totpUriDetails {
+  width: 100%;
+}
+
+.totpUri {
+  display: block;
+  margin-top: var(--sv-space-2);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  background-color: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  font-size: var(--sv-font-size-xs);
+  word-break: break-all;
+}
+
+.backupCodesBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  align-items: flex-start;
+}
+
+.backupCodesList {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--sv-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.backupCode {
+  padding: var(--sv-space-2) var(--sv-space-3);
+  background-color: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  font-size: var(--sv-font-size-sm);
+  font-family: monospace;
+  letter-spacing: 0.05em;
+}
+
 /* ── Segmented control ──────────────────────────────────────────────────── */
 
 .segmented {

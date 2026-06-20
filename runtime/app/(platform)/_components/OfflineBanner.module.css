@@ -1,0 +1,38 @@
+.offline,
+.reconnected {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sv-space-2);
+  height: 32px;
+  padding-inline: var(--sv-space-4);
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-medium);
+  animation: slideDown 200ms ease-out;
+}
+
+.offline {
+  background: var(--sv-color-warning-surface);
+  color: var(--sv-color-warning-text);
+  border-bottom: 1px solid var(--sv-color-warning-border);
+}
+
+.reconnected {
+  background: var(--sv-color-success-surface);
+  color: var(--sv-color-success-text);
+  border-bottom: 1px solid var(--sv-color-success-border);
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

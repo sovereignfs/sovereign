@@ -7,6 +7,7 @@ import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
 import { AccountMenu } from './_components/AccountMenu';
 import { ActivePluginTitle } from './_components/ActivePluginTitle';
 import { MobileNav } from './_components/MobileNav';
+import { OfflineBanner } from './_components/OfflineBanner';
 import styles from './shell.module.css';
 
 function monogram(name: string): string {
@@ -65,6 +66,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
 
   return (
     <div className={styles.shell}>
+      <OfflineBanner />
       <aside className={styles.sidebar} aria-label="Primary navigation">
         <Link href="/" className={styles.brand} aria-label="Sovereign home">
           S

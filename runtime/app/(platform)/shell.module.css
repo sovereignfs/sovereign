@@ -120,6 +120,11 @@
     --sv-dialog-inset-top: var(--sv-shell-header-height);
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr auto;
+    /* Lock the shell to exactly the viewport height so the header and footer
+       stay pinned regardless of content length. The content cell scrolls. */
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
   }
 
   .sidebar {
@@ -128,6 +133,8 @@
 
   .content {
     padding: var(--sv-space-4);
+    /* Content cell scrolls within the fixed-height shell grid. */
+    overflow-y: auto;
   }
 
   .mobileHeader {

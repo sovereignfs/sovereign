@@ -107,6 +107,28 @@ For source builds, `git checkout <previous-commit>` before rebuilding.
 The root `package.json` version tracks roadmap milestones. Notes below call out
 any required configuration changes, schema changes, or action required.
 
+### v0.19 → v0.20
+
+- **TOTP and passkey MFA available.** No configuration is required for existing
+  deployments — MFA is opt-in per user. The `twoFactor` and `passkey` tables
+  are created automatically by better-auth on first startup.
+- **Three new optional env vars** (all have safe defaults for `localhost`):
+  - `AUTH_WEBAUTHN_RP_ID` — defaults to the hostname of `AUTH_BASE_URL`.
+  - `AUTH_WEBAUTHN_RP_NAME` — defaults to `Sovereign`.
+  - `AUTH_WEBAUTHN_ORIGIN` — defaults to `SOVEREIGN_AUTH_PUBLIC_URL` or `AUTH_BASE_URL`.
+
+  **Production deployments must set these** — the defaults will not work when
+  your instance runs on a real domain. See
+  [self-hosting.md — Two-factor authentication](self-hosting.md#two-factor-authentication-mfa)
+  for the correct values and the `rpID` constraint.
+
+- **`sv user reset-mfa <email>`** — new CLI break-glass command. Clears TOTP
+  secrets and passkeys for a user directly in the SQLite auth database (no
+  running server required). For Postgres instances, use Console → Users →
+  Reset MFA instead.
+- No database migration required — better-auth creates the `twoFactor` and
+  `passkey` tables at startup via its own DDL.
+
 ### v0.14 → v0.15
 
 - **Drizzle-kit migrations replace the interim DDL bootstrap.** Platform schema

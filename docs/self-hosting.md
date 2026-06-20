@@ -322,6 +322,84 @@ docker run -p 1025:1025 -p 8025:8025 axllent/mailpit
 
 ---
 
+## Two-factor authentication (MFA)
+
+Sovereign supports two opt-in second factors: **TOTP** (authenticator app) and
+**passkeys** (WebAuthn). Both are per-user; admins cannot force-enable them.
+
+### TOTP (authenticator app)
+
+Users enroll from **Account → Security → Set up authenticator app**:
+
+1. Enter the account password (server-side confirmation).
+2. Scan the QR code with any TOTP app (Authy, 1Password, Google Authenticator, Bitwarden, etc.).
+3. Click **Enable TOTP** — the app validates the first code.
+4. Save the 10 backup codes shown once. Each code is single-use.
+
+On subsequent sign-ins the user is redirected to `/login/2fa` after entering
+their password. They can verify with:
+
+- a live TOTP code from their authenticator app,
+- a single-use backup code, or
+- a registered passkey (if they have one).
+
+Once enrolled, users can **disable TOTP** or **regenerate backup codes** from
+the same Security tab (password-confirmed each time).
+
+### Passkeys (WebAuthn)
+
+Users add passkeys from **Account → Security → Add a passkey**. The browser
+prompts for device biometrics (Face ID, Touch ID, Windows Hello) or a hardware
+key. Multiple passkeys can be registered and named independently.
+
+Passkeys can be used at the login page (the **Sign in with a passkey** button
+appears if the browser supports WebAuthn) **and** as an alternative to a TOTP
+code on the `/login/2fa` challenge page.
+
+### Production configuration
+
+The three `AUTH_WEBAUTHN_*` variables (in the env-var table above) default to
+values that work for `localhost` development. Production deployments require
+careful setting:
+
+| Variable                | Production value                                                                                                                                                                                                                         |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTH_WEBAUTHN_RP_ID`   | Your bare **registrable domain** (e.g. `example.com`). Must be a suffix shared by **both** the auth server's origin and the runtime origin. Using a subdomain only (e.g. `auth.example.com`) blocks passkeys on the main runtime domain. |
+| `AUTH_WEBAUTHN_RP_NAME` | Any human-readable name (shown in the browser passkey prompt).                                                                                                                                                                           |
+| `AUTH_WEBAUTHN_ORIGIN`  | Comma-separated list of allowed origins. Set to your public runtime URL (e.g. `https://example.com`) — this is the `Origin` header the browser sends during WebAuthn ceremonies.                                                         |
+
+```env
+AUTH_WEBAUTHN_RP_ID=example.com
+AUTH_WEBAUTHN_RP_NAME=My Sovereign
+AUTH_WEBAUTHN_ORIGIN=https://example.com
+```
+
+> **Note:** passkey registrations are bound to the `rpID`. Changing
+> `AUTH_WEBAUTHN_RP_ID` in production invalidates all existing passkeys — users
+> must re-register. TOTP and backup codes are unaffected.
+
+### Admin reset
+
+If a user is locked out (lost authenticator, lost backup codes, no passkeys),
+an admin can clear their MFA from **Console → Users → Reset MFA** (the button
+appears in each user row). This removes all TOTP secrets, backup codes, and
+passkeys for that user, letting them sign in with password alone and re-enroll.
+
+### Break-glass CLI
+
+For cases where the Console itself is inaccessible (e.g. the only admin is
+locked out), the `sv` CLI provides a direct database reset:
+
+```bash
+pnpm sv user reset-mfa admin@example.com
+```
+
+This uses better-sqlite3 directly on the auth database and does not require a
+running server. Only available for SQLite deployments; Postgres instances must
+use the Console or a direct SQL query.
+
+---
+
 ## Invite-only registration
 
 When `AUTH_INVITE_ONLY=true`, only users with a valid invite token can

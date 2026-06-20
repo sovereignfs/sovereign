@@ -61,14 +61,16 @@ export function getEnv(): AuthEnv {
     // keep 'localhost'
   }
 
-  // WebAuthn origins: the auth server origin by default, or the runtime's
-  // public URL when set (covers split-origin deployments where auth is on a
-  // different port from the runtime).
+  // WebAuthn origin MUST be the browser-facing runtime origin (where the
+  // credential was created), NOT the auth server URL. The browser sends
+  // its own origin in the WebAuthn response; the auth server verifies it
+  // matches. SOVEREIGN_AUTH_PUBLIC_URL is the auth server's public URL —
+  // wrong here. NEXT_PUBLIC_RUNTIME_URL is the runtime's public URL — right.
+  // Falls back to http://localhost:3000 for zero-config local dev.
   const webAuthnOriginRaw =
     process.env.AUTH_WEBAUTHN_ORIGIN ||
-    process.env.SOVEREIGN_AUTH_PUBLIC_URL ||
     process.env.NEXT_PUBLIC_RUNTIME_URL ||
-    baseUrl;
+    'http://localhost:3000';
 
   cached ??= {
     secret: required('AUTH_SECRET'),

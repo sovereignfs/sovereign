@@ -276,7 +276,9 @@ export async function regenerateBackupCodesAction(
     const data = (await res.json().catch(() => null)) as { message?: string } | null;
     return { ok: false, error: data?.message ?? 'Failed to regenerate backup codes.' };
   }
-  const { codes } = (await res.json()) as { codes: string[] };
+  // better-auth returns { backupCodes } from this endpoint, not { codes }.
+  const data = (await res.json()) as { backupCodes?: string[]; codes?: string[] };
+  const codes = data.backupCodes ?? data.codes ?? [];
   void sdk.activity.log({
     action: 'account.backup_codes_regenerated',
     summary: 'Backup codes regenerated',

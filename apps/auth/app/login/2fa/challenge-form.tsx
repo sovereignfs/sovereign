@@ -79,7 +79,12 @@ export function ChallengeForm({ runtimeUrl }: { runtimeUrl: string }) {
           or
         </div>
 
-        <Button variant="secondary" onClick={onPasskeySignIn} disabled={passkeyLoading}>
+        <Button
+          variant="secondary"
+          className={styles.passkeyBtn}
+          onClick={onPasskeySignIn}
+          disabled={passkeyLoading}
+        >
           {passkeyLoading ? 'Waiting for passkey…' : 'Use a passkey instead'}
         </Button>
 

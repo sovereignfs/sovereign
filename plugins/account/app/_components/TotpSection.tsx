@@ -2,11 +2,11 @@
 
 import { useActionState, useTransition, useState } from 'react';
 import {
-  type TotpEnableState,
+  type TotpVerifyState,
   type TotpDisableState,
   type BackupCodesState,
   getTotpSetupAction,
-  enableTotpAction,
+  verifyTotpEnrollmentAction,
   disableTotpAction,
   regenerateBackupCodesAction,
 } from '../actions';
@@ -38,7 +38,7 @@ function BackupCodesList({ codes, onDone }: { codes: string[]; onDone: () => voi
 interface UriData {
   totpURI: string;
   qrDataUrl: string;
-  password: string;
+  backupCodes: string[];
 }
 
 function GetUriStep({ onUri }: { onUri: (data: UriData) => void }) {
@@ -53,10 +53,10 @@ function GetUriStep({ onUri }: { onUri: (data: UriData) => void }) {
         onUri({
           totpURI: result.totpURI,
           qrDataUrl: result.qrDataUrl,
-          password: fd.get('password') as string,
+          backupCodes: result.backupCodes,
         });
       } else {
-        setError(result?.error ?? 'Failed to get setup URI.');
+        setError(result?.error ?? 'Failed to start TOTP setup.');
       }
     });
   }
@@ -90,17 +90,21 @@ function GetUriStep({ onUri }: { onUri: (data: UriData) => void }) {
 function EnableStep({
   qrDataUrl,
   totpURI,
-  password,
   onEnabled,
   onBack,
-}: UriData & { onEnabled: (codes: string[]) => void; onBack: () => void }) {
-  const [state, formAction, pending] = useActionState<TotpEnableState, FormData>(
-    enableTotpAction,
+}: {
+  qrDataUrl: string;
+  totpURI: string;
+  onEnabled: () => void;
+  onBack: () => void;
+}) {
+  const [state, formAction, pending] = useActionState<TotpVerifyState, FormData>(
+    verifyTotpEnrollmentAction,
     null,
   );
 
   if (state?.ok) {
-    onEnabled(state.backupCodes);
+    onEnabled();
     return null;
   }
 
@@ -120,15 +124,29 @@ function EnableStep({
         <code className={styles.totpUri}>{totpURI}</code>
       </details>
       <form action={formAction} className={styles.form}>
-        <input type="hidden" name="password" value={password} />
-        <p className={styles.help}>Once you&rsquo;ve scanned it, click Enable to activate TOTP.</p>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="totp-verify-code">
+            Enter the 6-digit code from your app to confirm
+          </label>
+          <input
+            id="totp-verify-code"
+            name="code"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            pattern="[0-9]{6}"
+            required
+            className={styles.input}
+          />
+        </div>
         {state?.ok === false && <p className={styles.error}>{state.error}</p>}
         <div className={styles.buttonRow}>
           <button type="button" onClick={onBack} className={styles.revokeButton}>
             Back
           </button>
           <button type="submit" className={styles.button} disabled={pending}>
-            {pending ? 'Enabling…' : 'Enable TOTP'}
+            {pending ? 'Verifying…' : 'Enable TOTP'}
           </button>
         </div>
       </form>
@@ -230,7 +248,6 @@ export function TotpSection({ enabled: initialEnabled }: { enabled: boolean }) {
   const [enabled, setEnabled] = useState(initialEnabled);
   const [view, setView] = useState<View>('idle');
   const [uriData, setUriData] = useState<UriData | null>(null);
-  const [newCodes, setNewCodes] = useState<string[]>([]);
 
   if (view === 'get-uri') {
     return (
@@ -246,9 +263,9 @@ export function TotpSection({ enabled: initialEnabled }: { enabled: boolean }) {
   if (view === 'enable' && uriData) {
     return (
       <EnableStep
-        {...uriData}
-        onEnabled={(codes) => {
-          setNewCodes(codes);
+        qrDataUrl={uriData.qrDataUrl}
+        totpURI={uriData.totpURI}
+        onEnabled={() => {
           setView('backup-codes');
         }}
         onBack={() => setView('get-uri')}
@@ -256,10 +273,10 @@ export function TotpSection({ enabled: initialEnabled }: { enabled: boolean }) {
     );
   }
 
-  if (view === 'backup-codes') {
+  if (view === 'backup-codes' && uriData) {
     return (
       <BackupCodesList
-        codes={newCodes}
+        codes={uriData.backupCodes}
         onDone={() => {
           setEnabled(true);
           setView('idle');

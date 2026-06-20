@@ -1348,7 +1348,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.26 — Passkeys & TOTP MFA (RFC 0012)
+#### ✅ Task 0.5.26 — Passkeys & TOTP MFA (RFC 0012)
 
 **Goal:** Add TOTP MFA (authenticator-app only) and passkeys (2FA + passwordless) on better-auth's first-party plugins.
 

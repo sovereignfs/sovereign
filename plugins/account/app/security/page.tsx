@@ -22,10 +22,6 @@ export default async function SecurityPage() {
   const cookie = h.get('cookie') ?? '';
 
   const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
-  // Browser-reachable auth URL, passed to the PasskeySection client component
-  // so it can point its auth client at the right origin for WebAuthn ceremonies.
-  const authPublicUrl =
-    process.env.SOVEREIGN_AUTH_PUBLIC_URL || process.env.AUTH_BASE_URL || 'http://localhost:3001';
 
   // Fetch session with cache disabled to get the up-to-date twoFactorEnabled flag.
   // Plain get-session honours the signed cache cookie and may return stale data.
@@ -54,7 +50,7 @@ export default async function SecurityPage() {
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Passkeys</h2>
-        <PasskeySection initialPasskeys={passkeys} authPublicUrl={authPublicUrl} />
+        <PasskeySection initialPasskeys={passkeys} />
       </section>
 
       <section className={styles.section}>

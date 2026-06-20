@@ -49,23 +49,17 @@ function PasskeyRow({ passkey, onRemoved }: { passkey: PasskeyEntry; onRemoved: 
   );
 }
 
-export function PasskeySection({
-  initialPasskeys,
-  authPublicUrl,
-}: {
-  initialPasskeys: PasskeyEntry[];
-  authPublicUrl: string;
-}) {
+export function PasskeySection({ initialPasskeys }: { initialPasskeys: PasskeyEntry[] }) {
   const [passkeys, setPasskeys] = useState(initialPasskeys);
   const [addError, setAddError] = useState<string | null>(null);
   const [addPending, startAdd] = useTransition();
 
-  // Auth client pointed at the auth server's public URL (RFC 0012). Created
-  // once per component instance — the baseURL comes from the server component
-  // so it is never hardcoded in the bundle.
+  // Auth client with no baseURL so it calls the same-origin runtime, which
+  // proxies /api/auth/passkey/* to the auth server server-side. This avoids
+  // cross-origin issues: SameSite=Lax session cookies are not sent by the
+  // browser on cross-origin fetch requests.
   const [client] = useState(() =>
     createAuthClient({
-      baseURL: authPublicUrl,
       plugins: [
         // Cast to silence the minor peer-version type mismatch between
         // @better-auth/passkey and better-auth (runtime-compatible).

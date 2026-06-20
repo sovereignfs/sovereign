@@ -2,9 +2,18 @@ import { sdk } from '@sovereignfs/sdk';
 import { Button } from '@sovereignfs/ui';
 import styles from './example-basic.module.css';
 
+// The platform auto-namespaces plugin capabilities to `<pluginId>:<capName>`.
+// This constant matches the `view-advanced` entry in manifest.json.
+const CAP_VIEW_ADVANCED = 'fs.sovereign.example-basic:view-advanced';
+
 export default async function ExampleBasicPage() {
   const session = await sdk.auth.getSession();
   const user = session?.user;
+
+  // sdk.auth.hasCapability checks session.user.capabilities — a flat list the
+  // middleware builds from the platform-role preset plus any plugin-declared
+  // capabilities with defaultGrant: 'all' (RFC 0022).
+  const canViewAdvanced = sdk.auth.hasCapability(session, CAP_VIEW_ADVANCED);
 
   return (
     <div className={styles.page}>
@@ -35,6 +44,17 @@ export default async function ExampleBasicPage() {
           <p className={styles.muted}>No active session.</p>
         )}
       </section>
+
+      {canViewAdvanced && (
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>Advanced section</h2>
+          <p className={styles.muted}>
+            Visible because this session has the{' '}
+            <code className={styles.code}>{CAP_VIEW_ADVANCED}</code> capability (declared in
+            manifest.json with <code className={styles.code}>defaultGrant: &quot;all&quot;</code>).
+          </p>
+        </section>
+      )}
 
       <div>
         <Button variant="primary" size="md">

@@ -159,4 +159,56 @@ describe('validateManifest', () => {
     });
     expect(res.valid).toBe(false);
   });
+
+  // RFC 0022 — plugin-declared capabilities
+  it('accepts a manifest with a capabilities field (RFC 0022)', () => {
+    const res = validateManifest({
+      ...base,
+      capabilities: {
+        'create-item': { description: 'Create items.', defaultGrant: 'all' },
+        'delete-item': { description: 'Delete items.' },
+      },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('accepts capabilities without defaultGrant (defaults to none)', () => {
+    const res = validateManifest({
+      ...base,
+      capabilities: { 'admin-panel': {} },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects capability names that are not kebab-case lowercase (RFC 0022)', () => {
+    const res = validateManifest({
+      ...base,
+      capabilities: { CreateItem: { description: 'Bad name.' } },
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects capability names starting with a digit', () => {
+    const res = validateManifest({
+      ...base,
+      capabilities: { '1bad': {} },
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects an invalid defaultGrant value', () => {
+    const res = validateManifest({
+      ...base,
+      capabilities: { feature: { defaultGrant: 'admins' } },
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects unknown fields inside a capability declaration', () => {
+    const res = validateManifest({
+      ...base,
+      capabilities: { feature: { bogus: true } },
+    });
+    expect(res.valid).toBe(false);
+  });
 });

@@ -134,6 +134,40 @@ const manifestObjectSchema = z
       .optional(),
     repository: z.string().url().optional(),
     /**
+     * Plugin-declared capabilities (RFC 0022). Each key is a local capability
+     * name (lowercase kebab-case); the platform auto-namespaces it to
+     * `<pluginId>:<capName>` (e.g. `com.acme.myapp:create-item`).
+     *
+     * `defaultGrant: 'all'` means every authenticated user receives the
+     * capability automatically (injected by the middleware alongside the
+     * platform-role capabilities). Omitting `defaultGrant` (or `'none'`) means
+     * the plugin owns the grant logic — use `sdk.db` to store per-user grants
+     * in the plugin's own table and check them with `sdk.auth.hasCapability`.
+     */
+    capabilities: z
+      .record(
+        z
+          .string()
+          .regex(
+            /^[a-z][a-z0-9-]*$/,
+            'capability name must start with a lowercase letter and contain only lowercase letters, digits, and hyphens',
+          ),
+        z
+          .object({
+            /** Human-readable description of what the capability grants. */
+            description: z.string().optional(),
+            /**
+             * Who receives the capability by default:
+             * - `'all'`  — every authenticated user (injected by the middleware).
+             * - `'none'` — no one by default; the plugin manages grants itself.
+             * Defaults to `'none'` when omitted.
+             */
+            defaultGrant: z.enum(['all', 'none']).optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+    /**
      * Plugin-scoped environment variables (RFC 0018). Each key must be
      * UPPER_CASE_WITH_UNDERSCORES. The platform namespaces them automatically:
      * `scope: 'runtime'` → `SV_PLUGIN_<SLUG>_<KEY>`;

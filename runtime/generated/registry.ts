@@ -83,6 +83,12 @@ export const registry: SovereignManifest[] = [
     "icon": "icon.svg",
     "compatibility": {
       "minPlatformVersion": "0.6.0"
+    },
+    "capabilities": {
+      "view-advanced": {
+        "description": "Access the advanced section of the example plugin.",
+        "defaultGrant": "all"
+      }
     }
   },
   {

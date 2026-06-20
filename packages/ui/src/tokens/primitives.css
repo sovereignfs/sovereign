@@ -58,4 +58,10 @@
   --sv-radius-md: 0.375rem;
   --sv-radius-lg: 0.5rem;
   --sv-radius-full: 9999px;
+
+  /* Touch targets — minimum hit-area dimension for interactive controls.
+     44px follows the WCAG 2.5.5 / Apple HIG / Material guideline for reliable
+     touch without a pointing device. Applied to icon-only controls on mobile
+     (avatar, footer button, Drawer nav items). */
+  --sv-touch-target-min: 44px;
 }

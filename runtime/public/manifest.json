@@ -5,8 +5,11 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#09090b",
   "theme_color": "#09090b",
+  "orientation": "any",
+  "categories": ["productivity"],
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -25,6 +28,20 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Launcher",
+      "short_name": "Apps",
+      "description": "Open the app launcher",
+      "url": "/launcher"
+    },
+    {
+      "name": "Account",
+      "short_name": "Account",
+      "description": "Manage your profile and preferences",
+      "url": "/account"
     }
   ]
 }

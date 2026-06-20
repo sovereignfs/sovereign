@@ -5,7 +5,10 @@
   --sv-dialog-inset-left: var(--sv-shell-sidebar-width);
   display: grid;
   grid-template-columns: var(--sv-shell-sidebar-width) 1fr;
+  /* dvh avoids clipping by mobile browser UI / virtual keyboard (RFC 0013).
+     100vh fallback for older engines that do not support dvh. */
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .sidebar {
@@ -96,8 +99,7 @@
   padding: var(--sv-space-8);
 }
 
-.mobileHeader,
-.mobileFooter {
+.mobileHeader {
   display: none;
 }
 
@@ -109,8 +111,13 @@
 
 @media (max-width: 768px) {
   .shell {
-    /* No sidebar on mobile — overlay dialogs span the full width. */
+    /* No sidebar on mobile — overlay dialogs span the full width.
+       The header height is declared here so both the sticky header and the
+       dialog's --sv-dialog-inset-top reference the same value. */
+    --sv-shell-header-height: 60px;
     --sv-dialog-inset-left: 0;
+    /* Push the dialog sheet below the sticky header (RFC 0013). */
+    --sv-dialog-inset-top: var(--sv-shell-header-height);
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr auto;
   }
@@ -127,18 +134,25 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: var(--sv-space-3);
+    min-height: var(--sv-shell-header-height);
+    /* Sit below the notch / status bar in standalone mode. */
     padding: var(--sv-space-3) var(--sv-space-4);
+    padding-top: max(var(--sv-space-3), env(safe-area-inset-top));
+    padding-right: max(var(--sv-space-4), env(safe-area-inset-right));
+    padding-left: max(var(--sv-space-4), env(safe-area-inset-left));
     background-color: var(--sv-color-surface);
     border-bottom: 1px solid var(--sv-color-border);
+    /* Stay above the dialog scrim (z-index: 100) so the header remains
+       visible and usable while an overlay plugin is open. */
+    position: sticky;
+    top: 0;
+    z-index: 101;
   }
 
-  .mobileFooter {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--sv-space-3);
-    padding: var(--sv-space-2);
-    background-color: var(--sv-color-surface);
-    border-top: 1px solid var(--sv-color-border);
+  /* Ensure the avatar hit-area meets the 44px touch-target minimum. */
+  .avatar {
+    min-width: var(--sv-touch-target-min, 44px);
+    min-height: var(--sv-touch-target-min, 44px);
   }
 }

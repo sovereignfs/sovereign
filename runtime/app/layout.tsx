@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   // Installable PWA (SRS §3.11, PLT-09). The web manifest + icons live in
   // public/; the service worker is generated there at build by next-pwa.
   manifest: '/manifest.json',
-  appleWebApp: { capable: true, title: 'Sovereign', statusBarStyle: 'default' },
+  appleWebApp: { capable: true, title: 'Sovereign', statusBarStyle: 'black-translucent' },
   icons: {
     icon: '/icons/icon-192.png',
     apple: '/icons/apple-touch-icon.png',
@@ -19,6 +19,10 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: '#09090b',
+  // viewport-fit=cover allows content to extend into the notch/corner areas
+  // (safe-area insets compensate in CSS with env(safe-area-inset-*)). Required
+  // for the immersive black-translucent status bar on iOS standalone (RFC 0013).
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

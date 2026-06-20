@@ -12,11 +12,13 @@
  * `--sv-dialog-inset-left` lets a host inset the scrim past a fixed left nav
  * rail (e.g. the platform sidebar) so the overlay's left margin is measured
  * from the rail, not the viewport edge, and the rail stays visible/usable.
- * Defaults to 0 (full-viewport scrim) for standalone use. */
+ * `--sv-dialog-inset-top` (RFC 0013) mirrors this on the vertical axis: the
+ * shell sets it to the mobile header height so the header stays visible and
+ * interactive above the dialog sheet. Defaults to 0 for standalone use. */
 
 .scrim {
   position: fixed;
-  top: 0;
+  top: var(--sv-dialog-inset-top, 0);
   right: 0;
   bottom: 0;
   left: var(--sv-dialog-inset-left, 0);
@@ -97,8 +99,11 @@
   outline-offset: 2px;
 }
 
-/* Mobile: full-screen sheet (RFC 0001 §3) — every size fills the viewport. */
-@media (max-width: 640px) {
+/* Mobile: full-screen sheet (RFC 0001 §3, breakpoint unified to 768px per
+ * RFC 0013). Every size fills the scrim's available area (which is already
+ * inset from the top by --sv-dialog-inset-top when a fixed header is shown).
+ * The panel therefore fills height: 100% of the remaining space, not 100dvh. */
+@media (max-width: 768px) {
   .scrim {
     padding: 0;
   }

@@ -540,7 +540,7 @@ packages (`db`, `manifest`, `mailer`) directly — only `@sovereignfs/sdk` and
 Build your interface with the Sovereign Design System (`@sovereignfs/ui`):
 
 ```ts
-import { Button, Input, Dialog, Icon } from '@sovereignfs/ui';
+import { Button, Input, Dialog, Drawer, Icon } from '@sovereignfs/ui';
 ```
 
 Design tokens (`--sv-*` CSS custom properties) are injected globally by the

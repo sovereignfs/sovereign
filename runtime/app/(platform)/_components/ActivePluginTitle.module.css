@@ -1,0 +1,9 @@
+.title {
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+  /* Prevent overflow-clipping brand/avatar in tight viewports. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

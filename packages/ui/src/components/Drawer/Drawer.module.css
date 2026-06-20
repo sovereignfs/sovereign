@@ -1,0 +1,27 @@
+/* Drawer — bottom-sheet surface (RFC 0013). Shares scrim/shadow tokens with
+ * Dialog but slides up from the bottom instead of centering. The panel has no
+ * fixed height — it sizes to content, capped at 80dvh so some page context
+ * remains visible above. Safe-area-aware: bottom padding clears the home
+ * indicator in standalone/fullscreen mode. */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  background: var(--sv-color-scrim);
+}
+
+.panel {
+  width: 100%;
+  max-height: 80dvh;
+  overflow-y: auto;
+  background: var(--sv-color-surface-raised);
+  border-top: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg) var(--sv-radius-lg) 0 0;
+  box-shadow: var(--sv-shadow-overlay);
+  /* Pull content above the home indicator / bottom bar in standalone mode. */
+  padding-bottom: env(safe-area-inset-bottom);
+  outline: none;
+}

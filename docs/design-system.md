@@ -17,6 +17,7 @@ and tokens inside a plugin) lives in `docs/plugin-development.md` (from v0.5).
 - [Token reference](#token-reference)
 - [Building a component](#building-a-component)
 - [Theming](#theming)
+- [Responsive & mobile](#responsive--mobile)
 
 ---
 
@@ -214,3 +215,125 @@ tokens at `:root` (for example, giving Sovereign a brand colour by setting
 `--sv-color-accent`). Primitives stay fixed; only the semantic layer is
 overridden. Because every component references the semantic layer, a theme is
 purely a set of CSS variable values — no component or build changes required.
+
+---
+
+## Responsive & mobile
+
+This section covers the design-system conventions for building mobile-responsive
+UI — the breakpoint constant, the `Drawer` primitive, touch-target sizing, safe
+areas, and dynamic viewport height. (RFC 0013.)
+
+### Breakpoint convention
+
+Sovereign uses a **single mobile breakpoint: `768px`**.
+
+```css
+@media (max-width: 768px) {
+  /* mobile styles */
+}
+```
+
+All shell components (sidebar/header/footer, `Dialog` mobile sheet, `Drawer`)
+flip at `768px`. Because CSS custom properties **cannot be used inside `@media`
+conditions**, this value is a documented constant rather than a `--sv-*` token —
+reference this doc, not a magic number. Per-component custom breakpoints are
+rejected in design-system code reviews; a single documented threshold prevents
+the 641–768px mismatch band that previously existed between the shell (`768px`)
+and the `Dialog` (`640px`).
+
+### Dynamic viewport height
+
+Use `100dvh` (with a `100vh` fallback) instead of `100vh` for full-screen
+surfaces. Mobile browser UI (address bar, tab strip) and the virtual keyboard
+shrink `100vh`; `dvh` tracks the actual available height:
+
+```css
+.fullBleed {
+  min-height: 100vh; /* fallback for older engines */
+  min-height: 100dvh;
+}
+```
+
+The shell already uses this convention; follow it in full-screen plugin UI.
+
+### Safe-area insets
+
+In standalone/fullscreen PWA mode, `viewport-fit=cover` extends content into the
+notch and home-indicator areas. Apply `env(safe-area-inset-*)` to elements that
+would otherwise collide with hardware:
+
+```css
+.header {
+  padding-top: max(var(--sv-space-3), env(safe-area-inset-top));
+}
+
+.footer {
+  padding-bottom: max(var(--sv-space-2), env(safe-area-inset-bottom));
+}
+```
+
+Using `max(...)` means the inset only applies when it is larger than the base
+padding — the element keeps its minimum spacing on devices without notches.
+
+### Touch targets — `--sv-touch-target-min`
+
+The primitive token `--sv-touch-target-min: 44px` is the minimum hit-area
+dimension for icon-only interactive controls (avatar button, footer actions,
+Drawer nav items). 44px matches the Apple HIG / Material Design / WCAG 2.5.5
+guideline for reliable tap without precision pointing:
+
+```css
+.iconButton {
+  min-width: var(--sv-touch-target-min, 44px);
+  min-height: var(--sv-touch-target-min, 44px);
+}
+```
+
+This applies on mobile. Desktop icon-only controls (sidebar icons) can be
+smaller because mouse interaction is more precise.
+
+### `Dialog` vs `Drawer`
+
+|                | `Dialog`                                         | `Drawer`                                            |
+| -------------- | ------------------------------------------------ | --------------------------------------------------- |
+| Position       | Centered on desktop, full-screen sheet on mobile | Always a bottom sheet                               |
+| Use when       | Modal: the user must act before continuing       | Navigation or options revealed by tapping a trigger |
+| Dismiss        | Esc, scrim click, close button                   | Esc, scrim click                                    |
+| Platform usage | Overlay-shell plugins (Console, Account)         | Mobile plugin-navigation (Apps button)              |
+
+The `Drawer` is the right choice for panels the user **slides into**, not dialogs
+that **block** a workflow. Both share the same `--sv-color-scrim` and
+`--sv-shadow-overlay` tokens and the same focus-trap / Esc / scrim-click
+dismissal convention.
+
+### `Drawer` component
+
+```tsx
+import { Drawer } from '@sovereignfs/ui';
+
+<Drawer open={open} onClose={() => setOpen(false)} aria-label="App navigation">
+  {/* any content — lists, grids, etc. */}
+</Drawer>;
+```
+
+The `Drawer` panel sizes to its content (capped at `80dvh`), is safe-area-aware
+on the bottom (`env(safe-area-inset-bottom)` padding), and is focus-trapped.
+The scrim covers the full viewport so it works in any shell context.
+
+### `--sv-dialog-inset-top`
+
+Mirrors `--sv-dialog-inset-left` on the vertical axis. The runtime shell sets it
+to the mobile header height (`--sv-shell-header-height`) so an open `Dialog` or
+overlay-sheet begins **below** the sticky header — the header stays visible and
+interactive. Defaults to `0` (full-viewport scrim) for standalone use:
+
+```css
+/* Shell sets this on mobile: */
+.shell {
+  --sv-dialog-inset-top: var(--sv-shell-header-height);
+}
+```
+
+Plugin code does not need to set this; it is a platform-level concern wired by
+the shell.

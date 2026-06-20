@@ -22,6 +22,7 @@ import type {
   SendNotificationInput,
 } from '@sovereignfs/sdk';
 import { registerExporter, registerImporter } from './portability/registry';
+import { fanOutPushToUser } from './push';
 
 let _version: string | undefined;
 
@@ -163,6 +164,14 @@ provideHost({
         recipientUserId: input.recipientUserId,
         source: pluginId,
         sourceType: 'plugin',
+        title: input.title,
+        body: input.body,
+        url: input.url,
+        category: input.category,
+        icon: input.icon,
+      });
+      // Fire-and-forget push fan-out (respects per-user muted-category prefs).
+      void fanOutPushToUser(input.recipientUserId, {
         title: input.title,
         body: input.body,
         url: input.url,

@@ -139,3 +139,14 @@ export const activityLog = pgTable('activity_log', {
   metadata: text('metadata'),
   createdAt: bigint('created_at', { mode: 'number' }).notNull(),
 });
+
+/** Browser Web Push subscriptions (RFC 0016). Mirror of SQLite schema. */
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+});

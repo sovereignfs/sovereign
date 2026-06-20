@@ -3,6 +3,7 @@ import { getPlatformSetting, sendNotification, setPlatformSetting } from '@sover
 import { randomUUID } from 'node:crypto';
 import { hasCapability } from '@/src/capabilities';
 import { getPlatformDb } from '@/src/db';
+import { fanOutPushToUsers } from '@/src/push';
 
 /** Minimum seconds between admin broadcasts (rate-limit guard). */
 const BROADCAST_COOLDOWN_SECS = 60;
@@ -72,6 +73,14 @@ export async function POST(request: Request): Promise<Response> {
       }),
     ),
   );
+
+  // Push fan-out for all recipients at once (broadcast bypasses per-user category prefs).
+  void fanOutPushToUsers(body.recipientUserIds, {
+    title: body.title,
+    body: body.body,
+    url: body.url,
+    category: body.category ?? 'announcement',
+  });
 
   return NextResponse.json({ ok: true, sent: body.recipientUserIds.length });
 }

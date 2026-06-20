@@ -660,3 +660,85 @@ export async function setNotificationPrefs(
   );
   return next;
 }
+
+// ── Web Push subscriptions (RFC 0016) ────────────────────────────────────────
+
+export interface PushSubscriptionRow {
+  id: string;
+  userId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  createdAt: number;
+}
+
+/** Upsert a Web Push subscription. Re-subscribing the same endpoint updates keys. */
+export async function savePushSubscription(
+  pdb: PlatformDb,
+  input: { id: string; userId: string; endpoint: string; p256dh: string; auth: string },
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO push_subscriptions (id, tenant_id, user_id, endpoint, p256dh, auth, created_at)
+        VALUES (${input.id}, ${DEFAULT_TENANT_ID}, ${input.userId}, ${input.endpoint}, ${input.p256dh}, ${input.auth}, ${now})
+        ON CONFLICT (endpoint)
+        DO UPDATE SET user_id = excluded.user_id,
+                      p256dh  = excluded.p256dh,
+                      auth    = excluded.auth`,
+  );
+}
+
+/** Return all active push subscriptions for a user. */
+export async function getPushSubscriptionsForUser(
+  pdb: PlatformDb,
+  userId: string,
+): Promise<PushSubscriptionRow[]> {
+  return dbAll<PushSubscriptionRow>(
+    pdb,
+    sql`SELECT id, user_id AS "userId", endpoint, p256dh, auth, created_at AS "createdAt"
+        FROM push_subscriptions
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND user_id = ${userId}`,
+  );
+}
+
+/** Return push subscriptions for a list of user IDs (used by broadcast fan-out). */
+export async function getPushSubscriptionsByUsers(
+  pdb: PlatformDb,
+  userIds: string[],
+): Promise<PushSubscriptionRow[]> {
+  if (userIds.length === 0) return [];
+  const placeholders = userIds.map((id) => sql`${id}`).reduce((a, b) => sql`${a}, ${b}`);
+  return dbAll<PushSubscriptionRow>(
+    pdb,
+    sql`SELECT id, user_id AS "userId", endpoint, p256dh, auth, created_at AS "createdAt"
+        FROM push_subscriptions
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND user_id IN (${placeholders})`,
+  );
+}
+
+/** Delete a push subscription by endpoint (called on 410 Gone or user unsubscribe). */
+export async function deletePushSubscription(pdb: PlatformDb, endpoint: string): Promise<void> {
+  await dbRun(pdb, sql`DELETE FROM push_subscriptions WHERE endpoint = ${endpoint}`);
+}
+
+/** Delete all push subscriptions for a user (e.g. when the user opts out). */
+export async function deleteUserPushSubscriptions(pdb: PlatformDb, userId: string): Promise<void> {
+  await dbRun(
+    pdb,
+    sql`DELETE FROM push_subscriptions
+        WHERE tenant_id = ${DEFAULT_TENANT_ID} AND user_id = ${userId}`,
+  );
+}
+
+/** Return true if the user has at least one active push subscription. */
+export async function hasPushSubscription(pdb: PlatformDb, userId: string): Promise<boolean> {
+  const row = await dbGet<{ n: number }>(
+    pdb,
+    sql`SELECT COUNT(*) AS n FROM push_subscriptions
+        WHERE tenant_id = ${DEFAULT_TENANT_ID} AND user_id = ${userId}`,
+  );
+  return (row?.n ?? 0) > 0;
+}

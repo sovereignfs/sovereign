@@ -1568,7 +1568,7 @@ supported path to production.
 
 ---
 
-#### Task Task 0.7.02 — Web Push notifications (RFC 0016)
+#### ✅ Task 0.7.02 — Web Push notifications (RFC 0016)
 
 **Goal:** Background delivery of inbox notifications via Web Push (VAPID + service worker).
 

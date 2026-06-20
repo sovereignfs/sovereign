@@ -90,5 +90,32 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
        ON activity_log (actor_id)`,
     `CREATE INDEX IF NOT EXISTS activity_log_subject
        ON activity_log (subject_user_id)`,
+    // RFC 0015 — Notification Center
+    `CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      recipient_user_id TEXT NOT NULL,
+      source TEXT NOT NULL,
+      source_type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT,
+      url TEXT,
+      category TEXT NOT NULL DEFAULT 'info',
+      icon TEXT,
+      read_at ${ts},
+      dismissed_at ${ts},
+      created_at ${ts} NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS notifications_user_feed
+       ON notifications (tenant_id, recipient_user_id, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS notifications_unread
+       ON notifications (tenant_id, recipient_user_id, read_at)`,
+    `CREATE TABLE IF NOT EXISTS notification_prefs (
+      user_id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      muted_categories TEXT NOT NULL DEFAULT '[]',
+      poll_interval_secs INTEGER NOT NULL DEFAULT 30,
+      updated_at ${ts} NOT NULL
+    )`,
   ];
 }

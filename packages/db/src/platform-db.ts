@@ -462,3 +462,201 @@ export async function setAccountPrefs(
   );
   return next;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Notifications (RFC 0015)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** A notification row as returned to callers. */
+export interface NotificationRow {
+  id: string;
+  tenantId: string;
+  recipientUserId: string;
+  source: string;
+  sourceType: string;
+  title: string;
+  body: string | null;
+  url: string | null;
+  category: string;
+  icon: string | null;
+  readAt: number | null;
+  dismissedAt: number | null;
+  createdAt: number;
+}
+
+export interface SendNotificationInput {
+  id: string;
+  recipientUserId: string;
+  source: string;
+  sourceType: 'plugin' | 'platform' | 'admin';
+  title: string;
+  body?: string;
+  url?: string;
+  category?: string;
+  icon?: string;
+}
+
+/** Insert a new notification row. */
+export async function sendNotification(
+  pdb: PlatformDb,
+  input: SendNotificationInput,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO notifications
+          (id, tenant_id, recipient_user_id, source, source_type,
+           title, body, url, category, icon, created_at)
+        VALUES
+          (${input.id}, ${DEFAULT_TENANT_ID}, ${input.recipientUserId},
+           ${input.source}, ${input.sourceType},
+           ${input.title}, ${input.body ?? null}, ${input.url ?? null},
+           ${input.category ?? 'info'}, ${input.icon ?? null}, ${now})`,
+  );
+}
+
+const NOTIF_SELECT = sql.raw(`
+  SELECT id, tenant_id AS "tenantId", recipient_user_id AS "recipientUserId",
+         source, source_type AS "sourceType", title, body, url, category, icon,
+         read_at AS "readAt", dismissed_at AS "dismissedAt", created_at AS "createdAt"
+  FROM notifications
+`);
+
+/**
+ * List notifications for a user (newest first). Excludes dismissed rows by
+ * default. Limit is capped at 100.
+ */
+export async function listUserNotifications(
+  pdb: PlatformDb,
+  userId: string,
+  options: { includeDismissed?: boolean; limit?: number } = {},
+): Promise<NotificationRow[]> {
+  const limit = Math.min(options.limit ?? 50, 100);
+  const includeDismissed = options.includeDismissed ?? false;
+  return dbAll<NotificationRow>(
+    pdb,
+    sql`${NOTIF_SELECT}
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND recipient_user_id = ${userId}
+          ${includeDismissed ? sql.raw('') : sql`AND dismissed_at IS NULL`}
+        ORDER BY created_at DESC
+        LIMIT ${limit}`,
+  );
+}
+
+/** Count unread (non-dismissed) notifications for a user. */
+export async function countUnreadNotifications(pdb: PlatformDb, userId: string): Promise<number> {
+  const row = await dbGet<{ n: number }>(
+    pdb,
+    sql`SELECT COUNT(*) AS n FROM notifications
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND recipient_user_id = ${userId}
+          AND read_at IS NULL
+          AND dismissed_at IS NULL`,
+  );
+  return row?.n ?? 0;
+}
+
+/** Mark a single notification as read. No-op if already read or not owned by user. */
+export async function markNotificationRead(
+  pdb: PlatformDb,
+  id: string,
+  userId: string,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE notifications
+        SET read_at = ${now}
+        WHERE id = ${id}
+          AND recipient_user_id = ${userId}
+          AND read_at IS NULL`,
+  );
+}
+
+/** Mark all unread non-dismissed notifications for a user as read. */
+export async function markAllNotificationsRead(pdb: PlatformDb, userId: string): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE notifications
+        SET read_at = ${now}
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND recipient_user_id = ${userId}
+          AND read_at IS NULL
+          AND dismissed_at IS NULL`,
+  );
+}
+
+/** Dismiss a notification (hide from inbox). No-op if not owned by user. */
+export async function dismissNotification(
+  pdb: PlatformDb,
+  id: string,
+  userId: string,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE notifications
+        SET dismissed_at = ${now},
+            read_at = COALESCE(read_at, ${now})
+        WHERE id = ${id}
+          AND recipient_user_id = ${userId}
+          AND dismissed_at IS NULL`,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Notification prefs (RFC 0015)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface NotificationPrefsValue {
+  mutedCategories: string[];
+  pollIntervalSecs: number;
+}
+
+const DEFAULT_NOTIFICATION_PREFS: NotificationPrefsValue = {
+  mutedCategories: [],
+  pollIntervalSecs: 30,
+};
+
+/** Get a user's notification preferences, falling back to defaults. */
+export async function getNotificationPrefs(
+  pdb: PlatformDb,
+  userId: string,
+): Promise<NotificationPrefsValue> {
+  const row = await dbGet<{ mutedCategories: string; pollIntervalSecs: number }>(
+    pdb,
+    sql`SELECT muted_categories AS "mutedCategories", poll_interval_secs AS "pollIntervalSecs"
+        FROM notification_prefs WHERE user_id = ${userId}`,
+  );
+  if (!row) return DEFAULT_NOTIFICATION_PREFS;
+  return {
+    mutedCategories: JSON.parse(row.mutedCategories) as string[],
+    pollIntervalSecs: row.pollIntervalSecs,
+  };
+}
+
+/** Upsert a user's notification preferences. */
+export async function setNotificationPrefs(
+  pdb: PlatformDb,
+  userId: string,
+  prefs: Partial<NotificationPrefsValue>,
+): Promise<NotificationPrefsValue> {
+  const current = await getNotificationPrefs(pdb, userId);
+  const next: NotificationPrefsValue = {
+    mutedCategories: prefs.mutedCategories ?? current.mutedCategories,
+    pollIntervalSecs: prefs.pollIntervalSecs ?? current.pollIntervalSecs,
+  };
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO notification_prefs (user_id, tenant_id, muted_categories, poll_interval_secs, updated_at)
+        VALUES (${userId}, ${DEFAULT_TENANT_ID}, ${JSON.stringify(next.mutedCategories)}, ${next.pollIntervalSecs}, ${now})
+        ON CONFLICT (user_id)
+        DO UPDATE SET muted_categories = excluded.muted_categories,
+                      poll_interval_secs = excluded.poll_interval_secs,
+                      updated_at = excluded.updated_at`,
+  );
+  return next;
+}

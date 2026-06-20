@@ -6,6 +6,7 @@ const tabs = [
   { href: '/account/profile', label: 'Profile' },
   { href: '/account/security', label: 'Security' },
   { href: '/account/preferences', label: 'Preferences' },
+  { href: '/account/notifications', label: 'Notifications' },
   { href: '/account/data', label: 'Data' },
   { href: '/account/activity', label: 'Activity' },
 ];

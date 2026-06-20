@@ -47,6 +47,11 @@ beforeAll(() => {
         mockImporters.set(pluginId, handler);
       },
     },
+    notifications: {
+      async send(_input, _pluginId) {
+        /* no-op */
+      },
+    },
   });
 });
 
@@ -122,8 +127,11 @@ describe('sdk — experimental surfaces throw NotImplementedError', () => {
     expect(() => sdk.storage.get('k')).toThrow(NotImplementedError);
   });
 
-  it('notifications.send', () => {
-    expect(() => sdk.notifications.send('u', 'hi')).toThrow(NotImplementedError);
+  it('notifications.send delegates to the registered host (RFC 0015)', async () => {
+    // No longer throws NotImplementedError — now delegates to the host.
+    await expect(
+      sdk.notifications.send({ recipientUserId: 'u1', title: 'Test' }),
+    ).resolves.toBeUndefined();
   });
 
   it('events.publish / events.subscribe', () => {

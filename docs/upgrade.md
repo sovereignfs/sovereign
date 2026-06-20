@@ -107,6 +107,25 @@ For source builds, `git checkout <previous-commit>` before rebuilding.
 The root `package.json` version tracks roadmap milestones. Notes below call out
 any required configuration changes, schema changes, or action required.
 
+### v0.22 → v0.23
+
+- **Notification Center (RFC 0015).** In-app per-user notifications with a bell icon in the
+  chrome, polling-based delivery (default 30s), and SSE streaming. Two new platform tables
+  (`notifications`, `notification_prefs`) are added by the Drizzle migration automatically
+  on startup.
+- **No action required for operators.** The migration runs automatically. Existing plugins
+  continue to work without changes.
+- **Plugin authors:** to send notifications, add `"notifications:send"` to your manifest
+  `permissions` and call `sdk.notifications.send(input, await headers())`. See
+  `docs/plugin-development.md` for the full API.
+- **Admin broadcast:** `POST /api/admin/broadcast` (admin key required) sends announcements
+  to one or more users; rate-limited to once per 60 seconds.
+- **`@sovereignfs/db` → 1.1.0** (minor — new tables and helper functions).
+- **`@sovereignfs/sdk` → 1.7.0** (minor — `sdk.notifications` promoted from
+  `NotImplementedError` stub to a working implementation; `SendNotificationInput` type
+  exported).
+- **`@sovereignfs/ui` → 0.9.0** (minor — `Toast`/`ToastProvider`/`useToast` exported).
+
 ### v0.21 → v0.22
 
 - **Plugin-declared capabilities (RFC 0022).** Plugins may now declare a

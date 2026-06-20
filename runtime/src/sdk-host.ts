@@ -9,6 +9,7 @@ import {
   getPlatformSetting,
   logDataAccess,
   recordActivity,
+  sendNotification,
 } from '@sovereignfs/db';
 import { createMailer } from '@sovereignfs/mailer';
 import { ConsentRequiredError, provideHost } from '@sovereignfs/sdk';
@@ -18,6 +19,7 @@ import type {
   DataContractResolver,
   ExportResolver,
   ImportHandler,
+  SendNotificationInput,
 } from '@sovereignfs/sdk';
 import { registerExporter, registerImporter } from './portability/registry';
 
@@ -151,6 +153,22 @@ provideHost({
     },
     provideImport(pluginId: string, handler: ImportHandler): void {
       registerImporter(pluginId, handler);
+    },
+  },
+  notifications: {
+    async send(input: SendNotificationInput, pluginId: string): Promise<void> {
+      const pdb = await getPlatformDb();
+      await sendNotification(pdb, {
+        id: randomUUID(),
+        recipientUserId: input.recipientUserId,
+        source: pluginId,
+        sourceType: 'plugin',
+        title: input.title,
+        body: input.body,
+        url: input.url,
+        category: input.category,
+        icon: input.icon,
+      });
     },
   },
 });

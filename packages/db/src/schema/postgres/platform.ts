@@ -100,6 +100,30 @@ export const dataAccessLog = pgTable('data_access_log', {
   rowCount: integer('row_count').notNull(),
 });
 
+export const notifications = pgTable('notifications', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  recipientUserId: text('recipient_user_id').notNull(),
+  source: text('source').notNull(),
+  sourceType: text('source_type').notNull(),
+  title: text('title').notNull(),
+  body: text('body'),
+  url: text('url'),
+  category: text('category').notNull().default('info'),
+  icon: text('icon'),
+  readAt: bigint('read_at', { mode: 'number' }),
+  dismissedAt: bigint('dismissed_at', { mode: 'number' }),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+});
+
+export const notificationPrefs = pgTable('notification_prefs', {
+  userId: text('user_id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  mutedCategories: text('muted_categories').notNull().default('[]'),
+  pollIntervalSecs: integer('poll_interval_secs').notNull().default(30),
+  updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+});
+
 export const activityLog = pgTable('activity_log', {
   id: text('id').primaryKey(),
   tenantId: text('tenant_id').notNull(),

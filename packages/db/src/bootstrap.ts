@@ -126,5 +126,21 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       auth TEXT NOT NULL,
       created_at ${ts} NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS entitlements (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      plugin_id TEXT NOT NULL,
+      tier_id TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      source TEXT NOT NULL DEFAULT 'manual',
+      license_token TEXT NOT NULL,
+      issued_at ${ts} NOT NULL,
+      expires_at ${ts},
+      created_at ${ts} NOT NULL,
+      updated_at ${ts} NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS entitlements_user_plugin_idx
+       ON entitlements (user_id, plugin_id)`,
   ];
 }

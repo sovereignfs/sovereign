@@ -150,3 +150,19 @@ export const pushSubscriptions = pgTable('push_subscriptions', {
   auth: text('auth').notNull(),
   createdAt: bigint('created_at', { mode: 'number' }).notNull(),
 });
+
+/** Plugin entitlements (RFC 0003). Mirror of SQLite schema. */
+export const entitlements = pgTable('entitlements', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  pluginId: text('plugin_id').notNull(),
+  tierId: text('tier_id'),
+  status: text('status').notNull().default('active'),
+  source: text('source').notNull().default('manual'),
+  licenseToken: text('license_token').notNull(),
+  issuedAt: bigint('issued_at', { mode: 'number' }).notNull(),
+  expiresAt: bigint('expires_at', { mode: 'number' }),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+});

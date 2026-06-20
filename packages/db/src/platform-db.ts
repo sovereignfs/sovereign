@@ -742,3 +742,160 @@ export async function hasPushSubscription(pdb: PlatformDb, userId: string): Prom
   );
   return (row?.n ?? 0) > 0;
 }
+
+// ─── Entitlements (RFC 0003) ───────────────────────────────────────────────
+
+export interface EntitlementRow {
+  id: string;
+  tenantId: string;
+  userId: string;
+  pluginId: string;
+  tierId: string | null;
+  status: string;
+  source: string;
+  licenseToken: string;
+  issuedAt: number;
+  expiresAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Return the most-recent active (non-expired) entitlement for a user+plugin, or null. */
+export async function getActiveEntitlement(
+  pdb: PlatformDb,
+  userId: string,
+  pluginId: string,
+): Promise<EntitlementRow | null> {
+  const now = Math.floor(Date.now() / 1000);
+  const row = await dbGet<EntitlementRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", user_id AS "userId", plugin_id AS "pluginId",
+               tier_id AS "tierId", status, source, license_token AS "licenseToken",
+               issued_at AS "issuedAt", expires_at AS "expiresAt",
+               created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM entitlements
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND user_id = ${userId}
+          AND plugin_id = ${pluginId}
+          AND status = 'active'
+          AND (expires_at IS NULL OR expires_at > ${now})
+        ORDER BY created_at DESC
+        LIMIT 1`,
+  );
+  return row ?? null;
+}
+
+/** Return all entitlements (all statuses) for a user, newest first. */
+export async function listUserEntitlements(
+  pdb: PlatformDb,
+  userId: string,
+): Promise<EntitlementRow[]> {
+  return dbAll<EntitlementRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", user_id AS "userId", plugin_id AS "pluginId",
+               tier_id AS "tierId", status, source, license_token AS "licenseToken",
+               issued_at AS "issuedAt", expires_at AS "expiresAt",
+               created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM entitlements
+        WHERE tenant_id = ${DEFAULT_TENANT_ID} AND user_id = ${userId}
+        ORDER BY created_at DESC`,
+  );
+}
+
+/** Return all entitlements for a plugin (admin view), newest first. */
+export async function listPluginEntitlements(
+  pdb: PlatformDb,
+  pluginId: string,
+): Promise<EntitlementRow[]> {
+  return dbAll<EntitlementRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", user_id AS "userId", plugin_id AS "pluginId",
+               tier_id AS "tierId", status, source, license_token AS "licenseToken",
+               issued_at AS "issuedAt", expires_at AS "expiresAt",
+               created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM entitlements
+        WHERE tenant_id = ${DEFAULT_TENANT_ID} AND plugin_id = ${pluginId}
+        ORDER BY created_at DESC`,
+  );
+}
+
+/** Return all entitlements across all plugins (admin overview), newest first. */
+export async function listAllEntitlements(pdb: PlatformDb): Promise<EntitlementRow[]> {
+  return dbAll<EntitlementRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", user_id AS "userId", plugin_id AS "pluginId",
+               tier_id AS "tierId", status, source, license_token AS "licenseToken",
+               issued_at AS "issuedAt", expires_at AS "expiresAt",
+               created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM entitlements
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+        ORDER BY created_at DESC`,
+  );
+}
+
+/** Insert or update an entitlement row. Uses UPSERT on (user_id, plugin_id). */
+export async function saveEntitlement(
+  pdb: PlatformDb,
+  row: Omit<EntitlementRow, 'tenantId'>,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO entitlements
+          (id, tenant_id, user_id, plugin_id, tier_id, status, source,
+           license_token, issued_at, expires_at, created_at, updated_at)
+        VALUES
+          (${row.id}, ${DEFAULT_TENANT_ID}, ${row.userId}, ${row.pluginId},
+           ${row.tierId ?? null}, ${row.status}, ${row.source},
+           ${row.licenseToken}, ${row.issuedAt}, ${row.expiresAt ?? null},
+           ${now}, ${now})
+        ON CONFLICT(id) DO UPDATE SET
+          tier_id       = excluded.tier_id,
+          status        = excluded.status,
+          source        = excluded.source,
+          license_token = excluded.license_token,
+          issued_at     = excluded.issued_at,
+          expires_at    = excluded.expires_at,
+          updated_at    = ${now}`,
+  );
+}
+
+/** Mark an entitlement as cancelled by ID. */
+export async function cancelEntitlement(pdb: PlatformDb, id: string): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE entitlements
+        SET status = 'cancelled', updated_at = ${now}
+        WHERE id = ${id} AND tenant_id = ${DEFAULT_TENANT_ID}`,
+  );
+}
+
+/**
+ * Return IDs of plugins that require an entitlement (non-free model) and
+ * for which the given user currently has NO active entitlement.
+ * Used by the middleware to determine which plugins are paywalled for this user.
+ */
+export async function getPaidPluginsWithoutEntitlement(
+  pdb: PlatformDb,
+  userId: string,
+  paidPluginIds: string[],
+): Promise<string[]> {
+  if (paidPluginIds.length === 0) return [];
+  const now = Math.floor(Date.now() / 1000);
+  const rows = await dbAll<{ pluginId: string }>(
+    pdb,
+    sql`SELECT plugin_id AS "pluginId"
+        FROM entitlements
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND user_id = ${userId}
+          AND status = 'active'
+          AND (expires_at IS NULL OR expires_at > ${now})
+          AND plugin_id IN (${sql.join(
+            paidPluginIds.map((id) => sql`${id}`),
+            sql`, `,
+          )})`,
+  );
+  const entitled = new Set(rows.map((r) => r.pluginId));
+  return paidPluginIds.filter((id) => !entitled.has(id));
+}

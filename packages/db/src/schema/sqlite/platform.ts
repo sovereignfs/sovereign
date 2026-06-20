@@ -228,6 +228,38 @@ export const pushSubscriptions = sqliteTable('push_subscriptions', {
   createdAt: integer('created_at').notNull(),
 });
 
+/**
+ * Plugin entitlements (RFC 0003). Tracks signed licenses imported by users.
+ * The runtime middleware gates paid plugin routes by checking for an active,
+ * unexpired row here. License tokens are verified offline against the plugin
+ * author's Ed25519 public key declared in the manifest.
+ */
+export const entitlements = sqliteTable('entitlements', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  /** The user who holds this entitlement. */
+  userId: text('user_id').notNull(),
+  /** Plugin ID (e.g. `com.acme.myplugin`). */
+  pluginId: text('plugin_id').notNull(),
+  /** Tier ID (e.g. `"pro"`), or null for single-tier plugins. */
+  tierId: text('tier_id'),
+  /** `active` — currently valid. `expired` — past `expiresAt`. `cancelled` — revoked. */
+  status: text('status').notNull().default('active'),
+  /**
+   * How the entitlement was acquired: `manual` (license token imported by user),
+   * `stripe` (Stripe webhook), `paypal` (PayPal webhook).
+   */
+  source: text('source').notNull().default('manual'),
+  /** The raw signed license token as received from the author's billing service. */
+  licenseToken: text('license_token').notNull(),
+  /** Unix epoch seconds when the license was issued by the author. */
+  issuedAt: integer('issued_at').notNull(),
+  /** Unix epoch seconds when the entitlement expires (`null` = perpetual). */
+  expiresAt: integer('expires_at'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 export type NotificationPrefs = typeof notificationPrefs.$inferSelect;
@@ -240,3 +272,5 @@ export type DataAccessLogEntry = typeof dataAccessLog.$inferSelect;
 export type NewDataAccessLogEntry = typeof dataAccessLog.$inferInsert;
 export type ActivityLog = typeof activityLog.$inferSelect;
 export type NewActivityLog = typeof activityLog.$inferInsert;
+export type Entitlement = typeof entitlements.$inferSelect;
+export type NewEntitlement = typeof entitlements.$inferInsert;

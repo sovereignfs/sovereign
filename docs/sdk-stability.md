@@ -48,10 +48,17 @@ group during the pre-v1 hardening period:
 - `sdk.env` — plugin-scoped environment variable accessor (RFC 0018). `sdk.env.get(key)` reads `SV_PLUGIN_<SLUG>_<KEY>` scoped to the calling plugin; server-side only.
 - `sdk.notifications` — Notification Center (RFC 0015). `sdk.notifications.send()` delivers in-app notifications to users; requires the `notifications:send` manifest permission. Polling default (30s), SSE optional.
 
-These surfaces are **reserved** (not yet implemented — every call throws
-`NotImplementedError`). Their shape may change before they ship:
+These surfaces are **reserved** — they exist as stubs and throw
+`NotImplementedError` (or in `sdk.billing`'s case, `EntitlementRequiredError`).
+Their shape may change before they ship:
 
 - `sdk.storage`, `sdk.events` — reserved post-v1 surfaces.
+- `sdk.billing` — plugin monetization (RFC 0003). `getEntitlement(pluginId)` and
+  `requireEntitlement(pluginId)` are exported as stubs; `EntitlementRequiredError`
+  is exported. The platform's own paywall gating (middleware redirect + license
+  token import) does not require calling `sdk.billing` directly — it is available
+  for plugins that want to do entitlement-aware rendering inside a partially-gated
+  surface.
 
 When one of these is implemented, it graduates into the stable surface with a
 **minor** release (additive), and this document is updated.

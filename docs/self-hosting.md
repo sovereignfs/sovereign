@@ -350,6 +350,69 @@ a signal to test the plugin against the newer platform and publish an update.
 
 ---
 
+## Maintaining a fork
+
+Most operators should never fork Sovereign's source — env vars, community plugins
+(`sv plugin add`), and the RFC 0027 branding system cover the full customisation
+surface without touching any source file. A fork is warranted only when you need
+custom plugins compiled into the same image (e.g. for air-gapped environments or
+proprietary code), or when you are building a commercial white-labeled derivative.
+
+For the full model, zone taxonomy, AGPL compliance table, and `sv fork check`
+follow-on, see [RFC 0028](rfcs/0028-operator-fork-model.md).
+
+### Quick-start: Track 2 fork setup
+
+```bash
+# Fork sovereignfs/sovereign on GitHub, then:
+git clone https://github.com/<org>/sovereign-fork && cd sovereign-fork
+git remote add upstream https://github.com/sovereignfs/sovereign
+git fetch upstream
+```
+
+Add an `operator/` directory to the repo root:
+
+```
+operator/
+├── OPERATOR.md          # fork purpose, plugin list, AGPL posture
+├── UPSTREAM             # plain text: upstream tag this fork is based on
+└── docker-compose.override.yml   # deployment overrides (optional)
+```
+
+Add custom plugins under `plugins/<com.yourorg.pluginid>/` and unignore them in
+`.gitignore`:
+
+```gitignore
+!/plugins/com.yourorg.myplugin/
+```
+
+**The isolation principle:** never modify files owned by upstream (`runtime/`,
+`packages/`, `apps/`, `scripts/`, `plugins/account/`, `plugins/console/`,
+`plugins/launcher/`, etc.). Operator additions go in `operator/` and
+`plugins/<operator-id>/` only. Because the two file sets never overlap,
+`git rebase upstream/main` applies every upstream release with zero conflicts.
+
+### Upstream sync
+
+```bash
+git fetch upstream
+git rebase upstream/main          # zero conflicts when the isolation principle is respected
+echo "v1.3.0" > operator/UPSTREAM
+git add operator/UPSTREAM && git commit -m "chore: sync with upstream v1.3.0"
+git push --force-with-lease origin main
+
+# Then deploy normally:
+sv backup
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+```
+
+A conflict during rebase signals that a core-locked file was modified — fix by
+reverting the change and expressing the intent as a community plugin or upstream
+RFC instead.
+
+---
+
 ## Upgrading
 
 See the [upgrade guide](upgrade.md) for version-specific migration notes,

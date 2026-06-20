@@ -1898,8 +1898,6 @@ _Version 1.22 — June 2026. Planning change (no task completed, no version bump
 
 _Version 1.24 — June 2026. **Task 0.5.30 — Offline connectivity banner** completed and merged. Thin fixed banner surfaces connectivity status (soft-offline case — hard-offline was already covered by the `/offline` SW fallback). `@sovereignfs/ui` → 0.7.0 (warning/success status colour tokens); `runtime` → 0.20.0. CLAUDE.md gains the browser-API / `useState` SSR hydration rule. SRS v0.29. Earlier notes retained._
 
-
-
 _Version 1.23 — June 2026. Planning change (no task completed, no version bumps): (1) Corrected duplicate task numbering — RFC 0028 operator fork model task renumbered from 1.0.06 to 1.0.07 (1.0.06 is already occupied by Non-Docker/systemd deployment, RFC 0026). (2) Added Task 1.0.08 — Storybook for `@sovereignfs/ui` design system (no RFC needed — developer tooling; Storybook 8 + `@storybook/nextjs`, Token Gallery, all component stories, a11y addon, CI build job). SRS decision-log row added (v0.28). Earlier notes retained._
 
 _Version 1.22 — June 2026. Planning change (no task completed, no version bumps): Operator fork model (RFC 0028) incorporated as a documentation-only post-v1 task (originally numbered 1.0.06; corrected to 1.0.07 in v1.23). Mirrored in SRS v0.27 (§2.7 pointer + decision-log row). Earlier notes retained._

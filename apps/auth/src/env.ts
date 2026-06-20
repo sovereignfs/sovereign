@@ -35,10 +35,9 @@ export interface AuthEnv {
   /** Human-readable name shown in browser passkey prompts. Defaults to "Sovereign". */
   webAuthnRpName: string;
   /**
-   * Full origin(s) the runtime is served from, for WebAuthn challenge binding.
-   * Defaults to the auth server's baseUrl. Set to the runtime's public URL
-   * when the runtime and auth server are on different ports/subdomains.
-   * Accepts a single URL string or comma-separated list.
+   * All browser-facing origins where WebAuthn challenges occur. Must include
+   * the runtime public URL (passkey management via proxy) AND the auth server
+   * public URL (passkey sign-in on the login page). Comma-separated list.
    */
   webAuthnOrigin: string[];
 }
@@ -61,16 +60,21 @@ export function getEnv(): AuthEnv {
     // keep 'localhost'
   }
 
-  // WebAuthn origin MUST be the browser-facing runtime origin (where the
-  // credential was created), NOT the auth server URL. The browser sends
-  // its own origin in the WebAuthn response; the auth server verifies it
-  // matches. SOVEREIGN_AUTH_PUBLIC_URL is the auth server's public URL —
-  // wrong here. NEXT_PUBLIC_RUNTIME_URL is the runtime's public URL — right.
-  // Falls back to http://localhost:3000 for zero-config local dev.
-  const webAuthnOriginRaw =
-    process.env.AUTH_WEBAUTHN_ORIGIN ||
-    process.env.NEXT_PUBLIC_RUNTIME_URL ||
-    'http://localhost:3000';
+  // WebAuthn origin must include EVERY browser-facing origin where a WebAuthn
+  // challenge can occur. There are two in this architecture:
+  //   1. The runtime origin (http://localhost:3000 in dev) — passkey management
+  //      in the account plugin is proxied through the runtime, so the browser
+  //      creates/presents credentials from the runtime origin.
+  //   2. The auth server's public origin (http://localhost:3001 in dev) — the
+  //      login page lives on the auth server, so passkey sign-in assertions
+  //      carry the auth server origin.
+  // In production, set AUTH_WEBAUTHN_ORIGIN to a comma-separated list of both
+  // your runtime URL and auth server URL (e.g. https://app.example.com,https://auth.example.com).
+  const runtimeOrigin = process.env.NEXT_PUBLIC_RUNTIME_URL || 'http://localhost:3000';
+  const authPublicOrigin = process.env.SOVEREIGN_AUTH_PUBLIC_URL || baseUrl;
+  const defaultWebAuthnOrigins =
+    runtimeOrigin === authPublicOrigin ? runtimeOrigin : `${runtimeOrigin},${authPublicOrigin}`;
+  const webAuthnOriginRaw = process.env.AUTH_WEBAUTHN_ORIGIN || defaultWebAuthnOrigins;
 
   cached ??= {
     secret: required('AUTH_SECRET'),

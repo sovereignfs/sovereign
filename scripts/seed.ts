@@ -2,7 +2,7 @@
  * Idempotent dev/test seed (RFC 0019). Populates a dev database with baseline
  * platform data and two per-role test users:
  *
- *   admin@dev.local   password: admin-dev-password   (platform:admin)
+ *   admin@dev.local   password: admin-dev-password   (platform:owner)
  *   user@dev.local    password: user-dev-password    (platform:user)
  *
  * HARD-GATED TO NON-PROD: refuses to run when NODE_ENV=production unless the
@@ -40,7 +40,7 @@ export const SEED_USERS = [
     email: 'admin@dev.local',
     name: 'Dev Admin',
     password: 'admin-dev-password',
-    role: 'platform:admin' as const,
+    role: 'platform:owner' as const,
   },
   {
     email: 'user@dev.local',
@@ -167,7 +167,7 @@ async function main(): Promise<void> {
     [
       'Seed complete. Test accounts:',
       '',
-      '  admin@dev.local   password: admin-dev-password   (platform:admin)',
+      '  admin@dev.local   password: admin-dev-password   (platform:owner)',
       '  user@dev.local    password: user-dev-password    (platform:user)',
       '',
       'These are dev-only credentials — NEVER use in production.',

@@ -29,7 +29,7 @@ pnpm dev               # starts runtime + auth server
 ```
 
 Open `http://localhost:3000`. The first user to register is automatically
-assigned `platform:admin`.
+assigned `platform:owner`.
 
 **Environment variables:** `AUTH_SECRET`, `SOVEREIGN_ADMIN_KEY`, and
 `SOVEREIGN_AUTH_SECRET` have no defaults — the server will not start without
@@ -60,7 +60,7 @@ can sign in immediately without registering manually:
 
 | Email             | Password             | Role             |
 | ----------------- | -------------------- | ---------------- |
-| `admin@dev.local` | `admin-dev-password` | `platform:admin` |
+| `admin@dev.local` | `admin-dev-password` | `platform:owner` |
 | `user@dev.local`  | `user-dev-password`  | `platform:user`  |
 
 ```bash

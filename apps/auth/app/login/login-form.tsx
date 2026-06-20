@@ -87,7 +87,12 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
         <div className={styles.divider} aria-hidden="true">
           or
         </div>
-        <Button variant="secondary" onClick={onPasskeySignIn} disabled={passkeyLoading}>
+        <Button
+          variant="secondary"
+          className={styles.passkeyBtn}
+          onClick={onPasskeySignIn}
+          disabled={passkeyLoading}
+        >
           {passkeyLoading ? 'Waiting for passkey…' : 'Sign in with a passkey'}
         </Button>
         <p className={styles.footer}>

@@ -75,6 +75,10 @@
   background-color: var(--sv-color-border);
 }
 
+.passkeyBtn {
+  width: 100%;
+}
+
 .footer {
   margin-top: var(--sv-space-6);
   font-size: var(--sv-font-size-sm);

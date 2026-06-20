@@ -131,15 +131,59 @@ export async function revokeSessionAction(formData: FormData): Promise<void> {
 
 // ── TOTP (RFC 0012) ──────────────────────────────────────────────────────
 
+/**
+ * Forward all Set-Cookie headers from an auth-server response to the browser.
+ * Called after better-auth operations that create or replace the user's session
+ * (e.g. TOTP verify-totp during enrollment creates a new session + deletes the
+ * old one). Without this the browser keeps its stale/deleted session token.
+ */
+async function forwardAuthCookies(authRes: Response): Promise<void> {
+  const jar = await cookies();
+  const getSetCookie = (authRes.headers as { getSetCookie?: () => string[] }).getSetCookie;
+  const rawCookies =
+    typeof getSetCookie === 'function'
+      ? getSetCookie.call(authRes.headers)
+      : (() => {
+          const v = authRes.headers.get('set-cookie');
+          return v ? [v] : [];
+        })();
+
+  for (const raw of rawCookies) {
+    const parts = raw.split(';').map((s) => s.trim());
+    const nameVal = parts[0] ?? '';
+    const eqIdx = nameVal.indexOf('=');
+    if (eqIdx === -1) continue;
+    const name = nameVal.slice(0, eqIdx);
+    const value = nameVal.slice(eqIdx + 1);
+    const opts: Parameters<typeof jar.set>[2] = { path: '/' };
+    for (const attr of parts.slice(1)) {
+      const lower = attr.toLowerCase();
+      if (lower === 'httponly') opts.httpOnly = true;
+      else if (lower === 'secure') opts.secure = true;
+      else if (lower.startsWith('samesite='))
+        opts.sameSite = lower.slice('samesite='.length) as 'lax' | 'strict' | 'none';
+      else if (lower.startsWith('max-age=')) opts.maxAge = Number(lower.slice('max-age='.length));
+      else if (lower.startsWith('path=')) opts.path = attr.slice('path='.length);
+    }
+    jar.set(name, value, opts);
+  }
+}
+
 export type TotpSetupState =
-  | { ok: true; totpURI: string; qrDataUrl: string }
+  | { ok: true; totpURI: string; qrDataUrl: string; backupCodes: string[] }
   | { ok: false; error: string }
   | null;
 
 /**
- * Start TOTP enrollment: fetch the TOTP URI from better-auth and render the QR
- * code server-side so no QR library is needed client-side. The URI is returned
- * for display alongside the QR image (accessible text fallback).
+ * Start TOTP enrollment: call better-auth's `enable` endpoint to create the
+ * twoFactor DB record (secret + unverified backup codes) and return the TOTP
+ * URI. The QR is rendered server-side so no QR library is needed client-side.
+ * Backup codes are also returned here so they can be shown after the user
+ * verifies the code (see verifyTotpEnrollmentAction).
+ *
+ * Note: calling `get-totp-uri` (the old approach) requires an EXISTING
+ * twoFactor record — it throws TOTP_NOT_ENABLED for new users. `enable`
+ * creates the record and returns the URI + backup codes in one shot.
  */
 export async function getTotpSetupAction(
   _prev: TotpSetupState,
@@ -149,52 +193,49 @@ export async function getTotpSetupAction(
   const password = (formData.get('password') as string | null) ?? '';
   if (!password) return { ok: false, error: 'Password is required.' };
 
-  const res = await authPost('/two-factor/get-totp-uri', { password });
+  const res = await authPost('/two-factor/enable', { password });
   if (!res.ok) {
     const data = (await res.json().catch(() => null)) as { message?: string } | null;
-    return { ok: false, error: data?.message ?? 'Failed to get setup URI.' };
+    return { ok: false, error: data?.message ?? 'Failed to start TOTP setup.' };
   }
-  const { totpURI } = (await res.json()) as { totpURI: string };
+  const { totpURI, backupCodes } = (await res.json()) as {
+    totpURI: string;
+    backupCodes: string[];
+  };
   const qrDataUrl = await QRCode.toDataURL(totpURI, { width: 200, margin: 1 });
-  return { ok: true, totpURI, qrDataUrl };
+  return { ok: true, totpURI, qrDataUrl, backupCodes };
 }
 
-export type TotpEnableState =
-  | { ok: true; backupCodes: string[] }
-  | { ok: false; error: string }
-  | null;
+export type TotpVerifyState = { ok: true } | { ok: false; error: string } | null;
 
 /**
- * Complete TOTP enrollment: enable TOTP for the user, then generate backup
- * codes (shown once — the user must save them before dismissing).
+ * Complete TOTP enrollment: verify the code the user entered from their
+ * authenticator app. better-auth's `verify-totp` endpoint sets
+ * twoFactorEnabled=true, marks the twoFactor record as verified, creates a
+ * new session (deleting the old one), and sends back a Set-Cookie header.
+ * We forward that cookie to the browser so the user stays signed in.
  */
-export async function enableTotpAction(
-  _prev: TotpEnableState,
+export async function verifyTotpEnrollmentAction(
+  _prev: TotpVerifyState,
   formData: FormData,
-): Promise<TotpEnableState> {
+): Promise<TotpVerifyState> {
   await sdk.auth.requireSession();
-  const password = (formData.get('password') as string | null) ?? '';
-  if (!password) return { ok: false, error: 'Password is required.' };
+  const code = (formData.get('code') as string | null) ?? '';
+  if (!code) return { ok: false, error: 'Enter the 6-digit code from your authenticator app.' };
 
-  const enableRes = await authPost('/two-factor/enable', { password });
-  if (!enableRes.ok) {
-    const data = (await enableRes.json().catch(() => null)) as { message?: string } | null;
-    return { ok: false, error: data?.message ?? 'Failed to enable TOTP.' };
+  const res = await authPost('/two-factor/verify-totp', { code });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => null)) as { message?: string } | null;
+    return { ok: false, error: data?.message ?? 'Invalid code. Please try again.' };
   }
 
-  const codesRes = await authPost('/two-factor/generate-backup-codes', { password });
-  if (!codesRes.ok) {
-    const data = (await codesRes.json().catch(() => null)) as { message?: string } | null;
-    return {
-      ok: false,
-      error: data?.message ?? 'TOTP enabled but failed to generate backup codes.',
-    };
-  }
-  const { codes } = (await codesRes.json()) as { codes: string[] };
+  // verify-totp replaces the session — forward the new session cookie so the
+  // browser keeps the new token instead of the now-deleted old one.
+  await forwardAuthCookies(res);
   await invalidateSessionCache();
   void sdk.activity.log({ action: 'account.totp_enabled', summary: 'TOTP two-factor enabled' });
   revalidatePath('/account/security');
-  return { ok: true, backupCodes: codes };
+  return { ok: true };
 }
 
 export type TotpDisableState = { ok: true } | { ok: false; error: string } | null;

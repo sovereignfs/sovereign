@@ -1326,7 +1326,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.25 — Mobile responsiveness & PWA hardening (RFC 0013)
+#### ✅ Task 0.5.25 — Mobile responsiveness & PWA hardening (RFC 0013)
 
 **Goal:** Harden the mobile and PWA experience across the three shell modes.
 

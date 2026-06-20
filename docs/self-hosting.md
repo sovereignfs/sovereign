@@ -573,6 +573,80 @@ use the Console or a direct SQL query.
 
 ---
 
+## Web Push notifications (RFC 0016)
+
+Background push notifications let the platform deliver alerts to users' devices
+even when the browser tab is closed, via the [Web Push Protocol][webpush] and
+the browser's push service.
+
+Push is entirely **opt-in** — both for operators (VAPID keys must be configured)
+and for users (per-device subscription in Account → Notifications). The in-app
+bell and polling continue to work with no VAPID configuration.
+
+[webpush]: https://www.rfc-editor.org/rfc/rfc8030
+
+### Generating VAPID keys
+
+VAPID keys are generated **once per deployment** and must not change — changing
+them invalidates all existing subscriptions and users must re-subscribe.
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+This prints a pair of base64url-encoded keys. Add them to `.env`:
+
+```env
+VAPID_PUBLIC_KEY=<base64url public key>
+VAPID_PRIVATE_KEY=<base64url private key>
+VAPID_CONTACT=mailto:ops@example.com
+```
+
+`VAPID_CONTACT` is a contact URI sent in the VAPID Authorization header (required
+by spec). Use a `mailto:` address you monitor — push services use it for
+abuse reporting.
+
+### How it works
+
+1. The runtime serves `VAPID_PUBLIC_KEY` to the browser via
+   `GET /api/account/push-subscription`.
+2. The user clicks **Enable push notifications** in Account → Notifications.
+   The browser asks for permission, then registers with the browser's push
+   service and sends the resulting subscription (`endpoint` + `keys`) to
+   `POST /api/account/push-subscription`.
+3. When a notification is sent (via `sdk.notifications.send` or the admin
+   broadcast), the runtime fan-outs a Web Push message to every active
+   subscription for that user, respecting their muted-category preferences.
+4. The service worker (`runtime/worker/index.ts`, bundled by next-pwa) receives
+   the `push` event and shows an OS-level notification via
+   `self.registration.showNotification`. Clicking the notification opens or
+   focuses the app.
+
+### Stale subscription pruning
+
+When a push service returns `410 Gone` (device deregistered or browser data
+cleared), the platform automatically deletes that subscription from the
+`push_subscriptions` table. No manual cleanup is needed.
+
+### HTTPS requirement
+
+Web Push and the Service Worker API require a **secure context**: `https://` in
+production. `localhost` is the only allowed exception for development. Users
+on plain HTTP will see the opt-in button greyed out with an explanatory message.
+
+### Disabling push
+
+Remove (or comment out) `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` from `.env`
+and restart. The push opt-in UI disappears from Account → Notifications and no
+fan-out attempts are made. Existing subscriptions in the database are ignored
+and can be left in place or deleted with:
+
+```sql
+DELETE FROM push_subscriptions;
+```
+
+---
+
 ## Invite-only registration
 
 When `AUTH_INVITE_ONLY=true`, only users with a valid invite token can

@@ -2,8 +2,8 @@
  * Idempotent dev/test seed (RFC 0019). Populates a dev database with baseline
  * platform data and two per-role test users:
  *
- *   admin@dev.local   password: admin-dev-password   (platform:owner)
- *   user@dev.local    password: user-dev-password    (platform:user)
+ *   admin@sovereign.local   password: admin-dev-password   (platform:owner)
+ *   user@sovereign.local    password: user-dev-password    (platform:user)
  *
  * HARD-GATED TO NON-PROD: refuses to run when NODE_ENV=production unless the
  * SOVEREIGN_SEED_ALLOW_PROD override is set. Never run against a real instance.
@@ -37,13 +37,13 @@ if (process.env.NODE_ENV === 'production' && process.env.SOVEREIGN_SEED_ALLOW_PR
 /** Seed user definitions — exported for use in integration tests. */
 export const SEED_USERS = [
   {
-    email: 'admin@dev.local',
+    email: 'admin@sovereign.local',
     name: 'Dev Admin',
     password: 'admin-dev-password',
     role: 'platform:owner' as const,
   },
   {
-    email: 'user@dev.local',
+    email: 'user@sovereign.local',
     name: 'Dev User',
     password: 'user-dev-password',
     role: 'platform:user' as const,
@@ -167,8 +167,8 @@ async function main(): Promise<void> {
     [
       'Seed complete. Test accounts:',
       '',
-      '  admin@dev.local   password: admin-dev-password   (platform:owner)',
-      '  user@dev.local    password: user-dev-password    (platform:user)',
+      '  admin@sovereign.local   password: admin-dev-password   (platform:owner)',
+      '  user@sovereign.local    password: user-dev-password    (platform:user)',
       '',
       'These are dev-only credentials — NEVER use in production.',
     ].join('\n'),

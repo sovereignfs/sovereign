@@ -26,11 +26,12 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
     setError(null);
     const result = await authClient.signIn.email({ email, password });
     setLoading(false);
-    // twoFactorClient handles the 2FA redirect automatically when it detects
-    // the twoFactorRedirect flag — the page navigates to /login/2fa; no
-    // explicit check is needed here.
     if (result?.error) {
       setError(result.error.message ?? 'Sign in failed.');
+    } else if ((result?.data as Record<string, unknown>)?.twoFactorRedirect) {
+      // twoFactorClient has already navigated to /login/2fa — do NOT redirect
+      // to runtimeUrl here or it overrides the 2FA page navigation, sending
+      // the user to the runtime without a session and looping back to /login.
     } else if (result?.data) {
       window.location.href = runtimeUrl;
     }

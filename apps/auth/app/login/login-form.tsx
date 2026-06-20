@@ -60,9 +60,10 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
           </p>
         ) : null}
         <form className={styles.form} onSubmit={onSubmit}>
-          <label className={styles.field}>
+          <label htmlFor="login-email" className={styles.field}>
             <span className={styles.label}>Email</span>
             <Input
+              id="login-email"
               type="email"
               autoComplete="email"
               required
@@ -70,9 +71,10 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
               onChange={(e) => setEmail(e.target.value)}
             />
           </label>
-          <label className={styles.field}>
+          <label htmlFor="login-password" className={styles.field}>
             <span className={styles.label}>Password</span>
             <Input
+              id="login-password"
               type="password"
               autoComplete="current-password"
               required

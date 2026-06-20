@@ -36,18 +36,20 @@ export function RegisterForm({ runtimeUrl }: { runtimeUrl: string }) {
       <div className={styles.card}>
         <h1 className={styles.title}>Create your account</h1>
         <form className={styles.form} onSubmit={onSubmit}>
-          <label className={styles.field}>
+          <label htmlFor="register-name" className={styles.field}>
             <span className={styles.label}>Name</span>
             <Input
+              id="register-name"
               autoComplete="name"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </label>
-          <label className={styles.field}>
+          <label htmlFor="register-email" className={styles.field}>
             <span className={styles.label}>Email</span>
             <Input
+              id="register-email"
               type="email"
               autoComplete="email"
               required
@@ -55,9 +57,10 @@ export function RegisterForm({ runtimeUrl }: { runtimeUrl: string }) {
               onChange={(e) => setEmail(e.target.value)}
             />
           </label>
-          <label className={styles.field}>
+          <label htmlFor="register-password" className={styles.field}>
             <span className={styles.label}>Password</span>
             <Input
+              id="register-password"
               type="password"
               autoComplete="new-password"
               required

@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import eslintConfigPrettier from 'eslint-config-prettier';
 import globals from 'globals';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 
 export default tseslint.config(
   // Ignore generated, build, and dependency output across the monorepo.
@@ -49,6 +50,14 @@ export default tseslint.config(
         },
       ],
     },
+  },
+
+  // Accessibility: jsx-a11y recommended ruleset applied to all JSX/TSX files.
+  // Enforces WCAG 2.1 AA-compatible patterns for platform and plugin code.
+  {
+    files: ['**/*.{jsx,tsx}'],
+    plugins: { 'jsx-a11y': jsxA11y },
+    rules: jsxA11y.flatConfigs.recommended.rules,
   },
 
   // SDK boundary rule (NFR-06): plugins may only use @sovereignfs/sdk and

@@ -1391,7 +1391,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### Task 0.5.28 — Accessibility audit & a11y contract (RFC 0025)
+#### ✅ Task 0.5.28 — Accessibility audit & a11y contract (RFC 0025)
 
 **Goal:** Reach WCAG 2.1 AA on all platform-owned UI, add automated a11y linting,
 and deliver the plugin developer a11y contract per RFC 0025.

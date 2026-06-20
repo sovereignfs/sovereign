@@ -66,7 +66,6 @@ export function ChallengeForm({ runtimeUrl }: { runtimeUrl: string }) {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               required
-              autoFocus
             />
           </label>
           {error ? <p className={styles.error}>{error}</p> : null}

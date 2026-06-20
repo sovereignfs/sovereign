@@ -32,7 +32,9 @@ describe('Dialog', () => {
         Body
       </Dialog>,
     );
-    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    // Keyboard handler is registered on document (not the dialog element) so
+    // screen readers and keyboard users can dismiss from anywhere in the page.
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledOnce();
   });
 

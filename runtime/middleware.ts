@@ -1,6 +1,7 @@
 import { getCookieCache } from 'better-auth/cookies';
 import { type NextRequest, NextResponse } from 'next/server';
 import { decideApiNamespace, isPublicApiPath } from '@/src/api-namespace';
+import { capabilitiesForRole } from '@/src/capabilities';
 import { getInstalledPlugins } from '@/src/registry';
 import { decidePluginRoute, underPrefix } from '@/src/route-guard';
 import { buildContentSecurityPolicy, generateNonce } from '@/src/security';
@@ -128,8 +129,8 @@ async function verifyViaAuthServer(
  * signed cookie cache and falls back to the auth server's /api/verify (SRS
  * AUTH-05/06). On success the verified user is injected as request headers for
  * downstream server components; otherwise the request is redirected to /login.
- * Routes under an `adminOnly` plugin's prefix are reachable only by
- * `platform:admin` — everyone else gets 403 (SRS §3.4, PLT-03). Routes under a
+ * Routes under an `adminOnly` plugin's prefix require the `console:access`
+ * capability (RFC 0021) — users without it get 403 (SRS §3.4, PLT-03). Routes under a
  * disabled plugin's prefix return 404 (SRS CON-07, PLT-04).
  */
 export async function middleware(request: NextRequest): Promise<NextResponse> {
@@ -217,6 +218,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   headers.set('x-sovereign-user-id', user.id);
   headers.set('x-sovereign-user-email', user.email);
   headers.set('x-sovereign-user-role', user.role);
+  headers.set('x-sovereign-user-capabilities', JSON.stringify(capabilitiesForRole(user.role)));
   headers.set('x-sovereign-session-expires-at', String(expiresAt));
   if (user.name != null) headers.set('x-sovereign-user-name', user.name);
   if (user.image != null) headers.set('x-sovereign-user-image', user.image);

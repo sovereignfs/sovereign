@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import { Icon } from '@sovereignfs/ui';
+import { hasCapability } from '@/src/capabilities';
 import { getInstalledPlugins } from '@/src/registry';
 import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
 import { AccountMenu } from './_components/AccountMenu';
@@ -21,7 +22,7 @@ function monogram(name: string): string {
 export default async function PlatformLayout({ children }: { children: ReactNode }) {
   const h = await headers();
   const role = h.get('x-sovereign-user-role') ?? 'platform:user';
-  const isAdmin = role === 'platform:admin';
+  const isAdmin = hasCapability(role, 'console:access');
 
   const userImage = h.get('x-sovereign-user-image');
   const userLabel = h.get('x-sovereign-user-name') || h.get('x-sovereign-user-email') || '?';

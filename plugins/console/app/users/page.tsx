@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { sdk } from '@sovereignfs/sdk';
 import { changeRoleAction, toggleActiveAction, resetMfaAction } from './actions';
 import styles from '../console.module.css';
 
@@ -29,16 +30,30 @@ function StatusBadge({ status }: { status: MemberRow['status'] }) {
   return <span className={styles.badgeInvited}>Invited</span>;
 }
 
+function RoleBadge({ role }: { role: string | null }) {
+  if (!role) return <span className={styles.textMuted}>—</span>;
+  if (role === 'platform:owner')
+    return <span className={`${styles.badgeAdmin} ${styles.badgeOwner}`}>Owner</span>;
+  if (role === 'platform:admin') return <span className={styles.badgeAdmin}>Admin</span>;
+  if (role === 'platform:auditor') return <span className={styles.badgeAuditor}>Auditor</span>;
+  return <span className={styles.badgeUser}>User</span>;
+}
+
 export default async function UsersPage() {
-  const members = await getMembers();
+  const [members, session] = await Promise.all([getMembers(), sdk.auth.getSession()]);
+
+  const canAssignRoles = sdk.auth.hasCapability(session, 'role:assign');
+  const canManageUsers = sdk.auth.hasCapability(session, 'user:manage');
 
   return (
     <div>
       <div className={styles.pageHeader}>
         <h2 className={styles.pageTitle}>Users</h2>
-        <Link href="/console/users/invite" className={styles.actionButton}>
-          Invite user
-        </Link>
+        {canManageUsers && (
+          <Link href="/console/users/invite" className={styles.actionButton}>
+            Invite user
+          </Link>
+        )}
       </div>
 
       <div className={styles.tableWrapper}>
@@ -53,114 +68,118 @@ export default async function UsersPage() {
             </tr>
           </thead>
           <tbody>
-            {members.map((member) => (
-              <tr key={member.id ?? `invite-${member.email}`} className={styles.tr}>
-                <td className={styles.td}>
-                  <div className={styles.userCell}>
-                    <span className={styles.userName}>{member.name ?? '—'}</span>
-                    <span className={styles.userEmail}>{member.email}</span>
-                  </div>
-                </td>
-
-                <td className={styles.td}>
-                  {member.role ? (
-                    <span
-                      className={
-                        member.role === 'platform:admin' ? styles.badgeAdmin : styles.badgeUser
-                      }
-                    >
-                      {member.role === 'platform:admin' ? 'Admin' : 'User'}
-                    </span>
-                  ) : (
-                    <span className={styles.textMuted}>—</span>
-                  )}
-                </td>
-
-                <td className={styles.td}>
-                  <StatusBadge status={member.status} />
-                </td>
-
-                <td className={styles.td}>
-                  <time dateTime={new Date(member.createdAt).toISOString()}>
-                    {new Date(member.createdAt).toLocaleDateString()}
-                  </time>
-                  {member.expiresAt && (
-                    <span className={styles.expiryNote}>
-                      {' '}
-                      · expires {new Date(member.expiresAt).toLocaleDateString()}
-                    </span>
-                  )}
-                </td>
-
-                <td className={styles.td}>
-                  {member.status !== 'invited' && member.id ? (
-                    <div className={styles.rowActions}>
-                      {/*
-                        `key`s tie each form to the server state it renders. React
-                        19 resets a form after its action runs, which reverts the
-                        uncontrolled <select defaultValue> (role) and the
-                        status-derived button to their pre-submit values even
-                        though the row re-rendered with fresh data. Re-keying on
-                        the value forces a remount so the controls reflect the
-                        change (the Status/Role badges, not being form controls,
-                        already update correctly).
-                      */}
-                      <form
-                        action={changeRoleAction}
-                        className={styles.roleForm}
-                        key={`role-${member.role ?? 'none'}`}
-                      >
-                        <input type="hidden" name="userId" value={member.id} />
-                        <select
-                          name="role"
-                          defaultValue={member.role ?? 'platform:user'}
-                          className={styles.roleSelect}
-                          aria-label={`Role for ${member.email}`}
-                        >
-                          <option value="platform:user">User</option>
-                          <option value="platform:admin">Admin</option>
-                        </select>
-                        <button type="submit" className={styles.actionButtonSmall}>
-                          Save
-                        </button>
-                      </form>
-
-                      <form action={toggleActiveAction} key={`active-${member.status}`}>
-                        <input type="hidden" name="userId" value={member.id} />
-                        <input
-                          type="hidden"
-                          name="active"
-                          value={member.status === 'active' ? 'false' : 'true'}
-                        />
-                        <button
-                          type="submit"
-                          className={
-                            member.status === 'active'
-                              ? styles.deactivateButton
-                              : styles.reactivateButton
-                          }
-                        >
-                          {member.status === 'active' ? 'Deactivate' : 'Reactivate'}
-                        </button>
-                      </form>
-
-                      <form action={resetMfaAction}>
-                        <input type="hidden" name="userId" value={member.id} />
-                        <button
-                          type="submit"
-                          className={styles.resetMfaButton}
-                          title="Remove all TOTP secrets and passkeys so the user can sign in without MFA"
-                        >
-                          Reset MFA
-                        </button>
-                      </form>
+            {members.map((member) => {
+              const isOwner = member.role === 'platform:owner';
+              // Owner row is always read-only; actions also require user:manage.
+              const actionsLocked = isOwner || !canManageUsers;
+              return (
+                <tr key={member.id ?? `invite-${member.email}`} className={styles.tr}>
+                  <td className={styles.td}>
+                    <div className={styles.userCell}>
+                      <span className={styles.userName}>{member.name ?? '—'}</span>
+                      <span className={styles.userEmail}>{member.email}</span>
                     </div>
-                  ) : (
-                    <span className={styles.textMuted}>—</span>
-                  )}
-                </td>
-              </tr>
-            ))}
+                  </td>
+
+                  <td className={styles.td}>
+                    <RoleBadge role={member.role} />
+                  </td>
+
+                  <td className={styles.td}>
+                    <StatusBadge status={member.status} />
+                  </td>
+
+                  <td className={styles.td}>
+                    <time dateTime={new Date(member.createdAt).toISOString()}>
+                      {new Date(member.createdAt).toLocaleDateString()}
+                    </time>
+                    {member.expiresAt && (
+                      <span className={styles.expiryNote}>
+                        {' '}
+                        · expires {new Date(member.expiresAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </td>
+
+                  <td className={styles.td}>
+                    {member.status !== 'invited' && member.id ? (
+                      actionsLocked ? (
+                        <span className={styles.textMuted}>
+                          {isOwner ? 'Owner — protected' : '—'}
+                        </span>
+                      ) : (
+                        <div className={styles.rowActions}>
+                          {/*
+                            `key`s tie each form to the server state it renders. React
+                            19 resets a form after its action runs, which reverts the
+                            uncontrolled <select defaultValue> (role) and the
+                            status-derived button to their pre-submit values even
+                            though the row re-rendered with fresh data. Re-keying on
+                            the value forces a remount so the controls reflect the
+                            change (the Status/Role badges, not being form controls,
+                            already update correctly).
+                          */}
+                          {canAssignRoles && (
+                            <form
+                              action={changeRoleAction}
+                              className={styles.roleForm}
+                              key={`role-${member.role ?? 'none'}`}
+                            >
+                              <input type="hidden" name="userId" value={member.id} />
+                              <select
+                                name="role"
+                                defaultValue={member.role ?? 'platform:user'}
+                                className={styles.roleSelect}
+                                aria-label={`Role for ${member.email}`}
+                              >
+                                <option value="platform:user">User</option>
+                                <option value="platform:auditor">Auditor</option>
+                                <option value="platform:admin">Admin</option>
+                              </select>
+                              <button type="submit" className={styles.actionButtonSmall}>
+                                Save
+                              </button>
+                            </form>
+                          )}
+
+                          <form action={toggleActiveAction} key={`active-${member.status}`}>
+                            <input type="hidden" name="userId" value={member.id} />
+                            <input
+                              type="hidden"
+                              name="active"
+                              value={member.status === 'active' ? 'false' : 'true'}
+                            />
+                            <button
+                              type="submit"
+                              className={
+                                member.status === 'active'
+                                  ? styles.deactivateButton
+                                  : styles.reactivateButton
+                              }
+                            >
+                              {member.status === 'active' ? 'Deactivate' : 'Reactivate'}
+                            </button>
+                          </form>
+
+                          <form action={resetMfaAction}>
+                            <input type="hidden" name="userId" value={member.id} />
+                            <button
+                              type="submit"
+                              className={styles.resetMfaButton}
+                              title="Remove all TOTP secrets and passkeys so the user can sign in without MFA"
+                            >
+                              Reset MFA
+                            </button>
+                          </form>
+                        </div>
+                      )
+                    ) : (
+                      <span className={styles.textMuted}>—</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

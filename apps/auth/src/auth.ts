@@ -83,8 +83,8 @@ function buildOptions(): BetterAuthOptions {
               ]);
             }
 
-            // First user becomes the platform admin.
-            return { data: { ...user, role: isFirst ? 'platform:admin' : 'platform:user' } };
+            // First user becomes the platform owner (RFC 0021).
+            return { data: { ...user, role: isFirst ? 'platform:owner' : 'platform:user' } };
           },
         },
       },

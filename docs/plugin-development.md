@@ -456,13 +456,25 @@ The SDK surface (`sdk.*`):
 - **`auth`** — session and account.
   - `getSession()` → `Session | null`; `requireSession()` → `Session` (throws
     `NotAuthenticatedError` if unauthenticated).
+  - `hasCapability(session, capability)` → `boolean` — checks whether the
+    session holds a given platform capability (RFC 0021). Use this instead of
+    comparing `user.role` directly; the platform may change role-to-capability
+    mappings without changing the role names.
   - `changePassword({ currentPassword, newPassword })`,
     `listSessions()`, `revokeSession(token)`, `signOut()` (ends the current
     session; the caller redirects afterwards).
+
   ```ts
-  const { user } = await sdk.auth.requireSession();
-  // user.id, user.email, user.name, user.image, user.role, user.tenantId
+  const session = await sdk.auth.requireSession();
+  // session.user: { id, email, name, image, role, tenantId, capabilities }
+  const { user } = session;
+
+  // Prefer capability checks over role comparison:
+  if (sdk.auth.hasCapability(session, 'user:manage')) {
+    // current user can manage other users
+  }
   ```
+
 - **`db`** — `getClient()` returns the platform Drizzle client (await it — the
   data layer is dialect-agnostic and async). Query your own slug-prefixed tables
   with it (see Database).

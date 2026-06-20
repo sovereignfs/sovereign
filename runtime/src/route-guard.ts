@@ -5,6 +5,8 @@
  * the verified user's role.
  */
 
+import { hasCapability } from './capabilities';
+
 /** The subset of a plugin manifest the route decision needs. */
 export interface PluginRouteInfo {
   id: string;
@@ -23,8 +25,8 @@ export function underPrefix(pathname: string, routePrefix: string): boolean {
 /**
  * Decide how a request path is handled relative to installed plugins:
  * - under a disabled plugin's prefix → 'not-found' (404, SRS CON-07/PLT-04)
- * - under an adminOnly plugin's prefix without platform:admin → 'forbidden'
- *   (403, SRS §3.4/PLT-03)
+ * - under an adminOnly plugin's prefix without console:access → 'forbidden'
+ *   (403, SRS §3.4/PLT-03; RFC 0021 capability gate)
  * - otherwise → 'ok'
  * Disabled wins over adminOnly: a disabled plugin 404s for everyone.
  */
@@ -37,6 +39,6 @@ export function decidePluginRoute(
   const matched = plugins.find((plugin) => underPrefix(pathname, plugin.routePrefix));
   if (!matched) return 'ok';
   if (disabledIds.has(matched.id)) return 'not-found';
-  if (matched.adminOnly && userRole !== 'platform:admin') return 'forbidden';
+  if (matched.adminOnly && !hasCapability(userRole, 'console:access')) return 'forbidden';
   return 'ok';
 }

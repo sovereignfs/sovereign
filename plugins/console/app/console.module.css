@@ -155,6 +155,7 @@
 .badgeDeactivated,
 .badgeInvited,
 .badgeAdmin,
+.badgeAuditor,
 .badgeUser {
   display: inline-block;
   padding: var(--sv-space-1) var(--sv-space-2);
@@ -175,9 +176,20 @@
   color: var(--sv-color-text-muted);
 }
 
+.badgeOwner {
+  background-color: color-mix(in srgb, var(--sv-color-accent) 18%, transparent);
+  color: var(--sv-color-accent);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
 .badgeAdmin {
   background-color: color-mix(in srgb, var(--sv-color-text-primary) 10%, transparent);
   color: var(--sv-color-text-primary);
+}
+
+.badgeAuditor {
+  background-color: color-mix(in srgb, var(--sv-color-text-muted) 14%, transparent);
+  color: var(--sv-color-text-secondary);
 }
 
 .badgeUser {

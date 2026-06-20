@@ -5,6 +5,8 @@ export interface SessionUser {
   name: string | null;
   image: string | null;
   role: string;
+  /** Effective capability strings derived from the role preset (RFC 0021). */
+  capabilities: readonly string[];
 }
 
 export interface Session {

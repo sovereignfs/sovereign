@@ -18,6 +18,16 @@ export async function PATCH(
   const { id } = await params;
   const body = (await request.json()) as PatchBody;
 
+  // Owner protection (RFC 0021): the platform:owner role cannot be changed,
+  // and the owner account cannot be deactivated. Prevents accidental lockout.
+  const target = await authGet<{ role: string }>('SELECT role FROM "user" WHERE id = ?', [id]);
+  if (target?.role === 'platform:owner' && ('role' in body || 'active' in body)) {
+    return NextResponse.json(
+      { error: 'The platform owner role and account status cannot be changed via this API.' },
+      { status: 403 },
+    );
+  }
+
   const now = new Date().toISOString(); // better-auth stores dates as ISO/timestamp
 
   // `user` is a reserved word in Postgres and the date columns are camelCase, so

@@ -1605,42 +1605,6 @@ supported path to production.
 
 ---
 
-#### Task 0.8.03 — Non-Docker production deployment, Phase 2 — systemd (RFC 0026) **[post-v1]**
-
-**Goal:** Add systemd as a zero-extra-dependency alternative to PM2 for Linux
-server operators (RFC 0026 Phase 2). Phase 1 (PM2) must ship first.
-
-**Deliverables:**
-
-- `bin/sv.ts`: `sv setup systemd [--user <user>] [--dir <dir>] [--env-file <path>]`
-  sub-command writing two pre-filled unit files to the current directory; template
-  logic in `bin/helpers.ts`; unit-tested
-- `docs/examples/sovereign-auth.service`, `docs/examples/sovereign-runtime.service`
-  — canonical unit files (same as `sv setup systemd` defaults): `User=sovereign`,
-  `WorkingDirectory=`, `EnvironmentFile=`, `HOSTNAME=127.0.0.1` on auth,
-  `ExecStartPre` health-poll on the runtime unit, `Restart=on-failure`
-- `docs/self-hosting.md`: "Non-Docker deployment (systemd)" section alongside the
-  PM2 section; covers account creation, `EnvironmentFile` setup, `systemctl enable`,
-  log access via `journalctl`, and the upgrade procedure
-- Document `sv serve` as a valid single-process target under either PM2 or systemd
-  (simplest path for minimal init systems)
-- SRS §3.1: systemd noted as the recommended Linux-native alternative to PM2
-
-**Dependencies:** Task 0.5.29 (Phase 1 — PM2 and `sv serve` health-gate must be
-in place)
-
-**SRS reference:** RFC 0026 Phase 2, SRS §3.1
-
-**Review checklist:**
-
-- `sv setup systemd` produces two syntactically valid unit files with correct
-  `WorkingDirectory`, `EnvironmentFile`, `HOSTNAME`, and `ExecStartPre` health-poll
-- `systemctl start sovereign-runtime` waits for `sovereign-auth` to pass its health
-  check before the runtime process starts
-- `docs/self-hosting.md` systemd section is self-contained alongside the PM2 section
-
----
-
 ## v1
 
 The v1.0 release line and post-release work — net-new features, the capability
@@ -1693,6 +1657,221 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 - A dev-mode request reads only the mock DB; concurrent real requests are unaffected; nothing egresses
 
 ---
+
+#### Task 1.0.03 — White-labeling, Phase 1 — Brand DB + shell injection (RFC 0027) **[post-v1]**
+
+**Goal:** Let operators replace Sovereign's visual identity with their own brand. Phase 1 ships the data layer, CSS token namespace, runtime injection, and the Console branding form. Depends on the `tenant_branding` table and `BrandProvider` being in place before Phases 2 and 3.
+
+**Deliverables:**
+
+- `packages/db` → minor: `tenant_branding` table (dialect-aware DDL, bootstrapped by `bootstrapPlatformDb()` alongside the default-tenant seed); `getTenantBranding(pdb, tenantId)` (merges DB values over `BRAND_*` env defaults); `setTenantBranding(pdb, tenantId, partial)` (upsert; validates `brand_primary` as `/^#[0-9a-fA-F]{6}$/` before writing — raw user input must never reach a `<style>` block unchecked)
+- `packages/ui` → minor: `--sv-brand-logo`, `--sv-brand-logo-dark`, `--sv-brand-favicon` tokens added to `semantic.css` (separate namespace from `--sv-color-*` — brand tokens hold URLs, not colours; they are set once by the operator and do not change with dark mode or user prefs); documented in `docs/design-system.md`
+- `runtime` → minor: `BrandProvider` server component (`runtime/src/brand-provider.tsx`) — reads `tenant_branding`, merges env defaults, renders a `<style>` block setting `--sv-brand-*` tokens and (if `brandPrimary` set) `--sv-color-accent` / `--sv-color-accent-hover` (HSL lightness delta, `ACCENT_HOVER_LIGHTNESS_DELTA = 8`, clamped to stay in range); passes `brandName` as a React prop to children; called from `(platform)/layout.tsx`
+- `runtime` (continued): `GET /api/brand/logo[?dark=1]` and `GET /api/brand/favicon` routes serving uploaded files from `data/brand/` (MIME type validated, 2 MB cap); `POST /api/brand/logo` / `POST /api/brand/favicon` upload routes (admin-gated); all three excluded from the middleware session gate (must load on the login page)
+- `runtime` (continued): `GET /api/admin/tenant-branding` route — returns merged brand config (DB + env defaults) for the auth server proxy in Phase 2
+- `@sovereignfs/sdk` → minor: `sdk.platform.getConfig()` gains `brandName` (falls back to `tenantName`) and `brandPrimaryColor?` (validated hex or undefined), documented in `docs/plugin-development.md`
+- `plugins/console` → minor: new **Branding** section under `/console/settings/branding` — brand name input, logo upload (light + dark) or external URL, primary colour picker (validated hex client + server), favicon upload, email sender name, email logo URL; live preview panel (client-side CSS variable swap); PATCH writes to `tenant_branding`
+- New `BRAND_*` env vars added to `.env.example` and `docs/self-hosting.md`; `docs/plugin-development.md` documents `--sv-brand-*` token usage and the `getConfig()` branding fields
+
+**Dependencies:** Task 0.5.03 (Postgres), Task 0.5.05 (`sdk.platform`), Task 0.5.15 (CSP — `/api/brand/*` must be in the middleware exclusion list alongside `/api/health` and PWA assets)
+
+**SRS reference:** RFC 0027, SRS §3.18
+
+**Review checklist:**
+
+- Brand name set in Console renders in the sidebar header and login page instead of "Sovereign"
+- Uploading a logo serves it from `/api/brand/logo` on the login page (pre-auth, session gate excluded)
+- `brand_primary` write rejects any non-hex value; valid hex sets `--sv-color-accent` via `BrandProvider`
+- `sdk.platform.getConfig()` returns `brandName` and `brandPrimaryColor` (or undefined when unset)
+- `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, and docs-parity test pass
+
+---
+
+#### Task 1.0.04 — White-labeling, Phase 2 — Email templates + auth login page (RFC 0027) **[post-v1]**
+
+**Goal:** Extend white-labeling to outbound email and the auth server's login/registration page. Depends on Phase 1 (`tenant_branding` table and `/api/admin/tenant-branding` endpoint).
+
+**Deliverables:**
+
+- `packages/mailer` → minor: `MailOptions` gains `branding?: { name: string; logoUrl?: string }` parameter; email HTML templates use `branding.name` as the sender display name and render `<img src="logoUrl" alt="name">` with graceful text fallback (hosted URL, not `data:` URI — Gmail and most webmail clients refuse inline base64 images); `packages/mailer/CHANGELOG.md` updated; `docs/plugin-development.md` documents the `branding` option
+- `apps/auth` → minor: root layout fetches `GET <SOVEREIGN_AUTH_URL replaced with runtime>/api/admin/tenant-branding` at render time (proxy approach — one store, no dual-write); result cached in-process with a 60-second TTL to avoid a brand fetch on every login render; `BrandProvider` (duplicated into `apps/auth/src/brand-provider.tsx`, same pattern as the duplicated `security.ts`) renders brand tokens and brand name on the login and registration pages; on fetch failure the layout falls back to Sovereign defaults (graceful degradation)
+- Runtime invite and password-reset email routes pass branding from `getTenantBranding()` to the mailer
+
+**Dependencies:** Task 1.0.03 (Phase 1 — `tenant_branding` table and `/api/admin/tenant-branding` route must exist)
+
+**SRS reference:** RFC 0027 Phase 2, SRS §3.18
+
+**Review checklist:**
+
+- A branded instance shows the operator's logo and name on the login page (not "Sovereign")
+- Invite email renders the operator's sender name in the `From` header; logo `<img>` appears in supported clients; plain-text version uses the brand name
+- Auth server login page falls back to Sovereign defaults if the runtime is unreachable
+
+---
+
+#### Task 1.0.05 — White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) **[post-v1]**
+
+**Goal:** Extend white-labeling to the PWA manifest and favicon so the installed PWA shows the operator's app name and icons. Depends on Phase 1 (brand DB and serving routes).
+
+**Deliverables:**
+
+- `runtime` → minor: `GET /manifest.webmanifest` route — when branding is configured reads `tenant_branding` and returns a dynamic manifest with the operator's `name`, `short_name`, and icon URLs; when no branding is configured the static `runtime/public/manifest.json` continues to be served. Route is excluded from the middleware session gate (required for PWA installability)
+- `runtime` (continued): `GET /favicon.ico` route — returns the tenant's branded favicon when configured, falling back to `runtime/public/favicon.ico`; `runtime/app/layout.tsx` `<head>` metadata updated to point to the dynamic route unconditionally so the fallback is transparent
+- Document in `docs/self-hosting.md`: when branding changes, cached service-worker users see the old name/icons until the SW updates (known limitation, acceptable for v1)
+
+**Dependencies:** Task 1.0.03 (Phase 1 — branded logo served from `/api/brand/logo`; `tenant_branding` table)
+
+**SRS reference:** RFC 0027 Phase 3, SRS §3.18
+
+**Review checklist:**
+
+- `GET /manifest.webmanifest` returns the operator's brand name and icon URLs when configured; returns the static Sovereign manifest when unconfigured
+- `GET /favicon.ico` returns the operator's favicon when configured; falls back to the committed favicon
+- PWA installation on a branded instance shows the operator's name and icons in the OS launcher
+
+---
+
+#### Task 1.0.06 — Non-Docker production deployment, Phase 2 — systemd (RFC 0026) **[post-v1]**
+
+**Goal:** Add systemd as a zero-extra-dependency alternative to PM2 for Linux
+server operators (RFC 0026 Phase 2). Phase 1 (PM2) must ship first.
+
+**Deliverables:**
+
+- `bin/sv.ts`: `sv setup systemd [--user <user>] [--dir <dir>] [--env-file <path>]`
+  sub-command writing two pre-filled unit files to the current directory; template
+  logic in `bin/helpers.ts`; unit-tested
+- `docs/examples/sovereign-auth.service`, `docs/examples/sovereign-runtime.service`
+  — canonical unit files (same as `sv setup systemd` defaults): `User=sovereign`,
+  `WorkingDirectory=`, `EnvironmentFile=`, `HOSTNAME=127.0.0.1` on auth,
+  `ExecStartPre` health-poll on the runtime unit, `Restart=on-failure`
+- `docs/self-hosting.md`: "Non-Docker deployment (systemd)" section alongside the
+  PM2 section; covers account creation, `EnvironmentFile` setup, `systemctl enable`,
+  log access via `journalctl`, and the upgrade procedure
+- Document `sv serve` as a valid single-process target under either PM2 or systemd
+  (simplest path for minimal init systems)
+- SRS §3.1: systemd noted as the recommended Linux-native alternative to PM2
+
+**Dependencies:** Task 0.5.29 (Phase 1 — PM2 and `sv serve` health-gate must be
+in place)
+
+**SRS reference:** RFC 0026 Phase 2, SRS §3.1
+
+**Review checklist:**
+
+- `sv setup systemd` produces two syntactically valid unit files with correct
+  `WorkingDirectory`, `EnvironmentFile`, `HOSTNAME`, and `ExecStartPre` health-poll
+- `systemctl start sovereign-runtime` waits for `sovereign-auth` to pass its health
+  check before the runtime process starts
+- `docs/self-hosting.md` systemd section is self-contained alongside the PM2 section
+
+---
+
+#### Task 1.0.07 — Operator fork model & upstream sync (RFC 0028) **[post-v1]**
+
+**Goal:** Publish the operator fork model documentation and add the "Maintaining a fork" section to `docs/self-hosting.md`. This is a documentation-only task — no code, no version bumps.
+
+**Deliverables:**
+
+- `docs/rfcs/0028-operator-fork-model.md` — the RFC (already drafted)
+- `docs/self-hosting.md` — "Maintaining a fork" section: two-track summary (config-only vs fork-and-track), `operator/` directory convention, upstream sync command sequence, isolation principle, asset management guidance
+- `docs/sovereign-proposal-plan-srs.md` — §2.7 pointer + decision-log row (already added in RFC documentation pass)
+- `docs/rfcs/README.md` — RFC 0028 row updated from Draft to Accepted
+
+**Optional follow-on (separate task):** `sv fork check` CLI command — reads `operator/UPSTREAM`, compares against the latest upstream tag, and warns if the fork is behind.
+
+**Dependencies:** None hard. RFC 0027 (Task 1.0.03) should ship first so the "Post-RFC 0027 asset management" recommendation in the RFC is actionable.
+
+**SRS reference:** RFC 0028, SRS §2.7
+
+**Review checklist:**
+
+- `docs/self-hosting.md` "Maintaining a fork" section is self-contained; a reader can follow it from fork setup through first upstream sync without consulting the RFC
+- The two-track model, isolation principle, AGPL table, and rebase workflow are consistent between the RFC and the self-hosting doc
+- RFC 0028 status in `docs/rfcs/README.md` updated to Accepted
+
+---
+
+#### Task 1.0.08 — Storybook for the design system and app shell **[post-v1]**
+
+**Goal:** Give component authors, plugin developers, and designers a live, isolated environment to develop and inspect every `@sovereignfs/ui` component and its token context. Storybook 8 is the choice — it has native CSS Modules support (via `@storybook/nextjs`), the best a11y addon ecosystem, and wide team familiarity. No RFC is warranted: this is developer tooling with no runtime surfaces, no SDK changes, and no architectural trade-offs that need RFC-level documentation. The decision rationale is recorded in the SRS decision log.
+
+**Scope:**
+
+Phase 1 (this task) targets `packages/ui` exclusively. The `runtime` App Router shell uses React Server Components heavily — Storybook's RSC support is immature as of mid-2026; RSC stories are a follow-on tracked under "Optional extensions" below.
+
+**Deliverables:**
+
+- **Storybook installation (`packages/ui`):**
+  - `@storybook/nextjs` (Vite builder) + `storybook` CLI as devDependencies in `packages/ui/package.json`; versions pinned in the pnpm catalog (new `"storybook"` catalog entry, referenced as `"catalog:"`)
+  - `.storybook/main.ts` — framework: `@storybook/nextjs`, addons (see below), `stories` glob targeting `src/**/*.stories.tsx`
+  - `.storybook/preview.ts` — global decorator importing the full token stack (`primitives.css`, `semantic.css`); `data-theme` parameter wired so the themes addon toggles dark mode correctly
+  - `packages/ui/package.json` gains `"storybook": "storybook dev -p 6006"` and `"build-storybook": "storybook build --output-dir storybook-static"` scripts
+  - `packages/ui/.storybook/` added to `.prettierignore` (generated config files should not be linted)
+
+- **Addons:**
+  - `@storybook/addon-a11y` — accessibility panel; every story must pass WCAG 2.1 AA checks; a11y failures treated as errors in CI
+  - `@storybook/addon-viewport` — responsive preview (mobile 375px, tablet 768px, desktop 1280px presets matching the shell breakpoints)
+  - `@storybook/addon-themes` — single decorator toggles `[data-theme="dark"]` on the canvas root; eliminates the need for per-story dark variants
+  - `@storybook/addon-docs` — auto-generates prop tables from TypeScript types; used for `ComponentName.stories.tsx` `meta.parameters.docs` entries
+
+- **Token Gallery story (`src/stories/TokenGallery.stories.tsx`):**
+  - One story per token tier — Colour (semantic, both themes side-by-side), Space scale, Typography scale, Radius scale, Shadow scale, Icon sizes
+  - Reads CSS custom properties at render time via `getComputedStyle(document.documentElement)` — always reflects the actual loaded CSS, not a hardcoded snapshot
+  - Dark mode toggle shows both themes on the same canvas for comparison
+
+- **Component stories (one `*.stories.tsx` per component):**
+  - `Button` — all `variant` × `size` combinations; loading state; disabled; icon-only
+  - `Card` — default, with header/footer slots, interactive (clickable)
+  - `Input` — text/email/password types; error state; disabled; with label
+  - `Badge` — all variants
+  - `Dialog` — `sm`/`md`/`lg` sizes; `open`/`closed`; trigger interaction (Storybook `play` function using `@storybook/test`)
+  - `Drawer` — mobile breakpoint (viewport addon at 375px); open/closed; with list items
+  - `Icon` — full icon grid (all 26 names from `IconName`); `sm`/`md`/`lg` sizes; `aria-label` vs `aria-hidden` variants
+
+- **Monorepo integration:**
+  - `turbo.json`: add `"build-storybook"` to the `pipeline` with `dependsOn: ["^build"]` and `outputs: ["storybook-static/**"]`; Storybook dev (`pnpm storybook`) is not a Turborepo task — it runs ad-hoc
+  - Root `package.json` gains `"storybook": "pnpm --filter @sovereignfs/ui storybook"` and `"build-storybook": "pnpm --filter @sovereignfs/ui build-storybook"` scripts for convenience
+  - `storybook-static/` added to root `.gitignore`
+
+- **CI (`storybook-build` job in `.github/workflows/ci.yml`):**
+  - Runs `pnpm build-storybook` — catches stories that fail to compile or reference missing tokens
+  - Fails on a11y errors via `--test` flag (Storybook 8 CLI test mode)
+  - Runs on the same draft-PR exclusion logic as the existing jobs
+  - Uploads `storybook-static/` as a CI artifact (7-day retention) for PR preview inspection without deploying a Storybook hosting service
+
+- **Documentation:**
+  - `docs/design-system.md` gains a "Component stories (Storybook)" section: how to run (`pnpm storybook`), what the Token Gallery shows, how to add a story for a new component, the a11y policy
+  - `docs/plugin-development.md` notes that `@sovereignfs/ui` ships with Storybook stories developers can run locally to explore the component API
+
+**Optional extensions (follow-on tasks, not in scope here):**
+
+- **Visual regression testing (Chromatic):** requires a paid Chromatic account; added as a follow-on when the team is ready. The `build-storybook` CI artifact enables manual visual comparison in the interim.
+- **`runtime` client-component stories:** once Storybook's RSC story support matures, extend to `runtime/app/_components/` client components (avatar popover, `ActivePluginTitle`, `MobileNav`, etc.). Tracked as a future task.
+- **Plugin developer guide stories:** example stories shipped in `plugins/fs.sovereign.example-basic/` demonstrating how a plugin consumes `@sovereignfs/ui` components in Storybook.
+
+**Dependencies:** Task 0.3.07 (`packages/ui` scaffold must exist — ✅ already merged), Task 0.5.17 (Icon system — all `IconName` values needed for the Icon story — ✅ already merged)
+
+**Version impact:** `packages/ui` → **minor** (adds a new developer-facing capability; no breaking changes to the published component API)
+
+**SRS reference:** SRS §3.19 (design system tooling), NFR-10 (documentation completeness)
+
+**Review checklist:**
+
+- `pnpm storybook` starts the dev server at `:6006` with all stories rendering; Token Gallery correctly reads both light and dark theme token values
+- `pnpm build-storybook` exits 0; a11y check passes on all stories
+- Dialog and Drawer stories: the `play` function opens and dismisses the component; keyboard navigation works (Tab, Esc); focus trap confirmed in the a11y panel
+- Icon story renders all 26 icons with correct sizes; `aria-hidden` icons have no accessible name; `aria-label` icons are announced correctly
+- Dark mode toggle in the Storybook toolbar applies `[data-theme="dark"]` to the canvas root and all semantic colour tokens update immediately
+- CI `storybook-build` job is green; artifact is uploaded
+
+---
+
+_Version 1.23 — June 2026. Planning change (no task completed, no version bumps): (1) Corrected duplicate task numbering — RFC 0028 operator fork model task renumbered from 1.0.06 to 1.0.07 (1.0.06 is already occupied by Non-Docker/systemd deployment, RFC 0026). (2) Added Task 1.0.08 — Storybook for `@sovereignfs/ui` design system (no RFC needed — developer tooling; Storybook 8 + `@storybook/nextjs`, Token Gallery, all component stories, a11y addon, CI build job). SRS decision-log row added (v0.28). Earlier notes retained._
+
+_Version 1.22 — June 2026. Planning change (no task completed, no version bumps): Operator fork model (RFC 0028) incorporated as a documentation-only post-v1 task (originally numbered 1.0.06; corrected to 1.0.07 in v1.23). Mirrored in SRS v0.27 (§2.7 pointer + decision-log row). Earlier notes retained._
+
+_Version 1.21 — June 2026. Planning change (no task completed, no version bumps): White-labeling / tenant branding (RFC 0027) incorporated as three post-v1 tasks (1.0.03–1.0.05) in Phase v1.0+. Phase 1 ships the data layer + shell injection + Console branding form + SDK extension; Phase 2 adds branded email templates and auth login page branding; Phase 3 adds dynamic PWA manifest and favicon route. Mirrored in SRS v0.26 (§3.18, §4.6, decision-log row). Earlier notes retained._
 
 _Version 1.20 — June 2026. **Task 0.5.18 — Registry contribution process** completed and merged. New `registry/plugins.json` public discovery index — each entry is a **thin record** `{ id, repository: { type: git|path, url }, name, description, tags? }` (a pointer to the source + display metadata, **not** a copy of the manifest; the manifest is fetched from the source at install time, avoiding drift). Lists only third-party plugins; the array starts empty and grows by submission. Adds `registryEntrySchema` + `validateRegistryEntry` to `@sovereignfs/manifest` (**0.7.0 → 0.8.0**, additive `feat`). Entries carry author/license/homepage/keywords + an optional pinned `repository.ref`. A validation pipeline — `scripts/validate-registry.ts` (`pnpm registry:validate` / `registry:check`) — clones each source, validates its manifest + LICENSE, and records `provenance` (resolved commit + sha256 content hash over the source tree); a `.github/workflows/registry-validate.yml` job gated by `paths: ['registry/**']` re-verifies on registry changes only. Used by `registry/__tests__` (wired into `vitest.config.ts`) + `registry/CONTRIBUTING.md` + a directory-based `.github/PULL_REQUEST_TEMPLATE/registry-submission.md` + a "Submitting to the registry" section in `docs/plugin-development.md`. Earlier notes retained._
 

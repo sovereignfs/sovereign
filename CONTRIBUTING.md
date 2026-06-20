@@ -58,10 +58,10 @@ your working tree manually.
 `sv seed` inserts two known-password test users into the auth database so you
 can sign in immediately without registering manually:
 
-| Email             | Password             | Role             |
-| ----------------- | -------------------- | ---------------- |
-| `admin@dev.local` | `admin-dev-password` | `platform:owner` |
-| `user@dev.local`  | `user-dev-password`  | `platform:user`  |
+| Email                   | Password             | Role             |
+| ----------------------- | -------------------- | ---------------- |
+| `admin@sovereign.local` | `admin-dev-password` | `platform:owner` |
+| `user@sovereign.local`  | `user-dev-password`  | `platform:user`  |
 
 ```bash
 pnpm sv seed

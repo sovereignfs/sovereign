@@ -1,12 +1,20 @@
+/* Hidden by default — only rendered on mobile (mirrors the old .mobileFooter
+   display:none convention in shell.module.css). */
 .footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--sv-space-2) var(--sv-space-4);
-  /* Sit above the home indicator in standalone mode. */
-  padding-bottom: max(var(--sv-space-2), env(safe-area-inset-bottom));
-  background-color: var(--sv-color-surface);
-  border-top: 1px solid var(--sv-color-border);
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sv-space-2) var(--sv-space-4);
+    /* Sit above the home indicator in standalone mode. */
+    padding-bottom: max(var(--sv-space-2), env(safe-area-inset-bottom));
+    background-color: var(--sv-color-surface);
+    border-top: 1px solid var(--sv-color-border);
+  }
 }
 
 .appsButton {

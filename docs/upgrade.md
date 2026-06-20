@@ -107,6 +107,20 @@ For source builds, `git checkout <previous-commit>` before rebuilding.
 The root `package.json` version tracks roadmap milestones. Notes below call out
 any required configuration changes, schema changes, or action required.
 
+### v0.21 → v0.22
+
+- **Plugin-declared capabilities (RFC 0022).** Plugins may now declare a
+  `capabilities` field in `manifest.json` to express fine-grained, namespaced
+  permissions (e.g. `my-plugin:create-item`). This is an additive manifest
+  change — existing manifests without a `capabilities` field are unaffected.
+- **No action required for operators.** The platform automatically injects
+  capabilities declared with `defaultGrant: "all"` into every authenticated
+  session. Plugin authors who want to adopt the feature should see the new
+  `### capabilities (RFC 0022)` section in `docs/plugin-development.md`.
+- **`@sovereignfs/manifest` → 0.13.0** (minor, no breaking changes). The
+  internal manifest schema adds the optional `capabilities` field and exports a
+  new `pluginCapabilityName(pluginId, capName)` helper.
+
 ### v0.20 → v0.21
 
 - **Platform roles expanded to four (RFC 0021).** The `platform:admin` role is

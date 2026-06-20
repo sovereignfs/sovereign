@@ -54,6 +54,13 @@ user as `x-sovereign-user-*` headers for downstream server components, enforces
 `adminOnly` (403) and disabled-plugin (404) rules, and serves the configured
 root plugin at `/`. Plugin routes are composed into the App Router at build time.
 
+**Capabilities** flow from two sources: platform-role presets (11 built-in
+capabilities derived from the user's role, RFC 0021) and plugin-declared
+capabilities with `defaultGrant: "all"` (injected from the generated
+`plugin-capabilities.ts`, RFC 0022). Both are serialised into the
+`x-sovereign-user-capabilities` header so `sdk.auth.hasCapability` can resolve
+them synchronously in any server component or route handler without a DB call.
+
 ## Plugin system & manifest (SRS §3.5, §3.8, §3.9)
 
 Each plugin ships a strict `manifest.json` (validated at build — invalid manifest
@@ -74,10 +81,19 @@ promises.
 
 ## SDK (SRS §3.6)
 
-`@sovereignfs/sdk` exposes `auth`, `db`, `mailer`, `platform` (implemented) and
-`storage`, `notifications`, `events`, `data` (reserved, post-v1). It is published
-to npm as a public contract for plugin developers; `DrizzleClient` is kept
-opaque so the published SDK takes no dialect dependency.
+`@sovereignfs/sdk` exposes:
+
+- **Stable (v1 guarantee, NFR-04):** `auth`, `db`, `mailer`, `platform`.
+- **Implemented, experimental:** `data` (cross-plugin data sharing, RFC 0002),
+  `activity` (activity log, RFC 0005), `portability` (user data export/import,
+  RFC 0007), `env` (plugin-scoped env vars, RFC 0018).
+- **Reserved (throw `NotImplementedError` until their backing mechanisms ship):**
+  `storage`, `notifications`, `events`.
+
+The package is published to npm with zero runtime dependencies — implementations
+are host-provided by the runtime at startup via `provideHost()`, so plugins can
+type-check and lint in isolation without a full platform checkout. `DrizzleClient`
+is kept opaque so the published SDK takes no dialect dependency.
 
 ## PWA (SRS §3.11)
 
@@ -96,10 +112,10 @@ telemetry**. Threat model and a self-hoster hardening checklist live in
 
 ## Post-v1 (specified, not built)
 
-Native mobile via a Capacitor shell + `sdk.device.*` (SRS §3.12), consent-gated
-cross-plugin data sharing via `sdk.data` (SRS §3.13, RFC 0002), and at-rest /
-field-level / zero-knowledge encryption (SRS §3.17 Tiers 2–4, RFC 0008) are
-designed but out of scope for v1.
+Native mobile via a Capacitor shell + `sdk.device.*` (SRS §3.12), the
+Notification Center (RFC 0015), Web Push (RFC 0016), and at-rest / field-level /
+zero-knowledge encryption (SRS §3.17 Tiers 2–4, RFC 0008) are designed but out
+of scope for v1.
 
 ## Design proposals (RFCs)
 

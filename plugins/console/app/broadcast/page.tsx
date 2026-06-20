@@ -38,14 +38,10 @@ export default function BroadcastPage() {
     setResult(null);
 
     try {
-      const adminKey = '';
       const res = await fetch('/api/admin/broadcast', {
         method: 'POST',
         credentials: 'same-origin',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-key': adminKey,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipientUserIds: ids,
           title: title.trim(),

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPlatformSetting, sendNotification, setPlatformSetting } from '@sovereignfs/db';
 import { randomUUID } from 'node:crypto';
+import { hasCapability } from '@/src/capabilities';
 import { checkAdminKey } from '@/src/admin-guard';
 import { getPlatformDb } from '@/src/db';
 
@@ -8,14 +9,23 @@ import { getPlatformDb } from '@/src/db';
 const BROADCAST_COOLDOWN_SECS = 60;
 
 /**
- * POST /api/admin/broadcast — send a notification to all users.
+ * POST /api/admin/broadcast — send a notification to one or more users.
  *
- * Rate-limited to once per 60 seconds. Requires the admin API key.
- * Body: `{ recipientUserIds: string[], title: string, body?: string, url?: string, category?: string }`
+ * Accepts either:
+ *   - `Authorization: Bearer <SOVEREIGN_ADMIN_KEY>` (programmatic / API access), or
+ *   - a session with `console:access` capability (browser Console UI — the
+ *     middleware injects `x-sovereign-user-role` on all platform routes).
+ *
+ * Rate-limited to once per 60 seconds.
  */
 export async function POST(request: Request): Promise<Response> {
-  const denied = checkAdminKey(request);
-  if (denied) return denied;
+  const role = request.headers.get('x-sovereign-user-role');
+  const sessionOk = role && hasCapability(role, 'console:access');
+  if (!sessionOk) {
+    // Fall back to API key auth for programmatic callers.
+    const denied = checkAdminKey(request);
+    if (denied) return denied;
+  }
 
   const body = (await request.json()) as {
     recipientUserIds: string[];

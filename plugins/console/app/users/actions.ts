@@ -68,6 +68,27 @@ export async function toggleActiveAction(formData: FormData): Promise<void> {
   revalidatePath('/console/users');
 }
 
+export async function resetMfaAction(formData: FormData): Promise<void> {
+  await sdk.auth.requireSession();
+  const userId = formData.get('userId') as string;
+  const res = await adminFetch(`/api/admin/users/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ resetMfa: true }),
+  });
+  if (!res.ok) throw new Error(`Failed to reset MFA: ${res.status}`);
+  void logActivity({
+    actorId: await actorId(),
+    actorType: 'user',
+    action: 'user.mfa_reset',
+    subjectUserId: userId,
+    targetType: 'user',
+    targetId: userId,
+    visibility: 'user',
+    summary: 'MFA reset by admin',
+  });
+  revalidatePath('/console/users');
+}
+
 export type InviteState =
   | { success: true; token: string; email: string }
   | { success: false; error: string };

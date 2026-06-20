@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { cookies, headers } from 'next/headers';
+import QRCode from 'qrcode';
 import { sdk } from '@sovereignfs/sdk';
 import { validatePasswordChange } from './_lib/password';
 
@@ -26,6 +27,19 @@ async function invalidateSessionCache(): Promise<void> {
   // The `__Secure-`-prefixed name (production, HTTPS) can only be unset with the
   // Secure attribute, so clear it explicitly rather than via delete().
   jar.set('__Secure-better-auth.session_data', '', { maxAge: 0, path: '/', secure: true });
+}
+
+/** Call a better-auth endpoint, forwarding the current session cookie. */
+async function authPost(path: string, body: Record<string, unknown>): Promise<Response> {
+  return fetch(`${AUTH_URL}/api/auth${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      cookie: await sessionCookie(),
+      origin: AUTH_URL,
+    },
+    body: JSON.stringify(body),
+  });
 }
 
 /** Change the display name (ACC-02). Delegates to better-auth's update-user. */
@@ -113,4 +127,141 @@ export async function revokeSessionAction(formData: FormData): Promise<void> {
   await sdk.auth.revokeSession(token);
   void sdk.activity.log({ action: 'account.session_revoked', summary: 'Session revoked' });
   revalidatePath('/account/security');
+}
+
+// ── TOTP (RFC 0012) ──────────────────────────────────────────────────────
+
+export type TotpSetupState =
+  | { ok: true; totpURI: string; qrDataUrl: string }
+  | { ok: false; error: string }
+  | null;
+
+/**
+ * Start TOTP enrollment: fetch the TOTP URI from better-auth and render the QR
+ * code server-side so no QR library is needed client-side. The URI is returned
+ * for display alongside the QR image (accessible text fallback).
+ */
+export async function getTotpSetupAction(
+  _prev: TotpSetupState,
+  formData: FormData,
+): Promise<TotpSetupState> {
+  await sdk.auth.requireSession();
+  const password = (formData.get('password') as string | null) ?? '';
+  if (!password) return { ok: false, error: 'Password is required.' };
+
+  const res = await authPost('/two-factor/get-totp-uri', { password });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => null)) as { message?: string } | null;
+    return { ok: false, error: data?.message ?? 'Failed to get setup URI.' };
+  }
+  const { totpURI } = (await res.json()) as { totpURI: string };
+  const qrDataUrl = await QRCode.toDataURL(totpURI, { width: 200, margin: 1 });
+  return { ok: true, totpURI, qrDataUrl };
+}
+
+export type TotpEnableState =
+  | { ok: true; backupCodes: string[] }
+  | { ok: false; error: string }
+  | null;
+
+/**
+ * Complete TOTP enrollment: enable TOTP for the user, then generate backup
+ * codes (shown once — the user must save them before dismissing).
+ */
+export async function enableTotpAction(
+  _prev: TotpEnableState,
+  formData: FormData,
+): Promise<TotpEnableState> {
+  await sdk.auth.requireSession();
+  const password = (formData.get('password') as string | null) ?? '';
+  if (!password) return { ok: false, error: 'Password is required.' };
+
+  const enableRes = await authPost('/two-factor/enable', { password });
+  if (!enableRes.ok) {
+    const data = (await enableRes.json().catch(() => null)) as { message?: string } | null;
+    return { ok: false, error: data?.message ?? 'Failed to enable TOTP.' };
+  }
+
+  const codesRes = await authPost('/two-factor/generate-backup-codes', { password });
+  if (!codesRes.ok) {
+    const data = (await codesRes.json().catch(() => null)) as { message?: string } | null;
+    return {
+      ok: false,
+      error: data?.message ?? 'TOTP enabled but failed to generate backup codes.',
+    };
+  }
+  const { codes } = (await codesRes.json()) as { codes: string[] };
+  await invalidateSessionCache();
+  void sdk.activity.log({ action: 'account.totp_enabled', summary: 'TOTP two-factor enabled' });
+  revalidatePath('/account/security');
+  return { ok: true, backupCodes: codes };
+}
+
+export type TotpDisableState = { ok: true } | { ok: false; error: string } | null;
+
+/** Disable TOTP and remove backup codes. Requires password re-confirmation. */
+export async function disableTotpAction(
+  _prev: TotpDisableState,
+  formData: FormData,
+): Promise<TotpDisableState> {
+  await sdk.auth.requireSession();
+  const password = (formData.get('password') as string | null) ?? '';
+  if (!password) return { ok: false, error: 'Password is required.' };
+
+  const res = await authPost('/two-factor/disable', { password });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => null)) as { message?: string } | null;
+    return { ok: false, error: data?.message ?? 'Failed to disable TOTP.' };
+  }
+  await invalidateSessionCache();
+  void sdk.activity.log({ action: 'account.totp_disabled', summary: 'TOTP two-factor disabled' });
+  revalidatePath('/account/security');
+  return { ok: true };
+}
+
+export type BackupCodesState = { ok: true; codes: string[] } | { ok: false; error: string } | null;
+
+/** Regenerate backup codes (requires password). The old codes are invalidated. */
+export async function regenerateBackupCodesAction(
+  _prev: BackupCodesState,
+  formData: FormData,
+): Promise<BackupCodesState> {
+  await sdk.auth.requireSession();
+  const password = (formData.get('password') as string | null) ?? '';
+  if (!password) return { ok: false, error: 'Password is required.' };
+
+  const res = await authPost('/two-factor/generate-backup-codes', { password });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => null)) as { message?: string } | null;
+    return { ok: false, error: data?.message ?? 'Failed to regenerate backup codes.' };
+  }
+  const { codes } = (await res.json()) as { codes: string[] };
+  void sdk.activity.log({
+    action: 'account.backup_codes_regenerated',
+    summary: 'Backup codes regenerated',
+  });
+  return { ok: true, codes };
+}
+
+// ── Passkeys (RFC 0012) ──────────────────────────────────────────────────
+
+export type PasskeyDeleteState = { ok: true } | { ok: false; error: string } | null;
+
+/** Remove a registered passkey by ID. */
+export async function deletePasskeyAction(
+  _prev: PasskeyDeleteState,
+  formData: FormData,
+): Promise<PasskeyDeleteState> {
+  await sdk.auth.requireSession();
+  const id = (formData.get('id') as string | null) ?? '';
+  if (!id) return { ok: false, error: 'Passkey ID is required.' };
+
+  const res = await authPost('/passkey/delete-passkey', { id });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => null)) as { message?: string } | null;
+    return { ok: false, error: data?.message ?? 'Failed to remove passkey.' };
+  }
+  void sdk.activity.log({ action: 'account.passkey_removed', summary: 'Passkey removed' });
+  revalidatePath('/account/security');
+  return { ok: true };
 }

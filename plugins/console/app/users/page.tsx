@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { changeRoleAction, toggleActiveAction } from './actions';
+import { changeRoleAction, toggleActiveAction, resetMfaAction } from './actions';
 import styles from '../console.module.css';
 
 interface MemberRow {
@@ -141,6 +141,17 @@ export default async function UsersPage() {
                           }
                         >
                           {member.status === 'active' ? 'Deactivate' : 'Reactivate'}
+                        </button>
+                      </form>
+
+                      <form action={resetMfaAction}>
+                        <input type="hidden" name="userId" value={member.id} />
+                        <button
+                          type="submit"
+                          className={styles.resetMfaButton}
+                          title="Remove all TOTP secrets and passkeys so the user can sign in without MFA"
+                        >
+                          Reset MFA
                         </button>
                       </form>
                     </div>

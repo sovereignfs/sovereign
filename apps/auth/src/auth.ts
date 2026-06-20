@@ -1,6 +1,8 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { APIError } from 'better-auth/api';
 import { nextCookies } from 'better-auth/next-js';
+import { twoFactor } from 'better-auth/plugins/two-factor';
+import { passkey } from '@better-auth/passkey';
 import { authGet, authRun, getAuthDatabase } from './db';
 import { getEnv } from './env';
 import { readInviteOnlySetting, resolveInviteOnly } from './settings';
@@ -87,7 +89,20 @@ function buildOptions(): BetterAuthOptions {
         },
       },
     },
-    plugins: [nextCookies()],
+    plugins: [
+      nextCookies(),
+      twoFactor({
+        issuer: env.webAuthnRpName,
+        // Backup codes (10 codes). OTP (email/SMS) is omitted — no sendOTP
+        // configured, so those endpoints are effectively inert (RFC 0012).
+        backupCodeOptions: { amount: 10 },
+      }),
+      passkey({
+        rpID: env.webAuthnRpId,
+        rpName: env.webAuthnRpName,
+        origin: env.webAuthnOrigin.length === 1 ? env.webAuthnOrigin[0] : env.webAuthnOrigin,
+      }),
+    ],
   };
 }
 

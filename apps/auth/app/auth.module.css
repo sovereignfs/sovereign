@@ -58,6 +58,23 @@
   border-radius: var(--sv-radius-md);
 }
 
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  margin: var(--sv-space-2) 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: var(--sv-color-border);
+}
+
 .footer {
   margin-top: var(--sv-space-6);
   font-size: var(--sv-font-size-sm);

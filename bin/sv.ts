@@ -481,9 +481,27 @@ const seed = defineCommand({
   },
 });
 
+const RESET_MFA = join(SCRIPTS_DIR, 'reset-mfa.ts');
+
+const userResetMfa = defineCommand({
+  meta: {
+    name: 'reset-mfa',
+    description: "Clear a user's TOTP secrets and passkeys (break-glass)",
+  },
+  args: { email: { type: 'positional', required: true, description: "User's email address" } },
+  run({ args }) {
+    run('tsx', [RESET_MFA, args.email]);
+  },
+});
+
+const user = defineCommand({
+  meta: { name: 'user', description: 'User management utilities' },
+  subCommands: { 'reset-mfa': userResetMfa },
+});
+
 const main = defineCommand({
   meta: { name: 'sv', description: 'Sovereign deployment CLI' },
-  subCommands: { install, generate, build, dev, serve, seed, backup, restore, plugin },
+  subCommands: { install, generate, build, dev, serve, seed, backup, restore, plugin, user },
 });
 
 void runMain(main);

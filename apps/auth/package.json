@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/auth",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@better-auth/passkey": "^1.6.19",
     "@next/env": "^16.2.9",
     "@sovereignfs/ui": "workspace:*",
     "better-auth": "^1.6.16",

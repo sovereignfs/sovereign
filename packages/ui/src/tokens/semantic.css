@@ -27,6 +27,16 @@
 
   --sv-color-focus-ring: var(--sv-grey-900);
 
+  /* Status surfaces — warning (amber) and success (green).
+     Use these for banners, badges, and inline validation UI.
+     Never hardcode amber/green hex in components — reference these tokens. */
+  --sv-color-warning-surface: var(--sv-amber-100);
+  --sv-color-warning-text: var(--sv-amber-800);
+  --sv-color-warning-border: var(--sv-amber-200);
+  --sv-color-success-surface: var(--sv-green-100);
+  --sv-color-success-text: var(--sv-green-800);
+  --sv-color-success-border: var(--sv-green-200);
+
   /* Overlay surfaces (Dialog/Sheet): the scrim behind a dialog and the panel's
      elevation shadow. Composed rgba layers, like --sv-shadow-card. */
   --sv-color-scrim: rgba(0, 0, 0, 0.5);
@@ -51,6 +61,13 @@
   --sv-color-accent-hover: var(--sv-grey-200);
 
   --sv-color-focus-ring: var(--sv-grey-100);
+
+  --sv-color-warning-surface: var(--sv-amber-900);
+  --sv-color-warning-text: var(--sv-amber-200);
+  --sv-color-warning-border: var(--sv-amber-800);
+  --sv-color-success-surface: var(--sv-green-900);
+  --sv-color-success-text: var(--sv-green-200);
+  --sv-color-success-border: var(--sv-green-800);
 
   --sv-color-scrim: rgba(0, 0, 0, 0.65);
 

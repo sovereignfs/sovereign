@@ -319,6 +319,15 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   `/login` (middleware, logout route) must target the **public** auth URL
   (`SOVEREIGN_AUTH_PUBLIC_URL`), never the internal `SOVEREIGN_AUTH_URL`
   (`auth:3001`), which the browser cannot resolve in Docker.
+- **`'use client'` components must never read browser APIs (`navigator`, `window`,
+  `localStorage`, etc.) inside a `useState` initializer or during render.** The
+  server renders without those globals, producing different HTML than the client
+  and triggering a React hydration error. The pattern: always initialise state to
+  a server-safe value (e.g. `useState('online')`), then read the browser API
+  inside `useEffect` and call the setter if needed. The one-frame delay before
+  the UI reflects the real browser state is imperceptible. `OfflineBanner` is the
+  canonical example — it initialises to `'online'` and checks `navigator.onLine`
+  in `useEffect` (`runtime/app/(platform)/_components/OfflineBanner.tsx`).
 - **Never read `NEXT_PUBLIC_*` env vars for a value that must vary per deployment
   at run time.** Next.js inlines `process.env.NEXT_PUBLIC_*` literals at **build
   time** into every bundle (client and server); the Docker images build without

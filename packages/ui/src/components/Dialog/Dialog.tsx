@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useCallback, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import styles from './Dialog.module.css';
 
 export type DialogSize = 'sm' | 'md' | 'lg' | 'full';
@@ -50,40 +50,55 @@ export function Dialog({
     return () => previouslyFocused.current?.focus();
   }, [open]);
 
-  const onKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (event.key === 'Escape') {
-        event.stopPropagation();
+  // Keyboard handling: Escape closes, Tab cycles within the panel (focus trap).
+  // Attached at document level so no keyboard listener is needed on the dialog
+  // div itself (which would trigger jsx-a11y/no-noninteractive-element-interactions).
+  useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
         onClose();
         return;
       }
-      if (event.key !== 'Tab') return;
+      if (e.key !== 'Tab') return;
       const panel = panelRef.current;
       if (!panel) return;
       const focusable = [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)];
       const first = focusable[0];
       const last = focusable.at(-1);
       if (!first || !last) {
-        event.preventDefault();
+        e.preventDefault();
         return;
       }
       const active = document.activeElement;
-      if (event.shiftKey && active === first) {
-        event.preventDefault();
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
         first.focus();
       }
-    },
-    [onClose],
-  );
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
 
   if (!open) return null;
 
   return (
-    <div className={styles.scrim} onClick={onClose}>
-      {/* Stop propagation so clicks inside the panel don't dismiss. */}
+    // role="presentation" removes the scrim from the AT (it is purely visual).
+    // e.target check lets clicks inside the panel bubble without triggering dismiss.
+    <div
+      className={styles.scrim}
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
+    >
       <div
         ref={panelRef}
         role="dialog"
@@ -91,8 +106,6 @@ export function Dialog({
         aria-label={ariaLabel}
         tabIndex={-1}
         className={[styles.panel, styles[size]].join(' ')}
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={onKeyDown}
       >
         <button type="button" className={styles.close} aria-label="Close" onClick={onClose}>
           ×

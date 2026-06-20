@@ -101,10 +101,13 @@ variables are available globally to every plugin.
 
 ### Status colours
 
-A minimal warning (amber) and success (green) palette for banners, badges, and inline validation. Always reference these tokens — never hardcode amber or green hex in a component or plugin.
+A minimal error (red), warning (amber), and success (green) palette for banners, badges, and inline validation. Always reference these tokens — never hardcode colour hex in a component or plugin.
 
 | Token                        | Light     | Dark      | Role                              |
 | ---------------------------- | --------- | --------- | --------------------------------- |
+| `--sv-color-error-surface`   | red-100   | red-900   | Error banner / badge background   |
+| `--sv-color-error-text`      | red-800   | red-200   | Text on error surface             |
+| `--sv-color-error-border`    | red-200   | red-700   | Error surface border              |
 | `--sv-color-warning-surface` | amber-100 | amber-900 | Warning banner / badge background |
 | `--sv-color-warning-text`    | amber-800 | amber-200 | Text on warning surface           |
 | `--sv-color-warning-border`  | amber-200 | amber-800 | Warning surface border            |
@@ -112,7 +115,55 @@ A minimal warning (amber) and success (green) palette for banners, badges, and i
 | `--sv-color-success-text`    | green-800 | green-200 | Text on success surface           |
 | `--sv-color-success-border`  | green-200 | green-800 | Success surface border            |
 
-These tokens are backed by `--sv-amber-*` and `--sv-green-*` primitive swatches defined in `primitives.css`. The primitives are fixed across themes; only the semantic mapping changes.
+These tokens are backed by `--sv-red-*`, `--sv-amber-*`, and `--sv-green-*` primitive swatches defined in `primitives.css`. The primitives are fixed across themes; only the semantic mapping changes.
+
+**WCAG 2.1 AA contrast commitment:** every status colour pair satisfies the minimum contrast requirements — 4.5:1 for text (≥18px bold or ≥24px regular), 3:1 for UI components and graphical objects. Test with the `--sv-color-*-text` token over its matching `--sv-color-*-surface`.
+
+### Accessibility
+
+#### Focus visible
+
+Every interactive component in `@sovereignfs/ui` exposes a `:focus-visible` outline referencing `--sv-color-focus-ring`. Third-party plugins must do the same — never suppress the focus ring with `outline: none` without providing an equivalent visible indicator.
+
+```css
+/* Reference implementation (used in Button, Input, etc.): */
+:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+```
+
+#### Reduced motion
+
+Animated components honour `prefers-reduced-motion: reduce`. The `OfflineBanner` slide-in animation is suppressed when the user has requested reduced motion. Any new animated component must follow the same pattern:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  .myComponent {
+    animation: none;
+    transition: none;
+  }
+}
+```
+
+#### Per-component a11y contract
+
+| Component | Role / element  | Keyboard                      | ARIA                                                                 | Focus order                               |
+| --------- | --------------- | ----------------------------- | -------------------------------------------------------------------- | ----------------------------------------- |
+| `Button`  | `<button>`      | Enter / Space activate        | `disabled` attribute                                                 | Natural                                   |
+| `Input`   | `<input>`       | Standard field editing        | `type`, `required`, `aria-invalid` via parent                        | Natural; label via `htmlFor`+`id`         |
+| `Dialog`  | `role="dialog"` | Esc close, Tab/Shift-Tab trap | `aria-modal="true"`, `aria-label` required                           | First focusable on open; restore on close |
+| `Drawer`  | `role="dialog"` | Esc close, Tab/Shift-Tab trap | `aria-modal="true"`, `aria-label` required                           | First focusable on open; restore on close |
+| `Icon`    | SVG             | Not focusable                 | `aria-hidden` (decorative) or `aria-label`+`role="img"` (meaningful) | N/A                                       |
+
+**Label association:** the `Input` component spreads all native `<input>` props, including `id`. Always pair it with an explicit `htmlFor` on the label — `jsx-a11y` cannot trace through the custom wrapper to verify implicit association.
+
+```tsx
+<label htmlFor="user-email">
+  Email
+  <Input id="user-email" type="email" />
+</label>
+```
 
 ## Building a component
 

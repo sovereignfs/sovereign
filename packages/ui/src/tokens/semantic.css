@@ -27,9 +27,12 @@
 
   --sv-color-focus-ring: var(--sv-grey-900);
 
-  /* Status surfaces — warning (amber) and success (green).
+  /* Status surfaces — error (red), warning (amber), success (green).
      Use these for banners, badges, and inline validation UI.
-     Never hardcode amber/green hex in components — reference these tokens. */
+     Never hardcode colour hex in components — reference these tokens. */
+  --sv-color-error-surface: var(--sv-red-100);
+  --sv-color-error-text: var(--sv-red-800);
+  --sv-color-error-border: var(--sv-red-200);
   --sv-color-warning-surface: var(--sv-amber-100);
   --sv-color-warning-text: var(--sv-amber-800);
   --sv-color-warning-border: var(--sv-amber-200);
@@ -62,6 +65,9 @@
 
   --sv-color-focus-ring: var(--sv-grey-100);
 
+  --sv-color-error-surface: var(--sv-red-900);
+  --sv-color-error-text: var(--sv-red-200);
+  --sv-color-error-border: var(--sv-red-700);
   --sv-color-warning-surface: var(--sv-amber-900);
   --sv-color-warning-text: var(--sv-amber-200);
   --sv-color-warning-border: var(--sv-amber-800);

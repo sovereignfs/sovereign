@@ -621,6 +621,117 @@ Never edit the composed copies under
 `runtime/app/(platform)/(plugins)/` — they are generated and git-ignored. Your
 `plugins/<id>/` directory is the source of truth.
 
+## Accessibility
+
+Sovereign targets **WCAG 2.1 AA** on all platform-owned UI, and plugin developers are expected to ship accessible plugins. The `eslint-plugin-jsx-a11y` recommended ruleset is enforced across the entire monorepo — `pnpm lint` will catch common violations at build time.
+
+### Semantic HTML
+
+Use the correct native element for the job. Browsers provide free keyboard behaviour, role announcements, and focus management:
+
+- `<button>` for actions, `<a>` for navigation, `<input>` for form fields
+- `<nav>`, `<main>`, `<section>`, `<header>`, `<footer>` for landmarks
+- `<ul>` / `<ol>` + `<li>` for lists — never add `role="list"` (it is implicit on `<ul>`)
+- `<table>` / `<th>` / `<td>` for tabular data — not CSS grids dressed as tables
+
+### Form labels
+
+Every form control must have a visible, programmatically associated label. The `Input` component accepts `id` and spreads it to the underlying `<input>` — always pair it with `htmlFor`:
+
+```tsx
+<label htmlFor="plugin-title">
+  Title
+  <Input id="plugin-title" type="text" value={title} onChange={...} />
+</label>
+```
+
+Placeholder text is not a label — it disappears on input and is never announced as the field's accessible name.
+
+### Icon accessibility
+
+The `<Icon>` component from `@sovereignfs/ui` enforces the correct pattern via prop types:
+
+```tsx
+// Decorative icon (next to visible text) — hide from screen readers
+<Icon name="trash-2" size="md" aria-hidden />
+
+// Meaningful icon (no adjacent text) — provide a label
+<Icon name="log-out" aria-label="Sign out" />
+```
+
+Never use emoji or Unicode symbols as icons in interactive UI — they have inconsistent screen-reader announcements.
+
+### Keyboard operability
+
+Every feature a mouse user can reach must be reachable by keyboard alone:
+
+- All interactive elements must be in the tab order (or reachable via a documented keyboard shortcut)
+- Custom widgets (menus, comboboxes, trees, carousels) must follow the [ARIA Authoring Practices Guide](https://www.w3.org/WAI/ARIA/apg/) keyboard conventions for their role
+- Never use `div` or `span` with `onClick` — use `<button>` or an element with an appropriate role, `tabIndex`, and keyboard handler
+
+### Colour independence
+
+Never convey meaning through colour alone. Pair colour with an icon, label, or pattern:
+
+```tsx
+// ✗ colour-only: fails for colour-blind users
+<span style={{ color: 'red' }}>Error</span>
+
+// ✓ colour + text/icon
+<span className={styles.error}>
+  <Icon name="alert-circle" aria-hidden />
+  Error: field is required
+</span>
+```
+
+Use `--sv-color-error-*`, `--sv-color-warning-*`, and `--sv-color-success-*` tokens (not hardcoded hex) so the palette remains consistent and accessible in dark mode.
+
+### Live regions
+
+For status messages that appear without a page reload (async saves, error toasts, form validation), use `role="status"` (polite) or `role="alert"` (assertive) so screen readers announce the change:
+
+```tsx
+{
+  error && (
+    <p role="alert" className={styles.error}>
+      {error}
+    </p>
+  );
+}
+{
+  saved && (
+    <p role="status" className={styles.notice}>
+      Saved.
+    </p>
+  );
+}
+```
+
+### Reduced motion
+
+Animate only when the user has not requested reduced motion:
+
+```css
+.mySlideIn {
+  animation: slideIn 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mySlideIn {
+    animation: none;
+  }
+}
+```
+
+### Custom ARIA patterns
+
+If you must build a custom interactive widget (tabs, accordion, carousel), follow the [WAI-ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/) for the corresponding pattern. Key points:
+
+- Assign the correct `role` to the container and children
+- Manage `aria-selected`, `aria-expanded`, `aria-controls`, `aria-labelledby` as the pattern requires
+- Implement the full keyboard model (arrow keys, Home/End, Enter/Space) expected for that role
+- Ensure focus is moved programmatically when content changes visibility
+
 ## Publishing & the registry
 
 To distribute a plugin, set `type` to `sovereign` or `community` and point

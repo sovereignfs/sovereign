@@ -58,7 +58,7 @@ export function MobileNav({ plugins }: { plugins: PluginEntry[] }) {
           </button>
         </div>
         <nav aria-label="Installed plugins">
-          <ul className={styles.drawerList} role="list">
+          <ul className={styles.drawerList}>
             {plugins.map((plugin) => (
               <li key={plugin.id}>
                 <Link

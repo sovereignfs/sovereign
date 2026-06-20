@@ -10,7 +10,7 @@
   /* Neutral grey scale (monochrome identity) */
   --sv-white: #ffffff;
 
-  /* Status colour primitives — amber (warning) and green (success).
+  /* Status colour primitives — amber (warning), green (success), red (error).
      Kept minimal: only the swatches the semantic status tokens reference. */
   --sv-amber-100: #fef3c7;
   --sv-amber-200: #fde68a;
@@ -20,6 +20,11 @@
   --sv-green-200: #bbf7d0;
   --sv-green-800: #166534;
   --sv-green-900: #14532d;
+  --sv-red-100: #fee2e2;
+  --sv-red-200: #fecaca;
+  --sv-red-700: #b91c1c;
+  --sv-red-800: #991b1b;
+  --sv-red-900: #7f1d1d;
   --sv-black: #000000;
   --sv-grey-50: #fafafa;
   --sv-grey-100: #f4f4f5;

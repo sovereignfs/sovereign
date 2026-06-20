@@ -36,3 +36,10 @@
     transform: translateY(0);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .offline,
+  .reconnected {
+    animation: none;
+  }
+}

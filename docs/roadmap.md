@@ -1471,6 +1471,31 @@ supported path to production.
 
 ---
 
+#### ✅ Task 0.5.30 — Offline connectivity banner (PWA shell)
+
+**Goal:** Surface connectivity status to users who are already in an authenticated session when their network drops. The hard-offline case (navigating to an uncached page) was already handled by the `/offline` fallback route; this task covers the soft-offline case — the network disappears while the user is on a page.
+
+**Deliverables:**
+
+- `@sovereignfs/ui` → **minor** (0.7.0): status colour tokens — `--sv-color-warning-surface/text/border` (amber) and `--sv-color-success-surface/text/border` (green); backed by new `--sv-amber-*` / `--sv-green-*` primitive swatches; documented in `docs/design-system.md` "Status colours" section
+- `runtime` → **minor** (0.20.0): `OfflineBanner` client component (`runtime/app/(platform)/_components/OfflineBanner.tsx`) — initialises to `'online'` server-safely (avoids SSR hydration mismatch), then checks `navigator.onLine` in `useEffect`; listens to `window` `offline`/`online` events; amber "No internet connection" banner persists until reconnected; green "Back online" flash auto-dismisses after 3 s (coincides with `reloadOnOnline` SW reload); `position: fixed; top: 0; z-index: 200` (above the mobile header's `z-index: 101`); 200 ms slide-in animation; uses `alert-triangle` icon and `--sv-color-warning-*` / `--sv-color-success-*` tokens
+- Wired into both `(platform)/layout.tsx` and `(minimal)/layout.tsx`; excluded from `/offline` (implicit there)
+- `CLAUDE.md` gains the browser-API / `useState` hydration rule: never read `navigator`/`window`/`localStorage` in a `useState` initializer — initialise to a server-safe value and read in `useEffect`
+
+**Dependencies:** Task 0.5.01 (PWA — `reloadOnOnline`), Task 0.5.17 (Icon — `alert-triangle`), Task 0.5.25 (mobile shell — z-index context)
+
+**SRS reference:** SRS §3.11 (PWA)
+
+**Review checklist:**
+
+- DevTools → Network → Offline: amber banner slides in immediately; no hydration error in dev or production build
+- DevTools → Network → Online: green "Back online" flash appears then dismisses after ~3 s; page reloads from SW
+- Loading from SW cache while offline: amber banner present on mount (not deferred until a network event)
+- Mobile (< 768 px): banner is above the sticky header; `z-index: 200` > header's `101`
+- Dark mode: dark amber/green tokens render correctly
+
+---
+
 ### Phase v0.6 — User roles & capabilities
 
 #### Task 0.6.01 — Platform roles & capabilities (RFC 0021)
@@ -1866,6 +1891,14 @@ Phase 1 (this task) targets `packages/ui` exclusively. The `runtime` App Router 
 - CI `storybook-build` job is green; artifact is uploaded
 
 ---
+
+_Version 1.23 — June 2026. Planning change (no task completed, no version bumps): (1) Corrected duplicate task numbering — RFC 0028 operator fork model task renumbered from 1.0.06 to 1.0.07 (1.0.06 is already occupied by Non-Docker/systemd deployment, RFC 0026). (2) Added Task 1.0.08 — Storybook for `@sovereignfs/ui` design system (no RFC needed — developer tooling; Storybook 8 + `@storybook/nextjs`, Token Gallery, all component stories, a11y addon, CI build job). SRS decision-log row added (v0.28). Earlier notes retained._
+
+_Version 1.22 — June 2026. Planning change (no task completed, no version bumps): Operator fork model (RFC 0028) incorporated as a documentation-only post-v1 task (originally numbered 1.0.06; corrected to 1.0.07 in v1.23). Mirrored in SRS v0.27 (§2.7 pointer + decision-log row). Earlier notes retained._
+
+_Version 1.24 — June 2026. **Task 0.5.30 — Offline connectivity banner** completed and merged. Thin fixed banner surfaces connectivity status (soft-offline case — hard-offline was already covered by the `/offline` SW fallback). `@sovereignfs/ui` → 0.7.0 (warning/success status colour tokens); `runtime` → 0.20.0. CLAUDE.md gains the browser-API / `useState` SSR hydration rule. SRS v0.29. Earlier notes retained._
+
+
 
 _Version 1.23 — June 2026. Planning change (no task completed, no version bumps): (1) Corrected duplicate task numbering — RFC 0028 operator fork model task renumbered from 1.0.06 to 1.0.07 (1.0.06 is already occupied by Non-Docker/systemd deployment, RFC 0026). (2) Added Task 1.0.08 — Storybook for `@sovereignfs/ui` design system (no RFC needed — developer tooling; Storybook 8 + `@storybook/nextjs`, Token Gallery, all component stories, a11y addon, CI build job). SRS decision-log row added (v0.28). Earlier notes retained._
 

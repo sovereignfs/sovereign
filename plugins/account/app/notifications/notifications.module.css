@@ -54,3 +54,15 @@
   font-size: var(--sv-font-size-sm);
   color: var(--sv-color-success-text);
 }
+
+.pushWarning {
+  margin: var(--sv-space-2) 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-warning-text, var(--sv-color-text-secondary));
+}
+
+.pushError {
+  margin-top: var(--sv-space-2);
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-error-text);
+}

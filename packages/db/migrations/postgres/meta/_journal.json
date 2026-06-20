@@ -15,6 +15,13 @@
       "when": 1781986224104,
       "tag": "0001_parallel_whirlwind",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781990772637,
+      "tag": "0002_broken_scorpion",
+      "breakpoints": true
     }
   ]
 }

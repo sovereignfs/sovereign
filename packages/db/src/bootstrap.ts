@@ -117,5 +117,14 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       poll_interval_secs INTEGER NOT NULL DEFAULT 30,
       updated_at ${ts} NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      endpoint TEXT NOT NULL UNIQUE,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      created_at ${ts} NOT NULL
+    )`,
   ];
 }

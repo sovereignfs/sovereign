@@ -210,10 +210,30 @@ export const notificationPrefs = sqliteTable('notification_prefs', {
   updatedAt: integer('updated_at').notNull(),
 });
 
+/**
+ * Browser Web Push subscriptions (RFC 0016). One row per device per user.
+ * Endpoint is unique — re-subscription from the same device upserts.
+ * Rows are pruned when the push service returns 410 (Gone).
+ */
+export const pushSubscriptions = sqliteTable('push_subscriptions', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  /** The push service endpoint URL (unique per browser/device). */
+  endpoint: text('endpoint').notNull().unique(),
+  /** ECDH public key (base64url) for payload encryption. */
+  p256dh: text('p256dh').notNull(),
+  /** HMAC auth secret (base64url). */
+  auth: text('auth').notNull(),
+  createdAt: integer('created_at').notNull(),
+});
+
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 export type NotificationPrefs = typeof notificationPrefs.$inferSelect;
 export type NewNotificationPrefs = typeof notificationPrefs.$inferInsert;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;
 export type ConsentGrant = typeof consentGrants.$inferSelect;
 export type NewConsentGrant = typeof consentGrants.$inferInsert;
 export type DataAccessLogEntry = typeof dataAccessLog.$inferSelect;

@@ -15,6 +15,13 @@
       "when": 1781986223770,
       "tag": "0001_silly_nuke",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1781990772309,
+      "tag": "0002_watery_paibok",
+      "breakpoints": true
     }
   ]
 }

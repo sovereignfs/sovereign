@@ -149,6 +149,13 @@
   font-size: var(--sv-font-size-xs);
 }
 
+.userId {
+  font-family: monospace;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-tertiary);
+  user-select: all;
+}
+
 /* ── Badges ─────────────────────────────────────────────────────────────── */
 
 .badgeActive,

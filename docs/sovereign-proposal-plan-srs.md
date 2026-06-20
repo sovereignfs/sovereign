@@ -46,6 +46,7 @@
    - 3.15 [Deployment & Upgrade Strategy (RFC 0006)](#315-deployment--upgrade-strategy-rfc-0006)
    - 3.16 [User Data Portability (RFC 0007)](#316-user-data-portability-rfc-0007)
    - 3.17 [Security & Encryption Architecture (RFC 0008)](#317-security--encryption-architecture-rfc-0008)
+   - 3.18 [White-labeling (RFC 0027) (post-v1 plan)](#318-white-labeling-rfc-0027-post-v1-plan)
 
 4. [Software Requirements Specification](#4-software-requirements-specification)
    - 4.1 [User Roles and Capabilities](#41-user-roles-and-capabilities)
@@ -351,6 +352,14 @@ A complete reference deployment (platform + Tasks + Splitify + Plainwrite) requi
 - **Third-party plugins:** Any license, declared in `manifest.json`
 - **Contributor License Agreement:** Required before merging PRs (as per v1 precedent)
 - **Dual licensing:** Commercial license available for organisations needing to operate the runtime privately without AGPL obligations (contact maintainer)
+
+**Fork model:** Operators who need custom compiled-in plugins or who are building
+a commercial OEM derivative should follow the fork model documented in RFC 0028
+(`docs/rfcs/0028-operator-fork-model.md`). The key principle: never modify
+upstream-owned files; add only to the fork-safe zone (`operator/`,
+`plugins/<operator-id>/`). This keeps `git rebase upstream/main` conflict-free.
+AGPL triggers on distribution, not private self-hosted use; community plugins
+(`plugins/<operator-*>/`) are MIT-SDK-bound and carry no AGPL copyleft.
 
 ---
 
@@ -778,6 +787,80 @@ only the zero-knowledge tier does. Amends §3.15 (encrypted backups) and §3.16
 zero-knowledge E2EE (Tiers 2–4) are **post-v1** (Task 1.0.01). Deferred per
 RFC 0008.
 
+### 3.18 White-labeling (RFC 0027) (post-v1 plan)
+
+Let any Sovereign operator replace Sovereign's visual identity with their own
+brand. An operator deploys Sovereign as the core and customises the logo, app
+name, favicon, colours, and email sender identity per tenant. The same
+infrastructure enables the dual-licensing model (AGPL + commercial) where a
+closed-source derivative ships under an operator's own brand.
+
+**Config layering:** env-var defaults merged with per-tenant DB overrides. Env
+vars define the baseline at deploy time; the `tenant_branding` table stores
+per-tenant overrides. Single-tenant operators get a pure env-var experience;
+multi-tenant operators configure each tenant in Console.
+
+**New `BRAND_*` env vars (all optional, Sovereign defaults apply when unset):**
+`BRAND_NAME`, `BRAND_LOGO`, `BRAND_LOGO_DARK`, `BRAND_FAVICON`,
+`BRAND_PRIMARY_COLOR` (sets `--sv-color-accent`), `BRAND_EMAIL_FROM_NAME`,
+`BRAND_EMAIL_LOGO`.
+
+**`tenant_branding` table** (`packages/db`): dialect-aware DDL bootstrapped
+alongside the default-tenant seed. Written via `setTenantBranding()` (upsert);
+read via `getTenantBranding()` which merges DB values over env defaults.
+`brand_primary` is validated hex `/^#[0-9a-fA-F]{6}$/` at write time — a
+malformed value injected into a `<style>` block would be CSS injection.
+
+**`--sv-brand-*` token namespace** (separate from `--sv-color-*` semantic
+tokens): `--sv-brand-logo`, `--sv-brand-logo-dark`, `--sv-brand-favicon`. Brand
+tokens carry URLs, not colours; they are set by the operator once and do not
+change with dark mode. The brand name is a React prop from `BrandProvider`, not
+a CSS custom property — CSS `content:` cannot supply rendered text content.
+
+**`BrandProvider`** (`runtime/src/brand-provider.tsx`): React server component.
+Reads `tenant_branding` from the platform DB, merges with env defaults, renders
+a `<style>` block setting `--sv-brand-*` tokens and (if `brandPrimary` is set)
+`--sv-color-accent` / `--sv-color-accent-hover` (HSL lightness delta derivation,
+`ACCENT_HOVER_LIGHTNESS_DELTA = 8`). Called from `(platform)/layout.tsx` and
+the auth server root layout. No in-process brand cache — the per-request render
+boundary provides isolation; brand values change rarely.
+
+**Logo serving and CSP:** uploaded logos stored at `data/brand/<tenant_id>.<ext>`
+(same volume as `data/avatars/`), served by `GET /api/brand/logo[?dark=1]` and
+`GET /api/brand/favicon` — excluded from the middleware session gate (must load
+on the login page). MIME type validated + 2 MB cap at upload. External URLs
+entered by the operator are stored as-is; the preferred approach for CSP
+compliance is proxying through `/api/brand/proxy?url=…` (keeps `img-src 'self'`
+strict) rather than widening `img-src`.
+
+**Auth server login page:** obtains brand values by fetching
+`GET <runtime>/api/admin/tenant-branding` at render time (proxy approach — one
+store, no dual-write). Fails gracefully to Sovereign defaults if the runtime is
+unreachable. An in-memory TTL cache (60 s) prevents a brand fetch on every login
+render.
+
+**Email templates:** `packages/mailer` `MailOptions` gains an optional
+`branding?: { name, logoUrl? }` parameter. Hosted URL (not `data:` URI — Gmail
+and most webmail strip base64 URIs); template degrades gracefully with text
+fallback when images are blocked.
+
+**PWA manifest:** becomes a served route (`GET /manifest.webmanifest`) when
+branding is configured. Cached SW users see the old name/icons until the SW
+updates — acceptable for v1; documented in `docs/self-hosting.md`.
+
+**`sdk.platform.getConfig()` extension:** gains `brandName` (falls back to
+`tenantName`) and `brandPrimaryColor?` (validated hex or undefined), enabling
+plugins to display the instance name and primary colour without reading CSS
+variables.
+
+**Phasing (post-v1):** Phase 1 — `tenant_branding` table, env vars,
+`--sv-brand-*` tokens, `BrandProvider`, Console branding form, `getConfig()`
+extension. Phase 2 — branded email templates, auth login page branding via
+runtime proxy. Phase 3 — dynamic PWA manifest route, dynamic favicon route.
+Published packages (`@sovereignfs/ui`, `@sovereignfs/sdk`) receive additive
+minor bumps only. See RFC 0027 (`docs/rfcs/0027-white-labeling.md`) for the
+full design and security analysis.
+
 ---
 
 ## 4. Software Requirements Specification
@@ -888,6 +971,7 @@ Granular per-user capability overrides and per-plugin role assignments are expli
 - Per-plugin permission assignment for individual users
 - Public-facing plugin marketplace or install UI
 - Federated instances
+- White-labeling / tenant branding (planned post-v1 — see §3.18 for the decided approach)
 
 ---
 
@@ -1045,8 +1129,17 @@ type Permission =
 | Jun 2026 | Test organization (RFC 0010) incorporated: boundary-based layout — within-package tests (unit/component/visual + within-package integration) live in per-directory `__tests__/`; cross-service integration + e2e live at root `/__tests__/`. Task 0.5.16                                                                                                                                                                                                                                                                                                                                                     | Placement should follow the boundary a test crosses, not its type label; in a Turborepo monorepo a test belongs to the package owning the code (locality + per-package runs), so "integration" is not one location. e2e (Playwright) and visual are reserved with no dependencies added yet.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Jun 2026 | Icon system (RFC 0011) incorporated: adopt Lucide via a curated set generated into the design system as inline SVGs behind a Sovereign `<Icon>`; `lucide` is a build-time devDependency only (zero runtime/peer dep); replace chrome monograms/emoji; render plugin `icon.svg` safely. Task 0.5.17                                                                                                                                                                                                                                                                                                           | No icon system existed (monograms + an OS-dependent `⚙` emoji), yet the platform's own `icon.svg` already follows Lucide's 24×24 stroke/`currentColor` convention. ISC license + bundling fit NFR-02 and the no-telemetry stance; generating SVGs honors the design system's "zero extra dependencies" rule and RFC 0008's supply-chain ethos. Plugin SVGs are untrusted (rendered via `<img>`/sanitized, never `dangerouslySetInnerHTML`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Jun 2026 | Package codenames (RFC 0009 — `ui`→`mosaic`, `mailer`→`dispatch`, `db`→`database`) withdrawn/deferred                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Reconsidered and not pursued at this time. The pre-publish rename window stays open (nothing is on npm yet), so it can be revisited before first publish without breakage. RFC 0009 marked Withdrawn.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Jun 2026 | Operator fork model & upstream sync (RFC 0028) documented: two tracks (config-only = recommended; fork-and-track = for committed custom plugins or OEM distribution); isolation principle (never modify core-locked files: `runtime/`, `packages/`, `apps/`, core plugins); fork-safe zone (`operator/`, `plugins/<operator-id>/`); rebase-over-merge upstream sync; `operator/UPSTREAM` version tracking; AGPL compliance table. Full design in `docs/rfcs/0028-operator-fork-model.md`. §2.7 updated with pointer.                                                                                         | Most self-hosters need no fork — env vars + community plugins + RFC 0027 branding cover the full surface. The fork model is for operators who need custom plugins compiled into the same image (air-gapped or proprietary) or who are building a commercial OEM derivative. The isolation principle makes the fork directly analogous to the SDK boundary rule: just as plugins must not import `runtime/src`, fork operators must not modify upstream files. Rebase over merge keeps history linear and conflicts localised to the operator's own changes; when the isolation principle is respected, rebase produces zero conflicts. Custom community plugins use only the MIT SDK/UI and carry no AGPL copyleft regardless of distribution scenario.                                                                                                                                                                                                                                                                                                                                                 |
+| Jun 2026 | White-labeling / tenant branding (RFC 0027) incorporated as a **post-v1** plan (§3.18): `tenant_branding` table + `BRAND_*` env vars + `--sv-brand-*` token namespace + `BrandProvider` + Console branding form + `getConfig()` extension (Phase 1); branded email templates + auth login page via runtime proxy (Phase 2); dynamic PWA manifest + favicon route (Phase 3). Full design in `docs/rfcs/0027-white-labeling.md`. Tasks 1.0.03–1.0.05                                                                                                                                                           | The existing infrastructure (`tenant_id`, `tenants` table, `platform_settings`, design-system token architecture) already points toward this capability; what was missing was a structured `tenant_branding` table, a dedicated `--sv-brand-*` token namespace, and a delivery mechanism for the runtime, auth server, email, and PWA. CSS variable injection achieves the visual result without forking any template. `platform_settings` is not used as a branding store (untyped, unstructured; brand values benefit from explicit columns). Brand name is a React prop from `BrandProvider`, not a CSS custom property — `content:` on pseudo-elements does not work for rendered text. Auth server branding obtained via proxy to runtime (one store, no dual-write) — the dual-write approach is appropriate for invite-only (safety-critical boolean) but not for 7 cosmetic fields where a stale value is cosmetically wrong, not a security failure. `data:` URI email logo rejected — Gmail and most webmail refuse to render them.                                                           |
+| Jun 2026 | Storybook 8 chosen for `@sovereignfs/ui` design system documentation (Task 1.0.08, post-v1). No RFC — pure developer tooling, no runtime surface, no SDK/manifest/DB change. `@storybook/nextjs` (Vite builder) with `addon-a11y`, `addon-viewport`, `addon-themes`. Token Gallery story + one story per component. CI `storybook-build` job with a11y enforcement. RSC stories deferred until Storybook RSC support matures.                                                                                                                                                                                | Alternatives considered: **Ladle** (fast, Vite-native, but minimal addon ecosystem — no a11y addon), **Histoire** (Vue-first, React support immature), **Docz** (stagnant since 2022). Storybook 8 is the only option with mature CSS Modules support (`@storybook/nextjs`), a production-ready a11y addon (`addon-a11y`), dark mode toggling for CSS custom property themes, and widespread team familiarity. Scoped to `packages/ui` because App Router RSC components cannot be rendered in Storybook without significant workarounds; client-component stories in `runtime` added as a follow-on.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 ---
+
+_Version 0.28 — June 2026. Storybook for `@sovereignfs/ui` added as post-v1 Task 1.0.08. Decision-log row added. No architecture section needed (developer tooling only — no runtime surface, SDK, permission, or schema change)._
+
+_Version 0.27 — June 2026. Operator fork model (RFC 0028) documented. §2.7 gains a "Fork model" paragraph pointing to RFC 0028; one decision-log row added. No architecture section needed (purely process/convention guidance). No SDK surface change, no permission change, no schema change._
+
+_Version 0.26 — June 2026. White-labeling / tenant branding (RFC 0027) incorporated as a post-v1 plan. New §3.18; §4.6 gains "White-labeling" as an out-of-scope v1 item; decision-log row added. Roadmap gains Tasks 1.0.03–1.0.05 (three phases). No SDK surface change, no permission change, no schema change in v1._
 
 _Version 0.25 — June 2026. Post-implementation refinement of the overlay shell (Task 0.5.09, RFC 0001 open questions 2 & 4 resolved): §5 manifest reference gains the optional `shellConfig` object with `overlaySize` (`sm`/`md`/`lg`, default `lg`, valid only for `shell: "overlay"`); §3.8 records that overlay dialogs are fixed-size (never content-driven) and that intra-overlay navigation must use `replace` so a single `router.back()` dismisses the dialog. No new requirement or permission; implementation-only (already merged)._
 

@@ -99,6 +99,21 @@ variables are available globally to every plugin.
 | `--sv-shadow-card`          | composed shadow | composed shadow | Card elevation             |
 | `--sv-shadow-overlay`       | composed shadow | composed shadow | Dialog / overlay elevation |
 
+### Status colours
+
+A minimal warning (amber) and success (green) palette for banners, badges, and inline validation. Always reference these tokens — never hardcode amber or green hex in a component or plugin.
+
+| Token                        | Light     | Dark      | Role                              |
+| ---------------------------- | --------- | --------- | --------------------------------- |
+| `--sv-color-warning-surface` | amber-100 | amber-900 | Warning banner / badge background |
+| `--sv-color-warning-text`    | amber-800 | amber-200 | Text on warning surface           |
+| `--sv-color-warning-border`  | amber-200 | amber-800 | Warning surface border            |
+| `--sv-color-success-surface` | green-100 | green-900 | Success banner / badge background |
+| `--sv-color-success-text`    | green-800 | green-200 | Text on success surface           |
+| `--sv-color-success-border`  | green-200 | green-800 | Success surface border            |
+
+These tokens are backed by `--sv-amber-*` and `--sv-green-*` primitive swatches defined in `primitives.css`. The primitives are fixed across themes; only the semantic mapping changes.
+
 ## Building a component
 
 1. **Location:** `src/components/<Name>/<Name>.tsx` with a co-located

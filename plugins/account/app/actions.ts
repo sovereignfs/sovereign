@@ -81,6 +81,28 @@ async function patchPrefs(body: Record<string, unknown>): Promise<void> {
     const detail = ((await res.json().catch(() => null)) as { error?: string } | null)?.error;
     throw new Error(detail ?? `Failed to save preference: ${res.status}`);
   }
+  // Forward any Set-Cookie headers (e.g. sv-theme) from the API response to the
+  // browser. Server actions use fetch internally, so those headers don't reach
+  // the client automatically — they must be re-applied via the cookies() API.
+  const jar = await cookies();
+  for (const raw of res.headers.getSetCookie()) {
+    const [nameVal, ...directives] = raw.split(/;\s*/);
+    const eqIdx = nameVal?.indexOf('=') ?? -1;
+    if (eqIdx === -1 || !nameVal) continue;
+    const name = nameVal.slice(0, eqIdx);
+    const value = nameVal.slice(eqIdx + 1);
+    const opts: Parameters<typeof jar.set>[2] = { path: '/' };
+    for (const d of directives) {
+      const dl = d.toLowerCase();
+      if (dl === 'httponly') opts.httpOnly = true;
+      else if (dl === 'secure') opts.secure = true;
+      else if (dl.startsWith('samesite='))
+        opts.sameSite = d.slice(9).toLowerCase() as 'lax' | 'strict' | 'none';
+      else if (dl.startsWith('max-age=')) opts.maxAge = Number(d.slice(8));
+      else if (dl.startsWith('path=')) opts.path = d.slice(5);
+    }
+    jar.set(name, value, opts);
+  }
   revalidatePath('/account/preferences');
 }
 

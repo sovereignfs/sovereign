@@ -1,23 +1,22 @@
 import { NextResponse } from 'next/server';
 import { getPlatformSetting, sendNotification, setPlatformSetting } from '@sovereignfs/db';
 import { randomUUID } from 'node:crypto';
-import { checkAdminKey } from '@/src/admin-guard';
+import { hasCapability } from '@/src/capabilities';
 import { getPlatformDb } from '@/src/db';
 
 /** Minimum seconds between admin broadcasts (rate-limit guard). */
 const BROADCAST_COOLDOWN_SECS = 60;
 
 /**
- * POST /api/admin/broadcast — programmatic broadcast via API key.
- *
- * The Console UI uses POST /api/account/broadcast (session-gated) instead —
- * /api/admin/* is excluded from the session middleware so role headers are
- * not injected here. This endpoint exists for scripted/CI callers with
- * Authorization: Bearer <SOVEREIGN_ADMIN_KEY>.
+ * POST /api/account/broadcast — send an announcement notification to one or
+ * more users. Session-gated; requires the `console:access` capability
+ * (platform:admin or platform:owner). Rate-limited to once per 60 seconds.
  */
 export async function POST(request: Request): Promise<Response> {
-  const denied = checkAdminKey(request);
-  if (denied) return denied;
+  const role = request.headers.get('x-sovereign-user-role');
+  if (!role || !hasCapability(role, 'console:access')) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
 
   const body = (await request.json()) as {
     recipientUserIds: string[];
@@ -59,8 +58,6 @@ export async function POST(request: Request): Promise<Response> {
 
   await setPlatformSetting(pdb, 'last_broadcast_at', String(Math.floor(Date.now() / 1000)));
 
-  // Send one notification per recipient. Fire-and-forget style — we don't wait
-  // for every insert to finish before responding, but we do await the batch.
   await Promise.all(
     body.recipientUserIds.map((userId) =>
       sendNotification(pdb, {

@@ -9,6 +9,17 @@
 :root {
   /* Neutral grey scale (monochrome identity) */
   --sv-white: #ffffff;
+
+  /* Status colour primitives — amber (warning) and green (success).
+     Kept minimal: only the swatches the semantic status tokens reference. */
+  --sv-amber-100: #fef3c7;
+  --sv-amber-200: #fde68a;
+  --sv-amber-800: #92400e;
+  --sv-amber-900: #78350f;
+  --sv-green-100: #dcfce7;
+  --sv-green-200: #bbf7d0;
+  --sv-green-800: #166534;
+  --sv-green-900: #14532d;
   --sv-black: #000000;
   --sv-grey-50: #fafafa;
   --sv-grey-100: #f4f4f5;

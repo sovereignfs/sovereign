@@ -79,7 +79,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
             {pluginIcons}
           </nav>
           <div className={styles.chrome}>
-            <NotificationBell />
+            <NotificationBell placement="sidebar" />
             {isAdmin ? (
               <Link href="/console" className={styles.icon} title="Console" aria-label="Console">
                 <Icon name="settings" size="lg" aria-hidden />

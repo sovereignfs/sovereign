@@ -1,10 +1,10 @@
 # RFC 0027 — White-labeling (tenant branding)
 
-**Status:** Draft\
+**Status:** Accepted\
 **Date:** June 2026\
-**Author:** Open Code\
+**Author:** kasunben\
 **Scope:** Whole platform — `packages/ui`, `packages/db`, `runtime`, `apps/auth`, `packages/mailer`, `bin/sv`, `.env.example`, docs, Docker/compose, SRS\
-**Incorporated into plan:** No — documentation-first. This RFC describes the design for per-tenant white-labeling (visual + email tier); implementation tasks and SRS sections to be assigned when scheduled.
+**Incorporated into plan:** Yes — post-v1. SRS §3.18 documents the architecture; roadmap Tasks 1.0.03 (Phase 1: DB + shell + Console form + SDK), 1.0.04 (Phase 2: email + auth login), and 1.0.05 (Phase 3: dynamic PWA manifest + favicon) schedule the implementation.
 
 ---
 

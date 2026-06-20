@@ -1,0 +1,130 @@
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sv-space-2) var(--sv-space-4);
+  /* Sit above the home indicator in standalone mode. */
+  padding-bottom: max(var(--sv-space-2), env(safe-area-inset-bottom));
+  background-color: var(--sv-color-surface);
+  border-top: 1px solid var(--sv-color-border);
+}
+
+.appsButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  min-height: var(--sv-touch-target-min, 44px);
+  padding: 0 var(--sv-space-4);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-surface-sunken);
+  color: var(--sv-color-text-primary);
+  font: inherit;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  cursor: pointer;
+}
+
+.appsButton:hover {
+  background: var(--sv-color-border);
+}
+
+.appsButton:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.appsLabel {
+  font-size: var(--sv-font-size-sm);
+}
+
+/* Drawer contents */
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sv-space-4) var(--sv-space-4) var(--sv-space-3);
+  border-bottom: 1px solid var(--sv-color-border);
+}
+
+.drawerTitle {
+  font-size: var(--sv-font-size-md);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.drawerClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--sv-touch-target-min, 44px);
+  min-height: var(--sv-touch-target-min, 44px);
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  color: var(--sv-color-text-muted);
+  cursor: pointer;
+}
+
+.drawerClose:hover {
+  background: var(--sv-color-surface-sunken);
+  color: var(--sv-color-text-primary);
+}
+
+.drawerClose:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.drawerList {
+  list-style: none;
+  margin: 0;
+  padding: var(--sv-space-2) 0;
+}
+
+.drawerItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  min-height: var(--sv-touch-target-min, 44px);
+  padding: 0 var(--sv-space-4);
+  color: var(--sv-color-text-primary);
+  text-decoration: none;
+  font-size: var(--sv-font-size-sm);
+}
+
+.drawerItem:hover {
+  background: var(--sv-color-surface-sunken);
+}
+
+.drawerItem:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.drawerIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface-sunken);
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-muted);
+}
+
+.drawerIconImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.drawerItemName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

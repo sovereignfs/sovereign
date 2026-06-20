@@ -16,11 +16,14 @@ export function AccountMenu({
   avatar,
   triggerClassName,
   placement,
+  showConsole,
 }: {
   avatar: ReactNode;
   triggerClassName?: string;
   /** Where the popover opens relative to the trigger. */
   placement: 'sidebar' | 'header';
+  /** Show a Console link in the menu (shown to admins on mobile header). */
+  showConsole?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -69,6 +72,16 @@ export function AccountMenu({
           >
             Account
           </Link>
+          {showConsole ? (
+            <Link
+              href="/console"
+              role="menuitem"
+              className={styles.item}
+              onClick={() => setOpen(false)}
+            >
+              Console
+            </Link>
+          ) : null}
           <form action="/api/account/logout" method="post">
             <button type="submit" role="menuitem" className={styles.item}>
               Log out

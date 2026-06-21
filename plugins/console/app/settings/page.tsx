@@ -44,12 +44,31 @@ async function adminGet<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+const DEFAULT_SETTINGS: Settings = { tenantName: 'Sovereign', inviteOnly: false, rootPluginId: '' };
+const DEFAULT_BRANDING: Branding = {
+  brandName: 'Sovereign',
+  brandLogo: null,
+  brandLogoDark: null,
+  brandFavicon: null,
+  brandPrimary: null,
+  emailFromName: null,
+  emailLogo: null,
+};
+
+function settled<T>(result: PromiseSettledResult<T>, fallback: T): T {
+  return result.status === 'fulfilled' ? result.value : fallback;
+}
+
 export default async function SettingsPage() {
-  const [settings, plugins, branding] = await Promise.all([
+  const [settingsResult, pluginsResult, brandingResult] = await Promise.allSettled([
     adminGet<Settings>('/api/admin/settings'),
     adminGet<PluginRow[]>('/api/admin/plugins'),
     adminGet<Branding>('/api/admin/tenant-branding'),
   ]);
+
+  const settings = settled(settingsResult, DEFAULT_SETTINGS);
+  const plugins = settled(pluginsResult, [] as PluginRow[]);
+  const branding = settled(brandingResult, DEFAULT_BRANDING);
 
   // Only installed, enabled, non-adminOnly, non-overlay plugins are eligible
   // roots (CON-11): `/` is served as a full page, which overlay plugins cannot.

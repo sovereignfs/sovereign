@@ -397,6 +397,24 @@
   background-color: var(--sv-color-surface-sunken);
 }
 
+.feedbackSuccess {
+  font-size: var(--sv-font-size-sm);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border-radius: var(--sv-radius-md);
+  border: 1px solid var(--sv-color-success-border);
+  background-color: var(--sv-color-success-surface);
+  color: var(--sv-color-success-text);
+}
+
+.feedbackError {
+  font-size: var(--sv-font-size-sm);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border-radius: var(--sv-radius-md);
+  border: 1px solid var(--sv-color-error-border);
+  background-color: var(--sv-color-error-surface);
+  color: var(--sv-color-error-text);
+}
+
 /* ── Utility ────────────────────────────────────────────────────────────── */
 
 .textMuted {

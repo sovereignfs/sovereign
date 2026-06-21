@@ -1,10 +1,12 @@
 # RFC 0004 — Per-plugin database
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Manifest schema (`packages/manifest`), DB layer (`packages/db`), migration runner, runtime SDK bridge (`sdk.db`), SRS\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 1.0.08. No implementation has landed yet; SQLite file isolation, Postgres schema isolation, per-plugin client registry, per-store migration routing, and lifecycle/backup hooks all land in that task.
+**Incorporated into plan:** Yes — implemented in Task 0.8.02 (`@sovereignfs/db` 1.5.0, `@sovereignfs/sdk` 1.9.0, `runtime` 0.26.0).
+
+See [`docs/plugin-database.md`](../plugin-database.md) for the operator/author reference.
 
 ---
 
@@ -192,6 +194,53 @@ CASCADE`) — a single, total deletion.
 4. Add lifecycle hooks (provision/drop) and per-plugin backup/export; revisit BYO
    external databases only if there is demand.
 
+## Implementation (Task 0.8.02)
+
+### Open questions resolved
+
+1. **Postgres mechanism:** schema-per-plugin (`CREATE SCHEMA IF NOT EXISTS "plugin_<slug>"`).
+   A separate `pg.Pool` per isolated plugin with `SET search_path TO "plugin_<slug>"` on
+   every new connection. Separate pool objects (not connections) — the "no extra pool"
+   intent was about not spawning a separate Postgres database; small pool objects are
+   acceptable overhead.
+
+2. **Slug prefix in isolated stores:** not required. `database` is treated as fixed at
+   install — switching is a migration-backed explicit operation, not a manifest toggle.
+   Slug prefix is documented as optional for isolated stores and recommended to drop.
+
+3. **Connection pooling:** lazy per-plugin `pg.Pool`; created on first `getPluginDb()`
+   call and cached in-process. Plugin pool shares the same server as the platform pool.
+   No connection-count concern unless an operator installs dozens of isolated plugins.
+
+4. **BYO external database:** deferred. The `DATABASE_URL`/`DB_DIALECT` env-config approach
+   mentioned in Open question 4 is still the path if needed; not built in this task.
+
+5. **Per-plugin backup/export:** covered by `sv backup` (all SQLite files under `data/`
+   are included; Postgres schemas are in the same database captured by `pg_dump`). A
+   single-plugin SQLite file can be copied directly. Fine-grained `sv backup --plugin <id>`
+   is deferred.
+
+6. **Provisioning privileges:** for Postgres, `CREATE SCHEMA` requires the runtime DB
+   role to have `CREATE` privilege on the database (standard default for the database
+   owner). No additional setup documented; self-hosters who use a restricted role need
+   to grant `CREATE ON DATABASE` manually.
+
+### What shipped
+
+| Component                                | Change                                                                                                              |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `packages/db/src/plugin-client.ts` (new) | `getPluginDb`, `provisionPluginDb`, `dropPluginDb`, `pluginMigrationsFolder`, `pluginSchemaName`, `pluginSqliteUrl` |
+| `packages/db/src/migrate.ts`             | `runPluginMigrations(pluginDb, folder)`                                                                             |
+| `packages/db/src/index.ts`               | All new exports                                                                                                     |
+| `packages/sdk/src/db.ts`                 | Reads `x-sovereign-plugin-id` header; passes `pluginId` to host                                                     |
+| `packages/sdk/src/host.ts`               | `SdkHost.db.getClient(pluginId: string \| null)`                                                                    |
+| `runtime/src/sdk-host.ts`                | Routes `isolated` plugins to dedicated client                                                                       |
+| `runtime/src/plugin-migrations.ts` (new) | Startup migration runner for isolated plugins                                                                       |
+| `runtime/instrumentation.ts`             | Calls plugin migration runner at boot                                                                               |
+| `bin/sv.ts`                              | `plugin remove` reads manifest before delete; drops store; `--keep-data` flag                                       |
+| `docs/plugin-database.md` (new)          | Full operator/author reference                                                                                      |
+| SRS §3.7, §4.6, §5                       | Updated "not implemented" → implemented                                                                             |
+
 ## Changelog
 
 | Version | Date     | Change                                                                                       |
@@ -199,3 +248,4 @@ CASCADE`) — a single, total deletion.
 | 0.1     | Jun 2026 | Initial draft.                                                                               |
 | 0.2     | Jun 2026 | Added to the roadmap as exploratory Task 1.0.08 (gated on acceptance; still Draft).          |
 | 0.3     | Jun 2026 | RFC accepted; status updated to Accepted; Task 1.0.08 now scheduled (no implementation yet). |
+| 0.4     | Jun 2026 | Implemented in Task 0.8.02; status updated to Implemented; open questions resolved.          |

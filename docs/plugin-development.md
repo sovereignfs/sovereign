@@ -916,77 +916,33 @@ your plugin name) is shown as a fallback when no `icon.svg` is present.
 
 ## Database
 
-### Shared (default)
+Plugins access the database through `await sdk.db.getClient()`. There are two isolation
+modes, set in the manifest:
 
-Plugins share the single platform database by default. Isolation is by convention:
+|              | `shared` (default)                             | `isolated`                           |
+| ------------ | ---------------------------------------------- | ------------------------------------ |
+| Store        | Platform DB (shared with all plugins)          | Dedicated file or schema per plugin  |
+| Table prefix | Required (slug, e.g. `tasks_lists`)            | Not required                         |
+| Uninstall    | Tables remain                                  | Entire store dropped                 |
+| Migrations   | `plugins/<id>/migrations/` against platform DB | Same path, routed to dedicated store |
 
-- **Prefix every table with your plugin slug** — `tasks_lists`, `tasks_items`,
-  `splitify_groups`.
-- **Use Drizzle**, defined in `db/schema.ts`, and stay dialect-agnostic: the
-  same schema must run on SQLite (default) and Postgres. Don't write
-  SQLite-specific SQL.
-- **Add `tenant_id` to user-scoped tables** from day one, even though v1 is
-  single-tenant — it keeps the door open for multi-tenancy.
+**For most plugins, shared is the right choice.** Use `"database": "isolated"` when you
+need a clean data lifecycle (e.g. uninstall should delete all plugin data), per-plugin
+backup, or blast-radius isolation.
 
-Get a client with `await sdk.db.getClient()` and query through your schema.
-
-### Isolated database (`database: "isolated"`)
-
-Set `"database": "isolated"` in your manifest to opt into a **dedicated store**:
-
-```jsonc
-{
-  "id": "io.example.tasks",
-  "database": "isolated",
-  ...
-}
+```ts
+// Same call regardless of mode — the runtime routes transparently:
+const db = await sdk.db.getClient();
 ```
 
-The platform provisions the store automatically on the first `sdk.db.getClient()` call:
+**Rules that apply in both modes:**
 
-- **SQLite** — a dedicated file at `data/plugins/<pluginId>.db` (WAL mode).
-- **Postgres** — a dedicated schema `plugin_<slug>` on the same server
-  (e.g. `plugin_io_example_tasks`), created with `CREATE SCHEMA IF NOT EXISTS`.
+- `tenant_id` on every user-scoped table (multi-tenancy readiness).
+- Dialect-agnostic Drizzle schemas — must run on SQLite and Postgres.
 
-`sdk.db.getClient()` returns the plugin's dedicated Drizzle instance transparently —
-your code calls it exactly the same way as a shared plugin.
-
-**What changes with `isolated`:**
-
-|                    | `shared`                           | `isolated`                                                             |
-| ------------------ | ---------------------------------- | ---------------------------------------------------------------------- |
-| Table prefix       | Required (slug)                    | Optional (own namespace)                                               |
-| Uninstall          | Tables remain until manual cleanup | Entire store dropped automatically                                     |
-| `sv backup`        | Included in platform DB backup     | Included (SQLite: separate file in `data/plugins/`; Postgres: same DB) |
-| Cross-plugin SQL   | Possible (same DB)                 | Not possible; use `sdk.data` (RFC 0002)                                |
-| Migration tracking | Shared `__drizzle_migrations`      | Per-plugin `__drizzle_migrations` in the dedicated store               |
-
-**Migrations for isolated plugins:**
-
-Place migration files under `plugins/<id>/migrations/sqlite/` and
-`plugins/<id>/migrations/postgres/` (the same layout as `packages/db/migrations/`).
-The platform runs them automatically at startup via Drizzle's migrator — the same
-mechanism as the platform migrations, but routed to the plugin's own store.
-
-The platform-DB migration tracking (`__drizzle_migrations`) is independent of your
-plugin's store — version state is per-database.
-
-**Uninstall behaviour:**
-
-`sv plugin remove <id>` drops the plugin directory **and** the isolated store
-(SQLite: deletes the file and WAL sidecars; Postgres: `DROP SCHEMA … CASCADE`).
-Pass `--keep-data` to retain the store for manual inspection or migration:
-
-```bash
-pnpm sv plugin remove io.example.tasks          # remove + drop store
-pnpm sv plugin remove io.example.tasks --keep-data  # remove, keep data/plugins/io.example.tasks.db
-```
-
-**Still required in isolated stores:**
-
-- `tenant_id` on user-scoped tables (multi-tenancy readiness).
-- Dialect-agnostic Drizzle schemas (`INTEGER` vs `BIGINT`, etc. — see the
-  platform schema in `packages/db/src/schema/` for reference).
+See **[`docs/plugin-database.md`](../docs/plugin-database.md)** for the full reference:
+shared conventions, isolated provisioning details (SQLite file path, Postgres schema
+naming), migration setup, lifecycle (provision / uninstall / `--keep-data`), and backup.
 
 ## Local development
 

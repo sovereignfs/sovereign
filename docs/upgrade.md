@@ -107,6 +107,34 @@ For source builds, `git checkout <previous-commit>` before rebuilding.
 The root `package.json` version tracks roadmap milestones. Notes below call out
 any required configuration changes, schema changes, or action required.
 
+### v0.25 → v0.26
+
+- **Per-plugin isolated databases (RFC 0004).** Plugins can now opt into a dedicated
+  database by setting `"database": "isolated"` in their manifest. This is **entirely
+  opt-in** — existing `shared` plugins (the default) are completely unaffected and
+  require no changes.
+- **No action required for operators.** The `data/plugins/` directory is created
+  automatically when the first isolated plugin provisions its store. It is included in
+  `sv backup` archives automatically. Nothing in the existing platform schema changes.
+- **Plugin authors adopting `isolated`:** set `"database": "isolated"` in your
+  `manifest.json`, create `plugins/<id>/migrations/sqlite/` and
+  `plugins/<id>/migrations/postgres/` directories for your Drizzle migration files, and
+  remove the slug prefix from your table names (optional but recommended — you have your
+  own namespace). `sdk.db.getClient()` call sites need no changes.
+- **`sv plugin remove` now drops the store.** When removing an isolated plugin,
+  `sv plugin remove <id>` deletes the store (SQLite file or Postgres schema). Pass
+  `--keep-data` to retain the store for manual inspection or migration.
+- **`@sovereignfs/db` → 1.5.0** (minor — new `plugin-client.ts` with `getPluginDb`,
+  `provisionPluginDb`, `dropPluginDb`, `pluginMigrationsFolder`; `runPluginMigrations`
+  added to migrate module).
+- **`@sovereignfs/sdk` → 1.9.0** (minor — `sdk.db.getClient()` now routes isolated
+  plugins to their dedicated store transparently; `SdkHost.db.getClient` signature change
+  is internal only).
+- **`runtime` → 0.26.0** (minor — SDK host routes isolated plugins; startup runs
+  per-plugin migrations).
+
+See [`docs/plugin-database.md`](plugin-database.md) for the full reference.
+
 ### v0.24 → v0.25
 
 - **Plugin monetization (RFC 0003).** Plugin authors can now declare a `monetization`

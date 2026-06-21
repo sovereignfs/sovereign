@@ -138,10 +138,16 @@ runtime and auth containers:
 
 ```
 data/
-  sovereign.db   # Runtime platform database
-  auth.db        # Auth server identity database
-  avatars/       # User avatar uploads (Task 0.4.06)
+  sovereign.db        # Runtime platform database
+  auth.db             # Auth server identity database
+  avatars/            # User avatar uploads
+  plugins/            # Isolated-database plugin stores (one file per plugin)
+    <pluginId>.db     # e.g. io.example.tasks.db — only present for database: "isolated" plugins
 ```
+
+The `plugins/` subdirectory is created automatically when the first isolated plugin
+provisions its store. If no isolated plugins are installed it will not exist.
+See [`docs/plugin-database.md`](plugin-database.md) for the full isolated-database reference.
 
 How that directory is persisted depends on the compose file:
 

@@ -31,9 +31,10 @@ catalogs:
     storybook: ^10.4.6
     '@storybook/react-vite': ^10.4.6
     '@storybook/addon-a11y': ^10.4.6
-    '@storybook/addon-viewport': ^9.0.8
     '@storybook/addon-themes': ^10.4.6
-    '@storybook/test': ^8.6.15
+    # @storybook/addon-viewport was absorbed into the storybook core package in v9+.
+    # Use parameters.viewport in preview.ts; no separate addon needed.
+    # @storybook/test was similarly absorbed; import from 'storybook/test' instead.
 
 allowBuilds:
   better-sqlite3: true

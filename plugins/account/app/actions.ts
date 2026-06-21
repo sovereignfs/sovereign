@@ -42,12 +42,18 @@ async function authPost(path: string, body: Record<string, unknown>): Promise<Re
   });
 }
 
+export type DisplayNameResult = { ok: true; message: string } | { ok: false; error: string };
+
 /** Change the display name (ACC-02). Delegates to better-auth's update-user. */
-export async function updateDisplayNameAction(formData: FormData): Promise<void> {
+export async function updateDisplayNameAction(
+  _prev: DisplayNameResult | null,
+  formData: FormData,
+): Promise<DisplayNameResult> {
   await sdk.auth.requireSession();
   const name = (formData.get('name') as string | null)?.trim() ?? '';
-  if (name.length === 0) throw new Error('Display name is required.');
-  if (name.length > 100) throw new Error('Display name must be 100 characters or fewer.');
+  if (name.length === 0) return { ok: false, error: 'Display name is required.' };
+  if (name.length > 100)
+    return { ok: false, error: 'Display name must be 100 characters or fewer.' };
 
   const res = await fetch(`${AUTH_URL}/api/auth/update-user`, {
     method: 'POST',
@@ -60,13 +66,14 @@ export async function updateDisplayNameAction(formData: FormData): Promise<void>
     },
     body: JSON.stringify({ name }),
   });
-  if (!res.ok) throw new Error(`Failed to update display name: ${res.status}`);
+  if (!res.ok) return { ok: false, error: `Failed to update display name: ${res.status}` };
   await invalidateSessionCache();
   void sdk.activity.log({
     action: 'account.display_name_changed',
     summary: 'Display name updated',
   });
   revalidatePath('/account/profile');
+  return { ok: true, message: 'Name saved.' };
 }
 
 /** Persist a preference change (ACC-07/08) via the runtime account-prefs route. */

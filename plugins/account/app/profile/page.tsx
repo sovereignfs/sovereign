@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import { sdk } from '@sovereignfs/sdk';
-import { updateDisplayNameAction } from '../actions';
 import { AvatarUpload } from '../_components/AvatarUpload';
+import { DisplayNameForm } from './DisplayNameForm';
 import styles from '../account.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -53,25 +53,7 @@ export default async function ProfilePage() {
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Display name</h2>
-        <form action={updateDisplayNameAction} className={styles.form}>
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="name">
-              Name
-            </label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              required
-              maxLength={100}
-              defaultValue={name ?? ''}
-              className={styles.input}
-            />
-          </div>
-          <button type="submit" className={styles.button}>
-            Save name
-          </button>
-        </form>
+        <DisplayNameForm initialName={name ?? ''} />
       </section>
 
       <section className={styles.section}>

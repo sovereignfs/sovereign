@@ -15,6 +15,17 @@ calls a deployment makes are the ones you configure: the database, the SMTP
 server (if email is enabled), and the browser ↔ your instance. This is a
 guarantee, not a default you can toggle.
 
+## Logging and telemetry
+
+Sovereign's structured logger (RFC 0020) writes newline-delimited JSON to the
+process's own **stdout/stderr** — controlled by the `LOG_LEVEL` env var (`warn`
+by default). No log data is sent to any third party. Operators read logs via
+`docker logs`, `journalctl`, or their own log aggregator on the same host.
+
+This is **logging, not telemetry**: everything stays on the operator's
+infrastructure. The no-telemetry guarantee is intact — the distinction is where
+the data goes, not whether it exists.
+
 ## Threat model
 
 Security controls are only meaningful against a stated adversary. **Assets:** the

@@ -5,7 +5,6 @@ import {
   findWorkspaceRoot,
   getConsentGrant,
   getDefaultTenant,
-  getPlatformDb,
   getPlatformSetting,
   getPluginDb,
   logDataAccess,
@@ -13,6 +12,7 @@ import {
   recordActivity,
   sendNotification,
 } from '@sovereignfs/db';
+import { getPlatformDb } from './db';
 import { createMailer } from '@sovereignfs/mailer';
 import { ConsentRequiredError, provideHost } from '@sovereignfs/sdk';
 import { registry } from '../generated/registry';

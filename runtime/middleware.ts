@@ -2,6 +2,12 @@ import { getCookieCache } from 'better-auth/cookies';
 import { type NextRequest, NextResponse } from 'next/server';
 import { decideApiNamespace, isPublicApiPath } from '@/src/api-namespace';
 import { capabilitiesForRole } from '@/src/capabilities';
+import {
+  DEV_MODE_FORWARDED_HEADER,
+  DEV_MODE_INCOMING_HEADER,
+  isDevModeConfigured,
+  validateDevModeSecret,
+} from '@/src/dev-mode';
 import { ALL_GRANTED_PLUGIN_CAPS } from '@/generated/plugin-capabilities';
 import { getInstalledPlugins } from '@/src/registry';
 import { decidePluginRoute, matchedPluginId, underPrefix } from '@/src/route-guard';
@@ -215,6 +221,14 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return response;
   };
 
+  // Attach a visible response header so clients (curl, browser devtools) can
+  // confirm dev-mode is active — a guardrail against mistaking mock data for
+  // real (RFC 0020 "visibly flagged" requirement).
+  const withDevMode = (response: NextResponse): NextResponse => {
+    if (devModeActive) response.headers.set('x-sovereign-dev-mode', 'active');
+    return response;
+  };
+
   const installedPlugins = getInstalledPlugins();
 
   // Only consult plugin status when the path is actually under a plugin prefix.
@@ -253,6 +267,26 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // Dev-mode switch (RFC 0020): if SOVEREIGN_DEV_MODE_ENABLED=true and the
+  // request carries a valid dev-mode secret, forward the marker header so
+  // downstream route handlers resolve the mock DB via getPlatformDb(). The
+  // check happens after session verification so we know the caller is
+  // authenticated. Edge runtime cannot write to the DB, so audit logging is
+  // done via console.log (picked up by operators reading server stdout).
+  const devModeActive =
+    isDevModeConfigured() && validateDevModeSecret(request.headers.get(DEV_MODE_INCOMING_HEADER));
+  if (devModeActive) {
+    console.log(
+      JSON.stringify({
+        ts: new Date().toISOString(),
+        level: 'info',
+        msg: 'dev-mode activated',
+        userId: user.id,
+        path: pathname,
+      }),
+    );
+  }
+
   const headers = new Headers(request.headers);
   // Pass the nonce to the rendered request: Next reads it from the CSP request
   // header for its scripts; the layout reads `x-nonce` for the theme script.
@@ -277,6 +311,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   );
   if (currentPlugin) headers.set('x-sovereign-plugin-id', currentPlugin.id);
 
+  // Forward the dev-mode flag to Node runtime handlers (RFC 0020). The marker
+  // header is safe to inject here — it was validated above; stripping the
+  // incoming secret header prevents it from reaching plugin code.
+  headers.delete(DEV_MODE_INCOMING_HEADER);
+  if (devModeActive) headers.set(DEV_MODE_FORWARDED_HEADER, '1');
+
   // Serve the configured root plugin in place at `/` (PLT-14) — the URL stays
   // `/` while the plugin's route renders, and the plugin is still reachable at
   // its own routePrefix. Falls through to the placeholder home page when no
@@ -286,14 +326,16 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     const rootPrefix = await fetchRootPluginPrefix();
     if (rootPrefix && rootPrefix !== '/') {
       return applyCsp(
-        withCookies(
-          NextResponse.rewrite(new URL(rootPrefix, request.url), { request: { headers } }),
+        withDevMode(
+          withCookies(
+            NextResponse.rewrite(new URL(rootPrefix, request.url), { request: { headers } }),
+          ),
         ),
       );
     }
   }
 
-  return applyCsp(withCookies(NextResponse.next({ request: { headers } })));
+  return applyCsp(withDevMode(withCookies(NextResponse.next({ request: { headers } }))));
 }
 
 export const config = {

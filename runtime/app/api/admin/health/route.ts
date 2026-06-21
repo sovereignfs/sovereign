@@ -2,9 +2,11 @@ import { statSync } from 'node:fs';
 import { NextResponse } from 'next/server';
 import { getLastMigrationResult, pingDb, resolveDialect, resolveSqlitePath } from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
+import { isDevModeConfigured } from '@/src/dev-mode';
 import { getPlatformDb } from '@/src/db';
 import { getIncompatiblePlugins } from '@/src/plugin-compat';
 import { getPlatformVersion } from '@/src/platform-version';
+import { getInstalledPlugins } from '@/src/registry';
 
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
 
@@ -15,6 +17,8 @@ interface HealthReport {
     status: 'ok' | 'error';
     /** SQLite file size in bytes; null for :memory: or Postgres (CON-09). */
     sizeBytes: number | null;
+    /** Last applied migration version, or null before first migration run. */
+    migrationVersion: string | null;
   };
   auth: { status: 'ok' | 'unreachable' };
   /** Plugins disabled at boot due to platform-version incompatibility (RFC 0024). */
@@ -25,6 +29,16 @@ interface HealthReport {
    * or upgrade to at least the indicated version.
    */
   downgradeWarning: { detectedVersion: string; runningVersion: string } | null;
+  /** Summary of the installed plugin registry. */
+  plugins: {
+    installed: number;
+    adminOnly: number;
+  };
+  /** Operator diagnostics: current log level and dev-mode configuration. */
+  diagnostics: {
+    logLevel: string;
+    devModeEnabled: boolean;
+  };
   uptimeSeconds: number;
 }
 
@@ -73,12 +87,27 @@ export async function GET(request: Request): Promise<Response> {
         }
       : null;
 
+  const installedPlugins = getInstalledPlugins();
+
   const report: HealthReport = {
     platformVersion: getPlatformVersion(),
-    database: { dialect: resolved.dialect, status: dbStatus, sizeBytes },
+    database: {
+      dialect: resolved.dialect,
+      status: dbStatus,
+      sizeBytes,
+      migrationVersion: migrationResult?.currentVersion ?? null,
+    },
     auth: { status: authStatus },
     incompatiblePlugins,
     downgradeWarning,
+    plugins: {
+      installed: installedPlugins.length,
+      adminOnly: installedPlugins.filter((p) => p.adminOnly).length,
+    },
+    diagnostics: {
+      logLevel: (process.env.LOG_LEVEL ?? 'warn').toLowerCase(),
+      devModeEnabled: isDevModeConfigured(),
+    },
     uptimeSeconds: Math.floor(process.uptime()),
   };
   return NextResponse.json(report);

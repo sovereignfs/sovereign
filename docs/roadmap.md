@@ -1701,7 +1701,7 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 
 ---
 
-#### Task 1.0.02 — Production dev-mode & diagnostics (RFC 0020)
+#### ✅ Task 1.0.02 — Production dev-mode & diagnostics (RFC 0020)
 
 **Goal:** Validate features on a production instance against a mock database without touching real data, plus local no-telemetry diagnostics.
 
@@ -1717,7 +1717,7 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 
 **Review checklist:**
 
-- A dev-mode request reads only the mock DB; concurrent real requests are unaffected; nothing egresses
+- ✅ A dev-mode request reads only the mock DB; concurrent real requests are unaffected; nothing egresses
 
 ---
 

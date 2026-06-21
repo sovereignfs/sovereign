@@ -123,7 +123,10 @@ export async function sendInviteAction(
 
   const { token } = (await res.json()) as { token: string; email: string };
 
-  const runtimeUrl = `http://localhost:${process.env.PORT ?? '3000'}`;
+  // Read via a computed key so Next.js does not inline the value at build time
+  // (the Docker image builds without .env, freezing a literal to localhost:3000).
+  const runtimeUrlKey = 'NEXT_PUBLIC_RUNTIME_URL';
+  const runtimeUrl = process.env[runtimeUrlKey] ?? `http://localhost:${process.env.PORT ?? '3000'}`;
   const registerUrl = `${runtimeUrl}/register`;
   await sdk.mailer.send({
     to: email,

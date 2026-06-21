@@ -69,10 +69,6 @@ export default async function SettingsPage() {
   const plugins = settled(pluginsResult, [] as PluginRow[]);
   const branding = settled(brandingResult, DEFAULT_BRANDING);
 
-  const settings = settled(settingsResult, DEFAULT_SETTINGS);
-  const plugins = settled(pluginsResult, [] as PluginRow[]);
-  const branding = settled(brandingResult, DEFAULT_BRANDING);
-
   // Only installed, enabled, non-adminOnly, non-overlay plugins are eligible
   // roots (CON-11): `/` is served as a full page, which overlay plugins cannot.
   const rootCandidates = plugins.filter((p) => p.enabled && !p.adminOnly && p.shell !== 'overlay');

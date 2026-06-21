@@ -26,6 +26,28 @@ This is **logging, not telemetry**: everything stays on the operator's
 infrastructure. The no-telemetry guarantee is intact — the distinction is where
 the data goes, not whether it exists.
 
+## Production dev-mode isolation
+
+The optional [production dev-mode](self-hosting.md#production-dev-mode-rfc-0020)
+feature routes platform database reads and writes for a single request to a mock
+database, leaving all other concurrent requests unaffected. The isolation
+properties that make this safe to run on a live instance:
+
+- **Off unless explicitly enabled.** `SOVEREIGN_DEV_MODE_ENABLED` must be `true`;
+  without it the `X-Sovereign-Dev-Mode-Secret` header is silently ignored.
+- **Secret-gated per request.** Switching to the mock DB requires both a valid
+  session cookie (authenticated caller) and the `SOVEREIGN_DEV_MODE_SECRET` header.
+- **Per-request, never global.** The mock client is selected inside
+  `getPlatformDb()` by reading the forwarded `x-sovereign-dev-mode` request header
+  for that request's Next.js context only. A concurrent real-user request with no
+  such header sees the production database as normal.
+- **Hard isolation between clients.** The mock DB is a separate Drizzle
+  `createClient()` instance. There is no code path from a dev-mode request back to
+  the production `PlatformDb` singleton.
+- **Audited.** Every activation is logged as a JSON line (level `info`) to server
+  stdout, including the user ID and path, so operators can review usage via
+  `docker logs`.
+
 ## Threat model
 
 Security controls are only meaningful against a stated adversary. **Assets:** the

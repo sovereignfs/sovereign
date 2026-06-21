@@ -87,9 +87,12 @@ export function verifyLicenseToken(
     if (!ok) return { valid: false, payload: null, error: 'Signature verification failed.' };
 
     // Decode and validate the payload fields.
+    // payloadBytes above is the base64url string itself (for sig verification);
+    // to get JSON we must base64url-decode it separately.
+    const payloadJson = Buffer.from(payloadB64, 'base64url').toString('utf-8');
     let payload: LicensePayload;
     try {
-      payload = JSON.parse(payloadBytes.toString('utf-8')) as LicensePayload;
+      payload = JSON.parse(payloadJson) as LicensePayload;
     } catch {
       return { valid: false, payload: null, error: 'Payload is not valid JSON.' };
     }

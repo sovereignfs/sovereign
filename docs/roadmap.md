@@ -1855,7 +1855,7 @@ in place)
 
 ---
 
-#### Task 1.0.08 — Storybook for the design system and app shell **[post-v1]**
+#### ✅ Task 1.0.08 — Storybook for the design system and app shell **[post-v1]**
 
 **Goal:** Give component authors, plugin developers, and designers a live, isolated environment to develop and inspect every `@sovereignfs/ui` component and its token context. Storybook 8 is the choice — it has native CSS Modules support (via `@storybook/nextjs`), the best a11y addon ecosystem, and wide team familiarity. No RFC is warranted: this is developer tooling with no runtime surfaces, no SDK changes, and no architectural trade-offs that need RFC-level documentation. The decision rationale is recorded in the SRS decision log.
 

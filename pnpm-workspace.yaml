@@ -24,6 +24,17 @@ catalog:
 # better-sqlite3 needs its postinstall to fetch/compile the native binding.
 # simple-git-hooks: declined — the root `prepare` script installs the git hooks
 # explicitly, so the dependency's own postinstall is redundant.
+catalogs:
+  # Storybook — used exclusively by packages/ui. All addon versions must
+  # stay in lock-step with the storybook core version.
+  storybook:
+    storybook: ^10.4.6
+    '@storybook/react-vite': ^10.4.6
+    '@storybook/addon-a11y': ^10.4.6
+    '@storybook/addon-viewport': ^9.0.8
+    '@storybook/addon-themes': ^10.4.6
+    '@storybook/test': ^8.6.15
+
 allowBuilds:
   better-sqlite3: true
   esbuild: true

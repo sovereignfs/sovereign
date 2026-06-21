@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { Dialog } from '@sovereignfs/ui';
+import { useState, useRef, useEffect } from 'react';
 import { toggleActiveAction, resetMfaAction } from './actions';
 import styles from '../console.module.css';
 
@@ -22,8 +21,32 @@ function ConfirmDialog({
   confirmLabel,
   onConfirm,
 }: ConfirmDialogProps) {
+  const ref = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (open) el.showModal();
+    else el.close();
+  }, [open]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const handleClose = () => onClose();
+    el.addEventListener('close', handleClose);
+    return () => el.removeEventListener('close', handleClose);
+  }, [onClose]);
+
   return (
-    <Dialog open={open} onClose={onClose} size="sm" aria-label={title}>
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
+    <dialog
+      ref={ref}
+      className={styles.confirmNativeDialog}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className={styles.confirmDialog}>
         <h2 className={styles.confirmTitle}>{title}</h2>
         <p className={styles.confirmMessage}>{message}</p>
@@ -36,7 +59,7 @@ function ConfirmDialog({
           </button>
         </div>
       </div>
-    </Dialog>
+    </dialog>
   );
 }
 

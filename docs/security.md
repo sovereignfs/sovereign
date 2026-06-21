@@ -89,6 +89,13 @@ Task 1.0.01; zero-knowledge E2EE is charted but out of v1 scope.
   HMAC-verified offline and carries `Secure` in production (`__Secure-` prefix).
 - **Transport:** Postgres connects over TLS when the connection string sets
   `sslmode` (see below); the public edge must terminate TLS with HSTS.
+- **Login rate limiting** is active in all environments (dev + production): the
+  auth server enforces 3 sign-in attempts per 10 seconds per IP address and 3
+  password-reset requests per 60 seconds per IP (via better-auth's built-in
+  per-path rate limiter). Responses above the limit return `429 Too Many Requests`
+  with an `X-Retry-After` header. Rate limiting is stored in-memory per process
+  (sufficient for single-instance deployments); a shared secondary storage (e.g.
+  Redis) would be needed for multi-instance setups.
 
 ## Self-hoster hardening checklist
 

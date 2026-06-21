@@ -1,9 +1,10 @@
 'use client';
 
-import { useActionState, useTransition, useState } from 'react';
+import { useActionState, useTransition, useState, useRef } from 'react';
 import { createAuthClient } from 'better-auth/react';
 import type { BetterAuthClientPlugin } from 'better-auth/client';
 import { passkeyClient } from '@better-auth/passkey/client';
+import { Dialog } from '@sovereignfs/ui';
 import { type PasskeyDeleteState, deletePasskeyAction } from '../actions';
 import styles from '../account.module.css';
 
@@ -26,6 +27,8 @@ function PasskeyRow({ passkey, onRemoved }: { passkey: PasskeyEntry; onRemoved: 
     deletePasskeyAction,
     null,
   );
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   if (state?.ok) {
     onRemoved();
@@ -39,11 +42,49 @@ function PasskeyRow({ passkey, onRemoved }: { passkey: PasskeyEntry; onRemoved: 
         <span className={styles.sessionMeta}>Added {formatDate(passkey.createdAt)}</span>
         {state?.ok === false && <span className={styles.error}>{state.error}</span>}
       </div>
-      <form action={formAction}>
+      <button
+        type="button"
+        className={styles.revokeButton}
+        disabled={pending}
+        onClick={() => setConfirmOpen(true)}
+      >
+        {pending ? 'Removing…' : 'Remove'}
+      </button>
+      <Dialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        size="sm"
+        aria-label="Remove passkey"
+      >
+        <div className={styles.confirmDialog}>
+          <h2 className={styles.confirmTitle}>Remove passkey</h2>
+          <p className={styles.confirmMessage}>
+            Remove &ldquo;{passkey.name ?? 'Unnamed passkey'}&rdquo;? You will no longer be able to
+            sign in with this passkey.
+          </p>
+          <div className={styles.confirmActions}>
+            <button
+              type="button"
+              className={styles.buttonSecondary}
+              onClick={() => setConfirmOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={styles.dangerButton}
+              onClick={() => {
+                setConfirmOpen(false);
+                formRef.current?.requestSubmit();
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      </Dialog>
+      <form ref={formRef} action={formAction} style={{ display: 'none' }}>
         <input type="hidden" name="id" value={passkey.id} />
-        <button type="submit" className={styles.revokeButton} disabled={pending}>
-          {pending ? 'Removing…' : 'Remove'}
-        </button>
       </form>
     </li>
   );

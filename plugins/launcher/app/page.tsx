@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 // The runtime always listens on :3000; self-fetch its own API rather than the
 // public URL (which may sit behind a reverse proxy the container can't hairpin
 // through) — same rationale as the Console pages.
-const SELF_URL = 'http://localhost:3000';
+const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
 
 interface LauncherPlugin extends PluginTileData {
   adminOnly: boolean;

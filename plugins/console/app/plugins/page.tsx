@@ -17,7 +17,7 @@ interface PluginRow {
 async function getPlugins(): Promise<PluginRow[]> {
   // Self-fetch — the runtime always listens on :3000 (see plugins/actions.ts).
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
-  const res = await fetch(`http://localhost:3000/api/admin/plugins`, {
+  const res = await fetch(`http://localhost:${process.env.PORT ?? '3000'}/api/admin/plugins`, {
     headers: { Authorization: `Bearer ${adminKey}` },
     cache: 'no-store',
   });

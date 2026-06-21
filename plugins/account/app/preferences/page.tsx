@@ -5,7 +5,7 @@ import styles from '../account.module.css';
 
 export const dynamic = 'force-dynamic';
 
-const SELF_URL = 'http://localhost:3000';
+const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
 
 interface Prefs {
   timezone: string;

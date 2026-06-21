@@ -7,7 +7,7 @@ import { sdk } from '@sovereignfs/sdk';
 import { validatePasswordChange } from './_lib/password';
 
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
-const SELF_URL = 'http://localhost:3000';
+const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
 
 async function sessionCookie(): Promise<string> {
   return (await headers()).get('cookie') ?? '';

@@ -123,7 +123,7 @@ export async function sendInviteAction(
 
   const { token } = (await res.json()) as { token: string; email: string };
 
-  const runtimeUrl = process.env.NEXT_PUBLIC_RUNTIME_URL ?? 'http://localhost:3000';
+  const runtimeUrl = `http://localhost:${process.env.PORT ?? '3000'}`;
   const registerUrl = `${runtimeUrl}/register`;
   await sdk.mailer.send({
     to: email,

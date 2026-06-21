@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { sdk } from '@sovereignfs/sdk';
 
-const RUNTIME_URL = process.env.NEXT_PUBLIC_RUNTIME_URL ?? 'http://localhost:3000';
+const RUNTIME_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
 
 export async function saveLicenseKeyAction(
   pluginId: string,

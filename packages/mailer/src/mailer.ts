@@ -5,11 +5,18 @@ import type { Mailer, MailerConfig, MailOptions } from './types';
  * Resolve mailer config from explicit overrides then environment variables:
  * SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM. No credentials are ever
  * hardcoded; everything comes from config or env.
+ *
+ * In non-production environments, falls back to Mailpit defaults (localhost:1025)
+ * when no SMTP_HOST is configured so dev email works without any .env change.
  */
 function resolveConfig(config: MailerConfig, env: NodeJS.ProcessEnv): MailerConfig {
-  const port = config.port ?? (env.SMTP_PORT ? Number(env.SMTP_PORT) : undefined);
+  const isDev = env.NODE_ENV !== 'production';
+  const host = config.host ?? env.SMTP_HOST ?? (isDev ? 'localhost' : undefined);
+  const port =
+    config.port ??
+    (env.SMTP_PORT ? Number(env.SMTP_PORT) : isDev && !env.SMTP_HOST ? 1025 : undefined);
   return {
-    host: config.host ?? env.SMTP_HOST,
+    host,
     port,
     user: config.user ?? env.SMTP_USER,
     pass: config.pass ?? env.SMTP_PASS,
@@ -19,9 +26,10 @@ function resolveConfig(config: MailerConfig, env: NodeJS.ProcessEnv): MailerConf
 }
 
 /**
- * Create a mailer. When SMTP is not configured (no host), the returned mailer is
- * a graceful no-op: `send()` logs a warning and resolves without throwing, so an
- * instance with email disabled still runs (SRS NFR-02 — email is optional).
+ * Create a mailer. In non-production environments, falls back to Mailpit on
+ * localhost:1025 when SMTP_HOST is unset so dev email works out of the box.
+ * In production with no SMTP_HOST the mailer is a graceful no-op: `send()`
+ * logs a warning and resolves without throwing (SRS NFR-02 — email is optional).
  */
 export function createMailer(config: MailerConfig = {}): Mailer {
   const resolved = resolveConfig(config, process.env);

@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 describe('createMailer', () => {
-  it('no-ops when SMTP is not configured (does not throw, does not send)', async () => {
+  it('no-ops when SMTP_HOST is set to empty string (does not throw, does not send)', async () => {
     vi.stubEnv('SMTP_HOST', '');
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
@@ -62,5 +62,59 @@ describe('createMailer', () => {
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({ from: 'override@example.com' }),
     );
+  });
+});
+
+describe('createMailer — dev Mailpit fallback', () => {
+  it('connects to localhost:1025 in non-production when SMTP_HOST is not set', () => {
+    // Delete SMTP_HOST so the ?? fallback path is reached (empty string is not null/undefined).
+    const saved = process.env.SMTP_HOST;
+    delete process.env.SMTP_HOST;
+    // NODE_ENV defaults to 'test' in Vitest, which is !== 'production', so isDev = true.
+    const sendMail = vi.fn().mockResolvedValue(undefined);
+    createTransport.mockReturnValue({ sendMail } as unknown as Transporter);
+
+    try {
+      const mailer = createMailer();
+      expect(mailer.configured).toBe(true);
+      expect(createTransport).toHaveBeenCalledWith(
+        expect.objectContaining({ host: 'localhost', port: 1025 }),
+      );
+    } finally {
+      if (saved !== undefined) process.env.SMTP_HOST = saved;
+    }
+  });
+
+  it('SMTP_HOST env always takes precedence over the dev fallback', () => {
+    vi.stubEnv('SMTP_HOST', 'my-smtp-relay.example.com');
+    vi.stubEnv('SMTP_PORT', '587');
+    const sendMail = vi.fn().mockResolvedValue(undefined);
+    createTransport.mockReturnValue({ sendMail } as unknown as Transporter);
+
+    const mailer = createMailer();
+    expect(mailer.configured).toBe(true);
+    expect(createTransport).toHaveBeenCalledWith(
+      expect.objectContaining({ host: 'my-smtp-relay.example.com', port: 587 }),
+    );
+  });
+
+  it('no-ops in production when SMTP_HOST is not set', async () => {
+    const saved = process.env.SMTP_HOST;
+    delete process.env.SMTP_HOST;
+    vi.stubEnv('NODE_ENV', 'production');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    try {
+      const mailer = createMailer();
+      expect(mailer.configured).toBe(false);
+      await expect(
+        mailer.send({ to: 'a@b.c', subject: 'Test', text: 'hi' }),
+      ).resolves.toBeUndefined();
+      expect(createTransport).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledOnce();
+    } finally {
+      if (saved !== undefined) process.env.SMTP_HOST = saved;
+      warn.mockRestore();
+    }
   });
 });

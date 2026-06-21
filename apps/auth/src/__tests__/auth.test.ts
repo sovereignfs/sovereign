@@ -16,3 +16,17 @@ describe('auth options', () => {
     expect(getAuthOptions().session?.freshAge).toBe(0);
   });
 });
+
+describe('password reset config', () => {
+  it('email+password auth is enabled', async () => {
+    const { getAuthOptions } = await import('../auth');
+    expect(getAuthOptions().emailAndPassword?.enabled).toBe(true);
+  });
+
+  it('sendResetPassword handler is configured', async () => {
+    // Regression guard: if sendResetPassword is removed or renamed, the
+    // forgot-password flow silently stops sending emails. Keep this wired.
+    const { getAuthOptions } = await import('../auth');
+    expect(typeof getAuthOptions().emailAndPassword?.sendResetPassword).toBe('function');
+  });
+});

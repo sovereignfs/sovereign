@@ -1,5 +1,12 @@
 import { togglePluginAction } from './actions';
+import { PluginInstallPanel, RemovePluginButton } from './PluginInstallPanel';
 import styles from '../console.module.css';
+
+const PLATFORM_PLUGIN_IDS = new Set([
+  'fs.sovereign.console',
+  'fs.sovereign.launcher',
+  'fs.sovereign.account',
+]);
 
 interface PluginRow {
   id: string;
@@ -15,9 +22,9 @@ interface PluginRow {
 }
 
 async function getPlugins(): Promise<PluginRow[]> {
-  // Self-fetch — the runtime always listens on :3000 (see plugins/actions.ts).
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
-  const res = await fetch(`http://localhost:${process.env.PORT ?? '3000'}/api/admin/plugins`, {
+  const selfUrl = `http://localhost:${process.env.PORT ?? '3000'}`;
+  const res = await fetch(`${selfUrl}/api/admin/plugins`, {
     headers: { Authorization: `Bearer ${adminKey}` },
     cache: 'no-store',
   });
@@ -38,6 +45,8 @@ export default async function PluginsPage() {
         <h2 className={styles.pageTitle}>Plugins</h2>
       </div>
 
+      <PluginInstallPanel />
+
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
           <thead>
@@ -51,77 +60,87 @@ export default async function PluginsPage() {
             </tr>
           </thead>
           <tbody>
-            {plugins.map((plugin) => (
-              <tr key={plugin.id} className={styles.tr}>
-                <td className={styles.td}>
-                  <div className={styles.userCell}>
-                    <span className={styles.userName}>{plugin.name}</span>
-                    {plugin.description && (
-                      <span className={styles.userEmail}>{plugin.description}</span>
+            {plugins.map((plugin) => {
+              const isChrome = PLATFORM_PLUGIN_IDS.has(plugin.id);
+              return (
+                <tr key={plugin.id} className={styles.tr}>
+                  <td className={styles.td}>
+                    <div className={styles.userCell}>
+                      <span className={styles.userName}>{plugin.name}</span>
+                      {plugin.description && (
+                        <span className={styles.userEmail}>{plugin.description}</span>
+                      )}
+                      <span className={styles.userId}>{plugin.id}</span>
+                    </div>
+                  </td>
+
+                  <td className={styles.td}>
+                    <code className={styles.codeInline}>{plugin.version}</code>
+                  </td>
+
+                  <td className={styles.td}>
+                    <TypeBadge type={plugin.type} />
+                    {plugin.adminOnly && <span className={styles.adminOnlyNote}> admin-only</span>}
+                  </td>
+
+                  <td className={styles.td}>
+                    <code className={styles.codeInline}>{plugin.routePrefix}</code>
+                  </td>
+
+                  <td className={styles.td}>
+                    {plugin.enabled ? (
+                      <span className={styles.badgeActive}>Enabled</span>
+                    ) : plugin.compatibilityError ? (
+                      <span className={styles.badgeDeactivated} title={plugin.compatibilityError}>
+                        Incompatible
+                      </span>
+                    ) : (
+                      <span className={styles.badgeDeactivated}>Disabled</span>
                     )}
-                  </div>
-                </td>
-
-                <td className={styles.td}>
-                  <code className={styles.codeInline}>{plugin.version}</code>
-                </td>
-
-                <td className={styles.td}>
-                  <TypeBadge type={plugin.type} />
-                  {plugin.adminOnly && <span className={styles.adminOnlyNote}> admin-only</span>}
-                </td>
-
-                <td className={styles.td}>
-                  <code className={styles.codeInline}>{plugin.routePrefix}</code>
-                </td>
-
-                <td className={styles.td}>
-                  {plugin.enabled ? (
-                    <span className={styles.badgeActive}>Enabled</span>
-                  ) : plugin.compatibilityError ? (
-                    <span className={styles.badgeDeactivated} title={plugin.compatibilityError}>
-                      Incompatible
-                    </span>
-                  ) : (
-                    <span className={styles.badgeDeactivated}>Disabled</span>
-                  )}
-                  {plugin.compatibilityWarnings.length > 0 && (
-                    <span
-                      className={styles.adminOnlyNote}
-                      title={plugin.compatibilityWarnings.join('\n')}
-                    >
-                      {' '}
-                      ⚠ version advisory
-                    </span>
-                  )}
-                </td>
-
-                <td className={styles.td}>
-                  {plugin.compatibilityError ? (
-                    <span className={styles.adminOnlyNote} title={plugin.compatibilityError}>
-                      Incompatible — cannot enable
-                    </span>
-                  ) : (
-                    <form action={togglePluginAction}>
-                      <input type="hidden" name="pluginId" value={plugin.id} />
-                      <input
-                        type="hidden"
-                        name="enabled"
-                        value={plugin.enabled ? 'false' : 'true'}
-                      />
-                      <button
-                        type="submit"
-                        className={
-                          plugin.enabled ? styles.deactivateButton : styles.reactivateButton
-                        }
+                    {plugin.compatibilityWarnings.length > 0 && (
+                      <span
+                        className={styles.adminOnlyNote}
+                        title={plugin.compatibilityWarnings.join('\n')}
                       >
-                        {plugin.enabled ? 'Disable' : 'Enable'}
-                      </button>
-                    </form>
-                  )}
-                </td>
-              </tr>
-            ))}
+                        {' '}
+                        ⚠ version advisory
+                      </span>
+                    )}
+                  </td>
+
+                  <td className={styles.td}>
+                    <div className={styles.rowActions}>
+                      {plugin.compatibilityError ? (
+                        <span className={styles.adminOnlyNote} title={plugin.compatibilityError}>
+                          Incompatible — cannot enable
+                        </span>
+                      ) : (
+                        <form action={togglePluginAction}>
+                          <input type="hidden" name="pluginId" value={plugin.id} />
+                          <input
+                            type="hidden"
+                            name="enabled"
+                            value={plugin.enabled ? 'false' : 'true'}
+                          />
+                          <button
+                            type="submit"
+                            className={
+                              plugin.enabled ? styles.deactivateButton : styles.reactivateButton
+                            }
+                          >
+                            {plugin.enabled ? 'Disable' : 'Enable'}
+                          </button>
+                        </form>
+                      )}
+
+                      {!isChrome && (
+                        <RemovePluginButton pluginId={plugin.id} pluginName={plugin.name} />
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -24,6 +24,7 @@ export const RESERVED_API_SEGMENTS: ReadonlySet<string> = new Set([
   'auth',
   'brand',
   'health',
+  'manifest',
   'plugins',
 ]);
 

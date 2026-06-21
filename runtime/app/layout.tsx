@@ -7,9 +7,10 @@ import { themeScript } from '@/src/theme-script';
 export const metadata: Metadata = {
   title: 'Sovereign',
   description: 'Your self-hosted workspace.',
-  // Installable PWA (SRS §3.11, PLT-09). The web manifest + icons live in
-  // public/; the service worker is generated there at build by next-pwa.
-  manifest: '/manifest.json',
+  // Installable PWA (SRS §3.11, PLT-09). The dynamic manifest route returns
+  // the correct brand name from the DB; the static public/manifest.json is
+  // kept for @ducanh2912/next-pwa build-time tooling only.
+  manifest: '/api/manifest',
   appleWebApp: { capable: true, title: 'Sovereign', statusBarStyle: 'black-translucent' },
   icons: {
     icon: '/icons/icon-192.png',

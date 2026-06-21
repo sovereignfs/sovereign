@@ -459,3 +459,37 @@
 .dangerButton:hover {
   opacity: 0.88;
 }
+
+/* ── Pagination ─────────────────────────────────────────────────────────── */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sv-space-4);
+  padding: var(--sv-space-5) 0;
+}
+
+.paginationButton {
+  padding: var(--sv-space-1) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  background-color: var(--sv-color-surface-raised);
+  color: var(--sv-color-text-primary);
+  font-size: var(--sv-font-size-sm);
+  cursor: pointer;
+}
+
+.paginationButton:hover:not(:disabled) {
+  border-color: var(--sv-color-border-strong);
+}
+
+.paginationButton:disabled {
+  color: var(--sv-color-text-muted);
+  cursor: default;
+}
+
+.paginationInfo {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}

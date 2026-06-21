@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { listAdminActivity } from '@sovereignfs/db';
+import { countAdminActivity, listAdminActivity } from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
 import { getPlatformDb } from '@/src/db';
 
@@ -11,8 +11,13 @@ export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const actorId = url.searchParams.get('actorId') ?? undefined;
   const action = url.searchParams.get('action') ?? undefined;
-  const limit = Math.min(Number(url.searchParams.get('limit') ?? '100'), 500);
+  const limit = Math.min(Number(url.searchParams.get('limit') ?? '50'), 500);
+  const offset = Math.max(0, Number(url.searchParams.get('offset') ?? '0'));
 
-  const rows = await listAdminActivity(await getPlatformDb(), { actorId, action, limit });
-  return NextResponse.json({ events: rows });
+  const pdb = await getPlatformDb();
+  const [rows, total] = await Promise.all([
+    listAdminActivity(pdb, { actorId, action, limit, offset }),
+    countAdminActivity(pdb, { actorId, action }),
+  ]);
+  return NextResponse.json({ events: rows, total, limit, offset });
 }

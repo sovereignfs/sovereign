@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Manifest schema (`packages/manifest`), SDK (`packages/sdk`), runtime middleware, plugin registry, `packages/ui`, Console/Account, SRS\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 1.0.07. No implementation has landed yet; the `monetization` manifest field, `sdk.billing` stub, entitlement gating, payment-provider adapters, and subscription UX all land in that task.
+**Incorporated into plan:** Yes — Phase 1 completed as Task 0.8.01 (manifest field, `sdk.billing` stub, entitlement gating, offline Ed25519 verification, paywall, Account billing tab, Console entitlements view, license generator for operators). Phase 2 (automated payment collection) scheduled as post-v1 Task 1.0.09.
 
 ---
 
@@ -268,6 +268,57 @@ plugins are not core — and avoids making the project a payment intermediary.
    subscription-management UX in Account/Console.
 4. Revisit a central discovery/checkout layer only if there is demand.
 
+## Phase 2 — Automated payment collection (post-v1, Task 1.0.09)
+
+Phase 1 (Task 0.8.01) ships the manual Ed25519 token model. Phase 2 adds automated
+payment collection — users subscribe and receive access without the operator generating
+and distributing a token by hand.
+
+### Bank transfer + admin confirmation flow
+
+1. User opens the paywall page and clicks "Request access via bank transfer."
+2. `sdk.billing.requestSubscription({ pluginId, tierId })` creates a `payment_requests`
+   row (`status: pending`) and presents the operator's configured payment instructions
+   (IBAN / account details stored in Console Settings — a new `bank_transfer_details`
+   `platform_setting` key).
+3. Console gains a **Pending Payments** sub-section under Entitlements — lists pending
+   requests with subscriber, plugin, tier, amount, and requested-at timestamp.
+4. The operator confirms receipt out of band (inspects their bank statement), then
+   clicks **Confirm payment** → status transitions to `confirmed` → the runtime
+   auto-creates an `entitlements` row (as if `source: 'bank_transfer'`). The
+   subscriber immediately gains access on their next request.
+5. **Reject** sets status to `rejected` and, if SMTP is configured, sends the
+   subscriber a notification email.
+
+### Stripe / PayPal webhook flow
+
+Plugin authors who prefer fully automated collection configure their payment
+gateway's webhook to POST to their plugin's serve route
+(`/api/<slug>/payment-webhook`), which is delegated via the existing public API
+namespace (RFC 0008/PLT-16). The plugin's server-side webhook handler:
+
+1. Verifies the gateway signature.
+2. Calls `sdk.billing.grantEntitlement({ userId, pluginId, tierId, expiresAt })` to
+   write the entitlement directly — no signed token required (server-side trust).
+
+The platform itself ships no gateway adapter code; payment integration is entirely
+in the plugin. `sdk.billing.grantEntitlement()` is the platform-side seam.
+
+### New DB table (Phase 2)
+
+`payment_requests` — `{ id, userId, pluginId, tierId, status, requestedAt, resolvedAt, resolvedBy, notes, tenantId }`.
+
+Both SQLite and Postgres dialects; drizzle-kit migration added.
+
+### New / updated SDK surfaces (Phase 2)
+
+| Surface                                    | Status                                        | Notes                                                                                                     |
+| ------------------------------------------ | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `sdk.billing.requestSubscription(input)`   | New (throws `NotImplementedError` in Phase 1) | Creates a `payment_requests` row; returns instructions.                                                   |
+| `sdk.billing.grantEntitlement(input)`      | New                                           | Admin/webhook path to write an entitlement without a signed token. Callable only from plugin server code. |
+| `sdk.billing.getEntitlement(pluginId)`     | Phase 1 stub → Phase 2 implemented            | Returns the current user's active entitlement for a plugin.                                               |
+| `sdk.billing.requireEntitlement(pluginId)` | Phase 1 stub → Phase 2 implemented            | Throws `EntitlementRequiredError` if no active entitlement.                                               |
+
 ## Changelog
 
 | Version | Date     | Change                                                                                       |
@@ -275,3 +326,4 @@ plugins are not core — and avoids making the project a payment intermediary.
 | 0.1     | Jun 2026 | Initial draft.                                                                               |
 | 0.2     | Jun 2026 | Added to the roadmap as exploratory Task 1.0.07 (gated on acceptance; still Draft).          |
 | 0.3     | Jun 2026 | RFC accepted; status updated to Accepted; Task 1.0.07 now scheduled (no implementation yet). |
+| 0.4     | Jun 2026 | Phase 1 complete (Task 0.8.01). Phase 2 section added; roadmap Task 1.0.09 scheduled.        |

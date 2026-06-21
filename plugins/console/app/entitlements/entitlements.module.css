@@ -64,3 +64,332 @@
   background: var(--sv-color-surface-raised);
   color: var(--sv-color-text-tertiary);
 }
+
+/* ── License generator ──────────────────────────────────────────────────── */
+
+.generator {
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+  background: var(--sv-color-surface-raised);
+  overflow: hidden;
+}
+
+.generatorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-4);
+  padding: var(--sv-space-4) var(--sv-space-5);
+}
+
+.generatorTitle {
+  margin: 0;
+  font-size: var(--sv-font-size-base);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.generatorToggle {
+  padding: var(--sv-space-1) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  background: var(--sv-color-surface);
+  color: var(--sv-color-text-secondary);
+  font-size: var(--sv-font-size-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.generatorToggle:hover {
+  border-color: var(--sv-color-border-strong);
+  color: var(--sv-color-text-primary);
+}
+
+.generatorBody {
+  padding: 0 var(--sv-space-5) var(--sv-space-5);
+  border-top: 1px solid var(--sv-color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-5);
+}
+
+.generatorHint {
+  margin: var(--sv-space-4) 0 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-secondary);
+  line-height: 1.5;
+}
+
+.generatorForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+  max-width: 560px;
+}
+
+.generatorRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+}
+
+.generatorLabelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sv-space-3);
+  flex-wrap: wrap;
+}
+
+.keyBadges {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  flex-wrap: wrap;
+}
+
+.keyStoredBadge {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-accent);
+  background: color-mix(in srgb, var(--sv-color-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sv-color-accent) 25%, transparent);
+  border-radius: var(--sv-radius-sm);
+  padding: 1px var(--sv-space-2);
+  white-space: nowrap;
+}
+
+.keySavedNote {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+  white-space: nowrap;
+}
+
+.clearKeyBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-secondary);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.clearKeyBtn:hover {
+  color: var(--sv-color-text-primary);
+}
+
+.saveKeyBtn {
+  background: none;
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  padding: 1px var(--sv-space-2);
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.saveKeyBtn:hover:not(:disabled) {
+  border-color: var(--sv-color-border-strong);
+  color: var(--sv-color-text-primary);
+}
+
+.saveKeyBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Keypair generation ─────────────────────────────────────────────────── */
+
+.keygenTriggerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  flex-wrap: wrap;
+}
+
+.keygenTriggerBtn {
+  background: none;
+  border: 1px dashed var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  padding: var(--sv-space-1) var(--sv-space-3);
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.keygenTriggerBtn:hover:not(:disabled) {
+  border-color: var(--sv-color-border-strong);
+  color: var(--sv-color-text-primary);
+}
+
+.keygenTriggerBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.keygenPanel {
+  background: color-mix(in srgb, var(--sv-color-accent) 5%, var(--sv-color-surface-raised));
+  border: 1px solid color-mix(in srgb, var(--sv-color-accent) 20%, transparent);
+  border-radius: var(--sv-radius-md);
+  padding: var(--sv-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  max-width: 560px;
+}
+
+.keygenPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-3);
+}
+
+.keygenPanelTitle {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.keygenNote {
+  margin: 0;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-secondary);
+  line-height: 1.5;
+}
+
+.generatorLabel {
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+}
+
+.generatorMeta {
+  font-weight: normal;
+  color: var(--sv-color-text-muted);
+}
+
+.generatorInput,
+.generatorSelect {
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface);
+  color: var(--sv-color-text-primary);
+  font-size: var(--sv-font-size-sm);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.generatorInput:focus,
+.generatorSelect:focus {
+  outline: 2px solid var(--sv-color-accent);
+  outline-offset: 1px;
+  border-color: var(--sv-color-accent);
+}
+
+.generatorTextarea {
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface);
+  color: var(--sv-color-text-primary);
+  font-size: var(--sv-font-size-sm);
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.generatorTextarea:focus {
+  outline: 2px solid var(--sv-color-accent);
+  outline-offset: 1px;
+  border-color: var(--sv-color-accent);
+}
+
+.generatorMono {
+  font-family: monospace;
+}
+
+.generatorButton {
+  align-self: flex-start;
+  padding: var(--sv-space-2) var(--sv-space-4);
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  cursor: pointer;
+}
+
+.generatorButton:hover {
+  opacity: 0.88;
+}
+
+.generatorButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.generatorError {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-error-text);
+  background: var(--sv-color-error-surface);
+  border: 1px solid var(--sv-color-error-border);
+  border-radius: var(--sv-radius-sm);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  margin: 0;
+}
+
+.generatorSuccess {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+  background: color-mix(in srgb, var(--sv-color-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sv-color-accent) 30%, transparent);
+  border-radius: var(--sv-radius-sm);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  margin: 0;
+}
+
+.generatorResult {
+  background: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  padding: var(--sv-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  max-width: 560px;
+}
+
+.generatorResultHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-3);
+}
+
+.generatorResultLabel {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+}
+
+.grantRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+  padding-top: var(--sv-space-3);
+  border-top: 1px solid var(--sv-color-border);
+}
+
+.grantControls {
+  display: flex;
+  gap: var(--sv-space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}

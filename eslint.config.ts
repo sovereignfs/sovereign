@@ -19,6 +19,7 @@ export default tseslint.config(
       'runtime/public/sw.js',
       'runtime/public/workbox-*.js',
       'runtime/public/fallback-*.js',
+      'runtime/public/worker-*.js',
     ],
   },
 

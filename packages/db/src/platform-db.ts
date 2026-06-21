@@ -92,6 +92,14 @@ export async function getPlatformSetting(pdb: PlatformDb, key: string): Promise<
   return row?.value ?? null;
 }
 
+/** Delete a platform setting for the default tenant. No-op if the key does not exist. */
+export async function deletePlatformSetting(pdb: PlatformDb, key: string): Promise<void> {
+  await dbRun(
+    pdb,
+    sql`DELETE FROM platform_settings WHERE key = ${key} AND tenant_id = ${DEFAULT_TENANT_ID}`,
+  );
+}
+
 /** Upsert a platform setting for the default tenant. */
 export async function setPlatformSetting(
   pdb: PlatformDb,

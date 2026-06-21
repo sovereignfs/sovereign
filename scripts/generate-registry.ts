@@ -38,7 +38,7 @@ import {
   watch,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   checkCompatibility,
@@ -194,29 +194,17 @@ function composeTargets(manifest: SovereignManifest): string[] {
 }
 
 function composePlugins(plugins: PluginEntry[]): void {
-  // Clear composed plugin segments from the (plugins) group, keeping the
-  // hand-written files (the .gitignore, the overlay-slot host layout.tsx, and
-  // the @modal slot dir — its interception copies are cleared separately below).
   mkdirSync(PLATFORM_PLUGINS_DIR, { recursive: true });
-  for (const entry of readdirSync(PLATFORM_PLUGINS_DIR)) {
-    if (PLUGINS_DIR_KEEP.has(entry)) continue;
-    rmSync(join(PLATFORM_PLUGINS_DIR, entry), { recursive: true, force: true });
-  }
-  // Clear only the generated interception copies in the @modal slot — the
-  // hand-written default.tsx, layout.tsx (Dialog chrome), and .gitignore stay.
   mkdirSync(MODAL_DIR, { recursive: true });
-  for (const entry of readdirSync(MODAL_DIR)) {
-    if (entry.startsWith('(.)')) {
-      rmSync(join(MODAL_DIR, entry), { recursive: true, force: true });
-    }
-  }
-  // Clear composed route segments from the (minimal) group, keeping the
-  // committed layout.tsx, minimal.module.css, and .gitignore.
   mkdirSync(MINIMAL_DIR, { recursive: true });
-  for (const entry of readdirSync(MINIMAL_DIR)) {
-    if (MINIMAL_DIR_KEEP.has(entry)) continue;
-    rmSync(join(MINIMAL_DIR, entry), { recursive: true, force: true });
-  }
+
+  // Track which first-level child dir under each base dir is occupied by an
+  // active plugin so stale entries can be pruned after copying. We copy FIRST
+  // so active plugin routes are never absent — a clear-then-copy gap causes
+  // Next.js's dev route watcher to briefly serve 404s for valid plugin routes.
+  const activePlatform = new Set<string>();
+  const activeModal = new Set<string>();
+  const activeMinimal = new Set<string>();
 
   for (const { dir, manifest } of plugins) {
     const srcApp = join(PLUGINS_DIR, dir, 'app');
@@ -225,7 +213,35 @@ function composePlugins(plugins: PluginEntry[]): void {
     for (const dest of composeTargets(manifest)) {
       mkdirSync(dirname(dest), { recursive: true });
       cpSync(srcApp, dest, { recursive: true });
+      // Record which first-level segment this occupies so we can prune stale
+      // sibling dirs without touching the ones we just wrote.
+      const firstSeg = (base: string) => relative(base, dest).split(sep)[0] ?? '';
+      if (dest.startsWith(MODAL_DIR + sep)) {
+        activeModal.add(firstSeg(MODAL_DIR));
+      } else if (dest.startsWith(MINIMAL_DIR + sep)) {
+        activeMinimal.add(firstSeg(MINIMAL_DIR));
+      } else {
+        activePlatform.add(firstSeg(PLATFORM_PLUGINS_DIR));
+      }
     }
+  }
+
+  // Prune stale entries from removed or renamed plugins — after the copy so
+  // active routes are never briefly missing.
+  for (const entry of readdirSync(PLATFORM_PLUGINS_DIR)) {
+    if (PLUGINS_DIR_KEEP.has(entry) || activePlatform.has(entry)) continue;
+    rmSync(join(PLATFORM_PLUGINS_DIR, entry), { recursive: true, force: true });
+  }
+  // Remove only generated interception copies from @modal; the hand-written
+  // default.tsx, layout.tsx, and .gitignore are preserved by the `(!startsWith)`
+  // guard above (they are not `(.)*` prefixed).
+  for (const entry of readdirSync(MODAL_DIR)) {
+    if (!entry.startsWith('(.)') || activeModal.has(entry)) continue;
+    rmSync(join(MODAL_DIR, entry), { recursive: true, force: true });
+  }
+  for (const entry of readdirSync(MINIMAL_DIR)) {
+    if (MINIMAL_DIR_KEEP.has(entry) || activeMinimal.has(entry)) continue;
+    rmSync(join(MINIMAL_DIR, entry), { recursive: true, force: true });
   }
 }
 

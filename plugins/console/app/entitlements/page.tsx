@@ -1,3 +1,6 @@
+import { sdk } from '@sovereignfs/sdk';
+import { getInstalledPlugins } from '@/src/registry';
+import { LicenseGenerator, type GeneratorPlugin, type GeneratorUser } from './LicenseGenerator';
 import styles from '../console.module.css';
 import entStyles from './entitlements.module.css';
 
@@ -13,10 +16,20 @@ interface EntitlementRow {
   createdAt: number;
 }
 
+interface MemberRow {
+  id: string | null;
+  email: string;
+  name: string | null;
+  status: 'active' | 'deactivated' | 'invited';
+}
+
+const RUNTIME_URL = process.env.NEXT_PUBLIC_RUNTIME_URL ?? 'http://localhost:3000';
+const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+
 async function loadEntitlements(): Promise<EntitlementRow[]> {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   try {
-    const res = await fetch('http://localhost:3000/api/admin/entitlements', {
+    const res = await fetch(`${RUNTIME_URL}/api/admin/entitlements`, {
       headers: { authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
     });
@@ -28,8 +41,57 @@ async function loadEntitlements(): Promise<EntitlementRow[]> {
   }
 }
 
+async function loadStoredKeys(): Promise<Record<string, string>> {
+  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
+  try {
+    const res = await fetch(`${RUNTIME_URL}/api/admin/license-keys`, {
+      headers: { Authorization: `Bearer ${adminKey}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) return {};
+    const data = (await res.json()) as { keys: Record<string, string> };
+    return data.keys;
+  } catch {
+    return {};
+  }
+}
+
+async function loadUsers(): Promise<MemberRow[]> {
+  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
+  try {
+    const res = await fetch(`${AUTH_URL}/api/admin/users`, {
+      headers: { Authorization: `Bearer ${adminKey}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) return [];
+    return (await res.json()) as MemberRow[];
+  } catch {
+    return [];
+  }
+}
+
 export default async function EntitlementsPage() {
-  const rows = await loadEntitlements();
+  const [rows, session] = await Promise.all([loadEntitlements(), sdk.auth.getSession()]);
+  const isOwner = sdk.auth.hasCapability(session, 'role:assign');
+
+  let generatorPlugins: GeneratorPlugin[] = [];
+  let generatorUsers: GeneratorUser[] = [];
+  let storedKeys: Record<string, string> = {};
+
+  if (isOwner) {
+    const [members, keys] = await Promise.all([loadUsers(), loadStoredKeys()]);
+    storedKeys = keys;
+    // Only monetized plugins with a declared public key can have licenses generated.
+    generatorPlugins = getInstalledPlugins().flatMap((p) => {
+      const publicKey = p.monetization?.license?.publicKey;
+      if (!publicKey) return [];
+      return [{ id: p.id, name: p.name, publicKey, tiers: p.monetization?.tiers ?? [] }];
+    });
+    generatorUsers = members.flatMap((m) => {
+      if (!m.id || m.status === 'invited') return [];
+      return [{ id: m.id, email: m.email, name: m.name }];
+    });
+  }
 
   const formatDate = (ts: number) =>
     new Date(ts * 1000).toLocaleDateString(undefined, {
@@ -44,12 +106,23 @@ export default async function EntitlementsPage() {
 
   return (
     <div className={styles.sections}>
+      {isOwner && (
+        <section className={styles.section}>
+          <LicenseGenerator
+            plugins={generatorPlugins}
+            users={generatorUsers}
+            storedKeys={storedKeys}
+          />
+        </section>
+      )}
+
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Plugin entitlements</h2>
         <p className={styles.help}>
-          Signed licenses imported by users for paid plugins. Admins can view entitlements but not
-          create them — licenses are issued by plugin authors. Users manage their own licenses via{' '}
-          <strong>Account → Billing</strong>.
+          Signed licenses imported by users for paid plugins.{' '}
+          {isOwner
+            ? 'Generate and grant licenses above, or users can import them via Account → Billing.'
+            : 'Users manage their own licenses via Account → Billing.'}
         </p>
 
         {rows.length === 0 ? (

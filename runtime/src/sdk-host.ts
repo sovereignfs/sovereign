@@ -7,12 +7,15 @@ import {
   getDefaultTenant,
   getPlatformDb,
   getPlatformSetting,
+  getPluginDb,
   logDataAccess,
+  provisionPluginDb,
   recordActivity,
   sendNotification,
 } from '@sovereignfs/db';
 import { createMailer } from '@sovereignfs/mailer';
 import { ConsentRequiredError, provideHost } from '@sovereignfs/sdk';
+import { registry } from '../generated/registry';
 import type {
   ActivityLogEntry,
   DataContractRef,
@@ -54,7 +57,15 @@ const _resolverRegistry = new Map<string, DataContractResolver>();
 
 provideHost({
   db: {
-    async getClient() {
+    async getClient(pluginId: string | null) {
+      if (pluginId) {
+        const manifest = registry.find((m) => m.id === pluginId);
+        if (manifest?.database === 'isolated') {
+          // Provision on first use (idempotent), then return the dedicated client.
+          await provisionPluginDb(pluginId);
+          return getPluginDb(pluginId).db;
+        }
+      }
       return (await getPlatformDb()).db;
     },
   },

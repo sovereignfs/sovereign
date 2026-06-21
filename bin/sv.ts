@@ -259,9 +259,15 @@ const pluginRemove = defineCommand({
   meta: { name: 'remove', description: 'Remove an installed plugin and re-compose' },
   args: {
     id: { type: 'positional', required: true, description: 'Plugin directory name under plugins/' },
+    'keep-data': {
+      type: 'boolean',
+      default: false,
+      description: 'Skip dropping the isolated plugin database (data is retained on disk)',
+    },
   },
-  run({ args }) {
+  async run({ args }) {
     const { id } = args;
+    const keepData = args['keep-data'];
     try {
       assertRemovablePlugin(id);
     } catch (error) {
@@ -275,8 +281,42 @@ const pluginRemove = defineCommand({
       process.exit(1);
     }
 
+    // Read the manifest before deletion to know if the plugin used an isolated DB.
+    let isIsolated = false;
+    let manifestPluginId: string | null = null;
+    try {
+      const raw = JSON.parse(readFileSync(join(dest, 'manifest.json'), 'utf8')) as {
+        database?: string;
+        id?: string;
+      };
+      isIsolated = raw.database === 'isolated';
+      manifestPluginId = raw.id ?? null;
+    } catch {
+      // Manifest unreadable — treat as shared.
+    }
+
     rmSync(dest, { recursive: true, force: true });
     consola.success(`Removed plugins/${id}.`);
+
+    if (isIsolated && manifestPluginId && !keepData) {
+      consola.info(`Dropping isolated database for "${manifestPluginId}"…`);
+      try {
+        const { dropPluginDb } = await import('@sovereignfs/db');
+        await dropPluginDb(manifestPluginId);
+        consola.success(`Database for "${manifestPluginId}" dropped.`);
+      } catch (err) {
+        consola.warn(
+          `Could not drop isolated database for "${manifestPluginId}" — ` +
+            `you may need to delete it manually. Error: ${(err as Error).message}`,
+        );
+      }
+    } else if (isIsolated && manifestPluginId && keepData) {
+      consola.info(
+        `Kept isolated database for "${manifestPluginId}" (--keep-data). ` +
+          `Run \`pnpm sv plugin drop-data ${manifestPluginId}\` to delete it later.`,
+      );
+    }
+
     run('tsx', [GENERATE]);
   },
 });

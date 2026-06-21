@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   outputFileTracingRoot: resolve(process.cwd(), '../..'),
   // Compile the design system from source (no watch build needed in dev).
-  transpilePackages: ['@sovereignfs/ui'],
+  transpilePackages: ['@sovereignfs/mailer', '@sovereignfs/ui'],
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

@@ -138,6 +138,9 @@ importers:
       '@next/env':
         specifier: ^16.2.9
         version: 16.2.9
+      '@sovereignfs/mailer':
+        specifier: workspace:*
+        version: link:../../packages/mailer
       '@sovereignfs/ui':
         specifier: workspace:*
         version: link:../../packages/ui

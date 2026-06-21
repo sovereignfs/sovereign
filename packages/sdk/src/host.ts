@@ -15,7 +15,12 @@ import type {
  */
 export interface SdkHost {
   db: {
-    getClient(): Promise<DrizzleClient>;
+    /**
+     * `pluginId` is the calling plugin's manifest id, read from the
+     * `x-sovereign-plugin-id` request header by the SDK. `null` means the call
+     * happened outside a plugin route context; the platform DB is returned.
+     */
+    getClient(pluginId: string | null): Promise<DrizzleClient>;
   };
   mailer: {
     send(options: MailOptions): Promise<void>;

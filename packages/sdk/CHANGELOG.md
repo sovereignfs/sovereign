@@ -5,6 +5,22 @@ follows [Semantic Versioning](https://semver.org); see
 [`docs/sdk-stability.md`](../../docs/sdk-stability.md) for the stability policy
 and which parts of the surface the guarantee covers.
 
+## 1.9.0
+
+**`sdk.db.getClient()` routes isolated plugins to their dedicated store** (RFC 0004 / Task 0.8.02).
+
+The public API is unchanged — plugins still call `await sdk.db.getClient()` with no
+arguments. Internally, the SDK reads the `x-sovereign-plugin-id` request header (set
+by the runtime middleware) and the runtime host returns either the platform DB (for
+`database: "shared"` plugins, the default) or a dedicated Drizzle instance (for
+`database: "isolated"` plugins). Plugin code requires no changes to adopt isolation —
+only the manifest `"database": "isolated"` field is needed.
+
+**`SdkHost` interface change (internal):** `SdkHost.db.getClient` signature changes from
+`() => Promise<DrizzleClient>` to `(pluginId: string | null) => Promise<DrizzleClient>`.
+This only affects the runtime's host implementation; plugin code and the public
+`sdk.db.getClient()` API are unchanged.
+
 ## 1.8.0
 
 **New export: `sdk.billing` stubs and `EntitlementRequiredError`** (RFC 0003 / Task 0.8.01).

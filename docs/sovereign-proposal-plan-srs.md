@@ -536,7 +536,10 @@ Plugins declare which SDK capabilities they use in their manifest under `"permis
 
 **Production:** PostgreSQL. Switching requires only changing `DATABASE_URL` in environment config and a dialect flag. No application code changes.
 
-**Plugin schema isolation:** Each plugin prefixes all its table names with its slug (e.g. `tasks_lists`, `tasks_items`, `splitify_groups`, `splitify_expenses`). There are no Postgres schemas or separate databases per plugin — a single schema with namespaced tables.
+**Plugin schema isolation:** Plugins choose between two isolation models via the manifest `database` field:
+
+- **`shared` (default):** Plugin tables live in the platform database, namespaced by slug prefix (e.g. `tasks_lists`, `tasks_items`). One connection, simple deployment.
+- **`isolated` (opt-in, RFC 0004):** The plugin gets its own dedicated store — a separate SQLite file (`data/plugins/<pluginId>.db`) or a Postgres schema (`plugin_<slug>`, provisioned with `CREATE SCHEMA IF NOT EXISTS`). The store is provisioned lazily on first `sdk.db.getClient()` call, and dropped entirely on uninstall. Migrations run against the dedicated store at startup. No slug prefix is required inside an isolated store. `sdk.db.getClient()` is transparent to the caller — isolation is handled by the runtime.
 
 **Migrations:** Each plugin maintains its own migration files under `plugins/[id]/migrations/`. The `packages/db` migration runner aggregates and applies all plugin migrations in deterministic order at startup. Platform migrations (users, tenants, sessions) run first, then plugins in alphabetical order.
 
@@ -976,7 +979,7 @@ Granular per-user capability overrides and per-plugin role assignments are expli
 - Plugin sandboxing or process isolation
 - Runtime dynamic plugin loading (module federation, iframes)
 - OAuth provider functionality (Sovereign as an IdP)
-- Per-plugin isolated database (`"database": "isolated"` declared in manifest but not implemented)
+- Per-plugin isolated database (`"database": "isolated"`) — **implemented (RFC 0004)**; see §3.7
 - End-to-end encryption
 - Native mobile app (planned post-v1 — see §3.12 for the decided approach)
 - Real-time features (WebSockets, live collaboration)
@@ -1010,9 +1013,9 @@ interface SovereignManifest {
   // Optional human-readable description
   description?: string;
 
-  // Database isolation preference
-  // "shared"   — uses the platform database (default, v1 behaviour)
-  // "isolated" — requests a separate database instance (declared but not implemented in v1)
+  // Database isolation preference (RFC 0004)
+  // "shared"   — uses the platform database, slug-prefixed tables (default)
+  // "isolated" — dedicated SQLite file or Postgres schema; provisioned on first use, dropped on uninstall
   database?: 'shared' | 'isolated';
 
   // Plugin type — determines origin and trust level

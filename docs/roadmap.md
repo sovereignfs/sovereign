@@ -1613,7 +1613,7 @@ supported path to production.
 
 ---
 
-#### Task 0.8.02 — Per-plugin database (RFC 0004)
+#### ✅ Task 0.8.02 — Per-plugin database (RFC 0004)
 
 **Goal:** Let a plugin opt into a dedicated database (`database: "isolated"`) rather than sharing the platform DB. RFC 0004 accepted.
 
@@ -1623,7 +1623,7 @@ supported path to production.
 - Postgres: schema-per-plugin (`CREATE SCHEMA`, `search_path`); provision on first use, `DROP SCHEMA … CASCADE` on uninstall; no extra pool (single connection)
 - Migration runner routes each plugin's migrations to its resolved store (shared → platform DB; isolated → dedicated store)
 - `sdk.db.getClient()` transparently returns the shared or dedicated client per the plugin's `database` setting
-- Plugin lifecycle hooks: provision on first `getClient()`, drop on uninstall/purge; per-plugin backup/export path
+- Plugin lifecycle hooks: provision on first `getClient()`, drop on uninstall/purge (`sv plugin remove` with `--keep-data` opt-out)
 - SRS §3.7/§4.6/§5 updated ("not implemented" → "opt-in isolated model")
 
 **Dependencies:** Task 0.5.03 (Postgres), Task 0.5.05 (`sdk.db`)

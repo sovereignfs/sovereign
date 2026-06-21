@@ -59,7 +59,16 @@ export {
   type SendNotificationInput,
 } from './platform-db';
 export { resolveDialect, type Dialect, type ResolvedDialect } from './dialect';
-export { runMigrations, type MigrationResult } from './migrate';
+export { runMigrations, runPluginMigrations, type MigrationResult } from './migrate';
+export {
+  dropPluginDb,
+  getPluginDb,
+  pluginMigrationsFolder,
+  pluginSchemaName,
+  pluginSqliteUrl,
+  provisionPluginDb,
+  type PluginDb,
+} from './plugin-client';
 
 export * as schema from './schema/sqlite';
 export type {

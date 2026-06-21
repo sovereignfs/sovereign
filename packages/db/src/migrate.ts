@@ -6,6 +6,7 @@ import { migrate as migrateSqlite } from 'drizzle-orm/better-sqlite3/migrator';
 import type { PlatformDb } from './client';
 import { findWorkspaceRoot } from './client';
 import { dbGet, dbRun } from './exec';
+import type { PluginDb } from './plugin-client';
 
 export interface MigrationResult {
   /** The platform version stored in the DB before this run. Null on first install. */
@@ -133,4 +134,29 @@ function isVersionGreater(a: string, b: string): boolean {
   if (aMaj !== bMaj) return aMaj > bMaj;
   if (aMin !== bMin) return aMin > bMin;
   return aPat > bPat;
+}
+
+/**
+ * Apply all pending migrations for one isolated plugin's dedicated store.
+ *
+ * Unlike the platform migration runner, this function does NOT manage
+ * downgrade detection or platform-version bookkeeping — it only applies
+ * Drizzle migrations from the plugin's own `migrations/{sqlite,postgres}/`
+ * folder. The plugin is responsible for all schema state in its store.
+ *
+ * Each store tracks applied migrations in its own `__drizzle_migrations`
+ * table (Drizzle's default), so version state is per-database and never
+ * interleaves with the platform DB's migration log.
+ */
+export async function runPluginMigrations(
+  pluginDb: PluginDb,
+  migrationsFolder: string,
+): Promise<void> {
+  if (pluginDb.dialect === 'sqlite') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    migrateSqlite(pluginDb.db as any, { migrationsFolder });
+    return;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await migratePg(pluginDb.db as any, { migrationsFolder });
 }

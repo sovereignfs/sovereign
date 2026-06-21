@@ -129,29 +129,29 @@ serves at `/tasks/lists`.
 `manifest.json` is validated at build time against a strict schema
 (`packages/manifest`); unknown keys fail the build. Every field:
 
-| Field           | Type                                                                    | Required                             | Description                                                                                                                                                                                                                              |
-| --------------- | ----------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schemaVersion` | integer                                                                 | yes                                  | Manifest format version. Currently `1`.                                                                                                                                                                                                  |
-| `id`            | string                                                                  | yes                                  | Globally-unique reverse-DNS id, e.g. `io.example.tasks`. Also the install directory name.                                                                                                                                                |
-| `name`          | string                                                                  | yes                                  | Human-readable name shown in the sidebar and Launcher.                                                                                                                                                                                   |
-| `version`       | string                                                                  | yes                                  | Plugin version (semver recommended).                                                                                                                                                                                                     |
-| `description`   | string                                                                  | no                                   | Short description.                                                                                                                                                                                                                       |
-| `database`      | `shared` \| `isolated`                                                  | no                                   | Data isolation model. `shared` (default) keeps plugin tables in the platform DB with a slug prefix. `isolated` gives the plugin its own dedicated store; not implemented in v1 — scheduled for post-v1 Task 1.0.08 (RFC 0004, Accepted). |
-| `type`          | `platform` \| `sovereign` \| `community`                                | yes                                  | Origin/trust tier (see below).                                                                                                                                                                                                           |
-| `runtime`       | `native` \| `static` \| `iframe-local` \| `iframe-remote` \| `external` | yes                                  | Execution model. v1 plugins use `native`; the others are reserved for future runtimes.                                                                                                                                                   |
-| `routePrefix`   | string starting with `/`                                                | yes                                  | URL prefix the plugin serves under, e.g. `/tasks`. The single source of truth for the plugin's URL.                                                                                                                                      |
-| `permissions`   | array of permission strings                                             | yes (may be `[]`)                    | SDK capabilities the plugin declares (see below).                                                                                                                                                                                        |
-| `shell`         | `default` \| `minimal` \| `overlay`                                     | no                                   | Presentation mode. `default` = full page under the platform sidebar; `overlay` = dialog over the current page (see below); `minimal` = chrome-free, full-bleed (see below).                                                              |
-| `shellConfig`   | object (see below)                                                      | no                                   | Per-shell tuning. Holds `overlaySize` (`sm` \| `md` \| `lg`, default `lg`) for `shell: overlay` plugins. Only valid when `shell` is `overlay`.                                                                                           |
-| `adminOnly`     | boolean                                                                 | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                  |
-| `apiProvider`   | boolean                                                                 | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                            |
-| `icon`          | string                                                                  | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                                                                                                                                                     |
-| `compatibility` | object (see below)                                                      | yes                                  | Platform version constraints. Hard-gates install/boot on `minPlatformVersion`; surfaces an advisory warning in Console/health when the platform exceeds the optional `maxPlatformVersion`.                                               |
-| `data`          | object (see below)                                                      | no                                   | Cross-plugin data sharing declarations (RFC 0002). Declare the contracts this plugin exposes (`data.provides`) and the ones it reads (`data.consumes`). Requires the matching `data:provide` / `data:consume` permissions.               |
-| `env`           | object (see below)                                                      | no                                   | Plugin-scoped environment variable declarations (RFC 0018). Keys are auto-namespaced to `SV_PLUGIN_<SLUG>_<KEY>`; read them via `sdk.env.get('KEY')` in server code.                                                                     |
-| `capabilities`  | object (see below)                                                      | no                                   | Plugin-declared capabilities (RFC 0022). Each key is a local name auto-namespaced to `<pluginId>:<capName>`; enforce access inside the plugin via `sdk.auth.hasCapability`.                                                              |
-| `monetization`  | object (see below)                                                      | no                                   | Monetization model (RFC 0003). Declares the billing model, tiers, and the author's Ed25519 public key for offline license verification. Only `sovereign`/`community` plugins may declare this.                                           |
-| `repository`    | string (URL)                                                            | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                |
+| Field           | Type                                                                    | Required                             | Description                                                                                                                                                                                                                                 |
+| --------------- | ----------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion` | integer                                                                 | yes                                  | Manifest format version. Currently `1`.                                                                                                                                                                                                     |
+| `id`            | string                                                                  | yes                                  | Globally-unique reverse-DNS id, e.g. `io.example.tasks`. Also the install directory name.                                                                                                                                                   |
+| `name`          | string                                                                  | yes                                  | Human-readable name shown in the sidebar and Launcher.                                                                                                                                                                                      |
+| `version`       | string                                                                  | yes                                  | Plugin version (semver recommended).                                                                                                                                                                                                        |
+| `description`   | string                                                                  | no                                   | Short description.                                                                                                                                                                                                                          |
+| `database`      | `shared` \| `isolated`                                                  | no                                   | Data isolation model. `shared` (default) keeps plugin tables in the platform DB with a slug prefix. `isolated` gives the plugin its own dedicated store — a separate SQLite file or Postgres schema. See the [Database](#database) section. |
+| `type`          | `platform` \| `sovereign` \| `community`                                | yes                                  | Origin/trust tier (see below).                                                                                                                                                                                                              |
+| `runtime`       | `native` \| `static` \| `iframe-local` \| `iframe-remote` \| `external` | yes                                  | Execution model. v1 plugins use `native`; the others are reserved for future runtimes.                                                                                                                                                      |
+| `routePrefix`   | string starting with `/`                                                | yes                                  | URL prefix the plugin serves under, e.g. `/tasks`. The single source of truth for the plugin's URL.                                                                                                                                         |
+| `permissions`   | array of permission strings                                             | yes (may be `[]`)                    | SDK capabilities the plugin declares (see below).                                                                                                                                                                                           |
+| `shell`         | `default` \| `minimal` \| `overlay`                                     | no                                   | Presentation mode. `default` = full page under the platform sidebar; `overlay` = dialog over the current page (see below); `minimal` = chrome-free, full-bleed (see below).                                                                 |
+| `shellConfig`   | object (see below)                                                      | no                                   | Per-shell tuning. Holds `overlaySize` (`sm` \| `md` \| `lg`, default `lg`) for `shell: overlay` plugins. Only valid when `shell` is `overlay`.                                                                                              |
+| `adminOnly`     | boolean                                                                 | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                     |
+| `apiProvider`   | boolean                                                                 | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                               |
+| `icon`          | string                                                                  | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                                                                                                                                                        |
+| `compatibility` | object (see below)                                                      | yes                                  | Platform version constraints. Hard-gates install/boot on `minPlatformVersion`; surfaces an advisory warning in Console/health when the platform exceeds the optional `maxPlatformVersion`.                                                  |
+| `data`          | object (see below)                                                      | no                                   | Cross-plugin data sharing declarations (RFC 0002). Declare the contracts this plugin exposes (`data.provides`) and the ones it reads (`data.consumes`). Requires the matching `data:provide` / `data:consume` permissions.                  |
+| `env`           | object (see below)                                                      | no                                   | Plugin-scoped environment variable declarations (RFC 0018). Keys are auto-namespaced to `SV_PLUGIN_<SLUG>_<KEY>`; read them via `sdk.env.get('KEY')` in server code.                                                                        |
+| `capabilities`  | object (see below)                                                      | no                                   | Plugin-declared capabilities (RFC 0022). Each key is a local name auto-namespaced to `<pluginId>:<capName>`; enforce access inside the plugin via `sdk.auth.hasCapability`.                                                                 |
+| `monetization`  | object (see below)                                                      | no                                   | Monetization model (RFC 0003). Declares the billing model, tiers, and the author's Ed25519 public key for offline license verification. Only `sovereign`/`community` plugins may declare this.                                              |
+| `repository`    | string (URL)                                                            | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                   |
 
 ### `type`
 
@@ -916,10 +916,12 @@ your plugin name) is shown as a fallback when no `icon.svg` is present.
 
 ## Database
 
-Plugins share the single platform database; isolation is by **convention**:
+### Shared (default)
+
+Plugins share the single platform database by default. Isolation is by convention:
 
 - **Prefix every table with your plugin slug** — `tasks_lists`, `tasks_items`,
-  `splitify_groups`. There are no per-plugin databases in v1.
+  `splitify_groups`.
 - **Use Drizzle**, defined in `db/schema.ts`, and stay dialect-agnostic: the
   same schema must run on SQLite (default) and Postgres. Don't write
   SQLite-specific SQL.
@@ -927,6 +929,64 @@ Plugins share the single platform database; isolation is by **convention**:
   single-tenant — it keeps the door open for multi-tenancy.
 
 Get a client with `await sdk.db.getClient()` and query through your schema.
+
+### Isolated database (`database: "isolated"`)
+
+Set `"database": "isolated"` in your manifest to opt into a **dedicated store**:
+
+```jsonc
+{
+  "id": "io.example.tasks",
+  "database": "isolated",
+  ...
+}
+```
+
+The platform provisions the store automatically on the first `sdk.db.getClient()` call:
+
+- **SQLite** — a dedicated file at `data/plugins/<pluginId>.db` (WAL mode).
+- **Postgres** — a dedicated schema `plugin_<slug>` on the same server
+  (e.g. `plugin_io_example_tasks`), created with `CREATE SCHEMA IF NOT EXISTS`.
+
+`sdk.db.getClient()` returns the plugin's dedicated Drizzle instance transparently —
+your code calls it exactly the same way as a shared plugin.
+
+**What changes with `isolated`:**
+
+|                    | `shared`                           | `isolated`                                                             |
+| ------------------ | ---------------------------------- | ---------------------------------------------------------------------- |
+| Table prefix       | Required (slug)                    | Optional (own namespace)                                               |
+| Uninstall          | Tables remain until manual cleanup | Entire store dropped automatically                                     |
+| `sv backup`        | Included in platform DB backup     | Included (SQLite: separate file in `data/plugins/`; Postgres: same DB) |
+| Cross-plugin SQL   | Possible (same DB)                 | Not possible; use `sdk.data` (RFC 0002)                                |
+| Migration tracking | Shared `__drizzle_migrations`      | Per-plugin `__drizzle_migrations` in the dedicated store               |
+
+**Migrations for isolated plugins:**
+
+Place migration files under `plugins/<id>/migrations/sqlite/` and
+`plugins/<id>/migrations/postgres/` (the same layout as `packages/db/migrations/`).
+The platform runs them automatically at startup via Drizzle's migrator — the same
+mechanism as the platform migrations, but routed to the plugin's own store.
+
+The platform-DB migration tracking (`__drizzle_migrations`) is independent of your
+plugin's store — version state is per-database.
+
+**Uninstall behaviour:**
+
+`sv plugin remove <id>` drops the plugin directory **and** the isolated store
+(SQLite: deletes the file and WAL sidecars; Postgres: `DROP SCHEMA … CASCADE`).
+Pass `--keep-data` to retain the store for manual inspection or migration:
+
+```bash
+pnpm sv plugin remove io.example.tasks          # remove + drop store
+pnpm sv plugin remove io.example.tasks --keep-data  # remove, keep data/plugins/io.example.tasks.db
+```
+
+**Still required in isolated stores:**
+
+- `tenant_id` on user-scoped tables (multi-tenancy readiness).
+- Dialect-agnostic Drizzle schemas (`INTEGER` vs `BIGINT`, etc. — see the
+  platform schema in `packages/db/src/schema/` for reference).
 
 ## Local development
 

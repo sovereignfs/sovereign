@@ -23,7 +23,7 @@ interface MemberRow {
   status: 'active' | 'deactivated' | 'invited';
 }
 
-const RUNTIME_URL = process.env.NEXT_PUBLIC_RUNTIME_URL ?? 'http://localhost:3000';
+const RUNTIME_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
 
 async function loadEntitlements(): Promise<EntitlementRow[]> {

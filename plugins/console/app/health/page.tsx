@@ -1,6 +1,6 @@
 import styles from '../console.module.css';
 
-const SELF_URL = 'http://localhost:3000';
+const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
 
 interface HealthReport {
   platformVersion: string;

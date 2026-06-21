@@ -7,7 +7,7 @@ const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 
 // Self-fetch address for the runtime's own admin API — the server always
 // listens on :3000 (see plugins/actions.ts for the reverse-proxy rationale).
-const SELF_URL = 'http://localhost:3000';
+const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
 
 async function patchSettings(body: Record<string, unknown>): Promise<void> {
   await sdk.auth.requireSession();

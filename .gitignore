@@ -67,3 +67,6 @@ memory/
 playwright-report/
 test-results/
 .auth/
+
+# Storybook
+packages/ui/storybook-static/

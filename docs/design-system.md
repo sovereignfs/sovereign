@@ -403,3 +403,68 @@ interactive. Defaults to `0` (full-viewport scrim) for standalone use:
 
 Plugin code does not need to set this; it is a platform-level concern wired by
 the shell.
+
+---
+
+## Component stories (Storybook)
+
+Every `@sovereignfs/ui` component has a Storybook story. The Storybook instance
+serves as the living design reference for component authors, plugin developers,
+and designers — each component is rendered in isolation with every meaningful
+variant, both light and dark themes, and responsive viewports.
+
+### Running locally
+
+```bash
+# From the monorepo root:
+pnpm storybook        # starts dev server at http://localhost:6006
+
+# Or directly from the package:
+pnpm --filter @sovereignfs/ui storybook
+```
+
+The dev server hot-reloads on source changes to both components and CSS tokens.
+
+### What's covered
+
+| Story file                 | Stories                                                                                             |
+| -------------------------- | --------------------------------------------------------------------------------------------------- |
+| `TokenGallery.stories.tsx` | Live gallery of every `--sv-*` token tier (colours, space, typography, radius, icon sizes, shadows) |
+| `Button.stories.tsx`       | All `variant` × `size` combinations; disabled; icon-leading; icon-only; `AllVariants` grid          |
+| `Input.stories.tsx`        | Text / email / password types; disabled; error state with `aria-invalid` + description              |
+| `Icon.stories.tsx`         | Decorative vs meaningful a11y variants; all three sizes; `AllIcons` full grid                       |
+| `Dialog.stories.tsx`       | `sm` / `md` / `lg` / `full` sizes; closed state; `play` function opens and asserts visibility       |
+| `Drawer.stories.tsx`       | Default (mobile viewport); closed; `play` function opens and asserts panel visible                  |
+
+### Themes toolbar
+
+The **Themes** toolbar addon (top-right in the canvas) toggles `data-theme="dark"` on
+the canvas root. Since all component styles reference semantic tokens, switching
+themes re-renders correctly without touching any component code.
+
+### A11y panel
+
+Every story runs `@storybook/addon-a11y` automatically. The **Accessibility** panel
+(bottom of the canvas) reports WCAG 2.1 violations. Violations are treated as build
+errors in CI — `storybook build` fails if any story has an a11y issue.
+
+### Adding a story for a new component
+
+1. Create `packages/ui/src/components/<Name>/<Name>.stories.tsx`.
+2. Use `satisfies Meta<typeof YourComponent>` (not `Meta<typeof YourComponent>` alone)
+   so TypeScript infers arg types.
+3. Always pair `<Input>` and similar bare elements with a `<label>` in stories — the
+   a11y addon flags unlabelled controls as errors.
+4. Use `aria-hidden` for decorative icons and `aria-label` for meaningful ones.
+5. Run `pnpm storybook` locally and confirm the a11y panel shows no violations before
+   pushing.
+
+### Building for CI / PR preview
+
+```bash
+pnpm build-storybook   # outputs to packages/ui/storybook-static/
+```
+
+The CI `storybook-build` job runs this on every non-draft PR and uploads the
+static output as a workflow artifact (7-day retention) — download `storybook-static`
+from the Actions run to inspect the PR's stories without deploying a hosting service.

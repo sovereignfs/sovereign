@@ -122,3 +122,23 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - run: pnpm test
+
+  storybook-build:
+    name: Storybook build
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Build Storybook
+        run: pnpm build-storybook
+      - name: Upload Storybook artifact
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: storybook-static
+          path: packages/ui/storybook-static/
+          retention-days: 7

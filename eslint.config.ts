@@ -24,6 +24,9 @@ export default tseslint.config(
       // patterns that conflict with the project's TypeScript-strict + jsx-a11y rules.
       '__tests__/e2e/**',
       'playwright.config.ts',
+      // Storybook config and generated static output.
+      'packages/ui/.storybook/**',
+      'packages/ui/storybook-static/**',
     ],
   },
 

@@ -1,0 +1,101 @@
+'use client';
+
+import { useState, useRef } from 'react';
+import { Dialog } from '@sovereignfs/ui';
+import { toggleActiveAction, resetMfaAction } from './actions';
+import styles from '../console.module.css';
+
+interface ConfirmDialogProps {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+}
+
+function ConfirmDialog({
+  open,
+  onClose,
+  title,
+  message,
+  confirmLabel,
+  onConfirm,
+}: ConfirmDialogProps) {
+  return (
+    <Dialog open={open} onClose={onClose} size="sm" aria-label={title}>
+      <div className={styles.confirmDialog}>
+        <h2 className={styles.confirmTitle}>{title}</h2>
+        <p className={styles.confirmMessage}>{message}</p>
+        <div className={styles.confirmActions}>
+          <button type="button" className={styles.actionButton} onClick={onClose}>
+            Cancel
+          </button>
+          <button type="button" className={styles.dangerButton} onClick={onConfirm}>
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
+export function DeactivateButton({ userId, name }: { userId: string; name: string }) {
+  const [open, setOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  return (
+    <>
+      <button type="button" className={styles.deactivateButton} onClick={() => setOpen(true)}>
+        Deactivate
+      </button>
+      <ConfirmDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Deactivate user"
+        message={`Deactivate ${name || userId}? They will not be able to sign in until reactivated.`}
+        confirmLabel="Deactivate"
+        onConfirm={() => {
+          setOpen(false);
+          formRef.current?.requestSubmit();
+        }}
+      />
+      <form ref={formRef} action={toggleActiveAction} style={{ display: 'none' }}>
+        <input type="hidden" name="userId" value={userId} />
+        <input type="hidden" name="active" value="false" />
+      </form>
+    </>
+  );
+}
+
+export function ResetMfaButton({ userId, name }: { userId: string; name: string }) {
+  const [open, setOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  return (
+    <>
+      <button
+        type="button"
+        className={styles.resetMfaButton}
+        title="Remove all TOTP secrets and passkeys so the user can sign in without MFA"
+        onClick={() => setOpen(true)}
+      >
+        Reset MFA
+      </button>
+      <ConfirmDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Reset MFA"
+        message={`Remove all MFA methods for ${name || userId}? They will be able to sign in with only their password.`}
+        confirmLabel="Reset MFA"
+        onConfirm={() => {
+          setOpen(false);
+          formRef.current?.requestSubmit();
+        }}
+      />
+      <form ref={formRef} action={resetMfaAction} style={{ display: 'none' }}>
+        <input type="hidden" name="userId" value={userId} />
+      </form>
+    </>
+  );
+}

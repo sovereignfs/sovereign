@@ -1,6 +1,6 @@
 import type { ActiveSession } from '@sovereignfs/sdk';
-import { revokeSessionAction } from '../actions';
 import { deviceHint } from '../_lib/device-hint';
+import { RevokeSessionButton } from './RevokeSessionButton';
 import styles from '../account.module.css';
 
 function formatDate(iso: string): string {
@@ -36,13 +36,7 @@ export function SessionList({ sessions }: { sessions: ActiveSession[] }) {
               </button>
             </form>
           ) : (
-            <form action={revokeSessionAction}>
-              <input type="hidden" name="token" value={session.token} />
-              <input type="hidden" name="current" value="false" />
-              <button type="submit" className={styles.revokeButton}>
-                Revoke
-              </button>
-            </form>
+            <RevokeSessionButton token={session.token} />
           )}
         </li>
       ))}

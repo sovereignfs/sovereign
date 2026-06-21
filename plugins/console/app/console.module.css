@@ -415,6 +415,50 @@
   color: var(--sv-color-error-text);
 }
 
+/* ── Confirm dialog ─────────────────────────────────────────────────────── */
+
+.confirmDialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+  padding: var(--sv-space-6);
+}
+
+.confirmTitle {
+  margin: 0;
+  font-size: var(--sv-font-size-lg);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.confirmMessage {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-secondary);
+}
+
+.confirmActions {
+  display: flex;
+  gap: var(--sv-space-3);
+  justify-content: flex-end;
+}
+
+.dangerButton {
+  display: inline-block;
+  padding: var(--sv-space-2) var(--sv-space-4);
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-error-text);
+  color: #fff;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  cursor: pointer;
+}
+
+.dangerButton:hover {
+  opacity: 0.88;
+}
+
 /* ── Utility ────────────────────────────────────────────────────────────── */
 
 .textMuted {

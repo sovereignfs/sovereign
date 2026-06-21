@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { sdk } from '@sovereignfs/sdk';
-import { changeRoleAction, toggleActiveAction, resetMfaAction } from './actions';
+import { changeRoleAction, toggleActiveAction } from './actions';
+import { DeactivateButton, ResetMfaButton } from './UserActionButtons';
 import styles from '../console.module.css';
 
 interface MemberRow {
@@ -147,35 +148,25 @@ export default async function UsersPage() {
                             </form>
                           )}
 
-                          <form action={toggleActiveAction} key={`active-${member.status}`}>
-                            <input type="hidden" name="userId" value={member.id} />
-                            <input
-                              type="hidden"
-                              name="active"
-                              value={member.status === 'active' ? 'false' : 'true'}
+                          {member.status === 'active' ? (
+                            <DeactivateButton
+                              userId={member.id ?? ''}
+                              name={member.name ?? member.email}
                             />
-                            <button
-                              type="submit"
-                              className={
-                                member.status === 'active'
-                                  ? styles.deactivateButton
-                                  : styles.reactivateButton
-                              }
-                            >
-                              {member.status === 'active' ? 'Deactivate' : 'Reactivate'}
-                            </button>
-                          </form>
+                          ) : (
+                            <form action={toggleActiveAction}>
+                              <input type="hidden" name="userId" value={member.id} />
+                              <input type="hidden" name="active" value="true" />
+                              <button type="submit" className={styles.reactivateButton}>
+                                Reactivate
+                              </button>
+                            </form>
+                          )}
 
-                          <form action={resetMfaAction}>
-                            <input type="hidden" name="userId" value={member.id} />
-                            <button
-                              type="submit"
-                              className={styles.resetMfaButton}
-                              title="Remove all TOTP secrets and passkeys so the user can sign in without MFA"
-                            >
-                              Reset MFA
-                            </button>
-                          </form>
+                          <ResetMfaButton
+                            userId={member.id ?? ''}
+                            name={member.name ?? member.email}
+                          />
                         </div>
                       )
                     ) : (

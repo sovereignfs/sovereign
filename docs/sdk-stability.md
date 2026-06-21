@@ -26,7 +26,10 @@ published plugin contract). Changes are recorded in each package's
 - `sdk.auth` — session and account (`getSession`, `requireSession`,
   `changePassword`, `listSessions`, `revokeSession`, `signOut`,
   `hasCapability(session, capability)`).
-- `sdk.db` — the platform Drizzle client (`getClient`).
+- `sdk.db` — the Drizzle client for this plugin's database (`getClient`). Returns
+  the platform DB for `shared` plugins (the default) and a dedicated Drizzle
+  instance for `isolated` plugins — transparent to the caller. See
+  [`docs/plugin-database.md`](plugin-database.md).
 - `sdk.mailer` — transactional email (`send`).
 - `sdk.platform` — instance configuration (`getConfig`).
 

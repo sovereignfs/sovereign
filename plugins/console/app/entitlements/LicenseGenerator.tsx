@@ -29,6 +29,8 @@ interface Props {
   users: GeneratorUser[];
   /** Private key `d` values stored in platform_settings, keyed by plugin ID. */
   storedKeys: Record<string, string>;
+  /** Public key `x` values stored in platform_settings, keyed by plugin ID. */
+  storedPublicKeys: Record<string, string>;
 }
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -47,7 +49,7 @@ function resolveStoredKey(pluginId: string, storedKeys: Record<string, string>) 
   return { key: '', source: 'none' as const };
 }
 
-export function LicenseGenerator({ plugins, users, storedKeys }: Props) {
+export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys }: Props) {
   const [open, setOpen] = useState(false);
   const [pluginId, setPluginId] = useState(plugins[0]?.id ?? '');
   const [privateKey, setPrivateKey] = useState('');
@@ -154,7 +156,13 @@ export function LicenseGenerator({ plugins, users, storedKeys }: Props) {
     setSavingKey(true);
     resetKeyActionResult();
     try {
-      const result = await saveLicenseKeyAction(pluginId, privateKey.trim());
+      // Pass the generated public key when available so the verifier can use it
+      // without requiring a manifest update (supports key rotation post-deploy).
+      const result = await saveLicenseKeyAction(
+        pluginId,
+        privateKey.trim(),
+        generatedPubKey || undefined,
+      );
       setKeyActionOk(result.ok);
       setKeyActionResult(result.ok ? 'Saved to instance.' : (result.error ?? 'Unknown error.'));
       if (result.ok) setKeySource('instance');
@@ -233,7 +241,10 @@ export function LicenseGenerator({ plugins, users, storedKeys }: Props) {
     setGenerating(true);
     try {
       const privD = privateKey.trim();
-      const pubX = selectedPlugin.publicKey;
+      // Use the generated public key when a fresh keypair was produced in this session —
+      // it forms a valid pair with the auto-filled private key. Fall back to the manifest
+      // key when no in-browser generation happened (operator pasted an existing key).
+      const pubX = generatedPubKey || selectedPlugin.publicKey;
       const now = Math.floor(Date.now() / 1000);
       const payloadObj: Record<string, unknown> = {
         pluginId,
@@ -262,7 +273,11 @@ export function LicenseGenerator({ plugins, users, storedKeys }: Props) {
       );
       setToken(`${payloadB64}.${toBase64Url(sig)}`);
     } catch (err: unknown) {
-      setGenError(err instanceof Error ? err.message : 'Failed to generate token.');
+      const msg = err instanceof Error ? err.message : '';
+      setGenError(
+        msg ||
+          'Failed to sign token. Verify the private key is a valid Ed25519 d value (base64url).',
+      );
     } finally {
       setGenerating(false);
     }
@@ -521,6 +536,44 @@ export function LicenseGenerator({ plugins, users, storedKeys }: Props) {
                 }}
               />
             </div>
+
+            {generatedPubKey &&
+              selectedPlugin &&
+              generatedPubKey !== selectedPlugin.publicKey &&
+              generatedPubKey !== storedPublicKeys[pluginId] && (
+                <div className={styles.generatorWarn} role="status">
+                  <p className={styles.generatorWarnText}>
+                    ⚠️ New keypair not yet active — click <strong>Save to instance</strong> to store
+                    both keys. Tokens will verify without any manifest update.
+                  </p>
+                  {!showKeygen && (
+                    <div className={styles.generatorWarnKey}>
+                      <span className={styles.generatorLabel}>Public key (for your records)</span>
+                      <div className={styles.generatorLabelRow}>
+                        <textarea
+                          readOnly
+                          className={`${styles.generatorTextarea} ${styles.generatorMono}`}
+                          value={generatedPubKey}
+                          rows={2}
+                          aria-label="Generated public key"
+                          onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                        />
+                        <button
+                          type="button"
+                          className={styles.generatorToggle}
+                          onClick={() => {
+                            void navigator.clipboard.writeText(generatedPubKey);
+                            setPubKeyCopied(true);
+                            setTimeout(() => setPubKeyCopied(false), 2000);
+                          }}
+                        >
+                          {pubKeyCopied ? 'Copied!' : 'Copy'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
             {genError && (
               <p className={styles.generatorError} role="alert">

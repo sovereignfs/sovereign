@@ -4,14 +4,16 @@ import { checkAdminKey } from '@/src/admin-guard';
 import { getPlatformDb } from '@/src/db';
 import { getInstalledPlugins } from '@/src/registry';
 
-const KEY_PREFIX = 'license_private_key:';
+const PRIV_PREFIX = 'license_private_key:';
+const PUB_PREFIX = 'license_public_key:';
 
 /**
  * GET /api/admin/license-keys
  *
- * Returns `{ keys: Record<pluginId, string> }` — the stored private key `d`
- * values for each installed monetized plugin that has one saved. The value is
- * the raw base64url `d` scalar as stored by POST below.
+ * Returns stored keypair values for each installed monetized plugin.
+ * `keys` = private key `d` values; `publicKeys` = public key `x` values
+ * (only present when saved via POST, i.e. when the operator used the Console
+ * keypair generator and clicked "Save to instance").
  *
  * Admin-key authenticated.
  */
@@ -26,22 +28,31 @@ export async function GET(request: Request): Promise<Response> {
 
   const entries = await Promise.all(
     monetizedIds.map(async (id) => {
-      const val = await getPlatformSetting(pdb, `${KEY_PREFIX}${id}`);
-      return [id, val] as const;
+      const [priv, pub] = await Promise.all([
+        getPlatformSetting(pdb, `${PRIV_PREFIX}${id}`),
+        getPlatformSetting(pdb, `${PUB_PREFIX}${id}`),
+      ]);
+      return [id, { priv, pub }] as const;
     }),
   );
 
-  const keys = Object.fromEntries(entries.filter(([, v]) => v !== null)) as Record<string, string>;
-  return NextResponse.json({ keys });
+  const keys: Record<string, string> = {};
+  const publicKeys: Record<string, string> = {};
+  for (const [id, { priv, pub }] of entries) {
+    if (priv) keys[id] = priv;
+    if (pub) publicKeys[id] = pub;
+  }
+  return NextResponse.json({ keys, publicKeys });
 }
 
 /**
  * POST /api/admin/license-keys
  *
- * Body: `{ pluginId: string; privateKey: string }`.
- * Stores the private key `d` value in `platform_settings` under
- * `license_private_key:<pluginId>` so the Console generator can pre-fill it
- * on any device without the operator pasting it again.
+ * Body: `{ pluginId: string; privateKey: string; publicKey?: string }`.
+ * Stores both keys in `platform_settings`. `publicKey` (the JWK `x` value) is
+ * optional but strongly recommended when using a keypair generated in the
+ * Console — once stored it becomes the authoritative verification key,
+ * overriding the manifest value, so token verification works without a redeploy.
  *
  * Admin-key authenticated.
  */
@@ -52,6 +63,7 @@ export async function POST(request: Request): Promise<Response> {
   const body = (await request.json().catch(() => null)) as {
     pluginId?: string;
     privateKey?: string;
+    publicKey?: string;
   } | null;
 
   if (!body?.pluginId || !body.privateKey) {
@@ -59,15 +71,21 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const plugin = getInstalledPlugins().find((p) => p.id === body.pluginId);
-  if (!plugin?.monetization?.license?.publicKey) {
+  if (!plugin?.monetization) {
     return NextResponse.json(
-      { error: 'Plugin not found or has no license public key.' },
+      { error: 'Plugin not found or has no monetization config.' },
       { status: 404 },
     );
   }
 
   const pdb = await getPlatformDb();
-  await setPlatformSetting(pdb, `${KEY_PREFIX}${body.pluginId}`, body.privateKey.trim());
+  const writes: Promise<void>[] = [
+    setPlatformSetting(pdb, `${PRIV_PREFIX}${body.pluginId}`, body.privateKey.trim()),
+  ];
+  if (body.publicKey?.trim()) {
+    writes.push(setPlatformSetting(pdb, `${PUB_PREFIX}${body.pluginId}`, body.publicKey.trim()));
+  }
+  await Promise.all(writes);
 
   return NextResponse.json({ ok: true });
 }
@@ -75,8 +93,8 @@ export async function POST(request: Request): Promise<Response> {
 /**
  * DELETE /api/admin/license-keys?pluginId=<id>
  *
- * Removes a stored private key from `platform_settings`. No-op if the key was
- * never saved. Admin-key authenticated.
+ * Removes both the stored private and public keys from `platform_settings`.
+ * Admin-key authenticated.
  */
 export async function DELETE(request: Request): Promise<Response> {
   const denied = checkAdminKey(request);
@@ -89,7 +107,10 @@ export async function DELETE(request: Request): Promise<Response> {
   }
 
   const pdb = await getPlatformDb();
-  await deletePlatformSetting(pdb, `${KEY_PREFIX}${pluginId}`);
+  await Promise.all([
+    deletePlatformSetting(pdb, `${PRIV_PREFIX}${pluginId}`),
+    deletePlatformSetting(pdb, `${PUB_PREFIX}${pluginId}`),
+  ]);
 
   return NextResponse.json({ ok: true });
 }

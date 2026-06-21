@@ -26,7 +26,7 @@
   padding: 0.2em 0.7em;
   border-radius: var(--sv-radius-sm);
   background: var(--sv-color-accent);
-  color: var(--sv-color-accent-foreground);
+  color: var(--sv-color-text-on-accent);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -125,7 +125,7 @@
   height: 24px;
   border-radius: 50%;
   background: var(--sv-color-accent);
-  color: var(--sv-color-accent-foreground);
+  color: var(--sv-color-text-on-accent);
   font-size: var(--sv-font-size-xs);
   font-weight: 700;
   display: flex;

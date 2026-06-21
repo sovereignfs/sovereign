@@ -4,26 +4,41 @@
  * Token format: `<base64url(JSON payload)>.<base64url(Ed25519 signature)>`
  *
  * The signature covers the UTF-8 bytes of the payload portion (before the dot).
- * The plugin author holds the private key; the public key is published in
- * `manifest.monetization.license.publicKey` (raw 32-byte Ed25519, base64url).
- *
- * Authors generate a keypair with:
- *   node -e "const c=require('crypto'); const {publicKey:pub,privateKey:priv}=
- *     c.generateKeyPairSync('ed25519');
- *     console.log('pub',pub.export({format:'jwk'}).x);
- *     console.log('priv',priv.export({format:'jwk'}).d);"
- *
- * Authors sign a token with:
- *   node -e "const c=require('crypto');
- *     const priv=c.createPrivateKey({key:{kty:'OKP',crv:'Ed25519',
- *       x:'<public>',d:'<private>'},format:'jwk'});
- *     const payload=Buffer.from(JSON.stringify({pluginId,sub,issuedAt,expiresAt,tier}))
- *       .toString('base64url');
- *     const sig=c.sign(null,Buffer.from(payload),priv).toString('base64url');
- *     console.log(payload+'.'+sig);"
+ * The plugin author holds the private key; the public key is resolved at
+ * verification time via `resolvePluginPublicKey`:
+ *   1. `platform_settings` key `license_public_key:<pluginId>` — set by the
+ *      Console keypair generator and takes precedence over the manifest. This
+ *      allows key rotation without a redeploy.
+ *   2. `manifest.monetization.license.publicKey` — the build-time default for
+ *      third-party plugins whose operator doesn't hold the private key.
  */
 
 import { type JsonWebKey, createPublicKey, verify as cryptoVerify } from 'node:crypto';
+import { getPlatformSetting } from '@sovereignfs/db';
+import { getPlatformDb } from './db';
+import { getInstalledPlugins } from './registry';
+
+const PUB_KEY_PREFIX = 'license_public_key:';
+
+/**
+ * Resolve the Ed25519 public key for a plugin.
+ *
+ * Checks `platform_settings` first so operators can rotate keys without a
+ * redeploy (the Console keypair generator stores both keys when "Save to
+ * instance" is clicked). Falls back to the manifest value for third-party
+ * plugins where the operator never holds the private key.
+ */
+export async function resolvePluginPublicKey(pluginId: string): Promise<string | null> {
+  try {
+    const pdb = await getPlatformDb();
+    const stored = await getPlatformSetting(pdb, `${PUB_KEY_PREFIX}${pluginId}`);
+    if (stored) return stored;
+  } catch {
+    // DB unavailable — fall through to manifest
+  }
+  const plugin = getInstalledPlugins().find((p) => p.id === pluginId);
+  return plugin?.monetization?.license?.publicKey ?? null;
+}
 
 export interface LicensePayload {
   /** Plugin ID this license is issued for (e.g. `com.acme.myplugin`). */

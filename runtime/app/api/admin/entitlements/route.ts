@@ -9,7 +9,7 @@ import {
 import { checkAdminKey } from '@/src/admin-guard';
 import { getPlatformDb } from '@/src/db';
 import { getInstalledPlugins } from '@/src/registry';
-import { verifyLicenseToken } from '@/src/license';
+import { verifyLicenseToken, resolvePluginPublicKey } from '@/src/license';
 import { logActivity } from '@/src/activity';
 
 /**
@@ -80,10 +80,10 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: 'Plugin not found.' }, { status: 404 });
   }
 
-  const publicKey = plugin.monetization?.license?.publicKey;
+  const publicKey = await resolvePluginPublicKey(pluginId);
   if (!publicKey) {
     return NextResponse.json(
-      { error: 'Plugin manifest does not declare a license public key.' },
+      { error: 'No license public key found for this plugin (manifest or instance storage).' },
       { status: 400 },
     );
   }

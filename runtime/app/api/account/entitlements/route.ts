@@ -7,7 +7,7 @@ import {
 } from '@sovereignfs/db';
 import { getPlatformDb } from '@/src/db';
 import { getInstalledPlugins } from '@/src/registry';
-import { verifyLicenseToken } from '@/src/license';
+import { verifyLicenseToken, resolvePluginPublicKey } from '@/src/license';
 import { logActivity } from '@/src/activity';
 
 /** GET /api/account/entitlements — list current user's entitlements. */
@@ -96,13 +96,13 @@ export async function POST(request: Request): Promise<Response> {
     return err;
   }
 
-  const publicKey = plugin.monetization.license?.publicKey;
+  const publicKey = await resolvePluginPublicKey(pluginId);
   if (!publicKey) {
     const err = NextResponse.json(
-      { error: 'Plugin manifest does not declare a license public key.' },
+      { error: 'No license public key found for this plugin (manifest or instance storage).' },
       { status: 500 },
     );
-    if (isForm) return redirectBack(paywallPath, err, 'No public key in manifest.');
+    if (isForm) return redirectBack(paywallPath, err, 'No public key configured.');
     return err;
   }
 

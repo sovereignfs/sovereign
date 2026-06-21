@@ -8,6 +8,7 @@ const RUNTIME_URL = process.env.NEXT_PUBLIC_RUNTIME_URL ?? 'http://localhost:300
 export async function saveLicenseKeyAction(
   pluginId: string,
   privateKey: string,
+  publicKey?: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const session = await sdk.auth.requireSession();
   if (!sdk.auth.hasCapability(session, 'role:assign')) {
@@ -19,7 +20,7 @@ export async function saveLicenseKeyAction(
     res = await fetch(`${RUNTIME_URL}/api/admin/license-keys`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminKey}` },
-      body: JSON.stringify({ pluginId, privateKey }),
+      body: JSON.stringify({ pluginId, privateKey, ...(publicKey ? { publicKey } : {}) }),
     });
   } catch {
     return { ok: false, error: 'Failed to reach the runtime API.' };

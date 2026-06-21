@@ -2,12 +2,6 @@ import { togglePluginAction } from './actions';
 import { PluginInstallPanel, RemovePluginButton } from './PluginInstallPanel';
 import styles from '../console.module.css';
 
-const PLATFORM_PLUGIN_IDS = new Set([
-  'fs.sovereign.console',
-  'fs.sovereign.launcher',
-  'fs.sovereign.account',
-]);
-
 interface PluginRow {
   id: string;
   name: string;
@@ -61,7 +55,7 @@ export default async function PluginsPage() {
           </thead>
           <tbody>
             {plugins.map((plugin) => {
-              const isChrome = PLATFORM_PLUGIN_IDS.has(plugin.id);
+              const isChrome = plugin.type === 'platform';
               return (
                 <tr key={plugin.id} className={styles.tr}>
                   <td className={styles.td}>

@@ -108,6 +108,16 @@
   margin: 0;
 }
 
+.importError {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-error-text);
+  background: var(--sv-color-error-surface);
+  border: 1px solid var(--sv-color-error-border);
+  border-radius: var(--sv-radius-sm);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  margin: 0;
+}
+
 .importHint {
   font-size: var(--sv-font-size-sm);
   color: var(--sv-color-text-secondary);

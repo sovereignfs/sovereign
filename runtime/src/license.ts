@@ -65,8 +65,10 @@ export function verifyLicenseToken(
     const payloadB64 = token.slice(0, dot);
     const sigB64 = token.slice(dot + 1);
 
-    // Decode and verify the signature.
-    const payloadBytes = Buffer.from(payloadB64, 'base64url');
+    // The signature covers the UTF-8 bytes of the base64url payload string
+    // (i.e. the ASCII characters 'e','y','J',... before the dot), matching
+    // what the signing script produces with Buffer.from(payload) [no encoding].
+    const payloadBytes = Buffer.from(payloadB64); // utf-8 / ascii of the b64url string
     const sigBytes = Buffer.from(sigB64, 'base64url');
 
     // Reconstruct the Ed25519 public key from the raw 32-byte JWK `x` value.

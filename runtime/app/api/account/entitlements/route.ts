@@ -76,11 +76,14 @@ export async function POST(request: Request): Promise<Response> {
     return err;
   }
 
+  // Errors always redirect back to the paywall so the user can retry.
+  const paywallPath = `/paywall/${encodeURIComponent(pluginId)}`;
+
   // Find the plugin manifest for the public key.
   const plugin = getInstalledPlugins().find((p) => p.id === pluginId);
   if (!plugin) {
     const err = NextResponse.json({ error: 'Plugin not found.' }, { status: 404 });
-    if (isForm) return redirectBack(returnPath ?? '/', err, 'Plugin not found.');
+    if (isForm) return redirectBack(paywallPath, err, 'Plugin not found.');
     return err;
   }
 
@@ -89,7 +92,7 @@ export async function POST(request: Request): Promise<Response> {
       { error: 'This plugin is free — no license required.' },
       { status: 400 },
     );
-    if (isForm) return redirectBack(returnPath ?? plugin.routePrefix, err, 'This plugin is free.');
+    if (isForm) return redirectBack(plugin.routePrefix, err, 'This plugin is free.');
     return err;
   }
 
@@ -99,7 +102,7 @@ export async function POST(request: Request): Promise<Response> {
       { error: 'Plugin manifest does not declare a license public key.' },
       { status: 500 },
     );
-    if (isForm) return redirectBack(returnPath ?? '/', err, 'No public key in manifest.');
+    if (isForm) return redirectBack(paywallPath, err, 'No public key in manifest.');
     return err;
   }
 
@@ -107,9 +110,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!result.valid || !result.payload) {
     const errMsg = result.error ?? 'Invalid license token.';
     const err = NextResponse.json({ error: errMsg }, { status: 422 });
-    if (isForm) {
-      return redirectBack(returnPath ?? `/paywall/${encodeURIComponent(pluginId)}`, err, errMsg);
-    }
+    if (isForm) return redirectBack(paywallPath, err, errMsg);
     return err;
   }
 

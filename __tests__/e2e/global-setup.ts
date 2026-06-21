@@ -1,8 +1,10 @@
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { chromium, type FullConfig } from '@playwright/test';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const AUTH_DIR = path.join(ROOT, '.auth');
 const RUNTIME = 'http://localhost:3000';

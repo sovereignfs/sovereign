@@ -1,6 +1,8 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test as base, type Page } from '@playwright/test';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AUTH_DIR = path.resolve(__dirname, '../../.auth');
 
 type AuthFixtures = {

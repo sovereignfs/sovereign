@@ -13,6 +13,7 @@ export {
   getLastMigrationResult,
   getNotificationPrefs,
   getPlatformDb,
+  deletePlatformSetting,
   getPlatformSetting,
   listAdminActivity,
   listAllConsentGrants,

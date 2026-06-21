@@ -1896,6 +1896,40 @@ Phase 1 (this task) targets `packages/ui` exclusively. The `runtime` App Router 
 - Dark mode toggle in the Storybook toolbar applies `[data-theme="dark"]` to the canvas root and all semantic colour tokens update immediately
 - CI `storybook-build` job is green; artifact is uploaded
 
+#### Task 1.0.09 — Phase 2 payment integration (RFC 0003 Phase 2) **[post-v1]**
+
+**Goal:** Automate the payment → entitlement flow that Phase 1 (Task 0.8.01) leaves
+manual. Three sub-tracks, independently deliverable:
+
+**Sub-track A — Bank transfer + admin confirmation**
+
+- New `payment_requests` table (both dialects; drizzle-kit migration).
+- Console **Pending Payments** sub-section under Entitlements — lists pending requests with subscriber, plugin, tier, amount, and requested-at.
+- Admin **Confirm** / **Reject** actions: confirm auto-creates an entitlement row (`source: 'bank_transfer'`); reject optionally sends a notification email.
+- `sdk.billing.requestSubscription({ pluginId, tierId })` (currently `NotImplementedError` stub → implemented) creates the request row and returns configured bank details.
+- Console Settings gains a `bank_transfer_details` field (IBAN / instructions).
+
+**Sub-track B — Stripe webhook**
+
+- No platform adapter code — integration lives in the plugin.
+- `sdk.billing.grantEntitlement({ userId, pluginId, tierId, expiresAt })` (new) lets a plugin's webhook handler write an entitlement server-side without a signed token.
+- Example Stripe webhook handler in `plugins/example-monetized/` or docs.
+
+**Sub-track C — PayPal webhook**
+
+- Same pattern as Stripe; same `sdk.billing.grantEntitlement()` seam.
+
+**Dependencies:** Task 0.8.01 (Phase 1 must be in production), Task 1.0.01 (encryption at rest — payment request records contain PII)
+
+**SRS reference:** RFC 0003 Phase 2
+
+**Review checklist:**
+
+- Bank transfer: user submits request → Console "Pending Payments" shows it → admin confirms → user's next request passes the paywall without re-importing a token
+- Bank transfer: admin rejects → user receives notification email (when SMTP configured)
+- Stripe: plugin webhook verifies signature, calls `sdk.billing.grantEntitlement()`, user gains access
+- `sdk.billing.requestSubscription()` throws `EntitlementRequiredError` when called from a non-plugin context
+
 ---
 
 _Version 1.23 — June 2026. Planning change (no task completed, no version bumps): (1) Corrected duplicate task numbering — RFC 0028 operator fork model task renumbered from 1.0.06 to 1.0.07 (1.0.06 is already occupied by Non-Docker/systemd deployment, RFC 0026). (2) Added Task 1.0.08 — Storybook for `@sovereignfs/ui` design system (no RFC needed — developer tooling; Storybook 8 + `@storybook/nextjs`, Token Gallery, all component stories, a11y addon, CI build job). SRS decision-log row added (v0.28). Earlier notes retained._

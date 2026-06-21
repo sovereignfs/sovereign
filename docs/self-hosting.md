@@ -132,13 +132,67 @@ to get started — every variable is documented there.
 | `SOVEREIGN_DEV_MODE_ENABLED` | no       | —                                                   | Set to `true` to enable production dev-mode (RFC 0020). When unset the feature does not exist and the dev-mode secret header is ignored entirely.                                                                                                                                                                                                                                                               |
 | `SOVEREIGN_DEV_MODE_SECRET`  | no       | `SOVEREIGN_ADMIN_KEY`                               | Secret callers supply in `X-Sovereign-Dev-Mode-Secret` to activate dev-mode on a request. Defaults to `SOVEREIGN_ADMIN_KEY` when unset. Set explicitly in production.                                                                                                                                                                                                                                           |
 | `SOVEREIGN_DEV_DATABASE_URL` | no       | —                                                   | URL of the mock database populated by `sv seed`. Dev-mode requests resolve all platform DB reads/writes to this database. Must be a separate file/schema from `DATABASE_URL`. Example: `file:./data/sovereign-dev.db`.                                                                                                                                                                                          |
-| `BRAND_NAME`                 | no       | `Sovereign`                                         | Display name of the instance shown in the shell, login page, and email. Overridable per tenant in Console → Settings → Branding.                                                                                                                                                                                                                                                                                |
+| `BRAND_NAME`                 | no       | `Sovereign`                                         | Display name of the instance. Appears in the runtime shell header, the auth server login page title and heading, and outbound email. Read server-side at request time (not baked at build). Overridable per tenant in Console → Settings → Branding.                                                                                                                                                            |
 | `BRAND_PRIMARY_COLOR`        | no       | —                                                   | 6-digit hex accent colour (e.g. `#3b82f6`) injected as `--sv-color-accent`. Leave unset to use the default monochrome palette.                                                                                                                                                                                                                                                                                  |
 | `BRAND_LOGO`                 | no       | —                                                   | URL of the light-theme brand logo. Use an absolute URL for an external logo, or `/api/brand/logo` after uploading via Console → Branding.                                                                                                                                                                                                                                                                       |
 | `BRAND_LOGO_DARK`            | no       | `BRAND_LOGO`                                        | URL of the dark-theme brand logo. Falls back to `BRAND_LOGO` when unset.                                                                                                                                                                                                                                                                                                                                        |
 | `BRAND_FAVICON`              | no       | —                                                   | URL of the branded favicon. Falls back to the built-in `favicon.ico` when unset.                                                                                                                                                                                                                                                                                                                                |
 | `BRAND_EMAIL_FROM_NAME`      | no       | —                                                   | Sender display name used in outbound email (invite, password reset). Falls back to `BRAND_NAME` when unset.                                                                                                                                                                                                                                                                                                     |
 | `BRAND_EMAIL_LOGO`           | no       | —                                                   | Publicly reachable URL for the logo included in HTML email bodies. Must be reachable by email client rendering engines — not a path-relative URL.                                                                                                                                                                                                                                                               |
+
+---
+
+## Branding and white-labeling
+
+Sovereign supports full white-labeling via env vars (instance-wide defaults) and
+the Console Branding UI (per-tenant overrides stored in the database). The two
+layers stack: Console settings take precedence over env vars; env vars take
+precedence over built-in defaults.
+
+### What `BRAND_NAME` affects
+
+`BRAND_NAME` is read server-side at request time by both apps, so changing it in
+your deployment env takes effect on the next request without a rebuild.
+
+| Surface          | App         | Detail                                                      |
+| ---------------- | ----------- | ----------------------------------------------------------- |
+| Shell header     | Runtime     | Shown as the instance name when no logo is configured       |
+| Page `<title>`   | Auth server | `<BRAND_NAME>` — used for the browser tab and bookmark name |
+| Login heading    | Auth server | "Sign in to `<BRAND_NAME>`"                                 |
+| Page description | Auth server | "Sign in to your `<BRAND_NAME>` workspace."                 |
+| Outbound email   | Both        | Subject lines and body copy use the brand name              |
+| PWA manifest     | Runtime     | `name` and `short_name` in the web app manifest             |
+
+### Env-var branding (instance-wide)
+
+Set any of the `BRAND_*` vars in `.env` before starting the containers. All are
+optional — unset vars fall back to the Sovereign defaults.
+
+```env
+BRAND_NAME=Acme Workspace
+BRAND_PRIMARY_COLOR=#3b82f6      # hex accent colour
+BRAND_LOGO=https://cdn.example.com/logo.png
+BRAND_LOGO_DARK=https://cdn.example.com/logo-dark.png
+BRAND_FAVICON=https://cdn.example.com/favicon.ico
+BRAND_EMAIL_FROM_NAME=Acme      # email sender display name
+BRAND_EMAIL_LOGO=https://cdn.example.com/logo-email.png
+```
+
+> **Logo and favicon URLs** must be publicly reachable absolute URLs. The auth
+> server login page loads before any session exists, so relative or
+> session-gated paths won't work. Use a CDN, object storage, or upload via the
+> Console (which exposes `/api/brand/logo` and `/api/brand/favicon` as
+> unauthenticated endpoints).
+
+### Console branding (per-tenant override)
+
+**Console → Settings → Branding** provides a live UI for the same fields. Values
+saved there are stored in the `tenant_branding` table and take precedence over
+env vars for every request — no restart needed. This is the recommended path for
+operators who want to update branding without touching deployment config.
+
+To reset a Console-set value back to the env-var default, clear the field in
+Console and save.
 
 ---
 

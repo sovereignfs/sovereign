@@ -11,8 +11,9 @@ import styles from '../auth.module.css';
  * `runtimeUrl` is resolved server-side (see runtimePublicUrl) and passed in so
  * the post-login redirect targets the deployment's real runtime origin at
  * request time — not a value frozen into the client bundle at build time.
+ * `brandName` is resolved from BRAND_NAME env at request time for the same reason.
  */
-export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
+export function LoginForm({ runtimeUrl, brandName }: { runtimeUrl: string; brandName: string }) {
   const signedOut = useSearchParams().get('signedout') === '1';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,7 +54,7 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
   return (
     <main className={styles.page}>
       <div className={styles.card}>
-        <h1 className={styles.title}>Sign in to Sovereign</h1>
+        <h1 className={styles.title}>Sign in to {brandName}</h1>
         {signedOut ? (
           <p className={styles.notice} role="status">
             You&rsquo;ve been signed out.

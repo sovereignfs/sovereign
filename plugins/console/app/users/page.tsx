@@ -4,6 +4,8 @@ import { changeRoleAction, toggleActiveAction } from './actions';
 import { DeactivateButton, ResetMfaButton } from './UserActionButtons';
 import styles from '../console.module.css';
 
+const PAGE_SIZE = 50;
+
 interface MemberRow {
   id: string | null;
   email: string;
@@ -40,8 +42,20 @@ function RoleBadge({ role }: { role: string | null }) {
   return <span className={styles.badgeUser}>User</span>;
 }
 
-export default async function UsersPage() {
-  const [members, session] = await Promise.all([getMembers(), sdk.auth.getSession()]);
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam ?? '1'));
+
+  const [allMembers, session] = await Promise.all([getMembers(), sdk.auth.getSession()]);
+
+  const total = allMembers.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const members = allMembers.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const canAssignRoles = sdk.auth.hasCapability(session, 'role:assign');
   const canManageUsers = sdk.auth.hasCapability(session, 'user:manage');
@@ -50,11 +64,14 @@ export default async function UsersPage() {
     <div>
       <div className={styles.pageHeader}>
         <h2 className={styles.pageTitle}>Users</h2>
-        {canManageUsers && (
-          <Link href="/console/users/invite" className={styles.actionButton}>
-            Invite user
-          </Link>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sv-space-3)' }}>
+          <span className={styles.textMuted}>{total} members</span>
+          {canManageUsers && (
+            <Link href="/console/users/invite" className={styles.actionButton}>
+              Invite user
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className={styles.tableWrapper}>
@@ -179,6 +196,28 @@ export default async function UsersPage() {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          {safePage > 1 ? (
+            <Link href={`?page=${safePage - 1}`} className={styles.paginationLink}>
+              ← Previous
+            </Link>
+          ) : (
+            <span className={styles.paginationDisabled}>← Previous</span>
+          )}
+          <span className={styles.paginationInfo}>
+            Page {safePage} of {totalPages}
+          </span>
+          {safePage < totalPages ? (
+            <Link href={`?page=${safePage + 1}`} className={styles.paginationLink}>
+              Next →
+            </Link>
+          ) : (
+            <span className={styles.paginationDisabled}>Next →</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -383,12 +383,14 @@ export async function recordActivity(pdb: PlatformDb, input: RecordActivityInput
 
 /**
  * Personal activity feed — events where the given user is actor or subject,
- * visibility = 'user'. Newest-first, limited to `limit` rows.
+ * visibility = 'user'. Newest-first, limited to `limit` rows starting at
+ * `offset` (0-based, for page-based UI: page N → offset N*limit).
  */
 export async function listUserActivity(
   pdb: PlatformDb,
   userId: string,
   limit = 50,
+  offset = 0,
 ): Promise<ActivityLogRow[]> {
   return dbAll<ActivityLogRow>(
     pdb,
@@ -402,19 +404,33 @@ export async function listUserActivity(
           AND visibility = 'user'
           AND (actor_id = ${userId} OR subject_user_id = ${userId})
         ORDER BY created_at DESC
-        LIMIT ${limit}`,
+        LIMIT ${limit} OFFSET ${offset}`,
   );
+}
+
+/** Total count of personal activity rows for the given user (for pagination). */
+export async function countUserActivity(pdb: PlatformDb, userId: string): Promise<number> {
+  const row = await dbGet<{ c: number | string }>(
+    pdb,
+    sql`SELECT COUNT(*) AS c FROM activity_log
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND visibility = 'user'
+          AND (actor_id = ${userId} OR subject_user_id = ${userId})`,
+  );
+  return Number(row?.c ?? 0);
 }
 
 /**
  * Admin (platform-wide) activity feed — all rows for the tenant, newest-first,
- * limited to `limit` rows. Optionally filtered by `actorId` or `action`.
+ * limited to `limit` rows starting at `offset`. Optionally filtered by
+ * `actorId` or `action`.
  */
 export async function listAdminActivity(
   pdb: PlatformDb,
-  options: { actorId?: string; action?: string; limit?: number } = {},
+  options: { actorId?: string; action?: string; limit?: number; offset?: number } = {},
 ): Promise<ActivityLogRow[]> {
   const limit = options.limit ?? 100;
+  const offset = options.offset ?? 0;
   const actorFilter = options.actorId ?? null;
   const actionFilter = options.action ?? null;
   return dbAll<ActivityLogRow>(
@@ -429,8 +445,25 @@ export async function listAdminActivity(
           AND (${actorFilter} IS NULL OR actor_id = ${actorFilter})
           AND (${actionFilter} IS NULL OR action = ${actionFilter})
         ORDER BY created_at DESC
-        LIMIT ${limit}`,
+        LIMIT ${limit} OFFSET ${offset}`,
   );
+}
+
+/** Total count of admin-visible activity rows (for pagination). */
+export async function countAdminActivity(
+  pdb: PlatformDb,
+  options: { actorId?: string; action?: string } = {},
+): Promise<number> {
+  const actorFilter = options.actorId ?? null;
+  const actionFilter = options.action ?? null;
+  const row = await dbGet<{ c: number | string }>(
+    pdb,
+    sql`SELECT COUNT(*) AS c FROM activity_log
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND (${actorFilter} IS NULL OR actor_id = ${actorFilter})
+          AND (${actionFilter} IS NULL OR action = ${actionFilter})`,
+  );
+  return Number(row?.c ?? 0);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

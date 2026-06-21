@@ -15,6 +15,8 @@ export {
   getPlatformDb,
   deletePlatformSetting,
   getPlatformSetting,
+  countAdminActivity,
+  countUserActivity,
   listAdminActivity,
   listAllConsentGrants,
   listConsentGrants,

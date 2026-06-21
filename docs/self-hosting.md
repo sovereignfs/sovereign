@@ -115,7 +115,7 @@ to get started — every variable is documented there.
 | `DATABASE_URL`               | no       | `file:./data/sovereign.db`                          | Runtime database. SQLite file path (relative paths resolve against the repo root) or a `postgres://` URL.                                                                                                                                                                                                                                                                                                       |
 | `DB_DIALECT`                 | no       | `sqlite`                                            | Set to `postgres` when using PostgreSQL.                                                                                                                                                                                                                                                                                                                                                                        |
 | `PGSSLROOTCERT`              | no       | —                                                   | Path to a CA PEM file for Postgres TLS certificate verification. Only meaningful when `DATABASE_URL` / `AUTH_DATABASE_URL` includes `sslmode=verify-full`. Follows the standard libpq convention (same env var accepted by `psql` and `pg_dump`).                                                                                                                                                               |
-| `SMTP_HOST`                  | no       | —                                                   | SMTP server host. Leave unset to disable email (the app still runs).                                                                                                                                                                                                                                                                                                                                            |
+| `SMTP_HOST`                  | no       | `localhost` (dev) / — (prod)                        | SMTP server host. In non-production builds, defaults to `localhost` so Mailpit works out of the box with no config. In production, leave unset to disable email (the app still runs) or set to your SMTP relay.                                                                                                                                                                                                 |
 | `SMTP_PORT`                  | no       | `587`                                               | SMTP port.                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `SMTP_USER`                  | no       | —                                                   | SMTP username.                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `SMTP_PASS`                  | no       | —                                                   | SMTP password.                                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -487,28 +487,69 @@ stay on the `sovereign_data` volume regardless of dialect.
 
 ## Email in development
 
-The dev Compose file includes [Mailpit](https://mailpit.axllent.org/) — a
-local SMTP server with a web inbox. It runs automatically alongside the other
-services. No configuration needed:
+Sovereign uses [Mailpit](https://mailpit.axllent.org/) to capture outbound
+email locally — a tiny SMTP server with a web inbox.
 
-- **SMTP:** `mailpit:1025` (internal) — already wired in the Compose file
-- **Web inbox:** http://localhost:8025
+### `pnpm dev` (native)
 
-To capture email when using `pnpm dev` (native, outside Docker):
-
-```env
-SMTP_HOST=localhost
-SMTP_PORT=1025
-```
-
-Then start Mailpit separately:
+No `.env` changes needed. When `SMTP_HOST` is unset, the mailer automatically
+falls back to `localhost:1025` in non-production environments. Just start
+Mailpit and emails appear immediately:
 
 ```bash
 # Docker (standalone)
 docker run -p 1025:1025 -p 8025:8025 axllent/mailpit
 
-# Or native binary — see https://mailpit.axllent.org/docs/install/
+# Or native binary
+brew install mailpit   # macOS
+# see https://mailpit.axllent.org/docs/install/ for Linux/Windows
+mailpit
 ```
+
+Open **http://localhost:8025** and trigger any email flow (invite, forgot
+password) — no additional configuration required.
+
+### Docker Compose
+
+Mailpit is included in `docker-compose.yml` and starts automatically alongside
+the runtime and auth services. Set `SMTP_HOST=mailpit` in `.env` to route
+the containerised app to it:
+
+```env
+SMTP_HOST=mailpit   # the Docker service name; omit when running pnpm dev natively
+```
+
+- **SMTP (internal):** `mailpit:1025`
+- **Web inbox:** http://localhost:8025
+
+---
+
+## Password reset
+
+Users who have forgotten their password can request a reset link from the login
+page via the **Forgot password?** link. The flow:
+
+1. User enters their email address at `/forgot-password`.
+2. The auth server sends a time-limited reset link to that address.
+3. User clicks the link (`/reset-password?token=…`) and chooses a new password
+   (minimum 8 characters, confirmed twice).
+4. On success the session is not automatically created — the user is directed to
+   sign in with the new password.
+
+**Security properties:**
+
+- The response is always _"If that email address is registered, you'll receive a
+  reset link shortly"_ regardless of whether the address exists — no user
+  enumeration.
+- Reset tokens expire after **1 hour**.
+- The endpoint is rate-limited to **3 requests per 60 seconds per IP** to prevent
+  abuse.
+
+**Requirement:** password reset sends an email, so SMTP must be reachable. In
+development Mailpit handles this automatically (see [Email in
+development](#email-in-development)). In production configure `SMTP_HOST` and
+the related vars in the env table above; without them the reset email is silently
+skipped and the user will not receive a link.
 
 ---
 

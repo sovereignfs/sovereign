@@ -85,30 +85,35 @@ run.
 
 ### Email in development
 
-The mailer speaks plain SMTP, so to actually see the emails the app sends in
-dev you point `SMTP_HOST` at a local catch-all server. With email **off**
-(`SMTP_HOST` unset, the default) `send()` is a no-op and the app still runs.
-
 We use [Mailpit](https://github.com/axllent/mailpit) — a tiny SMTP server with
-a web inbox. Two ways to run it, both with SMTP on `1025` and the inbox on
-`8025`:
+a web inbox — to capture outbound email locally.
 
-- **Docker:** `docker compose up mailpit` (the service is in
-  `docker-compose.yml`). In `.env` set `SMTP_HOST=mailpit` if the app also runs
-  in Compose, or `SMTP_HOST=localhost` if you run it with `pnpm dev`.
-- **Native (no Docker):** install the binary and run it —
+**In `pnpm dev` (native), no configuration is needed.** When `SMTP_HOST` is
+unset, the mailer automatically falls back to `localhost:1025` in non-production
+environments. Start Mailpit and emails appear in its inbox immediately:
 
-  ```bash
-  brew install mailpit   # or: go install github.com/axllent/mailpit@latest
-  mailpit
-  ```
+```bash
+# Docker (standalone)
+docker run -p 1025:1025 -p 8025:8025 axllent/mailpit
 
-  then set `SMTP_HOST=localhost` in `.env`.
+# Native binary
+brew install mailpit   # or: go install github.com/axllent/mailpit@latest
+mailpit
+```
 
-Either way, open the inbox at **http://localhost:8025** and trigger a flow that
-sends mail. For a zero-install option, nodemailer's
-[Ethereal](https://ethereal.email/) test accounts print a preview URL per
-message instead of using a local inbox.
+Then open **http://localhost:8025** and trigger any email flow (invite, forgot
+password, etc.) — the mail will appear without any `.env` changes.
+
+**In Docker Compose**, Mailpit runs automatically as part of the stack. Add
+`SMTP_HOST=mailpit` to `.env` to route the app (running inside Compose) to it:
+
+```env
+SMTP_HOST=mailpit   # the Docker service name; omit for pnpm dev
+```
+
+In production, with `SMTP_HOST` unset, the mailer is a graceful no-op — the
+app still starts and runs; email features (invites, password reset) are simply
+skipped.
 
 ### Running the tests
 

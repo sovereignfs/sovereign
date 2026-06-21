@@ -1,0 +1,178 @@
+.page {
+  padding: var(--sv-space-8) var(--sv-space-6);
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-6);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: var(--sv-font-size-2xl);
+  font-weight: 600;
+  color: var(--sv-color-text-primary);
+  margin: 0;
+}
+
+.badge {
+  font-size: var(--sv-font-size-xs);
+  font-weight: 600;
+  padding: 0.2em 0.7em;
+  border-radius: var(--sv-radius-sm);
+  background: var(--sv-color-accent);
+  color: var(--sv-color-accent-foreground);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.lead {
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-md);
+  margin: 0;
+}
+
+.code {
+  font-family: var(--sv-font-family-mono);
+  font-size: 0.875em;
+  background: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  padding: 0.1em 0.35em;
+}
+
+/* Gated content card */
+.card {
+  background: var(--sv-color-surface-raised);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  box-shadow: var(--sv-shadow-card);
+  padding: var(--sv-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
+/* Developer guide card — visually distinct */
+.devCard {
+  background: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  padding: var(--sv-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-5);
+}
+
+.cardTitle {
+  font-size: var(--sv-font-size-md);
+  font-weight: 600;
+  color: var(--sv-color-text-primary);
+  margin: 0;
+}
+
+.dl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  gap: var(--sv-space-4);
+  font-size: var(--sv-font-size-sm);
+}
+
+.row dt {
+  color: var(--sv-color-text-muted);
+  min-width: 100px;
+  font-weight: 500;
+}
+
+.row dd {
+  color: var(--sv-color-text-primary);
+  margin: 0;
+}
+
+.ok {
+  color: var(--sv-color-text-primary);
+  font-weight: 500;
+}
+
+.muted {
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Numbered steps */
+.step {
+  display: flex;
+  gap: var(--sv-space-4);
+  align-items: flex-start;
+}
+
+.stepNum {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--sv-color-accent);
+  color: var(--sv-color-accent-foreground);
+  font-size: var(--sv-font-size-xs);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.step > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+  min-width: 0;
+}
+
+.stepTitle {
+  font-size: var(--sv-font-size-sm);
+  font-weight: 600;
+  color: var(--sv-color-text-primary);
+  margin: 0;
+}
+
+/* Token display */
+.token {
+  font-family: var(--sv-font-family-mono);
+  font-size: var(--sv-font-size-xs);
+  background: var(--sv-color-surface);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  padding: var(--sv-space-3);
+  word-break: break-all;
+  white-space: pre-wrap;
+  margin: 0;
+  color: var(--sv-color-text-primary);
+}
+
+/* Code blocks for shell snippets */
+.code_block {
+  font-family: var(--sv-font-family-mono);
+  font-size: var(--sv-font-size-xs);
+  background: var(--sv-color-surface);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  padding: var(--sv-space-3);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  color: var(--sv-color-text-primary);
+  line-height: 1.6;
+}

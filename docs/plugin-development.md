@@ -51,17 +51,23 @@ workflow. Edit the manifest, implement your `app/page.tsx`, then install with
 
 ### Example plugins
 
-Two reference plugins ship with the platform and are composed automatically.
+Three reference plugins ship with the platform and are composed automatically.
 They are enabled by default and serve as both documentation and runtime
 test fixtures:
 
-| Plugin ID                    | Route            | What it shows                                  |
-| ---------------------------- | ---------------- | ---------------------------------------------- |
-| `fs.sovereign.example-basic` | `/example-basic` | Session reading, `@sovereignfs/ui`, CSS tokens |
-| `fs.sovereign.example-api`   | `/example-api`   | API provider serve-route pattern (PLT-16)      |
+| Plugin ID                        | Route                | What it shows                                                                |
+| -------------------------------- | -------------------- | ---------------------------------------------------------------------------- |
+| `fs.sovereign.example-basic`     | `/example-basic`     | Session reading, `@sovereignfs/ui`, CSS tokens, plugin-declared capabilities |
+| `fs.sovereign.example-api`       | `/example-api`       | API provider serve-route pattern (PLT-16)                                    |
+| `fs.sovereign.example-monetized` | `/example-monetized` | Monetization manifest field, Ed25519 license gating, paywall flow (RFC 0003) |
 
-Browse `plugins/example-basic/` and `plugins/example-api/` in the monorepo
-for fully-working code to adapt.
+Browse `plugins/example-basic/`, `plugins/example-api/`, and
+`plugins/example-monetized/` in the monorepo for fully-working code to adapt.
+
+The `example-monetized` plugin ships with a committed demo keypair and a
+pre-signed token, so you can test the paywall → import → access flow immediately
+without any billing setup. See [Testing monetization locally](#testing-monetization-locally)
+for the step-by-step instructions.
 
 ## How plugins work
 
@@ -594,6 +600,102 @@ in-plugin checks.
 > ships in a future release. `sdk.billing.getEntitlement()` and
 > `sdk.billing.requireEntitlement()` throw `NotImplementedError` until then.
 > Route-level access (middleware gating) is fully functional now.
+
+#### Testing monetization locally
+
+The `plugins/example-monetized` plugin ships with a committed demo keypair and a
+pre-signed token so you can walk through the full flow without any billing setup.
+Start the dev server and go to `/example-monetized` — on first visit you will be
+redirected to the paywall page because you have no entitlement yet.
+
+**Step 1 — Generate a keypair** (once per plugin; keep the private key secret):
+
+```bash
+node -e "
+const c = require('crypto');
+const { publicKey: pub, privateKey: priv } = c.generateKeyPairSync('ed25519');
+const { x } = pub.export({ format: 'jwk' });
+const { d } = priv.export({ format: 'jwk' });
+console.log('Public key  (put in manifest):', x);
+console.log('Private key (keep in secret): ', d);
+"
+```
+
+Put the public key (`x`) in `manifest.json → monetization.license.publicKey`.
+Store the private key in your billing backend — never commit it.
+
+**Step 2 — Declare monetization in your manifest:**
+
+```jsonc
+"monetization": {
+  "model": "recurring",
+  "interval": "month",
+  "tiers": [
+    { "id": "pro", "name": "Pro", "price": { "amount": 1500, "currency": "USD" } }
+  ],
+  "license": {
+    "publicKey": "<your base64url Ed25519 public key>"
+  }
+}
+```
+
+Run `pnpm generate` after editing the manifest. Visiting the plugin's route now
+redirects to the paywall.
+
+**Step 3 — Sign a license token** (your billing backend does this after payment;
+for local testing you can run it manually):
+
+```bash
+node -e "
+const c = require('crypto');
+const priv = c.createPrivateKey({
+  key: {
+    kty: 'OKP', crv: 'Ed25519',
+    x: '<YOUR_PUBLIC_KEY>',
+    d: '<YOUR_PRIVATE_KEY>'
+  },
+  format: 'jwk'
+});
+const payload = Buffer.from(JSON.stringify({
+  pluginId:  'your.plugin.id',
+  sub:       'user@example.com',
+  issuedAt:  Math.floor(Date.now() / 1000),
+  expiresAt: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // 30 days
+  tier:      'pro'
+})).toString('base64url');
+const sig = c.sign(null, Buffer.from(payload), priv).toString('base64url');
+console.log(payload + '.' + sig);
+"
+```
+
+The output is the token to deliver to the user.
+
+**Step 4 — Import the token:**
+
+The user pastes the token on the paywall page (`/paywall/<pluginId>`) and clicks
+**Activate license** — or imports it later in **Account → Billing**. The platform
+verifies the Ed25519 signature offline and grants immediate access.
+
+**Step 5 — Test error paths:**
+
+| Scenario                  | How to reproduce                                 | Expected result                           |
+| ------------------------- | ------------------------------------------------ | ----------------------------------------- |
+| No entitlement            | Visit the plugin route without importing a token | 303 redirect to `/paywall/<pluginId>`     |
+| API route, no entitlement | `curl /api/<slug>/anything`                      | `402 Payment Required`                    |
+| Expired token             | Set `expiresAt` in the past and sign             | "License has expired" on the paywall form |
+| Wrong plugin              | Use a token signed with a different `pluginId`   | "License is for plugin X, not Y"          |
+| Tampered token            | Flip a character in the signature half           | "Signature verification failed."          |
+| Cancelled entitlement     | Cancel in Account → Billing, then revisit        | Redirected to paywall                     |
+
+**Token payload reference:**
+
+| Field       | Type   | Required | Description                                           |
+| ----------- | ------ | -------- | ----------------------------------------------------- |
+| `pluginId`  | string | yes      | Must match the manifest `id` exactly                  |
+| `sub`       | string | yes      | Subscriber identity (email or instance domain)        |
+| `issuedAt`  | number | yes      | Unix epoch seconds                                    |
+| `expiresAt` | number | no       | Unix epoch seconds. Omit for perpetual licenses.      |
+| `tier`      | string | no       | Tier ID (e.g. `"pro"`). Omit for single-tier plugins. |
 
 ### Example `manifest.json`
 

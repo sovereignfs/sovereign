@@ -23,6 +23,8 @@ jobs:
     name: Playwright golden paths
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Temporarily disabled — tests run locally via the pre-push git hook instead.
+    if: false
 
     steps:
       - uses: actions/checkout@v4

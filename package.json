@@ -31,7 +31,8 @@
     "prepare": "simple-git-hooks"
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged"
+    "pre-commit": "pnpm lint-staged",
+    "pre-push": "pnpm test:e2e"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

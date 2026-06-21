@@ -388,6 +388,20 @@
 
 /* ── Confirm dialog ─────────────────────────────────────────────────────── */
 
+.confirmNativeDialog {
+  border: none;
+  border-radius: var(--sv-radius-lg);
+  background: var(--sv-color-surface);
+  box-shadow: var(--sv-shadow-overlay);
+  padding: 0;
+  width: 22rem;
+  max-width: calc(100vw - var(--sv-space-8));
+}
+
+.confirmNativeDialog::backdrop {
+  background: var(--sv-color-scrim);
+}
+
 .confirmDialog {
   display: flex;
   flex-direction: column;

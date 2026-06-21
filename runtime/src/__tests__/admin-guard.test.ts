@@ -31,8 +31,8 @@ describe('checkAdminKey (runtime)', () => {
     expect(checkAdminKey(requestWithAuth())?.status).toBe(403);
   });
 
-  it('returns 500 when SOVEREIGN_ADMIN_KEY is not configured', () => {
+  it('returns 503 when SOVEREIGN_ADMIN_KEY is not configured', () => {
     delete process.env.SOVEREIGN_ADMIN_KEY;
-    expect(checkAdminKey(requestWithAuth('Bearer anything'))?.status).toBe(500);
+    expect(checkAdminKey(requestWithAuth('Bearer anything'))?.status).toBe(503);
   });
 });

@@ -30,6 +30,8 @@
   ],
   "scripts": {
     "build": "tsup",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build --output-dir storybook-static",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
@@ -38,12 +40,18 @@
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",
+    "@storybook/addon-a11y": "catalog:storybook",
+    "@storybook/addon-themes": "catalog:storybook",
+    "@storybook/addon-viewport": "catalog:storybook",
+    "@storybook/react-vite": "catalog:storybook",
+    "@storybook/test": "catalog:storybook",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "storybook": "catalog:storybook",
     "tsup": "catalog:",
     "typescript": "catalog:"
   }

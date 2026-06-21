@@ -62,10 +62,12 @@ type Story = StoryObj<typeof meta>;
 // ---------------------------------------------------------------------------
 
 export const Default: Story = {
+  args: { open: false, onClose: () => {}, children: null },
   render: () => <DrawerDemo />,
 };
 
 export const Closed: Story = {
+  args: { open: false, onClose: () => {}, children: null },
   render: () => (
     <Drawer open={false} onClose={() => {}} aria-label="Closed drawer">
       <p>Never seen</p>
@@ -75,6 +77,7 @@ export const Closed: Story = {
 
 /** Play function opens the drawer and asserts its list items are visible. */
 export const OpenViaInteraction: Story = {
+  args: { open: false, onClose: () => {}, children: null },
   render: () => <DrawerDemo label="Navigation menu" />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

@@ -3,8 +3,8 @@ import { test, expect } from './fixtures';
 test.describe('Console plugin — golden paths', () => {
   test('admin can access /console', async ({ adminPage: page }) => {
     await page.goto('/console');
-    // The console page (full-page, not interception) renders the plugin content.
-    await expect(page.locator('h2')).toBeVisible();
+    // The console layout renders an h1 "Console" heading.
+    await expect(page.locator('h1')).toBeVisible();
   });
 
   test('regular user gets a 403 response on /console', async ({ userPage: page }) => {

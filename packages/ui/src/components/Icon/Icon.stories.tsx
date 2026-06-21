@@ -42,6 +42,7 @@ export const SizeLarge: Story = { args: { name: 'bell', size: 'lg', 'aria-hidden
 /** Full icon grid — every name across all three sizes. */
 export const AllIcons: Story = {
   parameters: { layout: 'padded' },
+  args: { name: 'house', 'aria-hidden': true },
   render: () => (
     <div>
       {(['sm', 'md', 'lg'] as const).map((sz) => (

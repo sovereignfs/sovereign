@@ -60,18 +60,22 @@ type Story = StoryObj<typeof meta>;
 // ---------------------------------------------------------------------------
 
 export const Small: Story = {
+  args: { open: false, onClose: () => {}, children: null },
   render: () => <DialogDemo size="sm" label="Small dialog" />,
 };
 
 export const Medium: Story = {
+  args: { open: false, onClose: () => {}, children: null },
   render: () => <DialogDemo size="md" label="Medium dialog" />,
 };
 
 export const Large: Story = {
+  args: { open: false, onClose: () => {}, children: null },
   render: () => <DialogDemo size="lg" label="Large dialog" />,
 };
 
 export const Closed: Story = {
+  args: { open: false, onClose: () => {}, children: null },
   render: () => (
     <Dialog open={false} onClose={() => {}} aria-label="Closed dialog">
       <p>Never seen</p>
@@ -81,6 +85,7 @@ export const Closed: Story = {
 
 /** Play function opens the dialog and asserts it is visible. */
 export const OpenViaInteraction: Story = {
+  args: { open: false, onClose: () => {}, children: null },
   render: () => <DialogDemo size="md" label="Interaction test dialog" />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

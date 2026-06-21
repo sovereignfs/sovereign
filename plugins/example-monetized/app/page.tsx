@@ -1,4 +1,5 @@
 import { sdk } from '@sovereignfs/sdk';
+import { sql } from 'drizzle-orm';
 import { Button } from '@sovereignfs/ui';
 import styles from './example-monetized.module.css';
 
@@ -20,15 +21,61 @@ import styles from './example-monetized.module.css';
 const DEMO_TOKEN =
   'eyJwbHVnaW5JZCI6ImZzLnNvdmVyZWlnbi5leGFtcGxlLW1vbmV0aXplZCIsInN1YiI6ImRlbW9AZXhhbXBsZS5jb20iLCJpc3N1ZWRBdCI6MTc1MDAwMDAwMCwidGllciI6InBybyJ9.Rfv-w5U2LNuxc9oTfFHW-TPhV8j3uMeS7MaDGHxhVvrQ6OcX66R392QEr6ztGQ5dEb2n3FpuBeOqNgVlmnJoDg';
 
+const PLUGIN_ID = 'fs.sovereign.example-monetized';
+
+const TIERS: Record<string, string> = {
+  basic: 'Basic',
+  pro: 'Pro',
+};
+
+type EntRow = { tier_id: string | null };
+
+/** Read the caller's active entitlement tier from the platform DB. */
+async function getActiveTier(userId: string): Promise<string | null> {
+  try {
+    const db = (await sdk.db.getClient()) as Record<string, unknown>;
+    const now = Math.floor(Date.now() / 1000);
+    // sdk.db.getClient() returns the raw Drizzle instance (opaque in the SDK).
+    // Both adapters accept a drizzle-orm `sql` template object; result shape
+    // differs: BetterSQLite3 (.all) is synchronous and returns T[]; postgres-js
+    // (.execute) is async and returns the rows array directly. When
+    // sdk.billing.getEntitlement() is implemented (Task 0.8.02) use that instead.
+    const query = sql`
+      SELECT tier_id FROM entitlements
+      WHERE user_id = ${userId}
+        AND plugin_id = ${PLUGIN_ID}
+        AND status = ${'active'}
+        AND (expires_at IS NULL OR expires_at > ${now})
+      ORDER BY created_at DESC LIMIT 1
+    `;
+    let rows: EntRow[] = [];
+    if (typeof db['all'] === 'function') {
+      rows = (db['all'] as (q: unknown) => EntRow[])(query);
+    } else if (typeof db['execute'] === 'function') {
+      const res = (await (db['execute'] as (q: unknown) => Promise<unknown>)(query)) as
+        | EntRow[]
+        | { rows?: EntRow[] };
+      rows = Array.isArray(res) ? res : (res.rows ?? []);
+    }
+    return rows[0]?.tier_id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function ExampleMonetizedPage() {
   const session = await sdk.auth.getSession();
   const user = session?.user;
+
+  const tierId = user?.id ? await getActiveTier(user.id) : null;
+  const tierName = tierId ? (TIERS[tierId] ?? tierId) : null;
+  const badgeLabel = tierName ? `${tierName} tier active` : 'License active';
 
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>Example: Monetized Plugin</h1>
-        <span className={styles.badge}>Pro tier active</span>
+        <span className={styles.badge}>{badgeLabel}</span>
       </div>
       <p className={styles.lead}>
         If you can see this page, the platform verified your license token before routing you here.
@@ -63,6 +110,12 @@ export default async function ExampleMonetizedPage() {
             <dt>Access</dt>
             <dd className={styles.ok}>✓ Entitlement verified</dd>
           </div>
+          {tierName && (
+            <div className={styles.row}>
+              <dt>Tier</dt>
+              <dd>{tierName}</dd>
+            </div>
+          )}
         </dl>
       </section>
 
@@ -137,7 +190,9 @@ console.log(payload + '.' + sig);
             <p className={styles.stepTitle}>Use your own keypair in a real plugin</p>
             <p className={styles.muted}>
               Generate a fresh keypair and put only the public key in your manifest. Keep the
-              private key in your billing backend — never commit it.
+              private key in your billing backend — never commit it. Or use{' '}
+              <strong>Console → Entitlements → Generate license token</strong> to create keypairs
+              and sign tokens from the browser without any tooling.
             </p>
             <pre className={styles.code_block}>{`node -e "
 const c = require('crypto');
@@ -154,7 +209,7 @@ console.log('Private key (secret):',  d);
 
       <div>
         <form action="/api/account/entitlements" method="post">
-          <input type="hidden" name="pluginId" value="fs.sovereign.example-monetized" />
+          <input type="hidden" name="pluginId" value={PLUGIN_ID} />
           <input type="hidden" name="licenseToken" value={DEMO_TOKEN} />
           <input type="hidden" name="returnPath" value="/example-monetized" />
           <Button type="submit" variant="secondary" size="sm">

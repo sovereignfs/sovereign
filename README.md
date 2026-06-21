@@ -88,6 +88,8 @@ bin/sv            the sv CLI
   conventions for platform and plugin interfaces.
 - [Upgrade guide](docs/upgrade.md) — versioned changes, migration notes, and
   compatibility guidance.
+- [Troubleshooting](docs/troubleshooting.md) — known dev-server quirks, 404
+  patterns, license token issues, and Docker gotchas.
 - [Contributing](CONTRIBUTING.md) — development workflow, project conventions,
   and contribution expectations. CI runs the full check suite on every
   (non-draft) pull request.

@@ -610,6 +610,14 @@ redirected to the paywall page because you have no entitlement yet.
 
 **Step 1 — Generate a keypair** (once per plugin; keep the private key secret):
 
+> **Tip — browser-based generator:** If you're the operator of a self-hosted
+> instance, **Console → Entitlements → Generate license token** lets you
+> generate a keypair in-browser, save both keys to instance storage in one
+> click, and sign tokens immediately — no Node.js required and no manifest
+> update needed (see [Key rotation](#key-rotation) below).
+
+Otherwise, generate via Node:
+
 ```bash
 node -e "
 const c = require('crypto');
@@ -686,6 +694,29 @@ verifies the Ed25519 signature offline and grants immediate access.
 | Wrong plugin              | Use a token signed with a different `pluginId`   | "License is for plugin X, not Y"          |
 | Tampered token            | Flip a character in the signature half           | "Signature verification failed."          |
 | Cancelled entitlement     | Cancel in Account → Billing, then revisit        | Redirected to paywall                     |
+
+#### Key rotation
+
+You can rotate the signing keypair after deployment without rebuilding the image.
+
+The platform resolves the public key for token verification in this order:
+
+1. **Instance storage** (`platform_settings` key `license_public_key:<pluginId>`) — written
+   when an operator saves a keypair via Console → Entitlements → Generate license token.
+   Takes precedence over the manifest.
+2. **Manifest** (`monetization.license.publicKey`) — the build-time default, used for
+   third-party plugins where the operator never holds the private key.
+
+**To rotate via the Console (no redeploy):**
+
+1. Open Console → Entitlements → Generate license token.
+2. Click **Generate new keypair** — browser generates a fresh Ed25519 pair.
+3. Click **Save to instance** — both the private key (`d`) and public key (`x`) are stored
+   in `platform_settings`. Existing tokens signed with the old key will immediately fail; issue
+   new tokens to existing subscribers before rotating in production.
+4. Done. New tokens verify against the stored key.
+
+The manifest value is not required to change. If you do update it (e.g. when publishing a new plugin version), it has no effect while an instance-stored key is present.
 
 **Token payload reference:**
 

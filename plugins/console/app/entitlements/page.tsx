@@ -41,18 +41,24 @@ async function loadEntitlements(): Promise<EntitlementRow[]> {
   }
 }
 
-async function loadStoredKeys(): Promise<Record<string, string>> {
+async function loadStoredKeys(): Promise<{
+  keys: Record<string, string>;
+  publicKeys: Record<string, string>;
+}> {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   try {
     const res = await fetch(`${RUNTIME_URL}/api/admin/license-keys`, {
       headers: { Authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
     });
-    if (!res.ok) return {};
-    const data = (await res.json()) as { keys: Record<string, string> };
-    return data.keys;
+    if (!res.ok) return { keys: {}, publicKeys: {} };
+    const data = (await res.json()) as {
+      keys: Record<string, string>;
+      publicKeys: Record<string, string>;
+    };
+    return { keys: data.keys ?? {}, publicKeys: data.publicKeys ?? {} };
   } catch {
-    return {};
+    return { keys: {}, publicKeys: {} };
   }
 }
 
@@ -77,10 +83,12 @@ export default async function EntitlementsPage() {
   let generatorPlugins: GeneratorPlugin[] = [];
   let generatorUsers: GeneratorUser[] = [];
   let storedKeys: Record<string, string> = {};
+  let storedPublicKeys: Record<string, string> = {};
 
   if (isOwner) {
-    const [members, keys] = await Promise.all([loadUsers(), loadStoredKeys()]);
+    const [members, { keys, publicKeys }] = await Promise.all([loadUsers(), loadStoredKeys()]);
     storedKeys = keys;
+    storedPublicKeys = publicKeys;
     // Only monetized plugins with a declared public key can have licenses generated.
     generatorPlugins = getInstalledPlugins().flatMap((p) => {
       const publicKey = p.monetization?.license?.publicKey;
@@ -112,6 +120,7 @@ export default async function EntitlementsPage() {
             plugins={generatorPlugins}
             users={generatorUsers}
             storedKeys={storedKeys}
+            storedPublicKeys={storedPublicKeys}
           />
         </section>
       )}

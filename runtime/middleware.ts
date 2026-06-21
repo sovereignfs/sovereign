@@ -345,8 +345,9 @@ export const config = {
   // bundles, icons — must load without a session), and Next static assets.
   matcher: [
     // Exclude: auth pages, admin API (self-authenticated), public liveness probe,
-    // brand assets (must load on the login page pre-session), offline fallback,
-    // PWA assets, and Next.js static assets.
-    '/((?!login|register|offline|api/admin|api/health|api/brand|manifest.json|sw.js|workbox-|fallback-|icons/|_next/static|_next/image|favicon.ico).*)',
+    // brand assets (must load on the login page pre-session), dynamic manifest
+    // (browsers fetch it before login for PWA install), offline fallback, PWA
+    // assets, and Next.js static assets.
+    '/((?!login|register|offline|api/admin|api/health|api/brand|api/manifest|manifest.json|sw.js|workbox-|fallback-|icons/|_next/static|_next/image|favicon.ico).*)',
   ],
 };

@@ -2,6 +2,14 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    exclude: [
+      '**/node_modules/**',
+      '**/.next/**',
+      // Playwright specs live in __tests__/e2e/ — Vitest must not pick them up.
+      // The include patterns below only match *.test.{ts,tsx} so .spec.ts would
+      // not match anyway, but this explicit exclude documents the intent.
+      '__tests__/e2e/**',
+    ],
     include: [
       // Unit / component / integration tests inside each package or app.
       // Tests sit in per-directory __tests__/ folders next to the source they cover.

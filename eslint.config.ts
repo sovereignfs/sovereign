@@ -20,6 +20,10 @@ export default tseslint.config(
       'runtime/public/workbox-*.js',
       'runtime/public/fallback-*.js',
       'runtime/public/worker-*.js',
+      // Playwright e2e specs and config use their own type definitions and test
+      // patterns that conflict with the project's TypeScript-strict + jsx-a11y rules.
+      '__tests__/e2e/**',
+      'playwright.config.ts',
     ],
   },
 

@@ -21,7 +21,7 @@
     "test:watch": "vitest",
     "test:unit": "vitest run --reporter=verbose",
     "test:integration": "vitest run __tests__/integration --passWithNoTests",
-    "test:e2e": "vitest run __tests__/e2e --passWithNoTests",
+    "test:e2e": "playwright test",
     "generate": "tsx scripts/generate-registry.ts",
     "generate:icons": "tsx scripts/generate-icons.ts",
     "install:plugins": "tsx scripts/install-plugins.ts",
@@ -44,6 +44,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
+    "@playwright/test": "^1.61.0",
     "@sovereignfs/db": "workspace:*",
     "@sovereignfs/manifest": "workspace:*",
     "@sovereignfs/tsconfig": "workspace:*",

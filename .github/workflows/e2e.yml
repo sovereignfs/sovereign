@@ -1,0 +1,73 @@
+name: E2E
+
+# Run golden-path Playwright tests on every merge to main, but only when
+# source code actually changed — docs-only merges (*.md, docs/, registry/)
+# do not need a full browser-test pass.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'plugins/**'
+      - 'runtime/**'
+      - 'scripts/**'
+      - 'bin/**'
+      - '__tests__/e2e/**'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+
+jobs:
+  e2e:
+    name: Playwright golden paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Reuse the shared pnpm + Node setup from the CI pipeline.
+      - uses: ./.github/actions/setup
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Build workspace packages (SDK, UI, manifest, db, mailer) so the apps can
+      # import them. The runtime and auth apps are started by Playwright's webServer
+      # in dev mode — no full `next build` needed.
+      - name: Build workspace packages
+        run: pnpm turbo build --filter='./packages/*'
+
+      # Generate composed plugin routes so `next dev` starts cleanly.
+      - name: Generate plugin registry
+        run: pnpm generate
+
+      # Write a minimal .env for both apps. Secrets must be set in the repo's
+      # Settings → Secrets and variables → Actions.
+      # E2E_AUTH_SECRET: any stable base64 string (openssl rand -base64 32)
+      # E2E_ADMIN_KEY: any string used as the sovereign admin key
+      - name: Write .env
+        run: |
+          {
+            echo "AUTH_SECRET=${{ secrets.E2E_AUTH_SECRET }}"
+            echo "SOVEREIGN_AUTH_SECRET=${{ secrets.E2E_AUTH_SECRET }}"
+            echo "SOVEREIGN_ADMIN_KEY=${{ secrets.E2E_ADMIN_KEY }}"
+            echo "SOVEREIGN_AUTH_URL=http://localhost:3001"
+            echo "SOVEREIGN_AUTH_PUBLIC_URL=http://localhost:3001"
+            echo "NEXT_PUBLIC_RUNTIME_URL=http://localhost:3000"
+            echo "AUTH_INVITE_ONLY=false"
+          } >> .env
+
+      - name: Run Playwright tests
+        run: pnpm test:e2e
+        env:
+          CI: 'true'
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

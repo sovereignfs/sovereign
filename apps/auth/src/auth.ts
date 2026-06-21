@@ -5,6 +5,7 @@ import { twoFactor } from 'better-auth/plugins/two-factor';
 import { passkey } from '@better-auth/passkey';
 import { authGet, authRun, getAuthDatabase } from './db';
 import { getEnv } from './env';
+import { sendMail } from './mailer';
 import { readInviteOnlySetting, resolveInviteOnly } from './settings';
 
 function buildOptions(): BetterAuthOptions {
@@ -33,6 +34,17 @@ function buildOptions(): BetterAuthOptions {
     emailAndPassword: {
       enabled: true,
       autoSignIn: true,
+      sendResetPassword: async ({ user, token }) => {
+        const resetUrl = `${env.baseUrl}/reset-password?token=${token}`;
+        await sendMail({
+          to: user.email,
+          subject: 'Reset your Sovereign password',
+          html: `<p>You requested a password reset. Click the link below to choose a new password.</p>
+<p><a href="${resetUrl}">${resetUrl}</a></p>
+<p>This link expires in 1 hour. If you did not request a password reset, you can ignore this email.</p>`,
+          text: `You requested a password reset.\n\nReset your password: ${resetUrl}\n\nThis link expires in 1 hour. If you did not request this, ignore this email.`,
+        });
+      },
     },
     user: {
       additionalFields: {

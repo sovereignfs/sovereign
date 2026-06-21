@@ -99,7 +99,10 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
           {passkeyLoading ? 'Waiting for passkey…' : 'Sign in with a passkey'}
         </Button>
         <p className={styles.footer}>
-          No account?{' '}
+          <Link className={styles.link} href="/forgot-password">
+            Forgot password?
+          </Link>
+          {' · '}No account?{' '}
           <Link className={styles.link} href="/register">
             Create one
           </Link>

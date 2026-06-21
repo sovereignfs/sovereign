@@ -46,6 +46,18 @@
 
   --sv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
   --sv-shadow-overlay: 0 10px 38px rgba(0, 0, 0, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
+
+  /*
+   * Brand identity tokens (RFC 0027). Distinct namespace from --sv-color-*:
+   * these hold URLs (not colours) and are set once by the operator, not swapped
+   * with dark mode. Set by BrandProvider server component from tenant_branding DB.
+   * CSS: background-image: var(--sv-brand-logo);
+   *   or <img src="var(--sv-brand-logo)"> is NOT correct — use the BrandProvider
+   *   prop `brandName` and the /api/brand/* routes for the actual URLs.
+   */
+  --sv-brand-logo: none;
+  --sv-brand-logo-dark: none;
+  --sv-brand-favicon: none;
 }
 
 [data-theme='dark'] {

@@ -1,0 +1,44 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sv-space-4);
+}
+
+.card {
+  text-align: center;
+  padding: var(--sv-space-8);
+}
+
+.code {
+  margin: 0 0 var(--sv-space-2);
+  font-size: 4rem;
+  font-weight: var(--sv-font-weight-bold);
+  line-height: 1;
+  color: var(--sv-color-text-primary);
+}
+
+.message {
+  margin: 0 0 var(--sv-space-6);
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-base);
+}
+
+.link {
+  display: inline-block;
+  padding: var(--sv-space-2) var(--sv-space-5);
+  background-color: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+  border: none;
+  border-radius: var(--sv-radius-md);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.link:hover {
+  background-color: var(--sv-color-accent-hover);
+}

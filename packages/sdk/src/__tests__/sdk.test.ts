@@ -4,7 +4,12 @@ import { ConsentRequiredError, NotAuthenticatedError, NotImplementedError, sdk }
 
 // A minimal mock host — lets us test SDK delegation without a real runtime.
 const mockDbClient = { select: () => ({}), insert: () => ({}) };
-const mockConfig = { tenantName: 'Test Workspace', inviteOnly: false, version: '0.6.0' };
+const mockConfig = {
+  tenantName: 'Test Workspace',
+  inviteOnly: false,
+  version: '0.6.0',
+  brandName: 'Test Workspace',
+};
 const mockDataResolvers = new Map<string, (...args: unknown[]) => Promise<unknown[]>>();
 const mockExporters = new Map<string, unknown>();
 const mockImporters = new Map<string, unknown>();

@@ -2,11 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  DEFAULT_TENANT_ID,
   findWorkspaceRoot,
   getConsentGrant,
   getDefaultTenant,
   getPlatformSetting,
   getPluginDb,
+  getTenantBranding,
   logDataAccess,
   provisionPluginDb,
   recordActivity,
@@ -77,14 +79,17 @@ provideHost({
   platform: {
     async getConfig() {
       const db = await getPlatformDb();
-      const [tenant, inviteOnly] = await Promise.all([
+      const [tenant, inviteOnly, branding] = await Promise.all([
         getDefaultTenant(db),
         getPlatformSetting(db, 'invite_only'),
+        getTenantBranding(db, DEFAULT_TENANT_ID),
       ]);
       return {
         tenantName: tenant.name,
         inviteOnly: inviteOnly === 'true',
         version: getPlatformVersion(),
+        brandName: branding.brandName,
+        brandPrimaryColor: branding.brandPrimary ?? undefined,
       };
     },
   },

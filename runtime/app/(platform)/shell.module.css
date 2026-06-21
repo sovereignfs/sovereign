@@ -45,6 +45,13 @@
   text-decoration: none;
 }
 
+.brandLogoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: var(--sv-radius-md);
+}
+
 .plugins {
   flex: 1;
   display: flex;

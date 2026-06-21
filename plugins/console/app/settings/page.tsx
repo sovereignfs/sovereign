@@ -1,4 +1,11 @@
-import { updateInviteOnlyAction, updateRootPluginAction, updateTenantNameAction } from './actions';
+import {
+  updateInviteOnlyAction,
+  updateRootPluginAction,
+  updateTenantNameAction,
+  updateBrandingAction,
+  uploadLogoAction,
+  uploadFaviconAction,
+} from './actions';
 import styles from '../console.module.css';
 
 const SELF_URL = 'http://localhost:3000';
@@ -7,6 +14,16 @@ interface Settings {
   tenantName: string;
   inviteOnly: boolean;
   rootPluginId: string;
+}
+
+interface Branding {
+  brandName: string;
+  brandLogo: string | null;
+  brandLogoDark: string | null;
+  brandFavicon: string | null;
+  brandPrimary: string | null;
+  emailFromName: string | null;
+  emailLogo: string | null;
 }
 
 interface PluginRow {
@@ -28,9 +45,10 @@ async function adminGet<T>(path: string): Promise<T> {
 }
 
 export default async function SettingsPage() {
-  const [settings, plugins] = await Promise.all([
+  const [settings, plugins, branding] = await Promise.all([
     adminGet<Settings>('/api/admin/settings'),
     adminGet<PluginRow[]>('/api/admin/plugins'),
+    adminGet<Branding>('/api/admin/tenant-branding'),
   ]);
 
   // Only installed, enabled, non-adminOnly, non-overlay plugins are eligible
@@ -128,6 +146,194 @@ export default async function SettingsPage() {
           <p className={styles.helpText}>
             Current setting: <code className={styles.codeInline}>{settings.rootPluginId}</code>
           </p>
+        </section>
+        <section className={styles.settingsSection}>
+          <h3 className={styles.sectionTitle}>Branding</h3>
+          <p className={styles.helpText}>
+            Customise the name, logo, and accent colour shown across the platform. Uploads are
+            stored in <code className={styles.codeInline}>data/brand/</code>.
+          </p>
+
+          {/* Text / colour fields */}
+          <form action={updateBrandingAction} className={styles.settingsForm}>
+            <div className={styles.fieldGroup}>
+              <label className={styles.label} htmlFor="brandName">
+                Brand name
+              </label>
+              <input
+                id="brandName"
+                name="brandName"
+                type="text"
+                placeholder="Sovereign"
+                defaultValue={branding.brandName !== 'Sovereign' ? branding.brandName : ''}
+                className={styles.input}
+              />
+              <span className={styles.helpText}>Displayed in the shell header and login page.</span>
+            </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.label} htmlFor="brandPrimary">
+                Primary colour
+              </label>
+              <input
+                id="brandPrimary"
+                name="brandPrimary"
+                type="text"
+                pattern="^#[0-9a-fA-F]{6}$"
+                placeholder="#3b82f6"
+                defaultValue={branding.brandPrimary ?? ''}
+                className={styles.input}
+              />
+              <span className={styles.helpText}>
+                6-digit hex (e.g. <code className={styles.codeInline}>#3b82f6</code>). Sets{' '}
+                <code className={styles.codeInline}>--sv-color-accent</code>. Leave blank to use the
+                default.
+              </span>
+            </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.label} htmlFor="brandLogo">
+                Logo URL (light theme)
+              </label>
+              <input
+                id="brandLogo"
+                name="brandLogo"
+                type="url"
+                placeholder="https://… or /api/brand/logo"
+                defaultValue={branding.brandLogo ?? ''}
+                className={styles.input}
+              />
+            </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.label} htmlFor="brandLogoDark">
+                Logo URL (dark theme)
+              </label>
+              <input
+                id="brandLogoDark"
+                name="brandLogoDark"
+                type="url"
+                placeholder="https://… or /api/brand/logo?dark=1"
+                defaultValue={branding.brandLogoDark ?? ''}
+                className={styles.input}
+              />
+            </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.label} htmlFor="brandFavicon">
+                Favicon URL
+              </label>
+              <input
+                id="brandFavicon"
+                name="brandFavicon"
+                type="url"
+                placeholder="https://… or /api/brand/favicon"
+                defaultValue={branding.brandFavicon ?? ''}
+                className={styles.input}
+              />
+            </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.label} htmlFor="emailFromName">
+                Email sender name
+              </label>
+              <input
+                id="emailFromName"
+                name="emailFromName"
+                type="text"
+                placeholder="Sovereign"
+                defaultValue={branding.emailFromName ?? ''}
+                className={styles.input}
+              />
+            </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.label} htmlFor="emailLogo">
+                Email logo URL
+              </label>
+              <input
+                id="emailLogo"
+                name="emailLogo"
+                type="url"
+                placeholder="https://…"
+                defaultValue={branding.emailLogo ?? ''}
+                className={styles.input}
+              />
+              <span className={styles.helpText}>
+                Used in outbound email HTML templates. Must be publicly reachable.
+              </span>
+            </div>
+            <button type="submit" className={styles.actionButton}>
+              Save branding
+            </button>
+          </form>
+
+          {/* Logo file upload (light) */}
+          <form
+            action={uploadLogoAction}
+            className={styles.settingsForm}
+            style={{ marginTop: '16px' }}
+          >
+            <input type="hidden" name="dark" value="0" />
+            <div className={styles.fieldGroup}>
+              <label className={styles.label} htmlFor="logoFile">
+                Upload logo (light theme)
+              </label>
+              <input
+                id="logoFile"
+                name="file"
+                type="file"
+                accept="image/png,image/svg+xml,image/jpeg,image/webp"
+                className={styles.input}
+              />
+              <span className={styles.helpText}>PNG, SVG, JPEG, or WebP · max 2 MB</span>
+            </div>
+            <button type="submit" className={styles.actionButton}>
+              Upload
+            </button>
+          </form>
+
+          {/* Logo file upload (dark) */}
+          <form
+            action={uploadLogoAction}
+            className={styles.settingsForm}
+            style={{ marginTop: '8px' }}
+          >
+            <input type="hidden" name="dark" value="1" />
+            <div className={styles.fieldGroup}>
+              <label className={styles.label} htmlFor="logoDarkFile">
+                Upload logo (dark theme)
+              </label>
+              <input
+                id="logoDarkFile"
+                name="file"
+                type="file"
+                accept="image/png,image/svg+xml,image/jpeg,image/webp"
+                className={styles.input}
+              />
+            </div>
+            <button type="submit" className={styles.actionButton}>
+              Upload
+            </button>
+          </form>
+
+          {/* Favicon file upload */}
+          <form
+            action={uploadFaviconAction}
+            className={styles.settingsForm}
+            style={{ marginTop: '8px' }}
+          >
+            <div className={styles.fieldGroup}>
+              <label className={styles.label} htmlFor="faviconFile">
+                Upload favicon
+              </label>
+              <input
+                id="faviconFile"
+                name="file"
+                type="file"
+                accept="image/png,image/svg+xml,image/x-icon,image/webp"
+                className={styles.input}
+              />
+              <span className={styles.helpText}>PNG, SVG, ICO, or WebP · max 2 MB</span>
+            </div>
+            <button type="submit" className={styles.actionButton}>
+              Upload
+            </button>
+          </form>
         </section>
       </div>
     </div>

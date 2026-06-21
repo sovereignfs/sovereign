@@ -355,3 +355,45 @@ const config = await sdk.platform.getConfig();
 ```
 
 The returned `PlatformConfig` shape is unchanged.
+
+---
+
+## v0.27 → v0.28 (White-labeling Phase 1, RFC 0027)
+
+### `sdk.platform.getConfig()` gains branding fields
+
+`PlatformConfig` now includes two new fields:
+
+```ts
+interface PlatformConfig {
+  tenantName: string;
+  inviteOnly: boolean;
+  version: string;
+  brandName: string; // ← new; falls back to tenantName
+  brandPrimaryColor?: string; // ← new; validated hex or undefined
+}
+```
+
+Existing code reading `getConfig()` is unaffected — the new fields are additive.
+
+### New `tenant_branding` database table
+
+The migration (`0004_tenant_branding`) is applied automatically on startup.
+No manual step required.
+
+### New `BRAND_*` environment variables
+
+Seven new optional env vars control white-label defaults. All are optional;
+Sovereign defaults apply when unset. See
+[`docs/self-hosting.md`](self-hosting.md#environment-variables) for the full
+list.
+
+### New `--sv-brand-*` CSS tokens
+
+Three new CSS custom properties are now defined in `packages/ui/src/tokens/semantic.css`:
+
+- `--sv-brand-logo` — light-theme logo URL
+- `--sv-brand-logo-dark` — dark-theme logo URL
+- `--sv-brand-favicon` — favicon URL
+
+These are set at `:root` by `BrandProvider` and available in plugin CSS without any import.

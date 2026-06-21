@@ -47,6 +47,10 @@ export interface PlatformConfig {
   tenantName: string;
   inviteOnly: boolean;
   version: string;
+  /** Brand name; falls back to tenantName when no brand name is configured. */
+  brandName: string;
+  /** Validated 6-digit hex colour overriding --sv-color-accent, or undefined when unset. */
+  brandPrimaryColor?: string;
 }
 
 /**

@@ -879,6 +879,102 @@ export async function cancelEntitlement(pdb: PlatformDb, id: string): Promise<vo
   );
 }
 
+// ── Tenant branding (RFC 0027) ─────────────────────────────────────────────
+
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+export interface TenantBrandingValue {
+  brandName: string;
+  brandLogo: string | null;
+  brandLogoDark: string | null;
+  brandFavicon: string | null;
+  brandPrimary: string | null;
+  emailFromName: string | null;
+  emailLogo: string | null;
+}
+
+/**
+ * Read tenant branding, merging DB values over BRAND_* env-var defaults.
+ * Always returns a complete object — null fields mean "no override set".
+ */
+export async function getTenantBranding(
+  pdb: PlatformDb,
+  tenantId: string,
+): Promise<TenantBrandingValue> {
+  const row = await dbGet<{
+    brandName: string | null;
+    brandLogo: string | null;
+    brandLogoDark: string | null;
+    brandFavicon: string | null;
+    brandPrimary: string | null;
+    emailFromName: string | null;
+    emailLogo: string | null;
+  }>(
+    pdb,
+    sql`SELECT brand_name AS "brandName",
+               brand_logo AS "brandLogo",
+               brand_logo_dark AS "brandLogoDark",
+               brand_favicon AS "brandFavicon",
+               brand_primary AS "brandPrimary",
+               email_from_name AS "emailFromName",
+               email_logo AS "emailLogo"
+        FROM tenant_branding WHERE tenant_id = ${tenantId}`,
+  );
+  return {
+    brandName: row?.brandName ?? process.env.BRAND_NAME ?? 'Sovereign',
+    brandLogo: row?.brandLogo ?? process.env.BRAND_LOGO ?? null,
+    brandLogoDark: row?.brandLogoDark ?? process.env.BRAND_LOGO_DARK ?? null,
+    brandFavicon: row?.brandFavicon ?? process.env.BRAND_FAVICON ?? null,
+    brandPrimary:
+      (row?.brandPrimary ?? process.env.BRAND_PRIMARY_COLOR ?? null) &&
+      HEX_COLOR_RE.test(row?.brandPrimary ?? process.env.BRAND_PRIMARY_COLOR ?? '')
+        ? (row?.brandPrimary ?? process.env.BRAND_PRIMARY_COLOR ?? null)
+        : null,
+    emailFromName: row?.emailFromName ?? process.env.BRAND_EMAIL_FROM_NAME ?? null,
+    emailLogo: row?.emailLogo ?? process.env.BRAND_EMAIL_LOGO ?? null,
+  };
+}
+
+/**
+ * Upsert tenant branding. Callers read the current state via getTenantBranding,
+ * mutate fields, then write the full merged value back.
+ * brand_primary is validated as a 6-digit hex colour before persisting —
+ * raw user input must never reach a <style> block unchecked (CSS injection).
+ */
+export async function setTenantBranding(
+  pdb: PlatformDb,
+  tenantId: string,
+  values: Omit<TenantBrandingValue, 'brandName'> & { brandName: string | null },
+): Promise<void> {
+  if (values.brandPrimary !== null) {
+    if (!HEX_COLOR_RE.test(values.brandPrimary)) {
+      throw new Error(
+        `Invalid brandPrimary: "${values.brandPrimary}". Must be a 6-digit hex colour (#rrggbb).`,
+      );
+    }
+  }
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO tenant_branding
+          (tenant_id, brand_name, brand_logo, brand_logo_dark, brand_favicon,
+           brand_primary, email_from_name, email_logo, updated_at)
+        VALUES
+          (${tenantId}, ${values.brandName}, ${values.brandLogo}, ${values.brandLogoDark},
+           ${values.brandFavicon}, ${values.brandPrimary}, ${values.emailFromName},
+           ${values.emailLogo}, ${now})
+        ON CONFLICT (tenant_id) DO UPDATE SET
+          brand_name      = excluded.brand_name,
+          brand_logo      = excluded.brand_logo,
+          brand_logo_dark = excluded.brand_logo_dark,
+          brand_favicon   = excluded.brand_favicon,
+          brand_primary   = excluded.brand_primary,
+          email_from_name = excluded.email_from_name,
+          email_logo      = excluded.email_logo,
+          updated_at      = excluded.updated_at`,
+  );
+}
+
 /**
  * Return IDs of plugins that require an entitlement (non-free model) and
  * for which the given user currently has NO active entitlement.

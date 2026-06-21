@@ -1721,7 +1721,7 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 
 ---
 
-#### Task 1.0.03 — White-labeling, Phase 1 — Brand DB + shell injection (RFC 0027) **[post-v1]**
+#### ✅ Task 1.0.03 — White-labeling, Phase 1 — Brand DB + shell injection (RFC 0027) **[post-v1]**
 
 **Goal:** Let operators replace Sovereign's visual identity with their own brand. Phase 1 ships the data layer, CSS token namespace, runtime injection, and the Console branding form. Depends on the `tenant_branding` table and `BrandProvider` being in place before Phases 2 and 3.
 

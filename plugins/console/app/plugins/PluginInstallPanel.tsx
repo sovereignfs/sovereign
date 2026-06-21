@@ -1,38 +1,61 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition, useRef, useEffect } from 'react';
+import {
+  checkPluginManifestAction,
+  installPluginAction,
+  removePluginAction,
+  type ManifestPreview,
+} from './install-actions';
 import styles from '../console.module.css';
 
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  function handleCopy() {
-    void navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className={styles.copyButton}
-      aria-label="Copy command"
-    >
-      {copied ? 'Copied!' : 'Copy'}
-    </button>
-  );
-}
-
-/** Collapsible "Add a plugin" panel shown above the installed-plugins table. */
+/** Two-step "Add a plugin" panel: validate manifest → confirm install. */
 export function PluginInstallPanel() {
   const [open, setOpen] = useState(false);
   const [repoUrl, setRepoUrl] = useState('');
+  const [preview, setPreview] = useState<ManifestPreview | null>(null);
+  const [checkError, setCheckError] = useState<string | null>(null);
+  const [installMsg, setInstallMsg] = useState<string | null>(null);
+  const [installError, setInstallError] = useState<string | null>(null);
+  const [isChecking, startChecking] = useTransition();
+  const [isInstalling, startInstalling] = useTransition();
 
-  const command = repoUrl.trim()
-    ? `sv plugin add ${repoUrl.trim()}`
-    : 'sv plugin add <git-repo-url>';
+  function resetState() {
+    setPreview(null);
+    setCheckError(null);
+    setInstallMsg(null);
+    setInstallError(null);
+  }
+
+  function handleUrlChange(v: string) {
+    setRepoUrl(v);
+    resetState();
+  }
+
+  function handleCheck() {
+    resetState();
+    startChecking(async () => {
+      const result = await checkPluginManifestAction(repoUrl);
+      if (result.ok) setPreview(result.manifest);
+      else setCheckError(result.error);
+    });
+  }
+
+  function handleInstall() {
+    if (!preview) return;
+    setInstallMsg(null);
+    setInstallError(null);
+    startInstalling(async () => {
+      const result = await installPluginAction(repoUrl);
+      if (result.ok) {
+        setInstallMsg(result.message);
+        setRepoUrl('');
+        setPreview(null);
+      } else {
+        setInstallError(result.error);
+      }
+    });
+  }
 
   return (
     <div className={styles.installPanel}>
@@ -48,74 +71,154 @@ export function PluginInstallPanel() {
 
       {open && (
         <div className={styles.installPanelBody}>
-          <p className={styles.installPanelDesc}>
-            Paste a Git repository URL to get the install command. Run it from the server (or with{' '}
-            <code className={styles.codeInline}>pnpm</code> prefix in the monorepo). After
-            installing, restart the server for changes to take effect in production.
-          </p>
-
           <div className={styles.installPanelRow}>
             <label htmlFor="plugin-repo-url" className={styles.installPanelLabel}>
-              Repository URL
+              Git repository URL
             </label>
-            <input
-              id="plugin-repo-url"
-              type="url"
-              value={repoUrl}
-              onChange={(e) => setRepoUrl(e.target.value)}
-              placeholder="https://github.com/example/my-plugin"
-              className={styles.input}
-            />
+            <div className={styles.installPanelInputRow}>
+              <input
+                id="plugin-repo-url"
+                type="url"
+                value={repoUrl}
+                onChange={(e) => handleUrlChange(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !isChecking && repoUrl && handleCheck()}
+                placeholder="https://github.com/example/my-plugin"
+                className={styles.input}
+                disabled={isInstalling}
+              />
+              <button
+                type="button"
+                className={styles.actionButton}
+                onClick={handleCheck}
+                disabled={!repoUrl.trim() || isChecking || isInstalling}
+              >
+                {isChecking ? 'Checking…' : 'Check'}
+              </button>
+            </div>
           </div>
 
-          <div className={styles.installPanelCommand}>
-            <code className={styles.installPanelCode}>{command}</code>
-            <CopyButton text={command} />
-          </div>
+          {checkError && <p className={styles.feedbackError}>{checkError}</p>}
 
-          <p className={styles.helpText}>
-            After the command completes, a restart is required in production. In development, HMR
-            picks up new routes automatically.
-          </p>
+          {preview && (
+            <div className={styles.installPreview}>
+              <div className={styles.installPreviewInfo}>
+                <span className={styles.installPreviewName}>{preview.name}</span>
+                <span className={styles.installPreviewMeta}>
+                  {preview.id} · v{preview.version} ·{' '}
+                  <span
+                    className={preview.type === 'platform' ? styles.badgeAdmin : styles.badgeUser}
+                  >
+                    {preview.type}
+                  </span>
+                </span>
+                {preview.description && (
+                  <span className={styles.installPreviewDesc}>{preview.description}</span>
+                )}
+              </div>
+              <button
+                type="button"
+                className={styles.actionButton}
+                onClick={handleInstall}
+                disabled={isInstalling}
+              >
+                {isInstalling ? 'Installing…' : 'Install'}
+              </button>
+            </div>
+          )}
+
+          {installMsg && <p className={styles.feedbackSuccess}>{installMsg}</p>}
+          {installError && <p className={styles.feedbackError}>{installError}</p>}
         </div>
       )}
     </div>
   );
 }
 
-interface RemovePanelProps {
+interface RemovePluginButtonProps {
   pluginId: string;
   pluginName: string;
 }
 
-/** Inline remove button for non-platform plugins — shows CLI command + copy. */
-export function RemovePluginButton({ pluginId, pluginName }: RemovePanelProps) {
+/** Remove button with confirm dialog and real server-side execution. */
+export function RemovePluginButton({ pluginId, pluginName }: RemovePluginButtonProps) {
   const [open, setOpen] = useState(false);
-  const command = `sv plugin remove ${pluginId}`;
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    if (open) el.showModal();
+    else el.close();
+  }, [open]);
+
+  useEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    const handleClose = () => setOpen(false);
+    el.addEventListener('close', handleClose);
+    return () => el.removeEventListener('close', handleClose);
+  }, []);
+
+  function handleRemove() {
+    setError(null);
+    startTransition(async () => {
+      const result = await removePluginAction(pluginId);
+      if (result.ok) {
+        setOpen(false);
+      } else {
+        setError(result.error);
+      }
+    });
+  }
 
   return (
     <>
       <button
         type="button"
         className={styles.deactivateButton}
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
+        onClick={() => setOpen(true)}
         title={`Remove ${pluginName}`}
       >
         Remove
       </button>
 
-      {open && (
-        <div className={styles.removePanel}>
-          <p className={styles.removePanelDesc}>
-            Run this command on the server to remove the plugin, then restart to apply:
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
+      <dialog
+        ref={dialogRef}
+        className={styles.confirmNativeDialog}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setOpen(false);
+        }}
+      >
+        <div className={styles.confirmDialog}>
+          <h2 className={styles.confirmTitle}>Remove plugin</h2>
+          <p className={styles.confirmMessage}>
+            Remove <strong>{pluginName}</strong>? Its files will be deleted from the server. This
+            cannot be undone without reinstalling.
           </p>
-          <div className={styles.installPanelCommand}>
-            <code className={styles.installPanelCode}>{command}</code>
-            <CopyButton text={command} />
+          {error && <p className={styles.feedbackError}>{error}</p>}
+          <div className={styles.confirmActions}>
+            <button
+              type="button"
+              className={styles.actionButton}
+              onClick={() => setOpen(false)}
+              disabled={isPending}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={styles.dangerButton}
+              onClick={handleRemove}
+              disabled={isPending}
+            >
+              {isPending ? 'Removing…' : 'Remove'}
+            </button>
           </div>
         </div>
-      )}
+      </dialog>
     </>
   );
 }

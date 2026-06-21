@@ -198,31 +198,6 @@ export async function setPluginEnabled(
     .onConflictDoUpdate({ target: pg.pluginStatus.pluginId, set: { enabled, updatedAt: now } });
 }
 
-/**
- * Insert a plugin_status row with the given default enabled state, but only if
- * no row exists yet. Used at startup to seed example plugins as disabled without
- * overriding explicit operator choices.
- */
-export async function insertPluginStatusIfAbsent(
-  pdb: PlatformDb,
-  pluginId: string,
-  enabled: boolean,
-): Promise<void> {
-  const now = Math.floor(Date.now() / 1000);
-  if (pdb.dialect === 'sqlite') {
-    pdb.db
-      .insert(sqlite.pluginStatus)
-      .values({ pluginId, tenantId: DEFAULT_TENANT_ID, enabled, updatedAt: now })
-      .onConflictDoNothing()
-      .run();
-    return;
-  }
-  await pdb.db
-    .insert(pg.pluginStatus)
-    .values({ pluginId, tenantId: DEFAULT_TENANT_ID, enabled, updatedAt: now })
-    .onConflictDoNothing();
-}
-
 // ─── Cross-plugin data sharing helpers (RFC 0002) ────────────────────────────
 
 export interface ConsentGrantRow {

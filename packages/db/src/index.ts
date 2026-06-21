@@ -49,7 +49,6 @@ export {
   getPaidPluginsWithoutEntitlement,
   getTenantBranding,
   setTenantBranding,
-  insertPluginStatusIfAbsent,
   type AccountPrefsValue,
   type ActivityLogRow,
   type ConsentGrantRow,

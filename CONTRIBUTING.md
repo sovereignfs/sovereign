@@ -53,6 +53,14 @@ accordingly in your `.env`.
 files automatically. Run `pnpm format` and `pnpm lint` at any time to check
 your working tree manually.
 
+**E2E pre-push hook:** The pre-push hook runs `pnpm test:e2e` (the full
+Playwright golden-path suite) before every `git push`. To skip it for a
+docs-only or work-in-progress push:
+
+```bash
+SKIP_SIMPLE_GIT_HOOKS=1 git push
+```
+
 ### Dev database seed
 
 `sv seed` inserts two known-password test users into the auth database so you

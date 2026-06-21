@@ -14,13 +14,14 @@
 .sidebar {
   /* Stick to the viewport top so the sidebar never scrolls with the content.
      z-index keeps the sidebar's stacking context above the content column so
-     the account-menu popover (position: absolute inside the sidebar) renders
-     on top of the page rather than behind it. */
+     the account-menu popover renders on top of the page rather than behind it.
+     overflow must remain visible (the default) — setting overflow-y: auto would
+     implicitly make overflow-x non-visible, clipping the popover that opens to
+     the right of the sidebar. The .plugins section scrolls independently. */
   position: sticky;
   top: 0;
   height: 100vh;
   height: 100dvh;
-  overflow-y: auto;
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -51,6 +52,10 @@
   align-items: center;
   gap: var(--sv-space-2);
   width: 100%;
+  /* Scroll only this section when there are many plugin icons, keeping the
+     brand and chrome pinned at the top and bottom of the sidebar. */
+  overflow-y: auto;
+  overflow-x: visible;
 }
 
 .chrome {

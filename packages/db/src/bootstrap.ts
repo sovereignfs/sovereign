@@ -142,5 +142,17 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
     )`,
     `CREATE INDEX IF NOT EXISTS entitlements_user_plugin_idx
        ON entitlements (user_id, plugin_id)`,
+    // RFC 0027 — White-labeling Phase 1
+    `CREATE TABLE IF NOT EXISTS tenant_branding (
+      tenant_id TEXT NOT NULL PRIMARY KEY,
+      brand_name TEXT,
+      brand_logo TEXT,
+      brand_logo_dark TEXT,
+      brand_favicon TEXT,
+      brand_primary TEXT,
+      email_from_name TEXT,
+      email_logo TEXT,
+      updated_at ${ts} NOT NULL
+    )`,
   ];
 }

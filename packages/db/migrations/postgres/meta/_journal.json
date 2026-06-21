@@ -29,6 +29,13 @@
       "when": 1782000000000,
       "tag": "0003_plugin_entitlements",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1750550400000,
+      "tag": "0004_tenant_branding",
+      "breakpoints": true
     }
   ]
 }

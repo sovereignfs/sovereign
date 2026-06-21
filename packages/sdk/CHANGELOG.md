@@ -5,6 +5,17 @@ follows [Semantic Versioning](https://semver.org); see
 [`docs/sdk-stability.md`](../../docs/sdk-stability.md) for the stability policy
 and which parts of the surface the guarantee covers.
 
+## 1.10.0
+
+**`sdk.platform.getConfig()` returns branding fields** (RFC 0027 Phase 1 / Task 1.0.03).
+
+`PlatformConfig` gains two new fields:
+
+- `brandName: string` — the operator-configured display name; falls back to `tenantName`.
+- `brandPrimaryColor?: string` — validated 6-digit hex accent colour or `undefined`.
+
+Additive change — no migration required.
+
 ## 1.9.0
 
 **`sdk.db.getClient()` routes isolated plugins to their dedicated store** (RFC 0004 / Task 0.8.02).

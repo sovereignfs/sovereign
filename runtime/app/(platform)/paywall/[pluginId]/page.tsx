@@ -6,10 +6,12 @@ import styles from './paywall.module.css';
 
 interface Props {
   params: Promise<{ pluginId: string }>;
+  searchParams: Promise<{ error?: string }>;
 }
 
-export default async function PaywallPage({ params }: Props) {
+export default async function PaywallPage({ params, searchParams }: Props) {
   const { pluginId } = await params;
+  const { error } = await searchParams;
   const decodedId = decodeURIComponent(pluginId);
 
   const plugin = getInstalledPlugins().find((p) => p.id === decodedId);
@@ -84,6 +86,11 @@ export default async function PaywallPage({ params }: Props) {
 
         <section className={styles.importSection}>
           <h2 className={styles.importTitle}>Already have a license?</h2>
+          {error && (
+            <p className={styles.importError} role="alert">
+              {decodeURIComponent(error)}
+            </p>
+          )}
           <p className={styles.importHint}>
             Paste the signed license token you received from the plugin author or payment provider.
             Your access will be activated immediately.

@@ -668,6 +668,171 @@ After the first user registers, invite new users via the Console:
 
 ---
 
+## Diagnostics
+
+### Structured logging
+
+Sovereign emits newline-delimited JSON to the process's own stdout/stderr. Nothing is sent off-box (see [Security — logging](security.md#logging-and-telemetry)).
+
+Set `LOG_LEVEL` in `.env` to control verbosity:
+
+| Level   | Output                                                     |
+| ------- | ---------------------------------------------------------- |
+| `error` | Startup failures, unrecoverable errors only                |
+| `warn`  | Default — configuration warnings, expected transient fails |
+| `info`  | Request-level events, startup milestones                   |
+| `debug` | Verbose: DB resolution, dev-mode activations, all paths    |
+
+```bash
+LOG_LEVEL=debug docker compose up
+# or with Docker logs:
+docker logs -f sovereign-runtime-1
+```
+
+Log lines look like:
+
+```json
+{
+  "ts": "2026-06-21T14:00:00.000Z",
+  "level": "info",
+  "msg": "dev-mode activated",
+  "userId": "usr_abc123",
+  "path": "/console"
+}
+```
+
+### Admin health endpoint
+
+`GET /api/admin/health` (requires `Authorization: Bearer <SOVEREIGN_ADMIN_KEY>`) returns a structured JSON report:
+
+```bash
+curl -s -H "Authorization: Bearer $SOVEREIGN_ADMIN_KEY" \
+  http://localhost:3000/api/admin/health | jq .
+```
+
+```json
+{
+  "platformVersion": "0.6.0",
+  "database": {
+    "dialect": "sqlite",
+    "status": "ok",
+    "sizeBytes": 204800,
+    "migrationVersion": "0001"
+  },
+  "auth": { "status": "ok" },
+  "incompatiblePlugins": [],
+  "downgradeWarning": null,
+  "plugins": { "installed": 5, "adminOnly": 1 },
+  "diagnostics": {
+    "logLevel": "warn",
+    "devModeEnabled": false
+  },
+  "uptimeSeconds": 3600
+}
+```
+
+Key fields:
+
+- `database.migrationVersion` — the last applied migration; useful for verifying an upgrade landed.
+- `downgradeWarning` — non-null when the running binary is older than the version that last wrote to the database. Restore a backup or upgrade before doing more writes.
+- `diagnostics.devModeEnabled` — confirms whether `SOVEREIGN_DEV_MODE_ENABLED=true` is active in the environment.
+
+---
+
+## Production dev-mode (RFC 0020)
+
+Production dev-mode lets you validate a feature on your **live instance** against
+a **seeded mock database** without touching real user data. You use your real
+account and session — only platform data (plugins, settings, notifications, etc.)
+is read from and written to the isolated mock database.
+
+> **When to use it:** you want to test a new plugin or configuration change on
+> the actual production deployment (its real TLS setup, reverse proxy, Docker
+> network) but must not disturb live users or data.
+
+### How it works
+
+1. Middleware checks each incoming request for the `X-Sovereign-Dev-Mode-Secret` header.
+2. If the secret matches (`SOVEREIGN_DEV_MODE_SECRET` or `SOVEREIGN_ADMIN_KEY`) and `SOVEREIGN_DEV_MODE_ENABLED=true`, the request is marked as a dev-mode request.
+3. All platform DB reads and writes for **that request only** go to the mock database (`SOVEREIGN_DEV_DATABASE_URL`). Concurrent requests from real users are unaffected.
+4. The response carries `x-sovereign-dev-mode: active` so you can confirm it worked.
+
+This is **never a global switch** — there is no way to put the entire process into dev-mode. The isolation is per-request.
+
+### Setup
+
+**Step 1 — Add env vars to `.env`:**
+
+```env
+SOVEREIGN_DEV_MODE_ENABLED=true
+
+# A dedicated secret is recommended; falls back to SOVEREIGN_ADMIN_KEY if unset.
+SOVEREIGN_DEV_MODE_SECRET=your-dev-mode-secret-here
+
+# A separate SQLite file (or Postgres schema) for mock data.
+SOVEREIGN_DEV_DATABASE_URL=file:./data/sovereign-dev.db
+```
+
+**Step 2 — Seed the mock database:**
+
+```bash
+# Seeds admin@dev.local / admin-dev-password and user@dev.local / user-dev-password
+# into the database pointed at by SOVEREIGN_DEV_DATABASE_URL (or DATABASE_URL if not set).
+DATABASE_URL=file:./data/sovereign-dev.db pnpm sv seed
+```
+
+Or, if using Docker Compose, run seed inside the runtime container:
+
+```bash
+DATABASE_URL=file:./data/sovereign-dev.db docker compose exec runtime pnpm sv seed
+```
+
+**Step 3 — Restart to pick up the new env vars.**
+
+### Making a dev-mode request
+
+Add `X-Sovereign-Dev-Mode-Secret` to any request that should use the mock database:
+
+```bash
+# Check the health endpoint — confirms devModeEnabled is true in the report.
+curl -s \
+  -H "Authorization: Bearer $SOVEREIGN_ADMIN_KEY" \
+  http://localhost:3000/api/admin/health | jq .diagnostics
+
+# Probe a page with dev-mode active. The -I flag shows response headers.
+curl -sI \
+  -H "Cookie: <your-session-cookie>" \
+  -H "X-Sovereign-Dev-Mode-Secret: $SOVEREIGN_DEV_MODE_SECRET" \
+  http://localhost:3000/console
+# → x-sovereign-dev-mode: active  (confirms the mock DB is in use)
+```
+
+From the browser, add the header via a browser extension (e.g. ModHeader) or
+a proxy. Any page or API call that carries the header will resolve against the
+mock database. Remove the header to return to real data — no restart needed.
+
+### What is and isn't mocked
+
+| Layer                     | In dev-mode                                                  |
+| ------------------------- | ------------------------------------------------------------ |
+| Platform database         | **Mock DB** (`SOVEREIGN_DEV_DATABASE_URL`)                   |
+| Plugin isolated databases | **Mock DB** (resolved through the same context-aware switch) |
+| Auth sessions / identity  | **Real** — you sign in with a real account                   |
+| Auth database (`auth.db`) | **Real** — user records, passwords, MFA are untouched        |
+| Activity log              | **Real** — dev-mode activations are logged to the real DB    |
+
+In v1 there is no way to mock the auth layer on prod (the "auth crux" per RFC 0020). Use the seeded test credentials (`admin@dev.local`, `user@dev.local`) on a local or staging instance for that level of isolation.
+
+### Safety properties
+
+- **Off unless explicitly enabled.** `SOVEREIGN_DEV_MODE_ENABLED` must be `true`; the header is silently ignored otherwise.
+- **Secret-gated per request.** An unauthenticated header is ignored; the feature requires a valid session cookie AND the correct secret.
+- **Per-request, never global.** Only the request carrying the header reads from the mock DB. Every other concurrent request uses the real DB.
+- **Hard isolation.** The mock client is a separate `createClient()` instance pointing at `SOVEREIGN_DEV_DATABASE_URL`. There is no path from a dev-mode request to the real DB.
+- **Audited.** Every activation is logged (JSON) to stdout, capturable via `docker logs`.
+
+---
+
 ## Plugin compatibility
 
 On every startup the runtime checks each installed plugin's

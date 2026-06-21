@@ -35,6 +35,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   watch,
   writeFileSync,
 } from 'node:fs';
@@ -193,6 +194,45 @@ function composeTargets(manifest: SovereignManifest): string[] {
   return [fallback];
 }
 
+/**
+ * Incrementally sync `src` directory into `dest`, touching only files that
+ * have actually changed (size or mtime differs) and removing files in `dest`
+ * that no longer exist in `src`. Unchanged files are left untouched so
+ * Next.js's dev watcher doesn't see filesystem events and doesn't invalidate
+ * already-compiled routes — preventing the client-side "404 on soft nav"
+ * that happens when a spurious fs.watch event re-copies everything and
+ * Next.js forgets its compiled route map mid-navigation.
+ */
+function syncDir(src: string, dest: string): void {
+  mkdirSync(dest, { recursive: true });
+
+  const srcNames = new Set(readdirSync(src));
+
+  // Remove entries in dest that are gone from src.
+  for (const name of readdirSync(dest)) {
+    if (!srcNames.has(name)) rmSync(join(dest, name), { recursive: true, force: true });
+  }
+
+  for (const name of srcNames) {
+    const srcPath = join(src, name);
+    const destPath = join(dest, name);
+    const srcStat = statSync(srcPath);
+
+    if (srcStat.isDirectory()) {
+      syncDir(srcPath, destPath);
+    } else {
+      // Only write if the file is missing, has a different size, or the source
+      // is newer than the destination (indicates the developer saved an edit).
+      let needsCopy = !existsSync(destPath);
+      if (!needsCopy) {
+        const destStat = statSync(destPath);
+        needsCopy = srcStat.size !== destStat.size || srcStat.mtimeMs > destStat.mtimeMs;
+      }
+      if (needsCopy) cpSync(srcPath, destPath);
+    }
+  }
+}
+
 function composePlugins(plugins: PluginEntry[]): void {
   mkdirSync(PLATFORM_PLUGINS_DIR, { recursive: true });
   mkdirSync(MODAL_DIR, { recursive: true });
@@ -212,7 +252,7 @@ function composePlugins(plugins: PluginEntry[]): void {
     // The public path is the manifest routePrefix, not the source dir name.
     for (const dest of composeTargets(manifest)) {
       mkdirSync(dirname(dest), { recursive: true });
-      cpSync(srcApp, dest, { recursive: true });
+      syncDir(srcApp, dest);
       // Record which first-level segment this occupies so we can prune stale
       // sibling dirs without touching the ones we just wrote.
       const firstSeg = (base: string) => relative(base, dest).split(sep)[0] ?? '';

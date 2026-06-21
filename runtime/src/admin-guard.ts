@@ -8,7 +8,9 @@ import { NextResponse } from 'next/server';
 export function checkAdminKey(request: Request): NextResponse | null {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY;
   if (!adminKey) {
-    return NextResponse.json({ error: 'SOVEREIGN_ADMIN_KEY is not configured' }, { status: 500 });
+    // 503 Service Unavailable: the server is running but misconfigured.
+    // 500 would imply a bug; the operator simply hasn't set the required key.
+    return NextResponse.json({ error: 'SOVEREIGN_ADMIN_KEY is not configured' }, { status: 503 });
   }
   const auth = request.headers.get('authorization') ?? '';
   if (auth !== `Bearer ${adminKey}`) {

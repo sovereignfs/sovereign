@@ -93,6 +93,50 @@ export const registry: SovereignManifest[] = [
   },
   {
     "schemaVersion": 1,
+    "id": "fs.sovereign.example-monetized",
+    "name": "Example: Monetized",
+    "version": "0.1.0",
+    "description": "Reference plugin demonstrating the monetization manifest field, Ed25519 license gating, and the platform paywall flow.",
+    "type": "sovereign",
+    "runtime": "native",
+    "routePrefix": "/example-monetized",
+    "permissions": [
+      "auth:session"
+    ],
+    "shell": "default",
+    "icon": "icon.svg",
+    "compatibility": {
+      "minPlatformVersion": "0.6.0"
+    },
+    "repository": "https://github.com/sovereignfs/sovereign-plugin-examples",
+    "monetization": {
+      "model": "recurring",
+      "interval": "month",
+      "tiers": [
+        {
+          "id": "basic",
+          "name": "Basic",
+          "price": {
+            "amount": 500,
+            "currency": "USD"
+          }
+        },
+        {
+          "id": "pro",
+          "name": "Pro",
+          "price": {
+            "amount": 1500,
+            "currency": "USD"
+          }
+        }
+      ],
+      "license": {
+        "publicKey": "OQETbqoRboorjWYxjfpWCx4780PQ2MWbJDxW-rOxDdQ"
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
     "id": "fs.sovereign.launcher",
     "name": "Launcher",
     "version": "0.1.0",

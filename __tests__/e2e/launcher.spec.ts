@@ -13,7 +13,8 @@ test.describe('Launcher — golden paths', () => {
     await page.goto('/launcher');
     const tile = page.locator('ul li a').first();
     const href = await tile.getAttribute('href');
-    await tile.click();
+    // tile.click() returns before Next.js <Link> navigation commits — wait for the URL change.
+    await Promise.all([page.waitForURL(`**${href}**`, { timeout: 10_000 }), tile.click()]);
     expect(page.url()).toContain(href ?? '/');
   });
 

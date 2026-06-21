@@ -31,7 +31,8 @@ test.describe('Auth — golden paths', () => {
     await page.click('button[type="submit"]');
     // The form stays on the login page and shows an error.
     await expect(page).toHaveURL(`${AUTH_SERVER}/login`);
-    await expect(page.locator('p.error')).toBeVisible();
+    // CSS Module class names are hashed; the only <p> inside <form> is the error message.
+    await expect(page.locator('form p')).toBeVisible();
   });
 
   test('logout returns to /login with signed-out notice', async ({ browser }) => {

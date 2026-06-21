@@ -1636,6 +1636,38 @@ supported path to production.
 
 ---
 
+#### ✅ Task 0.9.01 — E2E golden-path test suite (Playwright)
+
+**Goal:** Wire up Playwright as the browser-automation layer and write 20 golden-path tests
+covering the critical user flows: auth (login/logout/redirect), launcher navigation, Account
+and Console plugin pages, platform shell navigation (root rewrite, brand link, avatar menu),
+and the monetization paywall flow.
+
+**Scope:**
+
+- `playwright.config.ts` — config with dual `webServer` (auth `:3001`, runtime `:3000`),
+  `globalSetup`, chromium-only in CI, `retries: 1` to absorb Next.js lazy-compilation 404s
+- `__tests__/e2e/global-setup.ts` — seeds test users via `pnpm sv seed`, saves storage state
+  for both users, generates test Ed25519 keypair for paywall spec
+- `__tests__/e2e/fixtures.ts` — `adminPage` / `userPage` fixture helpers
+- Six spec files (20 tests total): `auth`, `launcher`, `account`, `console`, `navigation`, `paywall`
+- `.github/workflows/e2e.yml` — CI job, triggers on `push: main` with `paths` filter (source only,
+  not docs/md)
+- `docs/testing-e2e.md` — local run guide + full coverage/deferred-flow table
+
+**Version bumps:** none (devDependency only — `@playwright/test`; no package API changes).
+
+**SRS reference:** RFC 0010 (test organisation); SRS NFR-11 (accessibility/quality).
+
+**Review checklist:**
+
+- `pnpm test:e2e` passes all 20 tests locally against `pnpm dev` servers
+- `pnpm test` (Vitest) still passes unchanged (no `.spec.ts` picked up)
+- `pnpm lint` passes (`__tests__/e2e/**` and `playwright.config.ts` excluded from ESLint)
+- `e2e.yml` workflow appears in GitHub Actions after merge; passes on next source-code push to main
+
+---
+
 ## v1
 
 The v1.0 release line and post-release work — net-new features, the capability

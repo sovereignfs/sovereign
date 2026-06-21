@@ -62,3 +62,8 @@ memory/
 
 # OS
 .DS_Store
+
+# Playwright E2E
+playwright-report/
+test-results/
+.auth/

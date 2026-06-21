@@ -45,6 +45,22 @@ function buildOptions(): BetterAuthOptions {
           text: `You requested a password reset.\n\nReset your password: ${resetUrl}\n\nThis link expires in 1 hour. If you did not request this, ignore this email.`,
         });
       },
+      // Minimum password length (better-auth default is 8, but being explicit
+      // here so it doesn't silently change with a library upgrade).
+      minPasswordLength: 8,
+    },
+    // Brute-force / credential-stuffing protection. better-auth applies
+    // per-path special rules on top of the global rate limit:
+    //   • /sign-in/* and /sign-up/*      → 3 requests per 10 s per IP
+    //   • /request-password-reset / etc  → 3 requests per 60 s per IP
+    // Returns 429 with an X-Retry-After header when exceeded.
+    // Enabled unconditionally so dev behaviour matches production; in dev
+    // better-auth resolves all requests to LOCALHOST_IP, so all browser
+    // sign-in attempts share the same bucket — a minor inconvenience worth the
+    // consistency.
+    rateLimit: {
+      enabled: process.env.NODE_ENV !== 'test',
+      storage: 'memory',
     },
     user: {
       additionalFields: {

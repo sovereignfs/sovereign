@@ -1,7 +1,11 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test, expect } from '@playwright/test';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME = 'http://localhost:3000';
 const AUTH_SERVER = 'http://localhost:3001';
+const ADMIN_STATE = path.join(__dirname, '../../.auth/admin.json');
 
 test.describe('Auth — golden paths', () => {
   test('unauthenticated visit redirects to auth login page', async ({ page }) => {
@@ -33,7 +37,7 @@ test.describe('Auth — golden paths', () => {
   test('logout returns to /login with signed-out notice', async ({ browser }) => {
     // Use a fresh authenticated context (admin state loaded in global-setup).
     const ctx = await browser.newContext({
-      storageState: require('path').join(__dirname, '../../.auth/admin.json'),
+      storageState: ADMIN_STATE,
     });
     const page = await ctx.newPage();
     await page.goto(`${RUNTIME}/`);

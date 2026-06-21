@@ -1,7 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test, expect } from './fixtures';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ID = 'fs.sovereign.example-monetized';
 const PLUGIN_ROUTE = '/example-monetized';
 const TOKEN_FILE = path.join(__dirname, '../../.auth/test-token.txt');

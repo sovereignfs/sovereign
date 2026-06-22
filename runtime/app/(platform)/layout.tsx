@@ -38,8 +38,11 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   // Non-chrome plugins for the sidebar middle section and the mobile Drawer.
   const allPlugins = getInstalledPlugins();
   const plugins = allPlugins.filter((plugin) => !CHROME_PLUGIN_IDS.has(plugin.id));
+  // The Launcher is a chrome plugin (hidden from its own tiles) but should
+  // always appear as the first icon in the sidebar so users can return home.
+  const launcher = allPlugins.find((plugin) => plugin.id === 'fs.sovereign.launcher');
 
-  const pluginIcons = plugins.map((plugin) => (
+  const pluginIcons = [...(launcher ? [launcher] : []), ...plugins].map((plugin) => (
     <Link key={plugin.id} href={plugin.routePrefix} className={styles.icon} title={plugin.name}>
       {plugin.icon ? (
         <img

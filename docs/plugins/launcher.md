@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Purpose:** Canonical specification for the Sovereign Launcher plugin — the single source of truth for its manifest, access model, functional requirements, and build plan.\
-**Status:** v0.1 implemented (Task 0.4.05)
+**Status:** v0.1 implemented (Task 0.4.5)
 
 ---
 
@@ -191,8 +191,8 @@ fetch is replaced by `sdk.db` when 0.5.05 lands.
 
 | SDK surface | Used for                                                           | Available from |
 | ----------- | ------------------------------------------------------------------ | -------------- |
-| `sdk.auth`  | Current user session; role check for the admin section             | Task 0.4.02    |
-| `sdk.db`    | Read plugin registry (installed plugins + their manifest metadata) | Task 0.5.05    |
+| `sdk.auth`  | Current user session; role check for the admin section             | Task 0.4.2     |
+| `sdk.db`    | Read plugin registry (installed plugins + their manifest metadata) | Task 0.5.5     |
 
 In v0.1, the registry read is served by the runtime route `GET /api/plugins`
 (see [Data model](#data-model)) until `sdk.db` is wired. `sdk.auth.getSession()`
@@ -253,7 +253,7 @@ Multi-project tile expansion, search, notification badges.
 
 2. **Plugin registry SDK surface.** The Launcher reads installed plugins via
    `sdk.db`. The exact shape of the plugin registry table(s) in `packages/db` is
-   determined by Task 0.4.03 (Plugin registry). The Launcher's `page.tsx` should
+   determined by Task 0.4.3 (Plugin registry). The Launcher's `page.tsx` should
    be written against the registry table shape once that task is complete.
 
 3. **Icon resolution.** The `icon` field in a plugin's manifest is a path
@@ -266,7 +266,7 @@ Multi-project tile expansion, search, notification badges.
 
 ## Changelog
 
-| Version | Date     | Change                                                                                                                                                                                                                                                                                                                                                              |
-| ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | Jun 2026 | Initial draft — platform home screen spec.                                                                                                                                                                                                                                                                                                                          |
-| 0.1     | Jun 2026 | v0.1 implemented (Task 0.4.05). Deviations from this spec: components live under `app/_components/` (not a sibling `components/`) since composition copies only `app/`; registry is read via the gated `/api/plugins` route (forwarding the session cookie) rather than `sdk.db`, which lands in 0.5.05; tiles use monograms pending an icon-serving pipeline (Q3). |
+| Version | Date     | Change                                                                                                                                                                                                                                                                                                                                                             |
+| ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | Jun 2026 | Initial draft — platform home screen spec.                                                                                                                                                                                                                                                                                                                         |
+| 0.1     | Jun 2026 | v0.1 implemented (Task 0.4.5). Deviations from this spec: components live under `app/_components/` (not a sibling `components/`) since composition copies only `app/`; registry is read via the gated `/api/plugins` route (forwarding the session cookie) rather than `sdk.db`, which lands in 0.5.05; tiles use monograms pending an icon-serving pipeline (Q3). |

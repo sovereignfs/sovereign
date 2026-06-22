@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** SDK (`packages/sdk`), manifest schema (`packages/manifest`), runtime, Account, reference plugins\
-**Incorporated into plan:** Yes — SRS §3.16, §5 (`data:export` / `data:import`), and **Task 0.5.14**. The reserved `sdk.portability` surface + permissions and the export/import/cross-instance-migration mechanism land in that task (the reserved stub is applied there, after RFC 0005's SDK/manifest stubs).
+**Incorporated into plan:** Yes — SRS §3.16, §5 (`data:export` / `data:import`), and **Task 0.5.15**. The reserved `sdk.portability` surface + permissions and the export/import/cross-instance-migration mechanism land in that task (the reserved stub is applied there, after RFC 0005's SDK/manifest stubs).
 
 ---
 
@@ -249,4 +249,4 @@ skipped / warnings).
 | Version | Date     | Change                                                                                    |
 | ------- | -------- | ----------------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; proposes reserved `sdk.portability` + `data:export`/`data:import`.         |
-| 1.0     | Jun 2026 | Accepted; incorporated into SRS §3.16, §5 (`data:export`/`data:import`), and Task 0.5.14. |
+| 1.0     | Jun 2026 | Accepted; incorporated into SRS §3.16, §5 (`data:export`/`data:import`), and Task 0.5.15. |

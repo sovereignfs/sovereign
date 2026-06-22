@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `vitest.config.ts`, all `*.test.ts(x)` locations, a new root `/__tests__/`, `package.json` test scripts, CLAUDE.md + CONTRIBUTING test conventions\
-**Incorporated into plan:** Yes — **Task 0.5.16** (decision-log row in SRS §6). The file moves + Vitest glob/script changes + CLAUDE.md/CONTRIBUTING updates land in that task.
+**Incorporated into plan:** Yes — **Task 0.5.17** (decision-log row in SRS §6). The file moves + Vitest glob/script changes + CLAUDE.md/CONTRIBUTING updates land in that task.
 
 ---
 
@@ -148,5 +148,5 @@ half-moved.
 | Version | Date     | Change                                                                           |
 | ------- | -------- | -------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; boundary-based layout, per-dir `__tests__/`, root `/__tests__/`.  |
-| 1.0     | Jun 2026 | Accepted; incorporated into the build plan (Task 0.5.16) and a decision-log row. |
-| 1.1     | Jun 2026 | Implemented in Task 0.5.16 (merged to `main`).                                   |
+| 1.0     | Jun 2026 | Accepted; incorporated into the build plan (Task 0.5.17) and a decision-log row. |
+| 1.1     | Jun 2026 | Implemented in Task 0.5.17 (merged to `main`).                                   |

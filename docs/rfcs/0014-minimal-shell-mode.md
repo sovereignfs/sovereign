@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `scripts/generate-registry.ts` (composition), runtime route tree (a new `(minimal)` route group + committed layout + `.gitignore`), `runtime/src/root-plugin.ts` (eligibility), `packages/manifest` (validation), `docs/plugin-development.md`, CLAUDE.md, SRS; builds on RFC 0001 (shell modes) and RFC 0013 (mobile responsiveness)\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.24; documentation-first. This RFC specifies the wiring and the remaining missing pieces for `shell: "minimal"`; SRS requirement IDs, scheduling, and task allocation are deferred.
+**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.25; documentation-first. This RFC specifies the wiring and the remaining missing pieces for `shell: "minimal"`; SRS requirement IDs, scheduling, and task allocation are deferred.
 
 ---
 
@@ -204,4 +204,4 @@ middleware (redirect to `/login` if unauthenticated), then renders via the
 | Version | Date     | Change                                                                                                                                                      |
 | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; wire `shell: "minimal"` via a sibling `(minimal)` route group, generate-script branch, root eligibility + nav contract; documentation-first. |
-| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.24.                                                                                                          |
+| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.25.                                                                                                          |

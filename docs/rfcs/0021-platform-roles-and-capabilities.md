@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `apps/auth` (role default → owner, first-user hook, role-change guards), a centralized roles/capabilities module, `runtime/src/route-guard.ts` + `runtime/middleware.ts` + `runtime/src/session-verify.ts` (capability gate + capabilities in the session cache), `runtime/src/launcher-plugins.ts` + `(platform)/layout.tsx` (chrome gating), `packages/sdk` (`SessionUser` + `hasCapability`/`requireCapability`), `packages/manifest` (`adminOnly` → capability, the reserved `admin:*`), Console (role management UI), SRS §3.4 / AUTH-08 / PLT-03 / CON-05; builds on RFC 0005 (audit), RFC 0008 (security)\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 1.0.02; documentation-first. This RFC specifies the platform role/capability model and the end-to-end flows; SRS requirement IDs, scheduling, and task allocation are deferred. **Plugin-declared capabilities are RFC 0022**, which builds on this one.
+**Incorporated into plan:** Yes — scheduled as roadmap Task 0.6.0; documentation-first. This RFC specifies the platform role/capability model and the end-to-end flows; SRS requirement IDs, scheduling, and task allocation are deferred. **Plugin-declared capabilities are RFC 0022**, which builds on this one.
 
 ---
 
@@ -193,4 +193,4 @@ anyone else.
 | Version | Date     | Change                                                                                                                                                                                                                                                     |
 | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; capability-based model with owner/admin/auditor/user presets (hardcoded defaults + DB-driven override), a protected `platform:owner`, capabilities carried in the session cache for Edge gating; anchored on SRS §3.4; documentation-first. |
-| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 1.0.02.                                                                                                                                                                                                         |
+| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.6.0.                                                                                                                                                                                                          |

@@ -37,7 +37,7 @@ implemented keep their original order, numbering, and phase grouping.
 
 ### Phase v0.3 — Foundation
 
-#### ✅ Task 0.3.01 — Monorepo scaffold
+#### ✅ Task 0.3.1 — Monorepo scaffold
 
 **Goal:** Bare monorepo structure with pnpm workspaces and Turborepo configured. No application code.
 
@@ -61,7 +61,7 @@ implemented keep their original order, numbering, and phase grouping.
 
 ---
 
-#### ✅ Task 0.3.02 — Shared TypeScript config
+#### ✅ Task 0.3.2 — Shared TypeScript config
 
 **Goal:** Centralised TypeScript configuration inherited by all packages and apps.
 
@@ -82,7 +82,7 @@ implemented keep their original order, numbering, and phase grouping.
 
 ---
 
-#### ✅ Task 0.3.03 — Code quality tooling
+#### ✅ Task 0.3.3 — Code quality tooling
 
 **Goal:** Establish consistent code formatting and linting across the entire
 monorepo before any application code is written. All subsequent tasks inherit
@@ -131,7 +131,7 @@ Code quality section. No Biome — ESLint is required for the custom
 
 ---
 
-#### ✅ Task 0.3.04 — `packages/db` — Drizzle client factory
+#### ✅ Task 0.3.4 — `packages/db` — Drizzle client factory
 
 **Goal:** Shared database package providing a Drizzle client factory that supports both SQLite and PostgreSQL via a dialect flag.
 
@@ -164,7 +164,7 @@ Code quality section. No Biome — ESLint is required for the custom
 
 ---
 
-#### ✅ Task 0.3.05 — `packages/manifest` — schema and validation
+#### ✅ Task 0.3.5 — `packages/manifest` — schema and validation
 
 **Goal:** Manifest schema package providing TypeScript types and a validation function.
 
@@ -191,7 +191,7 @@ Code quality section. No Biome — ESLint is required for the custom
 
 ---
 
-#### ✅ Task 0.3.06 — `packages/mailer` — SMTP abstraction
+#### ✅ Task 0.3.6 — `packages/mailer` — SMTP abstraction
 
 **Goal:** Thin mailer package wrapping nodemailer with a simple `send()` interface.
 
@@ -228,7 +228,7 @@ Code quality section. No Biome — ESLint is required for the custom
 
 ---
 
-#### ✅ Task 0.3.07 — `packages/ui` — Sovereign Design System scaffold
+#### ✅ Task 0.3.7 — `packages/ui` — Sovereign Design System scaffold
 
 **Goal:** Sovereign Design System scaffold — two-tier CSS custom property token
 architecture and one primitive component to validate the setup. This package is
@@ -309,7 +309,7 @@ externalised `.css` imports resolve inside `dist/`) is finalised in Task 0.5.07.
 
 ---
 
-#### ✅ Task 0.3.08 — `packages/sdk` — interface definitions
+#### ✅ Task 0.3.8 — `packages/sdk` — interface definitions
 
 **Goal:** SDK package with full interface definitions for v1 surface. Implementations are stubs at this stage — real implementations come in later tasks.
 
@@ -352,7 +352,7 @@ and `files` fields pointing to `dist/`.
 
 ---
 
-#### ✅ Task 0.3.09 — `apps/auth` — better-auth server **[parallel with 0.3.10]**
+#### ✅ Task 0.3.9 — `apps/auth` — better-auth server **[parallel with 0.3.10]**
 
 **Goal:** Self-contained auth server wrapping better-auth. Handles login, logout, registration, session verification, and its own login/registration UI. Owns its identity database; does **not** use `packages/db` (SRS §3.3).
 
@@ -524,7 +524,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ### Phase v0.4 — Platform Plugins (Console, Launcher, Account)
 
-#### ✅ Task 0.4.01 — Console plugin scaffold
+#### ✅ Task 0.4.1 — Console plugin scaffold
 
 **Goal:** Console plugin directory structure, manifest, and basic routing wired into the runtime via the generate script.
 
@@ -548,7 +548,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-#### ✅ Task 0.4.02 — Console: user management
+#### ✅ Task 0.4.2 — Console: user management
 
 **Goal:** User list, invite, role change, and deactivate/reactivate.
 
@@ -570,7 +570,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-#### ✅ Task 0.4.03 — Console: plugin management
+#### ✅ Task 0.4.3 — Console: plugin management
 
 **Goal:** Installed plugin list with enable/disable toggle.
 
@@ -591,7 +591,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-#### ✅ Task 0.4.04 — Console: tenant settings, system health, and root plugin config
+#### ✅ Task 0.4.4 — Console: tenant settings, system health, and root plugin config
 
 **Goal:** Tenant name configuration, invite-only toggle, system health dashboard, and admin-configurable root plugin.
 
@@ -622,7 +622,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-#### ✅ Task 0.4.05 — Launcher plugin
+#### ✅ Task 0.4.5 — Launcher plugin
 
 **Goal:** Platform home screen that lists all installed plugins, serving as the default root page at `/`.
 
@@ -651,7 +651,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-#### ✅ Task 0.4.06 — Account plugin
+#### ✅ Task 0.4.6 — Account plugin
 
 **Goal:** Per-user profile, preferences, and credential management for all authenticated users.
 
@@ -687,7 +687,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ### Phase v0.5 — Polish and Self-Hosting
 
-#### ✅ Task 0.5.00 — `scripts/install-plugins.ts` — plugin install script
+#### ✅ Task 0.5.0 — `scripts/install-plugins.ts` — plugin install script
 
 **Goal:** Full implementation of the install script stubbed in Task 0.3.01.
 
@@ -720,7 +720,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 - `pnpm generate` runs automatically after install
 - Script fails clearly if a repository URL is unreachable
 
-#### ✅ Task 0.5.01 — PWA configuration
+#### ✅ Task 0.5.1 — PWA configuration
 
 **Goal:** Runtime configured as an installable PWA.
 
@@ -741,7 +741,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-#### ✅ Task 0.5.02 — Production Docker image
+#### ✅ Task 0.5.2 — Production Docker image
 
 **Goal:** Separate production Docker images for runtime and auth, each built
 from Next.js standalone output.
@@ -778,7 +778,7 @@ from Next.js standalone output.
 
 ---
 
-#### ✅ Task 0.5.03 — Postgres validation
+#### ✅ Task 0.5.3 — Postgres validation
 
 **Goal:** Confirm full parity between SQLite and Postgres deployments.
 
@@ -799,7 +799,7 @@ from Next.js standalone output.
 
 ---
 
-#### ✅ Task 0.5.04 — `sv` CLI — core commands
+#### ✅ Task 0.5.4 — `sv` CLI — core commands
 
 **Goal:** `sv` CLI with essential commands for managing a Sovereign deployment.
 
@@ -836,7 +836,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.05 — SDK implementations (db and platform)
+#### ✅ Task 0.5.5 — SDK implementations (db and platform)
 
 **Goal:** Complete remaining SDK implementations. `sdk.auth` and `sdk.mailer` were wired in Task 0.4.02. This task completes `sdk.db` and `sdk.platform`.
 
@@ -860,7 +860,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.05b — Local session verification in middleware (AUTH-05) **[split from 0.5.05; done]**
+#### ✅ Task 0.5.6 — Local session verification in middleware (AUTH-05) **[split from 0.5.05; done]**
 
 **Goal:** Replace the runtime middleware's per-request `/api/verify` round-trip to the auth server with **local** verification of the session, using the shared secret.
 
@@ -877,7 +877,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.06 — Documentation **[done]**
+#### ✅ Task 0.5.7 — Documentation **[done]**
 
 **Goal:** Complete self-hosting and plugin developer documentation.
 
@@ -906,7 +906,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.07 — CI pipeline
+#### ✅ Task 0.5.8 — CI pipeline
 
 **Goal:** GitHub Actions pipelines for continuous validation and npm publishing.
 
@@ -949,7 +949,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 - A tag without a corresponding version bump in the package's `package.json`
   fails the publish (version already exists on npm)
 
-#### ✅ Task 0.5.08 — Public `/api` namespace delegation **[parallel]**
+#### ✅ Task 0.5.9 — Public `/api` namespace delegation **[parallel]**
 
 **Goal:** Reserve the top-level `/api/*` namespace for plugin-served public APIs, per PLT-16. Required before the API Composer plugin (`docs/plugins/api-composer.md`) can serve its generated APIs.
 
@@ -971,7 +971,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.09 — Overlay shell mode **[parallel]**
+#### ✅ Task 0.5.10 — Overlay shell mode **[parallel]**
 
 **Goal:** Add the `overlay` shell mode from RFC 0001 (SRS §3.8/§3.9) — a plugin renders as a dismissable dialog over the current page, with a full-page fallback on hard navigation — and migrate Console and Account to it. A v0.5 polish item; no hard dependency on the other v0.5 tasks, but it needs the `packages/ui` `Dialog` primitive. Console and Account already ship as `default`/full-page, so this is a retrofit.
 
@@ -998,7 +998,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.10 — Cross-plugin data sharing (consent-gated)
+#### ✅ Task 0.5.11 — Cross-plugin data sharing (consent-gated)
 
 **Goal:** Implement the consent-gated, pull-based, read-only cross-plugin data-sharing mechanism specified in RFC 0002 / SRS §3.13. The reserved `sdk.data` surface and the `data:provide`/`data:consume` permissions already exist as stubs; this task makes them real. Depends on `sdk.db` (Task 0.5.05).
 
@@ -1017,7 +1017,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.11 — Logout / self sign-out
+#### ✅ Task 0.5.12 — Logout / self sign-out
 
 **Goal:** Implement AUTH-02 self sign-out across the SDK, the shell chrome, and the Account plugin. The requirement was specified but never built — the shell exposes the avatar only as a link to `/account`, `sdk.auth` has no `signOut`, and session revoke (ACC-06) excludes the current session.
 
@@ -1043,7 +1043,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.12 — Activity log (RFC 0005)
+#### ✅ Task 0.5.13 — Activity log (RFC 0005)
 
 **Delivered:**
 
@@ -1059,7 +1059,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.13 — Deployment & upgrade strategy (RFC 0006)
+#### ✅ Task 0.5.14 — Deployment & upgrade strategy (RFC 0006)
 
 **Goal:** Implement the tiered, low-downtime upgrade model from RFC 0006 / SRS §3.15. Depends on the CI pipeline (Task 0.5.07) for image publishing.
 
@@ -1084,7 +1084,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.14 — User data portability (RFC 0007)
+#### ✅ Task 0.5.15 — User data portability (RFC 0007)
 
 **Goal:** Implement self-service export/import/migration from RFC 0007 / SRS §3.16. The reserved `sdk.portability` surface and `data:export`/`data:import` permissions land as stubs first (sequenced after RFC 0005's stubs).
 
@@ -1108,7 +1108,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.15 — Security hardening, Tier 0 + Tier 1 (RFC 0008)
+#### ✅ Task 0.5.16 — Security hardening, Tier 0 + Tier 1 (RFC 0008)
 
 **Goal:** Ship the no-crypto-machinery hardening tiers of RFC 0008 / SRS §3.17 in v1: security headers + threat-model doc (Tier 0) and transport hardening (Tier 1). At-rest encryption and beyond (Tiers 2–4) are deferred post-v1 to Task 1.0.01.
 
@@ -1130,7 +1130,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.16 — Test organization (RFC 0010) **[parallel]**
+#### ✅ Task 0.5.17 — Test organization (RFC 0010) **[parallel]**
 
 **Goal:** Apply the boundary-based test layout from RFC 0010. Mechanical; one pass.
 
@@ -1153,7 +1153,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.17 — Icon system (RFC 0011)
+#### ✅ Task 0.5.18 — Icon system (RFC 0011)
 
 **Goal:** Adopt Lucide as the icon language per RFC 0011, via a generated zero-dependency SVG set behind a Sovereign `<Icon>`.
 
@@ -1175,7 +1175,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.18 — Registry contribution process
+#### ✅ Task 0.5.19 — Registry contribution process
 
 **Goal:** Define and document the process for submitting a community plugin to `registry/plugins.json`.
 
@@ -1199,7 +1199,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.19 — Stable SDK and semver commitment
+#### ✅ Task 0.5.20 — Stable SDK and semver commitment
 
 **Goal:** SDK API review, cleanup, and semver commitment documented.
 
@@ -1220,7 +1220,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.20 — SDK distribution & plugin isolation boundary (RFC 0023)
+#### ✅ Task 0.5.21 — SDK distribution & plugin isolation boundary (RFC 0023)
 
 **Goal:** Decide and implement the published-SDK model. Plugins are host-composed fragments with no standalone runtime and the SDK is in-process host glue, so publish `@sovereignfs/sdk` as a **types-first contract** (host-provided/guarded impls, no `db`/`mailer` dependency) — which also dissolves the private-deps blocker — or drop the "published" designation if isolated authoring isn't pursued.
 
@@ -1241,7 +1241,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.21 — Plugin compatibility & versioning (RFC 0024)
+#### ✅ Task 0.5.22 — Plugin compatibility & versioning (RFC 0024)
 
 **Goal:** Make the dormant `schemaVersion` and `compatibility.minPlatformVersion` fields functional, add an advisory `maxPlatformVersion`, and enforce compatibility consistently.
 
@@ -1262,7 +1262,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.22 — Plugin-scoped environment variables (RFC 0018)
+#### ✅ Task 0.5.23 — Plugin-scoped environment variables (RFC 0018)
 
 **Goal:** Let a plugin declare and supply its own env vars in plugin scope without touching monorepo files, with secrets never baked into artifacts.
 
@@ -1284,7 +1284,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.23 — Test setup & seeding (RFC 0019)
+#### ✅ Task 0.5.24 — Test setup & seeding (RFC 0019)
 
 **Goal:** A test-data foundation — in-code fixtures/factories plus an idempotent seed with per-role test users — and the dev/prod mode concept.
 
@@ -1305,7 +1305,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.24 — Minimal shell mode (RFC 0014)
+#### ✅ Task 0.5.25 — Minimal shell mode (RFC 0014)
 
 **Goal:** Wire the third `shell` mode — `minimal` (chrome-free, full-bleed) — which currently fails the build.
 
@@ -1326,7 +1326,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.25 — Mobile responsiveness & PWA hardening (RFC 0013)
+#### ✅ Task 0.5.26 — Mobile responsiveness & PWA hardening (RFC 0013)
 
 **Goal:** Harden the mobile and PWA experience across the three shell modes.
 
@@ -1348,7 +1348,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.26 — Passkeys & TOTP MFA (RFC 0012)
+#### ✅ Task 0.5.27 — Passkeys & TOTP MFA (RFC 0012)
 
 **Goal:** Add TOTP MFA (authenticator-app only) and passkeys (2FA + passwordless) on better-auth's first-party plugins.
 
@@ -1370,7 +1370,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.27 — Plugin starter template & example plugins (RFC 0017)
+#### ✅ Task 0.5.28 — Plugin starter template & example plugins (RFC 0017)
 
 **Goal:** A frictionless plugin on-ramp — one canonical starter skeleton delivered three ways, plus capability-demo example plugins that double as test fixtures.
 
@@ -1391,7 +1391,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### ✅ Task 0.5.28 — Accessibility audit & a11y contract (RFC 0025)
+#### ✅ Task 0.5.29 — Accessibility audit & a11y contract (RFC 0025)
 
 **Goal:** Reach WCAG 2.1 AA on all platform-owned UI, add automated a11y linting,
 and deliver the plugin developer a11y contract per RFC 0025.
@@ -1432,7 +1432,7 @@ and deliver the plugin developer a11y contract per RFC 0025.
 
 ---
 
-#### ✅ Task 0.5.29 — Non-Docker production deployment, Phase 1 — PM2 (RFC 0026)
+#### ✅ Task 0.5.30 — Non-Docker production deployment, Phase 1 — PM2 (RFC 0026)
 
 **Goal:** Ship the PM2 deployment path as the first-class non-Docker fallback
 (RFC 0026 Phase 1). Operators who can't or won't use Docker get a documented,
@@ -1471,7 +1471,7 @@ supported path to production.
 
 ---
 
-#### ✅ Task 0.5.30 — Offline connectivity banner (PWA shell)
+#### ✅ Task 0.5.31 — Offline connectivity banner (PWA shell)
 
 **Goal:** Surface connectivity status to users who are already in an authenticated session when their network drops. The hard-offline case (navigating to an uncached page) was already handled by the `/offline` fallback route; this task covers the soft-offline case — the network disappears while the user is on a page.
 
@@ -1498,7 +1498,7 @@ supported path to production.
 
 ### Phase v0.6 — User roles & capabilities
 
-#### ✅ Task 0.6.01 — Platform roles & capabilities (RFC 0021)
+#### ✅ Task 0.6.0 — Platform roles & capabilities (RFC 0021)
 
 **Goal:** Grow the two-role model into a capability-based model with named role presets and a protected `platform:owner` — the SRS §3.4 "future version" with database-driven capability assignment.
 
@@ -1520,7 +1520,7 @@ supported path to production.
 
 ---
 
-#### Task 0.6.02 — Plugin-declared capabilities (RFC 0022) ✅
+#### Task 0.6.1 — Plugin-declared capabilities (RFC 0022) ✅
 
 **Goal:** Let plugins declare namespaced capabilities (`splitify:create-group`) enforced intra-plugin via the SDK.
 
@@ -1547,7 +1547,7 @@ supported path to production.
 
 ### Phase v0.7 — Notifications
 
-#### ✅ Task 0.7.01 — Notification Center (RFC 0015)
+#### ✅ Task 0.7.0 — Notification Center (RFC 0015)
 
 **Goal:** A per-user notification inbox with a bell + panel, toasts, the `sdk.notifications` send surface, and admin broadcast.
 
@@ -1568,7 +1568,7 @@ supported path to production.
 
 ---
 
-#### ✅ Task 0.7.02 — Web Push notifications (RFC 0016)
+#### ✅ Task 0.7.1 — Web Push notifications (RFC 0016)
 
 **Goal:** Background delivery of inbox notifications via Web Push (VAPID + service worker).
 
@@ -1590,7 +1590,7 @@ supported path to production.
 
 ### Phase v0.8 — Plugin isolation & Live debuging
 
-#### ✅ Task 0.8.01 — Plugin monetization (RFC 0003)
+#### ✅ Task 0.8.0 — Plugin monetization (RFC 0003)
 
 **Goal:** Let plugin authors monetize plugins via a manifest-declared model + author-signed entitlement gating. RFC 0003 accepted.
 
@@ -1613,7 +1613,7 @@ supported path to production.
 
 ---
 
-#### ✅ Task 0.8.02 — Per-plugin database (RFC 0004)
+#### ✅ Task 0.8.1 — Per-plugin database (RFC 0004)
 
 **Goal:** Let a plugin opt into a dedicated database (`database: "isolated"`) rather than sharing the platform DB. RFC 0004 accepted.
 
@@ -1636,7 +1636,7 @@ supported path to production.
 
 ---
 
-#### ✅ Task 0.9.01 — E2E golden-path test suite (Playwright)
+#### ✅ Task 0.8.2 — E2E golden-path test suite (Playwright)
 
 **Goal:** Wire up Playwright as the browser-automation layer and write 20 golden-path tests
 covering the critical user flows: auth (login/logout/redirect), launcher navigation, Account

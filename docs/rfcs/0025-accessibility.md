@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/ui`, `docs/design-system.md`, `docs/plugin-development.md`, `eslint.config.ts`, SRS; builds on RFC 0001 (Dialog focus trap), RFC 0011 (Icon aria-hidden), RFC 0013 (touch targets)\
-**Incorporated into plan:** Yes — Task 0.5.28. SRS NFR ID assigned during the implementation task.
+**Incorporated into plan:** Yes — Task 0.5.29. SRS NFR ID assigned during the implementation task.
 
 ---
 
@@ -60,13 +60,13 @@ experiences in production.
   menu with `aria-expanded`, Esc, click-outside, keyboard-accessible trigger.
 - **Semantic tokens** — `packages/ui/src/tokens/semantic.css`: `--sv-color-focus-ring`
   exists; no rule mandates its use on interactive elements.
-- **Icon** — RFC 0011 (Task 0.5.17, unimplemented): specifies `aria-hidden` for
+- **Icon** — RFC 0011 (Task 0.5.18, unimplemented): specifies `aria-hidden` for
   decorative icons and `aria-label` for functional ones. This RFC depends on that
   convention being established.
-- **Touch targets** — RFC 0013 (Task 0.5.25, unimplemented): sets
+- **Touch targets** — RFC 0013 (Task 0.5.26, unimplemented): sets
   `--sv-touch-target-min: 44px` and enforces it on interactive elements. The a11y
-  audit in Task 0.5.28 should run after 0.5.25.
-- **ESLint** — `eslint.config.ts` (root, flat config, Task 0.3.03): `typescript-eslint`
+  audit in Task 0.5.29 should run after 0.5.25.
+- **ESLint** — `eslint.config.ts` (root, flat config, Task 0.3.3): `typescript-eslint`
   recommended + strict, `eslint-config-prettier`. Adding `eslint-plugin-jsx-a11y`
   follows this pattern without structural change.
 
@@ -134,7 +134,7 @@ documents the rule so it is applied before animations are added.
 #### Per-component a11y spec
 
 `docs/design-system.md` gains an a11y subsection for each component shipping in
-or before Task 0.5.28. Format: a small table covering role/element semantics,
+or before Task 0.5.29. Format: a small table covering role/element semantics,
 keyboard interactions, ARIA attributes, focus order, and any `aria-live` usage.
 
 | Component | Role / element  | Keyboard              | ARIA                               | Focus order             |
@@ -158,7 +158,7 @@ The implementation task must clean up any existing violations before enabling th
 rule — a red CI is not acceptable to merge on.
 
 No new devDependency beyond the plugin. It follows the exact flat-config pattern
-established in Task 0.3.03.
+established in Task 0.3.3.
 
 ### Axis C — Plugin developer a11y contract (`docs/plugin-development.md`)
 
@@ -228,7 +228,7 @@ to be 2.2-compatible.
 **Axe-core / Playwright a11y automation in CI.** End-to-end a11y assertions (e.g.
 `@axe-core/playwright` in the e2e tier) would catch rendered violations that
 static linting misses. This is the right long-term posture but heavyweight for
-Task 0.5.28 alongside the audit and documentation work. Deferred to a follow-up
+Task 0.5.29 alongside the audit and documentation work. Deferred to a follow-up
 or the e2e tier when RFC 0019's test infrastructure is in place.
 
 **Linting only — no design-system spec or plugin guidance.** Linting catches
@@ -253,7 +253,7 @@ components it provides.
    `runtime/`, `apps/auth/`) use strict while plugins (which use the starter
    template) get recommended? Or one ruleset everywhere for consistency?
 
-3. **`prefers-contrast: more` (high-contrast mode).** Should the Task 0.5.28 scope
+3. **`prefers-contrast: more` (high-contrast mode).** Should the Task 0.5.29 scope
    include a `prefers-contrast` media query layer on the semantic token set, or is
    that deferred as a follow-up?
 
@@ -266,14 +266,14 @@ components it provides.
 
 - **This RFC** lands in `docs/rfcs/` as a Draft. No code changes. Reviewed and
   either accepted or iterated on before the implementation task begins.
-- **Task 0.5.28** implements the three axes: audit + fix shell/chrome/auth UI
+- **Task 0.5.29** implements the three axes: audit + fix shell/chrome/auth UI
   against WCAG 2.1 AA, add `eslint-plugin-jsx-a11y`, add semantic tokens, write
   component a11y specs in `docs/design-system.md`, write the "Accessibility"
   section in `docs/plugin-development.md`, add NFR-11 to the SRS.
 - **Semver:** `@sovereignfs/ui` **minor** bump for the four new tokens. No breaking
   changes. No `@sovereignfs/sdk` change.
-- **Dependencies:** Task 0.5.17 (Icon `aria-hidden`/`aria-label` convention should
-  be established before the a11y spec references it); Task 0.5.25 (touch targets
+- **Dependencies:** Task 0.5.18 (Icon `aria-hidden`/`aria-label` convention should
+  be established before the a11y spec references it); Task 0.5.26 (touch targets
   in place before the audit runs).
 
 ## Changelog

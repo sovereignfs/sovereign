@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Runtime shell (`runtime/app/(platform)/`), `packages/ui` (`Dialog` + a new `Drawer` + tokens), runtime PWA config / `runtime/public/manifest.json` / root-layout viewport, `docs/design-system.md`, SRS; builds on RFC 0001 (overlay shell)\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.25; documentation-first. This RFC specifies the design and the end-to-end mobile UI flows; SRS requirement IDs, scheduling, and task allocation are deferred. Wiring the `minimal` shell mode is explicitly out of scope here and handed to a follow-up RFC 0014.
+**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.26; documentation-first. This RFC specifies the design and the end-to-end mobile UI flows; SRS requirement IDs, scheduling, and task allocation are deferred. Wiring the `minimal` shell mode is explicitly out of scope here and handed to a follow-up RFC 0014.
 
 ---
 
@@ -275,4 +275,4 @@ indicator (safe-area bottom).
 | Version | Date     | Change                                                                                                                                                                                                                                 |
 | ------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; mobile hardening across the three shell modes + PWA polish; bottom `Drawer`, top-inset overlay, unified breakpoint, safe-area/`dvh`/touch-target tokens; documentation-first, minimal-mode wiring deferred to RFC 0014. |
-| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.25.                                                                                                                                                                                     |
+| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.26.                                                                                                                                                                                     |

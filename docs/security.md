@@ -54,23 +54,23 @@ Security controls are only meaningful against a stated adversary. **Assets:** th
 identity database (`auth.db`), the platform database (`sovereign.db`), plugin
 data, avatars/blobs, backups, secrets, and live sessions.
 
-| Threat                                     | Addressed by                                               | Ships in              | Residual risk                                           |
-| ------------------------------------------ | ---------------------------------------------------------- | --------------------- | ------------------------------------------------------- |
-| Network sniffing / MITM                    | Transport: TLS/HSTS at the edge, Postgres SSL              | **v1**                | Endpoint compromise.                                    |
-| XSS / injected scripts                     | Strict nonce-based CSP + security headers                  | **v1**                | A bug that echoes a valid nonce.                        |
-| Clickjacking                               | `X-Frame-Options: DENY` + `frame-ancestors 'none'`         | **v1**                | —                                                       |
-| Stolen or guessed password                 | TOTP / passkey second factor (opt-in per user)             | **v1**                | Users who haven't enrolled MFA have password-only auth. |
-| Forged session cookie                      | HMAC-signed cookie cache; Argon2id passwords (better-auth) | **v1**                | Stolen live cookie from a compromised device.           |
-| Compromised / curious plugin               | SDK boundary (plugins can't import runtime internals)      | **v1**                | A plugin still sees its own users' data.                |
-| Stolen disk / leaked backup / VPS snapshot | At-rest encryption (DB / backup / blob)                    | post-v1 (Task 1.0.01) | Until then, rely on host-level disk encryption.         |
-| Curious/malicious host or hosting provider | Field-level → zero-knowledge encryption                    | post-v1 (charted)     | The operator can read data at rest in v1.               |
-| RCE / compromised server process           | Only zero-knowledge E2EE mitigates                         | not planned for v1    | An attacker with code execution wins.                   |
+| Threat                                     | Addressed by                                               | Ships in             | Residual risk                                           |
+| ------------------------------------------ | ---------------------------------------------------------- | -------------------- | ------------------------------------------------------- |
+| Network sniffing / MITM                    | Transport: TLS/HSTS at the edge, Postgres SSL              | **v1**               | Endpoint compromise.                                    |
+| XSS / injected scripts                     | Strict nonce-based CSP + security headers                  | **v1**               | A bug that echoes a valid nonce.                        |
+| Clickjacking                               | `X-Frame-Options: DENY` + `frame-ancestors 'none'`         | **v1**               | —                                                       |
+| Stolen or guessed password                 | TOTP / passkey second factor (opt-in per user)             | **v1**               | Users who haven't enrolled MFA have password-only auth. |
+| Forged session cookie                      | HMAC-signed cookie cache; Argon2id passwords (better-auth) | **v1**               | Stolen live cookie from a compromised device.           |
+| Compromised / curious plugin               | SDK boundary (plugins can't import runtime internals)      | **v1**               | A plugin still sees its own users' data.                |
+| Stolen disk / leaked backup / VPS snapshot | At-rest encryption (DB / backup / blob)                    | post-v1 (Task 1.0.1) | Until then, rely on host-level disk encryption.         |
+| Curious/malicious host or hosting provider | Field-level → zero-knowledge encryption                    | post-v1 (charted)    | The operator can read data at rest in v1.               |
+| RCE / compromised server process           | Only zero-knowledge E2EE mitigates                         | not planned for v1   | An attacker with code execution wins.                   |
 
 **Honest framing.** v1 ships Tiers 0–1 of RFC 0008 (hardening + transport). It
 does **not** yet encrypt data at rest, so anyone who can read the server's disk
 or a raw backup can read the data. Protect the host accordingly (see the
 checklist). At-rest and field-level encryption are specified and deferred to
-Task 1.0.01; zero-knowledge E2EE is charted but out of v1 scope.
+Task 1.0.1; zero-knowledge E2EE is charted but out of v1 scope.
 
 ## What v1 enforces
 

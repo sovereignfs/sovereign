@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Manifest schema (`packages/manifest`), SDK (`packages/sdk`), runtime middleware, plugin registry, `packages/ui`, Console/Account, SRS\
-**Incorporated into plan:** Yes — Phase 1 completed as Task 0.8.01 (manifest field, `sdk.billing` stub, entitlement gating, offline Ed25519 verification, paywall, Account billing tab, Console entitlements view, license generator for operators). Phase 2 (automated payment collection) scheduled as post-v1 Task 1.0.09.
+**Incorporated into plan:** Yes — Phase 1 completed as Task 0.8.0 (manifest field, `sdk.billing` stub, entitlement gating, offline Ed25519 verification, paywall, Account billing tab, Console entitlements view, license generator for operators). Phase 2 (automated payment collection) scheduled as post-v1 Task 1.0.2.
 
 ---
 
@@ -68,7 +68,7 @@ discovery and a hosted store are explicitly out of scope (see Alternatives).
   (`storage`, `notifications`, `events`, and `data` from RFC 0002) as stubs that
   throw `NotImplementedError`, with matching reserved manifest permissions. A
   `billing` surface would follow the same pattern.
-- **Registry** (Task 1.0.01, `registry/plugins.json`) plus the manifest
+- **Registry** (Task 1.0.1, `registry/plugins.json`) plus the manifest
   `repository`/`type` fields are the natural place to publish an author's
   license **public key** and establish author identity.
 - **Licensing** (§2.7): third-party plugins may use any license; commercial /
@@ -268,9 +268,9 @@ plugins are not core — and avoids making the project a payment intermediary.
    subscription-management UX in Account/Console.
 4. Revisit a central discovery/checkout layer only if there is demand.
 
-## Phase 2 — Automated payment collection (post-v1, Task 1.0.09)
+## Phase 2 — Automated payment collection (post-v1, Task 1.0.2)
 
-Phase 1 (Task 0.8.01) ships the manual Ed25519 token model. Phase 2 adds automated
+Phase 1 (Task 0.8.0) ships the manual Ed25519 token model. Phase 2 adds automated
 payment collection — users subscribe and receive access without the operator generating
 and distributing a token by hand.
 
@@ -321,9 +321,9 @@ Both SQLite and Postgres dialects; drizzle-kit migration added.
 
 ## Changelog
 
-| Version | Date     | Change                                                                                       |
-| ------- | -------- | -------------------------------------------------------------------------------------------- |
-| 0.1     | Jun 2026 | Initial draft.                                                                               |
-| 0.2     | Jun 2026 | Added to the roadmap as exploratory Task 1.0.07 (gated on acceptance; still Draft).          |
-| 0.3     | Jun 2026 | RFC accepted; status updated to Accepted; Task 1.0.07 now scheduled (no implementation yet). |
-| 0.4     | Jun 2026 | Phase 1 complete (Task 0.8.01). Phase 2 section added; roadmap Task 1.0.09 scheduled.        |
+| Version | Date     | Change                                                                                      |
+| ------- | -------- | ------------------------------------------------------------------------------------------- |
+| 0.1     | Jun 2026 | Initial draft.                                                                              |
+| 0.2     | Jun 2026 | Added to the roadmap as exploratory Task 0.8.0 (gated on acceptance; still Draft).          |
+| 0.3     | Jun 2026 | RFC accepted; status updated to Accepted; Task 0.8.0 now scheduled (no implementation yet). |
+| 0.4     | Jun 2026 | Phase 1 complete (Task 0.8.0). Phase 2 section added; roadmap Task 1.0.2 scheduled.         |

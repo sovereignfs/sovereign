@@ -3,8 +3,8 @@
 **Status:** Accepted\
 **Date:** June 2026\
 **Author:** kasunben\
-**Scope:** `packages/sdk` (contract vs host-provided implementation), `packages/db` + `packages/mailer` (stay private), `.github/workflows/publish.yml` (`sdk-v*`), CLAUDE.md (the "not npm-installable" caveat + "published" designation), the SRS decision log, Task 0.5.19; **amends RFC 0017** (its publish prerequisite); contrasts `@sovereignfs/ui` (portable)\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.20; documentation-first. This RFC settles what a plugin can do in isolation and, from that, the SDK's distribution model; SRS requirement IDs, scheduling, and task allocation are deferred.
+**Scope:** `packages/sdk` (contract vs host-provided implementation), `packages/db` + `packages/mailer` (stay private), `.github/workflows/publish.yml` (`sdk-v*`), CLAUDE.md (the "not npm-installable" caveat + "published" designation), the SRS decision log, Task 0.5.20; **amends RFC 0017** (its publish prerequisite); contrasts `@sovereignfs/ui` (portable)\
+**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.21; documentation-first. This RFC settles what a plugin can do in isolation and, from that, the SDK's distribution model; SRS requirement IDs, scheduling, and task allocation are deferred.
 
 ---
 
@@ -114,7 +114,7 @@ SDK workspace-internal, develop plugins in a checkout via `workspace:*`, and dro
 
 ## What changes (when this is accepted)
 
-- **CLAUDE.md** — the Task 0.5.07 caveat is rewritten: the blocker is dissolved by
+- **CLAUDE.md** — the Task 0.5.8 caveat is rewritten: the blocker is dissolved by
   the types-first split, not by bundling private deps; the SDK's "published" status
   is qualified as a types-first contract.
 - **SRS decision log** — "the published SDK has no runtime dependencies" is made
@@ -122,7 +122,7 @@ SDK workspace-internal, develop plugins in a checkout via `workspace:*`, and dro
 - **RFC 0017** — its publish **prerequisite** is amended from "bundle/publish the
   private deps" to "restructure the SDK types-first" (cross-referenced; a one-line
   note added now so the two RFCs don't contradict).
-- **A task owns the restructure** — Task 0.5.19 (stable SDK & semver) or a small new
+- **A task owns the restructure** — Task 0.5.20 (stable SDK & semver) or a small new
   task; it splits the SDK into the published contract + the host-provided impls.
 
 ## Alternatives considered
@@ -146,7 +146,7 @@ SDK workspace-internal, develop plugins in a checkout via `workspace:*`, and dro
    runtime; the exact error contract.
 2. **Types entrypoint** — does the types-first split warrant a separate types-only
    export, or is one entrypoint with guarded impls enough?
-3. **Task ownership** — fold the restructure into Task 0.5.19 or a new small task.
+3. **Task ownership** — fold the restructure into Task 0.5.20 or a new small task.
 4. **Dev-harness** — whether a published runtime harness is worth it post-v1.
 5. **Requirement IDs** — deferred until accepted.
 
@@ -164,4 +164,4 @@ SDK workspace-internal, develop plugins in a checkout via `workspace:*`, and dro
 | Version | Date     | Change                                                                                                                                                                                                                                                                              |
 | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; establishes that plugins cannot run in isolation (composed fragments + in-process host-glue SDK), so publishing the full-impl SDK is meaningless; recommends a types-first contract (or not publishing), dropping the `noExternal`-bundle plan; documentation-first. |
-| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.20.                                                                                                                                                                                                                                  |
+| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.21.                                                                                                                                                                                                                                  |

@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Design system (`packages/ui`) — a new `Icon` component + a generated SVG set; runtime chrome; `PluginTile`/sidebar plugin-icon wiring; `docs/design-system.md` + `docs/plugin-development.md`\
-**Incorporated into plan:** Yes — **Task 0.5.17** (decision-log row in SRS §6). The `<Icon>` component, the generated zero-dependency SVG set, and the chrome adoption + plugin-icon wiring land in that task.
+**Incorporated into plan:** Yes — **Task 0.5.18** (decision-log row in SRS §6). The `<Icon>` component, the generated zero-dependency SVG set, and the chrome adoption + plugin-icon wiring land in that task.
 
 ---
 
@@ -161,4 +161,4 @@ is unaffected.
 | Version | Date     | Change                                                                           |
 | ------- | -------- | -------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; Lucide via a generated zero-dependency SVG set behind `<Icon>`.   |
-| 1.0     | Jun 2026 | Accepted; incorporated into the build plan (Task 0.5.17) and a decision-log row. |
+| 1.0     | Jun 2026 | Accepted; incorporated into the build plan (Task 0.5.18) and a decision-log row. |

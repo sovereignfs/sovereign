@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Purpose:** Canonical specification for the Sovereign Account plugin — the single source of truth for its manifest, access model, functional requirements, data model, and build plan.\
-**Status:** v0.1 implemented (Task 0.4.06) — Profile, Security, and Preferences (ACC-01–08)
+**Status:** v0.1 implemented (Task 0.4.6) — Profile, Security, and Preferences (ACC-01–08)
 
 ---
 
@@ -190,8 +190,8 @@ record in `packages/db` (maintained by the platform, not this plugin) holds the
 
 | SDK surface | Used for                                                                        | Available from |
 | ----------- | ------------------------------------------------------------------------------- | -------------- |
-| `sdk.auth`  | Current user session; password change via `better-auth`; session listing/revoke | Task 0.4.02    |
-| `sdk.db`    | Read/write `account_prefs`; read/write `avatar_url` on the user record          | Task 0.5.05    |
+| `sdk.auth`  | Current user session; password change via `better-auth`; session listing/revoke | Task 0.4.2     |
+| `sdk.db`    | Read/write `account_prefs`; read/write `avatar_url` on the user record          | Task 0.5.5     |
 
 ---
 
@@ -219,7 +219,7 @@ not eligible as the root plugin (CON-11).
   (ACC-11). Could generalise to other "active credential" listings.
 
 The current-session "Log out" (ACC-11) shares the platform logout action with the
-shell **avatar menu** (the primary entry point); see Task 0.5.11.
+shell **avatar menu** (the primary entry point); see Task 0.5.12.
 
 ---
 
@@ -236,7 +236,7 @@ with revoke, timezone setting, appearance toggle.
 their password, revoke other sessions, set their timezone, and toggle light/dark
 mode — with all preferences persisted and applied immediately.
 
-### Logout (ACC-11) — Task 0.5.11
+### Logout (ACC-11) — Task 0.5.12
 
 Self sign-out, closing the long-standing AUTH-02 gap (specified but never built).
 Adds `sdk.auth.signOut()` and a "Log out" action on the current-session row,
@@ -252,7 +252,7 @@ customisation (pin/unpin/reorder) — see ACC-10.
 
 ## Open questions
 
-1. **Avatar storage mechanism.** ✅ **Resolved (Task 0.4.06 part 1): option (b).**
+1. **Avatar storage mechanism.** ✅ **Resolved (Task 0.4.6 part 1): option (b).**
    Avatars are stored on disk at `data/avatars/<user_id>.<ext>` (workspace-root
    `data/`, resolved like the SQLite DB) and served by the runtime route
    `GET /api/account/avatar/[userId]`. Upload goes to `POST /api/account/avatar`
@@ -270,7 +270,7 @@ customisation (pin/unpin/reorder) — see ACC-10.
    ACC-02 targets the display name only. Confirm the platform user schema
    distinguishes these two fields before implementing.
 
-4. **Appearance preference and SSR.** ✅ **Resolved (Task 0.4.06 part 1).** The
+4. **Appearance preference and SSR.** ✅ **Resolved (Task 0.4.6 part 1).** The
    choice is written to both `account_prefs` (authoritative) and an `sv-theme`
    cookie. An inline script in the runtime root layout (`runtime/app/layout.tsx`)
    runs before first paint and sets `data-theme` from the cookie — `light`/`dark`
@@ -283,9 +283,9 @@ customisation (pin/unpin/reorder) — see ACC-10.
 
 ## Changelog
 
-| Version | Date     | Change                                                                                                                                                                                                                                                                                                                                     |
-| ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0.1     | Jun 2026 | Initial draft — per-user profile and preferences plugin.                                                                                                                                                                                                                                                                                   |
-| 0.1     | Jun 2026 | Part 1 implemented (Task 0.4.06): Profile (ACC-01/02/03) + Preferences (ACC-07/08). Resolved Q1 (avatar → disk + Next route) and Q4 (theme → `account_prefs` + `sv-theme` cookie + pre-paint inline script). Deviation: components live under `app/_components/` (composition copies only `app/`). Security (ACC-04–06) follows in part 2. |
-| 0.1     | Jun 2026 | Part 2 implemented (Task 0.4.06): Security tab — password change (ACC-04) + active-session list/revoke (ACC-05/06). Extended `sdk.auth` with `changePassword`/`listSessions`/`revokeSession` (wrap better-auth with cookie + Origin). v0.1 complete.                                                                                       |
-| 0.1     | Jun 2026 | Specified ACC-11 (self sign-out / "Log out") to close the AUTH-02 gap — current-session Log out action + shell avatar menu, `sdk.auth.signOut()`, better-auth sign-out + session-cache-cookie clear. Scheduled as Task 0.5.11 (not yet implemented).                                                                                       |
+| Version | Date     | Change                                                                                                                                                                                                                                                                                                                                    |
+| ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Jun 2026 | Initial draft — per-user profile and preferences plugin.                                                                                                                                                                                                                                                                                  |
+| 0.1     | Jun 2026 | Part 1 implemented (Task 0.4.6): Profile (ACC-01/02/03) + Preferences (ACC-07/08). Resolved Q1 (avatar → disk + Next route) and Q4 (theme → `account_prefs` + `sv-theme` cookie + pre-paint inline script). Deviation: components live under `app/_components/` (composition copies only `app/`). Security (ACC-04–06) follows in part 2. |
+| 0.1     | Jun 2026 | Part 2 implemented (Task 0.4.6): Security tab — password change (ACC-04) + active-session list/revoke (ACC-05/06). Extended `sdk.auth` with `changePassword`/`listSessions`/`revokeSession` (wrap better-auth with cookie + Origin). v0.1 complete.                                                                                       |
+| 0.1     | Jun 2026 | Specified ACC-11 (self sign-out / "Log out") to close the AUTH-02 gap — current-session Log out action + shell avatar menu, `sdk.auth.signOut()`, better-auth sign-out + session-cache-cookie clear. Scheduled as Task 0.5.12 (not yet implemented).                                                                                      |

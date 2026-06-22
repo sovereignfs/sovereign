@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Platform shell, manifest schema, generate script, `packages/ui`\
-**Incorporated into plan:** Yes — the design is recorded in SRS §3.8 (shell modes), §3.9 (dual composition), §5 (manifest `shell` enum), and CON-11 (root-plugin eligibility), with a decision-log row. The implementation is scheduled as Task 0.5.09 (overlay shell mode); the code changes in the "Impact when accepted" table land in that task.
+**Incorporated into plan:** Yes — the design is recorded in SRS §3.8 (shell modes), §3.9 (dual composition), §5 (manifest `shell` enum), and CON-11 (root-plugin eligibility), with a decision-log row. The implementation is scheduled as Task 0.5.10 (overlay shell mode); the code changes in the "Impact when accepted" table land in that task.
 
 ---
 
@@ -150,7 +150,7 @@ New primitives (also independently useful):
   (`default` / `minimal` / `overlay` → three compose targets) should be kept
   coherent when either lands.
 
-## Impact (accepted — SRS/tasks incorporated; code lands in Task 0.5.09)
+## Impact (accepted — SRS/tasks incorporated; code lands in Task 0.5.10)
 
 | Where                                                | Change                                                                                                                                               |
 | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -217,6 +217,6 @@ New primitives (also independently useful):
 | Version | Date     | Change                                                                                                                                                                                              |
 | ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft.                                                                                                                                                                                      |
-| 1.0     | Jun 2026 | Accepted; incorporated into SRS (§3.8/§3.9/§5/CON-11 + decision log) and Task 0.5.09.                                                                                                               |
+| 1.0     | Jun 2026 | Accepted; incorporated into SRS (§3.8/§3.9/§5/CON-11 + decision log) and Task 0.5.10.                                                                                                               |
 | 1.1     | Jun 2026 | Post-implementation: resolved open questions 2 (manifest `shellConfig.overlaySize`) and 4 (`router.replace` for intra-overlay navigation).                                                          |
 | 1.2     | Jun 2026 | Post-implementation: the `Dialog` scrim insets its left edge past the platform sidebar (`--sv-dialog-inset-left`), so overlay dialogs start at the sidebar's right edge and leave the rail visible. |

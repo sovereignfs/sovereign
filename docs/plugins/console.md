@@ -210,16 +210,16 @@ Resolved decisions (gaps the SRS left open):
 Console exercises four SDK surfaces. Their readiness is sequenced across v0.4
 and v0.5:
 
-| SDK surface    | Used for                               | Status when Console needs it                        |
-| -------------- | -------------------------------------- | --------------------------------------------------- |
-| `sdk.auth`     | session, user list, role, deactivate   | **Real impl wired in Task 0.4.02** (prerequisite).  |
-| `sdk.mailer`   | sending invite emails (CON-03)         | **Real impl wired in Task 0.4.02** (prerequisite).  |
-| `sdk.platform` | `getConfig()` for tenant name (CON-08) | Stubbed through v0.4; **completed in Task 0.5.05**. |
-| `sdk.db`       | reading/writing platform tables        | Stubbed through v0.4; **completed in Task 0.5.05**. |
+| SDK surface    | Used for                               | Status when Console needs it                       |
+| -------------- | -------------------------------------- | -------------------------------------------------- |
+| `sdk.auth`     | session, user list, role, deactivate   | **Real impl wired in Task 0.4.2** (prerequisite).  |
+| `sdk.mailer`   | sending invite emails (CON-03)         | **Real impl wired in Task 0.4.2** (prerequisite).  |
+| `sdk.platform` | `getConfig()` for tenant name (CON-08) | Stubbed through v0.4; **completed in Task 0.5.5**. |
+| `sdk.db`       | reading/writing platform tables        | Stubbed through v0.4; **completed in Task 0.5.5**. |
 
-**Sequencing caveat (carry into the build):** Task 0.4.04 needs
+**Sequencing caveat (carry into the build):** Task 0.4.4 needs
 `sdk.platform.getConfig()` and `sdk.db`, but their real implementations don't
-land until Task 0.5.05. For v0.4, Console's settings/health pages work against
+land until Task 0.5.5. For v0.4, Console's settings/health pages work against
 the stubbed `platform`/`db` surfaces (or read the tables directly via
 `packages/db` where the SDK stub is insufficient), and the SDK-routed path is
 finalized in 0.5.05. This is a known ordering wrinkle, not a contradiction —

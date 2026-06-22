@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/db` (request-scoped DB resolution), runtime middleware (dev-mode detection + gating + request context), `apps/auth` (parallel dev-DB path — the crux), env (`SOVEREIGN_DEV_MODE_ENABLED`, dev-DB URLs, a dev-mode secret, `LOG_LEVEL`), structured logging + `runtime/app/api/admin/health`, `docs/security.md` + `docs/self-hosting.md`; builds on RFC 0019 (seed for the mock DB), RFC 0005 (audit), RFC 0008 (security / no-telemetry)\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 1.0.06; documentation-first. This RFC specifies a way to exercise features on a production deployment against mock data, plus operator-owned diagnostics; SRS requirement IDs, scheduling, and task allocation are deferred.
+**Incorporated into plan:** Yes — scheduled as roadmap Task 0.8.3; documentation-first. This RFC specifies a way to exercise features on a production deployment against mock data, plus operator-owned diagnostics; SRS requirement IDs, scheduling, and task allocation are deferred.
 
 ---
 
@@ -167,4 +167,4 @@ hits `/api/admin/health` for the diagnostics report. Nothing leaves the box.
 | Version | Date     | Change                                                                                                                                                                                                                                             |
 | ------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; request-scoped (AsyncLocalStorage) prod dev-mode pointing at an RFC 0019-seeded mock DB, six safety guardrails, the auth crux, plus local no-telemetry diagnostics (structured logging + richer admin health); documentation-first. |
-| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 1.0.06.                                                                                                                                                                                                 |
+| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.8.3.                                                                                                                                                                                                  |

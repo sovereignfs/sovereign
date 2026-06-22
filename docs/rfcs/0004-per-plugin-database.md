@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Manifest schema (`packages/manifest`), DB layer (`packages/db`), migration runner, runtime SDK bridge (`sdk.db`), SRS\
-**Incorporated into plan:** Yes — implemented in Task 0.8.02 (`@sovereignfs/db` 1.5.0, `@sovereignfs/sdk` 1.9.0, `runtime` 0.26.0).
+**Incorporated into plan:** Yes — implemented in Task 0.8.1 (`@sovereignfs/db` 1.5.0, `@sovereignfs/sdk` 1.9.0, `runtime` 0.26.0).
 
 See [`docs/plugin-database.md`](../plugin-database.md) for the operator/author reference.
 
@@ -61,8 +61,8 @@ in v1" (SRS §4.6/§5). This RFC designs it as a **post-v1** capability.
 - **The DB factory already has the seam:** `createClient({ dialect?, url? })`
   (`packages/db/src/client.ts`) accepts per-call dialect/URL overrides;
   `resolveSqlitePath` resolves relative `file:` paths against the workspace root
-  into `data/`. (Postgres is recognised but not wired until Task 0.5.03.)
-- **`sdk.db.getClient()`** (Task 0.5.05) is the single point where the runtime
+  into `data/`. (Postgres is recognised but not wired until Task 0.5.3.)
+- **`sdk.db.getClient()`** (Task 0.5.5) is the single point where the runtime
   decides which client a plugin receives — the natural place to route an isolated
   plugin to its dedicated store.
 - **Per-plugin migrations are already the model:** SRS §3.7 plans migration files
@@ -190,11 +190,11 @@ CASCADE`) — a single, total deletion.
    `createClient`, per-plugin client registry, per-store migrations) — proves the
    model with zero new infrastructure.
 3. Add the **Postgres** mechanism (schema-per-plugin per the resolved Open
-   question) once Postgres is wired (Task 0.5.03).
+   question) once Postgres is wired (Task 0.5.3).
 4. Add lifecycle hooks (provision/drop) and per-plugin backup/export; revisit BYO
    external databases only if there is demand.
 
-## Implementation (Task 0.8.02)
+## Implementation (Task 0.8.1)
 
 ### Open questions resolved
 
@@ -243,9 +243,9 @@ CASCADE`) — a single, total deletion.
 
 ## Changelog
 
-| Version | Date     | Change                                                                                       |
-| ------- | -------- | -------------------------------------------------------------------------------------------- |
-| 0.1     | Jun 2026 | Initial draft.                                                                               |
-| 0.2     | Jun 2026 | Added to the roadmap as exploratory Task 1.0.08 (gated on acceptance; still Draft).          |
-| 0.3     | Jun 2026 | RFC accepted; status updated to Accepted; Task 1.0.08 now scheduled (no implementation yet). |
-| 0.4     | Jun 2026 | Implemented in Task 0.8.02; status updated to Implemented; open questions resolved.          |
+| Version | Date     | Change                                                                                      |
+| ------- | -------- | ------------------------------------------------------------------------------------------- |
+| 0.1     | Jun 2026 | Initial draft.                                                                              |
+| 0.2     | Jun 2026 | Added to the roadmap as exploratory Task 0.8.1 (gated on acceptance; still Draft).          |
+| 0.3     | Jun 2026 | RFC accepted; status updated to Accepted; Task 0.8.1 now scheduled (no implementation yet). |
+| 0.4     | Jun 2026 | Implemented in Task 0.8.1; status updated to Implemented; open questions resolved.          |

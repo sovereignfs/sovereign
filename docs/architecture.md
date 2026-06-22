@@ -144,7 +144,7 @@ transparent; `sv plugin remove` drops the store (opt-out: `--keep-data`).
   notification delivery, RFC 0015).
 - **Reserved (throw `NotImplementedError` until their backing mechanisms ship):**
   `storage`, `events`, `billing` (stub only; full payment flow is post-v1,
-  Task 1.0.09).
+  Task 1.0.2).
 
 The package is published to npm with zero runtime dependencies — implementations
 are host-provided by the runtime at startup via `provideHost()`, so plugins can
@@ -211,7 +211,7 @@ set per-request in middleware (no `'unsafe-inline'` for scripts). Postgres
 connects over TLS from the connection string's `sslmode`. Sovereign sends **no
 telemetry**. Threat model and a self-hoster hardening checklist live in
 [security.md](security.md). At-rest, field-level, and zero-knowledge encryption
-(Tiers 2–4) are specified but post-v1 (Task 1.0.01).
+(Tiers 2–4) are specified but post-v1 (Task 1.0.1).
 
 ## Post-v1 (specified, not built)
 

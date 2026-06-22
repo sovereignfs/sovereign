@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `apps/auth` (better-auth plugins + login flow), runtime middleware & `/api/verify`, `plugins/account` (Security tab), `bin/sv` (break-glass), Console admin API, `packages/sdk` (auth surface), `.env.example`, Docker (new dependency), docs, SRS\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.26; documentation-first. This RFC records the feasibility findings, the technical design against the existing better-auth stack, and the end-to-end UI flows. Scheduling, SRS requirement IDs (proposed AUTH-09+), and task allocation are deferred; prioritization comes later.
+**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.27; documentation-first. This RFC records the feasibility findings, the technical design against the existing better-auth stack, and the end-to-end UI flows. Scheduling, SRS requirement IDs (proposed AUTH-09+), and task allocation are deferred; prioritization comes later.
 
 ---
 
@@ -366,4 +366,4 @@ MFA enabled), it follows the established **reserved-stub pattern**
 | Version | Date     | Change                                                                                                                                                                              |
 | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; TOTP (authenticator-only) + passkeys (2FA and passwordless) on better-auth's first-party plugins; recovery + UI flows; documentation-first, prioritization deferred. |
-| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.26.                                                                                                                                  |
+| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.27.                                                                                                                                  |

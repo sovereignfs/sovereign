@@ -3,8 +3,8 @@
 **Status:** Accepted\
 **Date:** June 2026\
 **Author:** kasunben\
-**Scope:** `packages/manifest` (`maxPlatformVersion` + semver validation + `CURRENT_MANIFEST_SCHEMA_VERSION` + a `checkCompatibility` resolver; add `semver`), `scripts/generate-registry.ts` + `scripts/install-plugins.ts` + `bin/sv` (install/build gates), runtime startup + `plugin_status` + `/api/admin/health` (boot disable + surface), `registry/plugins.json` (Task 0.5.18), `docs/plugin-development.md` + `docs/self-hosting.md`; **amends RFC 0006** (consumes the boot gate + admin-health surfacing), disambiguates from **RFC 0007** (`schemaVersion` clash), relates to Task 0.5.18/0.5.19\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.21; documentation-first. This RFC defines the compatibility model and where it is enforced; SRS requirement IDs, scheduling, and task allocation are deferred.
+**Scope:** `packages/manifest` (`maxPlatformVersion` + semver validation + `CURRENT_MANIFEST_SCHEMA_VERSION` + a `checkCompatibility` resolver; add `semver`), `scripts/generate-registry.ts` + `scripts/install-plugins.ts` + `bin/sv` (install/build gates), runtime startup + `plugin_status` + `/api/admin/health` (boot disable + surface), `registry/plugins.json` (Task 0.5.19), `docs/plugin-development.md` + `docs/self-hosting.md`; **amends RFC 0006** (consumes the boot gate + admin-health surfacing), disambiguates from **RFC 0007** (`schemaVersion` clash), relates to Task 0.5.19/0.5.20\
+**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.22; documentation-first. This RFC defines the compatibility model and where it is enforced; SRS requirement IDs, scheduling, and task allocation are deferred.
 
 ---
 
@@ -51,8 +51,8 @@ deferred the implementation; this RFC supplies the model.
   `sdk.platform.getConfig().version` and `/api/admin/health`.
 - **RFC 0006 anticipated this** — "reuse `compatibility.minPlatformVersion` as an
   install-/start-time check … fail loudly," plus a startup version gate surfaced in
-  admin health (deferred). **Task 0.5.18** registry "must target compatible platform
-  version" is a human review note today; **Task 0.5.19** defines SDK semver.
+  admin health (deferred). **Task 0.5.19** registry "must target compatible platform
+  version" is a human review note today; **Task 0.5.20** defines SDK semver.
 
 ## The three version concepts (disambiguation)
 
@@ -60,7 +60,7 @@ deferred the implementation; this RFC supplies the model.
 | ----------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------ |
 | Manifest **`schemaVersion`**                                      | The **manifest format** itself                     | The platform's `CURRENT_MANIFEST_SCHEMA_VERSION` |
 | **`compatibility.minPlatformVersion`** / **`maxPlatformVersion`** | The **platform version range** the plugin supports | The running platform version (semver)            |
-| **SDK semver** (Task 0.5.19)                                      | The plugin↔platform **contract**                   | (v1: implied by platform version)                |
+| **SDK semver** (Task 0.5.20)                                      | The plugin↔platform **contract**                   | (v1: implied by platform version)                |
 
 For v1 the **platform version is the single compatibility axis** a plugin declares —
 the SDK ships with the platform, so plugins don't separately pin an SDK range.
@@ -119,7 +119,7 @@ checkCompatibility(
 | **Install** (`sv plugin add` / `install-plugins`) | **Refuse** with a clear error before adding.                       |
 | **Build / generate** (`generate-registry.ts`)     | **Fail the build** for composed in-repo plugins (the dev path).    |
 | **Boot / startup**                                | **Disable + surface** the plugin (Console/health) — never brick.   |
-| **Registry** (Task 0.5.18)                        | **Filter** so users only see plugins installable on their version. |
+| **Registry** (Task 0.5.19)                        | **Filter** so users only see plugins installable on their version. |
 
 The boot path re-checks against the (possibly upgraded) platform version and marks
 the plugin **incompatible-disabled** — distinct from an admin-disabled plugin in
@@ -180,4 +180,4 @@ registry hides plugins that don't satisfy the viewer's platform version.
 | Version | Date     | Change                                                                                                                                                                                                                                                                                           |
 | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 0.1     | Jun 2026 | Initial draft; makes `schemaVersion` + `compatibility` functional — semver-validated `minPlatformVersion` (hard) + advisory `maxPlatformVersion`, a `CURRENT_MANIFEST_SCHEMA_VERSION` accept-range, one shared resolver, tiered enforcement at install/build/boot/registry; documentation-first. |
-| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.21.                                                                                                                                                                                                                                               |
+| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.22.                                                                                                                                                                                                                                               |

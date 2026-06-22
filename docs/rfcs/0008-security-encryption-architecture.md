@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Whole platform — runtime, `apps/auth`, `packages/db`, `packages/sdk`, `packages/manifest`, `bin/sv`, Docker/Compose, `.env.example`, docs, SRS; amends RFC 0006 & 0007\
-**Incorporated into plan:** Yes, **phased** — SRS §3.17, §5 (`crypto:use`). **Tier 0 (hardening) + Tier 1 (transport) ship in v1** (Task 0.5.15); **at-rest encryption, field-level `sdk.crypto` + `crypto:use`, and zero-knowledge E2EE (Tiers 2–4) are post-v1** (Task 1.0.01). The reserved `sdk.crypto` stub + `crypto:use` permission land with the post-v1 task.
+**Incorporated into plan:** Yes, **phased** — SRS §3.17, §5 (`crypto:use`). **Tier 0 (hardening) + Tier 1 (transport) ship in v1** (Task 0.5.16); **at-rest encryption, field-level `sdk.crypto` + `crypto:use`, and zero-knowledge E2EE (Tiers 2–4) are post-v1** (Task 1.0.1). The reserved `sdk.crypto` stub + `crypto:use` permission land with the post-v1 task.
 
 ---
 
@@ -250,24 +250,24 @@ doc-only draft.)
 
 ## Adoption path
 
-1. **v1 — Tier 0 / 1 (Task 0.5.15):** security headers + `docs/security.md`
+1. **v1 — Tier 0 / 1 (Task 0.5.16):** security headers + `docs/security.md`
    (threat model) + Postgres SSL + transport hardening. No new app secrets or
    native deps.
-2. **post-v1 — reserved stub (Task 1.0.01):** reserved `sdk.crypto` stub
+2. **post-v1 — reserved stub (Task 1.0.1):** reserved `sdk.crypto` stub
    (`encryptField`/`decryptField` throw `NotImplementedError`) + `crypto:use`
    permission — additive (SDK + manifest **minor** bumps).
-3. **post-v1 — Tier 2 (Task 1.0.01):** key management (local KEK + envelope) → DB
+3. **post-v1 — Tier 2 (Task 1.0.1):** key management (local KEK + envelope) → DB
    encryption (SQLCipher) → encrypted backups/exports (amend RFC 0006/0007) →
    avatar/blob encryption.
-4. **post-v1 — Tier 3 (Task 1.0.01):** implement `sdk.crypto` field-level
+4. **post-v1 — Tier 3 (Task 1.0.1):** implement `sdk.crypto` field-level
    encryption (+ optional blind indexes).
 5. **post-v1 — Tier 4:** zero-knowledge E2EE — per-plugin opt-in, aligned with the
    federation direction.
 
 ## Changelog
 
-| Version | Date     | Change                                                                                                                                                                                                        |
-| ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | Jun 2026 | Initial draft; threat model + tiered encryption roadmap; proposes reserved `sdk.crypto` + `crypto:use`.                                                                                                       |
-| 1.0     | Jun 2026 | Accepted (phased); incorporated into SRS §3.17, §5 (`crypto:use`); Tier 0/1 → Task 0.5.15 (v1), Tiers 2–4 → Task 1.0.01 (post-v1).                                                                            |
-| 1.1     | Jun 2026 | **Tier 0/1 implemented** (Task 0.5.15): static security headers + HSTS (prod) and a strict nonce-based CSP on both apps; Postgres TLS via `sslmode`; new `docs/security.md`. Tiers 2–4 remain in Task 1.0.01. |
+| Version | Date     | Change                                                                                                                                                                                                       |
+| ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | Jun 2026 | Initial draft; threat model + tiered encryption roadmap; proposes reserved `sdk.crypto` + `crypto:use`.                                                                                                      |
+| 1.0     | Jun 2026 | Accepted (phased); incorporated into SRS §3.17, §5 (`crypto:use`); Tier 0/1 → Task 0.5.16 (v1), Tiers 2–4 → Task 1.0.1 (post-v1).                                                                            |
+| 1.1     | Jun 2026 | **Tier 0/1 implemented** (Task 0.5.16): static security headers + HSTS (prod) and a strict nonce-based CSP on both apps; Postgres TLS via `sslmode`; new `docs/security.md`. Tiers 2–4 remain in Task 1.0.1. |

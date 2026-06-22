@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/manifest` (new optional `env` field), `packages/sdk` (`sdk.env` scoped accessor), `scripts/generate-registry.ts` (merge + namespacing + validation), the runtime env loader, `.env.example` / `docs/self-hosting.md` / `docs/plugin-development.md` + the docs-parity tests, Docker/Compose; builds on the plugin model (SRS §3.5/§3.9) and RFC 0008 (secret handling)\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.22; documentation-first. This RFC specifies the model for plugin-declared environment variables and the end-to-end flows; SRS requirement IDs, scheduling, and task allocation are deferred.
+**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.23; documentation-first. This RFC specifies the model for plugin-declared environment variables and the end-to-end flows; SRS requirement IDs, scheduling, and task allocation are deferred.
 
 ---
 
@@ -221,4 +221,4 @@ secrets are absent from the artifact and read at container start.
 | Version | Date     | Change                                                                                                                                                                                                                          |
 | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; plugin-declared env via a manifest `env` field, three value sources (baked non-secret defaults / dev-local / operator-supplied secrets), auto-namespacing + `sdk.env`, secrets never baked; documentation-first. |
-| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.22.                                                                                                                                                                              |
+| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.23.                                                                                                                                                                              |

@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/manifest` (a new `capabilities` declaration), `packages/sdk` (`hasCapability`/`requireCapability` resolve plugin capabilities), the capability resolver + session from RFC 0021, an optional platform/Console assignment surface, `docs/plugin-development.md`; **builds on RFC 0021** (capability model, resolver, SDK helper, `platform:`/`plugin:` namespacing), RFC 0018 (manifest declaration + namespacing pattern), RFC 0005 (audit)\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 1.0.03; documentation-first. This RFC specifies how plugins declare and use their own plugin-scoped capabilities; SRS requirement IDs, scheduling, and task allocation are deferred.
+**Incorporated into plan:** Yes — scheduled as roadmap Task 0.6.1; documentation-first. This RFC specifies how plugins declare and use their own plugin-scoped capabilities; SRS requirement IDs, scheduling, and task allocation are deferred.
 
 ---
 
@@ -160,4 +160,4 @@ audited (RFC 0005).
 | Version | Date     | Change                                                                                                                                                                                                                                           |
 | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 0.1     | Jun 2026 | Initial draft; plugins declare namespaced `<slug>:<capability>` in the manifest, enforced intra-plugin via the RFC 0021 SDK helper; assignment-model (platform-stored vs plugin-managed) left as the central open question; documentation-first. |
-| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 1.0.03.                                                                                                                                                                                               |
+| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.6.1.                                                                                                                                                                                                |

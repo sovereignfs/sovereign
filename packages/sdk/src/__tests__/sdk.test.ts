@@ -9,6 +9,7 @@ const mockConfig = {
   inviteOnly: false,
   version: '0.6.0',
   instanceName: 'Test Workspace',
+  instanceUrl: 'http://localhost:3000',
 };
 const mockDataResolvers = new Map<string, (...args: unknown[]) => Promise<unknown[]>>();
 const mockExporters = new Map<string, unknown>();

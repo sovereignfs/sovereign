@@ -52,6 +52,8 @@ services:
       # (not the dev :3000 left in .env).
       NEXT_PUBLIC_RUNTIME_URL: '${NEXT_PUBLIC_RUNTIME_URL:-http://localhost:${RUNTIME_PORT:-4000}}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
+      # Auth reaches the runtime on the internal Docker network for email branding.
+      SOVEREIGN_RUNTIME_INTERNAL_URL: 'http://runtime:3000'
     volumes:
       # Named volume (not a host bind mount): Docker initialises it with the
       # image's /app/data ownership, so the non-root runner can write SQLite +
@@ -100,6 +102,8 @@ services:
       SMTP_USER: '${SMTP_USER:-}'
       SMTP_PASS: '${SMTP_PASS:-}'
       SMTP_FROM: '${SMTP_FROM:-}'
+      # Public URL used in email footers and invite links.
+      SOVEREIGN_RUNTIME_PUBLIC_URL: '${NEXT_PUBLIC_RUNTIME_URL:-http://localhost:${RUNTIME_PORT:-4000}}'
     volumes:
       # Shared with the auth service — both resolve relative SQLite paths
       # against /app (the cwd), so both DBs and avatars land in this volume.

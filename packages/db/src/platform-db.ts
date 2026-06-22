@@ -1008,6 +1008,54 @@ export async function setInstanceConfig(
   );
 }
 
+// ── Email copy overrides (RFC 0031) ──────────────────────────────────────────
+
+export type EmailTemplateId = 'passwordReset' | 'invite';
+
+/**
+ * Reads operator-customised copy for a single email template from
+ * `platform_settings` (key pattern: `email_copy_<templateId>_en_<field>`).
+ * Returns only the fields that have overrides — callers merge over built-in copy.
+ */
+export async function getEmailCopy(
+  pdb: PlatformDb,
+  tenantId: string,
+  templateId: EmailTemplateId,
+): Promise<Record<string, string>> {
+  const prefix = `email_copy_${templateId}_en_`;
+  const rows = await dbAll<{ key: string; value: string }>(
+    pdb,
+    sql`SELECT key, value FROM platform_settings
+        WHERE tenant_id = ${tenantId} AND key LIKE ${prefix + '%'}`,
+  );
+  return Object.fromEntries(rows.map((r) => [r.key.slice(prefix.length), r.value]));
+}
+
+/**
+ * Upserts a single copy field override for an email template.
+ * Validation: subject max 200 chars; all other fields max 2000 chars.
+ */
+export async function setEmailCopy(
+  pdb: PlatformDb,
+  tenantId: string,
+  templateId: EmailTemplateId,
+  field: string,
+  value: string,
+): Promise<void> {
+  const maxLen = field === 'subject' ? 200 : 2000;
+  if (value.length > maxLen) {
+    throw new Error(`Email copy field "${field}" exceeds maximum length of ${maxLen} characters.`);
+  }
+  const key = `email_copy_${templateId}_en_${field}`;
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO platform_settings (key, tenant_id, value, updated_at)
+        VALUES (${key}, ${tenantId}, ${value}, ${now})
+        ON CONFLICT (key, tenant_id) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+  );
+}
+
 /**
  * Return IDs of plugins that require an entitlement (non-free model) and
  * for which the given user currently has NO active entitlement.

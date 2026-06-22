@@ -788,11 +788,13 @@ The SDK surface (`sdk.*`):
   ```
 - **`mailer`** — `send({ to, subject, text, html })`. No-ops when SMTP is
   unconfigured.
-- **`platform`** — `getConfig()` → `{ tenantName, inviteOnly, version, instanceName, instancePrimaryColor? }`
+- **`platform`** — `getConfig()` → `{ tenantName, inviteOnly, version, instanceName, instancePrimaryColor?, emailFromName?, emailLogo?, instanceUrl }`
   (await it). `instanceName` falls back to `tenantName` when no instance name is
   configured; `instancePrimaryColor` is a validated 6-digit hex string or
-  `undefined`. Use these to display the operator's instance identity in plugin UI without
-  reading CSS variables.
+  `undefined`. `emailFromName` and `emailLogo` are the instance's email-specific
+  overrides (useful when building `EmailBranding` for `renderInviteEmail` /
+  `renderPasswordResetEmail` from `@sovereignfs/mailer`). `instanceUrl` is the
+  public base URL of the runtime — use it in email footers and links.
 - **`data`** — cross-plugin data sharing (RFC 0002). `sdk.data.provide(contract,
 resolver)` registers a resolver; `sdk.data.query(ref, params)` reads from
   another plugin's contract (throws `ConsentRequiredError` without a user grant).

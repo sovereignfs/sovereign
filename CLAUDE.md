@@ -392,10 +392,11 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 - Task 1.0.03 — White-labeling Phase 1 (RFC 0027; `runtime` → 0.28.0). `instance_config` table (was `tenant_branding`) + `InstanceProvider` server component; `--sv-instance-logo/dark/favicon` tokens + `--sv-color-accent` override from hex; instance API routes (`/api/instance/*`); Console Instance identity section; `sdk.platform.getConfig()` returns `instanceName`/`instancePrimaryColor`.
 - Console plugin install/remove UX — real two-step server-side flow (fetch manifest preview → confirm install via `sv plugin add`; confirm remove via `sv plugin remove`). Platform-plugin guard uses `plugin.type === 'platform'`.
 - Task 0.9.0 — Instance identity rename (RFC 0032; `@sovereignfs/ui` → 0.11.0, `@sovereignfs/sdk` → 1.11.0, `@sovereignfs/db` → 1.7.0, `runtime` → 0.29.0). Pure rename: `BRAND_*` env vars → `INSTANCE_*`, `--sv-brand-*` tokens → `--sv-instance-*`, `brandName`/`brandPrimaryColor` → `instanceName`/`instancePrimaryColor`, `tenant_branding` table → `instance_config`, `BrandProvider` → `InstanceProvider`, `/api/brand/` routes → `/api/instance/`.
+- Task 0.9.1 — Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027; `@sovereignfs/mailer` → 0.2.0, `@sovereignfs/db` → 1.8.0, `@sovereignfs/sdk` → 1.12.0, `runtime` → 0.30.0, `apps/auth` → 0.9.0). React Email–based `PasswordResetEmail` and `InviteEmail` templates with full instance branding (`name`, `logoUrl`, `primaryColor`, `instanceUrl`). English copy with `{{brandName}}` interpolation; per-template, per-field copy overrides stored in `platform_settings`. Console Email Templates section: template selector, per-field override forms, sandboxed iframe preview, test-send button. Auth login page branded via `AuthInstanceProvider` (60s cache, graceful fallback). Runtime `/api/admin/invites` proxy creates the invite token then sends the branded email (ESLint boundary compliance). New env vars: `SOVEREIGN_RUNTIME_INTERNAL_URL`, `SOVEREIGN_RUNTIME_PUBLIC_URL`.
 
 > Full task history (phases 0.3–0.7): `docs/task-history.md`
 
-⏳ **Next: Task 0.9.1 — Email templates (RFC 0031).** Branch from up-to-date `main`.
+⏳ **Next: Task 0.9.2 — White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027).** Branch from up-to-date `main`.
 
 Keep this file current: update the Status section as tasks complete, and add any
 new load-bearing convention that future sessions must not violate.

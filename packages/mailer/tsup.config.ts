@@ -5,4 +5,7 @@ export default defineConfig({
   format: ['esm'],
   dts: true,
   clean: true,
+  esbuildOptions(options) {
+    options.jsx = 'automatic';
+  },
 });

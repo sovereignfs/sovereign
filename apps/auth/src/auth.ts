@@ -3,7 +3,9 @@ import { APIError } from 'better-auth/api';
 import { nextCookies } from 'better-auth/next-js';
 import { twoFactor } from 'better-auth/plugins/two-factor';
 import { passkey } from '@better-auth/passkey';
+import { renderPasswordResetEmail, renderSubject } from '@sovereignfs/mailer';
 import { authGet, authRun, getAuthDatabase } from './db';
+import { getBranding } from './email-branding';
 import { getEnv } from './env';
 import { sendMail } from './mailer';
 import { readInviteOnlySetting, resolveInviteOnly } from './settings';
@@ -36,14 +38,12 @@ function buildOptions(): BetterAuthOptions {
       autoSignIn: true,
       sendResetPassword: async ({ user, token }) => {
         const resetUrl = `${env.baseUrl}/reset-password?token=${token}`;
-        await sendMail({
-          to: user.email,
-          subject: 'Reset your Sovereign password',
-          html: `<p>You requested a password reset. Click the link below to choose a new password.</p>
-<p><a href="${resetUrl}">${resetUrl}</a></p>
-<p>This link expires in 1 hour. If you did not request a password reset, you can ignore this email.</p>`,
-          text: `You requested a password reset.\n\nReset your password: ${resetUrl}\n\nThis link expires in 1 hour. If you did not request this, ignore this email.`,
-        });
+        const branding = await getBranding();
+        const [html, subject] = await Promise.all([
+          renderPasswordResetEmail(resetUrl, branding),
+          Promise.resolve(renderSubject('passwordReset', branding)),
+        ]);
+        await sendMail({ to: user.email, subject, html });
       },
       // Minimum password length (better-auth default is 8, but being explicit
       // here so it doesn't silently change with a library upgrade).

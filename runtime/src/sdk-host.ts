@@ -84,12 +84,17 @@ provideHost({
         getPlatformSetting(db, 'invite_only'),
         getInstanceConfig(db, DEFAULT_TENANT_ID),
       ]);
+      const instanceUrlKey = 'SOVEREIGN_RUNTIME_PUBLIC_URL';
+      const instanceUrl = process.env[instanceUrlKey] ?? 'http://localhost:3000';
       return {
         tenantName: tenant.name,
         inviteOnly: inviteOnly === 'true',
         version: getPlatformVersion(),
         instanceName: instanceCfg.instanceName,
         instancePrimaryColor: instanceCfg.instancePrimary ?? undefined,
+        emailFromName: instanceCfg.emailFromName ?? undefined,
+        emailLogo: instanceCfg.emailLogo ?? undefined,
+        instanceUrl,
       };
     },
   },

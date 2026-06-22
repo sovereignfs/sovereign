@@ -140,6 +140,19 @@ to get started — every variable is documented there.
 | `INSTANCE_EMAIL_FROM_NAME`   | no       | —                                                   | Sender display name used in outbound email (invite, password reset). Falls back to `INSTANCE_NAME` when unset.                                                                                                                                                                                                                                                                                                  |
 | `INSTANCE_EMAIL_LOGO`        | no       | —                                                   | Publicly reachable URL for the logo included in HTML email bodies. Must be reachable by email client rendering engines — not a path-relative URL.                                                                                                                                                                                                                                                               |
 
+| `SOVEREIGN_RUNTIME_INTERNAL_URL` | no | `http://localhost:3000` | URL the auth server uses to reach the runtime internally (email branding fetch, login-page branding). In Docker Compose this is the internal service name, e.g. `http://runtime:3000`.
+| `SOVEREIGN_RUNTIME_PUBLIC_URL` | no | `http://localhost:3000` | Public base URL of the runtime, used in email footers and invite links. Set to your public domain in production.
+
+### Email template customisation
+
+Platform emails (password reset, user invite) are generated from React Email templates and support two levels of customisation:
+
+1. **Instance identity** — set `INSTANCE_NAME`, `INSTANCE_EMAIL_FROM_NAME`, `INSTANCE_EMAIL_LOGO`, and `INSTANCE_PRIMARY_COLOR` to inject your branding into every template automatically.
+
+2. **Copy overrides** — edit the subject line and body copy per template in **Console → Settings → Email Templates**. Overrides are stored in the `platform_settings` table and take effect immediately. Use `{{brandName}}` in any text field to interpolate the instance name.
+
+A **Test send** button in the Console delivers a sample email to the currently signed-in admin's address.
+
 ---
 
 ## Data persistence

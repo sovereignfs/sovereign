@@ -1847,7 +1847,7 @@ adopt the correct naming from day one. No production users means zero migration 
 
 ---
 
-#### Task 0.9.1 — Email template system + White-labeling Phase 2 — Email + auth login page (RFC 0031 + RFC 0027)
+#### ✅ Task 0.9.1 — Email template system + White-labeling Phase 2 — Email + auth login page (RFC 0031 + RFC 0027)
 
 **Goal:** Introduce the email template infrastructure (RFC 0031) — React Email–based
 templates with branding injection, standalone locale support, and operator copy/subject

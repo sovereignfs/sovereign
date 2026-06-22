@@ -1,6 +1,7 @@
 import '@sovereignfs/ui/tokens.css';
 import './globals.css';
 import type { ReactNode } from 'react';
+import { AuthInstanceProvider } from '@/src/instance-provider';
 
 export const metadata = {
   title: 'Sovereign',
@@ -14,8 +15,15 @@ export const dynamic = 'force-dynamic';
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
+    <AuthInstanceProvider>
+      {(ctx) => (
+        <html lang="en">
+          <head>
+            <title>{ctx.instanceName}</title>
+          </head>
+          <body>{children}</body>
+        </html>
+      )}
+    </AuthInstanceProvider>
   );
 }

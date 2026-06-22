@@ -145,3 +145,57 @@ export async function uploadFaviconAction(
   revalidatePath('/');
   return { ok: true, message: 'Favicon uploaded.' };
 }
+
+export async function updateEmailCopyAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  await sdk.auth.requireSession();
+  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
+
+  const templateId = formData.get('templateId') as string | null;
+  const field = formData.get('field') as string | null;
+  const value = (formData.get('value') as string | null) ?? '';
+
+  if (!templateId || !field) return { ok: false, error: 'Missing templateId or field.' };
+
+  const res = await fetch(`${SELF_URL}/api/admin/email-templates`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminKey}`,
+    },
+    body: JSON.stringify({ templateId, field, value }),
+  });
+  if (!res.ok) {
+    const detail = ((await res.json().catch(() => null)) as { error?: string } | null)?.error;
+    return { ok: false, error: detail ?? `Failed to save: ${res.status}` };
+  }
+  revalidatePath('/console/settings');
+  return { ok: true, message: 'Saved.' };
+}
+
+export async function sendTestEmailAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  await sdk.auth.requireSession();
+  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
+  const templateId = formData.get('templateId') as string | null;
+  if (!templateId) return { ok: false, error: 'Missing templateId.' };
+
+  const res = await fetch(`${SELF_URL}/api/admin/email-templates/test`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminKey}`,
+    },
+    body: JSON.stringify({ templateId }),
+  });
+  if (!res.ok) {
+    const detail = ((await res.json().catch(() => null)) as { error?: string } | null)?.error;
+    return { ok: false, error: detail ?? `Failed to send test: ${res.status}` };
+  }
+  const data = (await res.json()) as { to?: string };
+  return { ok: true, message: `Test email sent to ${data.to ?? 'your address'}.` };
+}

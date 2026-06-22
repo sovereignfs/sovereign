@@ -7,6 +7,7 @@ import {
   LogoUploadForm,
   FaviconUploadForm,
 } from './SettingsForms';
+import { EmailTemplatesForm } from './EmailTemplatesForms';
 
 const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
 
@@ -60,14 +61,23 @@ function settled<T>(result: PromiseSettledResult<T>, fallback: T): T {
 }
 
 export default async function SettingsPage() {
-  const [settingsResult, pluginsResult, instanceResult] = await Promise.allSettled([
-    adminGet<Settings>('/api/admin/settings'),
-    adminGet<PluginRow[]>('/api/admin/plugins'),
-    adminGet<InstanceIdentity>('/api/admin/instance-config'),
-  ]);
+  const [settingsResult, pluginsResult, instanceResult, pwResetCopyResult, inviteCopyResult] =
+    await Promise.allSettled([
+      adminGet<Settings>('/api/admin/settings'),
+      adminGet<PluginRow[]>('/api/admin/plugins'),
+      adminGet<InstanceIdentity>('/api/admin/instance-config'),
+      adminGet<{ copy: Record<string, string> }>(
+        '/api/admin/email-templates?templateId=passwordReset',
+      ),
+      adminGet<{ copy: Record<string, string> }>('/api/admin/email-templates?templateId=invite'),
+    ]);
   const settings = settled(settingsResult, DEFAULT_SETTINGS);
   const plugins = settled(pluginsResult, [] as PluginRow[]);
   const instance = settled(instanceResult, DEFAULT_INSTANCE);
+  const emailCopy = {
+    passwordReset: settled(pwResetCopyResult, { copy: {} }).copy,
+    invite: settled(inviteCopyResult, { copy: {} }).copy,
+  };
 
   // Only installed, enabled, non-adminOnly, non-overlay plugins are eligible
   // roots (CON-11): `/` is served as a full page, which overlay plugins cannot.
@@ -115,6 +125,15 @@ export default async function SettingsPage() {
           <LogoUploadForm dark={false} />
           <LogoUploadForm dark={true} />
           <FaviconUploadForm />
+        </section>
+
+        <section className={styles.settingsSection}>
+          <h3 className={styles.sectionTitle}>Email templates</h3>
+          <p className={styles.helpText}>
+            Override the built-in copy for platform emails. Changes take effect immediately.
+            Test-send delivers a sample to your own email address.
+          </p>
+          <EmailTemplatesForm initialCopy={emailCopy} previewBaseUrl={SELF_URL} />
         </section>
       </div>
     </div>

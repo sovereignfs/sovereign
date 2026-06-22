@@ -1,0 +1,16 @@
+{
+  "passwordReset": {
+    "subject": "Reset your {{brandName}} password",
+    "intro": "You requested a password reset for your {{brandName}} account.",
+    "cta": "Reset password",
+    "expiry": "This link expires in 1 hour.",
+    "ignore": "If you did not request this, you can safely ignore this email."
+  },
+  "invite": {
+    "subject": "You've been invited to {{brandName}}",
+    "intro": "You've been invited to join {{brandName}}.",
+    "cta": "Create your account",
+    "expiry": "This invite expires in 48 hours.",
+    "footer": "Use the email address this invitation was sent to when registering."
+  }
+}

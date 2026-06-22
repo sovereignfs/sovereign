@@ -51,6 +51,12 @@ export interface PlatformConfig {
   instanceName: string;
   /** Validated 6-digit hex colour overriding --sv-color-accent, or undefined when unset. */
   instancePrimaryColor?: string;
+  /** Display name used in email From headers. Falls back to instanceName when unset. */
+  emailFromName?: string;
+  /** Absolute URL to the logo image used in email headers. Must be publicly reachable. */
+  emailLogo?: string;
+  /** Public base URL of the runtime instance (used in email footers and links). */
+  instanceUrl: string;
 }
 
 /**

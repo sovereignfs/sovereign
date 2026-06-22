@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `runtime/next.config.ts` + a new `runtime/worker/` (service-worker push handler), platform DB (`packages/db` — a new `push_subscriptions` table + helpers), runtime API routes + the `web-push` dependency, `runtime/public/manifest.json`, `.env.example` + `docs/self-hosting.md` (VAPID keys), Account (enable-push toggle), Console (broadcast push), SRS; **builds on RFC 0015** (Notification Center) and RFC 0001 / PLT-09 (PWA)\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 1.0.05; documentation-first. This RFC specifies the Web Push delivery channel and the end-to-end flows; SRS requirement IDs (proposed `NOTIF-*` / `PUSH-*`), scheduling, and task allocation are deferred.
+**Incorporated into plan:** Yes — scheduled as roadmap Task 0.7.1; documentation-first. This RFC specifies the Web Push delivery channel and the end-to-end flows; SRS requirement IDs (proposed `NOTIF-*` / `PUSH-*`), scheduling, and task allocation are deferred.
 
 ---
 
@@ -189,4 +189,4 @@ endpoint that returns `410` is pruned automatically on the next send.
 | Version | Date     | Change                                                                                                                                                                                                                                  |
 | ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; Web Push as a background delivery channel for RFC 0015 inbox notifications — VAPID optional secrets, `customWorkerSrc` SW handler, `push_subscriptions` store, Account opt-in, platform-owned send; documentation-first. |
-| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 1.0.05.                                                                                                                                                                                      |
+| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.7.1.                                                                                                                                                                                       |

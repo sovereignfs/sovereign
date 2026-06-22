@@ -3,8 +3,8 @@
 **Status:** Accepted\
 **Date:** June 2026\
 **Author:** kasunben\
-**Scope:** Docker images + Compose, CI (Task 0.5.07), `packages/db` (migrations), `apps/auth`, `bin/sv`, `docs/self-hosting.md`, `docs/upgrade.md`, SRS §3.1 + NFRs\
-**Incorporated into plan:** Yes — SRS §3.15 and **Task 0.5.13**. The implementation (pull-based images, graceful shutdown, drizzle-kit + expand-contract migrations, `sv backup`/`restore` + auto-snapshot, tag-pinned rollback) lands in that task; image publishing depends on the CI pipeline (Task 0.5.07).
+**Scope:** Docker images + Compose, CI (Task 0.5.8), `packages/db` (migrations), `apps/auth`, `bin/sv`, `docs/self-hosting.md`, `docs/upgrade.md`, SRS §3.1 + NFRs\
+**Incorporated into plan:** Yes — SRS §3.15 and **Task 0.5.14**. The implementation (pull-based images, graceful shutdown, drizzle-kit + expand-contract migrations, `sv backup`/`restore` + auto-snapshot, tag-pinned rollback) lands in that task; image publishing depends on the CI pipeline (Task 0.5.8).
 
 ---
 
@@ -79,14 +79,14 @@ migrations as the project moves toward and past v1.0.
   `package.json`) tracks roadmap milestones; `@sovereignfs/sdk` and
   `@sovereignfs/ui` follow npm semver (NFR-04: patch never breaks); breaking
   changes get a migration note in `docs/upgrade.md`.
-- **No CI / no image registry yet** — both are introduced by Task 0.5.07, on
+- **No CI / no image registry yet** — both are introduced by Task 0.5.8, on
   which this RFC's image-publishing piece depends.
 
 ## Proposed design
 
 ### 1. Upgrade unit — published versioned images
 
-CI (Task 0.5.07) builds the **runtime** and **auth** images and pushes semver
+CI (Task 0.5.8) builds the **runtime** and **auth** images and pushes semver
 tags to a container registry (GHCR proposed):
 
 - `:MAJOR.MINOR.PATCH` (immutable, e.g. `:0.7.0`) — the pinning tag;
@@ -202,7 +202,7 @@ net that turns rollback from "hope" into a procedure.
 
 | Where                                     | Change                                                                                                     |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| CI (Task 0.5.07 dependency)               | Build + push semver-tagged runtime/auth images to the registry.                                            |
+| CI (Task 0.5.8 dependency)                | Build + push semver-tagged runtime/auth images to the registry.                                            |
 | `Dockerfile`, `apps/auth/Dockerfile`      | Graceful-shutdown entrypoint handling; align `HEALTHCHECK`.                                                |
 | Compose files                             | `image:` tags + `SOVEREIGN_VERSION`, a gated `migrate` step, `stop_grace_period`; blue-green example.      |
 | `packages/db`                             | `drizzle.config`, `migrations/`, load-bearing `runMigrations`, advisory lock, `schema_migrations`, gate.   |
@@ -253,7 +253,7 @@ net that turns rollback from "hope" into a procedure.
    for first install. Establish the expand-contract rule in CLAUDE.md.
 2. **Graceful shutdown** — SIGTERM draining in both servers + `stop_grace_period`.
 3. **Backups** — `sv backup`/`restore` + automatic pre-upgrade snapshot.
-4. **Images & CI** — semver-tagged image publishing (with Task 0.5.07) +
+4. **Images & CI** — semver-tagged image publishing (with Task 0.5.8) +
    `image:`-based `docker-compose.prod.yml` + `SOVEREIGN_VERSION`.
 5. **Docs** — rewrite the upgrade procedure; add blue-green and rollback guides.
 6. **SRS** — add `DEP-xx` requirements + decision-log entry on acceptance.
@@ -263,4 +263,4 @@ net that turns rollback from "hope" into a procedure.
 | Version | Date     | Change                                                 |
 | ------- | -------- | ------------------------------------------------------ |
 | 0.1     | Jun 2026 | Initial draft.                                         |
-| 1.0     | Jun 2026 | Accepted; incorporated into SRS §3.15 and Task 0.5.13. |
+| 1.0     | Jun 2026 | Accepted; incorporated into SRS §3.15 and Task 0.5.14. |

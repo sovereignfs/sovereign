@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** SDK (`packages/sdk`), manifest schema (`packages/manifest`), platform DB (`packages/db`), runtime, Console, Account\
-**Incorporated into plan:** Yes — SRS §3.14, §5 (`activity:write`), and **Task 0.5.12**. The reserved `sdk.activity` surface + `activity:write` permission landed in code as `NotImplementedError` stubs; the `activity_log` table, capture points, verify-boundary auth capture, and the Console/Account views are built in Task 0.5.12.
+**Incorporated into plan:** Yes — SRS §3.14, §5 (`activity:write`), and **Task 0.5.13**. The reserved `sdk.activity` surface + `activity:write` permission landed in code as `NotImplementedError` stubs; the `activity_log` table, capture points, verify-boundary auth capture, and the Console/Account views are built in Task 0.5.13.
 
 ---
 
@@ -283,4 +283,4 @@ A future `sdk.activity.list(query)` (plugins reading their own emitted events) i
 | Version | Date     | Change                                                                         |
 | ------- | -------- | ------------------------------------------------------------------------------ |
 | 0.1     | Jun 2026 | Initial draft; reserved `sdk.activity` stub + `activity:write` permission.     |
-| 1.0     | Jun 2026 | Accepted; incorporated into SRS §3.14, §5 (`activity:write`), and Task 0.5.12. |
+| 1.0     | Jun 2026 | Accepted; incorporated into SRS §3.14, §5 (`activity:write`), and Task 0.5.13. |

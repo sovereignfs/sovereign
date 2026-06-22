@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `bin/sv`, `docs/self-hosting.md`, `docs/examples/`, SRS §3.1; amends RFC 0006 (adds a non-Docker fallback path alongside the canonical Docker Compose model)\
-**Incorporated into plan:** Yes — **Phase 1 (PM2)** as pre-v1 Task 0.5.29; **Phase 2 (systemd)** as post-v1 Task 1.0.09. SRS requirement IDs assigned during the implementation tasks.
+**Incorporated into plan:** Yes — **Phase 1 (PM2)** as pre-v1 Task 0.5.30; **Phase 2 (systemd)** as pre-v1 Task 0.9.3. SRS requirement IDs assigned during the implementation tasks.
 
 ---
 
@@ -14,12 +14,12 @@ Define a **first-class non-Docker production path** for Sovereign, delivered in
 two phases. Docker Compose remains the canonical deployment; this RFC makes the
 fallback documented and supported rather than an undocumented improvisation.
 
-**Phase 1 (pre-v1, Task 0.5.29):** PM2 as the single non-Docker path. A health-gate
+**Phase 1 (pre-v1, Task 0.5.30):** PM2 as the single non-Docker path. A health-gate
 is added to `sv serve`, a `sv setup pm2` command generates a ready-to-use
 ecosystem config, and `docs/self-hosting.md` gains a "Non-Docker deployment"
 section.
 
-**Phase 2 (post-v1, Task 1.0.09):** systemd as the zero-extra-dependency Linux
+**Phase 2 (pre-v1, Task 0.9.3):** systemd as the zero-extra-dependency Linux
 alternative. `sv setup systemd` generates unit files; `docs/self-hosting.md`
 gains a parallel systemd section alongside PM2.
 
@@ -68,13 +68,13 @@ connection failures), no restart-on-crash, and no documented production posture.
 - **Health endpoints**: `GET /api/health` (public liveness) on both servers,
   excluded from the session gate. Used by the Docker `HEALTHCHECK`; reused here
   for startup ordering and process-manager health probes.
-- **RFC 0006 upgrade flow**: `sv backup` / `sv restore` (Task 0.5.13) applies
+- **RFC 0006 upgrade flow**: `sv backup` / `sv restore` (Task 0.5.14) applies
   unchanged. The pre-upgrade snapshot is the same procedure regardless of whether
   the container layer exists.
 
 ## Proposed design
 
-### Phase 1 — PM2 (pre-v1, Task 0.5.29)
+### Phase 1 — PM2 (pre-v1, Task 0.5.30)
 
 #### PM2 ecosystem config
 
@@ -167,7 +167,7 @@ unit-tested. Idempotent (re-running overwrites).
 
 ---
 
-### Phase 2 — systemd (post-v1, Task 1.0.09)
+### Phase 2 — systemd (pre-v1, Task 0.9.3)
 
 #### systemd unit files
 
@@ -304,7 +304,7 @@ them from `WorkingDirectory`.
 **Upgrade** (no `docker compose pull`):
 
 ```bash
-sv backup                          # pre-upgrade snapshot (RFC 0006 / Task 0.5.13)
+sv backup                          # pre-upgrade snapshot (RFC 0006 / Task 0.5.14)
 git pull
 pnpm install --frozen-lockfile
 pnpm build
@@ -313,7 +313,7 @@ pm2 restart all                    # Phase 1 (PM2)
 ```
 
 The same expand-contract migration discipline from RFC 0006 applies. The
-`runMigrations()` runner (Task 0.5.13) fires on startup inside each server
+`runMigrations()` runner (Task 0.5.14) fires on startup inside each server
 process, so both apps self-migrate on restart.
 
 ### Data directory
@@ -366,20 +366,20 @@ not a deployment option.
 ## Adoption path
 
 - **This RFC** lands in `docs/rfcs/` as a Draft.
-- **Phase 1 — Task 0.5.29 (pre-v1):** `sv serve` health-gate, `sv setup pm2`,
+- **Phase 1 — Task 0.5.30 (pre-v1):** `sv serve` health-gate, `sv setup pm2`,
   `docs/examples/pm2.example.config.js`, "Non-Docker deployment (PM2)" section in
   `docs/self-hosting.md`, SRS §3.1 PM2 addition.
-- **Phase 2 — Task 1.0.09 (post-v1):** `sv setup systemd`, systemd unit files in
+- **Phase 2 — Task 0.9.3 (pre-v1):** `sv setup systemd`, systemd unit files in
   `docs/examples/`, "Non-Docker deployment (systemd)" section in
   `docs/self-hosting.md`, SRS §3.1 systemd note.
-- **Dependencies**: `sv serve` exists (Task 0.5.04). `sv backup`/`restore`
-  (Task 0.5.13) is referenced in the upgrade procedure but is not a blocker.
+- **Dependencies**: `sv serve` exists (Task 0.5.4). `sv backup`/`restore`
+  (Task 0.5.14) is referenced in the upgrade procedure but is not a blocker.
 - **Semver**: `bin/sv` is a monorepo-internal CLI. No semver impact. `docs/`
   changes carry no version bump.
 
 ## Changelog
 
-| Version | Date      | Change                                                          |
-| ------- | --------- | --------------------------------------------------------------- |
-| 0.1     | June 2026 | Initial draft                                                   |
-| 0.2     | June 2026 | Split into Phase 1 (PM2, pre-v1) and Phase 2 (systemd, post-v1) |
+| Version | Date      | Change                                                         |
+| ------- | --------- | -------------------------------------------------------------- |
+| 0.1     | June 2026 | Initial draft                                                  |
+| 0.2     | June 2026 | Split into Phase 1 (PM2, pre-v1) and Phase 2 (systemd, pre-v1) |

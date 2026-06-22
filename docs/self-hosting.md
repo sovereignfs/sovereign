@@ -712,7 +712,7 @@ register. The first user is always exempt — they register normally and become
 the platform admin.
 
 After the first user registers, invite new users via the Console:
-`/console/users/invite` (Task 0.4.02).
+`/console/users/invite` (Task 0.4.2).
 
 ---
 

@@ -29,7 +29,7 @@ term, and `manifest`/`tsconfig` are conventional and self-describing.
 Sovereign's packages are its building blocks; memorable names give the platform
 identity and make the architecture more legible as a product (not just a
 dependency graph). The **timing is the point**: there is no CI/publish pipeline
-yet (that is the pending Task 0.5.07) and **no public release**, so no package
+yet (that is the pending Task 0.5.8) and **no public release**, so no package
 has reached npm and there are no third-party plugins. Renaming now is **pure
 internal churn with zero external breakage**. Once `ui` ships to npm it becomes a
 public design-system contract and a rename would be a breaking change under
@@ -122,7 +122,7 @@ leaves the build broken in between), and **must precede first npm publish**.
 
 ## Open questions
 
-1. **Timing vs Task 0.5.07.** Guarantee the rename lands before the publish
+1. **Timing vs Task 0.5.8.** Guarantee the rename lands before the publish
    pipeline / first release.
 2. **`dispatch` scope in the SRS.** Whether to add a short note tying `dispatch`
    to the reserved `sdk.notifications` surface so the broadened role is recorded

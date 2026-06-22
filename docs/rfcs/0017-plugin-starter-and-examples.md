@@ -3,8 +3,8 @@
 **Status:** Accepted\
 **Date:** June 2026\
 **Author:** kasunben\
-**Scope:** `bin/sv` + `bin/helpers.ts` (a new `plugin new` command), `@sovereignfs/sdk` npm publishability (**prerequisite**), `docs/plugin-development.md`, `CONTRIBUTING.md`, the registry (`registry/plugins.json`, Task 0.5.18), and **external GitHub repos** (a template + example plugins) under the `sovereignfs` org; builds on the plugin model (SRS §3.5/§3.9), RFC 0001 (overlay), RFC 0014 (minimal shell), RFC 0015 (notifications), RFC 0010 (test organization — examples double as fixtures)\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.27; documentation-first. This RFC defines the starter/example strategy, contents, naming, the hard prerequisite, and the example set. The template and example repos are external repos created as execution after acceptance; SRS requirement IDs, scheduling, and task allocation are deferred.
+**Scope:** `bin/sv` + `bin/helpers.ts` (a new `plugin new` command), `@sovereignfs/sdk` npm publishability (**prerequisite**), `docs/plugin-development.md`, `CONTRIBUTING.md`, the registry (`registry/plugins.json`, Task 0.5.19), and **external GitHub repos** (a template + example plugins) under the `sovereignfs` org; builds on the plugin model (SRS §3.5/§3.9), RFC 0001 (overlay), RFC 0014 (minimal shell), RFC 0015 (notifications), RFC 0010 (test organization — examples double as fixtures)\
+**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.28; documentation-first. This RFC defines the starter/example strategy, contents, naming, the hard prerequisite, and the example set. The template and example repos are external repos created as execution after acceptance; SRS requirement IDs, scheduling, and task allocation are deferred.
 
 ---
 
@@ -60,7 +60,7 @@ authoring from "study the platform" into "fork and edit."
   template must use real npm versions.
 - **The blocker.** `@sovereignfs/ui` is npm-publishable, but **`@sovereignfs/sdk`
   is not yet** — its `dist` imports the private `@sovereignfs/db`/`@sovereignfs/mailer`
-  (CLAUDE.md, Task 0.5.07 caveat). A standalone template can't `npm install
+  (CLAUDE.md, Task 0.5.8 caveat). A standalone template can't `npm install
 @sovereignfs/sdk` until that is resolved.
 - **Conventions** — GitHub org `sovereignfs`; repos `sovereign-plugin-<name>`;
   plugin ids `io.openfs.sovereign.<name>` (community/first-party) and
@@ -157,7 +157,7 @@ Consolidate the rules so the starter models them: org `sovereignfs`, repos
 "demo, not product"), ids `io.openfs.sovereign[.example].<name>`, npm scope
 `@sovereignfs/*`.
 
-### Tie to the registry (Task 0.5.18)
+### Tie to the registry (Task 0.5.19)
 
 The template and the examples are natural first entries / discovery anchors for
 `registry/plugins.json`. The contributor loop becomes: **Use this template →
@@ -204,7 +204,7 @@ Sovereign (`sv plugin add <repo>` or a `sovereign.plugins.json` entry) → `pnpm
 3. Add **`sv plugin new`** consuming the skeleton (can land first, in-monorepo).
 4. Ship the **npm initializer**.
 5. Build the first couple of **example repos** (and wire them as test fixtures).
-6. **Register** the template + examples (Task 0.5.18).
+6. **Register** the template + examples (Task 0.5.19).
 
 Documentation-first now; nothing above is built in this RFC.
 
@@ -213,4 +213,4 @@ Documentation-first now; nothing above is built in this RFC.
 | Version | Date     | Change                                                                                                                                                                                                                              |
 | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; one canonical skeleton via template repo + `sv plugin new` + npm initializer; capability-demo example plugins that double as test fixtures; SDK-npm publishability as an explicit prerequisite; documentation-first. |
-| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.27.                                                                                                                                                                                  |
+| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.28.                                                                                                                                                                                  |

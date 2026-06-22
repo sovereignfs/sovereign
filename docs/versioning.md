@@ -16,7 +16,7 @@ rectification plan for reaching v1.0.0.
 | `@sovereignfs/ui`                 | **0.10.0**      | Published, public contract; strictly semver per NFR-04                          |
 | `@sovereignfs/db`                 | **1.6.0**       | Internal private package; semver tied to change type                            |
 | `@sovereignfs/manifest`           | **0.14.0**      | Internal private package; semver tied to change type                            |
-| `@sovereignfs/mailer`             | **0.1.0**       | Internal private package; essentially unchanged since Task 0.3.06               |
+| `@sovereignfs/mailer`             | **0.1.0**       | Internal private package; essentially unchanged since Task 0.3.6                |
 | `@sovereignfs/auth`               | **0.8.0**       | Internal (apps/auth); semver tied to change type                                |
 | `plugins/console`                 | **0.12.0**      | Internal; semver tied to change type                                            |
 | `plugins/account`                 | **0.9.0**       | Internal; semver tied to change type                                            |
@@ -41,8 +41,8 @@ the root version meaningless. The rectified scheme aligns the two.
 ### The runtime package drifted into being the "release version"
 
 While the root `package.json` was frozen, the `runtime` package (`runtime/package.json`)
-was bumped with every meaningful task — from `0.2.0` in Task 0.4.04 all the way
-to `0.28.0` after Task 1.0.03. This happened because:
+was bumped with every meaningful task — from `0.2.0` in Task 0.4.4 all the way
+to `0.28.0` after Task 0.8.4. This happened because:
 
 1. Most tasks change the runtime, so bumping `runtime/package.json` was a natural
    way to track "what changed".
@@ -78,23 +78,26 @@ NFR-04. The SDK's `1.x` line is a stable contract; the UI is still in its
 
 ## Root version map (current and planned)
 
-| Root version | Milestone                                                                             |
-| ------------ | ------------------------------------------------------------------------------------- |
-| `0.3.0`      | Foundation complete (monorepo, packages, auth, runtime, Docker)                       |
-| `0.4.0`      | Core plugin trio complete (Console, Launcher, Account)                                |
-| `0.5.0`      | Platform features complete (SDK, security, PWA, overlays, CLI, Postgres, CI, etc.)    |
-| `0.6.0`      | Roles & capabilities (RFC 0021, RFC 0022)                                             |
-| `0.7.0`      | Notifications (RFC 0015 Notification Center, RFC 0016 Web Push)                       |
-| `0.8.0`      | Monetization & isolated databases (RFC 0003, RFC 0004)                                |
-| `0.9.0`      | E2E test suite complete (Task 0.9.01, Playwright)                                     |
-| `0.9.1`      | Storybook for the design system (Task 1.0.08)                                         |
-| `0.9.2`      | Production dev-mode & diagnostics (Task 1.0.02)                                       |
-| `0.9.3`      | White-labeling Phase 1 + Console UX polish (Task 1.0.03 + ad-hoc tasks) — **current** |
-| `0.9.4`      | White-labeling Phase 2 (Task 1.0.04) — ⏳ next                                        |
-| `0.9.5`      | White-labeling Phase 3 (Task 1.0.05)                                                  |
-| `0.9.6`      | systemd deployment (Task 1.0.06)                                                      |
-| `0.9.7`      | Operator fork model docs (Task 1.0.07)                                                |
-| **`1.0.0`**  | **Public release**                                                                    |
+| Root version | Milestone                                                                            |
+| ------------ | ------------------------------------------------------------------------------------ |
+| `0.3.0`      | Foundation complete (monorepo, packages, auth, runtime, Docker)                      |
+| `0.4.0`      | Core plugin trio complete (Console, Launcher, Account)                               |
+| `0.5.0`      | Platform features complete (SDK, security, PWA, overlays, CLI, Postgres, CI, etc.)   |
+| `0.6.0`      | Roles & capabilities (RFC 0021, RFC 0022)                                            |
+| `0.7.0`      | Notifications (RFC 0015 Notification Center, RFC 0016 Web Push)                      |
+| `0.8.0`      | Monetization & isolated databases (RFC 0003, RFC 0004)                               |
+| `0.9.0`      | E2E test suite complete (Task 0.8.2, Playwright)                                     |
+| `0.9.1`      | Storybook for the design system (Task 0.8.5)                                         |
+| `0.9.2`      | Production dev-mode & diagnostics (Task 0.8.3)                                       |
+| `0.9.3`      | White-labeling Phase 1 + Console UX polish (Task 0.8.4 + ad-hoc tasks) — **current** |
+| `0.9.4`      | Instance identity rename (Task 0.9.0, RFC 0032) — ⏳ next                            |
+| `0.9.5`      | Email templates + White-labeling Phase 2 (Task 0.9.1, RFC 0031 + RFC 0027)           |
+| `0.9.6`      | White-labeling Phase 3: dynamic PWA manifest (Task 0.9.2, RFC 0027)                  |
+| `0.9.7`      | systemd deployment (Task 0.9.3, RFC 0026)                                            |
+| `0.9.8`      | Operator fork model docs (Task 0.9.4, RFC 0028)                                      |
+| `0.9.9`      | User data deletion (Task 0.9.5, RFC 0033)                                            |
+| `0.9.10`     | Notification pub/sub transport (Task 0.9.6, RFC 0034)                                |
+| **`1.0.0`**  | **Public release**                                                                   |
 
 ---
 

@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/db` (test-DB helpers + seed), `apps/auth` (seed users via better-auth), a seed entrypoint (`scripts/seed.ts` / `sv seed` in `bin/sv`), in-code fixtures/factories, `vitest.config.ts`, `CONTRIBUTING.md` + CLAUDE.md test docs; builds on RFC 0010 (test organization)\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.23; documentation-first. This RFC specifies a test-data foundation (fixtures, an idempotent seed, per-role test users) and the dev/prod mode concept; SRS requirement IDs, scheduling, and task allocation are deferred. **Testing on a production instance is a separate RFC 0020** that builds on the seed defined here.
+**Incorporated into plan:** Yes — scheduled as roadmap Task 0.5.24; documentation-first. This RFC specifies a test-data foundation (fixtures, an idempotent seed, per-role test users) and the dev/prod mode concept; SRS requirement IDs, scheduling, and task allocation are deferred. **Testing on a production instance is a separate RFC 0020** that builds on the seed defined here.
 
 ---
 
@@ -53,7 +53,7 @@ is friction for contributors and a blocker for the e2e tier RFC 0010 reserves.
   `ON CONFLICT … DO NOTHING` — the proven model for a safe, re-runnable seed.
 - **Password hashing.** better-auth uses Argon2id; `better-auth/crypto`'s
   `hashPassword` lets a seed insert a user with a **known** password directly.
-- **RFC 0010** reserves the e2e/integration tiers (Task 0.5.16, not yet run); this
+- **RFC 0010** reserves the e2e/integration tiers (Task 0.5.17, not yet run); this
   RFC's data foundation feeds them.
 
 ## Dev vs prod mode (shared concept)
@@ -114,7 +114,7 @@ config-only. This RFC adds:
 
 ### e2e tier alignment (RFC 0010)
 
-The reserved e2e tier (Playwright, Task 0.5.16) consumes a **seeded** instance: it
+The reserved e2e tier (Playwright, Task 0.5.17) consumes a **seeded** instance: it
 logs in as the documented test users and drives real flows. This RFC supplies the
 users/credentials; the harness itself lands with RFC 0010's task.
 
@@ -154,7 +154,7 @@ the known accounts.
 2. **When accepted & scheduled:** the fixtures/factories, the `sv seed` entrypoint +
    per-role test users (non-prod-gated), the documented dev/test DB, and the
    CONTRIBUTING/CLAUDE.md test docs — aligned with RFC 0010's layout. The e2e harness
-   follows with RFC 0010 (Task 0.5.16). RFC 0020 then reuses this seed for prod
+   follows with RFC 0010 (Task 0.5.17). RFC 0020 then reuses this seed for prod
    dev-mode.
 
 ## Changelog
@@ -162,4 +162,4 @@ the known accounts.
 | Version | Date     | Change                                                                                                                                                                                                   |
 | ------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; in-code fixtures/factories + an idempotent `sv seed` with per-role test users (non-prod-gated), the dev/prod mode concept, and the dev/test DB that RFC 0020 reuses; documentation-first. |
-| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.23.                                                                                                                                                       |
+| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.5.24.                                                                                                                                                       |

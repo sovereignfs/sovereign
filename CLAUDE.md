@@ -116,7 +116,7 @@ they are authoritative over assumptions:
 
 ## Code quality
 
-Established in Task 0.3.03. Every package and PR must comply — no exceptions.
+Established in Task 0.3.3. Every package and PR must comply — no exceptions.
 
 ### Tools
 
@@ -163,17 +163,17 @@ pnpm lint:fix        # run ESLint with auto-fix
 ## Hard architectural rules (enforced or load-bearing)
 
 - **SDK is the only plugin↔platform contract.** Plugins MUST NOT import from
-  `runtime/src`. ESLint enforces this (established in Task 0.3.03, verified in
-  Task 0.3.08). Plugins use `packages/sdk` only.
+  `runtime/src`. ESLint enforces this (established in Task 0.3.3, verified in
+  Task 0.3.8). Plugins use `packages/sdk` only.
 - **`@sovereignfs/sdk` is a types-first contract with zero runtime dependencies**
-  (RFC 0023, Task 0.5.20). `packages/sdk` does not import `@sovereignfs/db` or
+  (RFC 0023, Task 0.5.21). `packages/sdk` does not import `@sovereignfs/db` or
   `@sovereignfs/mailer`. Implementations are registered by the runtime at startup
   via `provideHost()` in `runtime/instrumentation.ts` → `runtime/src/sdk-host.ts`.
   Never add `@sovereignfs/db`/`@sovereignfs/mailer` back as dependencies of the
   SDK — the `noExternal`-bundle plan is explicitly dropped. Platform internals
   belong in `runtime/src/sdk-host.ts`, not in `packages/sdk`.
 - **Every package/app extends `packages/tsconfig`** (`base`/`nextjs`/`library`),
-  established in Task 0.3.02. Easy to forget on new packages.
+  established in Task 0.3.2. Easy to forget on new packages.
 - **Manifests are validated at build time.** Invalid manifest = failed build.
 - **Plugin tables are slug-prefixed** (`tasks_lists`, `splitify_groups`).
   Single shared schema, no per-plugin DBs in v1.
@@ -181,7 +181,7 @@ pnpm lint:fix        # run ESLint with auto-fix
   multi-tenancy), even though no multi-tenant logic exists in v1.
 - **DB is dialect-agnostic** (Drizzle): SQLite default, Postgres via env only.
   No SQLite-specific SQL in app code.
-- **The platform data layer is async** (Task 0.5.03). Postgres (node-postgres)
+- **The platform data layer is async** (Task 0.5.3). Postgres (node-postgres)
   has no synchronous query, so `getPlatformDb()` and every `packages/db` platform
   helper (`getPlatformSetting`, `setAccountPrefs`, …) and `sdk.platform.getConfig()`
   return promises — always `await` them. (On SQLite the underlying better-sqlite3
@@ -206,7 +206,7 @@ pnpm lint:fix        # run ESLint with auto-fix
   and are gitignored by a `.gitignore` inside each route group — never edit or
   commit them. Source of truth is always `plugins/[id]/app/`. `shell: minimal` (a
   chrome-free group) is not wired yet; the generate script fails loudly on it.
-  **`shell: overlay` (RFC 0001, Task 0.5.09) composes TWICE:** the full-page
+  **`shell: overlay` (RFC 0001, Task 0.5.10) composes TWICE:** the full-page
   fallback under `(plugins)/<routePrefix>/` (same as default) **and** an
   interception copy under `(plugins)/@modal/(.)<routePrefix>/`. The `@modal`
   parallel-route slot lives **inside** `(plugins)` (hosted by a committed
@@ -241,7 +241,7 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   sidebar width (`--sv-shell-sidebar-width`, reset to `0` on mobile) on `.shell`
   so overlay dialogs start at the sidebar's right edge and leave the rail
   visible/usable — never hardcode the sidebar width into the `Dialog`.
-- **`shell: minimal` (RFC 0014, Task 0.5.24) composes into `runtime/app/(minimal)/`** — a
+- **`shell: minimal` (RFC 0014, Task 0.5.25) composes into `runtime/app/(minimal)/`** — a
   chrome-free, full-bleed route group (no sidebar, header, or footer). The committed
   `(minimal)/layout.tsx` applies `100dvh` and safe-area insets; generated composed routes
   land alongside it (gitignored by `(minimal)/.gitignore` which keeps `layout.tsx` and
@@ -288,7 +288,7 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   (forwarding the session cookie), not import the registry — the SDK boundary
   rule forbids plugins importing `runtime/src` or internal packages. The route
   is session-gated (middleware injects `x-sovereign-user-role`) and role-filters
-  via `selectLauncherPlugins`; `sdk.db` replaces this fetch in Task 0.5.05.
+  via `selectLauncherPlugins`; `sdk.db` replaces this fetch in Task 0.5.5.
 - **The `/api/*` namespace is split: reserved runtime segments vs. the public
   provider namespace (PLT-16).** The runtime serves its own first-level segments
   — `account`, `admin`, `health`, `plugins` (`runtime/app/api/*`) — listed in
@@ -354,7 +354,7 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   `data/avatars/<user_id>.<ext>` (served by `/api/account/avatar/[userId]`); the
   user record's `image` field holds the servable URL.
 - **Security headers are split: static via `next.config.ts`, CSP via middleware**
-  (RFC 0008 Tier 0, Task 0.5.15). Both apps' `next.config.ts` emit the static
+  (RFC 0008 Tier 0, Task 0.5.16). Both apps' `next.config.ts` emit the static
   headers (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
   `Referrer-Policy`, `Permissions-Policy`, and **HSTS production-only**). The
   **Content-Security-Policy is strict and nonce-based**, set per-request in
@@ -390,7 +390,7 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   production build (`next build`). The PWA assets and the `/offline` fallback
   are excluded from the middleware session gate (they must load without a
   session).
-- **Production images build from Next.js standalone output** (Task 0.5.02).
+- **Production images build from Next.js standalone output** (Task 0.5.2).
   Both `next.config.ts` set `output: 'standalone'` **and**
   `outputFileTracingRoot` to the monorepo root — required in a pnpm monorepo or
   the trace misses workspace package files. The standalone tree mirrors the repo
@@ -638,7 +638,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
   apps load the single root `.env` via `loadEnvConfig`. The runtime middleware
   injects `x-sovereign-user-*` headers from the verified session.
 - **Middleware verifies sessions locally, then falls back to `/api/verify`**
-  (AUTH-05, Task 0.5.05b). The auth server enables better-auth's **signed cookie
+  (AUTH-05, Task 0.5.6). The auth server enables better-auth's **signed cookie
   cache** (`session.cookieCache`, `maxAge` 300s) — a `better-auth.session_data`
   cookie holding session+user, HMAC-signed with `AUTH_SECRET`. The middleware
   verifies it offline via `getCookieCache` from `better-auth/cookies` (Edge-safe;
@@ -769,7 +769,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 - ✅ Console plugin install/remove UX — replaced the copy-CLI-command pattern with a real two-step server-side flow. **"Add a plugin" panel:** user enters a Git repo URL → "Check" fetches `manifest.json` from the raw GitHub/GitLab/Gitea URL server-side, validates required fields, and shows a preview card (name, id, version, description, type); "Install" then calls `pnpm sv plugin add <url>` via `execSync` and `revalidatePath`. **"Remove" button:** opens a native `<dialog>` confirm (auto-sized, no fixed height) and calls `pnpm sv plugin remove <id>` server-side. Platform-plugin guard changed from a hardcoded `PLATFORM_PLUGIN_IDS` set to `plugin.type === 'platform'` so new platform plugins are automatically protected. Server actions live in `plugins/console/app/plugins/install-actions.ts`; `@sovereignfs/manifest`/`@sovereignfs/db` imports replaced with inlined helpers to satisfy the SDK boundary ESLint rule.
 
-⏳ **Next: Task 1.0.04 — White-labeling, Phase 2 — Email templates + auth login page (RFC 0027).** Branch from up-to-date `main`.
+⏳ **Next: Task 0.9.0 — Instance identity rename (RFC 0032).** Branch from up-to-date `main`.
 
 Keep this file current: update the Status section as tasks complete, and add any
 new load-bearing convention that future sessions must not violate.

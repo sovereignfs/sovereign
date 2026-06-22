@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/sdk` (`sdk.notifications`), `packages/manifest` (`notifications:send`), platform DB (`packages/db` — a new `notifications` table + notification prefs), runtime chrome + API routes, `packages/ui` (new `Toast` + popover/panel), Account (notification prefs), Console (admin broadcast), SRS; builds on RFC 0005 (activity log), RFC 0011 (icon system), RFC 0013 (mobile Drawer)\
-**Incorporated into plan:** Yes — scheduled as roadmap Task 1.0.04; documentation-first. This RFC specifies the in-app notification system (data model, SDK surface, UI, delivery) and the end-to-end flows. SRS requirement IDs (proposed `NOTIF-*`), scheduling, and task allocation are deferred. **Web Push is a separate RFC 0016** that layers a background delivery channel on top of this one.
+**Incorporated into plan:** Yes — scheduled as roadmap Task 0.7.0; documentation-first. This RFC specifies the in-app notification system (data model, SDK surface, UI, delivery) and the end-to-end flows. SRS requirement IDs (proposed `NOTIF-*`), scheduling, and task allocation are deferred. **Web Push is a separate RFC 0016** that layers a background delivery channel on top of this one.
 
 ---
 
@@ -266,4 +266,4 @@ Console → clients receive notifications instantly; or leaves it `polling` (def
 | Version | Date     | Change                                                                                                                                                                                                                      |
 | ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Jun 2026 | Initial draft; per-user inbox + `sdk.notifications` send surface + bell/panel/toast UI + admin broadcast (four guardrails) + admin-selectable polling/WebSocket transport; documentation-first, Web Push split to RFC 0016. |
-| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 1.0.04.                                                                                                                                                                          |
+| 0.2     | Jun 2026 | Accepted; scheduled in the roadmap as Task 0.7.0.                                                                                                                                                                           |

@@ -514,3 +514,43 @@ Existing calls are unaffected — the new fields are additive.
 **New `--sv-brand-*` CSS tokens** (`--sv-brand-logo`, `--sv-brand-logo-dark`,
 `--sv-brand-favicon`) are set at `:root` by `BrandProvider` and are available
 in plugin CSS without any import.
+
+---
+
+### Platform 0.28 → 0.29 (`@sovereignfs/ui` 0.10.0 → 0.11.0, `@sovereignfs/sdk` 1.10.0 → 1.11.0, Instance identity rename, RFC 0032)
+
+**Breaking: `--sv-brand-*` CSS tokens renamed to `--sv-instance-*`.** Update any plugin CSS that references these tokens:
+
+```css
+/* Before */
+background-image: var(--sv-brand-logo);
+
+/* After */
+background-image: var(--sv-instance-logo);
+```
+
+**Breaking: `PlatformConfig.brandName` and `brandPrimaryColor` renamed.** Update calls to `sdk.platform.getConfig()`:
+
+```ts
+// Before
+const { brandName, brandPrimaryColor } = await sdk.platform.getConfig();
+
+// After
+const { instanceName, instancePrimaryColor } = await sdk.platform.getConfig();
+```
+
+**Breaking: `BRAND_*` environment variables renamed to `INSTANCE_*`.** Update your `.env` or Compose env block:
+
+```
+BRAND_NAME            → INSTANCE_NAME
+BRAND_LOGO            → INSTANCE_LOGO
+BRAND_LOGO_DARK       → INSTANCE_LOGO_DARK
+BRAND_FAVICON         → INSTANCE_FAVICON
+BRAND_PRIMARY_COLOR   → INSTANCE_PRIMARY_COLOR
+BRAND_EMAIL_FROM_NAME → INSTANCE_EMAIL_FROM_NAME
+BRAND_EMAIL_LOGO      → INSTANCE_EMAIL_LOGO
+```
+
+**`/api/brand/*` routes renamed to `/api/instance/*`.** If any external system fetches these routes directly, update those references.
+
+The database migration (`0005_rename_tenant_branding`) runs automatically at startup — no manual SQL required.

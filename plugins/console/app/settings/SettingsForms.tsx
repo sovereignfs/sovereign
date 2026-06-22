@@ -7,7 +7,7 @@ import {
   updateTenantNameAction,
   updateInviteOnlyAction,
   updateRootPluginAction,
-  updateBrandingAction,
+  updateInstanceAction,
   uploadLogoAction,
   uploadFaviconAction,
 } from './actions';
@@ -129,45 +129,47 @@ export function RootPluginForm({
   );
 }
 
-export interface BrandingValues {
-  brandName: string;
-  brandLogo: string | null;
-  brandLogoDark: string | null;
-  brandFavicon: string | null;
-  brandPrimary: string | null;
+export interface InstanceValues {
+  instanceName: string;
+  instanceLogo: string | null;
+  instanceLogoDark: string | null;
+  instanceFavicon: string | null;
+  instancePrimary: string | null;
   emailFromName: string | null;
   emailLogo: string | null;
 }
 
-export function BrandingForm({ initialValues }: { initialValues: BrandingValues }) {
-  const [state, action, pending] = useActionState(updateBrandingAction, null);
+export function InstanceForm({ initialValues }: { initialValues: InstanceValues }) {
+  const [state, action, pending] = useActionState(updateInstanceAction, null);
   return (
     <form action={action} className={styles.settingsForm}>
       <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="brandName">
-          Brand name
+        <label className={styles.label} htmlFor="instanceName">
+          Instance name
         </label>
         <input
-          id="brandName"
-          name="brandName"
+          id="instanceName"
+          name="instanceName"
           type="text"
           placeholder="Sovereign"
-          defaultValue={initialValues.brandName !== 'Sovereign' ? initialValues.brandName : ''}
+          defaultValue={
+            initialValues.instanceName !== 'Sovereign' ? initialValues.instanceName : ''
+          }
           className={styles.input}
         />
         <span className={styles.helpText}>Displayed in the shell header and login page.</span>
       </div>
       <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="brandPrimary">
+        <label className={styles.label} htmlFor="instancePrimary">
           Primary colour
         </label>
         <input
-          id="brandPrimary"
-          name="brandPrimary"
+          id="instancePrimary"
+          name="instancePrimary"
           type="text"
           pattern="^#[0-9a-fA-F]{6}$"
           placeholder="#3b82f6"
-          defaultValue={initialValues.brandPrimary ?? ''}
+          defaultValue={initialValues.instancePrimary ?? ''}
           className={styles.input}
         />
         <span className={styles.helpText}>
@@ -177,41 +179,41 @@ export function BrandingForm({ initialValues }: { initialValues: BrandingValues 
         </span>
       </div>
       <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="brandLogo">
+        <label className={styles.label} htmlFor="instanceLogo">
           Logo URL (light theme)
         </label>
         <input
-          id="brandLogo"
-          name="brandLogo"
+          id="instanceLogo"
+          name="instanceLogo"
           type="url"
-          placeholder="https://… or /api/brand/logo"
-          defaultValue={initialValues.brandLogo ?? ''}
+          placeholder="https://… or /api/instance/logo"
+          defaultValue={initialValues.instanceLogo ?? ''}
           className={styles.input}
         />
       </div>
       <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="brandLogoDark">
+        <label className={styles.label} htmlFor="instanceLogoDark">
           Logo URL (dark theme)
         </label>
         <input
-          id="brandLogoDark"
-          name="brandLogoDark"
+          id="instanceLogoDark"
+          name="instanceLogoDark"
           type="url"
-          placeholder="https://… or /api/brand/logo?dark=1"
-          defaultValue={initialValues.brandLogoDark ?? ''}
+          placeholder="https://… or /api/instance/logo?dark=1"
+          defaultValue={initialValues.instanceLogoDark ?? ''}
           className={styles.input}
         />
       </div>
       <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="brandFavicon">
+        <label className={styles.label} htmlFor="instanceFavicon">
           Favicon URL
         </label>
         <input
-          id="brandFavicon"
-          name="brandFavicon"
+          id="instanceFavicon"
+          name="instanceFavicon"
           type="url"
-          placeholder="https://… or /api/brand/favicon"
-          defaultValue={initialValues.brandFavicon ?? ''}
+          placeholder="https://… or /api/instance/favicon"
+          defaultValue={initialValues.instanceFavicon ?? ''}
           className={styles.input}
         />
       </div>
@@ -246,7 +248,7 @@ export function BrandingForm({ initialValues }: { initialValues: BrandingValues 
       </div>
       <Feedback result={state} />
       <button type="submit" className={styles.actionButton} disabled={pending}>
-        {pending ? 'Saving…' : 'Save branding'}
+        {pending ? 'Saving…' : 'Save instance identity'}
       </button>
     </form>
   );

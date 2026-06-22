@@ -1798,7 +1798,7 @@ Tasks that ship before the public `v1.0.0` release. These tasks were originally
 scoped as post-v1 but pulled forward into the pre-release cycle as the platform
 matured ahead of schedule.
 
-#### Task 0.9.0 — Instance identity rename (RFC 0032)
+#### ✅ Task 0.9.0 — Instance identity rename (RFC 0032)
 
 **Goal:** Rename every `brand/Brand` identifier introduced in Task 1.0.03 (RFC 0027
 Phase 1) to `instance/Instance` across the full platform. Pure rename — no new

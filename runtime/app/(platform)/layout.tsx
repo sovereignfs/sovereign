@@ -5,7 +5,7 @@ import { Icon } from '@sovereignfs/ui';
 import { hasCapability } from '@/src/capabilities';
 import { getInstalledPlugins } from '@/src/registry';
 import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
-import { BrandProvider } from '@/src/brand-provider';
+import { InstanceProvider } from '@/src/instance-provider';
 import { AccountMenu } from './_components/AccountMenu';
 import { ActivePluginTitle } from './_components/ActivePluginTitle';
 import { ClientShell } from './_components/ClientShell';
@@ -69,17 +69,17 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   }));
 
   return (
-    <BrandProvider>
-      {({ brandName, brandLogoUrl }) => (
+    <InstanceProvider>
+      {({ instanceName, instanceLogoUrl }) => (
         <ClientShell>
           <div className={styles.shell}>
             <OfflineBanner />
             <aside className={styles.sidebar} aria-label="Primary navigation">
-              <Link href="/" className={styles.brand} aria-label={`${brandName} home`}>
-                {brandLogoUrl ? (
-                  <img src={brandLogoUrl} alt={brandName} className={styles.brandLogoImg} />
+              <Link href="/" className={styles.brand} aria-label={`${instanceName} home`}>
+                {instanceLogoUrl ? (
+                  <img src={instanceLogoUrl} alt={instanceName} className={styles.brandLogoImg} />
                 ) : (
-                  <span aria-hidden="true">{brandName.charAt(0).toUpperCase()}</span>
+                  <span aria-hidden="true">{instanceName.charAt(0).toUpperCase()}</span>
                 )}
               </Link>
               <nav className={styles.plugins} aria-label="Plugins">
@@ -108,11 +108,11 @@ export default async function PlatformLayout({ children }: { children: ReactNode
             {/* Mobile header: brand · active-plugin title · bell · avatar menu (RFC 0013).
                 Console is added to the avatar menu for admins (no sidebar on mobile). */}
             <header className={styles.mobileHeader}>
-              <Link href="/" className={styles.mobileBrand} aria-label={`${brandName} home`}>
-                {brandLogoUrl ? (
-                  <img src={brandLogoUrl} alt={brandName} className={styles.brandLogoImg} />
+              <Link href="/" className={styles.mobileBrand} aria-label={`${instanceName} home`}>
+                {instanceLogoUrl ? (
+                  <img src={instanceLogoUrl} alt={instanceName} className={styles.brandLogoImg} />
                 ) : (
-                  brandName
+                  instanceName
                 )}
               </Link>
               <ActivePluginTitle plugins={allPluginList} />
@@ -133,6 +133,6 @@ export default async function PlatformLayout({ children }: { children: ReactNode
           </div>
         </ClientShell>
       )}
-    </BrandProvider>
+    </InstanceProvider>
   );
 }

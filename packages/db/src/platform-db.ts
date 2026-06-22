@@ -912,89 +912,89 @@ export async function cancelEntitlement(pdb: PlatformDb, id: string): Promise<vo
   );
 }
 
-// ── Tenant branding (RFC 0027) ─────────────────────────────────────────────
+// ── Instance identity config (RFC 0027 / RFC 0032 rename) ────────────────────
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 
-export interface TenantBrandingValue {
-  brandName: string;
-  brandLogo: string | null;
-  brandLogoDark: string | null;
-  brandFavicon: string | null;
-  brandPrimary: string | null;
+export interface InstanceConfig {
+  instanceName: string;
+  instanceLogo: string | null;
+  instanceLogoDark: string | null;
+  instanceFavicon: string | null;
+  instancePrimary: string | null;
   emailFromName: string | null;
   emailLogo: string | null;
 }
 
 /**
- * Read tenant branding, merging DB values over BRAND_* env-var defaults.
+ * Read instance config, merging DB values over INSTANCE_* env-var defaults.
  * Always returns a complete object — null fields mean "no override set".
  */
-export async function getTenantBranding(
+export async function getInstanceConfig(
   pdb: PlatformDb,
   tenantId: string,
-): Promise<TenantBrandingValue> {
+): Promise<InstanceConfig> {
   const row = await dbGet<{
-    brandName: string | null;
-    brandLogo: string | null;
-    brandLogoDark: string | null;
-    brandFavicon: string | null;
-    brandPrimary: string | null;
+    instanceName: string | null;
+    instanceLogo: string | null;
+    instanceLogoDark: string | null;
+    instanceFavicon: string | null;
+    instancePrimary: string | null;
     emailFromName: string | null;
     emailLogo: string | null;
   }>(
     pdb,
-    sql`SELECT brand_name AS "brandName",
-               brand_logo AS "brandLogo",
-               brand_logo_dark AS "brandLogoDark",
-               brand_favicon AS "brandFavicon",
-               brand_primary AS "brandPrimary",
+    sql`SELECT brand_name AS "instanceName",
+               brand_logo AS "instanceLogo",
+               brand_logo_dark AS "instanceLogoDark",
+               brand_favicon AS "instanceFavicon",
+               brand_primary AS "instancePrimary",
                email_from_name AS "emailFromName",
                email_logo AS "emailLogo"
-        FROM tenant_branding WHERE tenant_id = ${tenantId}`,
+        FROM instance_config WHERE tenant_id = ${tenantId}`,
   );
   return {
-    brandName: row?.brandName ?? process.env.BRAND_NAME ?? 'Sovereign',
-    brandLogo: row?.brandLogo ?? process.env.BRAND_LOGO ?? null,
-    brandLogoDark: row?.brandLogoDark ?? process.env.BRAND_LOGO_DARK ?? null,
-    brandFavicon: row?.brandFavicon ?? process.env.BRAND_FAVICON ?? null,
-    brandPrimary:
-      (row?.brandPrimary ?? process.env.BRAND_PRIMARY_COLOR ?? null) &&
-      HEX_COLOR_RE.test(row?.brandPrimary ?? process.env.BRAND_PRIMARY_COLOR ?? '')
-        ? (row?.brandPrimary ?? process.env.BRAND_PRIMARY_COLOR ?? null)
+    instanceName: row?.instanceName ?? process.env.INSTANCE_NAME ?? 'Sovereign',
+    instanceLogo: row?.instanceLogo ?? process.env.INSTANCE_LOGO ?? null,
+    instanceLogoDark: row?.instanceLogoDark ?? process.env.INSTANCE_LOGO_DARK ?? null,
+    instanceFavicon: row?.instanceFavicon ?? process.env.INSTANCE_FAVICON ?? null,
+    instancePrimary:
+      (row?.instancePrimary ?? process.env.INSTANCE_PRIMARY_COLOR ?? null) &&
+      HEX_COLOR_RE.test(row?.instancePrimary ?? process.env.INSTANCE_PRIMARY_COLOR ?? '')
+        ? (row?.instancePrimary ?? process.env.INSTANCE_PRIMARY_COLOR ?? null)
         : null,
-    emailFromName: row?.emailFromName ?? process.env.BRAND_EMAIL_FROM_NAME ?? null,
-    emailLogo: row?.emailLogo ?? process.env.BRAND_EMAIL_LOGO ?? null,
+    emailFromName: row?.emailFromName ?? process.env.INSTANCE_EMAIL_FROM_NAME ?? null,
+    emailLogo: row?.emailLogo ?? process.env.INSTANCE_EMAIL_LOGO ?? null,
   };
 }
 
 /**
- * Upsert tenant branding. Callers read the current state via getTenantBranding,
+ * Upsert instance config. Callers read the current state via getInstanceConfig,
  * mutate fields, then write the full merged value back.
- * brand_primary is validated as a 6-digit hex colour before persisting —
+ * instancePrimary is validated as a 6-digit hex colour before persisting —
  * raw user input must never reach a <style> block unchecked (CSS injection).
  */
-export async function setTenantBranding(
+export async function setInstanceConfig(
   pdb: PlatformDb,
   tenantId: string,
-  values: Omit<TenantBrandingValue, 'brandName'> & { brandName: string | null },
+  values: Omit<InstanceConfig, 'instanceName'> & { instanceName: string | null },
 ): Promise<void> {
-  if (values.brandPrimary !== null) {
-    if (!HEX_COLOR_RE.test(values.brandPrimary)) {
+  if (values.instancePrimary !== null) {
+    if (!HEX_COLOR_RE.test(values.instancePrimary)) {
       throw new Error(
-        `Invalid brandPrimary: "${values.brandPrimary}". Must be a 6-digit hex colour (#rrggbb).`,
+        `Invalid instancePrimary: "${values.instancePrimary}". Must be a 6-digit hex colour (#rrggbb).`,
       );
     }
   }
   const now = Math.floor(Date.now() / 1000);
   await dbRun(
     pdb,
-    sql`INSERT INTO tenant_branding
+    sql`INSERT INTO instance_config
           (tenant_id, brand_name, brand_logo, brand_logo_dark, brand_favicon,
            brand_primary, email_from_name, email_logo, updated_at)
         VALUES
-          (${tenantId}, ${values.brandName}, ${values.brandLogo}, ${values.brandLogoDark},
-           ${values.brandFavicon}, ${values.brandPrimary}, ${values.emailFromName},
+          (${tenantId}, ${values.instanceName}, ${values.instanceLogo}, ${values.instanceLogoDark},
+           ${values.instanceFavicon}, ${values.instancePrimary}, ${values.emailFromName},
            ${values.emailLogo}, ${now})
         ON CONFLICT (tenant_id) DO UPDATE SET
           brand_name      = excluded.brand_name,

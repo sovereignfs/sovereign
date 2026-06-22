@@ -284,66 +284,66 @@ purely a set of CSS variable values — no component or build changes required.
 
 ---
 
-## Brand identity tokens (RFC 0027)
+## Instance identity tokens (RFC 0027 / RFC 0032)
 
-The `--sv-brand-*` namespace is a separate tier from `--sv-color-*`. Brand
+The `--sv-instance-*` namespace is a separate tier from `--sv-color-*`. Instance
 tokens hold **URLs** (logo and favicon paths), not colours. They are set once
-by the operator at deploy time or via Console → Settings → Branding — they do
+by the operator at deploy time or via Console → Settings → Instance identity — they do
 not change with dark mode or user preferences.
 
 ```css
 :root {
-  --sv-brand-logo: none; /* URL of the light-theme logo */
-  --sv-brand-logo-dark: none; /* URL of the dark-theme logo (falls back to --sv-brand-logo) */
-  --sv-brand-favicon: none; /* URL of the favicon */
+  --sv-instance-logo: none; /* URL of the light-theme logo */
+  --sv-instance-logo-dark: none; /* URL of the dark-theme logo (falls back to --sv-instance-logo) */
+  --sv-instance-favicon: none; /* URL of the favicon */
 }
 ```
 
-`BrandProvider` (a runtime server component) sets these at `:root` from the
-`tenant_branding` table, merged over `BRAND_*` env-var defaults. Plugins
+`InstanceProvider` (a runtime server component) sets these at `:root` from the
+`instance_config` table, merged over `INSTANCE_*` env-var defaults. Plugins
 running inside the shell receive the values automatically — no import required.
 
 ### Why a separate namespace?
 
-| Property    | `--sv-color-*`        | `--sv-brand-*`  |
-| ----------- | --------------------- | --------------- |
-| Value type  | Colour (`#hex`, HSL)  | URL (`url(…)`)  |
-| Changes on  | Dark mode, user prefs | Operator deploy |
-| Theming use | Dynamic swap          | Static identity |
+| Property    | `--sv-color-*`        | `--sv-instance-*` |
+| ----------- | --------------------- | ----------------- |
+| Value type  | Colour (`#hex`, HSL)  | URL (`url(…)`)    |
+| Changes on  | Dark mode, user prefs | Operator deploy   |
+| Theming use | Dynamic swap          | Static identity   |
 
 Mixing URL values into the colour namespace would conflate two concerns and
 confuse plugin developers — a colour picker returns `#hex`, not a `url()`.
 
-### Using brand tokens in plugin CSS
+### Using instance tokens in plugin CSS
 
 ```css
 /* In your plugin's CSS module */
 .logo {
-  background-image: var(--sv-brand-logo);
+  background-image: var(--sv-instance-logo);
   background-size: contain;
   width: 36px;
   height: 36px;
 }
 ```
 
-> **Note:** `--sv-brand-logo` is a CSS `url()` value, so it works in
+> **Note:** `--sv-instance-logo` is a CSS `url()` value, so it works in
 > `background-image` but not in `src` attributes directly. Use the API routes
-> (`/api/brand/logo`, `/api/brand/favicon`) in HTML `<img>` tags, or use
-> `sdk.platform.getConfig()` which returns `brandName` as a string prop.
+> (`/api/instance/logo`, `/api/instance/favicon`) in HTML `<img>` tags, or use
+> `sdk.platform.getConfig()` which returns `instanceName` as a string prop.
 
-### Brand name
+### Instance name
 
-**The brand name is a React prop, not a CSS custom property.** CSS custom
+**The instance name is a React prop, not a CSS custom property.** CSS custom
 properties cannot supply rendered text content for HTML elements — they only
 work with `content:` on pseudo-elements, which is too narrow for the shell
-chrome. `BrandProvider` passes `brandName` as a render-prop to the layout.
+chrome. `InstanceProvider` passes `instanceName` as a render-prop to the layout.
 
 Plugin developers read it from `sdk.platform.getConfig()`:
 
 ```ts
 const config = await sdk.platform.getConfig();
-// config.brandName — the operator-configured display name
-// config.brandPrimaryColor — validated hex or undefined
+// config.instanceName — the operator-configured display name
+// config.instancePrimaryColor — validated hex or undefined
 ```
 
 ---

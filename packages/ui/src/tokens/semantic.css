@@ -48,16 +48,16 @@
   --sv-shadow-overlay: 0 10px 38px rgba(0, 0, 0, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
 
   /*
-   * Brand identity tokens (RFC 0027). Distinct namespace from --sv-color-*:
+   * Instance identity tokens (RFC 0027 / RFC 0032 rename). Distinct namespace from --sv-color-*:
    * these hold URLs (not colours) and are set once by the operator, not swapped
-   * with dark mode. Set by BrandProvider server component from tenant_branding DB.
-   * CSS: background-image: var(--sv-brand-logo);
-   *   or <img src="var(--sv-brand-logo)"> is NOT correct — use the BrandProvider
-   *   prop `brandName` and the /api/brand/* routes for the actual URLs.
+   * with dark mode. Set by InstanceProvider server component from instance_config DB.
+   * CSS: background-image: var(--sv-instance-logo);
+   *   or <img src="var(--sv-instance-logo)"> is NOT correct — use the InstanceProvider
+   *   prop `instanceName` and the /api/instance/* routes for the actual URLs.
    */
-  --sv-brand-logo: none;
-  --sv-brand-logo-dark: none;
-  --sv-brand-favicon: none;
+  --sv-instance-logo: none;
+  --sv-instance-logo-dark: none;
+  --sv-instance-favicon: none;
 }
 
 [data-theme='dark'] {

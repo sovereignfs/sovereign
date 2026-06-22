@@ -49,19 +49,19 @@ export {
   saveEntitlement,
   cancelEntitlement,
   getPaidPluginsWithoutEntitlement,
-  getTenantBranding,
-  setTenantBranding,
+  getInstanceConfig,
+  setInstanceConfig,
   type AccountPrefsValue,
   type ActivityLogRow,
   type ConsentGrantRow,
   type EntitlementRow,
+  type InstanceConfig,
   type NotificationPrefsValue,
   type NotificationRow,
   type PlatformDb,
   type PushSubscriptionRow,
   type RecordActivityInput,
   type SendNotificationInput,
-  type TenantBrandingValue,
 } from './platform-db';
 export { resolveDialect, type Dialect, type ResolvedDialect } from './dialect';
 export { runMigrations, runPluginMigrations, type MigrationResult } from './migrate';
@@ -103,6 +103,6 @@ export type {
   NewPushSubscription,
   Entitlement,
   NewEntitlement,
-  TenantBranding,
-  NewTenantBranding,
+  InstanceConfigRow,
+  NewInstanceConfigRow,
 } from './schema/sqlite/platform';

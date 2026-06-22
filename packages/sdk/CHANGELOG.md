@@ -5,6 +5,17 @@ follows [Semantic Versioning](https://semver.org); see
 [`docs/sdk-stability.md`](../../docs/sdk-stability.md) for the stability policy
 and which parts of the surface the guarantee covers.
 
+## 1.11.0
+
+**`PlatformConfig.brandName` and `brandPrimaryColor` renamed** (RFC 0032 / Task 0.9.0).
+
+`PlatformConfig` field names updated:
+
+- `brandName` → `instanceName`
+- `brandPrimaryColor?` → `instancePrimaryColor?`
+
+Update calls to `sdk.platform.getConfig()` to use the new names. See `docs/upgrade.md` for a migration snippet.
+
 ## 1.10.0
 
 **`sdk.platform.getConfig()` returns branding fields** (RFC 0027 Phase 1 / Task 1.0.03).

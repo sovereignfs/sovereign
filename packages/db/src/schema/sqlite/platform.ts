@@ -261,25 +261,25 @@ export const entitlements = sqliteTable('entitlements', {
 });
 
 /**
- * Per-tenant white-label branding config (RFC 0027, Phase 1).
- * One row per tenant; upserted via setTenantBranding(). A null column means
- * "use the env-var default" so the helper always merges over BRAND_* env vars.
+ * Per-instance identity config (RFC 0027, Phase 1 / RFC 0032 rename).
+ * One row per tenant; upserted via setInstanceConfig(). A null column means
+ * "use the env-var default" so the helper always merges over INSTANCE_* env vars.
  */
-export const tenantBranding = sqliteTable('tenant_branding', {
+export const instanceConfig = sqliteTable('instance_config', {
   tenantId: text('tenant_id').notNull().primaryKey(),
-  /** Display name of the instance, e.g. "Acme Workspace". Falls back to BRAND_NAME env. */
-  brandName: text('brand_name'),
-  /** Path-relative URL of the light-theme logo, e.g. `/api/brand/logo`. */
-  brandLogo: text('brand_logo'),
-  /** Path-relative URL of the dark-theme logo. Falls back to brandLogo. */
-  brandLogoDark: text('brand_logo_dark'),
+  /** Display name of the instance, e.g. "Acme Workspace". Falls back to INSTANCE_NAME env. */
+  instanceName: text('brand_name'),
+  /** Path-relative URL of the light-theme logo, e.g. `/api/instance/logo`. */
+  instanceLogo: text('brand_logo'),
+  /** Path-relative URL of the dark-theme logo. Falls back to instanceLogo. */
+  instanceLogoDark: text('brand_logo_dark'),
   /** Path-relative URL of the branded favicon. */
-  brandFavicon: text('brand_favicon'),
+  instanceFavicon: text('brand_favicon'),
   /** Validated hex colour overriding --sv-color-accent, e.g. "#3b82f6". */
-  brandPrimary: text('brand_primary'),
+  instancePrimary: text('brand_primary'),
   /** Sender display name for outbound email, e.g. "Acme Support". */
   emailFromName: text('email_from_name'),
-  /** Publicly reachable URL for the brand logo used in HTML email bodies. */
+  /** Publicly reachable URL for the instance logo used in HTML email bodies. */
   emailLogo: text('email_logo'),
   updatedAt: integer('updated_at').notNull(),
 });
@@ -298,5 +298,5 @@ export type ActivityLog = typeof activityLog.$inferSelect;
 export type NewActivityLog = typeof activityLog.$inferInsert;
 export type Entitlement = typeof entitlements.$inferSelect;
 export type NewEntitlement = typeof entitlements.$inferInsert;
-export type TenantBranding = typeof tenantBranding.$inferSelect;
-export type NewTenantBranding = typeof tenantBranding.$inferInsert;
+export type InstanceConfigRow = typeof instanceConfig.$inferSelect;
+export type NewInstanceConfigRow = typeof instanceConfig.$inferInsert;

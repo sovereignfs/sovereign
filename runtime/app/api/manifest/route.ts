@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPlatformDb } from '@sovereignfs/db';
-import { DEFAULT_TENANT_ID, getTenantBranding } from '@sovereignfs/db';
+import { DEFAULT_TENANT_ID, getInstanceConfig } from '@sovereignfs/db';
 
 /**
  * Dynamic web app manifest — returns the PWA manifest with the tenant's brand
@@ -10,23 +10,23 @@ import { DEFAULT_TENANT_ID, getTenantBranding } from '@sovereignfs/db';
  * tooling; this route is the authoritative one for browsers.
  */
 export async function GET(): Promise<Response> {
-  let brandName = process.env.BRAND_NAME ?? 'Sovereign';
+  let instanceName = process.env.INSTANCE_NAME ?? 'Sovereign';
   let description = 'Your self-hosted workspace.';
 
   try {
     const pdb = await getPlatformDb();
-    const branding = await getTenantBranding(pdb, DEFAULT_TENANT_ID);
-    if (branding.brandName) {
-      brandName = branding.brandName;
-      description = `${brandName} — your self-hosted workspace.`;
+    const config = await getInstanceConfig(pdb, DEFAULT_TENANT_ID);
+    if (config.instanceName) {
+      instanceName = config.instanceName;
+      description = `${instanceName} — your self-hosted workspace.`;
     }
   } catch {
-    // Branding is cosmetic — serve a working manifest even on DB failure.
+    // Instance config is cosmetic — serve a working manifest even on DB failure.
   }
 
   const manifest = {
-    name: brandName,
-    short_name: brandName,
+    name: instanceName,
+    short_name: instanceName,
     description,
     start_url: '/',
     scope: '/',

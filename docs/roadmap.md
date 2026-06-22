@@ -2174,6 +2174,194 @@ manual. Three sub-tracks, independently deliverable:
 
 ---
 
+#### Task 1.0.3 — Internationalization, Phase 1 — Infrastructure (RFC 0029) **[post-v1]**
+
+**Goal:** Wire the i18n infrastructure end-to-end: manifest field, platform config, transparent locale cookie, middleware injection, next-intl integration, generate script message merging, `sdk.i18n` surface, DB migration, Console Languages section, and Account Language preference.
+
+**Deliverables:**
+
+- `packages/manifest`: optional `i18n.supportedLocales` field in schema; validation (English required; missing locale file → build fail); `manifestFieldNames` update for docs-parity test. Minor bump.
+- `packages/db`: new nullable `locale TEXT` column on `account_prefs` + drizzle-kit migration for both dialects; `PlatformConfig` type gains `enabledLanguages`/`defaultLanguage`. Minor bump.
+- `packages/sdk`: new experimental `sdk.i18n` module (`getLocale`, `getEnabledLanguages`, `getDefaultLanguage`); `SdkHost` `i18n` key; marked experimental in `docs/sdk-stability.md`. Minor bump.
+- `scripts/generate-registry.ts`: `composeMessages()` step merges plugin `messages/<locale>.json` into `runtime/generated/messages/<locale>.ts` (namespaced by plugin ID + `platform` key for shell strings); generated files gitignored.
+- `runtime`: new `GET /api/admin/i18n` route (admin-key-authed); `RESERVED_API_SEGMENTS` gains `'i18n'`; middleware locale resolution (`sv-locale` cookie → enabled_languages → default_language → `'en'`) + `x-sovereign-user-locale` header injection; `runtime/i18n/request.ts`; `next.config.ts` wrapped with `createNextIntlPlugin`; root layout `NextIntlClientProvider` + dynamic `lang={locale}` attribute. Minor bump.
+- `plugins/console`: Languages section in Settings (enable/disable checkboxes, default language dropdown, plugin coverage table). Minor bump.
+- `plugins/account`: Language preference in Preferences tab (dropdown of enabled languages; save writes `account_prefs.locale` + clears `sv-locale` cookie). Minor bump.
+- `docs/plugin-development.md`: "Internationalization" section (manifest field, `messages/` convention, `sdk.i18n`, next-intl usage pattern).
+- `docs/self-hosting.md`: "Language config" section (enabled languages, default language).
+- New dep: `next-intl` in `runtime/package.json`.
+
+**Dependencies:** None (independent post-v1 task)
+
+**SRS reference:** RFC 0029
+
+**Review checklist:**
+
+- `pnpm generate` emits `runtime/generated/messages/en.ts` with correct namespace structure
+- Plugin with no `i18n` field is unaffected; generates cleanly with zero i18n output
+- Middleware injects `x-sovereign-user-locale` on all requests; verify with `curl -H "Cookie: sv-locale=de"` and check response header
+- Console Settings shows Languages section; English pre-checked and disabled
+- Account Preferences shows Language dropdown; selecting a language persists and `sv-locale` cookie is set
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` all pass
+- Docs-parity test passes: `i18n` manifest field and `sdk.i18n` surface documented
+
+---
+
+#### Task 1.0.4 — Internationalization, Phase 2 — Platform shell adoption (RFC 0029) **[post-v1]**
+
+**Goal:** Extract all platform chrome strings into `messages/en.json` files and ship four built-in translations — English (`en`), German (`de`), Sinhala (`si`), Tamil (`ta`) — for the runtime shell, Console, Account, and auth app. Sinhala and Tamil use non-Latin scripts, validating the full stack beyond ASCII.
+
+**Deliverables:**
+
+- `runtime/messages/{en,de,si,ta}.json`: all platform chrome strings (sidebar nav, offline banner, error messages, health page labels, etc.)
+- `plugins/console/messages/{en,de,si,ta}.json`: all Console UI strings; `manifest.json` gains `i18n: { supportedLocales: ["en","de","si","ta"] }`
+- `plugins/account/messages/{en,de,si,ta}.json`: all Account UI strings; same manifest update
+- `apps/auth/messages/{en,de,si,ta}.json`: login, register, 2FA, password-reset strings; `apps/auth/i18n/request.ts`; `apps/auth/next.config.ts` wrapped with `createNextIntlPlugin`. Minor bump.
+- RFC 0017 plugin starter template (`packages/create-plugin`): scaffold includes `messages/en.json` stub + next-intl usage example.
+- E2E test: language switch to German (Latin) and Tamil (non-Latin) → Console/Account strings render in the selected language.
+
+**Dependencies:** Task 1.0.3
+
+**SRS reference:** RFC 0029
+
+**Review checklist:**
+
+- User selects Tamil (`ta`) in Account → Console and Account strings render in Tamil script
+- User selects German (`de`) → Latin-script translation renders correctly
+- Plugin without `i18n` field (e.g. Launcher) renders English unchanged
+- Auth login page renders in correct locale
+- `pnpm generate` runs without error with all four locale message files present
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` all pass
+
+---
+
+#### Task 1.0.5 — Analytics, Phase 1 — Plugin scaffold + server-side infrastructure (RFC 0030) **[post-v1]**
+
+**Goal:** Introduce a self-hosted, operator-controlled analytics system as a new
+**platform plugin** (`plugins/analytics/`, id `fs.sovereign.analytics`). All data stays
+on the instance. Page views are recorded server-side by the middleware (hard DNT/GPC
+block). Plugins can emit custom analytics events via `sdk.analytics.track()`. Admins view
+aggregate usage data in the Analytics plugin's Dashboard. Data collection is **off by
+default** — enabled explicitly in Analytics → Settings. Operators who want no analytics
+at all can disable the plugin in Console → Plugin Management.
+
+**Deliverables:**
+
+- `plugins/analytics/` scaffold: `manifest.json` (`type: platform`, `shell: default`,
+  `routePrefix: /analytics`, `adminOnly: true`, `database: shared`, `permissions:
+["auth:session", "db:readWrite"]`), `icon.svg`, `app/layout.tsx` (Dashboard / Settings
+  nav), `app/page.tsx` (Dashboard), `app/settings/page.tsx` (collection toggle, retention
+  dropdown, export, clear-all), empty `db/schema.ts`, `package.json`.
+- `packages/db`: `analytics_page_views` + `analytics_events` table schemas for both
+  SQLite and Postgres dialects; drizzle-kit migrations; DB helpers `recordPageView()`,
+  `recordAnalyticsEvent()`, `queryAnalyticsAggregates()`, `cleanupOldAnalyticsRows()`;
+  bootstrap seeds four new `platform_settings` keys: `analytics_collection_enabled`
+  (`'false'`), `analytics_retention_days` (`'90'`), `analytics_daily_salt`
+  (auto-generated), `analytics_salt_date` (today).
+- `packages/manifest`: new `analytics:write` permission string in the manifest schema.
+- `packages/sdk`: `sdk.analytics.track(event, properties?)` and
+  `sdk.analytics.isEnabled()` in the experimental group; `SdkHost` gains `analytics` key.
+- `runtime`:
+  - `GET /api/analytics/config` — edge-cached (60 s); reads analytics plugin's
+    `plugin_status.is_enabled` AND `analytics_collection_enabled` platform setting.
+    Returns `{ enabled: bool, salt, saltDate, retentionDays }`.
+  - Middleware page-view recording: fetch analytics config at request start, check
+    `DNT`/`Sec-GPC` headers (hard block on either), compute daily-rotating session hash
+    (`SHA-256(session_token + daily_salt)`), fire-and-forget
+    `POST /api/analytics/internal/page-view` (non-blocking).
+  - `POST /api/analytics/internal/page-view` — Node-runtime write route (admin-key-authed).
+  - `GET /api/admin/analytics` — aggregate query endpoint (`health:view`-gated); supports
+    `?range=7d|30d|90d` and `?type=pageviews|events|sessions`.
+  - `'analytics'` added to `RESERVED_API_SEGMENTS`; dir-parity test passes.
+  - Cleanup runner in `runtime/instrumentation.ts` `register()`: `cleanupOldAnalyticsRows()`.
+  - SDK host `analytics` implementation: 60 s in-process cache for enabled state; checks
+    plugin status + collection flag + DNT header; namespaces event to `<pluginId>.<event>`.
+- `plugins/analytics/app/page.tsx`: Dashboard with active sessions/day bar chart, page
+  views by plugin bar chart, top pages table, custom events table. Native `<canvas>`
+  charts — no charting library dependency.
+- `plugins/analytics/app/settings/page.tsx`: collection toggle (writes
+  `analytics_collection_enabled`), retention dropdown (30/60/90/180 days), export button
+  (`GET /api/admin/analytics?format=csv`), clear-all destructive button.
+- `plugins/console`: Health page gains a "View analytics →" link to `/analytics`.
+- Docs:
+  - `plugin-development.md`: `sdk.analytics` surface documented; `analytics:write`
+    permission in manifest reference table; plugin custom-event pattern + PII warning.
+  - `self-hosting.md`: `analytics_collection_enabled`, `analytics_retention_days` settings
+    documented.
+  - `sdk-stability.md`: `sdk.analytics` added to the experimental-implemented group.
+  - `packages/sdk/CHANGELOG.md`: minor entry.
+  - Docs-parity test must pass for `analytics:write` permission and `sdk.analytics`.
+
+**Dependencies:** None (independent post-v1 task)
+
+**SRS reference:** RFC 0030
+
+**Review checklist:**
+
+- `GET /analytics` (admin session) → Dashboard renders
+- `GET /analytics` (platform:user session) → 403
+- Analytics plugin visible in Console → Plugin Management with enable/disable toggle
+- Collection off by default: visit pages → no rows in `analytics_page_views`
+- Enable collection in Analytics → Settings; visit plugin page → row in `analytics_page_views`
+- `curl -H "DNT: 1" http://localhost:3000/launcher` → no row inserted (hard block)
+- `curl -H "Sec-GPC: 1" http://localhost:3000/launcher` → no row inserted (hard block)
+- Plugin WITH `analytics:write` permission: `sdk.analytics.track('feature.used', {})` → row in `analytics_events` with namespaced `event_name`
+- Plugin WITHOUT `analytics:write` permission: `sdk.analytics.track()` → silent no-op, no row, no error
+- Disable analytics plugin in Console → Plugin Management: `GET /analytics` → 404; `GET /api/analytics/config` → `{ enabled: false }`; `sdk.analytics.track()` from any plugin → no-op
+- Retention cleanup: set `analytics_retention_days` to `1`, restart → old rows deleted at startup
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` all pass
+- Docs-parity test passes: `analytics:write` + `sdk.analytics` documented
+
+---
+
+#### Task 1.0.6 — Analytics, Phase 2 — Client-side click tracking + heatmaps (RFC 0030) **[post-v1]**
+
+**Goal:** Extend the analytics plugin with client-side click and scroll tracking (collected
+by a self-hosted JS snippet served from the runtime — never a third-party CDN) and a
+heatmap visualization in the Analytics plugin's Heatmap tab. The client script checks
+`navigator.doNotTrack` and `navigator.globalPrivacyControl` before initializing — hard
+block if either is set.
+
+**Deliverables:**
+
+- `packages/db`: `analytics_click_events` + `analytics_scroll_events` table schemas for
+  both dialects; drizzle-kit migrations; DB helpers for batch insert and heatmap aggregate
+  queries.
+- `runtime`:
+  - `POST /api/analytics/event` — client-side event receiver: session-cookie-authed,
+    re-checks DNT/GPC, computes session hash, batch-inserts click and scroll rows.
+  - `GET /api/analytics/script.js` — self-hosted analytics client script: returns empty
+    200 when analytics is disabled or collection is off; otherwise returns the minified
+    tracking script (~3 KB). Checks `navigator.doNotTrack` / `navigator.globalPrivacyControl`
+    before attaching any listeners — exits immediately if either is truthy.
+  - Root layout (`runtime/app/layout.tsx`): `<Script src="/api/analytics/script.js"
+strategy="afterInteractive">` (excluded from session gate).
+  - `GET /api/admin/analytics?type=clicks&path=<pathname>` and `?type=scroll` —
+    heatmap aggregate queries.
+- `plugins/analytics/app/heatmap/page.tsx`: **Heatmap** tab added to Analytics plugin:
+  - Plugin selector + path input.
+  - Click heatmap rendered on `<canvas>` as radial-gradient density overlay (blue → yellow → red).
+  - Optional `<iframe sandbox="allow-same-origin allow-scripts" style="pointer-events:none">` for live page background.
+  - Scroll depth segmented bar (% of sessions reaching 25/50/75/100%).
+  - Date range filter.
+- CSP: `connect-src 'self'` already covers `/api/analytics/event` — no change needed.
+
+**Dependencies:** Task 1.0.5
+
+**SRS reference:** RFC 0030
+
+**Review checklist:**
+
+- Load a plugin page, click several elements, scroll to bottom; navigate away; confirm rows appear in `analytics_click_events` and `analytics_scroll_events`
+- Form field clicks (`<input>`, `<textarea>`) produce no `element_selector` recording
+- Browser with `navigator.doNotTrack = '1'`: reload — no network request to `/api/analytics/event` (verify in DevTools Network tab)
+- `GET /api/analytics/script.js` with analytics disabled → empty body, 200 OK
+- Analytics plugin Heatmap tab: select a plugin + path → canvas renders click density gradient
+- Scroll depth bar: reflects actual scrolling depth from test session
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` all pass
+
+---
+
 _Version 1.25 — June 2026. Several unnumbered ad-hoc tasks completed and merged (tracked in CLAUDE.md Status). (1) **Console license generator + operator key management** (RFC 0003 Phase 1 follow-up): in-browser Ed25519 keypair generation via `crypto.subtle`; server-side private-key storage in `platform_settings`; field source indicators. `@sovereignfs/db` → 1.4.0, `plugins/console` → 0.11.0. (2) **RFC 0003 Phase 2 docs**: `docs/rfcs/0003-plugin-monetization.md` extended with bank-transfer + webhook integration patterns and `sdk.billing.grantEntitlement()` seam. Task 1.0.09 added to roadmap. (3) **License generator bug fixes + DB-first key resolution**: fixed silent signing failure on Chrome (empty DOMException message), stale-public-key warning, and key inaccessibility after panel dismiss; `resolvePluginPublicKey` now resolves from `platform_settings` first (enables operator key rotation without rebuild); example-monetized plugin reads live entitlement. `runtime` → 0.25.1, `plugins/console` → 0.12.0. (4) **Fix: `generate-registry.ts` copy-first compose order**: eliminated intermittent dev 404s caused by the clear-then-copy sequence leaving a window where Next's route scanner found routes absent; now copies first, then prunes stale dirs. No version bump. (5) **Console plugin install/remove UX** (final pre-v1 console polish): replaced copy-CLI-command pattern with a two-step server-side flow — URL → "Check" fetches and validates the manifest preview, "Install" clones; "Remove" shows a native confirm dialog. Platform-plugin guard switched from a hardcoded ID set to `plugin.type === "platform"`. Earlier notes retained._
 
 _Version 1.24 — June 2026. **Task 0.5.30 — Offline connectivity banner** completed and merged. Thin fixed banner surfaces connectivity status (soft-offline case — hard-offline was already covered by the `/offline` SW fallback). `@sovereignfs/ui` → 0.7.0 (warning/success status colour tokens); `runtime` → 0.20.0. CLAUDE.md gains the browser-API / `useState` SSR hydration rule. SRS v0.29. Earlier notes retained._

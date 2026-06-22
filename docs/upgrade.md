@@ -104,8 +104,46 @@ For source builds, `git checkout <previous-commit>` before rebuilding.
 
 ## Platform releases
 
-The root `package.json` version tracks roadmap milestones. Notes below call out
-any required configuration changes, schema changes, or action required.
+Version numbers in the sections below refer to the **`runtime` package version**
+(`runtime/package.json`), not the root `package.json`. The root `package.json`
+is frozen at `0.6.x` through the entire pre-v1 period and will jump to `1.0.0`
+at the public v1 release. See [`docs/versioning.md`](versioning.md) for the full
+rationale and the versioning plan.
+
+Notes call out any required configuration changes, schema changes, or action required.
+
+### v0.27 → v0.28
+
+- **White-labeling Phase 1 (RFC 0027).** Operators can now set a brand name,
+  primary colour, logo, and favicon via Console → Settings → Branding. A new
+  `tenant_branding` table is created by the Drizzle migration automatically on
+  startup — **no manual step required**.
+- **`sdk.platform.getConfig()` gains `brandName` and `brandPrimaryColor?`.**
+  Existing calls are unaffected; the fields are additive.
+- **Three new `--sv-brand-*` CSS tokens** (`--sv-brand-logo`,
+  `--sv-brand-logo-dark`, `--sv-brand-favicon`) are set at `:root` by
+  `BrandProvider` and are available in plugin CSS without any import.
+- **Seven new optional `BRAND_*` env vars** control deployment-level brand
+  defaults. All are optional; Sovereign defaults apply when unset. See
+  [`docs/self-hosting.md`](self-hosting.md#environment-variables).
+- **`runtime` → 0.28.0**, **`@sovereignfs/db` → 1.6.0**,
+  **`@sovereignfs/sdk` → 1.10.0**, **`@sovereignfs/ui` → 0.10.0**,
+  **`plugins/console` → 0.12.0**.
+
+### v0.26 → v0.27
+
+- **Production dev-mode & diagnostics (RFC 0020).** A request-scoped dev-mode
+  switch (`SOVEREIGN_DEV_MODE_ENABLED=true`) routes SDK DB calls to a mock
+  database for a single request when the correct `X-Sovereign-Dev-Mode-Secret`
+  header is present. Real requests are completely unaffected. Off by default.
+- **Structured logging.** `LOG_LEVEL` (error/warn/info/debug; default `warn`)
+  controls a newline-delimited JSON logger to stdout. No egress.
+- **Richer `/api/admin/health`.** Now includes `database.migrationVersion`,
+  `plugins.installed`/`adminOnly`, and `diagnostics.{logLevel, devModeEnabled}`.
+- **Four new optional env vars:** `LOG_LEVEL`, `SOVEREIGN_DEV_MODE_ENABLED`,
+  `SOVEREIGN_DEV_MODE_SECRET`, `SOVEREIGN_DEV_DATABASE_URL`. All documented in
+  `.env.example` and `docs/self-hosting.md`.
+- **`runtime` → 0.27.0**.
 
 ### v0.25 → v0.26
 
@@ -236,6 +274,53 @@ See [`docs/plugin-database.md`](plugin-database.md) for the full reference.
   instead of checking `user.role` directly. Both are backward-compatible
   additive additions.
 
+### v0.18 → v0.19
+
+- **Mobile responsiveness & PWA hardening (RFC 0013).** The shell's mobile footer
+  is replaced by a single "Apps" Drawer button; the header gains an
+  `ActivePluginTitle`; Console moves into the avatar menu on mobile. Dialog
+  top-inset (`--sv-dialog-inset-top`) keeps the header visible above overlay
+  sheets. Unified breakpoint at 768 px; `100dvh` throughout; safe-area insets;
+  44 px touch targets; `viewport-fit=cover` + immersive iOS status bar.
+- **New `Drawer` UI primitive** added to `@sovereignfs/ui` (bottom-sheet, focus
+  trap, safe-area-aware).
+- **PWA manifest polish:** `display_override`, `orientation: "any"`,
+  `categories: ["productivity"]`, `shortcuts` (Launcher + Account).
+- **No operator action required.** All changes are in the shell UI.
+- **`runtime` → 0.19.0**, **`@sovereignfs/ui` → 0.6.0**.
+
+### v0.17 → v0.18
+
+- **Minimal shell mode (RFC 0014).** A `shell: "minimal"` manifest value now
+  composes plugins into a chrome-free route group (`(minimal)/`). Previously
+  `shell: "minimal"` failed the build. Minimal plugins can be used as the root
+  plugin for kiosk use cases.
+- **No operator action required.** Existing plugins are unaffected. The new route
+  group is entirely generated and gitignored.
+- **`runtime` → 0.18.0**.
+
+### v0.16 → v0.17
+
+- **Plugin-scoped environment variables (RFC 0018).** Plugins may now declare an
+  `env` map in `manifest.json`; keys are auto-namespaced to
+  `SV_PLUGIN_<SLUG>_<KEY>` (runtime) or `NEXT_PUBLIC_SV_PLUGIN_<SLUG>_<KEY>`
+  (build). `sdk.env.get('KEY')` reads only the calling plugin's own vars.
+- **No operator action required.** The feature is opt-in by plugin authors.
+  Plugin-declared secrets must be supplied at runtime via the namespaced env var.
+- **`runtime` → 0.17.0**, **`@sovereignfs/sdk` → 1.5.0**,
+  **`@sovereignfs/manifest` → 0.12.0**.
+
+### v0.15 → v0.16
+
+- **User data portability (RFC 0007).** Users can export all their data as a
+  versioned ZIP (Account → Data → Export) and import it on another instance.
+  Plugin participation is opt-in via `sdk.portability.provideExport` /
+  `provideImport` and the `data:export` / `data:import` manifest permissions.
+- **No operator action required.** Export/import routes are session-gated. The
+  50 MB import cap is enforced by the server.
+- **`runtime` → 0.16.0**, **`@sovereignfs/sdk` → 1.4.0**,
+  **`@sovereignfs/manifest` → 0.11.0**, **`plugins/account` → 0.5.0**.
+
 ### v0.19 → v0.20
 
 - **TOTP and passkey MFA available.** No configuration is required for existing
@@ -257,6 +342,59 @@ See [`docs/plugin-database.md`](plugin-database.md) for the full reference.
   Reset MFA instead.
 - No database migration required — better-auth creates the `twoFactor` and
   `passkey` tables at startup via its own DDL.
+
+### v0.13 → v0.14
+
+- **Activity log (RFC 0005).** The `activity_log` table records platform and plugin
+  actions. `sdk.activity.log()` is now implemented (no longer a stub). Personal
+  activity appears in Account → Activity; platform-wide history is in Console →
+  Activity. The migration runs automatically on startup.
+- **Icon system (RFC 0011).** `@sovereignfs/ui` exports an `<Icon>` component
+  backed by curated Lucide SVG icons. Plugin manifest `icon.svg` files are served
+  from `/plugin-icons/<id>.svg`. Chrome monograms and emoji replaced with icons.
+- **No operator action required.** All changes are additive.
+- **`runtime` → 0.14.0** (`0.14.1` for icon system), **`@sovereignfs/db` → 0.9.0**,
+  **`@sovereignfs/sdk` → 1.3.0**, **`@sovereignfs/ui` → 0.5.0**,
+  **`plugins/account` → 0.4.0**, **`plugins/console` → 0.5.0**.
+
+### v0.12 → v0.13
+
+- **Cross-plugin data sharing (RFC 0002).** Provider plugins can call
+  `sdk.data.provide(contract, resolver)`; consumer plugins call
+  `sdk.data.query(ref, params)`. Consent is managed by users in Account → Data.
+  Two new tables (`consent_grants`, `data_access_log`) are created by migration
+  on startup.
+- **Manifest:** optional `data.provides[]` / `data.consumes[]` fields;
+  `data:provide` and `data:consume` permissions promoted from reserved to active.
+- **No operator action required.** The feature is entirely opt-in by plugin authors.
+- **`runtime` → 0.13.0**, **`@sovereignfs/db` → 0.8.0**,
+  **`@sovereignfs/sdk` → 1.2.0**, **`@sovereignfs/manifest` → 0.10.0**,
+  **`plugins/account` → 0.3.0**.
+
+### v0.11 → v0.12
+
+- **Plugin compatibility & versioning (RFC 0024).** The dormant `schemaVersion`
+  and `compatibility.minPlatformVersion` fields in `manifest.json` are now
+  enforced. An incompatible plugin is rejected at `sv plugin add`, at build, and
+  is disabled at boot (not bricked). An advisory `maxPlatformVersion` generates a
+  warning. Console shows an "Incompatible" badge; `/api/admin/health` lists
+  incompatible plugins.
+- **No operator action required.** Existing plugins without a `compatibility` field
+  are unaffected. Platform plugins ship with appropriate `minPlatformVersion`.
+- **`runtime` → 0.12.0**, **`@sovereignfs/manifest` → 0.9.0**.
+
+### v0.10 → v0.11
+
+- **SDK distribution & plugin isolation boundary (RFC 0023).** `@sovereignfs/sdk`
+  now has zero runtime dependencies. Implementations are host-provided by the
+  runtime at startup via `provideHost()` (`runtime/instrumentation.ts`). Outside
+  the runtime, SDK calls throw "no runtime host is registered". Plugin authors can
+  type-check against the published SDK without installing `@sovereignfs/db` or
+  `@sovereignfs/mailer`.
+- **Plugin authors:** no call-site changes needed. If you were relying on the
+  SDK importing from `@sovereignfs/db` directly in a non-runtime context (e.g.
+  tests), that no longer works — use mocked host registrations instead.
+- **`runtime` → 0.11.0**, **`@sovereignfs/sdk` → 1.1.0**.
 
 ### v0.14 → v0.15
 
@@ -356,13 +494,10 @@ const config = await sdk.platform.getConfig();
 
 The returned `PlatformConfig` shape is unchanged.
 
----
+### `@sovereignfs/sdk` 1.9.0 → 1.10.0 (White-labeling Phase 1, RFC 0027)
 
-## v0.27 → v0.28 (White-labeling Phase 1, RFC 0027)
-
-### `sdk.platform.getConfig()` gains branding fields
-
-`PlatformConfig` now includes two new fields:
+**`sdk.platform.getConfig()` gains branding fields.** `PlatformConfig` now
+includes two new optional fields:
 
 ```ts
 interface PlatformConfig {
@@ -374,26 +509,8 @@ interface PlatformConfig {
 }
 ```
 
-Existing code reading `getConfig()` is unaffected — the new fields are additive.
+Existing calls are unaffected — the new fields are additive.
 
-### New `tenant_branding` database table
-
-The migration (`0004_tenant_branding`) is applied automatically on startup.
-No manual step required.
-
-### New `BRAND_*` environment variables
-
-Seven new optional env vars control white-label defaults. All are optional;
-Sovereign defaults apply when unset. See
-[`docs/self-hosting.md`](self-hosting.md#environment-variables) for the full
-list.
-
-### New `--sv-brand-*` CSS tokens
-
-Three new CSS custom properties are now defined in `packages/ui/src/tokens/semantic.css`:
-
-- `--sv-brand-logo` — light-theme logo URL
-- `--sv-brand-logo-dark` — dark-theme logo URL
-- `--sv-brand-favicon` — favicon URL
-
-These are set at `:root` by `BrandProvider` and available in plugin CSS without any import.
+**New `--sv-brand-*` CSS tokens** (`--sv-brand-logo`, `--sv-brand-logo-dark`,
+`--sv-brand-favicon`) are set at `:root` by `BrandProvider` and are available
+in plugin CSS without any import.

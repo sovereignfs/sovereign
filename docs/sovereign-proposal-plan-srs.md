@@ -41,12 +41,12 @@
    - 3.10 [Shared Login State](#310-shared-login-state)
    - 3.11 [PWA](#311-pwa)
    - 3.12 [Native Mobile App (post-v1 plan)](#312-native-mobile-app-post-v1-plan)
-   - 3.13 [Cross-Plugin Data Sharing (post-v1 plan)](#313-cross-plugin-data-sharing-post-v1-plan)
+   - 3.13 [Cross-Plugin Data Sharing (RFC 0002)](#313-cross-plugin-data-sharing-rfc-0002-implemented-in-task-0510)
    - 3.14 [Activity Log (RFC 0005)](#314-activity-log-rfc-0005)
    - 3.15 [Deployment & Upgrade Strategy (RFC 0006)](#315-deployment--upgrade-strategy-rfc-0006)
    - 3.16 [User Data Portability (RFC 0007)](#316-user-data-portability-rfc-0007)
    - 3.17 [Security & Encryption Architecture (RFC 0008)](#317-security--encryption-architecture-rfc-0008)
-   - 3.18 [White-labeling (RFC 0027) (post-v1 plan)](#318-white-labeling-rfc-0027-post-v1-plan)
+   - 3.18 [White-labeling (RFC 0027)](#318-white-labeling-rfc-0027-phase-1-implemented-in-task-1003)
 
 4. [Software Requirements Specification](#4-software-requirements-specification)
    - 4.1 [User Roles and Capabilities](#41-user-roles-and-capabilities)
@@ -720,13 +720,13 @@ The shell app lives in a separate repository (`sovereign-mobile`) under
 the Sovereign project, not in this monorepo. It is developed and versioned
 independently of the platform.
 
-### 3.13 Cross-Plugin Data Sharing (post-v1 plan)
+### 3.13 Cross-Plugin Data Sharing (RFC 0002; implemented in Task 0.5.10)
 
 Plugins are isolated behind the SDK boundary — a plugin may not import another
 plugin's internals or read its tables. Some user-desired flows, however, want one
 plugin to enrich itself from another's data (so the user doesn't re-enter it).
-Sovereign will support this through a **consent-gated, pull-based, read-only**
-mechanism — specified in **RFC 0002 — Cross-plugin data sharing** — never by
+Sovereign supports this through a **consent-gated, pull-based, read-only**
+mechanism — specified in **RFC 0002 — Cross-plugin data sharing** — without
 relaxing isolation.
 
 Model: a **provider** plugin exposes named, versioned, read-only **data
@@ -738,12 +738,10 @@ permitted only when the user holds an explicit, revocable **consent grant** for
 table access), tenant- and user-scoped, read-only, and audited. Consumers manage
 their own grants from Account; Console provides oversight.
 
-Two reserved manifest permissions gate participation — `data:provide` and
-`data:consume` — and the SDK ships a reserved `sdk.data` surface that throws
-`NotImplementedError` until the mechanism is implemented (mirroring the other
-post-v1 surfaces). The full design — manifest `data.provides[]`/`data.consumes[]`
-declarations, the consent and audit tables, runtime resolution, and consent UI —
-is deferred per RFC 0002.
+Two manifest permissions gate participation — `data:provide` and `data:consume`;
+the SDK surface (`sdk.data`) is implemented. The `consent_grants` and
+`data_access_log` tables are created by migration on startup. See
+`docs/plugin-development.md` for provider/consumer code examples.
 
 ### 3.14 Activity Log (RFC 0005)
 
@@ -801,7 +799,7 @@ only the zero-knowledge tier does. Amends §3.15 (encrypted backups) and §3.16
 zero-knowledge E2EE (Tiers 2–4) are **post-v1** (Task 1.0.01). Deferred per
 RFC 0008.
 
-### 3.18 White-labeling (RFC 0027) (post-v1 plan)
+### 3.18 White-labeling (RFC 0027; Phase 1 implemented in Task 1.0.03)
 
 Let any Sovereign operator replace Sovereign's visual identity with their own
 brand. An operator deploys Sovereign as the core and customises the logo, app
@@ -986,7 +984,7 @@ Granular per-user capability overrides and per-plugin role assignments are expli
 - Per-plugin permission assignment for individual users
 - Public-facing plugin marketplace or install UI
 - Federated instances
-- White-labeling / tenant branding (planned post-v1 — see §3.18 for the decided approach)
+- White-labeling / tenant branding Phase 2–3 (branded email + auth page + dynamic PWA manifest — see §3.18; Phase 1 is implemented)
 
 ---
 

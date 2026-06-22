@@ -146,17 +146,24 @@ patch versions of earlier milestones and are not listed individually.
 
 These ship before `v1.0.0` and bump the root patch version with each merge:
 
-| Task                                                                             | Root version after merge |
-| -------------------------------------------------------------------------------- | ------------------------ |
-| ⏳ Task 1.0.04 — White-labeling Phase 2: email templates + auth login (RFC 0027) | `0.9.4`                  |
-| Task 1.0.05 — White-labeling Phase 3: dynamic PWA manifest + favicon (RFC 0027)  | `0.9.5`                  |
-| Task 1.0.06 — Non-Docker Phase 2: systemd (RFC 0026)                             | `0.9.6`                  |
-| Task 1.0.07 — Operator fork model & upstream sync (RFC 0028)                     | `0.9.7`                  |
+| Task                                                                           | Root version after merge |
+| ------------------------------------------------------------------------------ | ------------------------ |
+| ⏳ Task 0.9.0 — Instance identity rename (RFC 0032)                            | `0.9.4`                  |
+| Task 0.9.1 — Email templates + White-labeling Phase 2 (RFC 0031 + RFC 0027)    | `0.9.5`                  |
+| Task 0.9.2 — White-labeling Phase 3: dynamic PWA manifest + favicon (RFC 0027) | `0.9.6`                  |
+| Task 0.9.3 — Non-Docker Phase 2: systemd (RFC 0026)                            | `0.9.7`                  |
+| Task 0.9.4 — Operator fork model & upstream sync (RFC 0028)                    | `0.9.8`                  |
+| Task 0.9.5 — User data deletion (RFC 0033)                                     | `0.9.9`                  |
+| Task 0.9.6 — Notification pub/sub transport (RFC 0034)                         | `0.9.10`                 |
 
 ### Post-v1 (will not ship before `1.0.0`)
 
-- **Task 1.0.01** — Encryption at rest, field-level, Tier 2–4 (RFC 0008)
-- **Task 1.0.09** — Phase 2 payment integration (RFC 0003 Phase 2)
+- **Task 1.0.1** — Encryption at rest, field-level, Tier 2–4 (RFC 0008)
+- **Task 1.0.2** — Phase 2 payment integration (RFC 0003 Phase 2)
+- **Task 1.0.3** — Internationalization, Phase 1 — Infrastructure (RFC 0029)
+- **Task 1.0.4** — Internationalization, Phase 2 — Platform shell adoption (RFC 0029)
+- **Task 1.0.5** — Analytics, Phase 1 — Plugin scaffold + server-side infrastructure (RFC 0030)
+- **Task 1.0.6** — Analytics, Phase 2 — Client-side click tracking + heatmaps (RFC 0030)
 
 ---
 
@@ -174,14 +181,14 @@ These ship before `v1.0.0` and bump the root patch version with each merge:
 
 ### What needs to happen before v1.0.0
 
-1. **Complete remaining pre-v1 tasks** (Tasks 1.0.04–1.0.07): each task bumps
-   the root version by a patch (`0.9.4` → `0.9.5` → `0.9.6` → `0.9.7`).
+1. **Complete remaining pre-v1 tasks** (Tasks 0.9.0–0.9.6): each task bumps
+   the root version by a patch (`0.9.4` → `0.9.5` → … → `0.9.10`).
 2. **Bump root `package.json` to `1.0.0`** in the final release PR — after the
    last hardening task merges.
 3. **Bump runtime to `1.0.0`** to match the product release (see Option A below).
 4. **Tag the release**: `git tag v1.0.0`, push, and let the Docker image
    publish workflow produce the `v1.0.0` GHCR image.
-5. **Update `docs/upgrade.md`** with final transition notes for `0.9.7 → 1.0.0`.
+5. **Update `docs/upgrade.md`** with final transition notes for `0.9.10 → 1.0.0`.
 6. **Branch convention changes at v1.0.0**: `main` becomes the production branch
    and `dev` the integration branch (as noted in CLAUDE.md).
 
@@ -193,6 +200,13 @@ These ship before `v1.0.0` and bump the root patch version with each merge:
   semver independently.
 - Any internal package versions: they track their own history and have no public
   semver promise to uphold.
+- **`CLAUDE.md` Status section task numbers**: the Status log is a timestamped
+  historical record ("merged to `main`") written at the time each task landed.
+  Those entries use the task numbers that existed at the time of merge (the
+  pre-renumbering scheme, e.g. `0.5.15 — Security hardening`). Rewriting history
+  to match the new numbers would introduce confusion rather than clarity. The
+  **roadmap** is the canonical task-number reference going forward; CLAUDE.md's
+  Status log is a narrative record, not a cross-reference index.
 
 ### Version consistency going forward
 

@@ -1668,21 +1668,7 @@ and the monetization paywall flow.
 
 ---
 
-## v1
-
-`v1.0.0` is the hardened, public-ready milestone for Sovereign. This section has
-two sub-phases: **pre-release hardening** (tasks that ship before the tag) and
-**post-release / future** (work planned after the public release).
-
-### Phase v1.0 — Pre-release hardening
-
-Tasks that ship before the public `v1.0.0` release. These tasks were originally
-scoped as post-v1 but pulled forward into the pre-release cycle as the platform
-matured ahead of schedule.
-
----
-
-#### ✅ Task 1.0.02 — Production dev-mode & diagnostics (RFC 0020)
+#### ✅ Task 0.8.3 — Production dev-mode & diagnostics (RFC 0020)
 
 **Goal:** Validate features on a production instance against a mock database without touching real data, plus local no-telemetry diagnostics.
 
@@ -1702,7 +1688,7 @@ matured ahead of schedule.
 
 ---
 
-#### ✅ Task 1.0.03 — White-labeling, Phase 1 — Brand DB + shell injection (RFC 0027)
+#### ✅ Task 0.8.4 — White-labeling, Phase 1 — Brand DB + shell injection (RFC 0027)
 
 **Goal:** Let operators replace Sovereign's visual identity with their own brand. Phase 1 ships the data layer, CSS token namespace, runtime injection, and the Console branding form. Depends on the `tenant_branding` table and `BrandProvider` being in place before Phases 2 and 3.
 
@@ -1731,112 +1717,7 @@ matured ahead of schedule.
 
 ---
 
-#### Task 1.0.04 — White-labeling, Phase 2 — Email templates + auth login page (RFC 0027)
-
-**Goal:** Extend white-labeling to outbound email and the auth server's login/registration page. Depends on Phase 1 (`tenant_branding` table and `/api/admin/tenant-branding` endpoint).
-
-**Deliverables:**
-
-- `packages/mailer` → minor: `MailOptions` gains `branding?: { name: string; logoUrl?: string }` parameter; email HTML templates use `branding.name` as the sender display name and render `<img src="logoUrl" alt="name">` with graceful text fallback (hosted URL, not `data:` URI — Gmail and most webmail clients refuse inline base64 images); `packages/mailer/CHANGELOG.md` updated; `docs/plugin-development.md` documents the `branding` option
-- `apps/auth` → minor: root layout fetches `GET <SOVEREIGN_AUTH_URL replaced with runtime>/api/admin/tenant-branding` at render time (proxy approach — one store, no dual-write); result cached in-process with a 60-second TTL to avoid a brand fetch on every login render; `BrandProvider` (duplicated into `apps/auth/src/brand-provider.tsx`, same pattern as the duplicated `security.ts`) renders brand tokens and brand name on the login and registration pages; on fetch failure the layout falls back to Sovereign defaults (graceful degradation)
-- Runtime invite and password-reset email routes pass branding from `getTenantBranding()` to the mailer
-
-**Dependencies:** Task 1.0.03 (Phase 1 — `tenant_branding` table and `/api/admin/tenant-branding` route must exist)
-
-**SRS reference:** RFC 0027 Phase 2, SRS §3.18
-
-**Review checklist:**
-
-- A branded instance shows the operator's logo and name on the login page (not "Sovereign")
-- Invite email renders the operator's sender name in the `From` header; logo `<img>` appears in supported clients; plain-text version uses the brand name
-- Auth server login page falls back to Sovereign defaults if the runtime is unreachable
-
----
-
-#### Task 1.0.05 — White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027)
-
-**Goal:** Extend white-labeling to the PWA manifest and favicon so the installed PWA shows the operator's app name and icons. Depends on Phase 1 (brand DB and serving routes).
-
-**Deliverables:**
-
-- `runtime` → minor: `GET /manifest.webmanifest` route — when branding is configured reads `tenant_branding` and returns a dynamic manifest with the operator's `name`, `short_name`, and icon URLs; when no branding is configured the static `runtime/public/manifest.json` continues to be served. Route is excluded from the middleware session gate (required for PWA installability)
-- `runtime` (continued): `GET /favicon.ico` route — returns the tenant's branded favicon when configured, falling back to `runtime/public/favicon.ico`; `runtime/app/layout.tsx` `<head>` metadata updated to point to the dynamic route unconditionally so the fallback is transparent
-- Document in `docs/self-hosting.md`: when branding changes, cached service-worker users see the old name/icons until the SW updates (known limitation, acceptable for v1)
-
-**Dependencies:** Task 1.0.03 (Phase 1 — branded logo served from `/api/brand/logo`; `tenant_branding` table)
-
-**SRS reference:** RFC 0027 Phase 3, SRS §3.18
-
-**Review checklist:**
-
-- `GET /manifest.webmanifest` returns the operator's brand name and icon URLs when configured; returns the static Sovereign manifest when unconfigured
-- `GET /favicon.ico` returns the operator's favicon when configured; falls back to the committed favicon
-- PWA installation on a branded instance shows the operator's name and icons in the OS launcher
-
----
-
-#### Task 1.0.06 — Non-Docker production deployment, Phase 2 — systemd (RFC 0026)
-
-**Goal:** Add systemd as a zero-extra-dependency alternative to PM2 for Linux
-server operators (RFC 0026 Phase 2). Phase 1 (PM2) must ship first.
-
-**Deliverables:**
-
-- `bin/sv.ts`: `sv setup systemd [--user <user>] [--dir <dir>] [--env-file <path>]`
-  sub-command writing two pre-filled unit files to the current directory; template
-  logic in `bin/helpers.ts`; unit-tested
-- `docs/examples/sovereign-auth.service`, `docs/examples/sovereign-runtime.service`
-  — canonical unit files (same as `sv setup systemd` defaults): `User=sovereign`,
-  `WorkingDirectory=`, `EnvironmentFile=`, `HOSTNAME=127.0.0.1` on auth,
-  `ExecStartPre` health-poll on the runtime unit, `Restart=on-failure`
-- `docs/self-hosting.md`: "Non-Docker deployment (systemd)" section alongside the
-  PM2 section; covers account creation, `EnvironmentFile` setup, `systemctl enable`,
-  log access via `journalctl`, and the upgrade procedure
-- Document `sv serve` as a valid single-process target under either PM2 or systemd
-  (simplest path for minimal init systems)
-- SRS §3.1: systemd noted as the recommended Linux-native alternative to PM2
-
-**Dependencies:** Task 0.5.29 (Phase 1 — PM2 and `sv serve` health-gate must be
-in place)
-
-**SRS reference:** RFC 0026 Phase 2, SRS §3.1
-
-**Review checklist:**
-
-- `sv setup systemd` produces two syntactically valid unit files with correct
-  `WorkingDirectory`, `EnvironmentFile`, `HOSTNAME`, and `ExecStartPre` health-poll
-- `systemctl start sovereign-runtime` waits for `sovereign-auth` to pass its health
-  check before the runtime process starts
-- `docs/self-hosting.md` systemd section is self-contained alongside the PM2 section
-
----
-
-#### Task 1.0.07 — Operator fork model & upstream sync (RFC 0028)
-
-**Goal:** Publish the operator fork model documentation and add the "Maintaining a fork" section to `docs/self-hosting.md`. This is a documentation-only task — no code, no version bumps.
-
-**Deliverables:**
-
-- `docs/rfcs/0028-operator-fork-model.md` — the RFC (already drafted)
-- `docs/self-hosting.md` — "Maintaining a fork" section: two-track summary (config-only vs fork-and-track), `operator/` directory convention, upstream sync command sequence, isolation principle, asset management guidance
-- `docs/sovereign-proposal-plan-srs.md` — §2.7 pointer + decision-log row (already added in RFC documentation pass)
-- `docs/rfcs/README.md` — RFC 0028 row updated from Draft to Accepted
-
-**Optional follow-on (separate task):** `sv fork check` CLI command — reads `operator/UPSTREAM`, compares against the latest upstream tag, and warns if the fork is behind.
-
-**Dependencies:** None hard. RFC 0027 (Task 1.0.03) should ship first so the "Post-RFC 0027 asset management" recommendation in the RFC is actionable.
-
-**SRS reference:** RFC 0028, SRS §2.7
-
-**Review checklist:**
-
-- `docs/self-hosting.md` "Maintaining a fork" section is self-contained; a reader can follow it from fork setup through first upstream sync without consulting the RFC
-- The two-track model, isolation principle, AGPL table, and rebase workflow are consistent between the RFC and the self-hosting doc
-- RFC 0028 status in `docs/rfcs/README.md` updated to Accepted
-
----
-
-#### ✅ Task 1.0.08 — Storybook for the design system and app shell
+#### ✅ Task 0.8.5 — Storybook for the design system and app shell
 
 **Goal:** Give component authors, plugin developers, and designers a live, isolated environment to develop and inspect every `@sovereignfs/ui` component and its token context. Storybook 8 is the choice — it has native CSS Modules support (via `@storybook/nextjs`), the best a11y addon ecosystem, and wide team familiarity. No RFC is warranted: this is developer tooling with no runtime surfaces, no SDK changes, and no architectural trade-offs that need RFC-level documentation. The decision rationale is recorded in the SRS decision log.
 
@@ -1911,11 +1792,330 @@ Phase 1 (this task) targets `packages/ui` exclusively. The `runtime` App Router 
 
 ---
 
+### Phase v0.9 — pre-release hardening
+
+Tasks that ship before the public `v1.0.0` release. These tasks were originally
+scoped as post-v1 but pulled forward into the pre-release cycle as the platform
+matured ahead of schedule.
+
+#### Task 0.9.0 — Instance identity rename (RFC 0032)
+
+**Goal:** Rename every `brand/Brand` identifier introduced in Task 1.0.03 (RFC 0027
+Phase 1) to `instance/Instance` across the full platform. Pure rename — no new
+functionality. Ships first so Task 0.9.1 (email templates) and all subsequent work
+adopt the correct naming from day one. No production users means zero migration burden.
+
+**Deliverables:**
+
+- `.env.example`, `docker-compose.yml`, `docker-compose.prod.yml`: `BRAND_*` →
+  `INSTANCE_*` (seven env vars).
+- `packages/ui` → minor (`0.10.0` → `0.11.0`): `--sv-brand-logo` / `--sv-brand-logo-dark` /
+  `--sv-brand-favicon` renamed to `--sv-instance-logo` / `--sv-instance-logo-dark` /
+  `--sv-instance-favicon` in `tokens/semantic.css`.
+- `packages/sdk` → minor (`1.10.0` → `1.11.0`): `PlatformConfig.brandName` →
+  `instanceName`; `brandPrimaryColor?` → `instancePrimaryColor?`.
+- `packages/db` → minor: `tenant_branding` table renamed to `instance_config` via
+  drizzle-kit migration (`ALTER TABLE … RENAME TO`); `TenantBrandingValue` →
+  `InstanceConfig`; `getTenantBranding()` → `getInstanceConfig()`; `setTenantBranding()`
+  → `setInstanceConfig()`; bootstrap DDL parity test updated.
+- `runtime` → minor: `brand-provider.tsx` → `instance-provider.tsx` (`BrandProvider` →
+  `InstanceProvider`, `BrandContext` → `InstanceContext`); `runtime/app/api/brand/` →
+  `runtime/app/api/instance/` (all seven logo/favicon routes); `RESERVED_API_SEGMENTS`
+  replaces `'brand'` with `'instance'`; dir-parity test passes.
+- `plugins/console` → patch: Settings "Branding" → "Instance identity"; field labels
+  updated; `PATCH /api/admin/tenant-branding` → `PATCH /api/admin/instance-config`.
+- `apps/auth` → patch: env var reads updated.
+- `docs/upgrade.md`: v0.28 → v0.29 migration notes (env var rename table, CSS token
+  rename note, SDK field rename note).
+- All doc references updated: `docs/self-hosting.md`, `docs/design-system.md`,
+  `docs/plugin-development.md`, `docs/rfcs/0027-white-labeling.md`.
+
+**Root version bump:** `0.9.3` → `0.9.4`
+
+**Dependencies:** Task 1.0.03 (Phase 1 — renames what Phase 1 introduced)
+
+**SRS reference:** RFC 0032
+
+**Review checklist:**
+
+- `grep -r "BRAND_\|--sv-brand\|brandName\|brandPrimary\|BrandProvider\|getTenantBranding\|tenant_branding\|/api/brand/" packages/ runtime/ apps/ plugins/ .env.example` → zero matches
+- RESERVED_API_SEGMENTS contains `'instance'` and not `'brand'`; dir-parity test passes
+- Console Settings → Instance identity section renders; logo/favicon upload/remove still work
+- `sdk.platform.getConfig()` returns `instanceName`; existing Console usage updated
+- DB migration runs on both SQLite and Postgres; data preserved
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` all pass
+
+---
+
+#### Task 0.9.1 — Email template system + White-labeling Phase 2 — Email + auth login page (RFC 0031 + RFC 0027)
+
+**Goal:** Introduce the email template infrastructure (RFC 0031) — React Email–based
+templates with branding injection, standalone locale support, and operator copy/subject
+overrides — then use it to deliver RFC 0027 Phase 2: branded emails and the auth server's
+branded login/registration page. RFC 0031 is the prerequisite; both ship in this task.
+
+**Deliverables:**
+
+- `packages/mailer` → minor (RFC 0031): `@react-email/components` + `@react-email/render`
+  added; new `templates/` subtree with `EmailLayout`, `EmailHeader`, `EmailFooter`
+  components, `locales/{en,de,si,ta}.json`, `PasswordResetEmail.tsx`, `InviteEmail.tsx`;
+  exported `renderPasswordResetEmail()`, `renderInviteEmail()`, `renderSubject()`,
+  `EmailBranding` and `EmailLocale` types; `email:dev` preview script on port 3003.
+- `packages/db` → minor (RFC 0031): `getEmailCopy()` / `setEmailCopy()` helpers using
+  `platform_settings` key pattern `email_copy_<templateId>_<locale>_<field>`.
+- `packages/sdk` → minor (RFC 0031): `PlatformConfig` gains `emailFromName?`, `emailLogo?`,
+  `instanceUrl`; `sdk.platform.getConfig()` returns these fields.
+- `runtime` → minor (RFC 0031 + RFC 0027 Phase 2):
+  - New `GET /api/admin/instance-config` route (admin-key-gated; returns merged
+    `InstanceConfig`; used by `apps/auth` and Console invite action).
+  - New Console → Settings → **Email Templates** section: template selector, locale
+    selector, subject + body copy override fields, live preview panel (`<iframe>`), and
+    test-send button (`POST /api/admin/email-templates/test`).
+  - API routes: `GET/PATCH /api/admin/email-templates`, `GET /api/admin/email-templates/preview`.
+  - (RFC 0027 Phase 2) Auth login/registration page: `apps/auth` root layout fetches
+    `/api/admin/instance-config` (60 s in-process cache; graceful fallback to Sovereign
+    defaults); `InstanceProvider` duplicated into `apps/auth/src/instance-provider.tsx`
+    (same pattern as `security.ts` duplication).
+- `apps/auth` → minor (RFC 0031 + RFC 0027 Phase 2):
+  - `sendResetPassword` hook calls `renderPasswordResetEmail()` + `renderSubject()` with
+    fetched instance config and resolved locale.
+  - `apps/auth/src/email-branding.ts` — 60 s cached `getBranding()` fetching from
+    `SOVEREIGN_RUNTIME_INTERNAL_URL` (new env var, default `http://localhost:3000`).
+- `plugins/console` → minor:
+  - Invite action calls `renderInviteEmail()` + `renderSubject()` with instance identity
+    from `sdk.platform.getConfig()` and locale from request headers.
+  - Email Templates Console section (see runtime deliverable above).
+- New env var: `SOVEREIGN_RUNTIME_INTERNAL_URL` — added to `.env.example` and
+  `docs/self-hosting.md`; Docker compose files set this to the internal service name.
+- Docs: `docs/plugin-development.md` — note that `sdk.mailer.send()` accepts pre-rendered
+  HTML; React Email is available for plugin authors. `docs/self-hosting.md` — email
+  template customisation section.
+
+**Dependencies:** Task 0.9.0 (RFC 0032 rename must be complete — this task uses
+`InstanceConfig`, `INSTANCE_*` env vars, and `--sv-instance-*` tokens throughout);
+Task 1.0.03 (Phase 1 — `instance_config` table must exist)
+
+**SRS reference:** RFC 0031, RFC 0027 Phase 2, SRS §3.18
+
+**Review checklist:**
+
+- `pnpm email:dev` starts preview server on `:3003`; all templates render with sample instance identity
+- Password reset email arrives with instance logo, instance name in subject, CTA button in `instancePrimaryColor`
+- Images blocked in email client → instance name appears as `alt` text; email remains readable
+- Console → Settings → Email Templates: override invite subject → test-send → arrives with custom subject
+- Locale set to Tamil → invite email body renders in Tamil script
+- Auth server offline → password reset sends with graceful Sovereign defaults
+- A configured instance shows the operator's logo and name on the login/register page
+- Auth server login page falls back to Sovereign defaults if the runtime is unreachable
+
+---
+
+#### Task 0.9.2 — White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027)
+
+**Goal:** Extend instance identity to the PWA manifest and favicon so the installed PWA shows the operator's app name and icons. Depends on Phase 1 (instance config DB and serving routes) and the rename in Task 0.9.0.
+
+**Deliverables:**
+
+- `runtime` → minor: `GET /manifest.webmanifest` route — when instance identity is configured reads `instance_config` and returns a dynamic manifest with the operator's `name`, `short_name`, and icon URLs; when unconfigured the static `runtime/public/manifest.json` continues to be served. Route is excluded from the middleware session gate (required for PWA installability)
+- `runtime` (continued): `GET /favicon.ico` route — returns the instance's configured favicon when set, falling back to `runtime/public/favicon.ico`; `runtime/app/layout.tsx` `<head>` metadata updated to point to the dynamic route unconditionally so the fallback is transparent
+- Document in `docs/self-hosting.md`: when identity changes, cached service-worker users see the old name/icons until the SW updates (known limitation, acceptable for v1)
+
+**Dependencies:** Task 0.9.0 (RFC 0032 rename — `instance_config` table name); Task 1.0.03 (Phase 1 — instance logo served from `/api/instance/logo`)
+
+**SRS reference:** RFC 0027 Phase 3, SRS §3.18
+
+**Review checklist:**
+
+- `GET /manifest.webmanifest` returns the operator's instance name and icon URLs when configured; returns the static Sovereign manifest when unconfigured
+- `GET /favicon.ico` returns the operator's favicon when configured; falls back to the committed favicon
+- PWA installation on a configured instance shows the operator's name and icons in the OS launcher
+
+---
+
+#### Task 0.9.3 — Non-Docker production deployment, Phase 2 — systemd (RFC 0026)
+
+**Goal:** Add systemd as a zero-extra-dependency alternative to PM2 for Linux
+server operators (RFC 0026 Phase 2). Phase 1 (PM2) must ship first.
+
+**Deliverables:**
+
+- `bin/sv.ts`: `sv setup systemd [--user <user>] [--dir <dir>] [--env-file <path>]`
+  sub-command writing two pre-filled unit files to the current directory; template
+  logic in `bin/helpers.ts`; unit-tested
+- `docs/examples/sovereign-auth.service`, `docs/examples/sovereign-runtime.service`
+  — canonical unit files (same as `sv setup systemd` defaults): `User=sovereign`,
+  `WorkingDirectory=`, `EnvironmentFile=`, `HOSTNAME=127.0.0.1` on auth,
+  `ExecStartPre` health-poll on the runtime unit, `Restart=on-failure`
+- `docs/self-hosting.md`: "Non-Docker deployment (systemd)" section alongside the
+  PM2 section; covers account creation, `EnvironmentFile` setup, `systemctl enable`,
+  log access via `journalctl`, and the upgrade procedure
+- Document `sv serve` as a valid single-process target under either PM2 or systemd
+  (simplest path for minimal init systems)
+- SRS §3.1: systemd noted as the recommended Linux-native alternative to PM2
+
+**Dependencies:** Task 0.5.29 (Phase 1 — PM2 and `sv serve` health-gate must be
+in place)
+
+**SRS reference:** RFC 0026 Phase 2, SRS §3.1
+
+**Review checklist:**
+
+- `sv setup systemd` produces two syntactically valid unit files with correct
+  `WorkingDirectory`, `EnvironmentFile`, `HOSTNAME`, and `ExecStartPre` health-poll
+- `systemctl start sovereign-runtime` waits for `sovereign-auth` to pass its health
+  check before the runtime process starts
+- `docs/self-hosting.md` systemd section is self-contained alongside the PM2 section
+
+---
+
+#### Task 0.9.4 — Operator fork model & upstream sync (RFC 0028)
+
+**Goal:** Publish the operator fork model documentation and add the "Maintaining a fork" section to `docs/self-hosting.md`. This is a documentation-only task — no code, no version bumps.
+
+**Deliverables:**
+
+- `docs/rfcs/0028-operator-fork-model.md` — the RFC (already drafted)
+- `docs/self-hosting.md` — "Maintaining a fork" section: two-track summary (config-only vs fork-and-track), `operator/` directory convention, upstream sync command sequence, isolation principle, asset management guidance
+- `docs/sovereign-proposal-plan-srs.md` — §2.7 pointer + decision-log row (already added in RFC documentation pass)
+- `docs/rfcs/README.md` — RFC 0028 row updated from Draft to Accepted
+
+**Optional follow-on (separate task):** `sv fork check` CLI command — reads `operator/UPSTREAM`, compares against the latest upstream tag, and warns if the fork is behind.
+
+**Dependencies:** None hard. RFC 0027 (Task 1.0.03) should ship first so the "Post-RFC 0027 asset management" recommendation in the RFC is actionable.
+
+**SRS reference:** RFC 0028, SRS §2.7
+
+**Review checklist:**
+
+- `docs/self-hosting.md` "Maintaining a fork" section is self-contained; a reader can follow it from fork setup through first upstream sync without consulting the RFC
+- The two-track model, isolation principle, AGPL table, and rebase workflow are consistent between the RFC and the self-hosting doc
+- RFC 0028 status in `docs/rfcs/README.md` updated to Accepted
+
+#### Task 0.9.5 — User data deletion (RFC 0033)
+
+**Goal:** Let users permanently delete all their data from Account → Data, and give
+admins a "Delete" action in Console → Users. The platform cascades the deletion across
+all platform tables and delegates to installed plugins via a new SDK hook. Companion to
+RFC 0007 (data portability): export first, then delete.
+
+**Deliverables:**
+
+- `packages/sdk` → minor (`1.12.0`): `sdk.portability.provideDelete(handler)` — stable
+  surface. Handler receives `{ userId, tenantId, db }` and returns
+  `{ deleted: number; errors?: string[] }`.
+- `packages/db` → patch: `deleteUserData()` helper (deletes all platform-table rows for
+  a user in dependency order); `logDeletion()` helper for the admin activity entry.
+- `runtime` → minor:
+  - `runtime/src/user-deletion.ts` — `deleteUser(userId, tenantId)` cascade function:
+    collect plugin handlers, run in parallel (30 s timeout per handler), delete platform
+    rows (`consent_grants` → `data_access_log` → `activity_log` → `notifications` →
+    `notification_prefs` → `push_subscriptions` → `entitlements` → `account_prefs` →
+    avatar file on disk), then call better-auth admin API to remove the user record.
+    Returns `DeletionSummary`.
+  - `DELETE /api/account` — session-gated, requires password re-verification
+    (server-to-server call to better-auth), 409 if sole `platform:owner`, clears
+    session cookies on success, returns `{ deletedAt }`.
+  - `DELETE /api/admin/users/[id]?deleteData=true` — extends the existing route,
+    requires `user:manage` capability, rejects `platform:owner` targets.
+  - Login page: `?accountDeleted=1` notice (same pattern as `?signedout=1`).
+- `plugins/account` → minor: **Account → Data** tab gains a "Delete your account"
+  section below Export/Import: danger-button opens a `<dialog>` with password
+  confirmation field; calls `DELETE /api/account`; redirects on success.
+- `plugins/console` → patch: Users page gains a **Delete…** action per row (disabled
+  for `platform:owner` rows); opens native `<dialog>` with named confirmation; calls
+  `DELETE /api/admin/users/[id]?deleteData=true`.
+- `docs/plugin-development.md` — `sdk.portability.provideDelete` documented alongside
+  `provideExport`/`provideImport`; note that plugins without a handler leave orphaned
+  rows (operator responsibility).
+- `docs/upgrade.md` — v0.x → v0.9.5 notes (new `DELETE /api/account` route; new SDK
+  method; plugin authors should register a handler).
+
+**Root version bump:** `0.9.8` → `0.9.9`
+
+**Dependencies:** Task 0.5.14 (RFC 0007 — `sdk.portability` interface to extend);
+Task 0.6.01 (capabilities — `user:manage` gate on the admin route)
+
+**SRS reference:** RFC 0033
+
+**Review checklist:**
+
+- `DELETE /api/account` with wrong password → 403; with correct password → 200,
+  cookies cleared, `?accountDeleted=1` notice on login page
+- Sole `platform:owner` attempting self-delete → 409; Console "Delete" disabled for owner rows
+- Plugin with `provideDelete` handler: rows removed; handler result in `DeletionSummary`
+- Plugin without handler: cascade proceeds; summary notes the missing handler (no crash)
+- `account.self_deleted` / `account.deleted` activity log entry present after deletion
+- Avatar file removed from `data/avatars/`; all platform-table rows for user absent
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
+#### Task 0.9.6 — Notification Center: pluggable pub/sub transport (RFC 0034)
+
+**Goal:** Replace the Notification Center's DB-polling SSE backend with a real
+event-driven pub/sub broker. Polling stays the default (`NOTIFICATION_TRANSPORT=polling`);
+operators opt in to instant push delivery via `sse` (in-process EventEmitter, no new
+infra) or `redis` (Redis Pub/Sub, for multi-process/clustered deployments). Resolves
+RFC 0015's deferred transport decision.
+
+**Deliverables:**
+
+- `runtime/src/notification-broker.ts` — `NotificationBroker` interface + singleton
+  `initBroker()` / `getBroker()` accessors.
+- `runtime/src/brokers/in-process.ts` — `InProcessBroker` (Node.js `EventEmitter`,
+  `setMaxListeners(0)`, no deps).
+- `runtime/src/brokers/redis.ts` — `RedisBroker` (`ioredis` PUBLISH/SUBSCRIBE, two
+  dedicated connections); loaded via dynamic `import()` so `ioredis` is truly optional.
+- `ioredis` added as `optionalDependencies` in `runtime/package.json`.
+- `runtime/instrumentation.ts` — `register()` reads `NOTIFICATION_TRANSPORT` and
+  `REDIS_URL`, initialises broker, calls `broker.close()` on `SIGTERM`.
+- `runtime/src/sdk-host.ts` — `notifications.send()` calls `broker.publish()` after DB
+  write (no-op when broker is null / polling mode).
+- `runtime/app/api/account/notifications/stream/route.ts` — rewired to subscribe to the
+  broker; 503 when `NOTIFICATION_TRANSPORT=polling`; 25 s heartbeat comment line to beat
+  proxy idle timeouts; `X-Accel-Buffering: no` header.
+- `runtime/app/api/account/notifications/route.ts` — response gains `transport:
+'polling' | 'sse'` field (Node.js runtime reads env at request time).
+- `plugins/account` — bell component reads `transport` from initial fetch: in `sse`
+  mode, connects `EventSource` instead of polling; three-error fallback to polling.
+- `GET /api/admin/health` — `notifications: { transport, brokerConnected }` section.
+- New env vars: `NOTIFICATION_TRANSPORT` (default `polling`), `REDIS_URL`, optional
+  `NOTIFICATION_HEARTBEAT_INTERVAL` (default `25000`) — added to `.env.example` and
+  `docs/self-hosting.md`.
+- `docker-compose.prod.yml` — commented-out `redis` service block; commented
+  `NOTIFICATION_TRANSPORT=redis` + `REDIS_URL` lines for operators to activate.
+- `docs/self-hosting.md` — new "Notification transport" section (proxy config table for
+  nginx / Caddy / Traefik / AWS ALB; SSE vs polling tradeoffs; Redis setup steps).
+- Deprecates: RFC 0015's planned `notification_transport` key in `platform_settings`
+  (never written; replaced by the env var).
+
+**Root version bump:** `0.9.9` → `0.9.10`
+
+**Dependencies:** Task 0.7.01 (Notification Center — `sdk.notifications.send()` and the
+existing SSE route shape this task rewires)
+
+**SRS reference:** RFC 0034, RFC 0015 (open question 2 resolved)
+
+**Review checklist:**
+
+- `NOTIFICATION_TRANSPORT=polling` (default): SSE endpoint returns 503; bell polls at
+  user's configured interval; behaviour identical to pre-RFC baseline
+- `NOTIFICATION_TRANSPORT=sse`: `EventSource` connection opens; `sdk.notifications.send()`
+  delivers notification to bell in < 1 s (no poll wait); multiple tabs all receive
+- `NOTIFICATION_TRANSPORT=redis` + `REDIS_URL` set: cross-process delivery verified
+  (send from process A, client on process B receives)
+- `NOTIFICATION_TRANSPORT=redis`, Redis down: notification written to DB; SSE push
+  degrades gracefully; health reports `brokerConnected: false`
+- `GET /api/admin/health` returns correct `notifications.transport` and `brokerConnected`
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ### Phase v1.0+ — Post-release / future
 
 > Work scheduled **after** the v1.0 public release. Items here are post-v1 regardless of when their reserved-stub groundwork lands.
 
-#### Task 1.0.01 — Encryption at rest & field-level, Tier 2–4 (RFC 0008) **[post-v1]**
+#### Task 1.0.1 — Encryption at rest & field-level, Tier 2–4 (RFC 0008) **[post-v1]**
 
 **Goal:** The deferred, crypto-heavy tiers of RFC 0008 / SRS §3.17 — shipped **after v1**. Tier 2 (at-rest encryption + key management), Tier 3 (field-level via `sdk.crypto`), and the charting of Tier 4 (zero-knowledge E2EE). The reserved `sdk.crypto` surface + `crypto:use` permission land as `NotImplementedError` stubs first (after RFC 0005's stubs).
 
@@ -1938,7 +2138,7 @@ Phase 1 (this task) targets `packages/ui` exclusively. The `runtime` App Router 
 
 ---
 
-#### Task 1.0.09 — Phase 2 payment integration (RFC 0003 Phase 2) **[post-v1]**
+#### Task 1.0.2 — Phase 2 payment integration (RFC 0003 Phase 2) **[post-v1]**
 
 **Goal:** Automate the payment → entitlement flow that Phase 1 (Task 0.8.01) leaves
 manual. Three sub-tracks, independently deliverable:

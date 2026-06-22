@@ -234,6 +234,7 @@
   background-color: transparent;
   color: var(--sv-color-text-muted);
   font-size: var(--sv-font-size-sm);
+  white-space: nowrap;
   cursor: pointer;
 }
 

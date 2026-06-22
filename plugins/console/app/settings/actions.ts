@@ -54,46 +54,46 @@ export async function updateRootPluginAction(
   return patchSettings({ rootPluginId });
 }
 
-export async function updateBrandingAction(
+export async function updateInstanceAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   await sdk.auth.requireSession();
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
 
-  const brandName = (formData.get('brandName') as string | null)?.trim() || null;
-  const brandPrimary = (formData.get('brandPrimary') as string | null)?.trim() || null;
-  const brandLogo = (formData.get('brandLogo') as string | null)?.trim() || null;
-  const brandLogoDark = (formData.get('brandLogoDark') as string | null)?.trim() || null;
-  const brandFavicon = (formData.get('brandFavicon') as string | null)?.trim() || null;
+  const instanceName = (formData.get('instanceName') as string | null)?.trim() || null;
+  const instancePrimary = (formData.get('instancePrimary') as string | null)?.trim() || null;
+  const instanceLogo = (formData.get('instanceLogo') as string | null)?.trim() || null;
+  const instanceLogoDark = (formData.get('instanceLogoDark') as string | null)?.trim() || null;
+  const instanceFavicon = (formData.get('instanceFavicon') as string | null)?.trim() || null;
   const emailFromName = (formData.get('emailFromName') as string | null)?.trim() || null;
   const emailLogo = (formData.get('emailLogo') as string | null)?.trim() || null;
 
-  if (brandPrimary && !HEX_COLOR_RE.test(brandPrimary)) {
+  if (instancePrimary && !HEX_COLOR_RE.test(instancePrimary)) {
     return { ok: false, error: 'Primary colour must be a 6-digit hex value, e.g. #3b82f6.' };
   }
 
   const body = {
-    brandName,
-    brandPrimary,
-    brandLogo,
-    brandLogoDark,
-    brandFavicon,
+    instanceName,
+    instancePrimary,
+    instanceLogo,
+    instanceLogoDark,
+    instanceFavicon,
     emailFromName,
     emailLogo,
   };
-  const res = await fetch(`${SELF_URL}/api/admin/tenant-branding`, {
+  const res = await fetch(`${SELF_URL}/api/admin/instance-config`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminKey}` },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
     const detail = ((await res.json().catch(() => null)) as { error?: string } | null)?.error;
-    return { ok: false, error: detail ?? `Failed to update branding: ${res.status}` };
+    return { ok: false, error: detail ?? `Failed to update instance identity: ${res.status}` };
   }
   revalidatePath('/console/settings');
   revalidatePath('/');
-  return { ok: true, message: 'Branding saved.' };
+  return { ok: true, message: 'Instance identity saved.' };
 }
 
 export async function uploadLogoAction(
@@ -107,7 +107,7 @@ export async function uploadLogoAction(
   if (!file || file.size === 0) return { ok: false, error: 'No file selected.' };
   const uploadForm = new FormData();
   uploadForm.set('file', file);
-  const url = `${SELF_URL}/api/brand/logo${dark ? '?dark=1' : ''}`;
+  const url = `${SELF_URL}/api/instance/logo${dark ? '?dark=1' : ''}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminKey}` },
@@ -132,7 +132,7 @@ export async function uploadFaviconAction(
   if (!file || file.size === 0) return { ok: false, error: 'No file selected.' };
   const uploadForm = new FormData();
   uploadForm.set('file', file);
-  const res = await fetch(`${SELF_URL}/api/brand/favicon`, {
+  const res = await fetch(`${SELF_URL}/api/instance/favicon`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminKey}` },
     body: uploadForm,

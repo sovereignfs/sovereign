@@ -389,12 +389,13 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 - Task 0.9.01 — E2E golden-path test suite (Playwright; 20 tests in 6 spec files: auth, launcher, account, console, navigation, paywall). `playwright.config.ts` with dual `webServer`, global setup seeds users + keypair, `adminPage`/`userPage` fixtures. `.github/workflows/e2e.yml` CI job.
 - Task 1.0.08 — Storybook for the design system (`@sovereignfs/ui`). Storybook 10 (`@storybook/react-vite`); stories for Token Gallery, Button, Input, Icon, Dialog, Drawer. `storybook-build` CI job.
 - Task 1.0.02 — Production dev-mode & diagnostics (RFC 0020; `runtime` → 0.27.0). Per-request dev-mode switch via `SOVEREIGN_DEV_MODE_ENABLED` + header secret; context-aware `runtime/src/db.ts` routes to mock DB in dev-mode; structured `LOG_LEVEL` logger; richer `/api/admin/health` response.
-- Task 1.0.03 — White-labeling Phase 1 (RFC 0027; `runtime` → 0.28.0). `tenant_branding` table + `BrandProvider` server component; `--sv-brand-logo/dark/favicon` tokens + `--sv-color-accent` override from hex; brand API routes (`/api/brand/*`); Console Branding section; `sdk.platform.getConfig()` returns `brandName`/`brandPrimaryColor`.
+- Task 1.0.03 — White-labeling Phase 1 (RFC 0027; `runtime` → 0.28.0). `instance_config` table (was `tenant_branding`) + `InstanceProvider` server component; `--sv-instance-logo/dark/favicon` tokens + `--sv-color-accent` override from hex; instance API routes (`/api/instance/*`); Console Instance identity section; `sdk.platform.getConfig()` returns `instanceName`/`instancePrimaryColor`.
 - Console plugin install/remove UX — real two-step server-side flow (fetch manifest preview → confirm install via `sv plugin add`; confirm remove via `sv plugin remove`). Platform-plugin guard uses `plugin.type === 'platform'`.
+- Task 0.9.0 — Instance identity rename (RFC 0032; `@sovereignfs/ui` → 0.11.0, `@sovereignfs/sdk` → 1.11.0, `@sovereignfs/db` → 1.7.0, `runtime` → 0.29.0). Pure rename: `BRAND_*` env vars → `INSTANCE_*`, `--sv-brand-*` tokens → `--sv-instance-*`, `brandName`/`brandPrimaryColor` → `instanceName`/`instancePrimaryColor`, `tenant_branding` table → `instance_config`, `BrandProvider` → `InstanceProvider`, `/api/brand/` routes → `/api/instance/`.
 
 > Full task history (phases 0.3–0.7): `docs/task-history.md`
 
-⏳ **Next: Task 0.9.0 — Instance identity rename (RFC 0032).** Branch from up-to-date `main`.
+⏳ **Next: Task 0.9.1 — Email templates (RFC 0031).** Branch from up-to-date `main`.
 
 Keep this file current: update the Status section as tasks complete, and add any
 new load-bearing convention that future sessions must not violate.

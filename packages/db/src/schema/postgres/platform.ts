@@ -167,14 +167,14 @@ export const entitlements = pgTable('entitlements', {
   updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
 });
 
-/** Per-tenant white-label branding config (RFC 0027, Phase 1). Mirror of SQLite schema. */
-export const tenantBranding = pgTable('tenant_branding', {
+/** Per-instance identity config (RFC 0027 / RFC 0032 rename). Mirror of SQLite schema. */
+export const instanceConfig = pgTable('instance_config', {
   tenantId: text('tenant_id').notNull().primaryKey(),
-  brandName: text('brand_name'),
-  brandLogo: text('brand_logo'),
-  brandLogoDark: text('brand_logo_dark'),
-  brandFavicon: text('brand_favicon'),
-  brandPrimary: text('brand_primary'),
+  instanceName: text('brand_name'),
+  instanceLogo: text('brand_logo'),
+  instanceLogoDark: text('brand_logo_dark'),
+  instanceFavicon: text('brand_favicon'),
+  instancePrimary: text('brand_primary'),
   emailFromName: text('email_from_name'),
   emailLogo: text('email_logo'),
   updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),

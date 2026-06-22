@@ -142,8 +142,8 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
     )`,
     `CREATE INDEX IF NOT EXISTS entitlements_user_plugin_idx
        ON entitlements (user_id, plugin_id)`,
-    // RFC 0027 — White-labeling Phase 1
-    `CREATE TABLE IF NOT EXISTS tenant_branding (
+    // RFC 0027 / RFC 0032 — instance identity config
+    `CREATE TABLE IF NOT EXISTS instance_config (
       tenant_id TEXT NOT NULL PRIMARY KEY,
       brand_name TEXT,
       brand_logo TEXT,

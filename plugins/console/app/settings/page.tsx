@@ -3,7 +3,7 @@ import {
   TenantForm,
   InviteOnlyForm,
   RootPluginForm,
-  BrandingForm,
+  InstanceForm,
   LogoUploadForm,
   FaviconUploadForm,
 } from './SettingsForms';
@@ -16,12 +16,12 @@ interface Settings {
   rootPluginId: string;
 }
 
-interface Branding {
-  brandName: string;
-  brandLogo: string | null;
-  brandLogoDark: string | null;
-  brandFavicon: string | null;
-  brandPrimary: string | null;
+interface InstanceIdentity {
+  instanceName: string;
+  instanceLogo: string | null;
+  instanceLogoDark: string | null;
+  instanceFavicon: string | null;
+  instancePrimary: string | null;
   emailFromName: string | null;
   emailLogo: string | null;
 }
@@ -45,12 +45,12 @@ async function adminGet<T>(path: string): Promise<T> {
 }
 
 const DEFAULT_SETTINGS: Settings = { tenantName: 'Sovereign', inviteOnly: false, rootPluginId: '' };
-const DEFAULT_BRANDING: Branding = {
-  brandName: 'Sovereign',
-  brandLogo: null,
-  brandLogoDark: null,
-  brandFavicon: null,
-  brandPrimary: null,
+const DEFAULT_INSTANCE: InstanceIdentity = {
+  instanceName: 'Sovereign',
+  instanceLogo: null,
+  instanceLogoDark: null,
+  instanceFavicon: null,
+  instancePrimary: null,
   emailFromName: null,
   emailLogo: null,
 };
@@ -60,14 +60,14 @@ function settled<T>(result: PromiseSettledResult<T>, fallback: T): T {
 }
 
 export default async function SettingsPage() {
-  const [settingsResult, pluginsResult, brandingResult] = await Promise.allSettled([
+  const [settingsResult, pluginsResult, instanceResult] = await Promise.allSettled([
     adminGet<Settings>('/api/admin/settings'),
     adminGet<PluginRow[]>('/api/admin/plugins'),
-    adminGet<Branding>('/api/admin/tenant-branding'),
+    adminGet<InstanceIdentity>('/api/admin/instance-config'),
   ]);
   const settings = settled(settingsResult, DEFAULT_SETTINGS);
   const plugins = settled(pluginsResult, [] as PluginRow[]);
-  const branding = settled(brandingResult, DEFAULT_BRANDING);
+  const instance = settled(instanceResult, DEFAULT_INSTANCE);
 
   // Only installed, enabled, non-adminOnly, non-overlay plugins are eligible
   // roots (CON-11): `/` is served as a full page, which overlay plugins cannot.
@@ -104,13 +104,13 @@ export default async function SettingsPage() {
         </section>
 
         <section className={styles.settingsSection}>
-          <h3 className={styles.sectionTitle}>Branding</h3>
+          <h3 className={styles.sectionTitle}>Instance identity</h3>
           <p className={styles.helpText}>
             Customise the name, logo, and accent colour shown across the platform. Uploads are
-            stored in <code className={styles.codeInline}>data/brand/</code>.
+            stored in <code className={styles.codeInline}>data/instance/</code>.
           </p>
 
-          <BrandingForm initialValues={branding} />
+          <InstanceForm initialValues={instance} />
 
           <LogoUploadForm dark={false} />
           <LogoUploadForm dark={true} />

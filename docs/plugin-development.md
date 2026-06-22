@@ -788,10 +788,10 @@ The SDK surface (`sdk.*`):
   ```
 - **`mailer`** — `send({ to, subject, text, html })`. No-ops when SMTP is
   unconfigured.
-- **`platform`** — `getConfig()` → `{ tenantName, inviteOnly, version, brandName, brandPrimaryColor? }`
-  (await it). `brandName` falls back to `tenantName` when no brand name is
-  configured; `brandPrimaryColor` is a validated 6-digit hex string or
-  `undefined`. Use these to display the operator's brand in plugin UI without
+- **`platform`** — `getConfig()` → `{ tenantName, inviteOnly, version, instanceName, instancePrimaryColor? }`
+  (await it). `instanceName` falls back to `tenantName` when no instance name is
+  configured; `instancePrimaryColor` is a validated 6-digit hex string or
+  `undefined`. Use these to display the operator's instance identity in plugin UI without
   reading CSS variables.
 - **`data`** — cross-plugin data sharing (RFC 0002). `sdk.data.provide(contract,
 resolver)` registers a resolver; `sdk.data.query(ref, params)` reads from

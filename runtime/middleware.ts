@@ -348,6 +348,6 @@ export const config = {
     // brand assets (must load on the login page pre-session), dynamic manifest
     // (browsers fetch it before login for PWA install), offline fallback, PWA
     // assets, and Next.js static assets.
-    '/((?!login|register|offline|api/admin|api/health|api/brand|api/manifest|manifest.json|sw.js|workbox-|fallback-|icons/|_next/static|_next/image|favicon.ico).*)',
+    '/((?!login|register|offline|api/admin|api/health|api/instance|api/manifest|manifest.json|sw.js|workbox-|fallback-|icons/|_next/static|_next/image|favicon.ico).*)',
   ],
 };

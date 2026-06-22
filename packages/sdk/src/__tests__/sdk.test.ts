@@ -8,7 +8,7 @@ const mockConfig = {
   tenantName: 'Test Workspace',
   inviteOnly: false,
   version: '0.6.0',
-  brandName: 'Test Workspace',
+  instanceName: 'Test Workspace',
 };
 const mockDataResolvers = new Map<string, (...args: unknown[]) => Promise<unknown[]>>();
 const mockExporters = new Map<string, unknown>();

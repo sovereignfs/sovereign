@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { getPlatformDb } from '@sovereignfs/db';
-import { DEFAULT_TENANT_ID, getTenantBranding, type TenantBrandingValue } from '@sovereignfs/db';
+import { DEFAULT_TENANT_ID, getInstanceConfig, type InstanceConfig } from '@sovereignfs/db';
 
-/** Fixed lightness delta used to derive --sv-color-accent-hover from the brand accent. */
+/** Fixed lightness delta used to derive --sv-color-accent-hover from the instance accent. */
 const ACCENT_HOVER_LIGHTNESS_DELTA = 8;
 
 /** Parse a validated 6-digit hex colour to HSL triple (all 0–100 for L). */
@@ -30,22 +30,22 @@ function hexToHsl(hex: string): [number, number, number] {
   return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
 }
 
-/** Build the inline style block that injects brand CSS custom properties at :root. */
-function buildBrandStyle(branding: TenantBrandingValue): string {
+/** Build the inline style block that injects instance CSS custom properties at :root. */
+function buildInstanceStyle(config: InstanceConfig): string {
   const lines: string[] = [];
 
-  if (branding.brandLogo) {
-    lines.push(`  --sv-brand-logo: url(${JSON.stringify(branding.brandLogo)});`);
+  if (config.instanceLogo) {
+    lines.push(`  --sv-instance-logo: url(${JSON.stringify(config.instanceLogo)});`);
   }
-  if (branding.brandLogoDark) {
-    lines.push(`  --sv-brand-logo-dark: url(${JSON.stringify(branding.brandLogoDark)});`);
+  if (config.instanceLogoDark) {
+    lines.push(`  --sv-instance-logo-dark: url(${JSON.stringify(config.instanceLogoDark)});`);
   }
-  if (branding.brandFavicon) {
-    lines.push(`  --sv-brand-favicon: url(${JSON.stringify(branding.brandFavicon)});`);
+  if (config.instanceFavicon) {
+    lines.push(`  --sv-instance-favicon: url(${JSON.stringify(config.instanceFavicon)});`);
   }
 
-  if (branding.brandPrimary) {
-    const [h, s, l] = hexToHsl(branding.brandPrimary);
+  if (config.instancePrimary) {
+    const [h, s, l] = hexToHsl(config.instancePrimary);
     // Hover: shift lightness toward background (darker on light theme, lighter on dark).
     // Clamped so the result stays in [0, 100].
     const hoverLLight = Math.max(0, Math.min(100, l - ACCENT_HOVER_LIGHTNESS_DELTA));
@@ -63,45 +63,45 @@ function buildBrandStyle(branding: TenantBrandingValue): string {
   return lines.length > 0 ? `:root {\n${lines.join('\n')}\n}` : '';
 }
 
-export interface BrandContext {
-  brandName: string;
-  brandLogoUrl: string | null;
-  brandLogoDarkUrl: string | null;
+export interface InstanceContext {
+  instanceName: string;
+  instanceLogoUrl: string | null;
+  instanceLogoDarkUrl: string | null;
 }
 
-interface BrandProviderProps {
-  children: (ctx: BrandContext) => ReactNode;
+interface InstanceProviderProps {
+  children: (ctx: InstanceContext) => ReactNode;
 }
 
 /**
- * Server component — reads tenant branding from DB (merged with BRAND_* env),
+ * Server component — reads instance config from DB (merged with INSTANCE_* env),
  * injects CSS custom properties via an inline <style> block, and passes the
- * brand name (and resolved logo URLs) as render-prop children so the shell
+ * instance name (and resolved logo URLs) as render-prop children so the shell
  * chrome can render text without reading CSS variables.
  */
-export async function BrandProvider({ children }: BrandProviderProps): Promise<ReactNode> {
-  let branding: TenantBrandingValue;
+export async function InstanceProvider({ children }: InstanceProviderProps): Promise<ReactNode> {
+  let config: InstanceConfig;
   try {
     const pdb = await getPlatformDb();
-    branding = await getTenantBranding(pdb, DEFAULT_TENANT_ID);
+    config = await getInstanceConfig(pdb, DEFAULT_TENANT_ID);
   } catch {
-    // Branding is cosmetic — never crash on a failed DB read.
-    branding = {
-      brandName: process.env.BRAND_NAME ?? 'Sovereign',
-      brandLogo: process.env.BRAND_LOGO ?? null,
-      brandLogoDark: process.env.BRAND_LOGO_DARK ?? null,
-      brandFavicon: process.env.BRAND_FAVICON ?? null,
-      brandPrimary: null,
+    // Instance config is cosmetic — never crash on a failed DB read.
+    config = {
+      instanceName: process.env.INSTANCE_NAME ?? 'Sovereign',
+      instanceLogo: process.env.INSTANCE_LOGO ?? null,
+      instanceLogoDark: process.env.INSTANCE_LOGO_DARK ?? null,
+      instanceFavicon: process.env.INSTANCE_FAVICON ?? null,
+      instancePrimary: null,
       emailFromName: null,
       emailLogo: null,
     };
   }
 
-  const styleContent = buildBrandStyle(branding);
-  const ctx: BrandContext = {
-    brandName: branding.brandName,
-    brandLogoUrl: branding.brandLogo,
-    brandLogoDarkUrl: branding.brandLogoDark,
+  const styleContent = buildInstanceStyle(config);
+  const ctx: InstanceContext = {
+    instanceName: config.instanceName,
+    instanceLogoUrl: config.instanceLogo,
+    instanceLogoDarkUrl: config.instanceLogoDark,
   };
 
   return (

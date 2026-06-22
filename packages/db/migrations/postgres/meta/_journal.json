@@ -36,6 +36,13 @@
       "when": 1782100000000,
       "tag": "0004_tenant_branding",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782200000000,
+      "tag": "0005_rename_tenant_branding",
+      "breakpoints": true
     }
   ]
 }

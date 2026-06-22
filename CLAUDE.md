@@ -95,17 +95,15 @@ they are authoritative over assumptions:
   `@sovereignfs/sdk` and `@sovereignfs/ui` — they are public contracts for
   plugin developers.
 
-  The **platform version** in the root `package.json` is **frozen at `0.6.x`
-  through the entire pre-v1 hardening period.** Do **not** bump it minor-by-minor
-  per task or roadmap milestone — that would imply progress toward a 1.0 the
-  platform has not earned yet. The single `1.0.0` release is reserved for the
-  hardened, public-ready platform; only then does the major change. Until then
-  the platform version stays `0.6.x` (a patch bump is acceptable for a
-  platform-wide fix, but most tasks leave it untouched). This is intentionally
-  decoupled from the roadmap phase numbers (`0.3.x`/`0.4.x`/`0.5.x` task IDs are
-  tracking labels, not the product version). The downgrade guard, plugin
-  compatibility gates (RFC 0024), and `/api/admin/health` all read this value, so
-  keeping it stable also keeps those stable.
+  The **platform version** in the root `package.json` tracks roadmap phase
+  milestones — **minor bumps for completed phases, patch bumps for completed
+  pre-release hardening tasks (1.0.xx), and a single jump to `1.0.0` at the
+  public release.** The current version is **`0.9.3`** (phases 0.3–0.9 complete
+  - three 1.0.xx hardening tasks). Do **not** bump the minor for individual tasks
+    within a phase — minor bumps happen once per completed roadmap phase. The
+    downgrade guard, plugin compatibility gates (RFC 0024), and `/api/admin/health`
+    all read this value; see `docs/versioning.md` for the full version map and
+    rectification plan.
 
   **Per-package versions are independent of the platform version.** Internal,
   private packages (`@sovereignfs/db`, `runtime`, `auth`, `manifest`, `mailer`,

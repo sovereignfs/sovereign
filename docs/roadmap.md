@@ -1534,7 +1534,7 @@ supported path to production.
 - ✅ `example-basic` plugin demonstrates the pattern: declares `view-advanced` with `defaultGrant: 'all'`, gates the UI section with `sdk.auth.hasCapability`
 - ✅ `docs/plugin-development.md` — `capabilities` manifest field table row + full `### capabilities (RFC 0022)` section (storage model, code example, constraint note that enforcement is inside the plugin)
 
-**Dependencies:** Task 1.0.02 (capability model)
+**Dependencies:** Task 0.6.01 (platform roles & capabilities — the `hasCapability` infrastructure this extends)
 
 **SRS reference:** RFC 0022
 
@@ -1670,34 +1670,15 @@ and the monetization paywall flow.
 
 ## v1
 
-The v1.0 release line and post-release work — net-new features, the capability
-work the SRS §3.4 designates a “future version”, advanced operations, and
-exploratory proposals (added as tasks but gated on RFC acceptance).
+`v1.0.0` is the hardened, public-ready milestone for Sovereign. This section has
+two sub-phases: **pre-release hardening** (tasks that ship before the tag) and
+**post-release / future** (work planned after the public release).
 
-### Phase v1.0+ — Post-release / future
+### Phase v1.0 — Pre-release hardening
 
-> Work scheduled **after** the v1.0 public release. Items here are post-v1 regardless of when their reserved-stub groundwork lands.
-
-#### Task 1.0.01 — Encryption at rest & field-level, Tier 2–4 (RFC 0008) **[post-v1]**
-
-**Goal:** The deferred, crypto-heavy tiers of RFC 0008 / SRS §3.17 — shipped **after v1**. Tier 2 (at-rest encryption + key management), Tier 3 (field-level via `sdk.crypto`), and the charting of Tier 4 (zero-knowledge E2EE). The reserved `sdk.crypto` surface + `crypto:use` permission land as `NotImplementedError` stubs first (after RFC 0005's stubs).
-
-**Deliverables:**
-
-- Tier 2: local-keyfile envelope key management (master KEK → wrapped DEKs; fail-fast when enabled); SQLCipher DB encryption (`better-sqlite3-multiple-ciphers`); encrypted backups (amends Task 0.5.13) + encrypted export bundles (amends Task 0.5.14); avatar/blob encryption
-- Tier 3: `sdk.crypto` field-level encrypt/decrypt (per-user DEK) + `crypto:use` enforcement; optional blind indexes
-- Tier 4: zero-knowledge E2EE remains charted (per-plugin opt-in, aligned with the federation direction) — not built
-- New env vars (`SOVEREIGN_ENCRYPTION`, key/keyfile, backup passphrase) → `.env.example` + `docs/self-hosting.md` + docs-parity; **Docker/native-dep impact** (SQLCipher in image build + `allowBuilds`)
-
-**Dependencies:** Task 0.5.15 (Tier 0–1), Task 0.5.13 (backups), Task 0.5.14 (exports)
-
-**SRS reference:** RFC 0008 (Tiers 2–4), SRS §3.17, §5 (`crypto:use`), NFR-02/07/08/09
-
-**Review checklist:**
-
-- A stolen disk / leaked backup yields ciphertext; the docs state plainly that server-held keys do not defend against a curious operator or RCE
-- Encryption is opt-in and fails fast when enabled without a key; rotation re-wraps DEKs without bulk re-encryption
-- Field-level encryption is gated by `crypto:use`; encrypted columns document the search/sort caveat
+Tasks that ship before the public `v1.0.0` release. These tasks were originally
+scoped as post-v1 but pulled forward into the pre-release cycle as the platform
+matured ahead of schedule.
 
 ---
 
@@ -1721,7 +1702,7 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 
 ---
 
-#### ✅ Task 1.0.03 — White-labeling, Phase 1 — Brand DB + shell injection (RFC 0027) **[post-v1]**
+#### ✅ Task 1.0.03 — White-labeling, Phase 1 — Brand DB + shell injection (RFC 0027)
 
 **Goal:** Let operators replace Sovereign's visual identity with their own brand. Phase 1 ships the data layer, CSS token namespace, runtime injection, and the Console branding form. Depends on the `tenant_branding` table and `BrandProvider` being in place before Phases 2 and 3.
 
@@ -1750,7 +1731,7 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 
 ---
 
-#### Task 1.0.04 — White-labeling, Phase 2 — Email templates + auth login page (RFC 0027) **[post-v1]**
+#### Task 1.0.04 — White-labeling, Phase 2 — Email templates + auth login page (RFC 0027)
 
 **Goal:** Extend white-labeling to outbound email and the auth server's login/registration page. Depends on Phase 1 (`tenant_branding` table and `/api/admin/tenant-branding` endpoint).
 
@@ -1772,7 +1753,7 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 
 ---
 
-#### Task 1.0.05 — White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) **[post-v1]**
+#### Task 1.0.05 — White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027)
 
 **Goal:** Extend white-labeling to the PWA manifest and favicon so the installed PWA shows the operator's app name and icons. Depends on Phase 1 (brand DB and serving routes).
 
@@ -1794,7 +1775,7 @@ exploratory proposals (added as tasks but gated on RFC acceptance).
 
 ---
 
-#### Task 1.0.06 — Non-Docker production deployment, Phase 2 — systemd (RFC 0026) **[post-v1]**
+#### Task 1.0.06 — Non-Docker production deployment, Phase 2 — systemd (RFC 0026)
 
 **Goal:** Add systemd as a zero-extra-dependency alternative to PM2 for Linux
 server operators (RFC 0026 Phase 2). Phase 1 (PM2) must ship first.
@@ -1830,7 +1811,7 @@ in place)
 
 ---
 
-#### Task 1.0.07 — Operator fork model & upstream sync (RFC 0028) **[post-v1]**
+#### Task 1.0.07 — Operator fork model & upstream sync (RFC 0028)
 
 **Goal:** Publish the operator fork model documentation and add the "Maintaining a fork" section to `docs/self-hosting.md`. This is a documentation-only task — no code, no version bumps.
 
@@ -1855,7 +1836,7 @@ in place)
 
 ---
 
-#### ✅ Task 1.0.08 — Storybook for the design system and app shell **[post-v1]**
+#### ✅ Task 1.0.08 — Storybook for the design system and app shell
 
 **Goal:** Give component authors, plugin developers, and designers a live, isolated environment to develop and inspect every `@sovereignfs/ui` component and its token context. Storybook 8 is the choice — it has native CSS Modules support (via `@storybook/nextjs`), the best a11y addon ecosystem, and wide team familiarity. No RFC is warranted: this is developer tooling with no runtime surfaces, no SDK changes, and no architectural trade-offs that need RFC-level documentation. The decision rationale is recorded in the SRS decision log.
 
@@ -1928,6 +1909,35 @@ Phase 1 (this task) targets `packages/ui` exclusively. The `runtime` App Router 
 - Dark mode toggle in the Storybook toolbar applies `[data-theme="dark"]` to the canvas root and all semantic colour tokens update immediately
 - CI `storybook-build` job is green; artifact is uploaded
 
+---
+
+### Phase v1.0+ — Post-release / future
+
+> Work scheduled **after** the v1.0 public release. Items here are post-v1 regardless of when their reserved-stub groundwork lands.
+
+#### Task 1.0.01 — Encryption at rest & field-level, Tier 2–4 (RFC 0008) **[post-v1]**
+
+**Goal:** The deferred, crypto-heavy tiers of RFC 0008 / SRS §3.17 — shipped **after v1**. Tier 2 (at-rest encryption + key management), Tier 3 (field-level via `sdk.crypto`), and the charting of Tier 4 (zero-knowledge E2EE). The reserved `sdk.crypto` surface + `crypto:use` permission land as `NotImplementedError` stubs first (after RFC 0005's stubs).
+
+**Deliverables:**
+
+- Tier 2: local-keyfile envelope key management (master KEK → wrapped DEKs; fail-fast when enabled); SQLCipher DB encryption (`better-sqlite3-multiple-ciphers`); encrypted backups (amends Task 0.5.13) + encrypted export bundles (amends Task 0.5.14); avatar/blob encryption
+- Tier 3: `sdk.crypto` field-level encrypt/decrypt (per-user DEK) + `crypto:use` enforcement; optional blind indexes
+- Tier 4: zero-knowledge E2EE remains charted (per-plugin opt-in, aligned with the federation direction) — not built
+- New env vars (`SOVEREIGN_ENCRYPTION`, key/keyfile, backup passphrase) → `.env.example` + `docs/self-hosting.md` + docs-parity; **Docker/native-dep impact** (SQLCipher in image build + `allowBuilds`)
+
+**Dependencies:** Task 0.5.15 (Tier 0–1), Task 0.5.13 (backups), Task 0.5.14 (exports)
+
+**SRS reference:** RFC 0008 (Tiers 2–4), SRS §3.17, §5 (`crypto:use`), NFR-02/07/08/09
+
+**Review checklist:**
+
+- A stolen disk / leaked backup yields ciphertext; the docs state plainly that server-held keys do not defend against a curious operator or RCE
+- Encryption is opt-in and fails fast when enabled without a key; rotation re-wraps DEKs without bulk re-encryption
+- Field-level encryption is gated by `crypto:use`; encrypted columns document the search/sort caveat
+
+---
+
 #### Task 1.0.09 — Phase 2 payment integration (RFC 0003 Phase 2) **[post-v1]**
 
 **Goal:** Automate the payment → entitlement flow that Phase 1 (Task 0.8.01) leaves
@@ -1964,9 +1974,7 @@ manual. Three sub-tracks, independently deliverable:
 
 ---
 
-_Version 1.23 — June 2026. Planning change (no task completed, no version bumps): (1) Corrected duplicate task numbering — RFC 0028 operator fork model task renumbered from 1.0.06 to 1.0.07 (1.0.06 is already occupied by Non-Docker/systemd deployment, RFC 0026). (2) Added Task 1.0.08 — Storybook for `@sovereignfs/ui` design system (no RFC needed — developer tooling; Storybook 8 + `@storybook/nextjs`, Token Gallery, all component stories, a11y addon, CI build job). SRS decision-log row added (v0.28). Earlier notes retained._
-
-_Version 1.22 — June 2026. Planning change (no task completed, no version bumps): Operator fork model (RFC 0028) incorporated as a documentation-only post-v1 task (originally numbered 1.0.06; corrected to 1.0.07 in v1.23). Mirrored in SRS v0.27 (§2.7 pointer + decision-log row). Earlier notes retained._
+_Version 1.25 — June 2026. Several unnumbered ad-hoc tasks completed and merged (tracked in CLAUDE.md Status). (1) **Console license generator + operator key management** (RFC 0003 Phase 1 follow-up): in-browser Ed25519 keypair generation via `crypto.subtle`; server-side private-key storage in `platform_settings`; field source indicators. `@sovereignfs/db` → 1.4.0, `plugins/console` → 0.11.0. (2) **RFC 0003 Phase 2 docs**: `docs/rfcs/0003-plugin-monetization.md` extended with bank-transfer + webhook integration patterns and `sdk.billing.grantEntitlement()` seam. Task 1.0.09 added to roadmap. (3) **License generator bug fixes + DB-first key resolution**: fixed silent signing failure on Chrome (empty DOMException message), stale-public-key warning, and key inaccessibility after panel dismiss; `resolvePluginPublicKey` now resolves from `platform_settings` first (enables operator key rotation without rebuild); example-monetized plugin reads live entitlement. `runtime` → 0.25.1, `plugins/console` → 0.12.0. (4) **Fix: `generate-registry.ts` copy-first compose order**: eliminated intermittent dev 404s caused by the clear-then-copy sequence leaving a window where Next's route scanner found routes absent; now copies first, then prunes stale dirs. No version bump. (5) **Console plugin install/remove UX** (final pre-v1 console polish): replaced copy-CLI-command pattern with a two-step server-side flow — URL → "Check" fetches and validates the manifest preview, "Install" clones; "Remove" shows a native confirm dialog. Platform-plugin guard switched from a hardcoded ID set to `plugin.type === "platform"`. Earlier notes retained._
 
 _Version 1.24 — June 2026. **Task 0.5.30 — Offline connectivity banner** completed and merged. Thin fixed banner surfaces connectivity status (soft-offline case — hard-offline was already covered by the `/offline` SW fallback). `@sovereignfs/ui` → 0.7.0 (warning/success status colour tokens); `runtime` → 0.20.0. CLAUDE.md gains the browser-API / `useState` SSR hydration rule. SRS v0.29. Earlier notes retained._
 

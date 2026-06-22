@@ -5,25 +5,6 @@ import type { SovereignManifest } from '@sovereignfs/manifest';
 export const registry: SovereignManifest[] = [
   {
     "schemaVersion": 1,
-    "id": "com.example.my-plugin",
-    "name": "My Plugin",
-    "version": "0.1.0",
-    "description": "A Sovereign plugin.",
-    "type": "community",
-    "runtime": "native",
-    "routePrefix": "/my-plugin",
-    "permissions": [
-      "auth:session"
-    ],
-    "shell": "default",
-    "icon": "icon.svg",
-    "compatibility": {
-      "minPlatformVersion": "0.6.0"
-    },
-    "repository": "https://github.com/YOUR_ORG/YOUR_REPO"
-  },
-  {
-    "schemaVersion": 1,
     "id": "fs.sovereign.account",
     "name": "Account",
     "version": "0.1.0",

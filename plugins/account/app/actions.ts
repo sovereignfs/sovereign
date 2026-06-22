@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { cookies, headers } from 'next/headers';
 import QRCode from 'qrcode';
 import { sdk } from '@sovereignfs/sdk';
@@ -145,6 +146,21 @@ export async function changePasswordAction(
   }
   void sdk.activity.log({ action: 'account.password_changed', summary: 'Password changed' });
   return { ok: true };
+}
+
+/**
+ * Sign the current user out (ACC-11). Used by the Active sessions Log out
+ * button. Calls better-auth's sign-out, clears the runtime's session-cache
+ * cookies, then redirects to the auth server's login page.
+ */
+export async function logoutAction(): Promise<void> {
+  await sdk.auth.signOut();
+  await invalidateSessionCache();
+  const authPublicUrl =
+    process.env.SOVEREIGN_AUTH_PUBLIC_URL ??
+    process.env.SOVEREIGN_AUTH_URL ??
+    'http://localhost:3001';
+  redirect(`${authPublicUrl}/login?signedout=1`);
 }
 
 /** Revoke another session (ACC-06). The current session can't be revoked here. */

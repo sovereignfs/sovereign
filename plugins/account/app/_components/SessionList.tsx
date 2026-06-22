@@ -1,4 +1,5 @@
 import type { ActiveSession } from '@sovereignfs/sdk';
+import { logoutAction } from '../actions';
 import { deviceHint } from '../_lib/device-hint';
 import { RevokeSessionButton } from './RevokeSessionButton';
 import styles from '../account.module.css';
@@ -28,9 +29,9 @@ export function SessionList({ sessions }: { sessions: ActiveSession[] }) {
           </div>
           {session.current ? (
             // The current session can't be revoked via ACC-06; logging out ends
-            // it instead. Plain form POST to the runtime logout route so it
-            // works without JS (it clears the session-cache cookies + redirects).
-            <form action="/api/account/logout" method="post">
+            // it instead. Server action so the redirect + cookie-clearing works
+            // correctly from both hard-navigation and overlay contexts.
+            <form action={logoutAction}>
               <button type="submit" className={styles.revokeButton}>
                 Log out
               </button>

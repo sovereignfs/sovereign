@@ -103,6 +103,7 @@
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-muted);
   text-decoration: none;
+  cursor: pointer;
 }
 
 .avatarImage {

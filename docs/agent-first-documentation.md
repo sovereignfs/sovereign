@@ -49,7 +49,7 @@ The key insight is that agents — like humans — should only load what they ne
 
 ### The `CURRENT_TASK.md` mechanism
 
-Domain-grouping helps with planning and orientation, but it still requires a navigation hop: roadmap → find epic → read task block. For the most frequent operation — "what am I building right now?" — we added `CURRENT_TASK.md`: a transient file written to the repo root by the `/task-start` skill and deleted by `/task-complete`.
+Domain-grouping helps with planning and orientation, but it still requires a navigation hop: roadmap → find epic → read task block. For the most frequent operation — "what am I building right now?" — we added `CURRENT_TASK.md`: a transient file written to the repo root by the `/sv-task-start` skill and deleted by `/sv-task-complete`.
 
 ```markdown
 # Current Task
@@ -99,7 +99,7 @@ After implementation, the current agent ran the full check suite, processed the 
 
 We introduced three skill files, each a standalone agent brief:
 
-**`/verify`** — reads `CURRENT_TASK.md`, runs `format:check`, `lint`, `typecheck`, `test`, and optionally docs-parity. Returns a structured pass/fail table, not raw output:
+**`/sv-verify`** — reads `CURRENT_TASK.md`, runs `format:check`, `lint`, `typecheck`, `test`, and optionally docs-parity. Returns a structured pass/fail table, not raw output:
 
 ```
 | Check        | Result   | Notes              |
@@ -110,20 +110,20 @@ We introduced three skill files, each a standalone agent brief:
 | test         | ✅ PASS  | 47 tests passed    |
 ```
 
-**`/update-task-docs`** — reads `CURRENT_TASK.md` for metadata, marks the roadmap row ✅, appends a completion entry to `CLAUDE.md`, advances the `⏳ Next` pointer, and deletes `CURRENT_TASK.md`.
+**`/sv-update-task-docs`** — reads `CURRENT_TASK.md` for metadata, marks the roadmap row ✅, appends a completion entry to `CLAUDE.md`, advances the `⏳ Next` pointer, and deletes `CURRENT_TASK.md`.
 
-**`/security-check`** — conditional on the diff touching sensitive paths (auth, middleware, CSP, cookies, SDK surface). Reviews the diff against a lookup table of hard architectural rules: redirect codes, CSP construction, cookie clearing patterns, session config invariants. Violations block the PR draft.
+**`/sv-security-check`** — conditional on the diff touching sensitive paths (auth, middleware, CSP, cookies, SDK surface). Reviews the diff against a lookup table of hard architectural rules: redirect codes, CSP construction, cookie clearing patterns, session config invariants. Violations block the PR draft.
 
 ### The parallel execution model
 
-`/task-complete` now spawns Verifier and Docs Updater simultaneously, then conditionally runs the Security Check, then hands the main agent a clean result to work from:
+`/sv-task-complete` now spawns Verifier and Docs Updater simultaneously, then conditionally runs the Security Check, then hands the main agent a clean result to work from:
 
 ```
 [parallel]
-  /verify          — checks pass/fail (30–60s)
-  /update-task-docs — roadmap + CLAUDE.md + cleanup (5–10s)
+  /sv-verify       — checks pass/fail (30–60s)
+  /sv-update-task-docs— roadmap + CLAUDE.md + cleanup (5–10s)
 [sequential]
-  /security-check  — only if diff touches sensitive paths
+  /sv-security-check— only if diff touches sensitive paths
   main agent       — version bumps + PR draft
 ```
 

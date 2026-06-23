@@ -13,7 +13,12 @@ Run all quality checks for the current task and report a structured pass/fail su
    pnpm lint 2>&1
    pnpm typecheck 2>&1
    pnpm test 2>&1
+   pnpm build 2>&1
    ```
+
+   `pnpm build` runs `next build` via webpack and catches import-resolution errors
+   (e.g. `.js` extensions that TypeScript accepts but webpack cannot resolve) that
+   none of the other checks surface.
 
 3. **Run docs-parity check** only if step 1 indicated manifest/SDK/env changes:
 
@@ -32,6 +37,7 @@ Run all quality checks for the current task and report a structured pass/fail su
    | lint | ✅ PASS | — |
    | typecheck | ✅ PASS | — |
    | test | ✅ PASS | 47 tests passed |
+   | build | ✅ PASS | — |
    | docs-parity | ✅ PASS | — |
 
    **Overall: ✅ All checks pass**

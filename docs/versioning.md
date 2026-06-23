@@ -90,13 +90,12 @@ NFR-04. The SDK's `1.x` line is a stable contract; the UI is still in its
 | `0.9.1`      | Storybook for the design system (Task 0.8.5)                                         |
 | `0.9.2`      | Production dev-mode & diagnostics (Task 0.8.3)                                       |
 | `0.9.3`      | White-labeling Phase 1 + Console UX polish (Task 0.8.4 + ad-hoc tasks) — **current** |
-| `0.9.4`      | Instance identity rename (Task 0.9.0, RFC 0032) — ⏳ next                            |
-| `0.9.5`      | Email templates + White-labeling Phase 2 (Task 0.9.1, RFC 0031 + RFC 0027)           |
-| `0.9.6`      | White-labeling Phase 3: dynamic PWA manifest (Task 0.9.2, RFC 0027)                  |
-| `0.9.7`      | systemd deployment (Task 0.9.3, RFC 0026)                                            |
-| `0.9.8`      | Operator fork model docs (Task 0.9.4, RFC 0028)                                      |
-| `0.9.9`      | User data deletion (Task 0.9.5, RFC 0033)                                            |
-| `0.9.10`     | Notification pub/sub transport (Task 0.9.6, RFC 0034)                                |
+| `0.9.4`      | Instance identity rename (Task 0.9.0, RFC 0032)                                      |
+| `0.9.5`      | Email templates + White-labeling Phase 2 (Task 0.9.2, RFC 0031 + RFC 0027)           |
+| `0.9.6`      | White-labeling Phase 3: dynamic PWA manifest (Task 0.9.3, RFC 0027)                  |
+| `0.9.7`      | systemd deployment (Task 0.9.4, RFC 0026)                                            |
+| `0.9.8`      | Operator fork model docs (Task 0.9.5, RFC 0028)                                      |
+| `0.9.9`      | Notification pub/sub transport (Task 0.9.6, RFC 0034)                                |
 | **`1.0.0`**  | **Public release**                                                                   |
 
 ---
@@ -148,13 +147,13 @@ These ship before `v1.0.0` and bump the root patch version with each merge:
 
 | Task                                                                           | Root version after merge |
 | ------------------------------------------------------------------------------ | ------------------------ |
-| ⏳ Task 0.9.0 — Instance identity rename (RFC 0032)                            | `0.9.4`                  |
-| Task 0.9.1 — Email templates + White-labeling Phase 2 (RFC 0031 + RFC 0027)    | `0.9.5`                  |
-| Task 0.9.2 — White-labeling Phase 3: dynamic PWA manifest + favicon (RFC 0027) | `0.9.6`                  |
-| Task 0.9.3 — Non-Docker Phase 2: systemd (RFC 0026)                            | `0.9.7`                  |
-| Task 0.9.4 — Operator fork model & upstream sync (RFC 0028)                    | `0.9.8`                  |
-| Task 0.9.5 — User data deletion (RFC 0033)                                     | `0.9.9`                  |
-| Task 0.9.6 — Notification pub/sub transport (RFC 0034)                         | `0.9.10`                 |
+| ✅ Task 0.9.0 — Instance identity rename (RFC 0032)                            | `0.9.4`                  |
+| ✅ Task 0.9.1 — User data deletion (RFC 0033)                                  | `0.9.1`                  |
+| ⏳ Task 0.9.2 — Email templates + White-labeling Phase 2 (RFC 0031 + RFC 0027) | `0.9.5`                  |
+| Task 0.9.3 — White-labeling Phase 3: dynamic PWA manifest + favicon (RFC 0027) | `0.9.6`                  |
+| Task 0.9.4 — Non-Docker Phase 2: systemd (RFC 0026)                            | `0.9.7`                  |
+| Task 0.9.5 — Operator fork model & upstream sync (RFC 0028)                    | `0.9.8`                  |
+| Task 0.9.6 — Notification pub/sub transport (RFC 0034)                         | `0.9.9`                  |
 
 ### Post-v1 (will not ship before `1.0.0`)
 
@@ -182,13 +181,13 @@ These ship before `v1.0.0` and bump the root patch version with each merge:
 ### What needs to happen before v1.0.0
 
 1. **Complete remaining pre-v1 tasks** (Tasks 0.9.0–0.9.6): each task bumps
-   the root version by a patch (`0.9.4` → `0.9.5` → … → `0.9.10`).
+   the root version by a patch (`0.9.4` → `0.9.5` → … → `0.9.9`).
 2. **Bump root `package.json` to `1.0.0`** in the final release PR — after the
    last hardening task merges.
 3. **Bump runtime to `1.0.0`** to match the product release (see Option A below).
 4. **Tag the release**: `git tag v1.0.0`, push, and let the Docker image
    publish workflow produce the `v1.0.0` GHCR image.
-5. **Update `docs/upgrade.md`** with final transition notes for `0.9.10 → 1.0.0`.
+5. **Update `docs/upgrade.md`** with final transition notes for `0.9.9 → 1.0.0`.
 6. **Branch convention changes at v1.0.0**: `main` becomes the production branch
    and `dev` the integration branch (as noted in CLAUDE.md).
 

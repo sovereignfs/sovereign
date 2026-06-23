@@ -8,7 +8,7 @@
 
 ## Overview
 
-"Data sovereignty" is a core Sovereign promise: no lock-in, no silent retention. This epic covers the full data lifecycle — Drizzle-kit migrations and backup/restore (upgrade safety), self-service export/import (portability), per-plugin database isolation (plugin data stays with its plugin), self-delete (the right to be forgotten), and encryption at rest (post-v1, opt-in). User data deletion (Task 0.9.5) is the only pre-v1 remaining item; encryption is scheduled post-v1.
+"Data sovereignty" is a core Sovereign promise: no lock-in, no silent retention. This epic covers the full data lifecycle — Drizzle-kit migrations and backup/restore (upgrade safety), self-service export/import (portability), per-plugin database isolation (plugin data stays with its plugin), self-delete (the right to be forgotten), and encryption at rest (post-v1, opt-in). User data deletion (Task 0.9.1) is complete; encryption at rest is scheduled post-v1.
 
 ## Tasks
 
@@ -115,5 +115,5 @@
 ## Cross-references
 
 - Per-plugin database (Task 0.8.1) is also tracked in [Plugins Runtime](plugins-runtime.md).
-- User data deletion (Task 0.9.5) is also tracked in [Users & Auth](users-auth.md) (it extends `sdk.portability`).
+- User data deletion (Task 0.9.1) is also tracked in [Users & Auth](users-auth.md) (it extends `sdk.portability`).
 - Security hardening Tier 0+1 is tracked in [Platform Shell](platform-shell.md) (no crypto machinery in v1).

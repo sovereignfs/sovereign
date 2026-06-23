@@ -40,7 +40,7 @@ for the full process.
 | [0028](0028-operator-fork-model.md)              | Operator fork model & upstream sync                 | Draft                | No — documentation-first                                    |
 | [0029](0029-internationalization.md)             | Internationalization / localization                 | Draft                | Yes — Tasks 1.0.3 + 1.0.4 [post-v1]                         |
 | [0030](0030-privacy-first-analytics.md)          | Privacy-first analytics                             | Draft                | Yes — Tasks 1.0.5 + 1.0.6 [post-v1]                         |
-| [0031](0031-email-templates.md)                  | Email template system                               | Draft                | Yes — Task 0.9.1 (co-reference with RFC 0027 Phase 2)       |
+| [0031](0031-email-templates.md)                  | Email template system                               | Draft                | Yes — Task 0.9.2 (co-reference with RFC 0027 Phase 2)       |
 | [0032](0032-instance-identity-rename.md)         | Instance identity rename                            | Draft                | Yes — Task 0.9.0 (naming rectification)                     |
-| [0033](0033-user-data-deletion.md)               | User data deletion (right to erasure)               | Draft                | Yes — Task 0.9.5 (pre-v1)                                   |
+| [0033](0033-user-data-deletion.md)               | User data deletion (right to erasure)               | Draft                | Yes — Task 0.9.1 (pre-v1)                                   |
 | [0034](0034-notification-transport.md)           | Notification Center — pluggable transport (pub/sub) | Draft                | Yes — Task 0.9.6 (pre-v1)                                   |

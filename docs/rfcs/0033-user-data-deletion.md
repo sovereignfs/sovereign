@@ -7,7 +7,7 @@ author: kasunben
 scope: >
   packages/db, packages/sdk, runtime, apps/auth, plugins/account,
   plugins/console, docs
-incorporated_into_plan: 'Yes — Task 0.9.5 (pre-v1)'
+incorporated_into_plan: 'Yes — Task 0.9.1 (pre-v1)'
 ---
 
 # RFC 0033 — User data deletion (Right to erasure)
@@ -211,7 +211,7 @@ Calls `DELETE /api/admin/users/[id]?deleteData=true`.
 | `apps/auth`         | patch | current → next    | `verify-credentials` server-to-server helper (or reuse existing auth flow)                                            |
 | `plugins/account`   | minor | current → next    | New UI section in Data tab                                                                                            |
 | `plugins/console`   | patch | current → next    | Delete action added to Users table                                                                                    |
-| Root `package.json` | patch | `0.9.8` → `0.9.9` | One pre-v1 hardening task                                                                                             |
+| Root `package.json` | patch | `0.9.0` → `0.9.1` | One pre-v1 hardening task                                                                                             |
 
 ---
 

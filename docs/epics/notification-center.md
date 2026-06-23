@@ -92,7 +92,7 @@ RFC 0015's deferred transport decision.
 - Deprecates: RFC 0015's planned `notification_transport` key in `platform_settings`
   (never written; replaced by the env var).
 
-**Root version bump:** `0.9.9` → `0.9.10`
+**Root version bump:** `0.9.8` → `0.9.9`
 
 **Dependencies:** Task 0.7.01 (Notification Center — `sdk.notifications.send()` and the
 existing SSE route shape this task rewires)

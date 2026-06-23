@@ -57,7 +57,7 @@ Subsequent tasks added Account sections as part of other epics:
 | 0.5.27 | Security tab — TOTP enrollment/disable, passkey add/list/remove       | [Users & Auth](users-auth.md)                 |
 | 0.7.1  | Preferences tab — push notification opt-in                            | [Notification Center](notification-center.md) |
 | 0.8.0  | New Subscriptions section — purchase, import license, manage renewals | [Monetization](monetization.md)               |
-| 0.9.5  | Data tab — "Delete your account" section                              | [Users & Auth](users-auth.md)                 |
+| 0.9.1  | Data tab — "Delete your account" section                              | [Users & Auth](users-auth.md)                 |
 
 ## Related Docs
 

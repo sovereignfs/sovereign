@@ -453,11 +453,11 @@ set `NOTIFICATION_TRANSPORT=redis` + `REDIS_URL=redis://redis:6379` together.
 
 ## Semver impact
 
-| Package             | Bump  | Version            | Reason                                                                                                                                                  |
-| ------------------- | ----- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `runtime`           | minor | current → next     | Broker module; SSE route rewrite; `transport` field in notifications response; `NOTIFICATION_TRANSPORT` + `REDIS_URL` env vars; health report extension |
-| `@sovereignfs/sdk`  | none  | —                  | No public API change — `sdk.notifications.send()` is unchanged                                                                                          |
-| Root `package.json` | patch | `0.9.9` → `0.9.10` | One pre-v1 hardening task                                                                                                                               |
+| Package             | Bump  | Version           | Reason                                                                                                                                                  |
+| ------------------- | ----- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `runtime`           | minor | current → next    | Broker module; SSE route rewrite; `transport` field in notifications response; `NOTIFICATION_TRANSPORT` + `REDIS_URL` env vars; health report extension |
+| `@sovereignfs/sdk`  | none  | —                 | No public API change — `sdk.notifications.send()` is unchanged                                                                                          |
+| Root `package.json` | patch | `0.9.8` → `0.9.9` | One pre-v1 hardening task                                                                                                                               |
 
 `ioredis` is added as an `optionalDependency` of `runtime`. It does not appear in any
 exported SDK types.

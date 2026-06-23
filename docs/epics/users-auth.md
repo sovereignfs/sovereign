@@ -204,10 +204,10 @@ RFC 0007 (data portability): export first, then delete.
 - `docs/plugin-development.md` — `sdk.portability.provideDelete` documented alongside
   `provideExport`/`provideImport`; note that plugins without a handler leave orphaned
   rows (operator responsibility).
-- `docs/upgrade.md` — v0.x → v0.9.5 notes (new `DELETE /api/account` route; new SDK
+- `docs/upgrade.md` — v0.x → v0.9.1 notes (new `DELETE /api/account` route; new SDK
   method; plugin authors should register a handler).
 
-**Root version bump:** `0.9.8` → `0.9.1`
+**Root version bump:** `0.9.0` → `0.9.1`
 
 **Dependencies:** Task 0.5.14 (RFC 0007 — `sdk.portability` interface to extend);
 Task 0.6.01 (capabilities — `user:manage` gate on the admin route)

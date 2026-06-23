@@ -59,6 +59,7 @@ In the same branch:
 - [ ] `pnpm lint` passes
 - [ ] `pnpm typecheck` passes
 - [ ] `pnpm test` passes
+- [ ] `pnpm build` passes
 - [ ] Docs parity test passes (if manifest/SDK/env changed)
 - [ ] Security check passes (if auth/middleware/CSP touched)
 - [ ] Version bumped per semver policy

@@ -58,6 +58,9 @@ export type {
   PluginExportSection,
   ExportResolver,
   ImportHandler,
+  DeletionContext,
+  DeletionResult,
+  DeletionHandler,
 } from './portability';
 export type {
   Session,

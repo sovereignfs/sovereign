@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { toggleActiveAction, resetMfaAction } from './actions';
+import { toggleActiveAction, resetMfaAction, deleteUserAction } from './actions';
 import styles from '../console.module.css';
 
 interface ConfirmDialogProps {
@@ -86,6 +86,33 @@ export function DeactivateButton({ userId, name }: { userId: string; name: strin
       <form ref={formRef} action={toggleActiveAction} style={{ display: 'none' }}>
         <input type="hidden" name="userId" value={userId} />
         <input type="hidden" name="active" value="false" />
+      </form>
+    </>
+  );
+}
+
+export function DeleteButton({ userId, name }: { userId: string; name: string }) {
+  const [open, setOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  return (
+    <>
+      <button type="button" className={styles.dangerButton} onClick={() => setOpen(true)}>
+        Delete…
+      </button>
+      <ConfirmDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title={`Delete user: ${name || userId}?`}
+        message="This will permanently remove all their data from this instance, including their profile, activity history, plugin data, and files. This cannot be undone."
+        confirmLabel="Delete permanently"
+        onConfirm={() => {
+          setOpen(false);
+          formRef.current?.requestSubmit();
+        }}
+      />
+      <form ref={formRef} action={deleteUserAction} style={{ display: 'none' }}>
+        <input type="hidden" name="userId" value={userId} />
       </form>
     </>
   );

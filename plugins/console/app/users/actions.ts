@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { sdk } from '@sovereignfs/sdk';
 import { logActivity } from '@/src/activity';
+import { deleteUser } from '@/src/user-deletion';
 
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
 
@@ -96,6 +97,42 @@ export async function resetMfaAction(formData: FormData): Promise<void> {
     visibility: 'user',
     summary: 'MFA reset by admin',
   });
+  revalidatePath('/console/users');
+}
+
+export async function deleteUserAction(formData: FormData): Promise<void> {
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'user:manage')) {
+    throw new Error('Insufficient privileges to manage users.');
+  }
+
+  const userId = formData.get('userId') as string;
+  const actor = await actorId();
+
+  // Guard: platform:owner cannot be deleted.
+  const usersRes = await adminFetch('/api/admin/users');
+  if (usersRes.ok) {
+    const members = (await usersRes.json()) as Array<{ id: string | null; role: string | null }>;
+    const target = members.find((m) => m.id === userId);
+    if (target?.role === 'platform:owner') {
+      throw new Error('The platform owner account cannot be deleted.');
+    }
+  }
+
+  void logActivity({
+    actorId: actor,
+    actorType: 'user',
+    action: 'account.deleted',
+    subjectUserId: userId,
+    targetType: 'user',
+    targetId: userId,
+    visibility: 'admin',
+    summary: 'Admin deleted user account and all data',
+    metadata: { userId },
+  });
+
+  await deleteUser(userId, 'default');
+
   revalidatePath('/console/users');
 }
 

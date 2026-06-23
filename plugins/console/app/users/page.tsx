@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { sdk } from '@sovereignfs/sdk';
 import { changeRoleAction, toggleActiveAction } from './actions';
-import { DeactivateButton, ResetMfaButton } from './UserActionButtons';
+import { DeactivateButton, DeleteButton, ResetMfaButton } from './UserActionButtons';
 import styles from '../console.module.css';
 
 const PAGE_SIZE = 50;
@@ -181,6 +181,11 @@ export default async function UsersPage({
                           )}
 
                           <ResetMfaButton
+                            userId={member.id ?? ''}
+                            name={member.name ?? member.email}
+                          />
+
+                          <DeleteButton
                             userId={member.id ?? ''}
                             name={member.name ?? member.email}
                           />

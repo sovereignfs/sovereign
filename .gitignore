@@ -70,3 +70,6 @@ test-results/
 
 # Storybook
 packages/ui/storybook-static/
+
+# Local session working file — never commit
+CURRENT_TASK.md

@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import type { NotificationBroker, NotificationPayload } from '../notification-broker.js';
+import type { NotificationBroker, NotificationPayload } from '../notification-broker';
 
 export class InProcessBroker implements NotificationBroker {
   readonly #emitter = new EventEmitter();

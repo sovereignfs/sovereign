@@ -51,6 +51,18 @@ Work is organized into 16 domain epics. Each task has a **stable epic task ID** 
 
 The epic index is at [`docs/epics/README.md`](epics/README.md).
 
+### Stable IDs vs volatile slots
+
+**Epic task IDs are permanent.** Once an ID like `9.9` is assigned it never changes —
+it is the stable identifier for that unit of work. Use epic task IDs in doc
+cross-references, RFC `incorporated_into_plan` fields, and task dependency lists.
+
+**Roadmap slot versions are volatile.** A slot like `0.9.2` reflects current priority
+ordering and may shift when tasks are reprioritized (e.g. `0.9.5 → 0.9.1`). Always
+look up the live slot from `docs/roadmap.md` rather than copying it from another doc;
+include roadmap slots only where the shipping order matters (upgrade notes, version
+maps).
+
 ---
 
 ## Task lifecycle

@@ -4,7 +4,14 @@ Prepare to begin the next Sovereign task. Run this at the start of every work se
 
 ## Steps
 
-1. **Identify the next task** — read the `⏳ Next:` line in `CLAUDE.md`. If absent, find the first non-✅ row in `docs/roadmap.md`. Note the roadmap version (e.g. `0.9.1`) and the epic task ID (e.g. `9.9`).
+1. **Identify the next task** — read the `⏳ Next:` line in `CLAUDE.md` to get the **epic task ID** (e.g. `9.9`). Then look up the **current roadmap slot** for that ID directly from `docs/roadmap.md` — this is the authoritative source and may differ from CLAUDE.md if priorities shifted since it was last updated:
+
+   ```bash
+   grep "\[9\.9\]" docs/roadmap.md
+   # → | 0.9.2   | Email template system... | ⏳  | [9.9](...) |
+   ```
+
+   Extract the version from column 1 of that row. If `⏳ Next:` is absent from CLAUDE.md, find the first non-✅ row in `docs/roadmap.md` directly.
 
 2. **Check git state** — run `git status` and `git log --oneline -5`. Confirm you're on `main` and it's clean. If not, stop and ask.
 

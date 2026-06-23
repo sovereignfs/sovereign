@@ -42,6 +42,12 @@ they are authoritative over assumptions:
 - **Doc task numbers (e.g. `0.3.02`) are for local tracking only.** Never put
   them in branch names, commit messages, or PR titles/descriptions. Refer to the
   work by what it does, not its task number.
+- **Epic task IDs (`<epic>.<seq>`, e.g. `9.9`) are permanent stable identifiers.**
+  Use them in doc cross-references, RFC `incorporated_into_plan` fields, and task
+  dependency lists. **Roadmap slot versions (e.g. `0.9.2`) are volatile** — they
+  reflect current priority ordering and may shift when tasks are reprioritized.
+  Always look up the live slot from `docs/roadmap.md` rather than hard-coding it in
+  docs; include slots only where shipping order matters (upgrade notes, version maps).
 - **Commits** end with a `Co-Authored-By` trailer specific to the tool used:
   - If **Claude Code** is the coding agent; end with the trailer (model-agnostic — do not use a specific model name,
     as multiple models may contribute to one task): `Co-Authored-By: Claude Code <noreply@anthropic.com>`

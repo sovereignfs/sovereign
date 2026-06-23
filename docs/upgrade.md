@@ -554,3 +554,33 @@ BRAND_EMAIL_LOGO      → INSTANCE_EMAIL_LOGO
 **`/api/brand/*` routes renamed to `/api/instance/*`.** If any external system fetches these routes directly, update those references.
 
 The database migration (`0005_rename_tenant_branding`) runs automatically at startup — no manual SQL required.
+
+---
+
+### Platform 0.9.8 → 0.9.9 (`@sovereignfs/sdk` 1.11.0 → 1.12.0, User data deletion, RFC 0033)
+
+**New: `sdk.portability.provideDelete(handler)` — account deletion hook.**
+Plugin authors should register a deletion handler to clean up per-user rows when
+a user account is deleted. Plugins without a handler will have their rows left in
+place (operator responsibility).
+
+```ts
+// In a plugin route or Server Component:
+import { sdk } from '@sovereignfs/sdk';
+
+await sdk.portability.provideDelete(async ({ userId, db }) => {
+  // delete all rows belonging to this user from your plugin's tables
+  const deleted = await myCleanupFn(db, userId);
+  return { deleted };
+});
+```
+
+**New: `DELETE /api/account`** — users can now delete their own account from
+Account → Data. Requires password re-verification. Returns 409 if the user is
+the sole `platform:owner`. On success, clears session cookies.
+
+**New: `DELETE /api/admin/users/[id]?deleteData=true`** — admins can delete a
+user and all their data from Console → Users. Requires `user:manage` capability.
+Cannot target a `platform:owner`.
+
+No database migrations required — deletion removes existing rows.

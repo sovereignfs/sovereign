@@ -1,4 +1,4 @@
-import type { ExportResolver, ImportHandler } from '@sovereignfs/sdk';
+import type { DeletionHandler, ExportResolver, ImportHandler } from '@sovereignfs/sdk';
 
 /**
  * In-process registry of plugin portability resolvers (RFC 0007), keyed by
@@ -16,6 +16,7 @@ import type { ExportResolver, ImportHandler } from '@sovereignfs/sdk';
 interface PortabilityEntry {
   exporter?: ExportResolver;
   importer?: ImportHandler;
+  deleter?: DeletionHandler;
 }
 
 const REGISTRY_KEY = Symbol.for('@sovereignfs/runtime:portability-registry');
@@ -47,6 +48,25 @@ export function getExporter(pluginId: string): ExportResolver | undefined {
 
 export function getImporter(pluginId: string): ImportHandler | undefined {
   return registry().get(pluginId)?.importer;
+}
+
+export function registerDeleter(pluginId: string, handler: DeletionHandler): void {
+  const entry = registry().get(pluginId) ?? {};
+  entry.deleter = handler;
+  registry().set(pluginId, entry);
+}
+
+export function getDeleter(pluginId: string): DeletionHandler | undefined {
+  return registry().get(pluginId)?.deleter;
+}
+
+/** Returns all registered deletion handlers as [pluginId, handler] pairs. */
+export function getAllDeleters(): [string, DeletionHandler][] {
+  const result: [string, DeletionHandler][] = [];
+  for (const [pluginId, entry] of registry()) {
+    if (entry.deleter) result.push([pluginId, entry.deleter]);
+  }
+  return result;
 }
 
 /** Test helper — clear all registrations. */

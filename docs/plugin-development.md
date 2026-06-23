@@ -841,6 +841,21 @@ remapId(originalId) }` — use `remapId` to translate stored IDs to fresh ones
   });
   ```
 
+  **Account deletion (RFC 0033):** register a deletion handler via
+  `sdk.portability.provideDelete(handler)` to clean up your plugin's data when a
+  user account is deleted (self-service or admin-initiated). The handler receives
+  `DeletionContext { userId, tenantId, db }` where `db` is your plugin's Drizzle
+  client. Return `{ deleted: number; errors?: string[] }`. Plugins without a
+  handler have their rows left in place — document this in your plugin's README.
+  The runtime runs all handlers in parallel with a 30 s timeout each.
+
+  ```ts
+  await sdk.portability.provideDelete(async ({ userId, db }) => {
+    const result = await (db as MyDb).delete(myTasks).where(eq(myTasks.userId, userId));
+    return { deleted: result.rowsAffected ?? 0 };
+  });
+  ```
+
 - **`env`** — plugin-scoped environment variables (RFC 0018). `sdk.env.get(key)`
   reads the calling plugin's `SV_PLUGIN_<SLUG>_<KEY>` env var, identified by
   the `x-sovereign-plugin-id` request header. Returns `null` when absent or

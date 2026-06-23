@@ -115,11 +115,11 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 | Version | Task                                                                      | Status | Epic task                                                                                                            |
 | ------- | ------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------- |
 | 0.9.0   | Instance identity rename (RFC 0032)                                       | ✅     | [9.8](epics/theming.md#98--instance-identity-rename-rfc-0032)                                                        |
-| 0.9.1   | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | ⏳     | [9.9](epics/theming.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
-| 0.9.2   | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](epics/theming.md#910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
-| 0.9.3   | Non-Docker production deployment, Phase 2 — systemd (RFC 0026)            | 📋     | [0.13](epics/infrastructure.md#013--non-docker-production-deployment-phase-2--systemd)                               |
-| 0.9.4   | Operator fork model & upstream sync (RFC 0028)                            | 📋     | [3.14](epics/plugins-runtime.md#314--operator-fork-model--upstream-sync)                                             |
-| 0.9.5   | User data deletion (RFC 0033)                                             | 📋     | [1.7](epics/users-auth.md#17--user-data-deletion-rfc-0033)                                                           |
+| 0.9.1   | User data deletion (RFC 0033)                                             | ✅     | [1.7](epics/users-auth.md#17--user-data-deletion-rfc-0033)                                                           |
+| 0.9.2   | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | ⏳     | [9.9](epics/theming.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
+| 0.9.3   | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](epics/theming.md#910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
+| 0.9.4   | Non-Docker production deployment, Phase 2 — systemd (RFC 0026)            | 📋     | [0.13](epics/infrastructure.md#013--non-docker-production-deployment-phase-2--systemd)                               |
+| 0.9.5   | Operator fork model & upstream sync (RFC 0028)                            | 📋     | [3.14](epics/plugins-runtime.md#314--operator-fork-model--upstream-sync)                                             |
 | 0.9.6   | Notification Center: pluggable pub/sub transport (RFC 0034)               | 📋     | [4.3](epics/notification-center.md#43--notification-center-pluggable-pubsub-transport)                               |
 
 ---

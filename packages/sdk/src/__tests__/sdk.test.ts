@@ -51,6 +51,9 @@ beforeAll(() => {
       provideImport(pluginId, handler) {
         mockImporters.set(pluginId, handler);
       },
+      provideDelete(_pluginId, _handler) {
+        /* no-op */
+      },
     },
     notifications: {
       async send(_input, _pluginId) {

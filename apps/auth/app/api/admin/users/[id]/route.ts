@@ -81,3 +81,42 @@ export async function PATCH(
       updated.createdAt instanceof Date ? updated.createdAt.toISOString() : updated.createdAt,
   });
 }
+
+/**
+ * DELETE /api/admin/users/[id]
+ *
+ * Permanently removes a user's auth record (user row, sessions, accounts,
+ * verification tokens, twoFactor, passkeys). Called by the runtime's deletion
+ * cascade after platform-table and plugin data has already been wiped.
+ * Requires the admin key; cannot target platform:owner.
+ */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  const denied = checkAdminKey(request);
+  if (denied) return denied;
+
+  const { id } = await params;
+
+  const target = await authGet<{ role: string }>('SELECT role FROM "user" WHERE id = ?', [id]);
+  if (!target) {
+    return NextResponse.json({ error: 'not found' }, { status: 404 });
+  }
+  if (target.role === 'platform:owner') {
+    return NextResponse.json(
+      { error: 'The platform owner account cannot be deleted.' },
+      { status: 403 },
+    );
+  }
+
+  // Remove all auth-managed rows for this user in dependency order.
+  await authRun('DELETE FROM "twoFactor" WHERE "userId" = ?', [id]);
+  await authRun('DELETE FROM "passkey" WHERE "userId" = ?', [id]);
+  await authRun('DELETE FROM verification WHERE identifier = ?', [id]);
+  await authRun('DELETE FROM account WHERE "userId" = ?', [id]);
+  await authRun('DELETE FROM session WHERE "userId" = ?', [id]);
+  await authRun('DELETE FROM "user" WHERE id = ?', [id]);
+
+  return new Response(null, { status: 204 });
+}

@@ -14,6 +14,7 @@ import styles from '../auth.module.css';
  */
 export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
   const signedOut = useSearchParams().get('signedout') === '1';
+  const accountDeleted = useSearchParams().get('accountDeleted') === '1';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +58,11 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
         {signedOut ? (
           <p className={styles.notice} role="status">
             You&rsquo;ve been signed out.
+          </p>
+        ) : null}
+        {accountDeleted ? (
+          <p className={styles.notice} role="status">
+            Your account has been deleted.
           </p>
         ) : null}
         <form className={styles.form} onSubmit={onSubmit}>

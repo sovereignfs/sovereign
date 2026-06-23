@@ -1,5 +1,5 @@
 import type { DataContractRef, DataContractResolver } from './data';
-import type { ExportResolver, ImportHandler } from './portability';
+import type { DeletionHandler, ExportResolver, ImportHandler } from './portability';
 import type {
   ActivityLogEntry,
   DrizzleClient,
@@ -59,6 +59,8 @@ export interface SdkHost {
     provideExport(pluginId: string, resolver: ExportResolver): void;
     /** Register a plugin's import handler, keyed by `pluginId`. */
     provideImport(pluginId: string, handler: ImportHandler): void;
+    /** Register a plugin's deletion handler (RFC 0033), keyed by `pluginId`. */
+    provideDelete(pluginId: string, handler: DeletionHandler): void;
   };
   notifications: {
     /**

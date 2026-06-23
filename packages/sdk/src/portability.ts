@@ -37,6 +37,25 @@ export type ExportResolver = (ctx: ExportContext) => Promise<PluginExportSection
 /** Restores one plugin's export section into the importing user's account. */
 export type ImportHandler = (section: PluginExportSection, ctx: ImportContext) => Promise<void>;
 
+/** Supplied to a deletion handler — scoped to the user being deleted. */
+export interface DeletionContext {
+  userId: string;
+  tenantId: string;
+  /** The plugin's own Drizzle client (same as `sdk.db.getClient()`). */
+  db: unknown;
+}
+
+/** What a deletion handler must return. */
+export interface DeletionResult {
+  /** Number of rows (or objects) deleted. */
+  deleted: number;
+  /** Non-fatal errors encountered during cleanup. */
+  errors?: string[];
+}
+
+/** Cleans up one plugin's user data when a user account is deleted. */
+export type DeletionHandler = (ctx: DeletionContext) => Promise<DeletionResult>;
+
 /**
  * User data portability (RFC 0007) — self-service export / restore / migration.
  *
@@ -91,5 +110,17 @@ export const portability = {
       );
     }
     requireHost().portability.provideImport(pluginId, handler);
+  },
+
+  /** Provider: register this plugin's deletion handler (RFC 0033). */
+  async provideDelete(handler: DeletionHandler): Promise<void> {
+    const pluginId = (await headers()).get('x-sovereign-plugin-id');
+    if (!pluginId) {
+      throw new Error(
+        'sdk.portability.provideDelete() must be called from a plugin route context ' +
+          '(x-sovereign-plugin-id header missing).',
+      );
+    }
+    requireHost().portability.provideDelete(pluginId, handler);
   },
 };

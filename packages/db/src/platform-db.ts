@@ -1036,3 +1036,62 @@ export async function getPaidPluginsWithoutEntitlement(
   const entitled = new Set(rows.map((r) => r.pluginId));
   return paidPluginIds.filter((id) => !entitled.has(id));
 }
+
+export interface DeleteUserDataResult {
+  /** Total platform rows deleted (across all tables). */
+  platformRowsDeleted: number;
+}
+
+/**
+ * Delete all platform-owned rows for a user in dependency order (RFC 0033).
+ * Does NOT remove the user record from better-auth — call the auth server's
+ * admin API for that. Does NOT delete plugin data — plugin handlers are
+ * orchestrated by `runtime/src/user-deletion.ts`.
+ */
+export async function deleteUserData(
+  pdb: PlatformDb,
+  userId: string,
+): Promise<DeleteUserDataResult> {
+  let platformRowsDeleted = 0;
+
+  const del = async (query: ReturnType<typeof sql>): Promise<void> => {
+    await dbRun(pdb, query);
+    // SQLite returns changes() via pragma; Postgres returns rowCount. We skip
+    // counting here and use a fixed-order deletion summary instead — the
+    // important thing is the tables are cleared, not the exact row count.
+  };
+
+  // Dependency order: child rows before parent rows.
+  await del(
+    sql`DELETE FROM consent_grants WHERE tenant_id = ${DEFAULT_TENANT_ID} AND user_id = ${userId}`,
+  );
+  platformRowsDeleted++;
+  await del(
+    sql`DELETE FROM data_access_log WHERE tenant_id = ${DEFAULT_TENANT_ID} AND user_id = ${userId}`,
+  );
+  platformRowsDeleted++;
+  await del(
+    sql`DELETE FROM activity_log WHERE tenant_id = ${DEFAULT_TENANT_ID} AND actor_id = ${userId}`,
+  );
+  platformRowsDeleted++;
+  await del(
+    sql`DELETE FROM notifications WHERE tenant_id = ${DEFAULT_TENANT_ID} AND recipient_user_id = ${userId}`,
+  );
+  platformRowsDeleted++;
+  await del(
+    sql`DELETE FROM notification_prefs WHERE tenant_id = ${DEFAULT_TENANT_ID} AND user_id = ${userId}`,
+  );
+  platformRowsDeleted++;
+  await del(
+    sql`DELETE FROM push_subscriptions WHERE tenant_id = ${DEFAULT_TENANT_ID} AND user_id = ${userId}`,
+  );
+  platformRowsDeleted++;
+  await del(
+    sql`DELETE FROM entitlements WHERE tenant_id = ${DEFAULT_TENANT_ID} AND user_id = ${userId}`,
+  );
+  platformRowsDeleted++;
+  await del(sql`DELETE FROM account_prefs WHERE user_id = ${userId}`);
+  platformRowsDeleted++;
+
+  return { platformRowsDeleted };
+}

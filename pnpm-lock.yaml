@@ -356,37 +356,6 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
-  plugins/com.example.my-plugin:
-    dependencies:
-      '@sovereignfs/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
-      '@sovereignfs/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      next:
-        specifier: latest
-        version: 16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      react:
-        specifier: latest
-        version: 19.2.7
-      react-dom:
-        specifier: latest
-        version: 19.2.7(react@19.2.7)
-    devDependencies:
-      '@sovereignfs/tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/tsconfig
-      '@types/react':
-        specifier: latest
-        version: 19.2.17
-      '@types/react-dom':
-        specifier: latest
-        version: 19.2.3(@types/react@19.2.17)
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-
   plugins/console:
     dependencies:
       '@sovereignfs/sdk':
@@ -10198,6 +10167,7 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
+    optional: true
 
   node-abi@3.92.0:
     dependencies:

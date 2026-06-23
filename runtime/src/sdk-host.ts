@@ -22,11 +22,12 @@ import type {
   ActivityLogEntry,
   DataContractRef,
   DataContractResolver,
+  DeletionHandler,
   ExportResolver,
   ImportHandler,
   SendNotificationInput,
 } from '@sovereignfs/sdk';
-import { registerExporter, registerImporter } from './portability/registry';
+import { registerDeleter, registerExporter, registerImporter } from './portability/registry';
 import { fanOutPushToUser } from './push';
 
 let _version: string | undefined;
@@ -170,6 +171,9 @@ provideHost({
     },
     provideImport(pluginId: string, handler: ImportHandler): void {
       registerImporter(pluginId, handler);
+    },
+    provideDelete(pluginId: string, handler: DeletionHandler): void {
+      registerDeleter(pluginId, handler);
     },
   },
   notifications: {

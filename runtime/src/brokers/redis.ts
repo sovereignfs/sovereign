@@ -1,4 +1,4 @@
-import type { NotificationBroker, NotificationPayload } from '../notification-broker.js';
+import type { NotificationBroker, NotificationPayload } from '../notification-broker';
 
 // ioredis is an optionalDependency — this module is only loaded when
 // NOTIFICATION_TRANSPORT=redis, so the dynamic import is safe.

@@ -16,9 +16,11 @@ they are authoritative over assumptions:
 
 - `docs/sovereign-proposal-plan-srs.md` — Concept, Plan, Architecture, SRS,
   manifest reference, decision log.
-- `docs/roadmap.md` — The build plan: sequenced tasks grouped by release
-  milestone (Pre-v1, v1); completed tasks marked ✅. Each task = one branch =
-  one PR.
+- `docs/roadmap.md` — Chronological task index (version → epic task ID → status).
+  Full task detail lives in `docs/epics/`. Each task = one branch = one PR.
+
+**Task workflow** — how to start, implement, and complete a task (including the
+`CURRENT_TASK.md` mechanism and epic task IDs): `docs/development-workflow.md`.
 
 ## Working conventions
 
@@ -395,7 +397,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 > Full task history (phases 0.3–0.7): `docs/task-history.md`
 
-⏳ **Next: Task 0.9.1 — Email templates (RFC 0031).** Branch from up-to-date `main`.
+⏳ **Next: Task 0.9.1 — Email templates (RFC 0031) → epic task [9.9](docs/epics/theming.md).** Branch from up-to-date `main`.
 
 Keep this file current: update the Status section as tasks complete, and add any
 new load-bearing convention that future sessions must not violate.

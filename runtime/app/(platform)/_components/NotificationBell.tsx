@@ -23,58 +23,126 @@ interface NotificationItem {
 interface NotificationResponse {
   notifications: NotificationItem[];
   unreadCount: number;
+  transport?: 'polling' | 'sse';
+}
+
+interface SsePayload {
+  notificationId: string;
+  userId: string;
+  title: string;
+  body?: string;
+  url?: string;
+  category: string;
+  source?: string;
 }
 
 const POLL_INTERVAL_MS = 30_000;
+const SSE_ERROR_FALLBACK_THRESHOLD = 3;
 
 export function NotificationBell({ placement = 'header' }: { placement?: 'sidebar' | 'header' }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [transport, setTransport] = useState<'polling' | 'sse'>('polling');
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const res = await fetch('/api/account/notifications', { credentials: 'same-origin' });
-      if (!res.ok) return;
-      const data = (await res.json()) as NotificationResponse;
+  const fetchNotifications = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      try {
+        const res = await fetch('/api/account/notifications', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const data = (await res.json()) as NotificationResponse;
 
-      // Capture before the loop: both bells may start an initial fetch concurrently, but
-      // JS is single-threaded so only one runs at a time. The first to finish sets
-      // initialFetchDone = true; the second sees isFirstFetch = false but all IDs are
-      // already in seenIds, so it finds nothing new and toasts nothing.
-      const isFirstFetch = !initialFetchDone;
+        if (data.transport && data.transport !== transport) {
+          setTransport(data.transport);
+        }
 
-      for (const item of data.notifications) {
-        if (!seenIds.has(item.id)) {
-          seenIds.add(item.id);
-          if (!isFirstFetch && item.readAt == null) {
-            toast.show({
-              title: item.title,
-              message: item.body ?? undefined,
-              category: item.category,
-            });
+        const isFirstFetch = !initialFetchDone;
+
+        for (const item of data.notifications) {
+          if (!seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            if (!isFirstFetch && !opts?.silent && item.readAt == null) {
+              toast.show({
+                title: item.title,
+                message: item.body ?? undefined,
+                category: item.category,
+              });
+            }
           }
         }
+
+        initialFetchDone = true;
+
+        setItems(data.notifications);
+        setUnreadCount(data.unreadCount);
+      } catch {
+        // Silently ignore transient fetch failures.
       }
+    },
+    [toast, transport],
+  );
 
-      initialFetchDone = true;
-
-      setItems(data.notifications);
-      setUnreadCount(data.unreadCount);
-    } catch {
-      // Silently ignore transient fetch failures.
-    }
-  }, [toast]);
-
-  // Initial fetch + polling.
+  // Initial fetch — runs once on mount to get transport mode and seed seen-ids.
   useEffect(() => {
-    void fetchNotifications();
+    void fetchNotifications({ silent: true });
+  }, []); // intentional empty deps: seed is a one-time operation
+
+  // Polling mode: interval fetch. Skipped once SSE takes over.
+  useEffect(() => {
+    if (transport !== 'polling') return;
     const interval = setInterval(() => void fetchNotifications(), POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  }, [transport, fetchNotifications]);
+
+  // SSE mode: open an EventSource; fall back to polling after 3 consecutive errors.
+  useEffect(() => {
+    if (transport !== 'sse') return;
+
+    let errorCount = 0;
+    const es = new EventSource('/api/account/notifications/stream');
+
+    es.onmessage = (event: MessageEvent<string>) => {
+      errorCount = 0;
+      try {
+        const payload = JSON.parse(event.data) as SsePayload;
+        const newItem: NotificationItem = {
+          id: payload.notificationId,
+          title: payload.title,
+          body: payload.body ?? null,
+          url: payload.url ?? null,
+          category: payload.category,
+          readAt: null,
+          createdAt: Math.floor(Date.now() / 1000),
+        };
+
+        if (!seenIds.has(newItem.id)) {
+          seenIds.add(newItem.id);
+          toast.show({
+            title: newItem.title,
+            message: newItem.body ?? undefined,
+            category: newItem.category,
+          });
+          setItems((prev) => [newItem, ...prev]);
+          setUnreadCount((c) => c + 1);
+        }
+      } catch {
+        // Malformed payload — ignore.
+      }
+    };
+
+    es.onerror = () => {
+      errorCount += 1;
+      if (errorCount >= SSE_ERROR_FALLBACK_THRESHOLD) {
+        es.close();
+        setTransport('polling');
+      }
+    };
+
+    return () => es.close();
+  }, [transport, toast]);
 
   // Close on outside click / Escape.
   useEffect(() => {
@@ -135,7 +203,7 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
         aria-haspopup="dialog"
         onClick={() => {
           setOpen((o) => {
-            if (!o) void fetchNotifications();
+            if (!o) void fetchNotifications({ silent: true });
             return !o;
           });
         }}

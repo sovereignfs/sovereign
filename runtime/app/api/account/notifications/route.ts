@@ -7,6 +7,7 @@ import {
   markNotificationRead,
 } from '@sovereignfs/db';
 import { getPlatformDb } from '@/src/db';
+import { getBroker } from '@/src/notification-broker';
 
 /** GET /api/account/notifications — user inbox feed. */
 export async function GET(request: Request): Promise<Response> {
@@ -23,7 +24,11 @@ export async function GET(request: Request): Promise<Response> {
     countUnreadNotifications(pdb, userId),
   ]);
 
-  return NextResponse.json({ notifications: items, unreadCount: unread });
+  // 'sse' is returned for both sse and redis modes — clients only care about
+  // whether to open an EventSource; the broker backend is transparent to them.
+  const transport: 'polling' | 'sse' = getBroker() ? 'sse' : 'polling';
+
+  return NextResponse.json({ notifications: items, unreadCount: unread, transport });
 }
 
 /** POST /api/account/notifications — bulk actions (read-all, dismiss). */

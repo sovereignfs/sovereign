@@ -1,50 +1,47 @@
-import { countUnreadNotifications, listUserNotifications } from '@sovereignfs/db';
-import { getPlatformDb } from '@/src/db';
+import { getBroker } from '@/src/notification-broker';
+import type { NotificationPayload } from '@/src/notification-broker';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/account/notifications/stream — SSE event stream.
+ * GET /api/account/notifications/stream — event-driven SSE stream.
  *
- * Sends the current inbox snapshot immediately, then pushes delta updates
- * every `pollIntervalSecs` seconds. Used when the platform setting
- * `notification_transport` = `'sse'`; polling (`/api/account/notifications`)
- * is the default.
+ * Returns 503 when NOTIFICATION_TRANSPORT=polling (the default) — callers
+ * must not connect in that mode. In sse/redis mode, the stream stays open and
+ * emits one `data:` line per incoming notification for this user.
+ *
+ * A heartbeat comment is sent every NOTIFICATION_HEARTBEAT_INTERVAL ms
+ * (default 25 s) to keep the connection alive through reverse-proxy idle
+ * timeouts (common default: 30 s).
  */
 export async function GET(request: Request): Promise<Response> {
+  const broker = getBroker();
+
+  if (!broker) {
+    return new Response('Transport is polling; SSE unavailable.', { status: 503 });
+  }
+
   const userId = request.headers.get('x-sovereign-user-id');
   if (!userId) return new Response('unauthenticated', { status: 401 });
 
+  const heartbeatMs = Number(process.env.NOTIFICATION_HEARTBEAT_INTERVAL ?? '25000');
   const encoder = new TextEncoder();
-  let closed = false;
 
   const stream = new ReadableStream({
-    async start(controller) {
-      const send = (event: string, data: unknown) => {
-        if (closed) return;
-        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+    start(controller) {
+      const send = (payload: NotificationPayload) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
       };
 
-      const push = async () => {
-        if (closed) return;
-        try {
-          const pdb = await getPlatformDb();
-          const [items, unread] = await Promise.all([
-            listUserNotifications(pdb, userId, { limit: 50 }),
-            countUnreadNotifications(pdb, userId),
-          ]);
-          send('notifications', { notifications: items, unreadCount: unread });
-        } catch {
-          // Silently skip on transient DB errors — client will retry.
-        }
-      };
+      const unsubscribe = broker.subscribe(userId, send);
 
-      await push();
-      const interval = setInterval(() => void push(), 30_000);
+      const heartbeat = setInterval(() => {
+        controller.enqueue(encoder.encode(': heartbeat\n\n'));
+      }, heartbeatMs);
 
       request.signal.addEventListener('abort', () => {
-        closed = true;
-        clearInterval(interval);
+        unsubscribe();
+        clearInterval(heartbeat);
         controller.close();
       });
     },
@@ -53,7 +50,7 @@ export async function GET(request: Request): Promise<Response> {
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
     },

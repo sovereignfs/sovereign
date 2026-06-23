@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/runtime",
-  "version": "0.30.0",
+  "version": "0.31.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -28,6 +28,9 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "web-push": "^3.6.7"
+  },
+  "optionalDependencies": {
+    "ioredis": "^5.3.2"
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",

@@ -100,6 +100,11 @@ services:
       SMTP_USER: '${SMTP_USER:-}'
       SMTP_PASS: '${SMTP_PASS:-}'
       SMTP_FROM: '${SMTP_FROM:-}'
+      # Notification transport (RFC 0034). Default is polling (no extra infra).
+      # Uncomment and set REDIS_URL to opt in to instant SSE delivery via Redis.
+      # Also uncomment the redis service block below and add it to depends_on.
+      # NOTIFICATION_TRANSPORT: 'redis'
+      # REDIS_URL: 'redis://redis:6379'
     volumes:
       # Shared with the auth service — both resolve relative SQLite paths
       # against /app (the cwd), so both DBs and avatars land in this volume.
@@ -115,6 +120,18 @@ services:
         condition: service_healthy
     networks:
       - sovereign_net
+
+  # ── Optional: Redis for instant cross-process notification delivery ─────────
+  # Uncomment this block and set NOTIFICATION_TRANSPORT=redis + REDIS_URL in the
+  # runtime service above to enable Redis-backed SSE notifications. Required for
+  # multi-process deployments (PM2 cluster, multiple runtime containers).
+  #
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: sovereign-redis
+  #   restart: unless-stopped
+  #   networks:
+  #     - sovereign_net
 
 volumes:
   sovereign_data:

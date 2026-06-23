@@ -435,5 +435,5 @@ in place)
 
 - [self-hosting.md](../self-hosting.md)
 - [testing-e2e.md](../testing-e2e.md)
-- [versioning.md](../versioning.md)
+- [upgrade.md — runtime version map + v1.0.0 checklist](../upgrade.md)
 - [upgrade.md](../upgrade.md)

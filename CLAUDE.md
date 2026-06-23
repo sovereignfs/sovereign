@@ -111,8 +111,8 @@ they are authoritative over assumptions:
   - three 1.0.xx hardening tasks). Do **not** bump the minor for individual tasks
     within a phase — minor bumps happen once per completed roadmap phase. The
     downgrade guard, plugin compatibility gates (RFC 0024), and `/api/admin/health`
-    all read this value; see `docs/versioning.md` for the full version map and
-    rectification plan.
+    all read this value; see `docs/upgrade.md` for the runtime version map and
+    v1.0.0 release checklist.
 
   **Per-package versions are independent of the platform version.** Internal,
   private packages (`@sovereignfs/db`, `runtime`, `auth`, `manifest`, `mailer`,

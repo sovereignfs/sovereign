@@ -106,9 +106,8 @@ For source builds, `git checkout <previous-commit>` before rebuilding.
 
 Version numbers in the sections below refer to the **`runtime` package version**
 (`runtime/package.json`), not the root `package.json`. The root `package.json`
-is frozen at `0.6.x` through the entire pre-v1 period and will jump to `1.0.0`
-at the public v1 release. See [`docs/versioning.md`](versioning.md) for the full
-rationale and the versioning plan.
+tracks roadmap phase milestones and will jump to `1.0.0` at the public release.
+See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklist](#v100-release-checklist) at the end of this file.
 
 Notes call out any required configuration changes, schema changes, or action required.
 
@@ -584,3 +583,67 @@ user and all their data from Console → Users. Requires `user:manage` capabilit
 Cannot target a `platform:owner`.
 
 No database migrations required — deletion removes existing rows.
+
+---
+
+## Runtime version map
+
+Maps the `runtime` package version at which each major capability was added.
+The section headings above correspond to these runtime version transitions.
+`SOVEREIGN_VERSION` in Compose files should match the runtime version for
+the release you are running.
+
+| Runtime version | Key capability delivered                                                  |
+| --------------- | ------------------------------------------------------------------------- |
+| 0.2.0           | Platform DB (tenant_settings, root plugin config), Console settings       |
+| 0.3.0           | Launcher plugin, root-plugin-in-place rewrite                             |
+| 0.4.0           | Account plugin (profile + preferences)                                    |
+| 0.5.0           | Plugin install script, PWA configuration                                  |
+| 0.6.0           | Local session verification (cookie-cache, AUTH-05)                        |
+| 0.7.0           | Public `/api` namespace delegation (PLT-16)                               |
+| 0.8.0–0.9.1     | Overlay shell mode (RFC 0001), Dialog UI primitive                        |
+| 0.9.0           | Logout / self sign-out (AUTH-02)                                          |
+| 0.10.0          | Security hardening Tier 0 + Tier 1 (RFC 0008)                             |
+| 0.11.0          | SDK distribution (RFC 0023), zero-dep published SDK                       |
+| 0.12.0          | Plugin compatibility & versioning (RFC 0024)                              |
+| 0.13.0          | Cross-plugin data sharing (RFC 0002)                                      |
+| 0.14.0–0.14.1   | Activity log (RFC 0005), icon system (RFC 0011)                           |
+| 0.15.0          | Drizzle-kit migrations, `sv backup`/`restore`, downgrade guard (RFC 0006) |
+| 0.16.0          | User data portability (RFC 0007)                                          |
+| 0.17.0          | Plugin-scoped env vars (RFC 0018)                                         |
+| 0.18.0          | Minimal shell mode (RFC 0014)                                             |
+| 0.19.0          | Mobile responsiveness & PWA hardening (RFC 0013)                          |
+| 0.20.0          | Passkeys & TOTP MFA (RFC 0012), offline connectivity banner               |
+| 0.21.0          | Platform roles & capabilities (RFC 0021)                                  |
+| 0.22.0          | Notification Center (RFC 0015)                                            |
+| 0.23.0          | Web Push notifications (RFC 0016)                                         |
+| 0.25.0–0.25.1   | Plugin monetization (RFC 0003), license generator, entitlements           |
+| 0.26.0          | Per-plugin isolated database (RFC 0004)                                   |
+| 0.27.0          | Production dev-mode & diagnostics (RFC 0020)                              |
+| 0.28.0          | White-labeling Phase 1 (RFC 0027)                                         |
+| 0.29.0          | Instance identity rename (RFC 0032)                                       |
+| 0.30.0          | User data deletion (RFC 0033)                                             |
+
+Some runtime minor versions (e.g. 0.24.0) were used by intermediate sub-tasks or
+patch releases and are not listed individually.
+
+---
+
+## v1.0.0 release checklist
+
+Steps to execute when all pre-v1 tasks in [`docs/roadmap.md`](roadmap.md) are ✅:
+
+1. **Bump root `package.json` to `1.0.0`** and **bump `runtime/package.json` to
+   `1.0.0`** in the same PR — aligning both to the product release milestone.
+   The runtime is the product from an operator's perspective; keeping both in sync
+   avoids operators seeing `sovereign@1.0.0` running on `runtime@0.3x.0`.
+2. **Tag the release**: `git tag v1.0.0 && git push --tags`. The Docker image
+   publish workflow produces the `v1.0.0` GHCR image automatically.
+3. **Update this file** with final transition notes for the last `0.9.x → 1.0.0`
+   jump, following the same format as the sections above.
+4. **Reorganise upgrade guide section headings** to use root `package.json` versions
+   (`v1.0 → v1.1`, etc.) instead of runtime-internal ones going forward. The runtime
+   version map above remains the historical reference for pre-v1 sections.
+5. **Update `SOVEREIGN_VERSION`** in `docker-compose.prod.yml` to `1.0.0`.
+6. **Branch convention changes**: `main` becomes the production branch and `dev`
+   the integration branch (as noted in `CLAUDE.md`).

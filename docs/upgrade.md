@@ -557,7 +557,7 @@ The database migration (`0005_rename_tenant_branding`) runs automatically at sta
 
 ---
 
-### Platform 0.9.8 → 0.9.9 (`@sovereignfs/sdk` 1.11.0 → 1.12.0, User data deletion, RFC 0033)
+### Platform 0.9.0 → 0.9.1 (`@sovereignfs/sdk` 1.11.0 → 1.12.0, User data deletion, RFC 0033)
 
 **New: `sdk.portability.provideDelete(handler)` — account deletion hook.**
 Plugin authors should register a deletion handler to clean up per-user rows when

@@ -404,7 +404,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 > Full task history (phases 0.3–0.7): `docs/task-history.md`
 
-⏳ **Next: Task 0.9.2 — Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027) → epic task [9.9](epics/theming.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027).** Branch from up-to-date `main`.
+⏳ **Next: Task 0.9.2 — Notification Center: pluggable pub/sub transport (RFC 0034) → epic task [4.3](epics/notification-center.md#43--notification-center-pluggable-pubsub-transport).** Branch from up-to-date `main`.
 
 Keep this file current: update the Status section as tasks complete, and add any
 new load-bearing convention that future sessions must not violate.

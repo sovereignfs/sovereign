@@ -8,7 +8,7 @@
 
 ## Overview
 
-The Notification Center gives plugins a single `sdk.notifications.send()` call that fans out to the user's in-app inbox, a toast if they are active, and a background push notification if they have opted in. The first two tasks built the inbox, bell chrome, Toast primitive, admin broadcast, and VAPID-based web push. Task 0.9.6 replaces the polling SSE backend with a real event-driven broker — operators choose between in-process EventEmitter (zero infra) or Redis Pub/Sub (multi-process deployments).
+The Notification Center gives plugins a single `sdk.notifications.send()` call that fans out to the user's in-app inbox, a toast if they are active, and a background push notification if they have opted in. The first two tasks built the inbox, bell chrome, Toast primitive, admin broadcast, and VAPID-based web push. Task 0.9.2 replaces the polling SSE backend with a real event-driven broker — operators choose between in-process EventEmitter (zero infra) or Redis Pub/Sub (multi-process deployments).
 
 ## Tasks
 
@@ -92,7 +92,7 @@ RFC 0015's deferred transport decision.
 - Deprecates: RFC 0015's planned `notification_transport` key in `platform_settings`
   (never written; replaced by the env var).
 
-**Root version bump:** `0.9.8` → `0.9.9`
+**Root version bump:** `0.9.1` → `0.9.2`
 
 **Dependencies:** Task 0.7.01 (Notification Center — `sdk.notifications.send()` and the
 existing SSE route shape this task rewires)

@@ -7,7 +7,7 @@ author: kasunben
 scope: >
   packages/ui, packages/db, packages/sdk, runtime, apps/auth, plugins/console,
   .env.example, docker-compose.yml, docker-compose.prod.yml, all docs
-incorporated_into_plan: 'Yes — Task 0.9.0 (naming rectification before RFC 0027 Phase 2 and RFC 0031)'
+incorporated_into_plan: 'Yes — epic task 9.8 (naming rectification before RFC 0027 Phase 2 and RFC 0031)'
 ---
 
 # RFC 0032 — Instance Identity Rename
@@ -22,8 +22,8 @@ self-hosted workspace tool that operators _own_. Operators are configuring _thei
 instance_, not "branding" a product.
 
 This RFC renames every `brand/Brand` identifier to `instance/Instance` across the
-entire platform. It is a pure rename — no new functionality. It ships as Task 0.9.0
-before Task 0.9.1 (email templates, RFC 0031) so that all subsequent work adopts the
+entire platform. It is a pure rename — no new functionality. It ships as epic task 9.8
+before epic task 9.9 (email templates, RFC 0031) so that all subsequent work adopts the
 correct naming from the start.
 
 ---
@@ -185,7 +185,7 @@ Reads env vars by name only — no code changes beyond the env var reads. The
 | `runtime`           | minor | current → next      | Route rename, provider rename, env var reads                               |
 | `apps/auth`         | patch | current → next      | Reads new env var names only                                               |
 | `plugins/console`   | patch | current → next      | UI labels + route name                                                     |
-| Root `package.json` | patch | `0.9.3` → `0.9.4`   | One pre-v1 naming rectification task                                       |
+| Root `package.json` | patch | —                   | One pre-v1 naming rectification task; slot in roadmap.md                   |
 
 ---
 

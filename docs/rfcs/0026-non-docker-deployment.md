@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `bin/sv`, `docs/self-hosting.md`, `docs/examples/`, SRS §3.1; amends RFC 0006 (adds a non-Docker fallback path alongside the canonical Docker Compose model)\
-**Incorporated into plan:** Yes — **Phase 1 (PM2)** as pre-v1 Task 0.5.30; **Phase 2 (systemd)** as pre-v1 Task 0.9.3. SRS requirement IDs assigned during the implementation tasks.
+**Incorporated into plan:** Yes — **Phase 1 (PM2)** as Task 0.5.30; **Phase 2 (systemd)** as epic task 0.13. SRS requirement IDs assigned during the implementation tasks.
 
 ---
 
@@ -19,7 +19,7 @@ is added to `sv serve`, a `sv setup pm2` command generates a ready-to-use
 ecosystem config, and `docs/self-hosting.md` gains a "Non-Docker deployment"
 section.
 
-**Phase 2 (pre-v1, Task 0.9.3):** systemd as the zero-extra-dependency Linux
+**Phase 2 (pre-v1, epic task 0.13):** systemd as the zero-extra-dependency Linux
 alternative. `sv setup systemd` generates unit files; `docs/self-hosting.md`
 gains a parallel systemd section alongside PM2.
 
@@ -167,7 +167,7 @@ unit-tested. Idempotent (re-running overwrites).
 
 ---
 
-### Phase 2 — systemd (pre-v1, Task 0.9.3)
+### Phase 2 — systemd (pre-v1, epic task 0.13)
 
 #### systemd unit files
 
@@ -369,7 +369,7 @@ not a deployment option.
 - **Phase 1 — Task 0.5.30 (pre-v1):** `sv serve` health-gate, `sv setup pm2`,
   `docs/examples/pm2.example.config.js`, "Non-Docker deployment (PM2)" section in
   `docs/self-hosting.md`, SRS §3.1 PM2 addition.
-- **Phase 2 — Task 0.9.3 (pre-v1):** `sv setup systemd`, systemd unit files in
+- **Phase 2 — epic task 0.13 (pre-v1):** `sv setup systemd`, systemd unit files in
   `docs/examples/`, "Non-Docker deployment (systemd)" section in
   `docs/self-hosting.md`, SRS §3.1 systemd note.
 - **Dependencies**: `sv serve` exists (Task 0.5.4). `sv backup`/`restore`

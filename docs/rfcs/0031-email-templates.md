@@ -6,7 +6,7 @@ date: June 2026
 author: kasunben
 scope: >
   packages/mailer, packages/db, packages/sdk, runtime, apps/auth, plugins/console
-incorporated_into_plan: 'Yes — Task 0.9.0 (alongside RFC 0027 Phase 2)'
+incorporated_into_plan: 'Yes — epic task 9.9 (alongside RFC 0027 Phase 2)'
 ---
 
 # RFC 0031 — Email Template System

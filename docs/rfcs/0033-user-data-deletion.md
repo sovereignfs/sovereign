@@ -7,7 +7,7 @@ author: kasunben
 scope: >
   packages/db, packages/sdk, runtime, apps/auth, plugins/account,
   plugins/console, docs
-incorporated_into_plan: 'Yes — Task 0.9.1 (pre-v1)'
+incorporated_into_plan: 'Yes — epic task 1.7 (pre-v1)'
 ---
 
 # RFC 0033 — User data deletion (Right to erasure)
@@ -203,15 +203,15 @@ Calls `DELETE /api/admin/users/[id]?deleteData=true`.
 
 ## Semver impact
 
-| Package             | Bump  | Version           | Reason                                                                                                                |
-| ------------------- | ----- | ----------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `@sovereignfs/sdk`  | minor | → `1.12.0`        | `sdk.portability.provideDelete` added to stable surface                                                               |
-| `@sovereignfs/db`   | patch | current → next    | `deleteUser` helpers (no public type changes)                                                                         |
-| `runtime`           | minor | current → next    | New `DELETE /api/account` route; `user-deletion.ts` cascade; `DELETE /api/admin/users/[id]?deleteData=true` extension |
-| `apps/auth`         | patch | current → next    | `verify-credentials` server-to-server helper (or reuse existing auth flow)                                            |
-| `plugins/account`   | minor | current → next    | New UI section in Data tab                                                                                            |
-| `plugins/console`   | patch | current → next    | Delete action added to Users table                                                                                    |
-| Root `package.json` | patch | `0.9.0` → `0.9.1` | One pre-v1 hardening task                                                                                             |
+| Package             | Bump  | Version        | Reason                                                                                                                |
+| ------------------- | ----- | -------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `@sovereignfs/sdk`  | minor | → `1.12.0`     | `sdk.portability.provideDelete` added to stable surface                                                               |
+| `@sovereignfs/db`   | patch | current → next | `deleteUser` helpers (no public type changes)                                                                         |
+| `runtime`           | minor | current → next | New `DELETE /api/account` route; `user-deletion.ts` cascade; `DELETE /api/admin/users/[id]?deleteData=true` extension |
+| `apps/auth`         | patch | current → next | `verify-credentials` server-to-server helper (or reuse existing auth flow)                                            |
+| `plugins/account`   | minor | current → next | New UI section in Data tab                                                                                            |
+| `plugins/console`   | patch | current → next | Delete action added to Users table                                                                                    |
+| Root `package.json` | patch | —              | One pre-v1 hardening task; slot in roadmap.md                                                                         |
 
 ---
 

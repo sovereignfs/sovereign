@@ -241,7 +241,7 @@ Phase 1 (this task) targets `packages/ui` exclusively. The `runtime` App Router 
 
 **Goal:** Rename every `brand/Brand` identifier introduced in Task 1.0.03 (RFC 0027
 Phase 1) to `instance/Instance` across the full platform. Pure rename — no new
-functionality. Ships first so Task 0.9.1 (email templates) and all subsequent work
+functionality. Ships first so epic task 9.9 (email templates) and all subsequent work
 adopt the correct naming from day one. No production users means zero migration burden.
 
 **Deliverables:**
@@ -269,7 +269,7 @@ adopt the correct naming from day one. No production users means zero migration 
 - All doc references updated: `docs/self-hosting.md`, `docs/design-system.md`,
   `docs/plugin-development.md`, `docs/rfcs/0027-white-labeling.md`.
 
-**Root version bump:** `0.9.3` → `0.9.4`
+**Root version bump:** root `package.json` — patch (one pre-v1 hardening task)
 
 **Dependencies:** Task 1.0.03 (Phase 1 — renames what Phase 1 introduced)
 
@@ -330,7 +330,7 @@ branded login/registration page. RFC 0031 is the prerequisite; both ship in this
   HTML; React Email is available for plugin authors. `docs/self-hosting.md` — email
   template customisation section.
 
-**Dependencies:** Task 0.9.0 (RFC 0032 rename must be complete — this task uses
+**Dependencies:** epic task 9.8 (RFC 0032 rename must be complete — this task uses
 `InstanceConfig`, `INSTANCE_*` env vars, and `--sv-instance-*` tokens throughout);
 Task 1.0.03 (Phase 1 — `instance_config` table must exist)
 
@@ -351,7 +351,7 @@ Task 1.0.03 (Phase 1 — `instance_config` table must exist)
 
 #### 📋 9.10 — White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027)
 
-**Goal:** Extend instance identity to the PWA manifest and favicon so the installed PWA shows the operator's app name and icons. Depends on Phase 1 (instance config DB and serving routes) and the rename in Task 0.9.0.
+**Goal:** Extend instance identity to the PWA manifest and favicon so the installed PWA shows the operator's app name and icons. Depends on Phase 1 (instance config DB and serving routes) and the rename in epic task 9.8.
 
 **Deliverables:**
 
@@ -359,7 +359,7 @@ Task 1.0.03 (Phase 1 — `instance_config` table must exist)
 - `runtime` (continued): `GET /favicon.ico` route — returns the instance's configured favicon when set, falling back to `runtime/public/favicon.ico`; `runtime/app/layout.tsx` `<head>` metadata updated to point to the dynamic route unconditionally so the fallback is transparent
 - Document in `docs/self-hosting.md`: when identity changes, cached service-worker users see the old name/icons until the SW updates (known limitation, acceptable for v1)
 
-**Dependencies:** Task 0.9.0 (RFC 0032 rename — `instance_config` table name); Task 1.0.03 (Phase 1 — instance logo served from `/api/instance/logo`)
+**Dependencies:** epic task 9.8 (RFC 0032 rename — `instance_config` table name); Task 1.0.03 (Phase 1 — instance logo served from `/api/instance/logo`)
 
 **SRS reference:** RFC 0027 Phase 3, SRS §3.18
 

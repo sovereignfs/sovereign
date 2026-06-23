@@ -8,7 +8,7 @@
 
 ## Overview
 
-This epic owns everything that makes plugins a first-class concept in Sovereign: the typed manifest schema, the generate script that composes plugin routes into the runtime, the `@sovereignfs/sdk` contract that plugin code calls, environment variable namespacing, per-plugin database isolation, compatibility versioning, the plugin registry, and the `sv` CLI. The operator fork model documentation (Task 0.9.4) is the only remaining item.
+This epic owns everything that makes plugins a first-class concept in Sovereign: the typed manifest schema, the generate script that composes plugin routes into the runtime, the `@sovereignfs/sdk` contract that plugin code calls, environment variable namespacing, per-plugin database isolation, compatibility versioning, the plugin registry, and the `sv` CLI. The operator fork model documentation (epic task 3.14) is the only remaining item.
 
 ## Tasks
 

@@ -8,7 +8,7 @@
 
 ## Overview
 
-Infrastructure covers the foundation that everything else runs on: the Turborepo + pnpm monorepo, shared TypeScript configs, the database package, Docker Compose for dev and production, the GitHub Actions CI pipeline, the E2E test suite, and non-Docker deployment (PM2 in v0.5, systemd in v0.9). The only pending item is Task 0.9.3 (systemd), which adds a zero-extra-dependency Linux production path alongside PM2.
+Infrastructure covers the foundation that everything else runs on: the Turborepo + pnpm monorepo, shared TypeScript configs, the database package, Docker Compose for dev and production, the GitHub Actions CI pipeline, the E2E test suite, and non-Docker deployment (PM2 in v0.5, systemd planned). The only pending item is epic task 0.13 (systemd), which adds a zero-extra-dependency Linux production path alongside PM2.
 
 ## Tasks
 

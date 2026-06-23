@@ -120,8 +120,8 @@ Subsequent tasks added Console sections as part of other epics:
 | 0.8.0  | Entitlement oversight, manual payment confirmation, Ed25519 key management | [Monetization](monetization.md)     |
 | 0.8.3  | Richer `/api/admin/health` response                                        | [Platform Shell](platform-shell.md) |
 | 0.8.4  | Instance identity / branding section                                       | [Theming](theming.md)               |
-| 0.9.2  | Email Templates section                                                    | [Theming](theming.md)               |
-| 0.9.1  | Admin delete user action                                                   | [Users & Auth](users-auth.md)       |
+| 9.9    | Email Templates section                                                    | [Theming](theming.md)               |
+| 1.7    | Admin delete user action                                                   | [Users & Auth](users-auth.md)       |
 
 ## Related Docs
 

@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Whole platform — `packages/ui`, `packages/db`, `runtime`, `apps/auth`, `packages/mailer`, `bin/sv`, `.env.example`, docs, Docker/compose, SRS\
-**Incorporated into plan:** Yes — phased pre-v1. SRS §3.18 documents the architecture. Task 1.0.03 (Phase 1: DB + shell + Console form + SDK) is ✅ shipped; Tasks 0.9.1 (Phase 2: email + auth login) and 0.9.2 (Phase 3: dynamic PWA manifest + favicon) are in the pre-release schedule. Task 0.9.0 (RFC 0032) renames `BRAND_*` → `INSTANCE_*` ahead of Phase 2.
+**Incorporated into plan:** Yes — phased pre-v1. SRS §3.18 documents the architecture. Task 1.0.03 (Phase 1: DB + shell + Console form + SDK) is ✅ shipped; epic tasks 9.9 (Phase 2: email + auth login) and 9.10 (Phase 3: dynamic PWA manifest + favicon) are in the pre-release schedule. Epic task 9.8 (RFC 0032) renames `BRAND_*` → `INSTANCE_*` ahead of Phase 2.
 
 ---
 
@@ -14,7 +14,7 @@ Let any Sovereign operator — individual, organisation, or company — replace 
 
 Instance identity values are injected as CSS custom properties at `:root` — the same mechanism as dark mode and tenant theming — so every component inherits the configured identity without code changes. A new `--sv-instance-*` token namespace carries non-colour identity (logo URLs, favicon URL). Colour overrides go into the existing `--sv-color-*` semantic layer. The instance name is delivered as a React prop by `InstanceProvider` and may be mirrored as a CSS custom property for decorative uses only.
 
-> **RFC 0032 note:** The identifiers in this RFC were originally defined with a `brand/BRAND_` prefix (Phase 1 shipped). RFC 0032 (Task 0.9.0) renames them to `instance/INSTANCE_` before Phase 2. This document reflects the post-rename naming throughout.
+> **RFC 0032 note:** The identifiers in this RFC were originally defined with a `brand/BRAND_` prefix (Phase 1 shipped). RFC 0032 (epic task 9.8) renames them to `instance/INSTANCE_` before Phase 2. This document reflects the post-rename naming throughout.
 
 ## Motivation
 
@@ -192,7 +192,7 @@ The fetch is wrapped in a try/catch; on failure `InstanceProvider` renders with 
 
 ### Email templates
 
-`packages/mailer` gains an optional `instanceIdentity` parameter in `MailOptions` (added in RFC 0031, Task 0.9.1):
+`packages/mailer` gains an optional `instanceIdentity` parameter in `MailOptions` (added in RFC 0031, epic task 9.9):
 
 ```ts
 interface MailOptions {
@@ -353,7 +353,7 @@ This RFC is **documentation-first**. The design is recorded here for review and 
 | 2     | Email templates (logo + sender name, RFC 0031), auth login page identity via runtime proxy                                                | `packages/mailer`, `apps/auth`                                             | `mailer` minor, `auth` minor                                          |
 | 3     | Dynamic PWA manifest route, dynamic favicon route                                                                                         | `runtime`                                                                  | `runtime` minor                                                       |
 
-Phase 0 (RFC 0032) shipped as Task 0.9.0; Phase 1 shipped as Task 1.0.03. Published packages (`@sovereignfs/ui`, `@sovereignfs/sdk`) treated the Phase 0 rename as a breaking minor bump per NFR-04 (no breaking patch releases).
+Phase 0 (RFC 0032) shipped as epic task 9.8; Phase 1 shipped as Task 1.0.03. Published packages (`@sovereignfs/ui`, `@sovereignfs/sdk`) treated the Phase 0 rename as a breaking minor bump per NFR-04 (no breaking patch releases).
 
 ### Required doc updates
 
@@ -377,4 +377,4 @@ Phase 0 (RFC 0032) shipped as Task 0.9.0; Phase 1 shipped as Task 1.0.03. Publis
 | ------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | June 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 0.2     | June 2026 | Clarified config layering (removed phantom `platform_settings` middle tier); fixed `--sv-instance-name` approach (React prop, not CSS var); fixed email logo (hosted URL, not `data:` URI); specified CSS injection guard on `instance_primary`; specified dialect-agnostic DDL; added CSP/logo-serving analysis; resolved auth server approach (proxy, not dual-write); added `getConfig()` extension; specified `accent-hover` derivation algorithm; corrected Phase 3 semver to minor; added `docs/upgrade.md` to required doc updates; added security considerations section |
-| 0.3     | June 2026 | All `BRAND_*`/`--sv-brand-*`/`brandName`/`BrandProvider`/`tenant_branding` identifiers renamed to `INSTANCE_*`/`--sv-instance-*`/`instanceName`/`InstanceProvider`/`instance_config` per RFC 0032 (Task 0.9.0); adoption path gains a Phase 0 row for the rename; incorporated-into-plan reference updated to reflect pre-v1 schedule                                                                                                                                                                                                                                            |
+| 0.3     | June 2026 | All `BRAND_*`/`--sv-brand-*`/`brandName`/`BrandProvider`/`tenant_branding` identifiers renamed to `INSTANCE_*`/`--sv-instance-*`/`instanceName`/`InstanceProvider`/`instance_config` per RFC 0032 (epic task 9.8); adoption path gains a Phase 0 row for the rename; incorporated-into-plan reference updated to reflect pre-v1 schedule                                                                                                                                                                                                                                         |

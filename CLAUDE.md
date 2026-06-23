@@ -60,11 +60,12 @@ they are authoritative over assumptions:
   `main`, correcting it means rewriting/force-pushing `main` — avoid that.
 - **When a task is done, always update both `docs/roadmap.md` and `CLAUDE.md`
   in the same PR.** Mark the task ✅ in the roadmap, add a ✅ completion entry
-  to the CLAUDE.md Status section, and add a `⏳ Next: Task X.X.XX — <title>`
+  to the CLAUDE.md Status section, and add a `⏳ Next: <title> → epic task [X.Y](<path>)`
   line at the end of the Status section so the next session knows immediately
-  what to start without re-reading the roadmap. Never leave the Status section
-  without a "⏳ Next" marker — if a PR completes the last task in a phase,
-  point at the first task of the next phase.
+  what to start without re-reading the roadmap. **Do not include the roadmap slot
+  in this line** — the slot is looked up live from `docs/roadmap.md` by `task-start`.
+  Never leave the Status section without a "⏳ Next" marker — if a PR completes
+  the last task in a phase, point at the first task of the next phase.
 - **Verify before claiming done.** Run the task's review-checklist commands and
   show the output.
 - Never merge a PR automatically. Either wait for explicit instruction to merge,
@@ -404,7 +405,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 > Full task history (phases 0.3–0.7): `docs/task-history.md`
 
-⏳ **Next: Task 0.9.2 — Notification Center: pluggable pub/sub transport (RFC 0034) → epic task [4.3](epics/notification-center.md#43--notification-center-pluggable-pubsub-transport).** Branch from up-to-date `main`.
+⏳ **Next: Notification Center: pluggable pub/sub transport (RFC 0034) → epic task [4.3](epics/notification-center.md#43--notification-center-pluggable-pubsub-transport).** Branch from up-to-date `main`.
 
 Keep this file current: update the Status section as tasks complete, and add any
 new load-bearing convention that future sessions must not violate.

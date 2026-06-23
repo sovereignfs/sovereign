@@ -4,6 +4,7 @@ import { getLastMigrationResult, pingDb, resolveDialect, resolveSqlitePath } fro
 import { checkAdminKey } from '@/src/admin-guard';
 import { isDevModeConfigured } from '@/src/dev-mode';
 import { getPlatformDb } from '@/src/db';
+import { getBroker } from '@/src/notification-broker';
 import { getIncompatiblePlugins } from '@/src/plugin-compat';
 import { getPlatformVersion } from '@/src/platform-version';
 import { getInstalledPlugins } from '@/src/registry';
@@ -38,6 +39,11 @@ interface HealthReport {
   diagnostics: {
     logLevel: string;
     devModeEnabled: boolean;
+  };
+  /** Notification delivery transport and broker connection state (RFC 0034). */
+  notifications: {
+    transport: 'polling' | 'sse' | 'redis';
+    brokerConnected: boolean;
   };
   uptimeSeconds: number;
 }
@@ -89,6 +95,18 @@ export async function GET(request: Request): Promise<Response> {
 
   const installedPlugins = getInstalledPlugins();
 
+  const rawTransport = process.env.NOTIFICATION_TRANSPORT ?? 'polling';
+  const notifTransport: 'polling' | 'sse' | 'redis' =
+    rawTransport === 'sse' || rawTransport === 'redis' ? rawTransport : 'polling';
+  const broker = getBroker();
+  // RedisBroker exposes a `connected` getter; InProcessBroker is always connected.
+  const brokerConnected = broker
+    ? 'connected' in broker &&
+      typeof (broker as unknown as { connected: boolean }).connected === 'boolean'
+      ? (broker as unknown as { connected: boolean }).connected
+      : true
+    : false;
+
   const report: HealthReport = {
     platformVersion: getPlatformVersion(),
     database: {
@@ -107,6 +125,10 @@ export async function GET(request: Request): Promise<Response> {
     diagnostics: {
       logLevel: (process.env.LOG_LEVEL ?? 'warn').toLowerCase(),
       devModeEnabled: isDevModeConfigured(),
+    },
+    notifications: {
+      transport: notifTransport,
+      brokerConnected,
     },
     uptimeSeconds: Math.floor(process.uptime()),
   };

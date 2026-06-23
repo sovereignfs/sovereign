@@ -1,7 +1,7 @@
 ---
 rfc: 0034
 title: Notification Center — Pluggable transport (pub/sub)
-status: Draft
+status: Accepted
 date: June 2026
 author: kasunben
 scope: >

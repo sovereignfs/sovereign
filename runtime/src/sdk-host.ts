@@ -29,6 +29,7 @@ import type {
 } from '@sovereignfs/sdk';
 import { registerDeleter, registerExporter, registerImporter } from './portability/registry';
 import { fanOutPushToUser } from './push';
+import { getBroker } from './notification-broker';
 
 let _version: string | undefined;
 
@@ -179,8 +180,9 @@ provideHost({
   notifications: {
     async send(input: SendNotificationInput, pluginId: string): Promise<void> {
       const pdb = await getPlatformDb();
+      const notifId = randomUUID();
       await sendNotification(pdb, {
-        id: randomUUID(),
+        id: notifId,
         recipientUserId: input.recipientUserId,
         source: pluginId,
         sourceType: 'plugin',
@@ -190,6 +192,21 @@ provideHost({
         category: input.category,
         icon: input.icon,
       });
+
+      // Broker publish for SSE/Redis transport (no-op in polling mode).
+      const broker = getBroker();
+      if (broker) {
+        void broker.publish(input.recipientUserId, {
+          notificationId: notifId,
+          userId: input.recipientUserId,
+          title: input.title,
+          body: input.body ?? undefined,
+          url: input.url ?? undefined,
+          category: input.category ?? 'info',
+          source: pluginId,
+        });
+      }
+
       // Fire-and-forget push fan-out (respects per-user muted-category prefs).
       void fanOutPushToUser(input.recipientUserId, {
         title: input.title,

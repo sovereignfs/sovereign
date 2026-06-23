@@ -64,4 +64,4 @@ Prepare to begin the next Sovereign task. Run this at the start of every work se
 - Commits end with: `Co-Authored-By: Claude Code <noreply@anthropic.com>`
 - PRs target `main` and end with: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
 - Merge strategy: rebase and merge (never squash)
-- Run `/task-complete` when the implementation is ready for review
+- Run `/sv-task-complete` when the implementation is ready for review

@@ -8,26 +8,26 @@ Finish a Sovereign task and prepare it for PR. Run this when implementation is d
 
 Launch two sub-agents **simultaneously** (single message, two Agent tool calls):
 
-**Agent A — Verifier:** Brief it with the full contents of `.claude/commands/verify.md` plus: "The repo is at `/Users/nemo/Dev/kasunben/sovereignfs/sovereign`. Read `CURRENT_TASK.md` for task context, run all checks, and return only the summary table."
+**Agent A — Verifier:** Brief it with the full contents of `.claude/commands/sv-verify.md` plus: "The repo is at `/Users/nemo/Dev/kasunben/sovereignfs/sovereign`. Read `CURRENT_TASK.md` for task context, run all checks, and return only the summary table."
 
-**Agent B — Docs Updater:** Brief it with the full contents of `.claude/commands/update-task-docs.md` plus: "The repo is at `/Users/nemo/Dev/kasunben/sovereignfs/sovereign`. Read `CURRENT_TASK.md`, update `docs/roadmap.md` and `CLAUDE.md`, delete `CURRENT_TASK.md`, and report what changed."
+**Agent B — Docs Updater:** Brief it with the full contents of `.claude/commands/sv-update-task-docs.md` plus: "The repo is at `/Users/nemo/Dev/kasunben/sovereignfs/sovereign`. Read `CURRENT_TASK.md`, update `docs/roadmap.md` and `CLAUDE.md`, delete `CURRENT_TASK.md`, and report what changed."
 
 Wait for both agents to return before continuing.
 
 ### 2. Handle verification results
 
 - If Verifier reports **all checks pass** → continue.
-- If Verifier reports **failures** → fix them, then re-run `/verify` before continuing. Do not proceed to PR with failing checks.
+- If Verifier reports **failures** → fix them, then re-run `/sv-verify` before continuing. Do not proceed to PR with failing checks.
 
 ### 3. Security check (conditional)
 
-Run `/security-check` if the diff touches sensitive paths:
+Run `/sv-security-check` if the diff touches sensitive paths:
 
 ```bash
 git diff main...HEAD --name-only | grep -E "apps/auth/|middleware|/api/|packages/sdk/|csp|cookie|session"
 ```
 
-If any matches → spawn a Security Check agent briefed with the contents of `.claude/commands/security-check.md`. Fix any violations before continuing.
+If any matches → spawn a Security Check agent briefed with the contents of `.claude/commands/sv-security-check.md`. Fix any violations before continuing.
 
 ### 4. Bump versions
 

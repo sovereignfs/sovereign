@@ -69,7 +69,7 @@ maps).
 
 ### Starting a task
 
-Run `/task-start`. The skill:
+Run `/sv-task-start`. The skill:
 
 1. Reads the `⏳ Next` pointer in `CLAUDE.md` to identify the task.
 2. Confirms `main` is clean and pulls latest.
@@ -84,22 +84,22 @@ Read `CURRENT_TASK.md` for task context at any point. It contains everything: go
 
 ### Completing a task
 
-Run `/task-complete`. The skill orchestrates three role agents, two of which run in parallel:
+Run `/sv-task-complete`. The skill orchestrates three role agents, two of which run in parallel:
 
 ```
 [parallel]
-  /verify          — runs all checks, returns structured pass/fail summary
-  /update-task-docs — updates roadmap row + CLAUDE.md, deletes CURRENT_TASK.md
+  /sv-verify       — runs all checks, returns structured pass/fail summary
+  /sv-update-task-docs— updates roadmap row + CLAUDE.md, deletes CURRENT_TASK.md
 [sequential, after both complete]
-  /security-check  — only if diff touches auth/middleware/CSP/SDK paths
+  /sv-security-check— only if diff touches auth/middleware/CSP/SDK paths
   main agent       — version bumps + PR draft
 ```
 
-**`/verify`** reads `CURRENT_TASK.md`, runs `format:check`, `lint`, `typecheck`, `test` (and docs-parity if relevant), and returns a summary table — not raw output. Failures block the PR draft.
+**`/sv-verify`** reads `CURRENT_TASK.md`, runs `format:check`, `lint`, `typecheck`, `test` (and docs-parity if relevant), and returns a summary table — not raw output. Failures block the PR draft.
 
-**`/update-task-docs`** reads `CURRENT_TASK.md` for metadata, marks the roadmap row ✅, appends a completion entry to `CLAUDE.md`, advances the `⏳ Next` pointer, and deletes `CURRENT_TASK.md`.
+**`/sv-update-task-docs`** reads `CURRENT_TASK.md` for metadata, marks the roadmap row ✅, appends a completion entry to `CLAUDE.md`, advances the `⏳ Next` pointer, and deletes `CURRENT_TASK.md`.
 
-**`/security-check`** (conditional) reviews the diff against the hard architectural rules in `CLAUDE.md` — redirect codes, CSP construction, cookie clearing, session config, `NEXT_PUBLIC_*` usage. Violations block the PR draft.
+**`/sv-security-check`** (conditional) reviews the diff against the hard architectural rules in `CLAUDE.md` — redirect codes, CSP construction, cookie clearing, session config, `NEXT_PUBLIC_*` usage. Violations block the PR draft.
 
 ---
 
@@ -118,7 +118,7 @@ Status lives in exactly two places:
 
 ## `CURRENT_TASK.md` — the active task file
 
-`CURRENT_TASK.md` is a transient file written by `/task-start` and deleted by `/task-complete`. It is never committed.
+`CURRENT_TASK.md` is a transient file written by `/sv-task-start` and deleted by `/sv-task-complete`. It is never committed.
 
 ```markdown
 # Current Task
@@ -143,7 +143,7 @@ Status lives in exactly two places:
 
 Any agent or sub-agent working on the current task should read this file first. It is the single source of truth for what is being built right now.
 
-If `CURRENT_TASK.md` does not exist, no task is in progress — run `/task-start` to begin one.
+If `CURRENT_TASK.md` does not exist, no task is in progress — run `/sv-task-start` to begin one.
 
 ---
 
@@ -169,12 +169,12 @@ The `**[3.13]**` notation is the stable epic task ID. It survives task renames b
 
 Four focused skills cover the non-implementation phases of a task. Each needs only `CURRENT_TASK.md` plus its own skill file — no full project orientation required.
 
-| Skill               | Trigger                                                 | What it does                                                               |
-| ------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `/verify`           | Parallel with `/update-task-docs` at task-complete      | Runs all checks, returns structured pass/fail table                        |
-| `/update-task-docs` | Parallel with `/verify` at task-complete                | Marks roadmap ✅, advances CLAUDE.md Next pointer, deletes CURRENT_TASK.md |
-| `/security-check`   | Conditional — when diff touches auth/middleware/CSP/SDK | Reviews diff against hard architectural rules, blocks PR on violation      |
-| `/task-start`       | Session start                                           | Writes CURRENT_TASK.md, creates branch                                     |
+| Skill                  | Trigger                                                 | What it does                                                               |
+| ---------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `/sv-verify`           | Parallel with `/sv-update-task-docs` at task-complete   | Runs all checks, returns structured pass/fail table                        |
+| `/sv-update-task-docs` | Parallel with `/sv-verify` at task-complete             | Marks roadmap ✅, advances CLAUDE.md Next pointer, deletes CURRENT_TASK.md |
+| `/sv-security-check`   | Conditional — when diff touches auth/middleware/CSP/SDK | Reviews diff against hard architectural rules, blocks PR on violation      |
+| `/sv-task-start`       | Session start                                           | Writes CURRENT_TASK.md, creates branch                                     |
 
 Each agent is briefed with `CURRENT_TASK.md` (~50 lines) rather than the full project context. The Verifier and Docs Updater run in parallel, so the task-complete wall-clock is bounded by whichever takes longer (verification, ~30–60s) rather than their sum.
 

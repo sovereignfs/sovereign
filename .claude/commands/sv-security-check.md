@@ -4,7 +4,7 @@ Targeted security review scoped to the current branch diff. Checks for violation
 
 ## When to run
 
-Automatically triggered by `/task-complete` when the diff touches any of:
+Automatically triggered by `/sv-task-complete` when the diff touches any of:
 
 - `apps/auth/` — auth server, session config, CSRF
 - `runtime/src/middleware.ts` or `runtime/middleware.ts` — redirect codes, session verification
@@ -12,7 +12,7 @@ Automatically triggered by `/task-complete` when the diff touches any of:
 - `packages/sdk/` — SDK surface changes
 - Any file containing `csp`, `nonce`, `Content-Security-Policy`, `cookie`, `session`
 
-Can also be run manually at any time: `/security-check`
+Can also be run manually at any time: `/sv-security-check`
 
 ## Steps
 
@@ -64,4 +64,4 @@ Can also be run manually at any time: `/security-check`
 
    For any violation, add a **Violations** section with file, line, and the specific issue.
 
-6. **If violations are found** — stop and do not proceed to PR draft. Fix the violations first, then re-run `/verify` and `/security-check`.
+6. **If violations are found** — stop and do not proceed to PR draft. Fix the violations first, then re-run `/sv-verify` and `/sv-security-check`.

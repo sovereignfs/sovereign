@@ -1,6 +1,6 @@
 # Verify
 
-Run all quality checks for the current task and report a structured pass/fail summary. Can be run standalone or called by `/task-complete`.
+Run all quality checks for the current task and report a structured pass/fail summary. Can be run standalone or called by `/sv-task-complete`.
 
 ## Steps
 

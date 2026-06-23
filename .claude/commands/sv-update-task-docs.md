@@ -1,6 +1,6 @@
 # Update Task Docs
 
-Mark the current task complete in the roadmap and CLAUDE.md, then remove CURRENT_TASK.md. Called by `/task-complete` — can also be run standalone.
+Mark the current task complete in the roadmap and CLAUDE.md, then remove CURRENT_TASK.md. Called by `/sv-task-complete` — can also be run standalone.
 
 Requires `CURRENT_TASK.md` to exist in the repo root.
 

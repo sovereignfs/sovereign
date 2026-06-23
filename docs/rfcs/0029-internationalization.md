@@ -7,8 +7,8 @@
 `plugins/console`, `plugins/account`, `scripts/generate-registry.ts`,
 `docs/plugin-development.md`, `docs/self-hosting.md`; builds on RFC 0018
 (plugin-scoped env), RFC 0022 (plugin capabilities)\
-**Incorporated into plan:** Yes — Tasks 1.0.3 (infrastructure) and 1.0.4 (platform
-shell adoption) [post-v1]. `@sovereignfs/manifest` minor bump, `@sovereignfs/sdk` minor bump,
+**Incorporated into plan:** Yes — epic tasks 11.1 (infrastructure) and 11.2 (platform
+shell adoption). `@sovereignfs/manifest` minor bump, `@sovereignfs/sdk` minor bump,
 `@sovereignfs/db` minor bump.
 
 ---

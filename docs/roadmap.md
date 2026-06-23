@@ -117,10 +117,12 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 | 0.9.0   | Instance identity rename (RFC 0032)                                       | ✅     | [9.8](epics/theming.md#98--instance-identity-rename-rfc-0032)                                                        |
 | 0.9.1   | User data deletion (RFC 0033)                                             | ✅     | [1.7](epics/users-auth.md#17--user-data-deletion-rfc-0033)                                                           |
 | 0.9.2   | Notification Center: pluggable pub/sub transport (RFC 0034)               | ⏳     | [4.3](epics/notification-center.md#43--notification-center-pluggable-pubsub-transport)                               |
-| 0.9.3   | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](epics/theming.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
-| 0.9.4   | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](epics/theming.md#910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
-| 0.9.5   | Non-Docker production deployment, Phase 2 — systemd (RFC 0026)            | 📋     | [0.13](epics/infrastructure.md#013--non-docker-production-deployment-phase-2--systemd)                               |
-| 0.9.6   | Operator fork model & upstream sync (RFC 0028)                            | 📋     | [3.14](epics/plugins-runtime.md#314--operator-fork-model--upstream-sync)                                             |
+| 0.9.3   | Internationalization, Phase 1 — Infrastructure (RFC 0029)                 | 📋     | [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029)                                     |
+| 0.9.4   | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)        | 📋     | [11.2](epics/i18n.md#112--internationalization-phase-2--platform-shell-adoption-rfc-0029)                            |
+| 0.9.5   | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](epics/theming.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
+| 0.9.6   | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](epics/theming.md#910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
+| 0.9.7   | Non-Docker production deployment, Phase 2 — systemd (RFC 0026)            | 📋     | [0.13](epics/infrastructure.md#013--non-docker-production-deployment-phase-2--systemd)                               |
+| 0.9.8   | Operator fork model & upstream sync (RFC 0028)                            | 📋     | [3.14](epics/plugins-runtime.md#314--operator-fork-model--upstream-sync)                                             |
 
 ---
 
@@ -132,7 +134,5 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 | ------- | ---------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------- |
 | 1.0.1   | Encryption at rest & field-level, Tier 2–4 (RFC 0008)                        | 📋     | [8.5](epics/data-sovereignty.md#85--encryption-at-rest--field-level-tier-24-rfc-0008)                 |
 | 1.0.2   | Phase 2 payment integration (RFC 0003 Phase 2)                               | 📋     | [7.2](epics/monetization.md#72--phase-2-payment-integration-rfc-0003-phase-2)                         |
-| 1.0.3   | Internationalization, Phase 1 — Infrastructure (RFC 0029)                    | 📋     | [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029)                      |
-| 1.0.4   | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)           | 📋     | [11.2](epics/i18n.md#112--internationalization-phase-2--platform-shell-adoption-rfc-0029)             |
-| 1.0.5   | Analytics, Phase 1 — Plugin scaffold + server-side infrastructure (RFC 0030) | 📋     | [6.1](epics/analytics.md#61--analytics-phase-1--plugin-scaffold--server-side-infrastructure-rfc-0030) |
-| 1.0.6   | Analytics, Phase 2 — Client-side click tracking + heatmaps (RFC 0030)        | 📋     | [6.2](epics/analytics.md#62--analytics-phase-2--client-side-click-tracking--heatmaps-rfc-0030)        |
+| 1.0.3   | Analytics, Phase 1 — Plugin scaffold + server-side infrastructure (RFC 0030) | 📋     | [6.1](epics/analytics.md#61--analytics-phase-1--plugin-scaffold--server-side-infrastructure-rfc-0030) |
+| 1.0.4   | Analytics, Phase 2 — Client-side click tracking + heatmaps (RFC 0030)        | 📋     | [6.2](epics/analytics.md#62--analytics-phase-2--client-side-click-tracking--heatmaps-rfc-0030)        |

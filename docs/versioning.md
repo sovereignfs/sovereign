@@ -143,8 +143,6 @@ patch versions of earlier milestones and are not listed individually.
 
 - **Task 1.0.1** — Encryption at rest, field-level, Tier 2–4 (RFC 0008)
 - **Task 1.0.2** — Phase 2 payment integration (RFC 0003 Phase 2)
-- **Task 1.0.3** — Internationalization, Phase 1 — Infrastructure (RFC 0029)
-- **Task 1.0.4** — Internationalization, Phase 2 — Platform shell adoption (RFC 0029)
 - **Task 1.0.5** — Analytics, Phase 1 — Plugin scaffold + server-side infrastructure (RFC 0030)
 - **Task 1.0.6** — Analytics, Phase 2 — Client-side click tracking + heatmaps (RFC 0030)
 

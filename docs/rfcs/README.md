@@ -38,7 +38,7 @@ for the full process.
 | [0026](0026-non-docker-deployment.md)            | Non-Docker production deployment                    | Accepted             | Yes (phased) — Task 0.5.30 (Phase 1) + epic task 0.13 (Phase 2) |
 | [0027](0027-white-labeling.md)                   | White-labeling (instance identity)                  | Accepted             | Yes (phased) — epic tasks 9.8 + 9.9 + 9.10                      |
 | [0028](0028-operator-fork-model.md)              | Operator fork model & upstream sync                 | Draft                | No — documentation-first                                        |
-| [0029](0029-internationalization.md)             | Internationalization / localization                 | Draft                | Yes — Tasks 1.0.3 + 1.0.4 [post-v1]                             |
+| [0029](0029-internationalization.md)             | Internationalization / localization                 | Draft                | Yes — epic tasks 11.1 + 11.2 (pre-v1)                           |
 | [0030](0030-privacy-first-analytics.md)          | Privacy-first analytics                             | Draft                | Yes — Tasks 1.0.5 + 1.0.6 [post-v1]                             |
 | [0031](0031-email-templates.md)                  | Email template system                               | Draft                | Yes — epic task 9.9 (co-reference with RFC 0027 Phase 2)        |
 | [0032](0032-instance-identity-rename.md)         | Instance identity rename                            | Draft                | Yes — epic task 9.8 (naming rectification)                      |

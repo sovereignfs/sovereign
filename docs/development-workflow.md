@@ -72,15 +72,22 @@ Read `CURRENT_TASK.md` for task context at any point. It contains everything: go
 
 ### Completing a task
 
-Run `/task-complete`. The skill:
+Run `/task-complete`. The skill orchestrates three role agents, two of which run in parallel:
 
-1. Runs the verification checklist (`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`).
-2. Checks docs parity if manifest/SDK/env vars changed.
-3. Updates `docs/roadmap.md` — changes the task row's Status cell to ✅.
-4. Updates `CLAUDE.md` — appends a one-line ✅ completion entry and updates the `⏳ Next` pointer to include the epic file path (e.g. `⏳ Next: Task 0.9.2 — Title → epic task [9.10](docs/epics/theming.md)`).
-5. Deletes `CURRENT_TASK.md`.
-6. Bumps versions per semver policy.
-7. Drafts the PR description.
+```
+[parallel]
+  /verify          — runs all checks, returns structured pass/fail summary
+  /update-task-docs — updates roadmap row + CLAUDE.md, deletes CURRENT_TASK.md
+[sequential, after both complete]
+  /security-check  — only if diff touches auth/middleware/CSP/SDK paths
+  main agent       — version bumps + PR draft
+```
+
+**`/verify`** reads `CURRENT_TASK.md`, runs `format:check`, `lint`, `typecheck`, `test` (and docs-parity if relevant), and returns a summary table — not raw output. Failures block the PR draft.
+
+**`/update-task-docs`** reads `CURRENT_TASK.md` for metadata, marks the roadmap row ✅, appends a completion entry to `CLAUDE.md`, advances the `⏳ Next` pointer, and deletes `CURRENT_TASK.md`.
+
+**`/security-check`** (conditional) reviews the diff against the hard architectural rules in `CLAUDE.md` — redirect codes, CSP construction, cookie clearing, session config, `NEXT_PUBLIC_*` usage. Violations block the PR draft.
 
 ---
 
@@ -146,6 +153,21 @@ The `**[3.13]**` notation is the stable epic task ID. It survives task renames b
 
 ---
 
+## Role agents
+
+Four focused skills cover the non-implementation phases of a task. Each needs only `CURRENT_TASK.md` plus its own skill file — no full project orientation required.
+
+| Skill               | Trigger                                                 | What it does                                                               |
+| ------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `/verify`           | Parallel with `/update-task-docs` at task-complete      | Runs all checks, returns structured pass/fail table                        |
+| `/update-task-docs` | Parallel with `/verify` at task-complete                | Marks roadmap ✅, advances CLAUDE.md Next pointer, deletes CURRENT_TASK.md |
+| `/security-check`   | Conditional — when diff touches auth/middleware/CSP/SDK | Reviews diff against hard architectural rules, blocks PR on violation      |
+| `/task-start`       | Session start                                           | Writes CURRENT_TASK.md, creates branch                                     |
+
+Each agent is briefed with `CURRENT_TASK.md` (~50 lines) rather than the full project context. The Verifier and Docs Updater run in parallel, so the task-complete wall-clock is bounded by whichever takes longer (verification, ~30–60s) rather than their sum.
+
+---
+
 ## Quick reference for agents
 
 | I need to know…                      | Read…                                            |
@@ -158,3 +180,4 @@ The `**[3.13]**` notation is the stable epic task ID. It survives task renames b
 | Which epic a roadmap task belongs to | `docs/roadmap.md` → Epic task column             |
 | Epic file for a given epic ID        | `docs/epics/README.md`                           |
 | Project conventions and hard rules   | `CLAUDE.md`                                      |
+| Security rules to check against      | `CLAUDE.md` → "Hard architectural rules" section |

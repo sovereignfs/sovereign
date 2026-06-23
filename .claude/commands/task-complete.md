@@ -4,58 +4,71 @@ Finish a Sovereign task and prepare it for PR. Run this when implementation is d
 
 ## Steps
 
-1. **Run the verification checklist** — execute the commands listed in the roadmap entry for this task (typecheck, lint, tests, format check). Show all output. Do not claim done if any fail.
+### 1. Spawn parallel agents
 
-   ```bash
-   pnpm format:check && pnpm lint && pnpm typecheck && pnpm test
-   ```
+Launch two sub-agents **simultaneously** (single message, two Agent tool calls):
 
-2. **Check docs parity** — if you touched manifest fields, SDK surface, or env vars, verify the parity test passes:
+**Agent A — Verifier:** Brief it with the full contents of `.claude/commands/verify.md` plus: "The repo is at `/Users/nemo/Dev/kasunben/sovereignfs/sovereign`. Read `CURRENT_TASK.md` for task context, run all checks, and return only the summary table."
 
-   ```bash
-   pnpm test -- --reporter=verbose runtime/src/docs-parity
-   ```
+**Agent B — Docs Updater:** Brief it with the full contents of `.claude/commands/update-task-docs.md` plus: "The repo is at `/Users/nemo/Dev/kasunben/sovereignfs/sovereign`. Read `CURRENT_TASK.md`, update `docs/roadmap.md` and `CLAUDE.md`, delete `CURRENT_TASK.md`, and report what changed."
 
-3. **Mark roadmap done** — in `docs/roadmap.md`, find the task row and change its Status cell to ✅.
+Wait for both agents to return before continuing.
 
-4. **Update CLAUDE.md Status** — append a one-line ✅ entry at the bottom of the Status section. Keep it to one sentence: what shipped and which packages changed. Then update the `⏳ Next` line to point at the following task (include the epic task ID and epic file path so the next session can jump straight to it — e.g. `⏳ Next: Task 0.9.2 — White-labeling Phase 3 → [9.10](docs/epics/theming.md) (epic task 9.10)`).
+### 2. Handle verification results
 
-5. **Delete `CURRENT_TASK.md`** from the repo root — `rm CURRENT_TASK.md`. The task is done; the file should not persist.
+- If Verifier reports **all checks pass** → continue.
+- If Verifier reports **failures** → fix them, then re-run `/verify` before continuing. Do not proceed to PR with failing checks.
 
-6. **Bump versions** — in the same branch:
-   - `fix/` → patch bump on affected packages
-   - `feat/` → minor bump on affected packages
-   - Breaking change → major bump + migration note in `docs/upgrade.md`
-   - `chore/`/`docs/` → no bump unless a public API changed
-   - Platform root `package.json` only bumps at phase completion (minor) or 1.0.xx hardening (patch)
+### 3. Security check (conditional)
 
-7. **Draft the PR description** using this template:
+Run `/security-check` if the diff touches sensitive paths:
 
-   ```
-   ## What
+```bash
+git diff main...HEAD --name-only | grep -E "apps/auth/|middleware|/api/|packages/sdk/|csp|cookie|session"
+```
 
-   [1-3 sentences on what changed]
+If any matches → spawn a Security Check agent briefed with the contents of `.claude/commands/security-check.md`. Fix any violations before continuing.
 
-   ## Why
+### 4. Bump versions
 
-   [The motivation — SRS section, RFC, or bug]
+In the same branch:
 
-   ## How
+- `fix/` → patch bump on affected packages
+- `feat/` → minor bump on affected packages
+- Breaking change → major bump + migration note in `docs/upgrade.md`
+- `chore/`/`docs/` → no bump unless a public API changed
+- Platform root `package.json` only bumps at phase completion (minor) or 1.0.xx hardening (patch)
 
-   [Key implementation decisions, if non-obvious]
+### 5. Draft the PR description
 
-   ## Checklist
-   - [ ] `pnpm format:check` passes
-   - [ ] `pnpm lint` passes
-   - [ ] `pnpm typecheck` passes
-   - [ ] `pnpm test` passes
-   - [ ] Docs parity test passes (if manifest/SDK/env changed)
-   - [ ] Version bumped per semver policy
-   - [ ] `docs/roadmap.md` row updated ✅
-   - [ ] `CLAUDE.md` Status updated with ✅ entry and new `⏳ Next` pointer
-   - [ ] `CURRENT_TASK.md` deleted
+```
+## What
 
-   🤖 Generated with [Claude Code](https://claude.com/claude-code)
-   ```
+[1-3 sentences on what changed]
 
-8. **Do not merge** — wait for explicit instruction or consent from the user.
+## Why
+
+[The motivation — SRS section, RFC, or bug]
+
+## How
+
+[Key implementation decisions, if non-obvious]
+
+## Checklist
+- [ ] `pnpm format:check` passes
+- [ ] `pnpm lint` passes
+- [ ] `pnpm typecheck` passes
+- [ ] `pnpm test` passes
+- [ ] Docs parity test passes (if manifest/SDK/env changed)
+- [ ] Security check passes (if auth/middleware/CSP touched)
+- [ ] Version bumped per semver policy
+- [ ] `docs/roadmap.md` row updated ✅
+- [ ] `CLAUDE.md` Status updated with ✅ entry and new `⏳ Next` pointer
+- [ ] `CURRENT_TASK.md` deleted
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+```
+
+### 6. Do not merge
+
+Wait for explicit instruction or consent from the user.

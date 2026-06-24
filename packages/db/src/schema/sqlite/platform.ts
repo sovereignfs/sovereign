@@ -88,6 +88,8 @@ export const accountPrefs = sqliteTable('account_prefs', {
   tenantId: text('tenant_id').notNull(),
   timezone: text('timezone').notNull().default('UTC'),
   theme: text('theme').notNull().default('system'), // 'system' | 'light' | 'dark'
+  /** JSON-serialised Array<{ id: string; hidden: boolean }>; null = use default order. */
+  sidebarPlugins: text('sidebar_plugins'),
   updatedAt: integer('updated_at').notNull(),
 });
 

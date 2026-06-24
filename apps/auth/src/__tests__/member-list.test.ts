@@ -8,6 +8,7 @@ function user(overrides: Partial<AuthUserRow> = {}): AuthUserRow {
     name: 'Alice',
     role: 'platform:user',
     active: 1,
+    isTestUser: 0,
     createdAt: '2026-06-01T00:00:00.000Z',
     ...overrides,
   };
@@ -96,6 +97,20 @@ describe('buildMemberList', () => {
 
   it('returns an empty list for no users and no invites', () => {
     expect(buildMemberList([], [])).toEqual([]);
+  });
+
+  it('maps isTestUser 1/true to true and 0/null/false to false', () => {
+    const rows = buildMemberList(
+      [
+        user({ id: 'u1', email: 'a@x.com', isTestUser: 1 }),
+        user({ id: 'u2', email: 'b@x.com', isTestUser: true }),
+        user({ id: 'u3', email: 'c@x.com', isTestUser: 0 }),
+        user({ id: 'u4', email: 'd@x.com', isTestUser: null }),
+        user({ id: 'u5', email: 'e@x.com', isTestUser: false }),
+      ],
+      [],
+    );
+    expect(rows.map((r) => r.isTestUser)).toEqual([true, true, false, false, false]);
   });
 
   it('keeps registered users first, invites after', () => {

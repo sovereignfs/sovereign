@@ -97,8 +97,8 @@ async function seedSqlite(dbPath: string): Promise<void> {
     const userId = randomUUID();
     const hashed = await hashPassword(u.password);
     db.prepare(
-      `INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, active)
-       VALUES (?, ?, ?, 1, NULL, ?, ?, ?, 1)`,
+      `INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, active, "isTestUser")
+       VALUES (?, ?, ?, 1, NULL, ?, ?, ?, 1, 1)`,
     ).run(userId, u.name, u.email, now, now, u.role);
     db.prepare(
       `INSERT INTO account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
@@ -124,8 +124,8 @@ async function seedPostgres(connString: string): Promise<void> {
       const userId = randomUUID();
       const hashed = await hashPassword(u.password);
       await pool.query(
-        `INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, active)
-         VALUES ($1, $2, $3, true, NULL, $4, $5, $6, true)`,
+        `INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, active, "isTestUser")
+         VALUES ($1, $2, $3, true, NULL, $4, $5, $6, true, true)`,
         [userId, u.name, u.email, now, now, u.role],
       );
       await pool.query(

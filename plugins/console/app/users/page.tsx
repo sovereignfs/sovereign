@@ -12,6 +12,7 @@ interface MemberRow {
   name: string | null;
   role: string | null;
   status: 'active' | 'deactivated' | 'invited';
+  isTestUser: boolean;
   createdAt: string;
   expiresAt: string | null;
 }
@@ -94,7 +95,10 @@ export default async function UsersPage({
                 <tr key={member.id ?? `invite-${member.email}`} className={styles.tr}>
                   <td className={styles.td}>
                     <div className={styles.userCell}>
-                      <span className={styles.userName}>{member.name ?? '—'}</span>
+                      <span className={styles.userName}>
+                        {member.name ?? '—'}
+                        {member.isTestUser && <span className={styles.badgeTest}>Test</span>}
+                      </span>
                       <span className={styles.userEmail}>{member.email}</span>
                       {member.id && (
                         <span className={styles.userId} title="User ID — click to select all">

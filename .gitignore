@@ -39,6 +39,7 @@ runtime/public/sw.js.map
 runtime/public/workbox-*.js
 runtime/public/workbox-*.js.map
 runtime/public/fallback-*.js
+runtime/public/worker-*.js
 
 # Local / private working area. Not part of the open-source monorepo — may hold
 # proprietary plugin specs and notes, typically backed by a separate private

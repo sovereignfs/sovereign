@@ -163,7 +163,8 @@
 .badgeInvited,
 .badgeAdmin,
 .badgeAuditor,
-.badgeUser {
+.badgeUser,
+.badgeTest {
   display: inline-block;
   padding: var(--sv-space-1) var(--sv-space-2);
   border-radius: var(--sv-radius-sm);
@@ -207,6 +208,13 @@
 .badgeInvited {
   background-color: color-mix(in srgb, var(--sv-color-text-muted) 12%, transparent);
   color: var(--sv-color-text-muted);
+}
+
+.badgeTest {
+  background-color: color-mix(in srgb, var(--sv-color-text-muted) 10%, transparent);
+  color: var(--sv-color-text-tertiary);
+  font-style: italic;
+  margin-left: var(--sv-space-2);
 }
 
 /* ── Row actions ────────────────────────────────────────────────────────── */

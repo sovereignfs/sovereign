@@ -118,7 +118,7 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 | 0.9.1   | User data deletion (RFC 0033)                               | ✅     | [1.7](epics/users-auth.md#17--user-data-deletion-rfc-0033)                                 |
 | 0.9.2   | Notification Center: pluggable pub/sub transport (RFC 0034) | ✅     | [4.3](epics/notification-center.md#43--notification-center-pluggable-pubsub-transport)     |
 | 0.9.3   | Sidebar customization — plugin ordering and visibility      | ✅     | [2.13](epics/platform-shell.md#213--sidebar-customization--plugin-ordering-and-visibility) |
-| 0.9.4   | Email-bound invite flow                                     | 📋     | [1.10](epics/users-auth.md#110--email-bound-invite-flow)                                   |
+| 0.9.4   | Email-bound invite flow                                     | ✅     | [1.10](epics/users-auth.md#110--email-bound-invite-flow)                                   |
 | 0.9.5   | Test-user flag on seeded accounts                           | 📋     | [1.11](epics/users-auth.md#111--test-user-flag-on-seeded-accounts)                         |
 
 ---

@@ -2,7 +2,9 @@ import type { ReactNode } from 'react';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import { Icon } from '@sovereignfs/ui';
+import { getAccountPrefs } from '@sovereignfs/db';
 import { hasCapability } from '@/src/capabilities';
+import { getPlatformDb } from '@/src/db';
 import { getInstalledPlugins } from '@/src/registry';
 import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
 import { InstanceProvider } from '@/src/instance-provider';
@@ -37,10 +39,33 @@ export default async function PlatformLayout({ children }: { children: ReactNode
 
   // Non-chrome plugins for the sidebar middle section and the mobile Drawer.
   const allPlugins = getInstalledPlugins();
-  const plugins = allPlugins.filter((plugin) => !CHROME_PLUGIN_IDS.has(plugin.id));
+  const rawPlugins = allPlugins.filter((plugin) => !CHROME_PLUGIN_IDS.has(plugin.id));
   // The Launcher is a chrome plugin (hidden from its own tiles) but should
   // always appear as the first icon in the sidebar so users can return home.
   const launcher = allPlugins.find((plugin) => plugin.id === 'fs.sovereign.launcher');
+
+  // Apply the authenticated user's saved sidebar ordering and visibility prefs.
+  const userId = h.get('x-sovereign-user-id');
+  let plugins = rawPlugins;
+  if (userId) {
+    const prefs = await getAccountPrefs(await getPlatformDb(), userId);
+    if (prefs.sidebarPlugins) {
+      const idMap = new Map(rawPlugins.map((p) => [p.id, p]));
+      // Saved order, excluding hidden entries and uninstalled plugin IDs
+      const ordered = prefs.sidebarPlugins
+        .filter((e) => !e.hidden && idMap.has(e.id))
+        .flatMap((e) => {
+          const p = idMap.get(e.id);
+          return p ? [p] : [];
+        });
+      // Newly installed plugins not yet in the saved list go at the end
+      const knownIds = new Set(prefs.sidebarPlugins.map((e) => e.id));
+      for (const p of rawPlugins) {
+        if (!knownIds.has(p.id)) ordered.push(p);
+      }
+      plugins = ordered;
+    }
+  }
 
   const pluginIcons = [...(launcher ? [launcher] : []), ...plugins].map((plugin) => (
     <Link key={plugin.id} href={plugin.routePrefix} className={styles.icon} title={plugin.name}>

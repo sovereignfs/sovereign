@@ -144,7 +144,7 @@ export async function sendInviteAction(
   _prev: InviteState | null,
   formData: FormData,
 ): Promise<InviteState> {
-  await sdk.auth.requireSession();
+  const session = await sdk.auth.requireSession();
 
   const email = (formData.get('email') as string | null)?.trim();
   const expiresInDaysRaw = formData.get('expiresInDays') as string | null;
@@ -154,7 +154,12 @@ export async function sendInviteAction(
 
   const res = await adminFetch('/api/admin/invites', {
     method: 'POST',
-    body: JSON.stringify({ email, expiresInDays }),
+    body: JSON.stringify({
+      email,
+      expiresInDays,
+      invited_by_id: session.user.id,
+      invited_by_name: session.user.name ?? undefined,
+    }),
   });
   if (!res.ok) return { success: false, error: `Failed to create invite: ${res.status}` };
 
@@ -164,7 +169,7 @@ export async function sendInviteAction(
   // (the Docker image builds without .env, freezing a literal to localhost:3000).
   const runtimeUrlKey = 'NEXT_PUBLIC_RUNTIME_URL';
   const runtimeUrl = process.env[runtimeUrlKey] ?? `http://localhost:${process.env.PORT ?? '3000'}`;
-  const registerUrl = `${runtimeUrl}/register`;
+  const registerUrl = `${runtimeUrl}/register?token=${token}`;
   await sdk.mailer.send({
     to: email,
     subject: 'You have been invited to Sovereign',
@@ -172,10 +177,8 @@ export async function sendInviteAction(
       'You have been invited to join this Sovereign instance.',
       '',
       `Create your account at: ${registerUrl}`,
-      '',
-      'Use the email address this invitation was sent to when registering.',
     ].join('\n'),
-    html: `<p>You have been invited to join this Sovereign instance.</p><p><a href="${registerUrl}">Create your account</a></p><p>Use the email address this invitation was sent to when registering.</p>`,
+    html: `<p>You have been invited to join this Sovereign instance.</p><p><a href="${registerUrl}">Create your account</a></p>`,
   });
 
   void logActivity({

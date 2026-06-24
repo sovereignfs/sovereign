@@ -11,9 +11,19 @@ import styles from '../auth.module.css';
  * the post-registration redirect targets the deployment's real runtime origin
  * at request time — not a value frozen into the client bundle at build time.
  */
-export function RegisterForm({ runtimeUrl }: { runtimeUrl: string }) {
+export function RegisterForm({
+  runtimeUrl,
+  instanceName = 'Sovereign',
+  invitedEmail,
+  invitedBy,
+}: {
+  runtimeUrl: string;
+  instanceName?: string;
+  invitedEmail?: string;
+  invitedBy?: string;
+}) {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(invitedEmail ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,7 +44,10 @@ export function RegisterForm({ runtimeUrl }: { runtimeUrl: string }) {
   return (
     <main className={styles.page}>
       <div className={styles.card}>
-        <h1 className={styles.title}>Create your account</h1>
+        {invitedBy ? (
+          <p className={styles.notice}>You&apos;ve been invited by {invitedBy}</p>
+        ) : null}
+        <h1 className={styles.title}>Create your account on {instanceName}</h1>
         <form className={styles.form} onSubmit={onSubmit}>
           <label htmlFor="register-name" className={styles.field}>
             <span className={styles.label}>Name</span>
@@ -54,8 +67,14 @@ export function RegisterForm({ runtimeUrl }: { runtimeUrl: string }) {
               autoComplete="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              readOnly={!!invitedEmail}
+              onChange={invitedEmail ? undefined : (e) => setEmail(e.target.value)}
             />
+            {invitedEmail ? (
+              <span className={styles.label} style={{ color: 'var(--sv-color-text-muted)' }}>
+                This field is pre-filled from your invite
+              </span>
+            ) : null}
           </label>
           <label htmlFor="register-password" className={styles.field}>
             <span className={styles.label}>Password</span>

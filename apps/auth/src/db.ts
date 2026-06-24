@@ -88,7 +88,8 @@ export function getAuthDatabase(): Database.Database | Pool {
 
 /** Create the auth server's own tables (invites, auth_settings). Idempotent. */
 export async function ensureAuthTables(): Promise<void> {
-  const ts = getAuthDialect() === 'postgres' ? 'BIGINT' : 'INTEGER';
+  const dialect = getAuthDialect();
+  const ts = dialect === 'postgres' ? 'BIGINT' : 'INTEGER';
   await authRun(
     `CREATE TABLE IF NOT EXISTS invites (
       token TEXT PRIMARY KEY,
@@ -98,6 +99,18 @@ export async function ensureAuthTables(): Promise<void> {
       consumed_at ${ts}
     )`,
   );
+  // Columns added after initial schema — must be patched idempotently.
+  if (dialect === 'postgres') {
+    await authRun('ALTER TABLE invites ADD COLUMN IF NOT EXISTS invited_by_id TEXT');
+    await authRun('ALTER TABLE invites ADD COLUMN IF NOT EXISTS invited_by_name TEXT');
+  } else {
+    const cols = await authAll<{ name: string }>('PRAGMA table_info(invites)', []);
+    const names = new Set(cols.map((c) => c.name));
+    if (!names.has('invited_by_id'))
+      await authRun('ALTER TABLE invites ADD COLUMN invited_by_id TEXT');
+    if (!names.has('invited_by_name'))
+      await authRun('ALTER TABLE invites ADD COLUMN invited_by_name TEXT');
+  }
   await authRun(
     `CREATE TABLE IF NOT EXISTS auth_settings (
       key TEXT PRIMARY KEY,

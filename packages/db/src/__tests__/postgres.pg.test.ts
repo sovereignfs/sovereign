@@ -76,8 +76,16 @@ describe.skipIf(!PG_URL)('platform-db on Postgres', () => {
   });
 
   it('round-trips account preferences', async () => {
-    expect(await getAccountPrefs(pdb, 'u1')).toEqual({ timezone: 'UTC', theme: 'system' });
+    expect(await getAccountPrefs(pdb, 'u1')).toEqual({
+      timezone: 'UTC',
+      theme: 'system',
+      sidebarPlugins: null,
+    });
     await setAccountPrefs(pdb, 'u1', { theme: 'dark' });
-    expect(await getAccountPrefs(pdb, 'u1')).toEqual({ timezone: 'UTC', theme: 'dark' });
+    expect(await getAccountPrefs(pdb, 'u1')).toEqual({
+      timezone: 'UTC',
+      theme: 'dark',
+      sidebarPlugins: null,
+    });
   });
 });

@@ -112,18 +112,14 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 
 ### Phase v0.9 — Pre-release Hardening
 
-| Version | Task                                                                      | Status | Epic task                                                                                                            |
-| ------- | ------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------- |
-| 0.9.0   | Instance identity rename (RFC 0032)                                       | ✅     | [9.8](epics/theming.md#98--instance-identity-rename-rfc-0032)                                                        |
-| 0.9.1   | User data deletion (RFC 0033)                                             | ✅     | [1.7](epics/users-auth.md#17--user-data-deletion-rfc-0033)                                                           |
-| 0.9.2   | Notification Center: pluggable pub/sub transport (RFC 0034)               | ✅     | [4.3](epics/notification-center.md#43--notification-center-pluggable-pubsub-transport)                               |
-| 0.9.3   | Sidebar customization — plugin ordering and visibility                    | ✅     | [2.13](epics/platform-shell.md#213--sidebar-customization--plugin-ordering-and-visibility)                           |
-| 0.9.4   | Internationalization, Phase 1 — Infrastructure (RFC 0029)                 | 📋     | [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029)                                     |
-| 0.9.5   | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)        | 📋     | [11.2](epics/i18n.md#112--internationalization-phase-2--platform-shell-adoption-rfc-0029)                            |
-| 0.9.6   | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](epics/theming.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
-| 0.9.7   | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](epics/theming.md#910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
-| 0.9.8   | Non-Docker production deployment, Phase 2 — systemd (RFC 0026)            | 📋     | [0.13](epics/infrastructure.md#013--non-docker-production-deployment-phase-2--systemd)                               |
-| 0.9.9   | Operator fork model & upstream sync (RFC 0028)                            | 📋     | [3.14](epics/plugins-runtime.md#314--operator-fork-model--upstream-sync)                                             |
+| Version | Task                                                        | Status | Epic task                                                                                  |
+| ------- | ----------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------ |
+| 0.9.0   | Instance identity rename (RFC 0032)                         | ✅     | [9.8](epics/theming.md#98--instance-identity-rename-rfc-0032)                              |
+| 0.9.1   | User data deletion (RFC 0033)                               | ✅     | [1.7](epics/users-auth.md#17--user-data-deletion-rfc-0033)                                 |
+| 0.9.2   | Notification Center: pluggable pub/sub transport (RFC 0034) | ✅     | [4.3](epics/notification-center.md#43--notification-center-pluggable-pubsub-transport)     |
+| 0.9.3   | Sidebar customization — plugin ordering and visibility      | ✅     | [2.13](epics/platform-shell.md#213--sidebar-customization--plugin-ordering-and-visibility) |
+| 0.9.4   | Email-bound invite flow                                     | 📋     | [1.10](epics/users-auth.md#110--email-bound-invite-flow)                                   |
+| 0.9.5   | Test-user flag on seeded accounts                           | 📋     | [1.11](epics/users-auth.md#111--test-user-flag-on-seeded-accounts)                         |
 
 ---
 
@@ -145,10 +141,14 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 Tasks with accepted or draft RFCs but not yet assigned a roadmap slot. Promoted to a phase table
 once prioritised.
 
-| Version | Task                                                                  | Status | Epic task                                                                                        |
-| ------- | --------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ |
-| —       | Email-bound invite flow                                               | 📋     | [1.10](epics/users-auth.md#110--email-bound-invite-flow)                                         |
-| —       | Test-user flag on seeded accounts                                     | 📋     | [1.11](epics/users-auth.md#111--test-user-flag-on-seeded-accounts)                               |
-| —       | Per-plugin database dialect selection (RFC 0036)                      | 📋     | [3.15](epics/plugins-runtime.md#315--per-plugin-database-dialect-selection-rfc-0036)             |
-| —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035)    | 📋     | [1.8](epics/users-auth.md#18--progressive-user-verification-phase-1--infrastructure-rfc-0035)    |
-| —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035) | 📋     | [1.9](epics/users-auth.md#19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035) |
+| Version | Task                                                                      | Status | Epic task                                                                                                            |
+| ------- | ------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------- |
+| —       | Internationalization, Phase 1 — Infrastructure (RFC 0029)                 | 📋     | [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029)                                     |
+| —       | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)        | 📋     | [11.2](epics/i18n.md#112--internationalization-phase-2--platform-shell-adoption-rfc-0029)                            |
+| —       | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](epics/theming.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
+| —       | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](epics/theming.md#910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
+| —       | Non-Docker production deployment, Phase 2 — systemd (RFC 0026)            | 📋     | [0.13](epics/infrastructure.md#013--non-docker-production-deployment-phase-2--systemd)                               |
+| —       | Operator fork model & upstream sync (RFC 0028)                            | 📋     | [3.14](epics/plugins-runtime.md#314--operator-fork-model--upstream-sync)                                             |
+| —       | Per-plugin database dialect selection (RFC 0036)                          | 📋     | [3.15](epics/plugins-runtime.md#315--per-plugin-database-dialect-selection-rfc-0036)                                 |
+| —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035)        | 📋     | [1.8](epics/users-auth.md#18--progressive-user-verification-phase-1--infrastructure-rfc-0035)                        |
+| —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035)     | 📋     | [1.9](epics/users-auth.md#19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035)                     |

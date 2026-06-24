@@ -407,7 +407,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 > Full task history (phases 0.3–0.7): `docs/task-history.md`
 
-⏳ **Next: Internationalization, Phase 1 — Infrastructure (RFC 0029) → epic task [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029).** Branch from up-to-date `main`.
+⏳ **Next: Email-bound invite flow → epic task [1.10](epics/users-auth.md#110--email-bound-invite-flow).** Branch from up-to-date `main`.
 
 Keep this file current: update the Status section as tasks complete, and add any
 new load-bearing convention that future sessions must not violate.

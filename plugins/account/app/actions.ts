@@ -122,6 +122,12 @@ export async function updateThemeAction(theme: string): Promise<void> {
   await patchPrefs({ theme });
 }
 
+export async function updateSidebarPluginsAction(
+  sidebarPlugins: Array<{ id: string; hidden: boolean }> | null,
+): Promise<void> {
+  await patchPrefs({ sidebar_plugins: sidebarPlugins });
+}
+
 // ── Security (ACC-04/05/06) ───────────────────────────────────────────────
 
 export type PasswordState = { ok: true } | { ok: false; error: string } | null;

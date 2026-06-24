@@ -494,3 +494,92 @@
   font-size: var(--sv-font-size-sm);
   color: var(--sv-color-text-muted);
 }
+
+/* ── Sidebar control ────────────────────────────────────────────────────── */
+
+.sidebarControl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+  align-items: flex-start;
+}
+
+.sidebarList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  width: 100%;
+}
+
+.sidebarRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-surface-raised);
+  cursor: grab;
+}
+
+.sidebarRow:active {
+  cursor: grabbing;
+}
+
+.dragHandle {
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-lg);
+  line-height: 1;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.sidebarPluginIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--sv-radius-sm);
+  background-color: var(--sv-color-surface-sunken);
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-muted);
+  overflow: hidden;
+}
+
+.sidebarPluginImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.sidebarPluginName {
+  flex: 1;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebarToggle {
+  padding: var(--sv-space-1) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  background-color: transparent;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-xs);
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sidebarToggle:hover {
+  color: var(--sv-color-text-primary);
+  border-color: var(--sv-color-border-strong);
+}

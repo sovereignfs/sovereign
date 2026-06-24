@@ -168,7 +168,7 @@ Deferred: password reset (AUTH-07) — revisited in a later auth task.
 
 ---
 
-#### 📋 1.7 — User data deletion (RFC 0033)
+#### ✅ 1.7 — User data deletion (RFC 0033)
 
 **Goal:** Let users permanently delete all their data from Account → Data, and give
 admins a "Delete" action in Console → Users. The platform cascades the deletion across
@@ -227,12 +227,242 @@ Task 0.6.01 (capabilities — `user:manage` gate on the admin route)
 
 ---
 
+#### 📋 1.8 — Progressive user verification, Phase 1 — Infrastructure (RFC 0035)
+
+**Goal:** Wire up the dormant `emailVerified` field into a live email confirmation flow; introduce
+the four-level trust model (`registered → email_verified → mfa_enrolled → admin_vouched`); and
+propagate `verification_level` through the session header chain so middleware, capabilities, and
+plugins can gate on it.
+
+**Deliverables:**
+
+- `packages/db` → patch: `verification_level INTEGER NOT NULL DEFAULT 0` + `verification_events TEXT`
+  columns on the `users` table; Drizzle migration `0007_user_verification` (SQLite + Postgres);
+  `getUserVerificationLevel()` / `setUserVerificationLevel()` helpers.
+- `apps/auth` → minor: better-auth hooks in `apps/auth/src/auth.ts`:
+  - `onUserCreated`: fires `POST /api/auth/send-verification-email` when
+    `REQUIRE_EMAIL_VERIFICATION=true`; auto-promotes to Level 1 when `false`.
+  - `onEmailVerification`: sets `emailVerified = true`, `verification_level = max(level, 1)`,
+    records `email_verified_at` in `verification_events`, invalidates session cache.
+  - `onTwoFactorEnabled` / `onPasskeyCreated`: `verification_level = max(level, 2)`, records
+    `mfa_enrolled_at`.
+  - `onTwoFactorDisabled` / last-passkey-deleted: drops level to `min(level, 1)`, records
+    `mfa_removed_at`.
+- `runtime` → minor:
+  - `runtime/src/session-verify.ts`: include `verification_level` in session propagation.
+  - `runtime/middleware.ts`: inject `x-sovereign-verification-level: <n>` header alongside
+    the existing role/capabilities headers.
+  - `/verify-email` route: "check your inbox" page with a resend button (hard block when
+    `REQUIRE_EMAIL_VERIFICATION=true` and level is 0).
+  - `POST /api/admin/users/[id]/vouch` + `DELETE /api/admin/users/[id]/vouch`: requires
+    `user:manage` capability; records `vouched_by` + timestamps in `verification_events`.
+- `packages/sdk` → minor: `session.user.verificationLevel: 0 | 1 | 2 | 3` populated from the
+  new header. Parity-test additions for the new field.
+- `packages/manifest` → patch: `min_verification_level` optional integer field (0–3), validated
+  by the Zod schema; defaults to 0 (no gate).
+- `plugins/account` → minor: Security tab shows the user's current verification level and
+  prompts to verify email or enroll MFA if below the platform's effective minimum.
+- `plugins/console` → minor: Users table row menu gains **Vouch** / **Revoke vouch** actions
+  (disabled for `platform:owner` rows; requires `user:manage`). Activity log entry on each action.
+- `.env.example`: `REQUIRE_EMAIL_VERIFICATION` (default `true`), `REQUIRE_MFA` (default `false`).
+- `docs/self-hosting.md`: document both new env vars.
+- `docs/plugin-development.md`: `min_verification_level` manifest field; `session.user.verificationLevel`.
+
+**Version bumps:** `@sovereignfs/db` → patch, `@sovereignfs/sdk` → minor, `@sovereignfs/manifest`
+→ patch, `runtime` → minor, `plugins/account` → minor, `plugins/console` → minor.
+
+**Dependencies:** Task 1.4 (MFA — hooks to extend), Task 1.5 (capabilities — `user:manage` gate
+on vouch routes), Task 1.7 (session-verify pattern to extend with the new field)
+
+**SRS reference:** RFC 0035
+
+**Review checklist:**
+
+- New user receives a verification email on signup; clicking the link promotes to Level 1
+- `REQUIRE_EMAIL_VERIFICATION=false` auto-promotes to Level 1 with no email sent
+- TOTP enrollment promotes to Level 2; removing all MFA methods drops back to Level 1
+- `x-sovereign-verification-level` header present and correct in all authenticated requests
+- `sdk.session.user.verificationLevel` matches the header value
+- Console → Users: Vouch action promotes target to Level 3; Revoke drops to Level 2; activity log entry present
+- Account → Security: current verification level displayed; nudge shown when below platform minimum
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
+#### 📋 1.9 — Progressive user verification, Phase 2 — Capability opt-in (RFC 0035)
+
+**Goal:** Activate `minVerificationLevel` gates on individual platform capabilities and at the
+plugin manifest route boundary. Phase 1 laid the infrastructure; this task makes it functional
+for real access control.
+
+**Deliverables:**
+
+- `runtime/src/capabilities.ts`: add `minVerificationLevel?: 0 | 1 | 2 | 3` to the capability
+  definition type and annotate applicable capabilities (e.g., `user:manage` → 1,
+  `role:assign` → 2).
+- `hasCapability(role, cap, userLevel?)`: third parameter enables the level check. Returns `false`
+  if `userLevel < minVerificationLevel` for the requested capability. Existing callers without the
+  third arg are unaffected (backwards-compatible).
+- `runtime/middleware.ts` edge gate: pass the injected `x-sovereign-verification-level` into
+  `hasCapability` for route-level capability checks.
+- Plugin manifest enforcement: the plugin route boundary checks `min_verification_level` from the
+  manifest and returns 403 with a `verification_required` error body if the user's level is below
+  the declared minimum.
+- Nudge banner surfaced by the runtime shell when `min_verification_level` blocks plugin access
+  (message varies by which level is needed).
+- `docs/plugin-development.md`: worked example — declare `min_verification_level: 1`, what the
+  403 error body looks like, how to handle it in a plugin's own error boundary.
+
+**Version bumps:** `runtime` → minor.
+
+**Dependencies:** Task 1.8 (Phase 1 — infrastructure this task activates)
+
+**SRS reference:** RFC 0035
+
+**Review checklist:**
+
+- A `platform:user` at Level 0 is denied a capability gated to Level 1, even if their role
+  would otherwise grant it
+- A `platform:user` at Level 1 is allowed the same capability
+- A plugin declaring `min_verification_level: 2` returns 403 for a Level 1 user; the runtime
+  shell shows a nudge ("Enable MFA to access this plugin")
+- No existing capability or plugin behaviour changes for users already at Level 1+
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
+#### 📋 1.10 — Email-bound invite flow
+
+**Goal:** Bind every invite token to the invited email address and embed that token in the
+registration link so that clicking the email link pre-fills the email field as read-only and shows
+who sent the invite. Eliminates the current "use the email address this invitation was sent to"
+instruction and the silent registration failure when a user types the wrong email.
+
+**Current state:**
+
+The `invites` table (`apps/auth/src/db.ts:93`) has `token`, `email`, `created_at`, `expires_at`,
+`consumed_at` — but no `invited_by`. The Console invite action
+(`plugins/console/app/users/actions.ts:155`) creates the invite token and sends an email with a
+bare `/register` link; the token is **never embedded in the URL**. The `RegisterForm`
+(`apps/auth/app/register/register-form.tsx`) has no knowledge of invite tokens — it renders a
+blank form with an editable email field. The auth server validates the invite at submit time by
+matching the submitted email against the `invites` table, but there is nothing preventing the user
+from typing a different email and hitting a confusing 403.
+
+**Deliverables:**
+
+- `apps/auth` — schema patch: add `invited_by_id TEXT` and `invited_by_name TEXT` columns to the
+  `invites` table in `ensureAuthTables()` (the auth server manages its own DB schema directly, no
+  Drizzle migration — same pattern as the existing `CREATE TABLE IF NOT EXISTS invites` DDL). Old
+  rows have `NULL` for both columns; the flow degrades gracefully for tokens created before this
+  change.
+- `plugins/console` — invite creation: pass the actor's user ID and display name as
+  `invited_by_id` / `invited_by_name` when calling `POST /api/admin/invites`; embed
+  `?token=<token>` in the registration URL included in the invite email body (replaces the current
+  bare `/register` link). The "use the email address…" instruction in the email copy is removed.
+- `runtime/app/api/admin/invites` — accept and persist `invited_by_id` / `invited_by_name` from
+  the request body.
+- `apps/auth/app/register/page.tsx` — convert to an async server component: read the `token` query
+  param → look up the invite row → extract `email` and `invited_by_name` → pass to `RegisterForm`
+  as `invitedEmail` and `invitedBy`. If the token is not found, expired, or already consumed, render
+  a clear error ("This invite link is invalid or has already been used") rather than falling through
+  to a blank form.
+- `apps/auth/app/register/register-form.tsx` — accept optional `invitedEmail?: string` and
+  `invitedBy?: string` props:
+  - When `invitedEmail` is set: initialise the email `useState` with `invitedEmail`; render the
+    email `<Input>` with `readOnly` and a visual lock indicator (e.g. a small notice: "This field
+    is pre-filled from your invite").
+  - When `invitedBy` is set: show a banner at the top of the card: "You've been invited by
+    {invitedBy}" — using the instance name (`INSTANCE_NAME`) in the page title as well:
+    "Create your account on {instanceName}".
+  - Without props (direct `/register` access, no token): existing blank-form behaviour is
+    preserved exactly.
+
+**Scope note:** No changes to the invite-only gate logic in `apps/auth/src/auth.ts` — the server
+still validates the invite at submit time by matching email. This task only improves the pre-fill
+UX; it does not change the security model.
+
+**Dependencies:** Task 1.1 (`apps/auth` base; `invites` table DDL pattern),
+Task 1.5 (`user:manage` capability gate already on the invite route),
+Task 1.0.03 (`INSTANCE_NAME` / `InstanceProvider` for the page title)
+
+**Review checklist:**
+
+- Admin invites user@example.com from Console → email arrives with a link containing `?token=<uuid>`
+- Clicking the link opens `/register?token=<uuid>` → email field shows `user@example.com` and is
+  read-only; "invited by Admin Name" banner visible
+- Submitting with the pre-filled email succeeds; token is consumed
+- A user who navigates directly to `/register` (no token) sees the normal blank form — no regression
+- An invalid or already-consumed token shows a clear error page, not a blank form
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
+#### 📋 1.11 — Test-user flag on seeded accounts
+
+**Goal:** Add an `isTestUser` boolean field to the user record, defaulting to `false` for all real
+users and set to `true` by the seed script. Lets the Console, admin APIs, and tooling distinguish
+test accounts from real ones without relying on email address conventions.
+
+**Current state:**
+
+The seed script (`scripts/seed.ts`) inserts two users directly into better-auth's `"user"` table
+via raw SQL. The fields written today are `id`, `name`, `email`, `emailVerified`, `image`,
+`createdAt`, `updatedAt`, `role`, `active`. There is no way to distinguish seeded test users from
+real users other than matching against the hardcoded `SEED_USERS` email constants. The Console
+Users table shows them with no visual distinction.
+
+The pattern for custom user fields is `user.additionalFields` in `apps/auth/src/auth.ts` — `role`
+and `active` both follow this pattern with `input: false` (not user-settable) and a `defaultValue`.
+
+**Deliverables:**
+
+- `apps/auth/src/auth.ts` — add to `user.additionalFields`:
+  ```ts
+  isTestUser: { type: 'boolean', required: false, defaultValue: false, input: false }
+  ```
+  `input: false` ensures the field cannot be set via registration or profile-update endpoints.
+- `scripts/seed.ts` — include `is_test_user = 1` (SQLite) / `true` (Postgres) in the INSERT
+  for both seeded users (`admin@sovereign.local` and `user@sovereign.local`). Update the
+  `SEED_USERS` type annotation if it carries field metadata.
+- `packages/db/src/schema/sqlite/platform.ts` and postgres equivalent — add
+  `isTestUser: integer('is_test_user', { mode: 'boolean' }).notNull().default(false)` to the
+  platform `users` table, mirroring the `role` field precedent. Drizzle migration
+  `0008_user_is_test_user` (SQLite + Postgres).
+- `runtime/app/api/admin` — include `isTestUser` in the member-list response returned by
+  `GET /api/admin/users` (the `apps/auth/src/member-list.ts` helper) so Console and any SDK
+  consumer can read it in the same call.
+- `plugins/console` → Console → Users table: render a **"Test"** badge on rows where
+  `isTestUser` is true. No behavioural restriction — test users can still be deactivated,
+  deleted, or vouched like any other user.
+
+**Scope note:** No session-header propagation. Plugins do not need to know at request time whether
+the caller is a test account — this is a tooling and admin-visibility concern only.
+
+**Version bumps:** `@sovereignfs/db` → patch (migration), `runtime` → patch (member-list field),
+`plugins/console` → patch (badge).
+
+**Dependencies:** Task 1.1 (`additionalFields` pattern in `apps/auth`),
+Task 0.5.24 (RFC 0019 — test seeding infrastructure this extends)
+
+**Review checklist:**
+
+- `pnpm sv seed` completes; both seeded users have `isTestUser = true` in the DB
+- A manually registered user has `isTestUser = false`
+- `GET /api/admin/users` response includes `isTestUser: true` for seeded accounts
+- Console → Users: seeded users show a "Test" badge; no badge on real users
+- `SOVEREIGN_SEED_ALLOW_PROD` guard unchanged — seed still refuses to run in production
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0012 — Passkeys & TOTP MFA](../rfcs/0012-passkeys-and-mfa.md)
 - [RFC 0021 — Platform roles & capabilities](../rfcs/0021-platform-roles-and-capabilities.md)
 - [RFC 0022 — Plugin-declared capabilities](../rfcs/0022-plugin-capabilities.md)
 - [RFC 0033 — User data deletion](../rfcs/0033-user-data-deletion.md)
+- [RFC 0035 — Progressive user verification](../rfcs/0035-progressive-user-verification.md)
 
 ## Related Docs
 

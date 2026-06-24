@@ -330,6 +330,37 @@ The Platform Shell is the runtime that composes plugins into a coherent experien
 
 ---
 
+#### ✅ 2.13 — Sidebar customization — plugin ordering and visibility
+
+**Goal:** Let each user reorder and hide individual plugin icons in the sidebar's middle section (the plugin strip), without affecting the fixed chrome (notifications bell, console icon, account avatar) or the Launcher home icon.
+
+**Deliverables:**
+
+- `packages/db` → **patch** (1.7.2): `sidebar_plugins` column (nullable `text`, JSON-serialised `Array<{ id: string; hidden: boolean }>`) added to `account_prefs` in both SQLite and Postgres schemas; `SidebarPluginEntry` type exported; `AccountPrefsValue` extended with `sidebarPlugins: SidebarPluginEntry[] | null`; `getAccountPrefs` / `setAccountPrefs` helpers updated; Drizzle-kit migration 0006 for both dialects
+- `runtime` → **minor** (0.32.0): `/api/account/prefs` PATCH accepts `sidebar_plugins` (validated array or `null` to reset); new `GET /api/account/sidebar-plugins` returns available non-chrome plugin list and the user's current saved order (consumed by the Account preferences UI); `(platform)/layout.tsx` reads the authenticated user's saved preference server-side and merges it into `pluginList` — applying custom order and filtering hidden plugins — before rendering the sidebar and passing `pluginList` to `MobileNav`
+- `plugins/account` → **minor** (0.11.0): new **Sidebar** section on the Preferences page; `SidebarControl` client component — draggable list (HTML5 DnD, no extra dep), per-row show/hide toggle, reset-to-default button; `updateSidebarPluginsAction` server action calls `patchPrefs({ sidebar_plugins })`
+
+**Constraints:**
+
+- Launcher home icon stays pinned first in the sidebar and is not included in the customisation list
+- Chrome plugins (console, notifications, account avatar) are always fixed in the bottom section and excluded from the list
+
+**Dependencies:** Tasks 2.1 (shell layout), 2.8 (account prefs infrastructure)
+
+**Review checklist:**
+
+- Account → Preferences → Sidebar section lists all installed non-chrome, non-launcher plugins
+- Dragging a plugin row to a new position and saving reflects in the sidebar on next load
+- Toggling a plugin hidden and saving removes its icon from the sidebar middle section; bottom chrome is unaffected
+- Hidden plugins remain visible in the Sidebar settings list so users can re-enable them
+- A newly installed plugin not yet in the saved list appears at the end of the sidebar by default
+- Mobile nav drawer reflects the same order and visibility as the desktop sidebar
+- A user with no saved preference sees the default install order (no regression)
+- Resetting to default clears the preference; sidebar reverts to install order
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test` all pass
+
+---
+
 ## Related RFCs
 
 - [RFC 0001 — Overlay shell variant](../rfcs/0001-overlay-shell-variant.md)

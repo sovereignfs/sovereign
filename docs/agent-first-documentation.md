@@ -99,7 +99,7 @@ After implementation, the current agent ran the full check suite, processed the 
 
 We introduced three skill files, each a standalone agent brief:
 
-**`/sv-verify`** — reads `CURRENT_TASK.md`, runs `format:check`, `lint`, `typecheck`, `test`, and optionally docs-parity. Returns a structured pass/fail table, not raw output:
+**`/sv-verify`** — reads `CURRENT_TASK.md`, runs `format:check`, `lint`, `typecheck`, `test`, `build`, and optionally docs-parity. Returns a structured pass/fail table, not raw output:
 
 ```
 | Check        | Result   | Notes              |
@@ -108,6 +108,7 @@ We introduced three skill files, each a standalone agent brief:
 | lint         | ✅ PASS  | —                  |
 | typecheck    | ✅ PASS  | —                  |
 | test         | ✅ PASS  | 47 tests passed    |
+| build        | ✅ PASS  | —                  |
 ```
 
 **`/sv-update-task-docs`** — reads `CURRENT_TASK.md` for metadata, marks the roadmap row ✅, appends a completion entry to `CLAUDE.md`, advances the `⏳ Next` pointer, and deletes `CURRENT_TASK.md`.
@@ -202,4 +203,4 @@ The full implementation lives in the Sovereign repository. The key files are:
 - [`docs/epics/`](epics/) — 16 domain epic files with full task detail
 - [`docs/roadmap.md`](roadmap.md) — 139-line version-indexed table
 - [`docs/development-workflow.md`](development-workflow.md) — workflow reference for agents and contributors
-- [`.claude/commands/`](../.claude/commands/) — task lifecycle skills (`task-start`, `task-complete`, `verify`, `update-task-docs`, `security-check`)
+- [`.claude/commands/`](../.claude/commands/) — task lifecycle skills (`sv-task-start`, `sv-task-complete`, `sv-verify`, `sv-update-task-docs`, `sv-security-check`)

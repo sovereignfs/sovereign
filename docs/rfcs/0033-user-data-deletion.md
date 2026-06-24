@@ -1,13 +1,13 @@
 ---
 rfc: 0033
 title: User data deletion (Right to erasure)
-status: Draft
+status: Accepted
 date: June 2026
 author: kasunben
 scope: >
   packages/db, packages/sdk, runtime, apps/auth, plugins/account,
   plugins/console, docs
-incorporated_into_plan: 'Yes — epic task 1.7 (pre-v1)'
+incorporated_into_plan: 'Yes — epic task 1.7 (completed)'
 ---
 
 # RFC 0033 — User data deletion (Right to erasure)

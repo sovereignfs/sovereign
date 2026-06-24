@@ -1,6 +1,6 @@
 # RFC 0029 — Internationalization / Localization (i18n)
 
-**Status:** Draft\
+**Status:** Accepted\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/manifest`, `packages/sdk`, `packages/db`, `runtime`, `apps/auth`,

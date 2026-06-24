@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAccountPrefs, setAccountPrefs } from '@sovereignfs/db';
+import { getAccountPrefs, setAccountPrefs, type SidebarPluginEntry } from '@sovereignfs/db';
 import { getPlatformDb } from '@/src/db';
 import { isValidTheme, isValidTimezone } from '@/src/account';
 
@@ -13,6 +13,18 @@ function currentUserId(request: Request): string | null {
   return request.headers.get('x-sovereign-user-id');
 }
 
+function isValidSidebarPlugins(value: unknown): value is SidebarPluginEntry[] | null {
+  if (value === null) return true;
+  if (!Array.isArray(value)) return false;
+  return value.every(
+    (e) =>
+      e !== null &&
+      typeof e === 'object' &&
+      typeof (e as Record<string, unknown>).id === 'string' &&
+      typeof (e as Record<string, unknown>).hidden === 'boolean',
+  );
+}
+
 export async function GET(request: Request): Promise<Response> {
   const userId = currentUserId(request);
   if (!userId) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
@@ -23,8 +35,12 @@ export async function PATCH(request: Request): Promise<Response> {
   const userId = currentUserId(request);
   if (!userId) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
 
-  const body = (await request.json()) as { timezone?: unknown; theme?: unknown };
-  const patch: { timezone?: string; theme?: string } = {};
+  const body = (await request.json()) as {
+    timezone?: unknown;
+    theme?: unknown;
+    sidebar_plugins?: unknown;
+  };
+  const patch: Parameters<typeof setAccountPrefs>[2] = {};
 
   if (body.timezone !== undefined) {
     if (!isValidTimezone(body.timezone)) {
@@ -37,6 +53,12 @@ export async function PATCH(request: Request): Promise<Response> {
       return NextResponse.json({ error: 'invalid theme' }, { status: 400 });
     }
     patch.theme = body.theme;
+  }
+  if ('sidebar_plugins' in body) {
+    if (!isValidSidebarPlugins(body.sidebar_plugins)) {
+      return NextResponse.json({ error: 'invalid sidebar_plugins' }, { status: 400 });
+    }
+    patch.sidebarPlugins = body.sidebar_plugins;
   }
 
   const next = await setAccountPrefs(await getPlatformDb(), userId, patch);

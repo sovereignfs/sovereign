@@ -377,6 +377,63 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
+#### 📋 3.15 — Per-plugin database dialect selection (RFC 0036)
+
+**Goal:** Extend the `database` manifest field so an isolated plugin can opt into SQLite storage
+even when the platform runs Postgres. The **platform-as-ceiling rule** is enforced at install time:
+a plugin on a SQLite platform may not request Postgres (no server available); a plugin on a
+Postgres platform may always request SQLite (embedded, zero extra infrastructure).
+
+**Current state:**
+
+`packages/manifest/src/schema.ts:67` exposes `database: z.enum(['shared', 'isolated'])` — a
+simple two-value enum with no dialect sub-field. All provisioning functions in
+`packages/db/src/plugin-client.ts` (`getPluginDb`, `provisionPluginDb`, `dropPluginDb`) read
+`resolveDialect(process.env)` globally; there is no per-plugin override path. The migration runner
+(`runtime/src/plugin-migrations.ts`) resolves the platform dialect once and applies it to every
+isolated plugin.
+
+**Deliverables:**
+
+- `packages/manifest/src/schema.ts` — extend `database` to a Zod union:
+  - Backward-compat string branch: `'shared' | 'isolated'`
+  - New object branch: `{ isolation?: 'shared' | 'isolated', dialect?: 'sqlite' }`
+  - `'postgres'` is intentionally absent from the `dialect` enum — the schema itself encodes the
+    ceiling rule (a plugin can only request a dialect ≤ the platform's; the only downgrade is
+    SQLite).
+- `packages/db/src/plugin-client.ts` — add optional `dialect?: Dialect` param to `getPluginDb`,
+  `provisionPluginDb`, `dropPluginDb`. When omitted, falls back to `resolveDialect(process.env)`
+  as today. No existing callers need updating.
+- `runtime/src/sdk-host.ts` — extract `manifest.database.dialect` (where the object form is used)
+  and pass through to the two provisioning calls.
+- `runtime/src/plugin-migrations.ts` — add a per-plugin dialect variable inside the migration
+  loop: `resolvePluginDialect(manifest) ?? platformDialect`.
+- `bin/sv.ts` (`sv plugin remove`) — narrow the raw manifest JSON union before passing dialect to
+  `dropPluginDb`.
+- `docs/plugin-development.md` — document the new `database` object form, the allowed
+  combinations table, and the ceiling rule.
+
+**Version bumps:** `@sovereignfs/manifest` → minor (new optional field), `@sovereignfs/db` →
+minor (new optional params on exported functions), `runtime` → patch, `bin/sv` → patch.
+
+**Dependencies:** Task 3.13 (per-plugin database — the provisioning foundation this extends)
+
+**SRS reference:** RFC 0036
+
+**Review checklist:**
+
+- A Postgres-platform instance with a plugin declaring `{ isolation: "isolated", dialect: "sqlite" }`
+  gets a dedicated SQLite file at `data/plugins/<id>.db`; the platform Postgres schema is unaffected
+- The same plugin's migrations run from `plugins/<id>/migrations/sqlite/` not `postgres/`
+- `sv plugin remove` drops the SQLite file (not a Postgres schema) for such a plugin
+- A plugin with `"database": "isolated"` (legacy string) on a Postgres platform still gets a Postgres
+  schema — no regression
+- A plugin with `"database": "isolated"` on a SQLite platform still gets a SQLite file — no regression
+- `@sovereignfs/manifest` Zod schema rejects `{ dialect: "postgres" }` with a parse error
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0004 — Per-plugin database](../rfcs/0004-per-plugin-database.md)
@@ -387,6 +444,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 - [RFC 0023 — SDK distribution & isolation](../rfcs/0023-sdk-distribution.md)
 - [RFC 0024 — Plugin compatibility & versioning](../rfcs/0024-plugin-compatibility.md)
 - [RFC 0028 — Operator fork model](../rfcs/0028-operator-fork-model.md)
+- [RFC 0036 — Per-plugin database dialect selection](../rfcs/0036-per-plugin-dialect.md)
 
 ## Related Docs
 

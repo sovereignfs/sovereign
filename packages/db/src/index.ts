@@ -53,6 +53,7 @@ export {
   getInstanceConfig,
   setInstanceConfig,
   type AccountPrefsValue,
+  type SidebarPluginEntry,
   type DeleteUserDataResult,
   type ActivityLogRow,
   type ConsentGrantRow,

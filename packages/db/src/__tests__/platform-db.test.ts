@@ -80,16 +80,18 @@ describe('account preferences helpers', () => {
     expect(await getAccountPrefs(await freshDb(), 'u1')).toEqual({
       timezone: 'UTC',
       theme: 'system',
+      sidebarPlugins: null,
     });
   });
 
   it('inserts a row on first set and round-trips it', async () => {
     const db = await freshDb();
     const next = await setAccountPrefs(db, 'u1', { timezone: 'America/New_York', theme: 'dark' });
-    expect(next).toEqual({ timezone: 'America/New_York', theme: 'dark' });
+    expect(next).toEqual({ timezone: 'America/New_York', theme: 'dark', sidebarPlugins: null });
     expect(await getAccountPrefs(db, 'u1')).toEqual({
       timezone: 'America/New_York',
       theme: 'dark',
+      sidebarPlugins: null,
     });
   });
 
@@ -97,13 +99,21 @@ describe('account preferences helpers', () => {
     const db = await freshDb();
     await setAccountPrefs(db, 'u1', { timezone: 'Europe/Berlin', theme: 'light' });
     await setAccountPrefs(db, 'u1', { theme: 'dark' });
-    expect(await getAccountPrefs(db, 'u1')).toEqual({ timezone: 'Europe/Berlin', theme: 'dark' });
+    expect(await getAccountPrefs(db, 'u1')).toEqual({
+      timezone: 'Europe/Berlin',
+      theme: 'dark',
+      sidebarPlugins: null,
+    });
   });
 
   it('keeps preferences isolated per user', async () => {
     const db = await freshDb();
     await setAccountPrefs(db, 'u1', { theme: 'dark' });
-    expect(await getAccountPrefs(db, 'u2')).toEqual({ timezone: 'UTC', theme: 'system' });
+    expect(await getAccountPrefs(db, 'u2')).toEqual({
+      timezone: 'UTC',
+      theme: 'system',
+      sidebarPlugins: null,
+    });
   });
 });
 

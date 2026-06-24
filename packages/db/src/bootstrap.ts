@@ -45,6 +45,7 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       tenant_id TEXT NOT NULL,
       timezone TEXT NOT NULL DEFAULT 'UTC',
       theme TEXT NOT NULL DEFAULT 'system',
+      sidebar_plugins TEXT,
       updated_at ${ts} NOT NULL
     )`,
     `CREATE TABLE IF NOT EXISTS consent_grants (

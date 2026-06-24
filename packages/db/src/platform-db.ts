@@ -468,21 +468,40 @@ export async function countAdminActivity(
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** One entry in a user's saved sidebar plugin list (task 2.13). */
+export interface SidebarPluginEntry {
+  id: string;
+  hidden: boolean;
+}
+
 /** Account-plugin preferences with their defaults (SRS ACC-07/08). */
 export interface AccountPrefsValue {
   timezone: string;
   theme: string;
+  /** Saved plugin order and visibility. `null` means "use default install order". */
+  sidebarPlugins: SidebarPluginEntry[] | null;
 }
 
-const DEFAULT_ACCOUNT_PREFS: AccountPrefsValue = { timezone: 'UTC', theme: 'system' };
+const DEFAULT_ACCOUNT_PREFS: AccountPrefsValue = {
+  timezone: 'UTC',
+  theme: 'system',
+  sidebarPlugins: null,
+};
 
 /** A user's Account preferences, falling back to defaults when no row exists. */
 export async function getAccountPrefs(pdb: PlatformDb, userId: string): Promise<AccountPrefsValue> {
-  const row = await dbGet<AccountPrefsValue>(
+  const row = await dbGet<{ timezone: string; theme: string; sidebarPlugins: string | null }>(
     pdb,
-    sql`SELECT timezone, theme FROM account_prefs WHERE user_id = ${userId}`,
+    sql`SELECT timezone, theme, sidebar_plugins AS "sidebarPlugins" FROM account_prefs WHERE user_id = ${userId}`,
   );
-  return row ?? DEFAULT_ACCOUNT_PREFS;
+  if (!row) return DEFAULT_ACCOUNT_PREFS;
+  return {
+    timezone: row.timezone,
+    theme: row.theme,
+    sidebarPlugins: row.sidebarPlugins
+      ? (JSON.parse(row.sidebarPlugins) as SidebarPluginEntry[])
+      : null,
+  };
 }
 
 /** Upsert a user's Account preferences (one row per user). */
@@ -492,14 +511,21 @@ export async function setAccountPrefs(
   prefs: Partial<AccountPrefsValue>,
 ): Promise<AccountPrefsValue> {
   const current = await getAccountPrefs(pdb, userId);
-  const next = { ...current, ...prefs };
+  const next: AccountPrefsValue = {
+    timezone: prefs.timezone ?? current.timezone,
+    theme: prefs.theme ?? current.theme,
+    sidebarPlugins:
+      'sidebarPlugins' in prefs ? (prefs.sidebarPlugins ?? null) : current.sidebarPlugins,
+  };
+  const sidebarJson = next.sidebarPlugins ? JSON.stringify(next.sidebarPlugins) : null;
   const now = Math.floor(Date.now() / 1000);
   await dbRun(
     pdb,
-    sql`INSERT INTO account_prefs (user_id, tenant_id, timezone, theme, updated_at)
-        VALUES (${userId}, ${DEFAULT_TENANT_ID}, ${next.timezone}, ${next.theme}, ${now})
+    sql`INSERT INTO account_prefs (user_id, tenant_id, timezone, theme, sidebar_plugins, updated_at)
+        VALUES (${userId}, ${DEFAULT_TENANT_ID}, ${next.timezone}, ${next.theme}, ${sidebarJson}, ${now})
         ON CONFLICT (user_id)
-        DO UPDATE SET timezone = excluded.timezone, theme = excluded.theme, updated_at = excluded.updated_at`,
+        DO UPDATE SET timezone = excluded.timezone, theme = excluded.theme,
+                      sidebar_plugins = excluded.sidebar_plugins, updated_at = excluded.updated_at`,
   );
   return next;
 }

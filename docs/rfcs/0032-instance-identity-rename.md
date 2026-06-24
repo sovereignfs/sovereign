@@ -1,13 +1,13 @@
 ---
 rfc: 0032
 title: Instance Identity Rename
-status: Draft
+status: Accepted
 date: June 2026
 author: kasunben
 scope: >
   packages/ui, packages/db, packages/sdk, runtime, apps/auth, plugins/console,
   .env.example, docker-compose.yml, docker-compose.prod.yml, all docs
-incorporated_into_plan: 'Yes — epic task 9.8 (naming rectification before RFC 0027 Phase 2 and RFC 0031)'
+incorporated_into_plan: 'Yes — epic task 9.8 (completed)'
 ---
 
 # RFC 0032 — Instance Identity Rename

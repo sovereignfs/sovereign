@@ -1,13 +1,13 @@
 ---
 rfc: 0030
 title: Privacy-First Analytics
-status: Draft
+status: Accepted
 date: June 2026
 author: kasunben
 scope: >
   packages/manifest, packages/sdk, packages/db, runtime, plugins/analytics (new),
   plugins/console
-incorporated_into_plan: 'Yes — Tasks 1.0.5 (server-side infrastructure) and 1.0.6 (client-side tracking + heatmaps) [post-v1]'
+incorporated_into_plan: 'Yes — epic tasks 6.1 (server-side infrastructure) and 6.2 (client-side tracking + heatmaps) [post-v1]'
 ---
 
 # RFC 0030 — Privacy-First Analytics

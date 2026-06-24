@@ -1,10 +1,10 @@
 # RFC 0028 — Operator Fork Model & Upstream Sync
 
-**Status:** Draft\
+**Status:** Accepted\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `docs/`, `operator/` directory convention — no code changes, no new runtime surfaces, no version bumps\
-**Incorporated into plan:** No — documentation-first. This RFC defines the operator fork model; implementation tasks (docs updates + any tooling follow-on) to be assigned when scheduled.
+**Incorporated into plan:** Yes — epic task 3.14 (scheduled at roadmap slot 0.9.9).
 
 ---
 

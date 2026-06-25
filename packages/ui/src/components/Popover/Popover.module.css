@@ -1,0 +1,44 @@
+.container {
+  position: relative;
+  display: inline-flex;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + var(--sv-space-2));
+  z-index: 60;
+  background: var(--sv-color-surface);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-2xl);
+  box-shadow: var(--sv-shadow-popover);
+  overflow: hidden;
+  /* Slide in from slightly above */
+  animation: sv-popover-in 0.12s ease;
+}
+
+@keyframes sv-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}
+
+/* Alignment: right edge of panel aligns to right edge of trigger */
+.right {
+  right: 0;
+}
+
+/* Alignment: left edge of panel aligns to left edge of trigger */
+.left {
+  left: 0;
+}

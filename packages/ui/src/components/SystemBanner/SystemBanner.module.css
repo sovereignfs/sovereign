@@ -1,0 +1,67 @@
+.banner {
+  position: sticky;
+  top: 0;
+  /* Sits above sidebar rail (z-index ~10) but below dialogs/overlays (z-index 100) */
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-2) var(--sv-space-4);
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-sm);
+  line-height: 1.4;
+}
+
+.content {
+  flex: 1;
+  text-align: center;
+}
+
+/* Dismiss button — inherits the variant text colour */
+.dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--sv-radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.12s ease;
+}
+
+.dismiss:hover {
+  opacity: 1;
+}
+
+.dismiss:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
+/* Variants */
+.info {
+  background: var(--sv-color-info-surface);
+  color: var(--sv-color-info-text);
+  border-bottom-color: var(--sv-color-info-border);
+}
+
+.warning {
+  background: var(--sv-color-warning-surface);
+  color: var(--sv-color-warning-text);
+  border-bottom-color: var(--sv-color-warning-border);
+}
+
+.error {
+  background: var(--sv-color-error-surface);
+  color: var(--sv-color-error-text);
+  border-bottom-color: var(--sv-color-error-border);
+}

@@ -1,0 +1,52 @@
+.track {
+  /* 38×22px pill — spec dimensions */
+  display: inline-flex;
+  align-items: center;
+  width: 38px;
+  height: 22px;
+  border-radius: var(--sv-radius-full);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+  position: relative;
+}
+
+.track:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.track:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.on {
+  background-color: var(--sv-color-accent);
+}
+
+.off {
+  background-color: var(--sv-color-border-strong);
+}
+
+/* 18px thumb, 2px inset on each side */
+.thumb {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-white);
+  transition: transform 0.15s ease;
+  left: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.on .thumb {
+  transform: translateX(16px); /* 38 - 18 - 2 - 2 = 16 */
+}
+
+.off .thumb {
+  transform: translateX(0);
+}

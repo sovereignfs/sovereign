@@ -7,7 +7,7 @@ import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
 import styles from '../auth.module.css';
 
-export function ResetForm() {
+export function ResetForm({ instanceInitial = 'S' }: { instanceInitial?: string }) {
   const token = useSearchParams().get('token') ?? '';
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -44,8 +44,13 @@ export function ResetForm() {
     return (
       <main className={styles.page}>
         <div className={styles.card}>
+          <div className={styles.logo} aria-hidden="true">
+            {instanceInitial}
+          </div>
           <h1 className={styles.title}>Invalid link</h1>
-          <p className={styles.error}>No reset token found. Please use the link from your email.</p>
+          <p className={styles.error} style={{ marginTop: 20 }}>
+            No reset token found. Please use the link from your email.
+          </p>
           <p className={styles.footer}>
             <Link className={styles.link} href="/forgot-password">
               Request a new link
@@ -60,10 +65,16 @@ export function ResetForm() {
     return (
       <main className={styles.page}>
         <div className={styles.card}>
-          <h1 className={styles.title}>Password reset</h1>
-          <p className={styles.notice} role="status">
-            Your password has been updated. You can now sign in with your new password.
-          </p>
+          <div className={styles.logo} aria-hidden="true">
+            {instanceInitial}
+          </div>
+          <h1 className={styles.title}>Password updated</h1>
+          <div className={styles.notice} role="status">
+            <div className={styles.noticeDot} aria-hidden="true" />
+            <p className={styles.noticeText}>
+              Your password has been updated. You can now sign in with your new password.
+            </p>
+          </div>
           <p className={styles.footer}>
             <Link className={styles.link} href="/login">
               Sign in
@@ -77,10 +88,15 @@ export function ResetForm() {
   return (
     <main className={styles.page}>
       <div className={styles.card}>
+        <div className={styles.logo} aria-hidden="true">
+          {instanceInitial}
+        </div>
         <h1 className={styles.title}>Choose a new password</h1>
         <form className={styles.form} onSubmit={onSubmit}>
-          <label htmlFor="reset-password" className={styles.field}>
-            <span className={styles.label}>New password</span>
+          <div className={styles.field}>
+            <label htmlFor="reset-password" className={styles.label}>
+              New password
+            </label>
             <Input
               id="reset-password"
               type="password"
@@ -90,7 +106,8 @@ export function ResetForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-          </label>
+            <p className={styles.fieldHint}>At least 8 characters.</p>
+          </div>
           <label htmlFor="reset-confirm" className={styles.field}>
             <span className={styles.label}>Confirm new password</span>
             <Input
@@ -104,7 +121,7 @@ export function ResetForm() {
             />
           </label>
           {error ? <p className={styles.error}>{error}</p> : null}
-          <Button type="submit" disabled={loading}>
+          <Button type="submit" disabled={loading} className={styles.submitLg}>
             {loading ? 'Saving…' : 'Set new password'}
           </Button>
         </form>

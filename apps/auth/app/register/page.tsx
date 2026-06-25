@@ -18,6 +18,7 @@ export default async function RegisterPage({
   const { token } = await searchParams;
   const runtimeUrl = runtimePublicUrl();
   const instanceName = process.env.INSTANCE_NAME ?? 'Sovereign';
+  const instanceInitial = instanceName[0]?.toUpperCase() ?? 'S';
 
   if (token) {
     const now = Math.floor(Date.now() / 1000);
@@ -46,11 +47,18 @@ export default async function RegisterPage({
       <RegisterForm
         runtimeUrl={runtimeUrl}
         instanceName={instanceName}
+        instanceInitial={instanceInitial}
         invitedEmail={invite.email}
         invitedBy={invite.invited_by_name ?? undefined}
       />
     );
   }
 
-  return <RegisterForm runtimeUrl={runtimeUrl} instanceName={instanceName} />;
+  return (
+    <RegisterForm
+      runtimeUrl={runtimeUrl}
+      instanceName={instanceName}
+      instanceInitial={instanceInitial}
+    />
+  );
 }

@@ -7,9 +7,10 @@ import { LoginForm } from './login-form';
 // (Next 15).
 export default function LoginPage() {
   const runtimeUrl = runtimePublicUrl();
+  const instanceName = process.env.INSTANCE_NAME ?? 'Sovereign';
   return (
     <Suspense>
-      <LoginForm runtimeUrl={runtimeUrl} />
+      <LoginForm runtimeUrl={runtimeUrl} instanceInitial={instanceName[0]?.toUpperCase() ?? 'S'} />
     </Suspense>
   );
 }

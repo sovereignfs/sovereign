@@ -12,7 +12,13 @@ import styles from '../auth.module.css';
  * the post-login redirect targets the deployment's real runtime origin at
  * request time — not a value frozen into the client bundle at build time.
  */
-export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
+export function LoginForm({
+  runtimeUrl,
+  instanceInitial,
+}: {
+  runtimeUrl: string;
+  instanceInitial: string;
+}) {
   const signedOut = useSearchParams().get('signedout') === '1';
   const accountDeleted = useSearchParams().get('accountDeleted') === '1';
   const [email, setEmail] = useState('');
@@ -28,7 +34,7 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
     const result = await authClient.signIn.email({ email, password });
     setLoading(false);
     if (result?.error) {
-      setError(result.error.message ?? 'Sign in failed.');
+      setError('The email or password you entered is incorrect. Please try again.');
     } else if ((result?.data as Record<string, unknown>)?.twoFactorRedirect) {
       // twoFactorClient has already navigated to /login/2fa — do NOT redirect
       // to runtimeUrl here or it overrides the 2FA page navigation, sending
@@ -54,16 +60,21 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
   return (
     <main className={styles.page}>
       <div className={styles.card}>
+        <div className={styles.logo} aria-hidden="true">
+          {instanceInitial}
+        </div>
         <h1 className={styles.title}>Sign in to Sovereign</h1>
         {signedOut ? (
-          <p className={styles.notice} role="status">
-            You&rsquo;ve been signed out.
-          </p>
+          <div className={styles.notice} role="status">
+            <div className={styles.noticeDot} aria-hidden="true" />
+            <p className={styles.noticeText}>You&rsquo;ve been signed out.</p>
+          </div>
         ) : null}
         {accountDeleted ? (
-          <p className={styles.notice} role="status">
-            Your account has been deleted.
-          </p>
+          <div className={styles.notice} role="status">
+            <div className={styles.noticeDot} aria-hidden="true" />
+            <p className={styles.noticeText}>Your account has been deleted.</p>
+          </div>
         ) : null}
         <form className={styles.form} onSubmit={onSubmit}>
           <label htmlFor="login-email" className={styles.field}>
@@ -77,8 +88,15 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
               onChange={(e) => setEmail(e.target.value)}
             />
           </label>
-          <label htmlFor="login-password" className={styles.field}>
-            <span className={styles.label}>Password</span>
+          <div className={styles.field}>
+            <div className={styles.passwordHeader}>
+              <label htmlFor="login-password" className={styles.label}>
+                Password
+              </label>
+              <Link href="/forgot-password" className={styles.forgotLink}>
+                Forgot password?
+              </Link>
+            </div>
             <Input
               id="login-password"
               type="password"
@@ -87,9 +105,13 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-          </label>
+          </div>
           {error ? <p className={styles.error}>{error}</p> : null}
-          <Button type="submit" disabled={loading}>
+          <Button
+            type="submit"
+            disabled={loading}
+            className={error ? styles.submitAfterError : styles.submitLg}
+          >
             {loading ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
@@ -105,12 +127,9 @@ export function LoginForm({ runtimeUrl }: { runtimeUrl: string }) {
           {passkeyLoading ? 'Waiting for passkey…' : 'Sign in with a passkey'}
         </Button>
         <p className={styles.footer}>
-          <Link className={styles.link} href="/forgot-password">
-            Forgot password?
-          </Link>
-          {' · '}No account?{' '}
+          New to Sovereign?{' '}
           <Link className={styles.link} href="/register">
-            Create one
+            Create account
           </Link>
         </p>
       </div>

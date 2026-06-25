@@ -6,19 +6,16 @@ import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
 import styles from '../auth.module.css';
 
-/**
- * `runtimeUrl` is resolved server-side (see runtimePublicUrl) and passed in so
- * the post-registration redirect targets the deployment's real runtime origin
- * at request time — not a value frozen into the client bundle at build time.
- */
 export function RegisterForm({
   runtimeUrl,
   instanceName = 'Sovereign',
+  instanceInitial = 'S',
   invitedEmail,
   invitedBy,
 }: {
   runtimeUrl: string;
   instanceName?: string;
+  instanceInitial?: string;
   invitedEmail?: string;
   invitedBy?: string;
 }) {
@@ -27,6 +24,8 @@ export function RegisterForm({
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const isInvite = !!invitedEmail;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,10 +43,23 @@ export function RegisterForm({
   return (
     <main className={styles.page}>
       <div className={styles.card}>
-        {invitedBy ? (
-          <p className={styles.notice}>You&apos;ve been invited by {invitedBy}</p>
-        ) : null}
-        <h1 className={styles.title}>Create your account on {instanceName}</h1>
+        <div className={styles.logo} aria-hidden="true">
+          {instanceInitial}
+        </div>
+        <h1 className={styles.title}>Create your account</h1>
+
+        {isInvite && (
+          <div className={styles.inviteBanner}>
+            <p className={styles.inviteBannerTitle}>Invited to join {instanceName}</p>
+            {invitedBy && (
+              <p className={styles.inviteBannerMeta}>
+                By {invitedBy}
+                {invitedEmail && <> · {invitedEmail}</>}
+              </p>
+            )}
+          </div>
+        )}
+
         <form className={styles.form} onSubmit={onSubmit}>
           <label htmlFor="register-name" className={styles.field}>
             <span className={styles.label}>Name</span>
@@ -59,25 +71,27 @@ export function RegisterForm({
               onChange={(e) => setName(e.target.value)}
             />
           </label>
-          <label htmlFor="register-email" className={styles.field}>
-            <span className={styles.label}>Email</span>
+          <div className={styles.field}>
+            <div className={styles.fieldLabelRow}>
+              <label htmlFor="register-email" className={styles.label}>
+                Email
+              </label>
+              {isInvite && <span className={styles.fromInviteTag}>from invite</span>}
+            </div>
             <Input
               id="register-email"
               type="email"
               autoComplete="email"
               required
               value={email}
-              readOnly={!!invitedEmail}
-              onChange={invitedEmail ? undefined : (e) => setEmail(e.target.value)}
+              readOnly={isInvite}
+              onChange={isInvite ? undefined : (e) => setEmail(e.target.value)}
             />
-            {invitedEmail ? (
-              <span className={styles.label} style={{ color: 'var(--sv-color-text-muted)' }}>
-                This field is pre-filled from your invite
-              </span>
-            ) : null}
-          </label>
-          <label htmlFor="register-password" className={styles.field}>
-            <span className={styles.label}>Password</span>
+          </div>
+          <div className={styles.field}>
+            <label htmlFor="register-password" className={styles.label}>
+              Password
+            </label>
             <Input
               id="register-password"
               type="password"
@@ -87,10 +101,17 @@ export function RegisterForm({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-          </label>
+            <p className={styles.fieldHint}>At least 8 characters.</p>
+          </div>
           {error ? <p className={styles.error}>{error}</p> : null}
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Creating account…' : 'Create account'}
+          <Button type="submit" disabled={loading} className={styles.submitLg}>
+            {loading
+              ? isInvite
+                ? 'Accepting…'
+                : 'Creating account…'
+              : isInvite
+                ? 'Accept invitation'
+                : 'Create account'}
           </Button>
         </form>
         <p className={styles.footer}>

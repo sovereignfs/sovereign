@@ -8,63 +8,211 @@
 
 .card {
   width: 100%;
-  max-width: 380px;
+  max-width: 360px;
   background-color: var(--sv-color-surface);
   border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-lg);
-  box-shadow: var(--sv-shadow-card);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   padding: var(--sv-space-8);
 }
 
-.title {
-  margin: 0 0 var(--sv-space-6);
-  font-size: var(--sv-font-size-xl);
+/* ── Logo ──────────────────────────────────────────────────────────────────── */
+
+.logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background-color: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+  font-size: var(--sv-font-size-md);
   font-weight: var(--sv-font-weight-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
 }
+
+/* ── Title + subtitle ──────────────────────────────────────────────────────── */
+
+.title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: var(--sv-font-weight-semibold);
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  font-size: var(--sv-font-size-caption);
+  color: var(--sv-color-text-muted);
+  line-height: 1.5;
+}
+
+/* Login "signed out" / "account deleted" notice sits between title and form */
+.notice + .form {
+  margin-top: 16px;
+}
+
+/* ── Form ──────────────────────────────────────────────────────────────────── */
 
 .form {
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-4);
+  margin-top: 24px;
+}
+
+.formSm {
+  margin-top: 14px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--sv-space-1);
 }
 
 .label {
-  font-size: var(--sv-font-size-sm);
+  display: block;
+  font-size: var(--sv-font-size-caption);
   font-weight: var(--sv-font-weight-medium);
+  color: #3f3f46;
+  margin-bottom: 7px;
 }
+
+.passwordHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.passwordHeader .label {
+  margin-bottom: 0;
+}
+
+.forgotLink {
+  font-size: 12px;
+  color: #52525b;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: #d4d4d8;
+}
+
+.forgotLink:hover {
+  color: var(--sv-color-text-primary);
+  text-decoration-color: var(--sv-color-text-primary);
+}
+
+.fieldHint {
+  margin: 7px 0 0;
+  font-size: 12px;
+  color: var(--sv-color-text-muted);
+  line-height: 1.4;
+}
+
+.fieldLabelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.fieldLabelRow .label {
+  margin-bottom: 0;
+}
+
+/* ── Error ─────────────────────────────────────────────────────────────────── */
 
 .error {
-  padding: var(--sv-space-2) var(--sv-space-3);
-  font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-primary);
-  background-color: var(--sv-color-surface-sunken);
-  border: 1px solid var(--sv-color-border-strong);
+  padding: 11px 14px;
+  font-size: var(--sv-font-size-caption);
+  color: var(--sv-color-error-text);
+  background-color: var(--sv-color-error-surface);
+  border: 1px solid var(--sv-color-error-border);
   border-radius: var(--sv-radius-md);
+  line-height: 1.5;
+  margin: 2px 0;
 }
 
+/* Button with no extra margin — used when an error block sits above the button */
+.submitAfterError {
+  margin-top: 0;
+}
+
+/* ── Notice (success / info state) ────────────────────────────────────────── */
+
 .notice {
-  margin-bottom: var(--sv-space-4);
-  padding: var(--sv-space-2) var(--sv-space-3);
-  font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-primary);
+  display: flex;
+  gap: 11px;
   background-color: var(--sv-color-surface-sunken);
   border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-md);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-top: 20px;
 }
+
+.noticeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #16a34a;
+  margin-top: 5px;
+  flex: none;
+}
+
+.noticeText {
+  margin: 0;
+  font-size: 13.5px;
+  color: #3f3f46;
+  line-height: 1.55;
+}
+
+/* ── Invite banner ─────────────────────────────────────────────────────────── */
+
+.inviteBanner {
+  margin-top: 18px;
+  background-color: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+  border-radius: 10px;
+  padding: 13px 15px;
+}
+
+.inviteBannerTitle {
+  margin: 0;
+  font-size: var(--sv-font-size-caption);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+  line-height: 1.4;
+}
+
+.inviteBannerMeta {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--sv-color-text-muted);
+}
+
+/* ── "from invite" tag ─────────────────────────────────────────────────────── */
+
+.fromInviteTag {
+  font-family: var(--sv-font-family-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: #a1a1aa;
+  background-color: #f4f4f5;
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+/* ── Divider ───────────────────────────────────────────────────────────────── */
 
 .divider {
   display: flex;
   align-items: center;
-  gap: var(--sv-space-3);
-  margin: var(--sv-space-2) 0;
-  color: var(--sv-color-text-muted);
-  font-size: var(--sv-font-size-sm);
+  gap: 12px;
+  margin: 18px 0;
+  color: #a1a1aa;
+  font-size: 12px;
 }
 
 .divider::before,
@@ -75,18 +223,82 @@
   background-color: var(--sv-color-border);
 }
 
+/* ── Passkey button ────────────────────────────────────────────────────────── */
+
 .passkeyBtn {
   width: 100%;
 }
 
+/* ── Submit button extra margin (register / reset forms) ───────────────────── */
+
+.submitLg {
+  margin-top: 10px; /* adds to flex gap = 26px total */
+}
+
+/* ── OTP digit row (2FA) ───────────────────────────────────────────────────── */
+
+.otpRow {
+  display: flex;
+  gap: 8px;
+}
+
+.otpCell {
+  width: 100%;
+  height: 52px;
+  text-align: center;
+  font-family: var(--sv-font-family-mono);
+  font-size: 21px;
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+  background-color: var(--sv-color-surface);
+  border: 1px solid var(--sv-color-border-strong);
+  border-radius: 10px;
+  padding: 0;
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.otpCell:focus {
+  border-color: var(--sv-color-accent);
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.07);
+}
+
+.otpCell.otpError {
+  border-color: #fca5a5;
+}
+
+/* ── Backup code input ─────────────────────────────────────────────────────── */
+
+.backupInput {
+  font-family: var(--sv-font-family-mono);
+  font-size: var(--sv-font-size-md);
+  letter-spacing: 0.08em;
+}
+
+/* ── Footer ────────────────────────────────────────────────────────────────── */
+
 .footer {
-  margin-top: var(--sv-space-6);
-  font-size: var(--sv-font-size-sm);
+  margin-top: 24px;
+  font-size: var(--sv-font-size-caption);
   color: var(--sv-color-text-muted);
   text-align: center;
+  line-height: 1.6;
 }
 
 .link {
-  color: var(--sv-color-accent);
+  color: var(--sv-color-text-primary);
   font-weight: var(--sv-font-weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: #d4d4d8;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.link:hover {
+  text-decoration-color: var(--sv-color-text-primary);
 }

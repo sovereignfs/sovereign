@@ -4,9 +4,11 @@ import { ChallengeForm } from './challenge-form';
 
 export default function TwoFactorPage() {
   const runtimeUrl = runtimePublicUrl();
+  const instanceName = process.env.INSTANCE_NAME ?? 'Sovereign';
+  const instanceInitial = instanceName[0]?.toUpperCase() ?? 'S';
   return (
     <Suspense>
-      <ChallengeForm runtimeUrl={runtimeUrl} />
+      <ChallengeForm runtimeUrl={runtimeUrl} instanceInitial={instanceInitial} />
     </Suspense>
   );
 }

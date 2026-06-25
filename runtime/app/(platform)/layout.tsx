@@ -11,6 +11,7 @@ import { InstanceProvider } from '@/src/instance-provider';
 import { AccountMenu } from './_components/AccountMenu';
 import { ActivePluginTitle } from './_components/ActivePluginTitle';
 import { ClientShell } from './_components/ClientShell';
+import { NavIcon } from './_components/NavIcon';
 import { MobileNav } from './_components/MobileNav';
 import { NotificationBell } from './_components/NotificationBell';
 import { OfflineBanner } from './_components/OfflineBanner';
@@ -29,8 +30,10 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   const role = h.get('x-sovereign-user-role') ?? 'platform:user';
   const isAdmin = hasCapability(role, 'console:access');
 
-  const userImage = h.get('x-sovereign-user-image');
-  const userLabel = h.get('x-sovereign-user-name') || h.get('x-sovereign-user-email') || '?';
+  const userImage = h.get('x-sovereign-user-image') ?? undefined;
+  const userName = h.get('x-sovereign-user-name') ?? '';
+  const userEmail = h.get('x-sovereign-user-email') ?? '';
+  const userLabel = userName || userEmail || '?';
   const accountAvatar = userImage ? (
     <img src={userImage} alt="" className={styles.avatarImage} />
   ) : (
@@ -68,7 +71,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   }
 
   const pluginIcons = [...(launcher ? [launcher] : []), ...plugins].map((plugin) => (
-    <Link key={plugin.id} href={plugin.routePrefix} className={styles.icon} title={plugin.name}>
+    <NavIcon key={plugin.id} href={plugin.routePrefix} title={plugin.name}>
       {plugin.icon ? (
         <img
           src={`/plugin-icons/${plugin.id}.svg`}
@@ -79,7 +82,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
       ) : (
         <span aria-hidden="true">{monogram(plugin.name)}</span>
       )}
-    </Link>
+    </NavIcon>
   ));
 
   // Serialisable slice passed to client components.
@@ -110,25 +113,24 @@ export default async function PlatformLayout({ children }: { children: ReactNode
                   <span aria-hidden="true">{instanceName.charAt(0).toUpperCase()}</span>
                 )}
               </Link>
+              <hr className={styles.sidebarDivider} />
               <nav className={styles.plugins} aria-label="Plugins">
                 {pluginIcons}
               </nav>
               <div className={styles.chrome}>
                 <NotificationBell placement="sidebar" />
                 {isAdmin ? (
-                  <Link
-                    href="/console"
-                    className={styles.icon}
-                    title="Console"
-                    aria-label="Console"
-                  >
+                  <NavIcon href="/console" title="Console">
                     <Icon name="settings" size="lg" aria-hidden />
-                  </Link>
+                  </NavIcon>
                 ) : null}
                 <AccountMenu
                   avatar={accountAvatar}
                   triggerClassName={styles.avatar}
                   placement="sidebar"
+                  userName={userName}
+                  userEmail={userEmail}
+                  userImage={userImage}
                 />
               </div>
             </aside>
@@ -150,6 +152,9 @@ export default async function PlatformLayout({ children }: { children: ReactNode
                 triggerClassName={styles.avatar}
                 placement="header"
                 showConsole={isAdmin}
+                userName={userName}
+                userEmail={userEmail}
+                userImage={userImage}
               />
             </header>
 

@@ -2,28 +2,31 @@
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { Icon } from '@sovereignfs/ui';
 import styles from './AccountMenu.module.css';
 
-/**
- * Shell account control (PLT-11): the avatar opens a small popover menu with an
- * Account link and Log out, replacing the bare avatar link. Log out is a plain
- * form POST to the runtime logout route, so it works without JS; the menu's
- * open/close is the only JS-dependent layer. Keyboard-accessible: the trigger
- * exposes `aria-expanded`, Esc closes and restores focus, and a click (or focus
- * moving) outside dismisses it.
- */
+function monogram(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return '?';
+  const [first = '', second = ''] = trimmed.split(/\s+/);
+  const initials = second ? first.charAt(0) + second.charAt(0) : first.slice(0, 2);
+  return initials.toUpperCase();
+}
+
 export function AccountMenu({
   avatar,
   triggerClassName,
   placement,
-  showConsole,
+  userName,
+  userEmail,
+  userImage,
 }: {
   avatar: ReactNode;
   triggerClassName?: string;
-  /** Where the popover opens relative to the trigger. */
   placement: 'sidebar' | 'header';
-  /** Show a Console link in the menu (shown to admins on mobile header). */
-  showConsole?: boolean;
+  userName?: string;
+  userEmail?: string;
+  userImage?: string;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -48,6 +51,8 @@ export function AccountMenu({
     };
   }, [open]);
 
+  const displayName = userName || userEmail || '';
+
   return (
     <div ref={wrapRef} className={styles.wrap}>
       <button
@@ -64,27 +69,51 @@ export function AccountMenu({
       </button>
       {open ? (
         <div className={[styles.menu, styles[placement]].join(' ')} role="menu">
+          {displayName ? (
+            <>
+              <div className={styles.userHeader}>
+                <div className={styles.menuAvatar} aria-hidden="true">
+                  {userImage ? (
+                    <img src={userImage} alt="" className={styles.menuAvatarImg} />
+                  ) : (
+                    monogram(displayName)
+                  )}
+                </div>
+                <div className={styles.userInfo}>
+                  {userName && <p className={styles.userName}>{userName}</p>}
+                  {userEmail && <p className={styles.userEmail}>{userEmail}</p>}
+                </div>
+              </div>
+              <hr className={styles.divider} />
+            </>
+          ) : null}
           <Link
             href="/account"
             role="menuitem"
             className={styles.item}
             onClick={() => setOpen(false)}
           >
+            <Icon name="user" size="sm" aria-hidden />
             Account
           </Link>
-          {showConsole ? (
-            <Link
-              href="/console"
-              role="menuitem"
-              className={styles.item}
-              onClick={() => setOpen(false)}
-            >
-              Console
-            </Link>
-          ) : null}
+          <Link
+            href="/account/preferences"
+            role="menuitem"
+            className={styles.item}
+            onClick={() => setOpen(false)}
+          >
+            <Icon name="sliders-horizontal" size="sm" aria-hidden />
+            Preferences
+          </Link>
+          <hr className={styles.divider} />
           <form action="/api/account/logout" method="post">
-            <button type="submit" role="menuitem" className={styles.item}>
-              Log out
+            <button
+              type="submit"
+              role="menuitem"
+              className={`${styles.item} ${styles.itemDestructive}`}
+            >
+              <Icon name="log-out" size="sm" aria-hidden />
+              Sign out
             </button>
           </form>
         </div>

@@ -1,6 +1,7 @@
 .shell {
-  /* Single source for the sidebar width — fed to the grid and to the overlay
-     dialog's scrim inset so dialogs start at the sidebar's right edge. */
+  /* Single source for the sidebar width — fed to the grid template and the
+     dialog scrim's padding-left so the panel starts at the sidebar's right edge
+     while the scrim backdrop still covers the full viewport. */
   --sv-shell-sidebar-width: 64px;
   --sv-dialog-inset-left: var(--sv-shell-sidebar-width);
   display: grid;
@@ -52,6 +53,14 @@
   border-radius: var(--sv-radius-md);
 }
 
+.sidebarDivider {
+  width: 32px;
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--sv-color-border);
+  flex: none;
+}
+
 .plugins {
   flex: 1;
   display: flex;
@@ -87,6 +96,12 @@
 
 .icon:hover {
   background-color: var(--sv-color-border);
+  color: var(--sv-color-text-primary);
+}
+
+.iconActive {
+  background-color: var(--sv-color-border);
+  color: var(--sv-color-text-primary);
 }
 
 .avatar {

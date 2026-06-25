@@ -39,12 +39,95 @@ interface SsePayload {
 const POLL_INTERVAL_MS = 30_000;
 const SSE_ERROR_FALLBACK_THRESHOLD = 3;
 
+function timeAgo(ts: number): string {
+  const diff = Math.floor(Date.now() / 1000) - ts;
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 86400 * 2) return 'Yesterday';
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function categoryColorClass(category: string): string {
+  const c = category.toLowerCase();
+  if (c.includes('user') || c.includes('invite') || c.includes('join')) return styles.iconGreen;
+  if (
+    c.includes('security') ||
+    c.includes('session') ||
+    c.includes('auth') ||
+    c.includes('warning')
+  )
+    return styles.iconAmber;
+  return styles.iconNeutral;
+}
+
+function CategoryIcon({ category }: { category: string }) {
+  const c = category.toLowerCase();
+  if (c.includes('user') || c.includes('invite') || c.includes('join')) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <line x1="19" x2="19" y1="8" y2="14" />
+        <line x1="22" x2="16" y1="11" y2="11" />
+      </svg>
+    );
+  }
+  if (
+    c.includes('security') ||
+    c.includes('session') ||
+    c.includes('auth') ||
+    c.includes('warning')
+  ) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+        <path d="M12 9v4" />
+        <path d="M12 17h.01" />
+      </svg>
+    );
+  }
+  // default: package/layers for plugin/system
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+      <path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.9a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.81l-3.5-1.6" />
+      <path d="m6.08 14.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.9a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.81l-3.5-1.6" />
+    </svg>
+  );
+}
+
 export function NotificationBell({ placement = 'header' }: { placement?: 'sidebar' | 'header' }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [transport, setTransport] = useState<'polling' | 'sse'>('polling');
+  const [sidebarPanelBottom, setSidebarPanelBottom] = useState<number>(16);
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -188,8 +271,24 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'dismiss', id }),
     });
+    const item = items.find((n) => n.id === id);
     setItems((prev) => prev.filter((n) => n.id !== id));
-    setUnreadCount((c) => Math.max(0, c - 1));
+    if (item?.readAt == null) setUnreadCount((c) => Math.max(0, c - 1));
+  };
+
+  const clearAll = async () => {
+    await Promise.all(
+      items.map((item) =>
+        fetch('/api/account/notifications', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'dismiss', id: item.id }),
+        }),
+      ),
+    );
+    setItems([]);
+    setUnreadCount(0);
   };
 
   return (
@@ -197,13 +296,19 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
       <button
         ref={triggerRef}
         type="button"
-        className={styles.trigger}
+        className={`${styles.trigger} ${placement === 'sidebar' ? styles.triggerSidebar : ''}`}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => {
           setOpen((o) => {
-            if (!o) void fetchNotifications({ silent: true });
+            if (!o) {
+              void fetchNotifications({ silent: true });
+              if (placement === 'sidebar' && triggerRef.current) {
+                const rect = triggerRef.current.getBoundingClientRect();
+                setSidebarPanelBottom(window.innerHeight - rect.bottom);
+              }
+            }
             return !o;
           });
         }}
@@ -237,26 +342,80 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
           aria-label="Notifications"
           aria-modal="false"
           className={`${styles.panel} ${placement === 'sidebar' ? styles.panelSidebar : styles.panelHeader}`}
+          style={placement === 'sidebar' ? { bottom: sidebarPanelBottom } : undefined}
         >
           <div className={styles.header}>
             <span className={styles.headerTitle}>Notifications</span>
-            {unreadCount > 0 && (
+            <div className={styles.headerActions}>
+              {items.length > 0 && (
+                <>
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      className={styles.actionBtn}
+                      onClick={() => void markAllRead()}
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className={styles.actionBtn}
+                    onClick={() => void clearAll()}
+                  >
+                    Clear all
+                  </button>
+                </>
+              )}
               <button
                 type="button"
-                className={styles.markAllBtn}
-                onClick={() => void markAllRead()}
+                className={styles.closeBtn}
+                aria-label="Close notifications"
+                onClick={() => setOpen(false)}
               >
-                Mark all read
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
               </button>
-            )}
+            </div>
           </div>
+
           <ul className={styles.list} aria-label="Notification list">
-            {items.length === 0 && <li className={styles.empty}>No notifications yet.</li>}
+            {items.length === 0 && (
+              <li className={styles.empty}>
+                <div className={styles.emptyIcon} aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    <path d="M18.63 13A17.89 17.89 0 0 1 18 8" />
+                    <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14" />
+                    <path d="M18 8a6 6 0 0 0-9.33-5" />
+                    <line x1="1" x2="23" y1="1" y2="23" />
+                  </svg>
+                </div>
+                <span className={styles.emptyText}>No notifications.</span>
+              </li>
+            )}
             {items.map((item) => (
-              <li
-                key={item.id}
-                className={`${styles.item} ${item.readAt == null ? styles.unread : ''}`}
-              >
+              <li key={item.id} className={styles.item}>
+                <div className={`${styles.categoryIcon} ${categoryColorClass(item.category)}`}>
+                  <CategoryIcon category={item.category} />
+                </div>
                 <div className={styles.itemBody}>
                   {item.url ? (
                     <a href={item.url} className={styles.itemTitle} onClick={() => setOpen(false)}>
@@ -265,16 +424,30 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
                   ) : (
                     <span className={styles.itemTitle}>{item.title}</span>
                   )}
-                  {item.body && <p className={styles.itemMessage}>{item.body}</p>}
+                  <span className={styles.itemTime}>{timeAgo(item.createdAt)}</span>
                 </div>
-                <button
-                  type="button"
-                  className={styles.dismissBtn}
-                  aria-label={`Dismiss: ${item.title}`}
-                  onClick={() => void dismiss(item.id)}
-                >
-                  ✕
-                </button>
+                <div className={styles.itemEnd}>
+                  {item.readAt == null && <span className={styles.unreadDot} aria-label="Unread" />}
+                  <button
+                    type="button"
+                    className={styles.dismissBtn}
+                    aria-label={`Dismiss: ${item.title}`}
+                    onClick={() => void dismiss(item.id)}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

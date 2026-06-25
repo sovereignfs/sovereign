@@ -8,18 +8,19 @@
   z-index: 50;
   display: flex;
   flex-direction: column;
-  min-width: 10rem;
+  min-width: 15rem;
   padding: var(--sv-space-1);
   background: var(--sv-color-surface-raised);
   border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-md);
+  border-radius: 14px;
   box-shadow: var(--sv-shadow-overlay);
 }
 
-/* Sidebar: avatar sits at the bottom-left, so open up and to the right. */
+/* Sidebar: fixed to viewport so it anchors to the sidebar right edge precisely. */
 .sidebar {
-  bottom: 0;
-  left: calc(100% + var(--sv-space-2));
+  position: fixed;
+  bottom: var(--sv-space-4);
+  left: calc(var(--sv-shell-sidebar-width, 64px) + var(--sv-space-2));
 }
 
 /* Mobile header: avatar sits at the top-right, so open down and to the left. */
@@ -28,8 +29,75 @@
   right: 0;
 }
 
+/* ── User header ──────────────────────────────────────────────────────────── */
+
+.userHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-2) var(--sv-space-3);
+}
+
+.menuAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--sv-radius-full);
+  background-color: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
+  overflow: hidden;
+}
+
+.menuAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.userName {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userEmail {
+  margin: 1px 0 0;
+  font-size: var(--sv-font-size-caption);
+  color: var(--sv-color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Divider ──────────────────────────────────────────────────────────────── */
+
+.divider {
+  margin: var(--sv-space-1) calc(-1 * var(--sv-space-1));
+  border: none;
+  border-top: 1px solid var(--sv-color-border);
+}
+
+/* ── Menu items ───────────────────────────────────────────────────────────── */
+
 .item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
   width: 100%;
   padding: var(--sv-space-2) var(--sv-space-3);
   border: none;
@@ -50,4 +118,12 @@
 .item:focus-visible {
   outline: 2px solid var(--sv-color-focus-ring);
   outline-offset: -2px;
+}
+
+.itemDestructive {
+  color: var(--sv-color-error-text);
+}
+
+.itemDestructive:hover {
+  background: var(--sv-color-error-surface);
 }

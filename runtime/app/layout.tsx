@@ -2,7 +2,22 @@ import '@sovereignfs/ui/tokens.css';
 import './globals.css';
 import type { ReactNode } from 'react';
 import type { Metadata, Viewport } from 'next';
+import { Hanken_Grotesk, JetBrains_Mono } from 'next/font/google';
 import { themeScript } from '@/src/theme-script';
+
+const sans = Hanken_Grotesk({
+  subsets: ['latin'],
+  variable: '--sv-font-family',
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+});
+
+const mono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--sv-font-family-mono',
+  weight: ['400', '500'],
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Sovereign',
@@ -32,7 +47,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     // attribute intentionally differs from the server markup —
     // suppressHydrationWarning scopes React's mismatch check off this element
     // (the standard theming pattern; suppression does not extend to children).
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {children}

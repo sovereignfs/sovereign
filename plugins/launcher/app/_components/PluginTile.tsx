@@ -7,6 +7,7 @@ export interface PluginTileData {
   name: string;
   description: string;
   routePrefix: string;
+  type?: string;
   /**
    * Path-relative URL to the plugin's icon (e.g. `/plugin-icons/<id>.svg`).
    * Absent when the plugin ships no icon — the monogram fallback is shown instead.
@@ -15,7 +16,7 @@ export interface PluginTileData {
   iconUrl?: string;
 }
 
-/** A single plugin tile (LCH-01/02): icon, name, description; links to the plugin. */
+/** A single plugin tile: icon, name, description, type badge; links to the plugin. */
 export function PluginTile({ plugin }: { plugin: PluginTileData }) {
   return (
     <Link href={plugin.routePrefix} className={styles.tile}>
@@ -28,6 +29,12 @@ export function PluginTile({ plugin }: { plugin: PluginTileData }) {
       </span>
       <span className={styles.tileName}>{plugin.name}</span>
       {plugin.description && <span className={styles.tileDesc}>{plugin.description}</span>}
+      {plugin.type && (
+        <>
+          <span className={styles.tileSep} aria-hidden="true" />
+          <span className={styles.tileBadge}>{plugin.type}</span>
+        </>
+      )}
     </Link>
   );
 }

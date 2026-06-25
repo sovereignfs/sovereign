@@ -4,6 +4,15 @@
   gap: var(--sv-space-6);
 }
 
+/* ── Title row ──────────────────────────────────────────────────────────── */
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sv-space-4);
+}
+
 .title {
   margin: 0;
   font-size: var(--sv-font-size-2xl);
@@ -11,11 +20,73 @@
   color: var(--sv-color-text-primary);
 }
 
+.subtitle {
+  margin: var(--sv-space-1) 0 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}
+
+/* ── Search ─────────────────────────────────────────────────────────────── */
+
+.searchWrap {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  padding: 6px var(--sv-space-3);
+  min-width: 200px;
+  background-color: var(--sv-color-surface);
+  border: 1px solid var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-md);
+  cursor: text;
+}
+
+.searchIcon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--sv-color-text-muted);
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: var(--sv-color-text-muted);
+}
+
+/* ── Section header ─────────────────────────────────────────────────────── */
+
+.sectionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: calc(-1 * var(--sv-space-2));
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: var(--sv-font-weight-semibold);
+  letter-spacing: 0.06em;
+  color: var(--sv-color-text-muted);
+}
+
+.sectionCount {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}
+
 /* ── Grid ───────────────────────────────────────────────────────────────── */
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: var(--sv-space-4);
   margin: 0;
   padding: 0;
@@ -73,6 +144,27 @@
 .tileDesc {
   font-size: var(--sv-font-size-sm);
   color: var(--sv-color-text-muted);
+  line-height: 1.5;
+  flex: 1;
+}
+
+.tileSep {
+  display: block;
+  width: 100%;
+  height: 1px;
+  background-color: var(--sv-color-border);
+  margin-top: auto;
+}
+
+.tileBadge {
+  font-family: var(--sv-font-family-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--sv-color-text-muted);
+  background-color: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  padding: 2px 8px;
 }
 
 /* ── Admin section ──────────────────────────────────────────────────────── */

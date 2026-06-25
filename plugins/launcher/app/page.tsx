@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import Link from 'next/link';
 import { sdk } from '@sovereignfs/sdk';
 import { PluginGrid } from './_components/PluginGrid';
+import { SearchableGrid } from './_components/SearchableGrid';
 import type { PluginTileData } from './_components/PluginTile';
 import styles from './launcher.module.css';
 
@@ -40,7 +41,12 @@ export default async function LauncherPage() {
   if (plugins.length === 0) {
     return (
       <div className={styles.launcher}>
-        <h1 className={styles.title}>Home</h1>
+        <div className={styles.titleRow}>
+          <div>
+            <h1 className={styles.title}>Home</h1>
+            <p className={styles.subtitle}>Your installed plugins and tools.</p>
+          </div>
+        </div>
         <div className={styles.empty}>
           <p className={styles.emptyTitle}>No plugins installed yet</p>
           {isAdmin ? (
@@ -63,9 +69,7 @@ export default async function LauncherPage() {
 
   return (
     <div className={styles.launcher}>
-      <h1 className={styles.title}>Home</h1>
-
-      {mainPlugins.length > 0 && <PluginGrid plugins={mainPlugins} />}
+      <SearchableGrid plugins={mainPlugins} total={plugins.length} />
 
       {isAdmin && adminPlugins.length > 0 && (
         <section className={styles.adminSection}>

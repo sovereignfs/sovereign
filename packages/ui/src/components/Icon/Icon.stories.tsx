@@ -43,7 +43,7 @@ export const SizeLarge: Story = { args: { name: 'bell', size: 'lg', 'aria-hidden
 export const AllIcons: Story = {
   parameters: { layout: 'padded' },
   args: { name: 'house', 'aria-hidden': true },
-  render: () => (
+  render: (_args) => (
     <div>
       {(['sm', 'md', 'lg'] as const).map((sz) => (
         <section key={sz} style={{ marginBottom: 32 }}>

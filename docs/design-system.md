@@ -44,13 +44,14 @@ abbreviated after the prefix):
 
 ```
 primitives.css   raw, context-free scales — the palette, spacing, type, radii
-  --sv-grey-50 … --sv-grey-950 · --sv-space-1 … --sv-space-16
-  --sv-font-size-xs … --sv-font-size-2xl · --sv-radius-sm/md/lg
+  --sv-grey-50 … --sv-grey-950 · --sv-blue-* · --sv-space-1 … --sv-space-16
+  --sv-font-size-label/xs/caption/sm … --sv-font-size-2xl · --sv-font-weight-bold
+  --sv-radius-sm/md/lg/xl/2xl/3xl/full
         │  mapped by
         ▼
 semantic.css     contextual roles — what components and plugins reference
   --sv-color-surface · --sv-color-text-primary · --sv-color-border
-  --sv-color-accent · --sv-shadow-card …
+  --sv-color-accent · --sv-color-info-* · --sv-shadow-card/hover/popover …
 ```
 
 - **Primitives** are fixed. Theming never overrides them.
@@ -70,15 +71,34 @@ variables are available globally to every plugin.
 
 ### Primitive tokens (`src/tokens/primitives.css`)
 
-| Group         | Tokens                                                                       |
-| ------------- | ---------------------------------------------------------------------------- |
-| Palette       | `--sv-white`, `--sv-black`, `--sv-grey-50` … `--sv-grey-950`                 |
-| Spacing (4px) | `--sv-space-1` (4px) … `--sv-space-16` (64px) — steps 1,2,3,4,5,6,8,10,12,16 |
-| Font family   | `--sv-font-family`, `--sv-font-family-mono`                                  |
-| Font size     | `--sv-font-size-xs`, `-sm`, `-md`, `-lg`, `-xl`, `-2xl`                      |
-| Font weight   | `--sv-font-weight-regular` (400), `-medium` (500), `-semibold` (600)         |
-| Radius        | `--sv-radius-sm`, `-md`, `-lg`, `-full`                                      |
-| Icon size     | `--sv-icon-size-sm` (16px), `-md` (20px), `-lg` (24px)                       |
+| Group         | Tokens                                                                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Palette       | `--sv-white`, `--sv-black`, `--sv-grey-50` … `--sv-grey-950`                                                                          |
+| Status/info   | `--sv-red-*`, `--sv-amber-*`, `--sv-green-*`, `--sv-blue-*` — see semantic layer for use                                              |
+| Spacing (4px) | `--sv-space-1` (4px) … `--sv-space-16` (64px) — steps 1,2,3,4,5,6,8,10,12,16                                                          |
+| Font family   | `--sv-font-family` (Hanken Grotesk → system-ui), `--sv-font-family-mono` (JetBrains Mono → ui-monospace)                              |
+| Font size     | `--sv-font-size-label` (11px), `-xs` (12px), `-caption` (13px), `-sm` (14px), `-md` (16px), `-lg` (18px), `-xl` (20px), `-2xl` (24px) |
+| Font weight   | `--sv-font-weight-regular` (400), `-medium` (500), `-semibold` (600), `-bold` (700)                                                   |
+| Radius        | `--sv-radius-sm` (6px), `-md` (8px), `-lg` (11px), `-xl` (12px), `-2xl` (14px), `-3xl` (20px), `-full`                                |
+| Icon size     | `--sv-icon-size-sm` (16px), `-md` (20px), `-lg` (24px)                                                                                |
+
+**Font families:** `--sv-font-family` names Hanken Grotesk as the preferred body font
+with a full system-font fallback stack; `--sv-font-family-mono` names JetBrains Mono.
+The web fonts are **not loaded by the design system** — operators must supply a `<link>`
+or `@font-face` via their instance CSS. The system fallback applies automatically when
+the fonts are absent.
+
+**Radius scale guidance:**
+
+| Token              | Value  | Use                               |
+| ------------------ | ------ | --------------------------------- |
+| `--sv-radius-sm`   | 6px    | badge, tag                        |
+| `--sv-radius-md`   | 8px    | button, input                     |
+| `--sv-radius-lg`   | 11px   | sidebar icon, small card          |
+| `--sv-radius-xl`   | 12px   | card, panel                       |
+| `--sv-radius-2xl`  | 14px   | popover                           |
+| `--sv-radius-3xl`  | 20px   | bottom sheet (Drawer top corners) |
+| `--sv-radius-full` | 9999px | pill, avatar                      |
 
 ### Semantic tokens (`src/tokens/semantic.css`)
 
@@ -97,6 +117,8 @@ variables are available globally to every plugin.
 | `--sv-color-focus-ring`     | grey-900        | grey-100        | Focus outline              |
 | `--sv-color-scrim`          | composed rgba   | composed rgba   | Dialog backdrop overlay    |
 | `--sv-shadow-card`          | composed shadow | composed shadow | Card elevation             |
+| `--sv-shadow-hover`         | composed shadow | composed shadow | Card hover lift (e1)       |
+| `--sv-shadow-popover`       | composed shadow | composed shadow | Floating panels (e2)       |
 | `--sv-shadow-overlay`       | composed shadow | composed shadow | Dialog / overlay elevation |
 
 ### Status colours
@@ -114,8 +136,11 @@ A minimal error (red), warning (amber), and success (green) palette for banners,
 | `--sv-color-success-surface` | green-100 | green-900 | Success banner / badge background |
 | `--sv-color-success-text`    | green-800 | green-200 | Text on success surface           |
 | `--sv-color-success-border`  | green-200 | green-800 | Success surface border            |
+| `--sv-color-info-surface`    | blue-100  | blue-900  | Info banner / badge background    |
+| `--sv-color-info-text`       | blue-800  | blue-100  | Text on info surface              |
+| `--sv-color-info-border`     | blue-200  | blue-800  | Info surface border               |
 
-These tokens are backed by `--sv-red-*`, `--sv-amber-*`, and `--sv-green-*` primitive swatches defined in `primitives.css`. The primitives are fixed across themes; only the semantic mapping changes.
+These tokens are backed by `--sv-red-*`, `--sv-amber-*`, `--sv-green-*`, and `--sv-blue-*` primitive swatches defined in `primitives.css`. The primitives are fixed across themes; only the semantic mapping changes.
 
 **WCAG 2.1 AA contrast commitment:** every status colour pair satisfies the minimum contrast requirements — 4.5:1 for text (≥18px bold or ≥24px regular), 3:1 for UI components and graphical objects. Test with the `--sv-color-*-text` token over its matching `--sv-color-*-surface`.
 

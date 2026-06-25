@@ -29,4 +29,9 @@ describe('Button', () => {
     render(<Button disabled>Nope</Button>);
     expect((screen.getByRole('button', { name: 'Nope' }) as HTMLButtonElement).disabled).toBe(true);
   });
+
+  it('applies destructive variant class', () => {
+    render(<Button variant="destructive">Delete</Button>);
+    expect(screen.getByRole('button', { name: 'Delete' }).className).toContain('destructive');
+  });
 });

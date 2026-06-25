@@ -37,26 +37,26 @@ type Story = StoryObj<typeof meta>;
 // ---------------------------------------------------------------------------
 
 export const Text: Story = {
-  render: () => <Labeled label="Display name" type="text" placeholder="e.g. Jane Smith" />,
+  render: (_args) => <Labeled label="Display name" type="text" placeholder="e.g. Jane Smith" />,
 };
 
 export const Email: Story = {
-  render: () => <Labeled label="Email address" type="email" placeholder="you@example.com" />,
+  render: (_args) => <Labeled label="Email address" type="email" placeholder="you@example.com" />,
 };
 
 export const Password: Story = {
-  render: () => <Labeled label="Password" type="password" placeholder="••••••••" />,
+  render: (_args) => <Labeled label="Password" type="password" placeholder="••••••••" />,
 };
 
 export const Disabled: Story = {
-  render: () => (
+  render: (_args) => (
     <Labeled label="Read-only field" type="text" defaultValue="Cannot be changed" disabled />
   ),
 };
 
 /** Mimics an error state — the container adds red border via CSS token. */
 export const ErrorState: Story = {
-  render: () => (
+  render: (_args) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <label
         htmlFor="sb-input-err"

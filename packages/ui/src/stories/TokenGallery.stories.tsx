@@ -28,6 +28,9 @@ const SEMANTIC_COLORS = [
   '--sv-color-success-surface',
   '--sv-color-success-text',
   '--sv-color-success-border',
+  '--sv-color-info-surface',
+  '--sv-color-info-text',
+  '--sv-color-info-border',
   '--sv-color-scrim',
 ];
 
@@ -44,11 +47,21 @@ const SPACE_TOKENS = [
   '--sv-space-16',
 ];
 
-const RADIUS_TOKENS = ['--sv-radius-sm', '--sv-radius-md', '--sv-radius-lg'];
+const RADIUS_TOKENS = [
+  '--sv-radius-sm',
+  '--sv-radius-md',
+  '--sv-radius-lg',
+  '--sv-radius-xl',
+  '--sv-radius-2xl',
+  '--sv-radius-3xl',
+  '--sv-radius-full',
+];
 const ICON_SIZE_TOKENS = ['--sv-icon-size-sm', '--sv-icon-size-md', '--sv-icon-size-lg'];
 
 const FONT_SIZE_TOKENS = [
+  '--sv-font-size-label',
   '--sv-font-size-xs',
+  '--sv-font-size-caption',
   '--sv-font-size-sm',
   '--sv-font-size-md',
   '--sv-font-size-lg',
@@ -56,7 +69,12 @@ const FONT_SIZE_TOKENS = [
   '--sv-font-size-2xl',
 ];
 
-const SHADOW_TOKENS = ['--sv-shadow-card', '--sv-shadow-overlay'];
+const SHADOW_TOKENS = [
+  '--sv-shadow-card',
+  '--sv-shadow-hover',
+  '--sv-shadow-popover',
+  '--sv-shadow-overlay',
+];
 
 // ---------------------------------------------------------------------------
 

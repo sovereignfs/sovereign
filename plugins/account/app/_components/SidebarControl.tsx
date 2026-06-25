@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition, useRef } from 'react';
+import { Button, Toggle } from '@sovereignfs/ui';
 import { updateSidebarPluginsAction } from '../actions';
 import styles from '../account.module.css';
 
@@ -122,24 +123,18 @@ export function SidebarControl({ plugins, initial }: Props) {
                 )}
               </span>
               <span className={styles.sidebarPluginName}>{info.name}</span>
-              <button
-                type="button"
-                className={styles.sidebarToggle}
-                aria-pressed={!entry.hidden}
-                aria-label={entry.hidden ? `Show ${info.name}` : `Hide ${info.name}`}
-                onClick={() => {
-                  toggle(entry.id);
-                }}
-              >
-                {entry.hidden ? 'Show' : 'Hide'}
-              </button>
+              <Toggle
+                checked={!entry.hidden}
+                onChange={() => toggle(entry.id)}
+                aria-label={`Show ${info.name} in sidebar`}
+              />
             </li>
           );
         })}
       </ul>
-      <button type="button" className={styles.buttonSecondary} onClick={reset}>
+      <Button variant="secondary" onClick={reset}>
         Reset to default
-      </button>
+      </Button>
     </div>
   );
 }

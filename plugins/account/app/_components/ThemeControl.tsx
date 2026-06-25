@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { SegmentedControl } from '@sovereignfs/ui';
 import { updateThemeAction } from '../actions';
-import styles from '../account.module.css';
 
 const OPTIONS = [
   { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
 ] as const;
+
+type ThemeValue = (typeof OPTIONS)[number]['value'];
 
 /** Resolve a theme choice to the concrete attribute, following the OS for `system`. */
 function resolve(theme: string): 'light' | 'dark' {
@@ -19,10 +21,12 @@ function resolve(theme: string): 'light' | 'dark' {
 
 /** Segmented control for appearance (ACC-08) — applies instantly, then persists. */
 export function ThemeControl({ value }: { value: string }) {
-  const [theme, setTheme] = useState(value);
+  const [theme, setTheme] = useState<ThemeValue>(
+    (OPTIONS.find((o) => o.value === value)?.value ?? 'system') as ThemeValue,
+  );
   const [, startTransition] = useTransition();
 
-  function choose(next: string): void {
+  function choose(next: ThemeValue): void {
     setTheme(next);
     // Apply before the round-trip so the change is instant (no flash).
     document.documentElement.dataset.theme = resolve(next);
@@ -32,20 +36,11 @@ export function ThemeControl({ value }: { value: string }) {
   }
 
   return (
-    <div className={styles.segmented} role="group" aria-label="Appearance">
-      {OPTIONS.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          className={opt.value === theme ? styles.segmentActive : styles.segment}
-          aria-pressed={opt.value === theme}
-          onClick={() => {
-            choose(opt.value);
-          }}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
+    <SegmentedControl
+      value={theme}
+      onChange={choose}
+      options={OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
+      aria-label="Appearance"
+    />
   );
 }

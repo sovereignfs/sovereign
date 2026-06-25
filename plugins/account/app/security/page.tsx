@@ -24,7 +24,6 @@ export default async function SecurityPage() {
   const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
 
   // Fetch session with cache disabled to get the up-to-date twoFactorEnabled flag.
-  // Plain get-session honours the signed cache cookie and may return stale data.
   const sessionRes = await fetch(`${AUTH_URL}/api/auth/get-session?disableCookieCache=true`, {
     headers: { cookie, origin: AUTH_URL },
   });
@@ -33,7 +32,6 @@ export default async function SecurityPage() {
     : null;
   const totpEnabled = sessionData?.user?.twoFactorEnabled ?? false;
 
-  // Fetch registered passkeys directly from the auth server.
   const passkeysRes = await fetch(`${AUTH_URL}/api/auth/passkey/list-user-passkeys`, {
     headers: { cookie, origin: AUTH_URL },
   });
@@ -44,23 +42,29 @@ export default async function SecurityPage() {
   return (
     <div className={styles.sections}>
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Authenticator app (TOTP)</h2>
+        <h2 className={styles.sectionTitle}>Two-factor authentication</h2>
+        <p className={styles.sectionSubtitle}>
+          Add an extra layer of security using an authenticator app.
+        </p>
         <TotpSection enabled={totpEnabled} />
       </section>
 
       <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Active sessions</h2>
+        <SessionList sessions={sessions} />
+      </section>
+
+      <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Passkeys</h2>
+        <p className={styles.sectionSubtitle}>
+          Sign in faster with biometrics or your device PIN — no password needed.
+        </p>
         <PasskeySection initialPasskeys={passkeys} />
       </section>
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Change password</h2>
         <PasswordChangeForm />
-      </section>
-
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Active sessions</h2>
-        <SessionList sessions={sessions} />
       </section>
     </div>
   );

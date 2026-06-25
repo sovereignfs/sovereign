@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Badge } from '@sovereignfs/ui';
 import { sdk } from '@sovereignfs/sdk';
 import { changeRoleAction, toggleActiveAction } from './actions';
 import { DeactivateButton, DeleteButton, ResetMfaButton } from './UserActionButtons';
@@ -28,18 +29,24 @@ async function getMembers(): Promise<MemberRow[]> {
 }
 
 function StatusBadge({ status }: { status: MemberRow['status'] }) {
-  if (status === 'active') return <span className={styles.badgeActive}>Active</span>;
-  if (status === 'deactivated') return <span className={styles.badgeDeactivated}>Deactivated</span>;
-  return <span className={styles.badgeInvited}>Invited</span>;
+  return (
+    <Badge variant="status" status={status}>
+      {status === 'active' ? 'Active' : status === 'deactivated' ? 'Deactivated' : 'Invited'}
+    </Badge>
+  );
 }
 
 function RoleBadge({ role }: { role: string | null }) {
   if (!role) return <span className={styles.textMuted}>—</span>;
-  if (role === 'platform:owner')
-    return <span className={`${styles.badgeAdmin} ${styles.badgeOwner}`}>Owner</span>;
-  if (role === 'platform:admin') return <span className={styles.badgeAdmin}>Admin</span>;
-  if (role === 'platform:auditor') return <span className={styles.badgeAuditor}>Auditor</span>;
-  return <span className={styles.badgeUser}>User</span>;
+  const label =
+    role === 'platform:owner'
+      ? 'Owner'
+      : role === 'platform:admin'
+        ? 'Admin'
+        : role === 'platform:auditor'
+          ? 'Auditor'
+          : 'User';
+  return <Badge variant="role">{label}</Badge>;
 }
 
 export default async function UsersPage({

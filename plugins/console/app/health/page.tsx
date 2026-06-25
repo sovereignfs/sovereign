@@ -1,3 +1,4 @@
+import { Badge } from '@sovereignfs/ui';
 import styles from '../console.module.css';
 
 const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
@@ -42,9 +43,9 @@ function StatusBadge({
   badLabel: string;
 }) {
   return (
-    <span className={ok ? styles.badgeActive : styles.badgeDeactivated}>
+    <Badge variant="status" status={ok ? 'active' : 'failed'}>
       {ok ? okLabel : badLabel}
-    </span>
+    </Badge>
   );
 }
 

@@ -1,3 +1,4 @@
+import { Badge } from '@sovereignfs/ui';
 import { togglePluginAction } from './actions';
 import { PluginInstallPanel, RemovePluginButton } from './PluginInstallPanel';
 import styles from '../console.module.css';
@@ -27,7 +28,7 @@ async function getPlugins(): Promise<PluginRow[]> {
 }
 
 function TypeBadge({ type }: { type: string }) {
-  return <span className={type === 'platform' ? styles.badgeAdmin : styles.badgeUser}>{type}</span>;
+  return <Badge variant={type === 'platform' ? 'role' : 'mono'}>{type}</Badge>;
 }
 
 export default async function PluginsPage() {
@@ -83,13 +84,19 @@ export default async function PluginsPage() {
 
                   <td className={styles.td}>
                     {plugin.enabled ? (
-                      <span className={styles.badgeActive}>Enabled</span>
+                      <Badge variant="status" status="enabled">
+                        Enabled
+                      </Badge>
                     ) : plugin.compatibilityError ? (
-                      <span className={styles.badgeDeactivated} title={plugin.compatibilityError}>
-                        Incompatible
+                      <span title={plugin.compatibilityError}>
+                        <Badge variant="status" status="failed">
+                          Incompatible
+                        </Badge>
                       </span>
                     ) : (
-                      <span className={styles.badgeDeactivated}>Disabled</span>
+                      <Badge variant="status" status="deactivated">
+                        Disabled
+                      </Badge>
                     )}
                     {plugin.compatibilityWarnings.length > 0 && (
                       <span

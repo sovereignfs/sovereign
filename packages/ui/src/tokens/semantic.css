@@ -40,11 +40,20 @@
   --sv-color-success-text: var(--sv-green-800);
   --sv-color-success-border: var(--sv-green-200);
 
+  /* Info surfaces — blue palette. Use for informational banners and badges.
+     Never hardcode colour hex in components — reference these tokens. */
+  --sv-color-info-surface: var(--sv-blue-100);
+  --sv-color-info-text: var(--sv-blue-800);
+  --sv-color-info-border: var(--sv-blue-200);
+
   /* Overlay surfaces (Dialog/Sheet): the scrim behind a dialog and the panel's
      elevation shadow. Composed rgba layers, like --sv-shadow-card. */
   --sv-color-scrim: rgba(0, 0, 0, 0.5);
 
   --sv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
+  --sv-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.08); /* e1 — card hover lift */
+  --sv-shadow-popover:
+    0 4px 16px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08); /* e2 — floating panels */
   --sv-shadow-overlay: 0 10px 38px rgba(0, 0, 0, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
 
   /*
@@ -87,8 +96,14 @@
   --sv-color-success-text: var(--sv-green-200);
   --sv-color-success-border: var(--sv-green-800);
 
+  --sv-color-info-surface: var(--sv-blue-900);
+  --sv-color-info-text: var(--sv-blue-100);
+  --sv-color-info-border: var(--sv-blue-800);
+
   --sv-color-scrim: rgba(0, 0, 0, 0.65);
 
   --sv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.5);
+  --sv-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.3);
+  --sv-shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
   --sv-shadow-overlay: 0 10px 38px rgba(0, 0, 0, 0.6), 0 6px 12px rgba(0, 0, 0, 0.5);
 }

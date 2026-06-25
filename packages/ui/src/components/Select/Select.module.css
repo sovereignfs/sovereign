@@ -1,0 +1,52 @@
+/* Wrapper provides the positioning context for the custom chevron */
+.wrapper {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.select {
+  display: block;
+  width: 100%;
+  /* Right-pad to clear the custom chevron */
+  padding: var(--sv-space-2) var(--sv-space-8) var(--sv-space-2) var(--sv-space-3);
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-md);
+  line-height: 1.5;
+  color: var(--sv-color-text-primary);
+  background-color: var(--sv-color-surface);
+  border: 1px solid var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-md);
+  cursor: pointer;
+  /* Remove native OS chevron */
+  appearance: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.select:focus-visible {
+  outline: none;
+  border-color: var(--sv-color-accent);
+  box-shadow: 0 0 0 2px var(--sv-color-focus-ring);
+}
+
+.select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* CSS-drawn chevron — a rotated border trick, no SVG dependency */
+.chevron {
+  pointer-events: none;
+  position: absolute;
+  right: var(--sv-space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid var(--sv-color-text-muted);
+  border-bottom: 1.5px solid var(--sv-color-text-muted);
+  rotate: 45deg;
+  margin-top: -2px; /* optical adjustment for the 45° rotation */
+}

@@ -61,22 +61,22 @@ type Story = StoryObj<typeof meta>;
 
 export const Small: Story = {
   args: { open: false, onClose: () => {}, children: null },
-  render: () => <DialogDemo size="sm" label="Small dialog" />,
+  render: (_args) => <DialogDemo size="sm" label="Small dialog" />,
 };
 
 export const Medium: Story = {
   args: { open: false, onClose: () => {}, children: null },
-  render: () => <DialogDemo size="md" label="Medium dialog" />,
+  render: (_args) => <DialogDemo size="md" label="Medium dialog" />,
 };
 
 export const Large: Story = {
   args: { open: false, onClose: () => {}, children: null },
-  render: () => <DialogDemo size="lg" label="Large dialog" />,
+  render: (_args) => <DialogDemo size="lg" label="Large dialog" />,
 };
 
 export const Closed: Story = {
   args: { open: false, onClose: () => {}, children: null },
-  render: () => (
+  render: (_args) => (
     <Dialog open={false} onClose={() => {}} aria-label="Closed dialog">
       <p>Never seen</p>
     </Dialog>
@@ -86,7 +86,7 @@ export const Closed: Story = {
 /** Play function opens the dialog and asserts it is visible. */
 export const OpenViaInteraction: Story = {
   args: { open: false, onClose: () => {}, children: null },
-  render: () => <DialogDemo size="md" label="Interaction test dialog" />,
+  render: (_args) => <DialogDemo size="md" label="Interaction test dialog" />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const trigger = canvas.getByRole('button', { name: /open md dialog/i });

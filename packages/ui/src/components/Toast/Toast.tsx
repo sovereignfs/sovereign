@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { Icon, type IconName } from '../Icon/Icon';
 import styles from './Toast.module.css';
 
 export interface ToastItem {
@@ -92,6 +93,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Maps toast category to a leading Icon name. */
+const CATEGORY_ICON: Record<string, IconName> = {
+  info: 'info',
+  announcement: 'info',
+  success: 'check',
+  warning: 'alert-triangle',
+  error: 'alert-triangle',
+  security: 'alert-triangle',
+};
+
 function Toast({
   id,
   title,
@@ -101,12 +112,16 @@ function Toast({
   onDismiss,
 }: ToastItem & { onDismiss(id: string): void }) {
   const categoryClass = styles[category as keyof typeof styles] ?? styles.info;
+  const iconName = CATEGORY_ICON[category] ?? 'info';
 
   return (
     <li
       role="status"
       className={`${styles.toast} ${String(categoryClass)} ${exiting ? styles.exiting : ''}`}
     >
+      <span className={styles.icon} aria-hidden="true">
+        <Icon name={iconName} size="sm" aria-hidden />
+      </span>
       <div className={styles.body}>
         <div className={styles.title}>{title}</div>
         {message && <div className={styles.message}>{message}</div>}

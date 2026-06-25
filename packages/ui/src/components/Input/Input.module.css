@@ -3,7 +3,7 @@
   width: 100%;
   padding: var(--sv-space-2) var(--sv-space-3);
   font-family: var(--sv-font-family);
-  font-size: var(--sv-font-size-md);
+  font-size: var(--sv-font-size-sm);
   line-height: 1.5;
   color: var(--sv-color-text-primary);
   background-color: var(--sv-color-surface);
@@ -22,6 +22,13 @@
   outline: none;
   border-color: var(--sv-color-accent);
   box-shadow: 0 0 0 2px var(--sv-color-focus-ring);
+}
+
+.input:read-only {
+  background-color: var(--sv-color-surface-sunken);
+  color: var(--sv-color-text-muted);
+  border-color: var(--sv-color-border);
+  cursor: default;
 }
 
 .input:disabled {

@@ -15,7 +15,7 @@ const meta = {
     },
   },
   argTypes: {
-    variant: { control: 'select', options: ['primary', 'secondary', 'ghost'] },
+    variant: { control: 'select', options: ['primary', 'secondary', 'ghost', 'destructive'] },
     size: { control: 'select', options: ['sm', 'md'] },
     disabled: { control: 'boolean' },
     children: { control: 'text' },
@@ -33,6 +33,7 @@ type Story = StoryObj<typeof meta>;
 export const Primary: Story = { args: { variant: 'primary' } };
 export const Secondary: Story = { args: { variant: 'secondary' } };
 export const Ghost: Story = { args: { variant: 'ghost' } };
+export const Destructive: Story = { args: { variant: 'destructive', children: 'Delete account' } };
 
 export const Small: Story = { args: { size: 'sm' } };
 export const Medium: Story = { args: { size: 'md' } };
@@ -61,9 +62,9 @@ export const IconOnly: Story = {
 
 /** All variant × size combinations at a glance. */
 export const AllVariants: Story = {
-  render: () => (
+  render: (_args) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'flex-start' }}>
-      {(['primary', 'secondary', 'ghost'] as const).map((v) =>
+      {(['primary', 'secondary', 'ghost', 'destructive'] as const).map((v) =>
         (['md', 'sm'] as const).map((s) => (
           <Button key={`${v}-${s}`} variant={v} size={s}>
             {v} / {s}

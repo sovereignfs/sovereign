@@ -10,21 +10,26 @@
   /* Neutral grey scale (monochrome identity) */
   --sv-white: #ffffff;
 
-  /* Status colour primitives — amber (warning), green (success), red (error).
-     Kept minimal: only the swatches the semantic status tokens reference. */
-  --sv-amber-100: #fef3c7;
-  --sv-amber-200: #fde68a;
-  --sv-amber-800: #92400e;
-  --sv-amber-900: #78350f;
-  --sv-green-100: #dcfce7;
+  /* Status colour primitives — amber (warning), green (success), red (error), blue (info).
+     Kept minimal: only the swatches the semantic status tokens reference.
+     Hex values align with the v3.1 design spec. */
+  --sv-amber-100: #fff7ed;
+  --sv-amber-200: #fed7aa;
+  --sv-amber-800: #b45309;
+  --sv-amber-900: #92400e;
+  --sv-green-100: #ecfdf3;
   --sv-green-200: #bbf7d0;
-  --sv-green-800: #166534;
+  --sv-green-800: #167c4a;
   --sv-green-900: #14532d;
-  --sv-red-100: #fee2e2;
+  --sv-red-100: #fef2f2;
   --sv-red-200: #fecaca;
   --sv-red-700: #b91c1c;
   --sv-red-800: #991b1b;
   --sv-red-900: #7f1d1d;
+  --sv-blue-100: #eff6ff;
+  --sv-blue-200: #dbeafe;
+  --sv-blue-800: #1d4ed8;
+  --sv-blue-900: #1e3a8a;
   --sv-black: #000000;
   --sv-grey-50: #fafafa;
   --sv-grey-100: #f4f4f5;
@@ -50,30 +55,41 @@
   --sv-space-12: 3rem;
   --sv-space-16: 4rem;
 
-  /* Typography */
+  /* Typography
+     Default pair: Hanken Grotesk (body) + JetBrains Mono (code/identifiers).
+     Operators supply the web font via <link> or instance CSS; the fallback
+     stack applies when the font is not loaded. */
   --sv-font-family:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --sv-font-family-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
-  --sv-font-size-xs: 0.75rem;
-  --sv-font-size-sm: 0.875rem;
-  --sv-font-size-md: 1rem;
-  --sv-font-size-lg: 1.125rem;
-  --sv-font-size-xl: 1.25rem;
-  --sv-font-size-2xl: 1.5rem;
+    'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  --sv-font-family-mono:
+    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --sv-font-size-label: 0.6875rem; /* 11px — all-caps section labels */
+  --sv-font-size-xs: 0.75rem; /* 12px — mono identifiers */
+  --sv-font-size-caption: 0.8125rem; /* 13px — secondary / supporting copy */
+  --sv-font-size-sm: 0.875rem; /* 14px — body copy */
+  --sv-font-size-md: 1rem; /* 16px */
+  --sv-font-size-lg: 1.125rem; /* 18px */
+  --sv-font-size-xl: 1.25rem; /* 20px */
+  --sv-font-size-2xl: 1.5rem; /* 24px */
   --sv-font-weight-regular: 400;
   --sv-font-weight-medium: 500;
   --sv-font-weight-semibold: 600;
+  --sv-font-weight-bold: 700;
 
   /* Icon sizes — scale tokens used directly by the Icon component */
   --sv-icon-size-sm: 1rem; /* 16px — inline with body text */
   --sv-icon-size-md: 1.25rem; /* 20px — standard affordance */
   --sv-icon-size-lg: 1.5rem; /* 24px — prominent / standalone */
 
-  /* Border radii */
-  --sv-radius-sm: 0.25rem;
-  --sv-radius-md: 0.375rem;
-  --sv-radius-lg: 0.5rem;
-  --sv-radius-full: 9999px;
+  /* Border radii (v3.1 spec values) */
+  --sv-radius-sm: 0.375rem; /* 6px — badge, tag */
+  --sv-radius-md: 0.5rem; /* 8px — button, input */
+  --sv-radius-lg: 0.6875rem; /* 11px — sidebar icon, card */
+  --sv-radius-xl: 0.75rem; /* 12px — card, panel */
+  --sv-radius-2xl: 0.875rem; /* 14px — popover */
+  --sv-radius-3xl: 1.25rem; /* 20px — bottom sheet (Drawer top corners) */
+  --sv-radius-full: 9999px; /* pill / avatar */
 
   /* Touch targets — minimum hit-area dimension for interactive controls.
      44px follows the WCAG 2.5.5 / Apple HIG / Material guideline for reliable

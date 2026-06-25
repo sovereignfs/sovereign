@@ -63,12 +63,12 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: { open: false, onClose: () => {}, children: null },
-  render: () => <DrawerDemo />,
+  render: (_args) => <DrawerDemo />,
 };
 
 export const Closed: Story = {
   args: { open: false, onClose: () => {}, children: null },
-  render: () => (
+  render: (_args) => (
     <Drawer open={false} onClose={() => {}} aria-label="Closed drawer">
       <p>Never seen</p>
     </Drawer>
@@ -78,7 +78,7 @@ export const Closed: Story = {
 /** Play function opens the drawer and asserts its list items are visible. */
 export const OpenViaInteraction: Story = {
   args: { open: false, onClose: () => {}, children: null },
-  render: () => <DrawerDemo label="Navigation menu" />,
+  render: (_args) => <DrawerDemo label="Navigation menu" />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole('button', { name: /open drawer/i }));

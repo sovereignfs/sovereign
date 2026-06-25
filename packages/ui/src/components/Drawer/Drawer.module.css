@@ -19,7 +19,7 @@
   overflow-y: auto;
   background: var(--sv-color-surface-raised);
   border-top: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-lg) var(--sv-radius-lg) 0 0;
+  border-radius: var(--sv-radius-3xl) var(--sv-radius-3xl) 0 0;
   box-shadow: var(--sv-shadow-overlay);
   /* Pull content above the home indicator / bottom bar in standalone mode. */
   padding-bottom: env(safe-area-inset-bottom);

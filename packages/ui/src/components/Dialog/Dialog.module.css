@@ -21,12 +21,15 @@
   top: var(--sv-dialog-inset-top, 0);
   right: 0;
   bottom: 0;
-  left: var(--sv-dialog-inset-left, 0);
+  left: 0;
   z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
+  /* left edge always 0 so the backdrop covers the full viewport incl. sidebar.
+     padding-left offsets the panel's available area to start at the rail edge. */
   padding: var(--sv-space-8);
+  padding-left: calc(var(--sv-dialog-inset-left, 0px) + var(--sv-space-8));
   background: var(--sv-color-scrim);
 }
 

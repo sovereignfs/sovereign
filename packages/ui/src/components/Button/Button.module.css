@@ -32,8 +32,9 @@
 }
 
 .md {
-  padding: var(--sv-space-2) var(--sv-space-4);
-  font-size: var(--sv-font-size-md);
+  padding: 13px var(--sv-space-4);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
 }
 
 /* Variants */
@@ -63,4 +64,14 @@
 
 .ghost:hover:not(:disabled) {
   background-color: var(--sv-color-surface-sunken);
+}
+
+.destructive {
+  background-color: transparent;
+  color: var(--sv-color-error-text);
+  border-color: var(--sv-color-error-border);
+}
+
+.destructive:hover:not(:disabled) {
+  background-color: var(--sv-color-error-surface);
 }

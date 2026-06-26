@@ -553,6 +553,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-2);
+  width: 100%;
 }
 
 .label {
@@ -779,6 +780,8 @@
   flex-direction: column;
   gap: var(--sv-space-4);
   align-items: flex-start;
+  width: 100%;
+  max-width: 440px;
 }
 
 .checkboxRow {

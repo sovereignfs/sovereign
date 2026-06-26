@@ -42,29 +42,33 @@ export default async function SecurityPage() {
   return (
     <div className={styles.sections}>
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Two-factor authentication</h2>
-        <p className={styles.sectionSubtitle}>
-          Add an extra layer of security using an authenticator app.
-        </p>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Two-factor authentication</h2>
+          <p className={styles.sectionSubtitle}>
+            Add an extra layer of security using an authenticator app.
+          </p>
+        </div>
         <TotpSection enabled={totpEnabled} />
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Active sessions</h2>
-        <SessionList sessions={sessions} />
-      </section>
-
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Passkeys</h2>
-        <p className={styles.sectionSubtitle}>
-          Sign in faster with biometrics or your device PIN — no password needed.
-        </p>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Passkeys</h2>
+          <p className={styles.sectionSubtitle}>
+            Sign in faster with biometrics or your device PIN — no password needed.
+          </p>
+        </div>
         <PasskeySection initialPasskeys={passkeys} />
       </section>
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Change password</h2>
         <PasswordChangeForm />
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Active sessions</h2>
+        <SessionList sessions={sessions} />
       </section>
     </div>
   );

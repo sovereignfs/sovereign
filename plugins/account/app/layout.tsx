@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import Link from 'next/link';
 import styles from './account.module.css';
+import { ActiveNavLink } from './_components/ActiveNavLink';
 
 const tabs = [
   { href: '/account/profile', label: 'Profile' },
@@ -19,11 +19,14 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
         <h1 className={styles.title}>Account</h1>
         <nav className={styles.tabs} aria-label="Account sections">
           {tabs.map((tab) => (
-            // `replace` (not push) so switching tabs inside the overlay dialog
-            // doesn't stack history entries — closing then dismisses in one step.
-            <Link key={tab.href} href={tab.href} replace className={styles.tab}>
+            <ActiveNavLink
+              key={tab.href}
+              href={tab.href}
+              className={styles.tab}
+              activeClassName={`${styles.tab} ${styles.tabActive}`}
+            >
               {tab.label}
-            </Link>
+            </ActiveNavLink>
           ))}
         </nav>
       </header>

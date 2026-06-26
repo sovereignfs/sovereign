@@ -12,7 +12,7 @@
   justify-content: space-between;
   align-items: center;
   gap: var(--sv-space-4);
-  padding: var(--sv-space-3) var(--sv-space-4);
+  padding: var(--sv-space-4) var(--sv-space-5);
   background: var(--sv-color-surface-raised);
   border: 1px solid var(--sv-color-border);
   border-radius: var(--sv-radius-md);
@@ -30,22 +30,14 @@
 }
 
 .pluginName {
-  font-weight: 500;
+  font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);
-  font-size: var(--sv-font-size-sm);
-}
-
-.tier {
-  display: inline-block;
-  font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-accent);
-  font-weight: 500;
-  text-transform: capitalize;
+  font-size: var(--sv-font-size-md);
 }
 
 .meta {
   font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-tertiary);
+  color: var(--sv-color-text-muted);
 }
 
 .importForm {

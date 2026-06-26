@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from '../account.module.css';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 8;
 
 interface ActivityEvent {
   id: string;
@@ -19,11 +19,6 @@ interface ActivityEvent {
 interface ActivityResponse {
   events: ActivityEvent[];
   total: number;
-}
-
-function formatAction(event: ActivityEvent): string {
-  if (event.summary) return event.summary;
-  return event.action;
 }
 
 export default function ActivityPage() {
@@ -58,82 +53,59 @@ export default function ActivityPage() {
   }, [load]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const rangeStart = (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, total);
 
   return (
     <div className={styles.sections}>
       <section className={styles.section}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 className={styles.sectionTitle}>Activity</h2>
-          {total > 0 && (
-            <span className={styles.help} style={{ margin: 0 }}>
-              {total} events
-            </span>
-          )}
+        <div className={styles.activityHeader}>
+          <p className={styles.sectionSubtitle}>Your recent account activity.</p>
+          {total > 0 && <span className={styles.activityCount}>{total} events</span>}
         </div>
-        <p className={styles.help}>Your recent account activity.</p>
 
         {loading && <p className={styles.help}>Loading&hellip;</p>}
-        {error && <p style={{ color: 'var(--sv-color-error-text, red)' }}>{error}</p>}
-
+        {error && <p style={{ color: 'var(--sv-color-error-text)' }}>{error}</p>}
         {!loading && events.length === 0 && <p className={styles.help}>No activity yet.</p>}
 
         {events.length > 0 && (
           <>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            <ul className={styles.sessionGroup}>
               {events.map((event) => (
-                <li
-                  key={event.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    padding: 'var(--sv-space-3) 0',
-                    borderBottom: '1px solid var(--sv-color-border)',
-                    gap: 'var(--sv-space-4)',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 500 }}>{formatAction(event)}</div>
-                    {event.pluginId && (
-                      <div
-                        style={{
-                          fontSize: 'var(--sv-font-size-sm)',
-                          color: 'var(--sv-color-text-secondary)',
-                        }}
-                      >
-                        via {event.pluginId}
-                      </div>
-                    )}
+                <li key={event.id} className={styles.activityRow}>
+                  <div className={styles.activityInfo}>
+                    <span className={styles.activityTitle}>{event.summary ?? event.action}</span>
+                    <code className={styles.activityKey}>{event.action}</code>
                   </div>
                   <time
                     dateTime={new Date(event.createdAt * 1000).toISOString()}
-                    style={{
-                      fontSize: 'var(--sv-font-size-sm)',
-                      color: 'var(--sv-color-text-secondary)',
-                      whiteSpace: 'nowrap',
-                    }}
+                    className={styles.activityTime}
                   >
                     {new Date(event.createdAt * 1000).toLocaleString(undefined, {
-                      dateStyle: 'medium',
+                      dateStyle: 'short',
                       timeStyle: 'short',
                     })}
                   </time>
+                  <span className={styles.activityScope}>{event.actorType}</span>
                 </li>
               ))}
             </ul>
 
-            {totalPages > 1 && (
-              <div className={styles.pagination}>
+            <div className={styles.activityPagination}>
+              <span className={styles.paginationInfo}>
+                Showing {rangeStart}–{rangeEnd} of {total}
+              </span>
+              <div className={styles.paginationControls}>
                 <button
                   type="button"
                   onClick={() => void load(page - 1)}
                   disabled={page <= 1 || loading}
                   className={styles.paginationButton}
                 >
-                  ← Previous
+                  Previous
                 </button>
                 <span className={styles.paginationInfo}>
-                  Page {page} of {totalPages}
+                  {page} / {totalPages}
                 </span>
                 <button
                   type="button"
@@ -141,10 +113,10 @@ export default function ActivityPage() {
                   disabled={page >= totalPages || loading}
                   className={styles.paginationButton}
                 >
-                  Next →
+                  Next
                 </button>
               </div>
-            )}
+            </div>
           </>
         )}
       </section>

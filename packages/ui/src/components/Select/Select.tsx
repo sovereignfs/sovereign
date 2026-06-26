@@ -1,7 +1,10 @@
 import type { SelectHTMLAttributes } from 'react';
 import styles from './Select.module.css';
 
-export type SelectProps = SelectHTMLAttributes<HTMLSelectElement>;
+export type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'size'> & {
+  /** Visual size variant. 'sm' reduces height/padding for compact table-cell usage. */
+  size?: 'sm' | 'md';
+};
 
 /**
  * Select — styled wrapper around the native `<select>`. Inherits the same
@@ -10,9 +13,10 @@ export type SelectProps = SelectHTMLAttributes<HTMLSelectElement>;
  *
  * RSC-safe: presentational, no hooks, forwards all native select props.
  */
-export function Select({ className, children, ...rest }: SelectProps) {
+export function Select({ className, size, children, ...rest }: SelectProps) {
+  const sizeClass = size === 'sm' ? styles.sm : undefined;
   return (
-    <div className={styles.wrapper}>
+    <div className={[styles.wrapper, sizeClass].filter(Boolean).join(' ')}>
       <select className={[styles.select, className].filter(Boolean).join(' ')} {...rest}>
         {children}
       </select>

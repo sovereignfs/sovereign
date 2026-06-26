@@ -51,23 +51,19 @@
   font-size: var(--sv-font-size-sm);
 }
 
-/* CSS-drawn chevron — a rotated border trick, no SVG dependency */
+/* SVG chevron — matches the icon stroke style used across the UI */
 .chevron {
   pointer-events: none;
   position: absolute;
   right: var(--sv-space-3);
   top: 50%;
   transform: translateY(-50%);
-  width: 8px;
-  height: 8px;
-  border-right: 1.5px solid var(--sv-color-text-muted);
-  border-bottom: 1.5px solid var(--sv-color-text-muted);
-  rotate: 45deg;
-  margin-top: -2px; /* optical adjustment for the 45° rotation */
+  color: var(--sv-color-text-muted);
+  flex-shrink: 0;
 }
 
 .sm .chevron {
   right: var(--sv-space-2);
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }

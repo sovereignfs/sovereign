@@ -46,7 +46,7 @@ export default async function IdentityPage() {
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Logo & favicon uploads</h2>
+        <h2 className={styles.sectionTitle}>Upload assets</h2>
         <p className={styles.help}>
           Upload image files to serve via <code className={styles.codeInline}>/api/instance/</code>.
           Stored in <code className={styles.codeInline}>data/instance/</code>.

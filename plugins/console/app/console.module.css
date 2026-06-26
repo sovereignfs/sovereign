@@ -8,8 +8,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-4);
-  padding-bottom: var(--sv-space-4);
-  border-bottom: 1px solid var(--sv-color-border);
 }
 
 .title {
@@ -22,20 +20,29 @@
 .nav {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sv-space-2);
+  gap: 0;
+  border-bottom: 1px solid var(--sv-color-border);
 }
 
 .navLink {
-  padding: var(--sv-space-1) var(--sv-space-3);
-  border-radius: var(--sv-radius-md);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  padding-bottom: calc(var(--sv-space-2) + 2px);
+  border-bottom: 2px solid transparent;
   font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
   color: var(--sv-color-text-muted);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .navLink:hover {
   color: var(--sv-color-text-primary);
-  background-color: var(--sv-color-surface-sunken);
+}
+
+.navLinkActive {
+  color: var(--sv-color-text-primary);
+  font-weight: var(--sv-font-weight-semibold);
+  border-bottom-color: var(--sv-color-text-primary);
 }
 
 .body {
@@ -46,7 +53,7 @@
 
 .lede {
   margin: 0;
-  font-size: var(--sv-font-size-md);
+  font-size: var(--sv-font-size-sm);
   color: var(--sv-color-text-muted);
 }
 
@@ -54,7 +61,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: var(--sv-space-4);
-  margin: 0;
+  margin: var(--sv-space-5) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -78,7 +85,7 @@
 
 .cardTitle {
   font-size: var(--sv-font-size-lg);
-  font-weight: var(--sv-font-weight-medium);
+  font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);
 }
 
@@ -94,16 +101,29 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--sv-space-4);
+  margin-bottom: var(--sv-space-4);
 }
 
 .pageTitle {
   margin: 0;
-  font-size: var(--sv-font-size-xl);
+  font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);
 }
 
+.memberCount {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+}
+
 /* ── Table ──────────────────────────────────────────────────────────────── */
+
+.tableCard {
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+  overflow: hidden;
+  background-color: var(--sv-color-surface-raised);
+}
 
 .tableWrapper {
   overflow-x: auto;
@@ -118,7 +138,10 @@
 .th {
   padding: var(--sv-space-2) var(--sv-space-4);
   text-align: left;
+  font-size: var(--sv-font-size-xs);
   font-weight: var(--sv-font-weight-medium);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--sv-color-text-muted);
   border-bottom: 1px solid var(--sv-color-border);
   white-space: nowrap;
@@ -152,8 +175,12 @@
 .userId {
   font-family: monospace;
   font-size: var(--sv-font-size-xs);
-  color: var(--sv-color-text-tertiary);
+  color: var(--sv-color-text-subtle);
   user-select: all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
 }
 
 /* ── Badges ─────────────────────────────────────────────────────────────── */
@@ -209,6 +236,198 @@
   color: var(--sv-color-text-muted);
 }
 
+/* ── Role pills ─────────────────────────────────────────────────────────── */
+
+.rolePills {
+  display: inline-flex;
+  gap: 0;
+  padding: 2px;
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  background-color: var(--sv-color-surface-sunken);
+}
+
+.rolePill {
+  padding: 2px var(--sv-space-2);
+  border: 1px solid transparent;
+  border-radius: calc(var(--sv-radius-sm) - 2px);
+  background-color: transparent;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rolePill:hover {
+  color: var(--sv-color-text-primary);
+}
+
+.rolePillActive {
+  padding: 2px var(--sv-space-2);
+  border: 1px solid var(--sv-color-border-strong);
+  border-radius: calc(var(--sv-radius-sm) - 2px);
+  background-color: var(--sv-color-surface);
+  color: var(--sv-color-text-primary);
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-semibold);
+  cursor: default;
+  white-space: nowrap;
+  pointer-events: none;
+  /* override browser disabled opacity — active pill should look prominent */
+  opacity: 1;
+}
+
+/* ── Icon-only action buttons ───────────────────────────────────────────── */
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  background-color: transparent;
+  color: var(--sv-color-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.iconBtn:hover {
+  border-color: var(--sv-color-border-strong);
+  color: var(--sv-color-text-primary);
+}
+
+.iconBtnReactivate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  background-color: transparent;
+  color: var(--sv-color-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.iconBtnReactivate:hover {
+  border-color: var(--sv-color-success-text);
+  color: var(--sv-color-success-text);
+}
+
+.iconBtnDanger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--sv-red-700);
+  border-radius: var(--sv-radius-sm);
+  background-color: transparent;
+  color: var(--sv-red-700);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.iconBtnDanger:hover {
+  background-color: var(--sv-color-error-surface);
+}
+
+/* ── Users pagination ───────────────────────────────────────────────────── */
+
+.usersPagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-4);
+  padding: var(--sv-space-4) 0;
+}
+
+.paginationControls {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+}
+
+/* ── Activity log ───────────────────────────────────────────────────────── */
+
+.activitySearchBar {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  margin-bottom: var(--sv-space-4);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface);
+}
+
+.activitySearchIcon {
+  flex-shrink: 0;
+  color: var(--sv-color-text-muted);
+}
+
+.activitySearchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+  font-family: var(--sv-font-family);
+}
+
+.activitySearchInput::placeholder {
+  color: var(--sv-color-text-muted);
+}
+
+.activitySearchInput::-webkit-search-cancel-button {
+  display: none;
+}
+
+.activitySearchCount {
+  flex-shrink: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  white-space: nowrap;
+}
+
+.activityWhen {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+  white-space: nowrap;
+}
+
+.activityActor {
+  font-family: monospace;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}
+
+.activityEvent {
+  font-family: monospace;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+}
+
+.activitySummary {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+}
+
+.emptyTableMsg {
+  padding: var(--sv-space-8) var(--sv-space-4);
+  text-align: center;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}
+
 /* ── Row actions ────────────────────────────────────────────────────────── */
 
 .rowActions {
@@ -225,12 +444,16 @@
 }
 
 .roleSelect {
-  padding: var(--sv-space-1) var(--sv-space-2);
+  padding: 1px var(--sv-space-5) 1px var(--sv-space-2);
   border: 1px solid var(--sv-color-border);
   border-radius: var(--sv-radius-sm);
   background-color: var(--sv-color-surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--sv-space-2) center;
+  appearance: none;
   color: var(--sv-color-text-primary);
-  font-size: var(--sv-font-size-sm);
+  font-size: var(--sv-font-size-label);
   cursor: pointer;
 }
 
@@ -407,6 +630,9 @@
 }
 
 .feedbackError {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
   font-size: var(--sv-font-size-sm);
   padding: var(--sv-space-2) var(--sv-space-3);
   border-radius: var(--sv-radius-md);
@@ -418,6 +644,7 @@
 /* ── Confirm dialog ─────────────────────────────────────────────────────── */
 
 .confirmNativeDialog {
+  position: fixed;
   border: none;
   border-radius: var(--sv-radius-lg);
   background: var(--sv-color-surface);
@@ -520,11 +747,30 @@
   border-bottom: none;
 }
 
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-8);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
 .sectionTitle {
   margin: 0;
-  font-size: var(--sv-font-size-lg);
-  font-weight: var(--sv-font-weight-medium);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);
+}
+
+.help {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  line-height: 1.5;
 }
 
 .settingsForm {
@@ -554,6 +800,29 @@
   color: var(--sv-color-text-muted);
 }
 
+.labelMeta {
+  font-weight: normal;
+  color: var(--sv-color-text-muted);
+}
+
+.colorRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  width: 100%;
+}
+
+.colorSwatch {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 3px;
+  border: 1px solid var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-sm);
+  background: none;
+  cursor: pointer;
+}
+
 /* ── Plugin install panel ───────────────────────────────────────────────── */
 
 .installPanel {
@@ -561,6 +830,7 @@
   border: 1px solid var(--sv-color-border);
   border-radius: var(--sv-radius-lg);
   overflow: hidden;
+  background-color: var(--sv-color-surface);
 }
 
 .installPanelToggle {
@@ -590,10 +860,15 @@
 .installPanelBody {
   display: flex;
   flex-direction: column;
-  gap: var(--sv-space-4);
+  gap: var(--sv-space-3);
   padding: var(--sv-space-4);
-  border-top: 1px solid var(--sv-color-border);
-  background-color: var(--sv-color-surface);
+}
+
+.installPanelTitle {
+  margin: 0 0 var(--sv-space-1);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
 }
 
 .installPanelDesc {
@@ -739,7 +1014,7 @@
   padding: var(--sv-space-3) var(--sv-space-4);
   border: 1px solid var(--sv-color-border);
   border-radius: var(--sv-radius-md);
-  background-color: var(--sv-color-surface-raised);
+  background-color: var(--sv-color-surface-sunken);
 }
 
 .installPreviewInfo {
@@ -762,5 +1037,22 @@
 
 .installPreviewDesc {
   font-size: var(--sv-font-size-xs);
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
+}
+
+.installSuccess {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-success-text);
+  white-space: nowrap;
+}
+
+.typeBadges {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-1);
+  align-items: flex-start;
 }

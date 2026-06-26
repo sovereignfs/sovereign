@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useState, useActionState } from 'react';
+import { Input, Select, Button } from '@sovereignfs/ui';
 import styles from '../console.module.css';
 import {
   type ActionResult,
@@ -33,19 +34,12 @@ export function TenantForm({ initialName }: { initialName: string }) {
         <label className={styles.label} htmlFor="tenantName">
           Tenant name
         </label>
-        <input
-          id="tenantName"
-          name="tenantName"
-          type="text"
-          required
-          defaultValue={initialName}
-          className={styles.input}
-        />
+        <Input id="tenantName" name="tenantName" type="text" required defaultValue={initialName} />
       </div>
       <Feedback result={state} />
-      <button type="submit" className={styles.actionButton} disabled={pending}>
+      <Button type="submit" disabled={pending}>
         {pending ? 'Saving…' : 'Save name'}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -65,9 +59,9 @@ export function InviteOnlyForm({ initialValue }: { initialValue: boolean }) {
         </span>
       </label>
       <Feedback result={state} />
-      <button type="submit" className={styles.actionButton} disabled={pending}>
+      <Button type="submit" disabled={pending}>
         {pending ? 'Saving…' : 'Save registration policy'}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -100,11 +94,10 @@ export function RootPluginForm({
             placeholder.
           </p>
         ) : (
-          <select
+          <Select
             id="rootPluginId"
             name="rootPluginId"
             defaultValue={currentInstalled ? currentId : undefined}
-            className={styles.roleSelect}
           >
             {!currentInstalled && (
               <option value="" disabled>
@@ -116,14 +109,14 @@ export function RootPluginForm({
                 {p.name} ({p.id})
               </option>
             ))}
-          </select>
+          </Select>
         )}
       </div>
       <Feedback result={state} />
       {candidates.length > 0 && (
-        <button type="submit" className={styles.actionButton} disabled={pending}>
+        <Button type="submit" disabled={pending}>
           {pending ? 'Saving…' : 'Save root plugin'}
-        </button>
+        </Button>
       )}
     </form>
   );
@@ -141,13 +134,17 @@ export interface InstanceValues {
 
 export function InstanceForm({ initialValues }: { initialValues: InstanceValues }) {
   const [state, action, pending] = useActionState(updateInstanceAction, null);
+  const [primaryColor, setPrimaryColor] = useState(initialValues.instancePrimary ?? '');
+
+  const swatchValue = primaryColor.match(/^#[0-9a-fA-F]{6}$/) ? primaryColor : '#3b82f6';
+
   return (
     <form action={action} className={styles.settingsForm}>
       <div className={styles.fieldGroup}>
         <label className={styles.label} htmlFor="instanceName">
           Instance name
         </label>
-        <input
+        <Input
           id="instanceName"
           name="instanceName"
           type="text"
@@ -155,101 +152,111 @@ export function InstanceForm({ initialValues }: { initialValues: InstanceValues 
           defaultValue={
             initialValues.instanceName !== 'Sovereign' ? initialValues.instanceName : ''
           }
-          className={styles.input}
         />
         <span className={styles.helpText}>Displayed in the shell header and login page.</span>
       </div>
+
       <div className={styles.fieldGroup}>
         <label className={styles.label} htmlFor="instancePrimary">
           Primary colour
         </label>
-        <input
-          id="instancePrimary"
-          name="instancePrimary"
-          type="text"
-          pattern="^#[0-9a-fA-F]{6}$"
-          placeholder="#3b82f6"
-          defaultValue={initialValues.instancePrimary ?? ''}
-          className={styles.input}
-        />
+        <div className={styles.colorRow}>
+          <input
+            type="color"
+            value={swatchValue}
+            onChange={(e) => setPrimaryColor(e.target.value)}
+            className={styles.colorSwatch}
+            aria-label="Colour picker"
+            tabIndex={-1}
+          />
+          <Input
+            id="instancePrimary"
+            name="instancePrimary"
+            type="text"
+            pattern="^#[0-9a-fA-F]{6}$"
+            placeholder="#3b82f6"
+            value={primaryColor}
+            onChange={(e) => setPrimaryColor(e.target.value)}
+          />
+        </div>
         <span className={styles.helpText}>
-          6-digit hex (e.g. <code className={styles.codeInline}>#3b82f6</code>). Sets{' '}
-          <code className={styles.codeInline}>--sv-color-accent</code>. Leave blank to use the
-          default.
+          6-digit hex. Sets <code className={styles.codeInline}>--sv-color-accent</code>. Leave
+          blank to use the default.
         </span>
       </div>
+
       <div className={styles.fieldGroup}>
         <label className={styles.label} htmlFor="instanceLogo">
-          Logo URL (light theme)
+          Logo URL <span className={styles.labelMeta}>(light theme)</span>
         </label>
-        <input
+        <Input
           id="instanceLogo"
           name="instanceLogo"
           type="url"
-          placeholder="https://… or /api/instance/logo"
+          placeholder="https://… or /api/instance/logo-light"
           defaultValue={initialValues.instanceLogo ?? ''}
-          className={styles.input}
         />
       </div>
+
       <div className={styles.fieldGroup}>
         <label className={styles.label} htmlFor="instanceLogoDark">
-          Logo URL (dark theme)
+          Logo URL <span className={styles.labelMeta}>(dark theme)</span>
         </label>
-        <input
+        <Input
           id="instanceLogoDark"
           name="instanceLogoDark"
           type="url"
-          placeholder="https://… or /api/instance/logo?dark=1"
+          placeholder="https://… or /api/instance/logo-dark"
           defaultValue={initialValues.instanceLogoDark ?? ''}
-          className={styles.input}
         />
       </div>
+
       <div className={styles.fieldGroup}>
         <label className={styles.label} htmlFor="instanceFavicon">
           Favicon URL
         </label>
-        <input
+        <Input
           id="instanceFavicon"
           name="instanceFavicon"
           type="url"
           placeholder="https://… or /api/instance/favicon"
           defaultValue={initialValues.instanceFavicon ?? ''}
-          className={styles.input}
         />
       </div>
+
       <div className={styles.fieldGroup}>
         <label className={styles.label} htmlFor="emailFromName">
           Email sender name
         </label>
-        <input
+        <Input
           id="emailFromName"
           name="emailFromName"
           type="text"
           placeholder="Sovereign"
           defaultValue={initialValues.emailFromName ?? ''}
-          className={styles.input}
         />
       </div>
+
       <div className={styles.fieldGroup}>
         <label className={styles.label} htmlFor="emailLogo">
           Email logo URL
         </label>
-        <input
+        <Input
           id="emailLogo"
           name="emailLogo"
           type="url"
           placeholder="https://…"
           defaultValue={initialValues.emailLogo ?? ''}
-          className={styles.input}
         />
         <span className={styles.helpText}>
           Used in outbound email HTML templates. Must be publicly reachable.
         </span>
       </div>
+
       <Feedback result={state} />
-      <button type="submit" className={styles.actionButton} disabled={pending}>
+      <Button type="submit" disabled={pending}>
         {pending ? 'Saving…' : 'Save instance identity'}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -273,9 +280,9 @@ export function LogoUploadForm({ dark }: { dark: boolean }) {
         {!dark && <span className={styles.helpText}>PNG, SVG, JPEG, or WebP · max 2 MB</span>}
       </div>
       <Feedback result={state} />
-      <button type="submit" className={styles.actionButton} disabled={pending}>
+      <Button type="submit" disabled={pending}>
         {pending ? 'Uploading…' : 'Upload'}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -298,9 +305,9 @@ export function FaviconUploadForm() {
         <span className={styles.helpText}>PNG, SVG, ICO, or WebP · max 2 MB</span>
       </div>
       <Feedback result={state} />
-      <button type="submit" className={styles.actionButton} disabled={pending}>
+      <Button type="submit" disabled={pending}>
         {pending ? 'Uploading…' : 'Upload'}
-      </button>
+      </Button>
     </form>
   );
 }

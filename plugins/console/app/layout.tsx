@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import Link from 'next/link';
 import styles from './console.module.css';
+import { ConsoleNavLink } from './_components/ConsoleNavLink';
 
 /**
  * Console shell layout — the plugin's own sub-navigation, nested inside the
@@ -16,6 +16,7 @@ const sections = [
   { href: '/console/plugins', label: 'Plugins' },
   { href: '/console/entitlements', label: 'Entitlements' },
   { href: '/console/settings', label: 'Settings' },
+  { href: '/console/identity', label: 'Identity' },
   { href: '/console/health', label: 'Health' },
   { href: '/console/activity', label: 'Activity' },
   { href: '/console/broadcast', label: 'Broadcast' },
@@ -28,12 +29,14 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
         <h1 className={styles.title}>Console</h1>
         <nav className={styles.nav} aria-label="Console sections">
           {sections.map((section) => (
-            // `replace` (not push) so switching sections inside the overlay
-            // dialog doesn't stack history entries — closing then dismisses in
-            // one step.
-            <Link key={section.href} href={section.href} replace className={styles.navLink}>
+            <ConsoleNavLink
+              key={section.href}
+              href={section.href}
+              className={styles.navLink}
+              activeClassName={`${styles.navLink} ${styles.navLinkActive}`}
+            >
               {section.label}
-            </Link>
+            </ConsoleNavLink>
           ))}
         </nav>
       </header>

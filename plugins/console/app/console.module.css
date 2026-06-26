@@ -804,6 +804,52 @@
   color: var(--sv-color-text-muted);
 }
 
+/* ── File drop zone ──────────────────────────────────────────────────────── */
+
+.fileDropZone {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-4);
+  border: 1px dashed var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface);
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  transition: background 0.15s ease;
+}
+
+.fileDropZone:hover {
+  background: var(--sv-color-surface-sunken);
+}
+
+.fileInputHidden {
+  display: none;
+}
+
+.fileDropIcon {
+  color: var(--sv-color-text-muted);
+  flex-shrink: 0;
+}
+
+.fileDropText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fileDropLabel {
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.fileDropHint {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+}
+
 .labelMeta {
   font-weight: normal;
   color: var(--sv-color-text-muted);

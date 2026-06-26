@@ -13,6 +13,51 @@ import {
   uploadFaviconAction,
 } from './actions';
 
+function ImageIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  );
+}
+
+function FileDropZone({
+  id,
+  name,
+  accept,
+  hint,
+}: {
+  id: string;
+  name: string;
+  accept: string;
+  hint: string;
+}) {
+  return (
+    <label htmlFor={id} className={styles.fileDropZone}>
+      <input id={id} name={name} type="file" accept={accept} className={styles.fileInputHidden} />
+      <span className={styles.fileDropIcon}>
+        <ImageIcon />
+      </span>
+      <span className={styles.fileDropText}>
+        <span className={styles.fileDropLabel}>Choose a file</span>
+        <span className={styles.fileDropHint}>{hint}</span>
+      </span>
+    </label>
+  );
+}
+
 function Feedback({ result }: { result: ActionResult | null }) {
   if (!result) return null;
   return (
@@ -263,21 +308,20 @@ export function InstanceForm({ initialValues }: { initialValues: InstanceValues 
 
 export function LogoUploadForm({ dark }: { dark: boolean }) {
   const [state, action, pending] = useActionState(uploadLogoAction, null);
+  const fileId = dark ? 'logoDarkFile' : 'logoFile';
   return (
-    <form action={action} className={styles.settingsForm} style={{ marginTop: '8px' }}>
+    <form action={action} className={styles.settingsForm}>
       <input type="hidden" name="dark" value={dark ? '1' : '0'} />
       <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor={dark ? 'logoDarkFile' : 'logoFile'}>
-          {dark ? 'Upload logo (dark theme)' : 'Upload logo (light theme)'}
-        </label>
-        <input
-          id={dark ? 'logoDarkFile' : 'logoFile'}
+        <span className={styles.label}>
+          Logo <span className={styles.labelMeta}>({dark ? 'dark theme' : 'light theme'})</span>
+        </span>
+        <FileDropZone
+          id={fileId}
           name="file"
-          type="file"
           accept="image/png,image/svg+xml,image/jpeg,image/webp"
-          className={styles.input}
+          hint="PNG, SVG, JPEG, or WebP · max 2 MB"
         />
-        {!dark && <span className={styles.helpText}>PNG, SVG, JPEG, or WebP · max 2 MB</span>}
       </div>
       <Feedback result={state} />
       <Button type="submit" size="sm" disabled={pending}>
@@ -290,19 +334,15 @@ export function LogoUploadForm({ dark }: { dark: boolean }) {
 export function FaviconUploadForm() {
   const [state, action, pending] = useActionState(uploadFaviconAction, null);
   return (
-    <form action={action} className={styles.settingsForm} style={{ marginTop: '8px' }}>
+    <form action={action} className={styles.settingsForm}>
       <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="faviconFile">
-          Upload favicon
-        </label>
-        <input
+        <span className={styles.label}>Favicon</span>
+        <FileDropZone
           id="faviconFile"
           name="file"
-          type="file"
           accept="image/png,image/svg+xml,image/x-icon,image/webp"
-          className={styles.input}
+          hint="PNG, SVG, ICO, or WebP · max 2 MB"
         />
-        <span className={styles.helpText}>PNG, SVG, ICO, or WebP · max 2 MB</span>
       </div>
       <Feedback result={state} />
       <Button type="submit" size="sm" disabled={pending}>

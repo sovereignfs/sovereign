@@ -39,10 +39,36 @@ async function getActivity(offset: number, q?: string): Promise<ActivityResponse
   return res.json() as Promise<ActivityResponse>;
 }
 
-function actorLabel(event: ActivityEvent): string {
+function actorLabel(event: ActivityEvent): string | null {
   if (event.actorType === 'system') return 'System';
   if (event.actorType === 'plugin' && event.pluginId) return event.pluginId;
-  return event.actorId ? event.actorId.slice(0, 8) : '—';
+  return event.actorId ? event.actorId.slice(0, 8) : null;
+}
+
+function ActivityCard({ event }: { event: ActivityEvent }) {
+  const actor = actorLabel(event);
+  const when = new Date(event.createdAt * 1000).toLocaleString(undefined, {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  });
+  return (
+    <div className={styles.activityCard}>
+      <div className={styles.activityCardTop}>
+        <code className={styles.activityCardEvent}>{event.action}</code>
+        <Badge variant="role">{event.visibility}</Badge>
+      </div>
+      <div className={styles.activityCardMeta}>
+        <time dateTime={new Date(event.createdAt * 1000).toISOString()}>{when}</time>
+        {actor && (
+          <>
+            <span className={styles.activityCardDot} aria-hidden />
+            <code>{actor}</code>
+          </>
+        )}
+      </div>
+      {event.summary && <p className={styles.activityCardSummary}>{event.summary}</p>}
+    </div>
+  );
 }
 
 export default async function ActivityPage({
@@ -97,7 +123,7 @@ export default async function ActivityPage({
                         </time>
                       </td>
                       <td className={styles.td}>
-                        <code className={styles.activityActor}>{actorLabel(event)}</code>
+                        <code className={styles.activityActor}>{actorLabel(event) ?? '—'}</code>
                       </td>
                       <td className={styles.td}>
                         <code className={styles.activityEvent}>{event.action}</code>
@@ -113,6 +139,13 @@ export default async function ActivityPage({
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* Mobile: card list (hidden on desktop via CSS) */}
+          <div className={styles.activityCardList}>
+            {events.map((event) => (
+              <ActivityCard key={event.id} event={event} />
+            ))}
           </div>
 
           <div className={styles.usersPagination}>

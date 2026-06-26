@@ -1124,6 +1124,14 @@
   padding: 1px var(--sv-space-1);
 }
 
+/* Shrink and uppercase status + meta badges inside the plugin card */
+.pluginCardStatus span,
+.pluginCardMeta span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .pluginCardWarning {
   font-size: var(--sv-font-size-xs);
   color: var(--sv-color-warning-text);

@@ -15,7 +15,7 @@ function PluginCard({ plugin }: { plugin: PluginRow }) {
           )}
           <span className={styles.pluginCardId}>{plugin.id}</span>
         </div>
-        <div>
+        <div className={styles.pluginCardStatus}>
           {plugin.compatibilityError ? (
             <Badge variant="status" status="failed">
               Incompatible

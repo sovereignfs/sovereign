@@ -14,17 +14,18 @@ function useZones(current: string): string[] {
 }
 
 /** Timezone picker (ACC-07). Native select gives type-ahead search for free. */
-export function TimezoneSelect({ value }: { value: string }) {
+export function TimezoneSelect({ value, id }: { value: string; id?: string }) {
   const [tz, setTz] = useState(value);
   const [pending, startTransition] = useTransition();
   const zones = useZones(value);
 
   return (
     <select
+      id={id}
       className={styles.select}
       value={tz}
       disabled={pending}
-      aria-label="Timezone"
+      aria-label={id ? undefined : 'Timezone'}
       onChange={(e) => {
         const next = e.target.value;
         setTz(next);

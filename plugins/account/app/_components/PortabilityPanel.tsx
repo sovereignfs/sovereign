@@ -1,6 +1,6 @@
 'use client';
 
-import { type FormEvent, useState } from 'react';
+import { type DragEvent, type FormEvent, useState } from 'react';
 import styles from '../account.module.css';
 
 interface ImportSummary {
@@ -17,6 +17,7 @@ export function PortabilityPanel() {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
@@ -75,33 +76,112 @@ export function PortabilityPanel() {
           Download a copy of your account data — profile, preferences, avatar, and any participating
           plugins — as a ZIP archive you can keep or import elsewhere.
         </p>
-        <button
-          type="button"
-          className={styles.button}
-          onClick={() => void onExport()}
-          disabled={exporting}
-        >
-          {exporting ? 'Preparing…' : 'Export my data'}
-        </button>
+        <div style={{ alignSelf: 'flex-start' }}>
+          <button
+            type="button"
+            className={styles.button}
+            onClick={() => void onExport()}
+            disabled={exporting}
+          >
+            {!exporting && (
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 6 }}
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            )}
+            {exporting ? 'Preparing…' : 'Export as ZIP'}
+          </button>
+        </div>
         {exportError && <p className={styles.error}>{exportError}</p>}
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Import / restore</h2>
-        <p className={styles.help}>
-          Restore from a Sovereign export ZIP. Imported data is added to your account — nothing is
-          overwritten or deleted. Plugins that aren&rsquo;t installed are skipped.
-        </p>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Import / restore</h2>
+          <p className={styles.sectionSubtitle}>
+            Restore from a Sovereign export ZIP. Data is merged — nothing is overwritten. Plugins
+            not installed are skipped.
+          </p>
+        </div>
         <form className={styles.form} onSubmit={(e) => void onImport(e)}>
-          <input
-            className={styles.input}
-            type="file"
-            accept=".zip,application/zip"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          />
-          <button type="submit" className={styles.button} disabled={!file || importing}>
-            {importing ? 'Importing…' : 'Import'}
-          </button>
+          <label
+            aria-label="Upload ZIP file"
+            className={`${styles.dropzone} ${dragging ? styles.dropzoneActive : ''}`}
+            onDragOver={(e: DragEvent) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e: DragEvent) => {
+              e.preventDefault();
+              setDragging(false);
+              const dropped = e.dataTransfer.files[0];
+              if (dropped) setFile(dropped);
+            }}
+          >
+            <svg
+              width="36"
+              height="36"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              style={{ color: 'var(--sv-color-text-muted)', flexShrink: 0 }}
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <text x="6" y="19" fontSize="5" fontWeight="700" fill="currentColor" stroke="none">
+                ZIP
+              </text>
+            </svg>
+            <div className={styles.dropzoneText}>
+              <span className={styles.dropzoneTitle}>{file ? file.name : 'Choose a ZIP file'}</span>
+              <span className={styles.dropzoneHint}>
+                {file ? `${(file.size / 1024).toFixed(0)} KB` : 'or drag and drop here'}
+              </span>
+            </div>
+            <input
+              type="file"
+              accept=".zip,application/zip"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className={styles.hiddenInput}
+            />
+          </label>
+          <div style={{ alignSelf: 'flex-start' }}>
+            <button type="submit" className={styles.addPasskeyBtn} disabled={!file || importing}>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              {importing ? 'Importing…' : 'Import'}
+            </button>
+          </div>
         </form>
         {importError && <p className={styles.error}>{importError}</p>}
         {summary && (

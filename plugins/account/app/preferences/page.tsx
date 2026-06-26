@@ -52,23 +52,42 @@ export default async function PreferencesPage() {
     <div className={styles.sections}>
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Appearance</h2>
-        <ThemeControl value={prefs.theme} />
-        <p className={styles.help}>Applies immediately and to every session on this device.</p>
+        <div className={styles.controlGroup}>
+          <ThemeControl value={prefs.theme} />
+          <p className={styles.help}>Applies immediately and to every session on this device.</p>
+        </div>
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Timezone</h2>
-        <TimezoneSelect value={prefs.timezone} />
-        <p className={styles.help}>Used for date and time display across the platform.</p>
+        <h2 className={styles.sectionTitle}>Language &amp; Region</h2>
+        <div className={styles.field} style={{ maxWidth: 400 }}>
+          <label className={styles.label} htmlFor="lang-select">
+            Language
+          </label>
+          <select id="lang-select" className={styles.select} defaultValue="en-US" disabled>
+            <option value="en-US">English (US)</option>
+          </select>
+        </div>
+        <div className={styles.field} style={{ maxWidth: 400 }}>
+          <label className={styles.label} htmlFor="tz-select">
+            Timezone
+          </label>
+          <TimezoneSelect id="tz-select" value={prefs.timezone} />
+          <p className={styles.help}>Used for date and time display across the platform.</p>
+        </div>
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Sidebar</h2>
-        <p className={styles.help}>
-          Drag to reorder plugin icons. Toggle to show or hide individual plugins. The home icon and
-          platform controls are always visible.
-        </p>
-        <SidebarControl plugins={sidebarData.plugins} initial={sidebarData.sidebarPlugins} />
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Sidebar</h2>
+          <p className={styles.help}>
+            Drag to reorder plugin icons. Toggle to show or hide individual plugins. The home icon
+            and platform controls are always visible.
+          </p>
+        </div>
+        <div style={{ maxWidth: 400, width: '100%' }}>
+          <SidebarControl plugins={sidebarData.plugins} initial={sidebarData.sidebarPlugins} />
+        </div>
       </section>
     </div>
   );

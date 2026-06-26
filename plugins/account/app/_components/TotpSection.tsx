@@ -301,33 +301,35 @@ export function TotpSection({ enabled: initialEnabled }: { enabled: boolean }) {
     return <RegenerateCodesForm onBack={() => setView('idle')} />;
   }
 
-  // Idle — toggle card
+  // Idle — toggle card + optional backup codes button below
   return (
-    <div className={styles.totpCard}>
-      <div className={styles.totpCardInfo}>
-        <span className={styles.totpCardTitle}>Authenticator app</span>
-        <span className={styles.totpCardStatus}>{enabled ? 'Configured' : 'Not configured'}</span>
-      </div>
-      <div className={styles.totpCardActions}>
-        {enabled && (
+    <div className={styles.passkeySection}>
+      <div className={styles.totpCard}>
+        <div className={styles.totpCardInfo}>
+          <span className={styles.totpCardTitle}>Authenticator app</span>
+          <span className={styles.totpCardStatus}>{enabled ? 'Configured' : 'Not configured'}</span>
+        </div>
+        <div className={styles.totpCardActions}>
           <button
             type="button"
-            className={styles.revokeButton}
-            onClick={() => setView('regen-codes')}
+            role="switch"
+            aria-checked={enabled}
+            className={`${styles.toggle} ${enabled ? styles.toggleOn : ''}`}
+            onClick={() => setView(enabled ? 'disable' : 'get-uri')}
           >
-            Backup codes
+            <span className={styles.toggleThumb} />
           </button>
-        )}
+        </div>
+      </div>
+      {enabled && (
         <button
           type="button"
-          role="switch"
-          aria-checked={enabled}
-          className={`${styles.toggle} ${enabled ? styles.toggleOn : ''}`}
-          onClick={() => setView(enabled ? 'disable' : 'get-uri')}
+          className={styles.addPasskeyBtn}
+          onClick={() => setView('regen-codes')}
         >
-          <span className={styles.toggleThumb} />
+          Backup codes
         </button>
-      </div>
+      )}
     </div>
   );
 }

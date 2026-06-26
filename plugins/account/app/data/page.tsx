@@ -45,11 +45,13 @@ export default function DataPage() {
   return (
     <div className={styles.sections}>
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Data access consents</h2>
-        <p className={styles.help}>
-          These plugins can read your data from other plugins. Revoke any consent you no longer
-          want.
-        </p>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Data access consents</h2>
+          <p className={styles.sectionSubtitle}>
+            These plugins can read your data from other plugins. Revoke any consent you no longer
+            want.
+          </p>
+        </div>
 
         {loading && <p className={styles.help}>Loading&hellip;</p>}
         {error && <p style={{ color: 'var(--sv-color-error-text, red)' }}>{error}</p>}
@@ -57,48 +59,17 @@ export default function DataPage() {
         {!loading && grants.length === 0 && <p className={styles.help}>No active data consents.</p>}
 
         {grants.length > 0 && (
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          <ul className={styles.sessionGroup}>
             {grants.map((grant) => (
-              <li
-                key={grant.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: 'var(--sv-space-3) 0',
-                  borderBottom: '1px solid var(--sv-color-border)',
-                }}
-              >
-                <div>
-                  <strong>{grant.consumerId}</strong>
-                  <span style={{ color: 'var(--sv-color-text-secondary)' }}> reads </span>
-                  <strong>
-                    {grant.providerId}/{grant.contract}
-                  </strong>{' '}
-                  <span style={{ color: 'var(--sv-color-text-secondary)' }}>v{grant.version}</span>
-                  <div
-                    style={{
-                      fontSize: 'var(--sv-font-size-sm)',
-                      color: 'var(--sv-color-text-secondary)',
-                    }}
-                  >
-                    Granted{' '}
-                    {new Date(grant.grantedAt * 1000).toLocaleDateString(undefined, {
-                      dateStyle: 'medium',
-                    })}
-                  </div>
+              <li key={grant.id} className={styles.sessionRow}>
+                <div className={styles.sessionInfo}>
+                  <span className={styles.sessionDevice}>{grant.consumerId}</span>
+                  <span className={styles.sessionMeta}>Read {grant.contract}</span>
                 </div>
                 <button
+                  type="button"
+                  className={styles.revokeButton}
                   onClick={() => void revoke(grant.id)}
-                  style={{
-                    background: 'none',
-                    border: '1px solid var(--sv-color-border)',
-                    borderRadius: 'var(--sv-radius-sm)',
-                    padding: 'var(--sv-space-1) var(--sv-space-3)',
-                    cursor: 'pointer',
-                    color: 'var(--sv-color-text-primary)',
-                    fontSize: 'var(--sv-font-size-sm)',
-                  }}
                 >
                   Revoke
                 </button>
@@ -178,14 +149,18 @@ function DeleteAccountSection() {
   return (
     <>
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Delete your account</h2>
-        <p className={styles.help}>
-          Remove all your data from this instance permanently. This cannot be undone. Export your
-          data first if you want a copy.
-        </p>
-        <button type="button" className={styles.dangerButton} onClick={() => setOpen(true)}>
-          Delete my account
-        </button>
+        <div className={styles.dangerCard}>
+          <h2 className={styles.dangerCardTitle}>Delete account</h2>
+          <p className={styles.dangerCardBody}>
+            Permanently removes all your data from this instance. This cannot be undone — export
+            first if you want a copy.
+          </p>
+          <div>
+            <button type="button" className={styles.dangerButton} onClick={() => setOpen(true)}>
+              Delete my account
+            </button>
+          </div>
+        </div>
       </section>
 
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}

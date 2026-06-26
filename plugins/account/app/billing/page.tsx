@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Button } from '@sovereignfs/ui';
 import styles from '../account.module.css';
 import billingStyles from './billing.module.css';
 
@@ -110,20 +109,20 @@ export default function BillingPage() {
               <li key={ent.id} className={billingStyles.item}>
                 <div className={billingStyles.itemInfo}>
                   <span className={billingStyles.pluginName}>{ent.pluginName}</span>
-                  {ent.tierId && <span className={billingStyles.tier}>{ent.tierId}</span>}
                   <span className={billingStyles.meta}>
-                    Imported {formatDate(ent.issuedAt)}
-                    {ent.expiresAt ? ` · Expires ${formatDate(ent.expiresAt)}` : ' · Perpetual'}
+                    {ent.tierId ? `${ent.tierId} · ` : ''}
+                    {ent.expiresAt ? `Renews ${formatDate(ent.expiresAt)}` : 'Perpetual'}
                   </span>
                 </div>
-                <Button
-                  variant="secondary"
+                <button
+                  type="button"
+                  className={styles.revokeButton}
                   onClick={() => void cancel(ent.id)}
                   disabled={cancelling === ent.id}
-                  aria-label={`Cancel license for ${ent.pluginName}`}
+                  aria-label={`Revoke license for ${ent.pluginName}`}
                 >
-                  {cancelling === ent.id ? 'Cancelling…' : 'Cancel'}
-                </Button>
+                  {cancelling === ent.id ? 'Revoking…' : 'Revoke'}
+                </button>
               </li>
             ))}
           </ul>
@@ -168,9 +167,9 @@ export default function BillingPage() {
             required
             className={billingStyles.textarea}
           />
-          <Button type="submit" disabled={importing}>
+          <button type="submit" disabled={importing} className={styles.button}>
             {importing ? 'Importing…' : 'Import license'}
-          </Button>
+          </button>
           {importError && (
             <p className={billingStyles.error} role="alert">
               {importError}
@@ -193,8 +192,8 @@ export default function BillingPage() {
               <li key={ent.id} className={`${billingStyles.item} ${billingStyles.itemInactive}`}>
                 <div className={billingStyles.itemInfo}>
                   <span className={billingStyles.pluginName}>{ent.pluginName}</span>
-                  {ent.tierId && <span className={billingStyles.tier}>{ent.tierId}</span>}
                   <span className={billingStyles.meta}>
+                    {ent.tierId ? `${ent.tierId} · ` : ''}
                     {ent.status === 'cancelled' ? 'Cancelled' : 'Expired'} ·{' '}
                     {ent.expiresAt ? formatDate(ent.expiresAt) : formatDate(ent.issuedAt)}
                   </span>

@@ -37,7 +37,7 @@ function PasskeyRow({ passkey, onRemoved }: { passkey: PasskeyEntry; onRemoved: 
 
   return (
     <li className={styles.sessionRow}>
-      <div className={styles.sessionIconWrap}>
+      <div className={styles.passkeyIconWrap}>
         <svg
           viewBox="0 0 24 24"
           fill="none"

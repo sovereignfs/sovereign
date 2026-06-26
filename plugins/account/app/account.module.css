@@ -8,8 +8,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-4);
-  padding-bottom: var(--sv-space-4);
-  border-bottom: 1px solid var(--sv-color-border);
 }
 
 .title {
@@ -22,20 +20,29 @@
 .tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sv-space-2);
+  gap: 0;
+  border-bottom: 1px solid var(--sv-color-border);
 }
 
 .tab {
-  padding: var(--sv-space-1) var(--sv-space-3);
-  border-radius: var(--sv-radius-md);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  padding-bottom: calc(var(--sv-space-2) + 2px);
+  border-bottom: 2px solid transparent;
   font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
   color: var(--sv-color-text-muted);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .tab:hover {
   color: var(--sv-color-text-primary);
-  background-color: var(--sv-color-surface-sunken);
+}
+
+.tabActive {
+  color: var(--sv-color-text-primary);
+  font-weight: var(--sv-font-weight-semibold);
+  border-bottom-color: var(--sv-color-text-primary);
 }
 
 /* ── Sections ───────────────────────────────────────────────────────────── */
@@ -50,7 +57,7 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--sv-space-3);
+  gap: var(--sv-space-4);
   padding-bottom: var(--sv-space-6);
   border-bottom: 1px solid var(--sv-color-border);
 }
@@ -59,10 +66,18 @@
   border-bottom: none;
 }
 
+/* Groups title + subtitle so their internal gap is tighter than the gap
+   between the header block and the content below it. */
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-1);
+}
+
 .sectionTitle {
   margin: 0;
-  font-size: var(--sv-font-size-lg);
-  font-weight: var(--sv-font-weight-medium);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);
 }
 
@@ -91,7 +106,7 @@
 .label {
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-medium);
-  color: var(--sv-color-text-primary);
+  color: var(--sv-color-text-muted);
 }
 
 .input,
@@ -104,6 +119,17 @@
   font-size: var(--sv-font-size-sm);
   width: 100%;
   box-sizing: border-box;
+}
+
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: var(--sv-space-8);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--sv-space-3) center;
+  background-size: 18px 18px;
+  cursor: pointer;
 }
 
 .input:focus,
@@ -144,6 +170,14 @@
   margin: 0;
   font-size: var(--sv-font-size-xs);
   color: var(--sv-color-text-muted);
+}
+
+/* Tightly groups a control with its helper text */
+.controlGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+  align-items: flex-start;
 }
 
 .error {
@@ -283,10 +317,10 @@
 .revokeButton {
   flex: none;
   padding: 3px var(--sv-space-3);
-  border: 1px solid var(--sv-color-error-text);
+  border: 1px solid var(--sv-red-700);
   border-radius: var(--sv-radius-sm);
   background-color: transparent;
-  color: var(--sv-color-error-text);
+  color: var(--sv-red-700);
   font-size: var(--sv-font-size-sm);
   white-space: nowrap;
   cursor: pointer;
@@ -374,6 +408,26 @@
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-3);
+}
+
+/* Larger rounded-square tile for the fingerprint icon — more visible than
+   the generic session circle. Matches design spec passkey row. */
+.passkeyIconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+  color: var(--sv-color-text-primary);
+}
+
+.passkeyIconWrap svg {
+  width: 24px;
+  height: 24px;
 }
 
 /* Ghost "+ Add a passkey" button */
@@ -608,7 +662,7 @@
   padding: var(--sv-space-2) var(--sv-space-4);
   border: none;
   border-radius: var(--sv-radius-md);
-  background-color: var(--sv-color-error-text);
+  background-color: var(--sv-red-700);
   color: #fff;
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-medium);
@@ -616,7 +670,71 @@
 }
 
 .dangerButton:hover {
-  opacity: 0.88;
+  background-color: var(--sv-red-800);
+}
+
+/* ── Import dropzone ─────────────────────────────────────────────────────── */
+
+.dropzone {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-4);
+  padding: var(--sv-space-4) var(--sv-space-5);
+  border: 1.5px dashed var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-surface-raised);
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  transition: background-color 120ms ease;
+}
+
+.dropzone:hover,
+.dropzoneActive {
+  background-color: var(--sv-color-surface-sunken);
+  border-color: var(--sv-color-border-strong);
+}
+
+.dropzoneText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dropzoneTitle {
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+}
+
+.dropzoneHint {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+}
+
+/* ── Danger zone card ───────────────────────────────────────────────────── */
+
+.dangerCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+  padding: var(--sv-space-5);
+  border: 1px solid var(--sv-color-error-border);
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-error-surface);
+}
+
+.dangerCardTitle {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-error-text);
+}
+
+.dangerCardBody {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
 }
 
 /* ── Pagination ─────────────────────────────────────────────────────────── */
@@ -653,6 +771,87 @@
   color: var(--sv-color-text-muted);
 }
 
+/* ── Activity log ───────────────────────────────────────────────────────── */
+
+.activityHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-4);
+}
+
+.activityCount {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  white-space: nowrap;
+}
+
+.activityRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-4);
+  padding: var(--sv-space-4) var(--sv-space-4);
+  border-bottom: 1px solid var(--sv-color-border);
+}
+
+.activityRow:last-child {
+  border-bottom: none;
+}
+
+.activityInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.activityTitle {
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.activityKey {
+  font-size: var(--sv-font-size-xs);
+  font-family: monospace;
+  color: var(--sv-color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activityTime {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.activityScope {
+  flex-shrink: 0;
+  padding: 2px var(--sv-space-2);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  background-color: var(--sv-color-surface-sunken);
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+  white-space: nowrap;
+}
+
+.activityPagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-4);
+}
+
+.paginationControls {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+}
+
 /* ── Sidebar control ────────────────────────────────────────────────────── */
 
 .sidebarControl {
@@ -676,7 +875,7 @@
   display: flex;
   align-items: center;
   gap: var(--sv-space-3);
-  padding: var(--sv-space-2) var(--sv-space-3);
+  padding: 6px var(--sv-space-3);
   border: 1px solid var(--sv-color-border);
   border-radius: var(--sv-radius-md);
   background-color: var(--sv-color-surface-raised);
@@ -699,15 +898,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
   border-radius: var(--sv-radius-sm);
   background-color: var(--sv-color-surface-sunken);
-  font-size: var(--sv-font-size-xs);
+  border: 1px solid var(--sv-color-border);
+  font-size: 10px;
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-muted);
   overflow: hidden;
+  padding: 6px;
 }
 
 .sidebarPluginImg {

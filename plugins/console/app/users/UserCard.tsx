@@ -26,8 +26,15 @@ type ConfirmType = 'deactivate' | 'reactivate' | 'reset-mfa' | 'delete' | 'cance
 function roleName(role: string | null) {
   if (role === 'platform:owner') return 'Owner';
   if (role === 'platform:admin') return 'Admin';
+  if (role === 'platform:auditor') return 'Auditor';
   return 'User';
 }
+
+const ASSIGNABLE_ROLES = [
+  { value: 'platform:admin', label: 'Admin' },
+  { value: 'platform:auditor', label: 'Auditor' },
+  { value: 'platform:user', label: 'User' },
+] as const;
 
 function ConfirmSheet({
   open,
@@ -140,7 +147,7 @@ export function UserCard({
       fd.set('role', newRole);
       try {
         await changeRoleAction(fd);
-        const label = newRole === 'platform:admin' ? 'Admin' : 'User';
+        const label = ASSIGNABLE_ROLES.find((r) => r.value === newRole)?.label ?? newRole;
         toast.show({ title: 'Role updated', message: `Changed to ${label}.`, category: 'success' });
       } catch {
         setCurrentRole(prev);
@@ -199,29 +206,20 @@ export function UserCard({
 
           {menuOpen && (
             <div className={styles.userCardMenu} role="menu">
-              {/* Role options */}
+              {/* Role options — show all assignable roles except the current one */}
               {showRoleOptions && (
                 <>
-                  {currentRole !== 'platform:admin' && (
+                  {ASSIGNABLE_ROLES.filter((r) => r.value !== currentRole).map((r) => (
                     <button
+                      key={r.value}
                       type="button"
                       className={styles.userCardMenuItem}
                       role="menuitem"
-                      onClick={() => changeRole('platform:admin')}
+                      onClick={() => changeRole(r.value)}
                     >
-                      Make Admin
+                      Make {r.label}
                     </button>
-                  )}
-                  {currentRole !== 'platform:user' && (
-                    <button
-                      type="button"
-                      className={styles.userCardMenuItem}
-                      role="menuitem"
-                      onClick={() => changeRole('platform:user')}
-                    >
-                      Make User
-                    </button>
-                  )}
+                  ))}
                   {(showStatusActions || showCancelInvite) && (
                     <div className={styles.userCardMenuDivider} role="separator" />
                   )}

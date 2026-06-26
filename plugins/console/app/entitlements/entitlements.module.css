@@ -170,6 +170,7 @@
   font-size: var(--sv-font-size-sm);
   color: var(--sv-color-text-muted);
   line-height: 1.5;
+  max-width: 560px;
 }
 
 .generatorForm {

@@ -37,7 +37,7 @@ export function TenantForm({ initialName }: { initialName: string }) {
         <Input id="tenantName" name="tenantName" type="text" required defaultValue={initialName} />
       </div>
       <Feedback result={state} />
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" size="sm" disabled={pending}>
         {pending ? 'Saving…' : 'Save name'}
       </Button>
     </form>
@@ -59,7 +59,7 @@ export function InviteOnlyForm({ initialValue }: { initialValue: boolean }) {
         </span>
       </label>
       <Feedback result={state} />
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" size="sm" disabled={pending}>
         {pending ? 'Saving…' : 'Save registration policy'}
       </Button>
     </form>
@@ -114,7 +114,7 @@ export function RootPluginForm({
       </div>
       <Feedback result={state} />
       {candidates.length > 0 && (
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" size="sm" disabled={pending}>
           {pending ? 'Saving…' : 'Save root plugin'}
         </Button>
       )}
@@ -254,7 +254,7 @@ export function InstanceForm({ initialValues }: { initialValues: InstanceValues 
       </div>
 
       <Feedback result={state} />
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" size="sm" disabled={pending}>
         {pending ? 'Saving…' : 'Save instance identity'}
       </Button>
     </form>
@@ -280,7 +280,7 @@ export function LogoUploadForm({ dark }: { dark: boolean }) {
         {!dark && <span className={styles.helpText}>PNG, SVG, JPEG, or WebP · max 2 MB</span>}
       </div>
       <Feedback result={state} />
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" size="sm" disabled={pending}>
         {pending ? 'Uploading…' : 'Upload'}
       </Button>
     </form>
@@ -305,7 +305,7 @@ export function FaviconUploadForm() {
         <span className={styles.helpText}>PNG, SVG, ICO, or WebP · max 2 MB</span>
       </div>
       <Feedback result={state} />
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" size="sm" disabled={pending}>
         {pending ? 'Uploading…' : 'Upload'}
       </Button>
     </form>

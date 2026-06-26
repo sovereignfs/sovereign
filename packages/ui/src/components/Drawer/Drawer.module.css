@@ -7,6 +7,9 @@
 .scrim {
   position: fixed;
   inset: 0;
+  /* When the shell declares --sv-shell-footer-height (mobile nav bar), stop the
+     scrim above the footer so the panel never hides behind it. */
+  bottom: var(--sv-shell-footer-height, 0);
   z-index: 100;
   display: flex;
   align-items: flex-end;

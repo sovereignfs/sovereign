@@ -2,7 +2,7 @@ import type { SelectHTMLAttributes } from 'react';
 import styles from './Select.module.css';
 
 export type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'size'> & {
-  /** Visual size variant. 'sm' reduces height/padding for compact table-cell usage. */
+  /** 'md' (default) — standard form field height. 'sm' — compact for table cells and inline controls. */
   size?: 'sm' | 'md';
 };
 
@@ -13,10 +13,11 @@ export type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'size'> 
  *
  * RSC-safe: presentational, no hooks, forwards all native select props.
  */
-export function Select({ className, size, children, ...rest }: SelectProps) {
-  const sizeClass = size === 'sm' ? styles.sm : undefined;
+export function Select({ className, size = 'md', children, ...rest }: SelectProps) {
   return (
-    <div className={[styles.wrapper, sizeClass].filter(Boolean).join(' ')}>
+    <div
+      className={[styles.wrapper, size === 'sm' ? styles.sm : undefined].filter(Boolean).join(' ')}
+    >
       <select className={[styles.select, className].filter(Boolean).join(' ')} {...rest}>
         {children}
       </select>

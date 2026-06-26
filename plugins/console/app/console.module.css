@@ -1057,6 +1057,33 @@
   align-items: flex-start;
 }
 
+/* ── Invite button (ghost, compact) ─────────────────────────────────────── */
+
+.inviteButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  color: var(--sv-color-text-primary);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.inviteButton:hover {
+  background: var(--sv-color-surface-sunken);
+}
+
+.inviteDialogBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
 /* ── Mobile user cards ───────────────────────────────────────────────────── */
 
 /* Hidden on desktop; shown on mobile instead of the table. */

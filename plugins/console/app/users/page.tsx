@@ -51,7 +51,13 @@ function RoleCell({ member, canAssignRoles }: { member: MemberRow; canAssignRole
   }
 
   if (!canAssignRoles || !member.id) {
-    return <Badge variant="role">{member.role === 'platform:admin' ? 'Admin' : 'User'}</Badge>;
+    const label =
+      member.role === 'platform:admin'
+        ? 'Admin'
+        : member.role === 'platform:auditor'
+          ? 'Auditor'
+          : 'User';
+    return <Badge variant="role">{label}</Badge>;
   }
 
   return <RoleSelect userId={member.id} role={member.role ?? 'platform:user'} />;

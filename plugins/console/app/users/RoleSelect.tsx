@@ -6,6 +6,7 @@ import { changeRoleAction } from './actions';
 
 const ROLE_OPTIONS = [
   { value: 'platform:user', label: 'User' },
+  { value: 'platform:auditor', label: 'Auditor' },
   { value: 'platform:admin', label: 'Admin' },
 ] as const;
 

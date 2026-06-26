@@ -207,6 +207,7 @@
 
   .content {
     padding: var(--sv-space-4);
+    padding-bottom: calc(var(--sv-shell-footer-height, 60px) + var(--sv-space-4));
     /* Content cell scrolls within the fixed-height shell grid. */
     overflow-y: auto;
   }

@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { useRouter, useSelectedLayoutSegment } from 'next/navigation';
 import { Dialog } from '@sovereignfs/ui';
 import { getInstalledPlugins } from '@/src/registry';
-import { overlaySizeForSegment } from '@/src/overlay';
+import { overlaySizeForSegment, routeSegmentFromInterception } from '@/src/overlay';
 
 /**
  * Dialog chrome for overlay-shell plugins (RFC 0001). The generate script
@@ -34,10 +34,14 @@ export default function ModalSlotLayout({ children }: { children: ReactNode }) {
 
   if (!open) return <>{children}</>;
 
-  const size = overlaySizeForSegment(segment, getInstalledPlugins());
+  const plugins = getInstalledPlugins();
+  const size = overlaySizeForSegment(segment, plugins);
+  const routeSegment = routeSegmentFromInterception(segment ?? '');
+  const plugin = plugins.find((p) => p.routePrefix === `/${routeSegment}`);
+  const title = plugin?.name;
 
   return (
-    <Dialog open onClose={() => router.back()} size={size} aria-label="Overlay">
+    <Dialog open onClose={() => router.back()} size={size} title={title}>
       {children}
     </Dialog>
   );

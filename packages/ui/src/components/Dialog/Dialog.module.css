@@ -102,13 +102,22 @@
   outline-offset: 2px;
 }
 
+/* Hidden on desktop; shown only on mobile where it replaces the close button. */
+.mobileBar {
+  display: none;
+}
+
 /* Mobile: full-screen sheet (RFC 0001 §3, breakpoint unified to 768px per
  * RFC 0013). Every size fills the scrim's available area (which is already
  * inset from the top by --sv-dialog-inset-top when a fixed header is shown).
  * The panel therefore fills height: 100% of the remaining space, not 100dvh. */
 @media (max-width: 768px) {
+  /* On mobile the overlay feels like a full-page push, not a floating modal.
+     Remove the dim scrim and panel chrome so it's indistinguishable from a
+     regular page render. router.back() still closes it correctly. */
   .scrim {
     padding: 0;
+    background: transparent;
   }
 
   .panel,
@@ -122,5 +131,58 @@
     max-height: none;
     border: none;
     border-radius: 0;
+    box-shadow: none;
+    background: var(--sv-color-surface);
+  }
+
+  /* Desktop close button is replaced by mobileBar on mobile. */
+  .close {
+    display: none;
+  }
+
+  /* Title + close button in one solid row. Being a flex sibling before
+     .content means it never scrolls — the content area scrolls below it. */
+  .mobileBar {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: var(--sv-space-3) var(--sv-space-4);
+    background: var(--sv-color-surface);
+    border-bottom: 1px solid var(--sv-color-border);
+  }
+
+  .mobileBarTitle {
+    flex: 1;
+    font-size: var(--sv-font-size-xl);
+    font-weight: var(--sv-font-weight-semibold);
+    color: var(--sv-color-text-primary);
+  }
+
+  .mobileBarClose {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sv-space-8);
+    height: var(--sv-space-8);
+    flex-shrink: 0;
+    border: none;
+    border-radius: var(--sv-radius-md);
+    background: transparent;
+    color: var(--sv-color-text-muted);
+    font-size: var(--sv-font-size-xl);
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .mobileBarClose:hover {
+    background: var(--sv-color-surface-sunken);
+    color: var(--sv-color-text-primary);
+  }
+
+  /* Remove top padding so the sticky plugin header sits flush against the
+     mobileBar — no gap for scrolling content to bleed through. */
+  .content {
+    padding-top: 0;
+    padding-bottom: calc(var(--sv-shell-footer-height, 60px) + var(--sv-space-6, 24px));
   }
 }

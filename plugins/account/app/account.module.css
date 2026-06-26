@@ -24,6 +24,40 @@
   border-bottom: 1px solid var(--sv-color-border);
 }
 
+@media (max-width: 768px) {
+  /* The Dialog mobileBar provides the "Account" title on mobile — hide the
+     plugin's own h1 to avoid duplication. (On direct/hard navigation the tab
+     strip still makes the context obvious.) */
+  .title {
+    display: none;
+  }
+
+  /* Stick the tab strip so the active section is always visible while scrolling. */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--sv-color-surface);
+    padding: 0;
+    /* Slight bottom shadow to separate from scrolling content */
+    box-shadow: 0 1px 0 var(--sv-color-border);
+    margin-bottom: var(--sv-space-2);
+  }
+
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    /* Fade the right edge to hint at more tabs */
+    mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 .tab {
   padding: var(--sv-space-2) var(--sv-space-3);
   padding-bottom: calc(var(--sv-space-2) + 2px);

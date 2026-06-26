@@ -1145,11 +1145,9 @@
 }
 
 .pluginCardBtnToggle {
-  flex: 1;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: var(--sv-space-2) var(--sv-space-3);
+  padding: var(--sv-space-1) var(--sv-space-3);
   border: 1px solid var(--sv-color-border-strong);
   border-radius: var(--sv-radius-md);
   background: transparent;
@@ -1157,6 +1155,7 @@
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-medium);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .pluginCardBtnToggle:hover {
@@ -1164,7 +1163,9 @@
 }
 
 .pluginCardBtnRemove {
-  padding: var(--sv-space-2) var(--sv-space-3);
+  display: inline-flex;
+  align-items: center;
+  padding: var(--sv-space-1) var(--sv-space-3);
   border: 1px solid var(--sv-color-error-border);
   border-radius: var(--sv-radius-md);
   background: transparent;
@@ -1172,6 +1173,7 @@
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-medium);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .pluginCardBtnRemove:hover {

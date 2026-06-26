@@ -9,6 +9,7 @@ import {
   ResetMfaButton,
 } from './UserActionButtons';
 import { RoleSelect } from './RoleSelect';
+import { UserCard } from './UserCard';
 import styles from '../console.module.css';
 
 const PAGE_SIZE = 5;
@@ -200,6 +201,18 @@ export default async function UsersPage({
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile: card list (hidden on desktop via CSS) */}
+      <div className={styles.userCardList}>
+        {members.map((member) => (
+          <UserCard
+            key={member.id ?? `invite-${member.email}`}
+            member={member}
+            canAssignRoles={canAssignRoles}
+            canManageUsers={canManageUsers}
+          />
+        ))}
       </div>
 
       <div className={styles.usersPagination}>

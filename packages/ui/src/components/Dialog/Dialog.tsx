@@ -14,6 +14,9 @@ export interface DialogProps {
   size?: DialogSize;
   /** Accessible name for the dialog (sets `aria-label` on the panel). */
   'aria-label'?: string;
+  /** On mobile: shown in the top bar alongside the close button so the title
+   *  and dismiss affordance occupy the same row instead of stacking. */
+  title?: string;
   children: ReactNode;
 }
 
@@ -35,6 +38,7 @@ export function Dialog({
   onClose,
   size = 'lg',
   'aria-label': ariaLabel,
+  title,
   children,
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -103,10 +107,23 @@ export function Dialog({
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label={ariaLabel}
+        aria-label={ariaLabel ?? title}
         tabIndex={-1}
         className={[styles.panel, styles[size]].join(' ')}
       >
+        {/* Mobile: title + close button in one row (hidden on desktop via CSS). */}
+        <div className={styles.mobileBar}>
+          {title && <span className={styles.mobileBarTitle}>{title}</span>}
+          <button
+            type="button"
+            className={styles.mobileBarClose}
+            aria-label="Close"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </div>
+        {/* Desktop: absolute close button (hidden on mobile via CSS). */}
         <button type="button" className={styles.close} aria-label="Close" onClick={onClose}>
           ×
         </button>

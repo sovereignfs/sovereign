@@ -6,7 +6,7 @@ import styles from '../../console.module.css';
 
 type State = InviteState | null;
 
-export function InviteForm() {
+export function InviteForm({ onSuccess }: { onSuccess?: () => void }) {
   const [state, formAction, pending] = useActionState<State, FormData>(sendInviteAction, null);
 
   if (state?.success) {
@@ -19,6 +19,11 @@ export function InviteForm() {
           If email is not configured, share this token manually:{' '}
           <code className={styles.token}>{state.token}</code>
         </p>
+        {onSuccess && (
+          <button type="button" className={styles.actionButton} onClick={onSuccess}>
+            Done
+          </button>
+        )}
       </div>
     );
   }

@@ -10,6 +10,7 @@ import {
 } from './UserActionButtons';
 import { RoleSelect } from './RoleSelect';
 import { UserCard } from './UserCard';
+import { InviteDialog } from './invite/InviteDialog';
 import styles from '../console.module.css';
 
 const PAGE_SIZE = 5;
@@ -89,11 +90,7 @@ export default async function UsersPage({
         <h2 className={styles.pageTitle}>Users</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sv-space-3)' }}>
           <span className={styles.memberCount}>{total} members</span>
-          {canManageUsers && (
-            <Link href="/console/users/invite" className={styles.actionButton}>
-              Invite user
-            </Link>
-          )}
+          {canManageUsers && <InviteDialog />}
         </div>
       </div>
 

@@ -34,7 +34,6 @@ export function ForgotForm({ instanceInitial = 'S' }: { instanceInitial?: string
           </div>
           <h1 className={styles.title}>Check your email</h1>
           <div className={styles.notice} role="status">
-            <div className={styles.noticeDot} aria-hidden="true" />
             <p className={styles.noticeText}>
               If that email address is registered, you&rsquo;ll receive a reset link shortly.
             </p>

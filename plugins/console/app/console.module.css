@@ -558,7 +558,7 @@
 .label {
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-medium);
-  color: var(--sv-color-text-primary);
+  color: var(--sv-color-text-muted);
 }
 
 .optional {
@@ -756,11 +756,11 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--sv-space-4);
+  gap: var(--sv-space-3);
 }
 
 .sectionTitle {
-  margin: 0 0 var(--sv-space-2);
+  margin: 0;
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);

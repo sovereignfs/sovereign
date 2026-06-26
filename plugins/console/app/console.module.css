@@ -1230,6 +1230,73 @@
   background: var(--sv-color-error-surface);
 }
 
+/* ── Activity card list (mobile) ─────────────────────────────────────────── */
+
+.activityCardList {
+  display: none;
+}
+
+.activityCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+  padding: var(--sv-space-4);
+  border-bottom: 1px solid var(--sv-color-border);
+}
+
+.activityCard:last-child {
+  border-bottom: none;
+}
+
+.activityCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-2);
+}
+
+.activityCardEvent {
+  font-size: var(--sv-font-size-sm);
+  font-family: var(--sv-font-family-mono);
+  color: var(--sv-color-text-primary);
+  font-weight: var(--sv-font-weight-medium);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activityCardMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+  flex-shrink: 0;
+}
+
+.activityCardDot {
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--sv-color-text-muted);
+  flex-shrink: 0;
+}
+
+.activityCardSummary {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  line-height: 1.4;
+}
+
+/* Scope badge in card — same xs/uppercase treatment */
+.activityCardTop span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
 /* ── Invite button (ghost, compact) ─────────────────────────────────────── */
 
 .inviteButton {
@@ -1465,6 +1532,15 @@
   }
 
   .pluginCardList {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--sv-color-border);
+    border-radius: var(--sv-radius-md);
+    background: var(--sv-color-surface-raised);
+    overflow: hidden;
+  }
+
+  .activityCardList {
     display: flex;
     flex-direction: column;
     border: 1px solid var(--sv-color-border);

@@ -9,7 +9,6 @@ import { getInstalledPlugins } from '@/src/registry';
 import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
 import { InstanceProvider } from '@/src/instance-provider';
 import { AccountMenu } from './_components/AccountMenu';
-import { ActivePluginTitle } from './_components/ActivePluginTitle';
 import { ClientShell } from './_components/ClientShell';
 import { NavIcon } from './_components/NavIcon';
 import { MobileNav } from './_components/MobileNav';
@@ -93,12 +92,6 @@ export default async function PlatformLayout({ children }: { children: ReactNode
     iconUrl: p.icon ? `/plugin-icons/${p.id}.svg` : undefined,
   }));
 
-  // All plugins (including chrome) so ActivePluginTitle can match any route.
-  const allPluginList = allPlugins.map((p) => ({
-    routePrefix: p.routePrefix,
-    name: p.name,
-  }));
-
   return (
     <InstanceProvider>
       {({ instanceName, instanceLogoUrl }) => (
@@ -139,30 +132,37 @@ export default async function PlatformLayout({ children }: { children: ReactNode
                 Console is added to the avatar menu for admins (no sidebar on mobile). */}
             <header className={styles.mobileHeader}>
               <Link href="/" className={styles.mobileBrand} aria-label={`${instanceName} home`}>
-                {instanceLogoUrl ? (
-                  <img src={instanceLogoUrl} alt={instanceName} className={styles.brandLogoImg} />
-                ) : (
-                  instanceName
-                )}
+                <span className={styles.mobileBrandIcon} aria-hidden="true">
+                  {instanceLogoUrl ? (
+                    <img src={instanceLogoUrl} alt="" className={styles.brandLogoImg} />
+                  ) : (
+                    instanceName.charAt(0).toUpperCase()
+                  )}
+                </span>
+                <span className={styles.mobileBrandName}>{instanceName}</span>
               </Link>
-              <ActivePluginTitle plugins={allPluginList} />
-              <NotificationBell />
-              <AccountMenu
-                avatar={accountAvatar}
-                triggerClassName={styles.avatar}
-                placement="header"
-                showConsole={isAdmin}
-                userName={userName}
-                userEmail={userEmail}
-                userImage={userImage}
-              />
+              <div className={styles.mobileHeaderRight}>
+                <NotificationBell />
+                <AccountMenu
+                  avatar={accountAvatar}
+                  triggerClassName={styles.avatar}
+                  placement="header"
+                  showConsole={isAdmin}
+                  userName={userName}
+                  userEmail={userEmail}
+                  userImage={userImage}
+                />
+              </div>
             </header>
 
             <main className={styles.content}>{children}</main>
 
             {/* Mobile footer: single "Apps" button opens a Drawer (RFC 0013).
                 Replaces the persistent icon strip which clutters small viewports. */}
-            <MobileNav plugins={pluginList} />
+            <MobileNav
+              plugins={pluginList}
+              launcherIconUrl={launcher?.icon ? `/plugin-icons/${launcher.id}.svg` : undefined}
+            />
           </div>
         </ClientShell>
       )}

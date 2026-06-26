@@ -1,5 +1,4 @@
-/* Hidden by default — only rendered on mobile (mirrors the old .mobileFooter
-   display:none convention in shell.module.css). */
+/* Hidden by default — only shown on mobile */
 .footer {
   display: none;
 }
@@ -8,74 +7,123 @@
   .footer {
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: var(--sv-space-2) var(--sv-space-4);
-    /* Sit above the home indicator in standalone mode. */
+    padding: 0 var(--sv-space-4);
     padding-bottom: max(var(--sv-space-2), env(safe-area-inset-bottom));
     background-color: var(--sv-color-surface);
     border-top: 1px solid var(--sv-color-border);
+    /* Sit above the drawer scrim (z-index: 100) so the footer stays visible
+       while the Apps drawer is open. */
+    position: relative;
+    z-index: 101;
   }
 }
 
-.appsButton {
-  display: inline-flex;
+/* ── Footer nav items ────────────────────────────────────────────────────── */
+
+.navItem {
+  display: flex;
   align-items: center;
-  gap: var(--sv-space-2);
-  min-height: var(--sv-touch-target-min, 44px);
-  padding: 0 var(--sv-space-4);
-  border: 1px solid var(--sv-color-border);
+  justify-content: center;
+  flex: 1;
+  min-height: 52px;
+  border: none;
+  background: transparent;
+  color: var(--sv-color-text-muted);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  border-radius: var(--sv-radius-md);
+  transition: color 0.1s;
+}
+
+.navItem:hover {
+  color: var(--sv-color-text-primary);
+}
+
+.navItem:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.navItemActive {
+  color: var(--sv-color-text-primary);
+}
+
+/* Apps button: gets a grey circle background when the drawer is open */
+.navItemApps {
+  position: relative;
+}
+
+.navItemAppsOpen {
+  color: var(--sv-color-text-primary);
+}
+
+.navItemAppsOpen::before {
+  content: '';
+  position: absolute;
+  width: 48px;
+  height: 48px;
   border-radius: var(--sv-radius-full);
   background: var(--sv-color-surface-sunken);
-  color: var(--sv-color-text-primary);
-  font: inherit;
-  font-size: var(--sv-font-size-sm);
-  font-weight: var(--sv-font-weight-medium);
-  cursor: pointer;
 }
 
-.appsButton:hover {
-  background: var(--sv-color-border);
+.navItemAppsOpen svg,
+.navItemAppsOpen img {
+  position: relative;
+  z-index: 1;
 }
 
-.appsButton:focus-visible {
-  outline: 2px solid var(--sv-color-focus-ring);
-  outline-offset: 2px;
+.navIcon {
+  width: var(--sv-icon-size-md);
+  height: var(--sv-icon-size-md);
+  object-fit: contain;
 }
 
-.appsLabel {
-  font-size: var(--sv-font-size-sm);
+:global([data-theme='dark']) .navIcon {
+  filter: invert(1);
 }
 
-/* Drawer contents */
+/* ── Drawer ──────────────────────────────────────────────────────────────── */
+
+/* Drag handle pill */
+.handle {
+  width: 36px;
+  height: 4px;
+  margin: var(--sv-space-3) auto var(--sv-space-1);
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-border-strong);
+  flex-shrink: 0;
+}
+
 .drawerHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--sv-space-4) var(--sv-space-4) var(--sv-space-3);
-  border-bottom: 1px solid var(--sv-color-border);
+  padding: var(--sv-space-3) var(--sv-space-4) var(--sv-space-4);
 }
 
 .drawerTitle {
-  font-size: var(--sv-font-size-md);
+  font-size: var(--sv-font-size-lg);
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);
 }
 
 .drawerClose {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-width: var(--sv-touch-target-min, 44px);
-  min-height: var(--sv-touch-target-min, 44px);
+  width: 36px;
+  height: 36px;
   border: none;
-  border-radius: var(--sv-radius-md);
-  background: transparent;
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-surface-sunken);
   color: var(--sv-color-text-muted);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .drawerClose:hover {
-  background: var(--sv-color-surface-sunken);
+  background: var(--sv-color-border);
   color: var(--sv-color-text-primary);
 }
 
@@ -84,59 +132,65 @@
   outline-offset: 2px;
 }
 
-.drawerList {
+/* 3-column plugin grid */
+.drawerGrid {
   list-style: none;
   margin: 0;
-  padding: var(--sv-space-2) 0;
+  padding: var(--sv-space-2) var(--sv-space-4) var(--sv-space-6);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  row-gap: var(--sv-space-5);
 }
 
-.drawerItem {
+.drawerGridItem {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--sv-space-3);
-  min-height: var(--sv-touch-target-min, 44px);
-  padding: 0 var(--sv-space-4);
-  color: var(--sv-color-text-primary);
+  gap: var(--sv-space-2);
+  padding: var(--sv-space-1);
   text-decoration: none;
-  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
 }
 
-.drawerItem:hover {
-  background: var(--sv-color-surface-sunken);
+.drawerGridItem:hover .drawerGridIcon {
+  background: var(--sv-color-border);
 }
 
-.drawerItem:focus-visible {
+.drawerGridItem:focus-visible {
   outline: 2px solid var(--sv-color-focus-ring);
-  outline-offset: -2px;
+  outline-offset: 2px;
+  border-radius: var(--sv-radius-md);
 }
 
-.drawerIcon {
+.drawerGridIcon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  border-radius: var(--sv-radius-md);
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
   background: var(--sv-color-surface-sunken);
-  font-size: var(--sv-font-size-xs);
+  font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-muted);
+  transition: background 0.1s;
 }
 
-.drawerIconImg {
-  width: 100%;
-  height: 100%;
+.drawerGridIconImg {
+  width: 32px;
+  height: 32px;
   object-fit: contain;
 }
 
-:global([data-theme='dark']) .drawerIconImg {
+:global([data-theme='dark']) .drawerGridIconImg {
   filter: invert(1);
 }
 
-.drawerItemName {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.drawerGridName {
+  font-size: var(--sv-font-size-sm);
+  text-align: center;
+  color: var(--sv-color-text-primary);
+  line-height: 1.3;
+  word-break: break-word;
+  max-width: 80px;
 }

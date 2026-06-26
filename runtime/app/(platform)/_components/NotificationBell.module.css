@@ -23,6 +23,14 @@
   color: var(--sv-color-text-primary);
 }
 
+/* Mobile header: match the avatar size */
+@media (max-width: 768px) {
+  .trigger:not(.triggerSidebar) {
+    width: 36px;
+    height: 36px;
+  }
+}
+
 /* Sidebar placement — match the surrounding plugin icon style exactly */
 .triggerSidebar {
   width: 40px;

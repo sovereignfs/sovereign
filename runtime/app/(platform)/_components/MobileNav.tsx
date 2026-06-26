@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Drawer, Icon } from '@sovereignfs/ui';
 import styles from './MobileNav.module.css';
 
@@ -20,32 +21,48 @@ function monogram(name: string): string {
   return initials.toUpperCase();
 }
 
-/**
- * Mobile-only footer bar + plugin-navigation Drawer (RFC 0013). The footer
- * renders a single "Apps" action button; tapping it opens a dismissable
- * bottom Drawer listing installed (non-chrome) plugins. Navigating to a plugin
- * dismisses the Drawer automatically.
- */
-export function MobileNav({ plugins }: { plugins: PluginEntry[] }) {
+export function MobileNav({
+  plugins,
+  launcherIconUrl,
+}: {
+  plugins: PluginEntry[];
+  launcherIconUrl?: string;
+}) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const isHome = pathname === '/';
 
   return (
     <>
       <nav className={styles.footer} aria-label="Plugin navigation">
+        <Link
+          href="/"
+          className={`${styles.navItem} ${isHome ? styles.navItemActive : ''}`}
+          aria-label="Home"
+        >
+          <Icon name="house" size="md" aria-hidden />
+        </Link>
         <button
           type="button"
-          className={styles.appsButton}
-          aria-label="Open app navigation"
+          className={`${styles.navItem} ${styles.navItemApps} ${open ? styles.navItemAppsOpen : ''}`}
+          aria-label="Apps"
           aria-expanded={open}
           aria-haspopup="dialog"
           onClick={() => setOpen(true)}
         >
-          <Icon name="grid-2x2" size="md" aria-hidden />
-          <span className={styles.appsLabel}>Apps</span>
+          {launcherIconUrl ? (
+            <img src={launcherIconUrl} alt="" aria-hidden className={styles.navIcon} />
+          ) : (
+            <Icon name="grid-2x2" size="md" aria-hidden />
+          )}
         </button>
+        <Link href="/launcher" className={styles.navItem} aria-label="Search">
+          <Icon name="search" size="md" aria-hidden />
+        </Link>
       </nav>
 
       <Drawer open={open} onClose={() => setOpen(false)} aria-label="Plugin navigation">
+        <div className={styles.handle} aria-hidden="true" />
         <div className={styles.drawerHeader}>
           <span className={styles.drawerTitle}>Apps</span>
           <button
@@ -54,26 +71,26 @@ export function MobileNav({ plugins }: { plugins: PluginEntry[] }) {
             aria-label="Close navigation"
             onClick={() => setOpen(false)}
           >
-            <Icon name="x" size="md" aria-hidden />
+            <Icon name="x" size="sm" aria-hidden />
           </button>
         </div>
         <nav aria-label="Installed plugins">
-          <ul className={styles.drawerList}>
+          <ul className={styles.drawerGrid}>
             {plugins.map((plugin) => (
               <li key={plugin.id}>
                 <Link
                   href={plugin.routePrefix}
-                  className={styles.drawerItem}
+                  className={styles.drawerGridItem}
                   onClick={() => setOpen(false)}
                 >
-                  <span className={styles.drawerIcon} aria-hidden="true">
+                  <span className={styles.drawerGridIcon} aria-hidden="true">
                     {plugin.iconUrl ? (
-                      <img src={plugin.iconUrl} alt="" className={styles.drawerIconImg} />
+                      <img src={plugin.iconUrl} alt="" className={styles.drawerGridIconImg} />
                     ) : (
                       monogram(plugin.name)
                     )}
                   </span>
-                  <span className={styles.drawerItemName}>{plugin.name}</span>
+                  <span className={styles.drawerGridName}>{plugin.name}</span>
                 </Link>
               </li>
             ))}

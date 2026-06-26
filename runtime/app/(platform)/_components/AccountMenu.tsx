@@ -114,7 +114,7 @@ export function AccountMenu({
               className={styles.item}
               onClick={() => setOpen(false)}
             >
-              <Icon name="terminal" size="sm" aria-hidden />
+              <Icon name="settings" size="sm" aria-hidden />
               Console
             </Link>
           )}

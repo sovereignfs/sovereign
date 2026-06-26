@@ -27,123 +27,145 @@ async function getPlugins(): Promise<PluginRow[]> {
   return res.json() as Promise<PluginRow[]>;
 }
 
-function TypeBadge({ type }: { type: string }) {
-  return <Badge variant={type === 'platform' ? 'role' : 'mono'}>{type}</Badge>;
-}
-
 export default async function PluginsPage() {
   const plugins = await getPlugins();
 
   return (
     <div>
-      <div className={styles.pageHeader}>
-        <h2 className={styles.pageTitle}>Plugins</h2>
-      </div>
-
       <PluginInstallPanel />
 
-      <div className={styles.tableWrapper}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th className={styles.th}>Plugin</th>
-              <th className={styles.th}>Version</th>
-              <th className={styles.th}>Type</th>
-              <th className={styles.th}>Route</th>
-              <th className={styles.th}>Status</th>
-              <th className={styles.th}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {plugins.map((plugin) => {
-              const isChrome = plugin.type === 'platform';
-              return (
-                <tr key={plugin.id} className={styles.tr}>
-                  <td className={styles.td}>
-                    <div className={styles.userCell}>
-                      <span className={styles.userName}>{plugin.name}</span>
-                      {plugin.description && (
-                        <span className={styles.userEmail}>{plugin.description}</span>
-                      )}
-                      <span className={styles.userId}>{plugin.id}</span>
-                    </div>
-                  </td>
+      <div className={styles.tableCard}>
+        <div className={styles.tableWrapper}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th className={styles.th}>Plugin</th>
+                <th className={styles.th}>Version</th>
+                <th className={styles.th}>Type</th>
+                <th className={styles.th}>Route</th>
+                <th className={styles.th}>Status</th>
+                <th className={styles.th}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {plugins.map((plugin) => {
+                const isPlatform = plugin.type === 'platform';
+                return (
+                  <tr key={plugin.id} className={styles.tr}>
+                    <td className={styles.td}>
+                      <div className={styles.userCell}>
+                        <span className={styles.userName}>{plugin.name}</span>
+                        {plugin.description && (
+                          <span className={styles.userEmail}>{plugin.description}</span>
+                        )}
+                        <span className={styles.userId}>{plugin.id}</span>
+                      </div>
+                    </td>
 
-                  <td className={styles.td}>
-                    <code className={styles.codeInline}>{plugin.version}</code>
-                  </td>
+                    <td className={styles.td}>
+                      <code className={styles.codeInline}>{plugin.version}</code>
+                    </td>
 
-                  <td className={styles.td}>
-                    <TypeBadge type={plugin.type} />
-                    {plugin.adminOnly && <span className={styles.adminOnlyNote}> admin-only</span>}
-                  </td>
+                    <td className={styles.td}>
+                      <div className={styles.typeBadges}>
+                        <Badge variant="mono">{plugin.type}</Badge>
+                        {plugin.adminOnly && <Badge variant="mono">admin-only</Badge>}
+                      </div>
+                    </td>
 
-                  <td className={styles.td}>
-                    <code className={styles.codeInline}>{plugin.routePrefix}</code>
-                  </td>
+                    <td className={styles.td}>
+                      <code className={styles.codeInline}>{plugin.routePrefix}</code>
+                    </td>
 
-                  <td className={styles.td}>
-                    {plugin.enabled ? (
-                      <Badge variant="status" status="enabled">
-                        Enabled
-                      </Badge>
-                    ) : plugin.compatibilityError ? (
-                      <span title={plugin.compatibilityError}>
-                        <Badge variant="status" status="failed">
-                          Incompatible
-                        </Badge>
-                      </span>
-                    ) : (
-                      <Badge variant="status" status="deactivated">
-                        Disabled
-                      </Badge>
-                    )}
-                    {plugin.compatibilityWarnings.length > 0 && (
-                      <span
-                        className={styles.adminOnlyNote}
-                        title={plugin.compatibilityWarnings.join('\n')}
-                      >
-                        {' '}
-                        ⚠ version advisory
-                      </span>
-                    )}
-                  </td>
-
-                  <td className={styles.td}>
-                    <div className={styles.rowActions}>
+                    <td className={styles.td}>
                       {plugin.compatibilityError ? (
-                        <span className={styles.adminOnlyNote} title={plugin.compatibilityError}>
-                          Incompatible — cannot enable
+                        <span title={plugin.compatibilityError}>
+                          <Badge variant="status" status="failed">
+                            Incompatible
+                          </Badge>
                         </span>
+                      ) : plugin.enabled ? (
+                        <Badge variant="role">Enabled</Badge>
                       ) : (
-                        <form action={togglePluginAction}>
-                          <input type="hidden" name="pluginId" value={plugin.id} />
-                          <input
-                            type="hidden"
-                            name="enabled"
-                            value={plugin.enabled ? 'false' : 'true'}
-                          />
-                          <button
-                            type="submit"
-                            className={
-                              plugin.enabled ? styles.deactivateButton : styles.reactivateButton
-                            }
-                          >
-                            {plugin.enabled ? 'Disable' : 'Enable'}
-                          </button>
-                        </form>
+                        <Badge variant="status" status="deactivated">
+                          Disabled
+                        </Badge>
                       )}
+                      {plugin.compatibilityWarnings.length > 0 && (
+                        <span
+                          className={styles.adminOnlyNote}
+                          title={plugin.compatibilityWarnings.join('\n')}
+                        >
+                          {' '}
+                          ⚠ version advisory
+                        </span>
+                      )}
+                    </td>
 
-                      {!isChrome && (
-                        <RemovePluginButton pluginId={plugin.id} pluginName={plugin.name} />
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    <td className={styles.td}>
+                      <div className={styles.rowActions}>
+                        {plugin.compatibilityError ? (
+                          <span className={styles.adminOnlyNote} title={plugin.compatibilityError}>
+                            Incompatible
+                          </span>
+                        ) : (
+                          <form action={togglePluginAction} style={{ display: 'inline-flex' }}>
+                            <input type="hidden" name="pluginId" value={plugin.id} />
+                            <input
+                              type="hidden"
+                              name="enabled"
+                              value={plugin.enabled ? 'false' : 'true'}
+                            />
+                            <button
+                              type="submit"
+                              className={plugin.enabled ? styles.iconBtn : styles.iconBtnReactivate}
+                              title={plugin.enabled ? 'Disable plugin' : 'Enable plugin'}
+                            >
+                              {plugin.enabled ? (
+                                <svg
+                                  width="15"
+                                  height="15"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                >
+                                  <circle cx="12" cy="12" r="10" />
+                                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                                </svg>
+                              ) : (
+                                <svg
+                                  width="15"
+                                  height="15"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                >
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              )}
+                            </button>
+                          </form>
+                        )}
+
+                        {!isPlatform && (
+                          <RemovePluginButton pluginId={plugin.id} pluginName={plugin.name} />
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

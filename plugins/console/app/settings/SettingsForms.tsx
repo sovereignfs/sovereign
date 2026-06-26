@@ -324,7 +324,7 @@ export function LogoUploadForm({ dark }: { dark: boolean }) {
         />
       </div>
       <Feedback result={state} />
-      <Button type="submit" size="sm" disabled={pending}>
+      <Button type="submit" size="sm" variant="secondary" disabled={pending}>
         {pending ? 'Uploading…' : 'Upload'}
       </Button>
     </form>
@@ -345,7 +345,7 @@ export function FaviconUploadForm() {
         />
       </div>
       <Feedback result={state} />
-      <Button type="submit" size="sm" disabled={pending}>
+      <Button type="submit" size="sm" variant="secondary" disabled={pending}>
         {pending ? 'Uploading…' : 'Upload'}
       </Button>
     </form>

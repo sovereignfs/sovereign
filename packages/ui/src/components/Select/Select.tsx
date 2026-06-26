@@ -21,8 +21,20 @@ export function Select({ className, size = 'md', children, ...rest }: SelectProp
       <select className={[styles.select, className].filter(Boolean).join(' ')} {...rest}>
         {children}
       </select>
-      {/* Custom chevron — CSS-drawn so no icon dependency */}
-      <span className={styles.chevron} aria-hidden />
+      <svg
+        className={styles.chevron}
+        aria-hidden="true"
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
     </div>
   );
 }

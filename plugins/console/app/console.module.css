@@ -1196,7 +1196,7 @@
   position: absolute;
   right: 0;
   top: calc(100% + 4px);
-  z-index: 20;
+  z-index: 50;
   min-width: 160px;
   background: var(--sv-color-surface-raised);
   border: 1px solid var(--sv-color-border);
@@ -1274,7 +1274,20 @@
     flex-direction: column;
     border: 1px solid var(--sv-color-border);
     border-radius: var(--sv-radius-md);
-    overflow: hidden;
+    /* No overflow:hidden — it clips the absolute-positioned ⋯ menu.
+       Use first/last-child border-radius on cards instead. */
     background: var(--sv-color-surface-raised);
+  }
+
+  .userCard:first-child {
+    border-radius: var(--sv-radius-md) var(--sv-radius-md) 0 0;
+  }
+
+  .userCard:last-child {
+    border-radius: 0 0 var(--sv-radius-md) var(--sv-radius-md);
+  }
+
+  .userCard:only-child {
+    border-radius: var(--sv-radius-md);
   }
 }

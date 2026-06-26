@@ -4,6 +4,17 @@
   box-sizing: border-box;
 }
 
+/* Form elements do not inherit font-family from body by default in browsers;
+   they fall back to the OS system font. Force inheritance so every element
+   uses --sv-font-family (Hanken Grotesk). */
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+  font-size: inherit;
+}
+
 html,
 body {
   margin: 0;

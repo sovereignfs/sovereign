@@ -25,6 +25,14 @@
     box-shadow 0.15s ease;
 }
 
+/* sm — compact for table cells and inline controls */
+.sm .select {
+  padding: 2px var(--sv-space-6) 2px var(--sv-space-2);
+  font-size: var(--sv-font-size-sm);
+  line-height: 1.4;
+  border-radius: var(--sv-radius-sm);
+}
+
 .select:focus-visible {
   outline: none;
   border-color: var(--sv-color-accent);
@@ -56,4 +64,10 @@
   border-bottom: 1.5px solid var(--sv-color-text-muted);
   rotate: 45deg;
   margin-top: -2px; /* optical adjustment for the 45° rotation */
+}
+
+.sm .chevron {
+  right: var(--sv-space-2);
+  width: 6px;
+  height: 6px;
 }

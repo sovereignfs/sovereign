@@ -1057,6 +1057,119 @@
   align-items: flex-start;
 }
 
+/* ── Plugin card list (mobile) ───────────────────────────────────────────── */
+
+.pluginCardList {
+  display: none;
+}
+
+.pluginCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-4);
+  border-bottom: 1px solid var(--sv-color-border);
+}
+
+.pluginCard:last-child {
+  border-bottom: none;
+}
+
+.pluginCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sv-space-3);
+}
+
+.pluginCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-1);
+  min-width: 0;
+}
+
+.pluginCardName {
+  font-size: var(--sv-font-size-base);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.pluginCardDesc {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  line-height: 1.4;
+}
+
+.pluginCardId {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+  font-family: var(--sv-font-family-mono);
+}
+
+.pluginCardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sv-space-2);
+}
+
+.pluginCardMetaCode {
+  font-size: var(--sv-font-size-xs);
+  font-family: var(--sv-font-family-mono);
+  color: var(--sv-color-text-muted);
+  background: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  padding: 1px var(--sv-space-1);
+}
+
+.pluginCardWarning {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-warning-text);
+}
+
+.pluginCardActions {
+  display: flex;
+  gap: var(--sv-space-2);
+  align-items: center;
+  padding-top: var(--sv-space-1);
+}
+
+.pluginCardBtnToggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  color: var(--sv-color-text-primary);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  cursor: pointer;
+}
+
+.pluginCardBtnToggle:hover {
+  background: var(--sv-color-surface-sunken);
+}
+
+.pluginCardBtnRemove {
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border: 1px solid var(--sv-color-error-border);
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  color: var(--sv-color-error-text);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  cursor: pointer;
+}
+
+.pluginCardBtnRemove:hover {
+  background: var(--sv-color-error-surface);
+}
+
 /* ── Invite button (ghost, compact) ─────────────────────────────────────── */
 
 .inviteButton {
@@ -1289,5 +1402,14 @@
 
   .userCard:only-child {
     border-radius: var(--sv-radius-md);
+  }
+
+  .pluginCardList {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--sv-color-border);
+    border-radius: var(--sv-radius-md);
+    background: var(--sv-color-surface-raised);
+    overflow: hidden;
   }
 }

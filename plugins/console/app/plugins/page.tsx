@@ -3,6 +3,67 @@ import { togglePluginAction } from './actions';
 import { PluginInstallPanel, RemovePluginButton } from './PluginInstallPanel';
 import styles from '../console.module.css';
 
+function PluginCard({ plugin }: { plugin: PluginRow }) {
+  const isPlatform = plugin.type === 'platform';
+  return (
+    <div className={styles.pluginCard}>
+      <div className={styles.pluginCardHeader}>
+        <div className={styles.pluginCardInfo}>
+          <span className={styles.pluginCardName}>{plugin.name}</span>
+          {plugin.description && (
+            <span className={styles.pluginCardDesc}>{plugin.description}</span>
+          )}
+          <span className={styles.pluginCardId}>{plugin.id}</span>
+        </div>
+        <div>
+          {plugin.compatibilityError ? (
+            <Badge variant="status" status="failed">
+              Incompatible
+            </Badge>
+          ) : plugin.enabled ? (
+            <Badge variant="role">Enabled</Badge>
+          ) : (
+            <Badge variant="status" status="deactivated">
+              Disabled
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <div className={styles.pluginCardMeta}>
+        <code className={styles.pluginCardMetaCode}>{plugin.version}</code>
+        <Badge variant="mono">{plugin.type}</Badge>
+        {plugin.adminOnly && <Badge variant="mono">admin-only</Badge>}
+        <code className={styles.pluginCardMetaCode}>{plugin.routePrefix}</code>
+      </div>
+
+      {plugin.compatibilityWarnings.length > 0 && (
+        <p className={styles.pluginCardWarning}>⚠ {plugin.compatibilityWarnings.join(' · ')}</p>
+      )}
+
+      {!plugin.compatibilityError && (
+        <div className={styles.pluginCardActions}>
+          <form action={togglePluginAction} style={{ flex: 1, display: 'flex' }}>
+            <input type="hidden" name="pluginId" value={plugin.id} />
+            <input type="hidden" name="enabled" value={plugin.enabled ? 'false' : 'true'} />
+            <button type="submit" className={styles.pluginCardBtnToggle}>
+              {plugin.enabled ? 'Disable' : 'Enable'}
+            </button>
+          </form>
+          {!isPlatform && (
+            <RemovePluginButton
+              pluginId={plugin.id}
+              pluginName={plugin.name}
+              className={styles.pluginCardBtnRemove}
+              label="Remove"
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface PluginRow {
   id: string;
   name: string;
@@ -166,6 +227,13 @@ export default async function PluginsPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile: card list (hidden on desktop via CSS) */}
+      <div className={styles.pluginCardList}>
+        {plugins.map((plugin) => (
+          <PluginCard key={plugin.id} plugin={plugin} />
+        ))}
       </div>
     </div>
   );

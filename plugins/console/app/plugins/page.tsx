@@ -43,7 +43,7 @@ function PluginCard({ plugin }: { plugin: PluginRow }) {
 
       {!plugin.compatibilityError && (
         <div className={styles.pluginCardActions}>
-          <form action={togglePluginAction} style={{ flex: 1, display: 'flex' }}>
+          <form action={togglePluginAction}>
             <input type="hidden" name="pluginId" value={plugin.id} />
             <input type="hidden" name="enabled" value={plugin.enabled ? 'false' : 'true'} />
             <button type="submit" className={styles.pluginCardBtnToggle}>

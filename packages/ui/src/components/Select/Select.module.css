@@ -11,7 +11,7 @@
   /* Right-pad to clear the custom chevron */
   padding: var(--sv-space-2) var(--sv-space-8) var(--sv-space-2) var(--sv-space-3);
   font-family: var(--sv-font-family);
-  font-size: var(--sv-font-size-md);
+  font-size: var(--sv-font-size-sm);
   line-height: 1.5;
   color: var(--sv-color-text-primary);
   background-color: var(--sv-color-surface);

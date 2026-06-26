@@ -151,7 +151,7 @@
 }
 
 .generatorTitle {
-  margin: 0 0 var(--sv-space-1);
+  margin: 0 0 var(--sv-space-2);
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);

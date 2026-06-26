@@ -36,6 +36,13 @@
   cursor: not-allowed;
 }
 
+/* Compact size variant — reduced padding for table-cell usage */
+.sm .select {
+  padding-top: var(--sv-space-1);
+  padding-bottom: var(--sv-space-1);
+  font-size: var(--sv-font-size-sm);
+}
+
 /* CSS-drawn chevron — a rotated border trick, no SVG dependency */
 .chevron {
   pointer-events: none;

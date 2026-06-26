@@ -50,15 +50,16 @@ function timeAgo(ts: number): string {
 
 function categoryColorClass(category: string): string {
   const c = category.toLowerCase();
-  if (c.includes('user') || c.includes('invite') || c.includes('join')) return styles.iconGreen;
+  if (c.includes('user') || c.includes('invite') || c.includes('join'))
+    return styles.iconGreen ?? '';
   if (
     c.includes('security') ||
     c.includes('session') ||
     c.includes('auth') ||
     c.includes('warning')
   )
-    return styles.iconAmber;
-  return styles.iconNeutral;
+    return styles.iconAmber ?? '';
+  return styles.iconNeutral ?? '';
 }
 
 function CategoryIcon({ category }: { category: string }) {

@@ -1,14 +1,23 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
+import { useToast } from '@sovereignfs/ui';
 import { type DisplayNameResult, updateDisplayNameAction } from '../actions';
 import styles from '../account.module.css';
 
 export function DisplayNameForm({ initialName }: { initialName: string }) {
+  const toast = useToast();
   const [state, action, pending] = useActionState<DisplayNameResult | null, FormData>(
     updateDisplayNameAction,
     null,
   );
+
+  useEffect(() => {
+    if (!state) return;
+    if (state.ok) {
+      toast.show({ title: state.message, category: 'success' });
+    }
+  }, [state, toast]);
 
   return (
     <form action={action} className={styles.form}>
@@ -26,13 +35,9 @@ export function DisplayNameForm({ initialName }: { initialName: string }) {
           className={styles.input}
         />
       </div>
-      {state && (
-        <p
-          className={state.ok ? styles.feedbackSuccess : styles.feedbackError}
-          role="status"
-          aria-live="polite"
-        >
-          {state.ok ? state.message : state.error}
+      {state && !state.ok && (
+        <p className={styles.feedbackError} role="status" aria-live="polite">
+          {state.error}
         </p>
       )}
       <button type="submit" className={styles.button} disabled={pending}>

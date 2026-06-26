@@ -17,6 +17,7 @@
 
   --sv-color-text-primary: var(--sv-grey-950);
   --sv-color-text-muted: var(--sv-grey-500);
+  --sv-color-text-subtle: var(--sv-grey-400);
   --sv-color-text-on-accent: var(--sv-white);
 
   --sv-color-border: var(--sv-grey-200);
@@ -76,6 +77,7 @@
 
   --sv-color-text-primary: var(--sv-grey-50);
   --sv-color-text-muted: var(--sv-grey-400);
+  --sv-color-text-subtle: var(--sv-grey-600);
   --sv-color-text-on-accent: var(--sv-grey-950);
 
   --sv-color-border: var(--sv-grey-800);

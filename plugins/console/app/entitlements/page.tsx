@@ -1,20 +1,8 @@
 import { sdk } from '@sovereignfs/sdk';
 import { getInstalledPlugins } from '@/src/registry';
+import { EntitlementsSection, type EntitlementRow } from './EntitlementsSection';
 import { LicenseGenerator, type GeneratorPlugin, type GeneratorUser } from './LicenseGenerator';
 import styles from '../console.module.css';
-import entStyles from './entitlements.module.css';
-
-interface EntitlementRow {
-  id: string;
-  userId: string;
-  pluginId: string;
-  tierId: string | null;
-  status: string;
-  source: string;
-  issuedAt: number;
-  expiresAt: number | null;
-  createdAt: number;
-}
 
 interface MemberRow {
   id: string | null;
@@ -89,7 +77,6 @@ export default async function EntitlementsPage() {
     const [members, { keys, publicKeys }] = await Promise.all([loadUsers(), loadStoredKeys()]);
     storedKeys = keys;
     storedPublicKeys = publicKeys;
-    // Only monetized plugins with a declared public key can have licenses generated.
     generatorPlugins = getInstalledPlugins().flatMap((p) => {
       const publicKey = p.monetization?.license?.publicKey;
       if (!publicKey) return [];
@@ -101,20 +88,11 @@ export default async function EntitlementsPage() {
     });
   }
 
-  const formatDate = (ts: number) =>
-    new Date(ts * 1000).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-
-  const now = Math.floor(Date.now() / 1000);
-  const isActive = (row: EntitlementRow) =>
-    row.status === 'active' && (row.expiresAt == null || row.expiresAt > now);
-
   return (
     <div className={styles.sections}>
-      {isOwner && (
+      <EntitlementsSection rows={rows} isOwner={isOwner} />
+
+      {isOwner && generatorPlugins.length > 0 && (
         <section className={styles.section}>
           <LicenseGenerator
             plugins={generatorPlugins}
@@ -124,67 +102,6 @@ export default async function EntitlementsPage() {
           />
         </section>
       )}
-
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Plugin entitlements</h2>
-        <p className={styles.help}>
-          Signed licenses imported by users for paid plugins.{' '}
-          {isOwner
-            ? 'Generate and grant licenses above, or users can import them via Account → Billing.'
-            : 'Users manage their own licenses via Account → Billing.'}
-        </p>
-
-        {rows.length === 0 ? (
-          <p className={styles.help}>No entitlements recorded.</p>
-        ) : (
-          <div className={entStyles.tableWrapper}>
-            <table className={entStyles.table} aria-label="Entitlements">
-              <thead>
-                <tr>
-                  <th className={entStyles.th}>Plugin</th>
-                  <th className={entStyles.th}>User ID</th>
-                  <th className={entStyles.th}>Tier</th>
-                  <th className={entStyles.th}>Status</th>
-                  <th className={entStyles.th}>Source</th>
-                  <th className={entStyles.th}>Issued</th>
-                  <th className={entStyles.th}>Expires</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id} className={isActive(row) ? '' : entStyles.rowInactive}>
-                    <td className={entStyles.td}>
-                      <code className={entStyles.code}>{row.pluginId}</code>
-                    </td>
-                    <td className={entStyles.td}>
-                      <code className={entStyles.code}>{row.userId.slice(0, 8)}…</code>
-                    </td>
-                    <td className={entStyles.td}>
-                      {row.tierId ?? <span className={entStyles.none}>—</span>}
-                    </td>
-                    <td className={entStyles.td}>
-                      <span
-                        className={`${entStyles.badge} ${isActive(row) ? entStyles.badgeActive : entStyles.badgeInactive}`}
-                      >
-                        {isActive(row) ? 'active' : row.status}
-                      </span>
-                    </td>
-                    <td className={entStyles.td}>{row.source}</td>
-                    <td className={entStyles.td}>{formatDate(row.issuedAt)}</td>
-                    <td className={entStyles.td}>
-                      {row.expiresAt ? (
-                        formatDate(row.expiresAt)
-                      ) : (
-                        <span className={entStyles.none}>perpetual</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
     </div>
   );
 }

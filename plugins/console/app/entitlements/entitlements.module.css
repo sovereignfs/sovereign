@@ -1,3 +1,68 @@
+/* ── Entitlements section header ────────────────────────────────────────── */
+
+.sectionHeaderRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sv-space-4);
+}
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-10) var(--sv-space-6);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+  text-align: center;
+}
+
+.emptyIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--sv-color-surface-sunken);
+  color: var(--sv-color-text-muted);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: var(--sv-font-size-base);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.emptyDesc {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  max-width: 36ch;
+}
+
+.emptyRow {
+  padding: var(--sv-space-4) var(--sv-space-4);
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+  text-align: center;
+}
+
+/* ── Table cells ────────────────────────────────────────────────────────── */
+
+.userId {
+  font-family: monospace;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}
+
+/* ── Legacy table (kept for entitlements.module.css consumers) ─────────── */
+
 .tableWrapper {
   overflow-x: auto;
   border: 1px solid var(--sv-color-border);
@@ -67,37 +132,17 @@
 
 /* ── License generator ──────────────────────────────────────────────────── */
 
-.generator {
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-lg);
-  background: var(--sv-color-surface-raised);
-  overflow: hidden;
-}
-
-.generatorHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sv-space-4);
-  padding: var(--sv-space-4) var(--sv-space-5);
-}
-
-.generatorTitle {
-  margin: 0;
-  font-size: var(--sv-font-size-base);
-  font-weight: var(--sv-font-weight-semibold);
-  color: var(--sv-color-text-primary);
-}
-
+/* Inline action buttons inside the form (Copy, Dismiss, etc.) */
 .generatorToggle {
-  padding: var(--sv-space-1) var(--sv-space-3);
+  padding: var(--sv-space-1) var(--sv-space-2);
   border: 1px solid var(--sv-color-border);
   border-radius: var(--sv-radius-sm);
-  background: var(--sv-color-surface);
-  color: var(--sv-color-text-secondary);
-  font-size: var(--sv-font-size-sm);
+  background: none;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-xs);
   cursor: pointer;
   white-space: nowrap;
+  line-height: 1;
 }
 
 .generatorToggle:hover {
@@ -105,18 +150,24 @@
   color: var(--sv-color-text-primary);
 }
 
+.generatorTitle {
+  margin: 0 0 var(--sv-space-1);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
 .generatorBody {
-  padding: 0 var(--sv-space-5) var(--sv-space-5);
-  border-top: 1px solid var(--sv-color-border);
+  margin-top: var(--sv-space-4);
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-5);
 }
 
 .generatorHint {
-  margin: var(--sv-space-4) 0 0;
+  margin: 0 0 var(--sv-space-2);
   font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
   line-height: 1.5;
 }
 
@@ -209,19 +260,23 @@
 }
 
 .keygenTriggerBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sv-space-2);
   background: none;
-  border: 1px dashed var(--sv-color-border);
-  border-radius: var(--sv-radius-sm);
-  padding: var(--sv-space-1) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  padding: var(--sv-space-2) var(--sv-space-3);
   font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-secondary);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .keygenTriggerBtn:hover:not(:disabled) {
+  background: var(--sv-color-surface-sunken);
   border-color: var(--sv-color-border-strong);
-  color: var(--sv-color-text-primary);
 }
 
 .keygenTriggerBtn:disabled {

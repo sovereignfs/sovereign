@@ -136,6 +136,27 @@ export async function deleteUserAction(formData: FormData): Promise<void> {
   revalidatePath('/console/users');
 }
 
+export async function cancelInviteAction(formData: FormData): Promise<void> {
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'user:manage')) {
+    throw new Error('Insufficient privileges to manage users.');
+  }
+  const email = formData.get('email') as string;
+  const res = await adminFetch(`/api/admin/invites?email=${encodeURIComponent(email)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error(`Failed to cancel invite: ${res.status}`);
+  void logActivity({
+    actorId: await actorId(),
+    actorType: 'user',
+    action: 'user.invite_cancelled',
+    visibility: 'admin',
+    summary: `Invite cancelled for ${email}`,
+    metadata: { email },
+  });
+  revalidatePath('/console/users');
+}
+
 export type InviteState =
   | { success: true; token: string; email: string }
   | { success: false; error: string };

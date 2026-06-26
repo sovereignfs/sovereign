@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition, useRef, useEffect } from 'react';
+import { Badge } from '@sovereignfs/ui';
 import {
   checkPluginManifestAction,
   installPluginAction,
@@ -11,19 +12,18 @@ import styles from '../console.module.css';
 
 /** Two-step "Add a plugin" panel: validate manifest → confirm install. */
 export function PluginInstallPanel() {
-  const [open, setOpen] = useState(false);
   const [repoUrl, setRepoUrl] = useState('');
   const [preview, setPreview] = useState<ManifestPreview | null>(null);
+  const [installed, setInstalled] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
-  const [installMsg, setInstallMsg] = useState<string | null>(null);
   const [installError, setInstallError] = useState<string | null>(null);
   const [isChecking, startChecking] = useTransition();
   const [isInstalling, startInstalling] = useTransition();
 
   function resetState() {
     setPreview(null);
+    setInstalled(false);
     setCheckError(null);
-    setInstallMsg(null);
     setInstallError(null);
   }
 
@@ -43,14 +43,11 @@ export function PluginInstallPanel() {
 
   function handleInstall() {
     if (!preview) return;
-    setInstallMsg(null);
     setInstallError(null);
     startInstalling(async () => {
       const result = await installPluginAction(repoUrl);
       if (result.ok) {
-        setInstallMsg(result.message);
-        setRepoUrl('');
-        setPreview(null);
+        setInstalled(true);
       } else {
         setInstallError(result.error);
       }
@@ -59,62 +56,87 @@ export function PluginInstallPanel() {
 
   return (
     <div className={styles.installPanel}>
-      <button
-        type="button"
-        className={styles.installPanelToggle}
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-      >
-        <span>Add a plugin</span>
-        <span className={styles.installPanelCaret}>{open ? '▲' : '▼'}</span>
-      </button>
+      <div className={styles.installPanelBody}>
+        <p className={styles.installPanelTitle}>Add a plugin</p>
 
-      {open && (
-        <div className={styles.installPanelBody}>
-          <div className={styles.installPanelRow}>
-            <label htmlFor="plugin-repo-url" className={styles.installPanelLabel}>
-              Git repository URL
-            </label>
-            <div className={styles.installPanelInputRow}>
-              <input
-                id="plugin-repo-url"
-                type="url"
-                value={repoUrl}
-                onChange={(e) => handleUrlChange(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !isChecking && repoUrl && handleCheck()}
-                placeholder="https://github.com/example/my-plugin"
-                className={styles.input}
-                disabled={isInstalling}
-              />
-              <button
-                type="button"
-                className={styles.actionButton}
-                onClick={handleCheck}
-                disabled={!repoUrl.trim() || isChecking || isInstalling}
-              >
-                {isChecking ? 'Checking…' : 'Check'}
-              </button>
-            </div>
+        <div className={styles.installPanelRow}>
+          <label htmlFor="plugin-repo-url" className={styles.installPanelLabel}>
+            Git repository URL
+          </label>
+          <div className={styles.installPanelInputRow}>
+            <input
+              id="plugin-repo-url"
+              type="url"
+              value={repoUrl}
+              onChange={(e) => handleUrlChange(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !isChecking && repoUrl && handleCheck()}
+              placeholder="https://github.com/sovereignfs/sovereign-plugin-template.git"
+              className={styles.input}
+              disabled={isInstalling}
+            />
+            <button
+              type="button"
+              className={styles.actionButton}
+              onClick={handleCheck}
+              disabled={!repoUrl.trim() || isChecking || isInstalling}
+            >
+              {isChecking ? 'Checking…' : 'Check'}
+            </button>
           </div>
+        </div>
 
-          {checkError && <p className={styles.feedbackError}>{checkError}</p>}
+        {checkError && (
+          <div className={styles.feedbackError}>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              style={{ flexShrink: 0 }}
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            {checkError}
+          </div>
+        )}
 
-          {preview && (
-            <div className={styles.installPreview}>
-              <div className={styles.installPreviewInfo}>
-                <span className={styles.installPreviewName}>{preview.name}</span>
-                <span className={styles.installPreviewMeta}>
-                  {preview.id} · v{preview.version} ·{' '}
-                  <span
-                    className={preview.type === 'platform' ? styles.badgeAdmin : styles.badgeUser}
-                  >
-                    {preview.type}
-                  </span>
-                </span>
-                {preview.description && (
-                  <span className={styles.installPreviewDesc}>{preview.description}</span>
-                )}
-              </div>
+        {preview && (
+          <div className={styles.installPreview}>
+            <div className={styles.installPreviewInfo}>
+              <span className={styles.installPreviewName}>{preview.name}</span>
+              <span className={styles.installPreviewMeta}>
+                {preview.id} · v{preview.version} · <Badge variant="mono">{preview.type}</Badge>
+              </span>
+              {preview.description && (
+                <span className={styles.installPreviewDesc}>{preview.description}</span>
+              )}
+            </div>
+            {installed ? (
+              <span className={styles.installSuccess}>
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+                Installed
+              </span>
+            ) : (
               <button
                 type="button"
                 className={styles.actionButton}
@@ -123,13 +145,12 @@ export function PluginInstallPanel() {
               >
                 {isInstalling ? 'Installing…' : 'Install'}
               </button>
-            </div>
-          )}
+            )}
+          </div>
+        )}
 
-          {installMsg && <p className={styles.feedbackSuccess}>{installMsg}</p>}
-          {installError && <p className={styles.feedbackError}>{installError}</p>}
-        </div>
-      )}
+        {installError && <div className={styles.feedbackError}>{installError}</div>}
+      </div>
     </div>
   );
 }
@@ -177,11 +198,26 @@ export function RemovePluginButton({ pluginId, pluginName }: RemovePluginButtonP
     <>
       <button
         type="button"
-        className={styles.deactivateButton}
+        className={styles.iconBtnDanger}
         onClick={() => setOpen(true)}
         title={`Remove ${pluginName}`}
       >
-        Remove
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="3 6 5 6 21 6" />
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+          <path d="M10 11v6M14 11v6" />
+          <path d="M9 6V4h6v2" />
+        </svg>
       </button>
 
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}

@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { toggleActiveAction, resetMfaAction, deleteUserAction } from './actions';
+import {
+  toggleActiveAction,
+  resetMfaAction,
+  deleteUserAction,
+  cancelInviteAction,
+} from './actions';
 import styles from '../console.module.css';
 
 interface ConfirmDialogProps {
@@ -69,8 +74,26 @@ export function DeactivateButton({ userId, name }: { userId: string; name: strin
 
   return (
     <>
-      <button type="button" className={styles.deactivateButton} onClick={() => setOpen(true)}>
-        Deactivate
+      <button
+        type="button"
+        className={styles.iconBtn}
+        title="Deactivate user"
+        onClick={() => setOpen(true)}
+      >
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+        </svg>
       </button>
       <ConfirmDialog
         open={open}
@@ -97,8 +120,28 @@ export function DeleteButton({ userId, name }: { userId: string; name: string })
 
   return (
     <>
-      <button type="button" className={styles.dangerButton} onClick={() => setOpen(true)}>
-        Delete…
+      <button
+        type="button"
+        className={styles.iconBtnDanger}
+        title="Delete user"
+        onClick={() => setOpen(true)}
+      >
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="3 6 5 6 21 6" />
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+          <path d="M10 11v6M14 11v6" />
+          <path d="M9 6V4h6v2" />
+        </svg>
       </button>
       <ConfirmDialog
         open={open}
@@ -126,11 +169,24 @@ export function ResetMfaButton({ userId, name }: { userId: string; name: string 
     <>
       <button
         type="button"
-        className={styles.resetMfaButton}
-        title="Remove all TOTP secrets and passkeys so the user can sign in without MFA"
+        className={styles.iconBtn}
+        title="Reset MFA — removes all TOTP secrets and passkeys"
         onClick={() => setOpen(true)}
       >
-        Reset MFA
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+        </svg>
       </button>
       <ConfirmDialog
         open={open}
@@ -145,6 +201,53 @@ export function ResetMfaButton({ userId, name }: { userId: string; name: string 
       />
       <form ref={formRef} action={resetMfaAction} style={{ display: 'none' }}>
         <input type="hidden" name="userId" value={userId} />
+      </form>
+    </>
+  );
+}
+
+export function CancelInviteButton({ email }: { email: string }) {
+  const [open, setOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  return (
+    <>
+      <button
+        type="button"
+        className={styles.iconBtnDanger}
+        title="Cancel invite"
+        onClick={() => setOpen(true)}
+      >
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="3 6 5 6 21 6" />
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+          <path d="M10 11v6M14 11v6" />
+          <path d="M9 6V4h6v2" />
+        </svg>
+      </button>
+      <ConfirmDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Cancel invite"
+        message={`Cancel the pending invite for ${email}? They will no longer be able to use this invite link.`}
+        confirmLabel="Cancel invite"
+        onConfirm={() => {
+          setOpen(false);
+          formRef.current?.requestSubmit();
+        }}
+      />
+      <form ref={formRef} action={cancelInviteAction} style={{ display: 'none' }}>
+        <input type="hidden" name="email" value={email} />
       </form>
     </>
   );

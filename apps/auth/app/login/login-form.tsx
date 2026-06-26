@@ -51,7 +51,10 @@ export function LoginForm({
     const result = await (authClient.signIn as any).passkey();
     setPasskeyLoading(false);
     if (result?.error) {
-      setError(result.error.message ?? 'Passkey sign-in failed.');
+      const msg = result.error.message ?? '';
+      const isCancelled =
+        msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('abort');
+      setError(isCancelled ? 'Passkey sign-in was cancelled.' : msg || 'Passkey sign-in failed.');
     } else if (result?.data) {
       window.location.href = runtimeUrl;
     }
@@ -66,13 +69,11 @@ export function LoginForm({
         <h1 className={styles.title}>Sign in to Sovereign</h1>
         {signedOut ? (
           <div className={styles.notice} role="status">
-            <div className={styles.noticeDot} aria-hidden="true" />
             <p className={styles.noticeText}>You&rsquo;ve been signed out.</p>
           </div>
         ) : null}
         {accountDeleted ? (
           <div className={styles.notice} role="status">
-            <div className={styles.noticeDot} aria-hidden="true" />
             <p className={styles.noticeText}>Your account has been deleted.</p>
           </div>
         ) : null}

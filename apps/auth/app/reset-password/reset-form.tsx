@@ -70,7 +70,6 @@ export function ResetForm({ instanceInitial = 'S' }: { instanceInitial?: string 
           </div>
           <h1 className={styles.title}>Password updated</h1>
           <div className={styles.notice} role="status">
-            <div className={styles.noticeDot} aria-hidden="true" />
             <p className={styles.noticeText}>
               Your password has been updated. You can now sign in with your new password.
             </p>

@@ -47,7 +47,9 @@ describe('Dialog', () => {
     );
     fireEvent.click(screen.getByRole('dialog')); // panel — should not close
     expect(onClose).not.toHaveBeenCalled();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Close' })[0]);
+    const closeButtons = screen.getAllByRole('button', { name: 'Close' });
+    expect(closeButtons.length).toBeGreaterThan(0);
+    fireEvent.click(closeButtons[0] as HTMLElement);
     expect(onClose).toHaveBeenCalledOnce();
   });
 

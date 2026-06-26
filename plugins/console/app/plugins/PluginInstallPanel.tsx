@@ -158,10 +158,17 @@ export function PluginInstallPanel() {
 interface RemovePluginButtonProps {
   pluginId: string;
   pluginName: string;
+  className?: string;
+  label?: string;
 }
 
 /** Remove button with confirm dialog and real server-side execution. */
-export function RemovePluginButton({ pluginId, pluginName }: RemovePluginButtonProps) {
+export function RemovePluginButton({
+  pluginId,
+  pluginName,
+  className,
+  label,
+}: RemovePluginButtonProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -198,26 +205,28 @@ export function RemovePluginButton({ pluginId, pluginName }: RemovePluginButtonP
     <>
       <button
         type="button"
-        className={styles.iconBtnDanger}
+        className={className ?? styles.iconBtnDanger}
         onClick={() => setOpen(true)}
         title={`Remove ${pluginName}`}
       >
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <polyline points="3 6 5 6 21 6" />
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-          <path d="M10 11v6M14 11v6" />
-          <path d="M9 6V4h6v2" />
-        </svg>
+        {label ?? (
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            <path d="M10 11v6M14 11v6" />
+            <path d="M9 6V4h6v2" />
+          </svg>
+        )}
       </button>
 
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}

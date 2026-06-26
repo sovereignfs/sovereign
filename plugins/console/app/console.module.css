@@ -827,10 +827,10 @@
 
 .installPanel {
   margin-bottom: var(--sv-space-5);
-  border: 1px solid var(--sv-color-border);
+  border: 1px solid var(--sv-color-border-strong);
   border-radius: var(--sv-radius-lg);
   overflow: hidden;
-  background-color: var(--sv-color-surface);
+  background-color: var(--sv-color-surface-sunken);
 }
 
 .installPanelToggle {

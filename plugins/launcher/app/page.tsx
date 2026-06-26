@@ -44,7 +44,7 @@ export default async function LauncherPage() {
         <div className={styles.titleRow}>
           <div>
             <h1 className={styles.title}>Home</h1>
-            <p className={styles.subtitle}>Your installed plugins and tools.</p>
+            <p className={styles.subtitle}>Your installed apps and tools.</p>
           </div>
         </div>
         <div className={styles.empty}>

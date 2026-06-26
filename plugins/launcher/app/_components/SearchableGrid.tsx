@@ -21,9 +21,9 @@ export function SearchableGrid({ plugins, total }: { plugins: PluginTileData[]; 
       <div className={styles.titleRow}>
         <div>
           <h1 className={styles.title}>Home</h1>
-          <p className={styles.subtitle}>Your installed plugins and tools.</p>
+          <p className={styles.subtitle}>Your installed apps and tools.</p>
         </div>
-        <label className={styles.searchWrap} aria-label="Search plugins">
+        <label className={styles.searchWrap} aria-label="Search apps">
           <svg className={styles.searchIcon} viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5" />
             <path d="M10 10l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -31,7 +31,7 @@ export function SearchableGrid({ plugins, total }: { plugins: PluginTileData[]; 
           <input
             type="search"
             className={styles.searchInput}
-            placeholder="Search plugins"
+            placeholder="Search apps"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -39,7 +39,7 @@ export function SearchableGrid({ plugins, total }: { plugins: PluginTileData[]; 
       </div>
 
       <div className={styles.sectionRow}>
-        <span className={styles.sectionLabel}>PLUGINS</span>
+        <span className={styles.sectionLabel}>APPS</span>
         <span className={styles.sectionCount}>{total} installed</span>
       </div>
 

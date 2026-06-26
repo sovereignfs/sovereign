@@ -111,12 +111,12 @@
   width: 36px;
   height: 36px;
   border-radius: var(--sv-radius-full);
-  background-color: var(--sv-color-surface-sunken);
-  border: 1px solid var(--sv-color-border-strong);
+  background-color: var(--sv-color-accent);
+  border: 1px solid var(--sv-color-accent);
   overflow: hidden;
   font-size: var(--sv-font-size-xs);
   font-weight: var(--sv-font-weight-semibold);
-  color: var(--sv-color-text-muted);
+  color: var(--sv-color-text-on-accent);
   text-decoration: none;
   cursor: pointer;
 }

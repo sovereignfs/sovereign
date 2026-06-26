@@ -28,7 +28,10 @@ export const metadata: Metadata = {
   manifest: '/api/manifest',
   appleWebApp: { capable: true, title: 'Sovereign', statusBarStyle: 'black-translucent' },
   icons: {
-    icon: '/icons/icon-192.png',
+    icon: [
+      { url: '/icons/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
     apple: '/icons/apple-touch-icon.png',
   },
 };

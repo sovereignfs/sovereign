@@ -17,6 +17,7 @@ export function AccountMenu({
   avatar,
   triggerClassName,
   placement,
+  showConsole,
   userName,
   userEmail,
   userImage,
@@ -24,6 +25,7 @@ export function AccountMenu({
   avatar: ReactNode;
   triggerClassName?: string;
   placement: 'sidebar' | 'header';
+  showConsole?: boolean;
   userName?: string;
   userEmail?: string;
   userImage?: string;
@@ -105,6 +107,17 @@ export function AccountMenu({
             <Icon name="sliders-horizontal" size="sm" aria-hidden />
             Preferences
           </Link>
+          {showConsole && (
+            <Link
+              href="/console"
+              role="menuitem"
+              className={styles.item}
+              onClick={() => setOpen(false)}
+            >
+              <Icon name="terminal" size="sm" aria-hidden />
+              Console
+            </Link>
+          )}
           <hr className={styles.divider} />
           <form action="/api/account/logout" method="post">
             <button

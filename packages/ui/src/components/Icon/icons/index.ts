@@ -27,6 +27,7 @@ import { Grid2x2Icon } from './grid-2x2';
 import { InfoIcon } from './info';
 import { AlertTriangleIcon } from './alert-triangle';
 import { SlidersHorizontalIcon } from './sliders-horizontal';
+import { TerminalIcon } from './terminal';
 
 export type IconName =
   | 'house'
@@ -55,7 +56,8 @@ export type IconName =
   | 'grid-2x2'
   | 'info'
   | 'alert-triangle'
-  | 'sliders-horizontal';
+  | 'sliders-horizontal'
+  | 'terminal';
 
 export type IconComponent = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
@@ -87,6 +89,7 @@ export const ICONS: Record<IconName, IconComponent> = {
   info: InfoIcon,
   'alert-triangle': AlertTriangleIcon,
   'sliders-horizontal': SlidersHorizontalIcon,
+  terminal: TerminalIcon,
 };
 
 export { HouseIcon } from './house';
@@ -116,3 +119,4 @@ export { Grid2x2Icon } from './grid-2x2';
 export { InfoIcon } from './info';
 export { AlertTriangleIcon } from './alert-triangle';
 export { SlidersHorizontalIcon } from './sliders-horizontal';
+export { TerminalIcon } from './terminal';

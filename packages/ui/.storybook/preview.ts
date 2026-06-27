@@ -2,6 +2,7 @@ import type { Preview } from '@storybook/react-vite';
 import { withThemeByDataAttribute } from '@storybook/addon-themes';
 import '../src/tokens/primitives.css';
 import '../src/tokens/semantic.css';
+import './preview-globals.css';
 
 const preview: Preview = {
   decorators: [

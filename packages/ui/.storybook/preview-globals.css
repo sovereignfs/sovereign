@@ -1,0 +1,9 @@
+/* Apply the design system's base typography to the Storybook canvas,
+   matching what the runtime shell sets globally in production. */
+body {
+  font-family: var(--sv-font-family);
+  color: var(--sv-color-text-primary);
+  background: var(--sv-color-surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

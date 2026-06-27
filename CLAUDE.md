@@ -109,9 +109,9 @@ they are authoritative over assumptions:
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
   to `1.0.0` marks the public release.** The current version is **`0.9.3`**
   (phases 0.3–0.9 tasks complete, patch .3 from hotfixes). The
-    downgrade guard, plugin compatibility gates (RFC 0024), and `/api/admin/health`
-    all read this value; see `docs/upgrade.md` for the runtime version map and
-    v1.0.0 release checklist.
+  downgrade guard, plugin compatibility gates (RFC 0024), and `/api/admin/health`
+  all read this value; see `docs/upgrade.md` for the runtime version map and
+  v1.0.0 release checklist.
 
   **Per-package versions are independent of the platform version.** Internal,
   private packages (`@sovereignfs/db`, `runtime`, `auth`, `manifest`, `mailer`,

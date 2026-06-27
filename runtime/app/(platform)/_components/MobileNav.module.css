@@ -99,11 +99,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--sv-space-3) var(--sv-space-4) var(--sv-space-4);
+  padding: var(--sv-space-3) var(--sv-space-4) var(--sv-space-2);
 }
 
 .drawerTitle {
-  font-size: var(--sv-font-size-lg);
+  font-size: var(--sv-font-size-md);
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);
 }
@@ -166,9 +166,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 72px;
-  height: 72px;
-  border-radius: 18px;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
   background: var(--sv-color-surface-sunken);
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-semibold);
@@ -177,8 +177,8 @@
 }
 
 .drawerGridIconImg {
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
 }
 

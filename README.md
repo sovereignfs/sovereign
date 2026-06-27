@@ -1,6 +1,7 @@
 # Sovereign
 
 [![CI](https://github.com/sovereignfs/sovereign/actions/workflows/ci.yml/badge.svg)](https://github.com/sovereignfs/sovereign/actions/workflows/ci.yml)
+[![Storybook](https://img.shields.io/badge/Storybook-Design%20System-ff4785?logo=storybook&logoColor=white)](https://sovereignfs.github.io/storybook/)
 
 Sovereign is a modular, self-hostable workspace runtime for running personal or
 organisational software under one roof. It provides the shared platform pieces
@@ -23,7 +24,9 @@ owned by the person or organisation running it.
 - **Privacy-first ownership** — run your own instance, control your own data,
   and keep the deployment scoped to the people who use it.
 - **Developer-ready platform** — an installable PWA, typed SDK, and shared design
-  system for building plugins that fit cleanly into the runtime.
+  system for building plugins that fit cleanly into the runtime. Browse the live
+  component and token reference at
+  [sovereignfs.github.io/storybook](https://sovereignfs.github.io/storybook/).
 
 ## Quick start
 
@@ -85,7 +88,8 @@ bin/sv            the sv CLI
 - [Security](docs/security.md) — threat model, the no-telemetry guarantee,
   security headers/CSP, and a self-hoster hardening checklist.
 - [Design system](docs/design-system.md) — shared UI tokens, components, and
-  conventions for platform and plugin interfaces.
+  conventions for platform and plugin interfaces. Live component reference:
+  [sovereignfs.github.io/storybook](https://sovereignfs.github.io/storybook/).
 - [Upgrade guide](docs/upgrade.md) — versioned changes, migration notes, and
   compatibility guidance.
 - [Troubleshooting](docs/troubleshooting.md) — known dev-server quirks, 404

@@ -123,6 +123,19 @@ they are authoritative over assumptions:
   **`@sovereignfs/ui`** follow their own public semver per NFR-04 and are
   **exempt** from the platform's "stay under v1" rule.
 
+## Naming conventions
+
+**"Plugin" is the architectural term; "app" is the presentational term.**
+
+| Context                                                    | Term to use | Examples                                                               |
+| ---------------------------------------------------------- | ----------- | ---------------------------------------------------------------------- |
+| Code, types, APIs, DB schema, manifests, CLI               | **plugin**  | `PluginEntry`, `plugin.id`, `routePrefix`, `sv plugin add`             |
+| User-facing UI strings, labels, placeholders, empty states | **app**     | "Search apps…", "No apps found", "App navigation", "Apps" drawer title |
+| Documentation for plugin _developers_                      | **plugin**  | Plugin development guide, SDK docs, manifest reference                 |
+| Documentation or UI visible to _end users_                 | **app**     | Launcher tiles, search overlay, mobile footer aria-labels              |
+
+This split is intentional: internally "plugin" is the precise technical term for an installable module; externally "app" is what users understand. Never use "plugin" in a string the end user reads — it is a developer concept. This applies to all future shell chrome, Console user-facing copy, and any in-app help text.
+
 ## Code quality
 
 Established in Task 0.3.3. Every package and PR must comply — no exceptions.

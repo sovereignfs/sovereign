@@ -36,7 +36,7 @@ export function MobileNav({
 
   return (
     <>
-      <nav className={styles.footer} aria-label="Plugin navigation">
+      <nav className={styles.footer} aria-label="App navigation">
         <Link
           href="/"
           className={`${styles.navItem} ${isHome ? styles.navItemActive : ''}`}
@@ -72,7 +72,7 @@ export function MobileNav({
 
       <MobileSearch open={searchOpen} onClose={() => setSearchOpen(false)} plugins={plugins} />
 
-      <Drawer open={open} onClose={() => setOpen(false)} aria-label="Plugin navigation">
+      <Drawer open={open} onClose={() => setOpen(false)} aria-label="App navigation">
         <div className={styles.handle} aria-hidden="true" />
         <div className={styles.drawerHeader}>
           <span className={styles.drawerTitle}>Apps</span>

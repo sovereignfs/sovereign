@@ -67,7 +67,7 @@ export function MobileSearch({
   const results = q ? plugins.filter((p) => p.name.toLowerCase().includes(q)) : plugins;
 
   return (
-    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Search plugins">
+    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Search apps">
       <div className={styles.header}>
         <button
           type="button"
@@ -84,17 +84,17 @@ export function MobileSearch({
         <input
           ref={inputRef}
           type="search"
-          placeholder="Search plugins…"
+          placeholder="Search apps…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label="Search plugins"
+          aria-label="Search apps"
           className={styles.searchInput}
         />
       </div>
 
       <div className={styles.results}>
         {results.length === 0 ? (
-          <p className={styles.empty}>No plugins found</p>
+          <p className={styles.empty}>No apps found</p>
         ) : (
           <ul className={styles.resultList}>
             {results.map((plugin) => (

@@ -23,9 +23,9 @@ test.describe('Platform shell navigation — golden paths', () => {
     await trigger.click();
     // Menu items must be visible after opening.
     await expect(page.locator('[role="menuitem"]:has-text("Account")')).toBeVisible();
-    await expect(page.locator('[role="menuitem"]:has-text("Log out")')).toBeVisible();
+    await expect(page.locator('[role="menuitem"]:has-text("Sign out")')).toBeVisible();
     // Escape should close the menu.
     await page.keyboard.press('Escape');
-    await expect(page.locator('[role="menuitem"]:has-text("Log out")')).not.toBeVisible();
+    await expect(page.locator('[role="menuitem"]:has-text("Sign out")')).not.toBeVisible();
   });
 });

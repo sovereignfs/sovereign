@@ -14,15 +14,16 @@ test.describe('Console plugin — golden paths', () => {
 
   test('plugin list page shows installed plugins', async ({ adminPage: page }) => {
     await page.goto('/console/plugins');
-    await expect(page.getByRole('heading', { name: 'Plugins' })).toBeVisible();
-    // At least one table row (a plugin entry) must be present.
+    // The plugins page has no dedicated heading; the install panel and table identify it.
+    await expect(page.getByText('Add a plugin')).toBeVisible();
     await expect(page.locator('tbody tr').first()).toBeVisible();
   });
 
   test('user list page shows both seeded test users', async ({ adminPage: page }) => {
     await page.goto('/console/users');
     await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
-    await expect(page.getByText('admin@sovereign.local')).toBeVisible();
-    await expect(page.getByText('user@sovereign.local')).toBeVisible();
+    // Scope to the table to avoid matching the mobile card list or any open dialogs.
+    await expect(page.getByRole('table').getByText('admin@sovereign.local').first()).toBeVisible();
+    await expect(page.getByRole('table').getByText('user@sovereign.local').first()).toBeVisible();
   });
 });

@@ -6,7 +6,9 @@ export default defineConfig({
   testDir: './__tests__/e2e',
   testMatch: '**/*.spec.ts',
   outputDir: './test-results',
-  reporter: isCI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  reporter: isCI
+    ? [['list'], ['html', { open: 'never' }]]
+    : [['list'], ['html', { open: 'on-failure' }]],
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
@@ -24,6 +26,9 @@ export default defineConfig({
       url: 'http://localhost:3001/login',
       reuseExistingServer: !isCI,
       timeout: 120_000,
+      // Suppress Next.js dev-server output from the terminal; errors surface via test failures.
+      stdout: 'ignore',
+      stderr: 'ignore',
     },
     {
       // Runtime — polled at /api/health (public liveness probe, no session required).
@@ -32,6 +37,8 @@ export default defineConfig({
       url: 'http://localhost:3000/api/health',
       reuseExistingServer: !isCI,
       timeout: 180_000,
+      stdout: 'ignore',
+      stderr: 'ignore',
     },
   ],
 });

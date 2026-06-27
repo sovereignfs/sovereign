@@ -30,19 +30,20 @@ test.describe('Account plugin — golden paths', () => {
 
   test('theme can be toggled to Dark and applies to the document', async ({ adminPage: page }) => {
     await page.goto('/account/preferences');
-    const group = page.locator('div[role="group"][aria-label="Appearance"]');
+    // SegmentedControl renders role="radiogroup" with role="radio" children.
+    const group = page.locator('div[role="radiogroup"][aria-label="Appearance"]');
     await expect(group).toBeVisible();
 
     const originalTheme = await page.evaluate(
       () => (document.documentElement as HTMLElement).dataset.theme ?? 'system',
     );
 
-    await group.getByRole('button', { name: 'Dark' }).click();
+    await group.getByRole('radio', { name: 'Dark' }).click();
     // ThemeControl applies the attribute immediately before the server action round-trip.
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
     // Restore to the original theme.
     const restoreLabel = originalTheme === 'light' ? 'Light' : 'System';
-    await group.getByRole('button', { name: restoreLabel }).click();
+    await group.getByRole('radio', { name: restoreLabel }).click();
   });
 });

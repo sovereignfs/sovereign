@@ -100,7 +100,10 @@ test.describe('Password reset — page rendering', () => {
     await page.fill('#reset-confirm', 'newpassword123');
     await page.click('button[type="submit"]');
     // better-auth returns INVALID_TOKEN; the form surfaces it as human-readable text.
-    await expect(page.locator('form p')).toContainText(/invalid|expired/i);
+    // Use filter() to avoid strict-mode violation — the form also has a field hint <p>.
+    await expect(page.locator('form p').filter({ hasText: /invalid|expired/i })).toContainText(
+      /invalid|expired/i,
+    );
   });
 
   test('mismatched passwords show a client-side error without hitting the server', async ({
@@ -111,7 +114,9 @@ test.describe('Password reset — page rendering', () => {
     await page.fill('#reset-confirm', 'password-two');
     await page.click('button[type="submit"]');
     // Client-side guard fires before any network request.
-    await expect(page.locator('form p')).toContainText('do not match');
+    await expect(page.locator('form p').filter({ hasText: 'do not match' })).toContainText(
+      'do not match',
+    );
     // We should still be on the reset page, not a success screen.
     await expect(page.locator('h1')).toContainText('Choose a new password');
   });
@@ -173,7 +178,7 @@ test.describe('Password reset — full flow (requires Mailpit on localhost:8025)
     await page.fill('#reset-password', newPassword);
     await page.fill('#reset-confirm', newPassword);
     await page.click('button[type="submit"]');
-    await expect(page.locator('h1')).toContainText('Password reset');
+    await expect(page.locator('h1')).toContainText('Password updated');
     await expect(page.locator('[role="status"]')).toContainText('updated');
 
     // 6. Sign in with the new password and verify we land on the runtime

@@ -45,7 +45,7 @@ test.describe('Auth — golden paths', () => {
     // Open the avatar menu.
     await page.click('button[aria-label="Account"]');
     // Click the Log out form submit button.
-    await page.click('button[role="menuitem"]:has-text("Log out")');
+    await page.click('button[role="menuitem"]:has-text("Sign out")');
     // Expect redirect to auth server login page with signedout param.
     await page.waitForURL(`${AUTH_SERVER}/login**`);
     await expect(page).toHaveURL(/signedout=1/);

@@ -1002,7 +1002,7 @@ function MobilePatternsDoc() {
                     fontSize: 'var(--sv-font-size-sm)',
                   }}
                 >
-                  Search plugins…
+                  Search apps…
                 </span>
               </div>
             </div>

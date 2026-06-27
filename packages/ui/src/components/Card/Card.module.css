@@ -1,0 +1,34 @@
+.card {
+  background: var(--sv-color-surface-raised);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+  box-shadow: var(--sv-shadow-card);
+}
+
+.paddingSm {
+  padding: var(--sv-space-3);
+}
+
+.paddingMd {
+  padding: var(--sv-space-5);
+}
+
+.paddingLg {
+  padding: var(--sv-space-8);
+}
+
+.interactive {
+  cursor: pointer;
+  text-decoration: none;
+  display: block;
+  transition: border-color 0.15s ease;
+}
+
+.interactive:hover {
+  border-color: var(--sv-color-border-strong);
+}
+
+.interactive:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}

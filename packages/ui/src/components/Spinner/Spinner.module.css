@@ -1,0 +1,39 @@
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border-style: solid;
+  border-color: var(--sv-color-border);
+  border-top-color: var(--sv-color-accent);
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-play-state: paused;
+  }
+}
+
+.sm {
+  width: var(--sv-icon-size-sm);
+  height: var(--sv-icon-size-sm);
+  border-width: 2px;
+}
+
+.md {
+  width: var(--sv-icon-size-md);
+  height: var(--sv-icon-size-md);
+  border-width: 2px;
+}
+
+.lg {
+  width: var(--sv-icon-size-lg);
+  height: var(--sv-icon-size-lg);
+  border-width: 3px;
+}

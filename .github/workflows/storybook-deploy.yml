@@ -1,0 +1,39 @@
+name: Deploy Storybook
+
+# Publish the design-system Storybook to https://sovereignfs.github.io/storybook/
+# whenever a change to packages/ui lands on main.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/ui/**'
+
+concurrency:
+  group: storybook-deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build & deploy Storybook
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+
+      - name: Build Storybook
+        run: pnpm build-storybook
+        working-directory: packages/ui
+
+      - name: Deploy to sovereignfs/storybook
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.STORYBOOK_DEPLOY_TOKEN }}
+          external_repository: sovereignfs/storybook
+          publish_branch: gh-pages
+          publish_dir: packages/ui/storybook-static
+          commit_message: 'deploy: storybook from ${{ github.sha }}'
+          force_orphan: false

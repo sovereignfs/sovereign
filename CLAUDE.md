@@ -258,6 +258,27 @@ import { Button, Card, Input, Badge } from '@sovereignfs/ui';
 - Dark mode and tenant theming work by swapping semantic token values at `:root`;
   no component changes required.
 
+### Storybook hygiene (enforced per-PR)
+
+`packages/ui` is the public design system contract — Storybook is its living
+documentation. Whenever a task touches anything under `packages/ui/src/`:
+
+- **New component** → add a story file `packages/ui/src/stories/<Name>.stories.tsx`
+  covering at least the default state and one variant; add the component to the
+  **Component Gallery** section of `DesignSystemOverview.stories.tsx`.
+- **New or renamed token** → add or update the token in `TokenGallery.stories.tsx`
+  _and_ in the relevant color/scale section of `DesignSystemOverview.stories.tsx`.
+- **Component API change** → update the matching story's args/controls to reflect
+  the new props; update the import snippet in `DesignSystemOverview.stories.tsx`
+  if the public API visible there changed.
+- **After any of the above** → run `pnpm --filter @sovereignfs/ui typecheck` to
+  verify the stories are type-correct. The CI `storybook-build` job enforces a
+  clean build on every PR.
+
+The rule is: the story must reflect reality, not the state the component was in
+when the story was first written. Stale stories are silent lies in documentation
+that plugin developers will trust.
+
 ## Native mobile app (post-v1 plan)
 
 Mobile is out of scope for v1 but the approach is decided — do not treat it as

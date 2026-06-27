@@ -125,20 +125,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--sv-radius-lg);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--sv-radius-md);
   background: var(--sv-color-surface-sunken);
   flex-shrink: 0;
   overflow: hidden;
-  font-size: var(--sv-font-size-sm);
+  font-size: var(--sv-font-size-caption, 12px);
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-muted);
 }
 
 .pluginIconImg {
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
 }
 
@@ -148,7 +148,7 @@
 
 .pluginName {
   flex: 1;
-  font-size: var(--sv-font-size-md);
+  font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-medium);
 }
 

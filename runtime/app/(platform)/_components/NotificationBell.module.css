@@ -43,6 +43,11 @@
   background: var(--sv-color-border);
 }
 
+.triggerSidebarActive {
+  background: var(--sv-color-border) !important;
+  color: var(--sv-color-text-primary);
+}
+
 .trigger:focus-visible {
   outline: 2px solid var(--sv-color-accent);
   outline-offset: 2px;

@@ -297,7 +297,7 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
       <button
         ref={triggerRef}
         type="button"
-        className={`${styles.trigger} ${placement === 'sidebar' ? styles.triggerSidebar : ''}`}
+        className={`${styles.trigger} ${placement === 'sidebar' ? styles.triggerSidebar : ''} ${placement === 'sidebar' && open ? styles.triggerSidebarActive : ''}`}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
         aria-expanded={open}
         aria-haspopup="dialog"

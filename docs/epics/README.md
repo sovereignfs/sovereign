@@ -24,5 +24,6 @@ Full architecture and requirements: [sovereign-proposal-plan-srs.md](../sovereig
 | 13  | [Plugin — Console](plugin-console.md)         | ✅ Complete    | Admin console: user management, plugin management, settings, health                 |
 | 14  | [Plugin — Accounts](plugin-accounts.md)       | ✅ Complete    | Per-user profile, security, preferences, data portability, activity                 |
 | 15  | [Plugin — Launcher](plugin-launcher.md)       | ✅ Complete    | Home screen plugin grid — default root plugin                                       |
+| 16  | [Docs Site & Landing Page](docs.md)           | ⏳ In Progress | VitePress site from docs/ + project landing page at sovereignfs.github.io           |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned_

@@ -153,3 +153,5 @@ once prioritised.
 | —       | Per-plugin database dialect selection (RFC 0036)                      | 📋     | [3.15](epics/plugins-runtime.md#315--per-plugin-database-dialect-selection-rfc-0036)             |
 | —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035)    | 📋     | [1.8](epics/users-auth.md#18--progressive-user-verification-phase-1--infrastructure-rfc-0035)    |
 | —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035) | 📋     | [1.9](epics/users-auth.md#19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035) |
+| —       | VitePress docs site scaffold (RFC 0037)                               | 📋     | [16.1](epics/docs.md#161--appsdocs--vitepress-workspace-scaffold)                                |
+| —       | Landing home page (RFC 0037)                                          | 📋     | [16.2](epics/docs.md#162--docsindexmd--landing-home-page)                                        |

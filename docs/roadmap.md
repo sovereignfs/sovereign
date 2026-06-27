@@ -110,7 +110,7 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 
 ---
 
-### Phase v0.9 — Pre-release Hardening
+### Phase v0.9+ — Pre-release Hardening
 
 | Version | Task                                                                      | Status | Epic task                                                                                                                  |
 | ------- | ------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------- |

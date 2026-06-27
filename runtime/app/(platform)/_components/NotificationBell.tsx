@@ -297,7 +297,7 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
       <button
         ref={triggerRef}
         type="button"
-        className={`${styles.trigger} ${placement === 'sidebar' ? styles.triggerSidebar : ''} ${placement === 'sidebar' && open ? styles.triggerSidebarActive : ''}`}
+        className={`${styles.trigger} ${placement === 'sidebar' ? styles.triggerSidebar : ''} ${open ? (placement === 'sidebar' ? styles.triggerSidebarActive : styles.triggerActive) : ''}`}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
         aria-expanded={open}
         aria-haspopup="dialog"
@@ -316,8 +316,8 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          width="20"
-          height="20"
+          width="24"
+          height="24"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"

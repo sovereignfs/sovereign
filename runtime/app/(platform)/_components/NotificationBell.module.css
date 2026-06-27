@@ -23,6 +23,11 @@
   color: var(--sv-color-text-primary);
 }
 
+.triggerActive {
+  background: var(--sv-color-border);
+  color: var(--sv-color-text-primary);
+}
+
 /* Mobile header: match the avatar size */
 @media (max-width: 768px) {
   .trigger:not(.triggerSidebar) {

@@ -1,7 +1,16 @@
 {
   "name": "@sovereignfs/create-plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Scaffold a new Sovereign plugin — run via `npm create @sovereignfs/plugin`",
+  "keywords": [
+    "sovereign",
+    "plugin",
+    "scaffold",
+    "create",
+    "cli",
+    "template",
+    "self-hosted"
+  ],
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "bin": {

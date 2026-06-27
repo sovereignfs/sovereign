@@ -22,6 +22,8 @@
     "test:unit": "vitest run --reporter=verbose",
     "test:integration": "vitest run __tests__/integration --passWithNoTests",
     "test:e2e": "playwright test",
+    "test:all": "vitest run && vitest run __tests__/integration --passWithNoTests && playwright test",
+    "kill-port": "bash -c 'for port in 3000 3001; do pid=$(lsof -nP -iTCP:$port -sTCP:LISTEN 2>/dev/null | grep LISTEN | awk \"{print \\$2}\" | head -1); if [ -n \"$pid\" ]; then kill -9 $pid && echo \"Port $port freed (PID $pid)\"; else echo \"Port $port is already free\"; fi; done'",
     "generate": "tsx scripts/generate-registry.ts",
     "generate:icons": "tsx scripts/generate-icons.ts",
     "install:plugins": "tsx scripts/install-plugins.ts",

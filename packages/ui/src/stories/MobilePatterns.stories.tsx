@@ -487,6 +487,433 @@ function MobilePatternsDoc() {
         </div>
       </section>
 
+      {/* ── Shell chrome on mobile ── */}
+      <section style={{ marginBottom: 'var(--sv-space-10)' }}>
+        <SectionHeader
+          title="Shell chrome on mobile"
+          subtitle="What the runtime shell renders on your behalf at ≤ 768 px. Plugins only own the content area — everything else is provided."
+        />
+
+        {/* Anatomy diagram */}
+        <div
+          style={{
+            border: '1px solid var(--sv-color-border)',
+            borderRadius: 'var(--sv-radius-lg)',
+            overflow: 'hidden',
+            marginBottom: 'var(--sv-space-5)',
+            fontFamily: ff,
+            fontSize: 'var(--sv-font-size-sm)',
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              background: 'var(--sv-color-surface)',
+              borderBottom: '1px solid var(--sv-color-border)',
+              padding: 'var(--sv-space-3) var(--sv-space-4)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sv-space-2)' }}>
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 'var(--sv-radius-sm)',
+                  background: 'var(--sv-color-accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--sv-color-text-on-accent)',
+                  fontWeight: 700,
+                  fontSize: 13,
+                }}
+              >
+                S
+              </div>
+              <span style={{ fontWeight: 600, color: 'var(--sv-color-text-primary)' }}>
+                My Instance
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--sv-space-2)', alignItems: 'center' }}>
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 'var(--sv-radius-full)',
+                  background: 'var(--sv-color-surface-sunken)',
+                  border: '1px solid var(--sv-color-border)',
+                }}
+              />
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 'var(--sv-radius-full)',
+                  background: 'var(--sv-color-accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--sv-color-text-on-accent)',
+                  fontSize: 11,
+                  fontWeight: 700,
+                }}
+              >
+                JD
+              </div>
+            </div>
+          </div>
+          <div
+            style={{
+              background: 'var(--sv-color-info-surface)',
+              padding: 'var(--sv-space-2) var(--sv-space-4)',
+              fontSize: 'var(--sv-font-size-xs)',
+              color: 'var(--sv-color-info-text)',
+              fontFamily: 'var(--sv-font-family-mono)',
+            }}
+          >
+            ↑ Mobile header — 60 px, sticky · Logo · Instance name · Notification bell · Account
+            menu
+          </div>
+
+          {/* Content area */}
+          <div
+            style={{
+              background: 'var(--sv-color-surface-sunken)',
+              padding: 'var(--sv-space-6) var(--sv-space-4)',
+              textAlign: 'center',
+              color: 'var(--sv-color-text-muted)',
+              minHeight: 100,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'column',
+              gap: 'var(--sv-space-1)',
+            }}
+          >
+            <span style={{ fontWeight: 600, color: 'var(--sv-color-text-primary)' }}>
+              Plugin content area
+            </span>
+            <span style={{ fontSize: 'var(--sv-font-size-xs)' }}>
+              Shell sets padding-bottom automatically — no overlap with footer
+            </span>
+          </div>
+          <div
+            style={{
+              background: 'var(--sv-color-success-surface)',
+              padding: 'var(--sv-space-2) var(--sv-space-4)',
+              fontSize: 'var(--sv-font-size-xs)',
+              color: 'var(--sv-color-success-text)',
+              fontFamily: 'var(--sv-font-family-mono)',
+            }}
+          >
+            ↓ Your plugin renders here — full width, auto scroll
+          </div>
+
+          {/* Footer */}
+          <div
+            style={{
+              background: 'var(--sv-color-surface)',
+              borderTop: '1px solid var(--sv-color-border)',
+              padding: 'var(--sv-space-3) var(--sv-space-6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-around',
+            }}
+          >
+            {[
+              { icon: '🏠', label: 'Home', note: '→ /' },
+              { icon: '⊞', label: 'Apps', note: 'opens Drawer' },
+              { icon: '🔍', label: 'Search', note: '→ /launcher' },
+            ].map(({ icon, label, note }) => (
+              <div
+                key={label}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
+              >
+                <span style={{ fontSize: 20 }}>{icon}</span>
+                <span
+                  style={{
+                    fontSize: 'var(--sv-font-size-xs)',
+                    color: 'var(--sv-color-text-primary)',
+                    fontWeight: 600,
+                  }}
+                >
+                  {label}
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.625rem',
+                    color: 'var(--sv-color-text-muted)',
+                    fontFamily: 'var(--sv-font-family-mono)',
+                  }}
+                >
+                  {note}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div
+            style={{
+              background: 'var(--sv-color-warning-surface)',
+              padding: 'var(--sv-space-2) var(--sv-space-4)',
+              fontSize: 'var(--sv-font-size-xs)',
+              color: 'var(--sv-color-warning-text)',
+              fontFamily: 'var(--sv-font-family-mono)',
+            }}
+          >
+            ↑ Mobile footer (MobileNav) — 60 px · Home · Apps · Search
+          </div>
+        </div>
+
+        {/* Header details */}
+        <Card padding="md" style={{ marginBottom: 'var(--sv-space-4)' }}>
+          <Heading level={3}>Mobile header</Heading>
+          <Body>
+            The header is 60 px tall and sticks to the top during scroll. It contains the instance
+            logo + name (left), notification bell, and the account/console menu (right). Dialogs
+            automatically slide up from below it — the shell sets{' '}
+            <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+              --sv-dialog-inset-top
+            </code>{' '}
+            so your Dialog calls need no special offset prop.
+          </Body>
+          <pre
+            style={{
+              fontFamily: 'var(--sv-font-family-mono)',
+              fontSize: '0.75rem',
+              background: 'var(--sv-color-surface-sunken)',
+              border: '1px solid var(--sv-color-border)',
+              borderRadius: 'var(--sv-radius-md)',
+              padding: 'var(--sv-space-3) var(--sv-space-4)',
+              marginTop: 'var(--sv-space-3)',
+              overflowX: 'auto',
+              color: 'var(--sv-color-text-primary)',
+              lineHeight: 1.6,
+            }}
+          >
+            {`/* Shell-exposed CSS variables (read-only for plugins) */
+--sv-shell-header-height: 60px   /* height of the sticky mobile header  */
+--sv-shell-footer-height: 60px   /* height of the sticky mobile footer  */
+--sv-dialog-inset-top: 60px      /* auto-set — Dialog slides below header */`}
+          </pre>
+        </Card>
+
+        {/* Footer details */}
+        <Card padding="md" style={{ marginBottom: 'var(--sv-space-4)' }}>
+          <Heading level={3}>Mobile footer (MobileNav)</Heading>
+          <Body>
+            A three-button bar fixed to the bottom. Plugins don't render here — the shell adds it
+            automatically. The plugin content area already has{' '}
+            <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+              padding-bottom
+            </code>{' '}
+            so content never scrolls behind the footer.
+          </Body>
+          <div
+            style={{
+              marginTop: 'var(--sv-space-3)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--sv-space-2)',
+            }}
+          >
+            {[
+              {
+                slot: 'Home',
+                icon: '🏠',
+                desc: 'Returns to "/" (launcher). Active when pathname is "/" or "/launcher".',
+              },
+              {
+                slot: 'Apps',
+                icon: '⊞',
+                desc: 'Opens the Launcher Drawer showing all installed plugins as a grid.',
+              },
+              {
+                slot: 'Search',
+                icon: '🔍',
+                desc: 'Links to "/launcher" — the full-page plugin launcher.',
+              },
+            ].map(({ slot, icon, desc }) => (
+              <div
+                key={slot}
+                style={{
+                  display: 'flex',
+                  gap: 'var(--sv-space-3)',
+                  alignItems: 'flex-start',
+                  padding: 'var(--sv-space-2) 0',
+                  borderBottom: '1px solid var(--sv-color-border)',
+                }}
+              >
+                <span style={{ fontSize: 18, flexShrink: 0, lineHeight: 1.4 }}>{icon}</span>
+                <div>
+                  <span
+                    style={{
+                      fontFamily: ff,
+                      fontWeight: 600,
+                      fontSize: 'var(--sv-font-size-sm)',
+                      color: 'var(--sv-color-text-primary)',
+                    }}
+                  >
+                    {slot}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: ff,
+                      fontSize: 'var(--sv-font-size-sm)',
+                      color: 'var(--sv-color-text-muted)',
+                      display: 'block',
+                    }}
+                  >
+                    {desc}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Launcher Drawer */}
+        <Card padding="md">
+          <Heading level={3}>Launcher Drawer</Heading>
+          <Body>
+            Opened by the Apps button in the mobile footer. Renders all installed plugins as a
+            scrollable 2-column icon grid using the{' '}
+            <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+              Drawer
+            </code>{' '}
+            component from{' '}
+            <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+              @sovereignfs/ui
+            </code>
+            . It includes a drag handle, "Apps" title, and close button. Tapping any plugin tile
+            navigates to its route and closes the drawer. Respects{' '}
+            <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+              env(safe-area-inset-bottom)
+            </code>{' '}
+            via the Drawer component.
+          </Body>
+          <div
+            style={{
+              marginTop: 'var(--sv-space-4)',
+              background: 'var(--sv-color-surface)',
+              border: '1px solid var(--sv-color-border)',
+              borderRadius: 'var(--sv-radius-lg)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                padding: 'var(--sv-space-2) 0 var(--sv-space-1)',
+              }}
+            >
+              <div
+                style={{
+                  width: 36,
+                  height: 4,
+                  background: 'var(--sv-color-border-strong)',
+                  borderRadius: 'var(--sv-radius-full)',
+                }}
+              />
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: 'var(--sv-space-3) var(--sv-space-4)',
+                borderBottom: '1px solid var(--sv-color-border)',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: ff,
+                  fontWeight: 600,
+                  fontSize: 'var(--sv-font-size-md)',
+                  color: 'var(--sv-color-text-primary)',
+                }}
+              >
+                Apps
+              </span>
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 'var(--sv-radius-sm)',
+                  background: 'var(--sv-color-surface-sunken)',
+                  border: '1px solid var(--sv-color-border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 13,
+                  color: 'var(--sv-color-text-muted)',
+                }}
+              >
+                ✕
+              </div>
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: 'var(--sv-space-2)',
+                padding: 'var(--sv-space-4)',
+              }}
+            >
+              {['Console', 'Account', 'Tasks', 'Files'].map((name) => (
+                <div
+                  key={name}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 'var(--sv-space-2)',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: 'var(--sv-radius-lg)',
+                      background: 'var(--sv-color-surface-sunken)',
+                      border: '1px solid var(--sv-color-border)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 700,
+                      fontSize: 16,
+                      color: 'var(--sv-color-text-muted)',
+                    }}
+                  >
+                    {name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <span
+                    style={{
+                      fontFamily: ff,
+                      fontSize: 'var(--sv-font-size-xs)',
+                      color: 'var(--sv-color-text-muted)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <Callout type="info">
+            Plugin developers cannot customise the Launcher Drawer. Use the Drawer component from{' '}
+            <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+              @sovereignfs/ui
+            </code>{' '}
+            if you need a similar bottom-sheet pattern inside your own plugin.
+          </Callout>
+        </Card>
+      </section>
+
       {/* ── Touch targets ── */}
       <section style={{ marginBottom: 'var(--sv-space-10)' }}>
         <SectionHeader

@@ -498,9 +498,13 @@ the shell.
 ## Component stories (Storybook)
 
 Every `@sovereignfs/ui` component has a Storybook story. The Storybook instance
-serves as the living design reference for component authors, plugin developers,
-and designers — each component is rendered in isolation with every meaningful
+is the living design reference for component authors, plugin developers, and
+designers — each component is rendered in isolation with every meaningful
 variant, both light and dark themes, and responsive viewports.
+
+**Hosted:** [sovereignfs.github.io/storybook](https://sovereignfs.github.io/storybook/)
+— auto-deployed from `main` whenever `packages/ui/**` changes, via
+`.github/workflows/storybook-deploy.yml`.
 
 ### Running locally
 
@@ -514,16 +518,50 @@ pnpm --filter @sovereignfs/ui storybook
 
 The dev server hot-reloads on source changes to both components and CSS tokens.
 
+### Story organisation
+
+Stories live under two roots inside `packages/ui/src/`:
+
+| Root                 | Purpose                                                                |
+| -------------------- | ---------------------------------------------------------------------- |
+| `stories/`           | Cross-cutting reference docs: Overview, Token Gallery, Mobile Patterns |
+| `components/<Name>/` | Per-component story file co-located with the component                 |
+
 ### What's covered
 
-| Story file                 | Stories                                                                                             |
-| -------------------------- | --------------------------------------------------------------------------------------------------- |
-| `TokenGallery.stories.tsx` | Live gallery of every `--sv-*` token tier (colours, space, typography, radius, icon sizes, shadows) |
-| `Button.stories.tsx`       | All `variant` × `size` combinations; disabled; icon-leading; icon-only; `AllVariants` grid          |
-| `Input.stories.tsx`        | Text / email / password types; disabled; error state with `aria-invalid` + description              |
-| `Icon.stories.tsx`         | Decorative vs meaningful a11y variants; all three sizes; `AllIcons` full grid                       |
-| `Dialog.stories.tsx`       | `sm` / `md` / `lg` / `full` sizes; closed state; `play` function opens and asserts visibility       |
-| `Drawer.stories.tsx`       | Default (mobile viewport); closed; `play` function opens and asserts panel visible                  |
+#### Overview & reference (`src/stories/`)
+
+| Story file                         | What it documents                                                                                                                                                                                                    |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DesignSystemOverview.stories.tsx` | Full component gallery with live demos and import lines; colour palette; type scale; shadow scale; design rules                                                                                                      |
+| `TokenGallery.stories.tsx`         | Live gallery of every `--sv-*` token tier — colours, space, typography, radius, icon sizes, shadows — read from computed styles                                                                                      |
+| `MobilePatterns.stories.tsx`       | Mobile layout reference: breakpoints (640/768 px), constrained column, auto-adapting components, shell chrome anatomy (header/footer/drawer), touch targets, safe-area insets, typography scale, readiness checklist |
+
+#### Components (`src/components/<Name>/`)
+
+| Story file                     | Key variants and notes                                                                     |
+| ------------------------------ | ------------------------------------------------------------------------------------------ |
+| `Avatar.stories.tsx`           | Initials fallback; image src; sm/md/lg sizes                                               |
+| `Badge.stories.tsx`            | All status variants; subtle vs filled                                                      |
+| `Button.stories.tsx`           | All `variant` × `size` combinations; disabled; icon-leading; icon-only; `AllVariants` grid |
+| `Card.stories.tsx`             | sm/md/lg padding; interactive hover; semantic element variants                             |
+| `Dialog.stories.tsx`           | sm/md/lg/full sizes; closed state; `play` function opens and asserts visibility            |
+| `Drawer.stories.tsx`           | Mobile viewport default; closed; `play` function opens and asserts panel visible           |
+| `EmptyState.stories.tsx`       | Heading only; with icon; with action                                                       |
+| `FormField.stories.tsx`        | Default; with hint; with error (role="alert")                                              |
+| `Icon.stories.tsx`             | Decorative vs meaningful a11y variants; all three sizes; `AllIcons` full grid              |
+| `Input.stories.tsx`            | Text/email/password; disabled; error state with `aria-invalid`                             |
+| `NavTabs.stories.tsx`          | Default; active tab; mobile horizontal-scroll viewport                                     |
+| `PageHeader.stories.tsx`       | Title only; with description; with action slot                                             |
+| `Popover.stories.tsx`          | Four placements; trigger + content                                                         |
+| `SegmentedControl.stories.tsx` | Two and three options; controlled selection                                                |
+| `Select.stories.tsx`           | Default; disabled; with placeholder                                                        |
+| `Spinner.stories.tsx`          | sm/md/lg sizes; reduced-motion note                                                        |
+| `SystemBanner.stories.tsx`     | All four categories (info/success/warning/error); dismissible                              |
+| `Tabs.stories.tsx`             | Controlled tabs; default selected; keyboard navigation                                     |
+| `Toast.stories.tsx`            | All six categories triggered imperatively via `useToast`                                   |
+| `Toggle.stories.tsx`           | On/off; disabled; label association                                                        |
+| `Tooltip.stories.tsx`          | Four placement variants; hover and focus triggers                                          |
 
 ### Themes toolbar
 
@@ -542,18 +580,27 @@ errors in CI — `storybook build` fails if any story has an a11y issue.
 1. Create `packages/ui/src/components/<Name>/<Name>.stories.tsx`.
 2. Use `satisfies Meta<typeof YourComponent>` (not `Meta<typeof YourComponent>` alone)
    so TypeScript infers arg types.
-3. Always pair `<Input>` and similar bare elements with a `<label>` in stories — the
+3. Add the component to the **Component Gallery** section of
+   `DesignSystemOverview.stories.tsx` — both the import and a `<ComponentCard>` entry.
+4. Always pair `<Input>` and similar bare elements with a `<label>` in stories — the
    a11y addon flags unlabelled controls as errors.
-4. Use `aria-hidden` for decorative icons and `aria-label` for meaningful ones.
-5. Run `pnpm storybook` locally and confirm the a11y panel shows no violations before
-   pushing.
+5. Use `aria-hidden` for decorative icons and `aria-label` for meaningful ones.
+6. Run `pnpm storybook` locally and confirm the a11y panel shows no violations.
+7. Run `pnpm --filter @sovereignfs/ui typecheck` to confirm the stories are type-correct.
 
-### Building for CI / PR preview
+### Building and deploying
 
 ```bash
-pnpm build-storybook   # outputs to packages/ui/storybook-static/
+pnpm build-storybook          # static output → packages/ui/storybook-static/
+pnpm --filter @sovereignfs/ui build-storybook  # same, scoped
 ```
 
-The CI `storybook-build` job runs this on every non-draft PR and uploads the
-static output as a workflow artifact (7-day retention) — download `storybook-static`
-from the Actions run to inspect the PR's stories without deploying a hosting service.
+**CI (`storybook-build` job):** runs `build-storybook` on every non-draft PR and
+uploads the static output as a workflow artifact (7-day retention) — download
+`storybook-static` from the Actions run to review the PR's stories without a live
+hosting service.
+
+**Hosted deploy (`.github/workflows/storybook-deploy.yml`):** pushes the static
+build to the `gh-pages` branch of `sovereignfs/storybook` whenever a commit lands on
+`main` with changes under `packages/ui/**`. The deploy can also be triggered
+manually via **Actions → Deploy Storybook → Run workflow** on any branch.

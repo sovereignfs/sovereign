@@ -628,7 +628,7 @@ function MobilePatternsDoc() {
               [
                 { iconName: 'house', label: 'Home', note: '→ /' },
                 { iconName: 'grid-2x2', label: 'Apps', note: 'opens Drawer' },
-                { iconName: 'search', label: 'Search', note: '→ /launcher' },
+                { iconName: 'search', label: 'Search', note: 'opens overlay' },
               ] as { iconName: Parameters<typeof Icon>[0]['name']; label: string; note: string }[]
             ).map(({ iconName, label, note }) => (
               <div
@@ -737,7 +737,7 @@ function MobilePatternsDoc() {
                 {
                   slot: 'Search',
                   iconName: 'search',
-                  desc: 'Links to "/launcher" — the full-page plugin launcher.',
+                  desc: 'Opens the Search overlay — a full-screen input with a live-filtered plugin list. Closes on back button, Esc, or after navigating to a result.',
                 },
               ] as {
                 slot: string;
@@ -921,6 +921,147 @@ function MobilePatternsDoc() {
               @sovereignfs/ui
             </code>{' '}
             if you need a similar bottom-sheet pattern inside your own plugin.
+          </Callout>
+        </Card>
+
+        {/* Search overlay */}
+        <Card padding="md" style={{ marginTop: 'var(--sv-space-4)' }}>
+          <Heading level={3}>Search overlay</Heading>
+          <Body>
+            Opened by the Search button in the mobile footer. Renders a full-screen overlay (z-index
+            150, above the footer and Drawer scrim) with an auto-focused search input and a
+            live-filtered list of installed plugins. Tapping a result navigates to its route and
+            closes the overlay. Scroll lock is applied to{' '}
+            <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+              document.body
+            </code>{' '}
+            while open.
+          </Body>
+          {/* Anatomy mock */}
+          <div
+            style={{
+              marginTop: 'var(--sv-space-4)',
+              background: 'var(--sv-color-surface)',
+              border: '1px solid var(--sv-color-border)',
+              borderRadius: 'var(--sv-radius-lg)',
+              overflow: 'hidden',
+              fontFamily: ff,
+            }}
+          >
+            {/* Header row */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--sv-space-2)',
+                padding: 'var(--sv-space-3) var(--sv-space-4)',
+                borderBottom: '1px solid var(--sv-color-border)',
+              }}
+            >
+              <span
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 36,
+                  height: 36,
+                  borderRadius: 'var(--sv-radius-md)',
+                  background: 'var(--sv-color-surface-sunken)',
+                  flexShrink: 0,
+                }}
+              >
+                <Icon name="chevron-left" size="md" aria-hidden />
+              </span>
+              <span
+                style={{
+                  fontWeight: 600,
+                  fontSize: 'var(--sv-font-size-md)',
+                  color: 'var(--sv-color-text-primary)',
+                }}
+              >
+                Search
+              </span>
+            </div>
+            {/* Input row */}
+            <div style={{ padding: 'var(--sv-space-3) var(--sv-space-4)' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--sv-space-2)',
+                  padding: 'var(--sv-space-2) var(--sv-space-3)',
+                  borderRadius: 'var(--sv-radius-md)',
+                  border: '1px solid var(--sv-color-accent)',
+                  background: 'var(--sv-color-surface-sunken)',
+                }}
+              >
+                <Icon name="search" size="sm" aria-hidden />
+                <span
+                  style={{
+                    color: 'var(--sv-color-text-muted)',
+                    fontSize: 'var(--sv-font-size-sm)',
+                  }}
+                >
+                  Search plugins…
+                </span>
+              </div>
+            </div>
+            {/* Result rows */}
+            {['Console', 'Account', 'Launcher'].map((name) => (
+              <div
+                key={name}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--sv-space-3)',
+                  padding: 'var(--sv-space-2) var(--sv-space-4)',
+                  borderBottom: '1px solid var(--sv-color-border)',
+                  minHeight: 44,
+                }}
+              >
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 'var(--sv-radius-lg)',
+                    background: 'var(--sv-color-surface-sunken)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    fontSize: 12,
+                    color: 'var(--sv-color-text-muted)',
+                    flexShrink: 0,
+                  }}
+                >
+                  {name.slice(0, 2).toUpperCase()}
+                </div>
+                <span
+                  style={{
+                    flex: 1,
+                    fontSize: 'var(--sv-font-size-sm)',
+                    fontWeight: 500,
+                    color: 'var(--sv-color-text-primary)',
+                  }}
+                >
+                  {name}
+                </span>
+                <Icon name="chevron-right" size="sm" aria-hidden />
+              </div>
+            ))}
+          </div>
+          <Callout type="info">
+            The search overlay is shell chrome — plugin developers do not render it. The result set
+            is the platform's installed plugin list. If you need in-plugin search, build your own
+            input using{' '}
+            <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+              Input
+            </code>{' '}
+            from{' '}
+            <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+              @sovereignfs/ui
+            </code>
+            .
           </Callout>
         </Card>
       </section>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Drawer, Icon } from '@sovereignfs/ui';
 import styles from './MobileNav.module.css';
+import { MobileSearch } from './MobileSearch';
 
 interface PluginEntry {
   id: string;
@@ -29,6 +30,7 @@ export function MobileNav({
   launcherIconUrl?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
   const isHome = pathname === '/';
 
@@ -56,10 +58,19 @@ export function MobileNav({
             <Icon name="grid-2x2" size="md" aria-hidden />
           )}
         </button>
-        <Link href="/launcher" className={styles.navItem} aria-label="Search">
+        <button
+          type="button"
+          className={`${styles.navItem} ${searchOpen ? styles.navItemActive : ''}`}
+          aria-label="Search"
+          aria-expanded={searchOpen}
+          aria-haspopup="dialog"
+          onClick={() => setSearchOpen(true)}
+        >
           <Icon name="search" size="md" aria-hidden />
-        </Link>
+        </button>
       </nav>
+
+      <MobileSearch open={searchOpen} onClose={() => setSearchOpen(false)} plugins={plugins} />
 
       <Drawer open={open} onClose={() => setOpen(false)} aria-label="Plugin navigation">
         <div className={styles.handle} aria-hidden="true" />

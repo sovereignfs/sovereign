@@ -6,6 +6,7 @@ import { Dialog } from '../components/Dialog/Dialog';
 import { Drawer } from '../components/Drawer/Drawer';
 import { EmptyState } from '../components/EmptyState/EmptyState';
 import { FormField } from '../components/FormField/FormField';
+import { Icon } from '../components/Icon/Icon';
 import { Input } from '../components/Input/Input';
 import { NavTabs } from '../components/NavTabs/NavTabs';
 import { PageHeader } from '../components/PageHeader/PageHeader';
@@ -623,16 +624,18 @@ function MobilePatternsDoc() {
               justifyContent: 'space-around',
             }}
           >
-            {[
-              { icon: '🏠', label: 'Home', note: '→ /' },
-              { icon: '⊞', label: 'Apps', note: 'opens Drawer' },
-              { icon: '🔍', label: 'Search', note: '→ /launcher' },
-            ].map(({ icon, label, note }) => (
+            {(
+              [
+                { iconName: 'house', label: 'Home', note: '→ /' },
+                { iconName: 'grid-2x2', label: 'Apps', note: 'opens Drawer' },
+                { iconName: 'search', label: 'Search', note: '→ /launcher' },
+              ] as { iconName: Parameters<typeof Icon>[0]['name']; label: string; note: string }[]
+            ).map(({ iconName, label, note }) => (
               <div
                 key={label}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
               >
-                <span style={{ fontSize: 20 }}>{icon}</span>
+                <Icon name={iconName} size="md" aria-hidden />
                 <span
                   style={{
                     fontSize: 'var(--sv-font-size-xs)',
@@ -719,23 +722,29 @@ function MobilePatternsDoc() {
               gap: 'var(--sv-space-2)',
             }}
           >
-            {[
-              {
-                slot: 'Home',
-                icon: '🏠',
-                desc: 'Returns to "/" (launcher). Active when pathname is "/" or "/launcher".',
-              },
-              {
-                slot: 'Apps',
-                icon: '⊞',
-                desc: 'Opens the Launcher Drawer showing all installed plugins as a grid.',
-              },
-              {
-                slot: 'Search',
-                icon: '🔍',
-                desc: 'Links to "/launcher" — the full-page plugin launcher.',
-              },
-            ].map(({ slot, icon, desc }) => (
+            {(
+              [
+                {
+                  slot: 'Home',
+                  iconName: 'house',
+                  desc: 'Returns to "/" (launcher). Active when pathname is "/" or "/launcher".',
+                },
+                {
+                  slot: 'Apps',
+                  iconName: 'grid-2x2',
+                  desc: 'Opens the Launcher Drawer showing all installed plugins as a grid.',
+                },
+                {
+                  slot: 'Search',
+                  iconName: 'search',
+                  desc: 'Links to "/launcher" — the full-page plugin launcher.',
+                },
+              ] as {
+                slot: string;
+                iconName: Parameters<typeof Icon>[0]['name'];
+                desc: string;
+              }[]
+            ).map(({ slot, iconName, desc }) => (
               <div
                 key={slot}
                 style={{
@@ -746,7 +755,9 @@ function MobilePatternsDoc() {
                   borderBottom: '1px solid var(--sv-color-border)',
                 }}
               >
-                <span style={{ fontSize: 18, flexShrink: 0, lineHeight: 1.4 }}>{icon}</span>
+                <span style={{ flexShrink: 0, display: 'flex' }}>
+                  <Icon name={iconName} size="md" aria-hidden />
+                </span>
                 <div>
                   <span
                     style={{

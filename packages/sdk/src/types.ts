@@ -44,13 +44,24 @@ export interface MailOptions {
 }
 
 export interface PlatformConfig {
+  /**
+   * Name of the default tenant row — set in Console › Settings › Instance name.
+   * In v1 (single-tenant) this is the platform-wide workspace name.
+   * Multi-tenant deployments (post-v1) will surface per-tenant names separately.
+   */
   tenantName: string;
   inviteOnly: boolean;
   version: string;
-  /** Instance name; falls back to tenantName when no instance name is configured. */
+  /** Instance name; falls back to tenantName when no white-label name is configured. */
   instanceName: string;
   /** Validated 6-digit hex colour overriding --sv-color-accent, or undefined when unset. */
   instancePrimaryColor?: string;
+  /**
+   * Stable UUID that uniquely identifies this Sovereign installation.
+   * Generated once at bootstrap and never changes. Use this to identify the
+   * instance in federated contexts, license checks, or analytics.
+   */
+  instanceId: string;
 }
 
 /**

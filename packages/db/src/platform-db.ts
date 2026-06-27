@@ -42,6 +42,15 @@ export async function bootstrapPlatformDb(pdb: PlatformDb): Promise<void> {
         VALUES ('root_plugin_id', ${DEFAULT_TENANT_ID}, ${DEFAULT_ROOT_PLUGIN_ID}, ${now})
         ON CONFLICT (key, tenant_id) DO NOTHING`,
   );
+  // Stable UUID that uniquely identifies this Sovereign installation. Generated
+  // once; never overwritten. Used by sdk.platform.getConfig().instanceId.
+  const instanceId = crypto.randomUUID();
+  await dbRun(
+    pdb,
+    sql`INSERT INTO platform_settings (key, tenant_id, value, updated_at)
+        VALUES ('instance_id', ${DEFAULT_TENANT_ID}, ${instanceId}, ${now})
+        ON CONFLICT (key, tenant_id) DO NOTHING`,
+  );
 }
 
 let _dbPromise: Promise<PlatformDb> | null = null;
@@ -126,6 +135,16 @@ export async function getDefaultTenant(pdb: PlatformDb): Promise<{ name: string 
     throw new Error('Default tenant missing — was bootstrapPlatformDb() run?');
   }
   return row;
+}
+
+/**
+ * Return the stable instance UUID. Generated once at bootstrap and stored in
+ * `platform_settings` under `'instance_id'`. Throws if bootstrap has not run.
+ */
+export async function getInstanceId(pdb: PlatformDb): Promise<string> {
+  const id = await getPlatformSetting(pdb, 'instance_id');
+  if (!id) throw new Error('instance_id missing — was bootstrapPlatformDb() run?');
+  return id;
 }
 
 /** Rename the default tenant (CON-08). */

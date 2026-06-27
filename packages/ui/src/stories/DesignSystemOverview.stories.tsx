@@ -180,7 +180,7 @@ const COLOR_GROUPS: Array<{
   {
     label: 'Accent',
     usage:
-      'Primary interactive color. Monochrome by default; tenants override with their brand color.',
+      'Primary interactive color. Monochrome by default; instance admins override with their brand color.',
     tokens: [
       { token: '--sv-color-accent', name: 'accent' },
       { token: '--sv-color-accent-hover', name: 'accent-hover' },
@@ -859,7 +859,7 @@ function OverviewPage() {
             <strong>Never use primitive tokens in plugin code.</strong> Primitives like{' '}
             <code style={{ fontFamily: ffm }}>--sv-grey-900</code> or{' '}
             <code style={{ fontFamily: ffm }}>--sv-red-100</code> are fixed values — they do not
-            swap with dark mode or tenant theming. Only semantic tokens do.
+            swap with dark mode or instance theming. Only semantic tokens do.
           </div>
         </section>
 
@@ -1187,7 +1187,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
           <div style={{ marginBottom: 'var(--sv-space-6)' }}>
             <SystemBanner variant="info">
               All components reference <code style={{ fontFamily: ffm }}>--sv-*</code> tokens
-              internally — they automatically adapt to dark mode and tenant theming without any
+              internally — they automatically adapt to dark mode and instance theming without any
               extra configuration.
             </SystemBanner>
           </div>
@@ -1557,7 +1557,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
         <section style={{ marginBottom: 'var(--sv-space-8)' }}>
           <SectionHeader
             title="Design rules"
-            subtitle="The short list of things that break dark mode or tenant theming if ignored."
+            subtitle="The short list of things that break dark mode or instance theming if ignored."
           />
           <div
             style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sv-space-5)' }}

@@ -56,9 +56,9 @@ export async function PATCH(request: Request): Promise<Response> {
     void logActivity({
       actorId,
       actorType: 'user',
-      action: 'settings.tenant_name_changed',
+      action: 'settings.instance_name_changed',
       visibility: 'admin',
-      summary: `Tenant name changed to "${name}"`,
+      summary: `Instance name changed to "${name}"`,
       metadata: { tenantName: name },
     });
   }

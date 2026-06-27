@@ -21,8 +21,8 @@ export type Capability =
   | 'user:view' // view the user list in Console
   | 'user:manage' // invite / deactivate / reactivate users
   | 'plugin:manage' // enable / disable plugins
-  | 'tenant:view' // view tenant settings
-  | 'tenant:configure' // change tenant settings + root plugin
+  | 'instance:view' // view instance settings
+  | 'instance:configure' // change instance settings + root plugin
   | 'health:view' // view system health report
   | 'activity:view' // view activity log (RFC 0005)
   | 'role:assign'; // assign roles to other users (owner-only)
@@ -56,7 +56,7 @@ const AUDITOR_CAPS = new Set<Capability>([
   'profile:manage',
   'console:access',
   'user:view',
-  'tenant:view',
+  'instance:view',
   'health:view',
   'activity:view',
 ]);
@@ -68,8 +68,8 @@ const ADMIN_CAPS = new Set<Capability>([
   'user:view',
   'user:manage',
   'plugin:manage',
-  'tenant:view',
-  'tenant:configure',
+  'instance:view',
+  'instance:configure',
   'health:view',
   'activity:view',
 ]);
@@ -81,8 +81,8 @@ const OWNER_CAPS = new Set<Capability>([
   'user:view',
   'user:manage',
   'plugin:manage',
-  'tenant:view',
-  'tenant:configure',
+  'instance:view',
+  'instance:configure',
   'health:view',
   'activity:view',
   'role:assign',

@@ -237,13 +237,13 @@ Semantic tokens      contextual meaning, what plugin devs use
 ```
 
 Plugin developers reference **semantic colour tokens** — never primitive
-colours directly. The semantic colour layer is the theming surface that tenant
+colours directly. The semantic colour layer is the theming surface that instance
 theming (CON-08) and dark mode override at `:root` / `[data-theme]`; primitives
 stay fixed. The scale tokens (`--sv-space-*`, `--sv-radius-*`,
 `--sv-font-size-*`) have no separate semantic tier — they are theme-stable and
 used directly. See `docs/design-system.md` for the full model. The v1 identity
-is **monochrome** (accent = near-black on light, near-white on dark); a tenant
-adds colour by overriding `--sv-color-accent`.
+is **monochrome** (accent = near-black on light, near-white on dark); an instance
+admin adds colour by overriding `--sv-color-accent`.
 
 ### Token prefix
 
@@ -268,7 +268,7 @@ import { Button, Card, Input, Badge } from '@sovereignfs/ui';
 - The runtime shell and Console plugin use both tokens and components.
 - Plugin developers may use any component or token.
 - Components must never hardcode values — always reference `--sv-*` tokens.
-- Dark mode and tenant theming work by swapping semantic token values at `:root`;
+- Dark mode and instance theming work by swapping semantic token values at `:root`;
   no component changes required.
 
 ### Storybook hygiene (enforced per-PR)
@@ -473,6 +473,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 - Task 4.3 — Notification Center pluggable pub/sub transport (RFC 0034; runtime → 0.31.0). NOTIFICATION_TRANSPORT env var (polling/sse/redis); NotificationBroker interface + InProcessBroker (EventEmitter) + RedisBroker (ioredis optional dep); SSE stream route rewired to subscribe to broker; notifications GET response gains transport field; NotificationBell switches to EventSource in sse mode with 3-error fallback to polling; GET /api/admin/health gains notifications.{transport,brokerConnected}; docker-compose.prod.yml gets commented Redis service block; docs/self-hosting.md gets Notification transport section.
 - Task 2.13 — Sidebar customization — plugin ordering and visibility (`@sovereignfs/db` → 1.7.2, `runtime` → 0.32.0, `plugins/account` → 0.11.0). `sidebar_plugins` JSON column in `account_prefs` (SQLite + Postgres, migration 0006); `GET /api/account/sidebar-plugins` returns available plugins + current saved order; `PATCH /api/account/prefs` extended to accept `sidebar_plugins`; `(platform)/layout.tsx` applies user's saved order and visibility server-side before rendering sidebar and `MobileNav`; `SidebarControl` client component in Account → Preferences (HTML5 DnD reorder, show/hide toggle, reset).
 - Task 1.10 — Email-bound invite flow (`apps/auth` → 0.9.0, `plugins/console` → 0.13.0). `invited_by_id`/`invited_by_name` columns added to `invites` table; invite creation embeds `?token=<uuid>` in the registration URL; register page server component looks up the token and passes `invitedEmail`/`invitedBy` to `RegisterForm`; email field is pre-filled and read-only when token present; "invited by" banner shown; invalid/consumed tokens show a clear error page.
+- RFC 0039 — Instance identity: `instanceId` + terminology cleanup (`@sovereignfs/db` → 1.7.3, `@sovereignfs/sdk` → 1.13.0, `runtime` → 0.33.0, `plugins/console` → 0.14.1). Stable UUID seeded in `platform_settings` at bootstrap, exposed via `sdk.platform.getConfig().instanceId`. Capability strings renamed: `tenant:view` → `instance:view`, `tenant:configure` → `instance:configure`. Activity event renamed: `settings.tenant_name_changed` → `settings.instance_name_changed`. Console "Tenant name" label → "Instance name". Storybook + docs "tenant theming" → "instance theming" where it refers to instance-level overrides.
 
 > Full task history (phases 0.3–0.7): `docs/task-history.md`
 

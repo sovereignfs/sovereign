@@ -623,6 +623,21 @@ the release you are running.
 | 0.28.0          | White-labeling Phase 1 (RFC 0027)                                         |
 | 0.29.0          | Instance identity rename (RFC 0032)                                       |
 | 0.30.0          | User data deletion (RFC 0033)                                             |
+| 0.31.0          | Notification transport (RFC 0034)                                         |
+| 0.32.0          | Sidebar customization (epic task 2.13)                                    |
+| 0.33.0          | Instance identity — `instanceId` field + terminology cleanup (RFC 0039)   |
+
+**`runtime@0.33.0` — activity event name changed:**
+The `settings.tenant_name_changed` activity log action has been renamed to
+`settings.instance_name_changed`. Historical rows already in your `activity_log`
+table are unaffected; new renames produce the new event name. If you have any custom
+tooling that queries `activity_log` for this specific action string, update it.
+
+**`runtime@0.33.0` — capability strings renamed:**
+`tenant:view` → `instance:view` and `tenant:configure` → `instance:configure`.
+No plugin manifests are known to declare these capabilities directly (they are
+platform-internal), but if you have custom plugins that gate logic on these strings,
+update them.
 
 Some runtime minor versions (e.g. 0.24.0) were used by intermediate sub-tasks or
 patch releases and are not listed individually.

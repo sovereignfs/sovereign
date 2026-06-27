@@ -18,8 +18,8 @@ describe('ROLE_PRESETS', () => {
       'user:view',
       'user:manage',
       'plugin:manage',
-      'tenant:view',
-      'tenant:configure',
+      'instance:view',
+      'instance:configure',
       'health:view',
       'activity:view',
       'role:assign',
@@ -33,7 +33,7 @@ describe('ROLE_PRESETS', () => {
     expect(caps.has('role:assign')).toBe(false);
     expect(caps.has('user:manage')).toBe(true);
     expect(caps.has('plugin:manage')).toBe(true);
-    expect(caps.has('tenant:configure')).toBe(true);
+    expect(caps.has('instance:configure')).toBe(true);
   });
 
   it('auditor has read-only capabilities only', () => {
@@ -44,7 +44,7 @@ describe('ROLE_PRESETS', () => {
     // No write capabilities
     expect(caps.has('user:manage')).toBe(false);
     expect(caps.has('plugin:manage')).toBe(false);
-    expect(caps.has('tenant:configure')).toBe(false);
+    expect(caps.has('instance:configure')).toBe(false);
     expect(caps.has('role:assign')).toBe(false);
   });
 

@@ -2,6 +2,9 @@
 
 [![CI](https://github.com/sovereignfs/sovereign/actions/workflows/ci.yml/badge.svg)](https://github.com/sovereignfs/sovereign/actions/workflows/ci.yml)
 [![Storybook](https://img.shields.io/badge/Storybook-Design%20System-ff4785?logo=storybook&logoColor=white)](https://sovereignfs.github.io/storybook/)
+[![npm @sovereignfs/sdk](https://img.shields.io/npm/v/@sovereignfs/sdk?label=%40sovereignfs%2Fsdk)](https://www.npmjs.com/package/@sovereignfs/sdk)
+[![npm @sovereignfs/ui](https://img.shields.io/npm/v/@sovereignfs/ui?label=%40sovereignfs%2Fui)](https://www.npmjs.com/package/@sovereignfs/ui)
+[![npm @sovereignfs/create-plugin](https://img.shields.io/npm/v/@sovereignfs/create-plugin?label=create-plugin)](https://www.npmjs.com/package/@sovereignfs/create-plugin)
 
 Sovereign is a modular, self-hostable workspace runtime for running personal or
 organisational software under one roof. It provides the shared platform pieces

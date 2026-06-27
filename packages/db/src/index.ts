@@ -10,6 +10,7 @@ export {
   getAccountPrefs,
   getConsentGrant,
   getDefaultTenant,
+  getInstanceId,
   getLastMigrationResult,
   getNotificationPrefs,
   getPlatformDb,

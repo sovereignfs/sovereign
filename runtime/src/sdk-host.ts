@@ -6,6 +6,7 @@ import {
   findWorkspaceRoot,
   getConsentGrant,
   getDefaultTenant,
+  getInstanceId,
   getPlatformSetting,
   getPluginDb,
   getInstanceConfig,
@@ -81,10 +82,11 @@ provideHost({
   platform: {
     async getConfig() {
       const db = await getPlatformDb();
-      const [tenant, inviteOnly, instanceCfg] = await Promise.all([
+      const [tenant, inviteOnly, instanceCfg, instanceId] = await Promise.all([
         getDefaultTenant(db),
         getPlatformSetting(db, 'invite_only'),
         getInstanceConfig(db, DEFAULT_TENANT_ID),
+        getInstanceId(db),
       ]);
       return {
         tenantName: tenant.name,
@@ -92,6 +94,7 @@ provideHost({
         version: getPlatformVersion(),
         instanceName: instanceCfg.instanceName,
         instancePrimaryColor: instanceCfg.instancePrimary ?? undefined,
+        instanceId,
       };
     },
   },

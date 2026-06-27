@@ -34,7 +34,7 @@ export async function updateTenantNameAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const tenantName = (formData.get('tenantName') as string | null)?.trim();
-  if (!tenantName) return { ok: false, error: 'Tenant name is required.' };
+  if (!tenantName) return { ok: false, error: 'Instance name is required.' };
   return patchSettings({ tenantName });
 }
 

@@ -97,7 +97,7 @@ export function TenantForm({ initialName }: { initialName: string }) {
     <form action={action} className={styles.settingsForm}>
       <div className={styles.fieldGroup}>
         <label className={styles.label} htmlFor="tenantName">
-          Tenant name
+          Instance name
         </label>
         <Input id="tenantName" name="tenantName" type="text" required defaultValue={initialName} />
       </div>

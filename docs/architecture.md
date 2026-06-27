@@ -184,16 +184,16 @@ applies it additively with ID remapping. Plugin participation is opt-in via
 `data:import` manifest permissions. Import remaps IDs (no FK breakage) and skips
 unknown or non-permitted plugin sections with a per-section warning.
 
-## White-labeling, Phase 1 (RFC 0027)
+## White-labeling, Phase 1 (RFC 0027, RFC 0032)
 
 Operators can replace Sovereign's visual identity via Console → Settings → Branding.
-The `tenant_branding` table stores brand name, primary colour (hex), logo and favicon
-URLs. `BrandProvider` (server component in `runtime/src/brand-provider.tsx`) reads
-this at render time, injects `--sv-brand-*` CSS custom properties at `:root`, and
-derives `--sv-color-accent` from the primary colour. `BRAND_*` env vars supply
-deployment-level defaults. `sdk.platform.getConfig()` exposes `brandName` and
-`brandPrimaryColor`. Phases 2 (branded email + auth login page) and 3 (dynamic
-PWA manifest) are post-v1.
+The `instance_config` table stores instance name, primary colour (hex), logo and
+favicon URLs. `InstanceProvider` (server component in `runtime/src/instance-provider.tsx`)
+reads this at render time, injects `--sv-instance-*` CSS custom properties at `:root`,
+and derives `--sv-color-accent` from the primary colour. `INSTANCE_*` env vars supply
+deployment-level defaults. `sdk.platform.getConfig()` exposes `instanceName`,
+`instancePrimaryColor`, and the stable `instanceId` UUID. Phases 2 (branded email +
+auth login page) and 3 (dynamic PWA manifest) are post-v1.
 
 ## PWA (SRS §3.11)
 

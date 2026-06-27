@@ -9,6 +9,7 @@ const mockConfig = {
   inviteOnly: false,
   version: '0.6.0',
   instanceName: 'Test Workspace',
+  instanceId: 'test-instance-uuid',
 };
 const mockDataResolvers = new Map<string, (...args: unknown[]) => Promise<unknown[]>>();
 const mockExporters = new Map<string, unknown>();
@@ -116,6 +117,7 @@ describe('sdk.platform', () => {
     expect(config.tenantName).toBe('Test Workspace');
     expect(config.inviteOnly).toBe(false);
     expect(config.version).toBe('0.6.0');
+    expect(config.instanceId).toBe('test-instance-uuid');
   });
 });
 

@@ -960,7 +960,7 @@ Capabilities are hardcoded per role in v1 — defined in the runtime, not stored
 | `console:access` — access the Console plugin                  | ✗               | ✓                |
 | `user:manage` — invite, deactivate, and assign roles to users | ✗               | ✓                |
 | `plugin:manage` — install, remove, enable, disable plugins    | ✗               | ✓                |
-| `tenant:configure` — configure tenant settings                | ✗               | ✓                |
+| `instance:configure` — configure instance settings            | ✗               | ✓                |
 
 Capabilities use the same namespaced pattern as roles and connect directly to the manifest system — a plugin declaring `"adminOnly": true` in its manifest maps to requiring `console:access` capability at the middleware level.
 

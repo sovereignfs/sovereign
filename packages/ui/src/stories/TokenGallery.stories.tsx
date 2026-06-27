@@ -13,6 +13,7 @@ const SEMANTIC_COLORS = [
   '--sv-color-surface-raised',
   '--sv-color-text-primary',
   '--sv-color-text-muted',
+  '--sv-color-text-subtle',
   '--sv-color-text-on-accent',
   '--sv-color-border',
   '--sv-color-border-strong',

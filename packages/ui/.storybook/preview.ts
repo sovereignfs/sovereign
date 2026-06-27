@@ -26,6 +26,12 @@ const preview: Preview = {
       // Treat a11y violations as errors so the CI --test flag catches them.
       element: '#storybook-root',
     },
+    options: {
+      storySort: {
+        // Overview first, then token reference, then components alphabetically.
+        order: ['Overview', 'Design Tokens', 'Components'],
+      },
+    },
   },
 };
 

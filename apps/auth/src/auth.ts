@@ -118,7 +118,6 @@ function buildOptions(): BetterAuthOptions {
       },
     },
     plugins: [
-      nextCookies(),
       twoFactor({
         issuer: env.webAuthnRpName,
         // Backup codes (10 codes). OTP (email/SMS) is omitted — no sendOTP
@@ -130,6 +129,7 @@ function buildOptions(): BetterAuthOptions {
         rpName: env.webAuthnRpName,
         origin: env.webAuthnOrigin.length === 1 ? env.webAuthnOrigin[0] : env.webAuthnOrigin,
       }),
+      nextCookies(),
     ],
   };
 }

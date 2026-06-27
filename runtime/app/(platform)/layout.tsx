@@ -69,25 +69,30 @@ export default async function PlatformLayout({ children }: { children: ReactNode
     }
   }
 
-  const pluginIcons = [...(launcher ? [launcher] : []), ...plugins].map((plugin) => (
-    <NavIcon
-      key={plugin.id}
-      href={plugin.routePrefix}
-      title={plugin.name}
-      alsoActiveOn={plugin.id === 'fs.sovereign.launcher' ? ['/'] : undefined}
-    >
-      {plugin.icon ? (
-        <img
-          src={`/plugin-icons/${plugin.id}.svg`}
-          alt=""
-          aria-hidden
-          className={styles.pluginIconImg}
-        />
-      ) : (
-        <span aria-hidden="true">{monogram(plugin.name)}</span>
-      )}
-    </NavIcon>
-  ));
+  const pluginIcons = [...(launcher ? [launcher] : []), ...plugins].map((plugin) => {
+    const extraPaths: string[] = [];
+    if (plugin.id === 'fs.sovereign.launcher') extraPaths.push('/');
+    if (plugin.monetization) extraPaths.push(`/paywall/${encodeURIComponent(plugin.id)}`);
+    return (
+      <NavIcon
+        key={plugin.id}
+        href={plugin.routePrefix}
+        title={plugin.name}
+        alsoActiveOn={extraPaths.length > 0 ? extraPaths : undefined}
+      >
+        {plugin.icon ? (
+          <img
+            src={`/plugin-icons/${plugin.id}.svg`}
+            alt=""
+            aria-hidden
+            className={styles.pluginIconImg}
+          />
+        ) : (
+          <span aria-hidden="true">{monogram(plugin.name)}</span>
+        )}
+      </NavIcon>
+    );
+  });
 
   // Serialisable slice passed to client components.
   const pluginList = plugins.map((p) => ({

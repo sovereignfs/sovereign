@@ -1,19 +1,27 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
+import { Avatar } from '../components/Avatar/Avatar';
 import { Badge } from '../components/Badge/Badge';
 import { Button } from '../components/Button/Button';
+import { Card } from '../components/Card/Card';
 import { Dialog } from '../components/Dialog/Dialog';
 import { Drawer } from '../components/Drawer/Drawer';
+import { EmptyState } from '../components/EmptyState/EmptyState';
+import { FormField } from '../components/FormField/FormField';
 import { Icon } from '../components/Icon/Icon';
 import { Input } from '../components/Input/Input';
+import { NavTabs } from '../components/NavTabs/NavTabs';
+import { PageHeader } from '../components/PageHeader/PageHeader';
 import { Popover } from '../components/Popover/Popover';
 import { SegmentedControl } from '../components/SegmentedControl/SegmentedControl';
 import { Select } from '../components/Select/Select';
+import { Spinner } from '../components/Spinner/Spinner';
 import { SystemBanner } from '../components/SystemBanner/SystemBanner';
 import { Tabs } from '../components/Tabs/Tabs';
 import { ToastProvider, useToast } from '../components/Toast/Toast';
 import { Toggle } from '../components/Toggle/Toggle';
+import { Tooltip } from '../components/Tooltip/Tooltip';
 
 // ---------------------------------------------------------------------------
 // Shared primitives
@@ -1356,6 +1364,134 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               <ToastProvider>
                 <ToastDemo />
               </ToastProvider>
+            </ComponentCard>
+
+            {/* Card */}
+            <ComponentCard
+              name="Card"
+              importLine="import { Card } from '@sovereignfs/ui';"
+              usage="Surface container with border, shadow, and padding. Use as='article' or 'li' for semantics. Add interactive for hover/focus styles on clickable cards."
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+                <Card padding="sm">Small padding card</Card>
+                <Card padding="md" interactive>
+                  Interactive card — hover me
+                </Card>
+              </div>
+            </ComponentCard>
+
+            {/* FormField */}
+            <ComponentCard
+              name="FormField"
+              importLine="import { FormField } from '@sovereignfs/ui';"
+              usage="Accessible label + input wrapper. Wires hint and error text to the child via aria-describedby. Always pair with an Input and matching htmlFor/id."
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
+                <FormField label="Email" hint="We'll never share this." htmlFor="ov-email">
+                  <Input id="ov-email" type="email" placeholder="you@example.com" />
+                </FormField>
+                <FormField label="Password" error="Must be 8+ characters." htmlFor="ov-pw">
+                  <Input id="ov-pw" type="password" />
+                </FormField>
+              </div>
+            </ComponentCard>
+
+            {/* PageHeader */}
+            <ComponentCard
+              name="PageHeader"
+              importLine="import { PageHeader } from '@sovereignfs/ui';"
+              usage="Plugin page top section. Title + optional description + right-side action slot. Replaces the hand-rolled .pageHeader pattern in every plugin."
+            >
+              <div style={{ width: '100%' }}>
+                <PageHeader
+                  title="Users"
+                  description="Manage who has access to this instance."
+                  action={<Button size="sm">Invite user</Button>}
+                />
+              </div>
+            </ComponentCard>
+
+            {/* EmptyState */}
+            <ComponentCard
+              name="EmptyState"
+              importLine="import { EmptyState } from '@sovereignfs/ui';"
+              usage="Zero-data placeholder. Icon slot, heading, description, and optional CTA. Use whenever a list or table has no rows."
+            >
+              <EmptyState
+                icon="search"
+                heading="No results found"
+                description="Try adjusting your search."
+                action={
+                  <Button variant="secondary" size="sm">
+                    Clear filters
+                  </Button>
+                }
+              />
+            </ComponentCard>
+
+            {/* Spinner */}
+            <ComponentCard
+              name="Spinner"
+              importLine="import { Spinner } from '@sovereignfs/ui';"
+              usage="CSS-animated loading ring in sm/md/lg sizes matching icon-size tokens. Pauses under prefers-reduced-motion. Sets role='status' with aria-label."
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <Spinner size="sm" />
+                <Spinner size="md" />
+                <Spinner size="lg" />
+              </div>
+            </ComponentCard>
+
+            {/* Avatar */}
+            <ComponentCard
+              name="Avatar"
+              importLine="import { Avatar } from '@sovereignfs/ui';"
+              usage="User representation. Shows image when src loads; falls back to initials derived from name. Three sizes. Always sets alt text for accessibility."
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <Avatar name="Jane Smith" size="sm" />
+                <Avatar name="Jane Smith" size="md" />
+                <Avatar name="Jane Smith" size="lg" />
+                <Avatar name="Admin" src="https://i.pravatar.cc/150?u=sb" size="lg" />
+              </div>
+            </ComponentCard>
+
+            {/* NavTabs */}
+            <ComponentCard
+              name="NavTabs"
+              importLine="import { NavTabs } from '@sovereignfs/ui';"
+              usage="Underline-style navigation tabs for plugin-level page routing. Distinct from the contained Tabs component. Scrolls horizontally on mobile with no visible scrollbar."
+            >
+              <div style={{ width: '100%' }}>
+                <NavTabs
+                  items={[
+                    { label: 'Profile', href: '#', active: true },
+                    { label: 'Security', href: '#' },
+                    { label: 'Preferences', href: '#' },
+                    { label: 'Data', href: '#' },
+                  ]}
+                />
+              </div>
+            </ComponentCard>
+
+            {/* Tooltip */}
+            <ComponentCard
+              name="Tooltip"
+              importLine="import { Tooltip } from '@sovereignfs/ui';"
+              usage="CSS-only hover/focus hint. Four placements. Wired to its trigger via aria-describedby. No JS positioning — RSC-safe."
+            >
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                <Tooltip content="Saved to your account" side="top">
+                  <Button variant="secondary" size="sm">
+                    Save
+                  </Button>
+                </Tooltip>
+                <Tooltip content="Cannot be undone" side="right">
+                  <Button variant="destructive" size="sm">
+                    Delete
+                  </Button>
+                </Tooltip>
+              </div>
             </ComponentCard>
           </div>
         </section>

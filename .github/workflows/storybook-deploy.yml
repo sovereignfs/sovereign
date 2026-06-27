@@ -26,7 +26,6 @@ jobs:
 
       - name: Build Storybook
         run: pnpm build-storybook
-        working-directory: packages/ui
 
       - name: Deploy to sovereignfs/storybook
         uses: peaceiris/actions-gh-pages@v4

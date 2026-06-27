@@ -70,6 +70,13 @@ const FONT_SIZE_TOKENS = [
   '--sv-font-size-2xl',
 ];
 
+const FONT_WEIGHT_TOKENS = [
+  '--sv-font-weight-normal',
+  '--sv-font-weight-medium',
+  '--sv-font-weight-semibold',
+  '--sv-font-weight-bold',
+];
+
 const SHADOW_TOKENS = [
   '--sv-shadow-card',
   '--sv-shadow-hover',
@@ -150,7 +157,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <section style={{ marginBottom: 40 }}>
       <h2
         style={{
-          fontFamily: 'system-ui, sans-serif',
+          fontFamily: 'var(--sv-font-family)',
           fontSize: 18,
           fontWeight: 600,
           color: 'var(--sv-color-text-primary)',
@@ -175,7 +182,7 @@ function TokenGalleryComponent() {
         padding: 24,
         background: 'var(--sv-color-surface)',
         minHeight: '100vh',
-        fontFamily: 'system-ui, sans-serif',
+        fontFamily: 'var(--sv-font-family)',
       }}
     >
       <h1
@@ -214,6 +221,28 @@ function TokenGalleryComponent() {
                   minWidth: 4,
                 }}
               />
+            )}
+          />
+        ))}
+      </Section>
+
+      <Section title="Font weight scale">
+        {FONT_WEIGHT_TOKENS.map((t) => (
+          <ScaleRow
+            key={t}
+            token={t}
+            renderPreview={(_v) => (
+              <span
+                style={{
+                  fontFamily: 'var(--sv-font-family)',
+                  fontSize: 'var(--sv-font-size-md)',
+                  fontWeight: `var(${t})`,
+                  color: 'var(--sv-color-text-primary)',
+                  minWidth: 100,
+                }}
+              >
+                Sovereign
+              </span>
             )}
           />
         ))}

@@ -873,6 +873,67 @@ Published packages (`@sovereignfs/ui`, `@sovereignfs/sdk`) receive additive
 minor bumps only. See RFC 0027 (`docs/rfcs/0027-white-labeling.md`) for the
 full design and security analysis.
 
+### 3.19 Desktop App Shell (RFC 0038; post-v1 plan)
+
+Desktop support is deferred to post-v1 but the approach is decided.
+
+**Model: universal shell + instance URL.**
+A single app distributed as a direct download for macOS (`.dmg`), Windows
+(`.exe`/`.msi`), and Linux (`.AppImage`/`.deb`). On first launch the user enters
+the URL of their self-hosted Sovereign instance. The shell loads that URL in a
+WebView. All Sovereign functionality — auth, plugins, shell layout — is served by
+the user's own instance and runs inside the WebView unchanged. Switching between
+multiple instances is supported. This is the same pattern as the mobile shell
+(§3.12) and the same distribution model used by Nextcloud, Bitwarden, and Element
+for their desktop clients.
+
+**Shell technology: Tauri 2.x.**
+A single TypeScript codebase for macOS, Windows, and Linux. The shell's logic is
+minimal: instance URL onboarding on first launch, persistent URL storage, WebView
+loading, and native permission declarations. Tauri is chosen over Electron because:
+
+- System WebView (WKWebView on macOS, WebView2 on Windows, WebKitGTK on Linux) —
+  no bundled Chromium; ~5 MB binary vs ~150 MB
+- TypeScript throughout — consistent with the rest of the stack
+- Rust only required for deep native APIs; all shell logic is TypeScript
+- Tauri plugin system mirrors Capacitor's pattern exactly — native capabilities
+  added incrementally without architectural rework
+
+**Device API strategy — same three tiers as mobile:**
+
+| Tier            | Technology                                                 | Examples                                                          | Works in browser?     |
+| --------------- | ---------------------------------------------------------- | ----------------------------------------------------------------- | --------------------- |
+| Web APIs        | Standard browser APIs, work natively in WebView            | `navigator.geolocation`, `getUserMedia`, Web Notifications        | ✅                    |
+| Tauri plugins   | JS bridge to native OS capabilities                        | System tray, OS notifications, keychain, deep links, auto-updater | ❌ (shell only)       |
+| SDK abstraction | `sdk.device.*` detects environment, routes to correct tier | `sdk.device.notify()`, `sdk.device.secureStore.*`                 | ✅ (Web API fallback) |
+
+Plugin developers use `sdk.device.*` only — identical contract to mobile. The SDK
+gains a `"desktop"` environment check alongside `"browser"` / `"native"` (mobile).
+No plugin code changes required when the desktop shell launches.
+
+**Capability roadmap:**
+
+| Capability                                    | Task | Phase   |
+| --------------------------------------------- | ---- | ------- |
+| Scaffold, onboarding, WebView, multi-instance | 17.1 | post-v1 |
+| System tray + OS notifications                | 17.2 | post-v1 |
+| Deep link scheme (`sovereign://`)             | 17.3 | post-v1 |
+| Keychain credential storage                   | 17.4 | post-v1 |
+| Auto-updater                                  | 17.5 | post-v1 |
+| Mac App Store distribution                    | 17.6 | post-v1 |
+
+**Distribution:** Direct download via GitHub Releases for all platforms. Mac App
+Store distribution is deferred (requires sandboxing entitlements and App Review).
+macOS direct-download `.dmg` requires code signing and Gatekeeper notarization even
+outside the App Store (macOS 10.15+); Tauri's CI pipeline handles this.
+
+The shell app lives in a separate repository (`sovereign-desktop`) under the
+Sovereign project, not in this monorepo. It is developed and versioned
+independently of the platform.
+
+See RFC 0038 (`docs/rfcs/0038-desktop-app-shell.md`) for the full design,
+alternatives considered, and open questions.
+
 ---
 
 ## 4. Software Requirements Specification

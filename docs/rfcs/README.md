@@ -47,3 +47,4 @@ for the full process.
 | [0035](0035-progressive-user-verification.md)    | Progressive user verification                       | Accepted             | Yes (phased) — epic tasks 1.8 + 1.9                                  |
 | [0036](0036-per-plugin-dialect.md)               | Per-plugin database dialect selection               | Accepted             | Yes — epic task 3.15                                                 |
 | [0037](0037-vitepress-docs-site.md)              | VitePress public docs site and project landing page | Draft                | Yes — epic tasks 16.1, 16.2                                          |
+| [0038](0038-desktop-app-shell.md)                | Desktop app shell (Tauri, macOS-first)              | Draft                | Yes — epic task 17.1                                                 |

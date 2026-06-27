@@ -155,3 +155,9 @@ once prioritised.
 | —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035) | 📋     | [1.9](epics/users-auth.md#19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035) |
 | —       | VitePress docs site scaffold (RFC 0037)                               | 📋     | [16.1](epics/docs.md#161--appsdocs--vitepress-workspace-scaffold)                                |
 | —       | Landing home page (RFC 0037)                                          | 📋     | [16.2](epics/docs.md#162--docsindexmd--landing-home-page)                                        |
+| —       | Desktop app shell, macOS-first (RFC 0038)                             | 📋     | [17.1](epics/desktop.md#171--sovereign-desktop--tauri-shell-scaffold-macos-first)                |
+| —       | Desktop: system tray and OS notifications (RFC 0038)                  | 📋     | [17.2](epics/desktop.md#172--system-tray-and-os-notifications)                                   |
+| —       | Desktop: deep link scheme `sovereign://` (RFC 0038)                   | 📋     | [17.3](epics/desktop.md#173--deep-link-scheme-sovereign)                                         |
+| —       | Desktop: keychain credential storage (RFC 0038)                       | 📋     | [17.4](epics/desktop.md#174--keychain-credential-storage)                                        |
+| —       | Desktop: auto-updater (RFC 0038)                                      | 📋     | [17.5](epics/desktop.md#175--auto-updater)                                                       |
+| —       | Desktop: Mac App Store distribution (RFC 0038)                        | 📋     | [17.6](epics/desktop.md#176--mac-app-store-distribution)                                         |

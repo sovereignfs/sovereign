@@ -322,6 +322,38 @@ across browser, PWA, and native shell without changes.
 
 See SRS §3.12 for the full specification.
 
+## Desktop app (post-v1 plan)
+
+Desktop is out of scope for v1 but the approach is decided — do not treat it as
+an open question or suggest alternatives.
+
+**Model:** Universal Tauri shell app — direct `.dmg`/`.exe` download. On first
+launch the user enters their self-hosted instance URL. The app loads it in a
+WebView. All Sovereign functionality is served by the user's instance and runs
+unchanged. Multiple instances supported. Same model as the mobile shell and the
+same pattern as Nextcloud, Bitwarden, and Element desktop clients.
+
+**Shell:** Tauri 2.x (TypeScript shell logic; system WebView — WKWebView on macOS,
+WebView2 on Windows, WebKitGTK on Linux; ~5 MB binary). Lives in a separate
+`sovereign-desktop` repository. macOS ships first; Windows and Linux follow with
+the same codebase.
+
+**Distribution:** Direct download via GitHub Releases (`.dmg`, `.exe`/`.msi`,
+`.AppImage`/`.deb`). Mac App Store deferred.
+
+**Device API tiers — same three-tier model as mobile:**
+
+1. **Web APIs** — work natively in the system WebView. Use these first.
+2. **Tauri plugins** — for native capabilities beyond Web APIs: system tray,
+   OS notifications, keychain, deep links, auto-updater. Added post-v1 as needed.
+3. **`sdk.device.*`** — the SDK abstraction plugin developers call. Detects
+   environment (`"desktop"`), routes to the correct tier.
+
+**Plugin developers use `sdk.device.*` only.** No plugin changes required when
+the desktop shell launches.
+
+See RFC 0038 and SRS §3.19 for the full specification.
+
 ## Tech stack
 
 Next.js 15 (App Router) · TypeScript · Turborepo + pnpm workspaces ·
@@ -391,6 +423,8 @@ pnpm test:watch         # Vitest in watch mode
 pnpm test:unit          # unit/component tests with verbose output
 pnpm test:integration   # cross-service integration tests (root __tests__/integration/)
 pnpm test:e2e           # end-to-end tests (root __tests__/e2e/)
+pnpm test:all           # unit → integration → e2e in sequence (local full-suite run)
+pnpm kill-port          # kill any process listening on port 3000 or 3001 (frees dev ports)
 pnpm install:plugins    # clone sovereign/community plugins declared in sovereign.plugins.json
 pnpm registry:validate  # fetch + validate registry/plugins.json entries, write content-hash provenance
 pnpm registry:check     # verify-only (no write) — CI runs this on registry/ changes

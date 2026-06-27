@@ -70,7 +70,12 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   }
 
   const pluginIcons = [...(launcher ? [launcher] : []), ...plugins].map((plugin) => (
-    <NavIcon key={plugin.id} href={plugin.routePrefix} title={plugin.name}>
+    <NavIcon
+      key={plugin.id}
+      href={plugin.routePrefix}
+      title={plugin.name}
+      alsoActiveOn={plugin.id === 'fs.sovereign.launcher' ? ['/'] : undefined}
+    >
       {plugin.icon ? (
         <img
           src={`/plugin-icons/${plugin.id}.svg`}

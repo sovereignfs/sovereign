@@ -976,3 +976,13 @@
   color: var(--sv-color-text-primary);
   border-color: var(--sv-color-border-strong);
 }
+
+/* Dark mode: invert SVG plugin icons (black strokes → white) */
+:global([data-theme='dark']) .sidebarPluginImg {
+  filter: invert(1);
+}
+
+/* Dark mode: lighten the select dropdown chevron */
+:global([data-theme='dark']) .select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}

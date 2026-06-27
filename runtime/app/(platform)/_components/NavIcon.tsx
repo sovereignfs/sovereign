@@ -7,14 +7,19 @@ import styles from '../shell.module.css';
 export function NavIcon({
   href,
   title,
+  alsoActiveOn,
   children,
 }: {
   href: string;
   title: string;
+  alsoActiveOn?: string[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isActive = pathname === href || pathname.startsWith(href + '/');
+  const isActive =
+    pathname === href ||
+    pathname.startsWith(href + '/') ||
+    (alsoActiveOn?.includes(pathname) ?? false);
   return (
     <Link
       href={href}

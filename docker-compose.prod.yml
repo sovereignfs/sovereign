@@ -10,8 +10,9 @@
 # Mailpit is dev-only and is absent here. Configure a real SMTP provider via
 # the SMTP_* environment variables in your .env file.
 #
-# Only the runtime container is exposed to the internet (via a reverse proxy).
-# The auth server binds on the internal Docker bridge network only.
+# Both services are exposed on the host. In production, put a reverse proxy
+# (nginx, Caddy) in front of the runtime port. The auth port must also be
+# publicly reachable — browsers are redirected there for login.
 # See docs/self-hosting.md for full setup instructions.
 #
 # Quick start:

@@ -1,0 +1,28 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-1);
+}
+
+.label {
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+}
+
+.required {
+  color: var(--sv-color-error-text);
+  margin-left: var(--sv-space-1);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-error-text);
+}

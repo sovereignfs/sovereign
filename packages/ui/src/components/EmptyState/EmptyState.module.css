@@ -1,0 +1,27 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-12) var(--sv-space-6);
+  text-align: center;
+}
+
+.icon {
+  color: var(--sv-color-text-subtle);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--sv-font-size-md);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.description {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  max-width: 36ch;
+}

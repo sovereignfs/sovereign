@@ -1,4 +1,4 @@
-# Epic: Theming
+# Epic: Design System
 
 > The Sovereign Design System — CSS custom property tokens, UI components, white-labeling, instance identity, email templates, dark mode, and Storybook.
 
@@ -8,7 +8,7 @@
 
 ## Overview
 
-Theming covers two closely related areas: the `@sovereignfs/ui` design system (the public component and token contract for plugin developers), and the operator-facing white-labeling system that lets a self-hoster replace Sovereign's visual identity with their own brand. The design system scaffold landed in v0.3; white-labeling shipped across Tasks 0.8.4, 0.9.0, and continues with email templates (0.9.1) and dynamic PWA manifest (0.9.2).
+This epic covers two closely related areas: the `@sovereignfs/ui` design system (the public component and token contract for plugin developers), and the operator-facing white-labeling system that lets a self-hoster replace Sovereign's visual identity with their own brand. The design system scaffold landed in v0.3; white-labeling shipped across Tasks 0.8.4, 0.9.0, and continues with email templates and dynamic PWA manifest. Task 9.11 closes the component gaps identified in a readiness audit (2026-06-27) — eight commonly-needed layout and interaction primitives that plugin developers currently hand-roll per plugin.
 
 ## Related RFCs
 
@@ -370,3 +370,96 @@ Task 1.0.03 (Phase 1 — `instance_config` table must exist)
 - PWA installation on a configured instance shows the operator's name and icons in the OS launcher
 
 ---
+
+#### 📋 9.11 — Design system component gaps — plugin developer readiness
+
+**Goal:** Close the eight missing `@sovereignfs/ui` components identified in the
+2026-06-27 readiness audit. Plugin developers currently hand-roll these patterns
+per plugin (confirmed by reading `plugins/console` and `plugins/account` CSS
+modules). All components follow the existing conventions: CSS Modules, token-only
+values, RSC-safe, fully typed props, Storybook story included.
+
+Also fixes two documentation gaps found during the audit: font-weight tokens
+missing from `TokenGallery`, and the gallery using `system-ui` instead of
+`var(--sv-font-family)` for its own chrome.
+
+**Deliverables:**
+
+- **`Card`** (`packages/ui/src/components/Card/`) — surface container.
+  Props: `as?: 'div' | 'article' | 'li'` (default `'div'`),
+  `interactive?: boolean` (adds hover border + pointer cursor for clickable
+  cards), `padding?: 'sm' | 'md' | 'lg'` (default `'md'`), `className?`,
+  `children`. Uses `--sv-color-surface-raised`, `--sv-color-border`,
+  `--sv-radius-lg`, `--sv-shadow-card`.
+
+- **`FormField`** (`packages/ui/src/components/FormField/`) — accessible label +
+  input wrapper. Props: `label: string`, `hint?: string`, `error?: string`,
+  `htmlFor?: string`, `required?: boolean`, `children: React.ReactNode`.
+  Renders `<label>` linked to the child input via `htmlFor`; hint and error
+  rendered as `<p>` with `aria-describedby` wired to the child. Error text
+  uses `--sv-color-error-text`; hint uses `--sv-color-text-muted`.
+
+- **`PageHeader`** (`packages/ui/src/components/PageHeader/`) — plugin page
+  top-section. Props: `title: string`, `description?: string`,
+  `action?: React.ReactNode` (right-aligned slot for a button or badge).
+  Uses `--sv-font-size-2xl` + `--sv-font-weight-semibold` for title;
+  `--sv-color-text-muted` for description.
+
+- **`EmptyState`** (`packages/ui/src/components/EmptyState/`) — zero-data
+  placeholder. Props: `icon?: IconName` (renders an `<Icon>` at `lg` size),
+  `heading: string`, `description?: string`, `action?: React.ReactNode`.
+  Centred layout. Uses `--sv-color-text-muted` for description,
+  `--sv-color-text-subtle` for icon.
+
+- **`Spinner`** (`packages/ui/src/components/Spinner/`) — CSS-animated ring.
+  Props: `size?: 'sm' | 'md' | 'lg'` (16 / 24 / 32 px, matching icon size
+  tokens), `label?: string` (default `'Loading…'`, used as `aria-label`).
+  Pure CSS animation; respects `prefers-reduced-motion` (pauses animation).
+  Uses `--sv-color-accent` for the active arc, `--sv-color-border` for the track.
+
+- **`Avatar`** (`packages/ui/src/components/Avatar/`) — user representation.
+  Props: `src?: string`, `name: string` (used for initials fallback and
+  `alt`), `size?: 'sm' | 'md' | 'lg'` (24 / 32 / 40 px). Shows image when
+  `src` is provided and loads successfully; falls back to up-to-2-char initials
+  derived from `name` split on whitespace. Background uses
+  `--sv-color-surface-raised`; border uses `--sv-color-border`;
+  text uses `--sv-color-text-primary`.
+
+- **`NavTabs`** (`packages/ui/src/components/NavTabs/`) — underline-style
+  navigation tabs, distinct from the existing contained `Tabs` component.
+  Intended for plugin-level page navigation (mirrors the pattern used by both
+  `plugins/console` and `plugins/account`). Props: `items: { label: string;
+href: string; active?: boolean }[]`. Renders an `<nav>` with anchor tags;
+  active item gets a bottom border in `--sv-color-text-primary`. Scrollable
+  on mobile (same masked overflow pattern as `account.module.css`).
+
+- **`Tooltip`** (`packages/ui/src/components/Tooltip/`) — hover/focus hint.
+  Props: `content: string`, `children: React.ReactElement`, `side?: 'top' |
+'bottom' | 'left' | 'right'` (default `'top'`). Wraps the child in a
+  `<span>` with `aria-describedby` pointing to a visually-hidden tooltip
+  element; shown/hidden via CSS `:hover` + `:focus-within` on the wrapper —
+  no JS positioning (keeps it RSC-safe). Uses `--sv-color-surface-raised`,
+  `--sv-color-border`, `--sv-shadow-popover`, `--sv-font-size-xs`.
+
+**Token gallery fix:** add `--sv-font-weight-medium`, `--sv-font-weight-semibold`,
+`--sv-font-weight-bold` to `TokenGallery.stories.tsx`; replace `system-ui` with
+`var(--sv-font-family)` for the gallery's own chrome text.
+
+**Stories:** one `*.stories.tsx` per new component; add all eight to the Component
+Gallery section of `DesignSystemOverview.stories.tsx`.
+
+**Version impact:** `@sovereignfs/ui` → **minor** (`0.20.0` → `0.21.0`) — adds
+eight new exported components; no breaking changes to existing API.
+
+**Review checklist:**
+
+- All eight components exported from `packages/ui/src/index.ts`
+- No hardcoded colour, spacing, or radius values in any component CSS — only `--sv-*` token references
+- `Avatar` shows initials when `src` is absent or fails to load; `alt` is always set
+- `Spinner` animation pauses under `prefers-reduced-motion: reduce`
+- `FormField` error text is announced by screen readers via `aria-describedby`
+- `Tooltip` is keyboard accessible (visible on `:focus-within`)
+- `NavTabs` scrolls horizontally on a 375 px viewport without showing a scrollbar
+- All stories render without errors; a11y panel passes on each
+- `pnpm --filter @sovereignfs/ui typecheck` passes
+- `pnpm format:check && pnpm lint` pass

@@ -1,0 +1,51 @@
+.wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.tip {
+  position: absolute;
+  z-index: 50;
+  white-space: nowrap;
+  padding: var(--sv-space-1) var(--sv-space-2);
+  background: var(--sv-color-surface-raised);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  box-shadow: var(--sv-shadow-popover);
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-primary);
+  font-family: var(--sv-font-family);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.wrapper:hover .tip,
+.wrapper:focus-within .tip {
+  opacity: 1;
+}
+
+/* Placement */
+.top {
+  bottom: calc(100% + var(--sv-space-2));
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.bottom {
+  top: calc(100% + var(--sv-space-2));
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.left {
+  right: calc(100% + var(--sv-space-2));
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.right {
+  left: calc(100% + var(--sv-space-2));
+  top: 50%;
+  transform: translateY(-50%);
+}

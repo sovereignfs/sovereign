@@ -10,20 +10,20 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 
 ### Phase v0.3 — Foundation
 
-| Version | Task                                             | Status | Epic task                                                                   |
-| ------- | ------------------------------------------------ | ------ | --------------------------------------------------------------------------- |
-| 0.3.1   | Monorepo scaffold                                | ✅     | [0.1](epics/infrastructure.md#01--monorepo-scaffold)                        |
-| 0.3.2   | Shared TypeScript config                         | ✅     | [0.2](epics/infrastructure.md#02--shared-typescript-config)                 |
-| 0.3.3   | Code quality tooling                             | ✅     | [0.3](epics/infrastructure.md#03--code-quality-tooling)                     |
-| 0.3.4   | `packages/db` — Drizzle client factory           | ✅     | [0.4](epics/infrastructure.md#04--packagesdb--drizzle-client-factory)       |
-| 0.3.5   | `packages/manifest` — schema and validation      | ✅     | [3.1](epics/plugins-runtime.md#31--packagesmanifest--schema-and-validation) |
-| 0.3.6   | `packages/mailer` — SMTP abstraction             | ✅     | [0.5](epics/infrastructure.md#05--packagesmailer--smtp-abstraction)         |
-| 0.3.7   | `packages/ui` — Sovereign Design System scaffold | ✅     | [9.1](epics/theming.md#91--packagesui--sovereign-design-system-scaffold)    |
-| 0.3.8   | `packages/sdk` — interface definitions           | ✅     | [3.2](epics/plugins-runtime.md#32--packagessdk--interface-definitions)      |
-| 0.3.9   | `apps/auth` — better-auth server                 | ✅     | [1.1](epics/users-auth.md#11--appsauth--better-auth-server)                 |
-| 0.3.10  | Runtime scaffold                                 | ✅     | [2.1](epics/platform-shell.md#21--runtime-scaffold)                         |
-| 0.3.11  | Generate script                                  | ✅     | [2.2](epics/platform-shell.md#22--generate-script)                          |
-| 0.3.12  | Docker Compose for local dev                     | ✅     | [0.6](epics/infrastructure.md#06--docker-compose-for-local-dev)             |
+| Version | Task                                             | Status | Epic task                                                                      |
+| ------- | ------------------------------------------------ | ------ | ------------------------------------------------------------------------------ |
+| 0.3.1   | Monorepo scaffold                                | ✅     | [0.1](epics/infrastructure.md#01--monorepo-scaffold)                           |
+| 0.3.2   | Shared TypeScript config                         | ✅     | [0.2](epics/infrastructure.md#02--shared-typescript-config)                    |
+| 0.3.3   | Code quality tooling                             | ✅     | [0.3](epics/infrastructure.md#03--code-quality-tooling)                        |
+| 0.3.4   | `packages/db` — Drizzle client factory           | ✅     | [0.4](epics/infrastructure.md#04--packagesdb--drizzle-client-factory)          |
+| 0.3.5   | `packages/manifest` — schema and validation      | ✅     | [3.1](epics/plugins-runtime.md#31--packagesmanifest--schema-and-validation)    |
+| 0.3.6   | `packages/mailer` — SMTP abstraction             | ✅     | [0.5](epics/infrastructure.md#05--packagesmailer--smtp-abstraction)            |
+| 0.3.7   | `packages/ui` — Sovereign Design System scaffold | ✅     | [9.1](epics/design-system.md#91--packagesui--sovereign-design-system-scaffold) |
+| 0.3.8   | `packages/sdk` — interface definitions           | ✅     | [3.2](epics/plugins-runtime.md#32--packagessdk--interface-definitions)         |
+| 0.3.9   | `apps/auth` — better-auth server                 | ✅     | [1.1](epics/users-auth.md#11--appsauth--better-auth-server)                    |
+| 0.3.10  | Runtime scaffold                                 | ✅     | [2.1](epics/platform-shell.md#21--runtime-scaffold)                            |
+| 0.3.11  | Generate script                                  | ✅     | [2.2](epics/platform-shell.md#22--generate-script)                             |
+| 0.3.12  | Docker Compose for local dev                     | ✅     | [0.6](epics/infrastructure.md#06--docker-compose-for-local-dev)                |
 
 ---
 
@@ -99,31 +99,32 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 
 ### Phase v0.8 — Monetization & Hardening
 
-| Version | Task                                                            | Status | Epic task                                                                              |
-| ------- | --------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------- |
-| 0.8.0   | Plugin monetization (RFC 0003)                                  | ✅     | [7.1](epics/monetization.md#71--plugin-monetization-rfc-0003)                          |
-| 0.8.1   | Per-plugin database (RFC 0004)                                  | ✅     | [3.13](epics/plugins-runtime.md#313--per-plugin-database)                              |
-| 0.8.2   | E2E golden-path test suite (Playwright)                         | ✅     | [0.12](epics/infrastructure.md#012--e2e-golden-path-test-suite)                        |
-| 0.8.3   | Production dev-mode & diagnostics (RFC 0020)                    | ✅     | [2.12](epics/platform-shell.md#212--production-dev-mode--diagnostics)                  |
-| 0.8.4   | White-labeling, Phase 1 — Brand DB + shell injection (RFC 0027) | ✅     | [9.6](epics/theming.md#96--white-labeling-phase-1--brand-db--shell-injection-rfc-0027) |
-| 0.8.5   | Storybook for the design system and app shell                   | ✅     | [9.7](epics/theming.md#97--storybook-for-the-design-system-and-app-shell)              |
+| Version | Task                                                            | Status | Epic task                                                                                    |
+| ------- | --------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------- |
+| 0.8.0   | Plugin monetization (RFC 0003)                                  | ✅     | [7.1](epics/monetization.md#71--plugin-monetization-rfc-0003)                                |
+| 0.8.1   | Per-plugin database (RFC 0004)                                  | ✅     | [3.13](epics/plugins-runtime.md#313--per-plugin-database)                                    |
+| 0.8.2   | E2E golden-path test suite (Playwright)                         | ✅     | [0.12](epics/infrastructure.md#012--e2e-golden-path-test-suite)                              |
+| 0.8.3   | Production dev-mode & diagnostics (RFC 0020)                    | ✅     | [2.12](epics/platform-shell.md#212--production-dev-mode--diagnostics)                        |
+| 0.8.4   | White-labeling, Phase 1 — Brand DB + shell injection (RFC 0027) | ✅     | [9.6](epics/design-system.md#96--white-labeling-phase-1--brand-db--shell-injection-rfc-0027) |
+| 0.8.5   | Storybook for the design system and app shell                   | ✅     | [9.7](epics/design-system.md#97--storybook-for-the-design-system-and-app-shell)              |
 
 ---
 
 ### Phase v0.9 — Pre-release Hardening
 
-| Version | Task                                                                      | Status | Epic task                                                                                                            |
-| ------- | ------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------- |
-| 0.9.0   | Instance identity rename (RFC 0032)                                       | ✅     | [9.8](epics/theming.md#98--instance-identity-rename-rfc-0032)                                                        |
-| 0.9.1   | User data deletion (RFC 0033)                                             | ✅     | [1.7](epics/users-auth.md#17--user-data-deletion-rfc-0033)                                                           |
-| 0.9.2   | Notification Center: pluggable pub/sub transport (RFC 0034)               | ✅     | [4.3](epics/notification-center.md#43--notification-center-pluggable-pubsub-transport)                               |
-| 0.9.3   | Sidebar customization — plugin ordering and visibility                    | ✅     | [2.13](epics/platform-shell.md#213--sidebar-customization--plugin-ordering-and-visibility)                           |
-| 0.9.4   | Email-bound invite flow                                                   | ✅     | [1.10](epics/users-auth.md#110--email-bound-invite-flow)                                                             |
-| 0.9.5   | Test-user flag on seeded accounts                                         | 📋     | [1.11](epics/users-auth.md#111--test-user-flag-on-seeded-accounts)                                                   |
-| 0.9.6   | Internationalization, Phase 1 — Infrastructure (RFC 0029)                 | 📋     | [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029)                                     |
-| 0.9.7   | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)        | 📋     | [11.2](epics/i18n.md#112--internationalization-phase-2--platform-shell-adoption-rfc-0029)                            |
-| 0.9.8   | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](epics/theming.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
-| 0.9.9   | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](epics/theming.md#910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
+| Version | Task                                                                      | Status | Epic task                                                                                                                  |
+| ------- | ------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------- |
+| 0.9.0   | Instance identity rename (RFC 0032)                                       | ✅     | [9.8](epics/design-system.md#98--instance-identity-rename-rfc-0032)                                                        |
+| 0.9.1   | User data deletion (RFC 0033)                                             | ✅     | [1.7](epics/users-auth.md#17--user-data-deletion-rfc-0033)                                                                 |
+| 0.9.2   | Notification Center: pluggable pub/sub transport (RFC 0034)               | ✅     | [4.3](epics/notification-center.md#43--notification-center-pluggable-pubsub-transport)                                     |
+| 0.9.3   | Sidebar customization — plugin ordering and visibility                    | ✅     | [2.13](epics/platform-shell.md#213--sidebar-customization--plugin-ordering-and-visibility)                                 |
+| 0.9.4   | Email-bound invite flow                                                   | ✅     | [1.10](epics/users-auth.md#110--email-bound-invite-flow)                                                                   |
+| 0.9.5   | Test-user flag on seeded accounts                                         | 📋     | [1.11](epics/users-auth.md#111--test-user-flag-on-seeded-accounts)                                                         |
+| 0.9.6   | Internationalization, Phase 1 — Infrastructure (RFC 0029)                 | 📋     | [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029)                                           |
+| 0.9.7   | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)        | 📋     | [11.2](epics/i18n.md#112--internationalization-phase-2--platform-shell-adoption-rfc-0029)                                  |
+| 0.9.8   | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](epics/design-system.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
+| 0.9.9   | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](epics/design-system.md#910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
+| 0.9.10  | Design system component gaps — plugin developer readiness                 | 📋     | [9.11](epics/design-system.md#911--design-system-component-gaps--plugin-developer-readiness)                               |
 
 ---
 

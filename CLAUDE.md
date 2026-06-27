@@ -104,12 +104,11 @@ they are authoritative over assumptions:
   `@sovereignfs/sdk` and `@sovereignfs/ui` — they are public contracts for
   plugin developers.
 
-  The **platform version** in the root `package.json` tracks roadmap phase
-  milestones — **minor bumps for completed phases, patch bumps for completed
-  pre-release hardening tasks (1.0.xx), and a single jump to `1.0.0` at the
-  public release.** The current version is **`0.9.3`** (phases 0.3–0.9 complete
-  - three 1.0.xx hardening tasks). Do **not** bump the minor for individual tasks
-    within a phase — minor bumps happen once per completed roadmap phase. The
+  The **platform version** in the root `package.json` tracks roadmap
+  milestones — **each completed task bumps the minor version; patch versions
+  are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
+  to `1.0.0` marks the public release.** The current version is **`0.9.3`**
+  (phases 0.3–0.9 tasks complete, patch .3 from hotfixes). The
     downgrade guard, plugin compatibility gates (RFC 0024), and `/api/admin/health`
     all read this value; see `docs/upgrade.md` for the runtime version map and
     v1.0.0 release checklist.

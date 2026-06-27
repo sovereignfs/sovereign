@@ -119,12 +119,12 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 | 0.9.2   | Notification Center: pluggable pub/sub transport (RFC 0034)               | ✅     | [4.3](epics/notification-center.md#43--notification-center-pluggable-pubsub-transport)                                     |
 | 0.9.3   | Sidebar customization — plugin ordering and visibility                    | ✅     | [2.13](epics/platform-shell.md#213--sidebar-customization--plugin-ordering-and-visibility)                                 |
 | 0.9.4   | Email-bound invite flow                                                   | ✅     | [1.10](epics/users-auth.md#110--email-bound-invite-flow)                                                                   |
-| 0.9.5   | Test-user flag on seeded accounts                                         | 📋     | [1.11](epics/users-auth.md#111--test-user-flag-on-seeded-accounts)                                                         |
-| 0.9.6   | Internationalization, Phase 1 — Infrastructure (RFC 0029)                 | 📋     | [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029)                                           |
-| 0.9.7   | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)        | 📋     | [11.2](epics/i18n.md#112--internationalization-phase-2--platform-shell-adoption-rfc-0029)                                  |
-| 0.9.8   | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](epics/design-system.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
-| 0.9.9   | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](epics/design-system.md#910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
-| 0.9.10  | Design system component gaps — plugin developer readiness                 | 📋     | [9.11](epics/design-system.md#911--design-system-component-gaps--plugin-developer-readiness)                               |
+| 0.10.0  | Test-user flag on seeded accounts                                         | 📋     | [1.11](epics/users-auth.md#111--test-user-flag-on-seeded-accounts)                                                         |
+| 0.11.0  | Internationalization, Phase 1 — Infrastructure (RFC 0029)                 | 📋     | [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029)                                           |
+| 0.12.0  | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)        | 📋     | [11.2](epics/i18n.md#112--internationalization-phase-2--platform-shell-adoption-rfc-0029)                                  |
+| 0.13.0  | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](epics/design-system.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
+| 0.14.0  | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](epics/design-system.md#910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
+| 0.15.0  | Design system component gaps — plugin developer readiness                 | 📋     | [9.11](epics/design-system.md#911--design-system-component-gaps--plugin-developer-readiness)                               |
 
 ---
 
@@ -134,10 +134,10 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 
 | Version | Task                                                                         | Status | Epic task                                                                                             |
 | ------- | ---------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------- |
-| 1.0.1   | Encryption at rest & field-level, Tier 2–4 (RFC 0008)                        | 📋     | [8.5](epics/data-sovereignty.md#85--encryption-at-rest--field-level-tier-24-rfc-0008)                 |
-| 1.0.2   | Phase 2 payment integration (RFC 0003 Phase 2)                               | 📋     | [7.2](epics/monetization.md#72--phase-2-payment-integration-rfc-0003-phase-2)                         |
-| 1.0.3   | Analytics, Phase 1 — Plugin scaffold + server-side infrastructure (RFC 0030) | 📋     | [6.1](epics/analytics.md#61--analytics-phase-1--plugin-scaffold--server-side-infrastructure-rfc-0030) |
-| 1.0.4   | Analytics, Phase 2 — Client-side click tracking + heatmaps (RFC 0030)        | 📋     | [6.2](epics/analytics.md#62--analytics-phase-2--client-side-click-tracking--heatmaps-rfc-0030)        |
+| 1.1.0   | Encryption at rest & field-level, Tier 2–4 (RFC 0008)                        | 📋     | [8.5](epics/data-sovereignty.md#85--encryption-at-rest--field-level-tier-24-rfc-0008)                 |
+| 1.2.0   | Phase 2 payment integration (RFC 0003 Phase 2)                               | 📋     | [7.2](epics/monetization.md#72--phase-2-payment-integration-rfc-0003-phase-2)                         |
+| 1.3.0   | Analytics, Phase 1 — Plugin scaffold + server-side infrastructure (RFC 0030) | 📋     | [6.1](epics/analytics.md#61--analytics-phase-1--plugin-scaffold--server-side-infrastructure-rfc-0030) |
+| 1.4.0   | Analytics, Phase 2 — Client-side click tracking + heatmaps (RFC 0030)        | 📋     | [6.2](epics/analytics.md#62--analytics-phase-2--client-side-click-tracking--heatmaps-rfc-0030)        |
 
 ---
 

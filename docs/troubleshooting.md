@@ -63,3 +63,54 @@ pnpm generate   # recomposes all plugin routes
 ## Docker / production
 
 See [`docs/self-hosting.md`](self-hosting.md) for Docker-specific troubleshooting (volume ownership, `pnpm-workspace.yaml` marker, IPv4 healthcheck, etc.).
+
+---
+
+### Login loops back to the login page on a VPS deployment
+
+**Symptom:** Navigating to the runtime (`http://VPS_IP:4000`) immediately
+redirects to the auth login page. After signing in, the browser is sent to
+`localhost:4000` (or `localhost:3000`) instead of the server — and the login
+page appears again.
+
+**Cause:** `AUTH_BASE_URL` and `NEXT_PUBLIC_RUNTIME_URL` were not set, so they
+defaulted to `localhost:*`. Those addresses are only reachable from inside the
+server itself; a remote browser that follows them goes nowhere (or to the wrong
+machine entirely) and ends up back at the login page.
+
+**Fix:** Add these three variables to `.env` before starting the stack:
+
+```env
+AUTH_BASE_URL=http://YOUR_VPS_IP_OR_DOMAIN:4001
+NEXT_PUBLIC_RUNTIME_URL=http://YOUR_VPS_IP_OR_DOMAIN:4000
+AUTH_TRUSTED_ORIGINS=http://auth:3001
+```
+
+Restart both containers after editing `.env`:
+
+```bash
+docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml up -d
+```
+
+See [Deploying to a real VPS or server](self-hosting.md#deploying-to-a-real-vps-or-server) for the full setup with TLS/domain examples.
+
+---
+
+### Docker image not found when using `SOVEREIGN_VERSION`
+
+**Symptom:** `docker compose -f docker-compose.prod.yml up -d` fails with
+`manifest unknown` or `not found` when `SOVEREIGN_VERSION` is set.
+
+**Cause:** The image names in `docker-compose.prod.yml` reference
+`ghcr.io/sovereignfs/sovereign-auth` and `ghcr.io/sovereignfs/sovereign-runtime`.
+If you see a different org name, the file may be out of date.
+
+**Fix:** Pull the latest `docker-compose.prod.yml` from the repo — the org name
+was corrected to `sovereignfs` to match the GitHub Container Registry packages:
+
+```bash
+git pull
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+```

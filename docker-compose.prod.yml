@@ -23,7 +23,7 @@ services:
     # When SOVEREIGN_VERSION is set, pull the published image from GHCR.
     # Without it, build from source in this repo (the fallback for forks and
     # air-gapped environments).
-    image: ${SOVEREIGN_VERSION:+ghcr.io/kasunben/sovereign-auth:${SOVEREIGN_VERSION}}
+    image: ${SOVEREIGN_VERSION:+ghcr.io/sovereignfs/sovereign-auth:${SOVEREIGN_VERSION}}
     build:
       context: .
       dockerfile: apps/auth/Dockerfile
@@ -69,7 +69,7 @@ services:
       - sovereign_net
 
   runtime:
-    image: ${SOVEREIGN_VERSION:+ghcr.io/kasunben/sovereign-runtime:${SOVEREIGN_VERSION}}
+    image: ${SOVEREIGN_VERSION:+ghcr.io/sovereignfs/sovereign-runtime:${SOVEREIGN_VERSION}}
     build:
       context: .
       dockerfile: Dockerfile

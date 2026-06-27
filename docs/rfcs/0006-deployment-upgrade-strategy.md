@@ -99,9 +99,9 @@ tags to a container registry (GHCR proposed):
 ```yaml
 services:
   runtime:
-    image: ghcr.io/kasunben/sovereign-runtime:${SOVEREIGN_VERSION}
+    image: ghcr.io/sovereignfs/sovereign-runtime:${SOVEREIGN_VERSION}
   auth:
-    image: ghcr.io/kasunben/sovereign-auth:${SOVEREIGN_VERSION}
+    image: ghcr.io/sovereignfs/sovereign-auth:${SOVEREIGN_VERSION}
 ```
 
 Building from source (`up --build`) remains documented as a **fallback** for

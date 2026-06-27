@@ -220,6 +220,41 @@ and after you sign in or register the auth server sends you back to
 `http://localhost:4000`. In a real deployment behind a reverse proxy, set
 `AUTH_BASE_URL` and `NEXT_PUBLIC_RUNTIME_URL` to your public domain(s).
 
+### Deploying to a real VPS or server
+
+> **The most common mistake:** leaving `AUTH_BASE_URL` and
+> `NEXT_PUBLIC_RUNTIME_URL` at their defaults. They default to `localhost:*`
+> which is only reachable from within the server itself. A remote browser
+> that hits these URLs gets sent nowhere — login silently loops back to the
+> login page.
+
+When deploying to a real machine (any VPS, cloud VM, or bare-metal server),
+you **must** add these three variables to `.env` before starting:
+
+```env
+# Replace with your VPS IP or domain. Use https:// if you have TLS.
+AUTH_BASE_URL=http://203.0.113.10:4001           # public URL of the auth container
+NEXT_PUBLIC_RUNTIME_URL=http://203.0.113.10:4000 # public URL of the runtime container
+AUTH_TRUSTED_ORIGINS=http://auth:3001            # allows server-to-server calls through Docker
+```
+
+With a domain and TLS (recommended — see [Reverse proxy](#reverse-proxy) below):
+
+```env
+AUTH_BASE_URL=https://auth.example.com
+NEXT_PUBLIC_RUNTIME_URL=https://example.com
+AUTH_TRUSTED_ORIGINS=http://auth:3001
+```
+
+`SOVEREIGN_AUTH_PUBLIC_URL` is derived from `AUTH_BASE_URL` by the Compose file
+automatically — you only need to set `AUTH_BASE_URL`.
+
+**Why `AUTH_TRUSTED_ORIGINS=http://auth:3001`?** When `AUTH_BASE_URL` is your
+public domain, better-auth's CSRF check requires the internal Docker address
+(`http://auth:3001`) to be in the trusted-origins list, because that is the
+`Origin` header the runtime sends on server-to-server calls (avatar uploads,
+password changes, session verification). Without it those calls return 403.
+
 ### Reverse proxy
 
 Place a reverse proxy in front of the runtime port (`4000`) only — the auth
@@ -819,7 +854,7 @@ Set `LOG_LEVEL` in `.env` to control verbosity:
 ```bash
 LOG_LEVEL=debug docker compose up
 # or with Docker logs:
-docker logs -f sovereign-runtime-1
+docker logs -f sovereign-runtime
 ```
 
 Log lines look like:

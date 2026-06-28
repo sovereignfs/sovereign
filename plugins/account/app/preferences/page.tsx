@@ -27,22 +27,41 @@ interface SidebarData {
 
 async function getPrefs(): Promise<Prefs> {
   const cookie = (await headers()).get('cookie') ?? '';
-  const res = await fetch(`${SELF_URL}/api/account/prefs`, {
-    headers: { cookie },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`Failed to load preferences: ${res.status}`);
-  return res.json() as Promise<Prefs>;
+  try {
+    const res = await fetch(`${SELF_URL}/api/account/prefs`, {
+      headers: { cookie },
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      console.error(`[preferences] prefs fetch failed: ${res.status}`);
+      return { timezone: 'UTC', theme: 'system', sidebarPlugins: null };
+    }
+    return res.json() as Promise<Prefs>;
+  } catch (err) {
+    console.error('[preferences] prefs fetch error:', err instanceof Error ? err.message : err);
+    return { timezone: 'UTC', theme: 'system', sidebarPlugins: null };
+  }
 }
 
 async function getSidebarData(): Promise<SidebarData> {
   const cookie = (await headers()).get('cookie') ?? '';
-  const res = await fetch(`${SELF_URL}/api/account/sidebar-plugins`, {
-    headers: { cookie },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`Failed to load sidebar plugins: ${res.status}`);
-  return res.json() as Promise<SidebarData>;
+  try {
+    const res = await fetch(`${SELF_URL}/api/account/sidebar-plugins`, {
+      headers: { cookie },
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      console.error(`[preferences] sidebar-plugins fetch failed: ${res.status}`);
+      return { plugins: [], sidebarPlugins: null };
+    }
+    return res.json() as Promise<SidebarData>;
+  } catch (err) {
+    console.error(
+      '[preferences] sidebar-plugins fetch error:',
+      err instanceof Error ? err.message : err,
+    );
+    return { plugins: [], sidebarPlugins: null };
+  }
 }
 
 export default async function PreferencesPage() {

@@ -107,8 +107,8 @@ they are authoritative over assumptions:
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.10.0`**
-  (phases 0.3–0.9 tasks complete, patches .6–.10 from production hotfixes). The
+  to `1.0.0` marks the public release.** The current version is **`0.10.2`**
+  (phases 0.3–0.9 tasks complete, patches .6–.10 from production hotfixes, .1–.2 from docs tasks 16.1–16.2). The
   downgrade guard, plugin compatibility gates (RFC 0024), and `/api/admin/health`
   all read this value; see `docs/upgrade.md` for the runtime version map and
   v1.0.0 release checklist.

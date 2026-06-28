@@ -210,6 +210,13 @@
     padding-bottom: calc(var(--sv-shell-footer-height, 60px) + var(--sv-space-4));
     /* Content cell scrolls within the fixed-height shell grid. */
     overflow-y: auto;
+    /* Grid children default to min-width: auto, which lets nowrap content (e.g.
+       the account tab bar) push this cell wider than 1fr and cause the entire
+       shell — including the fixed header — to scroll horizontally. min-width: 0
+       constrains the cell to its 1fr allocation so overflow-x on inner elements
+       clips correctly instead of escaping to the viewport. */
+    min-width: 0;
+    overflow-x: hidden;
   }
 
   .mobileHeader {

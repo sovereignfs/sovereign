@@ -18,6 +18,13 @@ export interface AuthEnv {
   /** Shared secret for runtime→auth admin API calls. No default — must be set. */
   adminKey: string;
   /**
+   * Cookie domain for cross-subdomain session sharing. When auth and runtime
+   * live on different subdomains (e.g. auth.example.com and example.com),
+   * set this to the shared parent domain (e.g. ".example.com") so session
+   * cookies are readable by both. Unset in single-domain / localhost dev.
+   */
+  cookieDomain: string | undefined;
+  /**
    * Additional origins trusted for CSRF checks, beyond baseUrl. Set to the
    * internal Docker service address (http://auth:3001) so server-to-server
    * calls from the runtime — which send Origin: SOVEREIGN_AUTH_URL — are
@@ -90,6 +97,7 @@ export function getEnv(): AuthEnv {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
+    cookieDomain: process.env.AUTH_COOKIE_DOMAIN || undefined,
     webAuthnRpId: process.env.AUTH_WEBAUTHN_RP_ID || defaultRpId,
     webAuthnRpName: process.env.AUTH_WEBAUTHN_RP_NAME || 'Sovereign',
     webAuthnOrigin: webAuthnOriginRaw

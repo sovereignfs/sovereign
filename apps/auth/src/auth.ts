@@ -15,6 +15,11 @@ function buildOptions(): BetterAuthOptions {
     secret: env.secret,
     baseURL: env.baseUrl,
     ...(env.trustedOrigins.length > 0 && { trustedOrigins: env.trustedOrigins }),
+    ...(env.cookieDomain && {
+      advanced: {
+        crossSubDomainCookies: { enabled: true, domain: env.cookieDomain },
+      },
+    }),
     database: getAuthDatabase(),
     session: {
       // Disable better-auth's "fresh session" gate. By default sensitive

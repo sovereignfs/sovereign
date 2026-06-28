@@ -31,6 +31,7 @@ export function MobileSearch({
 }) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   // Auto-focus input when overlay opens; clear query on close.
   useEffect(() => {
@@ -61,13 +62,47 @@ export function MobileSearch({
     return () => document.removeEventListener('keydown', handler);
   }, [open, onClose]);
 
+  // Track the visual viewport so the overlay shrinks above the iOS soft keyboard.
+  // The overlay's CSS `bottom` is relative to the layout viewport, which does not
+  // shrink when the keyboard appears. The keyboard renders as a native layer on
+  // top of the web view, leaving dead empty space between the results and the
+  // keyboard. Adjusting `bottom` to match the keyboard height closes that gap.
+  useEffect(() => {
+    if (!open) return;
+    const vv = window.visualViewport;
+    const el = overlayRef.current;
+    if (!vv || !el) return;
+
+    const update = () => {
+      const keyboardHeight = window.innerHeight - (vv.offsetTop + vv.height);
+      // --sv-shell-footer-height is 60px; keep at least that much space for the footer.
+      el.style.bottom = `${Math.max(60, keyboardHeight)}px`;
+    };
+
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    update();
+
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+      el.style.bottom = '';
+    };
+  }, [open]);
+
   if (!open) return null;
 
   const q = query.trim().toLowerCase();
   const results = q ? plugins.filter((p) => p.name.toLowerCase().includes(q)) : plugins;
 
   return (
-    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Search apps">
+    <div
+      ref={overlayRef}
+      className={styles.overlay}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Search apps"
+    >
       <div className={styles.header}>
         <button
           type="button"

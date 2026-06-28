@@ -12,6 +12,7 @@ on:
     paths:
       - 'docs/**'
       - 'apps/docs/**'
+  workflow_dispatch: # allow manual re-deploys
 
 concurrency:
   group: docs-${{ github.ref }}

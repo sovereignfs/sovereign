@@ -185,8 +185,14 @@
   .shell {
     /* No sidebar on mobile — overlay dialogs span the full width.
        The header height is declared here so both the sticky header and the
-       dialog's --sv-dialog-inset-top reference the same value. */
-    --sv-shell-header-height: 60px;
+       dialog's --sv-dialog-inset-top reference the same value.
+       On notched/Dynamic Island iPhones env(safe-area-inset-top) can be ~47px.
+       The header padding-top is max(--sv-space-3=12px, safe-area-top), so its
+       rendered height is 60px + max(0, safe-area-top - 12px). The dialog scrim
+       must start at this actual height — a fixed 60px would hide the × button. */
+    --sv-shell-header-height: calc(
+      60px + max(0px, env(safe-area-inset-top) - var(--sv-space-3, 12px))
+    );
     --sv-dialog-inset-left: 0;
     /* Push the dialog sheet below the sticky header (RFC 0013). */
     --sv-dialog-inset-top: var(--sv-shell-header-height);
@@ -197,8 +203,13 @@
     height: 100vh;
     height: 100dvh;
     overflow: hidden;
-    /* Footer height exposed so the drawer scrim can stop above it. */
-    --sv-shell-footer-height: 60px;
+    /* Footer height: 60px baseline (52px nav min-height + 8px padding) plus any
+       safe-area-inset-bottom beyond the 8px baseline (e.g. ~34px on iPhones with
+       a home indicator). Exposed so the drawer scrim, search overlay, and dialog
+       content padding all stop above the footer. */
+    --sv-shell-footer-height: calc(
+      60px + max(0px, env(safe-area-inset-bottom) - var(--sv-space-2, 8px))
+    );
   }
 
   .sidebar {

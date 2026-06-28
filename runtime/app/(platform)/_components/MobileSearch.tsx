@@ -75,8 +75,12 @@ export function MobileSearch({
 
     const update = () => {
       const keyboardHeight = window.innerHeight - (vv.offsetTop + vv.height);
-      // --sv-shell-footer-height is 60px; keep at least that much space for the footer.
-      el.style.bottom = `${Math.max(60, keyboardHeight)}px`;
+      // Read the actual footer height from the CSS variable (includes safe-area-inset-bottom).
+      const footerHeight =
+        parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue('--sv-shell-footer-height'),
+        ) || 60;
+      el.style.bottom = `${Math.max(footerHeight, keyboardHeight)}px`;
     };
 
     vv.addEventListener('resize', update);

@@ -1,23 +1,20 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { updateTimezoneAction } from '../actions';
 import styles from '../account.module.css';
-
-/** All IANA zones the runtime knows, with the current value guaranteed present. */
-function useZones(current: string): string[] {
-  return useMemo(() => {
-    const supported =
-      typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : ['UTC'];
-    return supported.includes(current) ? supported : [current, ...supported];
-  }, [current]);
-}
 
 /** Timezone picker (ACC-07). Native select gives type-ahead search for free. */
 export function TimezoneSelect({ value, id }: { value: string; id?: string }) {
   const [tz, setTz] = useState(value);
+  const [zones, setZones] = useState<string[]>([value]); // safe SSR initial — expanded after mount
   const [pending, startTransition] = useTransition();
-  const zones = useZones(value);
+
+  useEffect(() => {
+    const supported =
+      typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : ['UTC'];
+    setZones(supported.includes(value) ? supported : [value, ...supported]);
+  }, [value]);
 
   return (
     <select

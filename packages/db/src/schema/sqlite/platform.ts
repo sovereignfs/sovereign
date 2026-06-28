@@ -32,7 +32,6 @@ export const users = sqliteTable('users', {
   name: text('name'),
   image: text('image'),
   role: text('role').notNull().default('platform:user'),
-  isTestUser: integer('is_test_user', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });

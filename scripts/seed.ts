@@ -91,7 +91,13 @@ async function seedSqlite(dbPath: string): Promise<void> {
       | { id: string }
       | undefined;
     if (existing) {
-      db.prepare(`UPDATE "user" SET "isTestUser" = 1 WHERE id = ?`).run(existing.id);
+      try {
+        db.prepare(`UPDATE "user" SET "isTestUser" = 1 WHERE id = ?`).run(existing.id);
+      } catch {
+        consola.warn(
+          `  isTestUser backfill skipped for ${u.email} — start the auth server once first`,
+        );
+      }
       consola.info(`  already exists: ${u.email}`);
       continue;
     }
@@ -119,7 +125,13 @@ async function seedPostgres(connString: string): Promise<void> {
     for (const u of SEED_USERS) {
       const { rowCount } = await pool.query('SELECT id FROM "user" WHERE email = $1', [u.email]);
       if ((rowCount ?? 0) > 0) {
-        await pool.query(`UPDATE "user" SET "isTestUser" = true WHERE email = $1`, [u.email]);
+        try {
+          await pool.query(`UPDATE "user" SET "isTestUser" = true WHERE email = $1`, [u.email]);
+        } catch {
+          consola.warn(
+            `  isTestUser backfill skipped for ${u.email} — start the auth server once first`,
+          );
+        }
         consola.info(`  already exists: ${u.email}`);
         continue;
       }

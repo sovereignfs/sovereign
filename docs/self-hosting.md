@@ -223,6 +223,13 @@ and after you sign in or register the auth server sends you back to
 
 ### Deploying to a real VPS or server
 
+> **Recommended path:** use the **[sovereign-infra](https://github.com/sovereignfs/sovereign-infra)**
+> GitHub template. It wires up Caddy (auto-TLS), age-encrypted secrets, daily
+> encrypted backups, and a GitHub Actions CI/CD pipeline that deploys a new
+> release with a single `git tag v0.9.10 && git push`. Fork it, run
+> `./configure.sh`, and follow the README. The manual instructions below still
+> apply — `sovereign-infra` automates them.
+
 > **The most common mistake:** leaving `AUTH_BASE_URL` and
 > `NEXT_PUBLIC_RUNTIME_URL` at their defaults. They default to `localhost:*`
 > which is only reachable from within the server itself. A remote browser

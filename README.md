@@ -80,7 +80,9 @@ bin/sv            the sv CLI
 ## Documentation
 
 - [Self-hosting](docs/self-hosting.md) — deployment, configuration, operations,
-  and production setup.
+  and production setup. For VPS deployments, see the
+  [sovereign-infra](https://github.com/sovereignfs/sovereign-infra) template
+  (Caddy + Docker + age-encrypted secrets + GitHub Actions CI/CD).
 - [Plugin development](docs/plugin-development.md) — SDK usage, plugin structure,
   manifests, routing, and runtime integration.
 - [SDK stability](docs/sdk-stability.md) — the `@sovereignfs/sdk` semver policy

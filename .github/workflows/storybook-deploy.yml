@@ -1,12 +1,11 @@
 name: Deploy Storybook
 
 # Publish the design-system Storybook to https://sovereignfs.github.io/storybook/
-# whenever a change to packages/ui lands on main.
+# on a sb-v* tag push. Use workflow_dispatch for manual re-deploys.
 on:
   push:
-    branches: [main]
-    paths:
-      - 'packages/ui/**'
+    tags:
+      - 'sb-v*'
   workflow_dispatch: # allow manual re-deploys
 
 concurrency:

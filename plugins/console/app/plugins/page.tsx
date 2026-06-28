@@ -80,12 +80,20 @@ interface PluginRow {
 async function getPlugins(): Promise<PluginRow[]> {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   const selfUrl = `http://localhost:${process.env.PORT ?? '3000'}`;
-  const res = await fetch(`${selfUrl}/api/admin/plugins`, {
-    headers: { Authorization: `Bearer ${adminKey}` },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`Failed to fetch plugins: ${res.status}`);
-  return res.json() as Promise<PluginRow[]>;
+  try {
+    const res = await fetch(`${selfUrl}/api/admin/plugins`, {
+      headers: { Authorization: `Bearer ${adminKey}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      console.error(`[plugins] fetch failed: ${res.status}`);
+      return [];
+    }
+    return res.json() as Promise<PluginRow[]>;
+  } catch (err) {
+    console.error('[plugins] fetch error:', err instanceof Error ? err.message : err);
+    return [];
+  }
 }
 
 export default async function PluginsPage() {

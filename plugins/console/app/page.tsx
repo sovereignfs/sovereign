@@ -1,10 +1,16 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import styles from './console.module.css';
 
+const VALID_TABS = new Set(['users', 'plugins', 'settings', 'health', 'activity', 'identity']);
+
 /**
- * Console home — an overview that links to each management area. The areas
- * themselves are implemented in subsequent tasks; until then these tiles link
- * to routes that are not yet present.
+ * Console home — an overview that links to each management area. Accepts a
+ * `?tab=` param and redirects to the matching sub-page. Going through the root
+ * first ensures the `(.)console` intercepting-route layout is initialised in
+ * the client router tree before navigating to the sub-page — a direct soft-nav
+ * to `/console/plugins` cold-starts the intercepting route and can fail in
+ * Next.js 15 App Router.
  */
 const areas = [
   {
@@ -29,7 +35,15 @@ const areas = [
   },
 ];
 
-export default function ConsoleHome() {
+export default async function ConsoleHome({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
+  if (tab && VALID_TABS.has(tab)) {
+    redirect(`/console/${tab}`);
+  }
   return (
     <div>
       <p className={styles.lede}>

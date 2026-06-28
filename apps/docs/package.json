@@ -1,0 +1,16 @@
+{
+  "name": "@sovereignfs/docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "@sovereignfs/tsconfig": "workspace:*",
+    "vitepress": "^1.6.3",
+    "vue": "^3.5.39"
+  }
+}

@@ -26,7 +26,7 @@ into docs).
 
 ## Tasks
 
-#### 📋 16.1 — apps/docs — VitePress workspace scaffold
+#### ✅ 16.1 — apps/docs — VitePress workspace scaffold
 
 **Goal:** Create `apps/docs/` as a pnpm workspace package containing a VitePress
 1.x config with `srcDir: '../../docs'`, full sidebar navigation matching the

@@ -15,4 +15,5 @@
 !/@modal
 /@modal/*
 !/@modal/default.tsx
+!/@modal/error.tsx
 !/@modal/layout.tsx

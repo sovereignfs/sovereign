@@ -7,6 +7,9 @@ export interface AuthUserRow {
   // Postgres; NULL means active (the default). The route passes whichever the
   // driver returns — `buildMemberList` treats 0 and false as deactivated.
   active: number | boolean | null;
+  // Reads back as 0/1 on SQLite, true/false on Postgres. Absent on rows from
+  // instances that haven't run the auth migration yet — treated as false.
+  isTestUser?: number | boolean | null;
   createdAt: string; // normalised to an ISO 8601 string by the caller (Date on pg)
 }
 
@@ -22,6 +25,7 @@ export interface MemberRow {
   name: string | null;
   role: string | null;
   status: 'active' | 'deactivated' | 'invited';
+  isTestUser?: boolean;
   createdAt: string;
   expiresAt: string | null;
 }
@@ -50,6 +54,7 @@ export function buildMemberList(users: AuthUserRow[], invites: PendingInviteRow[
     name: u.name,
     role: u.role,
     status: u.active === 0 || u.active === false ? 'deactivated' : 'active',
+    isTestUser: u.isTestUser === 1 || u.isTestUser === true,
     createdAt: u.createdAt,
     expiresAt: null,
   }));
@@ -60,6 +65,7 @@ export function buildMemberList(users: AuthUserRow[], invites: PendingInviteRow[
     name: null,
     role: null,
     status: 'invited',
+    isTestUser: false,
     createdAt: new Date(inv.created_at * 1000).toISOString(),
     expiresAt: inv.expires_at ? new Date(inv.expires_at * 1000).toISOString() : null,
   }));

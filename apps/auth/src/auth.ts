@@ -83,6 +83,13 @@ function buildOptions(): BetterAuthOptions {
           defaultValue: true,
           input: false,
         },
+        // Marks accounts inserted by the seed script. Not user-settable.
+        isTestUser: {
+          type: 'boolean',
+          required: false,
+          defaultValue: false,
+          input: false,
+        },
       },
     },
     databaseHooks: {

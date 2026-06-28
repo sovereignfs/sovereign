@@ -17,6 +17,7 @@ interface MemberRow {
   name: string | null;
   role: string | null;
   status: 'active' | 'deactivated' | 'invited';
+  isTestUser?: boolean;
   createdAt: string;
   expiresAt: string | null;
 }
@@ -186,6 +187,7 @@ export function UserCard({
                 ? 'Deactivated'
                 : 'Invited'}
           </Badge>
+          {member.isTestUser && <Badge variant="mono">Test</Badge>}
         </div>
       </div>
 

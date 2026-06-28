@@ -91,14 +91,15 @@ async function seedSqlite(dbPath: string): Promise<void> {
       | { id: string }
       | undefined;
     if (existing) {
+      db.prepare(`UPDATE "user" SET "isTestUser" = 1 WHERE id = ?`).run(existing.id);
       consola.info(`  already exists: ${u.email}`);
       continue;
     }
     const userId = randomUUID();
     const hashed = await hashPassword(u.password);
     db.prepare(
-      `INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, active)
-       VALUES (?, ?, ?, 1, NULL, ?, ?, ?, 1)`,
+      `INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, active, "isTestUser")
+       VALUES (?, ?, ?, 1, NULL, ?, ?, ?, 1, 1)`,
     ).run(userId, u.name, u.email, now, now, u.role);
     db.prepare(
       `INSERT INTO account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
@@ -118,14 +119,15 @@ async function seedPostgres(connString: string): Promise<void> {
     for (const u of SEED_USERS) {
       const { rowCount } = await pool.query('SELECT id FROM "user" WHERE email = $1', [u.email]);
       if ((rowCount ?? 0) > 0) {
+        await pool.query(`UPDATE "user" SET "isTestUser" = true WHERE email = $1`, [u.email]);
         consola.info(`  already exists: ${u.email}`);
         continue;
       }
       const userId = randomUUID();
       const hashed = await hashPassword(u.password);
       await pool.query(
-        `INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, active)
-         VALUES ($1, $2, $3, true, NULL, $4, $5, $6, true)`,
+        `INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, active, "isTestUser")
+         VALUES ($1, $2, $3, true, NULL, $4, $5, $6, true, true)`,
         [userId, u.name, u.email, now, now, u.role],
       );
       await pool.query(

@@ -24,10 +24,16 @@ async function sessionCookie(): Promise<string> {
  */
 async function invalidateSessionCache(): Promise<void> {
   const jar = await cookies();
-  jar.set('better-auth.session_data', '', { maxAge: 0, path: '/' });
+  const cookieDomain = process.env.AUTH_COOKIE_DOMAIN || undefined;
+  jar.set('better-auth.session_data', '', { maxAge: 0, path: '/', domain: cookieDomain });
   // The `__Secure-`-prefixed name (production, HTTPS) can only be unset with the
   // Secure attribute, so clear it explicitly rather than via delete().
-  jar.set('__Secure-better-auth.session_data', '', { maxAge: 0, path: '/', secure: true });
+  jar.set('__Secure-better-auth.session_data', '', {
+    maxAge: 0,
+    path: '/',
+    secure: true,
+    domain: cookieDomain,
+  });
 }
 
 /** Call a better-auth endpoint, forwarding the current session cookie. */

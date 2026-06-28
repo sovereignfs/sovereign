@@ -461,8 +461,8 @@ export async function listAdminActivity(
                visibility, summary, metadata, created_at AS "createdAt"
         FROM activity_log
         WHERE tenant_id = ${DEFAULT_TENANT_ID}
-          AND (${actorFilter} IS NULL OR actor_id = ${actorFilter})
-          AND (${actionFilter} IS NULL OR action = ${actionFilter})
+          AND (CAST(${actorFilter} AS TEXT) IS NULL OR actor_id = ${actorFilter})
+          AND (CAST(${actionFilter} AS TEXT) IS NULL OR action = ${actionFilter})
         ORDER BY created_at DESC
         LIMIT ${limit} OFFSET ${offset}`,
   );
@@ -479,8 +479,8 @@ export async function countAdminActivity(
     pdb,
     sql`SELECT COUNT(*) AS c FROM activity_log
         WHERE tenant_id = ${DEFAULT_TENANT_ID}
-          AND (${actorFilter} IS NULL OR actor_id = ${actorFilter})
-          AND (${actionFilter} IS NULL OR action = ${actionFilter})`,
+          AND (CAST(${actorFilter} AS TEXT) IS NULL OR actor_id = ${actorFilter})
+          AND (CAST(${actionFilter} AS TEXT) IS NULL OR action = ${actionFilter})`,
   );
   return Number(row?.c ?? 0);
 }
@@ -999,7 +999,7 @@ export async function getInstanceConfig(
         FROM instance_config WHERE tenant_id = ${tenantId}`,
   );
   return {
-    instanceName: row?.instanceName ?? process.env.INSTANCE_NAME ?? 'Sovereign',
+    instanceName: row?.instanceName || process.env.INSTANCE_NAME || 'Sovereign',
     instanceLogo: row?.instanceLogo ?? process.env.INSTANCE_LOGO ?? null,
     instanceLogoDark: row?.instanceLogoDark ?? process.env.INSTANCE_LOGO_DARK ?? null,
     instanceFavicon: row?.instanceFavicon ?? process.env.INSTANCE_FAVICON ?? null,

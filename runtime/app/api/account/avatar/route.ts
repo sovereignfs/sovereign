@@ -71,13 +71,15 @@ export async function POST(request: Request): Promise<Response> {
   // the next request falls back to /api/verify and picks up the new image right
   // away. The session token itself is untouched — this only drops the cache.
   const res = NextResponse.json({ url });
-  res.cookies.set('better-auth.session_data', '', { maxAge: 0, path: '/' });
+  const cookieDomain = process.env.AUTH_COOKIE_DOMAIN || undefined;
+  res.cookies.set('better-auth.session_data', '', { maxAge: 0, path: '/', domain: cookieDomain });
   // The `__Secure-`-prefixed name (production, HTTPS) can only be unset with the
   // Secure attribute, so clear it explicitly rather than via delete().
   res.cookies.set('__Secure-better-auth.session_data', '', {
     maxAge: 0,
     path: '/',
     secure: true,
+    domain: cookieDomain,
   });
   return res;
 }

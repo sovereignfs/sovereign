@@ -127,6 +127,10 @@ services:
       # to depends_on. REDIS_URL is required when NOTIFICATION_TRANSPORT=redis.
       NOTIFICATION_TRANSPORT: '${NOTIFICATION_TRANSPORT:-polling}'
       REDIS_URL: '${REDIS_URL:-}'
+      # Cookie domain for cross-subdomain session invalidation. Must match the
+      # value set in the auth service — used to clear the session-cache cookie
+      # after avatar/name changes so the shell reflects them immediately.
+      AUTH_COOKIE_DOMAIN: '${AUTH_COOKIE_DOMAIN:-}'
       # Instance identity env overrides (can also be set via Console → Instance).
       INSTANCE_NAME: '${INSTANCE_NAME:-}'
       INSTANCE_LOGO: '${INSTANCE_LOGO:-}'

@@ -41,3 +41,12 @@ allowBuilds:
   esbuild: true
   sharp: false
   simple-git-hooks: false
+
+# VitePress requires vue/server-renderer to be resolvable from its own context
+# (used in the SSR bundle). pnpm's strict isolation blocks this by default; the
+# extension promotes vue to a real dependency so pnpm links it into VitePress's
+# node_modules alongside it.
+packageExtensions:
+  vitepress@*:
+    dependencies:
+      vue: '^3.5'

@@ -27,6 +27,9 @@
     "build-storybook": {
       "dependsOn": ["^build"],
       "outputs": ["storybook-static/**"]
+    },
+    "@sovereignfs/docs#build": {
+      "outputs": ["apps/docs/.vitepress/dist/**"]
     }
   }
 }

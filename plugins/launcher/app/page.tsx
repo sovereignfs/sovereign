@@ -52,7 +52,7 @@ export default async function LauncherPage() {
           {isAdmin ? (
             <p className={styles.emptyText}>
               Install and enable plugins from the{' '}
-              <Link href="/console?tab=plugins" className={styles.emptyLink}>
+              <Link href="/console/plugins" className={styles.emptyLink}>
                 Console
               </Link>
               .

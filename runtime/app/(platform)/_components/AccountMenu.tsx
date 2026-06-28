@@ -99,7 +99,7 @@ export function AccountMenu({
             Account
           </Link>
           <Link
-            href="/account?tab=preferences"
+            href="/account/preferences"
             role="menuitem"
             className={styles.item}
             onClick={() => setOpen(false)}

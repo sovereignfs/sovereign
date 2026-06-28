@@ -50,6 +50,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/packages/db/migrations ./packages
 # folder paths and SQLite file paths resolve correctly against /app rather than
 # falling back to the post-chdir /app/runtime.
 COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+# Root package.json — read by getPlatformVersion() at runtime for the boot
+# compatibility check. Without it the check falls back to '0.0.0' and disables
+# every plugin that declares a minPlatformVersion.
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 # SQLite + avatars persist here (mounted as a volume). The relative DB path
 # resolves against the cwd (/app) at runtime, so it must be writable by the

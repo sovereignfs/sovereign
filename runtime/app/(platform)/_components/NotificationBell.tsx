@@ -36,7 +36,7 @@ interface SsePayload {
   source?: string;
 }
 
-const POLL_INTERVAL_MS = 30_000;
+const POLL_INTERVAL_MS = 10_000;
 const SSE_ERROR_FALLBACK_THRESHOLD = 3;
 
 function timeAgo(ts: number): string {

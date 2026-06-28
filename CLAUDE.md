@@ -107,8 +107,8 @@ they are authoritative over assumptions:
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.9.9`**
-  (phases 0.3–0.9 tasks complete, patches .6–.9 from production hotfixes). The
+  to `1.0.0` marks the public release.** The current version is **`0.9.10`**
+  (phases 0.3–0.9 tasks complete, patches .6–.10 from production hotfixes). The
   downgrade guard, plugin compatibility gates (RFC 0024), and `/api/admin/health`
   all read this value; see `docs/upgrade.md` for the runtime version map and
   v1.0.0 release checklist.
@@ -474,11 +474,12 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 - Task 1.10 — Email-bound invite flow (`apps/auth` → 0.9.0, `plugins/console` → 0.13.0). `invited_by_id`/`invited_by_name` columns added to `invites` table; invite creation embeds `?token=<uuid>` in the registration URL; register page server component looks up the token and passes `invitedEmail`/`invitedBy` to `RegisterForm`; email field is pre-filled and read-only when token present; "invited by" banner shown; invalid/consumed tokens show a clear error page.
 - RFC 0039 — Instance identity: `instanceId` + terminology cleanup (`@sovereignfs/db` → 1.7.3, `@sovereignfs/sdk` → 1.13.0, `runtime` → 0.33.0, `plugins/console` → 0.14.1). Stable UUID seeded in `platform_settings` at bootstrap, exposed via `sdk.platform.getConfig().instanceId`. Capability strings renamed: `tenant:view` → `instance:view`, `tenant:configure` → `instance:configure`. Activity event renamed: `settings.tenant_name_changed` → `settings.instance_name_changed`. Console "Tenant name" label → "Instance name". Storybook + docs "tenant theming" → "instance theming" where it refers to instance-level overrides.
 
-✅ **Production hotfixes (patches .6–.9):**
+✅ **Production hotfixes (patches .6–.10):**
 
 - Patch .6 — `AUTH_COOKIE_DOMAIN` support: cross-subdomain cookie fix for split-subdomain deployments (`auth.example.com` + `example.com`); `crossSubDomainCookies` in `apps/auth`; compose passthrough; docs parity.
 - Patch .7–.8 — Activity log 500 on Postgres: `CAST(${filter} AS TEXT) IS NULL` in `listAdminActivity`/`countAdminActivity` — Postgres cannot infer type from `$N IS NULL` on an unbound null parameter (`@sovereignfs/db` → 1.7.4).
 - Patch .9 — Instance name empty-string bug: `getInstanceConfig` used `??` so an empty-string `INSTANCE_NAME` env (from `${INSTANCE_NAME:-}` compose default) overwrote the `'Sovereign'` fallback, rendering a blank span (black square in sidebar); fixed with `||`. Avatar session-cache invalidation domain fix: `invalidateSessionCache` and avatar route now pass `domain: AUTH_COOKIE_DOMAIN` to `cookies.set()` so the cross-subdomain `session_data` cookie is actually cleared after a profile change (`@sovereignfs/db` → 1.7.5, `runtime` → 0.33.1, `plugins/account` → 0.12.1).
+- Patch .10 — Dockerfile now copies root `package.json` alongside `pnpm-workspace.yaml` so `getPlatformVersion()` reads the correct version at runtime (prevents `checkBootCompatibility()` from falsely disabling all plugins with `minPlatformVersion > 0.0.0` if the file is missing). Notification poll interval reduced 30 s → 10 s (`runtime` → 0.33.2).
 
 > Full task history (phases 0.3–0.7): `docs/task-history.md`
 

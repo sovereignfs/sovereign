@@ -481,9 +481,11 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 - Patch .9 — Instance name empty-string bug: `getInstanceConfig` used `??` so an empty-string `INSTANCE_NAME` env (from `${INSTANCE_NAME:-}` compose default) overwrote the `'Sovereign'` fallback, rendering a blank span (black square in sidebar); fixed with `||`. Avatar session-cache invalidation domain fix: `invalidateSessionCache` and avatar route now pass `domain: AUTH_COOKIE_DOMAIN` to `cookies.set()` so the cross-subdomain `session_data` cookie is actually cleared after a profile change (`@sovereignfs/db` → 1.7.5, `runtime` → 0.33.1, `plugins/account` → 0.12.1).
 - Patch .10 — Dockerfile now copies root `package.json` alongside `pnpm-workspace.yaml` so `getPlatformVersion()` reads the correct version at runtime (prevents `checkBootCompatibility()` from falsely disabling all plugins with `minPlatformVersion > 0.0.0` if the file is missing). Notification poll interval reduced 30 s → 10 s (`runtime` → 0.33.2).
 
+- Task 1.11 — Test-user flag on seeded accounts (`@sovereignfs/db` → 1.7.6, `apps/auth` → 0.9.1, `plugins/console` → 0.14.2). `isTestUser` boolean in better-auth `additionalFields` (auto-migrated at startup); seed script sets flag on INSERT and backfills pre-existing rows via UPDATE; `GET /api/admin/users` surfaces the field; Console Users table and mobile card render a "Test" badge. Field is optional on all interfaces so older instances degrade gracefully to false.
+
 > Full task history (phases 0.3–0.7): `docs/task-history.md`
 
-⏳ **Next: Test-user flag on seeded accounts → epic task [1.11](epics/users-auth.md#111--test-user-flag-on-seeded-accounts).** Branch from up-to-date `main`.
+⏳ **Next: Internationalization, Phase 1 — Infrastructure → epic task [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029).** Branch from up-to-date `main`.
 
 Keep this file current: update the Status section as tasks complete, and add any
 new load-bearing convention that future sessions must not violate.

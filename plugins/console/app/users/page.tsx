@@ -21,6 +21,7 @@ interface MemberRow {
   name: string | null;
   role: string | null;
   status: 'active' | 'deactivated' | 'invited';
+  isTestUser?: boolean;
   createdAt: string;
   expiresAt: string | null;
 }
@@ -129,7 +130,10 @@ export default async function UsersPage({
                     </td>
 
                     <td className={styles.td}>
-                      <StatusBadge status={member.status} />
+                      <span className={styles.badgeGroup}>
+                        <StatusBadge status={member.status} />
+                        {member.isTestUser && <Badge variant="mono">Test</Badge>}
+                      </span>
                     </td>
 
                     <td className={styles.td}>

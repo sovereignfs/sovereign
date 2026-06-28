@@ -33,6 +33,7 @@ export const users = pgTable('users', {
   name: text('name'),
   image: text('image'),
   role: text('role').notNull().default('platform:user'),
+  isTestUser: boolean('is_test_user').notNull().default(false),
   createdAt: bigint('created_at', { mode: 'number' }).notNull(),
   updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
 });

@@ -185,6 +185,13 @@
 
 /* ── Badges ─────────────────────────────────────────────────────────────── */
 
+.badgeGroup {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sv-space-1);
+}
+
 .badgeActive,
 .badgeDeactivated,
 .badgeInvited,

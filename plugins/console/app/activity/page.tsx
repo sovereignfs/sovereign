@@ -31,12 +31,20 @@ async function getActivity(offset: number, q?: string): Promise<ActivityResponse
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   let url = `${SELF_URL}/api/admin/activity?limit=${PAGE_SIZE}&offset=${offset}`;
   if (q) url += `&q=${encodeURIComponent(q)}`;
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${adminKey}` },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`Failed to fetch activity: ${res.status}`);
-  return res.json() as Promise<ActivityResponse>;
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${adminKey}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      console.error(`[activity] fetch failed: ${res.status}`);
+      return { events: [], total: 0, limit: PAGE_SIZE, offset };
+    }
+    return res.json() as Promise<ActivityResponse>;
+  } catch (err) {
+    console.error('[activity] fetch error:', err instanceof Error ? err.message : err);
+    return { events: [], total: 0, limit: PAGE_SIZE, offset };
+  }
 }
 
 function actorLabel(event: ActivityEvent): string | null {

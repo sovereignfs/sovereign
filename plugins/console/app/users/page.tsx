@@ -29,12 +29,20 @@ interface MemberRow {
 async function getMembers(): Promise<MemberRow[]> {
   const authUrl = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
-  const res = await fetch(`${authUrl}/api/admin/users`, {
-    headers: { Authorization: `Bearer ${adminKey}` },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`Failed to fetch users: ${res.status}`);
-  return res.json() as Promise<MemberRow[]>;
+  try {
+    const res = await fetch(`${authUrl}/api/admin/users`, {
+      headers: { Authorization: `Bearer ${adminKey}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      console.error(`[users] fetch failed: ${res.status}`);
+      return [];
+    }
+    return res.json() as Promise<MemberRow[]>;
+  } catch (err) {
+    console.error('[users] fetch error:', err instanceof Error ? err.message : err);
+    return [];
+  }
 }
 
 function StatusBadge({ status }: { status: MemberRow['status'] }) {

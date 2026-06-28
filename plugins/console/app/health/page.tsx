@@ -10,14 +10,29 @@ interface HealthReport {
   uptimeSeconds: number;
 }
 
+const DEFAULT_HEALTH: HealthReport = {
+  platformVersion: 'unknown',
+  database: { dialect: 'unknown', status: 'error', sizeBytes: null },
+  auth: { status: 'unreachable' },
+  uptimeSeconds: 0,
+};
+
 async function getHealth(): Promise<HealthReport> {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
-  const res = await fetch(`${SELF_URL}/api/admin/health`, {
-    headers: { Authorization: `Bearer ${adminKey}` },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`Failed to fetch health: ${res.status}`);
-  return res.json() as Promise<HealthReport>;
+  try {
+    const res = await fetch(`${SELF_URL}/api/admin/health`, {
+      headers: { Authorization: `Bearer ${adminKey}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      console.error(`[health] fetch failed: ${res.status}`);
+      return DEFAULT_HEALTH;
+    }
+    return res.json() as Promise<HealthReport>;
+  } catch (err) {
+    console.error('[health] fetch error:', err instanceof Error ? err.message : err);
+    return DEFAULT_HEALTH;
+  }
 }
 
 function formatBytes(bytes: number): string {

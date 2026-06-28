@@ -80,7 +80,7 @@ experience)
 - `pnpm lint` and `pnpm format:check` pass (apps/docs/ is in lint scope)
 - No content copied or symlinked into `apps/docs/` — all sidebar links resolve via srcDir
 
-#### 📋 16.2 — docs/index.md — Landing home page
+#### ✅ 16.2 — docs/index.md — Landing home page
 
 **Goal:** Add `docs/index.md` using VitePress built-in `layout: home` frontmatter
 so the site root shows a proper landing page — hero headline, feature tiles, and

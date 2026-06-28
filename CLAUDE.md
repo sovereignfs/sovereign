@@ -483,6 +483,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 - Task 1.11 — Test-user flag on seeded accounts (`@sovereignfs/db` → 1.7.6, `apps/auth` → 0.9.1, `plugins/console` → 0.14.2). `isTestUser` boolean in better-auth `additionalFields` (auto-migrated at startup); seed script sets flag on INSERT and backfills pre-existing rows via UPDATE; `GET /api/admin/users` surfaces the field; Console Users table and mobile card render a "Test" badge. Field is optional on all interfaces so older instances degrade gracefully to false.
 - Task 16.1 — VitePress docs site scaffold (RFC 0037). `apps/docs/` workspace package with `vitepress@^1`; `srcDir: '../../docs'` so no content is copied; full sidebar (Getting Started, Plugin Dev, Core Plugins, Contributing, RFCs collapsed); local full-text search; CI `docs.yml` with `build` job on PRs and `deploy` job on `main` push via `peaceiris/actions-gh-pages@v4` → `sovereignfs/sovereignfs.github.io`; `vue` added to root devDependencies to fix pnpm strict-isolation SSR resolution; `@sovereignfs/docs#build` added to `turbo.json`.
+- Task 16.2 — Landing home page (RFC 0037). `docs/index.md` with VitePress `layout: home`; hero (name, tagline, three CTA actions: Get Started, Plugin Dev, GitHub); six feature tiles (self-hostable, privacy-first, plugin-first, multi-user, design system, open source). Live at `https://sovereignfs.github.io/`.
 
 > Full task history (phases 0.3–0.7): `docs/task-history.md`
 

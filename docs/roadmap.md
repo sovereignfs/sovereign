@@ -121,6 +121,7 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 | 0.9.4   | Email-bound invite flow                                                   | ✅     | [1.10](epics/users-auth.md#110--email-bound-invite-flow)                                                                   |
 | 0.10.0  | Test-user flag on seeded accounts                                         | ✅     | [1.11](epics/users-auth.md#111--test-user-flag-on-seeded-accounts)                                                         |
 |         | VitePress docs site scaffold (RFC 0037)                                   | ✅     | [16.1](epics/docs.md#161--appsdocs--vitepress-workspace-scaffold)                                                          |
+|         | Landing home page (RFC 0037)                                              | ✅     | [16.2](epics/docs.md#162--docsindexmd--landing-home-page)                                                                  |
 | 0.11.0  | Internationalization, Phase 1 — Infrastructure (RFC 0029)                 | 📋     | [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029)                                           |
 | 0.12.0  | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)        | 📋     | [11.2](epics/i18n.md#112--internationalization-phase-2--platform-shell-adoption-rfc-0029)                                  |
 | 0.13.0  | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](epics/design-system.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
@@ -154,7 +155,6 @@ once prioritised.
 | —       | Per-plugin database dialect selection (RFC 0036)                      | 📋     | [3.15](epics/plugins-runtime.md#315--per-plugin-database-dialect-selection-rfc-0036)             |
 | —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035)    | 📋     | [1.8](epics/users-auth.md#18--progressive-user-verification-phase-1--infrastructure-rfc-0035)    |
 | —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035) | 📋     | [1.9](epics/users-auth.md#19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035) |
-| —       | Landing home page (RFC 0037)                                          | 📋     | [16.2](epics/docs.md#162--docsindexmd--landing-home-page)                                        |
 | —       | Desktop app shell, macOS-first (RFC 0038)                             | 📋     | [17.1](epics/desktop.md#171--sovereign-desktop--tauri-shell-scaffold-macos-first)                |
 | —       | Desktop: system tray and OS notifications (RFC 0038)                  | 📋     | [17.2](epics/desktop.md#172--system-tray-and-os-notifications)                                   |
 | —       | Desktop: deep link scheme `sovereign://` (RFC 0038)                   | 📋     | [17.3](epics/desktop.md#173--deep-link-scheme-sovereign)                                         |

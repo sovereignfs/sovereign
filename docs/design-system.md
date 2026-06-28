@@ -503,8 +503,8 @@ designers — each component is rendered in isolation with every meaningful
 variant, both light and dark themes, and responsive viewports.
 
 **Hosted:** [sovereignfs.github.io/storybook](https://sovereignfs.github.io/storybook/)
-— auto-deployed from `main` whenever `packages/ui/**` changes, via
-`.github/workflows/storybook-deploy.yml`.
+— deployed by pushing a `sb-v*` tag (e.g. `git tag sb-v0.11.0 && git push origin sb-v0.11.0`),
+via `.github/workflows/storybook-deploy.yml`.
 
 ### Running locally
 
@@ -601,6 +601,12 @@ uploads the static output as a workflow artifact (7-day retention) — download
 hosting service.
 
 **Hosted deploy (`.github/workflows/storybook-deploy.yml`):** pushes the static
-build to the `gh-pages` branch of `sovereignfs/storybook` whenever a commit lands on
-`main` with changes under `packages/ui/**`. The deploy can also be triggered
-manually via **Actions → Deploy Storybook → Run workflow** on any branch.
+build to the `gh-pages` branch of `sovereignfs/storybook`. Triggered by pushing a
+`sb-v*` tag — the tag does not need to match a package version, just mark the point
+you want live. Can also be triggered manually via **Actions → Deploy Storybook →
+Run workflow**.
+
+```bash
+git tag sb-v0.11.0
+git push origin sb-v0.11.0
+```

@@ -53,6 +53,15 @@ services:
       # (not the dev :3000 left in .env).
       NEXT_PUBLIC_RUNTIME_URL: '${NEXT_PUBLIC_RUNTIME_URL:-http://localhost:${RUNTIME_PORT:-4000}}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
+      # WebAuthn / passkeys. RP_ID must be the registrable domain (e.g. "example.com"),
+      # NOT the full hostname — passkeys are scoped to it and must be presentable on every
+      # origin listed in AUTH_WEBAUTHN_ORIGIN. Defaults are derived from AUTH_BASE_URL which
+      # gives the auth subdomain hostname — correct for single-domain setups, but wrong when
+      # the runtime and auth run on different subdomains (e.g. sovereign.example.com +
+      # auth.sovereign.example.com). Always set these explicitly in production.
+      AUTH_WEBAUTHN_RP_ID: '${AUTH_WEBAUTHN_RP_ID:-}'
+      AUTH_WEBAUTHN_RP_NAME: '${AUTH_WEBAUTHN_RP_NAME:-Sovereign}'
+      AUTH_WEBAUTHN_ORIGIN: '${AUTH_WEBAUTHN_ORIGIN:-}'
     volumes:
       # Named volume (not a host bind mount): Docker initialises it with the
       # image's /app/data ownership, so the non-root runner can write SQLite +
@@ -101,11 +110,24 @@ services:
       SMTP_USER: '${SMTP_USER:-}'
       SMTP_PASS: '${SMTP_PASS:-}'
       SMTP_FROM: '${SMTP_FROM:-}'
+      # Structured log level. One of: error | warn | info | debug (default: warn).
+      LOG_LEVEL: '${LOG_LEVEL:-warn}'
+      # Web Push / VAPID (RFC 0016). Generate once with: node -e "require('web-push').generateVAPIDKeys()"
+      # Leave blank to disable push notifications.
+      VAPID_PUBLIC_KEY: '${VAPID_PUBLIC_KEY:-}'
+      VAPID_PRIVATE_KEY: '${VAPID_PRIVATE_KEY:-}'
+      VAPID_CONTACT: '${VAPID_CONTACT:-}'
       # Notification transport (RFC 0034). Default is polling (no extra infra).
-      # Uncomment and set REDIS_URL to opt in to instant SSE delivery via Redis.
-      # Also uncomment the redis service block below and add it to depends_on.
-      # NOTIFICATION_TRANSPORT: 'redis'
-      # REDIS_URL: 'redis://redis:6379'
+      # Set to 'sse' for in-process SSE, or 'redis' for multi-process Redis pub/sub.
+      # When using 'redis', also uncomment the redis service block below and add it
+      # to depends_on. REDIS_URL is required when NOTIFICATION_TRANSPORT=redis.
+      NOTIFICATION_TRANSPORT: '${NOTIFICATION_TRANSPORT:-polling}'
+      REDIS_URL: '${REDIS_URL:-}'
+      # Instance identity env overrides (can also be set via Console → Instance).
+      INSTANCE_NAME: '${INSTANCE_NAME:-}'
+      INSTANCE_LOGO: '${INSTANCE_LOGO:-}'
+      INSTANCE_LOGO_DARK: '${INSTANCE_LOGO_DARK:-}'
+      INSTANCE_FAVICON: '${INSTANCE_FAVICON:-}'
     volumes:
       # Shared with the auth service — both resolve relative SQLite paths
       # against /app (the cwd), so both DBs and avatars land in this volume.

@@ -76,7 +76,7 @@ jobs:
       - name: Deploy to sovereignfs.github.io
         uses: peaceiris/actions-gh-pages@v4
         with:
-          personal_token: ${{ secrets.DOCS_DEPLOY_KEY }}
+          personal_token: ${{ secrets.DOCS_DEPLOY_TOKEN }}
           external_repository: sovereignfs/sovereignfs.github.io
           publish_branch: main
           publish_dir: apps/docs/.vitepress/dist

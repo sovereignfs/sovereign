@@ -1,6 +1,6 @@
 # RFC 0023 — SDK distribution & the plugin isolation boundary
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/sdk` (contract vs host-provided implementation), `packages/db` + `packages/mailer` (stay private), `.github/workflows/publish.yml` (`sdk-v*`), CLAUDE.md (the "not npm-installable" caveat + "published" designation), the SRS decision log, Task 0.5.20; **amends RFC 0017** (its publish prerequisite); contrasts `@sovereignfs/ui` (portable)\

@@ -1,7 +1,7 @@
 ---
 rfc: 0032
 title: Instance Identity Rename
-status: Accepted
+status: Implemented
 date: June 2026
 author: kasunben
 scope: >

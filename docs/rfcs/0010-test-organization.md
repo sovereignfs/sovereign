@@ -1,6 +1,6 @@
 # RFC 0010 — Test file organization
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `vitest.config.ts`, all `*.test.ts(x)` locations, a new root `/__tests__/`, `package.json` test scripts, CLAUDE.md + CONTRIBUTING test conventions\

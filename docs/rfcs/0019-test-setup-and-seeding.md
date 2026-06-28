@@ -1,6 +1,6 @@
 # RFC 0019 — Test setup & seeding
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/db` (test-DB helpers + seed), `apps/auth` (seed users via better-auth), a seed entrypoint (`scripts/seed.ts` / `sv seed` in `bin/sv`), in-code fixtures/factories, `vitest.config.ts`, `CONTRIBUTING.md` + CLAUDE.md test docs; builds on RFC 0010 (test organization)\

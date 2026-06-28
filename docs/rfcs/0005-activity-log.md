@@ -1,6 +1,6 @@
 # RFC 0005 — Activity log
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** SDK (`packages/sdk`), manifest schema (`packages/manifest`), platform DB (`packages/db`), runtime, Console, Account\

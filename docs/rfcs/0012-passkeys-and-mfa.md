@@ -1,6 +1,6 @@
 # RFC 0012 — Passkeys & TOTP multi-factor auth
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `apps/auth` (better-auth plugins + login flow), runtime middleware & `/api/verify`, `plugins/account` (Security tab), `bin/sv` (break-glass), Console admin API, `packages/sdk` (auth surface), `.env.example`, Docker (new dependency), docs, SRS\
@@ -106,7 +106,7 @@ anywhere in the SRS, the other RFCs, or the code — this is a clean addition.
    specified as an explicit **later phase** (§4f), not phase one.
 3. **Recovery (priority order):** backup codes → admin reset → `sv` CLI
    break-glass (§4g).
-4. **Status:** Draft, pre-v1 intent, prioritization deferred.
+4. **Status:** Implemented, pre-v1 intent, prioritization deferred.
 
 ## Proposed design
 

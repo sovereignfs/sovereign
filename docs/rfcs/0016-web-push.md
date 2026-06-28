@@ -1,6 +1,6 @@
 # RFC 0016 — Web Push notifications
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `runtime/next.config.ts` + a new `runtime/worker/` (service-worker push handler), platform DB (`packages/db` — a new `push_subscriptions` table + helpers), runtime API routes + the `web-push` dependency, `runtime/public/manifest.json`, `.env.example` + `docs/self-hosting.md` (VAPID keys), Account (enable-push toggle), Console (broadcast push), SRS; **builds on RFC 0015** (Notification Center) and RFC 0001 / PLT-09 (PWA)\

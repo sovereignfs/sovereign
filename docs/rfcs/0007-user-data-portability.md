@@ -1,6 +1,6 @@
 # RFC 0007 — User data export & portability
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** SDK (`packages/sdk`), manifest schema (`packages/manifest`), runtime, Account, reference plugins\

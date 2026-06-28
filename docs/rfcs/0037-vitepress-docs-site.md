@@ -1,7 +1,7 @@
 ---
 rfc: 0037
 title: VitePress public docs site and project landing page
-status: Draft
+status: Implemented
 date: June 2026
 author: kasunben
 scope: apps/docs, docs/index.md, pnpm-workspace.yaml, turbo.json, .github/workflows

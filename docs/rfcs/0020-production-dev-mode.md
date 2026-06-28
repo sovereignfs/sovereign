@@ -1,6 +1,6 @@
 # RFC 0020 — Production dev-mode & diagnostics
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/db` (request-scoped DB resolution), runtime middleware (dev-mode detection + gating + request context), `apps/auth` (parallel dev-DB path — the crux), env (`SOVEREIGN_DEV_MODE_ENABLED`, dev-DB URLs, a dev-mode secret, `LOG_LEVEL`), structured logging + `runtime/app/api/admin/health`, `docs/security.md` + `docs/self-hosting.md`; builds on RFC 0019 (seed for the mock DB), RFC 0005 (audit), RFC 0008 (security / no-telemetry)\

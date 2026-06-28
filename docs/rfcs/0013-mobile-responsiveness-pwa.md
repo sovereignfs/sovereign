@@ -1,6 +1,6 @@
 # RFC 0013 — Mobile responsiveness & PWA hardening
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Runtime shell (`runtime/app/(platform)/`), `packages/ui` (`Dialog` + a new `Drawer` + tokens), runtime PWA config / `runtime/public/manifest.json` / root-layout viewport, `docs/design-system.md`, SRS; builds on RFC 0001 (overlay shell)\

@@ -1,7 +1,7 @@
 ---
 rfc: 0038
 title: Desktop app shell (Tauri, macOS-first)
-status: Draft
+status: Accepted
 date: June 2026
 author: kasunben
 scope: sovereign-desktop (separate repo), docs, CLAUDE.md, packages/sdk

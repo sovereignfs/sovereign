@@ -1,6 +1,6 @@
 # RFC 0014 — Minimal shell mode
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `scripts/generate-registry.ts` (composition), runtime route tree (a new `(minimal)` route group + committed layout + `.gitignore`), `runtime/src/root-plugin.ts` (eligibility), `packages/manifest` (validation), `docs/plugin-development.md`, CLAUDE.md, SRS; builds on RFC 0001 (shell modes) and RFC 0013 (mobile responsiveness)\

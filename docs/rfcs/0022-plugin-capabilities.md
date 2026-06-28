@@ -1,6 +1,6 @@
 # RFC 0022 — Plugin-declared capabilities
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/manifest` (a new `capabilities` declaration), `packages/sdk` (`hasCapability`/`requireCapability` resolve plugin capabilities), the capability resolver + session from RFC 0021, an optional platform/Console assignment surface, `docs/plugin-development.md`; **builds on RFC 0021** (capability model, resolver, SDK helper, `platform:`/`plugin:` namespacing), RFC 0018 (manifest declaration + namespacing pattern), RFC 0005 (audit)\

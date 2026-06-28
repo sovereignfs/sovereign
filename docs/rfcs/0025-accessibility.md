@@ -1,6 +1,6 @@
 # RFC 0025 — Accessibility (WCAG 2.1 AA)
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/ui`, `docs/design-system.md`, `docs/plugin-development.md`, `eslint.config.ts`, SRS; builds on RFC 0001 (Dialog focus trap), RFC 0011 (Icon aria-hidden), RFC 0013 (touch targets)\

@@ -1,6 +1,6 @@
 # RFC 0006 — Deployment & upgrade strategy
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Docker images + Compose, CI (Task 0.5.8), `packages/db` (migrations), `apps/auth`, `bin/sv`, `docs/self-hosting.md`, `docs/upgrade.md`, SRS §3.1 + NFRs\

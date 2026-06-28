@@ -1,6 +1,6 @@
 # RFC 0011 — Icon system (Lucide)
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Design system (`packages/ui`) — a new `Icon` component + a generated SVG set; runtime chrome; `PluginTile`/sidebar plugin-icon wiring; `docs/design-system.md` + `docs/plugin-development.md`\

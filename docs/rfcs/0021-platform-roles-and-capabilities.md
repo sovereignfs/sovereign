@@ -1,6 +1,6 @@
 # RFC 0021 — Platform roles & capabilities
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `apps/auth` (role default → owner, first-user hook, role-change guards), a centralized roles/capabilities module, `runtime/src/route-guard.ts` + `runtime/middleware.ts` + `runtime/src/session-verify.ts` (capability gate + capabilities in the session cache), `runtime/src/launcher-plugins.ts` + `(platform)/layout.tsx` (chrome gating), `packages/sdk` (`SessionUser` + `hasCapability`/`requireCapability`), `packages/manifest` (`adminOnly` → capability, the reserved `admin:*`), Console (role management UI), SRS §3.4 / AUTH-08 / PLT-03 / CON-05; builds on RFC 0005 (audit), RFC 0008 (security)\

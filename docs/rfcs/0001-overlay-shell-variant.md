@@ -1,6 +1,6 @@
 # RFC 0001 — Overlay shell variant
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Platform shell, manifest schema, generate script, `packages/ui`\

@@ -1,6 +1,6 @@
 # RFC 0024 — Plugin compatibility & versioning
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/manifest` (`maxPlatformVersion` + semver validation + `CURRENT_MANIFEST_SCHEMA_VERSION` + a `checkCompatibility` resolver; add `semver`), `scripts/generate-registry.ts` + `scripts/install-plugins.ts` + `bin/sv` (install/build gates), runtime startup + `plugin_status` + `/api/admin/health` (boot disable + surface), `registry/plugins.json` (Task 0.5.19), `docs/plugin-development.md` + `docs/self-hosting.md`; **amends RFC 0006** (consumes the boot gate + admin-health surfacing), disambiguates from **RFC 0007** (`schemaVersion` clash), relates to Task 0.5.19/0.5.20\

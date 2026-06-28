@@ -1,7 +1,7 @@
 ---
 rfc: 0039
 title: Instance identity — instanceId field and terminology cleanup
-status: Accepted
+status: Implemented
 date: June 2026
 author: kasunben
 scope: packages/db, packages/sdk, runtime, plugins/console, packages/ui, docs

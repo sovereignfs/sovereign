@@ -1,6 +1,6 @@
 # RFC 0017 — Plugin starter template & example plugins
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `bin/sv` + `bin/helpers.ts` (a new `plugin new` command), `@sovereignfs/sdk` npm publishability (**prerequisite**), `docs/plugin-development.md`, `CONTRIBUTING.md`, the registry (`registry/plugins.json`, Task 0.5.19), and **external GitHub repos** (a template + example plugins) under the `sovereignfs` org; builds on the plugin model (SRS §3.5/§3.9), RFC 0001 (overlay), RFC 0014 (minimal shell), RFC 0015 (notifications), RFC 0010 (test organization — examples double as fixtures)\

@@ -1,6 +1,6 @@
 # RFC 0002 — Cross-plugin data sharing
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** SDK (`packages/sdk`), manifest schema (`packages/manifest`), runtime, `packages/ui`, Console/Account\

@@ -1,6 +1,6 @@
 # RFC 0018 — Plugin-scoped environment variables
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/manifest` (new optional `env` field), `packages/sdk` (`sdk.env` scoped accessor), `scripts/generate-registry.ts` (merge + namespacing + validation), the runtime env loader, `.env.example` / `docs/self-hosting.md` / `docs/plugin-development.md` + the docs-parity tests, Docker/Compose; builds on the plugin model (SRS §3.5/§3.9) and RFC 0008 (secret handling)\

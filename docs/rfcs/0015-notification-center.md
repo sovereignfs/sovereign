@@ -1,6 +1,6 @@
 # RFC 0015 — Notification Center
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `packages/sdk` (`sdk.notifications`), `packages/manifest` (`notifications:send`), platform DB (`packages/db` — a new `notifications` table + notification prefs), runtime chrome + API routes, `packages/ui` (new `Toast` + popover/panel), Account (notification prefs), Console (admin broadcast), SRS; builds on RFC 0005 (activity log), RFC 0011 (icon system), RFC 0013 (mobile Drawer)\

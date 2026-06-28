@@ -252,6 +252,22 @@ independent release cycle triggered by a version-specific Git tag:
 All other `@sovereignfs/*` packages are `"private": true` and are never
 published.
 
+## Deploying hosted sites
+
+Two sites are deployed via tag push rather than on every merge to `main`, to
+avoid burning CI minutes on incremental changes:
+
+| Site                                  | Tag pattern | Workflow                | Trigger command example                            |
+| ------------------------------------- | ----------- | ----------------------- | -------------------------------------------------- |
+| [sovereignfs.github.io][docs-site]    | `docs-v*`   | `docs.yml` (deploy job) | `git tag docs-v1.0 && git push origin docs-v1.0`   |
+| [sovereignfs.github.io/storybook][sb] | `sb-v*`     | `storybook-deploy.yml`  | `git tag sb-v0.11.0 && git push origin sb-v0.11.0` |
+
+[docs-site]: https://sovereignfs.github.io/
+[sb]: https://sovereignfs.github.io/storybook/
+
+Both workflows also support **manual re-deploys** via **Actions → [workflow name] →
+Run workflow** without needing to push a tag.
+
 ---
 
 ## Proposing a feature (RFCs)

@@ -17,7 +17,7 @@ duplicating any files — `docs/` remains the one source of truth.
 The same site doubles as the project's landing page via a VitePress home layout
 page, eliminating the need for a separate marketing site at v1. A GitHub Actions
 workflow deploys the static output to `sovereignfs/sovereignfs.github.io` on
-every merge to `main`, serving the public site at `https://sovereignfs.github.io/`.
+`docs-v*` tag pushes, serving the public site at `https://sovereignfs.github.io/`.
 
 The two tasks are sequenced: scaffold the navigable docs site first (so the full
 documentation is immediately browsable and the deploy pipeline is live), then
@@ -32,7 +32,7 @@ into docs).
 1.x config with `srcDir: '../../docs'`, full sidebar navigation matching the
 existing docs structure, and local full-text search. Running
 `pnpm --filter @sovereignfs/docs dev` opens the site at localhost:5173. Merges
-to `main` trigger a deploy job that publishes the built site to
+with a `docs-v*` tag trigger a deploy job that publishes the built site to
 `sovereignfs/sovereignfs.github.io`.
 
 **Deliverables:**
@@ -58,13 +58,13 @@ to `main` trigger a deploy job that publishes the built site to
 - `.github/workflows/docs.yml` — two jobs:
   - `build`: triggered on PRs with path filter `docs/**` or `apps/docs/**`;
     runs `pnpm --filter @sovereignfs/docs build` (smoke-test, no deploy)
-  - `deploy`: triggered on push to `main` with same path filter; builds then
-    pushes `apps/docs/.vitepress/dist/` to `sovereignfs/sovereignfs.github.io`
-    via `peaceiris/actions-gh-pages@v4` using secret `DOCS_DEPLOY_KEY`
+  - `deploy`: triggered on `docs-v*` tag push (or `workflow_dispatch`); builds
+    then pushes `apps/docs/.vitepress/dist/` to `sovereignfs/sovereignfs.github.io`
+    via `peaceiris/actions-gh-pages@v4` using PAT secret `DOCS_DEPLOY_TOKEN`
 
-**Prerequisites (manual):** generate an SSH deploy key; add the public key to
-`sovereignfs/sovereignfs.github.io` as a deploy key (write access); add the
-private key as secret `DOCS_DEPLOY_KEY` in this repo's Actions settings.
+**Prerequisites (manual):** generate a GitHub PAT with `repo` scope for
+`sovereignfs/sovereignfs.github.io`; add it as secret `DOCS_DEPLOY_TOKEN` in
+this repo's Actions settings.
 
 **SRS reference:** §1.1 (open-source, self-hostable positioning), §3.14 (developer
 experience)
@@ -76,7 +76,7 @@ experience)
 - Local search returns results for "plugin", "auth", "SDK"
 - `pnpm --filter @sovereignfs/docs build` exits 0 and emits `apps/docs/.vitepress/dist/`
 - CI `build` job passes on a test PR touching `docs/architecture.md`
-- On merge to `main`, `deploy` job runs and `https://sovereignfs.github.io/` updates
+- On `docs-v*` tag push, `deploy` job runs and `https://sovereignfs.github.io/` updates
 - `pnpm lint` and `pnpm format:check` pass (apps/docs/ is in lint scope)
 - No content copied or symlinked into `apps/docs/` — all sidebar links resolve via srcDir
 

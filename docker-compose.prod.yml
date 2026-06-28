@@ -62,6 +62,10 @@ services:
       AUTH_WEBAUTHN_RP_ID: '${AUTH_WEBAUTHN_RP_ID:-}'
       AUTH_WEBAUTHN_RP_NAME: '${AUTH_WEBAUTHN_RP_NAME:-Sovereign}'
       AUTH_WEBAUTHN_ORIGIN: '${AUTH_WEBAUTHN_ORIGIN:-}'
+      # Cookie domain for cross-subdomain session sharing. Required when auth and
+      # runtime are on different subdomains. Set to the shared parent domain with
+      # a leading dot (e.g. .example.com). Leave unset for localhost dev.
+      AUTH_COOKIE_DOMAIN: '${AUTH_COOKIE_DOMAIN:-}'
     volumes:
       # Named volume (not a host bind mount): Docker initialises it with the
       # image's /app/data ownership, so the non-root runner can write SQLite +

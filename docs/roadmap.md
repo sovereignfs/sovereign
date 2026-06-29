@@ -161,3 +161,19 @@ once prioritised.
 | —       | Desktop: keychain credential storage (RFC 0038)                       | 📋     | [17.4](epics/desktop.md#174--keychain-credential-storage)                                        |
 | —       | Desktop: auto-updater (RFC 0038)                                      | 📋     | [17.5](epics/desktop.md#175--auto-updater)                                                       |
 | —       | Desktop: Mac App Store distribution (RFC 0038)                        | 📋     | [17.6](epics/desktop.md#176--mac-app-store-distribution)                                         |
+| —       | Design system stabilization                                           | 📋     | [9.12](epics/design-system.md#912--design-system-stabilization)                                  |
+| —       | Messages and notification detail (RFC 0048)                           | 📋     | [4.4](epics/notification-center.md#44--messages-and-notification-detail-rfc-0048)                |
+| —       | User directory and member selection SDK (RFC 0041)                    | 📋     | [1.12](epics/users-auth.md#112--user-directory-and-member-selection-sdk-rfc-0041)                |
+| —       | Plugin-scoped roles and grants (RFC 0054)                             | 📋     | [1.13](epics/users-auth.md#113--plugin-scoped-roles-and-grants-rfc-0054)                         |
+| —       | Plugin secret vault (RFC 0043)                                        | 📋     | [8.6](epics/data-sovereignty.md#86--plugin-secret-vault-rfc-0043)                                |
+| —       | Plugin file storage (RFC 0044)                                        | 📋     | [8.7](epics/data-sovereignty.md#87--plugin-file-storage-rfc-0044)                                |
+| —       | Plugin portability hooks (RFC 0052)                                   | 📋     | [8.8](epics/data-sovereignty.md#88--plugin-portability-hooks-rfc-0052)                           |
+| —       | Plugin background jobs and schedules (RFC 0046)                       | 📋     | [3.16](epics/plugins-runtime.md#316--plugin-background-jobs-and-schedules-rfc-0046)              |
+| —       | Public plugin page routes (RFC 0042)                                  | 📋     | [2.14](epics/platform-shell.md#214--public-plugin-page-routes-rfc-0042)                          |
+| —       | Public plugin webhooks (RFC 0050)                                     | 📋     | [2.15](epics/platform-shell.md#215--public-plugin-webhooks-rfc-0050)                             |
+| —       | Plugin events and realtime channels (RFC 0045)                        | 📋     | [3.17](epics/plugins-runtime.md#317--plugin-events-and-realtime-channels-rfc-0045)               |
+| —       | Plugin tool contracts (RFC 0047)                                      | 📋     | [3.18](epics/plugins-runtime.md#318--plugin-tool-contracts-rfc-0047)                             |
+| —       | Plugin external connections (RFC 0049)                                | 📋     | [3.19](epics/plugins-runtime.md#319--plugin-external-connections-rfc-0049)                       |
+| —       | Cross-plugin references and dependency discovery (RFC 0051)           | 📋     | [3.20](epics/plugins-runtime.md#320--cross-plugin-references-and-dependency-discovery-rfc-0051)  |
+| —       | Plugin flow handoffs (RFC 0053)                                       | 📋     | [3.21](epics/plugins-runtime.md#321--plugin-flow-handoffs-rfc-0053)                              |
+| —       | Sovereign Harness platform plugin (RFC 0040)                          | 📋     | [18.1](epics/sovereign-harness.md#181--sovereign-harness-platform-plugin-rfc-0040)               |

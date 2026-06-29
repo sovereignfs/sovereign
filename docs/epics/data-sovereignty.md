@@ -98,6 +98,86 @@
 
 ---
 
+#### 📋 8.6 — Plugin secret vault (RFC 0043)
+
+**Goal:** Add a platform-managed secret vault for runtime plugin secrets such as OAuth tokens, personal access tokens, API keys, webhook secrets, and user/provider refresh tokens.
+
+**Deliverables:**
+
+- Add `sdk.secrets` for plugin-scoped, user-scoped, and instance-scoped runtime secrets.
+- Add encrypted platform storage for secret material and metadata.
+- Keep plugin-scoped env vars as the deployment-time secret mechanism; use the vault for runtime-created secrets.
+- Add Account/Console management surfaces where appropriate.
+- Define export/delete behavior that exports metadata but not plaintext secret values.
+- Add audit hooks for secret create/update/delete/read operations where useful.
+
+**Dependencies:** Task 8.5 (encryption architecture) informs the cryptographic model; Task 3.11 (plugin-scoped env vars) remains the deployment-time baseline.
+
+**SRS reference:** [RFC 0043](../rfcs/0043-plugin-secret-vault.md)
+
+**Review checklist:**
+
+- A plugin can store and retrieve a per-user credential without implementing its own encryption.
+- Deleted users have plugin vault secrets removed.
+- Exports do not leak plaintext secret values.
+- Missing vault encryption/key configuration fails safely according to the accepted implementation model.
+
+---
+
+#### 📋 8.7 — Plugin file storage (RFC 0044)
+
+**Goal:** Implement `sdk.storage` as a plugin-scoped file storage surface for attachments, generated assets, imports, exports, thumbnails, and other plugin-owned binary objects.
+
+**Deliverables:**
+
+- Add local filesystem-backed storage under the Sovereign data directory.
+- Add SDK methods for put/get/delete/list or equivalent object operations.
+- Add metadata tables for ownership, plugin ID, user ID, content type, size, and lifecycle state.
+- Add signed/authorized serving routes for plugin-owned files.
+- Integrate storage with user data export/import and deletion.
+- Define quotas and upload limits.
+- Keep the API backend-neutral so object-store support can be added later.
+
+**Dependencies:** Task 8.2 (portability), Task 8.4/1.7 (deletion), Task 8.5 (future encryption).
+
+**SRS reference:** [RFC 0044](../rfcs/0044-plugin-storage.md)
+
+**Review checklist:**
+
+- A plugin can store and serve a user-owned file without writing ad hoc paths.
+- Storage objects are deleted when user data deletion runs.
+- Export includes storage metadata and file payloads according to the accepted format.
+- Access checks prevent one plugin/user from reading another plugin/user's objects.
+
+---
+
+#### 📋 8.8 — Plugin portability hooks (RFC 0052)
+
+**Goal:** Add plugin-owned export/import/delete hooks so richer plugins can participate in Account-level portability without platform-specific table introspection.
+
+**Deliverables:**
+
+- Add SDK/runtime hook registration for plugin export, import, and user-data deletion.
+- Define plugin export result metadata: plugin ID, plugin version, schema version, data payload, files, references, secret metadata, and warnings.
+- Support file inclusion through plugin storage and user-selected export options.
+- Export secret metadata but never plaintext secret values.
+- Preserve cross-plugin references as inert metadata and document remapping behavior.
+- Make deletion hooks idempotent and cover plugin rows, user-owned storage, user-scoped secrets/connections, queued jobs, and generated artifacts.
+- Add Account orchestration and per-plugin success/failure reporting.
+
+**Dependencies:** RFC 0007 user data portability, RFC 0033 user data deletion, RFC 0044 plugin file storage, RFC 0049 plugin external connections, RFC 0051 cross-plugin references.
+
+**SRS reference:** [RFC 0052](../rfcs/0052-plugin-portability-hooks.md)
+
+**Review checklist:**
+
+- A plugin can export domain data and selected files without custom Account UI.
+- Import validates bundle shape/version before writing.
+- User deletion calls plugin cleanup idempotently.
+- Export bundles never include plaintext secrets.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)
@@ -105,6 +185,9 @@
 - [RFC 0004 — Per-plugin database](../rfcs/0004-per-plugin-database.md)
 - [RFC 0033 — User data deletion](../rfcs/0033-user-data-deletion.md)
 - [RFC 0008 — Security & encryption architecture](../rfcs/0008-security-encryption-architecture.md)
+- [RFC 0043 — Plugin secret vault](../rfcs/0043-plugin-secret-vault.md)
+- [RFC 0044 — Plugin file storage](../rfcs/0044-plugin-storage.md)
+- [RFC 0052 — Plugin portability hooks](../rfcs/0052-plugin-portability-hooks.md)
 
 ## Related Docs
 

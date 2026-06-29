@@ -456,6 +456,60 @@ Task 0.5.24 (RFC 0019 — test seeding infrastructure this extends)
 
 ---
 
+#### 📋 1.12 — User directory and member selection SDK (RFC 0041)
+
+**Goal:** Provide a privacy-preserving SDK and runtime surface that lets plugins find and select active users for sharing, assignment, membership, and message-recipient workflows without using admin APIs.
+
+**Deliverables:**
+
+- Add `sdk.directory.searchUsers()` and `sdk.directory.resolveUsers()` with a narrow, display-safe user shape.
+- Runtime routes validate the current session and return active users only.
+- Exclude roles, MFA state, session data, private profile fields, inactive users, and admin-only metadata.
+- Add rate limits and minimum-query behavior to avoid user enumeration.
+- Add optional shared user-picker UI guidance or primitive once repeated plugin usage emerges.
+- Document member-selection patterns in `docs/plugin-development.md`.
+
+**Dependencies:** Task 1.5 (roles/capabilities), Task 1.11 (active/test-user fields are already represented in user data, but not exposed by default).
+
+**SRS reference:** [RFC 0041](../rfcs/0041-user-directory.md)
+
+**Review checklist:**
+
+- A non-admin plugin can search active users by display-safe fields only.
+- Inactive users and role/capability details are never returned.
+- Sharing/member-selection flows can resolve selected user IDs without calling Console/admin routes.
+- User search is rate-limited and does not expose full user dumps.
+
+---
+
+#### 📋 1.13 — Plugin-scoped roles and grants (RFC 0054)
+
+**Goal:** Add a standard authorization model for plugins that need plugin-local roles, capability bundles, and resource-scoped grants without turning them into platform roles.
+
+**Deliverables:**
+
+- Extend manifest metadata with optional plugin role presets that bundle plugin-declared capabilities.
+- Define a standard plugin grant shape covering plugin-scope and resource-scope assignments.
+- Add `sdk.authz` or equivalent server-side helpers for plugin-owned grant checks.
+- Keep scoped grants out of the global session capability header; resolve them inside plugin server code with resource context.
+- Document assignment and revocation rules, including last-owner protection for plugin resources where lockout is possible.
+- Add audit expectations for grant create/revoke/change, ownership transfer, and any future emergency override.
+- Define export/import/delete behavior for plugin grants through plugin portability hooks.
+- Clarify platform-owner override policy: no silent access; any override must be explicit, narrow, audited, and preferably read-only.
+
+**Dependencies:** Task 1.5 (platform roles/capabilities), Task 1.6 (plugin-declared capabilities), Task 1.12 (user directory/member selection), Task 5.1 (activity logging), Task 8.8 (plugin portability hooks), RFC 0051 cross-plugin references.
+
+**SRS reference:** [RFC 0054](../rfcs/0054-plugin-scoped-roles-and-grants.md)
+
+**Review checklist:**
+
+- A plugin can declare role presets without granting anyone access automatically.
+- A plugin can check a user capability against a specific plugin-owned resource.
+- Resource-scoped grants do not bloat session headers or affect middleware routing.
+- Grant changes are audited and participate in export/delete semantics.
+
+---
+
 ## Related RFCs
 
 - [RFC 0012 — Passkeys & TOTP MFA](../rfcs/0012-passkeys-and-mfa.md)
@@ -463,6 +517,8 @@ Task 0.5.24 (RFC 0019 — test seeding infrastructure this extends)
 - [RFC 0022 — Plugin-declared capabilities](../rfcs/0022-plugin-capabilities.md)
 - [RFC 0033 — User data deletion](../rfcs/0033-user-data-deletion.md)
 - [RFC 0035 — Progressive user verification](../rfcs/0035-progressive-user-verification.md)
+- [RFC 0041 — User directory and member selection SDK](../rfcs/0041-user-directory.md)
+- [RFC 0054 — Plugin-scoped roles and grants](../rfcs/0054-plugin-scoped-roles-and-grants.md)
 
 ## Related Docs
 

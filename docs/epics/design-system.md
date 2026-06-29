@@ -463,3 +463,31 @@ eight new exported components; no breaking changes to existing API.
 - All stories render without errors; a11y panel passes on each
 - `pnpm --filter @sovereignfs/ui typecheck` passes
 - `pnpm format:check && pnpm lint` pass
+
+---
+
+#### 📋 9.12 — Design system stabilization
+
+**Goal:** Make `@sovereignfs/ui` a stricter, more reliable public contract for platform screens and plugin authors by fixing token drift, strengthening accessibility wiring, and improving adoption across first-party plugins.
+
+**Deliverables:**
+
+- Replace or formally alias undefined token references, starting with `packages/ui`.
+- Add a token validation script that fails on undefined `--sv-*` references and warns/fails on hardcoded design literals in component CSS.
+- Fix `FormField` so labels, hints, required state, invalid state, and error text are associated with the actual form control.
+- Add missing form primitives needed to reduce local control CSS, starting with `Textarea` and `Checkbox`.
+- Migrate Account and Console generic controls/page patterns toward shared primitives (`Button`, `Input`, `Select`, `NavTabs`, `PageHeader`, `Card`, `Badge`, `SystemBanner`).
+- Add package-level UI test and Storybook quality gates where practical.
+- Update `docs/design-system.md`, `docs/plugin-development.md`, and plugin templates with the recommended patterns.
+
+**Dependencies:** Task 9.11 (component gaps), Task 9.7 (Storybook), Task 10.1 (a11y contract).
+
+**Reference:** [Design System Stabilization Proposal](../design-system-stabilization-proposal.md)
+
+**Review checklist:**
+
+- `packages/ui` has no undefined token references.
+- Token validation runs in CI.
+- `FormField` hint/error text is announced with the associated control.
+- New first-party UI work no longer adds generic local `.button`, `.input`, `.select`, or `.textarea` styles.
+- Account and Console use shared primitives for common controls and page structure.

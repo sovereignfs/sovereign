@@ -434,6 +434,163 @@ minor (new optional params on exported functions), `runtime` → patch, `bin/sv`
 
 ---
 
+#### 📋 3.16 — Plugin background jobs and schedules (RFC 0046)
+
+**Goal:** Add a platform-managed background job surface so plugins can enqueue one-off work, schedule recurring work, and report progress without relying on a browser request.
+
+**Deliverables:**
+
+- Add `sdk.jobs` for enqueueing, scheduling, cancellation, status lookup, and handler registration.
+- Add platform job tables for queued/scheduled/running/completed/failed state.
+- Add runtime worker loop with clear single-process semantics and a future path for multi-process coordination.
+- Add progress reporting and notification integration for long-running work.
+- Add admin health visibility for stuck/failed jobs.
+- Define disabled-plugin and uninstall behavior for queued/scheduled jobs.
+
+**Dependencies:** Task 4.1 (notifications for completion/failure), Task 5.1 (activity logging), Task 3.13 (per-plugin database where plugin jobs touch plugin data).
+
+**SRS reference:** [RFC 0046](../rfcs/0046-plugin-jobs.md)
+
+**Review checklist:**
+
+- A plugin can enqueue a job and receive a completion/failure status.
+- Scheduled jobs survive runtime restart.
+- Disabled plugins do not execute queued or scheduled jobs.
+- Long-running jobs can notify the user on completion without holding a request open.
+
+---
+
+#### 📋 3.17 — Plugin events and realtime channels (RFC 0045)
+
+**Goal:** Implement `sdk.events` as a plugin-scoped realtime publish/subscribe surface for ephemeral UI synchronization.
+
+**Deliverables:**
+
+- Add manifest permission/schema support for plugin event channels.
+- Add `sdk.events` publish/subscribe API with runtime-injected plugin, tenant, and user context.
+- Reuse or extend the notification transport model for polling/SSE/Redis where appropriate.
+- Support channel authorization callbacks so a user receives only events for resources they can access.
+- Document that events are ephemeral and not a durable queue, notification inbox, or audit log.
+
+**Dependencies:** Task 4.3 (notification broker transport), Task 3.13 (per-plugin database for resource auth), Task 5.1 (activity remains separate).
+
+**SRS reference:** [RFC 0045](../rfcs/0045-plugin-events.md)
+
+**Review checklist:**
+
+- Two browser sessions viewing the same authorized resource receive realtime updates.
+- A user without access to a resource cannot subscribe to that resource's channel.
+- Events are not persisted as notifications or activity log rows by default.
+- Polling fallback remains available where SSE/Redis is disabled.
+
+---
+
+#### 📋 3.18 — Plugin tool contracts (RFC 0047)
+
+**Goal:** Add platform-mediated tool contracts so plugins can expose structured, permissioned, auditable actions to trusted callers such as assistant or automation layers.
+
+**Deliverables:**
+
+- Add manifest `tools` declarations with names, schemas, effect classes, confirmation requirements, and optional verification requirements.
+- Add provider registration through `sdk.tools.provide()`.
+- Add caller preview/execute flows through `sdk.tools.preview()` and `sdk.tools.execute()`.
+- Add platform confirmation-token flow for mutating or external effects.
+- Add activity logging for tool execution attempts and outcomes.
+- Add docs and examples for read, write, and external tool effects.
+
+**Dependencies:** RFC 0002 cross-plugin data sharing, Task 5.1 activity logging, Task 1.8/1.9 progressive verification, Task 18.1 Harness when assistant execution is introduced.
+
+**SRS reference:** [RFC 0047](../rfcs/0047-plugin-tools.md)
+
+**Review checklist:**
+
+- A provider plugin can declare and register a tool.
+- A caller can request a preview without mutation.
+- Mutating/external tools cannot execute without a matching confirmation token.
+- Tool execution records provider, caller, actor, effect class, result, and error metadata.
+
+---
+
+#### 📋 3.19 — Plugin external connections (RFC 0049)
+
+**Goal:** Add a platform pattern for plugin-owned external provider connections, including OAuth/connect-account lifecycle, connection metadata, secret-vault integration, reconnect, disconnect, and operator visibility.
+
+**Deliverables:**
+
+- Add platform-owned connection metadata records scoped by plugin, tenant, user, and provider.
+- Add `sdk.connections` or equivalent for create/list/get/update/disconnect/mark-used/mark-error flows.
+- Add manifest metadata for provider declarations and callback paths.
+- Add signed OAuth state helpers and server-side callback validation patterns.
+- Store all credential material through the plugin secret vault; connection records contain metadata only.
+- Add Account/Console views for connected credentials and provider status without revealing secrets.
+- Document reconnect, token-refresh, disconnect, and sanitized provider error handling.
+
+**Dependencies:** RFC 0043 plugin secret vault, RFC 0047 plugin tool contracts for caller-initiated external effects, RFC 0042/0050 where provider callbacks require public ingress.
+
+**SRS reference:** [RFC 0049](../rfcs/0049-plugin-external-connections.md)
+
+**Review checklist:**
+
+- A plugin can create a user-scoped external connection without storing secrets in its own tables.
+- OAuth state values are signed, expiry-bound, and validated on callback.
+- Disconnect removes or revokes associated secrets where possible.
+- Connection status is visible to the user without leaking credentials.
+
+---
+
+#### 📋 3.20 — Cross-plugin references and dependency discovery (RFC 0051)
+
+**Goal:** Let plugins discover optional dependencies and store stable, opaque references to provider-owned records without cross-plugin database coupling.
+
+**Deliverables:**
+
+- Add `sdk.plugins` discovery helpers for installed/enabled/user-available plugin status.
+- Add consent-status helpers for declared data contracts.
+- Define a standard `PluginReference` shape for provider ID, resource type, opaque resource ID, contract/version, label snapshot, and metadata.
+- Add optional integration manifest metadata for discoverable sibling-plugin relationships.
+- Document stale-reference behavior for unavailable providers, revoked consent, deleted resources, and version mismatches.
+- Ensure cross-plugin references participate in export/import as inert metadata.
+
+**Dependencies:** RFC 0002 cross-plugin data sharing, RFC 0047 plugin tool contracts, RFC 0052 plugin portability hooks.
+
+**SRS reference:** [RFC 0051](../rfcs/0051-cross-plugin-references.md)
+
+**Review checklist:**
+
+- A consumer can tell whether an optional provider plugin is installed, enabled, and available to the current user.
+- A stored reference does not grant access without a live data/tool contract authorization path.
+- Provider uninstall/disable does not break consumer tables.
+- UI can show cached labels while clearly marking unavailable or revoked links.
+
+---
+
+#### 📋 3.21 — Plugin flow handoffs (RFC 0053)
+
+**Goal:** Add platform-mediated handoffs so one plugin can start or continue a user-facing flow in another plugin with a signed, short-lived payload.
+
+**Deliverables:**
+
+- Add manifest `handoffs.receives` and `handoffs.sends` declarations with provider, name, path, schema, and public/authenticated mode metadata.
+- Add `sdk.handoffs.create()` for caller plugins and `sdk.handoffs.consume()` for provider plugins.
+- Add signed, expiry-bound, provider-scoped handoff tokens with payload hashing and optional single-use replay protection.
+- Support both authenticated-user and public-anonymous handoff modes.
+- Enforce public handoffs only on provider-declared public routes.
+- Validate return URLs to avoid open redirects.
+- Add docs and examples for checkout-style source plugin flows.
+
+**Dependencies:** RFC 0042 public plugin page routes, RFC 0050 public plugin webhooks for related public ingress constraints, RFC 0051 cross-plugin references, RFC 0047 plugin tool contracts for later mutating actions after a handoff.
+
+**SRS reference:** [RFC 0053](../rfcs/0053-plugin-flow-handoffs.md)
+
+**Review checklist:**
+
+- A source plugin can create a handoff token for a provider-declared flow.
+- A provider plugin can consume only tokens addressed to its own plugin ID and handoff name.
+- Expired, replayed, malformed, or wrong-provider tokens fail closed.
+- Public handoffs work for anonymous visitors only when explicitly declared.
+
+---
+
 ## Related RFCs
 
 - [RFC 0004 — Per-plugin database](../rfcs/0004-per-plugin-database.md)
@@ -445,6 +602,12 @@ minor (new optional params on exported functions), `runtime` → patch, `bin/sv`
 - [RFC 0024 — Plugin compatibility & versioning](../rfcs/0024-plugin-compatibility.md)
 - [RFC 0028 — Operator fork model](../rfcs/0028-operator-fork-model.md)
 - [RFC 0036 — Per-plugin database dialect selection](../rfcs/0036-per-plugin-dialect.md)
+- [RFC 0045 — Plugin events and realtime channels](../rfcs/0045-plugin-events.md)
+- [RFC 0046 — Plugin background jobs and schedules](../rfcs/0046-plugin-jobs.md)
+- [RFC 0047 — Plugin tool contracts](../rfcs/0047-plugin-tools.md)
+- [RFC 0049 — Plugin external connections](../rfcs/0049-plugin-external-connections.md)
+- [RFC 0051 — Cross-plugin references and dependency discovery](../rfcs/0051-cross-plugin-references.md)
+- [RFC 0053 — Plugin flow handoffs](../rfcs/0053-plugin-flow-handoffs.md)
 
 ## Related Docs
 

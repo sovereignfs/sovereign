@@ -361,6 +361,59 @@ The Platform Shell is the runtime that composes plugins into a coherent experien
 
 ---
 
+#### 📋 2.14 — Public plugin page routes (RFC 0042)
+
+**Goal:** Add a manifest-declared way for plugins to expose narrowly scoped public page routes without the global session redirect, while keeping the plugin responsible for route-level authorization.
+
+**Deliverables:**
+
+- Add `publicRoutes` or equivalent manifest field for declared public page prefixes.
+- Update runtime middleware/route gating so only declared public page routes bypass the session redirect.
+- Ensure public route prefixes are explicit, reviewable, and cannot shadow platform/account/admin routes.
+- Require plugins to perform token/session/public-ID authorization on public routes and fail closed.
+- Document public route patterns for token-protected previews, public shared documents, and published read-only pages.
+- Add tests for unauthenticated public route access, undeclared route redirects, and disabled/paywalled plugin behavior.
+
+**Dependencies:** Task 2.4 (public `/api` namespace delegation), Task 2.1 (middleware/session gate), Task 3.10 (compatibility/versioning).
+
+**SRS reference:** [RFC 0042](../rfcs/0042-public-plugin-routes.md)
+
+**Review checklist:**
+
+- Unauthenticated requests can reach only manifest-declared public plugin page routes.
+- Undeclared plugin pages still redirect to login.
+- Disabled plugin routes remain unavailable.
+- Public routes cannot claim reserved platform paths.
+
+---
+
+#### 📋 2.15 — Public plugin webhooks (RFC 0050)
+
+**Goal:** Add manifest-declared unauthenticated webhook ingress for plugins, with route validation, request limits, signature helpers, and replay protection.
+
+**Deliverables:**
+
+- Add manifest `webhooks` declarations with path, methods, description, body limits, and signature requirement metadata.
+- Extend middleware route decisions so only declared webhook paths bypass the session redirect.
+- Apply method and body-size limits before plugin handler execution.
+- Add server-side SDK helpers for common HMAC signature verification and replay checks.
+- Ensure webhook signing secrets are read through the plugin secret vault.
+- Add tests for undeclared webhook paths, disabled plugins, invalid methods, oversized bodies, and signature/replay helper behavior.
+- Document webhook implementation patterns for provider callbacks, verification challenges, and sanitized failure handling.
+
+**Dependencies:** Task 2.14 public plugin page routes for related public-route validation patterns, RFC 0043 plugin secret vault, RFC 0049 plugin external connections.
+
+**SRS reference:** [RFC 0050](../rfcs/0050-public-plugin-webhooks.md)
+
+**Review checklist:**
+
+- Multiple plugins can expose narrow public webhook routes without claiming global `/api/*`.
+- Undeclared webhook paths remain protected.
+- Webhook handlers receive no forged user identity.
+- Invalid signatures and replayed events fail closed.
+
+---
+
 ## Related RFCs
 
 - [RFC 0001 — Overlay shell variant](../rfcs/0001-overlay-shell-variant.md)
@@ -370,6 +423,8 @@ The Platform Shell is the runtime that composes plugins into a coherent experien
 - [RFC 0014 — Minimal shell mode](../rfcs/0014-minimal-shell-mode.md)
 - [RFC 0019 — Test setup & seeding](../rfcs/0019-test-setup-and-seeding.md)
 - [RFC 0020 — Production dev-mode & diagnostics](../rfcs/0020-production-dev-mode.md)
+- [RFC 0042 — Public plugin page routes](../rfcs/0042-public-plugin-routes.md)
+- [RFC 0050 — Public plugin webhooks](../rfcs/0050-public-plugin-webhooks.md)
 
 ## Related Docs
 

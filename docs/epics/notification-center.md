@@ -114,11 +114,42 @@ existing SSE route shape this task rewires)
 
 ---
 
+#### 📋 4.4 — Messages and notification detail (RFC 0048)
+
+**Goal:** Add a durable platform Message Inbox and full notification detail views while keeping notifications as lightweight delivery signals.
+
+**Deliverables:**
+
+- Extend notification records with `summary`, full `body`, `body_format`, `action_url`, metadata, expiry, dedupe, and priority semantics.
+- Add `/account/notifications` and `/account/notifications/<id>` views for full notification history and detail.
+- Add `messages` and `message_recipients` tables with per-recipient read/archive/delete state.
+- Add `/account/messages` and `/account/messages/<id>` views.
+- Add `messages:send` manifest permission and `sdk.messages.send()` for plugin-authored messages.
+- Add Console admin message compose for selected users or all active users.
+- Clarify and implement preference semantics for inbox rows, toasts, push, and message-generated notifications.
+- Harden notification/message sending at the runtime host boundary: trusted source resolution, manifest permission checks, recipient validation, batch caps, and rate limits.
+- Add export/delete participation for messages and notification detail metadata.
+
+**Dependencies:** Task 4.1 (Notification Center), Task 4.2 (Web Push), Task 4.3 (transport), Task 1.12 (user directory for recipient validation).
+
+**SRS reference:** [RFC 0048](../rfcs/0048-messages-and-notification-detail.md)
+
+**Review checklist:**
+
+- A plugin message appears in the recipient's message inbox and optionally creates a bell notification.
+- Reading a message marks related message notifications read without deleting the message.
+- A long notification opens a full notification detail page; short action-only notifications can still deep-link directly.
+- Muted category behavior is consistent across inbox count, toast, and push.
+- A plugin without `messages:send` or `notifications:send` cannot send through the runtime host.
+
+---
+
 ## Related RFCs
 
 - [RFC 0015 — Notification Center](../rfcs/0015-notification-center.md)
 - [RFC 0016 — Web Push](../rfcs/0016-web-push.md)
 - [RFC 0034 — Notification transport](../rfcs/0034-notification-transport.md)
+- [RFC 0048 — Messages and notification detail](../rfcs/0048-messages-and-notification-detail.md)
 
 ## Related Docs
 

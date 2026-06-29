@@ -20,6 +20,37 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
+  /* Prevent any child element from making the document wider than the viewport.
+     On mobile the shell grid can momentarily exceed 1fr (e.g. nowrap content in
+     the account tab bar or search overlay) — without this the document becomes
+     horizontally scrollable, shifting the sticky header along with everything else. */
+  overflow-x: hidden;
+}
+
+/* Provide --sv-dialog-inset-top at :root so position:fixed Dialog scrims
+   inherit it on iOS Safari. iOS Safari has a known behaviour where position:fixed
+   descendants inherit CSS custom properties from :root rather than from their DOM
+   ancestors — so the value set on .shell in shell.module.css does not reach the
+   Dialog's scrim. Defining it here (same formula as --sv-shell-header-height) is
+   the belt-and-suspenders fix: if the .shell definition propagates correctly it
+   is just a duplicate; if it doesn't (iOS), :root provides the correct value. */
+@media (max-width: 768px) {
+  :root {
+    --sv-dialog-inset-top: calc(60px + max(0px, env(safe-area-inset-top) - 12px));
+  }
+}
+
+/* iOS Safari zooms the viewport when focusing an input with font-size < 16px.
+   In standalone (PWA) mode the zoom persists after blur — the page stays scaled
+   up until the user pinch-zooms out. Clamping to ≥ 1rem (16px) on touch devices
+   prevents the zoom from triggering in the first place without disabling
+   user-scalable (which would break accessibility). */
+@supports (-webkit-touch-callout: none) {
+  input,
+  select,
+  textarea {
+    font-size: max(1rem, 100%);
+  }
 }
 
 body {

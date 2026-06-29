@@ -32,6 +32,15 @@ export function Drawer({ open, onClose, 'aria-label': ariaLabel, children }: Dra
 
   useEffect(() => {
     if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     previouslyFocused.current = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
     const first = panel?.querySelector<HTMLElement>(FOCUSABLE);

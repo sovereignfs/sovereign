@@ -49,6 +49,10 @@
   flex: 1 1 auto;
   overflow-y: auto;
   padding: var(--sv-space-6);
+  /* Prevent iOS scroll-chaining: when the dialog content reaches its top/bottom
+     boundary, stop the gesture from propagating to the document (which would
+     scroll the shell header and footer out of view in standalone PWA mode). */
+  overscroll-behavior: contain;
 }
 
 /* Fixed sizes. `max-*: 100%` caps to the scrim's content box (viewport minus

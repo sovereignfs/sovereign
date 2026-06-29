@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Sovereign Security Check'
+  short_description: 'Review sensitive Sovereign diffs for security rule violations.'
+  default_prompt: 'Use sv-security-check to review the current Sovereign diff.'

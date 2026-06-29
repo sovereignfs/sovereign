@@ -34,6 +34,7 @@
   text-decoration: none;
   border-radius: var(--sv-radius-md);
   transition: color 0.1s;
+  outline: none;
 }
 
 .navItem:hover {
@@ -120,6 +121,9 @@
   color: var(--sv-color-text-muted);
   cursor: pointer;
   flex-shrink: 0;
+  /* Suppress the UA focus ring on tap (mobile). The styled ring is applied only
+     on :focus-visible (keyboard navigation) below. */
+  outline: none;
 }
 
 .drawerClose:hover {

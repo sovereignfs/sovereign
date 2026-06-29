@@ -1,0 +1,220 @@
+/* Auth pages: /login, /register, /login/2fa */
+
+.page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sv-space-4);
+  background: var(--sv-color-surface);
+}
+
+.card {
+  width: 100%;
+  max-width: 360px;
+  background-color: var(--sv-color-surface);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+  box-shadow: var(--sv-shadow-card, 0 1px 2px rgba(0, 0, 0, 0.04));
+  padding: var(--sv-space-8);
+}
+
+/* ── Brand mark ──────────────────────────────────────────────────────────── */
+
+.logo {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+  font-size: var(--sv-font-size-md);
+  font-weight: var(--sv-font-weight-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.logoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ── Title + subtitle ────────────────────────────────────────────────────── */
+
+.title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: var(--sv-font-weight-semibold);
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  color: var(--sv-color-text-primary);
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  line-height: 1.5;
+}
+
+/* ── Notice (signed-out / account-deleted banner) ────────────────────────── */
+
+.notice {
+  margin-top: var(--sv-space-3);
+  padding: var(--sv-space-3) var(--sv-space-4);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+}
+
+.noticeText {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}
+
+/* ── Form ────────────────────────────────────────────────────────────────── */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+  margin-top: 24px;
+}
+
+.formSm {
+  margin-top: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  display: block;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-muted);
+  margin-bottom: var(--sv-space-2);
+}
+
+.passwordHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--sv-space-2);
+}
+
+.passwordHeader .label {
+  margin-bottom: 0;
+}
+
+.forgotLink {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--sv-color-border);
+}
+
+.error {
+  color: var(--sv-color-error, #ef4444);
+  font-size: var(--sv-font-size-sm);
+  margin: 0;
+}
+
+.fieldHint {
+  margin: var(--sv-space-1) 0 0;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+}
+
+/* ── Divider ─────────────────────────────────────────────────────────────── */
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+  margin: var(--sv-space-4) 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--sv-color-border);
+}
+
+/* ── Footer / links ──────────────────────────────────────────────────────── */
+
+.footer {
+  margin: var(--sv-space-5) 0 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  text-align: center;
+}
+
+.link {
+  color: var(--sv-color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ── Button helpers ──────────────────────────────────────────────────────── */
+
+.submitLg {
+  width: 100%;
+  margin-top: var(--sv-space-2);
+}
+
+.passkeyBtn {
+  width: 100%;
+}
+
+/* ── 2FA OTP cells ───────────────────────────────────────────────────────── */
+
+.otpRow {
+  display: flex;
+  gap: 8px;
+}
+
+.otpCell {
+  width: 100%;
+  height: 52px;
+  text-align: center;
+  font-family: var(--sv-font-family-mono);
+  font-size: 21px;
+  font-weight: var(--sv-font-weight-semibold);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface);
+  color: var(--sv-color-text-primary);
+  outline: none;
+  caret-color: transparent;
+}
+
+.otpCell:focus {
+  border-color: var(--sv-color-accent);
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.07);
+}
+
+.otpCell.otpError {
+  border-color: var(--sv-color-error, #ef4444);
+}
+
+.backupInput {
+  font-family: var(--sv-font-family-mono);
+  font-size: var(--sv-font-size-md);
+  letter-spacing: 0.08em;
+}

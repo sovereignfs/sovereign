@@ -44,6 +44,19 @@ export function Dialog({
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
+  // Prevent document-level scroll while open. On iOS standalone (PWA) mode,
+  // scroll events can leak from a position:fixed overlay to the document,
+  // scrolling the shell header and footer out of view. Locking the body is the
+  // belt-and-suspenders complement to overscroll-behavior:contain on .content.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   // Capture focus on open; restore it on close/unmount.
   useEffect(() => {
     if (!open) return;

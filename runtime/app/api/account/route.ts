@@ -4,10 +4,6 @@ import { logActivity } from '@/src/activity';
 import { deleteUser } from '@/src/user-deletion';
 
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
-const AUTH_PUBLIC_URL =
-  process.env.SOVEREIGN_AUTH_PUBLIC_URL ??
-  process.env.SOVEREIGN_AUTH_URL ??
-  'http://localhost:3001';
 
 /**
  * DELETE /api/account — self-service account deletion (RFC 0033).
@@ -95,7 +91,7 @@ export async function DELETE(request: Request): Promise<Response> {
   });
 
   // Set redirect header so the client knows where to go.
-  res.headers.set('x-sovereign-redirect', `${AUTH_PUBLIC_URL}/login?accountDeleted=1`);
+  res.headers.set('x-sovereign-redirect', '/login?accountDeleted=1');
 
   return res;
 }

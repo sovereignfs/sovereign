@@ -95,8 +95,10 @@
 
 .searchInput:focus-visible {
   border-color: var(--sv-color-accent);
-  outline: 2px solid var(--sv-color-focus-ring);
-  outline-offset: 2px;
+  /* box-shadow instead of outline: outlines paint outside the element's border
+     box and are NOT clipped by overflow:hidden on the overlay. box-shadow IS
+     clipped, so the focus ring stays within overlay bounds on iOS. */
+  box-shadow: 0 0 0 2px var(--sv-color-focus-ring);
 }
 
 /* Remove native search clear button */

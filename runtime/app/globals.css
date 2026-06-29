@@ -50,14 +50,16 @@ body {
 
 /* iOS Safari zooms the viewport when focusing an input with font-size < 16px.
    In standalone (PWA) mode the zoom persists after blur — the page stays scaled
-   up until the user pinch-zooms out. Clamping to ≥ 1rem (16px) on touch devices
-   prevents the zoom from triggering in the first place without disabling
-   user-scalable (which would break accessibility). */
+   up until the user pinch-zooms out. Clamping to ≥ 1rem (16px) prevents the
+   zoom without disabling user-scalable (which breaks accessibility).
+   !important is intentional: component CSS uses class selectors (specificity 0,1,0)
+   which beat this element rule (0,0,1), so without !important the sub-16px token
+   value wins and iOS zooms on every input tap. */
 @supports (-webkit-touch-callout: none) {
   input,
   select,
   textarea {
-    font-size: max(1rem, 100%);
+    font-size: max(1rem, 100%) !important;
   }
 }
 

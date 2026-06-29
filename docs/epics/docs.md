@@ -108,6 +108,38 @@ link: '/self-hosting' }` + `{ text: 'GitHub', link: '...', theme: 'alt' }`)
 - `pnpm --filter @sovereignfs/docs build` exits 0 after adding `docs/index.md`
 - No existing `docs/*.md` file is modified — `docs/index.md` is purely additive
 
+---
+
+#### 📋 16.3 — Current-state testing documentation cleanup
+
+**Goal:** Bring test documentation back in sync with the current codebase so
+contributors and release reviewers can trust the repo docs before v1.
+
+**Deliverables:**
+
+- Update `__tests__/e2e/README.md` so it reflects the current Playwright suite,
+  fixtures, seed prerequisites, and local run flow.
+- Add a compact test matrix to the documentation covering:
+  - Vitest unit/component scope.
+  - Playwright E2E scope.
+  - Postgres parity tests via `TEST_DATABASE_URL`.
+  - Why generated plugin route copies are excluded from test discovery.
+- Document the expected behavior of `pnpm test` and `pnpm test:e2e` in one
+  stable place.
+- Consider a docs-parity check for E2E documentation if there is a stable signal
+  that can be tested without brittle prose assertions.
+
+**Dependencies:** Task 0.12 (E2E golden-path test suite), Task 3.5 (test
+organization).
+
+**SRS reference:** NFR-11, RFC 0010.
+
+**Review checklist:**
+
+- No docs claim the E2E suite is empty.
+- Test commands and prerequisites are documented in one place.
+- `pnpm test` and `pnpm test:e2e` behavior is accurately described.
+
 ## Related RFCs
 
 - [RFC 0037 — VitePress public docs site and project landing page](../rfcs/0037-vitepress-docs-site.md)

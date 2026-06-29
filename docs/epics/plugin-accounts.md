@@ -4,7 +4,7 @@
 
 ## Status
 
-✅ Complete
+⏳ In Progress
 
 ## Overview
 
@@ -45,6 +45,32 @@ The Account plugin (`fs.sovereign.account`) is a `type: platform`, `shell: overl
 - `pnpm lint`, `pnpm format:check`, and `pnpm typecheck` pass
 
 ---
+
+#### 📋 14.2 — Account plugin workflow coverage
+
+**Goal:** Add meaningful regression coverage for Account workflows that users
+depend on, beyond private helper functions.
+
+**Deliverables:**
+
+- Cover profile and display-name update behavior.
+- Cover password validation and password-change action paths.
+- Cover sidebar plugin preference save and read behavior.
+- Cover notification preference update behavior.
+- Cover security panel helper behavior where it can be tested without browser
+  APIs.
+
+**Dependencies:** Task 14.1 (Account plugin), Task 2.13 (sidebar
+customization), Task 4.2 (Web Push notifications), Task 1.4 (Passkeys and TOTP
+MFA).
+
+**SRS reference:** ACC-01, ACC-04, ACC-07, ACC-08.
+
+**Review checklist:**
+
+- Critical Account actions have either unit/action tests or E2E coverage.
+- Tests avoid depending on generated route copies under `runtime/app`.
+- Existing user-facing Account behavior is unchanged.
 
 Subsequent tasks added Account sections as part of other epics:
 

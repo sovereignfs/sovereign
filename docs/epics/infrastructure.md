@@ -424,6 +424,98 @@ in place)
 
 ---
 
+#### 📋 0.14 — Typecheck performance and project references
+
+**Goal:** Improve contributor feedback time as the monorepo grows, without
+making Next.js app typechecking or Turbo caching more fragile.
+
+**Deliverables:**
+
+- Audit the current `tsconfig` inheritance graph.
+- Add `composite: true` to package configs where viable.
+- Add root TypeScript project references for packages first.
+- Evaluate Next.js app/runtime compatibility separately before enabling
+  references for apps.
+- Confirm Turbo caching still behaves correctly.
+- Measure before and after timings for `pnpm typecheck`.
+
+**Dependencies:** Task 0.2 (shared TypeScript config), Task 0.9 (CI pipeline).
+
+**SRS reference:** 2.2 Tech Stack, NFR-05.
+
+**Review checklist:**
+
+- Package-level typechecking can use incremental metadata.
+- The change does not make Next.js app typechecking more fragile.
+- Timing data is recorded in the PR or epic notes.
+
+---
+
+#### 📋 0.15 — Operational consistency checks
+
+**Goal:** Catch drift between auth DB, platform DB, generated state, and
+operator configuration before it becomes a production issue.
+
+**Deliverables:**
+
+- Add or extend health checks for:
+  - Generated registry presence and platform compatibility.
+  - Root plugin ID points to an installed, enabled, root-eligible plugin.
+  - Invite-only state if duplicated between auth and platform stores.
+  - Disabled incompatible plugins and recorded reasons.
+  - Plugin env vars required by manifests.
+- Consider a `pnpm sv doctor` command that reports:
+  - Required env readiness.
+  - DB dialect and migration status.
+  - Plugin manifest and generation status.
+  - Auth URL, public auth URL, and cookie-domain consistency.
+  - Notification transport configuration.
+- Ensure doctor-style checks do not mutate state unless explicitly requested.
+
+**Dependencies:** Task 0.10 (deployment and upgrade strategy), Task 2.12
+(production dev-mode and diagnostics), Task 3.10 (plugin compatibility and
+versioning), Task 3.11 (plugin-scoped environment variables).
+
+**SRS reference:** NFR-07, NFR-10, RFC 0006.
+
+**Review checklist:**
+
+- Operators can distinguish liveness from configuration readiness.
+- Common deployment drift has actionable error messages.
+- The doctor command does not mutate state unless explicitly requested.
+
+---
+
+#### 📋 0.16 — Pre-v1 stabilization gate
+
+**Goal:** Create a release-quality checkpoint that prevents new feature work
+from outrunning platform maintainability.
+
+**Deliverables:**
+
+- Add an explicit pre-v1 go/no-go checklist covering:
+  - Middleware refactor complete or explicitly deferred.
+  - Generate refactor complete or explicitly deferred.
+  - E2E suite covers auth, account, console, launcher, and paywall flows.
+  - Docs reflect current commands, test behavior, and development workflow.
+  - `pnpm generate` leaves no stale generated artifacts.
+  - `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm test:e2e` pass in CI.
+- Require new pre-v1 feature epics to state whether they touch middleware,
+  generation, auth, plugin manifests, or SDK contracts.
+
+**Dependencies:** Task 2.17 (middleware decomposition), Task 3.23 (generate
+script decomposition), Task 16.3 (current-state testing documentation cleanup).
+
+**SRS reference:** NFR-04, NFR-05, NFR-11.
+
+**Review checklist:**
+
+- There is a clear go/no-go checklist before v1.
+- Stabilization work is visible on the roadmap rather than hidden in ad hoc
+  cleanup.
+- Feature work that changes load-bearing architecture has test requirements
+  attached up front.
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)

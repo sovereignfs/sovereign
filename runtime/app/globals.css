@@ -20,11 +20,19 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  /* Prevent any child element from making the document wider than the viewport.
-     On mobile the shell grid can momentarily exceed 1fr (e.g. nowrap content in
-     the account tab bar or search overlay) — without this the document becomes
-     horizontally scrollable, shifting the sticky header along with everything else. */
-  overflow-x: hidden;
+}
+
+/* Prevent horizontal scroll on mobile where the shell grid can momentarily
+   exceed 1fr (e.g. nowrap content in the account tab bar or search overlay).
+   Scoped to mobile only — applying overflow-x: hidden on <html> at desktop
+   widths makes the html element the scroll container, which breaks
+   position: sticky on the sidebar (it sticks within html rather than the
+   viewport, causing the sidebar to scroll with the page). */
+@media (max-width: 768px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
 }
 
 /* Provide --sv-dialog-inset-top at :root so position:fixed Dialog scrims

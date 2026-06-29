@@ -7,6 +7,10 @@
   left: 0;
   right: 0;
   bottom: var(--sv-shell-footer-height, 60px);
+  /* Clip any child that overflows horizontally — prevents the overlay from
+     widening the layout viewport on Android when the input or a result row
+     exceeds the container width. */
+  overflow: hidden;
   z-index: 150; /* above footer (101) and Drawer scrim (100) */
   display: flex;
   flex-direction: column;
@@ -65,11 +69,15 @@
 }
 
 .searchInput {
-  /* Remove native iOS searchfield appearance — it overrides width: 100% and
-     box-sizing: border-box, causing the input to overflow its container. */
+  /* Remove native search-field appearance (iOS and Android Chrome both apply
+     UA styles to type="search" that resist width:100% and box-sizing). Using
+     type="text" + inputMode="search" in the JSX removes the UA trigger; these
+     appearance rules are a belt-and-suspenders fallback. */
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: var(--sv-space-2) var(--sv-space-3);
   font: inherit;
   font-size: var(--sv-font-size-sm);

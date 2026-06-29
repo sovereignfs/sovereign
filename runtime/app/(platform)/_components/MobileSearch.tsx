@@ -47,11 +47,11 @@ export function MobileSearch({
     if (!open) return;
     const count = parseInt(document.body.dataset.scrollLocks ?? '0', 10);
     document.body.dataset.scrollLocks = String(count + 1);
-    if (count === 0) document.body.style.overflow = 'hidden';
+    if (count === 0) document.body.style.overflowY = 'hidden';
     return () => {
       const next = Math.max(0, parseInt(document.body.dataset.scrollLocks ?? '0', 10) - 1);
       document.body.dataset.scrollLocks = String(next);
-      if (next === 0) document.body.style.overflow = '';
+      if (next === 0) document.body.style.overflowY = '';
     };
   }, [open]);
 
@@ -125,7 +125,8 @@ export function MobileSearch({
       <div className={styles.inputWrapper}>
         <input
           ref={inputRef}
-          type="search"
+          type="text"
+          inputMode="search"
           placeholder="Search apps…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

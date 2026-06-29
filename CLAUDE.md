@@ -11,7 +11,7 @@ privacy-first, single-tenant/multi-user in v1.
 
 ## Source of truth
 
-Two documents define everything. Read the relevant sections before any task —
+These shared docs define project state and workflow. Read the relevant sections before any task —
 they are authoritative over assumptions:
 
 - `docs/sovereign-proposal-plan-srs.md` — Concept, Plan, Architecture, SRS,
@@ -21,6 +21,9 @@ they are authoritative over assumptions:
 
 **Task workflow** — how to start, implement, and complete a task (including the
 `CURRENT_TASK.md` mechanism and epic task IDs): `docs/development-workflow.md`.
+
+**Multi-agent model** — how Claude Code and Codex divide work, commit attribution,
+and the decision log behind these conventions: `docs/multi-agent.md`.
 
 ## Working conventions
 
@@ -48,24 +51,16 @@ they are authoritative over assumptions:
   reflect current priority ordering and may shift when tasks are reprioritized.
   Always look up the live slot from `docs/roadmap.md` rather than hard-coding it in
   docs; include slots only where shipping order matters (upgrade notes, version maps).
-- **Commits** end with a `Co-Authored-By` trailer specific to the tool used:
-  - If **Claude Code** is the coding agent; end with the trailer (model-agnostic — do not use a specific model name,
-    as multiple models may contribute to one task): `Co-Authored-By: Claude Code <noreply@anthropic.com>`
-- **PRs** target `main`; body ends with the Claude Code attribution line.
+- **Commits** end with the Claude Code attribution trailer (model-agnostic — do not use a specific model name):
+  `Co-Authored-By: Claude Code <noreply@anthropic.com>`
+- **PRs** target `main`; body ends with:
+  `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
   Describe what changed and why, and cite relevant SRS sections — but no task numbers.
-  🤖 Generated with [Claude Code](https://claude.com/claude-code) (if **Claude Code** is the coding agent)
+- **Multiple agents may work this repo** — see `docs/multi-agent.md` for the full model. Each agent uses its own clone. Commit trailers identify which agent authored the work.
 - **Merge strategy: rebase and merge** (never squash, never create a merge
   commit). Keeps history linear — each task's commit lands on `main` verbatim.
-- **Fix commit messages BEFORE merging the PR.** Once a squash-merge lands on
-  `main`, correcting it means rewriting/force-pushing `main` — avoid that.
-- **When a task is done, always update both `docs/roadmap.md` and `CLAUDE.md`
-  in the same PR.** Mark the task ✅ in the roadmap, add a ✅ completion entry
-  to the CLAUDE.md Status section, and add a `⏳ Next: <title> → epic task [X.Y](<path>)`
-  line at the end of the Status section so the next session knows immediately
-  what to start without re-reading the roadmap. **Do not include the roadmap slot
-  in this line** — the slot is looked up live from `docs/roadmap.md` by `task-start`.
-  Never leave the Status section without a "⏳ Next" marker — if a PR completes
-  the last task in a phase, point at the first task of the next phase.
+- **Fix commit messages BEFORE merging the PR.** Once a commit lands on `main`, correcting it means rewriting/force-pushing `main` — avoid that.
+- **When a task is done, update `docs/roadmap.md` in the same PR.** Mark the task ✅ in the roadmap. That is the canonical completion record — do not duplicate it in `CLAUDE.md`. The next task is assigned by the developer at session start, not inferred from a pointer in this file.
 - **Verify before claiming done.** Run the task's review-checklist commands and
   show the output.
 - Never merge a PR automatically. Either wait for explicit instruction to merge,
@@ -108,7 +103,7 @@ they are authoritative over assumptions:
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
   to `1.0.0` marks the public release.** The current version is **`0.10.8`**
-  (phases 0.3–0.9 tasks complete, patches .6–.10 from production hotfixes, .1–.2 from docs tasks 16.1–16.2, .3–.7 from iOS PWA stability patches and Docker/logout/sidebar fixes, .8 from iOS input zoom root-cause fix). The
+  (phases 0.3–0.9 tasks complete, patches .6–.10 from production hotfixes, .1–.2 from docs tasks 16.1–16.2, .3–.8 from iOS PWA stability patches and Docker/logout/sidebar fixes). The
   downgrade guard, plugin compatibility gates (RFC 0024), and `/api/admin/health`
   all read this value; see `docs/upgrade.md` for the runtime version map and
   v1.0.0 release checklist.
@@ -457,47 +452,13 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 ## Status
 
-✅ **Phases 0.3–0.9 complete** — monorepo scaffold · shared packages (db, manifest, mailer, ui, sdk) · auth server · runtime · Docker (dev + prod) · console/launcher/account plugins · `sv` CLI · PWA · Postgres validation · SDK stability + distribution · overlay/minimal shell modes · security headers + nonce CSP · CI pipeline · registry + contribution process · versioning · session verification · cross-plugin data sharing · activity log · Drizzle-kit migrations + backup/restore · user data portability · icon system · plugin templates · test seeding · plugin-scoped env vars · mobile responsiveness · MFA (TOTP + passkeys) · accessibility audit · PM2 deployment · platform roles + capabilities · plugin-declared capabilities · notification center · web push · plugin monetization (Ed25519 tokens, entitlements, license generator) · per-plugin database · E2E golden-path suite · Storybook · production dev-mode + diagnostics · white-labeling Phase 1.
+Current platform version: **`0.10.8`**. All roadmap tasks through slot `0.10.2` are complete; patches `.3`–`.8` are hotfixes.
 
-✅ **Recent completions:**
+For the full task history and current roadmap position, see:
 
-- Task 0.8.02 — Per-plugin database (RFC 0004; `@sovereignfs/db` → 1.5.0, `@sovereignfs/sdk` → 1.9.0, `runtime` → 0.26.0). `database: "isolated"` manifest field gives a plugin its own SQLite file or Postgres schema; `sdk.db.getClient()` provisions and returns the dedicated client; migrations run per-plugin at boot; `sv plugin remove` drops the store unless `--keep-data` is passed.
-- Task 0.9.01 — E2E golden-path test suite (Playwright; 20 tests in 6 spec files: auth, launcher, account, console, navigation, paywall). `playwright.config.ts` with dual `webServer`, global setup seeds users + keypair, `adminPage`/`userPage` fixtures. `.github/workflows/e2e.yml` CI job.
-- Task 1.0.08 — Storybook for the design system (`@sovereignfs/ui`). Storybook 10 (`@storybook/react-vite`); stories for Token Gallery, Button, Input, Icon, Dialog, Drawer. `storybook-build` CI job.
-- Task 1.0.02 — Production dev-mode & diagnostics (RFC 0020; `runtime` → 0.27.0). Per-request dev-mode switch via `SOVEREIGN_DEV_MODE_ENABLED` + header secret; context-aware `runtime/src/db.ts` routes to mock DB in dev-mode; structured `LOG_LEVEL` logger; richer `/api/admin/health` response.
-- Task 1.0.03 — White-labeling Phase 1 (RFC 0027; `runtime` → 0.28.0). `instance_config` table (was `tenant_branding`) + `InstanceProvider` server component; `--sv-instance-logo/dark/favicon` tokens + `--sv-color-accent` override from hex; instance API routes (`/api/instance/*`); Console Instance identity section; `sdk.platform.getConfig()` returns `instanceName`/`instancePrimaryColor`.
-- Console plugin install/remove UX — real two-step server-side flow (fetch manifest preview → confirm install via `sv plugin add`; confirm remove via `sv plugin remove`). Platform-plugin guard uses `plugin.type === 'platform'`.
-- Task 0.9.0 — Instance identity rename (RFC 0032; `@sovereignfs/ui` → 0.11.0, `@sovereignfs/sdk` → 1.11.0, `@sovereignfs/db` → 1.7.0, `runtime` → 0.29.0). Pure rename: `BRAND_*` env vars → `INSTANCE_*`, `--sv-brand-*` tokens → `--sv-instance-*`, `brandName`/`brandPrimaryColor` → `instanceName`/`instancePrimaryColor`, `tenant_branding` table → `instance_config`, `BrandProvider` → `InstanceProvider`, `/api/brand/` routes → `/api/instance/`.
-- Task 0.9.1 — User data deletion (RFC 0033; `@sovereignfs/sdk` → 1.12.0, `@sovereignfs/db` → 1.7.1, `runtime` → 0.30.0, `plugins/account` → 0.10.0, `plugins/console` → 0.12.2). `sdk.portability.provideDelete()` stable surface; `deleteUserData()` DB helper; `runtime/src/user-deletion.ts` cascade (plugins parallel + 30 s timeout → platform rows → avatar → better-auth user removal); `DELETE /api/account` (password re-verification, sole-owner 409); `DELETE /api/admin/users/[id]?deleteData=true`; Account → Data delete section with dialog; Console → Users Delete… button; `?accountDeleted=1` login notice.
-- Task 4.3 — Notification Center pluggable pub/sub transport (RFC 0034; runtime → 0.31.0). NOTIFICATION_TRANSPORT env var (polling/sse/redis); NotificationBroker interface + InProcessBroker (EventEmitter) + RedisBroker (ioredis optional dep); SSE stream route rewired to subscribe to broker; notifications GET response gains transport field; NotificationBell switches to EventSource in sse mode with 3-error fallback to polling; GET /api/admin/health gains notifications.{transport,brokerConnected}; docker-compose.prod.yml gets commented Redis service block; docs/self-hosting.md gets Notification transport section.
-- Task 2.13 — Sidebar customization — plugin ordering and visibility (`@sovereignfs/db` → 1.7.2, `runtime` → 0.32.0, `plugins/account` → 0.11.0). `sidebar_plugins` JSON column in `account_prefs` (SQLite + Postgres, migration 0006); `GET /api/account/sidebar-plugins` returns available plugins + current saved order; `PATCH /api/account/prefs` extended to accept `sidebar_plugins`; `(platform)/layout.tsx` applies user's saved order and visibility server-side before rendering sidebar and `MobileNav`; `SidebarControl` client component in Account → Preferences (HTML5 DnD reorder, show/hide toggle, reset).
-- Task 1.10 — Email-bound invite flow (`apps/auth` → 0.9.0, `plugins/console` → 0.13.0). `invited_by_id`/`invited_by_name` columns added to `invites` table; invite creation embeds `?token=<uuid>` in the registration URL; register page server component looks up the token and passes `invitedEmail`/`invitedBy` to `RegisterForm`; email field is pre-filled and read-only when token present; "invited by" banner shown; invalid/consumed tokens show a clear error page.
-- RFC 0039 — Instance identity: `instanceId` + terminology cleanup (`@sovereignfs/db` → 1.7.3, `@sovereignfs/sdk` → 1.13.0, `runtime` → 0.33.0, `plugins/console` → 0.14.1). Stable UUID seeded in `platform_settings` at bootstrap, exposed via `sdk.platform.getConfig().instanceId`. Capability strings renamed: `tenant:view` → `instance:view`, `tenant:configure` → `instance:configure`. Activity event renamed: `settings.tenant_name_changed` → `settings.instance_name_changed`. Console "Tenant name" label → "Instance name". Storybook + docs "tenant theming" → "instance theming" where it refers to instance-level overrides.
+- `docs/roadmap.md` — canonical task queue and completion record
+- `docs/task-history.md` — detailed history for phases 0.3–0.7
 
-✅ **Production hotfixes (patches .6–.10):**
+**The next task is assigned by the developer at session start.** Read `docs/roadmap.md` to find the next pending task, then ask the developer which one to pick up — do not assume.
 
-- Patch .6 — `AUTH_COOKIE_DOMAIN` support: cross-subdomain cookie fix for split-subdomain deployments (`auth.example.com` + `example.com`); `crossSubDomainCookies` in `apps/auth`; compose passthrough; docs parity.
-- Patch .7–.8 — Activity log 500 on Postgres: `CAST(${filter} AS TEXT) IS NULL` in `listAdminActivity`/`countAdminActivity` — Postgres cannot infer type from `$N IS NULL` on an unbound null parameter (`@sovereignfs/db` → 1.7.4).
-- Patch .9 — Instance name empty-string bug: `getInstanceConfig` used `??` so an empty-string `INSTANCE_NAME` env (from `${INSTANCE_NAME:-}` compose default) overwrote the `'Sovereign'` fallback, rendering a blank span (black square in sidebar); fixed with `||`. Avatar session-cache invalidation domain fix: `invalidateSessionCache` and avatar route now pass `domain: AUTH_COOKIE_DOMAIN` to `cookies.set()` so the cross-subdomain `session_data` cookie is actually cleared after a profile change (`@sovereignfs/db` → 1.7.5, `runtime` → 0.33.1, `plugins/account` → 0.12.1).
-- Patch .10 — Dockerfile now copies root `package.json` alongside `pnpm-workspace.yaml` so `getPlatformVersion()` reads the correct version at runtime (prevents `checkBootCompatibility()` from falsely disabling all plugins with `minPlatformVersion > 0.0.0` if the file is missing). Notification poll interval reduced 30 s → 10 s (`runtime` → 0.33.2).
-
-✅ **iOS PWA stability patches (.11–.12 → platform `0.10.3`–`0.10.4`, `@sovereignfs/ui` → `0.21.2`, `runtime` → `0.33.3`; additional patches .13 → `0.10.8`, `runtime` → `0.33.4`):**
-
-- Patch .11 — **Same-origin auth flow** (`runtime` → 0.33.3): cross-origin redirects to `apps/auth` break iOS PWA standalone mode (Safari hijacks the navigation). Replaced `runtime/app/login/route.ts` and `runtime/app/register/route.ts` (plain 302 redirects) with full runtime-origin auth pages (`runtime/app/login/page.tsx` + `login-form.tsx`, `login/2fa/page.tsx` + `challenge-form.tsx`, `register/page.tsx` + `register-form.tsx`). Added `runtime/src/auth-client.ts` (no `baseURL` — calls `/api/auth/*` on the runtime origin). Added `runtime/app/api/auth/[...path]/route.ts` as a general catch-all proxy forwarding to `apps/auth` server-side, propagating cookies and `Set-Cookie` headers. `forgot-password` and `reset-password` intentionally remain as 303 redirects (email-link flows, not daily PWA paths). `runtime/app/api/account/logout/route.ts` rewired to clear session cookies and redirect to `/login?signedout=1` via `new URL(…)` (absolute URL required for route handlers). Middleware matcher updated to exclude the new `/api/auth` prefix.
-- Patch .11 — **iOS scroll and zoom fixes** (`runtime/app/globals.css`): added `overflow-x: hidden` on `html, body`; defined `--sv-dialog-inset-top` at `:root` for mobile (iOS Safari doesn't propagate CSS custom properties from DOM ancestors to `position:fixed` elements — must be at `:root`); added iOS-only `font-size: max(1rem, 100%)` on inputs/selects/textareas via `@supports (-webkit-touch-callout: none)` to prevent viewport zoom-on-focus that persists in PWA standalone mode.
-- Patch .11 — **Search input appearance fix** (`MobileSearch.module.css`): added `appearance: none; -webkit-appearance: none` to `.searchInput` — iOS native `searchfield` appearance overrides `width: 100%` and `box-sizing: border-box`.
-- Patch .11 — **Icon refresh**: `runtime/public/icons/favicon.svg` replaced `<text>` with a Hanken Grotesk Bold "S" `<path>` extracted via fontTools; all five PNG icon assets regenerated (apple-touch-icon, icon-192, icon-512, icon-maskable-512) with the correct glyph.
-- Patch .12 — **Ref-counted scroll lock** (`@sovereignfs/ui` → 0.21.2): added `packages/ui/src/scroll-lock.ts` with `lockBodyScroll()` / `unlockBodyScroll()` using a `data-scroll-locks` counter on `<body>` so nested overlays (Dialog inside Drawer, confirmation inside overlay plugin) don't release the lock prematurely when only the inner one closes. `Dialog.tsx` and `Drawer.tsx` import the shared utility; `overscroll-behavior: contain` added to `.content` / `.panel` to stop iOS scroll chaining from propagating to the document. `MobileSearch.tsx` uses the same inline ref-counted pattern for compatibility. `MobileSearch.module.css` adds `overscroll-behavior: contain` to `.results`.
-- Patch .12 — **OTP paste** (`runtime/app/login/2fa/challenge-form.tsx`): added `onDigitPaste` handler on every TOTP cell input — strips non-digits, fills all 6 cells, focuses the last filled cell — so authenticator-app copy-paste works in one gesture.
-- Patch .13 — **iOS input zoom root-cause fix** (`runtime` → 0.33.4, platform → 0.10.8): `--sv-font-size-sm` = 14px, below iOS's 16px auto-zoom threshold. The global `@supports (-webkit-touch-callout: none) { input { font-size: max(1rem, 100%) } }` in `globals.css` was being overridden by class-level component CSS (specificity 0,1,0 vs 0,0,1). Added `!important` to the anti-zoom rule so it wins regardless of component specificity. In PWA standalone mode, iOS zoom persists after blur (page stays scaled up until pinch-zoom reset), causing the entire overlay and home screen to appear wider than the viewport. Also changed `.searchInput:focus-visible` to use `box-shadow` instead of `outline` — CSS outlines paint outside the element's box and are NOT clipped by `overflow: hidden` on the overlay.
-
-- Task 1.11 — Test-user flag on seeded accounts (`@sovereignfs/db` → 1.7.6, `apps/auth` → 0.9.1, `plugins/console` → 0.14.2). `isTestUser` boolean in better-auth `additionalFields` (auto-migrated at startup); seed script sets flag on INSERT and backfills pre-existing rows via UPDATE; `GET /api/admin/users` surfaces the field; Console Users table and mobile card render a "Test" badge. Field is optional on all interfaces so older instances degrade gracefully to false.
-- Task 16.1 — VitePress docs site scaffold (RFC 0037). `apps/docs/` workspace package with `vitepress@^1`; `srcDir: '../../docs'` so no content is copied; full sidebar (Getting Started, Plugin Dev, Core Plugins, Contributing, RFCs collapsed); local full-text search; CI `docs.yml` with `build` job on PRs and `deploy` job on `main` push via `peaceiris/actions-gh-pages@v4` → `sovereignfs/sovereignfs.github.io`; `vue` added to root devDependencies to fix pnpm strict-isolation SSR resolution; `@sovereignfs/docs#build` added to `turbo.json`.
-- Task 16.2 — Landing home page (RFC 0037). `docs/index.md` with VitePress `layout: home`; hero (name, tagline, three CTA actions: Get Started, Plugin Dev, GitHub); six feature tiles (self-hostable, privacy-first, plugin-first, multi-user, design system, open source). Live at `https://sovereignfs.github.io/`.
-
-> Full task history (phases 0.3–0.7): `docs/task-history.md`
-
-⏳ **Next: Internationalization, Phase 1 — Infrastructure → epic task [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029).** Branch from up-to-date `main`.
-
-Keep this file current: update the Status section as tasks complete, and add any
-new load-bearing convention that future sessions must not violate.
+Keep this file current: add any new load-bearing convention that future sessions must not violate. Do not add task completion entries here — that belongs in `docs/roadmap.md`.

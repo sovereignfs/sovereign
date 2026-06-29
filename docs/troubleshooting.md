@@ -80,7 +80,7 @@ machine entirely) and ends up back at the login page.
 
 **Fix:** Add these three variables to `.env` before starting the stack:
 
-```env
+```bash
 AUTH_BASE_URL=http://YOUR_VPS_IP_OR_DOMAIN:4001
 NEXT_PUBLIC_RUNTIME_URL=http://YOUR_VPS_IP_OR_DOMAIN:4000
 AUTH_TRUSTED_ORIGINS=http://auth:3001

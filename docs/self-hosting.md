@@ -43,7 +43,7 @@ cp .env.example .env
 Open `.env` and set at minimum the two required secrets (both have no default —
 the apps refuse to start without them):
 
-```env
+```bash
 # Generate each with: openssl rand -base64 32
 AUTH_SECRET=your-secret-here
 SOVEREIGN_ADMIN_KEY=your-admin-key-here
@@ -59,7 +59,7 @@ Compose files fill in the right host-reachable values per environment (dev →
 docker compose up --build
 ```
 
-The runtime is now at **http://localhost:3000**.
+The runtime is now at **`http://localhost:3000`**.
 
 Open it in your browser — the first user to register automatically becomes the
 platform admin. If `AUTH_INVITE_ONLY=true`, skip ahead to the
@@ -215,7 +215,7 @@ the mapped host ports, so the flow works end to end without a domain or proxy:
 > overrides the per-environment defaults — so the prod stack would redirect to
 > the dev port. `.env.example` leaves them commented for exactly this reason.
 
-Then open <http://localhost:4000>. The runtime redirects you to
+Then open `http://localhost:4000`. The runtime redirects you to
 `http://localhost:4001/login` (reachable, **not** the internal `http://auth:3001`),
 and after you sign in or register the auth server sends you back to
 `http://localhost:4000`. In a real deployment behind a reverse proxy, set
@@ -239,7 +239,7 @@ and after you sign in or register the auth server sends you back to
 When deploying to a real machine (any VPS, cloud VM, or bare-metal server),
 you **must** add these three variables to `.env` before starting:
 
-```env
+```bash
 # Replace with your VPS IP or domain. Use https:// if you have TLS.
 AUTH_BASE_URL=http://203.0.113.10:4001           # public URL of the auth container
 NEXT_PUBLIC_RUNTIME_URL=http://203.0.113.10:4000 # public URL of the runtime container
@@ -248,7 +248,7 @@ AUTH_TRUSTED_ORIGINS=http://auth:3001            # allows server-to-server calls
 
 With a domain and TLS (recommended — see [Reverse proxy](#reverse-proxy) below):
 
-```env
+```bash
 AUTH_BASE_URL=https://auth.example.com
 NEXT_PUBLIC_RUNTIME_URL=https://example.com
 AUTH_TRUSTED_ORIGINS=http://auth:3001
@@ -552,7 +552,7 @@ brew install mailpit   # macOS
 mailpit
 ```
 
-Open **http://localhost:8025** and trigger any email flow (invite, forgot
+Open **`http://localhost:8025`** and trigger any email flow (invite, forgot
 password) — no additional configuration required.
 
 ### Docker Compose
@@ -561,12 +561,12 @@ Mailpit is included in `docker-compose.yml` and starts automatically alongside
 the runtime and auth services. Set `SMTP_HOST=mailpit` in `.env` to route
 the containerised app to it:
 
-```env
+```bash
 SMTP_HOST=mailpit   # the Docker service name; omit when running pnpm dev natively
 ```
 
 - **SMTP (internal):** `mailpit:1025`
-- **Web inbox:** http://localhost:8025
+- **Web inbox:** `http://localhost:8025`
 
 ---
 
@@ -645,7 +645,7 @@ careful setting:
 | `AUTH_WEBAUTHN_RP_NAME` | Any human-readable name (shown in the browser passkey prompt).                                                                                                                                                                           |
 | `AUTH_WEBAUTHN_ORIGIN`  | Comma-separated list of allowed origins. Set to your public runtime URL (e.g. `https://example.com`) — this is the `Origin` header the browser sends during WebAuthn ceremonies.                                                         |
 
-```env
+```bash
 AUTH_WEBAUTHN_RP_ID=example.com
 AUTH_WEBAUTHN_RP_NAME=My Sovereign
 AUTH_WEBAUTHN_ORIGIN=https://example.com
@@ -700,7 +700,7 @@ npx web-push generate-vapid-keys
 
 This prints a pair of base64url-encoded keys. Add them to `.env`:
 
-```env
+```bash
 VAPID_PUBLIC_KEY=<base64url public key>
 VAPID_PRIVATE_KEY=<base64url private key>
 VAPID_CONTACT=mailto:ops@example.com
@@ -764,7 +764,7 @@ The notification bell can receive updates in three modes, selected by
 
 ### Enabling SSE mode (single process)
 
-```env
+```bash
 NOTIFICATION_TRANSPORT=sse
 ```
 
@@ -788,7 +788,7 @@ page load. No additional dependencies or infrastructure required.
 
 2. Add the env vars to the runtime service:
 
-   ```env
+   ```bash
    NOTIFICATION_TRANSPORT=redis
    REDIS_URL=redis://redis:6379
    ```
@@ -939,7 +939,7 @@ This is **never a global switch** — there is no way to put the entire process 
 
 **Step 1 — Add env vars to `.env`:**
 
-```env
+```bash
 SOVEREIGN_DEV_MODE_ENABLED=true
 
 # A dedicated secret is recommended; falls back to SOVEREIGN_ADMIN_KEY if unset.
@@ -1061,7 +1061,7 @@ operator/
 Add custom plugins under `plugins/<com.yourorg.pluginid>/` and unignore them in
 `.gitignore`:
 
-```gitignore
+```text
 !/plugins/com.yourorg.myplugin/
 ```
 

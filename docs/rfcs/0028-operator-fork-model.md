@@ -228,7 +228,7 @@ reverse-DNS IDs, the paths never collide.
 
 **Update `.gitignore` to unignore your custom plugins:**
 
-```gitignore
+```text
 # .gitignore — add alongside the existing platform-plugin allowlist:
 !/plugins/com.acme.crm/
 !/plugins/com.acme.billing/

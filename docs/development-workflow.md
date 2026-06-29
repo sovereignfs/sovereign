@@ -49,7 +49,7 @@ Work is organized into 16 domain epics. Each task has a **stable epic task ID** 
 | 14  | `plugin-accounts.md`     | Account plugin                                            |
 | 15  | `plugin-launcher.md`     | Launcher plugin                                           |
 
-The epic index is at [`docs/epics/README.md`](epics/README.md).
+The epic index is `docs/epics/README.md` in the repository planning docs.
 
 ### Stable IDs vs volatile slots
 
@@ -73,7 +73,7 @@ Run `/sv-task-start`. The skill:
 
 1. Reads the `⏳ Next` pointer in `CLAUDE.md` to identify the task.
 2. Confirms `main` is clean and pulls latest.
-3. Looks up the epic file via [`docs/epics/README.md`](epics/README.md), then greps for the task heading to extract the full task block (Goal → Deliverables → SRS reference → Review checklist).
+3. Looks up the epic file via `docs/epics/README.md`, then greps for the task heading to extract the full task block (Goal → Deliverables → SRS reference → Review checklist).
 4. Writes **`CURRENT_TASK.md`** in the repo root — the full task spec in one file, no further navigation needed.
 5. Reads the relevant RFC if one is referenced.
 6. Prints a summary and creates the feature branch.

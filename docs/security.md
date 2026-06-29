@@ -2,7 +2,8 @@
 
 This document describes Sovereign's **security posture** — the threat model, the
 hardening that ships in v1, and a checklist for self-hosters. It complements
-[`SECURITY.md`](../SECURITY.md) (vulnerability disclosure) and implements
+[`SECURITY.md`](https://github.com/sovereignfs/sovereign/blob/main/SECURITY.md)
+(vulnerability disclosure) and implements
 [RFC 0008](rfcs/0008-security-encryption-architecture.md) / SRS §3.17.
 
 Sovereign is **self-hosted and privacy-first**: you run it, you own the data.
@@ -119,5 +120,6 @@ Task 1.0.1; zero-knowledge E2EE is charted but out of v1 scope.
 
 ## Reporting a vulnerability
 
-See [`SECURITY.md`](../SECURITY.md). Please do not file public issues for
-security reports.
+See
+[`SECURITY.md`](https://github.com/sovereignfs/sovereign/blob/main/SECURITY.md).
+Please do not file public issues for security reports.

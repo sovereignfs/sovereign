@@ -646,7 +646,7 @@ patch releases and are not listed individually.
 
 ## v1.0.0 release checklist
 
-Steps to execute when all pre-v1 tasks in [`docs/roadmap.md`](roadmap.md) are ✅:
+Steps to execute when all pre-v1 tasks in `docs/roadmap.md` are ✅:
 
 1. **Bump root `package.json` to `1.0.0`** and **bump `runtime/package.json` to
    `1.0.0`** in the same PR — aligning both to the product release milestone.

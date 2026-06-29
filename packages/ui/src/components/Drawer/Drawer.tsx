@@ -1,6 +1,7 @@
 'use client';
 
 import { type ReactNode, useEffect, useRef } from 'react';
+import { lockBodyScroll, unlockBodyScroll } from '../../scroll-lock';
 import styles from './Drawer.module.css';
 
 export interface DrawerProps {
@@ -32,11 +33,8 @@ export function Drawer({ open, onClose, 'aria-label': ariaLabel, children }: Dra
 
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    lockBodyScroll();
+    return unlockBodyScroll;
   }, [open]);
 
   useEffect(() => {

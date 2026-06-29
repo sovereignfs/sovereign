@@ -60,6 +60,12 @@ runtime/public/fallback-*.js
 # Machine-local; never committed (would conflict across sessions/users).
 memory/
 
+# Codex — ignore per-machine/local logs and overrides. Shared repo guidance
+# (`AGENTS.md`) and repo skills (`.agents/skills/`) are committed.
+.codex-log/
+.codex/*.local.*
+.codex/AGENTS.override.md
+
 # OS
 .DS_Store
 

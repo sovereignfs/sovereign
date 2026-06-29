@@ -71,6 +71,13 @@ test-results/
 # Storybook
 packages/ui/storybook-static/
 
+# VitePress
+apps/docs/.vitepress/cache/
+apps/docs/--host/
+
+# pnpm local store (should live in ~/.local/share/pnpm or equivalent, not the repo)
+.pnpm-store/
+
 # Local session working file — never commit
 CURRENT_TASK.md
 storybook.log

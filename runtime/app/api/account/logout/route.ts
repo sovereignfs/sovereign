@@ -17,7 +17,17 @@ import { sdk } from '@sovereignfs/sdk';
 export async function POST(request: Request): Promise<Response> {
   await sdk.auth.signOut();
 
-  const res = NextResponse.redirect(new URL('/login?signedout=1', request.url), 303);
+  // Reconstruct the public origin from proxy headers rather than request.url —
+  // in Docker, Next.js binds to 0.0.0.0 so request.url contains that address,
+  // which the browser cannot reach. x-forwarded-proto/host reflect the actual
+  // public URL set by the reverse proxy (or default to http/localhost:3000 in
+  // native dev where request.url is already correct).
+  const req = request as import('next/server').NextRequest;
+  const proto =
+    req.headers.get('x-forwarded-proto') ?? new URL(request.url).protocol.replace(':', '');
+  const host =
+    req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? new URL(request.url).host;
+  const res = NextResponse.redirect(new URL('/login?signedout=1', `${proto}://${host}`), 303);
   // Drop both cache-cookie variants (the `__Secure-` one only unsets with Secure).
   res.cookies.set('better-auth.session_data', '', { maxAge: 0, path: '/' });
   res.cookies.set('__Secure-better-auth.session_data', '', {

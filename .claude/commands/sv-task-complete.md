@@ -64,7 +64,6 @@ In the same branch:
 - [ ] Security check passes (if auth/middleware/CSP touched)
 - [ ] Version bumped per semver policy
 - [ ] `docs/roadmap.md` row updated ✅
-- [ ] `CLAUDE.md` Status updated with ✅ entry and new `⏳ Next` pointer
 - [ ] `CURRENT_TASK.md` deleted
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

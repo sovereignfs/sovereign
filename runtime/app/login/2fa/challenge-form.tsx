@@ -71,6 +71,20 @@ export function ChallengeForm({ instanceInitial = 'S' }: { instanceInitial?: str
     }
   }
 
+  function onDigitPaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP_LENGTH);
+    if (!pasted) return;
+    e.preventDefault();
+    const next = [...pasted.split(''), ...Array(OTP_LENGTH).fill('')].slice(
+      0,
+      OTP_LENGTH,
+    ) as string[];
+    setDigits(next);
+    // Focus the last filled cell so the user can correct from there.
+    const lastFilled = Math.min(pasted.length - 1, OTP_LENGTH - 1);
+    cellRefs.current[lastFilled]?.focus();
+  }
+
   function switchMode(next: Mode) {
     setMode(next);
     setDigits(Array(OTP_LENGTH).fill(''));
@@ -112,6 +126,7 @@ export function ChallengeForm({ instanceInitial = 'S' }: { instanceInitial?: str
                     className={[styles.otpCell, error ? styles.otpError : ''].join(' ')}
                     onInput={(e) => onDigitInput(i, (e.target as HTMLInputElement).value)}
                     onKeyDown={(e) => onDigitKeyDown(i, e)}
+                    onPaste={onDigitPaste}
                   />
                 ))}
               </div>

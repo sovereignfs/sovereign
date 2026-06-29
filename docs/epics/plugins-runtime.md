@@ -591,6 +591,100 @@ minor (new optional params on exported functions), `runtime` → patch, `bin/sv`
 
 ---
 
+#### 📋 3.22 — Generate script regression coverage
+
+**Goal:** Freeze current plugin composition behavior before decomposing the
+generation path that validates manifests, composes route trees, emits env files,
+and writes registry artifacts.
+
+**Deliverables:**
+
+- Add focused tests for shell-mode route-prefix rules:
+  - Overlay plugins reject multi-segment `routePrefix` values.
+  - Minimal plugins accept multi-segment `routePrefix` values.
+- Cover duplicate `apiProvider: true` manifests failing generation.
+- Cover secret plugin env vars never being embedded in generated files.
+- Cover plugin `.env` values being allowed only for non-secret dev defaults.
+- Cover stale generated routes and icons being pruned.
+- Cover deterministic manifest processing order.
+
+**Dependencies:** Task 2.5 (overlay shell mode), Task 2.9 (minimal shell mode),
+Task 2.4 (public `/api` namespace delegation), Task 3.11 (plugin-scoped
+environment variables), Task 3.6 (icon system).
+
+**SRS reference:** 3.8 Manifest System, 3.9 Plugin Loading Model, RFC 0018.
+
+**Review checklist:**
+
+- `pnpm generate` behavior is covered before decomposition starts.
+- Current generated registry, env, capability, route, and icon outputs are
+  protected from accidental format changes.
+- The tests avoid depending on generated route copies under `runtime/app`.
+
+---
+
+#### 📋 3.23 — Generate script decomposition
+
+**Goal:** Make plugin composition safer to evolve as shell modes, manifest
+fields, and registry behavior grow.
+
+**Deliverables:**
+
+- Split `scripts/generate-registry.ts` into focused modules under
+  `scripts/generate/`:
+  - `read-plugins.ts`: manifest scanning, validation, and compatibility checks.
+  - `compose-routes.ts`: shell-mode targets, sync, and stale route pruning.
+  - `plugin-icons.ts`: static icon copy and pruning.
+  - `plugin-env.ts`: plugin-scoped env declaration processing and output.
+  - `plugin-capabilities.ts`: generated capability declaration output.
+  - `write-registry.ts`: generated registry output.
+- Keep `scripts/generate-registry.ts` as the CLI entrypoint.
+- Preserve generated output format on the first refactor to minimize blast
+  radius.
+- Avoid changing plugin behavior in the same change as the decomposition.
+
+**Dependencies:** Task 3.22 (generate script regression coverage).
+
+**SRS reference:** 3.8 Manifest System, 3.9 Plugin Loading Model.
+
+**Review checklist:**
+
+- `pnpm generate` emits the same registry, env, capability, route, and icon
+  outputs as before for the current plugin set.
+- Generate behavior is covered by focused tests.
+- Future shell-mode changes can be made in `compose-routes.ts` without touching
+  manifest validation or env processing.
+
+---
+
+#### 📋 3.24 — SDK boundary and runtime contract tests
+
+**Goal:** Prevent accidental platform leakage into plugin code and keep the SDK
+contract honest.
+
+**Deliverables:**
+
+- Add a lint fixture or test that intentionally imports forbidden packages from
+  `plugins/` and asserts ESLint rejects it.
+- Add SDK host behavior tests for:
+  - Missing host throws a useful error.
+  - Plugin-scoped DB calls route isolated-database plugins correctly.
+  - Platform DB is returned outside plugin route context.
+  - Request-context-derived plugin and user identity cannot be forged through
+    plugin-provided SDK arguments.
+- Ensure docs examples match tested SDK usage.
+
+**Dependencies:** Task 0.3 (code quality tooling), Task 3.9 (SDK distribution
+and plugin isolation boundary), Task 3.13 (per-plugin database).
+
+**SRS reference:** 3.6 SDK, NFR-06.
+
+**Review checklist:**
+
+- The plugin import-boundary rule is tested, not just configured.
+- SDK host failure modes remain actionable for plugin developers.
+- Isolated database routing has regression coverage.
+
 ## Related RFCs
 
 - [RFC 0004 — Per-plugin database](../rfcs/0004-per-plugin-database.md)

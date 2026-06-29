@@ -4,7 +4,7 @@
 
 ## Status
 
-✅ Complete
+⏳ In Progress
 
 ## Overview
 
@@ -45,3 +45,27 @@ The Launcher (`fs.sovereign.launcher`) is a `type: platform`, `shell: default` p
 - `pnpm lint`, `pnpm format:check`, and `pnpm typecheck` pass
 
 ---
+
+#### 📋 15.2 — Launcher plugin workflow coverage
+
+**Goal:** Add meaningful regression coverage for Launcher workflows that users
+depend on.
+
+**Deliverables:**
+
+- Cover plugin filtering and ordering behavior.
+- Cover hidden chrome plugins being excluded from app tiles.
+- Cover monetized plugin tile and paywall behavior.
+- Cover accessible plugin visibility for admin and non-admin users.
+
+**Dependencies:** Task 15.1 (Launcher plugin), Task 2.13 (sidebar
+customization), Task 7.1 (plugin monetization).
+
+**SRS reference:** LCH-01, LCH-02, LCH-03, LCH-04, LCH-05.
+
+**Review checklist:**
+
+- Launcher coverage verifies the visible app tile list for ordinary users and
+  admins.
+- Monetized plugin tile and paywall behavior have regression coverage.
+- Chrome plugins remain excluded from app tiles.

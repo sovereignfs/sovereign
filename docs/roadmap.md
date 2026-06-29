@@ -177,3 +177,16 @@ once prioritised.
 | —       | Cross-plugin references and dependency discovery (RFC 0051)           | 📋     | [3.20](epics/plugins-runtime.md#320--cross-plugin-references-and-dependency-discovery-rfc-0051)  |
 | —       | Plugin flow handoffs (RFC 0053)                                       | 📋     | [3.21](epics/plugins-runtime.md#321--plugin-flow-handoffs-rfc-0053)                              |
 | —       | Sovereign Harness platform plugin (RFC 0040)                          | 📋     | [18.1](epics/sovereign-harness.md#181--sovereign-harness-platform-plugin-rfc-0040)               |
+| —       | Current-state testing documentation cleanup                           | 📋     | [16.3](epics/docs.md#163--current-state-testing-documentation-cleanup)                           |
+| —       | Middleware regression coverage                                        | 📋     | [2.16](epics/platform-shell.md#216--middleware-regression-coverage)                              |
+| —       | Middleware decomposition                                              | 📋     | [2.17](epics/platform-shell.md#217--middleware-decomposition)                                    |
+| —       | Generate script regression coverage                                   | 📋     | [3.22](epics/plugins-runtime.md#322--generate-script-regression-coverage)                        |
+| —       | Generate script decomposition                                         | 📋     | [3.23](epics/plugins-runtime.md#323--generate-script-decomposition)                              |
+| —       | Account plugin workflow coverage                                      | 📋     | [14.2](epics/plugin-accounts.md#142--account-plugin-workflow-coverage)                           |
+| —       | Console plugin workflow coverage                                      | 📋     | [13.5](epics/plugin-console.md#135--console-plugin-workflow-coverage)                            |
+| —       | Launcher plugin workflow coverage                                     | 📋     | [15.2](epics/plugin-launcher.md#152--launcher-plugin-workflow-coverage)                          |
+| —       | SDK boundary and runtime contract tests                               | 📋     | [3.24](epics/plugins-runtime.md#324--sdk-boundary-and-runtime-contract-tests)                    |
+| —       | Middleware internal fetch caching review                              | 📋     | [2.18](epics/platform-shell.md#218--middleware-internal-fetch-caching-review)                    |
+| —       | Typecheck performance and project references                          | 📋     | [0.14](epics/infrastructure.md#014--typecheck-performance-and-project-references)                |
+| —       | Operational consistency checks                                        | 📋     | [0.15](epics/infrastructure.md#015--operational-consistency-checks)                              |
+| —       | Pre-v1 stabilization gate                                             | 📋     | [0.16](epics/infrastructure.md#016--pre-v1-stabilization-gate)                                   |

@@ -4,7 +4,7 @@
 
 ## Status
 
-✅ Complete
+⏳ In Progress
 
 ## Overview
 
@@ -413,6 +413,107 @@ The Platform Shell is the runtime that composes plugins into a coherent experien
 - Invalid signatures and replayed events fail closed.
 
 ---
+
+#### 📋 2.16 — Middleware regression coverage
+
+**Goal:** Freeze the current middleware behavior with focused tests before
+refactoring the load-bearing auth, routing, CSP, paywall, and root-plugin paths.
+
+**Deliverables:**
+
+- Add regression coverage for unauthenticated `POST` requests to gated routes
+  redirecting to `/login` with `303`.
+- Cover non-admin access to Console returning `403`.
+- Cover disabled plugin routes returning `404`.
+- Cover paywalled page routes redirecting to `/paywall/<pluginId>`.
+- Cover paywalled plugin API routes returning `402`.
+- Cover root `/` rewrite behavior when a configured root plugin is available.
+- Cover public `/api/*` delegation remaining unauthenticated and provider-owned.
+
+**Dependencies:** Task 2.4 (public `/api` namespace delegation), Task 2.7
+(security hardening), Task 7.1 (plugin monetization), Task 0.12 (E2E golden-path
+test suite).
+
+**SRS reference:** PLT-02, PLT-03, PLT-04, PLT-06, PLT-16.
+
+**Review checklist:**
+
+- The high-risk middleware branches are covered before decomposition starts.
+- Tests document fail-open behavior for disabled-plugin and paywall status
+  lookups, and fail-closed behavior for auth verification.
+- The established unauthenticated `POST` → `303` login redirect behavior is
+  protected from regression.
+
+---
+
+#### 📋 2.17 — Middleware decomposition
+
+**Goal:** Keep `runtime/middleware.ts` behavior identical while reducing the
+risk of future auth, routing, CSP, paywall, and root-plugin changes.
+
+**Deliverables:**
+
+- Extract response helpers into `runtime/src/middleware/response.ts`:
+  - CSP application.
+  - Forwarded cookie handling.
+  - Dev-mode response stamping.
+  - Login and paywall redirect helpers.
+- Extract session verification into `runtime/src/middleware/session.ts`:
+  - Local signed cookie-cache verification.
+  - Auth-server fallback verification.
+  - A typed result carrying the verified session and forwarded cookies.
+- Extract plugin route gating into `runtime/src/middleware/plugin-gate.ts`:
+  - Disabled-plugin lookup.
+  - Entitlement and paywall lookup.
+  - Admin-only, disabled, and paywalled route decisions.
+- Keep the exported `middleware()` function as a readable orchestration layer.
+- Preserve existing fail-open and fail-closed semantics exactly:
+  - Auth verification fails closed.
+  - Disabled-plugin and paywall status fetches fail open.
+  - Unauthenticated gated requests redirect to `/login` with `303`.
+
+**Dependencies:** Task 2.16 (middleware regression coverage).
+
+**SRS reference:** PLT-02, PLT-03, PLT-04, PLT-06, PLT-16, RFC 0008.
+
+**Review checklist:**
+
+- Middleware behavior is unchanged from the user's perspective.
+- Extracted helpers have focused unit tests where practical.
+- `runtime/middleware.ts` reads as orchestration rather than implementation.
+
+---
+
+#### 📋 2.18 — Middleware internal fetch caching review
+
+**Goal:** Reduce repeated middleware self-fetches without weakening correctness
+or making admin changes feel stale.
+
+**Deliverables:**
+
+- Measure current middleware internal fetch count by path type:
+  - Normal platform page.
+  - Plugin route.
+  - Root `/`.
+  - Public `/api/*`.
+- Consider a short-lived in-process cache for disabled plugin IDs and the root
+  plugin prefix.
+- Keep entitlement checks uncached, or user-scoped with a very short TTL if
+  measurements show meaningful pressure.
+- Add explicit invalidation on admin mutations if practical; otherwise use a
+  conservative TTL such as 2-5 seconds.
+- Document fail-open and fail-closed behavior near the caching layer.
+
+**Dependencies:** Task 2.16 (middleware regression coverage), Task 2.17
+(middleware decomposition).
+
+**SRS reference:** PLT-04, PLT-06, NFR-05.
+
+**Review checklist:**
+
+- Caching is introduced only after baseline behavior is covered by tests.
+- Admin changes become visible within an explicit and documented window.
+- Auth and entitlement correctness is not weakened.
 
 ## Related RFCs
 

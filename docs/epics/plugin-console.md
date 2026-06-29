@@ -4,7 +4,7 @@
 
 ## Status
 
-✅ Complete
+⏳ In Progress
 
 ## Overview
 
@@ -109,6 +109,32 @@ Console is a `type: platform`, `adminOnly` plugin that ships with Sovereign. It 
 - `platform_settings` table present in migration; `root_plugin_id` seeded on first run
 
 ---
+
+#### 📋 13.5 — Console plugin workflow coverage
+
+**Goal:** Add meaningful regression coverage for Console workflows that
+operators depend on, beyond private helper functions.
+
+**Deliverables:**
+
+- Cover plugin enable and disable actions.
+- Cover invite creation flow.
+- Cover root plugin update behavior.
+- Cover branding and settings update behavior.
+- Cover role update guardrails.
+- Cover admin-only behavior for sensitive routes.
+
+**Dependencies:** Task 13.4 (Console tenant settings, system health, and root
+plugin config), Task 9.8 (instance identity rename), Task 1.10
+(email-bound invite flow), Task 1.5 (platform roles and capabilities).
+
+**SRS reference:** CON-02, CON-03, CON-06, CON-07, CON-08, CON-09, CON-11.
+
+**Review checklist:**
+
+- Critical operator actions have either unit/action tests or E2E coverage.
+- Admin-only behavior is covered for sensitive routes and actions.
+- Tests avoid depending on generated route copies under `runtime/app`.
 
 Subsequent tasks added Console sections as part of other epics:
 

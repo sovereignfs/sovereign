@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Sovereign Verify'
+  short_description: 'Run Sovereign task verification checks.'
+  default_prompt: 'Use sv-verify to verify the current Sovereign task.'

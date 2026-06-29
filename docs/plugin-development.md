@@ -1156,6 +1156,6 @@ checks the manifest and LICENSE, hashes the source tree, and writes a
 `provenance` block (resolved commit + content hash) into your entry. The
 **Registry validate** CI job re-runs `pnpm registry:check` to confirm the hash
 is fresh. The full process, requirements, and PR template are in
-[`registry/CONTRIBUTING.md`](../registry/CONTRIBUTING.md). Until your plugin is
-listed, you can still share your repository URL and instances add it to
-`sovereign.plugins.json` as above.
+[`registry/CONTRIBUTING.md`](https://github.com/sovereignfs/sovereign/blob/main/registry/CONTRIBUTING.md).
+Until your plugin is listed, you can still share your repository URL and
+instances add it to `sovereign.plugins.json` as above.

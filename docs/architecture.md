@@ -1,9 +1,7 @@
 # Architecture
 
 A contributor-oriented summary of how Sovereign fits together. It distils the
-authoritative specification in
-[sovereign-proposal-plan-srs.md](sovereign-proposal-plan-srs.md) §3 — follow the
-section links for the full detail and rationale. For building plugins see
+platform architecture into public documentation. For building plugins see
 [plugin-development.md](plugin-development.md); for running an instance see
 [self-hosting.md](self-hosting.md).
 
@@ -227,5 +225,5 @@ See the [RFC index](rfcs/README.md) for the status of each at a glance.
 
 ## Repository layout
 
-See the monorepo structure in the [README](../README.md#monorepo-layout) and the
-detailed breakdown in SRS §2.3.
+See the monorepo structure in the
+[README](https://github.com/sovereignfs/sovereign#monorepo-layout).

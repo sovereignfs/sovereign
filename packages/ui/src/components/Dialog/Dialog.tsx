@@ -1,6 +1,7 @@
 'use client';
 
 import { type ReactNode, useEffect, useRef } from 'react';
+import { lockBodyScroll, unlockBodyScroll } from '../../scroll-lock';
 import styles from './Dialog.module.css';
 
 export type DialogSize = 'sm' | 'md' | 'lg' | 'full';
@@ -44,17 +45,13 @@ export function Dialog({
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
-  // Prevent document-level scroll while open. On iOS standalone (PWA) mode,
-  // scroll events can leak from a position:fixed overlay to the document,
-  // scrolling the shell header and footer out of view. Locking the body is the
-  // belt-and-suspenders complement to overscroll-behavior:contain on .content.
+  // Prevent document-level scroll while open. Ref-counted so nested overlays
+  // (e.g. a confirmation dialog inside an overlay plugin) don't release the
+  // lock while a sibling is still open.
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    lockBodyScroll();
+    return unlockBodyScroll;
   }, [open]);
 
   // Capture focus on open; restore it on close/unmount.

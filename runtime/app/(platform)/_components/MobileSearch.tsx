@@ -42,13 +42,16 @@ export function MobileSearch({
     }
   }, [open]);
 
-  // Scroll lock while open.
+  // Ref-counted scroll lock — compatible with Dialog/Drawer using the same counter.
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const count = parseInt(document.body.dataset.scrollLocks ?? '0', 10);
+    document.body.dataset.scrollLocks = String(count + 1);
+    if (count === 0) document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = prev;
+      const next = Math.max(0, parseInt(document.body.dataset.scrollLocks ?? '0', 10) - 1);
+      document.body.dataset.scrollLocks = String(next);
+      if (next === 0) document.body.style.overflow = '';
     };
   }, [open]);
 

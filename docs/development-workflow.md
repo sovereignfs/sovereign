@@ -7,7 +7,7 @@ How tasks are planned, started, implemented, and closed out. Designed for agenti
 ## Three-layer information architecture
 
 ```
-CLAUDE.md                  ← session entry point; ⏳ Next pointer; conventions
+CLAUDE.md / AGENTS.md      ← agent-specific adapter; conventions only (no task pointer)
     │
     └─▶ docs/roadmap.md    ← chronological index; one row per PR; canonical status
             │
@@ -17,12 +17,14 @@ CLAUDE.md                  ← session entry point; ⏳ Next pointer; convention
 
 Each layer has a single job:
 
-| File                   | Job                             | What agents read it for                                         |
-| ---------------------- | ------------------------------- | --------------------------------------------------------------- |
-| `CLAUDE.md`            | Conventions + `⏳ Next` pointer | What task is next; how to work                                  |
-| `docs/roadmap.md`      | Version-ordered task index      | Which tasks exist, their status, which epic file has the detail |
-| `docs/epics/<file>.md` | Full task spec                  | Goal, deliverables, checklist for the active task               |
-| `CURRENT_TASK.md`      | Active task scratch (transient) | Everything needed mid-task without re-navigating                |
+| File                      | Job                             | What agents read it for                                         |
+| ------------------------- | ------------------------------- | --------------------------------------------------------------- |
+| `CLAUDE.md` / `AGENTS.md` | Agent-specific conventions      | How to work; architectural rules; commit/PR conventions         |
+| `docs/roadmap.md`         | Version-ordered task index      | Which tasks exist, their status, which epic file has the detail |
+| `docs/epics/<file>.md`    | Full task spec                  | Goal, deliverables, checklist for the active task               |
+| `CURRENT_TASK.md`         | Active task scratch (transient) | Everything needed mid-task without re-navigating                |
+
+> **Multi-agent note:** The `⏳ Next` pointer previously in `CLAUDE.md` has been removed. The developer assigns the next task explicitly at session start. See `docs/multi-agent.md` for the full model.
 
 ---
 
@@ -71,7 +73,7 @@ maps).
 
 Run `/sv-task-start`. The skill:
 
-1. Reads the `⏳ Next` pointer in `CLAUDE.md` to identify the task.
+1. The developer specifies the task (epic task ID or description) — there is no `⏳ Next` pointer. See `docs/multi-agent.md`.
 2. Confirms `main` is clean and pulls latest.
 3. Looks up the epic file via `docs/epics/README.md`, then greps for the task heading to extract the full task block (Goal → Deliverables → SRS reference → Review checklist).
 4. Writes **`CURRENT_TASK.md`** in the repo root — the full task spec in one file, no further navigation needed.
@@ -97,7 +99,7 @@ Run `/sv-task-complete`. The skill orchestrates three role agents, two of which 
 
 **`/sv-verify`** reads `CURRENT_TASK.md`, runs `format:check`, `lint`, `typecheck`, `test` (and docs-parity if relevant), and returns a summary table — not raw output. Failures block the PR draft.
 
-**`/sv-update-task-docs`** reads `CURRENT_TASK.md` for metadata, marks the roadmap row ✅, appends a completion entry to `CLAUDE.md`, advances the `⏳ Next` pointer, and deletes `CURRENT_TASK.md`.
+**`/sv-update-task-docs`** reads `CURRENT_TASK.md` for metadata, marks the roadmap row ✅, and deletes `CURRENT_TASK.md`. It does not append completion entries to `CLAUDE.md` or `AGENTS.md` — `docs/roadmap.md` is the canonical completion record.
 
 **`/sv-security-check`** (conditional) reviews the diff against the hard architectural rules in `CLAUDE.md` — redirect codes, CSP construction, cookie clearing, session config, `NEXT_PUBLIC_*` usage. Violations block the PR draft.
 
@@ -110,7 +112,7 @@ Status lives in exactly two places:
 | Location                          | What it tracks                               |
 | --------------------------------- | -------------------------------------------- |
 | `docs/roadmap.md` row Status cell | ✅ / ⏳ / 📋 per task — the canonical record |
-| `CLAUDE.md` `⏳ Next` pointer     | Which task is up next                        |
+| Open PRs                          | Which tasks are currently in flight          |
 
 **Epic file headings (`#### ✅ X.Y — …`) are set once when the task is written and not updated thereafter.** They show the state at the time of authoring. To know the current status of a task, check the roadmap row.
 
@@ -169,12 +171,12 @@ The `**[3.13]**` notation is the stable epic task ID. It survives task renames b
 
 Four focused skills cover the non-implementation phases of a task. Each needs only `CURRENT_TASK.md` plus its own skill file — no full project orientation required.
 
-| Skill                  | Trigger                                                 | What it does                                                               |
-| ---------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `/sv-verify`           | Parallel with `/sv-update-task-docs` at task-complete   | Runs all checks, returns structured pass/fail table                        |
-| `/sv-update-task-docs` | Parallel with `/sv-verify` at task-complete             | Marks roadmap ✅, advances CLAUDE.md Next pointer, deletes CURRENT_TASK.md |
-| `/sv-security-check`   | Conditional — when diff touches auth/middleware/CSP/SDK | Reviews diff against hard architectural rules, blocks PR on violation      |
-| `/sv-task-start`       | Session start                                           | Writes CURRENT_TASK.md, creates branch                                     |
+| Skill                  | Trigger                                                 | What it does                                                          |
+| ---------------------- | ------------------------------------------------------- | --------------------------------------------------------------------- |
+| `/sv-verify`           | Parallel with `/sv-update-task-docs` at task-complete   | Runs all checks, returns structured pass/fail table                   |
+| `/sv-update-task-docs` | Parallel with `/sv-verify` at task-complete             | Marks roadmap ✅, deletes CURRENT_TASK.md                             |
+| `/sv-security-check`   | Conditional — when diff touches auth/middleware/CSP/SDK | Reviews diff against hard architectural rules, blocks PR on violation |
+| `/sv-task-start`       | Session start                                           | Writes CURRENT_TASK.md, creates branch                                |
 
 Each agent is briefed with `CURRENT_TASK.md` (~50 lines) rather than the full project context. The Verifier and Docs Updater run in parallel, so the task-complete wall-clock is bounded by whichever takes longer (verification, ~30–60s) rather than their sum.
 
@@ -182,14 +184,14 @@ Each agent is briefed with `CURRENT_TASK.md` (~50 lines) rather than the full pr
 
 ## Quick reference for agents
 
-| I need to know…                      | Read…                                            |
-| ------------------------------------ | ------------------------------------------------ |
-| What task is next                    | `CLAUDE.md` → `⏳ Next` line                     |
-| Full spec for the current task       | `CURRENT_TASK.md`                                |
-| Full spec for any task by epic ID    | `docs/epics/<file>.md` — grep for `^#### .*<id>` |
-| All tasks in a domain                | `docs/epics/<file>.md`                           |
-| Roadmap version number for a task    | `docs/roadmap.md`                                |
-| Which epic a roadmap task belongs to | `docs/roadmap.md` → Epic task column             |
-| Epic file for a given epic ID        | `docs/epics/README.md`                           |
-| Project conventions and hard rules   | `CLAUDE.md`                                      |
-| Security rules to check against      | `CLAUDE.md` → "Hard architectural rules" section |
+| I need to know…                      | Read…                                                        |
+| ------------------------------------ | ------------------------------------------------------------ |
+| What task is next                    | Ask the developer; check `docs/roadmap.md` for pending tasks |
+| Full spec for the current task       | `CURRENT_TASK.md`                                            |
+| Full spec for any task by epic ID    | `docs/epics/<file>.md` — grep for `^#### .*<id>`             |
+| All tasks in a domain                | `docs/epics/<file>.md`                                       |
+| Roadmap version number for a task    | `docs/roadmap.md`                                            |
+| Which epic a roadmap task belongs to | `docs/roadmap.md` → Epic task column                         |
+| Epic file for a given epic ID        | `docs/epics/README.md`                                       |
+| Project conventions and hard rules   | `CLAUDE.md`                                                  |
+| Security rules to check against      | `CLAUDE.md` → "Hard architectural rules" section             |

@@ -7,10 +7,11 @@ on:
     paths:
       - 'docs/**'
       - 'apps/docs/**'
+      - '.github/workflows/docs.yml'
   push:
     tags:
       - 'docs-v*'
-  workflow_dispatch: # allow manual re-deploys
+  workflow_dispatch: # manually publish the current selected ref
 
 concurrency:
   group: docs-${{ github.ref }}

@@ -189,6 +189,9 @@ importers:
 
   apps/docs:
     devDependencies:
+      '@fontsource/hanken-grotesk':
+        specifier: ^5.2.8
+        version: 5.2.8
       '@sovereignfs/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -2206,6 +2209,9 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@fontsource/hanken-grotesk@5.2.8':
+    resolution: {integrity: sha512-J/e6hdfNCbyc4WK5hmZtk0zjaIsFx3pvCdPVxY25iYw2C9v1ZggGz4nfHnRjMhcz4WfaadUuwLNtvj8sQ70tkg==}
 
   '@hexagon/base64@1.1.28':
     resolution: {integrity: sha512-lhqDEAvWixy3bZ+UOYbPwUbBkwBq5C1LAJ/xPC8Oi+lL54oyakv/npbA0aU2hgCsx/1NUd4IBvV03+aUBWxerw==}
@@ -8248,6 +8254,8 @@ snapshots:
   '@exodus/bytes@1.15.1(@noble/hashes@2.2.0)':
     optionalDependencies:
       '@noble/hashes': 2.2.0
+
+  '@fontsource/hanken-grotesk@5.2.8': {}
 
   '@hexagon/base64@1.1.28': {}
 

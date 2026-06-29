@@ -28,12 +28,16 @@ export async function POST(request: Request): Promise<Response> {
   const host =
     req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? new URL(request.url).host;
   const res = NextResponse.redirect(new URL('/login?signedout=1', `${proto}://${host}`), 303);
-  // Drop both cache-cookie variants (the `__Secure-` one only unsets with Secure).
-  res.cookies.set('better-auth.session_data', '', { maxAge: 0, path: '/' });
+  // Drop both cache-cookie variants. Must include domain when AUTH_COOKIE_DOMAIN
+  // is set — cookies scoped to a domain can only be cleared with the same domain
+  // attribute (patch .9 fixed this for avatar; apply the same here).
+  const cookieDomain = process.env.AUTH_COOKIE_DOMAIN || undefined;
+  res.cookies.set('better-auth.session_data', '', { maxAge: 0, path: '/', domain: cookieDomain });
   res.cookies.set('__Secure-better-auth.session_data', '', {
     maxAge: 0,
     path: '/',
     secure: true,
+    domain: cookieDomain,
   });
   return res;
 }

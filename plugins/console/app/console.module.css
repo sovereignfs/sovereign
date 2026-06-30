@@ -1509,6 +1509,7 @@
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
     mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
+    overscroll-behavior-x: none;
   }
 
   .nav::-webkit-scrollbar {

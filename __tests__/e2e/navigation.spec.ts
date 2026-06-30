@@ -19,8 +19,9 @@ test.describe('Platform shell navigation — golden paths', () => {
 
   test('avatar menu opens and can be dismissed with Escape', async ({ adminPage: page }) => {
     await page.goto('/');
-    const trigger = page.locator('button[aria-label="Account"]').first();
-    await trigger.click();
+    const trigger = page.getByRole('button', { name: 'Account' }).first();
+    await trigger.focus();
+    await page.keyboard.press('Enter');
     // Menu items must be visible after opening.
     await expect(page.locator('[role="menuitem"]:has-text("Account")')).toBeVisible();
     await expect(page.locator('[role="menuitem"]:has-text("Sign out")')).toBeVisible();

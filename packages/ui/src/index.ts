@@ -43,3 +43,7 @@ export { NavTabs } from './components/NavTabs/NavTabs';
 export type { NavTabsProps, NavTabItem } from './components/NavTabs/NavTabs';
 export { Tooltip } from './components/Tooltip/Tooltip';
 export type { TooltipProps } from './components/Tooltip/Tooltip';
+export { Checkbox } from './components/Checkbox/Checkbox';
+export type { CheckboxProps } from './components/Checkbox/Checkbox';
+export { DragHandleRow } from './components/DragHandleRow/DragHandleRow';
+export type { DragHandleRowProps } from './components/DragHandleRow/DragHandleRow';

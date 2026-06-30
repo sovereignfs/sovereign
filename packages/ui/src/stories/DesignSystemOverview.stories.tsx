@@ -22,6 +22,8 @@ import { Tabs } from '../components/Tabs/Tabs';
 import { ToastProvider, useToast } from '../components/Toast/Toast';
 import { Toggle } from '../components/Toggle/Toggle';
 import { Tooltip } from '../components/Tooltip/Tooltip';
+import { Checkbox } from '../components/Checkbox/Checkbox';
+import { DragHandleRow } from '../components/DragHandleRow/DragHandleRow';
 
 // ---------------------------------------------------------------------------
 // Shared primitives
@@ -1181,7 +1183,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
         <section style={{ marginBottom: 'var(--sv-space-12)' }}>
           <SectionHeader
             title="Component gallery"
-            subtitle="All 13 components — click each story in the sidebar for the full API, variants, and controls."
+            subtitle="All 15 components — click each story in the sidebar for the full API, variants, and controls."
           />
 
           <div style={{ marginBottom: 'var(--sv-space-6)' }}>
@@ -1491,6 +1493,48 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                     Delete
                   </Button>
                 </Tooltip>
+              </div>
+            </ComponentCard>
+
+            {/* Checkbox */}
+            <ComponentCard
+              name="Checkbox"
+              importLine="import { Checkbox } from '@sovereignfs/ui';"
+              usage="Accessible checkbox with optional animated strike-through on the label when checked. Used in task lists."
+            >
+              {(() => {
+                const [a, setA] = useState(false);
+                const [b, setB] = useState(true);
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <Checkbox checked={a} onChange={setA} label="Unchecked task" strikeThrough />
+                    <Checkbox checked={b} onChange={setB} label="Completed task" strikeThrough />
+                  </div>
+                );
+              })()}
+            </ComponentCard>
+
+            {/* DragHandleRow */}
+            <ComponentCard
+              name="DragHandleRow"
+              importLine="import { DragHandleRow } from '@sovereignfs/ui';"
+              usage="Row wrapper with a drag handle that appears on hover. Attach dnd-kit sortable props via handleProps."
+            >
+              <div style={{ width: '100%' }}>
+                {['First item', 'Second item', 'Third item'].map((label) => (
+                  <DragHandleRow key={label}>
+                    <div
+                      style={{
+                        padding: 'var(--sv-space-2) var(--sv-space-1)',
+                        fontSize: 'var(--sv-font-size-sm)',
+                        color: 'var(--sv-color-text-primary)',
+                        borderBottom: '1px solid var(--sv-color-border)',
+                      }}
+                    >
+                      {label}
+                    </div>
+                  </DragHandleRow>
+                ))}
               </div>
             </ComponentCard>
           </div>

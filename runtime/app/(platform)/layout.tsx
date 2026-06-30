@@ -140,7 +140,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
 
             {/* Mobile header: brand · active-plugin title · bell · avatar menu (RFC 0013).
                 Console is added to the avatar menu for admins (no sidebar on mobile). */}
-            <header className={styles.mobileHeader}>
+            <header className={styles.mobileHeader} data-mobile-header>
               <Link href="/" className={styles.mobileBrand} aria-label={`${instanceName} home`}>
                 <span className={styles.mobileBrandIcon} aria-hidden="true">
                   {instanceLogoUrl ? (
@@ -165,7 +165,9 @@ export default async function PlatformLayout({ children }: { children: ReactNode
               </div>
             </header>
 
-            <main className={styles.content}>{children}</main>
+            <main id="main-scroll" className={styles.content}>
+              {children}
+            </main>
 
             {/* Mobile footer: single "Apps" button opens a Drawer (RFC 0013).
                 Replaces the persistent icon strip which clutters small viewports. */}

@@ -64,8 +64,8 @@ The `sv` CLI wraps common tasks: `pnpm sv <command>` (`dev`, `build`, `generate`
 ```
 apps/auth/        better-auth identity server (the only separate Next.js app)
 packages/
-  sdk/            @sovereignfs/sdk — plugin↔platform contract (yet to be published)
-  ui/             @sovereignfs/ui — design system (yet to be published)
+  sdk/            @sovereignfs/sdk — published plugin↔platform contract
+  ui/             @sovereignfs/ui — published design system
   db/             Drizzle client factory + schema (SQLite/Postgres)
   manifest/       manifest schema + validation
   mailer/         SMTP abstraction
@@ -98,9 +98,9 @@ bin/sv            the sv CLI
   compatibility guidance.
 - [Troubleshooting](docs/troubleshooting.md) — known dev-server quirks, 404
   patterns, license token issues, and Docker gotchas.
-- [Contributing](CONTRIBUTING.md) — development workflow, project conventions,
-  and contribution expectations. CI runs the full check suite on every
-  (non-draft) pull request.
+- [Contributing](CONTRIBUTING.md) — development workflow, local verification
+  hooks, draft-PR/CI behavior, release tag conventions, and contribution
+  expectations.
 - [RFCs](docs/rfcs/README.md) — design proposals with a status-at-a-glance
   index; the individual files hold motivation, design, and impact.
 - [Concept · Plan · SRS](docs/sovereign-proposal-plan-srs.md) and the

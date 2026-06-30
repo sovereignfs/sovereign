@@ -91,17 +91,23 @@ Run `/sv-task-complete`. The skill orchestrates three role agents, two of which 
 ```
 [parallel]
   /sv-verify       — runs all checks, returns structured pass/fail summary
-  /sv-update-task-docs— updates roadmap row + CLAUDE.md, deletes CURRENT_TASK.md
+  /sv-update-task-docs— updates roadmap row + epic heading, deletes CURRENT_TASK.md
 [sequential, after both complete]
   /sv-security-check— only if diff touches auth/middleware/CSP/SDK paths
-  main agent       — version bumps + PR draft
+  main agent       — version bumps + PR description
+  /sv-create-pr    — creates the GitHub PR as a draft when requested
 ```
 
 **`/sv-verify`** reads `CURRENT_TASK.md`, runs `format:check`, `lint`, `typecheck`, `test` (and docs-parity if relevant), and returns a summary table — not raw output. Failures block the PR draft.
 
-**`/sv-update-task-docs`** reads `CURRENT_TASK.md` for metadata, marks the roadmap row ✅, and deletes `CURRENT_TASK.md`. It does not append completion entries to `CLAUDE.md` or `AGENTS.md` — `docs/roadmap.md` is the canonical completion record.
+**`/sv-update-task-docs`** reads `CURRENT_TASK.md` for metadata, marks the roadmap row ✅, updates the matching epic task heading to ✅, and deletes `CURRENT_TASK.md`. It does not append completion entries to `CLAUDE.md` or `AGENTS.md` — `docs/roadmap.md` and the task's epic heading are the canonical completion markers.
 
 **`/sv-security-check`** (conditional) reviews the diff against the hard architectural rules in `CLAUDE.md` — redirect codes, CSP construction, cookie clearing, session config, `NEXT_PUBLIC_*` usage. Violations block the PR draft.
+
+**`/sv-create-pr`** creates the GitHub pull request. Agent-created PRs are
+always opened as **draft** PRs first with `gh pr create --draft`, even when the
+human simply says "create the PR". Mark a PR ready for review only after
+explicit human instruction.
 
 ---
 
@@ -114,7 +120,7 @@ Status lives in exactly two places:
 | `docs/roadmap.md` row Status cell | ✅ / ⏳ / 📋 per task — the canonical record |
 | Open PRs                          | Which tasks are currently in flight          |
 
-**Epic file headings (`#### ✅ X.Y — …`) are set once when the task is written and not updated thereafter.** They show the state at the time of authoring. To know the current status of a task, check the roadmap row.
+**Epic file headings (`#### ✅ X.Y — …`) are updated when a task completes.** To close a task, mark both the roadmap row and the matching `docs/epics/<file>.md` task heading ✅ in the same PR.
 
 ---
 
@@ -167,6 +173,24 @@ The `**[3.13]**` notation is the stable epic task ID. It survives task renames b
 
 ---
 
+## Version identifiers
+
+When a PR bumps a package version, use the release identifier as the version-bump
+commit subject and as the release tag:
+
+| Versioned target                 | Commit subject / tag |
+| -------------------------------- | -------------------- |
+| Root `package.json`              | `vX.Y.Z`             |
+| `packages/ui`                    | `ui-vX.Y.Z`          |
+| `apps/docs`                      | `docs-vX.Y.Z`        |
+| `packages/sdk`                   | `sdk-vX.Y.Z`         |
+| Any other package/app/plugin tag | `<slug>-vX.Y.Z`      |
+
+Use the package slug from the workspace path unless a public release workflow
+defines a more specific slug.
+
+---
+
 ## Role agents
 
 Four focused skills cover the non-implementation phases of a task. Each needs only `CURRENT_TASK.md` plus its own skill file — no full project orientation required.
@@ -174,7 +198,7 @@ Four focused skills cover the non-implementation phases of a task. Each needs on
 | Skill                  | Trigger                                                 | What it does                                                          |
 | ---------------------- | ------------------------------------------------------- | --------------------------------------------------------------------- |
 | `/sv-verify`           | Parallel with `/sv-update-task-docs` at task-complete   | Runs all checks, returns structured pass/fail table                   |
-| `/sv-update-task-docs` | Parallel with `/sv-verify` at task-complete             | Marks roadmap ✅, deletes CURRENT_TASK.md                             |
+| `/sv-update-task-docs` | Parallel with `/sv-verify` at task-complete             | Marks roadmap and epic heading ✅, deletes CURRENT_TASK.md            |
 | `/sv-security-check`   | Conditional — when diff touches auth/middleware/CSP/SDK | Reviews diff against hard architectural rules, blocks PR on violation |
 | `/sv-task-start`       | Session start                                           | Writes CURRENT_TASK.md, creates branch                                |
 

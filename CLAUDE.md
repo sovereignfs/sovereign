@@ -53,14 +53,19 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   docs; include slots only where shipping order matters (upgrade notes, version maps).
 - **Commits** end with the Claude Code attribution trailer (model-agnostic — do not use a specific model name):
   `Co-Authored-By: Claude Code <noreply@anthropic.com>`
-- **PRs** target `main`; body ends with:
+- **PRs** target `main` and are always created as GitHub drafts first with
+  `gh pr create --draft`; mark ready for review only after explicit developer
+  instruction. PR bodies end with:
   `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
   Describe what changed and why, and cite relevant SRS sections — but no task numbers.
 - **Multiple agents may work this repo** — see `docs/multi-agent.md` for the full model. Each agent uses its own clone. Commit trailers identify which agent authored the work.
 - **Merge strategy: rebase and merge** (never squash, never create a merge
   commit). Keeps history linear — each task's commit lands on `main` verbatim.
 - **Fix commit messages BEFORE merging the PR.** Once a commit lands on `main`, correcting it means rewriting/force-pushing `main` — avoid that.
-- **When a task is done, update `docs/roadmap.md` in the same PR.** Mark the task ✅ in the roadmap. That is the canonical completion record — do not duplicate it in `CLAUDE.md`. The next task is assigned by the developer at session start, not inferred from a pointer in this file.
+- **When a task is done, update `docs/roadmap.md` and the matching
+  `docs/epics/<file>.md` task heading in the same PR.** Mark both ✅. Do not
+  duplicate completion history in `CLAUDE.md`. The next task is assigned by the
+  developer at session start, not inferred from a pointer in this file.
 - **Verify before claiming done.** Run the task's review-checklist commands and
   show the output.
 - Never merge a PR automatically. Either wait for explicit instruction to merge,
@@ -116,6 +121,12 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   packages **`@sovereignfs/sdk`** (already `1.x`, the stable contract) and
   **`@sovereignfs/ui`** follow their own public semver per NFR-04 and are
   **exempt** from the platform's "stay under v1" rule.
+
+  **Version-bump commit subjects and release tags use the same identifier.**
+  Root `package.json` releases use `vX.Y.Z`. Package releases use the package
+  slug plus version: `ui-vX.Y.Z`, `docs-vX.Y.Z`, `sdk-vX.Y.Z`,
+  `runtime-vX.Y.Z`, `auth-vX.Y.Z`, and the same `<slug>-vX.Y.Z` pattern for
+  other package tags.
 
 ## Naming conventions
 

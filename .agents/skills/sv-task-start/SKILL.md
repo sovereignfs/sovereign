@@ -77,4 +77,5 @@ Prepare a Codex work session for one assigned Sovereign roadmap task.
 - `CURRENT_TASK.md` is local transient context and should not be committed.
 - Commits end with `Co-Authored-By: Codex <noreply@openai.com>` unless local
   Codex config emits a different attribution.
-- PR bodies end with `🤖 Generated with [Codex](https://developers.openai.com/codex)`.
+- PRs target `main`, are created as draft first with `sv-create-pr`, and PR
+  bodies end with `🤖 Generated with [Codex](https://developers.openai.com/codex)`.

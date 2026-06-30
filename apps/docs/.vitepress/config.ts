@@ -107,6 +107,8 @@ const rfcSidebarItems = [
     text: 'RFC 0054 — Plugin-Scoped Roles & Grants',
     link: '/rfcs/0054-plugin-scoped-roles-and-grants',
   },
+  { text: 'RFC 0055 — Sovereign Council', link: '/rfcs/0055-sovereign-council' },
+  { text: 'RFC 0056 — Sovereign Guide', link: '/rfcs/0056-sovereign-guide' },
 ];
 
 export default defineConfig({
@@ -117,7 +119,6 @@ export default defineConfig({
     // Internal planning/review material. Keep the public docs site focused on
     // user, operator, plugin-developer, and RFC content.
     'adhoc-tasks.md',
-    'agent-first-documentation.md',
     'design-system-stabilization-proposal.md',
     'pre-v1-stabilization-plan.md',
     'roadmap.md',
@@ -180,6 +181,7 @@ export default defineConfig({
           text: 'Contributing',
           items: [
             { text: 'Development Workflow', link: '/development-workflow' },
+            { text: 'Agent-First Documentation', link: '/agent-first-documentation' },
             { text: 'Architecture Rules', link: '/architecture-rules' },
             { text: 'Testing E2E', link: '/testing-e2e' },
           ],

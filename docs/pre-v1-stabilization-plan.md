@@ -289,7 +289,9 @@ from outrunning platform maintainability.
   - E2E suite covers auth, account, console, launcher, and paywall flows.
   - docs reflect current commands, test behavior, and development workflow.
   - `pnpm generate` leaves no stale generated artifacts.
-  - `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm test:e2e` pass in CI.
+  - `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass in CI.
+  - `pnpm test:e2e` passes manually before browser-facing, auth, middleware, platform plugin,
+    or Playwright harness changes are pushed.
 - Require new pre-v1 feature epics to state whether they touch middleware,
   generation, auth, plugin manifests, or SDK contracts.
 

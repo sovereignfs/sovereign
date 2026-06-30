@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** `docs/`, `operator/` directory convention — no code changes, no new runtime surfaces, no version bumps\
-**Incorporated into plan:** Yes — epic task 3.14 (scheduled at roadmap slot 0.9.9).
+**Incorporated into plan:** Yes — epic task 3.14.
 
 ---
 
@@ -276,10 +276,11 @@ git commit -m "chore: sync with upstream v1.3.0"
 #    use with care on a shared branch — coordinate with your team)
 git push --force-with-lease origin main
 
-# 5. Deploy using the standard upgrade procedure (RFC 0006 §3.15):
+# 5. Deploy using the standard upgrade procedure (RFC 0006 §3.15).
+#    If your fork builds its own image, build/publish that image from the rebased
+#    fork before recreating containers.
 sv backup
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up --build -d
 ```
 
 The rebase strategy is preferred over merge because it keeps the fork's history
@@ -338,7 +339,7 @@ their compliance posture (as shown in the template above).
 4. `git fetch upstream && git rebase upstream/main` — apply upstream changes.
 5. Resolve any conflicts (see "When you hit a conflict" above).
 6. Update `operator/UPSTREAM`, commit, push.
-7. `docker compose pull && docker compose up -d` — deploy.
+7. Build/publish your fork image if needed, then recreate containers.
 
 ## Alternatives considered
 

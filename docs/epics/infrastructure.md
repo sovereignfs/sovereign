@@ -358,10 +358,14 @@ supported path to production.
 
 #### ✅ 0.12 — E2E golden-path test suite
 
-**Goal:** Wire up Playwright as the browser-automation layer and write 20 golden-path tests
-covering the critical user flows: auth (login/logout/redirect), launcher navigation, Account
-and Console plugin pages, platform shell navigation (root rewrite, brand link, avatar menu),
-and the monetization paywall flow.
+**Goal:** Wire up Playwright as the browser-automation layer and write the first
+golden-path tests covering the critical user flows: auth (login/logout/redirect),
+launcher navigation, Account and Console plugin pages, platform shell navigation
+(root rewrite, brand link, avatar menu), and the monetization paywall flow.
+
+> **Current-state note:** This task originally landed six spec files / 20 tests.
+> The suite has since grown; the current spec list and counts live in
+> [testing-e2e.md](../testing-e2e.md).
 
 **Scope:**
 
@@ -370,9 +374,9 @@ and the monetization paywall flow.
 - `__tests__/e2e/global-setup.ts` — seeds test users via `pnpm sv seed`, saves storage state
   for both users, generates test Ed25519 keypair for paywall spec
 - `__tests__/e2e/fixtures.ts` — `adminPage` / `userPage` fixture helpers
-- Six spec files (20 tests total): `auth`, `launcher`, `account`, `console`, `navigation`, `paywall`
-- `.github/workflows/e2e.yml` — CI job, triggers on `push: main` with `paths` filter (source only,
-  not docs/md)
+- Initial six spec files: `auth`, `launcher`, `account`, `console`, `navigation`, `paywall`
+- `.github/workflows/e2e.yml` — hosted CI job definition kept disabled while E2E remains a
+  manual gate; retains the source-only `push: main` path filter for a future re-enable
 - `docs/testing-e2e.md` — local run guide + full coverage/deferred-flow table
 
 **Version bumps:** none (devDependency only — `@playwright/test`; no package API changes).
@@ -381,10 +385,11 @@ and the monetization paywall flow.
 
 **Review checklist:**
 
-- `pnpm test:e2e` passes all 20 tests locally against `pnpm dev` servers
+- `pnpm test:e2e` passes the current Playwright suite locally against dev servers
 - `pnpm test` (Vitest) still passes unchanged (no `.spec.ts` picked up)
 - `pnpm lint` passes (`__tests__/e2e/**` and `playwright.config.ts` excluded from ESLint)
-- `e2e.yml` workflow appears in GitHub Actions after merge; passes on next source-code push to main
+- `e2e.yml` workflow appears in GitHub Actions after merge with hosted execution disabled by
+  current policy
 
 ---
 
@@ -499,7 +504,9 @@ from outrunning platform maintainability.
   - E2E suite covers auth, account, console, launcher, and paywall flows.
   - Docs reflect current commands, test behavior, and development workflow.
   - `pnpm generate` leaves no stale generated artifacts.
-  - `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm test:e2e` pass in CI.
+  - `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass in CI.
+  - `pnpm test:e2e` passes manually before browser-facing, auth, middleware, platform plugin,
+    or Playwright harness changes are pushed.
 - Require new pre-v1 feature epics to state whether they touch middleware,
   generation, auth, plugin manifests, or SDK contracts.
 

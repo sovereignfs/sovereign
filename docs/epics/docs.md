@@ -110,7 +110,7 @@ link: '/self-hosting' }` + `{ text: 'GitHub', link: '...', theme: 'alt' }`)
 
 ---
 
-#### 📋 16.3 — Current-state testing documentation cleanup
+#### ✅ 16.3 — Current-state testing documentation cleanup
 
 **Goal:** Bring test documentation back in sync with the current codebase so
 contributors and release reviewers can trust the repo docs before v1.

@@ -1040,7 +1040,33 @@ proprietary code), or when you are building a commercial white-labeled derivativ
 For the full model, zone taxonomy, AGPL compliance table, and `sv fork check`
 follow-on, see [RFC 0028](rfcs/0028-operator-fork-model.md).
 
-### Quick-start: Track 2 fork setup
+### Choose a track
+
+| Track                        | Use when                                                                                                                                                                | Upgrade path                                                         |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| **Track 1 — config-only**    | You can use published Sovereign images, env vars, Console settings, branding, and `sv plugin add` / `sovereign.plugins.json`. This is the default and recommended path. | Pull the next image and follow [upgrade.md](upgrade.md).             |
+| **Track 2 — fork-and-track** | You need custom private plugins committed into the same source tree, an air-gapped build, or a commercial OEM derivative.                                               | Rebase your fork on upstream, then deploy with the normal procedure. |
+
+Start with Track 1. Move to Track 2 only when a plugin cannot be installed from
+an external repository at deploy/build time, or when you are distributing a
+derivative product.
+
+### Track 1: config-only
+
+Track 1 operators keep upstream source untouched. Typical customisation lives in:
+
+- `.env` or deployment secrets for database, auth, SMTP, VAPID, and branding
+  values.
+- Console settings for installed apps, root app selection, instance identity,
+  and user/admin configuration.
+- `sovereign.plugins.json` entries or `pnpm sv plugin add <repo>` for community
+  plugins.
+- Uploaded brand assets once the RFC 0027 branding phases are available.
+
+This track has no fork-specific git workflow. Upgrade by pulling the next image
+or upstream checkout, taking a backup, and following [upgrade.md](upgrade.md).
+
+### Track 2: fork-and-track setup
 
 ```bash
 # Fork sovereignfs/sovereign on GitHub, then:
@@ -1058,6 +1084,35 @@ operator/
 └── docker-compose.override.yml   # deployment overrides (optional)
 ```
 
+`operator/UPSTREAM` is a single line containing the upstream tag or commit SHA
+your fork last synced to, for example:
+
+```text
+v1.3.0
+```
+
+`operator/OPERATOR.md` should record the fork purpose, custom plugin list,
+maintainer contact, and AGPL posture:
+
+```markdown
+# Acme Sovereign Fork
+
+**Upstream:** sovereignfs/sovereign
+**Based on:** see `operator/UPSTREAM`
+**Purpose:** Internal deployment with proprietary CRM integration plugin
+
+## Custom plugins
+
+| Plugin ID      | Location                | License     |
+| -------------- | ----------------------- | ----------- |
+| `com.acme.crm` | `plugins/com.acme.crm/` | Proprietary |
+
+## AGPL compliance
+
+This fork is deployed internally and not distributed externally.
+No AGPL source-disclosure obligation applies.
+```
+
 Add custom plugins under `plugins/<com.yourorg.pluginid>/` and unignore them in
 `.gitignore`:
 
@@ -1071,6 +1126,22 @@ Add custom plugins under `plugins/<com.yourorg.pluginid>/` and unignore them in
 `plugins/<operator-id>/` only. Because the two file sets never overlap,
 `git rebase upstream/main` applies every upstream release with zero conflicts.
 
+Custom plugins are normal community plugins: use only `@sovereignfs/sdk` and
+`@sovereignfs/ui`, declare a manifest, and run through `pnpm generate`. Do not
+import from `runtime/src` or modify shell/auth/middleware internals in the fork.
+If you need a new core extension point, propose an upstream RFC instead.
+
+### Asset management in a fork
+
+Do not replace upstream files in `runtime/public/` or app layouts just to brand a
+fork.
+
+- **Before RFC 0027 branding is available:** place static operator assets under
+  `operator/assets/` and serve them from an operator-owned plugin route, such as
+  `plugins/com.acme.brand/app/logo/route.ts`.
+- **After RFC 0027 branding is available:** upload logos, favicons, and identity
+  values through Console. Those assets live in deployment data, not in the fork.
+
 ### Upstream sync
 
 ```bash
@@ -1080,15 +1151,27 @@ echo "v1.3.0" > operator/UPSTREAM
 git add operator/UPSTREAM && git commit -m "chore: sync with upstream v1.3.0"
 git push --force-with-lease origin main
 
-# Then deploy normally:
+# Then deploy normally. If your fork builds its own image, build/publish that
+# image from the rebased fork before recreating containers.
 sv backup
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up --build -d
 ```
 
 A conflict during rebase signals that a core-locked file was modified — fix by
 reverting the change and expressing the intent as a community plugin or upstream
 RFC instead.
+
+### AGPL reference for fork operators
+
+| Scenario                                                            | Obligation                                                          |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Private fork, self-hosted internally, not distributed               | None. AGPL triggers on distribution, not private use.               |
+| Hosting a modified Sovereign as a service for external users (SaaS) | Publish source changes under AGPL or obtain the commercial license. |
+| Building and distributing a white-labeled product                   | Use the commercial dual-license described in SRS §2.7.              |
+
+Custom plugins in `plugins/<operator-id>/` use the MIT-licensed SDK/UI boundary
+and may carry their own license. Record the fork's compliance posture in
+`operator/OPERATOR.md`.
 
 ---
 

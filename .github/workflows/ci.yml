@@ -7,7 +7,7 @@ name: CI
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
   workflow_call:
 
 # Cancel superseded runs on the same ref (e.g. rapid pushes to a PR).
@@ -24,10 +24,10 @@ defaults:
 
 # Every job carries the same guard: skip while the PR is a draft OR carries the
 # `skip-ci` label, run once it is marked ready for review without that label (and
-# on pushes thereafter). Because label add/remove is not in the trigger types,
-# toggling `skip-ci` takes effect on the next push/sync/reopen/ready, not on an
-# in-flight run. The guard always passes when this workflow is invoked via
-# workflow_call (no pull_request context), so the publish gate still runs.
+# on pushes thereafter). Label add/remove events are included so toggling
+# `skip-ci` takes effect immediately for new workflow runs. The guard always
+# passes when this workflow is invoked via workflow_call (no pull_request
+# context), so the publish gate still runs.
 jobs:
   format:
     name: Format

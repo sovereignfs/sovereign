@@ -35,9 +35,15 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
       - run: pnpm install --frozen-lockfile
+      - name: Verify tag matches package version
+        run: |
+          expected="${GITHUB_REF_NAME#sdk-v}"
+          actual="$(node -p "JSON.parse(require('node:fs').readFileSync('packages/sdk/package.json', 'utf8')).version")"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} expects @sovereignfs/sdk@${expected}, but package.json is ${actual}." >&2
+            exit 1
+          fi
       - run: pnpm --filter @sovereignfs/sdk build
-      # `pnpm publish` fails if this version is already on npm, so a tag without
-      # a matching version bump is rejected automatically.
       - run: pnpm --filter @sovereignfs/sdk publish --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -56,6 +62,14 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
       - run: pnpm install --frozen-lockfile
+      - name: Verify tag matches package version
+        run: |
+          expected="${GITHUB_REF_NAME#ui-v}"
+          actual="$(node -p "JSON.parse(require('node:fs').readFileSync('packages/ui/package.json', 'utf8')).version")"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} expects @sovereignfs/ui@${expected}, but package.json is ${actual}." >&2
+            exit 1
+          fi
       - run: pnpm --filter @sovereignfs/ui build
       - run: pnpm --filter @sovereignfs/ui publish --no-git-checks --access public
         env:
@@ -75,6 +89,14 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
       - run: pnpm install --frozen-lockfile
+      - name: Verify tag matches package version
+        run: |
+          expected="${GITHUB_REF_NAME#create-plugin-v}"
+          actual="$(node -p "JSON.parse(require('node:fs').readFileSync('packages/create-plugin/package.json', 'utf8')).version")"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} expects @sovereignfs/create-plugin@${expected}, but package.json is ${actual}." >&2
+            exit 1
+          fi
       - run: pnpm --filter @sovereignfs/create-plugin build
       - run: pnpm --filter @sovereignfs/create-plugin publish --no-git-checks --access public
         env:

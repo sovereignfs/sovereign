@@ -30,13 +30,14 @@
     "install:plugins": "tsx scripts/install-plugins.ts",
     "registry:validate": "tsx scripts/validate-registry.ts",
     "registry:check": "tsx scripts/validate-registry.ts --check",
+    "validate:plugin-boundary": "tsx scripts/validate-plugin-boundary.ts",
     "sv": "tsx bin/sv.ts",
     "storybook": "pnpm --filter @sovereignfs/ui storybook",
     "build-storybook": "pnpm --filter @sovereignfs/ui build-storybook",
     "prepare": "simple-git-hooks"
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged",
+    "pre-commit": "pnpm lint-staged && pnpm validate:plugin-boundary",
     "pre-push": "pnpm verify:push"
   },
   "lint-staged": {

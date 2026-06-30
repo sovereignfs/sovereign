@@ -27,6 +27,10 @@ pnpm test:e2e --ui
 pnpm test:e2e --debug auth.spec.ts
 ```
 
+Playwright injects E2E-only local defaults for `AUTH_SECRET` and
+`SOVEREIGN_ADMIN_KEY` when it starts the auth and runtime web servers. To run
+the suite with explicit values, set `E2E_AUTH_SECRET` and `E2E_ADMIN_KEY`.
+
 **Refreshing stale auth state:** the global setup saves login storage state to `.auth/`. If you
 change seed users or rotate secrets, delete the cache and re-run:
 

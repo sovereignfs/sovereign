@@ -46,6 +46,10 @@ By default, Playwright starts:
 During local runs, existing servers are reused. In CI, fresh servers are started
 and Chromium retries are enabled.
 
+Playwright injects E2E-only local defaults for `AUTH_SECRET` and
+`SOVEREIGN_ADMIN_KEY` when it starts both servers. To run with explicit values,
+set `E2E_AUTH_SECRET` and `E2E_ADMIN_KEY`.
+
 Useful variants:
 
 ```bash

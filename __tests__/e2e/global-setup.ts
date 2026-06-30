@@ -8,7 +8,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const AUTH_DIR = path.join(ROOT, '.auth');
 const RUNTIME = 'http://localhost:3000';
-const AUTH_SERVER = 'http://localhost:3001';
 
 async function loginAndSave(
   browser: Awaited<ReturnType<typeof chromium.launch>>,
@@ -18,17 +17,16 @@ async function loginAndSave(
 ): Promise<void> {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
-  // Unauthenticated visit redirects to auth server login.
+  // Unauthenticated visits redirect to the runtime's same-origin login page.
   await page.goto(`${RUNTIME}/`);
-  await page.waitForURL(`${AUTH_SERVER}/login**`);
+  await page.waitForURL(`${RUNTIME}/login**`);
   await page.fill('#login-email', email);
   await page.fill('#login-password', password);
   await page.click('button[type="submit"]');
-  // On success the auth server redirects back to the runtime.
-  await page.waitForURL(`${RUNTIME}/**`, { timeout: 15_000 });
-  // storageState captures cookies from BOTH origins in one shot: the session_token
-  // cookie from :3001 and the session_data cache cookie from :3000 (set on first
-  // /api/verify response). Tests pre-injecting this state are fully authenticated.
+  // On success the runtime login flow returns to the authenticated runtime.
+  await page.waitForURL(`${RUNTIME}/`, { timeout: 15_000 });
+  // storageState captures runtime cookies after the proxied login flow. Tests
+  // pre-injecting this state are fully authenticated.
   await ctx.storageState({ path: outPath });
   await ctx.close();
 }
@@ -68,7 +66,8 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
 async function setupPaywallToken(
   browser: Awaited<ReturnType<typeof chromium.launch>>,
 ): Promise<void> {
-  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? 'dev-admin-key';
+  const adminKey =
+    process.env.E2E_ADMIN_KEY ?? process.env.SOVEREIGN_ADMIN_KEY ?? 'sovereign-e2e-admin-key';
   const pluginId = 'fs.sovereign.example-monetized';
 
   // Generate keypair via Web Crypto (available in Node 19+; CI uses Node 20+).
@@ -86,7 +85,7 @@ async function setupPaywallToken(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-sovereign-admin-key': adminKey,
+      Authorization: `Bearer ${adminKey}`,
     },
     body: JSON.stringify({
       pluginId,

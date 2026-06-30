@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -13,10 +14,24 @@ function readTestToken(): string | null {
   return readFileSync(TOKEN_FILE, 'utf8').trim();
 }
 
+async function revokeTestEntitlement(page: Page): Promise<void> {
+  const entitlementRes = await page.request.get('/api/account/entitlements');
+  if (!entitlementRes.ok()) return;
+
+  const data = (await entitlementRes.json()) as {
+    entitlements?: Array<{ id: string; pluginId: string }>;
+  };
+  const entry = data.entitlements?.find((e) => e.pluginId === PLUGIN_ID);
+  if (entry) {
+    await page.request.delete(`/api/account/entitlements?id=${encodeURIComponent(entry.id)}`);
+  }
+}
+
 test.describe('Paywall — golden paths', () => {
   test('navigating to a paywalled plugin redirects to the paywall page', async ({
     userPage: page,
   }) => {
+    await revokeTestEntitlement(page);
     await page.goto(PLUGIN_ROUTE);
     // Middleware 303-redirects to /paywall/<pluginId> for page routes.
     await expect(page).toHaveURL(
@@ -44,7 +59,7 @@ test.describe('Paywall — golden paths', () => {
 
     await page.goto(`/paywall/${PLUGIN_ID}`);
     // Fill the license import form.
-    await page.locator('textarea[name="token"], input[name="token"]').fill(token);
+    await page.getByLabel('License token').fill(token);
     await page.getByRole('button', { name: /activate|import/i }).click();
 
     // Successful import redirects to the plugin route.
@@ -52,13 +67,6 @@ test.describe('Paywall — golden paths', () => {
     expect(page.url()).toContain(PLUGIN_ROUTE);
 
     // Cleanup: revoke the entitlement so subsequent runs can re-import.
-    const entitlementRes = await page.request.get('/api/account/entitlements');
-    if (entitlementRes.ok()) {
-      const data = (await entitlementRes.json()) as Array<{ id: string; pluginId: string }>;
-      const entry = data.find((e) => e.pluginId === PLUGIN_ID);
-      if (entry) {
-        await page.request.delete(`/api/account/entitlements/${entry.id}`);
-      }
-    }
+    await revokeTestEntitlement(page);
   });
 });

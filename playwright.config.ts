@@ -1,6 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const isCI = !!process.env.CI;
+const e2eAuthSecret =
+  process.env.E2E_AUTH_SECRET ?? process.env.AUTH_SECRET ?? 'sovereign-e2e-auth-secret';
+const e2eAdminKey =
+  process.env.E2E_ADMIN_KEY ?? process.env.SOVEREIGN_ADMIN_KEY ?? 'sovereign-e2e-admin-key';
+const e2eServerEnv = {
+  AUTH_SECRET: e2eAuthSecret,
+  SOVEREIGN_AUTH_SECRET: process.env.SOVEREIGN_AUTH_SECRET ?? e2eAuthSecret,
+  SOVEREIGN_ADMIN_KEY: e2eAdminKey,
+};
 
 export default defineConfig({
   testDir: './__tests__/e2e',
@@ -26,6 +35,7 @@ export default defineConfig({
       url: 'http://localhost:3001/login',
       reuseExistingServer: !isCI,
       timeout: 120_000,
+      env: e2eServerEnv,
       // Suppress Next.js dev-server output from the terminal; errors surface via test failures.
       stdout: 'ignore',
       stderr: 'ignore',
@@ -37,6 +47,7 @@ export default defineConfig({
       url: 'http://localhost:3000/api/health',
       reuseExistingServer: !isCI,
       timeout: 180_000,
+      env: e2eServerEnv,
       stdout: 'ignore',
       stderr: 'ignore',
     },

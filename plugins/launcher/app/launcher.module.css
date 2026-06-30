@@ -4,13 +4,12 @@
   gap: var(--sv-space-6);
 }
 
-/* ── Title row ──────────────────────────────────────────────────────────── */
+/* ── Header ─────────────────────────────────────────────────────────────── */
 
-.titleRow {
+.header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--sv-space-4);
+  flex-direction: column;
+  gap: var(--sv-space-3);
 }
 
 .title {
@@ -21,7 +20,7 @@
 }
 
 .subtitle {
-  margin: var(--sv-space-1) 0 0;
+  margin: calc(-1 * var(--sv-space-2)) 0 0;
   font-size: var(--sv-font-size-sm);
   color: var(--sv-color-text-muted);
 }
@@ -32,11 +31,10 @@
   display: flex;
   align-items: center;
   gap: var(--sv-space-2);
-  padding: 6px var(--sv-space-3);
-  min-width: 200px;
+  padding: 10px var(--sv-space-4);
   background-color: var(--sv-color-surface);
   border: 1px solid var(--sv-color-border-strong);
-  border-radius: var(--sv-radius-md);
+  border-radius: var(--sv-radius-lg);
   cursor: text;
 }
 

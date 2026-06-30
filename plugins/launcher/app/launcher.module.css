@@ -7,12 +7,19 @@
 /* ── Header ─────────────────────────────────────────────────────────────── */
 
 .header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sv-space-3);
+  /* Desktop: title+subtitle left, search right — grid lets the two text rows
+     share one column while the search spans both rows in the second column. */
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: var(--sv-space-6);
+  row-gap: var(--sv-space-1);
 }
 
 .title {
+  grid-column: 1;
+  grid-row: 1;
   margin: 0;
   font-size: var(--sv-font-size-2xl);
   font-weight: var(--sv-font-weight-semibold);
@@ -20,7 +27,9 @@
 }
 
 .subtitle {
-  margin: calc(-1 * var(--sv-space-2)) 0 0;
+  grid-column: 1;
+  grid-row: 2;
+  margin: 0;
   font-size: var(--sv-font-size-sm);
   color: var(--sv-color-text-muted);
 }
@@ -28,9 +37,12 @@
 /* ── Search ─────────────────────────────────────────────────────────────── */
 
 .searchWrap {
+  grid-column: 2;
+  grid-row: 1 / span 2;
   display: flex;
   align-items: center;
   gap: var(--sv-space-2);
+  width: 280px;
   padding: 10px var(--sv-space-4);
   background-color: var(--sv-color-surface);
   border: 1px solid var(--sv-color-border-strong);
@@ -163,6 +175,32 @@
   border: 1px solid var(--sv-color-border);
   border-radius: var(--sv-radius-sm);
   padding: 2px 8px;
+}
+
+@media (max-width: 768px) {
+  /* Collapse to a single stacked column on mobile — search drops below
+     the title/subtitle and stretches full width. */
+  .header {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    row-gap: var(--sv-space-3);
+  }
+
+  .title {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .subtitle {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .searchWrap {
+    grid-column: 1;
+    grid-row: 3;
+    width: auto;
+  }
 }
 
 /* ── Admin section ──────────────────────────────────────────────────────── */

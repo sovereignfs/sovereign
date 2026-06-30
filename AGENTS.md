@@ -51,6 +51,9 @@ prefer moving future shared guidance into `docs/`.
   `main` until v1.0.0; after v1.0.0 the integration branch becomes `dev`.
 - Never merge a PR automatically. Wait for explicit human instruction.
 - PRs target `main` until the post-v1 branch model changes.
+- Agent-created PRs are always opened as GitHub draft PRs first. Use
+  `gh pr create --draft`; mark ready for review only after explicit human
+  instruction.
 - Use rebase-and-merge, never squash or merge commits. Fix commit messages
   before merging, because the task commit lands on `main` verbatim.
 - Respect user or other-agent changes in the worktree. Do not revert changes
@@ -72,6 +75,10 @@ prefer moving future shared guidance into `docs/`.
   upgrade note, and `docs/`/`chore/` do not bump unless a public API changed.
   The root platform version tracks roadmap milestones; public `@sovereignfs/sdk`
   and `@sovereignfs/ui` follow their own compatibility constraints.
+- Version-bump commit subjects and release tags use the same version identifier:
+  root `package.json` uses `vX.Y.Z`; packages use `<package-slug>-vX.Y.Z`
+  (for example `ui-vX.Y.Z`, `docs-vX.Y.Z`, `sdk-vX.Y.Z`). Apply the same
+  `<slug>-vX.Y.Z` pattern to other package tags.
 
 ## Commit and PR conventions
 
@@ -91,6 +98,8 @@ prefer moving future shared guidance into `docs/`.
 
 - PR descriptions should summarize what changed and why, cite relevant SRS/RFC
   sections where useful, and include verification output.
+- When asked to create a PR, use the Sovereign PR workflow (`sv-create-pr` when
+  available) and create a draft PR by default.
 - Codex-authored PR bodies end with:
   `🤖 Generated with [Codex](https://developers.openai.com/codex)`
 

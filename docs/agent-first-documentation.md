@@ -38,7 +38,7 @@ The first structural change introduced a layer between the roadmap and the task 
 **A compact roadmap** reduced to a version-indexed table: one row per PR, with a link to the canonical task entry in the relevant epic file. 139 lines instead of 2,412.
 
 ```
-CLAUDE.md                  ← session entry point; ⏳ Next pointer; conventions
+CLAUDE.md                  ← session entry point; conventions
     │
     └─▶ docs/roadmap.md    ← 139-line chronological index
             │
@@ -95,9 +95,9 @@ The workflow refactor addressed context load. The second change addressed contex
 
 After implementation, the current agent ran the full check suite, processed the output, updated two documentation files, bumped versions, and drafted the PR description — sequentially, in the same context window. Raw typecheck output (98 lines in this project, hundreds in larger ones) sat in context while the agent tried to write a coherent PR description. Documentation updates context-switched the agent away from the implementation it was about to summarise.
 
-### Three focused role agents
+### Focused role agents
 
-We introduced three skill files, each a standalone agent brief:
+The workflow uses focused skill files, each a standalone agent brief:
 
 **`/sv-verify`** — reads `CURRENT_TASK.md`, runs `format:check`, `lint`, `typecheck`, `test`, `build`, and optionally docs-parity. Returns a structured pass/fail table, not raw output:
 
@@ -111,9 +111,11 @@ We introduced three skill files, each a standalone agent brief:
 | build        | ✅ PASS  | —                  |
 ```
 
-**`/sv-update-task-docs`** — reads `CURRENT_TASK.md` for metadata, marks the roadmap row ✅, appends a completion entry to `CLAUDE.md`, advances the `⏳ Next` pointer, and deletes `CURRENT_TASK.md`.
+**`/sv-update-task-docs`** — reads `CURRENT_TASK.md` for metadata, marks the roadmap row ✅, updates the matching epic task heading ✅, and deletes `CURRENT_TASK.md`.
 
 **`/sv-security-check`** — conditional on the diff touching sensitive paths (auth, middleware, CSP, cookies, SDK surface). Reviews the diff against a lookup table of hard architectural rules: redirect codes, CSP construction, cookie clearing patterns, session config invariants. Violations block the PR draft.
+
+**`/sv-create-pr`** — creates the GitHub pull request as a draft with `gh pr create --draft` when the developer asks for a PR. Ready-for-review remains an explicit human action.
 
 ### The parallel execution model
 
@@ -122,10 +124,11 @@ We introduced three skill files, each a standalone agent brief:
 ```
 [parallel]
   /sv-verify       — checks pass/fail (30–60s)
-  /sv-update-task-docs— roadmap + CLAUDE.md + cleanup (5–10s)
+  /sv-update-task-docs— roadmap + epic heading + cleanup (5–10s)
 [sequential]
   /sv-security-check— only if diff touches sensitive paths
-  main agent       — version bumps + PR draft
+  main agent       — version bumps + PR description
+  /sv-create-pr    — draft PR when requested
 ```
 
 Each role agent is briefed with `CURRENT_TASK.md` (~50 lines) plus its skill file. It needs nothing else. Before this refactor, a sub-agent needed a full project orientation pass to know what it was reviewing.
@@ -172,7 +175,7 @@ The refactors are complementary: Refactor 1 addressed session-start cost (the mo
 
 Working through this, a few principles emerged that feel applicable beyond this specific project:
 
-**Load context on demand, not upfront.** The biggest gain came from not loading the entire roadmap to answer "what do I do next?" A two-pointer system — `CLAUDE.md` holds the next-task pointer, `CURRENT_TASK.md` holds the current-task detail — means an agent loads ~450 lines instead of ~2,800 to orient itself.
+**Load context on demand, not upfront.** The biggest gain came from not loading the entire roadmap to answer "what do I do next?" The human assigns the task, and `CURRENT_TASK.md` holds the current-task detail — so an agent loads the relevant task context instead of the whole roadmap to orient itself.
 
 **Separate chronological index from canonical spec.** The roadmap is now a version-ordered index that points to epic files. The epic files are the spec. These are different concerns with different consumers: the roadmap answers "when did this ship?", the epic answers "what exactly does this task entail?" Conflating them made both worse.
 
@@ -200,7 +203,15 @@ More broadly, the exercise confirmed that documentation architecture matters for
 
 The full implementation lives in the Sovereign repository. The key files are:
 
-- [`docs/epics/`](epics/) — 16 domain epic files with full task detail
-- [`docs/roadmap.md`](roadmap.md) — 139-line version-indexed table
+- [`docs/epics/`](https://github.com/sovereignfs/sovereign/tree/main/docs/epics) — 16 domain epic files with full task detail
+- [`docs/roadmap.md`](https://github.com/sovereignfs/sovereign/blob/main/docs/roadmap.md) — 139-line version-indexed table
 - [`docs/development-workflow.md`](development-workflow.md) — workflow reference for agents and contributors
-- [`.claude/commands/`](../.claude/commands/) — task lifecycle skills (`sv-task-start`, `sv-task-complete`, `sv-verify`, `sv-update-task-docs`, `sv-security-check`)
+- [`.claude/commands/`](https://github.com/sovereignfs/sovereign/tree/main/.claude/commands) and [`.agents/skills/`](https://github.com/sovereignfs/sovereign/tree/main/.agents/skills) — task lifecycle commands and skills
+
+---
+
+Co-authored by Claude Code + Codex with humans.
+
+Created: 2026-06-23
+
+Last updated: 2026-06-30

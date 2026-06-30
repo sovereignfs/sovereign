@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Sovereign Create PR'
+  short_description: 'Create a Sovereign GitHub draft PR.'
+  default_prompt: 'Use sv-create-pr to create a draft PR for the current Sovereign branch.'

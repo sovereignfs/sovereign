@@ -8,9 +8,9 @@ Finish a Sovereign task and prepare it for PR. Run this when implementation is d
 
 Launch two sub-agents **simultaneously** (single message, two Agent tool calls):
 
-**Agent A — Verifier:** Brief it with the full contents of `.claude/commands/sv-verify.md` plus: "The repo is at `/Users/nemo/Dev/kasunben/sovereignfs/sovereign`. Read `CURRENT_TASK.md` for task context, run all checks, and return only the summary table."
+**Agent A — Verifier:** Brief it with the full contents of `.claude/commands/sv-verify.md` plus: "The repo is at the current working directory. Read `CURRENT_TASK.md` for task context, run all checks, and return only the summary table."
 
-**Agent B — Docs Updater:** Brief it with the full contents of `.claude/commands/sv-update-task-docs.md` plus: "The repo is at `/Users/nemo/Dev/kasunben/sovereignfs/sovereign`. Read `CURRENT_TASK.md`, update `docs/roadmap.md` and `CLAUDE.md`, delete `CURRENT_TASK.md`, and report what changed."
+**Agent B — Docs Updater:** Brief it with the full contents of `.claude/commands/sv-update-task-docs.md` plus: "The repo is at the current working directory. Read `CURRENT_TASK.md`, update `docs/roadmap.md` and the matching epic task heading, delete `CURRENT_TASK.md`, and report what changed."
 
 Wait for both agents to return before continuing.
 
@@ -64,11 +64,18 @@ In the same branch:
 - [ ] Security check passes (if auth/middleware/CSP touched)
 - [ ] Version bumped per semver policy
 - [ ] `docs/roadmap.md` row updated ✅
+- [ ] Epic task heading updated ✅
 - [ ] `CURRENT_TASK.md` deleted
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
 
-### 6. Do not merge
+### 6. Create a draft PR only when requested
+
+If the developer asks to create/open the PR, run `/sv-create-pr`. All
+agent-created PRs must start as GitHub draft PRs via `gh pr create --draft`,
+even when the developer simply says "create the PR".
+
+### 7. Do not merge
 
 Wait for explicit instruction or consent from the user.

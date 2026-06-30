@@ -128,8 +128,11 @@
   padding: 11px 14px;
   font-size: var(--sv-font-size-caption);
   color: var(--sv-color-error-text);
-  background-color: var(--sv-color-error-surface);
-  border: 1px solid var(--sv-color-error-border);
+  /* --sv-color-error-surface is --sv-red-100 (#fef2f2) — nearly invisible on a
+     white card. Step up to --sv-red-200 for a clearly visible pink tint, and
+     match the border to --sv-red-700 so the box reads as a distinct element. */
+  background-color: var(--sv-red-200);
+  border: 1px solid var(--sv-red-700);
   border-radius: var(--sv-radius-md);
   line-height: 1.5;
   margin: 2px 0;

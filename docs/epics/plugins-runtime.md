@@ -8,7 +8,12 @@
 
 ## Overview
 
-This epic owns everything that makes plugins a first-class concept in Sovereign: the typed manifest schema, the generate script that composes plugin routes into the runtime, the `@sovereignfs/sdk` contract that plugin code calls, environment variable namespacing, per-plugin database isolation, compatibility versioning, the plugin registry, and the `sv` CLI. The operator fork model documentation (epic task 3.14) is the only remaining item.
+This epic owns everything that makes plugins a first-class concept in Sovereign:
+the typed manifest schema, the generate script that composes plugin routes into
+the runtime, the `@sovereignfs/sdk` contract that plugin code calls,
+environment variable namespacing, per-plugin database isolation, compatibility
+versioning, the plugin registry, and the `sv` CLI. The remaining planned work
+mostly extends plugin runtime surfaces and hardens the generate/SDK boundaries.
 
 ## Tasks
 
@@ -352,7 +357,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### 📋 3.14 — Operator fork model & upstream sync
+#### ✅ 3.14 — Operator fork model & upstream sync
 
 **Goal:** Publish the operator fork model documentation and add the "Maintaining a fork" section to `docs/self-hosting.md`. This is a documentation-only task — no code, no version bumps.
 
@@ -591,7 +596,7 @@ minor (new optional params on exported functions), `runtime` → patch, `bin/sv`
 
 ---
 
-#### 📋 3.22 — Generate script regression coverage
+#### ✅ 3.22 — Generate script regression coverage
 
 **Goal:** Freeze current plugin composition behavior before decomposing the
 generation path that validates manifests, composes route trees, emits env files,

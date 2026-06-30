@@ -39,7 +39,7 @@ for the full process.
 | [0025](0025-accessibility.md)                    | Accessibility (WCAG 2.1 AA)                              | Accepted             | Yes — Task 0.5.29                                                    |
 | [0026](0026-non-docker-deployment.md)            | Non-Docker production deployment                         | Accepted             | Yes (phased) — Task 0.5.30 (Phase 1) + epic task 0.13 (Phase 2)      |
 | [0027](0027-white-labeling.md)                   | White-labeling (instance identity)                       | Accepted             | Yes (phased) — epic tasks 9.8 + 9.9 + 9.10                           |
-| [0028](0028-operator-fork-model.md)              | Operator fork model & upstream sync                      | Accepted             | Yes — epic task 3.14 (scheduled at 0.9.9)                            |
+| [0028](0028-operator-fork-model.md)              | Operator fork model & upstream sync                      | Accepted             | Yes — epic task 3.14                                                 |
 | [0029](0029-internationalization.md)             | Internationalization / localization                      | Accepted             | Yes — epic tasks 11.1 + 11.2 (scheduled at 0.9.4 + 0.9.5)            |
 | [0030](0030-privacy-first-analytics.md)          | Privacy-first analytics                                  | Accepted             | Yes — epic tasks 6.1 + 6.2 [post-v1]                                 |
 | [0031](0031-email-templates.md)                  | Email template system                                    | Accepted             | Yes — epic task 9.9 (alongside RFC 0027 Phase 2, scheduled at 0.9.6) |
@@ -66,3 +66,5 @@ for the full process.
 | [0052](0052-plugin-portability-hooks.md)         | Plugin portability hooks                                 | Draft                | Yes — epic task 8.8                                                  |
 | [0053](0053-plugin-flow-handoffs.md)             | Plugin flow handoffs                                     | Draft                | Yes — epic task 3.21                                                 |
 | [0054](0054-plugin-scoped-roles-and-grants.md)   | Plugin-scoped roles and grants                           | Draft                | Yes — epic task 1.13                                                 |
+| [0055](0055-sovereign-council.md)                | Sovereign Council — multi-model deliberation workspace   | Draft                | Yes — epic tasks 19.1, 19.2                                          |
+| [0056](0056-sovereign-guide.md)                  | Sovereign Guide — first-run guide platform plugin        | Draft                | No — documentation-first                                             |

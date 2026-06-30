@@ -5,10 +5,11 @@ status: Draft
 date: June 2026
 author: kasunben
 scope: >
-  plugins/harness (new), packages/db, packages/sdk, packages/manifest, runtime,
-  plugins/account, plugins/console, docs; builds on RFC 0002, RFC 0005, RFC 0015,
-  RFC 0018, RFC 0021, RFC 0022, RFC 0035
-incorporated_into_plan: 'No — documentation-first. This RFC specifies the product and architecture direction for an in-tree platform AI harness plugin; scheduling, package versions, and task IDs are deferred.'
+  sovereign-harness plugin (separate first-party repository), packages/db,
+  packages/sdk, packages/manifest, runtime, plugins/account, plugins/console,
+  docs; builds on RFC 0002, RFC 0005, RFC 0015, RFC 0018, RFC 0021, RFC 0022,
+  RFC 0035
+incorporated_into_plan: 'Yes — epic task 18.1'
 ---
 
 # RFC 0040 — Sovereign Harness
@@ -90,10 +91,12 @@ and data flow under the instance's control.
 
 ### 1. Product shape
 
-Harness ships as an in-tree platform plugin with the Sovereign platform code:
+Harness ships as a first-party platform plugin. Its source may live in a
+separate repository, while Sovereign pins and distributes it through first-party
+plugin metadata:
 
 ```text
-plugins/harness/
+sovereign-harness/
 ├── manifest.json
 ├── icon.svg
 ├── package.json
@@ -177,11 +180,12 @@ Suggested manifest shape:
 messages, run traces, model metadata, embeddings, and memory summaries. Keeping
 that store separate makes backup, removal, and future encryption work cleaner.
 
-`type: "platform"` is required because Harness is part of the platform
-distribution. It should be committed and versioned with the platform monorepo,
-composed through the normal plugin generation path, and enabled as a platform
-plugin rather than installed from an external plugin registry. The architectural
-rule still matters: Harness is a platform plugin, not runtime core.
+`type: "platform"` is required because Harness is a first-party, trusted
+platform plugin. That trust class does not require the source to live in the
+core monorepo. Harness may be maintained in a separate first-party repository
+and installed through pinned first-party registry metadata, then composed through
+the normal plugin generation path. The architectural rule still matters: Harness
+is a platform plugin, not runtime core.
 
 ### 2. Core features
 

@@ -414,7 +414,7 @@ The Platform Shell is the runtime that composes plugins into a coherent experien
 
 ---
 
-#### 📋 2.16 — Middleware regression coverage
+#### ✅ 2.16 — Middleware regression coverage
 
 **Goal:** Freeze the current middleware behavior with focused tests before
 refactoring the load-bearing auth, routing, CSP, paywall, and root-plugin paths.
@@ -514,6 +514,44 @@ or making admin changes feel stale.
 - Caching is introduced only after baseline behavior is covered by tests.
 - Admin changes become visible within an explicit and documented window.
 - Auth and entitlement correctness is not weakened.
+
+---
+
+#### 📋 2.19 — Overlay size variants for platform plugins
+
+**Goal:** Let overlay-rendered plugins choose an appropriate dialog width instead
+of forcing every overlay into the current large presentation.
+
+**Deliverables:**
+
+- Treat the existing overlay dialog size as `lg`.
+- Add supported overlay size variants `sm`, `md`, and `lg` for plugins rendered
+  through `shell: "overlay"`.
+- Wire overlay size resolution through the platform shell so Account, Console,
+  and future overlay plugins can request a size without special-casing runtime
+  chrome.
+- Update Account to render as a medium (`md`) overlay by default.
+- Keep Console on the large (`lg`) overlay unless a specific Console view opts
+  into a smaller size.
+- Ensure overlay size behavior is responsive:
+  - desktop uses the selected size token;
+  - mobile remains a full-screen sheet or equivalent mobile-safe presentation.
+- Document the overlay-size contract for plugin authors.
+
+**Dependencies:** Task 2.5 (overlay shell mode), Task 13.1 (Console plugin
+scaffold), Task 14.1 (Account plugin).
+
+**SRS reference:** RFC 0001, PLT-03, PLT-11.
+
+**Review checklist:**
+
+- Account opens in a medium overlay from the shell chrome/avatar entry.
+- Console keeps the current large overlay behavior by default.
+- `sm`, `md`, and `lg` overlays are visually distinct on desktop and do not
+  overflow common viewport widths.
+- Mobile overlay behavior remains usable and does not introduce clipped content.
+- Overlay size is configured through plugin/runtime metadata rather than
+  hardcoded per-route modal wrappers.
 
 ## Related RFCs
 

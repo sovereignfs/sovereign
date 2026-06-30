@@ -151,7 +151,7 @@ once prioritised.
 | Version | Task                                                                  | Status | Epic task                                                                                        |
 | ------- | --------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ |
 | —       | Non-Docker production deployment, Phase 2 — systemd (RFC 0026)        | 📋     | [0.13](epics/infrastructure.md#013--non-docker-production-deployment-phase-2--systemd)           |
-| —       | Operator fork model & upstream sync (RFC 0028)                        | 📋     | [3.14](epics/plugins-runtime.md#314--operator-fork-model--upstream-sync)                         |
+| —       | Operator fork model & upstream sync (RFC 0028)                        | ✅     | [3.14](epics/plugins-runtime.md#314--operator-fork-model--upstream-sync)                         |
 | —       | Per-plugin database dialect selection (RFC 0036)                      | 📋     | [3.15](epics/plugins-runtime.md#315--per-plugin-database-dialect-selection-rfc-0036)             |
 | —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035)    | 📋     | [1.8](epics/users-auth.md#18--progressive-user-verification-phase-1--infrastructure-rfc-0035)    |
 | —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035) | 📋     | [1.9](epics/users-auth.md#19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035) |
@@ -177,16 +177,19 @@ once prioritised.
 | —       | Cross-plugin references and dependency discovery (RFC 0051)           | 📋     | [3.20](epics/plugins-runtime.md#320--cross-plugin-references-and-dependency-discovery-rfc-0051)  |
 | —       | Plugin flow handoffs (RFC 0053)                                       | 📋     | [3.21](epics/plugins-runtime.md#321--plugin-flow-handoffs-rfc-0053)                              |
 | —       | Sovereign Harness platform plugin (RFC 0040)                          | 📋     | [18.1](epics/sovereign-harness.md#181--sovereign-harness-platform-plugin-rfc-0040)               |
-| —       | Current-state testing documentation cleanup                           | 📋     | [16.3](epics/docs.md#163--current-state-testing-documentation-cleanup)                           |
-| —       | Middleware regression coverage                                        | 📋     | [2.16](epics/platform-shell.md#216--middleware-regression-coverage)                              |
+| —       | Sovereign Council POC (RFC 0055)                                      | 📋     | [19.1](epics/sovereign-council.md#191--sovereign-council-poc-rfc-0055)                           |
+| —       | Sovereign Council full deliberation workspace                         | 📋     | [19.2](epics/sovereign-council.md#192--sovereign-council-full-deliberation-workspace)            |
+| —       | Current-state testing documentation cleanup                           | ✅     | [16.3](epics/docs.md#163--current-state-testing-documentation-cleanup)                           |
+| —       | Middleware regression coverage                                        | ✅     | [2.16](epics/platform-shell.md#216--middleware-regression-coverage)                              |
 | —       | Middleware decomposition                                              | 📋     | [2.17](epics/platform-shell.md#217--middleware-decomposition)                                    |
-| —       | Generate script regression coverage                                   | 📋     | [3.22](epics/plugins-runtime.md#322--generate-script-regression-coverage)                        |
+| —       | Generate script regression coverage                                   | ✅     | [3.22](epics/plugins-runtime.md#322--generate-script-regression-coverage)                        |
 | —       | Generate script decomposition                                         | 📋     | [3.23](epics/plugins-runtime.md#323--generate-script-decomposition)                              |
 | —       | Account plugin workflow coverage                                      | 📋     | [14.2](epics/plugin-accounts.md#142--account-plugin-workflow-coverage)                           |
 | —       | Console plugin workflow coverage                                      | 📋     | [13.5](epics/plugin-console.md#135--console-plugin-workflow-coverage)                            |
 | —       | Launcher plugin workflow coverage                                     | 📋     | [15.2](epics/plugin-launcher.md#152--launcher-plugin-workflow-coverage)                          |
 | —       | SDK boundary and runtime contract tests                               | 📋     | [3.24](epics/plugins-runtime.md#324--sdk-boundary-and-runtime-contract-tests)                    |
 | —       | Middleware internal fetch caching review                              | 📋     | [2.18](epics/platform-shell.md#218--middleware-internal-fetch-caching-review)                    |
+| —       | Overlay size variants for platform plugins                            | 📋     | [2.19](epics/platform-shell.md#219--overlay-size-variants-for-platform-plugins)                  |
 | —       | Typecheck performance and project references                          | 📋     | [0.14](epics/infrastructure.md#014--typecheck-performance-and-project-references)                |
 | —       | Operational consistency checks                                        | 📋     | [0.15](epics/infrastructure.md#015--operational-consistency-checks)                              |
 | —       | Pre-v1 stabilization gate                                             | 📋     | [0.16](epics/infrastructure.md#016--pre-v1-stabilization-gate)                                   |

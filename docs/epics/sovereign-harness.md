@@ -8,10 +8,12 @@
 
 ## Overview
 
-Sovereign Harness is an in-tree `platform` plugin that gives users an AI assistant
-inside Sovereign. It owns conversation UI, memory, model-provider routing, run
-traces, consent-gated cross-plugin context, and eventually confirmed tool
-execution through plugin tool contracts.
+Sovereign Harness is a first-party `platform` plugin that gives users an AI
+assistant inside Sovereign. Its source may live in a separate first-party
+repository, while Sovereign pins and distributes it through first-party plugin
+metadata. It owns conversation UI, memory, model-provider routing, run traces,
+consent-gated cross-plugin context, and eventually confirmed tool execution
+through plugin tool contracts.
 
 Harness is deliberately implemented as a platform plugin, not as runtime core.
 It uses the same SDK boundaries as other plugins and depends on platform
@@ -22,11 +24,11 @@ tool execution.
 
 #### 📋 18.1 — Sovereign Harness platform plugin (RFC 0040)
 
-**Goal:** Ship Sovereign Harness as an in-tree platform plugin that provides chat, memory, model routing, run traces, and consent-gated plugin context.
+**Goal:** Ship Sovereign Harness as a first-party platform plugin that provides chat, memory, model routing, run traces, and consent-gated plugin context.
 
 **Deliverables:**
 
-- Add `plugins/harness` as a `type: "platform"` plugin shipped with the platform code.
+- Create or pin the separate first-party Harness plugin repository with `type: "platform"` manifest identity.
 - Add conversation workspace, settings, memory review, and run-trace views.
 - Add model provider abstraction for OpenRouter, OpenAI-compatible providers, and local OpenAI-compatible model servers.
 - Use deployment-level provider configuration first; defer per-user BYOK until a secret-vault-backed design is available.

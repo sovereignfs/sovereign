@@ -27,5 +27,6 @@ Full architecture and requirements: [sovereign-proposal-plan-srs.md](../sovereig
 | 16  | [Docs Site & Landing Page](docs.md)           | ⏳ In Progress | VitePress site from docs/ + project landing page at sovereignfs.github.io           |
 | 17  | [Desktop App Shell](desktop.md)               | 📋 Planned     | Tauri shell app loading a self-hosted instance — macOS-first                        |
 | 18  | [Sovereign Harness](sovereign-harness.md)     | 📋 Planned     | Platform-shipped AI assistant and orchestration layer                               |
+| 19  | [Sovereign Council](sovereign-council.md)     | 📋 Planned     | Multi-model deliberation, brainstorming, and report generation                      |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned_

@@ -13,7 +13,10 @@ test.describe('Platform shell navigation — golden paths', () => {
 
   test('brand link returns to / from any page', async ({ adminPage: page }) => {
     await page.goto('/launcher');
-    await page.click('a[aria-label="Sovereign home"]');
+    await Promise.all([
+      page.waitForURL('http://localhost:3000/'),
+      page.getByRole('link', { name: 'Sovereign home' }).click(),
+    ]);
     await expect(page).toHaveURL('http://localhost:3000/');
   });
 

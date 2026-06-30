@@ -201,7 +201,7 @@ export function InstanceForm({ initialValues }: { initialValues: InstanceValues 
   const [state, action, pending] = useActionState(updateInstanceAction, null);
   const [primaryColor, setPrimaryColor] = useState(initialValues.instancePrimary ?? '');
 
-  const swatchValue = primaryColor.match(/^#[0-9a-fA-F]{6}$/) ? primaryColor : '#3b82f6';
+  const swatchValue = primaryColor.match(/^#[0-9a-fA-F]{6}$/) ? primaryColor : '#18181b';
 
   return (
     <form action={action} className={styles.settingsForm}>
@@ -239,7 +239,7 @@ export function InstanceForm({ initialValues }: { initialValues: InstanceValues 
             name="instancePrimary"
             type="text"
             pattern="^#[0-9a-fA-F]{6}$"
-            placeholder="#3b82f6"
+            placeholder="#18181b"
             value={primaryColor}
             onChange={(e) => setPrimaryColor(e.target.value)}
           />

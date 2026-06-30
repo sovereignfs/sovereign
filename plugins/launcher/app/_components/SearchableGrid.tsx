@@ -18,11 +18,9 @@ export function SearchableGrid({ plugins, total }: { plugins: PluginTileData[]; 
 
   return (
     <>
-      <div className={styles.titleRow}>
-        <div>
-          <h1 className={styles.title}>Home</h1>
-          <p className={styles.subtitle}>Your installed apps and tools.</p>
-        </div>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Home</h1>
+        <p className={styles.subtitle}>Your installed apps and tools.</p>
         <label className={styles.searchWrap} aria-label="Search apps">
           <svg className={styles.searchIcon} viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5" />

@@ -41,11 +41,9 @@ export default async function LauncherPage() {
   if (plugins.length === 0) {
     return (
       <div className={styles.launcher}>
-        <div className={styles.titleRow}>
-          <div>
-            <h1 className={styles.title}>Home</h1>
-            <p className={styles.subtitle}>Your installed apps and tools.</p>
-          </div>
+        <div className={styles.header}>
+          <h1 className={styles.title}>Home</h1>
+          <p className={styles.subtitle}>Your installed apps and tools.</p>
         </div>
         <div className={styles.empty}>
           <p className={styles.emptyTitle}>No plugins installed yet</p>

@@ -32,6 +32,14 @@
     display: none;
   }
 
+  /* Collapse the account flex gap on mobile so the space below the tab strip
+     matches the space above it (which is only the tab's own padding-top ≈ 8px).
+     The default gap: space-6 (24px) plus the header's margin-bottom (8px) gave
+     42px below vs 8px above — visually unbalanced. */
+  .account {
+    gap: 0;
+  }
+
   /* Stick the tab strip so the active section is always visible while scrolling. */
   .header {
     position: sticky;
@@ -51,6 +59,7 @@
     -webkit-overflow-scrolling: touch;
     /* Fade the right edge to hint at more tabs */
     mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
+    overscroll-behavior-x: none;
   }
 
   .tabs::-webkit-scrollbar {

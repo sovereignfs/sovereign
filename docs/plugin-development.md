@@ -986,6 +986,34 @@ Never edit the composed copies under
 `runtime/app/(platform)/(plugins)/` — they are generated and git-ignored. Your
 `plugins/<id>/` directory is the source of truth.
 
+### Developing a sovereign plugin inside the platform monorepo
+
+If you are building a `type: sovereign` plugin — one that lives in its own
+repository but you want to test against a local platform checkout before
+publishing — clone it under `plugins/` with a `.local` suffix:
+
+```bash
+git clone git@github.com:yourorg/your-plugin.git plugins/your-plugin.local
+```
+
+The `.local` suffix is the project convention for this pattern. It signals to
+other contributors that the directory is not part of this repository:
+
+- **git** — `plugins/<name>.local` is covered by the root `.gitignore`'s
+  generic `plugins/*/` catch-all and is never tracked or committed here.
+- **pnpm** — it is a full workspace member, so `pnpm dev` resolves its
+  dependencies and serves its routes live at the plugin's `routePrefix`,
+  exactly like a first-party plugin. No symlinks, no separate install step.
+- **pre-commit hook** — `scripts/validate-plugin-boundary.ts` runs on every
+  commit and automatically removes `pnpm-lock.yaml` and
+  `runtime/generated/registry.ts` from the staged set if they contain entries
+  for an untracked plugin directory — your on-disk files are left untouched.
+  You never need to clean up manually before committing unrelated platform work.
+
+The plugin's own source files stay in their own git history; only the
+platform's generated outputs drift locally, and the pre-commit hook handles
+those silently.
+
 ## Accessibility
 
 Sovereign targets **WCAG 2.1 AA** on all platform-owned UI, and plugin developers are expected to ship accessible plugins. The `eslint-plugin-jsx-a11y` recommended ruleset is enforced across the entire monorepo — `pnpm lint` will catch common violations at build time.

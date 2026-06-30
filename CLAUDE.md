@@ -102,8 +102,8 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.10.8`**
-  (phases 0.3–0.9 tasks complete, patches .6–.10 from production hotfixes, .1–.2 from docs tasks 16.1–16.2, .3–.8 from iOS PWA stability patches and Docker/logout/sidebar fixes). The
+  to `1.0.0` marks the public release.** The current version is **`0.10.9`**
+  (phases 0.3–0.9 tasks complete, patches .6–.10 from production hotfixes, .1–.2 from docs tasks 16.1–16.2, .3–.9 from iOS PWA stability patches, Docker/logout/sidebar fixes, and mobile overscroll/viewport/layout fixes). The
   downgrade guard, plugin compatibility gates (RFC 0024), and `/api/admin/health`
   all read this value; see `docs/upgrade.md` for the runtime version map and
   v1.0.0 release checklist.
@@ -452,7 +452,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 ## Status
 
-Current platform version: **`0.10.8`**. All roadmap tasks through slot `0.10.2` are complete; patches `.3`–`.8` are hotfixes.
+Current platform version: **`0.10.9`**. All roadmap tasks through slot `0.10.2` are complete; patches `.3`–`.9` are hotfixes.
 
 For the full task history and current roadmap position, see:
 

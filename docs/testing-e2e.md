@@ -46,9 +46,12 @@ pnpm exec playwright show-trace test-results/<test-name>/trace.zip
 
 ## CI
 
-The `e2e.yml` workflow runs on every push to `main` that touches source code (`apps/**`,
-`packages/**`, `plugins/**`, `runtime/**`, `scripts/**`, `bin/**`, `__tests__/e2e/**`,
-`playwright.config.ts`, `package.json`, `pnpm-lock.yaml`). Docs-only merges do not trigger it.
+The `e2e.yml` workflow is present but intentionally disabled while hosted E2E is deferred.
+Its source-path filter, setup, and artifact upload steps are kept ready for a future CI gate,
+but the job currently has `if: false`.
+
+Run `pnpm test:e2e` manually before pushing changes that touch browser-facing flows, auth,
+middleware, platform plugins, or the Playwright harness.
 
 **Required GitHub secrets:**
 
@@ -66,15 +69,16 @@ retention) — download and open `index.html` to view traces.
 
 ## What is covered
 
-| Spec                 | Tests  | Description                                                      |
-| -------------------- | ------ | ---------------------------------------------------------------- |
-| `auth.spec.ts`       | 4      | Unauthenticated redirect, login, wrong password, logout          |
-| `launcher.spec.ts`   | 3      | Plugin grid visible, tile click navigates, chrome plugins absent |
-| `account.spec.ts`    | 3      | Profile page renders, display name update, theme toggle          |
-| `console.spec.ts`    | 4      | Admin access, user 403, plugin list, user list                   |
-| `navigation.spec.ts` | 3      | Root rewrite, brand link, avatar menu keyboard                   |
-| `paywall.spec.ts`    | 3      | Paywalled redirect, tier display, token import + access          |
-| **Total**            | **20** |                                                                  |
+| Spec                     | Tests  | Description                                                         |
+| ------------------------ | ------ | ------------------------------------------------------------------- |
+| `auth.spec.ts`           | 4      | Unauthenticated redirect, login, wrong password, logout             |
+| `launcher.spec.ts`       | 3      | Plugin grid visible, tile click navigates, chrome plugins absent    |
+| `account.spec.ts`        | 3      | Profile page renders, display name update, theme toggle             |
+| `console.spec.ts`        | 4      | Admin access, user 403, plugin list, user list                      |
+| `navigation.spec.ts`     | 3      | Root rewrite, brand link, avatar menu keyboard                      |
+| `password-reset.spec.ts` | 7      | Forgot-password, invalid tokens, reset email link, single-use token |
+| `paywall.spec.ts`        | 3      | Paywalled redirect, tier display, token import + access             |
+| **Total**                | **27** |                                                                     |
 
 ---
 

@@ -1,8 +1,9 @@
 name: E2E
 
-# Run golden-path Playwright tests on every merge to main, but only when
-# source code actually changed — docs-only merges (*.md, docs/, registry/)
-# do not need a full browser-test pass.
+# Playwright CI is currently disabled by policy. Keep the workflow definition so
+# the source-path filter, setup, and artifact wiring are ready if the hosted E2E
+# gate is re-enabled later. Run `pnpm test:e2e` manually for browser-facing
+# changes.
 on:
   push:
     branches: [main]
@@ -23,7 +24,7 @@ jobs:
     name: Playwright golden paths
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Temporarily disabled — tests run locally via the pre-push git hook instead.
+    # Hosted E2E is deferred; local manual `pnpm test:e2e` is the current gate.
     if: false
 
     steps:

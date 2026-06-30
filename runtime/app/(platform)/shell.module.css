@@ -199,9 +199,11 @@
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr auto;
     /* Lock the shell to exactly the viewport height so the header and footer
-       stay pinned regardless of content length. The content cell scrolls. */
-    height: 100vh;
-    height: 100dvh;
+       stay pinned regardless of content length. The content cell scrolls.
+       --sv-vh is set by ClientShell via window.visualViewport.height on every
+       resize and visibilitychange — accurate even after iOS PWA resume when
+       100dvh is stale (WebKit caches the dvh value until a scroll fires). */
+    height: var(--sv-vh, 100dvh);
     overflow: hidden;
     /* Footer height: 60px baseline (52px nav min-height + 8px padding) plus any
        safe-area-inset-bottom beyond the 8px baseline (e.g. ~34px on iPhones with
@@ -228,6 +230,10 @@
        clips correctly instead of escaping to the viewport. */
     min-width: 0;
     overflow-x: hidden;
+    /* Disable iOS rubber-band bounce on the main content scroll surface — the
+       same reason it's disabled in Dialog .content. Without this, over-scrolling
+       reveals the white shell background above/below the content area. */
+    overscroll-behavior: none;
   }
 
   .mobileHeader {

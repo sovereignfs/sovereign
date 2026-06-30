@@ -48,11 +48,15 @@
 .content {
   flex: 1 1 auto;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: var(--sv-space-6);
-  /* Prevent iOS scroll-chaining: when the dialog content reaches its top/bottom
-     boundary, stop the gesture from propagating to the document (which would
-     scroll the shell header and footer out of view in standalone PWA mode). */
-  overscroll-behavior: contain;
+  /* Disable elastic overscroll within the dialog: `none` stops both scroll-
+     chaining to the parent and the iOS rubber-band bounce inside the panel.
+     `contain` only prevents chaining — the panel itself still bounces, which
+     reveals white panel-background between the mobileBar and the sticky tab
+     strip on iOS PWA. A dialog is a bounded surface where bounce is a visual
+     bug, not a feature. */
+  overscroll-behavior: none;
 }
 
 /* Fixed sizes. `max-*: 100%` caps to the scrim's content box (viewport minus

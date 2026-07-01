@@ -14,6 +14,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   renameSync,
   rmSync,
@@ -321,9 +322,116 @@ const pluginRemove = defineCommand({
   },
 });
 
+const pluginMigrate = defineCommand({
+  meta: {
+    name: 'migrate',
+    description: 'Apply pending database migrations for plugins (isolated and shared)',
+  },
+  args: {
+    id: {
+      type: 'positional',
+      required: false,
+      description: 'Plugin manifest ID or directory name to migrate (default: all plugins)',
+    },
+  },
+  async run({ args }) {
+    const {
+      findWorkspaceRoot,
+      getPluginDb,
+      getPlatformDb,
+      pluginMigrationsFolder,
+      provisionPluginDb,
+      resolveDialect,
+      runPluginMigrations,
+    } = await import('@sovereignfs/db');
+
+    const root = findWorkspaceRoot();
+    const pluginsRoot = join(root, 'plugins');
+    const { dialect } = resolveDialect(process.env);
+
+    // Scan plugins/ for any plugin that declares a database (isolated or shared)
+    // or has no database field (defaults to shared). Reads manifests directly so
+    // the command works with both installed (plugins/<id>/) and local-dev
+    // (plugins/<name>.local/) directories.
+    type PluginEntry = { dir: string; id: string; database: 'isolated' | 'shared' };
+    const pluginsWithMigrations: PluginEntry[] = [];
+
+    if (existsSync(pluginsRoot)) {
+      for (const entry of readdirSync(pluginsRoot, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        const manifestPath = join(pluginsRoot, entry.name, 'manifest.json');
+        if (!existsSync(manifestPath)) continue;
+        try {
+          const m = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+            id?: string;
+            database?: string;
+          };
+          if (typeof m.id !== 'string') continue;
+          const database = m.database === 'isolated' ? 'isolated' : 'shared';
+          pluginsWithMigrations.push({ dir: entry.name, id: m.id, database });
+        } catch {
+          // ignore unreadable manifests
+        }
+      }
+    }
+
+    const targets = args.id
+      ? pluginsWithMigrations.filter((p) => p.id === args.id || p.dir === args.id)
+      : pluginsWithMigrations;
+
+    if (args.id && targets.length === 0) {
+      consola.error(`No plugin found with ID or directory name "${args.id}".`);
+      process.exit(1);
+    }
+
+    if (targets.length === 0) {
+      consola.info('No plugins with migrations found.');
+      return;
+    }
+
+    let migrated = 0;
+    let failed = 0;
+
+    for (const { dir, id, database } of targets) {
+      const pluginDir = `plugins/${dir}`;
+      const folder = pluginMigrationsFolder(pluginDir, dialect);
+      if (!existsSync(folder)) continue;
+
+      consola.start(`Migrating "${id}" (${database})…`);
+      try {
+        if (database === 'isolated') {
+          await provisionPluginDb(id);
+          const pluginDb = getPluginDb(id);
+          await runPluginMigrations(pluginDb, folder);
+        } else {
+          // PlatformDb is structurally identical to PluginDb ({ dialect, db }).
+          // Cast via unknown: runPluginMigrations only accesses .dialect and .db,
+          // both of which exist on PlatformDb.
+          const pdb = await getPlatformDb();
+          await runPluginMigrations(
+            pdb as unknown as Parameters<typeof runPluginMigrations>[0],
+            folder,
+          );
+        }
+        consola.success(`${id}: up to date.`);
+        migrated++;
+      } catch (err) {
+        consola.error(`${id}: ${(err as Error).message}`);
+        failed++;
+      }
+    }
+
+    if (failed > 0) {
+      consola.error(`${failed} plugin(s) failed to migrate.`);
+      process.exit(1);
+    }
+    consola.success(`${migrated} plugin(s) migrated successfully.`);
+  },
+});
+
 const plugin = defineCommand({
   meta: { name: 'plugin', description: 'Scaffold, add, or remove individual plugins' },
-  subCommands: { new: pluginNew, add: pluginAdd, remove: pluginRemove },
+  subCommands: { new: pluginNew, add: pluginAdd, remove: pluginRemove, migrate: pluginMigrate },
 });
 
 const backup = defineCommand({

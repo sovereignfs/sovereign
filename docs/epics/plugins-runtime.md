@@ -690,6 +690,48 @@ and plugin isolation boundary), Task 3.13 (per-plugin database).
 - SDK host failure modes remain actionable for plugin developers.
 - Isolated database routing has regression coverage.
 
+---
+
+#### 📋 3.25 — Plugin external dependency resolution (RFC 0057)
+
+**Goal:** Automatically hoist a plugin's external npm dependencies into the
+runtime's module scope when the plugin is installed or removed, so plugin
+developers never need to manually edit `runtime/package.json`.
+
+**Deliverables:**
+
+- Add `runtime/generated/plugin-deps.json` — a committed ledger mapping each
+  plugin manifest ID to the external deps it contributed to the runtime.
+- Update `sv plugin add` to read the installed plugin's `package.json`, extract
+  external deps (filtering out `@sovereignfs/*` workspace packages and platform
+  peers already in `runtime/package.json`), write the ledger, merge deps into
+  `runtime/package.json`, and run `pnpm install --filter runtime`.
+- Update `sv plugin remove` to compute the set difference (deps no longer needed
+  by any remaining plugin) and prune them from `runtime/package.json`, then run
+  `pnpm install --filter runtime`.
+- Update `scripts/dev.ts` to sync `.local` plugin deps at dev-startup — detect
+  changes against the ledger, update `runtime/package.json` and re-install if
+  needed (gated on a hash check to avoid triggering install on every boot).
+- Remove the manually-added `@dnd-kit/*` entries from `runtime/package.json`
+  and let the ledger manage them.
+- Update `docs/plugin-development.md` — external deps are declared in the
+  plugin's own `package.json`; no manual platform-side step is needed.
+
+**Dependencies:** Task 3.4 (`sv` CLI core commands), Task 3.13 (per-plugin
+database — establishes the `sv plugin add/remove` lifecycle).
+
+**SRS reference:** 3.5 Plugin system, NFR-05 developer experience.
+
+**Review checklist:**
+
+- `sv plugin add` for a plugin with external deps updates the ledger and
+  installs them without manual intervention.
+- `sv plugin remove` prunes deps not needed by any remaining plugin and leaves
+  shared deps intact.
+- `pnpm dev` self-heals for `.local` plugins when their `package.json` changes.
+- `runtime/package.json` no longer contains manually-added plugin deps.
+- Docs updated: plugin developers declare deps in their own `package.json` only.
+
 ## Related RFCs
 
 - [RFC 0004 — Per-plugin database](../rfcs/0004-per-plugin-database.md)
@@ -707,6 +749,7 @@ and plugin isolation boundary), Task 3.13 (per-plugin database).
 - [RFC 0049 — Plugin external connections](../rfcs/0049-plugin-external-connections.md)
 - [RFC 0051 — Cross-plugin references and dependency discovery](../rfcs/0051-cross-plugin-references.md)
 - [RFC 0053 — Plugin flow handoffs](../rfcs/0053-plugin-flow-handoffs.md)
+- [RFC 0057 — Plugin external dependency resolution](../rfcs/0057-plugin-dep-hoisting.md)
 
 ## Related Docs
 

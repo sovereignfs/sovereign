@@ -98,6 +98,9 @@ bin/sv            the sv CLI
   compatibility guidance.
 - [Troubleshooting](docs/troubleshooting.md) — known dev-server quirks, 404
   patterns, license token issues, and Docker gotchas.
+- [Real-device PWA testing](docs/pwa-real-device-testing.md) — agent-assisted
+  iOS/Android installed-PWA checks, HTTPS tunnels, LAN URL tradeoffs, and device
+  checklist.
 - [Contributing](CONTRIBUTING.md) — development workflow, local verification
   hooks, draft-PR/CI behavior, release tag conventions, and contribution
   expectations.

@@ -22,6 +22,8 @@ Read the relevant shared docs before starting implementation:
 - `docs/architecture-rules.md` — hard architectural rules and rationale.
 - `docs/multi-agent.md` — Claude Code/Codex division of work, commit
   attribution, and the decision log behind these conventions.
+- `docs/pwa-real-device-testing.md` — agent-assisted iOS/Android installed-PWA
+  testing workflow, including HTTPS tunnel, LAN URL, and handoff checklist.
 
 `CLAUDE.md` is the Claude Code adapter. Do not treat it as Codex's instruction
 entry point, and do not update it unless the user explicitly asks. If a shared

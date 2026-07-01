@@ -115,6 +115,13 @@ They are candidates for future expansion:
 | Root plugin switching                       | Admin-only settings change with page-reload verification; deferred                                                |
 | Cross-plugin data sharing                   | Requires two plugins with `sdk.data.provide/consume` registered                                                   |
 
+Browser mobile emulation is not enough for installed-PWA behavior. For iPhone
+or Android PWA checks before deploy, use a production local build through an
+HTTPS tunnel and install from the device browser. See
+[`docs/pwa-real-device-testing.md`](pwa-real-device-testing.md) for the
+human/agent workflow, local network vs HTTPS tunnel tradeoffs, device checklist,
+and iPhone cache reset steps.
+
 ---
 
 ## Adding new tests

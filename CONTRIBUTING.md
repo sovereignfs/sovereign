@@ -165,6 +165,16 @@ These tests drop and recreate their own tables, so point them only at a
 disposable database. CI runs them too — its `test` job starts a Postgres service
 and sets `TEST_DATABASE_URL`, so the parity suites execute on every PR.
 
+### Real-device PWA testing before deploy
+
+Browser mobile emulation is useful for layout checks, but it is not equivalent
+to an installed PWA on iPhone or Android. For PWA-sensitive changes, test a
+production build over HTTPS on a real device before deploying.
+
+Use [`docs/pwa-real-device-testing.md`](docs/pwa-real-device-testing.md) for the
+agent-assisted workflow, local network vs HTTPS tunnel tradeoffs, auth URL
+checks, device checklist, and iPhone cache reset steps.
+
 ---
 
 ## Branching and commits

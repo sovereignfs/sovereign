@@ -188,6 +188,7 @@ once prioritised.
 | —       | Console plugin workflow coverage                                      | 📋     | [13.5](epics/plugin-console.md#135--console-plugin-workflow-coverage)                            |
 | —       | Launcher plugin workflow coverage                                     | 📋     | [15.2](epics/plugin-launcher.md#152--launcher-plugin-workflow-coverage)                          |
 | —       | SDK boundary and runtime contract tests                               | 📋     | [3.24](epics/plugins-runtime.md#324--sdk-boundary-and-runtime-contract-tests)                    |
+| —       | Plugin external dependency resolution (RFC 0057)                      | 📋     | [3.25](epics/plugins-runtime.md#325--plugin-external-dependency-resolution-rfc-0057)             |
 | —       | Middleware internal fetch caching review                              | 📋     | [2.18](epics/platform-shell.md#218--middleware-internal-fetch-caching-review)                    |
 | —       | Overlay size variants for platform plugins                            | 📋     | [2.19](epics/platform-shell.md#219--overlay-size-variants-for-platform-plugins)                  |
 | —       | Typecheck performance and project references                          | 📋     | [0.14](epics/infrastructure.md#014--typecheck-performance-and-project-references)                |

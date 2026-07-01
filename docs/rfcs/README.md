@@ -68,3 +68,4 @@ for the full process.
 | [0054](0054-plugin-scoped-roles-and-grants.md)   | Plugin-scoped roles and grants                           | Draft                | Yes — epic task 1.13                                                 |
 | [0055](0055-sovereign-council.md)                | Sovereign Council — multi-model deliberation workspace   | Draft                | Yes — epic tasks 19.1, 19.2                                          |
 | [0056](0056-sovereign-guide.md)                  | Sovereign Guide — first-run guide platform plugin        | Draft                | No — documentation-first                                             |
+| [0057](0057-plugin-dep-hoisting.md)              | Plugin external dependency resolution                    | Draft                | No — documentation-first                                             |

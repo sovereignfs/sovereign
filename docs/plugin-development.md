@@ -1014,6 +1014,81 @@ The plugin's own source files stay in their own git history; only the
 platform's generated outputs drift locally, and the pre-commit hook handles
 those silently.
 
+#### Choosing a database mode
+
+Set `"database"` in your manifest to one of two values:
+
+| Value        | What it means                                                                                                                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"isolated"` | Plugin owns a dedicated SQLite file / Postgres schema. No risk of table conflicts with the platform or other plugins. **Recommended for all third-party plugins.**                                      |
+| `"shared"`   | Plugin writes into the platform DB. Can join against platform tables (tenants, users, etc.). **For trusted first-party plugins only** — a schema conflict or buggy migration can corrupt platform data. |
+
+Omitting `"database"` is equivalent to `"shared"`.
+
+#### Database setup for local plugins
+
+If your plugin declares a database mode, add migration files before running
+`pnpm dev`. The platform applies pending migrations at server startup — but it
+will error on the first boot if the migrations folder is missing or malformed.
+
+**Required layout** (same for both modes):
+
+```
+plugins/your-plugin.local/
+  manifest.json
+  migrations/
+    sqlite/
+      0000_initial_schema.sql
+      meta/
+        _journal.json    ← Drizzle journal — every migration must be registered here
+```
+
+**`meta/_journal.json` format:**
+
+```json
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1751270400000,
+      "tag": "0000_initial_schema",
+      "breakpoints": true
+    }
+  ]
+}
+```
+
+Each SQL file gets one entry. `tag` is the filename without `.sql`. `when` is a
+Unix millisecond timestamp (any reasonable value; used for display only).
+
+For `isolated` plugins the migration runs against the plugin's own DB file in
+`data/plugins/`. For `shared` plugins it runs against the platform DB
+(`data/sovereign.db`) — table-name prefixing (e.g. `tasks_`, `myapp_`) is
+mandatory to avoid conflicts.
+
+#### Applying migrations without restarting the server
+
+When you add a new migration file, apply it immediately without restarting:
+
+```bash
+# Apply pending migrations for a specific plugin (by manifest ID or dir name)
+pnpm sv plugin migrate fs.sovereign.your-plugin
+
+# Apply pending migrations for all plugins in plugins/
+pnpm sv plugin migrate
+```
+
+The command reads from your plugin's `migrations/sqlite/` folder and updates
+the DB (plugin file for `isolated`, platform DB for `shared`). The running dev
+server picks up the new schema on the next request — no restart needed.
+
+See [`docs/plugin-database.md`](plugin-database.md) for the full migration
+reference: SQL conventions, journal format, Postgres variant, lifecycle, and
+backup.
+
 ## Accessibility
 
 Sovereign targets **WCAG 2.1 AA** on all platform-owned UI, and plugin developers are expected to ship accessible plugins. The `eslint-plugin-jsx-a11y` recommended ruleset is enforced across the entire monorepo — `pnpm lint` will catch common violations at build time.

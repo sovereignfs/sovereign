@@ -4,7 +4,8 @@
  *
  * 1. Apply declared plugin env-var defaults to `process.env` (RFC 0018).
  * 2. Register the SDK host (`sdk.db`, `sdk.mailer`, `sdk.platform`).
- * 3. Run per-plugin migrations for any installed isolated-database plugins (RFC 0004).
+ * 3. Run per-plugin migrations for all installed plugins — isolated (own DB) and
+ *    shared (platform DB) — after platform migrations have already applied (RFC 0004).
  * 4. Check all installed plugins for platform-version compatibility, disable
  *    incompatible ones in the DB, and record reasons for health/admin routes.
  * 5. Initialise the notification broker (RFC 0034).
@@ -19,8 +20,8 @@ export async function register(): Promise<void> {
     const { loadPluginEnv } = await import('./generated/plugin-env');
     loadPluginEnv();
     await import('./src/sdk-host');
-    const { runIsolatedPluginMigrations } = await import('./src/plugin-migrations');
-    await runIsolatedPluginMigrations();
+    const { runAllPluginMigrations } = await import('./src/plugin-migrations');
+    await runAllPluginMigrations();
     const { checkBootCompatibility } = await import('./src/boot-compat');
     await checkBootCompatibility();
 

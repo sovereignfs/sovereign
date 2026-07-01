@@ -1,41 +1,85 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
+  findWorkspaceRoot,
   getPluginDb,
+  getPlatformDb,
   pluginMigrationsFolder,
   provisionPluginDb,
   resolveDialect,
   runPluginMigrations,
+  type PluginDb,
 } from '@sovereignfs/db';
 import { registry } from '../generated/registry';
 
 /**
- * Run per-plugin migrations for all installed isolated-database plugins (RFC 0004).
+ * Run pending schema migrations for all installed plugins (RFC 0004).
  *
- * Called from `instrumentation.ts` register() at Node.js server startup, after
- * the SDK host is registered and before the compatibility check. Errors are logged
- * but do not abort startup — a failed plugin migration should not take the entire
- * platform down; the compatibility check still gates plugin access afterward.
+ * Two database modes are supported:
+ * - `isolated` — plugin owns a dedicated SQLite file / Postgres schema; migrations
+ *   run there and never touch the platform DB.
+ * - `shared` (or omitted) — plugin writes into the platform DB; migrations run
+ *   there after the platform's own migrations have already applied (enforced by
+ *   the call order in instrumentation.ts). Trusted first-party plugins only.
+ *
+ * Plugins with no `migrations/{sqlite,postgres}/` folder are skipped silently.
+ * A failed plugin migration is logged but does not abort startup — the
+ * compatibility check that follows will gate access to the broken plugin.
+ *
+ * Called from `instrumentation.ts` register() at Node.js server startup.
  */
-export async function runIsolatedPluginMigrations(): Promise<void> {
+export async function runAllPluginMigrations(): Promise<void> {
   const { dialect } = resolveDialect(process.env);
 
-  for (const manifest of registry) {
-    if (manifest.database !== 'isolated') continue;
+  // Build a map from manifest id → actual on-disk directory name.
+  // `sv plugin add` names dirs after the manifest id (plugins/<id>/), but local
+  // development dirs may use a different name (e.g. plugins/sovereign-tasks.local/).
+  // Scanning lets both cases resolve correctly without assuming dir === id.
+  const idToDir = buildIdToDirMap();
 
-    // sv plugin add names the dir after the manifest id, so plugins/<id>/ is canonical.
-    const pluginDir = `plugins/${manifest.id}`;
+  for (const manifest of registry) {
+    const isIsolated = manifest.database === 'isolated';
+    const isShared = !manifest.database || manifest.database === 'shared';
+    if (!isIsolated && !isShared) continue;
+
+    const dirName = idToDir.get(manifest.id) ?? manifest.id;
+    const pluginDir = `plugins/${dirName}`;
     const folder = pluginMigrationsFolder(pluginDir, dialect);
     if (!existsSync(folder)) continue;
 
     try {
-      await provisionPluginDb(manifest.id);
-      const pluginDb = getPluginDb(manifest.id);
-      await runPluginMigrations(pluginDb, folder);
+      if (isIsolated) {
+        await provisionPluginDb(manifest.id);
+        const pluginDb = getPluginDb(manifest.id);
+        await runPluginMigrations(pluginDb, folder);
+      } else {
+        // PlatformDb is structurally identical to PluginDb ({ dialect, db }
+        // discriminated union). The cast is safe: runPluginMigrations only
+        // accesses .dialect and .db, both of which exist on PlatformDb.
+        const pdb = await getPlatformDb();
+        await runPluginMigrations(pdb as unknown as PluginDb, folder);
+      }
     } catch (err) {
-      console.error(
-        `[sovereign] Failed to run migrations for isolated plugin "${manifest.id}":`,
-        err,
-      );
+      console.error(`[sovereign] Failed to run migrations for plugin "${manifest.id}":`, err);
     }
   }
+}
+
+function buildIdToDirMap(): Map<string, string> {
+  const map = new Map<string, string>();
+  const pluginsRoot = join(findWorkspaceRoot(), 'plugins');
+  if (!existsSync(pluginsRoot)) return map;
+
+  for (const entry of readdirSync(pluginsRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const manifestPath = join(pluginsRoot, entry.name, 'manifest.json');
+    if (!existsSync(manifestPath)) continue;
+    try {
+      const m = JSON.parse(readFileSync(manifestPath, 'utf8')) as { id?: string };
+      if (typeof m.id === 'string') map.set(m.id, entry.name);
+    } catch {
+      // ignore unreadable manifests — generate-registry.ts will catch them
+    }
+  }
+  return map;
 }

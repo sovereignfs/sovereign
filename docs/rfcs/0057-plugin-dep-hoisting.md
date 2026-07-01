@@ -7,7 +7,7 @@ author: kasunben
 scope: >
   bin/sv.ts, runtime/package.json, runtime/generated/plugin-deps.json (new),
   scripts/dev.ts, docs/plugin-development.md; standalone, no prior RFC dependency
-incorporated_into_plan: 'No — documentation-first. This RFC defines the fix for plugin external dependency resolution; scheduling and task IDs are deferred.'
+incorporated_into_plan: 'Yes — epic task 3.25 (plugins-runtime), non-prioritised roadmap slot.'
 ---
 
 # RFC 0057 — Plugin external dependency resolution

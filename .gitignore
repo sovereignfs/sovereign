@@ -21,6 +21,10 @@ dist/
 # User-uploaded avatars (Account plugin, ACC-03) — runtime data, never committed.
 **/data/avatars/
 
+# Plugin-isolated databases and runtime assets written to data/plugins/ by the
+# plugin DB provisioner — runtime data, never committed.
+**/data/plugins/
+
 # Externally-installed plugins (cloned by scripts/install-plugins.ts) are not
 # committed here — they live in their own repositories. Ignore every plugin
 # directory except the platform plugins that ship in this monorepo.

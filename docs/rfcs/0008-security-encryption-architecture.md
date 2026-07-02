@@ -153,7 +153,7 @@ can restore equality lookup. Field-level keeps the key off the disk that holds
 the ciphertext only if the KEK is sourced from outside that disk — otherwise it
 is defense-in-depth over Tier 2, not protection from the operator.
 
-### Tier 4 — Zero-knowledge / E2EE (charted, aspirational)
+### Tier 4 — Zero-knowledge / E2EE (specified by RFC 0060)
 
 Keys derived from each user's passphrase (Argon2id) on the **client**; data
 encrypted client-side; the server stores **ciphertext only**. This is the only
@@ -168,8 +168,9 @@ a great deal of how Sovereign works today:
 
 It is therefore a **major architectural shift**, realistically **per-plugin
 opt-in**, aligned with the post-v1 **federated-systems ("fs")** direction, and
-**out of v1 scope** (SRS §4.6). This RFC charts it so later work has a target,
-not a v1 commitment.
+**out of v1 scope** (SRS §4.6). RFC 0060 makes this tier concrete as a
+client-side encryption core, with Sovereign Wallet as the first planned
+consumer.
 
 ## Key management (cross-cutting)
 
@@ -261,7 +262,8 @@ doc-only draft.)
    avatar/blob encryption.
 4. **post-v1 — Tier 3 (Task 1.0.1):** implement `sdk.crypto` field-level
    encryption (+ optional blind indexes).
-5. **post-v1 — Tier 4:** zero-knowledge E2EE — per-plugin opt-in, aligned with the
+5. **post-v1 — Tier 4 (RFC 0060):** client-side encryption / zero-knowledge E2EE
+   core — per-plugin opt-in, first consumer Sovereign Wallet, aligned with the
    federation direction.
 
 ## Changelog
@@ -271,3 +273,4 @@ doc-only draft.)
 | 0.1     | Jun 2026 | Initial draft; threat model + tiered encryption roadmap; proposes reserved `sdk.crypto` + `crypto:use`.                                                                                                      |
 | 1.0     | Jun 2026 | Accepted (phased); incorporated into SRS §3.17, §5 (`crypto:use`); Tier 0/1 → Task 0.5.16 (v1), Tiers 2–4 → Task 1.0.1 (post-v1).                                                                            |
 | 1.1     | Jun 2026 | **Tier 0/1 implemented** (Task 0.5.16): static security headers + HSTS (prod) and a strict nonce-based CSP on both apps; Postgres TLS via `sslmode`; new `docs/security.md`. Tiers 2–4 remain in Task 1.0.1. |
+| 1.2     | Jul 2026 | Tier 4 client-side encryption made concrete in RFC 0060; Sovereign Wallet identified as first planned consumer.                                                                                              |

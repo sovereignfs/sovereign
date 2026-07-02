@@ -371,7 +371,7 @@ Task 1.0.03 (Phase 1 — `instance_config` table must exist)
 
 ---
 
-#### 📋 9.11 — Design system component gaps — plugin developer readiness
+#### ✅ 9.11 — Design system component gaps — plugin developer readiness
 
 **Goal:** Close the eight missing `@sovereignfs/ui` components identified in the
 2026-06-27 readiness audit. Plugin developers currently hand-roll these patterns

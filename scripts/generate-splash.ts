@@ -7,7 +7,10 @@
  * match the user sees a blank white flash on launch. This script renders the
  * brand mark (`runtime/public/icons/favicon.svg`) centred on a solid surface
  * colour for every device in `DEVICES`, in both orientations and both light and
- * dark, and emits the matching `<link>` metadata.
+ * dark, and emits the matching `<link>` metadata. The brand mark is a dark
+ * rounded square with a light letter; for the dark theme it is inverted (light
+ * square, dark letter) so the mark reads against the dark surface instead of
+ * dissolving into it.
  *
  * Outputs (both committed):
  *   - PNGs           → runtime/public/icons/splash/apple-splash[-dark]-{w}-{h}.png
@@ -33,6 +36,24 @@ const PUBLIC_HREF_BASE = '/icons/splash';
 const SURFACE = { light: '#ffffff', dark: '#09090b' } as const;
 /** The mark occupies this fraction of the shorter screen edge. */
 const MARK_RATIO = 0.22;
+/**
+ * Mark fills in `favicon.svg`: a near-black rounded square with a white letter.
+ * For the dark theme these are swapped so the mark stays visible against the
+ * dark surface (light square, near-black letter) instead of dissolving into it.
+ */
+const MARK_SQUARE = '#0a0a0a';
+const MARK_LETTER = '#ffffff';
+
+/** Return the mark SVG for a theme — inverted (square/letter swapped) for dark. */
+function themedSvg(svg: Buffer, theme: Theme): Buffer {
+  if (theme === 'light') return svg;
+  const swapped = svg
+    .toString('utf8')
+    .replaceAll(`fill="${MARK_SQUARE}"`, 'fill="__square__"')
+    .replaceAll(`fill="${MARK_LETTER}"`, `fill="${MARK_SQUARE}"`)
+    .replaceAll('fill="__square__"', `fill="${MARK_LETTER}"`);
+  return Buffer.from(swapped);
+}
 
 interface Device {
   /** Portrait CSS width in points (the shorter edge). */
@@ -130,9 +151,9 @@ async function main(): Promise<void> {
       const pw = Math.round((orientation === 'portrait' ? device.w : device.h) * device.dpr);
       const ph = Math.round((orientation === 'portrait' ? device.h : device.w) * device.dpr);
       const markSize = Math.round(Math.min(pw, ph) * MARK_RATIO);
-      const mark = await renderMark(svg, markSize);
 
       for (const theme of Object.keys(SURFACE) as Theme[]) {
+        const mark = await renderMark(themedSvg(svg, theme), markSize);
         const prefix = theme === 'dark' ? 'apple-splash-dark' : 'apple-splash';
         const file = `${prefix}-${String(pw)}-${String(ph)}.png`;
         await sharp({

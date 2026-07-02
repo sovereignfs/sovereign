@@ -60,6 +60,81 @@ pnpm generate   # recomposes all plugin routes
 
 ---
 
+## iOS PWA / mobile layout
+
+Two distinct iOS-specific layout bugs, both surfaced only on real devices
+(installed standalone PWA and/or mobile Safari). They look similar — "empty
+space at the bottom" — but have different causes and fixes.
+
+### Sign-in screens rubber-band / bounce on press-and-drag
+
+**Symptom:** On iOS (Safari or the installed PWA), pressing and dragging a finger
+on the sign-in / register / 2FA screens makes the **whole page bounce** — the
+card slides up under the status bar, a band of empty background appears below,
+then it springs back on release. The content already fits; nothing should
+scroll.
+
+**Cause:** `.page` used `min-height: 100vh` with the **document** (`html`/`body`)
+as the scroller. iOS applies elastic overscroll (rubber-band) to the document
+scroller **even when nothing overflows**, so any drag bounces the page. The
+runtime shell was already hardened against this, but the auth screens — the
+standalone `apps/auth` app and the runtime's own `/login`, `/register`,
+`/login/2fa` (which live outside the `(platform)` shell) — were not.
+
+**Fix:** Stop the document from being the scroller and suppress the bounce:
+
+- Set `overscroll-behavior: none` on `html, body` (and `overflow: hidden` where
+  the whole app is auth-only, e.g. `apps/auth/app/globals.css`). In the runtime,
+  `overscroll-behavior: none` goes in the global `globals.css` — a CSS Module
+  **cannot** carry a purely `:global(html)` rule (it fails the "pure selector"
+  build check), so it can't be scoped inside `login.module.css`.
+- Make `.page` the viewport-sized scroll surface: `height: 100dvh`,
+  `overflow-y: auto`, `overscroll-behavior: none`, and
+  **`align-items: safe center`** so a taller form (register / 2FA) still scrolls
+  from the top instead of being centred with its top clipped above the scroll
+  origin.
+
+### Empty strip below the footer / login card in the installed PWA
+
+**Symptom:** In the **installed standalone PWA**, a strip of the page background
+shows **below the bottom nav** on Home (and below the login card after logout).
+It's **intermittent** — the same screen sometimes renders correctly and
+sometimes with the strip, depending on the launch.
+
+**Cause:** iOS standalone PWAs intermittently report the viewport
+**~status-bar height short at launch/resume** — e.g. `793` instead of the true
+`852` — and the short value appears across `window.visualViewport.height`,
+`window.innerHeight` **and CSS `100dvh` simultaneously**, never self-correcting
+until a reflow. Anything sized to those units (the shell's `height: var(--sv-vh)`,
+the auth `.page`'s `100dvh`) therefore comes up short, exposing the darker
+`<body>` backdrop below it. **`window.screen.height` stays correct** throughout.
+
+Confirmed by an on-device readout: in the bad state `visualViewport.height`,
+`innerHeight` and `100dvh` were all `793` while `screen.height` was `852`; in the
+good state all four were `852`.
+
+**Fix:** Derive the full-screen height from `window.screen.height` — the one
+reliable metric — rather than the viewport units:
+
+- Shared helper `runtime/src/viewport-height.ts` returns `screen.height` **in
+  portrait standalone with the keyboard closed**, and falls back to the measured
+  visual viewport everywhere else (browser tabs, where it must sit inside the
+  browser chrome; landscape, where `screen.height` is unreliable; and while the
+  software keyboard is up, where the shrunk height is wanted so fixed footers
+  stay above the keyboard).
+- `ClientShell` pushes it onto `--sv-vh` for the platform shell; a small
+  `ViewportHeightSync` client component does the same for the auth pages (which
+  are outside the shell), and their `.page` consumes `height: var(--sv-vh, 100dvh)`.
+
+**Diagnosing on-device without Web Inspector:** if a USB/Web-Inspector connection
+isn't available, a throwaway fixed-position overlay that prints
+`visualViewport.height` / `innerHeight` / a measured `100dvh` probe /
+`screen.height` / the shell's `offsetHeight` (updated on `resize`,
+`orientationchange` and `visibilitychange`) is enough to read the values straight
+off the phone.
+
+---
+
 ## Docker / production
 
 See [`docs/self-hosting.md`](self-hosting.md) for Docker-specific troubleshooting (volume ownership, `pnpm-workspace.yaml` marker, IPv4 healthcheck, etc.).

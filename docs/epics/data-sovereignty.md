@@ -126,7 +126,7 @@
 
 #### 📋 8.7 — Plugin file storage (RFC 0044)
 
-**Goal:** Implement `sdk.storage` as a plugin-scoped file storage surface for attachments, generated assets, imports, exports, thumbnails, and other plugin-owned binary objects.
+**Goal:** Implement `sdk.storage` as a plugin-scoped file storage surface for attachments, generated assets, imports, exports, thumbnails, and other plugin-owned binary objects, with a documented content-delivery model that keeps CDN/object storage optional and backend-neutral.
 
 **Deliverables:**
 
@@ -134,9 +134,13 @@
 - Add SDK methods for put/get/delete/list or equivalent object operations.
 - Add metadata tables for ownership, plugin ID, user ID, content type, size, and lifecycle state.
 - Add signed/authorized serving routes for plugin-owned files.
+- Define serving classes for private plugin files, explicit public plugin content, and existing build/static assets.
+- Define signed URL cache headers, expiry behavior, and revocation semantics.
+- Document the storage backend tiers: local filesystem default, reverse-proxy cache guidance, future S3-compatible backend, and optional CDN-fronted delivery.
 - Integrate storage with user data export/import and deletion.
 - Define quotas and upload limits.
 - Keep the API backend-neutral so object-store support can be added later.
+- Keep CDN/object-store details invisible to plugin code.
 
 **Dependencies:** Task 8.2 (portability), Task 8.4/1.7 (deletion), Task 8.5 (future encryption).
 
@@ -145,9 +149,12 @@
 **Review checklist:**
 
 - A plugin can store and serve a user-owned file without writing ad hoc paths.
+- Private files are not public by default and are served through authenticated routes or short-lived signed URLs.
+- CDN/reverse-proxy caching cannot extend private-file access beyond signed URL expiry.
 - Storage objects are deleted when user data deletion runs.
 - Export includes storage metadata and file payloads according to the accepted format.
 - Access checks prevent one plugin/user from reading another plugin/user's objects.
+- The docs state that CDN and object storage are operator optimizations, not required dependencies.
 
 ---
 

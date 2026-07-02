@@ -119,6 +119,34 @@ export default async function ExampleMonetizedPage() {
         </dl>
       </section>
 
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Billing and entitlement surfaces</h2>
+        <div className={styles.surfaceGrid}>
+          <div>
+            <p className={styles.surfaceTitle}>Manifest</p>
+            <p className={styles.muted}>
+              The <code className={styles.code}>monetization</code> field declares the recurring
+              model, monthly interval, Basic/Pro tiers, and Ed25519 public key.
+            </p>
+          </div>
+          <div>
+            <p className={styles.surfaceTitle}>Runtime middleware</p>
+            <p className={styles.muted}>
+              The platform checks active entitlements before routing paid plugins. Missing access
+              redirects to the paywall; valid licenses allow this page to render.
+            </p>
+          </div>
+          <div>
+            <p className={styles.surfaceTitle}>SDK billing</p>
+            <p className={styles.muted}>
+              <code className={styles.code}>sdk.billing</code> is the intended in-plugin helper for
+              tier-aware feature gates, but it remains reserved until its backing implementation
+              ships. This example reads the current tier directly for demonstration only.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Developer guide ────────────────────────────────────────────────────── */}
       <section className={styles.devCard}>
         <h2 className={styles.cardTitle}>Developer guide — testing monetization</h2>

@@ -54,7 +54,7 @@ export const registry: SovereignManifest[] = [
     "id": "fs.sovereign.example-api",
     "name": "Example: API",
     "version": "0.1.0",
-    "description": "Reference plugin showing the API provider serve-route pattern. Set apiProvider: true to activate /api/* delegation.",
+    "description": "Reference plugin showing the API provider serve-route pattern for public /api/* delegation.",
     "type": "platform",
     "runtime": "native",
     "routePrefix": "/example-api",
@@ -62,6 +62,7 @@ export const registry: SovereignManifest[] = [
       "auth:session"
     ],
     "shell": "default",
+    "apiProvider": true,
     "icon": "icon.svg",
     "compatibility": {
       "minPlatformVersion": "0.6.0"
@@ -89,6 +90,24 @@ export const registry: SovereignManifest[] = [
         "description": "Access the advanced section of the example plugin.",
         "defaultGrant": "all"
       }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "id": "fs.sovereign.example-minimal",
+    "name": "Example: Minimal",
+    "version": "0.1.0",
+    "description": "Reference plugin demonstrating the chrome-free minimal shell.",
+    "type": "platform",
+    "runtime": "native",
+    "routePrefix": "/example-minimal",
+    "permissions": [
+      "auth:session"
+    ],
+    "shell": "minimal",
+    "icon": "icon.svg",
+    "compatibility": {
+      "minPlatformVersion": "0.6.0"
     }
   },
   {
@@ -133,6 +152,69 @@ export const registry: SovereignManifest[] = [
       "license": {
         "publicKey": "OQETbqoRboorjWYxjfpWCx4780PQ2MWbJDxW-rOxDdQ"
       }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "id": "fs.sovereign.example-overlay-large",
+    "name": "Example: Overlay Large",
+    "version": "0.1.0",
+    "description": "Reference plugin demonstrating the large overlay shell size.",
+    "type": "platform",
+    "runtime": "native",
+    "routePrefix": "/example-overlay-large",
+    "permissions": [
+      "auth:session"
+    ],
+    "shell": "overlay",
+    "shellConfig": {
+      "overlaySize": "lg"
+    },
+    "icon": "icon.svg",
+    "compatibility": {
+      "minPlatformVersion": "0.6.0"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "id": "fs.sovereign.example-overlay-medium",
+    "name": "Example: Overlay Medium",
+    "version": "0.1.0",
+    "description": "Reference plugin demonstrating the medium overlay shell size.",
+    "type": "platform",
+    "runtime": "native",
+    "routePrefix": "/example-overlay-medium",
+    "permissions": [
+      "auth:session"
+    ],
+    "shell": "overlay",
+    "shellConfig": {
+      "overlaySize": "md"
+    },
+    "icon": "icon.svg",
+    "compatibility": {
+      "minPlatformVersion": "0.6.0"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "id": "fs.sovereign.example-overlay-small",
+    "name": "Example: Overlay Small",
+    "version": "0.1.0",
+    "description": "Reference plugin demonstrating the small overlay shell size.",
+    "type": "platform",
+    "runtime": "native",
+    "routePrefix": "/example-overlay-small",
+    "permissions": [
+      "auth:session"
+    ],
+    "shell": "overlay",
+    "shellConfig": {
+      "overlaySize": "sm"
+    },
+    "icon": "icon.svg",
+    "compatibility": {
+      "minPlatformVersion": "0.6.0"
     }
   },
   {

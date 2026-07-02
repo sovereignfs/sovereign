@@ -8,10 +8,10 @@ export default async function ExampleApiPage() {
     <div className={styles.page}>
       <h1 className={styles.title}>Example: API Provider</h1>
       <p className={styles.lead}>
-        This plugin demonstrates the API provider pattern (PLT-16). To activate{' '}
-        <code className={styles.code}>/api/*</code> delegation, add{' '}
-        <code className={styles.code}>&quot;apiProvider&quot;: true</code> to{' '}
-        <code className={styles.code}>manifest.json</code>.
+        This plugin demonstrates the API provider pattern (PLT-16). Its manifest declares{' '}
+        <code className={styles.code}>&quot;apiProvider&quot;: true</code>, so public{' '}
+        <code className={styles.code}>/api/*</code> requests are delegated to this plugin before the
+        platform session gate.
       </p>
 
       <section className={styles.card}>
@@ -39,6 +39,31 @@ export default async function ExampleApiPage() {
             request.
           </li>
         </ol>
+      </section>
+
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Try the delegated routes</h2>
+        <div className={styles.examples}>
+          <div>
+            <p className={styles.exampleTitle}>GET status</p>
+            <pre className={styles.block}>{`curl http://localhost:3000/api/demo/status`}</pre>
+          </div>
+          <div>
+            <p className={styles.exampleTitle}>POST echo</p>
+            <pre className={styles.block}>{`curl -X POST http://localhost:3000/api/demo/echo \\
+  -H 'Content-Type: application/json' \\
+  -H 'Authorization: Bearer demo-key' \\
+  -d '{"title":"Hello from Sovereign"}'`}</pre>
+          </div>
+          <div>
+            <p className={styles.exampleTitle}>Structured error</p>
+            <pre className={styles.block}>{`curl -X POST http://localhost:3000/api/demo/echo`}</pre>
+          </div>
+        </div>
+        <p className={styles.note}>
+          The bearer header is optional in this example. Real API-provider plugins should verify
+          their own API keys, signatures, or webhook secrets inside the delegated route.
+        </p>
       </section>
 
       {session && (

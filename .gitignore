@@ -34,7 +34,11 @@ dist/
 !/plugins/launcher/
 !/plugins/example-basic/
 !/plugins/example-api/
+!/plugins/example-minimal/
 !/plugins/example-monetized/
+!/plugins/example-overlay-large/
+!/plugins/example-overlay-medium/
+!/plugins/example-overlay-small/
 
 # PWA service worker + Workbox bundles, generated into runtime/public by
 # @ducanh2912/next-pwa at build time. Never committed (the manifest + icons are).

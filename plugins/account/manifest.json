@@ -9,7 +9,7 @@
   "routePrefix": "/account",
   "shell": "overlay",
   "shellConfig": {
-    "overlaySize": "md"
+    "overlaySize": "lg"
   },
   "icon": "icon.svg",
   "permissions": ["auth:session", "db:readWrite"],

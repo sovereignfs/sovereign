@@ -127,6 +127,7 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 | —       | Current-state testing documentation cleanup                               | ✅     | [16.3](epics/docs.md#163--current-state-testing-documentation-cleanup)                                                     |
 | —       | Middleware regression coverage                                            | ✅     | [2.16](epics/platform-shell.md#216--middleware-regression-coverage)                                                        |
 | —       | Generate script regression coverage                                       | ✅     | [3.22](epics/plugins-runtime.md#322--generate-script-regression-coverage)                                                  |
+| —       | Overlay size variants for platform plugins                                | ✅     | [2.19](epics/platform-shell.md#219--overlay-size-variants-for-platform-plugins)                                            |
 | 0.11.0  | Internationalization, Phase 1 — Infrastructure (RFC 0029)                 | 📋     | [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029)                                           |
 | 0.12.0  | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)        | 📋     | [11.2](epics/i18n.md#112--internationalization-phase-2--platform-shell-adoption-rfc-0029)                                  |
 | 0.13.0  | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](epics/design-system.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
@@ -194,7 +195,6 @@ once prioritised.
 | —       | SDK boundary and runtime contract tests                               | 📋     | [3.24](epics/plugins-runtime.md#324--sdk-boundary-and-runtime-contract-tests)                    |
 | —       | Plugin external dependency resolution (RFC 0057)                      | 📋     | [3.25](epics/plugins-runtime.md#325--plugin-external-dependency-resolution-rfc-0057)             |
 | —       | Middleware internal fetch caching review                              | 📋     | [2.18](epics/platform-shell.md#218--middleware-internal-fetch-caching-review)                    |
-| —       | Overlay size variants for platform plugins                            | 📋     | [2.19](epics/platform-shell.md#219--overlay-size-variants-for-platform-plugins)                  |
 | —       | Typecheck performance and project references                          | 📋     | [0.14](epics/infrastructure.md#014--typecheck-performance-and-project-references)                |
 | —       | Operational consistency checks                                        | 📋     | [0.15](epics/infrastructure.md#015--operational-consistency-checks)                              |
 | —       | Pre-v1 stabilization gate                                             | 📋     | [0.16](epics/infrastructure.md#016--pre-v1-stabilization-gate)                                   |

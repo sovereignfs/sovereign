@@ -162,6 +162,7 @@ once prioritised.
 | —       | Desktop: auto-updater (RFC 0038)                                      | 📋     | [17.5](epics/desktop.md#175--auto-updater)                                                       |
 | —       | Desktop: Mac App Store distribution (RFC 0038)                        | 📋     | [17.6](epics/desktop.md#176--mac-app-store-distribution)                                         |
 | —       | Design system stabilization                                           | 📋     | [9.12](epics/design-system.md#912--design-system-stabilization)                                  |
+| —       | Local visual regression testing (RFC 0059)                            | 📋     | [9.14](epics/design-system.md#914--local-visual-regression-testing-rfc-0059)                     |
 | —       | Messages and notification detail (RFC 0048)                           | 📋     | [4.4](epics/notification-center.md#44--messages-and-notification-detail-rfc-0048)                |
 | —       | User directory and member selection SDK (RFC 0041)                    | 📋     | [1.12](epics/users-auth.md#112--user-directory-and-member-selection-sdk-rfc-0041)                |
 | —       | Plugin-scoped roles and grants (RFC 0054)                             | 📋     | [1.13](epics/users-auth.md#113--plugin-scoped-roles-and-grants-rfc-0054)                         |

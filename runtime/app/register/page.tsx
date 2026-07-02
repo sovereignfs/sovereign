@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { readServerSession } from '@/src/server-session';
 import { RegisterForm } from './register-form';
 
 const AUTH_PUBLIC_URL =
@@ -12,6 +13,10 @@ export default async function RegisterPage({
   searchParams: Promise<{ token?: string }>;
 }) {
   const { token } = await searchParams;
+
+  // Already signed in? Send them to the app rather than showing the form.
+  // (Skipped for invite-token links, handled below.) See readServerSession.
+  if (!token && (await readServerSession())) redirect('/');
 
   // Invite-token registration still goes through the auth server — it needs
   // direct DB access to validate and consume the token. This redirect is

@@ -77,13 +77,13 @@
 
 #### 📋 8.5 — Encryption at rest & field-level, Tier 2–4 (RFC 0008)
 
-**Goal:** The deferred, crypto-heavy tiers of RFC 0008 / SRS §3.17 — shipped **after v1**. Tier 2 (at-rest encryption + key management), Tier 3 (field-level via `sdk.crypto`), and the charting of Tier 4 (zero-knowledge E2EE). The reserved `sdk.crypto` surface + `crypto:use` permission land as `NotImplementedError` stubs first (after RFC 0005's stubs).
+**Goal:** The deferred, crypto-heavy tiers of RFC 0008 / SRS §3.17 — shipped **after v1**. Tier 2 (at-rest encryption + key management), Tier 3 (field-level via `sdk.crypto`), and the handoff to Tier 4 client-side encryption in RFC 0060. The reserved `sdk.crypto` surface + `crypto:use` permission land as `NotImplementedError` stubs first (after RFC 0005's stubs).
 
 **Deliverables:**
 
 - Tier 2: local-keyfile envelope key management (master KEK → wrapped DEKs; fail-fast when enabled); SQLCipher DB encryption (`better-sqlite3-multiple-ciphers`); encrypted backups (amends Task 0.5.13) + encrypted export bundles (amends Task 0.5.14); avatar/blob encryption
 - Tier 3: `sdk.crypto` field-level encrypt/decrypt (per-user DEK) + `crypto:use` enforcement; optional blind indexes
-- Tier 4: zero-knowledge E2EE remains charted (per-plugin opt-in, aligned with the federation direction) — not built
+- Tier 4: zero-knowledge/client-side encryption is tracked separately in Task 8.9 / RFC 0060 (per-plugin opt-in, first consumer Sovereign Wallet)
 - New env vars (`SOVEREIGN_ENCRYPTION`, key/keyfile, backup passphrase) → `.env.example` + `docs/self-hosting.md` + docs-parity; **Docker/native-dep impact** (SQLCipher in image build + `allowBuilds`)
 
 **Dependencies:** Task 0.5.15 (Tier 0–1), Task 0.5.13 (backups), Task 0.5.14 (exports)
@@ -178,6 +178,46 @@
 
 ---
 
+#### 📋 8.9 — Client-side encryption core (RFC 0060)
+
+**Goal:** Make RFC 0008 Tier 4 concrete by adding a core client-side encryption
+capability that lets approved plugins store user data the runtime and operator
+cannot decrypt.
+
+**Deliverables:**
+
+- Define and implement a client-side encryption SDK surface distinct from
+  server-side `sdk.crypto.encryptField()`.
+- Add encrypted profile metadata tables for client master key wrappers, recovery
+  wrappers, and enrolled devices.
+- Add Account setup/unlock/recovery UX with explicit data-loss warnings.
+- Add helpers for browser-side encryption/decryption of binary blobs and JSON
+  metadata.
+- Integrate encrypted binary payloads with plugin storage.
+- Add manifest permission/capability gating for plugins that use client-side
+  encryption.
+- Document recovery, password reset, device enrollment, export/delete, and
+  metadata-minimization rules.
+
+**Dependencies:** RFC 0008, Task 8.7 (plugin file storage), Task 8.8 (plugin
+portability hooks).
+
+**SRS reference:** [RFC 0060](../rfcs/0060-client-side-encryption-core.md)
+
+**Review checklist:**
+
+- Runtime and server-side plugin code never receive plaintext for encrypted
+  objects.
+- Password reset does not silently imply encrypted-data recovery.
+- A user can set up encryption, record a recovery secret, and enroll a second
+  device.
+- Encrypted object metadata separates plaintext routing fields from encrypted
+  human-readable fields.
+- Export/delete flows preserve ciphertext and remove all encrypted user data
+  idempotently.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)
@@ -188,6 +228,7 @@
 - [RFC 0043 — Plugin secret vault](../rfcs/0043-plugin-secret-vault.md)
 - [RFC 0044 — Plugin file storage](../rfcs/0044-plugin-storage.md)
 - [RFC 0052 — Plugin portability hooks](../rfcs/0052-plugin-portability-hooks.md)
+- [RFC 0060 — Client-side encryption core](../rfcs/0060-client-side-encryption-core.md)
 
 ## Related Docs
 
@@ -200,3 +241,4 @@
 - Per-plugin database (epic task 3.13) is also tracked in [Plugins Runtime](plugins-runtime.md).
 - User data deletion (epic task 1.7) is also tracked in [Users & Auth](users-auth.md) (it extends `sdk.portability`).
 - Security hardening Tier 0+1 is tracked in [Platform Shell](platform-shell.md) (no crypto machinery in v1).
+- Sovereign Wallet (Epic 21) is the first planned consumer of client-side encryption.

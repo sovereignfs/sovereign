@@ -14,6 +14,16 @@
     box-shadow 0.15s ease;
 }
 
+/* iOS Safari (tab and standalone PWA) auto-zooms the page whenever a focused
+   input's font-size is below 16px. The viewport intentionally allows pinch-zoom
+   (no maximum-scale — an accessibility requirement), so the only way to stop the
+   focus-zoom is to render the field at >=16px on touch devices. */
+@media (pointer: coarse) {
+  .input {
+    font-size: var(--sv-font-size-md);
+  }
+}
+
 .input::placeholder {
   color: var(--sv-color-text-muted);
 }

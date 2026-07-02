@@ -10,7 +10,7 @@
  * renderable. `security.test.ts` recomputes this from the script and fails on
  * drift — update it (and only it) when the theme script changes.
  */
-export const THEME_SCRIPT_CSP_HASH = "'sha256-qAARbpP9iFUEHhCRNYBBhInXMPdIEEZMEjxq7UOvuf0='";
+export const THEME_SCRIPT_CSP_HASH = "'sha256-miKEsTWC0+mzs7VnYRrY2zh7EVlLv4wnnCScRDUs4pY='";
 
 /** A per-request base64 nonce for the Content-Security-Policy `script-src`. */
 export function generateNonce(): string {

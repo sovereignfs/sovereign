@@ -4,7 +4,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--sv-space-6);
-  background: var(--sv-color-surface-subtle);
+  background: var(--sv-color-surface-sunken);
 }
 
 .card {
@@ -37,7 +37,7 @@
 }
 
 .description {
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
   margin: 0 0 var(--sv-space-4);
   font-size: var(--sv-font-size-sm);
   line-height: 1.5;
@@ -79,12 +79,12 @@
 }
 
 .tierPrice {
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
   font-size: var(--sv-font-size-sm);
 }
 
 .noTiers {
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
   font-size: var(--sv-font-size-sm);
   margin: 0 0 var(--sv-space-4);
 }
@@ -102,7 +102,7 @@
 }
 
 .importTitle {
-  font-size: var(--sv-font-size-base);
+  font-size: var(--sv-font-size-md);
   font-weight: 600;
   color: var(--sv-color-text-primary);
   margin: 0;
@@ -120,7 +120,7 @@
 
 .importHint {
   font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
   margin: 0;
   line-height: 1.5;
 }
@@ -157,7 +157,7 @@
 
 .tokenHint {
   font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-tertiary);
+  color: var(--sv-color-text-subtle);
   margin: 0;
   line-height: 1.5;
 }

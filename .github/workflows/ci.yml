@@ -65,6 +65,18 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm typecheck
 
+  design-tokens:
+    name: Design tokens
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm design:tokens:check
+
   generate-validate:
     name: Generate & validate registry
     runs-on: ubuntu-latest

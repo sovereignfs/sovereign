@@ -192,57 +192,6 @@
   gap: var(--sv-space-1);
 }
 
-.badgeActive,
-.badgeDeactivated,
-.badgeInvited,
-.badgeAdmin,
-.badgeAuditor,
-.badgeUser {
-  display: inline-block;
-  padding: var(--sv-space-1) var(--sv-space-2);
-  border-radius: var(--sv-radius-sm);
-  font-size: var(--sv-font-size-xs);
-  font-weight: var(--sv-font-weight-medium);
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.badgeActive {
-  background-color: color-mix(in srgb, var(--sv-color-accent) 12%, transparent);
-  color: var(--sv-color-accent);
-}
-
-.badgeDeactivated {
-  background-color: var(--sv-color-surface-sunken);
-  color: var(--sv-color-text-muted);
-}
-
-.badgeOwner {
-  background-color: color-mix(in srgb, var(--sv-color-accent) 18%, transparent);
-  color: var(--sv-color-accent);
-  font-weight: var(--sv-font-weight-semibold);
-}
-
-.badgeAdmin {
-  background-color: color-mix(in srgb, var(--sv-color-text-primary) 10%, transparent);
-  color: var(--sv-color-text-primary);
-}
-
-.badgeAuditor {
-  background-color: color-mix(in srgb, var(--sv-color-text-muted) 14%, transparent);
-  color: var(--sv-color-text-secondary);
-}
-
-.badgeUser {
-  background-color: var(--sv-color-surface-sunken);
-  color: var(--sv-color-text-muted);
-}
-
-.badgeInvited {
-  background-color: color-mix(in srgb, var(--sv-color-text-muted) 12%, transparent);
-  color: var(--sv-color-text-muted);
-}
-
 /* ── Role pills ─────────────────────────────────────────────────────────── */
 
 .rolePills {
@@ -444,111 +393,7 @@
   flex-wrap: wrap;
 }
 
-.roleForm {
-  display: flex;
-  align-items: center;
-  gap: var(--sv-space-2);
-}
-
-.roleSelect {
-  padding: 1px var(--sv-space-5) 1px var(--sv-space-2);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-sm);
-  background-color: var(--sv-color-surface);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right var(--sv-space-2) center;
-  appearance: none;
-  color: var(--sv-color-text-primary);
-  font-size: var(--sv-font-size-label);
-  cursor: pointer;
-}
-
-:global([data-theme='dark']) .roleSelect {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23a1a1aa' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
-}
-
-.actionButtonSmall {
-  padding: var(--sv-space-1) var(--sv-space-3);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-sm);
-  background-color: var(--sv-color-surface-raised);
-  color: var(--sv-color-text-primary);
-  font-size: var(--sv-font-size-sm);
-  cursor: pointer;
-}
-
-.actionButtonSmall:hover {
-  border-color: var(--sv-color-border-strong);
-}
-
-.deactivateButton {
-  padding: var(--sv-space-1) var(--sv-space-3);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-sm);
-  background-color: transparent;
-  color: var(--sv-color-text-muted);
-  font-size: var(--sv-font-size-sm);
-  cursor: pointer;
-}
-
-.deactivateButton:hover {
-  color: var(--sv-color-text-primary);
-  border-color: var(--sv-color-border-strong);
-}
-
-.reactivateButton {
-  padding: var(--sv-space-1) var(--sv-space-3);
-  border: 1px solid var(--sv-color-accent);
-  border-radius: var(--sv-radius-sm);
-  background-color: transparent;
-  color: var(--sv-color-accent);
-  font-size: var(--sv-font-size-sm);
-  cursor: pointer;
-}
-
-.reactivateButton:hover {
-  background-color: color-mix(in srgb, var(--sv-color-accent) 8%, transparent);
-}
-
-.resetMfaButton {
-  padding: var(--sv-space-1) var(--sv-space-3);
-  border: 1px solid var(--sv-color-border-strong);
-  border-radius: var(--sv-radius-sm);
-  background-color: transparent;
-  color: var(--sv-color-text-muted);
-  font-size: var(--sv-font-size-sm);
-  cursor: pointer;
-}
-
-.resetMfaButton:hover {
-  color: var(--sv-color-text-primary);
-  border-color: var(--sv-color-text-muted);
-}
-
 /* ── Primary action button ──────────────────────────────────────────────── */
-
-.actionButton {
-  display: inline-block;
-  padding: var(--sv-space-2) var(--sv-space-4);
-  border: none;
-  border-radius: var(--sv-radius-md);
-  background-color: var(--sv-color-accent);
-  color: var(--sv-color-text-on-accent);
-  font-size: var(--sv-font-size-sm);
-  font-weight: var(--sv-font-weight-medium);
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.actionButton:hover {
-  opacity: 0.88;
-}
-
-.actionButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 /* ── Invite form ────────────────────────────────────────────────────────── */
 
@@ -571,28 +416,6 @@
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-medium);
   color: var(--sv-color-text-muted);
-}
-
-.optional {
-  font-weight: normal;
-  color: var(--sv-color-text-muted);
-}
-
-.input {
-  padding: var(--sv-space-2) var(--sv-space-3);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-md);
-  background-color: var(--sv-color-surface);
-  color: var(--sv-color-text-primary);
-  font-size: var(--sv-font-size-sm);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.input:focus {
-  outline: 2px solid var(--sv-color-accent);
-  outline-offset: 1px;
-  border-color: var(--sv-color-accent);
 }
 
 /* ── Feedback ───────────────────────────────────────────────────────────── */
@@ -687,7 +510,7 @@
 .confirmMessage {
   margin: 0;
   font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
 }
 
 .confirmActions {
@@ -944,12 +767,6 @@
   gap: var(--sv-space-2);
 }
 
-.installPanelLabel {
-  font-size: var(--sv-font-size-sm);
-  font-weight: var(--sv-font-weight-medium);
-  color: var(--sv-color-text-primary);
-}
-
 .installPanelCommand {
   display: flex;
   align-items: center;
@@ -1063,7 +880,7 @@
   gap: var(--sv-space-2);
 }
 
-.installPanelInputRow .input {
+.installPanelInputGrow {
   flex: 1;
 }
 
@@ -1151,7 +968,7 @@
 }
 
 .pluginCardName {
-  font-size: var(--sv-font-size-base);
+  font-size: var(--sv-font-size-md);
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);
 }

@@ -167,9 +167,10 @@ once prioritised.
 | —       | Per-plugin database dialect selection (RFC 0036)                      | 📋     | [3.15](epics/plugins-runtime.md#315--per-plugin-database-dialect-selection-rfc-0036)             |
 | —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035)    | 📋     | [1.8](epics/users-auth.md#18--progressive-user-verification-phase-1--infrastructure-rfc-0035)    |
 | —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035) | 📋     | [1.9](epics/users-auth.md#19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035) |
-| —       | Design system stabilization                                           | 📋     | [9.12](epics/design-system.md#912--design-system-stabilization)                                  |
+| —       | Design system stabilization                                           | ✅     | [9.12](epics/design-system.md#912--design-system-stabilization)                                  |
 | —       | Subtle Sovereign attribution (RFC 0027)                               | 📋     | [9.13](epics/design-system.md#913--subtle-sovereign-attribution-rfc-0027)                        |
 | —       | Local visual regression testing (RFC 0059)                            | 📋     | [9.14](epics/design-system.md#914--local-visual-regression-testing-rfc-0059)                     |
+| —       | NavTabs Link support + PageHeader heading level                       | 📋     | [9.15](epics/design-system.md#915--navtabs-link-support--pageheader-heading-level)               |
 | —       | Messages and notification detail (RFC 0048)                           | 📋     | [4.4](epics/notification-center.md#44--messages-and-notification-detail-rfc-0048)                |
 | —       | User directory and member selection SDK (RFC 0041)                    | 📋     | [1.12](epics/users-auth.md#112--user-directory-and-member-selection-sdk-rfc-0041)                |
 | —       | Plugin-scoped roles and grants (RFC 0054)                             | 📋     | [1.13](epics/users-auth.md#113--plugin-scoped-roles-and-grants-rfc-0054)                         |
@@ -195,6 +196,7 @@ once prioritised.
 | —       | Generate script decomposition                                         | 📋     | [3.23](epics/plugins-runtime.md#323--generate-script-decomposition)                              |
 | —       | Account plugin workflow coverage                                      | 📋     | [14.2](epics/plugin-accounts.md#142--account-plugin-workflow-coverage)                           |
 | —       | Console plugin workflow coverage                                      | 📋     | [13.5](epics/plugin-console.md#135--console-plugin-workflow-coverage)                            |
+| —       | Console primitive migration, Phase 2                                  | 📋     | [13.6](epics/plugin-console.md#136--console-primitive-migration-phase-2)                         |
 | —       | Launcher plugin workflow coverage                                     | 📋     | [15.2](epics/plugin-launcher.md#152--launcher-plugin-workflow-coverage)                          |
 | —       | SDK boundary and runtime contract tests                               | 📋     | [3.24](epics/plugins-runtime.md#324--sdk-boundary-and-runtime-contract-tests)                    |
 | —       | Plugin external dependency resolution (RFC 0057)                      | 📋     | [3.25](epics/plugins-runtime.md#325--plugin-external-dependency-resolution-rfc-0057)             |

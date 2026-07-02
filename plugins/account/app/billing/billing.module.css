@@ -47,44 +47,10 @@
   max-width: 480px;
 }
 
-.label {
-  font-size: var(--sv-font-size-sm);
-  font-weight: 500;
-  color: var(--sv-color-text-primary);
-}
-
-.input {
-  background: var(--sv-color-surface-raised);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-md);
-  color: var(--sv-color-text-primary);
-  font-size: var(--sv-font-size-sm);
-  padding: var(--sv-space-2) var(--sv-space-3);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.input:focus {
-  outline: 2px solid var(--sv-color-accent);
-  outline-offset: 1px;
-}
-
-.textarea {
-  background: var(--sv-color-surface-raised);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-md);
-  color: var(--sv-color-text-primary);
-  font-family: monospace;
-  font-size: var(--sv-font-size-sm);
-  padding: var(--sv-space-2) var(--sv-space-3);
-  resize: vertical;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.textarea:focus {
-  outline: 2px solid var(--sv-color-accent);
-  outline-offset: 1px;
+/* License tokens read better in a monospace face — layered on top of the
+   shared Textarea's own border/radius/focus styling. */
+.tokenMono {
+  font-family: var(--sv-font-family-mono);
 }
 
 .error {
@@ -94,7 +60,7 @@
 }
 
 .success {
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
   font-size: var(--sv-font-size-sm);
   margin: 0;
 }

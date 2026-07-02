@@ -1,6 +1,7 @@
 'use client';
 
 import { type DragEvent, type FormEvent, useState } from 'react';
+import { Button } from '@sovereignfs/ui';
 import styles from '../account.module.css';
 
 interface ImportSummary {
@@ -77,12 +78,7 @@ export function PortabilityPanel() {
           plugins — as a ZIP archive you can keep or import elsewhere.
         </p>
         <div style={{ alignSelf: 'flex-start' }}>
-          <button
-            type="button"
-            className={styles.button}
-            onClick={() => void onExport()}
-            disabled={exporting}
-          >
+          <Button type="button" onClick={() => void onExport()} disabled={exporting}>
             {!exporting && (
               <svg
                 width="14"
@@ -102,7 +98,7 @@ export function PortabilityPanel() {
               </svg>
             )}
             {exporting ? 'Preparing…' : 'Export as ZIP'}
-          </button>
+          </Button>
         </div>
         {exportError && <p className={styles.error}>{exportError}</p>}
       </section>
@@ -197,12 +193,12 @@ export function PortabilityPanel() {
                   }}
                 >
                   <strong>{s.pluginId}</strong>{' '}
-                  <span style={{ color: 'var(--sv-color-text-secondary)' }}>{s.status}</span>
+                  <span style={{ color: 'var(--sv-color-text-muted)' }}>{s.status}</span>
                   {s.warning ? (
                     <div
                       style={{
                         fontSize: 'var(--sv-font-size-sm)',
-                        color: 'var(--sv-color-text-secondary)',
+                        color: 'var(--sv-color-text-muted)',
                       }}
                     >
                       {s.warning}

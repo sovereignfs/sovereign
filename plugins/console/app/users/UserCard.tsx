@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { Badge, useToast } from '@sovereignfs/ui';
+import { Badge, Button, useToast } from '@sovereignfs/ui';
 import {
   cancelInviteAction,
   changeRoleAction,
@@ -84,16 +84,18 @@ function ConfirmSheet({
         <h2 className={styles.confirmTitle}>{title}</h2>
         <p className={styles.confirmMessage}>{message}</p>
         <div className={styles.confirmActions}>
-          <button type="button" className={styles.actionButton} onClick={onClose}>
+          <Button type="button" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="button"
-            className={danger ? styles.dangerButton : styles.actionButton}
-            onClick={onConfirm}
-          >
-            {confirmLabel}
-          </button>
+          </Button>
+          {danger ? (
+            <button type="button" className={styles.dangerButton} onClick={onConfirm}>
+              {confirmLabel}
+            </button>
+          ) : (
+            <Button type="button" onClick={onConfirm}>
+              {confirmLabel}
+            </Button>
+          )}
         </div>
       </div>
     </dialog>

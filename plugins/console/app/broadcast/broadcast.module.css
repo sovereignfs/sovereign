@@ -13,42 +13,6 @@
   max-width: 600px;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sv-space-1);
-}
-
-.label {
-  font-size: var(--sv-font-size-sm);
-  font-weight: 500;
-  color: var(--sv-color-text-muted);
-}
-
-.textarea {
-  width: 100%;
-  padding: var(--sv-space-2) var(--sv-space-3);
-  background: var(--sv-color-surface);
-  color: var(--sv-color-text-primary);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-md);
-  font-size: var(--sv-font-size-sm);
-  font-family: inherit;
-  resize: vertical;
-  box-sizing: border-box;
-}
-
-.textarea:focus-visible {
-  outline: 2px solid var(--sv-color-accent);
-  outline-offset: 2px;
-}
-
-.hint {
-  font-size: var(--sv-font-size-xs);
-  color: var(--sv-color-text-tertiary);
-  margin: 0;
-}
-
 .success {
   padding: var(--sv-space-3) var(--sv-space-4);
   background: var(--sv-color-success-surface);

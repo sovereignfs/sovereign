@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Button } from '@sovereignfs/ui';
+import { Button, Checkbox, Select } from '@sovereignfs/ui';
 import styles from '../account.module.css';
 import notifStyles from './notifications.module.css';
 
@@ -211,18 +211,14 @@ export default function NotificationsPage() {
         <ul className={notifStyles.categoryList}>
           {KNOWN_CATEGORIES.map((cat) => (
             <li key={cat.id} className={notifStyles.categoryItem}>
-              <input
+              <Checkbox
                 id={`mute-${cat.id}`}
-                type="checkbox"
                 checked={prefs.mutedCategories.includes(cat.id)}
                 onChange={() => toggleMute(cat.id)}
                 disabled={saving}
-                className={notifStyles.checkbox}
+                label={cat.label}
               />
-              <label htmlFor={`mute-${cat.id}`} className={notifStyles.categoryLabel}>
-                {cat.label}
-                <span className={notifStyles.categoryDesc}> — {cat.description}</span>
-              </label>
+              <p className={notifStyles.categoryDesc}>{cat.description}</p>
             </li>
           ))}
         </ul>
@@ -232,8 +228,8 @@ export default function NotificationsPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Poll interval</h2>
         <p className={styles.help}>How often the browser checks for new notifications.</p>
-        <select
-          className={notifStyles.select}
+        <Select
+          className={notifStyles.selectField}
           value={prefs.pollIntervalSecs}
           onChange={(e) => void save({ pollIntervalSecs: Number(e.target.value) })}
           disabled={saving}
@@ -244,7 +240,7 @@ export default function NotificationsPage() {
               {opt.label}
             </option>
           ))}
-        </select>
+        </Select>
         {saved && (
           <p className={notifStyles.savedMsg} role="status">
             Saved.

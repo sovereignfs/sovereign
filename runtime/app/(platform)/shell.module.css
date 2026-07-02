@@ -169,7 +169,7 @@
 }
 
 .mobileBrandName {
-  font-size: var(--sv-font-size-base);
+  font-size: var(--sv-font-size-md);
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);
 }

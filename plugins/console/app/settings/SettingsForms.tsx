@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useActionState } from 'react';
-import { Input, Select, Button } from '@sovereignfs/ui';
+import { Button, FormField, Input, Select } from '@sovereignfs/ui';
 import styles from '../console.module.css';
 import {
   type ActionResult,
@@ -95,12 +95,9 @@ export function TenantForm({ initialName }: { initialName: string }) {
   const [state, action, pending] = useActionState(updateTenantNameAction, null);
   return (
     <form action={action} className={styles.settingsForm}>
-      <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="tenantName">
-          Instance name
-        </label>
-        <Input id="tenantName" name="tenantName" type="text" required defaultValue={initialName} />
-      </div>
+      <FormField label="Instance name" id="tenantName" required>
+        {(field) => <Input {...field} name="tenantName" type="text" defaultValue={initialName} />}
+      </FormField>
       <Feedback result={state} />
       <Button type="submit" size="sm" disabled={pending}>
         {pending ? 'Saving…' : 'Save name'}
@@ -148,35 +145,34 @@ export function RootPluginForm({
   const [state, action, pending] = useActionState(updateRootPluginAction, null);
   return (
     <form action={action} className={styles.settingsForm}>
-      <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="rootPluginId">
-          Plugin served at <code className={styles.codeInline}>/</code>
-        </label>
-        {candidates.length === 0 ? (
-          <p className={styles.helpText}>
-            No eligible plugins installed yet. The Launcher (the default root) arrives with the next
-            platform task; until then <code className={styles.codeInline}>/</code> shows a
-            placeholder.
-          </p>
-        ) : (
-          <Select
-            id="rootPluginId"
-            name="rootPluginId"
-            defaultValue={currentInstalled ? currentId : undefined}
-          >
-            {!currentInstalled && (
-              <option value="" disabled>
-                {currentId} (not installed)
-              </option>
-            )}
-            {candidates.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} ({p.id})
-              </option>
-            ))}
-          </Select>
-        )}
-      </div>
+      <FormField label="Plugin served at /" id="rootPluginId">
+        {(field) =>
+          candidates.length === 0 ? (
+            <p className={styles.helpText}>
+              No eligible plugins installed yet. The Launcher (the default root) arrives with the
+              next platform task; until then <code className={styles.codeInline}>/</code> shows a
+              placeholder.
+            </p>
+          ) : (
+            <Select
+              {...field}
+              name="rootPluginId"
+              defaultValue={currentInstalled ? currentId : undefined}
+            >
+              {!currentInstalled && (
+                <option value="" disabled>
+                  {currentId} (not installed)
+                </option>
+              )}
+              {candidates.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.id})
+                </option>
+              ))}
+            </Select>
+          )
+        }
+      </FormField>
       <Feedback result={state} />
       {candidates.length > 0 && (
         <Button type="submit" size="sm" disabled={pending}>
@@ -205,118 +201,115 @@ export function InstanceForm({ initialValues }: { initialValues: InstanceValues 
 
   return (
     <form action={action} className={styles.settingsForm}>
-      <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="instanceName">
-          Instance name
-        </label>
-        <Input
-          id="instanceName"
-          name="instanceName"
-          type="text"
-          placeholder="Sovereign"
-          defaultValue={
-            initialValues.instanceName !== 'Sovereign' ? initialValues.instanceName : ''
-          }
-        />
-        <span className={styles.helpText}>Displayed in the shell header and login page.</span>
-      </div>
-
-      <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="instancePrimary">
-          Primary colour
-        </label>
-        <div className={styles.colorRow}>
-          <input
-            type="color"
-            value={swatchValue}
-            onChange={(e) => setPrimaryColor(e.target.value)}
-            className={styles.colorSwatch}
-            aria-label="Colour picker"
-            tabIndex={-1}
-          />
+      <FormField
+        label="Instance name"
+        id="instanceName"
+        hint="Displayed in the shell header and login page."
+      >
+        {(field) => (
           <Input
-            id="instancePrimary"
-            name="instancePrimary"
+            {...field}
+            name="instanceName"
             type="text"
-            pattern="^#[0-9a-fA-F]{6}$"
-            placeholder="#18181b"
-            value={primaryColor}
-            onChange={(e) => setPrimaryColor(e.target.value)}
+            placeholder="Sovereign"
+            defaultValue={
+              initialValues.instanceName !== 'Sovereign' ? initialValues.instanceName : ''
+            }
           />
-        </div>
-        <span className={styles.helpText}>
-          6-digit hex. Sets <code className={styles.codeInline}>--sv-color-accent</code>. Leave
-          blank to use the default.
-        </span>
-      </div>
+        )}
+      </FormField>
 
-      <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="instanceLogo">
-          Logo URL <span className={styles.labelMeta}>(light theme)</span>
-        </label>
-        <Input
-          id="instanceLogo"
-          name="instanceLogo"
-          type="url"
-          placeholder="https://… or /api/instance/logo-light"
-          defaultValue={initialValues.instanceLogo ?? ''}
-        />
-      </div>
+      <FormField
+        label="Primary colour"
+        id="instancePrimary"
+        hint="6-digit hex. Sets --sv-color-accent. Leave blank to use the default."
+      >
+        {(field) => (
+          <div className={styles.colorRow}>
+            <input
+              type="color"
+              value={swatchValue}
+              onChange={(e) => setPrimaryColor(e.target.value)}
+              className={styles.colorSwatch}
+              aria-label="Colour picker"
+              tabIndex={-1}
+            />
+            <Input
+              {...field}
+              name="instancePrimary"
+              type="text"
+              pattern="^#[0-9a-fA-F]{6}$"
+              placeholder="#18181b"
+              value={primaryColor}
+              onChange={(e) => setPrimaryColor(e.target.value)}
+            />
+          </div>
+        )}
+      </FormField>
 
-      <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="instanceLogoDark">
-          Logo URL <span className={styles.labelMeta}>(dark theme)</span>
-        </label>
-        <Input
-          id="instanceLogoDark"
-          name="instanceLogoDark"
-          type="url"
-          placeholder="https://… or /api/instance/logo-dark"
-          defaultValue={initialValues.instanceLogoDark ?? ''}
-        />
-      </div>
+      <FormField label="Logo URL (light theme)" id="instanceLogo">
+        {(field) => (
+          <Input
+            {...field}
+            name="instanceLogo"
+            type="url"
+            placeholder="https://… or /api/instance/logo-light"
+            defaultValue={initialValues.instanceLogo ?? ''}
+          />
+        )}
+      </FormField>
 
-      <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="instanceFavicon">
-          Favicon URL
-        </label>
-        <Input
-          id="instanceFavicon"
-          name="instanceFavicon"
-          type="url"
-          placeholder="https://… or /api/instance/favicon"
-          defaultValue={initialValues.instanceFavicon ?? ''}
-        />
-      </div>
+      <FormField label="Logo URL (dark theme)" id="instanceLogoDark">
+        {(field) => (
+          <Input
+            {...field}
+            name="instanceLogoDark"
+            type="url"
+            placeholder="https://… or /api/instance/logo-dark"
+            defaultValue={initialValues.instanceLogoDark ?? ''}
+          />
+        )}
+      </FormField>
 
-      <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="emailFromName">
-          Email sender name
-        </label>
-        <Input
-          id="emailFromName"
-          name="emailFromName"
-          type="text"
-          placeholder="Sovereign"
-          defaultValue={initialValues.emailFromName ?? ''}
-        />
-      </div>
+      <FormField label="Favicon URL" id="instanceFavicon">
+        {(field) => (
+          <Input
+            {...field}
+            name="instanceFavicon"
+            type="url"
+            placeholder="https://… or /api/instance/favicon"
+            defaultValue={initialValues.instanceFavicon ?? ''}
+          />
+        )}
+      </FormField>
 
-      <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor="emailLogo">
-          Email logo URL
-        </label>
-        <Input
-          id="emailLogo"
-          name="emailLogo"
-          type="url"
-          placeholder="https://…"
-          defaultValue={initialValues.emailLogo ?? ''}
-        />
-        <span className={styles.helpText}>
-          Used in outbound email HTML templates. Must be publicly reachable.
-        </span>
-      </div>
+      <FormField label="Email sender name" id="emailFromName">
+        {(field) => (
+          <Input
+            {...field}
+            name="emailFromName"
+            type="text"
+            placeholder="Sovereign"
+            defaultValue={initialValues.emailFromName ?? ''}
+          />
+        )}
+      </FormField>
+
+      <FormField
+        label="Email logo URL"
+        id="emailLogo"
+        hint="Used in outbound email HTML templates. Must be publicly reachable."
+      >
+        {(field) => (
+          <Input
+            {...field}
+            name="emailLogo"
+            type="url"
+            placeholder="https://…"
+            defaultValue={initialValues.emailLogo ?? ''}
+          />
+        )}
+      </FormField>
 
       <Feedback result={state} />
       <Button type="submit" size="sm" disabled={pending}>

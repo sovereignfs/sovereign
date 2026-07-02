@@ -40,7 +40,7 @@
   background: var(--sv-white);
   transition: transform 0.15s ease;
   left: 2px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--sv-shadow-control);
 }
 
 .on .thumb {

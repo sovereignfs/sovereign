@@ -34,7 +34,7 @@ export default function ModalError({
         justifyContent: 'center',
       }}
     >
-      <p style={{ color: 'var(--sv-color-text-secondary, #71717a)', margin: 0 }}>
+      <p style={{ color: 'var(--sv-color-text-muted, #71717a)', margin: 0 }}>
         This page could not be loaded.
       </p>
       <button
@@ -44,7 +44,7 @@ export default function ModalError({
           border: '1px solid var(--sv-color-border, #d4d4d8)',
           borderRadius: 'var(--sv-radius-sm, 6px)',
           background: 'var(--sv-color-accent, #09090b)',
-          color: 'var(--sv-color-on-accent, #fafafa)',
+          color: 'var(--sv-color-text-on-accent, #fafafa)',
           cursor: 'pointer',
           fontSize: '0.875rem',
         }}

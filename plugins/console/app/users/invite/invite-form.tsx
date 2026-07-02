@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import { Button, FormField, Input } from '@sovereignfs/ui';
 import { sendInviteAction, type InviteState } from '../actions';
 import styles from '../../console.module.css';
 
@@ -20,9 +21,9 @@ export function InviteForm({ onSuccess }: { onSuccess?: () => void }) {
           <code className={styles.token}>{state.token}</code>
         </p>
         {onSuccess && (
-          <button type="button" className={styles.actionButton} onClick={onSuccess}>
+          <Button type="button" onClick={onSuccess}>
             Done
-          </button>
+          </Button>
         )}
       </div>
     );
@@ -32,39 +33,27 @@ export function InviteForm({ onSuccess }: { onSuccess?: () => void }) {
     <form action={formAction} className={styles.inviteForm}>
       {state && !state.success && <p className={styles.errorText}>{state.error}</p>}
 
-      <div className={styles.fieldGroup}>
-        <label htmlFor="invite-email" className={styles.label}>
-          Email address
-        </label>
-        <input
-          id="invite-email"
-          type="email"
-          name="email"
-          required
-          placeholder="user@example.com"
-          className={styles.input}
-          autoComplete="off"
-        />
-      </div>
+      <FormField label="Email address" id="invite-email" required>
+        {(field) => (
+          <Input
+            {...field}
+            type="email"
+            name="email"
+            placeholder="user@example.com"
+            autoComplete="off"
+          />
+        )}
+      </FormField>
 
-      <div className={styles.fieldGroup}>
-        <label htmlFor="invite-expires" className={styles.label}>
-          Expires in (days) <span className={styles.optional}>optional</span>
-        </label>
-        <input
-          id="invite-expires"
-          type="number"
-          name="expiresInDays"
-          min="1"
-          max="365"
-          placeholder="7"
-          className={styles.input}
-        />
-      </div>
+      <FormField label="Expires in (days) (optional)" id="invite-expires">
+        {(field) => (
+          <Input {...field} type="number" name="expiresInDays" min="1" max="365" placeholder="7" />
+        )}
+      </FormField>
 
-      <button type="submit" disabled={pending} className={styles.actionButton}>
+      <Button type="submit" disabled={pending}>
         {pending ? 'Sending…' : 'Send invitation'}
-      </button>
+      </Button>
     </form>
   );
 }

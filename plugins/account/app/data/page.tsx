@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Button, FormField, Input } from '@sovereignfs/ui';
 import { PortabilityPanel } from '../_components/PortabilityPanel';
 import styles from '../account.module.css';
 
@@ -177,28 +178,23 @@ function DeleteAccountSection() {
             All your data will be permanently removed, including your profile, preferences, activity
             history, notifications, and any data held by installed plugins. This cannot be undone.
           </p>
-          <label className={styles.field} htmlFor="delete-account-password">
-            <span className={styles.label}>Confirm with your password</span>
-            <input
-              id="delete-account-password"
-              type="password"
-              className={styles.input}
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={deleting}
-            />
-          </label>
+          <FormField label="Confirm with your password" id="delete-account-password">
+            {(field) => (
+              <Input
+                {...field}
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={deleting}
+              />
+            )}
+          </FormField>
           {error && <p className={styles.error}>{error}</p>}
           <div className={styles.confirmActions}>
-            <button
-              type="button"
-              className={styles.button}
-              onClick={() => setOpen(false)}
-              disabled={deleting}
-            >
+            <Button type="button" onClick={() => setOpen(false)} disabled={deleting}>
               Cancel
-            </button>
+            </Button>
             <button
               type="button"
               className={styles.dangerButton}

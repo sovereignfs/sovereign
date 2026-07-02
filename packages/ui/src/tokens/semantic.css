@@ -25,6 +25,10 @@
 
   --sv-color-accent: var(--sv-grey-900);
   --sv-color-accent-hover: var(--sv-grey-700);
+  /* Derived from --sv-color-accent via color-mix, so it re-themes automatically —
+     no separate dark-mode override needed. Tinted background for badges/chips
+     paired with --sv-color-accent text. */
+  --sv-color-accent-subtle: color-mix(in srgb, var(--sv-color-accent) 12%, transparent);
 
   --sv-color-focus-ring: var(--sv-grey-900);
 
@@ -56,6 +60,7 @@
   --sv-shadow-popover:
     0 4px 16px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08); /* e2 — floating panels */
   --sv-shadow-overlay: 0 10px 38px rgba(0, 0, 0, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
+  --sv-shadow-control: 0 1px 3px rgba(0, 0, 0, 0.2); /* small interactive-control shadows, e.g. Toggle thumb */
 
   /*
    * Instance identity tokens (RFC 0027 / RFC 0032 rename). Distinct namespace from --sv-color-*:
@@ -108,4 +113,5 @@
   --sv-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.3);
   --sv-shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
   --sv-shadow-overlay: 0 10px 38px rgba(0, 0, 0, 0.6), 0 6px 12px rgba(0, 0, 0, 0.5);
+  --sv-shadow-control: 0 1px 3px rgba(0, 0, 0, 0.5);
 }

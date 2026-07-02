@@ -80,7 +80,7 @@
 
 .message {
   font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
   margin-top: var(--sv-space-1);
   line-height: 1.4;
 }
@@ -91,9 +91,9 @@
   border: none;
   padding: 0;
   cursor: pointer;
-  color: var(--sv-color-text-tertiary);
+  color: var(--sv-color-text-subtle);
   line-height: 1;
-  font-size: var(--sv-font-size-base);
+  font-size: var(--sv-font-size-md);
 }
 
 .close:hover {

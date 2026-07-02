@@ -1,4 +1,5 @@
 import { headers } from 'next/headers';
+import { FormField, Select } from '@sovereignfs/ui';
 import { TimezoneSelect } from '../_components/TimezoneSelect';
 import { ThemeControl } from '../_components/ThemeControl';
 import { SidebarControl } from '../_components/SidebarControl';
@@ -79,20 +80,23 @@ export default async function PreferencesPage() {
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Language &amp; Region</h2>
-        <div className={styles.field} style={{ maxWidth: 400 }}>
-          <label className={styles.label} htmlFor="lang-select">
-            Language
-          </label>
-          <select id="lang-select" className={styles.select} defaultValue="en-US" disabled>
-            <option value="en-US">English (US)</option>
-          </select>
+        <div style={{ maxWidth: 400 }}>
+          <FormField label="Language" id="lang-select">
+            {(field) => (
+              <Select {...field} defaultValue="en-US" disabled>
+                <option value="en-US">English (US)</option>
+              </Select>
+            )}
+          </FormField>
         </div>
-        <div className={styles.field} style={{ maxWidth: 400 }}>
-          <label className={styles.label} htmlFor="tz-select">
-            Timezone
-          </label>
-          <TimezoneSelect id="tz-select" value={prefs.timezone} />
-          <p className={styles.help}>Used for date and time display across the platform.</p>
+        <div style={{ maxWidth: 400 }}>
+          <FormField
+            label="Timezone"
+            id="tz-select"
+            hint="Used for date and time display across the platform."
+          >
+            {(field) => <TimezoneSelect {...field} value={prefs.timezone} />}
+          </FormField>
         </div>
       </section>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { Button } from '@sovereignfs/ui';
 import { revokeSessionAction } from '../actions';
 import styles from '../account.module.css';
 
@@ -43,9 +44,9 @@ export function RevokeSessionButton({ token }: { token: string }) {
             This will immediately sign out that device. The session cannot be restored.
           </p>
           <div className={styles.confirmActions}>
-            <button type="button" className={styles.buttonSecondary} onClick={() => setOpen(false)}>
+            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Cancel
-            </button>
+            </Button>
             <button
               type="button"
               className={styles.dangerButton}

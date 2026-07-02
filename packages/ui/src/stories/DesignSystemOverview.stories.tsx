@@ -11,6 +11,7 @@ import { EmptyState } from '../components/EmptyState/EmptyState';
 import { FormField } from '../components/FormField/FormField';
 import { Icon } from '../components/Icon/Icon';
 import { Input } from '../components/Input/Input';
+import { Textarea } from '../components/Textarea/Textarea';
 import { NavTabs } from '../components/NavTabs/NavTabs';
 import { PageHeader } from '../components/PageHeader/PageHeader';
 import { Popover } from '../components/Popover/Popover';
@@ -1386,16 +1387,29 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="FormField"
               importLine="import { FormField } from '@sovereignfs/ui';"
-              usage="Accessible label + input wrapper. Wires hint and error text to the child via aria-describedby. Always pair with an Input and matching htmlFor/id."
+              usage="Accessible label + input wrapper. The render-prop `children` receives field props (id, aria-describedby, aria-invalid) to spread onto the control, so hint/error text stays wired to it."
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
-                <FormField label="Email" hint="We'll never share this." htmlFor="ov-email">
-                  <Input id="ov-email" type="email" placeholder="you@example.com" />
+                <FormField label="Email" hint="We'll never share this." id="ov-email">
+                  {(field) => <Input {...field} type="email" placeholder="you@example.com" />}
                 </FormField>
-                <FormField label="Password" error="Must be 8+ characters." htmlFor="ov-pw">
-                  <Input id="ov-pw" type="password" />
+                <FormField label="Password" error="Must be 8+ characters." id="ov-pw">
+                  {(field) => <Input {...field} type="password" />}
                 </FormField>
               </div>
+            </ComponentCard>
+
+            {/* Textarea */}
+            <ComponentCard
+              name="Textarea"
+              importLine="import { Textarea } from '@sovereignfs/ui';"
+              usage="The primitive multi-line text field. Forwards all native textarea props. Pair with FormField or a <label> for accessibility."
+            >
+              <Textarea
+                aria-label="Description"
+                placeholder="Add a description…"
+                style={{ width: '100%' }}
+              />
             </ComponentCard>
 
             {/* PageHeader */}

@@ -136,6 +136,49 @@ plugin config), Task 9.8 (instance identity rename), Task 1.10
 - Admin-only behavior is covered for sensitive routes and actions.
 - Tests avoid depending on generated route copies under `runtime/app`.
 
+---
+
+#### 📋 13.6 — Console primitive migration, Phase 2
+
+**Goal:** Finish adopting `@sovereignfs/ui` primitives for the higher-risk
+Console patterns deliberately deferred by Task 9.12 (design system
+stabilization), which scoped Console to a bounded pass — generic form
+controls, named action buttons, and duplicate badge implementations — and
+left the following for a focused follow-up so admin-critical flows (user
+deactivation, entitlements, plugin management) aren't touched in the same
+change as the broader stabilization work.
+
+**Deliverables:**
+
+- Migrate the confirm-dialog pattern (`.confirmNativeDialog` / native
+  `<dialog>`, used across `UserActionButtons.tsx`, `UserCard.tsx`,
+  `RevokeSessionButton.tsx`, `PluginInstallPanel.tsx`) to the shared `Dialog`
+  component.
+- Migrate the hand-rolled `.table` styling in `users/page.tsx` to a shared
+  table pattern, or document why it stays bespoke.
+- Consolidate the icon-only action button family (`.iconBtn`,
+  `.iconBtnReactivate`, `.iconBtnDanger`, `.copyButton`,
+  `.pluginCardBtnToggle`, `.pluginCardBtnRemove`, `.userCardMenuBtn`) —
+  either a new icon-button variant on `Button` or a documented local pattern.
+- Migrate Console's section nav (`layout.tsx`, `.nav`/`.navLink`) to
+  `NavTabs`, and the per-page `.pageHeader`/`.pageTitle` markup to
+  `PageHeader` — both **blocked on Task 9.13** (NavTabs needs Next `<Link>`
+  support; PageHeader needs a configurable heading level) landing first.
+- `.rolePill`/`.rolePills` (Console-specific role-assignment control) stay
+  local — not a generic primitive candidate.
+
+**Dependencies:** Task 9.12 (design system stabilization) ✅, Task 9.13
+(NavTabs Link support + PageHeader heading level) for the nav/header items.
+
+**Review checklist:**
+
+- Confirm dialogs across Console use the shared `Dialog` component.
+- Icon-only action buttons share one documented pattern instead of six
+  near-duplicate CSS classes.
+- No behavioral regression on user deactivation, deletion, MFA reset, invite
+  cancellation, or plugin install/remove flows — these are admin-destructive
+  actions and need manual re-verification, not just typecheck/lint.
+
 Subsequent tasks added Console sections as part of other epics:
 
 | Task   | Feature added to Console                                                   | Primary epic                        |

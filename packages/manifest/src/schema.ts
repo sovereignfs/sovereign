@@ -66,7 +66,7 @@ const manifestObjectSchema = z
     description: z.string().optional(),
     database: z.enum(['shared', 'isolated']).optional(),
     type: z.enum(['platform', 'sovereign', 'community']),
-    runtime: z.enum(['native', 'static', 'iframe-local', 'iframe-remote', 'external']),
+    runtime: z.enum(['native']),
     routePrefix: z.string().min(1).startsWith('/', 'routePrefix must start with "/"'),
     permissions: z.array(permissionSchema),
     shell: z.enum(['default', 'minimal', 'overlay']).optional(),

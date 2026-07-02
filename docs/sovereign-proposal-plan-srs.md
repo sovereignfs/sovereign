@@ -651,7 +651,7 @@ Removing a plugin: remove directory → run `pnpm generate` → run `pnpm build`
 
 There is no hot-swap or dynamic loading in v1. This is an intentional simplicity choice.
 
-**Runtime types** (only `native` implemented in v1):
+**Runtime types** (`native` is the only implemented and schema-accepted value in v1):
 
 | Type            | Description                                                                                                         | SDK Access       |
 | --------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------- |
@@ -661,7 +661,7 @@ There is no hot-swap or dynamic loading in v1. This is an intentional simplicity
 | `iframe-remote` | Remotely hosted app, iframe-mounted in the shell                                                                    | `postMessage`    |
 | `external`      | Deep link only, no embedding. Sovereign acts purely as a launcher entry point                                       | None             |
 
-> **Note:** `native` is the only runtime type implemented in v1. All other runtime types are declared for forward-compatibility and architectural planning purposes. Their specifications, behaviour, and SDK access mechanisms are subject to change before implementation.
+> **Note:** `native` is the only runtime type implemented and accepted by the manifest schema in v1. All other runtime types are retained here for architectural planning only. Their specifications, behaviour, SDK access mechanisms, and manifest values are subject to change before implementation.
 
 ### 3.10 Shared Login State
 
@@ -1083,9 +1083,10 @@ interface SovereignManifest {
   // "community" — third-party, any maintainer, any source
   type: 'platform' | 'sovereign' | 'community';
 
-  // How the plugin is rendered (only "native" implemented in v1)
-  // All types except "native" are subject to change before implementation
-  runtime: 'native' | 'static' | 'iframe-local' | 'iframe-remote' | 'external';
+  // How the plugin is rendered. Only "native" is accepted by the v1 schema.
+  // Future runtime models remain design-planned but are not valid manifest
+  // values until implemented.
+  runtime: 'native';
 
   // URL prefix for the plugin under the runtime
   routePrefix: string;

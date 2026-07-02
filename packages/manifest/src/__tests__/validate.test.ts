@@ -37,6 +37,16 @@ describe('validateManifest', () => {
     }
   });
 
+  it('rejects planned runtime values until they are implemented', () => {
+    for (const runtime of ['static', 'iframe-local', 'iframe-remote', 'external']) {
+      const res = validateManifest({ ...base, runtime });
+      expect(res.valid).toBe(false);
+      if (!res.valid) {
+        expect(res.errors.join(' ')).toContain('runtime');
+      }
+    }
+  });
+
   it('requires repository when type is "sovereign"', () => {
     const res = validateManifest({ ...base, type: 'sovereign' });
     expect(res.valid).toBe(false);

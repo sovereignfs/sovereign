@@ -1,12 +1,28 @@
 /* Auth pages: /login, /register, /login/2fa */
 
+/* iOS rubber-band suppression. These pages size .page to the exact viewport
+   height, so the document never overflows and thus never scrolls — but iOS
+   Safari / standalone PWA still bounces the whole page on a press-and-drag.
+   The document-level `overscroll-behavior: none` that kills that bounce lives
+   in globals.css (a CSS Module cannot carry a purely :global html/body rule);
+   here we make .page its own fixed-height scroll surface so taller forms still
+   scroll, and suppress the bounce on that surface too. */
 .page {
-  min-height: 100dvh;
+  /* 100vh fallback for engines without dvh; dvh tracks the dynamic viewport. */
+  height: 100vh;
+  height: 100dvh;
   display: flex;
-  align-items: center;
+  /* `safe center` centres the card when it fits but falls back to
+     start-alignment when a taller form (register / 2FA) overflows, so the top
+     of the card stays reachable above the scroll origin. */
+  align-items: safe center;
   justify-content: center;
   padding: var(--sv-space-4);
   background: var(--sv-color-surface);
+  /* .page is the scroll surface (the document has no overflow to scroll);
+     disable its own rubber-band too. */
+  overflow-y: auto;
+  overscroll-behavior: none;
 }
 
 .card {

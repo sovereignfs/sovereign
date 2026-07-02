@@ -74,12 +74,12 @@ See [`docs/self-hosting.md`](self-hosting.md) for Docker-specific troubleshootin
 
 **Current protection (why it should not recur):**
 
-1. [`runtime/app/(platform)/(plugins)/@modal/error.tsx`](<../runtime/app/(platform)/(plugins)/@modal/error.tsx>) — the slot-level error boundary. It confines any overlay render error to a recoverable "This page could not be loaded / Try again" state **inside the open dialog**, so the failure never escapes the slot as a 404.
+1. `runtime/app/(platform)/(plugins)/@modal/error.tsx` — the slot-level error boundary. It confines any overlay render error to a recoverable "This page could not be loaded / Try again" state **inside the open dialog**, so the failure never escapes the slot as a 404.
 2. Per-page fetch guards — `account/{profile,preferences,data,activity}` and `console/{plugins,users,health,activity}` wrap their self-fetches in `try/catch` with safe fallbacks so a failed response returns empty data instead of throwing.
 
 If the styled 404 reappears on a deployed instance, the most likely explanation is that the instance is running a build from **before** these fixes (2026-06-28), or the boundary/guards regressed. Confirm the running build with `GET /api/admin/health` → `platformVersion`, and check the browser devtools Network tab at the moment of the 404 for a failed RSC request to an overlay route.
 
-**Residual gap:** [`plugins/account/app/security/page.tsx`](../plugins/account/app/security/page.tsx) still has unguarded `await fetch(...)`/`sdk.auth.listSessions()` calls — it currently relies solely on the `@modal/error.tsx` boundary rather than its own fallbacks like the sibling pages. Wrapping those in `try/catch` would make the Security tab resilient on its own.
+**Residual gap:** `plugins/account/app/security/page.tsx` still has unguarded `await fetch(...)`/`sdk.auth.listSessions()` calls — it currently relies solely on the `@modal/error.tsx` boundary rather than its own fallbacks like the sibling pages. Wrapping those in `try/catch` would make the Security tab resilient on its own.
 
 **Desktop shell note:** the shell has no reload shortcut wired yet, so the "just reload" workaround is not available to end users there. Because the shell is a thin WebView that renders whatever the instance serves, a 404 seen in the desktop app is instance-side — debug it against the instance, not the shell.
 

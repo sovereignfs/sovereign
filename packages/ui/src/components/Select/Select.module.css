@@ -33,6 +33,15 @@
   border-radius: var(--sv-radius-sm);
 }
 
+/* iOS Safari zooms the page when a <select> under 16px receives focus, exactly
+   as it does for text inputs. Lift the default size to >=16px on touch devices;
+   the compact `.sm` variant is for dense desktop tables and is left untouched. */
+@media (pointer: coarse) {
+  .select {
+    font-size: var(--sv-font-size-md);
+  }
+}
+
 .select:focus-visible {
   outline: none;
   border-color: var(--sv-color-accent);

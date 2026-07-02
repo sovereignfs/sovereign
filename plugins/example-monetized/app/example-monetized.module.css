@@ -105,11 +105,40 @@
   font-weight: 500;
 }
 
+.surfaceGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sv-space-4);
+}
+
+.surfaceGrid > div {
+  padding: var(--sv-space-4);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  background: var(--sv-color-surface-sunken);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+}
+
+.surfaceTitle {
+  margin: 0;
+  color: var(--sv-color-text-primary);
+  font-size: var(--sv-font-size-sm);
+  font-weight: 650;
+}
+
 .muted {
   color: var(--sv-color-text-muted);
   font-size: var(--sv-font-size-sm);
   margin: 0;
   line-height: 1.6;
+}
+
+@media (max-width: 840px) {
+  .surfaceGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Numbered steps */

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "fs.sovereign.example-overlay-medium",
+  "name": "Example: Overlay Medium",
+  "version": "0.1.0",
+  "description": "Reference plugin demonstrating the medium overlay shell size.",
+  "type": "platform",
+  "runtime": "native",
+  "routePrefix": "/example-overlay-medium",
+  "shell": "overlay",
+  "shellConfig": {
+    "overlaySize": "md"
+  },
+  "icon": "icon.svg",
+  "permissions": ["auth:session"],
+  "compatibility": {
+    "minPlatformVersion": "0.6.0"
+  }
+}

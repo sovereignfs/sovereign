@@ -20,6 +20,13 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
+  /* Suppress the iOS Safari / standalone-PWA rubber-band bounce at the document
+     level across every runtime route. Unlike `overflow: hidden` this never traps
+     content — routes that overflow (paywall, error, offline) still scroll, they
+     just don't bounce — so it is safe to apply globally. The auth pages
+     (/login, /register, /login/2fa) additionally size their own scroll surface
+     to the viewport in login.module.css. */
+  overscroll-behavior: none;
 }
 
 /* Prevent horizontal scroll on mobile where the shell grid can momentarily

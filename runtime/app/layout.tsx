@@ -37,7 +37,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#09090b',
+  // `themeColor` is intentionally omitted here. The pre-paint theme script owns
+  // the `theme-color` meta so it can track the cookie-driven light/dark theme
+  // (which can diverge from the OS scheme). Declaring it via `viewport` too makes
+  // Next's metadata reconciler re-add its own copy on hydration, duplicating the
+  // tag — see runtime/src/theme-script.ts.
+  //
   // viewport-fit=cover allows content to extend into the notch/corner areas
   // (safe-area insets compensate in CSS with env(safe-area-inset-*)). Required
   // for the immersive black-translucent status bar on iOS standalone (RFC 0013).

@@ -29,7 +29,14 @@ export function ThemeControl({ value }: { value: string }) {
   function choose(next: ThemeValue): void {
     setTheme(next);
     // Apply before the round-trip so the change is instant (no flash).
-    document.documentElement.dataset.theme = resolve(next);
+    const resolved = resolve(next);
+    document.documentElement.dataset.theme = resolved;
+    // Keep the browser/OS chrome (theme-color meta) in sync with the live change,
+    // mirroring the pre-paint theme script. Colours track the light/dark
+    // --sv-color-surface tokens (--sv-white / --sv-grey-950).
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', resolved === 'dark' ? '#09090b' : '#ffffff');
     startTransition(() => {
       void updateThemeAction(next);
     });

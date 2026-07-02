@@ -155,12 +155,13 @@ once prioritised.
 | —       | Per-plugin database dialect selection (RFC 0036)                      | 📋     | [3.15](epics/plugins-runtime.md#315--per-plugin-database-dialect-selection-rfc-0036)             |
 | —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035)    | 📋     | [1.8](epics/users-auth.md#18--progressive-user-verification-phase-1--infrastructure-rfc-0035)    |
 | —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035) | 📋     | [1.9](epics/users-auth.md#19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035) |
-| —       | Desktop app shell, macOS-first (RFC 0038)                             | 📋     | [17.1](epics/desktop.md#171--sovereign-desktop--tauri-shell-scaffold-macos-first)                |
+| 0.1.0   | Desktop app shell, macOS-first (RFC 0038)                             | 📋     | [17.1](epics/desktop.md#171--sovereign-desktop--tauri-shell-scaffold-macos-first)                |
 | —       | Desktop: system tray and OS notifications (RFC 0038)                  | 📋     | [17.2](epics/desktop.md#172--system-tray-and-os-notifications)                                   |
 | —       | Desktop: deep link scheme `sovereign://` (RFC 0038)                   | 📋     | [17.3](epics/desktop.md#173--deep-link-scheme-sovereign)                                         |
 | —       | Desktop: keychain credential storage (RFC 0038)                       | 📋     | [17.4](epics/desktop.md#174--keychain-credential-storage)                                        |
 | —       | Desktop: auto-updater (RFC 0038)                                      | 📋     | [17.5](epics/desktop.md#175--auto-updater)                                                       |
 | —       | Desktop: Mac App Store distribution (RFC 0038)                        | 📋     | [17.6](epics/desktop.md#176--mac-app-store-distribution)                                         |
+| —       | SDK `"desktop"` environment for `sdk.device.*` (RFC 0038)             | 📋     | [17.7](epics/desktop.md#177--sdk-desktop-environment-for-sdkdevice)                              |
 | —       | Design system stabilization                                           | 📋     | [9.12](epics/design-system.md#912--design-system-stabilization)                                  |
 | —       | Messages and notification detail (RFC 0048)                           | 📋     | [4.4](epics/notification-center.md#44--messages-and-notification-detail-rfc-0048)                |
 | —       | User directory and member selection SDK (RFC 0041)                    | 📋     | [1.12](epics/users-auth.md#112--user-directory-and-member-selection-sdk-rfc-0041)                |

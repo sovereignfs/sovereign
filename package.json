@@ -1,6 +1,6 @@
 {
   "name": "sovereign",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "private": true,
   "type": "module",
   "description": "Sovereign — a modular, self-hostable workspace runtime.",
@@ -27,6 +27,7 @@
     "kill-port": "bash -c 'for port in 3000 3001; do pid=$(lsof -nP -iTCP:$port -sTCP:LISTEN 2>/dev/null | grep LISTEN | awk \"{print \\$2}\" | head -1); if [ -n \"$pid\" ]; then kill -9 $pid && echo \"Port $port freed (PID $pid)\"; else echo \"Port $port is already free\"; fi; done'",
     "generate": "tsx scripts/generate-registry.ts",
     "generate:icons": "tsx scripts/generate-icons.ts",
+    "generate:splash": "tsx scripts/generate-splash.ts",
     "install:plugins": "tsx scripts/install-plugins.ts",
     "registry:validate": "tsx scripts/validate-registry.ts",
     "registry:check": "tsx scripts/validate-registry.ts --check",
@@ -70,6 +71,7 @@
     "lint-staged": "^15.3.0",
     "lucide": "^1.21.0",
     "prettier": "^3.5.0",
+    "sharp": "0.34.5",
     "simple-git-hooks": "^2.11.1",
     "tsx": "^4.19.2",
     "turbo": "^2.3.3",

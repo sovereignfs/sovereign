@@ -1006,6 +1006,15 @@ publishing — clone it under `plugins/` with a `.local` suffix:
 git clone git@github.com:yourorg/your-plugin.git plugins/your-plugin.local
 ```
 
+> **Tip — automate this with `setup.sh`.** Rather than cloning each plugin by
+> hand, list its git URL in `sovereign.plugins.local` — a personal, **git-ignored**
+> file at the repo root, one URL per line — then run `./setup.sh`. It clones every
+> listed repo into `plugins/<name>.local` (skipping ones already present) and, if
+> the file is absent, skips the step with a one-line note. Because the file is
+> git-ignored and unreferenced by any code, the plugins you clone are never
+> declared in the codebase. Format and examples are documented in `setup.sh`'s
+> header and in `CONTRIBUTING.md` → "Cloning your own plugins with `setup.sh`".
+
 The `.local` suffix is the project convention for this pattern. It signals to
 other contributors that the directory is not part of this repository:
 

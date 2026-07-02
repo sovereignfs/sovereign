@@ -40,6 +40,10 @@ dist/
 !/plugins/example-overlay-medium/
 !/plugins/example-overlay-small/
 
+# Personal list of plugin repos to clone as plugins/<name>.local (read by
+# setup.sh). Developer-specific and never committed — see setup.sh header.
+/sovereign.plugins.local
+
 # PWA service worker + Workbox bundles, generated into runtime/public by
 # @ducanh2912/next-pwa at build time. Never committed (the manifest + icons are).
 runtime/public/sw.js

@@ -216,7 +216,7 @@ Phase 1 (this task) targets `packages/ui` exclusively. The `runtime` App Router 
 
 **Optional extensions (follow-on tasks, not in scope here):**
 
-- **Visual regression testing (Chromatic):** requires a paid Chromatic account; added as a follow-on when the team is ready. The `build-storybook` CI artifact enables manual visual comparison in the interim.
+- **Visual regression testing:** covered by follow-on task 9.14 / RFC 0059 using local Playwright screenshots first. Hosted tools such as Chromatic are deferred unless local review becomes a bottleneck.
 - **`runtime` client-component stories:** once Storybook's RSC story support matures, extend to `runtime/app/_components/` client components (avatar popover, `ActivePluginTitle`, `MobileNav`, etc.). Tracked as a future task.
 - **Plugin developer guide stories:** example stories shipped in `plugins/fs.sovereign.example-basic/` demonstrating how a plugin consumes `@sovereignfs/ui` components in Storybook.
 
@@ -491,3 +491,40 @@ eight new exported components; no breaking changes to existing API.
 - `FormField` hint/error text is announced with the associated control.
 - New first-party UI work no longer adds generic local `.button`, `.input`, `.select`, or `.textarea` styles.
 - Account and Console use shared primitives for common controls and page structure.
+
+---
+
+#### 📋 9.14 — Local visual regression testing (RFC 0059)
+
+**Goal:** Add local Playwright-based visual regression testing for the stabilized
+UI contract without introducing hosted visual review services.
+
+**Deliverables:**
+
+- Add `pnpm test:visual` and `pnpm test:visual:update` scripts.
+- Add Playwright visual configuration for deterministic screenshot comparisons.
+- Add Storybook-driven visual tests for curated `packages/ui` component states
+  across light/dark themes and key responsive viewports.
+- Add a small root visual smoke suite for auth, shell, Launcher, Account,
+  Console, overlays, and mobile navigation.
+- Define and document screenshot baseline storage/update workflow.
+- Add CI artifact upload for expected/actual/diff images when visual tests fail.
+- Document snapshot policy: avoid broad React DOM snapshots; allow snapshots for
+  stable serialized outputs only.
+- Defer Chromatic, Percy, Loki, or other hosted visual review tools unless local
+  review becomes a bottleneck.
+
+**Dependencies:** Task 9.7 (Storybook), Task 9.11 (component gaps), RFC 0010
+test organization, existing Playwright e2e setup.
+
+**SRS reference:** RFC 0059.
+
+**Review checklist:**
+
+- `pnpm test:visual` fails on intentional visual diffs.
+- `pnpm test:visual:update` refreshes baselines only when explicitly run.
+- Component visual tests cover the curated `packages/ui` baseline set.
+- Runtime visual smoke tests cover auth, shell, first-party plugins, overlays,
+  and mobile navigation without becoming a full workflow snapshot suite.
+- Docs explain when to add a visual test, when to update baselines, and when
+  snapshots are acceptable.

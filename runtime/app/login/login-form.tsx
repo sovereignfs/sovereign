@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
+import { ViewportHeightSync } from './ViewportHeightSync';
 import styles from './login.module.css';
 
 export function LoginForm({
@@ -55,6 +56,7 @@ export function LoginForm({
 
   return (
     <main className={styles.page}>
+      <ViewportHeightSync />
       <div className={styles.card}>
         <div className={styles.logo} aria-hidden="true">
           {instanceInitial}

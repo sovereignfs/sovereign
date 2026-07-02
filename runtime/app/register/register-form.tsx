@@ -4,6 +4,7 @@ import { type FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
+import { ViewportHeightSync } from '../login/ViewportHeightSync';
 import styles from '../login/login.module.css';
 
 export function RegisterForm({ instanceInitial = 'S' }: { instanceInitial?: string }) {
@@ -28,6 +29,7 @@ export function RegisterForm({ instanceInitial = 'S' }: { instanceInitial?: stri
 
   return (
     <main className={styles.page}>
+      <ViewportHeightSync />
       <div className={styles.card}>
         <div className={styles.logo} aria-hidden="true">
           {instanceInitial}

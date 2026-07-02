@@ -1,9 +1,21 @@
 .page {
-  min-height: 100vh;
+  /* 100vh fallback for engines without dvh support; dvh tracks the dynamic
+     viewport (iOS URL bar / safe areas) so the card stays centred. */
+  height: 100vh;
+  height: 100dvh;
   display: flex;
-  align-items: center;
+  /* `safe center` keeps the card centred when it fits, but falls back to
+     start-alignment when a taller form (register / 2FA) overflows — plain
+     `center` would push the top of the card out of reach above the scroll
+     origin. */
+  align-items: safe center;
   justify-content: center;
   padding: var(--sv-space-4);
+  /* .page is the scroll surface (the document is locked in globals.css).
+     overscroll-behavior: none suppresses the iOS rubber-band bounce here too,
+     so a press-and-drag on a screen that already fits does not move. */
+  overflow-y: auto;
+  overscroll-behavior: none;
 }
 
 .card {

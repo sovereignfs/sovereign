@@ -517,7 +517,7 @@ or making admin changes feel stale.
 
 ---
 
-#### 📋 2.19 — Overlay size variants for platform plugins
+#### ✅ 2.19 — Overlay size variants for platform plugins
 
 **Goal:** Let overlay-rendered plugins choose an appropriate dialog width instead
 of forcing every overlay into the current large presentation.

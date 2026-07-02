@@ -18,7 +18,7 @@ export const registry: SovereignManifest[] = [
     ],
     "shell": "overlay",
     "shellConfig": {
-      "overlaySize": "lg"
+      "overlaySize": "md"
     },
     "icon": "icon.svg",
     "compatibility": {

@@ -38,7 +38,7 @@ for the full process.
 | [0024](0024-plugin-compatibility.md)             | Plugin compatibility & versioning                        | Accepted             | Yes — Task 0.5.22                                                    |
 | [0025](0025-accessibility.md)                    | Accessibility (WCAG 2.1 AA)                              | Accepted             | Yes — Task 0.5.29                                                    |
 | [0026](0026-non-docker-deployment.md)            | Non-Docker production deployment                         | Accepted             | Yes (phased) — Task 0.5.30 (Phase 1) + epic task 0.13 (Phase 2)      |
-| [0027](0027-white-labeling.md)                   | White-labeling (instance identity)                       | Accepted             | Yes (phased) — epic tasks 9.8 + 9.9 + 9.10                           |
+| [0027](0027-white-labeling.md)                   | White-labeling (instance identity)                       | Accepted             | Yes (phased) — epic tasks 9.8 + 9.9 + 9.10 + 9.13                    |
 | [0028](0028-operator-fork-model.md)              | Operator fork model & upstream sync                      | Accepted             | Yes — epic task 3.14                                                 |
 | [0029](0029-internationalization.md)             | Internationalization / localization                      | Accepted             | Yes — epic tasks 11.1 + 11.2 (scheduled at 0.9.4 + 0.9.5)            |
 | [0030](0030-privacy-first-analytics.md)          | Privacy-first analytics                                  | Accepted             | Yes — epic tasks 6.1 + 6.2 [post-v1]                                 |

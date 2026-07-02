@@ -494,6 +494,44 @@ eight new exported components; no breaking changes to existing API.
 
 ---
 
+#### 📋 9.13 — Subtle Sovereign attribution (RFC 0027)
+
+**Goal:** Add subtle, useful attribution surfaces so users and admins can identify
+the platform as Sovereign without adding a persistent badge to daily workspace
+chrome.
+
+**Deliverables:**
+
+- Auth screens (`apps/auth`) gain small footer microcopy: `Powered by Sovereign`.
+- Runtime root metadata includes `<meta name="generator" content="Sovereign" />`
+  for authenticated and unauthenticated layouts where applicable.
+- Shell avatar menu gains an `About this instance` item that routes to the
+  Account or Console about surface depending on role and available destination.
+- Account plugin gains an About section/page showing instance name, platform
+  name (`Sovereign`), runtime version, and docs/source links.
+- Console system health/settings gains an about row showing `Platform:
+Sovereign` and `Runtime: vX.Y.Z` alongside existing operational metadata.
+- Documentation states that visible attribution is intentionally subtle and that
+  a permanent shell badge is not part of the default UI.
+
+**Dependencies:** Task 9.8 (instance identity rename), Task 9.9 (auth login page
+identity), Task 14.2 (Account workflow coverage) where relevant.
+
+**SRS reference:** RFC 0027, subtle attribution amendment.
+
+**Review checklist:**
+
+- Auth pages show `Powered by Sovereign` without competing with instance
+  identity.
+- Avatar menu opens an About surface and preserves normal back/navigation
+  behavior.
+- Account About and Console health use operational wording:
+  `Platform: Sovereign`, `Runtime: vX.Y.Z`.
+- Root HTML includes `meta name="generator" content="Sovereign"`.
+- Main authenticated shell chrome has no persistent `Powered by` badge.
+
+---
+
 #### 📋 9.14 — Local visual regression testing (RFC 0059)
 
 **Goal:** Add local Playwright-based visual regression testing for the stabilized

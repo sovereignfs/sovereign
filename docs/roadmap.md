@@ -196,6 +196,15 @@ once prioritised.
 | —       | Typecheck performance and project references                          | 📋     | [0.14](epics/infrastructure.md#014--typecheck-performance-and-project-references)                |
 | —       | Operational consistency checks                                        | 📋     | [0.15](epics/infrastructure.md#015--operational-consistency-checks)                              |
 | —       | Pre-v1 stabilization gate                                             | 📋     | [0.16](epics/infrastructure.md#016--pre-v1-stabilization-gate)                                   |
+| —       | Mobile app shell, iOS and Android (RFC 0058)                          | 📋     | [20.1](epics/mobile.md#201--sovereign-mobile--capacitor-shell-scaffold)                          |
+| —       | Mobile instance validation and compatibility endpoint (RFC 0058)      | 📋     | [20.2](epics/mobile.md#202--mobile-instance-validation-and-compatibility-endpoint)               |
+| —       | Mobile SDK native environment and bridge adapter (RFC 0058)           | 📋     | [20.3](epics/mobile.md#203--mobile-sdk-native-environment-and-bridge-adapter)                    |
+| —       | Mobile store release setup and privacy declarations (RFC 0058)        | 📋     | [20.4](epics/mobile.md#204--mobile-store-release-setup-and-privacy-declarations)                 |
+| —       | Mobile native push notifications (RFC 0058)                           | 📋     | [20.5](epics/mobile.md#205--native-push-notifications-apnsfcm)                                   |
+| —       | Mobile native photo picker and camera capture (RFC 0058)              | 📋     | [20.6](epics/mobile.md#206--native-photo-picker-and-camera-capture)                              |
+| —       | Mobile biometric auth capability (RFC 0058)                           | 📋     | [20.7](epics/mobile.md#207--biometric-auth-capability)                                           |
+| —       | Mobile haptics capability (RFC 0058)                                  | 📋     | [20.8](epics/mobile.md#208--haptics-capability)                                                  |
+| —       | Mobile background capability planning (RFC 0058)                      | 📋     | [20.9](epics/mobile.md#209--background-capability-planning)                                      |
 | —       | Sovereign Wallet scaffold (RFC 0061)                                  | 📋     | [21.1](epics/sovereign-wallet.md#211--sovereign-wallet-scaffold-rfc-0061)                        |
 | —       | Sovereign Wallet loyalty card storage and QR/barcode rendering        | 📋     | [21.2](epics/sovereign-wallet.md#212--loyalty-card-storage-and-qrbarcode-rendering)              |
 | —       | Sovereign Wallet encrypted document snapshots                         | 📋     | [21.3](epics/sovereign-wallet.md#213--encrypted-document-snapshots)                              |

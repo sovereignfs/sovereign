@@ -4,11 +4,19 @@
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](epics/).
 
+Split by client component — **PWA** (the web app itself; installable, works in
+any browser), **Desktop** (native Tauri shell, post-v1), **Mobile** (native
+Capacitor shell, post-v1). See CLAUDE.md ("Native mobile app" / "Desktop app")
+for the shell models — both wrap the same PWA in a native WebView and are not
+open architectural questions.
+
 ---
 
-## Pre-v1
+## PWA
 
-### Phase v0.3 — Foundation
+### Pre-v1
+
+#### Phase v0.3 — Foundation
 
 | Version | Task                                             | Status | Epic task                                                                      |
 | ------- | ------------------------------------------------ | ------ | ------------------------------------------------------------------------------ |
@@ -27,7 +35,7 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 
 ---
 
-### Phase v0.4 — Platform Plugins
+#### Phase v0.4 — Platform Plugins
 
 | Version | Task                                                            | Status | Epic task                                                                                         |
 | ------- | --------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------- |
@@ -40,7 +48,7 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 
 ---
 
-### Phase v0.5 — Polish and Self-Hosting
+#### Phase v0.5 — Polish and Self-Hosting
 
 | Version | Task                                                       | Status | Epic task                                                                                |
 | ------- | ---------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------- |
@@ -79,7 +87,7 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 
 ---
 
-### Phase v0.6 — User Roles & Capabilities
+#### Phase v0.6 — User Roles & Capabilities
 
 | Version | Task                                     | Status | Epic task                                                            |
 | ------- | ---------------------------------------- | ------ | -------------------------------------------------------------------- |
@@ -88,7 +96,7 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 
 ---
 
-### Phase v0.7 — Notifications
+#### Phase v0.7 — Notifications
 
 | Version | Task                              | Status | Epic task                                                      |
 | ------- | --------------------------------- | ------ | -------------------------------------------------------------- |
@@ -97,7 +105,7 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 
 ---
 
-### Phase v0.8 — Monetization & Hardening
+#### Phase v0.8 — Monetization & Hardening
 
 | Version | Task                                                            | Status | Epic task                                                                                    |
 | ------- | --------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------- |
@@ -110,7 +118,7 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 
 ---
 
-### Phase v0.9+ — Pre-release Hardening
+#### Phase v0.9+ — Pre-release Hardening
 
 | Version | Task                                                                      | Status | Epic task                                                                                                                  |
 | ------- | ------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------- |
@@ -135,9 +143,9 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 
 ---
 
-## Post-v1
+### Post-v1
 
-### Phase v1.0 — Extended Features
+#### Phase v1.0 — Extended Features
 
 | Version | Task                                                                         | Status | Epic task                                                                                             |
 | ------- | ---------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------- |
@@ -148,7 +156,7 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 
 ---
 
-## Non-prioritised tasks
+### Non-prioritised tasks
 
 Tasks with accepted or draft RFCs but not yet assigned a roadmap slot. Promoted to a phase table
 once prioritised.
@@ -159,13 +167,6 @@ once prioritised.
 | —       | Per-plugin database dialect selection (RFC 0036)                      | 📋     | [3.15](epics/plugins-runtime.md#315--per-plugin-database-dialect-selection-rfc-0036)             |
 | —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035)    | 📋     | [1.8](epics/users-auth.md#18--progressive-user-verification-phase-1--infrastructure-rfc-0035)    |
 | —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035) | 📋     | [1.9](epics/users-auth.md#19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035) |
-| 0.1.0   | Desktop app shell, macOS-first (RFC 0038)                             | 📋     | [17.1](epics/desktop.md#171--sovereign-desktop--tauri-shell-scaffold-macos-first)                |
-| —       | Desktop: system tray and OS notifications (RFC 0038)                  | 📋     | [17.2](epics/desktop.md#172--system-tray-and-os-notifications)                                   |
-| —       | Desktop: deep link scheme `sovereign://` (RFC 0038)                   | 📋     | [17.3](epics/desktop.md#173--deep-link-scheme-sovereign)                                         |
-| —       | Desktop: keychain credential storage (RFC 0038)                       | 📋     | [17.4](epics/desktop.md#174--keychain-credential-storage)                                        |
-| —       | Desktop: auto-updater (RFC 0038)                                      | 📋     | [17.5](epics/desktop.md#175--auto-updater)                                                       |
-| —       | Desktop: Mac App Store distribution (RFC 0038)                        | 📋     | [17.6](epics/desktop.md#176--mac-app-store-distribution)                                         |
-| —       | SDK `"desktop"` environment for `sdk.device.*` (RFC 0038)             | 📋     | [17.7](epics/desktop.md#177--sdk-desktop-environment-for-sdkdevice)                              |
 | —       | Design system stabilization                                           | 📋     | [9.12](epics/design-system.md#912--design-system-stabilization)                                  |
 | —       | Subtle Sovereign attribution (RFC 0027)                               | 📋     | [9.13](epics/design-system.md#913--subtle-sovereign-attribution-rfc-0027)                        |
 | —       | Local visual regression testing (RFC 0059)                            | 📋     | [9.14](epics/design-system.md#914--local-visual-regression-testing-rfc-0059)                     |
@@ -198,16 +199,58 @@ once prioritised.
 | —       | Typecheck performance and project references                          | 📋     | [0.14](epics/infrastructure.md#014--typecheck-performance-and-project-references)                |
 | —       | Operational consistency checks                                        | 📋     | [0.15](epics/infrastructure.md#015--operational-consistency-checks)                              |
 | —       | Pre-v1 stabilization gate                                             | 📋     | [0.16](epics/infrastructure.md#016--pre-v1-stabilization-gate)                                   |
-| —       | Mobile app shell, iOS and Android (RFC 0058)                          | 📋     | [20.1](epics/mobile.md#201--sovereign-mobile--capacitor-shell-scaffold)                          |
-| —       | Mobile instance validation and compatibility endpoint (RFC 0058)      | 📋     | [20.2](epics/mobile.md#202--mobile-instance-validation-and-compatibility-endpoint)               |
-| —       | Mobile SDK native environment and bridge adapter (RFC 0058)           | 📋     | [20.3](epics/mobile.md#203--mobile-sdk-native-environment-and-bridge-adapter)                    |
-| —       | Mobile store release setup and privacy declarations (RFC 0058)        | 📋     | [20.4](epics/mobile.md#204--mobile-store-release-setup-and-privacy-declarations)                 |
-| —       | Mobile native push notifications (RFC 0058)                           | 📋     | [20.5](epics/mobile.md#205--native-push-notifications-apnsfcm)                                   |
-| —       | Mobile native photo picker and camera capture (RFC 0058)              | 📋     | [20.6](epics/mobile.md#206--native-photo-picker-and-camera-capture)                              |
-| —       | Mobile biometric auth capability (RFC 0058)                           | 📋     | [20.7](epics/mobile.md#207--biometric-auth-capability)                                           |
-| —       | Mobile haptics capability (RFC 0058)                                  | 📋     | [20.8](epics/mobile.md#208--haptics-capability)                                                  |
-| —       | Mobile background capability planning (RFC 0058)                      | 📋     | [20.9](epics/mobile.md#209--background-capability-planning)                                      |
 | —       | Sovereign Wallet scaffold (RFC 0061)                                  | 📋     | [21.1](epics/sovereign-wallet.md#211--sovereign-wallet-scaffold-rfc-0061)                        |
 | —       | Sovereign Wallet loyalty card storage and QR/barcode rendering        | 📋     | [21.2](epics/sovereign-wallet.md#212--loyalty-card-storage-and-qrbarcode-rendering)              |
 | —       | Sovereign Wallet encrypted document snapshots                         | 📋     | [21.3](epics/sovereign-wallet.md#213--encrypted-document-snapshots)                              |
 | —       | Sovereign Wallet portability and deletion hooks                       | 📋     | [21.4](epics/sovereign-wallet.md#214--wallet-portability-and-deletion-hooks)                     |
+
+---
+
+## Desktop
+
+Native Tauri shell wrapping the PWA — direct `.dmg`/`.exe`/`.AppImage` download,
+macOS first. Out of scope for v1; the approach is decided (see CLAUDE.md
+"Desktop app (post-v1 plan)" and RFC 0038) and lives in a separate
+`sovereign-desktop` repository once work starts.
+
+### Pre-v1
+
+| Version | Task                                      | Status | Epic task                                                                         |
+| ------- | ----------------------------------------- | ------ | --------------------------------------------------------------------------------- |
+| 0.1.0   | Desktop app shell, macOS-first (RFC 0038) | 📋     | [17.1](epics/desktop.md#171--sovereign-desktop--tauri-shell-scaffold-macos-first) |
+
+---
+
+### Non-prioritised tasks
+
+| Version | Task                                                      | Status | Epic task                                                           |
+| ------- | --------------------------------------------------------- | ------ | ------------------------------------------------------------------- |
+| —       | Desktop: system tray and OS notifications (RFC 0038)      | 📋     | [17.2](epics/desktop.md#172--system-tray-and-os-notifications)      |
+| —       | Desktop: deep link scheme `sovereign://` (RFC 0038)       | 📋     | [17.3](epics/desktop.md#173--deep-link-scheme-sovereign)            |
+| —       | Desktop: keychain credential storage (RFC 0038)           | 📋     | [17.4](epics/desktop.md#174--keychain-credential-storage)           |
+| —       | Desktop: auto-updater (RFC 0038)                          | 📋     | [17.5](epics/desktop.md#175--auto-updater)                          |
+| —       | Desktop: Mac App Store distribution (RFC 0038)            | 📋     | [17.6](epics/desktop.md#176--mac-app-store-distribution)            |
+| —       | SDK `"desktop"` environment for `sdk.device.*` (RFC 0038) | 📋     | [17.7](epics/desktop.md#177--sdk-desktop-environment-for-sdkdevice) |
+
+---
+
+## Mobile
+
+Native Capacitor shell wrapping the PWA — one binary for the App Store / Play
+Store. Out of scope for v1; the approach is decided (see CLAUDE.md "Native
+mobile app (post-v1 plan)" and SRS §3.12) and lives in a separate
+`sovereign-mobile` repository once work starts.
+
+### Non-prioritised tasks
+
+| Version | Task                                                             | Status | Epic task                                                                          |
+| ------- | ---------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------- |
+| —       | Mobile app shell, iOS and Android (RFC 0058)                     | 📋     | [20.1](epics/mobile.md#201--sovereign-mobile--capacitor-shell-scaffold)            |
+| —       | Mobile instance validation and compatibility endpoint (RFC 0058) | 📋     | [20.2](epics/mobile.md#202--mobile-instance-validation-and-compatibility-endpoint) |
+| —       | Mobile SDK native environment and bridge adapter (RFC 0058)      | 📋     | [20.3](epics/mobile.md#203--mobile-sdk-native-environment-and-bridge-adapter)      |
+| —       | Mobile store release setup and privacy declarations (RFC 0058)   | 📋     | [20.4](epics/mobile.md#204--mobile-store-release-setup-and-privacy-declarations)   |
+| —       | Mobile native push notifications (RFC 0058)                      | 📋     | [20.5](epics/mobile.md#205--native-push-notifications-apnsfcm)                     |
+| —       | Mobile native photo picker and camera capture (RFC 0058)         | 📋     | [20.6](epics/mobile.md#206--native-photo-picker-and-camera-capture)                |
+| —       | Mobile biometric auth capability (RFC 0058)                      | 📋     | [20.7](epics/mobile.md#207--biometric-auth-capability)                             |
+| —       | Mobile haptics capability (RFC 0058)                             | 📋     | [20.8](epics/mobile.md#208--haptics-capability)                                    |
+| —       | Mobile background capability planning (RFC 0058)                 | 📋     | [20.9](epics/mobile.md#209--background-capability-planning)                        |

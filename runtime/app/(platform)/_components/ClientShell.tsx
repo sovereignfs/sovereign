@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { ToastProvider } from '@sovereignfs/ui';
+import { computeViewportHeight } from '@/src/viewport-height';
 
 /** Read the current visual viewport height and the rendered mobile header height,
  *  then push both as CSS custom properties onto :root so iOS-PWA-specific stale
@@ -11,8 +12,7 @@ import { ToastProvider } from '@sovereignfs/ui';
  *  won't update if the header's env(safe-area-inset-top) is stale) are resolved
  *  from live DOM measurements instead of cached CSS engine values. */
 function syncViewport() {
-  const vh = window.visualViewport?.height ?? window.innerHeight;
-  document.documentElement.style.setProperty('--sv-vh', `${vh}px`);
+  document.documentElement.style.setProperty('--sv-vh', `${computeViewportHeight()}px`);
 
   // Measure the rendered mobile header rather than re-deriving the safe-area
   // formula in JS (env() is not readable from JS directly).
@@ -34,9 +34,11 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
     const vv = window.visualViewport;
     if (vv) vv.addEventListener('resize', syncViewport);
     document.addEventListener('visibilitychange', syncViewport);
+    window.addEventListener('orientationchange', syncViewport);
     return () => {
       if (vv) vv.removeEventListener('resize', syncViewport);
       document.removeEventListener('visibilitychange', syncViewport);
+      window.removeEventListener('orientationchange', syncViewport);
     };
   }, []);
 

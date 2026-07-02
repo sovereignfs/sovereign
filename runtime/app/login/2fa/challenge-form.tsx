@@ -3,6 +3,7 @@
 import { type FormEvent, useRef, useState } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
+import { ViewportHeightSync } from '../ViewportHeightSync';
 import styles from '../login.module.css';
 
 type Mode = 'totp' | 'backup';
@@ -94,6 +95,7 @@ export function ChallengeForm({ instanceInitial = 'S' }: { instanceInitial?: str
 
   return (
     <main className={styles.page}>
+      <ViewportHeightSync />
       <div className={styles.card}>
         <div className={styles.logo} aria-hidden="true">
           {instanceInitial}

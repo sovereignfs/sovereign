@@ -8,9 +8,12 @@
    here we make .page its own fixed-height scroll surface so taller forms still
    scroll, and suppress the bounce on that surface too. */
 .page {
-  /* 100vh fallback for engines without dvh; dvh tracks the dynamic viewport. */
+  /* --sv-vh is set by ViewportHeightSync from a reliable measurement (iOS
+     standalone reports 100dvh ~status-bar height short at launch). 100vh/100dvh
+     are the pre-hydration fallbacks. */
   height: 100vh;
   height: 100dvh;
+  height: var(--sv-vh, 100dvh);
   display: flex;
   /* `safe center` centres the card when it fits but falls back to
      start-alignment when a taller form (register / 2FA) overflows, so the top

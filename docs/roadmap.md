@@ -122,11 +122,15 @@ Chronological build index — one row per PR. Full task detail lives in [`docs/e
 | 0.10.0  | Test-user flag on seeded accounts                                         | ✅     | [1.11](epics/users-auth.md#111--test-user-flag-on-seeded-accounts)                                                         |
 | 0.10.1  | VitePress docs site scaffold (RFC 0037)                                   | ✅     | [16.1](epics/docs.md#161--appsdocs--vitepress-workspace-scaffold)                                                          |
 | 0.10.2  | Landing home page (RFC 0037)                                              | ✅     | [16.2](epics/docs.md#162--docsindexmd--landing-home-page)                                                                  |
+| —       | Design system component gaps — plugin developer readiness                 | ✅     | [9.11](epics/design-system.md#911--design-system-component-gaps--plugin-developer-readiness)                               |
+| —       | Operator fork model & upstream sync (RFC 0028)                            | ✅     | [3.14](epics/plugins-runtime.md#314--operator-fork-model--upstream-sync)                                                   |
+| —       | Current-state testing documentation cleanup                               | ✅     | [16.3](epics/docs.md#163--current-state-testing-documentation-cleanup)                                                     |
+| —       | Middleware regression coverage                                            | ✅     | [2.16](epics/platform-shell.md#216--middleware-regression-coverage)                                                        |
+| —       | Generate script regression coverage                                       | ✅     | [3.22](epics/plugins-runtime.md#322--generate-script-regression-coverage)                                                  |
 | 0.11.0  | Internationalization, Phase 1 — Infrastructure (RFC 0029)                 | 📋     | [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029)                                           |
 | 0.12.0  | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)        | 📋     | [11.2](epics/i18n.md#112--internationalization-phase-2--platform-shell-adoption-rfc-0029)                                  |
 | 0.13.0  | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](epics/design-system.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
 | 0.14.0  | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](epics/design-system.md#910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
-| 0.15.0  | Design system component gaps — plugin developer readiness                 | 📋     | [9.11](epics/design-system.md#911--design-system-component-gaps--plugin-developer-readiness)                               |
 
 ---
 
@@ -151,7 +155,6 @@ once prioritised.
 | Version | Task                                                                  | Status | Epic task                                                                                        |
 | ------- | --------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ |
 | —       | Non-Docker production deployment, Phase 2 — systemd (RFC 0026)        | 📋     | [0.13](epics/infrastructure.md#013--non-docker-production-deployment-phase-2--systemd)           |
-| —       | Operator fork model & upstream sync (RFC 0028)                        | ✅     | [3.14](epics/plugins-runtime.md#314--operator-fork-model--upstream-sync)                         |
 | —       | Per-plugin database dialect selection (RFC 0036)                      | 📋     | [3.15](epics/plugins-runtime.md#315--per-plugin-database-dialect-selection-rfc-0036)             |
 | —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035)    | 📋     | [1.8](epics/users-auth.md#18--progressive-user-verification-phase-1--infrastructure-rfc-0035)    |
 | —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035) | 📋     | [1.9](epics/users-auth.md#19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035) |
@@ -182,10 +185,7 @@ once prioritised.
 | —       | Sovereign Harness platform plugin (RFC 0040)                          | 📋     | [18.1](epics/sovereign-harness.md#181--sovereign-harness-platform-plugin-rfc-0040)               |
 | —       | Sovereign Council POC (RFC 0055)                                      | 📋     | [19.1](epics/sovereign-council.md#191--sovereign-council-poc-rfc-0055)                           |
 | —       | Sovereign Council full deliberation workspace                         | 📋     | [19.2](epics/sovereign-council.md#192--sovereign-council-full-deliberation-workspace)            |
-| —       | Current-state testing documentation cleanup                           | ✅     | [16.3](epics/docs.md#163--current-state-testing-documentation-cleanup)                           |
-| —       | Middleware regression coverage                                        | ✅     | [2.16](epics/platform-shell.md#216--middleware-regression-coverage)                              |
 | —       | Middleware decomposition                                              | 📋     | [2.17](epics/platform-shell.md#217--middleware-decomposition)                                    |
-| —       | Generate script regression coverage                                   | ✅     | [3.22](epics/plugins-runtime.md#322--generate-script-regression-coverage)                        |
 | —       | Generate script decomposition                                         | 📋     | [3.23](epics/plugins-runtime.md#323--generate-script-decomposition)                              |
 | —       | Account plugin workflow coverage                                      | 📋     | [14.2](epics/plugin-accounts.md#142--account-plugin-workflow-coverage)                           |
 | —       | Console plugin workflow coverage                                      | 📋     | [13.5](epics/plugin-console.md#135--console-plugin-workflow-coverage)                            |

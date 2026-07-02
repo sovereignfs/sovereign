@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
+import { Button } from '@sovereignfs/ui';
 import styles from '../account.module.css';
 
 function monogram(label: string): string {
@@ -53,14 +54,9 @@ export function AvatarUpload({ imageUrl, name }: { imageUrl: string | null; name
             if (file) void onFile(file);
           }}
         />
-        <button
-          type="button"
-          className={styles.button}
-          disabled={busy}
-          onClick={() => inputRef.current?.click()}
-        >
+        <Button type="button" disabled={busy} onClick={() => inputRef.current?.click()}>
           {busy ? 'Uploading…' : imageUrl ? 'Replace avatar' : 'Upload avatar'}
-        </button>
+        </Button>
         <p className={styles.help}>JPEG, PNG, or WebP. Max 2 MB.</p>
         {error && <p className={styles.error}>{error}</p>}
       </div>

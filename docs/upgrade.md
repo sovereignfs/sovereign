@@ -584,6 +584,35 @@ Cannot target a `platform:owner`.
 
 No database migrations required — deletion removes existing rows.
 
+### `@sovereignfs/ui` 0.22.0 → 0.23.0
+
+**Breaking: `FormField` children is now a render prop.** The previous API
+computed `aria-describedby` but applied it to a wrapper `<div>` around the
+child, not the actual control, so screen readers didn't reliably announce
+hints/errors. `FormField` now passes the id/aria wiring to the control itself
+via a render-prop `children`, and generates its own `id` when one isn't
+provided:
+
+```tsx
+// Before
+<FormField label="Email" htmlFor="email">
+  <Input id="email" type="email" />
+</FormField>
+
+// After
+<FormField label="Email" id="email">
+  {(field) => <Input {...field} type="email" />}
+</FormField>
+
+// id is optional — FormField generates one via useId() if omitted:
+<FormField label="Email">{(field) => <Input {...field} type="email" />}</FormField>
+```
+
+`field` is `{ id, 'aria-describedby'?, 'aria-invalid'?, required? }` — spread
+it directly onto any `@sovereignfs/ui` form control or a native element.
+
+**New: `Textarea` component** — additive, no migration required.
+
 ---
 
 ## Runtime version map

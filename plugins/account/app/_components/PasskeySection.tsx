@@ -4,7 +4,7 @@ import { useActionState, useTransition, useState, useRef } from 'react';
 import { createAuthClient } from 'better-auth/react';
 import type { BetterAuthClientPlugin } from 'better-auth/client';
 import { passkeyClient } from '@better-auth/passkey/client';
-import { Dialog } from '@sovereignfs/ui';
+import { Button, Dialog } from '@sovereignfs/ui';
 import { type PasskeyDeleteState, deletePasskeyAction } from '../actions';
 import styles from '../account.module.css';
 
@@ -84,13 +84,9 @@ function PasskeyRow({ passkey, onRemoved }: { passkey: PasskeyEntry; onRemoved: 
             sign in with this passkey.
           </p>
           <div className={styles.confirmActions}>
-            <button
-              type="button"
-              className={styles.buttonSecondary}
-              onClick={() => setConfirmOpen(false)}
-            >
+            <Button type="button" variant="secondary" onClick={() => setConfirmOpen(false)}>
               Cancel
-            </button>
+            </Button>
             <button
               type="button"
               className={styles.dangerButton}

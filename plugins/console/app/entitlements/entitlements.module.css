@@ -35,7 +35,7 @@
 
 .emptyTitle {
   margin: 0;
-  font-size: var(--sv-font-size-base);
+  font-size: var(--sv-font-size-md);
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);
 }
@@ -78,7 +78,7 @@
 
 .th {
   background: var(--sv-color-surface-raised);
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
   font-weight: 600;
   padding: var(--sv-space-2) var(--sv-space-3);
   text-align: left;
@@ -104,31 +104,11 @@
 .code {
   font-family: monospace;
   font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
 }
 
 .none {
-  color: var(--sv-color-text-tertiary);
-}
-
-.badge {
-  display: inline-block;
-  padding: 1px var(--sv-space-2);
-  border-radius: var(--sv-radius-sm);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.badgeActive {
-  background: color-mix(in srgb, var(--sv-color-accent) 12%, transparent);
-  color: var(--sv-color-accent);
-}
-
-.badgeInactive {
-  background: var(--sv-color-surface-raised);
-  color: var(--sv-color-text-tertiary);
+  color: var(--sv-color-text-subtle);
 }
 
 /* ── License generator ──────────────────────────────────────────────────── */
@@ -222,7 +202,7 @@
   border: none;
   padding: 0;
   font-size: var(--sv-font-size-xs);
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
   cursor: pointer;
   text-decoration: underline;
 }
@@ -237,7 +217,7 @@
   border-radius: var(--sv-radius-sm);
   padding: 1px var(--sv-space-2);
   font-size: var(--sv-font-size-xs);
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -314,7 +294,7 @@
 .keygenNote {
   margin: 0;
   font-size: var(--sv-font-size-xs);
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
   line-height: 1.5;
 }
 
@@ -329,66 +309,10 @@
   color: var(--sv-color-text-muted);
 }
 
-.generatorInput,
-.generatorSelect {
-  padding: var(--sv-space-2) var(--sv-space-3);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-md);
-  background: var(--sv-color-surface);
-  color: var(--sv-color-text-primary);
-  font-size: var(--sv-font-size-sm);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.generatorInput:focus,
-.generatorSelect:focus {
-  outline: 2px solid var(--sv-color-accent);
-  outline-offset: 1px;
-  border-color: var(--sv-color-accent);
-}
-
-.generatorTextarea {
-  padding: var(--sv-space-2) var(--sv-space-3);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-md);
-  background: var(--sv-color-surface);
-  color: var(--sv-color-text-primary);
-  font-size: var(--sv-font-size-sm);
-  resize: vertical;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.generatorTextarea:focus {
-  outline: 2px solid var(--sv-color-accent);
-  outline-offset: 1px;
-  border-color: var(--sv-color-accent);
-}
-
+/* Layered on top of the shared Textarea's own border/radius/focus styling —
+   key material and tokens read better in a monospace face. */
 .generatorMono {
-  font-family: monospace;
-}
-
-.generatorButton {
-  align-self: flex-start;
-  padding: var(--sv-space-2) var(--sv-space-4);
-  border: none;
-  border-radius: var(--sv-radius-md);
-  background: var(--sv-color-accent);
-  color: var(--sv-color-text-on-accent);
-  font-size: var(--sv-font-size-sm);
-  font-weight: var(--sv-font-weight-medium);
-  cursor: pointer;
-}
-
-.generatorButton:hover {
-  opacity: 0.88;
-}
-
-.generatorButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  font-family: var(--sv-font-family-mono);
 }
 
 .generatorWarn {

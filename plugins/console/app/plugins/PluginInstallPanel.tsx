@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, useRef, useEffect } from 'react';
-import { Badge } from '@sovereignfs/ui';
+import { Badge, Button, FormField, Input } from '@sovereignfs/ui';
 import {
   checkPluginManifestAction,
   installPluginAction,
@@ -60,29 +60,29 @@ export function PluginInstallPanel() {
         <p className={styles.installPanelTitle}>Add a plugin</p>
 
         <div className={styles.installPanelRow}>
-          <label htmlFor="plugin-repo-url" className={styles.installPanelLabel}>
-            Git repository URL
-          </label>
-          <div className={styles.installPanelInputRow}>
-            <input
-              id="plugin-repo-url"
-              type="url"
-              value={repoUrl}
-              onChange={(e) => handleUrlChange(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !isChecking && repoUrl && handleCheck()}
-              placeholder="https://github.com/sovereignfs/sovereign-plugin-template.git"
-              className={styles.input}
-              disabled={isInstalling}
-            />
-            <button
-              type="button"
-              className={styles.actionButton}
-              onClick={handleCheck}
-              disabled={!repoUrl.trim() || isChecking || isInstalling}
-            >
-              {isChecking ? 'Checking…' : 'Check'}
-            </button>
-          </div>
+          <FormField label="Git repository URL" id="plugin-repo-url">
+            {(field) => (
+              <div className={styles.installPanelInputRow}>
+                <Input
+                  {...field}
+                  className={styles.installPanelInputGrow}
+                  type="url"
+                  value={repoUrl}
+                  onChange={(e) => handleUrlChange(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !isChecking && repoUrl && handleCheck()}
+                  placeholder="https://github.com/sovereignfs/sovereign-plugin-template.git"
+                  disabled={isInstalling}
+                />
+                <Button
+                  type="button"
+                  onClick={handleCheck}
+                  disabled={!repoUrl.trim() || isChecking || isInstalling}
+                >
+                  {isChecking ? 'Checking…' : 'Check'}
+                </Button>
+              </div>
+            )}
+          </FormField>
         </div>
 
         {checkError && (
@@ -137,14 +137,9 @@ export function PluginInstallPanel() {
                 Installed
               </span>
             ) : (
-              <button
-                type="button"
-                className={styles.actionButton}
-                onClick={handleInstall}
-                disabled={isInstalling}
-              >
+              <Button type="button" onClick={handleInstall} disabled={isInstalling}>
                 {isInstalling ? 'Installing…' : 'Install'}
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -245,14 +240,9 @@ export function RemovePluginButton({
           </p>
           {error && <p className={styles.feedbackError}>{error}</p>}
           <div className={styles.confirmActions}>
-            <button
-              type="button"
-              className={styles.actionButton}
-              onClick={() => setOpen(false)}
-              disabled={isPending}
-            >
+            <Button type="button" onClick={() => setOpen(false)} disabled={isPending}>
               Cancel
-            </button>
+            </Button>
             <button
               type="button"
               className={styles.dangerButton}

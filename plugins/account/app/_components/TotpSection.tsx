@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useTransition, useState } from 'react';
+import { Button, FormField, Input } from '@sovereignfs/ui';
 import {
   type TotpVerifyState,
   type TotpDisableState,
@@ -26,9 +27,9 @@ function BackupCodesList({ codes, onDone }: { codes: string[]; onDone: () => voi
           </li>
         ))}
       </ul>
-      <button type="button" onClick={onDone} className={styles.button}>
+      <Button type="button" onClick={onDone}>
         I&rsquo;ve saved my backup codes
-      </button>
+      </Button>
     </div>
   );
 }
@@ -66,23 +67,15 @@ function GetUriStep({ onUri }: { onUri: (data: UriData) => void }) {
       <p className={styles.help}>
         Use an authenticator app to generate time-based one-time passwords for extra security.
       </p>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="totp-password">
-          Confirm your password
-        </label>
-        <input
-          id="totp-password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          className={styles.input}
-        />
-      </div>
+      <FormField label="Confirm your password" id="totp-password" required>
+        {(field) => (
+          <Input {...field} name="password" type="password" autoComplete="current-password" />
+        )}
+      </FormField>
       {error && <p className={styles.error}>{error}</p>}
-      <button type="submit" className={styles.button} disabled={pending}>
+      <Button type="submit" disabled={pending}>
         {pending ? 'Loading…' : 'Continue'}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -124,30 +117,31 @@ function EnableStep({
         <code className={styles.totpUri}>{totpURI}</code>
       </details>
       <form action={formAction} className={styles.form}>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="totp-verify-code">
-            Enter the 6-digit code from your app to confirm
-          </label>
-          <input
-            id="totp-verify-code"
-            name="code"
-            type="text"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            pattern="[0-9]{6}"
-            required
-            className={styles.input}
-          />
-        </div>
+        <FormField
+          label="Enter the 6-digit code from your app to confirm"
+          id="totp-verify-code"
+          required
+        >
+          {(field) => (
+            <Input
+              {...field}
+              name="code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              pattern="[0-9]{6}"
+            />
+          )}
+        </FormField>
         {state?.ok === false && <p className={styles.error}>{state.error}</p>}
         <div className={styles.buttonRow}>
           <button type="button" onClick={onBack} className={styles.revokeButton}>
             Back
           </button>
-          <button type="submit" className={styles.button} disabled={pending}>
+          <Button type="submit" disabled={pending}>
             {pending ? 'Verifying…' : 'Enable TOTP'}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -173,27 +167,19 @@ function DisableForm({ onDone, onBack }: { onDone: () => void; onBack: () => voi
         Disabling TOTP removes your authenticator app link. You will need to re-enroll to use it
         again.
       </p>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="disable-totp-password">
-          Confirm your password
-        </label>
-        <input
-          id="disable-totp-password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          className={styles.input}
-        />
-      </div>
+      <FormField label="Confirm your password" id="disable-totp-password" required>
+        {(field) => (
+          <Input {...field} name="password" type="password" autoComplete="current-password" />
+        )}
+      </FormField>
       {state?.ok === false && <p className={styles.error}>{state.error}</p>}
       <div className={styles.buttonRow}>
         <button type="button" onClick={onBack} className={styles.revokeButton}>
           Cancel
         </button>
-        <button type="submit" className={styles.button} disabled={pending}>
+        <Button type="submit" disabled={pending}>
           {pending ? 'Disabling…' : 'Disable TOTP'}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -214,27 +200,19 @@ function RegenerateCodesForm({ onBack }: { onBack: () => void }) {
   return (
     <form action={formAction} className={styles.form}>
       <p className={styles.help}>Generating new backup codes will invalidate all existing ones.</p>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="regen-password">
-          Confirm your password
-        </label>
-        <input
-          id="regen-password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          className={styles.input}
-        />
-      </div>
+      <FormField label="Confirm your password" id="regen-password" required>
+        {(field) => (
+          <Input {...field} name="password" type="password" autoComplete="current-password" />
+        )}
+      </FormField>
       {state?.ok === false && <p className={styles.error}>{state.error}</p>}
       <div className={styles.buttonRow}>
         <button type="button" onClick={onBack} className={styles.revokeButton}>
           Cancel
         </button>
-        <button type="submit" className={styles.button} disabled={pending}>
+        <Button type="submit" disabled={pending}>
           {pending ? 'Generating…' : 'Regenerate backup codes'}
-        </button>
+        </Button>
       </div>
     </form>
   );

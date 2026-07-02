@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Select } from '@sovereignfs/ui';
+import { Button, Input, Select, Textarea } from '@sovereignfs/ui';
 import { deleteLicenseKeyAction, grantLicenseAction, saveLicenseKeyAction } from './actions';
 import styles from './entitlements.module.css';
 
@@ -399,9 +399,9 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
                     {pubKeyCopied ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
-                <textarea
+                <Textarea
                   readOnly
-                  className={`${styles.generatorTextarea} ${styles.generatorMono}`}
+                  className={styles.generatorMono}
                   value={generatedPubKey}
                   rows={2}
                   aria-label="Generated public key"
@@ -457,9 +457,9 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
                 )}
               </div>
             </div>
-            <textarea
+            <Textarea
               id="gen-privkey"
-              className={`${styles.generatorTextarea} ${styles.generatorMono}`}
+              className={styles.generatorMono}
               value={privateKey}
               onChange={(e) => handlePrivKeyChange(e.target.value)}
               rows={2}
@@ -482,10 +482,9 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
             <label htmlFor="gen-sub" className={styles.generatorLabel}>
               Subscriber
             </label>
-            <input
+            <Input
               id="gen-sub"
               type="text"
-              className={styles.generatorInput}
               value={subscriber}
               onChange={(e) => {
                 setSubscriber(e.target.value);
@@ -522,10 +521,9 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
             <label htmlFor="gen-expiry" className={styles.generatorLabel}>
               Expiry <span className={styles.generatorMeta}>(leave blank for perpetual)</span>
             </label>
-            <input
+            <Input
               id="gen-expiry"
               type="date"
-              className={styles.generatorInput}
               value={expiry}
               onChange={(e) => {
                 setExpiry(e.target.value);
@@ -547,9 +545,9 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
                   <div className={styles.generatorWarnKey}>
                     <span className={styles.generatorLabel}>Public key (for your records)</span>
                     <div className={styles.generatorLabelRow}>
-                      <textarea
+                      <Textarea
                         readOnly
-                        className={`${styles.generatorTextarea} ${styles.generatorMono}`}
+                        className={styles.generatorMono}
                         value={generatedPubKey}
                         rows={2}
                         aria-label="Generated public key"
@@ -578,14 +576,9 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
             </p>
           )}
 
-          <button
-            type="button"
-            className={styles.generatorButton}
-            onClick={() => void generate()}
-            disabled={generating}
-          >
+          <Button type="button" onClick={() => void generate()} disabled={generating}>
             {generating ? 'Signing…' : 'Generate token'}
-          </button>
+          </Button>
         </div>
 
         {token && (
@@ -600,9 +593,9 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
                 {copied ? 'Copied!' : 'Copy'}
               </button>
             </div>
-            <textarea
+            <Textarea
               readOnly
-              className={`${styles.generatorTextarea} ${styles.generatorMono}`}
+              className={styles.generatorMono}
               value={token}
               rows={4}
               aria-label="Generated license token"
@@ -632,14 +625,13 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
                       </option>
                     ))}
                   </Select>
-                  <button
+                  <Button
                     type="button"
-                    className={styles.generatorButton}
                     onClick={() => void grantToUser()}
                     disabled={granting || !grantUserId}
                   >
                     {granting ? 'Saving…' : 'Save entitlement'}
-                  </button>
+                  </Button>
                 </div>
                 {grantResult && (
                   <p

@@ -22,7 +22,7 @@
   background: none;
   padding: 0;
   border-radius: var(--sv-radius-sm);
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
   cursor: grab;
   opacity: 1;
   transition: opacity 0.1s ease;

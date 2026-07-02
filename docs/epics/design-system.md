@@ -286,7 +286,7 @@ adopt the correct naming from day one. No production users means zero migration 
 
 ---
 
-#### ⏳ 9.9 — Email template system + White-labeling Phase 2 — Email + auth login page (RFC 0031 + RFC 0027)
+#### 📋 9.9 — Email template system + White-labeling Phase 2 — Email + auth login page (RFC 0031 + RFC 0027)
 
 **Goal:** Introduce the email template infrastructure (RFC 0031) — React Email–based
 templates with branding injection, standalone locale support, and operator copy/subject
@@ -466,7 +466,7 @@ eight new exported components; no breaking changes to existing API.
 
 ---
 
-#### 📋 9.12 — Design system stabilization
+#### ✅ 9.12 — Design system stabilization
 
 **Goal:** Make `@sovereignfs/ui` a stricter, more reliable public contract for platform screens and plugin authors by fixing token drift, strengthening accessibility wiring, and improving adoption across first-party plugins.
 
@@ -483,6 +483,10 @@ eight new exported components; no breaking changes to existing API.
 **Dependencies:** Task 9.11 (component gaps), Task 9.7 (Storybook), Task 10.1 (a11y contract).
 
 **Reference:** [Design System Stabilization Proposal](../design-system-stabilization-proposal.md)
+
+**Version impact:** `@sovereignfs/ui` → **minor** (`0.22.0` → `0.23.0`) — adds
+the `Textarea` primitive (additive) and changes `FormField`'s `children` to a
+render prop (breaking, but zero prior consumers).
 
 **Review checklist:**
 
@@ -566,3 +570,44 @@ test organization, existing Playwright e2e setup.
   and mobile navigation without becoming a full workflow snapshot suite.
 - Docs explain when to add a visual test, when to update baselines, and when
   snapshots are acceptable.
+
+---
+
+#### 📋 9.15 — NavTabs Link support + PageHeader heading level
+
+**Goal:** Close two `@sovereignfs/ui` API gaps discovered while dogfooding
+`NavTabs` and `PageHeader` during Task 9.12's Account/Console migration —
+both components turned out to be unusable for their most obvious targets
+(the platform plugins' own section nav and page titles) without a
+regression, so that migration work was skipped rather than forced.
+
+**Deliverables:**
+
+- `NavTabs` currently renders plain `<a href>` anchors. Inside an overlay
+  plugin (`shell: overlay`, e.g. Account), that causes a full browser
+  navigation instead of a client-side route transition — breaking the
+  documented overlay-navigation contract (`<Link replace>`; a dialog
+  dismissed via `router.back()` needs push-based history to not stack).
+  Add a way for a consumer to supply its own link renderer (e.g. a
+  `renderLink?: (item: NavTabItem) => ReactNode` prop, or an `as` prop
+  accepting a component shaped like Next's `Link`) so first-party plugins
+  can use `NavTabs` without leaving the SPA.
+- `PageHeader` always renders `<h1>`. Console's per-page headers (Users,
+  Plugins, Entitlements, …) sit under the shell's own `<h1>Console</h1>` —
+  adopting `PageHeader` as-is would produce two `<h1>` elements per page, an
+  accessibility regression (broken heading hierarchy). Add a `headingLevel?:
+2 | 3` (or similar) prop, defaulting to the current `1` for standalone use.
+- Once both land, revisit the Account `layout.tsx` nav/title and Console's
+  per-page `.pageHeader`/`.nav` as part of Task 13.6.
+
+**Dependencies:** Task 9.12 (design system stabilization) — this task exists
+because 9.12 found the gap.
+
+**Review checklist:**
+
+- `NavTabs` can be used for SPA-internal navigation (Next `<Link>`) without
+  a full page reload.
+- `PageHeader` can render at a heading level other than `1` without any
+  other visual change.
+- Both changes are additive (new optional props, existing defaults
+  unchanged) — no `@sovereignfs/ui` version bump beyond minor.

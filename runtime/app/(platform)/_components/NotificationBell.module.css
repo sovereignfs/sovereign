@@ -15,7 +15,7 @@
   border: none;
   border-radius: var(--sv-radius-md);
   cursor: pointer;
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
 }
 
 .trigger:hover {

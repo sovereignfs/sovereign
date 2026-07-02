@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input } from '@sovereignfs/ui';
+import { Button, FormField, Input, Textarea } from '@sovereignfs/ui';
 import styles from '../console.module.css';
 import broadcastStyles from './broadcast.module.css';
 
@@ -75,61 +75,57 @@ export default function BroadcastPage() {
         once per 60 seconds.
       </p>
       <div className={broadcastStyles.form}>
-        <div className={broadcastStyles.field}>
-          <label htmlFor="broadcast-title" className={broadcastStyles.label}>
-            Title <span aria-hidden="true">*</span>
-          </label>
-          <Input
-            id="broadcast-title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Scheduled maintenance tonight"
-            disabled={sending}
-          />
-        </div>
-        <div className={broadcastStyles.field}>
-          <label htmlFor="broadcast-body" className={broadcastStyles.label}>
-            Message (optional)
-          </label>
-          <textarea
-            id="broadcast-body"
-            className={broadcastStyles.textarea}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Additional details…"
-            rows={3}
-            disabled={sending}
-          />
-        </div>
-        <div className={broadcastStyles.field}>
-          <label htmlFor="broadcast-url" className={broadcastStyles.label}>
-            Link URL (optional)
-          </label>
-          <Input
-            id="broadcast-url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="/console/settings"
-            disabled={sending}
-          />
-        </div>
-        <div className={broadcastStyles.field}>
-          <label htmlFor="broadcast-recipients" className={broadcastStyles.label}>
-            Recipient user IDs <span aria-hidden="true">*</span>
-          </label>
-          <textarea
-            id="broadcast-recipients"
-            className={broadcastStyles.textarea}
-            value={recipientIds}
-            onChange={(e) => setRecipientIds(e.target.value)}
-            placeholder="user-id-1, user-id-2, …"
-            rows={3}
-            disabled={sending}
-          />
-          <p className={broadcastStyles.hint}>
-            Paste one or more user IDs, separated by commas or newlines. Find IDs on the Users page.
-          </p>
-        </div>
+        <FormField label="Title" id="broadcast-title" required>
+          {(field) => (
+            <Input
+              {...field}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Scheduled maintenance tonight"
+              disabled={sending}
+            />
+          )}
+        </FormField>
+        <FormField label="Message (optional)" id="broadcast-body">
+          {(field) => (
+            <Textarea
+              {...field}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Additional details…"
+              rows={3}
+              disabled={sending}
+            />
+          )}
+        </FormField>
+        <FormField label="Link URL (optional)" id="broadcast-url">
+          {(field) => (
+            <Input
+              {...field}
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="/console/settings"
+              disabled={sending}
+            />
+          )}
+        </FormField>
+        <FormField
+          label="Recipient user IDs"
+          id="broadcast-recipients"
+          required
+          hint="Paste one or more user IDs, separated by commas or newlines. Find IDs on the Users page."
+        >
+          {(field) => (
+            <Textarea
+              {...field}
+              value={recipientIds}
+              onChange={(e) => setRecipientIds(e.target.value)}
+              placeholder="user-id-1, user-id-2, …"
+              rows={3}
+              disabled={sending}
+            />
+          )}
+        </FormField>
 
         {result && (
           <div

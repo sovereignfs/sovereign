@@ -22,7 +22,7 @@
 .message {
   margin: 0 0 var(--sv-space-6);
   color: var(--sv-color-text-muted);
-  font-size: var(--sv-font-size-base);
+  font-size: var(--sv-font-size-md);
 }
 
 .link {

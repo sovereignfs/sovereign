@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { Button } from '@sovereignfs/ui';
 import {
   toggleActiveAction,
   resetMfaAction,
@@ -56,9 +57,9 @@ function ConfirmDialog({
         <h2 className={styles.confirmTitle}>{title}</h2>
         <p className={styles.confirmMessage}>{message}</p>
         <div className={styles.confirmActions}>
-          <button type="button" className={styles.actionButton} onClick={onClose}>
+          <Button type="button" onClick={onClose}>
             Cancel
-          </button>
+          </Button>
           <button type="button" className={styles.dangerButton} onClick={onConfirm}>
             {confirmLabel}
           </button>

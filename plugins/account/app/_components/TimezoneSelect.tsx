@@ -1,11 +1,15 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+import { Select, type SelectProps } from '@sovereignfs/ui';
 import { updateTimezoneAction } from '../actions';
-import styles from '../account.module.css';
+
+type TimezoneSelectProps = Omit<SelectProps, 'value' | 'onChange' | 'children'> & {
+  value: string;
+};
 
 /** Timezone picker (ACC-07). Native select gives type-ahead search for free. */
-export function TimezoneSelect({ value, id }: { value: string; id?: string }) {
+export function TimezoneSelect({ value, id, ...rest }: TimezoneSelectProps) {
   const [tz, setTz] = useState(value);
   const [zones, setZones] = useState<string[]>([value]); // safe SSR initial — expanded after mount
   const [pending, startTransition] = useTransition();
@@ -17,12 +21,12 @@ export function TimezoneSelect({ value, id }: { value: string; id?: string }) {
   }, [value]);
 
   return (
-    <select
+    <Select
       id={id}
-      className={styles.select}
       value={tz}
       disabled={pending}
       aria-label={id ? undefined : 'Timezone'}
+      {...rest}
       onChange={(e) => {
         const next = e.target.value;
         setTz(next);
@@ -36,6 +40,6 @@ export function TimezoneSelect({ value, id }: { value: string; id?: string }) {
           {zone}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

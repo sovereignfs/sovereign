@@ -9,44 +9,22 @@
 
 .categoryItem {
   display: flex;
-  align-items: flex-start;
-  gap: var(--sv-space-3);
+  flex-direction: column;
+  gap: 2px;
 }
 
-.checkbox {
-  margin-top: 2px;
-  flex: 0 0 auto;
-  accent-color: var(--sv-color-accent);
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-}
-
-.categoryLabel {
-  cursor: pointer;
-  font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-primary);
-}
-
+/* Indented to align under the Checkbox's own label — box (18px) + its gap (--sv-space-2). */
 .categoryDesc {
-  color: var(--sv-color-text-secondary);
+  margin: 0;
+  padding-left: calc(18px + var(--sv-space-2));
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
 }
 
-.select {
+.selectField {
   display: block;
   margin-top: var(--sv-space-3);
-  padding: var(--sv-space-2) var(--sv-space-3);
-  background: var(--sv-color-surface);
-  color: var(--sv-color-text-primary);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-md);
-  font-size: var(--sv-font-size-sm);
-  cursor: pointer;
-}
-
-.select:focus-visible {
-  outline: 2px solid var(--sv-color-accent);
-  outline-offset: 2px;
+  max-width: 280px;
 }
 
 .savedMsg {
@@ -58,7 +36,7 @@
 .pushWarning {
   margin: var(--sv-space-2) 0;
   font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-warning-text, var(--sv-color-text-secondary));
+  color: var(--sv-color-warning-text);
 }
 
 .pushError {

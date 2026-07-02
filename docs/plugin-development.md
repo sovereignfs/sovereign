@@ -899,12 +899,68 @@ packages (`db`, `manifest`, `mailer`) directly — only `@sovereignfs/sdk` and
 Build your interface with the Sovereign Design System (`@sovereignfs/ui`):
 
 ```ts
-import { Button, Input, Dialog, Drawer, Icon } from '@sovereignfs/ui';
+import { Button, Input, Textarea, Dialog, Drawer, Icon } from '@sovereignfs/ui';
 ```
 
 Design tokens (`--sv-*` CSS custom properties) are injected globally by the
 runtime shell — reference them directly in your CSS, e.g.
 `color: var(--sv-color-text-primary)`. See [design-system.md](design-system.md).
+
+#### Building forms
+
+Wrap a labeled control in `FormField` rather than hand-rolling a
+`<label htmlFor>` + hint/error paragraph. Its `children` is a render prop —
+it receives the props (`id`, `aria-describedby`, `aria-invalid`, `required`)
+that must be spread onto the control so the label, hint, and error stay
+correctly associated:
+
+```tsx
+import { Button, FormField, Input, Select, Textarea } from '@sovereignfs/ui';
+
+<FormField label="Email" hint="Used for sign-in" required>
+  {(field) => <Input {...field} type="email" />}
+</FormField>
+
+<FormField label="Role" error={errors.role}>
+  {(field) => (
+    <Select {...field}>
+      <option value="member">Member</option>
+      <option value="admin">Admin</option>
+    </Select>
+  )}
+</FormField>
+
+<FormField label="Notes">
+  {(field) => <Textarea {...field} rows={4} />}
+</FormField>
+```
+
+`id` is generated automatically via `useId()` if you don't pass one. `field`
+works with any control — `Input`, `Select`, `Textarea`, or a native element —
+as long as it forwards `id`/`aria-*` to the underlying form element.
+
+#### When to reach for a primitive vs. local CSS
+
+Use a `@sovereignfs/ui` primitive (`Button`, `Input`, `Select`, `Textarea`,
+`Checkbox`, `FormField`, `Card`, `Badge`, `PageHeader`, `SystemBanner`, …) for
+any generic control or page-structure pattern — anything another plugin, or
+the platform shell, would plausibly need too. Keep CSS local for layout that
+is genuinely specific to your plugin's domain (a custom data table, a
+drag-and-drop list, a chart) — the design system does not try to cover every
+possible layout, only the repeated primitives.
+
+A short "do not" list:
+
+- Don't reference primitive colour tokens (`--sv-grey-*`, `--sv-red-*`, …) —
+  use semantic tokens (`--sv-color-*`) only.
+- Don't hardcode hex/`rgb()` colours in your CSS — use a token, or a status
+  token (`--sv-color-error-text`, etc.) if none fits.
+- Don't remove the focus ring (`outline: none`) without providing an
+  equivalent `:focus-visible` treatment.
+- Don't nest a `Card` inside another `Card` — pick one surface per visual
+  group.
+- Don't ship an icon-only control without an accessible name (`aria-label`
+  on the control, or a visually-hidden label).
 
 #### Using icons
 

@@ -77,14 +77,14 @@
   top: 50%;
   width: 100%;
   height: 1.5px;
-  background: var(--sv-color-text-secondary);
+  background: var(--sv-color-text-muted);
   transform: scaleX(0);
   transform-origin: left center;
   transition: transform 0.2s ease;
 }
 
 .struck {
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
 }
 
 .struck::after {

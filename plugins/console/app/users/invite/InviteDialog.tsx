@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Dialog } from '@sovereignfs/ui';
+import { Button, Dialog } from '@sovereignfs/ui';
 import { InviteForm } from './invite-form';
 import styles from '../../console.module.css';
 
@@ -10,9 +10,9 @@ export function InviteDialog() {
 
   return (
     <>
-      <button type="button" className={styles.inviteButton} onClick={() => setOpen(true)}>
+      <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
         + Invite
-      </button>
+      </Button>
 
       <Dialog open={open} onClose={() => setOpen(false)} size="sm" title="Invite user">
         <div className={styles.inviteDialogBody}>

@@ -141,7 +141,7 @@
 }
 
 .error {
-  color: var(--sv-color-error, #ef4444);
+  color: var(--sv-color-error-text, #ef4444);
   font-size: var(--sv-font-size-sm);
   margin: 0;
 }
@@ -229,7 +229,7 @@
 }
 
 .otpCell.otpError {
-  border-color: var(--sv-color-error, #ef4444);
+  border-color: var(--sv-color-error-text, #ef4444);
 }
 
 .backupInput {

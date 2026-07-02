@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Button, FormField, Input, Textarea } from '@sovereignfs/ui';
 import styles from '../account.module.css';
 import billingStyles from './billing.module.css';
 
@@ -143,33 +144,32 @@ export default function BillingPage() {
           directly from there.
         </p>
         <form onSubmit={(e) => void importLicense(e)} className={billingStyles.importForm}>
-          <label htmlFor="billing-plugin-id" className={billingStyles.label}>
-            Plugin ID
-          </label>
-          <input
-            id="billing-plugin-id"
-            type="text"
-            value={importPluginId}
-            onChange={(e) => setImportPluginId(e.target.value)}
-            placeholder="com.acme.myplugin"
-            required
-            className={billingStyles.input}
-          />
-          <label htmlFor="billing-token" className={billingStyles.label}>
-            License token
-          </label>
-          <textarea
-            id="billing-token"
-            value={importToken}
-            onChange={(e) => setImportToken(e.target.value)}
-            rows={4}
-            placeholder="Paste your license token here…"
-            required
-            className={billingStyles.textarea}
-          />
-          <button type="submit" disabled={importing} className={styles.button}>
+          <FormField label="Plugin ID" id="billing-plugin-id" required>
+            {(field) => (
+              <Input
+                {...field}
+                type="text"
+                value={importPluginId}
+                onChange={(e) => setImportPluginId(e.target.value)}
+                placeholder="com.acme.myplugin"
+              />
+            )}
+          </FormField>
+          <FormField label="License token" id="billing-token" required>
+            {(field) => (
+              <Textarea
+                {...field}
+                className={billingStyles.tokenMono}
+                value={importToken}
+                onChange={(e) => setImportToken(e.target.value)}
+                rows={4}
+                placeholder="Paste your license token here…"
+              />
+            )}
+          </FormField>
+          <Button type="submit" disabled={importing}>
             {importing ? 'Importing…' : 'Import license'}
-          </button>
+          </Button>
           {importError && (
             <p className={billingStyles.error} role="alert">
               {importError}

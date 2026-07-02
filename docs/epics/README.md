@@ -28,5 +28,7 @@ Full architecture and requirements: [sovereign-proposal-plan-srs.md](../sovereig
 | 17  | [Desktop App Shell](desktop.md)               | 📋 Planned     | Tauri shell app loading a self-hosted instance — macOS-first                        |
 | 18  | [Sovereign Harness](sovereign-harness.md)     | 📋 Planned     | Platform-shipped AI assistant and orchestration layer                               |
 | 19  | [Sovereign Council](sovereign-council.md)     | 📋 Planned     | Multi-model deliberation, brainstorming, and report generation                      |
+| 20  | [Mobile App Shell](mobile.md)                 | 📋 Planned     | Capacitor shell app loading a self-hosted instance — iOS and Android                |
+| 21  | [Sovereign Wallet](sovereign-wallet.md)       | 📋 Planned     | Encrypted wallet for QR loyalty cards and sensitive document snapshots              |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned_

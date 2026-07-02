@@ -69,3 +69,5 @@ for the full process.
 | [0055](0055-sovereign-council.md)                | Sovereign Council — multi-model deliberation workspace   | Draft                | Yes — epic tasks 19.1, 19.2                                          |
 | [0056](0056-sovereign-guide.md)                  | Sovereign Guide — first-run guide platform plugin        | Draft                | No — documentation-first                                             |
 | [0057](0057-plugin-dep-hoisting.md)              | Plugin external dependency resolution                    | Draft                | No — documentation-first                                             |
+| [0060](0060-client-side-encryption-core.md)      | Client-side encryption core                              | Draft                | Yes — epic task 8.9                                                  |
+| [0061](0061-sovereign-wallet.md)                 | Sovereign Wallet platform plugin                         | Draft                | Yes — epic tasks 21.1–21.4                                           |

@@ -30,7 +30,7 @@ Each layer has a single job:
 
 ## Epic structure
 
-Work is organized into 16 domain epics. Each task has a **stable epic task ID** (`<epic>.<seq>`) that can be cited in PRs, RFCs, and commits independently of roadmap version numbers.
+Work is organized into domain epics. Each task has a **stable epic task ID** (`<epic>.<seq>`) that can be cited in PRs, RFCs, and commits independently of roadmap version numbers.
 
 | ID  | Epic file                | Domain                                                    |
 | --- | ------------------------ | --------------------------------------------------------- |
@@ -50,6 +50,12 @@ Work is organized into 16 domain epics. Each task has a **stable epic task ID** 
 | 13  | `plugin-console.md`      | Admin console plugin                                      |
 | 14  | `plugin-accounts.md`     | Account plugin                                            |
 | 15  | `plugin-launcher.md`     | Launcher plugin                                           |
+| 16  | `docs.md`                | VitePress docs site and project landing page              |
+| 17  | `desktop.md`             | Native desktop shell                                      |
+| 18  | `sovereign-harness.md`   | AI assistant and orchestration layer                      |
+| 19  | `sovereign-council.md`   | Multi-model deliberation workspace                        |
+| 20  | `mobile.md`              | Native mobile shell                                       |
+| 21  | `sovereign-wallet.md`    | Encrypted wallet platform plugin                          |
 
 The epic index is `docs/epics/README.md` in the repository planning docs.
 

@@ -168,6 +168,7 @@ once prioritised.
 | —       | Plugin secret vault (RFC 0043)                                        | 📋     | [8.6](epics/data-sovereignty.md#86--plugin-secret-vault-rfc-0043)                                |
 | —       | Plugin file storage (RFC 0044)                                        | 📋     | [8.7](epics/data-sovereignty.md#87--plugin-file-storage-rfc-0044)                                |
 | —       | Plugin portability hooks (RFC 0052)                                   | 📋     | [8.8](epics/data-sovereignty.md#88--plugin-portability-hooks-rfc-0052)                           |
+| —       | Client-side encryption core (RFC 0060)                                | 📋     | [8.9](epics/data-sovereignty.md#89--client-side-encryption-core-rfc-0060)                        |
 | —       | Plugin background jobs and schedules (RFC 0046)                       | 📋     | [3.16](epics/plugins-runtime.md#316--plugin-background-jobs-and-schedules-rfc-0046)              |
 | —       | Public plugin page routes (RFC 0042)                                  | 📋     | [2.14](epics/platform-shell.md#214--public-plugin-page-routes-rfc-0042)                          |
 | —       | Public plugin webhooks (RFC 0050)                                     | 📋     | [2.15](epics/platform-shell.md#215--public-plugin-webhooks-rfc-0050)                             |
@@ -194,3 +195,7 @@ once prioritised.
 | —       | Typecheck performance and project references                          | 📋     | [0.14](epics/infrastructure.md#014--typecheck-performance-and-project-references)                |
 | —       | Operational consistency checks                                        | 📋     | [0.15](epics/infrastructure.md#015--operational-consistency-checks)                              |
 | —       | Pre-v1 stabilization gate                                             | 📋     | [0.16](epics/infrastructure.md#016--pre-v1-stabilization-gate)                                   |
+| —       | Sovereign Wallet scaffold (RFC 0061)                                  | 📋     | [21.1](epics/sovereign-wallet.md#211--sovereign-wallet-scaffold-rfc-0061)                        |
+| —       | Sovereign Wallet loyalty card storage and QR/barcode rendering        | 📋     | [21.2](epics/sovereign-wallet.md#212--loyalty-card-storage-and-qrbarcode-rendering)              |
+| —       | Sovereign Wallet encrypted document snapshots                         | 📋     | [21.3](epics/sovereign-wallet.md#213--encrypted-document-snapshots)                              |
+| —       | Sovereign Wallet portability and deletion hooks                       | 📋     | [21.4](epics/sovereign-wallet.md#214--wallet-portability-and-deletion-hooks)                     |

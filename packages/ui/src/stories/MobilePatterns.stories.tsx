@@ -405,11 +405,11 @@ function MobilePatternsDoc() {
                 gap: 'var(--sv-space-3)',
               }}
             >
-              <FormField label="Display name" htmlFor="mp-name">
-                <Input id="mp-name" placeholder="Your name" />
+              <FormField label="Display name" id="mp-name">
+                {(field) => <Input {...field} placeholder="Your name" />}
               </FormField>
-              <FormField label="Email" htmlFor="mp-email">
-                <Input id="mp-email" type="email" placeholder="you@example.com" />
+              <FormField label="Email" id="mp-email">
+                {(field) => <Input {...field} type="email" placeholder="you@example.com" />}
               </FormField>
               <Button type="submit">Save changes</Button>
             </div>

@@ -102,24 +102,27 @@ the fonts are absent.
 
 ### Semantic tokens (`src/tokens/semantic.css`)
 
-| Token                       | Light           | Dark            | Role                       |
-| --------------------------- | --------------- | --------------- | -------------------------- |
-| `--sv-color-surface`        | white           | grey-950        | Default background         |
-| `--sv-color-surface-sunken` | grey-50         | grey-900        | Recessed areas             |
-| `--sv-color-surface-raised` | white           | grey-900        | Cards, popovers            |
-| `--sv-color-text-primary`   | grey-950        | grey-50         | Primary text               |
-| `--sv-color-text-muted`     | grey-500        | grey-400        | Secondary text             |
-| `--sv-color-text-on-accent` | white           | grey-950        | Text on accent fills       |
-| `--sv-color-border`         | grey-200        | grey-800        | Hairline borders           |
-| `--sv-color-border-strong`  | grey-300        | grey-700        | Emphasised borders         |
-| `--sv-color-accent`         | grey-900        | grey-50         | Brand / interaction colour |
-| `--sv-color-accent-hover`   | grey-700        | grey-200        | Accent hover state         |
-| `--sv-color-focus-ring`     | grey-900        | grey-100        | Focus outline              |
-| `--sv-color-scrim`          | composed rgba   | composed rgba   | Dialog backdrop overlay    |
-| `--sv-shadow-card`          | composed shadow | composed shadow | Card elevation             |
-| `--sv-shadow-hover`         | composed shadow | composed shadow | Card hover lift (e1)       |
-| `--sv-shadow-popover`       | composed shadow | composed shadow | Floating panels (e2)       |
-| `--sv-shadow-overlay`       | composed shadow | composed shadow | Dialog / overlay elevation |
+| Token                       | Light                  | Dark                   | Role                                                                      |
+| --------------------------- | ---------------------- | ---------------------- | ------------------------------------------------------------------------- |
+| `--sv-color-surface`        | white                  | grey-950               | Default background                                                        |
+| `--sv-color-surface-sunken` | grey-50                | grey-900               | Recessed areas                                                            |
+| `--sv-color-surface-raised` | white                  | grey-900               | Cards, popovers                                                           |
+| `--sv-color-text-primary`   | grey-950               | grey-50                | Primary text                                                              |
+| `--sv-color-text-muted`     | grey-500               | grey-400               | Secondary text                                                            |
+| `--sv-color-text-subtle`    | grey-400               | grey-600               | Tertiary / de-emphasised text                                             |
+| `--sv-color-text-on-accent` | white                  | grey-950               | Text on accent fills                                                      |
+| `--sv-color-border`         | grey-200               | grey-800               | Hairline borders                                                          |
+| `--sv-color-border-strong`  | grey-300               | grey-700               | Emphasised borders                                                        |
+| `--sv-color-accent`         | grey-900               | grey-50                | Brand / interaction colour                                                |
+| `--sv-color-accent-hover`   | grey-700               | grey-200               | Accent hover state                                                        |
+| `--sv-color-accent-subtle`  | color-mix (accent 12%) | color-mix (accent 12%) | Tinted background paired with `--sv-color-accent` text, e.g. badges/chips |
+| `--sv-color-focus-ring`     | grey-900               | grey-100               | Focus outline                                                             |
+| `--sv-color-scrim`          | composed rgba          | composed rgba          | Dialog backdrop overlay                                                   |
+| `--sv-shadow-card`          | composed shadow        | composed shadow        | Card elevation                                                            |
+| `--sv-shadow-hover`         | composed shadow        | composed shadow        | Card hover lift (e1)                                                      |
+| `--sv-shadow-popover`       | composed shadow        | composed shadow        | Floating panels (e2)                                                      |
+| `--sv-shadow-overlay`       | composed shadow        | composed shadow        | Dialog / overlay elevation                                                |
+| `--sv-shadow-control`       | composed shadow        | composed shadow        | Small interactive-control shadows, e.g. Toggle thumb                      |
 
 ### Status colours
 
@@ -173,15 +176,25 @@ Animated components honour `prefers-reduced-motion: reduce`. The `OfflineBanner`
 
 #### Per-component a11y contract
 
-| Component | Role / element  | Keyboard                      | ARIA                                                                 | Focus order                               |
-| --------- | --------------- | ----------------------------- | -------------------------------------------------------------------- | ----------------------------------------- |
-| `Button`  | `<button>`      | Enter / Space activate        | `disabled` attribute                                                 | Natural                                   |
-| `Input`   | `<input>`       | Standard field editing        | `type`, `required`, `aria-invalid` via parent                        | Natural; label via `htmlFor`+`id`         |
-| `Dialog`  | `role="dialog"` | Esc close, Tab/Shift-Tab trap | `aria-modal="true"`, `aria-label` required                           | First focusable on open; restore on close |
-| `Drawer`  | `role="dialog"` | Esc close, Tab/Shift-Tab trap | `aria-modal="true"`, `aria-label` required                           | First focusable on open; restore on close |
-| `Icon`    | SVG             | Not focusable                 | `aria-hidden` (decorative) or `aria-label`+`role="img"` (meaningful) | N/A                                       |
+| Component   | Role / element              | Keyboard                                  | ARIA                                                                                                   | Focus order                               |
+| ----------- | --------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| `Button`    | `<button>`                  | Enter / Space activate                    | `disabled` attribute                                                                                   | Natural                                   |
+| `Input`     | `<input>`                   | Standard field editing                    | `type`, `required`, `aria-invalid` via parent                                                          | Natural; label via `htmlFor`+`id`         |
+| `Textarea`  | `<textarea>`                | Standard field editing                    | `required`, `aria-invalid` via parent                                                                  | Natural; label via `htmlFor`+`id`         |
+| `FormField` | `<label>` + `<div>` wrapper | N/A (delegates to its `children` control) | Generates `id`/`aria-describedby`/`aria-invalid`, passed to the control via the render-prop `children` | Natural                                   |
+| `Dialog`    | `role="dialog"`             | Esc close, Tab/Shift-Tab trap             | `aria-modal="true"`, `aria-label` required                                                             | First focusable on open; restore on close |
+| `Drawer`    | `role="dialog"`             | Esc close, Tab/Shift-Tab trap             | `aria-modal="true"`, `aria-label` required                                                             | First focusable on open; restore on close |
+| `Icon`      | SVG                         | Not focusable                             | `aria-hidden` (decorative) or `aria-label`+`role="img"` (meaningful)                                   | N/A                                       |
 
-**Label association:** the `Input` component spreads all native `<input>` props, including `id`. Always pair it with an explicit `htmlFor` on the label — `jsx-a11y` cannot trace through the custom wrapper to verify implicit association.
+**Label association:** prefer `FormField` — it generates the `id` (via `useId()` if none is given) and passes `{ id, 'aria-describedby', 'aria-invalid', required }` to the control through its render-prop `children`, so the label, hint, and error stay correctly wired without any manual `htmlFor` bookkeeping:
+
+```tsx
+<FormField label="Email" hint="We'll never share this.">
+  {(field) => <Input {...field} type="email" />}
+</FormField>
+```
+
+For a bare control outside `FormField` (e.g. `Input` used standalone), pair it with an explicit `htmlFor` on the label — `jsx-a11y` cannot trace through the custom wrapper to verify implicit association:
 
 ```tsx
 <label htmlFor="user-email">
@@ -196,9 +209,23 @@ Animated components honour `prefers-reduced-motion: reduce`. The `OfflineBanner`
    `<Name>.module.css` and `<Name>.test.tsx`.
 2. **CSS Modules only.** Style with a `.module.css` file; no inline styles, no
    CSS-in-JS, no Tailwind.
-3. **Tokens only.** Every colour, space, radius, and font value must be a
-   `--sv-*` token reference. No literals (hairline borders and focus-ring widths
-   in fixed `px` are the only exception — they are sub-scale control details).
+3. **Tokens only.** Every colour, space, and radius value must be a `--sv-*`
+   token reference. `pnpm design:tokens:check` (below) enforces this in CI.
+   Documented exceptions — fixed `px` values that are legitimately below the
+   scale or describe a control's own geometry, not a design value:
+   - hairline borders (`border: 1px solid …`) and focus-ring widths/offsets
+     (`outline-width`, `outline-offset`);
+   - fixed affordance dimensions (checkbox/toggle/avatar/icon sizes, e.g.
+     `width: 18px` for a toggle thumb);
+   - alignment micro-adjustments (`left: 2px`, `margin-top: -1px`) that
+     position a control detail relative to its own border;
+   - animation transform distances (`translateX(16px)`) computed from the
+     component's own fixed dimensions, not a design token.
+
+   Anything else — a colour, a spacing gap, a border-radius — must be a
+   token. `pnpm design:tokens:check` also fails on hardcoded hex/`rgb()`
+   colour literals in `packages/ui/src/components`.
+
 4. **RSC-safe.** Keep components presentational and prop-forwarding. Add
    `'use client'` only when the component genuinely needs hooks or browser state.
 5. **Accessibility.** Use the correct element/role, a visible `:focus-visible`
@@ -209,6 +236,20 @@ Animated components honour `prefers-reduced-motion: reduce`. The `OfflineBanner`
    exposes its key props.
 
 `Button` is the reference implementation of all of the above.
+
+### Token validation
+
+`pnpm design:tokens:check` (`scripts/design-tokens-check.ts`) scans every
+`var(--sv-...)` reference in `packages/ui/src`, `runtime/app`, and
+`plugins/*/app` and fails if it doesn't resolve to a token actually defined in
+`packages/ui/src/tokens/{primitives,semantic}.css` (plus the runtime-shell
+layout namespace — `--sv-shell-*` / `--sv-dialog-inset-*` — defined in
+`runtime/app/globals.css` and `shell.module.css`; see
+[`--sv-dialog-inset-top`](#--sv-dialog-inset-top) below). It also fails on
+hardcoded hex/`rgb()`/`rgba()` colour literals inside
+`packages/ui/src/components`, since third-party plugins inherit whatever
+ships there. Runs in CI (`design-tokens` job) after typecheck, and as part of
+`pnpm verify:push` (the pre-push hook).
 
 ## Icon system (RFC 0011)
 
@@ -539,29 +580,30 @@ Stories live under two roots inside `packages/ui/src/`:
 
 #### Components (`src/components/<Name>/`)
 
-| Story file                     | Key variants and notes                                                                     |
-| ------------------------------ | ------------------------------------------------------------------------------------------ |
-| `Avatar.stories.tsx`           | Initials fallback; image src; sm/md/lg sizes                                               |
-| `Badge.stories.tsx`            | All status variants; subtle vs filled                                                      |
-| `Button.stories.tsx`           | All `variant` × `size` combinations; disabled; icon-leading; icon-only; `AllVariants` grid |
-| `Card.stories.tsx`             | sm/md/lg padding; interactive hover; semantic element variants                             |
-| `Dialog.stories.tsx`           | sm/md/lg/full sizes; closed state; `play` function opens and asserts visibility            |
-| `Drawer.stories.tsx`           | Mobile viewport default; closed; `play` function opens and asserts panel visible           |
-| `EmptyState.stories.tsx`       | Heading only; with icon; with action                                                       |
-| `FormField.stories.tsx`        | Default; with hint; with error (role="alert")                                              |
-| `Icon.stories.tsx`             | Decorative vs meaningful a11y variants; all three sizes; `AllIcons` full grid              |
-| `Input.stories.tsx`            | Text/email/password; disabled; error state with `aria-invalid`                             |
-| `NavTabs.stories.tsx`          | Default; active tab; mobile horizontal-scroll viewport                                     |
-| `PageHeader.stories.tsx`       | Title only; with description; with action slot                                             |
-| `Popover.stories.tsx`          | Four placements; trigger + content                                                         |
-| `SegmentedControl.stories.tsx` | Two and three options; controlled selection                                                |
-| `Select.stories.tsx`           | Default; disabled; with placeholder                                                        |
-| `Spinner.stories.tsx`          | sm/md/lg sizes; reduced-motion note                                                        |
-| `SystemBanner.stories.tsx`     | All four categories (info/success/warning/error); dismissible                              |
-| `Tabs.stories.tsx`             | Controlled tabs; default selected; keyboard navigation                                     |
-| `Toast.stories.tsx`            | All six categories triggered imperatively via `useToast`                                   |
-| `Toggle.stories.tsx`           | On/off; disabled; label association                                                        |
-| `Tooltip.stories.tsx`          | Four placement variants; hover and focus triggers                                          |
+| Story file                     | Key variants and notes                                                                                                                                          |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Avatar.stories.tsx`           | Initials fallback; image src; sm/md/lg sizes                                                                                                                    |
+| `Badge.stories.tsx`            | All status variants; subtle vs filled                                                                                                                           |
+| `Button.stories.tsx`           | All `variant` × `size` combinations; disabled; icon-leading; icon-only; `AllVariants` grid                                                                      |
+| `Card.stories.tsx`             | sm/md/lg padding; interactive hover; semantic element variants                                                                                                  |
+| `Dialog.stories.tsx`           | sm/md/lg/full sizes; closed state; `play` function opens and asserts visibility                                                                                 |
+| `Drawer.stories.tsx`           | Mobile viewport default; closed; `play` function opens and asserts panel visible                                                                                |
+| `EmptyState.stories.tsx`       | Heading only; with icon; with action                                                                                                                            |
+| `FormField.stories.tsx`        | Default; with hint; with error (role="alert"); render-prop `children` wires field props (`id`, `aria-describedby`, `aria-invalid`, `required`) onto the control |
+| `Icon.stories.tsx`             | Decorative vs meaningful a11y variants; all three sizes; `AllIcons` full grid                                                                                   |
+| `Input.stories.tsx`            | Text/email/password; disabled; error state with `aria-invalid`                                                                                                  |
+| `NavTabs.stories.tsx`          | Default; active tab; mobile horizontal-scroll viewport                                                                                                          |
+| `PageHeader.stories.tsx`       | Title only; with description; with action slot                                                                                                                  |
+| `Popover.stories.tsx`          | Four placements; trigger + content                                                                                                                              |
+| `SegmentedControl.stories.tsx` | Two and three options; controlled selection                                                                                                                     |
+| `Select.stories.tsx`           | Default; disabled; with placeholder                                                                                                                             |
+| `Spinner.stories.tsx`          | sm/md/lg sizes; reduced-motion note                                                                                                                             |
+| `SystemBanner.stories.tsx`     | All four categories (info/success/warning/error); dismissible                                                                                                   |
+| `Tabs.stories.tsx`             | Controlled tabs; default selected; keyboard navigation                                                                                                          |
+| `Textarea.stories.tsx`         | Default; with value; custom `rows`; disabled                                                                                                                    |
+| `Toast.stories.tsx`            | All six categories triggered imperatively via `useToast`                                                                                                        |
+| `Toggle.stories.tsx`           | On/off; disabled; label association                                                                                                                             |
+| `Tooltip.stories.tsx`          | Four placement variants; hover and focus triggers                                                                                                               |
 
 ### Themes toolbar
 

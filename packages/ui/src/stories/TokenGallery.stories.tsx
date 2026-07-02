@@ -19,6 +19,7 @@ const SEMANTIC_COLORS = [
   '--sv-color-border-strong',
   '--sv-color-accent',
   '--sv-color-accent-hover',
+  '--sv-color-accent-subtle',
   '--sv-color-focus-ring',
   '--sv-color-error-surface',
   '--sv-color-error-text',
@@ -82,6 +83,7 @@ const SHADOW_TOKENS = [
   '--sv-shadow-hover',
   '--sv-shadow-popover',
   '--sv-shadow-overlay',
+  '--sv-shadow-control',
 ];
 
 // ---------------------------------------------------------------------------

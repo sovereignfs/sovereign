@@ -14,8 +14,8 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     label: 'Email address',
-    htmlFor: 'email',
-    children: <Input id="email" type="email" placeholder="you@example.com" />,
+    id: 'email',
+    children: (field) => <Input {...field} type="email" placeholder="you@example.com" />,
   },
 };
 
@@ -23,8 +23,8 @@ export const WithHint: Story = {
   args: {
     label: 'Username',
     hint: 'Letters, numbers, and underscores only.',
-    htmlFor: 'username',
-    children: <Input id="username" placeholder="your_username" />,
+    id: 'username',
+    children: (field) => <Input {...field} placeholder="your_username" />,
   },
 };
 
@@ -32,8 +32,8 @@ export const WithError: Story = {
   args: {
     label: 'Password',
     error: 'Password must be at least 8 characters.',
-    htmlFor: 'password',
-    children: <Input id="password" type="password" />,
+    id: 'password',
+    children: (field) => <Input {...field} type="password" />,
   },
 };
 
@@ -41,7 +41,7 @@ export const Required: Story = {
   args: {
     label: 'Full name',
     required: true,
-    htmlFor: 'name',
-    children: <Input id="name" placeholder="Jane Smith" />,
+    id: 'name',
+    children: (field) => <Input {...field} placeholder="Jane Smith" />,
   },
 };

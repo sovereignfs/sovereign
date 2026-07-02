@@ -43,11 +43,14 @@ support — and a GitHub Actions workflow producing a signed/notarized macOS
   - `index.html` — onboarding UI (local HTML rendered on first launch)
   - `.github/workflows/release.yml` — builds `.dmg` (macOS, signed + notarized),
     `.exe`/`.msi` (Windows), `.AppImage`/`.deb` (Linux) on `v*` tags
-- `packages/sdk` patch — add `"desktop"` environment to `sdk.device.*` routing;
-  semver patch bump
+- ~~`packages/sdk` patch — add `"desktop"` environment to `sdk.device.*` routing~~
+  — deferred to task 17.7: `sdk.device.*` does not exist in `packages/sdk` yet
+  (post-v1 surface), so there is no routing to patch
 
 **macOS CI secrets required:** `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`,
-`APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`.
+`APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`
+(notarization via Apple ID requires the team ID alongside the four secrets
+listed in RFC 0038).
 
 **SRS reference:** §3.19, §3.12 (mobile; same model)
 
@@ -59,7 +62,6 @@ support — and a GitHub Actions workflow producing a signed/notarized macOS
 - Multiple instance entries can be added and switched between
 - `cargo tauri build` produces a `.app` bundle and `.dmg`
 - GitHub Actions `release.yml` runs on a `v0.1.0` tag and attaches all artifacts
-- `pnpm test` passes in `packages/sdk` after the `"desktop"` environment addition
 
 #### 📋 17.2 — System tray and OS notifications
 
@@ -171,6 +173,30 @@ direct download, reaching users who prefer sandboxed App Store apps.
 - MAS build passes `codesign --verify` with sandbox entitlements
 - Submitted build passes App Review (no private API usage)
 - App Store listing shows correct screenshots and privacy labels
+
+#### 📋 17.7 — SDK `"desktop"` environment for `sdk.device.*`
+
+**Goal:** Add the `"desktop"` environment to `sdk.device.*` routing so plugins
+calling the device abstraction detect the Tauri shell and route to the correct
+tier. Deferred from task 17.1: `sdk.device.*` does not exist in `packages/sdk`
+yet (post-v1 surface), so there was no routing to patch when the shell scaffold
+shipped.
+
+**Deliverables:**
+
+- `packages/sdk` — `"desktop"` environment detection alongside `"browser"` /
+  `"native"` in the `sdk.device.*` surface. If `sdk.device.*` has not landed by
+  the time this task is picked up, ship the desktop check as part of its first
+  implementation instead. Semver: patch bump when routing already exists, minor
+  when this lands with the initial surface.
+
+**SRS reference:** §3.19, §3.12
+
+**Review checklist:**
+
+- `sdk.device.*` reports `"desktop"` inside the Tauri shell and `"browser"` in a
+  plain browser tab on the same instance
+- `pnpm test` passes in `packages/sdk` after the addition
 
 ## Related RFCs
 

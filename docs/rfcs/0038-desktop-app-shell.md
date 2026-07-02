@@ -66,7 +66,7 @@ App opens
   └─ No instance URL stored?
        └─ Show onboarding screen
             └─ User enters instance URL (e.g. https://my.sovereign.example)
-                 └─ Validate: GET /api/admin/health → expect 200 + { status: "ok" }
+                 └─ Validate: GET /api/health → expect 200 + { status: "ok" }
                       ├─ Valid → persist URL → load URL in WebView
                       └─ Invalid → inline error, let user retry
   └─ URL stored?
@@ -155,6 +155,7 @@ public API surface — internal environment detection only. Semver: patch bump.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | June 2026 | Initial draft |
+| Version | Date      | Change                                                                                                        |
+| ------- | --------- | ------------------------------------------------------------------------------------------------------------- |
+| 0.1     | June 2026 | Initial draft                                                                                                 |
+| 0.2     | July 2026 | Onboarding validation endpoint corrected to the public `/api/health` (`/api/admin/health` is admin-key-gated) |

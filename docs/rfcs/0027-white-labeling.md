@@ -267,6 +267,42 @@ Plugin developers use `sdk.platform.getConfig()` to display the instance name. E
 
 Logo and favicon URLs are intentionally excluded from `getConfig()` — they are served via the `/api/instance/*` routes and consumed as CSS `background-image` values, not as props. Adding them to the SDK surface would couple the SDK to the runtime's URL structure.
 
+### Subtle Sovereign attribution
+
+Instance identity lets operators make the workspace feel like their own. It
+should not erase the fact that the platform is powered by Sovereign in ordinary
+open-source/self-hosted deployments. Attribution should be useful, subtle, and
+operational rather than promotional.
+
+The default attribution surface is:
+
+- **Auth screens:** small footer microcopy, `Powered by Sovereign`, on login,
+  signup, password reset, and related unauthenticated auth screens.
+- **Account:** an About section or page visible to signed-in users, showing the
+  instance name, platform name (`Sovereign`), runtime version, and links to docs
+  or source where appropriate.
+- **Console:** system health/about row showing `Platform: Sovereign` and
+  `Runtime: vX.Y.Z`, alongside existing operational health metadata.
+- **Avatar menu:** an `About this instance` item that opens the Account or
+  Console about surface depending on role and route availability. The menu label
+  is instance-centered; the opened surface contains the Sovereign attribution.
+- **HTML metadata:** root layouts include
+  `<meta name="generator" content="Sovereign" />`.
+
+This RFC intentionally does **not** add a permanent "Powered by" badge to the
+authenticated shell chrome. Persistent attribution in the sidebar/header would
+compete with the user's workspace and the configured instance identity.
+
+Attribution copy should use two tones:
+
+- Entry surfaces: `Powered by Sovereign`.
+- Operational surfaces: `Platform: Sovereign`, `Runtime: vX.Y.Z`.
+
+Commercial OEM or stronger white-label distribution may need an attribution
+policy different from the open-source default. That policy is outside this RFC;
+the implementation should avoid hard-coding attribution in a way that prevents a
+future license-aware override.
+
 ## UI flows
 
 ### Admin flow: setting up instance identity
@@ -284,6 +320,15 @@ Logo and favicon URLs are intentionally excluded from `getConfig()` — they are
 2. User logs in — shell header shows the instance logo and name.
 3. User receives an email — sender name and logo reflect the instance identity (logo visible in clients that allow external images).
 4. User installs the PWA — app name and icons show the instance identity.
+
+### User flow: viewing platform attribution
+
+1. User opens the avatar menu and selects `About this instance`.
+2. Account or Console opens an About surface.
+3. The surface shows the configured instance name, `Platform: Sovereign`, runtime
+   version, and relevant docs/source links.
+4. The user returns to their previous app flow without a persistent attribution
+   badge being added to shell chrome.
 
 ### Reset flow
 
@@ -330,6 +375,14 @@ Considered to avoid external-image blocking in email clients. Rejected because G
 
 Considered and deferred. Showing different instance identity to admins vs users is a plausible requirement for OEM scenarios but adds complexity (role-scoped DB reads, multiple token sets). It can be layered on top of the per-tenant model without breaking changes by adding a `role` column to `instance_config`.
 
+### Permanent shell badge
+
+Considered and rejected for the default UI. A persistent `Powered by Sovereign`
+badge in the sidebar or header is discoverable, but it adds visual noise to the
+main workspace and competes with instance identity. Auth footer microcopy,
+About surfaces, Console health, avatar-menu entry, and HTML metadata provide
+awareness without occupying daily workspace chrome.
+
 ## Open questions
 
 1. **CSP for external logo URLs: proxy or widen?** (See "Logo serving and CSP" above.) Proxy keeps the CSP strict; widening is simpler to ship. The proxy is preferred; the implementation task records the final choice.
@@ -352,6 +405,7 @@ This RFC is **documentation-first**. The design is recorded here for review and 
 | 1     | `instance_config` table + helpers, env vars, `--sv-instance-*` tokens, `InstanceProvider`, Console identity form, `getConfig()` extension | `packages/db`, `runtime`, `plugins/console`, `packages/ui`, `packages/sdk` | `db` minor, `runtime` minor, `ui` minor, `console` minor, `sdk` minor |
 | 2     | Email templates (logo + sender name, RFC 0031), auth login page identity via runtime proxy                                                | `packages/mailer`, `apps/auth`                                             | `mailer` minor, `auth` minor                                          |
 | 3     | Dynamic PWA manifest route, dynamic favicon route                                                                                         | `runtime`                                                                  | `runtime` minor                                                       |
+| 4     | Subtle Sovereign attribution: auth footer, Account/Console About surfaces, avatar-menu entry, generator metadata                          | `runtime`, `apps/auth`, `plugins/account`, `plugins/console`               | `runtime` minor, `auth` minor, `account` minor, `console` minor       |
 
 Phase 0 (RFC 0032) shipped as epic task 9.8; Phase 1 shipped as Task 1.0.03. Published packages (`@sovereignfs/ui`, `@sovereignfs/sdk`) treated the Phase 0 rename as a breaking minor bump per NFR-04 (no breaking patch releases).
 
@@ -363,6 +417,8 @@ Phase 0 (RFC 0032) shipped as epic task 9.8; Phase 1 shipped as Task 1.0.03. Pub
 - `docs/sovereign-proposal-plan-srs.md` — add white-labeling to SRS §3 or §4
 - `docs/upgrade.md` — migration notes: Phase 0 (RFC 0032) renames; Phase 1 `instance_config` DB table (bootstrapped automatically on first run)
 - `.env.example` — `INSTANCE_*` vars
+- `docs/self-hosting.md` or `docs/architecture.md` — document the default
+  attribution surfaces and future OEM override considerations
 
 ### Docker/config impact
 
@@ -378,3 +434,4 @@ Phase 0 (RFC 0032) shipped as epic task 9.8; Phase 1 shipped as Task 1.0.03. Pub
 | 0.1     | June 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 0.2     | June 2026 | Clarified config layering (removed phantom `platform_settings` middle tier); fixed `--sv-instance-name` approach (React prop, not CSS var); fixed email logo (hosted URL, not `data:` URI); specified CSS injection guard on `instance_primary`; specified dialect-agnostic DDL; added CSP/logo-serving analysis; resolved auth server approach (proxy, not dual-write); added `getConfig()` extension; specified `accent-hover` derivation algorithm; corrected Phase 3 semver to minor; added `docs/upgrade.md` to required doc updates; added security considerations section |
 | 0.3     | June 2026 | All `BRAND_*`/`--sv-brand-*`/`brandName`/`BrandProvider`/`tenant_branding` identifiers renamed to `INSTANCE_*`/`--sv-instance-*`/`instanceName`/`InstanceProvider`/`instance_config` per RFC 0032 (epic task 9.8); adoption path gains a Phase 0 row for the rename; incorporated-into-plan reference updated to reflect pre-v1 schedule                                                                                                                                                                                                                                         |
+| 0.4     | July 2026 | Added subtle Sovereign attribution surfaces: auth footer microcopy, Account/Console About surfaces, avatar-menu entry, and generator metadata; rejected a permanent shell badge for the default UI                                                                                                                                                                                                                                                                                                                                                                               |

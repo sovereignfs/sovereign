@@ -120,26 +120,24 @@ open architectural questions.
 
 #### Phase v0.9+ — Pre-release Hardening
 
-| Version | Task                                                                      | Status | Epic task                                                                                                                  |
-| ------- | ------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------- |
-| 0.9.0   | Instance identity rename (RFC 0032)                                       | ✅     | [9.8](epics/design-system.md#98--instance-identity-rename-rfc-0032)                                                        |
-| 0.9.1   | User data deletion (RFC 0033)                                             | ✅     | [1.7](epics/users-auth.md#17--user-data-deletion-rfc-0033)                                                                 |
-| 0.9.2   | Notification Center: pluggable pub/sub transport (RFC 0034)               | ✅     | [4.3](epics/notification-center.md#43--notification-center-pluggable-pubsub-transport)                                     |
-| 0.9.3   | Sidebar customization — plugin ordering and visibility                    | ✅     | [2.13](epics/platform-shell.md#213--sidebar-customization--plugin-ordering-and-visibility)                                 |
-| 0.9.4   | Email-bound invite flow                                                   | ✅     | [1.10](epics/users-auth.md#110--email-bound-invite-flow)                                                                   |
-| 0.10.0  | Test-user flag on seeded accounts                                         | ✅     | [1.11](epics/users-auth.md#111--test-user-flag-on-seeded-accounts)                                                         |
-| 0.10.1  | VitePress docs site scaffold (RFC 0037)                                   | ✅     | [16.1](epics/docs.md#161--appsdocs--vitepress-workspace-scaffold)                                                          |
-| 0.10.2  | Landing home page (RFC 0037)                                              | ✅     | [16.2](epics/docs.md#162--docsindexmd--landing-home-page)                                                                  |
-| —       | Design system component gaps — plugin developer readiness                 | ✅     | [9.11](epics/design-system.md#911--design-system-component-gaps--plugin-developer-readiness)                               |
-| —       | Operator fork model & upstream sync (RFC 0028)                            | ✅     | [3.14](epics/plugins-runtime.md#314--operator-fork-model--upstream-sync)                                                   |
-| —       | Current-state testing documentation cleanup                               | ✅     | [16.3](epics/docs.md#163--current-state-testing-documentation-cleanup)                                                     |
-| —       | Middleware regression coverage                                            | ✅     | [2.16](epics/platform-shell.md#216--middleware-regression-coverage)                                                        |
-| —       | Generate script regression coverage                                       | ✅     | [3.22](epics/plugins-runtime.md#322--generate-script-regression-coverage)                                                  |
-| —       | Overlay size variants for platform plugins                                | ✅     | [2.19](epics/platform-shell.md#219--overlay-size-variants-for-platform-plugins)                                            |
-| 0.11.0  | Internationalization, Phase 1 — Infrastructure (RFC 0029)                 | 📋     | [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029)                                           |
-| 0.12.0  | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)        | 📋     | [11.2](epics/i18n.md#112--internationalization-phase-2--platform-shell-adoption-rfc-0029)                                  |
-| 0.13.0  | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](epics/design-system.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
-| 0.14.0  | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](epics/design-system.md#910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
+| Version | Task                                                        | Status | Epic task                                                                                    |
+| ------- | ----------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------- |
+| 0.9.0   | Instance identity rename (RFC 0032)                         | ✅     | [9.8](epics/design-system.md#98--instance-identity-rename-rfc-0032)                          |
+| 0.9.1   | User data deletion (RFC 0033)                               | ✅     | [1.7](epics/users-auth.md#17--user-data-deletion-rfc-0033)                                   |
+| 0.9.2   | Notification Center: pluggable pub/sub transport (RFC 0034) | ✅     | [4.3](epics/notification-center.md#43--notification-center-pluggable-pubsub-transport)       |
+| 0.9.3   | Sidebar customization — plugin ordering and visibility      | ✅     | [2.13](epics/platform-shell.md#213--sidebar-customization--plugin-ordering-and-visibility)   |
+| 0.9.4   | Email-bound invite flow                                     | ✅     | [1.10](epics/users-auth.md#110--email-bound-invite-flow)                                     |
+| 0.10.0  | Test-user flag on seeded accounts                           | ✅     | [1.11](epics/users-auth.md#111--test-user-flag-on-seeded-accounts)                           |
+| 0.10.1  | VitePress docs site scaffold (RFC 0037)                     | ✅     | [16.1](epics/docs.md#161--appsdocs--vitepress-workspace-scaffold)                            |
+| 0.10.2  | Landing home page (RFC 0037)                                | ✅     | [16.2](epics/docs.md#162--docsindexmd--landing-home-page)                                    |
+| —       | Design system component gaps — plugin developer readiness   | ✅     | [9.11](epics/design-system.md#911--design-system-component-gaps--plugin-developer-readiness) |
+| —       | Operator fork model & upstream sync (RFC 0028)              | ✅     | [3.14](epics/plugins-runtime.md#314--operator-fork-model--upstream-sync)                     |
+| —       | Current-state testing documentation cleanup                 | ✅     | [16.3](epics/docs.md#163--current-state-testing-documentation-cleanup)                       |
+| —       | Middleware regression coverage                              | ✅     | [2.16](epics/platform-shell.md#216--middleware-regression-coverage)                          |
+| —       | Generate script regression coverage                         | ✅     | [3.22](epics/plugins-runtime.md#322--generate-script-regression-coverage)                    |
+| —       | Overlay size variants for platform plugins                  | ✅     | [2.19](epics/platform-shell.md#219--overlay-size-variants-for-platform-plugins)              |
+| 0.11.2  | Design system stabilization                                 | ✅     | [9.12](epics/design-system.md#912--design-system-stabilization)                              |
+| 0.11.3  | Per-plugin database dialect selection (RFC 0036)            | ✅     | [3.15](epics/plugins-runtime.md#315--per-plugin-database-dialect-selection-rfc-0036)         |
 
 ---
 
@@ -161,54 +159,56 @@ open architectural questions.
 Tasks with accepted or draft RFCs but not yet assigned a roadmap slot. Promoted to a phase table
 once prioritised.
 
-| Version | Task                                                                  | Status | Epic task                                                                                        |
-| ------- | --------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ |
-| —       | Non-Docker production deployment, Phase 2 — systemd (RFC 0026)        | 📋     | [0.13](epics/infrastructure.md#013--non-docker-production-deployment-phase-2--systemd)           |
-| —       | Per-plugin database dialect selection (RFC 0036)                      | ✅     | [3.15](epics/plugins-runtime.md#315--per-plugin-database-dialect-selection-rfc-0036)             |
-| —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035)    | 📋     | [1.8](epics/users-auth.md#18--progressive-user-verification-phase-1--infrastructure-rfc-0035)    |
-| —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035) | 📋     | [1.9](epics/users-auth.md#19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035) |
-| —       | Design system stabilization                                           | ✅     | [9.12](epics/design-system.md#912--design-system-stabilization)                                  |
-| —       | Subtle Sovereign attribution (RFC 0027)                               | 📋     | [9.13](epics/design-system.md#913--subtle-sovereign-attribution-rfc-0027)                        |
-| —       | Local visual regression testing (RFC 0059)                            | 📋     | [9.14](epics/design-system.md#914--local-visual-regression-testing-rfc-0059)                     |
-| —       | NavTabs Link support + PageHeader heading level                       | 📋     | [9.15](epics/design-system.md#915--navtabs-link-support--pageheader-heading-level)               |
-| —       | Messages and notification detail (RFC 0048)                           | 📋     | [4.4](epics/notification-center.md#44--messages-and-notification-detail-rfc-0048)                |
-| —       | User directory and member selection SDK (RFC 0041)                    | 📋     | [1.12](epics/users-auth.md#112--user-directory-and-member-selection-sdk-rfc-0041)                |
-| —       | Plugin-scoped roles and grants (RFC 0054)                             | 📋     | [1.13](epics/users-auth.md#113--plugin-scoped-roles-and-grants-rfc-0054)                         |
-| —       | Account and security email delivery coverage (RFC 0062)               | 📋     | [1.14](epics/users-auth.md#114--account-and-security-email-delivery-coverage-rfc-0062)           |
-| —       | Plugin secret vault (RFC 0043)                                        | 📋     | [8.6](epics/data-sovereignty.md#86--plugin-secret-vault-rfc-0043)                                |
-| —       | Plugin file storage (RFC 0044)                                        | 📋     | [8.7](epics/data-sovereignty.md#87--plugin-file-storage-rfc-0044)                                |
-| —       | Plugin portability hooks (RFC 0052)                                   | 📋     | [8.8](epics/data-sovereignty.md#88--plugin-portability-hooks-rfc-0052)                           |
-| —       | Client-side encryption core (RFC 0060)                                | 📋     | [8.9](epics/data-sovereignty.md#89--client-side-encryption-core-rfc-0060)                        |
-| —       | Plugin background jobs and schedules (RFC 0046)                       | 📋     | [3.16](epics/plugins-runtime.md#316--plugin-background-jobs-and-schedules-rfc-0046)              |
-| —       | Public plugin page routes (RFC 0042)                                  | 📋     | [2.14](epics/platform-shell.md#214--public-plugin-page-routes-rfc-0042)                          |
-| —       | Public plugin webhooks (RFC 0050)                                     | 📋     | [2.15](epics/platform-shell.md#215--public-plugin-webhooks-rfc-0050)                             |
-| —       | Error-page digital-rights quote rotation                              | 📋     | [2.20](epics/platform-shell.md#220--error-page-digital-rights-quote-rotation)                    |
-| —       | Plugin events and realtime channels (RFC 0045)                        | 📋     | [3.17](epics/plugins-runtime.md#317--plugin-events-and-realtime-channels-rfc-0045)               |
-| —       | Plugin tool contracts (RFC 0047)                                      | 📋     | [3.18](epics/plugins-runtime.md#318--plugin-tool-contracts-rfc-0047)                             |
-| —       | Plugin external connections (RFC 0049)                                | 📋     | [3.19](epics/plugins-runtime.md#319--plugin-external-connections-rfc-0049)                       |
-| —       | Cross-plugin references and dependency discovery (RFC 0051)           | 📋     | [3.20](epics/plugins-runtime.md#320--cross-plugin-references-and-dependency-discovery-rfc-0051)  |
-| —       | Plugin flow handoffs (RFC 0053)                                       | 📋     | [3.21](epics/plugins-runtime.md#321--plugin-flow-handoffs-rfc-0053)                              |
-| —       | Email channel for broadcasts and messages (RFC 0062)                  | 📋     | [4.5](epics/notification-center.md#45--email-channel-for-broadcasts-and-messages-rfc-0062)       |
-| —       | Sovereign Harness platform plugin (RFC 0040)                          | 📋     | [18.1](epics/sovereign-harness.md#181--sovereign-harness-platform-plugin-rfc-0040)               |
-| —       | Sovereign Council POC (RFC 0055)                                      | 📋     | [19.1](epics/sovereign-council.md#191--sovereign-council-poc-rfc-0055)                           |
-| —       | Sovereign Council full deliberation workspace                         | 📋     | [19.2](epics/sovereign-council.md#192--sovereign-council-full-deliberation-workspace)            |
-| —       | Middleware decomposition                                              | 📋     | [2.17](epics/platform-shell.md#217--middleware-decomposition)                                    |
-| —       | Generate script decomposition                                         | 📋     | [3.23](epics/plugins-runtime.md#323--generate-script-decomposition)                              |
-| —       | Account plugin workflow coverage                                      | 📋     | [14.2](epics/plugin-accounts.md#142--account-plugin-workflow-coverage)                           |
-| —       | Console plugin workflow coverage                                      | 📋     | [13.5](epics/plugin-console.md#135--console-plugin-workflow-coverage)                            |
-| —       | Console primitive migration, Phase 2                                  | 📋     | [13.6](epics/plugin-console.md#136--console-primitive-migration-phase-2)                         |
-| —       | Launcher plugin workflow coverage                                     | 📋     | [15.2](epics/plugin-launcher.md#152--launcher-plugin-workflow-coverage)                          |
-| —       | SDK boundary and runtime contract tests                               | 📋     | [3.24](epics/plugins-runtime.md#324--sdk-boundary-and-runtime-contract-tests)                    |
-| —       | Plugin external dependency resolution (RFC 0057)                      | 📋     | [3.25](epics/plugins-runtime.md#325--plugin-external-dependency-resolution-rfc-0057)             |
-| —       | Plugin mailer permission and SDK email surface (RFC 0062)             | 📋     | [3.26](epics/plugins-runtime.md#326--plugin-mailer-permission-and-sdk-email-surface-rfc-0062)    |
-| —       | Middleware internal fetch caching review                              | 📋     | [2.18](epics/platform-shell.md#218--middleware-internal-fetch-caching-review)                    |
-| —       | Typecheck performance and project references                          | 📋     | [0.14](epics/infrastructure.md#014--typecheck-performance-and-project-references)                |
-| —       | Operational consistency checks                                        | 📋     | [0.15](epics/infrastructure.md#015--operational-consistency-checks)                              |
-| —       | Pre-v1 stabilization gate                                             | 📋     | [0.16](epics/infrastructure.md#016--pre-v1-stabilization-gate)                                   |
-| —       | Sovereign Wallet scaffold (RFC 0061)                                  | 📋     | [21.1](epics/sovereign-wallet.md#211--sovereign-wallet-scaffold-rfc-0061)                        |
-| —       | Sovereign Wallet loyalty card storage and QR/barcode rendering        | 📋     | [21.2](epics/sovereign-wallet.md#212--loyalty-card-storage-and-qrbarcode-rendering)              |
-| —       | Sovereign Wallet encrypted document snapshots                         | 📋     | [21.3](epics/sovereign-wallet.md#213--encrypted-document-snapshots)                              |
-| —       | Sovereign Wallet portability and deletion hooks                       | 📋     | [21.4](epics/sovereign-wallet.md#214--wallet-portability-and-deletion-hooks)                     |
+| Version | Task                                                                      | Status | Epic task                                                                                                                  |
+| ------- | ------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------- |
+| —       | Internationalization, Phase 1 — Infrastructure (RFC 0029)                 | 📋     | [11.1](epics/i18n.md#111--internationalization-phase-1--infrastructure-rfc-0029)                                           |
+| —       | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)        | 📋     | [11.2](epics/i18n.md#112--internationalization-phase-2--platform-shell-adoption-rfc-0029)                                  |
+| —       | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](epics/design-system.md#99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
+| —       | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](epics/design-system.md#910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
+| —       | Non-Docker production deployment, Phase 2 — systemd (RFC 0026)            | 📋     | [0.13](epics/infrastructure.md#013--non-docker-production-deployment-phase-2--systemd)                                     |
+| —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035)        | 📋     | [1.8](epics/users-auth.md#18--progressive-user-verification-phase-1--infrastructure-rfc-0035)                              |
+| —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035)     | 📋     | [1.9](epics/users-auth.md#19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035)                           |
+| —       | Subtle Sovereign attribution (RFC 0027)                                   | 📋     | [9.13](epics/design-system.md#913--subtle-sovereign-attribution-rfc-0027)                                                  |
+| —       | Local visual regression testing (RFC 0059)                                | 📋     | [9.14](epics/design-system.md#914--local-visual-regression-testing-rfc-0059)                                               |
+| —       | NavTabs Link support + PageHeader heading level                           | 📋     | [9.15](epics/design-system.md#915--navtabs-link-support--pageheader-heading-level)                                         |
+| —       | Messages and notification detail (RFC 0048)                               | 📋     | [4.4](epics/notification-center.md#44--messages-and-notification-detail-rfc-0048)                                          |
+| —       | User directory and member selection SDK (RFC 0041)                        | 📋     | [1.12](epics/users-auth.md#112--user-directory-and-member-selection-sdk-rfc-0041)                                          |
+| —       | Plugin-scoped roles and grants (RFC 0054)                                 | 📋     | [1.13](epics/users-auth.md#113--plugin-scoped-roles-and-grants-rfc-0054)                                                   |
+| —       | Account and security email delivery coverage (RFC 0062)                   | 📋     | [1.14](epics/users-auth.md#114--account-and-security-email-delivery-coverage-rfc-0062)                                     |
+| —       | Plugin secret vault (RFC 0043)                                            | 📋     | [8.6](epics/data-sovereignty.md#86--plugin-secret-vault-rfc-0043)                                                          |
+| —       | Plugin file storage (RFC 0044)                                            | 📋     | [8.7](epics/data-sovereignty.md#87--plugin-file-storage-rfc-0044)                                                          |
+| —       | Plugin portability hooks (RFC 0052)                                       | 📋     | [8.8](epics/data-sovereignty.md#88--plugin-portability-hooks-rfc-0052)                                                     |
+| —       | Client-side encryption core (RFC 0060)                                    | 📋     | [8.9](epics/data-sovereignty.md#89--client-side-encryption-core-rfc-0060)                                                  |
+| —       | Plugin background jobs and schedules (RFC 0046)                           | 📋     | [3.16](epics/plugins-runtime.md#316--plugin-background-jobs-and-schedules-rfc-0046)                                        |
+| —       | Public plugin page routes (RFC 0042)                                      | 📋     | [2.14](epics/platform-shell.md#214--public-plugin-page-routes-rfc-0042)                                                    |
+| —       | Public plugin webhooks (RFC 0050)                                         | 📋     | [2.15](epics/platform-shell.md#215--public-plugin-webhooks-rfc-0050)                                                       |
+| —       | Error-page digital-rights quote rotation                                  | 📋     | [2.20](epics/platform-shell.md#220--error-page-digital-rights-quote-rotation)                                              |
+| —       | Plugin events and realtime channels (RFC 0045)                            | 📋     | [3.17](epics/plugins-runtime.md#317--plugin-events-and-realtime-channels-rfc-0045)                                         |
+| —       | Plugin tool contracts (RFC 0047)                                          | 📋     | [3.18](epics/plugins-runtime.md#318--plugin-tool-contracts-rfc-0047)                                                       |
+| —       | Plugin external connections (RFC 0049)                                    | 📋     | [3.19](epics/plugins-runtime.md#319--plugin-external-connections-rfc-0049)                                                 |
+| —       | Cross-plugin references and dependency discovery (RFC 0051)               | 📋     | [3.20](epics/plugins-runtime.md#320--cross-plugin-references-and-dependency-discovery-rfc-0051)                            |
+| —       | Plugin flow handoffs (RFC 0053)                                           | 📋     | [3.21](epics/plugins-runtime.md#321--plugin-flow-handoffs-rfc-0053)                                                        |
+| —       | Email channel for broadcasts and messages (RFC 0062)                      | 📋     | [4.5](epics/notification-center.md#45--email-channel-for-broadcasts-and-messages-rfc-0062)                                 |
+| —       | Sovereign Harness platform plugin (RFC 0040)                              | 📋     | [18.1](epics/sovereign-harness.md#181--sovereign-harness-platform-plugin-rfc-0040)                                         |
+| —       | Sovereign Council POC (RFC 0055)                                          | 📋     | [19.1](epics/sovereign-council.md#191--sovereign-council-poc-rfc-0055)                                                     |
+| —       | Sovereign Council full deliberation workspace                             | 📋     | [19.2](epics/sovereign-council.md#192--sovereign-council-full-deliberation-workspace)                                      |
+| —       | Middleware decomposition                                                  | 📋     | [2.17](epics/platform-shell.md#217--middleware-decomposition)                                                              |
+| —       | Generate script decomposition                                             | 📋     | [3.23](epics/plugins-runtime.md#323--generate-script-decomposition)                                                        |
+| —       | Account plugin workflow coverage                                          | 📋     | [14.2](epics/plugin-accounts.md#142--account-plugin-workflow-coverage)                                                     |
+| —       | Console plugin workflow coverage                                          | 📋     | [13.5](epics/plugin-console.md#135--console-plugin-workflow-coverage)                                                      |
+| —       | Console primitive migration, Phase 2                                      | 📋     | [13.6](epics/plugin-console.md#136--console-primitive-migration-phase-2)                                                   |
+| —       | Launcher plugin workflow coverage                                         | 📋     | [15.2](epics/plugin-launcher.md#152--launcher-plugin-workflow-coverage)                                                    |
+| —       | SDK boundary and runtime contract tests                                   | 📋     | [3.24](epics/plugins-runtime.md#324--sdk-boundary-and-runtime-contract-tests)                                              |
+| —       | Plugin external dependency resolution (RFC 0057)                          | 📋     | [3.25](epics/plugins-runtime.md#325--plugin-external-dependency-resolution-rfc-0057)                                       |
+| —       | Plugin mailer permission and SDK email surface (RFC 0062)                 | 📋     | [3.26](epics/plugins-runtime.md#326--plugin-mailer-permission-and-sdk-email-surface-rfc-0062)                              |
+| —       | Middleware internal fetch caching review                                  | 📋     | [2.18](epics/platform-shell.md#218--middleware-internal-fetch-caching-review)                                              |
+| —       | Typecheck performance and project references                              | 📋     | [0.14](epics/infrastructure.md#014--typecheck-performance-and-project-references)                                          |
+| —       | Operational consistency checks                                            | 📋     | [0.15](epics/infrastructure.md#015--operational-consistency-checks)                                                        |
+| —       | Pre-v1 stabilization gate                                                 | 📋     | [0.16](epics/infrastructure.md#016--pre-v1-stabilization-gate)                                                             |
+| —       | Sovereign Wallet scaffold (RFC 0061)                                      | 📋     | [21.1](epics/sovereign-wallet.md#211--sovereign-wallet-scaffold-rfc-0061)                                                  |
+| —       | Sovereign Wallet loyalty card storage and QR/barcode rendering            | 📋     | [21.2](epics/sovereign-wallet.md#212--loyalty-card-storage-and-qrbarcode-rendering)                                        |
+| —       | Sovereign Wallet encrypted document snapshots                             | 📋     | [21.3](epics/sovereign-wallet.md#213--encrypted-document-snapshots)                                                        |
+| —       | Sovereign Wallet portability and deletion hooks                           | 📋     | [21.4](epics/sovereign-wallet.md#214--wallet-portability-and-deletion-hooks)                                               |
 
 ---
 

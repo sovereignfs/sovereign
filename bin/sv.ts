@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 
 import { defineCommand, runMain } from 'citty';
 import { consola } from 'consola';
+import { manifestDatabaseDialect, manifestDatabaseIsolation } from '@sovereignfs/manifest';
 
 import {
   assertRemovablePlugin,
@@ -284,13 +285,15 @@ const pluginRemove = defineCommand({
 
     // Read the manifest before deletion to know if the plugin used an isolated DB.
     let isIsolated = false;
+    let pluginDialect: 'sqlite' | undefined;
     let manifestPluginId: string | null = null;
     try {
       const raw = JSON.parse(readFileSync(join(dest, 'manifest.json'), 'utf8')) as {
-        database?: string;
+        database?: unknown;
         id?: string;
       };
-      isIsolated = raw.database === 'isolated';
+      isIsolated = manifestDatabaseIsolation(raw.database) === 'isolated';
+      pluginDialect = manifestDatabaseDialect(raw.database);
       manifestPluginId = raw.id ?? null;
     } catch {
       // Manifest unreadable — treat as shared.
@@ -303,7 +306,7 @@ const pluginRemove = defineCommand({
       consola.info(`Dropping isolated database for "${manifestPluginId}"…`);
       try {
         const { dropPluginDb } = await import('@sovereignfs/db');
-        await dropPluginDb(manifestPluginId);
+        await dropPluginDb(manifestPluginId, pluginDialect);
         consola.success(`Database for "${manifestPluginId}" dropped.`);
       } catch (err) {
         consola.warn(
@@ -353,7 +356,12 @@ const pluginMigrate = defineCommand({
     // or has no database field (defaults to shared). Reads manifests directly so
     // the command works with both installed (plugins/<id>/) and local-dev
     // (plugins/<name>.local/) directories.
-    type PluginEntry = { dir: string; id: string; database: 'isolated' | 'shared' };
+    type PluginEntry = {
+      dir: string;
+      id: string;
+      database: 'isolated' | 'shared';
+      dialect: 'sqlite' | 'postgres';
+    };
     const pluginsWithMigrations: PluginEntry[] = [];
 
     if (existsSync(pluginsRoot)) {
@@ -364,11 +372,18 @@ const pluginMigrate = defineCommand({
         try {
           const m = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
             id?: string;
-            database?: string;
+            database?: unknown;
           };
           if (typeof m.id !== 'string') continue;
-          const database = m.database === 'isolated' ? 'isolated' : 'shared';
-          pluginsWithMigrations.push({ dir: entry.name, id: m.id, database });
+          const database = manifestDatabaseIsolation(m.database);
+          const pluginDialect =
+            database === 'isolated' ? (manifestDatabaseDialect(m.database) ?? dialect) : dialect;
+          pluginsWithMigrations.push({
+            dir: entry.name,
+            id: m.id,
+            database,
+            dialect: pluginDialect,
+          });
         } catch {
           // ignore unreadable manifests
         }
@@ -392,16 +407,16 @@ const pluginMigrate = defineCommand({
     let migrated = 0;
     let failed = 0;
 
-    for (const { dir, id, database } of targets) {
+    for (const { dir, id, database, dialect: pluginDialect } of targets) {
       const pluginDir = `plugins/${dir}`;
-      const folder = pluginMigrationsFolder(pluginDir, dialect);
+      const folder = pluginMigrationsFolder(pluginDir, pluginDialect);
       if (!existsSync(folder)) continue;
 
       consola.start(`Migrating "${id}" (${database})…`);
       try {
         if (database === 'isolated') {
-          await provisionPluginDb(id);
-          const pluginDb = getPluginDb(id);
+          await provisionPluginDb(id, pluginDialect);
+          const pluginDb = getPluginDb(id, pluginDialect);
           await runPluginMigrations(pluginDb, folder);
         } else {
           // PlatformDb is structurally identical to PluginDb ({ dialect, db }).

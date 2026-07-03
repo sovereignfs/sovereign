@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { manifestDatabaseDialect, manifestDatabaseIsolation } from '../schema';
 import { validateManifest } from '../validate';
 
 const base = {
@@ -91,6 +92,41 @@ describe('validateManifest', () => {
   it('accepts a manifest that declares apiProvider (PLT-16)', () => {
     const res = validateManifest({ ...base, apiProvider: true });
     expect(res.valid).toBe(true);
+  });
+
+  it('accepts the legacy database string form', () => {
+    expect(validateManifest({ ...base, database: 'shared' }).valid).toBe(true);
+    expect(validateManifest({ ...base, database: 'isolated' }).valid).toBe(true);
+  });
+
+  it('accepts the database object form with a SQLite dialect override', () => {
+    const res = validateManifest({
+      ...base,
+      database: { isolation: 'isolated', dialect: 'sqlite' },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects postgres as a manifest database dialect', () => {
+    const res = validateManifest({
+      ...base,
+      database: { isolation: 'isolated', dialect: 'postgres' },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('database');
+    }
+  });
+
+  it('normalizes manifest database declarations', () => {
+    expect(manifestDatabaseIsolation(undefined)).toBe('shared');
+    expect(manifestDatabaseIsolation('isolated')).toBe('isolated');
+    expect(manifestDatabaseIsolation({ isolation: 'isolated', dialect: 'sqlite' })).toBe(
+      'isolated',
+    );
+    expect(manifestDatabaseIsolation({ dialect: 'sqlite' })).toBe('shared');
+    expect(manifestDatabaseDialect({ isolation: 'isolated', dialect: 'sqlite' })).toBe('sqlite');
+    expect(manifestDatabaseDialect({ isolation: 'isolated', dialect: 'postgres' })).toBeUndefined();
   });
 
   it('accepts shell: "overlay" (RFC 0001)', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pluginSchemaName, pluginSqliteUrl } from '../plugin-client';
+import { dropPluginDb, getPluginDb, pluginSchemaName, pluginSqliteUrl } from '../plugin-client';
 
 describe('pluginSchemaName', () => {
   it('prefixes with plugin_ and maps dots and hyphens to underscores', () => {
@@ -23,5 +23,31 @@ describe('pluginSqliteUrl', () => {
     expect(pluginSqliteUrl('io.example.my-plugin')).toBe(
       'file:./data/plugins/io.example.my-plugin.db',
     );
+  });
+});
+
+describe('getPluginDb', () => {
+  it('uses an explicit SQLite override even when the platform dialect is Postgres', async () => {
+    const originalDialect = process.env.DB_DIALECT;
+    const originalUrl = process.env.DATABASE_URL;
+    process.env.DB_DIALECT = 'postgres';
+    process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/sovereign_test';
+
+    try {
+      const pluginDb = getPluginDb('io.example.sqlite-plugin', 'sqlite');
+      expect(pluginDb.dialect).toBe('sqlite');
+    } finally {
+      await dropPluginDb('io.example.sqlite-plugin', 'sqlite');
+      if (originalDialect === undefined) {
+        delete process.env.DB_DIALECT;
+      } else {
+        process.env.DB_DIALECT = originalDialect;
+      }
+      if (originalUrl === undefined) {
+        delete process.env.DATABASE_URL;
+      } else {
+        process.env.DATABASE_URL = originalUrl;
+      }
+    }
   });
 });

@@ -164,7 +164,7 @@ once prioritised.
 | Version | Task                                                                  | Status | Epic task                                                                                        |
 | ------- | --------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ |
 | —       | Non-Docker production deployment, Phase 2 — systemd (RFC 0026)        | 📋     | [0.13](epics/infrastructure.md#013--non-docker-production-deployment-phase-2--systemd)           |
-| —       | Per-plugin database dialect selection (RFC 0036)                      | 📋     | [3.15](epics/plugins-runtime.md#315--per-plugin-database-dialect-selection-rfc-0036)             |
+| —       | Per-plugin database dialect selection (RFC 0036)                      | ✅     | [3.15](epics/plugins-runtime.md#315--per-plugin-database-dialect-selection-rfc-0036)             |
 | —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035)    | 📋     | [1.8](epics/users-auth.md#18--progressive-user-verification-phase-1--infrastructure-rfc-0035)    |
 | —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035) | 📋     | [1.9](epics/users-auth.md#19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035) |
 | —       | Design system stabilization                                           | ✅     | [9.12](epics/design-system.md#912--design-system-stabilization)                                  |

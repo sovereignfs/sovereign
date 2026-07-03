@@ -17,6 +17,7 @@ import {
 } from '@sovereignfs/db';
 import { getPlatformDb } from './db';
 import { createMailer } from '@sovereignfs/mailer';
+import { manifestDatabaseDialect, manifestDatabaseIsolation } from '@sovereignfs/manifest';
 import { ConsentRequiredError, provideHost } from '@sovereignfs/sdk';
 import { registry } from '../generated/registry';
 import type {
@@ -65,10 +66,11 @@ provideHost({
     async getClient(pluginId: string | null) {
       if (pluginId) {
         const manifest = registry.find((m) => m.id === pluginId);
-        if (manifest?.database === 'isolated') {
+        if (manifest && manifestDatabaseIsolation(manifest.database) === 'isolated') {
+          const pluginDialect = manifestDatabaseDialect(manifest.database);
           // Provision on first use (idempotent), then return the dedicated client.
-          await provisionPluginDb(pluginId);
-          return getPluginDb(pluginId).db;
+          await provisionPluginDb(pluginId, pluginDialect);
+          return getPluginDb(pluginId, pluginDialect).db;
         }
       }
       return (await getPlatformDb()).db;

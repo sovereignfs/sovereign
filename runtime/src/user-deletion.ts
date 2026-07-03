@@ -1,5 +1,6 @@
 import { existsSync, rmSync } from 'node:fs';
 import { deleteUserData } from '@sovereignfs/db';
+import { manifestDatabaseDialect, manifestDatabaseIsolation } from '@sovereignfs/manifest';
 import type { DeletionResult } from '@sovereignfs/sdk';
 import { getPlatformDb } from './db';
 import { findAvatarFile } from './avatars';
@@ -57,8 +58,8 @@ export async function deleteUser(userId: string, tenantId: string): Promise<Dele
       const manifest = installedPlugins.find((p) => p.id === pluginId);
       let db: unknown;
       try {
-        if (manifest?.database === 'isolated') {
-          db = getPluginDb(pluginId).db;
+        if (manifest && manifestDatabaseIsolation(manifest.database) === 'isolated') {
+          db = getPluginDb(pluginId, manifestDatabaseDialect(manifest.database)).db;
         } else {
           db = (await getPlatformDb()).db;
         }

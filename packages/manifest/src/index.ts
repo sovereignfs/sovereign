@@ -1,10 +1,16 @@
 export {
   manifestSchema,
+  manifestDatabaseDialect,
+  manifestDatabaseIsolation,
+  manifestDatabaseSchema,
   permissionSchema,
   manifestFieldNames,
   registryEntrySchema,
   registryEntryFieldNames,
   CURRENT_MANIFEST_SCHEMA_VERSION,
+  type ManifestDatabase,
+  type ManifestDatabaseDialect,
+  type ManifestDatabaseIsolation,
 } from './schema';
 export {
   validateManifest,

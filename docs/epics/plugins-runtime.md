@@ -382,7 +382,7 @@ consistent info/success/warn/error formatting. CLI is monorepo-internal in v1
 
 ---
 
-#### 📋 3.15 — Per-plugin database dialect selection (RFC 0036)
+#### ✅ 3.15 — Per-plugin database dialect selection (RFC 0036)
 
 **Goal:** Extend the `database` manifest field so an isolated plugin can opt into SQLite storage
 even when the platform runs Postgres. The **platform-as-ceiling rule** is enforced at install time:

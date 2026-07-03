@@ -42,6 +42,45 @@ const semverString = (label: string) =>
       message: `${label} must be a valid semver string (e.g. "0.6.0")`,
     });
 
+export const manifestDatabaseSchema = z.union([
+  z.enum(['shared', 'isolated']),
+  z
+    .object({
+      isolation: z.enum(['shared', 'isolated']).optional(),
+      dialect: z.enum(['sqlite']).optional(),
+    })
+    .strict(),
+]);
+
+export type ManifestDatabase = z.infer<typeof manifestDatabaseSchema>;
+export type ManifestDatabaseDialect = 'sqlite';
+export type ManifestDatabaseIsolation = 'shared' | 'isolated';
+
+export function manifestDatabaseIsolation(database: unknown): ManifestDatabaseIsolation {
+  if (database === 'isolated') return 'isolated';
+  if (
+    typeof database === 'object' &&
+    database !== null &&
+    'isolation' in database &&
+    database.isolation === 'isolated'
+  ) {
+    return 'isolated';
+  }
+  return 'shared';
+}
+
+export function manifestDatabaseDialect(database: unknown): ManifestDatabaseDialect | undefined {
+  if (
+    typeof database === 'object' &&
+    database !== null &&
+    'dialect' in database &&
+    database.dialect === 'sqlite'
+  ) {
+    return 'sqlite';
+  }
+  return undefined;
+}
+
 /**
  * The plugin manifest schema — the single source of truth for both runtime
  * validation and the exported TypeScript types (see ./types). Mirrors
@@ -64,7 +103,7 @@ const manifestObjectSchema = z
     name: z.string().min(1),
     version: z.string().min(1),
     description: z.string().optional(),
-    database: z.enum(['shared', 'isolated']).optional(),
+    database: manifestDatabaseSchema.optional(),
     type: z.enum(['platform', 'sovereign', 'community']),
     runtime: z.enum(['native']),
     routePrefix: z.string().min(1).startsWith('/', 'routePrefix must start with "/"'),

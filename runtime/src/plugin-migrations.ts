@@ -10,6 +10,7 @@ import {
   runPluginMigrations,
   type PluginDb,
 } from '@sovereignfs/db';
+import { manifestDatabaseDialect, manifestDatabaseIsolation } from '@sovereignfs/manifest';
 import { registry } from '../generated/registry';
 
 /**
@@ -29,7 +30,7 @@ import { registry } from '../generated/registry';
  * Called from `instrumentation.ts` register() at Node.js server startup.
  */
 export async function runAllPluginMigrations(): Promise<void> {
-  const { dialect } = resolveDialect(process.env);
+  const { dialect: platformDialect } = resolveDialect(process.env);
 
   // Build a map from manifest id → actual on-disk directory name.
   // `sv plugin add` names dirs after the manifest id (plugins/<id>/), but local
@@ -38,19 +39,23 @@ export async function runAllPluginMigrations(): Promise<void> {
   const idToDir = buildIdToDirMap();
 
   for (const manifest of registry) {
-    const isIsolated = manifest.database === 'isolated';
-    const isShared = !manifest.database || manifest.database === 'shared';
+    const isolation = manifestDatabaseIsolation(manifest.database);
+    const isIsolated = isolation === 'isolated';
+    const isShared = isolation === 'shared';
     if (!isIsolated && !isShared) continue;
 
     const dirName = idToDir.get(manifest.id) ?? manifest.id;
     const pluginDir = `plugins/${dirName}`;
-    const folder = pluginMigrationsFolder(pluginDir, dialect);
+    const pluginDialect = isIsolated
+      ? (manifestDatabaseDialect(manifest.database) ?? platformDialect)
+      : platformDialect;
+    const folder = pluginMigrationsFolder(pluginDir, pluginDialect);
     if (!existsSync(folder)) continue;
 
     try {
       if (isIsolated) {
-        await provisionPluginDb(manifest.id);
-        const pluginDb = getPluginDb(manifest.id);
+        await provisionPluginDb(manifest.id, pluginDialect);
+        const pluginDb = getPluginDb(manifest.id, pluginDialect);
         await runPluginMigrations(pluginDb, folder);
       } else {
         // PlatformDb is structurally identical to PluginDb ({ dialect, db }

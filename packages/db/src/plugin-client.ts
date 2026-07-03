@@ -5,7 +5,7 @@ import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { findWorkspaceRoot, pgSslMode, resolveSqlitePath } from './client';
-import { resolveDialect } from './dialect';
+import { resolveDialect, type Dialect, type ResolvedDialect } from './dialect';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnySqliteDb = ReturnType<typeof drizzleSqlite<any>>;
@@ -23,6 +23,19 @@ export type PluginDb =
 
 /** In-process lazy registry: pluginId → PluginDb */
 const _registry = new Map<string, PluginDb>();
+
+function resolvePluginDialect(dialect?: Dialect): ResolvedDialect {
+  const platform = resolveDialect(process.env);
+  if (!dialect) return platform;
+  if (dialect === 'postgres' && platform.dialect === 'sqlite') {
+    throw new Error('Cannot resolve a Postgres plugin database on a SQLite platform.');
+  }
+  return { ...platform, dialect };
+}
+
+function registryKey(pluginId: string, dialect: Dialect): string {
+  return `${dialect}:${pluginId}`;
+}
 
 /**
  * Postgres schema name for an isolated plugin.
@@ -56,11 +69,11 @@ function pgSsl(url: string): false | { rejectUnauthorized: boolean; ca?: string 
  *   DB, but with `search_path` set to `plugin_<slug>` on every new connection.
  *   The schema must already exist (call `provisionPluginDb` first).
  */
-export function getPluginDb(pluginId: string): PluginDb {
-  const cached = _registry.get(pluginId);
+export function getPluginDb(pluginId: string, dialect?: Dialect): PluginDb {
+  const resolved = resolvePluginDialect(dialect);
+  const cacheKey = registryKey(pluginId, resolved.dialect);
+  const cached = _registry.get(cacheKey);
   if (cached) return cached;
-
-  const resolved = resolveDialect(process.env);
 
   if (resolved.dialect === 'sqlite') {
     const path = resolveSqlitePath(pluginSqliteUrl(pluginId));
@@ -69,7 +82,7 @@ export function getPluginDb(pluginId: string): PluginDb {
     sqlite.pragma('journal_mode = WAL');
     sqlite.pragma('foreign_keys = ON');
     const pdb: PluginDb = { dialect: 'sqlite', db: drizzleSqlite(sqlite) };
-    _registry.set(pluginId, pdb);
+    _registry.set(cacheKey, pdb);
     return pdb;
   }
 
@@ -80,7 +93,7 @@ export function getPluginDb(pluginId: string): PluginDb {
     void client.query(`SET search_path TO "${schema}"`);
   });
   const pdb: PluginDb = { dialect: 'postgres', db: drizzlePg(pool) };
-  _registry.set(pluginId, pdb);
+  _registry.set(cacheKey, pdb);
   return pdb;
 }
 
@@ -92,8 +105,8 @@ export function getPluginDb(pluginId: string): PluginDb {
  *
  * Safe to call multiple times (idempotent).
  */
-export async function provisionPluginDb(pluginId: string): Promise<void> {
-  const resolved = resolveDialect(process.env);
+export async function provisionPluginDb(pluginId: string, dialect?: Dialect): Promise<void> {
+  const resolved = resolvePluginDialect(dialect);
   if (resolved.dialect === 'sqlite') return; // file created on first open
 
   const schema = pluginSchemaName(pluginId);
@@ -113,10 +126,10 @@ export async function provisionPluginDb(pluginId: string): Promise<void> {
  * Evicts the client from the in-process registry so any subsequent call to
  * `getPluginDb` would open a fresh connection (which would fail — store gone).
  */
-export async function dropPluginDb(pluginId: string): Promise<void> {
-  _registry.delete(pluginId);
-
-  const resolved = resolveDialect(process.env);
+export async function dropPluginDb(pluginId: string, dialect?: Dialect): Promise<void> {
+  const resolved = resolvePluginDialect(dialect);
+  _registry.delete(registryKey(pluginId, 'sqlite'));
+  _registry.delete(registryKey(pluginId, 'postgres'));
 
   if (resolved.dialect === 'sqlite') {
     const path = resolveSqlitePath(pluginSqliteUrl(pluginId));

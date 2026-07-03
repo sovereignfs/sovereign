@@ -56,6 +56,7 @@ export function ResetForm({ instanceInitial = 'S' }: { instanceInitial?: string 
               Request a new link
             </Link>
           </p>
+          <p className={styles.attribution}>Powered by Sovereign</p>
         </div>
       </main>
     );
@@ -79,6 +80,7 @@ export function ResetForm({ instanceInitial = 'S' }: { instanceInitial?: string 
               Sign in
             </Link>
           </p>
+          <p className={styles.attribution}>Powered by Sovereign</p>
         </div>
       </main>
     );
@@ -129,6 +131,7 @@ export function ResetForm({ instanceInitial = 'S' }: { instanceInitial?: string 
             Back to sign in
           </Link>
         </p>
+        <p className={styles.attribution}>Powered by Sovereign</p>
       </div>
     </main>
   );

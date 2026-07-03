@@ -23,6 +23,7 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Sovereign',
   description: 'Your self-hosted workspace.',
+  generator: 'Sovereign',
   // Installable PWA (SRS §3.11, PLT-09). The dynamic manifest route returns
   // the correct brand name from the DB; the static public/manifest.json is
   // kept for @ducanh2912/next-pwa build-time tooling only.

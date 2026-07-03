@@ -418,6 +418,17 @@ properties cannot supply rendered text content for HTML elements — they only
 work with `content:` on pseudo-elements, which is too narrow for the shell
 chrome. `InstanceProvider` passes `instanceName` as a render-prop to the layout.
 
+### Sovereign attribution
+
+Visible Sovereign attribution is intentionally subtle. Unauthenticated auth
+screens may show small footer microcopy (`Powered by Sovereign`) because those
+entry points sit outside the daily workspace shell.
+
+Signed-in surfaces use operational wording instead: the Account About page and
+Console health/about rows identify `Platform: Sovereign` and
+`Runtime: vX.Y.Z`, alongside instance metadata and docs/source links. The
+default authenticated shell does not include a permanent `Powered by` badge.
+
 Plugin developers read it from `sdk.platform.getConfig()`:
 
 ```ts

@@ -158,6 +158,63 @@
   color: var(--sv-color-text-muted);
 }
 
+/* ── About ──────────────────────────────────────────────────────────────── */
+
+.aboutList {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 560px;
+  margin: 0;
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-surface-raised);
+  overflow: hidden;
+}
+
+.aboutRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sv-space-4);
+  padding: var(--sv-space-3) var(--sv-space-4);
+  border-bottom: 1px solid var(--sv-color-border);
+}
+
+.aboutRow:last-child {
+  border-bottom: none;
+}
+
+.aboutLabel {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}
+
+.aboutValue {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+  text-align: right;
+}
+
+.aboutLinks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--sv-space-3);
+}
+
+.aboutLinks a {
+  color: var(--sv-color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--sv-color-border-strong);
+}
+
+.aboutLinks a:hover {
+  text-decoration-color: var(--sv-color-text-primary);
+}
+
 /* Tightly groups a control with its helper text */
 .controlGroup {
   display: flex;

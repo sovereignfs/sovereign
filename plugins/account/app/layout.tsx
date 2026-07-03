@@ -10,6 +10,7 @@ const tabs = [
   { href: '/account/billing', label: 'Billing' },
   { href: '/account/data', label: 'Data' },
   { href: '/account/activity', label: 'Activity' },
+  { href: '/account/about', label: 'About' },
 ];
 
 export default function AccountLayout({ children }: { children: ReactNode }) {

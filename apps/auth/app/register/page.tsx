@@ -38,6 +38,7 @@ export default async function RegisterPage({
           <div className={styles.card}>
             <h1 className={styles.title}>Invite link invalid</h1>
             <p className={styles.error}>This invite link is invalid or has already been used.</p>
+            <p className={styles.attribution}>Powered by Sovereign</p>
           </div>
         </main>
       );

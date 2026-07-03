@@ -1,6 +1,7 @@
 import '@sovereignfs/ui/tokens.css';
 import './globals.css';
 import type { ReactNode } from 'react';
+import type { Metadata } from 'next';
 import { Hanken_Grotesk, JetBrains_Mono } from 'next/font/google';
 
 const sans = Hanken_Grotesk({
@@ -17,9 +18,10 @@ const mono = JetBrains_Mono({
   display: 'swap',
 });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Sovereign',
   description: 'Sign in to your Sovereign workspace.',
+  generator: 'Sovereign',
 };
 
 // Render per-request so the middleware's CSP nonce is injected into Next's

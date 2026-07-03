@@ -120,6 +120,7 @@ export function RegisterForm({
             Sign in
           </Link>
         </p>
+        <p className={styles.attribution}>Powered by Sovereign</p>
       </div>
     </main>
   );

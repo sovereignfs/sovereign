@@ -43,6 +43,7 @@ export function ForgotForm({ instanceInitial = 'S' }: { instanceInitial?: string
               Back to sign in
             </Link>
           </p>
+          <p className={styles.attribution}>Powered by Sovereign</p>
         </div>
       </main>
     );
@@ -80,6 +81,7 @@ export function ForgotForm({ instanceInitial = 'S' }: { instanceInitial?: string
             Back to sign in
           </Link>
         </p>
+        <p className={styles.attribution}>Powered by Sovereign</p>
       </div>
     </main>
   );

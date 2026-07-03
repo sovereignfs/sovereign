@@ -133,6 +133,7 @@ export function LoginForm({
             Create account
           </Link>
         </p>
+        <p className={styles.attribution}>Powered by Sovereign</p>
       </div>
     </main>
   );

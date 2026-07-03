@@ -48,6 +48,11 @@ function formatUptime(seconds: number): string {
   return `${hours}h ${Math.floor((seconds % 3600) / 60)}m`;
 }
 
+function formatRuntimeVersion(version: string): string {
+  if (!version || version === 'unknown') return 'unknown';
+  return version.startsWith('v') ? version : `v${version}`;
+}
+
 function StatusBadge({
   ok,
   okLabel,
@@ -75,8 +80,11 @@ export default async function HealthPage() {
 
       <ul className={styles.cards}>
         <li className={styles.healthCard}>
-          <span className={styles.cardDesc}>Platform version</span>
-          <span className={styles.healthValue}>{health.platformVersion}</span>
+          <span className={styles.cardDesc}>About</span>
+          <span className={styles.healthValue}>Platform: Sovereign</span>
+          <span className={styles.cardDesc}>
+            Runtime: {formatRuntimeVersion(health.platformVersion)}
+          </span>
         </li>
 
         <li className={styles.healthCard}>

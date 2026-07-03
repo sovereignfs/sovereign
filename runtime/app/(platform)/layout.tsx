@@ -131,6 +131,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
                   avatar={accountAvatar}
                   triggerClassName={styles.avatar}
                   placement="sidebar"
+                  showConsole={isAdmin}
                   userName={userName}
                   userEmail={userEmail}
                   userImage={userImage}

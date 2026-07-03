@@ -33,6 +33,7 @@ export function AccountMenu({
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const aboutHref = showConsole ? '/console/health' : '/account/about';
 
   useEffect(() => {
     if (!open) return;
@@ -118,6 +119,15 @@ export function AccountMenu({
               Console
             </Link>
           )}
+          <Link
+            href={aboutHref}
+            role="menuitem"
+            className={styles.item}
+            onClick={() => setOpen(false)}
+          >
+            <Icon name="info" size="sm" aria-hidden />
+            About this instance
+          </Link>
           <hr className={styles.divider} />
           <form action="/api/account/logout" method="post">
             <button

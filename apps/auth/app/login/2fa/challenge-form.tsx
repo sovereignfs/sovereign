@@ -177,6 +177,7 @@ export function ChallengeForm({
             </>
           )}
         </p>
+        <p className={styles.attribution}>Powered by Sovereign</p>
       </div>
     </main>
   );

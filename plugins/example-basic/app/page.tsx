@@ -17,11 +17,13 @@ export default async function ExampleBasicPage() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Example Plugin</h1>
-      <p className={styles.lead}>
-        A minimal Sovereign plugin. Edit{' '}
-        <code className={styles.code}>plugins/example-basic/app/page.tsx</code> to get started.
-      </p>
+      <header className={styles.header}>
+        <h1 className={styles.title}>Example Plugin</h1>
+        <p className={styles.lead}>
+          A minimal Sovereign plugin. Edit{' '}
+          <code className={styles.code}>plugins/example-basic/app/page.tsx</code> to get started.
+        </p>
+      </header>
 
       <section className={styles.card}>
         <h2 className={styles.cardTitle}>Session</h2>

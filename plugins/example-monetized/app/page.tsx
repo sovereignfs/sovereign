@@ -73,14 +73,16 @@ export default async function ExampleMonetizedPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Example: Monetized Plugin</h1>
-        <span className={styles.badge}>{badgeLabel}</span>
-      </div>
-      <p className={styles.lead}>
-        If you can see this page, the platform verified your license token before routing you here.
-        This is a reference plugin for the monetization manifest field (RFC 0003).
-      </p>
+      <header className={styles.headerBlock}>
+        <div className={styles.header}>
+          <h1 className={styles.title}>Example: Monetized Plugin</h1>
+          <span className={styles.badge}>{badgeLabel}</span>
+        </div>
+        <p className={styles.lead}>
+          If you can see this page, the platform verified your license token before routing you
+          here. This is a reference plugin for the monetization manifest field (RFC 0003).
+        </p>
+      </header>
 
       {/* Gated content ─────────────────────────────────────────────────────── */}
       <section className={styles.card}>
@@ -189,7 +191,7 @@ export default async function ExampleMonetizedPage() {
               Use the demo private key to mint tokens with any payload — e.g. a different
               subscriber, an expiry date, or a different tier:
             </p>
-            <pre className={styles.code_block}>{`node -e "
+            <pre className={styles.codeBlock}>{`node -e "
 const c = require('crypto');
 const priv = c.createPrivateKey({
   key: {
@@ -222,7 +224,7 @@ console.log(payload + '.' + sig);
               <strong>Console → Entitlements → Generate license token</strong> to create keypairs
               and sign tokens from the browser without any tooling.
             </p>
-            <pre className={styles.code_block}>{`node -e "
+            <pre className={styles.codeBlock}>{`node -e "
 const c = require('crypto');
 const { publicKey: pub, privateKey: priv } =
   c.generateKeyPairSync('ed25519');

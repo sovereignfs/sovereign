@@ -1,21 +1,33 @@
 .page {
   padding: var(--sv-space-8) var(--sv-space-6);
-  max-width: 640px;
+  max-width: 840px;
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-6);
+}
+
+/* Binds the title to its lead paragraph as one header block (--sv-space-2,
+   matching the platform's title→description convention, e.g. the paywall
+   page) — distinct from the page's own --sv-space-6 gap before the first
+   card, so the heading doesn't read as just another item in the stack. */
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
 }
 
 .title {
   font-size: var(--sv-font-size-2xl);
   font-weight: 600;
   color: var(--sv-color-text-primary);
+  line-height: 1.25;
   margin: 0;
 }
 
 .lead {
   color: var(--sv-color-text-muted);
   font-size: var(--sv-font-size-md);
+  line-height: 1.6;
   margin: 0;
 }
 
@@ -57,6 +69,7 @@
   display: flex;
   gap: var(--sv-space-4);
   font-size: var(--sv-font-size-sm);
+  line-height: 1.5;
 }
 
 .row dt {
@@ -73,5 +86,6 @@
 .muted {
   color: var(--sv-color-text-muted);
   font-size: var(--sv-font-size-sm);
+  line-height: 1.6;
   margin: 0;
 }

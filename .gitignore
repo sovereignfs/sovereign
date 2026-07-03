@@ -27,18 +27,14 @@ dist/
 
 # Externally-installed plugins (cloned by scripts/install-plugins.ts) are not
 # committed here — they live in their own repositories. Ignore every plugin
-# directory except the platform plugins that ship in this monorepo.
+# directory except the platform plugins that ship in this monorepo. The example
+# plugins live in sovereignfs/sovereign-plugins-examples and are cloned in by
+# scripts/install-plugins.ts (see sovereign.plugins.json), so they are ignored
+# here too.
 /plugins/*/
 !/plugins/account/
 !/plugins/console/
 !/plugins/launcher/
-!/plugins/example-basic/
-!/plugins/example-api/
-!/plugins/example-minimal/
-!/plugins/example-monetized/
-!/plugins/example-overlay-large/
-!/plugins/example-overlay-medium/
-!/plugins/example-overlay-small/
 
 # Personal list of plugin repos to clone as plugins/<name>.local (read by
 # setup.sh). Developer-specific and never committed — see setup.sh header.
@@ -51,6 +47,7 @@ runtime/public/sw.js.map
 runtime/public/workbox-*.js
 runtime/public/workbox-*.js.map
 runtime/public/fallback-*.js
+runtime/public/worker-*.js
 
 # Local / private working area. Not part of the open-source monorepo — may hold
 # proprietary plugin specs and notes, typically backed by a separate private

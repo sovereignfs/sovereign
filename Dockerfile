@@ -19,7 +19,16 @@ RUN pnpm install --frozen-lockfile
 # ---- builder: compose plugins + build the standalone server ---------------
 FROM deps AS builder
 ENV NODE_ENV=production
-# Composes plugin app/ trees into the route group — must precede the build.
+# git is needed to clone the example plugins (and any external plugins declared
+# in sovereign.plugins.json) at their pinned refs. This step requires network
+# access during the build; the refs are pinned so the result is reproducible.
+RUN apk add --no-cache git
+# Clone the declared plugins into plugins/<id>/ at their pinned refs (the example
+# plugins live in sovereignfs/sovereign-plugins-examples), then compose every
+# plugin app/ tree into the route group — both must precede the build. The
+# explicit generate is a safety net for the empty-config case (install:plugins
+# only generates when it actually clones something).
+RUN pnpm install:plugins
 RUN pnpm run generate
 # tsup packages → next build → runtime/.next/standalone
 RUN pnpm --filter @sovereignfs/runtime build

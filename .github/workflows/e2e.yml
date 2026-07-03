@@ -31,9 +31,12 @@ jobs:
       - name: Build workspace packages
         run: pnpm turbo build --filter='./packages/*'
 
-      # Generate composed plugin routes so `next dev` starts cleanly.
-      - name: Generate plugin registry
-        run: pnpm generate
+      # Clone the example plugins at their pinned ref, then compose all plugin
+      # routes so `next dev` starts cleanly. The paywall golden path exercises
+      # the example-monetized plugin, so the examples must be present.
+      # install:plugins runs generate itself once it clones.
+      - name: Install and compose plugins
+        run: pnpm install:plugins
 
       # Write a minimal .env for both apps. Secrets must be set in the repo's
       # Settings → Secrets and variables → Actions.

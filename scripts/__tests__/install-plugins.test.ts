@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parsePluginsConfig, planInstall } from '../install-plugins';
+import { groupClones, parsePluginsConfig, planInstall } from '../install-plugins';
 
 describe('parsePluginsConfig', () => {
   it('parses an empty plugins array', () => {
@@ -20,6 +20,24 @@ describe('parsePluginsConfig', () => {
       plugins: [{ id: 'a', repository: 'r', branch: 'main' }],
     });
     expect(parsePluginsConfig(raw)).toEqual({ plugins: [{ id: 'a', repository: 'r' }] });
+  });
+
+  it('parses optional ref and subdir', () => {
+    const raw = JSON.stringify({
+      plugins: [{ id: 'example-basic', repository: 'r', ref: 'abc123', subdir: 'examples/basic' }],
+    });
+    expect(parsePluginsConfig(raw)).toEqual({
+      plugins: [{ id: 'example-basic', repository: 'r', ref: 'abc123', subdir: 'examples/basic' }],
+    });
+  });
+
+  it('throws on an empty ref or subdir when present', () => {
+    expect(() =>
+      parsePluginsConfig('{ "plugins": [{ "id": "a", "repository": "r", "ref": "" }] }'),
+    ).toThrow(/\.ref/);
+    expect(() =>
+      parsePluginsConfig('{ "plugins": [{ "id": "a", "repository": "r", "subdir": 5 }] }'),
+    ).toThrow(/\.subdir/);
   });
 
   it('throws on invalid JSON', () => {
@@ -78,5 +96,33 @@ describe('planInstall', () => {
     const { toClone, toSkip } = planInstall(config, (id) => id === 'b');
     expect(toClone.map((p) => p.id)).toEqual(['a', 'c']);
     expect(toSkip.map((p) => p.id)).toEqual(['b']);
+  });
+});
+
+describe('groupClones', () => {
+  it('groups entries sharing a repository and ref into one clone', () => {
+    const groups = groupClones([
+      { id: 'a', repository: 'repo1', ref: 'sha1', subdir: 'a' },
+      { id: 'b', repository: 'repo1', ref: 'sha1', subdir: 'b' },
+      { id: 'c', repository: 'repo2' },
+    ]);
+    expect(
+      groups.map((g) => ({
+        repository: g.repository,
+        ref: g.ref,
+        ids: g.entries.map((e) => e.id),
+      })),
+    ).toEqual([
+      { repository: 'repo1', ref: 'sha1', ids: ['a', 'b'] },
+      { repository: 'repo2', ref: undefined, ids: ['c'] },
+    ]);
+  });
+
+  it('keeps the same repository at different refs in separate groups', () => {
+    const groups = groupClones([
+      { id: 'a', repository: 'repo1', ref: 'sha1' },
+      { id: 'b', repository: 'repo1', ref: 'sha2' },
+    ]);
+    expect(groups).toHaveLength(2);
   });
 });

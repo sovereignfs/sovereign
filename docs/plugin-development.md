@@ -51,9 +51,14 @@ workflow. Edit the manifest, implement your `app/page.tsx`, then install with
 
 ### Example plugins
 
-Reference plugins ship with the platform and are composed automatically.
-They are enabled by default and serve as both documentation and runtime
-test fixtures:
+Reference plugins ship with the platform and serve as both documentation and
+runtime test fixtures. They live in their own repository —
+[`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples)
+— and the platform bundles them at build time: `scripts/install-plugins.ts`
+clones them (pinned to a commit in `sovereign.plugins.json`) into
+`plugins/<slug>/`, and the generate step composes them like any other plugin.
+They are enabled by default; an operator can disable them per-instance from the
+Console:
 
 | Plugin ID                             | Route                     | What it shows                                                                |
 | ------------------------------------- | ------------------------- | ---------------------------------------------------------------------------- |
@@ -65,7 +70,10 @@ test fixtures:
 | `fs.sovereign.example-api`            | `/example-api`            | API provider serve-route pattern (PLT-16)                                    |
 | `fs.sovereign.example-monetized`      | `/example-monetized`      | Monetization manifest field, Ed25519 license gating, paywall flow (RFC 0003) |
 
-Browse `plugins/example-*/` in the monorepo for fully-working code to adapt.
+Browse the [`sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples)
+repository for fully-working code to adapt. After a build (or a local
+`pnpm install:plugins`) the cloned copies are also under `plugins/example-*/`,
+but those are git-ignored working copies — the repository is the source of truth.
 
 The `example-monetized` plugin ships with a committed demo keypair and a
 pre-signed token, so you can test the paywall → import → access flow immediately

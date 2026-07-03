@@ -71,6 +71,8 @@ jobs:
             exit 1
           fi
       - run: pnpm --filter @sovereignfs/ui build
+      - name: Build Storybook
+        run: pnpm build-storybook
       - run: pnpm --filter @sovereignfs/ui publish --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,31 +1,20 @@
 name: E2E
 
-# Playwright CI is currently disabled by policy. Keep the workflow definition so
-# the source-path filter, setup, and artifact wiring are ready if the hosted E2E
-# gate is re-enabled later. Run `pnpm test:e2e` manually for browser-facing
-# changes.
+# Playwright runs as a reusable pre-publish gate for root release tags. Image
+# publishing must not proceed if the browser golden paths fail.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'plugins/**'
-      - 'runtime/**'
-      - 'scripts/**'
-      - 'bin/**'
-      - '__tests__/e2e/**'
-      - 'playwright.config.ts'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
+  workflow_call:
+    secrets:
+      E2E_AUTH_SECRET:
+        required: true
+      E2E_ADMIN_KEY:
+        required: true
 
 jobs:
   e2e:
     name: Playwright golden paths
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Hosted E2E is deferred; local manual `pnpm test:e2e` is the current gate.
-    if: false
 
     steps:
       - uses: actions/checkout@v4

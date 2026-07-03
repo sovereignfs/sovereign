@@ -88,6 +88,20 @@ The web fonts are **not loaded by the design system** — operators must supply 
 or `@font-face` via their instance CSS. The system fallback applies automatically when
 the fonts are absent.
 
+**Typography hierarchy — chrome vs. content:** the persistent app chrome (the
+instance brand name in the sidebar / mobile header) and a page or overlay's
+own `<h1>` deliberately sit on different steps of the type scale. This is a
+design decision, not an oversight — don't "fix" it by making them match.
+
+| Element                              | Token                       | Why                                                                               |
+| ------------------------------------ | --------------------------- | --------------------------------------------------------------------------------- |
+| Brand name (sidebar / mobile header) | `--sv-font-size-md` (16px)  | Wayfinding, not content — present and recognisable, never competing for attention |
+| Page / overlay title (`<h1>`)        | `--sv-font-size-2xl` (24px) | The primary thing on the screen — carries the strongest visual weight             |
+
+Persistent chrome should never be the largest text on a page. If a change
+makes the brand name the same size as (or larger than) a page title, that's a
+hierarchy regression, not a fix.
+
 **Radius scale guidance:**
 
 | Token              | Value  | Use                               |

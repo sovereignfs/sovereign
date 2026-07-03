@@ -10,7 +10,7 @@ export function InviteDialog() {
 
   return (
     <>
-      <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
+      <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(true)}>
         + Invite
       </Button>
 

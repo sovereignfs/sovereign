@@ -32,10 +32,10 @@
     display: none;
   }
 
-  /* Collapse the account flex gap on mobile so the space below the tab strip
-     matches the space above it (which is only the tab's own padding-top ≈ 8px).
-     The default gap: space-6 (24px) plus the header's margin-bottom (8px) gave
-     42px below vs 8px above — visually unbalanced. */
+  /* Collapse the account flex gap on mobile; the space below the tab strip is
+     then governed solely by the header's margin-bottom (below). The default
+     gap: space-6 (24px) plus that margin gave far too much room between the
+     strip and the content. */
   .account {
     gap: 0;
   }
@@ -49,7 +49,9 @@
     padding: 0;
     /* Slight bottom shadow to separate from scrolling content */
     box-shadow: 0 1px 0 var(--sv-color-border);
-    margin-bottom: var(--sv-space-2);
+    /* Breathing room between the strip's bottom border and the first content
+       section — otherwise the section heading sits cramped against the line. */
+    margin-bottom: var(--sv-space-4);
   }
 
   .tabs {
@@ -69,6 +71,11 @@
 
 .tab {
   padding: var(--sv-space-2) var(--sv-space-3);
+  /* Vertically centre the label: the bottom edge carries a 2px underline
+     (transparent here, --sv-color-text-primary when active), so its visual
+     weight is padding-bottom (10px) + 2px = 12px. Match that on top so the
+     text isn't parked 4px above centre. */
+  padding-top: var(--sv-space-3);
   padding-bottom: calc(var(--sv-space-2) + 2px);
   border-bottom: 2px solid transparent;
   font-size: var(--sv-font-size-sm);

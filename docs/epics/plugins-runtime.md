@@ -732,6 +732,52 @@ database — establishes the `sv plugin add/remove` lifecycle).
 - `runtime/package.json` no longer contains manually-added plugin deps.
 - Docs updated: plugin developers declare deps in their own `package.json` only.
 
+---
+
+#### 📋 3.26 — Plugin mailer permission and SDK email surface (RFC 0062)
+
+**Goal:** Make plugin-triggered email safe by enforcing `mailer:send` at the runtime host
+boundary and defining a user-scoped email API that does not let plugins freely email arbitrary
+addresses by default.
+
+**Deliverables:**
+
+- Change `sdk.mailer.send()` host handling so the runtime resolves the calling plugin ID from
+  request context and checks the plugin manifest for `mailer:send`.
+- Reject plugin mailer calls outside a plugin route/request context unless explicitly made by
+  trusted platform code.
+- Add per-plugin and per-recipient rate limits for plugin-triggered email.
+- Restrict third-party plugin email to platform-resolved users by default; direct arbitrary
+  external recipient email remains an explicitly permissioned escape hatch.
+- Add an additive `sdk.email.sendToUser()` or equivalent safer API that accepts
+  `recipientUserId`, `templateId`, and structured data while the platform resolves email address,
+  preferences, audit, rate limits, and delivery policy.
+- Update `packages/manifest` docs/tests to clarify `mailer:send` semantics and any new
+  email-specific manifest metadata.
+- Add SDK host regression tests proving plugins without `mailer:send` cannot send email and that
+  plugin-provided arguments cannot forge source identity.
+- Update `docs/plugin-development.md` with email permission rules, recommended
+  `sendToUser` usage, rate-limit expectations, and the distinction from notification/message
+  delivery.
+
+**Version bumps:** `@sovereignfs/sdk` → minor for the safer email API, `@sovereignfs/manifest`
+→ patch or minor depending on schema additions, `runtime` → minor.
+
+**Dependencies:** Task 3.9 (SDK distribution and host-provided implementations), Task 3.24 (SDK
+boundary and runtime contract tests), Task 1.12 (user directory for user resolution patterns),
+Task 1.14 (shared delivery wrapper and delivery log).
+
+**SRS reference:** [RFC 0062](../rfcs/0062-email-delivery-coverage.md)
+
+**Review checklist:**
+
+- A plugin without `mailer:send` receives a clear error when calling the mailer.
+- A plugin with `mailer:send` can send only through the allowed recipient/policy path.
+- `sdk.email.sendToUser()` resolves recipient email server-side and respects delivery policy.
+- Source plugin ID is runtime-derived and cannot be forged by plugin input.
+- Rate limits prevent high-volume accidental or malicious plugin email sends.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
 ## Related RFCs
 
 - [RFC 0004 — Per-plugin database](../rfcs/0004-per-plugin-database.md)
@@ -750,6 +796,7 @@ database — establishes the `sv plugin add/remove` lifecycle).
 - [RFC 0051 — Cross-plugin references and dependency discovery](../rfcs/0051-cross-plugin-references.md)
 - [RFC 0053 — Plugin flow handoffs](../rfcs/0053-plugin-flow-handoffs.md)
 - [RFC 0057 — Plugin external dependency resolution](../rfcs/0057-plugin-dep-hoisting.md)
+- [RFC 0062 — Email delivery coverage](../rfcs/0062-email-delivery-coverage.md)
 
 ## Related Docs
 

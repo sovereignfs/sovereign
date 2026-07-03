@@ -144,12 +144,59 @@ existing SSE route shape this task rewires)
 
 ---
 
+#### 📋 4.5 — Email channel for broadcasts and messages (RFC 0062)
+
+**Goal:** Add email as an explicit, preference-aware delivery channel for platform broadcasts
+and future durable messages without turning every notification into an email.
+
+**Deliverables:**
+
+- Extend the notification/message delivery model with explicit delivery-channel intent:
+  `inbox`, `toast`, `push`, and `email`.
+- Keep `sdk.notifications.send()` email delivery off by default. Existing plugin
+  notifications must not start emailing users unless a sender explicitly opts into an email
+  channel added by a future SDK minor version.
+- Add optional email delivery for Console/API broadcasts, defaulting off until user/operator
+  communication-email preferences exist.
+- When RFC 0048 messages land, allow a message send to create inbox/message state plus optional
+  bell, Web Push, and email delivery according to user preferences and sender policy.
+- Extend Account notification preferences for communication email delivery; authentication and
+  security emails remain outside user opt-out.
+- Respect muted communication-email preferences while preserving mandatory account/security
+  delivery semantics from task 1.14.
+- Record delivery attempts through the RFC 0062 delivery log rather than storing email bodies on
+  notification rows.
+- Update `docs/plugin-development.md` to clarify that notifications are lightweight alerts and
+  email is an explicit channel, not automatic fan-out.
+
+**Version bumps:** `runtime` → minor, `plugins/account` → minor, `plugins/console` → minor,
+`@sovereignfs/sdk` → minor if the notification/message send input gains an email-channel option.
+
+**Dependencies:** Task 4.1 (Notification Center), Task 4.2 (Web Push), Task 4.4 (messages for the
+message-email branch), Task 1.14 (shared email delivery wrapper and delivery log).
+
+**SRS reference:** [RFC 0062](../rfcs/0062-email-delivery-coverage.md), [RFC 0048](../rfcs/0048-messages-and-notification-detail.md)
+
+**Review checklist:**
+
+- Existing plugin notifications do not send email by default.
+- Admin broadcast can optionally send email to users who allow communication email.
+- Muted communication-email preferences suppress optional broadcast/message email but not
+  authentication or security emails.
+- Message-created email delivery uses message state as the durable object; notification rows stay
+  lightweight.
+- Email delivery attempts are logged without storing bodies or tokens.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0015 — Notification Center](../rfcs/0015-notification-center.md)
 - [RFC 0016 — Web Push](../rfcs/0016-web-push.md)
 - [RFC 0034 — Notification transport](../rfcs/0034-notification-transport.md)
 - [RFC 0048 — Messages and notification detail](../rfcs/0048-messages-and-notification-detail.md)
+- [RFC 0062 — Email delivery coverage](../rfcs/0062-email-delivery-coverage.md)
 
 ## Related Docs
 

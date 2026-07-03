@@ -6,13 +6,15 @@ export default async function ExampleApiPage() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Example: API Provider</h1>
-      <p className={styles.lead}>
-        This plugin demonstrates the API provider pattern (PLT-16). Its manifest declares{' '}
-        <code className={styles.code}>&quot;apiProvider&quot;: true</code>, so public{' '}
-        <code className={styles.code}>/api/*</code> requests are delegated to this plugin before the
-        platform session gate.
-      </p>
+      <header className={styles.header}>
+        <h1 className={styles.title}>Example: API Provider</h1>
+        <p className={styles.lead}>
+          This plugin demonstrates the API provider pattern (PLT-16). Its manifest declares{' '}
+          <code className={styles.code}>&quot;apiProvider&quot;: true</code>, so public{' '}
+          <code className={styles.code}>/api/*</code> requests are delegated to this plugin before
+          the platform session gate.
+        </p>
+      </header>
 
       <section className={styles.card}>
         <h2 className={styles.cardTitle}>How it works</h2>

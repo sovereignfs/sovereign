@@ -553,6 +553,48 @@ scaffold), Task 14.1 (Account plugin).
 - Overlay size is configured through plugin/runtime metadata rather than
   hardcoded per-route modal wrappers.
 
+---
+
+#### 📋 2.20 — Error-page digital-rights quote rotation
+
+**Goal:** Add a small, curated rotating quote treatment to platform-owned error pages so
+dead ends carry Sovereign's privacy and digital-rights voice without obscuring the practical
+recovery path.
+
+**Deliverables:**
+
+- Add a local, curated quote list for themes such as digital rights, privacy,
+  self-sovereignty, free knowledge, cryptography, and accountable power.
+- Each quote entry includes quote text, author, source label where known, and a short
+  category/tag. Keep excerpts short and attributable; avoid long copyrighted passages.
+- Add a shared `ErrorQuote` component in the runtime error-page surface. It must render as
+  secondary content below the primary error title, explanation, and recovery actions.
+- Apply the quote component to platform-owned `not-found` / 404 pages first. Generic
+  runtime error pages may use it only where it does not reduce clarity or trust.
+- Do not add rotating quotes to login, registration, password reset, MFA, account deletion,
+  or other auth/security-critical flows.
+- Select quotes in a non-tracking way. No remote calls, no analytics, no persistence needed;
+  per-request or client-side pseudo-random rotation is sufficient.
+- Keep the presentation accessible: semantic `<blockquote>`, visible attribution, no layout
+  shift that hides the error action buttons, and readable contrast in light/dark themes.
+- Document the editorial guardrails near the quote list so future additions stay
+  non-partisan, short, sourceable, and aligned with Sovereign's privacy-first positioning.
+
+**Dependencies:** Task 2.1 (runtime error surfaces), Task 2.10 (responsive shell
+polish), Task 9.1 (design tokens).
+
+**SRS reference:** UX polish; no RFC required.
+
+**Review checklist:**
+
+- `/not-found` / unknown routes show the normal 404 title, explanation, and recovery action
+  before any quote.
+- Reloading or revisiting can show a different quote from the curated local list.
+- Quotes are short, attributed, and do not include long copyrighted excerpts.
+- Auth/security-critical pages do not render the quote component.
+- Mobile and desktop layouts keep buttons visible and avoid overlapping quote text.
+- `pnpm format:check && pnpm lint && pnpm typecheck`
+
 ## Related RFCs
 
 - [RFC 0001 — Overlay shell variant](../rfcs/0001-overlay-shell-variant.md)

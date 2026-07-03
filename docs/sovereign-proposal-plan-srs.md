@@ -915,7 +915,7 @@ No plugin code changes required when the desktop shell launches.
 
 | Capability                                    | Task | Phase   |
 | --------------------------------------------- | ---- | ------- |
-| Scaffold, onboarding, WebView, multi-instance | 17.1 | post-v1 |
+| Scaffold, onboarding, WebView, multi-instance | 17.1 | shipped |
 | System tray + OS notifications                | 17.2 | post-v1 |
 | Deep link scheme (`sovereign://`)             | 17.3 | post-v1 |
 | Keychain credential storage                   | 17.4 | post-v1 |

@@ -510,6 +510,56 @@ Task 0.5.24 (RFC 0019 — test seeding infrastructure this extends)
 
 ---
 
+#### 📋 1.14 — Account and security email delivery coverage (RFC 0062)
+
+**Goal:** Make account lifecycle and security-sensitive user-management emails a consistent
+platform behavior instead of scattered ad-hoc sends. This task covers authentication,
+security, and administrative email delivery; email templates, branding, localization, preview
+tooling, and copy overrides remain owned by RFC 0031 / epic task 9.9.
+
+**Deliverables:**
+
+- Add a platform email delivery wrapper for first-party account workflows with delivery classes
+  from RFC 0062: `authentication`, `security`, `administrative`, and `communication`.
+- Preserve the auth/runtime boundary: `apps/auth` must not import runtime internals. Use an
+  auth-local wrapper or a narrow internal runtime endpoint for shared policy where needed.
+- Move existing password-reset and Console invite sends onto the wrapper without changing user
+  behavior.
+- Add account-created security email after signup/accepted invite, distinct from the RFC 0035
+  verification email.
+- Add security emails for password changed, MFA enabled/disabled/reset, passkey added/removed,
+  and account deletion.
+- Add administrative emails for account deactivation/reactivation and role changes.
+- Add `email_delivery_log` or equivalent non-secret audit/diagnostic records. Do not store full
+  bodies, reset tokens, invite tokens, or raw recipient email addresses.
+- Add Console health diagnostics for SMTP configured yes/no, last send status, last failure code,
+  and recent failure count.
+- Update `docs/self-hosting.md` with SMTP-dependent auth behavior, including the effect of
+  missing `SMTP_HOST` when email verification is required.
+
+**Version bumps:** `@sovereignfs/db` → patch if a delivery-log table is added,
+`runtime` → minor, `apps/auth` → minor, `plugins/account` → minor, `plugins/console` → minor.
+
+**Dependencies:** Task 0.5 (`packages/mailer`), Task 1.4 (MFA), Task 1.7 (account deletion),
+Task 1.8 (email verification), Task 9.9 (email templates for final rendering; wrapper may ship
+with plain fallback first).
+
+**SRS reference:** [RFC 0062](../rfcs/0062-email-delivery-coverage.md)
+
+**Review checklist:**
+
+- Password reset and invite still send successfully through the shared wrapper.
+- New signup/accepted-invite flow attempts an account-created security email.
+- Password, MFA, passkey, role, activation, and deletion changes attempt the expected email.
+- Authentication email failure blocks only flows that require email to complete; security and
+  administrative failures are logged and surfaced according to RFC 0062.
+- Email delivery logs contain no bodies, reset tokens, invite tokens, or raw recipient email
+  addresses.
+- Console health reports sanitized SMTP/email delivery diagnostics.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0012 — Passkeys & TOTP MFA](../rfcs/0012-passkeys-and-mfa.md)
@@ -519,6 +569,7 @@ Task 0.5.24 (RFC 0019 — test seeding infrastructure this extends)
 - [RFC 0035 — Progressive user verification](../rfcs/0035-progressive-user-verification.md)
 - [RFC 0041 — User directory and member selection SDK](../rfcs/0041-user-directory.md)
 - [RFC 0054 — Plugin-scoped roles and grants](../rfcs/0054-plugin-scoped-roles-and-grants.md)
+- [RFC 0062 — Email delivery coverage](../rfcs/0062-email-delivery-coverage.md)
 
 ## Related Docs
 

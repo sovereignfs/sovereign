@@ -173,6 +173,7 @@ once prioritised.
 | —       | Messages and notification detail (RFC 0048)                           | 📋     | [4.4](epics/notification-center.md#44--messages-and-notification-detail-rfc-0048)                |
 | —       | User directory and member selection SDK (RFC 0041)                    | 📋     | [1.12](epics/users-auth.md#112--user-directory-and-member-selection-sdk-rfc-0041)                |
 | —       | Plugin-scoped roles and grants (RFC 0054)                             | 📋     | [1.13](epics/users-auth.md#113--plugin-scoped-roles-and-grants-rfc-0054)                         |
+| —       | Account and security email delivery coverage (RFC 0062)               | 📋     | [1.14](epics/users-auth.md#114--account-and-security-email-delivery-coverage-rfc-0062)           |
 | —       | Plugin secret vault (RFC 0043)                                        | 📋     | [8.6](epics/data-sovereignty.md#86--plugin-secret-vault-rfc-0043)                                |
 | —       | Plugin file storage (RFC 0044)                                        | 📋     | [8.7](epics/data-sovereignty.md#87--plugin-file-storage-rfc-0044)                                |
 | —       | Plugin portability hooks (RFC 0052)                                   | 📋     | [8.8](epics/data-sovereignty.md#88--plugin-portability-hooks-rfc-0052)                           |
@@ -180,11 +181,13 @@ once prioritised.
 | —       | Plugin background jobs and schedules (RFC 0046)                       | 📋     | [3.16](epics/plugins-runtime.md#316--plugin-background-jobs-and-schedules-rfc-0046)              |
 | —       | Public plugin page routes (RFC 0042)                                  | 📋     | [2.14](epics/platform-shell.md#214--public-plugin-page-routes-rfc-0042)                          |
 | —       | Public plugin webhooks (RFC 0050)                                     | 📋     | [2.15](epics/platform-shell.md#215--public-plugin-webhooks-rfc-0050)                             |
+| —       | Error-page digital-rights quote rotation                              | 📋     | [2.20](epics/platform-shell.md#220--error-page-digital-rights-quote-rotation)                    |
 | —       | Plugin events and realtime channels (RFC 0045)                        | 📋     | [3.17](epics/plugins-runtime.md#317--plugin-events-and-realtime-channels-rfc-0045)               |
 | —       | Plugin tool contracts (RFC 0047)                                      | 📋     | [3.18](epics/plugins-runtime.md#318--plugin-tool-contracts-rfc-0047)                             |
 | —       | Plugin external connections (RFC 0049)                                | 📋     | [3.19](epics/plugins-runtime.md#319--plugin-external-connections-rfc-0049)                       |
 | —       | Cross-plugin references and dependency discovery (RFC 0051)           | 📋     | [3.20](epics/plugins-runtime.md#320--cross-plugin-references-and-dependency-discovery-rfc-0051)  |
 | —       | Plugin flow handoffs (RFC 0053)                                       | 📋     | [3.21](epics/plugins-runtime.md#321--plugin-flow-handoffs-rfc-0053)                              |
+| —       | Email channel for broadcasts and messages (RFC 0062)                  | 📋     | [4.5](epics/notification-center.md#45--email-channel-for-broadcasts-and-messages-rfc-0062)       |
 | —       | Sovereign Harness platform plugin (RFC 0040)                          | 📋     | [18.1](epics/sovereign-harness.md#181--sovereign-harness-platform-plugin-rfc-0040)               |
 | —       | Sovereign Council POC (RFC 0055)                                      | 📋     | [19.1](epics/sovereign-council.md#191--sovereign-council-poc-rfc-0055)                           |
 | —       | Sovereign Council full deliberation workspace                         | 📋     | [19.2](epics/sovereign-council.md#192--sovereign-council-full-deliberation-workspace)            |
@@ -195,6 +198,7 @@ once prioritised.
 | —       | Launcher plugin workflow coverage                                     | 📋     | [15.2](epics/plugin-launcher.md#152--launcher-plugin-workflow-coverage)                          |
 | —       | SDK boundary and runtime contract tests                               | 📋     | [3.24](epics/plugins-runtime.md#324--sdk-boundary-and-runtime-contract-tests)                    |
 | —       | Plugin external dependency resolution (RFC 0057)                      | 📋     | [3.25](epics/plugins-runtime.md#325--plugin-external-dependency-resolution-rfc-0057)             |
+| —       | Plugin mailer permission and SDK email surface (RFC 0062)             | 📋     | [3.26](epics/plugins-runtime.md#326--plugin-mailer-permission-and-sdk-email-surface-rfc-0062)    |
 | —       | Middleware internal fetch caching review                              | 📋     | [2.18](epics/platform-shell.md#218--middleware-internal-fetch-caching-review)                    |
 | —       | Typecheck performance and project references                          | 📋     | [0.14](epics/infrastructure.md#014--typecheck-performance-and-project-references)                |
 | —       | Operational consistency checks                                        | 📋     | [0.15](epics/infrastructure.md#015--operational-consistency-checks)                              |
@@ -210,14 +214,14 @@ once prioritised.
 
 Native Tauri shell wrapping the PWA — direct `.dmg`/`.exe`/`.AppImage` download,
 macOS first. Out of scope for v1; the approach is decided (see CLAUDE.md
-"Desktop app (post-v1 plan)" and RFC 0038) and lives in a separate
-`sovereign-desktop` repository once work starts.
+"Desktop app (post-v1 plan)" and RFC 0038) and lives in the separate
+`sovereign-desktop` repository.
 
 ### Pre-v1
 
 | Version | Task                                      | Status | Epic task                                                                         |
 | ------- | ----------------------------------------- | ------ | --------------------------------------------------------------------------------- |
-| 0.1.0   | Desktop app shell, macOS-first (RFC 0038) | 📋     | [17.1](epics/desktop.md#171--sovereign-desktop--tauri-shell-scaffold-macos-first) |
+| 0.1.0   | Desktop app shell, macOS-first (RFC 0038) | ✅     | [17.1](epics/desktop.md#171--sovereign-desktop--tauri-shell-scaffold-macos-first) |
 
 ---
 

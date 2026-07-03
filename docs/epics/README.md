@@ -25,7 +25,7 @@ Full architecture and requirements: [sovereign-proposal-plan-srs.md](../sovereig
 | 14  | [Plugin — Accounts](plugin-accounts.md)       | ✅ Complete    | Per-user profile, security, preferences, data portability, activity                 |
 | 15  | [Plugin — Launcher](plugin-launcher.md)       | ✅ Complete    | Home screen plugin grid — default root plugin                                       |
 | 16  | [Docs Site & Landing Page](docs.md)           | ⏳ In Progress | VitePress site from docs/ + project landing page at sovereignfs.github.io           |
-| 17  | [Desktop App Shell](desktop.md)               | 📋 Planned     | Tauri shell app loading a self-hosted instance — macOS-first                        |
+| 17  | [Desktop App Shell](desktop.md)               | ⏳ In Progress | Tauri shell app loading a self-hosted instance — macOS-first                        |
 | 18  | [Sovereign Harness](sovereign-harness.md)     | 📋 Planned     | Platform-shipped AI assistant and orchestration layer                               |
 | 19  | [Sovereign Council](sovereign-council.md)     | 📋 Planned     | Multi-model deliberation, brainstorming, and report generation                      |
 | 20  | [Mobile App Shell](mobile.md)                 | 📋 Planned     | Capacitor shell app loading a self-hosted instance — iOS and Android                |

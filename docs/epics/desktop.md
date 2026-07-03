@@ -5,7 +5,7 @@
 
 ## Status
 
-📋 Planned
+⏳ In Progress
 
 ## Overview
 
@@ -25,7 +25,7 @@ check internally; no plugin code changes required.
 
 ## Tasks
 
-#### 📋 17.1 — sovereign-desktop — Tauri shell scaffold (macOS-first)
+#### ✅ 17.1 — sovereign-desktop — Tauri shell scaffold (macOS-first)
 
 **Goal:** Bootstrap `sovereign-desktop` with a working Tauri 2.x shell —
 first-launch instance URL onboarding, URL validation against

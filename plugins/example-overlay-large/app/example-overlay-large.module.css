@@ -1,9 +1,27 @@
+/* No padding of its own, in either the full-page fallback or the modal —
+   matching every other overlay-capable platform plugin (plugins/launcher
+   .launcher, plugins/account .account, plugins/console .console all do the
+   same). The inset comes entirely from whichever ancestor renders this page:
+   the runtime shell's own .content in the full-page fallback
+   (runtime/app/(platform)/shell.module.css), or the Dialog's .content in the
+   modal (packages/ui Dialog.module.css). Adding padding here on top of
+   either would double up the inset for no reason. */
 .page {
   min-height: 100%;
-  padding: var(--sv-space-7);
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-5);
+}
+
+/* Binds the title(+badge) row to its lead paragraph as one header block
+   (--sv-space-2, matching the platform's title→description convention, e.g.
+   the paywall page) — distinct from the page's own --sv-space-5 gap before
+   the first panel, so the heading doesn't read as just another item in the
+   stack. */
+.headerBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
 }
 
 .header {
@@ -40,6 +58,13 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  /* The Dialog's close button is an absolutely-positioned overlay pinned to
+     the panel's top-right corner (packages/ui Dialog.module.css .close) — it
+     is not part of this page's layout flow, so a header row that reaches the
+     true top-right corner (as this badge does via justify-content:
+     space-between) collides with it. Reserve clearance so the badge never
+     shares that corner. */
+  margin-right: var(--sv-space-10);
 }
 
 .lead,
@@ -48,6 +73,23 @@
   color: var(--sv-color-text-muted);
   font-size: var(--sv-font-size-sm);
   line-height: 1.6;
+}
+
+/* Tertiary nav links sit in the same row as a primary Button — remove the
+   default underline so they read as an intentional control, not raw markup.
+   Padding brings the tap target up toward the ~44px minimum recommended for
+   touch (WCAG 2.5.5 / Apple HIG) — the text itself stays the same size. */
+.link {
+  padding: var(--sv-space-3) var(--sv-space-2);
+  border-radius: var(--sv-radius-sm);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.link:hover,
+.link:focus-visible {
+  color: var(--sv-color-text-primary);
+  text-decoration: underline;
 }
 
 .code {
@@ -97,22 +139,26 @@
   gap: var(--sv-space-2);
 }
 
+/* Label sits close to its value (gap, not justify-content: space-between) —
+   matching plugins/example-basic's .row. space-between stretches a short
+   label/value pair to the panel's full width, leaving a large empty gap in
+   the middle for no reason. */
 .row {
   display: flex;
-  justify-content: space-between;
-  gap: var(--sv-space-3);
+  gap: var(--sv-space-4);
   font-size: var(--sv-font-size-sm);
+  line-height: 1.5;
 }
 
 .row dt {
   color: var(--sv-color-text-muted);
+  min-width: 40px;
   font-weight: 500;
 }
 
 .row dd {
   margin: 0;
   color: var(--sv-color-text-primary);
-  text-align: right;
 }
 
 .actions {
@@ -120,10 +166,38 @@
   align-items: center;
   gap: var(--sv-space-3);
   flex-wrap: wrap;
+  /* .link's own horizontal padding (added for tap-target size) would
+     otherwise shift its text 8px right of the cards above it — pull the row
+     back so it stays left-aligned with the rest of the page. */
+  margin-left: calc(-1 * var(--sv-space-2));
 }
 
 @media (max-width: 720px) {
   .columns {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Below the Dialog's own mobile breakpoint (packages/ui Dialog.module.css),
+   the overlay becomes a full-screen sheet with a mobileBar that already shows
+   the plugin name ("Example: Overlay Large") and a close button. The eyebrow
+   ("Overlay size") and badge ("Default size") restate the same thing a
+   second time and cost ~35% of a phone viewport before any real content is
+   visible — drop them there and keep just the <h1> as an in-content anchor. */
+@media (max-width: 768px) {
+  .eyebrow,
+  .badge {
+    display: none;
+  }
+
+  /* .page has no padding of its own (see above) and the Dialog zeroes its
+     own .content top padding on mobile for plugins with a sticky header
+     (packages/ui Dialog.module.css) — this plugin doesn't have one, so
+     without this the title sits flush against the mobileBar with no
+     clearance at all. Restore a little, scoped to the modal only ([role=
+     "dialog"], set by the Dialog component) — the full-page fallback
+     already gets proper top spacing from the runtime shell's own header. */
+  :global([role='dialog']) .page {
+    padding-top: var(--sv-space-4);
   }
 }

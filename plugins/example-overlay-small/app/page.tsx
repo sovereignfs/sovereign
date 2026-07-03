@@ -8,15 +8,17 @@ export default async function ExampleOverlaySmallPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <p className={styles.eyebrow}>Overlay size</p>
-        <h1 className={styles.title}>Small</h1>
-      </header>
+      <header className={styles.headerBlock}>
+        <div className={styles.header}>
+          <p className={styles.eyebrow}>Overlay size</p>
+          <h1 className={styles.title}>Small</h1>
+        </div>
 
-      <p className={styles.lead}>
-        A compact overlay for quick actions. The platform owns the dialog chrome; this plugin only
-        declares <code className={styles.code}>shellConfig.overlaySize: &quot;sm&quot;</code>.
-      </p>
+        <p className={styles.lead}>
+          A compact overlay for quick actions. The platform owns the dialog chrome; this plugin only
+          declares <code className={styles.code}>shellConfig.overlaySize: &quot;sm&quot;</code>.
+        </p>
+      </header>
 
       <dl className={styles.dl}>
         <div className={styles.row}>

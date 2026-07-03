@@ -8,19 +8,21 @@ export default async function ExampleOverlayLargePage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Overlay size</p>
-          <h1 className={styles.title}>Large</h1>
+      <header className={styles.headerBlock}>
+        <div className={styles.header}>
+          <div>
+            <p className={styles.eyebrow}>Overlay size</p>
+            <h1 className={styles.title}>Large</h1>
+          </div>
+          <span className={styles.badge}>Default size</span>
         </div>
-        <span className={styles.badge}>Default size</span>
-      </header>
 
-      <p className={styles.lead}>
-        Large overlays are useful for settings and management workflows that should keep the user in
-        context. Omitting <code className={styles.code}>overlaySize</code> also resolves to this
-        size.
-      </p>
+        <p className={styles.lead}>
+          Large overlays are useful for settings and management workflows that should keep the user
+          in context. Omitting <code className={styles.code}>overlaySize</code> also resolves to
+          this size.
+        </p>
+      </header>
 
       <section className={styles.columns}>
         <div className={styles.panel}>

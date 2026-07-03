@@ -8,16 +8,18 @@ export default async function ExampleOverlayMediumPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <p className={styles.eyebrow}>Overlay size</p>
-        <h1 className={styles.title}>Medium</h1>
-      </header>
+      <header className={styles.headerBlock}>
+        <div className={styles.header}>
+          <p className={styles.eyebrow}>Overlay size</p>
+          <h1 className={styles.title}>Medium</h1>
+        </div>
 
-      <p className={styles.lead}>
-        A medium overlay fits short workflows with a preview, controls, and confirmation content.
-        Intra-overlay links use <code className={styles.code}>replace</code> so the platform can
-        dismiss the dialog with one back navigation.
-      </p>
+        <p className={styles.lead}>
+          A medium overlay fits short workflows with a preview, controls, and confirmation content.
+          Intra-overlay links use <code className={styles.code}>replace</code> so the platform can
+          dismiss the dialog with one back navigation.
+        </p>
+      </header>
 
       <section className={styles.panel}>
         <h2 className={styles.panelTitle}>Example workflow</h2>

@@ -9,6 +9,15 @@ node_modules
 # Generated plugin directory — recreated by the generate script
 runtime/app/plugins
 
+# Non-platform plugins (example + external) are cloned fresh at their pinned refs
+# inside the builder (see `pnpm install:plugins`). Never copy a local working-tree
+# clone into the context: it is absent from the frozen lockfile and would fail
+# `pnpm install --frozen-lockfile` in the deps stage.
+plugins/*/
+!plugins/account/
+!plugins/console/
+!plugins/launcher/
+
 # SQLite databases — mounted as a volume so data persists across rebuilds
 data/*.db
 

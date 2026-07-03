@@ -23,6 +23,7 @@ const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(SCRIPTS_DIR, '..');
 const RUNTIME_DIR = join(ROOT, 'runtime');
 const GENERATE = join(SCRIPTS_DIR, 'generate-registry.ts');
+const INSTALL_PLUGINS = join(SCRIPTS_DIR, 'install-plugins.ts');
 
 const children = new Set<ChildProcess>();
 let shuttingDown = false;
@@ -49,6 +50,17 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
   shutdown(0);
 });
+
+// 0. Best-effort: clone any declared plugins (the example plugins, plus any
+// external plugins in sovereign.plugins.json) at their pinned refs. Non-fatal —
+// if it fails (e.g. offline) dev still starts with whatever is already present,
+// you just develop without the freshly-declared plugins until the next run.
+const install = spawnSync('tsx', [INSTALL_PLUGINS], { cwd: ROOT, stdio: 'inherit' });
+if (install.status !== 0) {
+  console.warn(
+    '[dev] install-plugins did not complete — continuing without the declared external/example plugins.',
+  );
+}
 
 // 1. Compose plugins once, before Next's first route scan.
 const initial = spawnSync('tsx', [GENERATE], { cwd: ROOT, stdio: 'inherit' });

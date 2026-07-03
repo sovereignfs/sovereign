@@ -93,6 +93,26 @@ internet. Override `AUTH_PORT` and `RUNTIME_PORT` to use different host ports.
 
 ---
 
+## Bundled example plugins
+
+The platform ships a set of reference **example plugins** (basic, API provider,
+minimal/overlay shells, monetization demo). They do not live in the platform
+repository — they are maintained in
+[`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples)
+and declared in `sovereign.plugins.json`, each pinned to a commit. The Docker
+build (and `pnpm install:plugins` locally) clones them into `plugins/<slug>/`
+before composing routes, so a default install ships with them.
+
+Because they are cloned during the build, **the build needs network access to
+GitHub.** The pinned commit refs keep the result reproducible.
+
+To ship **without** the examples, remove their entries from
+`sovereign.plugins.json` before building the image — nothing will be cloned or
+composed. To keep them installed but hidden from users, disable them from
+**Console → Apps** instead (per-plugin, no rebuild).
+
+---
+
 ## Environment variables
 
 All variables live in a single `.env` at the repo root. Copy `.env.example`

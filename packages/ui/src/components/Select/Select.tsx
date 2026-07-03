@@ -12,13 +12,21 @@ export type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'size'> 
  * Uses the native picker on mobile — no custom dropdown, maximum a11y coverage.
  *
  * RSC-safe: presentational, no hooks, forwards all native select props.
+ *
+ * `className` sizes the outer box (the wrapper), not the `<select>` itself —
+ * the chevron is absolutely positioned against the wrapper, so a className
+ * that constrains only the `<select>` (e.g. `max-width`) shrinks the select
+ * while the wrapper (and thus the chevron) stays full width, leaving the
+ * chevron stranded past the visible box.
  */
 export function Select({ className, size = 'md', children, ...rest }: SelectProps) {
   return (
     <div
-      className={[styles.wrapper, size === 'sm' ? styles.sm : undefined].filter(Boolean).join(' ')}
+      className={[styles.wrapper, size === 'sm' ? styles.sm : undefined, className]
+        .filter(Boolean)
+        .join(' ')}
     >
-      <select className={[styles.select, className].filter(Boolean).join(' ')} {...rest}>
+      <select className={styles.select} {...rest}>
         {children}
       </select>
       <svg

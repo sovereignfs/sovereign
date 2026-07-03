@@ -2,6 +2,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-1);
+  /* Every local .field/.fieldGroup class this component replaced set this
+     explicitly. Without it, a parent with align-items: flex-start (needed so
+     submit buttons don't stretch full-width) shrink-wraps this wrapper to its
+     content's intrinsic width instead of filling the available space. */
+  width: 100%;
 }
 
 .label {

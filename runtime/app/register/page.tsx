@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { resolveInstanceName } from '@/src/instance-name';
 import { readServerSession } from '@/src/server-session';
 import { RegisterForm } from './register-form';
 import styles from '../auth-page.module.css';
@@ -35,7 +36,7 @@ export default async function RegisterPage({
   searchParams: Promise<{ token?: string }>;
 }) {
   const { token } = await searchParams;
-  const instanceName = process.env.INSTANCE_NAME ?? 'Sovereign';
+  const instanceName = resolveInstanceName(process.env.INSTANCE_NAME);
   const instanceInitial = instanceName[0]?.toUpperCase() ?? 'S';
 
   // Already signed in? Send them to the app rather than showing the form.

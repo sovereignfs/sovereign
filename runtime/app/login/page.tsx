@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
+import { resolveInstanceName } from '@/src/instance-name';
 import { readServerSession } from '@/src/server-session';
 import { LoginForm } from './login-form';
 
@@ -8,7 +9,7 @@ export default async function LoginPage() {
   // middleware skips this route, so the check lives here (see readServerSession).
   if (await readServerSession()) redirect('/');
 
-  const instanceName = process.env.INSTANCE_NAME ?? 'Sovereign';
+  const instanceName = resolveInstanceName(process.env.INSTANCE_NAME);
   return (
     <Suspense>
       <LoginForm

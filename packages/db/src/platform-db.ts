@@ -1063,6 +1063,7 @@ export async function cancelEntitlement(pdb: PlatformDb, id: string): Promise<vo
 // ── Instance identity config (RFC 0027 / RFC 0032 rename) ────────────────────
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+const DEFAULT_INSTANCE_NAME = 'Sovereign';
 
 export interface InstanceConfig {
   instanceName: string;
@@ -1072,6 +1073,17 @@ export interface InstanceConfig {
   instancePrimary: string | null;
   emailFromName: string | null;
   emailLogo: string | null;
+}
+
+function resolveInstanceName(value: string | null | undefined): string {
+  return value?.trim() || DEFAULT_INSTANCE_NAME;
+}
+
+function resolveConfiguredInstanceName(
+  rowValue: string | null | undefined,
+  envValue: string | null | undefined,
+): string {
+  return resolveInstanceName(rowValue?.trim() ? rowValue : envValue);
 }
 
 /**
@@ -1102,7 +1114,7 @@ export async function getInstanceConfig(
         FROM instance_config WHERE tenant_id = ${tenantId}`,
   );
   return {
-    instanceName: row?.instanceName || process.env.INSTANCE_NAME || 'Sovereign',
+    instanceName: resolveConfiguredInstanceName(row?.instanceName, process.env.INSTANCE_NAME),
     instanceLogo: row?.instanceLogo ?? process.env.INSTANCE_LOGO ?? null,
     instanceLogoDark: row?.instanceLogoDark ?? process.env.INSTANCE_LOGO_DARK ?? null,
     instanceFavicon: row?.instanceFavicon ?? process.env.INSTANCE_FAVICON ?? null,

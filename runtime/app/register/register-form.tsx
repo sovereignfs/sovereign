@@ -5,14 +5,27 @@ import Link from 'next/link';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
 import { ViewportHeightSync } from '../login/ViewportHeightSync';
-import styles from '../login/login.module.css';
+import registerStyles from './register.module.css';
+import styles from '../auth-page.module.css';
 
-export function RegisterForm({ instanceInitial = 'S' }: { instanceInitial?: string }) {
+export function RegisterForm({
+  instanceName = 'Sovereign',
+  instanceInitial = 'S',
+  invitedEmail,
+  invitedBy,
+}: {
+  instanceName?: string;
+  instanceInitial?: string;
+  invitedEmail?: string;
+  invitedBy?: string;
+}) {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(invitedEmail ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const isInvite = !!invitedEmail;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,6 +48,19 @@ export function RegisterForm({ instanceInitial = 'S' }: { instanceInitial?: stri
           {instanceInitial}
         </div>
         <h1 className={styles.title}>Create your account</h1>
+
+        {isInvite ? (
+          <div className={registerStyles.inviteBanner}>
+            <p className={registerStyles.inviteBannerTitle}>Invited to join {instanceName}</p>
+            {invitedBy ? (
+              <p className={registerStyles.inviteBannerMeta}>
+                By {invitedBy}
+                {invitedEmail ? <> · {invitedEmail}</> : null}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         <form className={styles.form} onSubmit={onSubmit}>
           <label htmlFor="register-name" className={styles.field}>
             <span className={styles.label}>Name</span>
@@ -46,17 +72,23 @@ export function RegisterForm({ instanceInitial = 'S' }: { instanceInitial?: stri
               onChange={(e) => setName(e.target.value)}
             />
           </label>
-          <label htmlFor="register-email" className={styles.field}>
-            <span className={styles.label}>Email</span>
+          <div className={styles.field}>
+            <div className={registerStyles.fieldLabelRow}>
+              <label htmlFor="register-email" className={styles.label}>
+                Email
+              </label>
+              {isInvite ? <span className={registerStyles.fromInviteTag}>from invite</span> : null}
+            </div>
             <Input
               id="register-email"
               type="email"
               autoComplete="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              readOnly={isInvite}
+              onChange={isInvite ? undefined : (e) => setEmail(e.target.value)}
             />
-          </label>
+          </div>
           <div className={styles.field}>
             <label htmlFor="register-password" className={styles.label}>
               Password
@@ -74,7 +106,13 @@ export function RegisterForm({ instanceInitial = 'S' }: { instanceInitial?: stri
           </div>
           {error ? <p className={styles.error}>{error}</p> : null}
           <Button type="submit" disabled={loading} className={styles.submitLg}>
-            {loading ? 'Creating account…' : 'Create account'}
+            {loading
+              ? isInvite
+                ? 'Accepting…'
+                : 'Creating account…'
+              : isInvite
+                ? 'Accept invitation'
+                : 'Create account'}
           </Button>
         </form>
         <p className={styles.footer}>

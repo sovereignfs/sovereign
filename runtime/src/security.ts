@@ -38,12 +38,9 @@ export function buildContentSecurityPolicy(
   // — never ship 'unsafe-eval'.
   const devEval = opts.isProd ? '' : ` 'unsafe-eval'`;
 
-  // The logout form (and any auth-bound form) lives on the runtime origin but
-  // its POST 303-redirects to the auth server's login page on a *different*
-  // origin (e.g. http://localhost:3001 / your auth domain). Browsers check
-  // form-action against every URL in the submission's redirect chain, so the
-  // auth origin must be allowed or the redirect is silently blocked (the page
-  // just flickers and stays put). 'self' alone is not enough.
+  // Keep the auth server origin allowed while its compatibility routes remain
+  // exposed. Browser-facing auth pages are runtime-hosted, but deployments may
+  // still link directly to the auth app during transition.
   const formAction = ["'self'", opts.authFormActionOrigin].filter(Boolean).join(' ');
 
   const directives = [

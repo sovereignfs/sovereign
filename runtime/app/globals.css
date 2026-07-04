@@ -24,8 +24,9 @@ body {
      level across every runtime route. Unlike `overflow: hidden` this never traps
      content — routes that overflow (paywall, error, offline) still scroll, they
      just don't bounce — so it is safe to apply globally. The auth pages
-     (/login, /register, /login/2fa) additionally size their own scroll surface
-     to the viewport in login.module.css. */
+     (/login, /register, /forgot-password, /reset-password, /login/2fa)
+     additionally size their own scroll surface to the viewport in
+     auth-page.module.css. */
   overscroll-behavior: none;
 }
 

@@ -43,8 +43,9 @@ export interface AuthEnv {
   webAuthnRpName: string;
   /**
    * All browser-facing origins where WebAuthn challenges occur. Must include
-   * the runtime public URL (passkey management via proxy) AND the auth server
-   * public URL (passkey sign-in on the login page). Comma-separated list.
+   * the runtime public URL (primary sign-in and passkey management via proxy).
+   * Keep the auth server public URL included while compatibility routes remain
+   * exposed. Comma-separated list.
    */
   webAuthnOrigin: string[];
 }
@@ -68,13 +69,12 @@ export function getEnv(): AuthEnv {
   }
 
   // WebAuthn origin must include EVERY browser-facing origin where a WebAuthn
-  // challenge can occur. There are two in this architecture:
+  // challenge can occur. There are two supported origins:
   //   1. The runtime origin (http://localhost:3000 in dev) — passkey management
-  //      in the account plugin is proxied through the runtime, so the browser
-  //      creates/presents credentials from the runtime origin.
+  //      and the primary sign-in UI are proxied through the runtime, so the
+  //      browser creates/presents credentials from the runtime origin.
   //   2. The auth server's public origin (http://localhost:3001 in dev) — the
-  //      login page lives on the auth server, so passkey sign-in assertions
-  //      carry the auth server origin.
+  //      auth app still exposes compatibility pages/routes.
   // In production, set AUTH_WEBAUTHN_ORIGIN to a comma-separated list of both
   // your runtime URL and auth server URL (e.g. https://app.example.com,https://auth.example.com).
   const runtimeOrigin = process.env.NEXT_PUBLIC_RUNTIME_URL || 'http://localhost:3000';

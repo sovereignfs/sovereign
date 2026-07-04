@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
 import { ViewportHeightSync } from './ViewportHeightSync';
-import styles from './login.module.css';
+import styles from '../auth-page.module.css';
 
 export function LoginForm({
   instanceName,

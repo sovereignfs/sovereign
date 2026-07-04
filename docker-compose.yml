@@ -33,10 +33,9 @@ services:
     # writes to the host `./data` bind mount work regardless of host ownership.
     # (Prod uses a named volume instead and keeps the non-root user.)
     user: root
-    # Exposed to the host so the browser can reach the auth login UI directly.
-    # The runtime redirects to SOVEREIGN_AUTH_PUBLIC_URL (localhost:3001) for
-    # browser-facing redirects, while keeping SOVEREIGN_AUTH_URL=http://auth:3001
-    # for internal server-to-server calls. Dev-only: production keeps auth
+    # Exposed to the host so the browser can reach the auth app's compatibility
+    # routes directly. Runtime-hosted auth UI talks to this service through
+    # SOVEREIGN_AUTH_URL=http://auth:3001. Dev-only: production keeps auth
     # internal (docker-compose.prod.yml uses expose, not ports).
     ports:
       - '${AUTH_PORT:-3001}:3001'
@@ -73,10 +72,10 @@ services:
       # Overrides the .env value (which points to localhost for native dev).
       # Inside Docker, the runtime reaches auth via the internal service name.
       SOVEREIGN_AUTH_URL: 'http://auth:3001'
-      # Browser-facing URL for auth redirects (login/logout). Differs from
+      # Browser-facing URL for auth-server compatibility routes. Differs from
       # SOVEREIGN_AUTH_URL because browsers can't resolve the internal service
-      # name "auth". Defaults to localhost in dev; set to your public domain
-      # in production when not using the internal service name.
+      # name "auth". Defaults to localhost in dev; set to your auth public
+      # domain in production when compatibility routes need to be reachable.
       SOVEREIGN_AUTH_PUBLIC_URL: '${SOVEREIGN_AUTH_PUBLIC_URL:-http://localhost:3001}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
       # Shared signing secret — the runtime verifies the auth server's session

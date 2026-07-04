@@ -1,0 +1,41 @@
+.fieldLabelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--sv-space-2);
+}
+
+.fieldLabelRow .label {
+  margin-bottom: 0;
+}
+
+.inviteBanner {
+  margin-top: var(--sv-space-5);
+  background-color: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  padding: var(--sv-space-3) var(--sv-space-4);
+}
+
+.inviteBannerTitle {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+  line-height: 1.4;
+}
+
+.inviteBannerMeta {
+  margin: var(--sv-space-1) 0 0;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+}
+
+.fromInviteTag {
+  font-family: var(--sv-font-family-mono);
+  font-size: 10px;
+  color: var(--sv-color-text-muted);
+  background-color: var(--sv-color-surface-sunken);
+  border-radius: var(--sv-radius-sm);
+  padding: 2px 7px;
+}

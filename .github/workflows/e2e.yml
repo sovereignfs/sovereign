@@ -58,6 +58,10 @@ jobs:
         run: pnpm test:e2e
         env:
           CI: 'true'
+          # install:plugins intentionally materializes gitignored external plugin
+          # packages after the frozen install. They are not part of pnpm-lock.yaml,
+          # so pnpm's pre-run dependency verification must stay off for this step.
+          PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: 'false'
 
       - name: Upload test report
         uses: actions/upload-artifact@v4

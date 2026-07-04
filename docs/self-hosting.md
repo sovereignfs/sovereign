@@ -106,10 +106,29 @@ before composing routes, so a default install ships with them.
 Because they are cloned during the build, **the build needs network access to
 GitHub.** The pinned commit refs keep the result reproducible.
 
-To ship **without** the examples, remove their entries from
-`sovereign.plugins.json` before building the image — nothing will be cloned or
-composed. To keep them installed but hidden from users, disable them from
-**Console → Apps** instead (per-plugin, no rebuild).
+### Showing/hiding the examples
+
+The examples are **hidden by default**: even though they are baked into the
+image, their routes return 404 and they never appear in the launcher or sidebar
+until you opt in. The easiest way to show them is the **Console → Settings →
+Example plugins** toggle — no env editing, no restart. Prefer this in day-to-day use.
+
+For provisioning (e.g. a demo image), the `SOVEREIGN_EXAMPLES_ENABLED` runtime
+env var sets the initial default. It is a plain runtime variable — set it in
+`.env` or the container's `environment:`.
+
+| Variable                     | Required | Default | Description                                                                                                                                                                     |
+| ---------------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SOVEREIGN_EXAMPLES_ENABLED` | no       | off     | Seeds whether the bundled example plugins are shown (`1`/`true`/`yes`/`on` = shown). The Console → Settings toggle, once used, is persisted and overrides this. Unset = hidden. |
+
+Precedence, highest first: (1) an explicit per-plugin enable/disable on
+**Console → Plugins** (persisted per plugin); (2) the **Console → Settings →
+Example plugins** instance toggle (persisted in `platform_settings`); (3) the
+`SOVEREIGN_EXAMPLES_ENABLED` env default; (4) off.
+
+To drop the examples from the image entirely (rather than just hiding them),
+remove their entries from `sovereign.plugins.json` before building — nothing will
+be cloned or composed.
 
 ---
 

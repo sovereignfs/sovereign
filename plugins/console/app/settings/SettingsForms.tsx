@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useActionState } from 'react';
-import { Button, FormField, Input, Select } from '@sovereignfs/ui';
+import { useState, useActionState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button, FormField, Input, Select, useToast } from '@sovereignfs/ui';
 import styles from '../console.module.css';
 import {
   type ActionResult,
   updateTenantNameAction,
   updateInviteOnlyAction,
+  updateExampleAppsAction,
   updateRootPluginAction,
   updateInstanceAction,
   uploadLogoAction,
@@ -78,21 +80,37 @@ function FileDropZone({
   );
 }
 
+// Success is surfaced as a toast (see useSaveResult); only errors render inline,
+// next to the form that produced them.
 function Feedback({ result }: { result: ActionResult | null }) {
-  if (!result) return null;
+  if (!result || result.ok) return null;
   return (
-    <p
-      className={result.ok ? styles.feedbackSuccess : styles.feedbackError}
-      role="status"
-      aria-live="polite"
-    >
-      {result.ok ? result.message : result.error}
+    <p className={styles.feedbackError} role="status" aria-live="polite">
+      {result.error}
     </p>
   );
 }
 
+/**
+ * On a successful settings action: show a success toast and refresh the current
+ * route's server components. The refresh is what makes changes visible without a
+ * manual reload — the Console renders as an overlay, so saving does not otherwise
+ * re-render the launcher/sidebar behind it (e.g. showing/hiding example plugins).
+ */
+function useSaveResult(result: ActionResult | null) {
+  const toast = useToast();
+  const router = useRouter();
+  useEffect(() => {
+    if (result?.ok) {
+      toast.show({ title: result.message, category: 'success' });
+      router.refresh();
+    }
+  }, [result, toast, router]);
+}
+
 export function TenantForm({ initialName }: { initialName: string }) {
   const [state, action, pending] = useActionState(updateTenantNameAction, null);
+  useSaveResult(state);
   return (
     <form action={action} className={styles.settingsForm}>
       <FormField label="Instance name" id="tenantName" required>
@@ -108,6 +126,7 @@ export function TenantForm({ initialName }: { initialName: string }) {
 
 export function InviteOnlyForm({ initialValue }: { initialValue: boolean }) {
   const [state, action, pending] = useActionState(updateInviteOnlyAction, null);
+  useSaveResult(state);
   return (
     <form action={action} className={styles.settingsForm}>
       <label className={styles.checkboxRow}>
@@ -128,6 +147,30 @@ export function InviteOnlyForm({ initialValue }: { initialValue: boolean }) {
   );
 }
 
+export function ExampleAppsForm({ initialValue }: { initialValue: boolean }) {
+  const [state, action, pending] = useActionState(updateExampleAppsAction, null);
+  useSaveResult(state);
+  return (
+    <form action={action} className={styles.settingsForm}>
+      <label className={styles.checkboxRow}>
+        <input type="checkbox" name="examplesEnabled" defaultChecked={initialValue} />
+        <span>
+          Show example plugins
+          <span className={styles.helpText}>
+            The bundled reference/demo plugins ship hidden by default. Enable to show them in the
+            launcher and sidebar. You can still enable or disable individual example plugins from
+            the Plugins page.
+          </span>
+        </span>
+      </label>
+      <Feedback result={state} />
+      <Button type="submit" size="sm" disabled={pending}>
+        {pending ? 'Saving…' : 'Save example plugins'}
+      </Button>
+    </form>
+  );
+}
+
 interface PluginOption {
   id: string;
   name: string;
@@ -143,6 +186,7 @@ export function RootPluginForm({
   currentInstalled: boolean;
 }) {
   const [state, action, pending] = useActionState(updateRootPluginAction, null);
+  useSaveResult(state);
   return (
     <form action={action} className={styles.settingsForm}>
       <FormField label="Plugin served at /" id="rootPluginId">
@@ -195,6 +239,7 @@ export interface InstanceValues {
 
 export function InstanceForm({ initialValues }: { initialValues: InstanceValues }) {
   const [state, action, pending] = useActionState(updateInstanceAction, null);
+  useSaveResult(state);
   const [primaryColor, setPrimaryColor] = useState(initialValues.instancePrimary ?? '');
 
   const swatchValue = primaryColor.match(/^#[0-9a-fA-F]{6}$/) ? primaryColor : '#18181b';
@@ -321,6 +366,7 @@ export function InstanceForm({ initialValues }: { initialValues: InstanceValues 
 
 export function LogoUploadForm({ dark }: { dark: boolean }) {
   const [state, action, pending] = useActionState(uploadLogoAction, null);
+  useSaveResult(state);
   const fileId = dark ? 'logoDarkFile' : 'logoFile';
   return (
     <form action={action} className={styles.settingsForm}>
@@ -352,6 +398,7 @@ export function LogoUploadForm({ dark }: { dark: boolean }) {
 
 export function FaviconUploadForm() {
   const [state, action, pending] = useActionState(uploadFaviconAction, null);
+  useSaveResult(state);
   return (
     <form action={action} className={styles.settingsForm}>
       <div className={styles.fieldGroup}>

@@ -3,43 +3,43 @@
     {
       "id": "example-basic",
       "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
-      "ref": "daf6eb2f7463865b228a86a4915514a972542430",
+      "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",
       "subdir": "example-basic"
     },
     {
       "id": "example-api",
       "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
-      "ref": "daf6eb2f7463865b228a86a4915514a972542430",
+      "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",
       "subdir": "example-api"
     },
     {
       "id": "example-minimal",
       "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
-      "ref": "daf6eb2f7463865b228a86a4915514a972542430",
+      "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",
       "subdir": "example-minimal"
     },
     {
       "id": "example-monetized",
       "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
-      "ref": "daf6eb2f7463865b228a86a4915514a972542430",
+      "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",
       "subdir": "example-monetized"
     },
     {
       "id": "example-overlay-small",
       "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
-      "ref": "daf6eb2f7463865b228a86a4915514a972542430",
+      "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",
       "subdir": "example-overlay-small"
     },
     {
       "id": "example-overlay-medium",
       "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
-      "ref": "daf6eb2f7463865b228a86a4915514a972542430",
+      "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",
       "subdir": "example-overlay-medium"
     },
     {
       "id": "example-overlay-large",
       "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
-      "ref": "daf6eb2f7463865b228a86a4915514a972542430",
+      "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",
       "subdir": "example-overlay-large"
     }
   ]

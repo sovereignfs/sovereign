@@ -33,6 +33,20 @@ export interface LauncherPluginInput extends PluginRouteInfo {
 }
 
 /**
+ * The non-chrome, enabled plugins shown in the sidebar's middle icon section
+ * (and the mobile Drawer), preserving input order. Disabled plugins — including
+ * example plugins hidden by the `SOVEREIGN_EXAMPLES_ENABLED` default — are
+ * excluded so no sidebar icon points at a route the middleware 404s. Generic so
+ * the shell can pass full manifest objects through untouched.
+ */
+export function selectSidebarPlugins<T extends { id: string }>(
+  plugins: readonly T[],
+  disabledIds: ReadonlySet<string>,
+): T[] {
+  return plugins.filter((p) => !CHROME_PLUGIN_IDS.has(p.id) && !disabledIds.has(p.id));
+}
+
+/**
  * Select the plugins a user should see in the Launcher (SRS LCH-01/03/04):
  * installed, enabled (not in `disabledIds`), and not platform chrome. Admin-only
  * plugins are included only for users with `console:access` — non-admins never

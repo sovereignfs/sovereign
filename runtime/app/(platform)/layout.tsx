@@ -5,8 +5,9 @@ import { Icon } from '@sovereignfs/ui';
 import { getAccountPrefs } from '@sovereignfs/db';
 import { hasCapability } from '@/src/capabilities';
 import { getPlatformDb } from '@/src/db';
+import { getDisabledPluginIds } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
-import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
+import { selectSidebarPlugins } from '@/src/launcher-plugins';
 import { InstanceProvider } from '@/src/instance-provider';
 import { AccountMenu } from './_components/AccountMenu';
 import { ClientShell } from './_components/ClientShell';
@@ -39,9 +40,14 @@ export default async function PlatformLayout({ children }: { children: ReactNode
     <span aria-hidden="true">{monogram(userLabel)}</span>
   );
 
-  // Non-chrome plugins for the sidebar middle section and the mobile Drawer.
+  // Non-chrome, enabled plugins for the sidebar middle section and the mobile
+  // Drawer. Disabled plugins (including example plugins hidden by the
+  // SOVEREIGN_EXAMPLES_ENABLED default) are excluded so the sidebar never shows
+  // an icon whose route the middleware 404s.
+  const pdb = await getPlatformDb();
+  const disabledIds = new Set(await getDisabledPluginIds(pdb));
   const allPlugins = getInstalledPlugins();
-  const rawPlugins = allPlugins.filter((plugin) => !CHROME_PLUGIN_IDS.has(plugin.id));
+  const rawPlugins = selectSidebarPlugins(allPlugins, disabledIds);
   // The Launcher is a chrome plugin (hidden from its own tiles) but should
   // always appear as the first icon in the sidebar so users can return home.
   const launcher = allPlugins.find((plugin) => plugin.id === 'fs.sovereign.launcher');
@@ -50,7 +56,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   const userId = h.get('x-sovereign-user-id');
   let plugins = rawPlugins;
   if (userId) {
-    const prefs = await getAccountPrefs(await getPlatformDb(), userId);
+    const prefs = await getAccountPrefs(pdb, userId);
     if (prefs.sidebarPlugins) {
       const idMap = new Map(rawPlugins.map((p) => [p.id, p]));
       // Saved order, excluding hidden entries and uninstalled plugin IDs

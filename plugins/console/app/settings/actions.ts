@@ -25,7 +25,9 @@ async function patchSettings(body: Record<string, unknown>): Promise<ActionResul
     return { ok: false, error: detail ?? `Failed to update settings: ${res.status}` };
   }
   revalidatePath('/console/settings');
-  revalidatePath('/');
+  // 'layout' scope revalidates the shared platform shell (sidebar/launcher) too —
+  // settings like the example-plugins toggle and root plugin change what it shows.
+  revalidatePath('/', 'layout');
   return { ok: true, message: 'Saved.' };
 }
 
@@ -43,6 +45,13 @@ export async function updateInviteOnlyAction(
   formData: FormData,
 ): Promise<ActionResult> {
   return patchSettings({ inviteOnly: formData.get('inviteOnly') === 'on' });
+}
+
+export async function updateExampleAppsAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return patchSettings({ examplesEnabled: formData.get('examplesEnabled') === 'on' });
 }
 
 export async function updateRootPluginAction(

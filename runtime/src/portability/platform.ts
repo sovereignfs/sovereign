@@ -1,9 +1,10 @@
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getAccountPrefs, listDisabledPluginIds, setAccountPrefs } from '@sovereignfs/db';
+import { getAccountPrefs, setAccountPrefs } from '@sovereignfs/db';
 import { isValidTheme, isValidTimezone } from '@/src/account';
 import { avatarsDir, findAvatarFile } from '@/src/avatars';
 import { getPlatformDb } from '@/src/db';
+import { getDisabledPluginIds } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
 import type { PlatformExportData } from './assemble';
 import type { PlatformAccountSection } from './restore';
@@ -19,7 +20,7 @@ const ALLOWED_AVATAR_EXT = new Set(['jpg', 'jpeg', 'png', 'webp']);
 export async function eligiblePluginIds(
   permission: 'data:export' | 'data:import',
 ): Promise<string[]> {
-  const disabled = new Set(await listDisabledPluginIds(await getPlatformDb()));
+  const disabled = new Set(await getDisabledPluginIds(await getPlatformDb()));
   return getInstalledPlugins()
     .filter((m) => !disabled.has(m.id) && m.permissions.includes(permission))
     .map((m) => m.id);

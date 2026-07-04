@@ -3,13 +3,18 @@ import {
   DEFAULT_ROOT_PLUGIN_ID,
   getDefaultTenant,
   getPlatformSetting,
-  listDisabledPluginIds,
   setPlatformSetting,
   setTenantName,
 } from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
 import { logActivity } from '@/src/activity';
 import { getPlatformDb } from '@/src/db';
+import {
+  EXAMPLES_ENABLED_SETTING,
+  examplesEnabledByDefault,
+  getDisabledPluginIds,
+  resolveExamplesEnabled,
+} from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
 import { validateRootPlugin } from '@/src/root-plugin';
 
@@ -17,15 +22,17 @@ const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
 
 async function readSettings() {
   const db = await getPlatformDb();
-  const [tenant, inviteOnly, rootPluginId] = await Promise.all([
+  const [tenant, inviteOnly, rootPluginId, examplesSetting] = await Promise.all([
     getDefaultTenant(db),
     getPlatformSetting(db, 'invite_only'),
     getPlatformSetting(db, 'root_plugin_id'),
+    getPlatformSetting(db, EXAMPLES_ENABLED_SETTING),
   ]);
   return {
     tenantName: tenant.name,
     inviteOnly: inviteOnly === 'true',
     rootPluginId: rootPluginId ?? DEFAULT_ROOT_PLUGIN_ID,
+    examplesEnabled: resolveExamplesEnabled(examplesSetting, examplesEnabledByDefault()),
   };
 }
 
@@ -43,6 +50,7 @@ export async function PATCH(request: Request): Promise<Response> {
     tenantName?: string;
     inviteOnly?: boolean;
     rootPluginId?: string;
+    examplesEnabled?: boolean;
   };
   const db = await getPlatformDb();
   const actorId = request.headers.get('x-sovereign-user-id');
@@ -64,7 +72,7 @@ export async function PATCH(request: Request): Promise<Response> {
   }
 
   if (body.rootPluginId !== undefined) {
-    const disabledIds = new Set(await listDisabledPluginIds(db));
+    const disabledIds = new Set(await getDisabledPluginIds(db));
     const result = validateRootPlugin(body.rootPluginId, getInstalledPlugins(), disabledIds);
     if (!result.ok) {
       return NextResponse.json(
@@ -111,6 +119,23 @@ export async function PATCH(request: Request): Promise<Response> {
       visibility: 'admin',
       summary: `Invite-only ${body.inviteOnly ? 'enabled' : 'disabled'}`,
       metadata: { inviteOnly: body.inviteOnly },
+    });
+  }
+
+  if (body.examplesEnabled !== undefined) {
+    if (typeof body.examplesEnabled !== 'boolean') {
+      return NextResponse.json({ error: 'examplesEnabled must be a boolean' }, { status: 400 });
+    }
+    // Sets the instance-wide default for the bundled example apps (overrides the
+    // SOVEREIGN_EXAMPLES_ENABLED env seed). Per-plugin toggles still win over it.
+    await setPlatformSetting(db, EXAMPLES_ENABLED_SETTING, String(body.examplesEnabled));
+    void logActivity({
+      actorId,
+      actorType: 'user',
+      action: 'settings.examples_visibility_changed',
+      visibility: 'admin',
+      summary: `Example apps ${body.examplesEnabled ? 'shown' : 'hidden'}`,
+      metadata: { examplesEnabled: body.examplesEnabled },
     });
   }
 

@@ -118,6 +118,12 @@ const manifestObjectSchema = z
       .optional(),
     adminOnly: z.boolean().optional(),
     apiProvider: z.boolean().optional(),
+    /**
+     * Marks this plugin as a bundled reference/example. Purely a classification
+     * flag: the platform groups example plugins in Console and offers a bulk
+     * enable/disable control for them. Has no effect on routing or permissions.
+     */
+    example: z.boolean().optional(),
     icon: z.string().optional(),
     compatibility: z
       .object({

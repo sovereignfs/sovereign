@@ -94,6 +94,14 @@ describe('validateManifest', () => {
     expect(res.valid).toBe(true);
   });
 
+  it('accepts a manifest that declares the example marker', () => {
+    expect(validateManifest({ ...base, example: true }).valid).toBe(true);
+  });
+
+  it('rejects a non-boolean example marker', () => {
+    expect(validateManifest({ ...base, example: 'yes' }).valid).toBe(false);
+  });
+
   it('accepts the legacy database string form', () => {
     expect(validateManifest({ ...base, database: 'shared' }).valid).toBe(true);
     expect(validateManifest({ ...base, database: 'isolated' }).valid).toBe(true);

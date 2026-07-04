@@ -24,6 +24,13 @@ goal is to make Sovereign's plugin graph usable through an AI layer while keepin
 the user's data, consent grants, audit trail, and model-provider choices under
 the instance owner's control.
 
+Harness is the advanced plugin phase of Sovereign's assistant roadmap. RFC 0063
+defines the first runtime phase: Jarvis / Core Assistant plus the optional local
+`apps/inference` sidecar. That runtime phase proves the shell assistant,
+local-first provider boundary, and platform-owned tool-safety pattern before the
+full Harness plugin adds durable memory, orchestration, run traces, and richer
+plugin context.
+
 Harness is inspired by the local-first AI harness pattern: a personal AI
 workspace with long-lived memory, model flexibility, and optional tool use. In
 Sovereign, those ideas become a plugin that reuses the platform's existing
@@ -66,6 +73,9 @@ and data flow under the instance's control.
 - **Plugins are composed into the runtime** from `plugins/<id>/app/` via the
   generate step. The manifest `routePrefix` is the source of truth for URL
   placement.
+- **Core Assistant / Jarvis is planned as the first runtime phase of the
+  Harness roadmap** (RFC 0063). Harness should treat it as prior product and
+  infrastructure direction, not as runtime internals to import.
 - **Plugins use the SDK boundary**. Importing platform internals from plugin
   code is forbidden by ESLint. Harness must not be special-cased around this
   boundary.

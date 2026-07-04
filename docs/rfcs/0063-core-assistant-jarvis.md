@@ -19,10 +19,10 @@ Add a built-in, lightweight workspace assistant to Sovereign. The feature is
 implemented as the **core assistant** in architecture and code, presented to
 users as **Jarvis** by default, and powered initially by an optional local
 **inference** sidecar. Jarvis is not an installable plugin and not an advanced
-agent framework. It is a platform-owned runtime feature for user-initiated
-workspace help, simple conversational interactions, navigation, read-only
-summaries, and narrow tool execution with deterministic validation and
-confirmation gates.
+agent framework. It is the first runtime phase of the broader Sovereign Harness
+roadmap: a platform-owned assistant layer for user-initiated workspace help,
+simple conversational interactions, navigation, read-only summaries, and narrow
+tool execution with deterministic validation and confirmation gates.
 
 The default shipping model is disabled by default. Operators can enable Jarvis
 globally, configure the display name, and point the runtime at an
@@ -38,12 +38,14 @@ orchestration exists, users benefit from a small always-available helper that
 can answer basic questions, help navigate installed apps, summarize visible
 workspace state, and prepare or execute simple tasks.
 
-Harness (RFC 0040) and Council (RFC 0055) remain the advanced AI components:
-longer-lived memory, multi-model work, orchestration, deliberation, model
-choice, and richer tool workflows. Jarvis fills a different product gap. It is
-the core workspace assistant: lightweight, local-first, user-initiated, and
-always bounded by runtime-owned authorization, tool validation, confirmation,
-and audit rules.
+Jarvis is the first phase of Sovereign's Harness direction, but not the full
+Harness plugin described in RFC 0040. It establishes the local-first runtime
+assistant surface, model-provider boundary, and basic tool-safety pattern that
+the later Harness plugin can learn from or build around. Harness remains the
+advanced orchestration product: durable conversations, memory, richer provider
+routing, run traces, consent-gated plugin context, and long-running workflows.
+Council (RFC 0055) remains adjacent: a multi-model deliberation workspace, not
+the personal assistant path.
 
 This design keeps Sovereign's privacy-first posture. The first official
 provider path is local inference on the same server. Operators may replace the
@@ -420,22 +422,25 @@ Runtime limits should include:
 CI must not download or run real models. Tests should use a deterministic fake
 provider.
 
-### 10. Relationship to Harness and Council
+### 10. Relationship to the Harness roadmap
 
-Jarvis, Harness, and Council are different components.
+Jarvis is the first runtime phase of the broader Sovereign Harness roadmap. It
+is intentionally smaller than the Harness plugin and implemented in runtime
+core because it needs shell context, platform-owned settings, current-user
+authorization, confirmation gates, and audit behavior.
 
-| Component | Role                                                                |
-| --------- | ------------------------------------------------------------------- |
-| Jarvis    | Core runtime assistant; lightweight, local-first, user-initiated.   |
-| Harness   | Advanced AI assistant/orchestration plugin with memory and tools.   |
-| Council   | Multi-model deliberation plugin with explicit sessions and reports. |
-| Inference | Local model-serving sidecar used by Jarvis and possibly others.     |
+| Component      | Role                                                                   |
+| -------------- | ---------------------------------------------------------------------- |
+| Jarvis         | First Harness runtime phase; lightweight, local-first, user-initiated. |
+| Inference      | Local model-serving sidecar used by Jarvis and possibly others.        |
+| Harness plugin | Later advanced assistant/orchestration product with memory and tools.  |
+| Council        | Adjacent multi-model deliberation workspace with sessions/reports.     |
 
-They may communicate or share data in the future through explicit contracts,
-but there is no direct relationship in v1. Jarvis should not import Harness or
-Council code. Harness and Council should not rely on Jarvis internals. Shared AI
-provider packages should wait until at least two components have proven the same
-abstraction.
+This is a roadmap relationship, not a code dependency. Jarvis should not import
+Harness or Council code. Harness and Council should not rely on Jarvis
+internals. Future communication or shared data must use explicit contracts.
+Shared AI provider packages should wait until at least two components have
+proven the same abstraction.
 
 ### 11. Packages and shared code
 
@@ -556,7 +561,8 @@ Phase 0 - RFC and docs:
 
 - Accept this RFC.
 - Add roadmap/epic tasks when scheduling is ready.
-- Document the relationship between Jarvis, Harness, Council, and inference.
+- Document Jarvis as the first runtime phase of the Harness roadmap while
+  keeping `apps/inference` as the reusable model-serving sidecar.
 
 Phase 1 - Runtime shell and disabled state:
 

@@ -143,6 +143,14 @@
   padding: var(--sv-space-8);
 }
 
+/* Full-bleed opt-in: a plugin that owns its own internal layout (columns,
+   scroll, flanking panes) can mark its root with [data-plugin-fullbleed] to
+   drop the shell's content padding and render edge-to-edge. Scoped via :has()
+   so only opted-in plugins are affected — every other plugin keeps its padding. */
+.content:has([data-plugin-fullbleed]) {
+  padding: 0;
+}
+
 .mobileHeader {
   display: none;
 }
@@ -234,6 +242,13 @@
        same reason it's disabled in Dialog .content. Without this, over-scrolling
        reveals the white shell background above/below the content area. */
     overscroll-behavior: none;
+  }
+
+  /* Full-bleed plugins drop side/top padding on mobile too, but keep the
+     fixed-footer clearance so content isn't hidden under the nav bar. */
+  .content:has([data-plugin-fullbleed]) {
+    padding: 0;
+    padding-bottom: var(--sv-shell-footer-height, 60px);
   }
 
   .mobileHeader {

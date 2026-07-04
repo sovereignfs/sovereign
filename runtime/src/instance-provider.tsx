@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { getPlatformDb } from '@sovereignfs/db';
 import { DEFAULT_TENANT_ID, getInstanceConfig, type InstanceConfig } from '@sovereignfs/db';
+import { resolveInstanceName } from './instance-name';
 
 /** Fixed lightness delta used to derive --sv-color-accent-hover from the instance accent. */
 const ACCENT_HOVER_LIGHTNESS_DELTA = 8;
@@ -87,7 +88,7 @@ export async function InstanceProvider({ children }: InstanceProviderProps): Pro
   } catch {
     // Instance config is cosmetic — never crash on a failed DB read.
     config = {
-      instanceName: process.env.INSTANCE_NAME ?? 'Sovereign',
+      instanceName: resolveInstanceName(process.env.INSTANCE_NAME),
       instanceLogo: process.env.INSTANCE_LOGO ?? null,
       instanceLogoDark: process.env.INSTANCE_LOGO_DARK ?? null,
       instanceFavicon: process.env.INSTANCE_FAVICON ?? null,

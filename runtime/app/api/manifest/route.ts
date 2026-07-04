@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPlatformDb } from '@sovereignfs/db';
 import { DEFAULT_TENANT_ID, getInstanceConfig } from '@sovereignfs/db';
+import { resolveInstanceName } from '@/src/instance-name';
 
 /**
  * Dynamic web app manifest — returns the PWA manifest with the tenant's brand
@@ -10,7 +11,7 @@ import { DEFAULT_TENANT_ID, getInstanceConfig } from '@sovereignfs/db';
  * tooling; this route is the authoritative one for browsers.
  */
 export async function GET(): Promise<Response> {
-  let instanceName = process.env.INSTANCE_NAME ?? 'Sovereign';
+  let instanceName = resolveInstanceName(process.env.INSTANCE_NAME);
   let description = 'Your self-hosted workspace.';
 
   try {

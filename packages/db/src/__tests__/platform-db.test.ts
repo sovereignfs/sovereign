@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createClient } from '../client';
 import {
+  DEFAULT_TENANT_ID,
   DEFAULT_ROOT_PLUGIN_ID,
   bootstrapPlatformDb,
   getAccountPrefs,
   getDefaultTenant,
+  getInstanceConfig,
   getPlatformSetting,
   listAdminActivity,
   listDisabledPluginIds,
@@ -12,6 +14,7 @@ import {
   listUserActivity,
   recordActivity,
   setAccountPrefs,
+  setInstanceConfig,
   setPlatformSetting,
   setPluginEnabled,
   setTenantName,
@@ -22,6 +25,14 @@ async function freshDb(): Promise<PlatformDb> {
   const db = createClient({ url: ':memory:' });
   await bootstrapPlatformDb(db);
   return db;
+}
+
+function restoreEnv(name: string, value: string | undefined): void {
+  if (value === undefined) {
+    Reflect.deleteProperty(process.env, name);
+  } else {
+    process.env[name] = value;
+  }
 }
 
 describe('bootstrapPlatformDb', () => {
@@ -72,6 +83,40 @@ describe('tenant helpers', () => {
     const db = await freshDb();
     await setTenantName(db, 'My Workspace');
     expect((await getDefaultTenant(db)).name).toBe('My Workspace');
+  });
+});
+
+describe('instance config helpers', () => {
+  it('treats blank INSTANCE_NAME as unset', async () => {
+    const previous = process.env.INSTANCE_NAME;
+    process.env.INSTANCE_NAME = '';
+    try {
+      const config = await getInstanceConfig(await freshDb(), DEFAULT_TENANT_ID);
+      expect(config.instanceName).toBe('Sovereign');
+    } finally {
+      restoreEnv('INSTANCE_NAME', previous);
+    }
+  });
+
+  it('falls back from a blank DB value to the env instance name', async () => {
+    const previous = process.env.INSTANCE_NAME;
+    process.env.INSTANCE_NAME = 'Acme Workspace';
+    try {
+      const db = await freshDb();
+      await setInstanceConfig(db, DEFAULT_TENANT_ID, {
+        instanceName: '   ',
+        instanceLogo: null,
+        instanceLogoDark: null,
+        instanceFavicon: null,
+        instancePrimary: null,
+        emailFromName: null,
+        emailLogo: null,
+      });
+      const config = await getInstanceConfig(db, DEFAULT_TENANT_ID);
+      expect(config.instanceName).toBe('Acme Workspace');
+    } finally {
+      restoreEnv('INSTANCE_NAME', previous);
+    }
   });
 });
 

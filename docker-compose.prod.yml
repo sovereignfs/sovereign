@@ -135,7 +135,7 @@ services:
       # after avatar/name changes so the shell reflects them immediately.
       AUTH_COOKIE_DOMAIN: '${AUTH_COOKIE_DOMAIN:-}'
       # Instance identity env overrides (can also be set via Console → Instance).
-      INSTANCE_NAME: '${INSTANCE_NAME:-}'
+      INSTANCE_NAME: '${INSTANCE_NAME:-Sovereign}'
       INSTANCE_LOGO: '${INSTANCE_LOGO:-}'
       INSTANCE_LOGO_DARK: '${INSTANCE_LOGO_DARK:-}'
       INSTANCE_FAVICON: '${INSTANCE_FAVICON:-}'

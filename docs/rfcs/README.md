@@ -74,3 +74,4 @@ for the full process.
 | [0060](0060-client-side-encryption-core.md)      | Client-side encryption core                              | Draft                | Yes — epic task 8.9                                                  |
 | [0061](0061-sovereign-wallet.md)                 | Sovereign Wallet platform plugin                         | Draft                | Yes — epic tasks 21.1–21.4                                           |
 | [0062](0062-email-delivery-coverage.md)          | Email delivery coverage                                  | Draft                | Yes — epic tasks 1.14, 3.26, and 4.5                                 |
+| [0063](0063-core-assistant-jarvis.md)            | Core Assistant, Jarvis UI, and Local Inference Sidecar   | Draft                | Yes — epic tasks 22.1–22.5                                           |

@@ -1,9 +1,11 @@
 name: CI
 
-# Validation runs only on pull requests targeting `main`. There is no push
-# trigger: `main` is gated pre-merge by the PR, and rebase-merge lands each
-# reviewed commit verbatim. `workflow_call` lets publish.yml reuse this as a
-# pre-publish gate on tagged commits.
+# Validation runs only on pull requests targeting `main`. Documentation-only PRs
+# still start the workflow, but a cheap changes job skips the expensive code
+# jobs while the Docs workflow handles docs validation. There is no push trigger:
+# `main` is gated pre-merge by the PR, and rebase-merge lands each reviewed
+# commit verbatim. `workflow_call` lets publish.yml reuse this as a pre-publish
+# gate on tagged commits and always runs the full validation suite.
 on:
   pull_request:
     branches: [main]
@@ -22,20 +24,130 @@ defaults:
   run:
     shell: bash
 
-# Every job carries the same guard: skip while the PR is a draft OR carries the
-# `skip-ci` label, run once it is marked ready for review without that label (and
-# on pushes thereafter). Label add/remove events are included so toggling
-# `skip-ci` takes effect immediately for new workflow runs. The guard always
-# passes when this workflow is invoked via workflow_call (no pull_request
+# Expensive validation jobs carry the same guard: skip while the PR is a draft
+# or carries the `skip-ci` label, and skip when the `changes` job says the files
+# touched are irrelevant to that job. Label add/remove events are included so
+# toggling `skip-ci` takes effect immediately for new workflow runs. The guard
+# always passes when this workflow is invoked via workflow_call (no pull_request
 # context), so the publish gate still runs.
 jobs:
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-latest
+    outputs:
+      format: ${{ steps.classify.outputs.format }}
+      lint: ${{ steps.classify.outputs.lint }}
+      typecheck: ${{ steps.classify.outputs.typecheck }}
+      design_tokens: ${{ steps.classify.outputs.design_tokens }}
+      generate_validate: ${{ steps.classify.outputs.generate_validate }}
+      build: ${{ steps.classify.outputs.build }}
+      test: ${{ steps.classify.outputs.test }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: classify
+        name: Classify pull request paths
+        run: |
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            {
+              echo "format=true"
+              echo "lint=true"
+              echo "typecheck=true"
+              echo "design_tokens=true"
+              echo "generate_validate=true"
+              echo "build=true"
+              echo "test=true"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD > /tmp/changed-files
+
+          if [[ ! -s /tmp/changed-files ]]; then
+            {
+              echo "format=true"
+              echo "lint=true"
+              echo "typecheck=true"
+              echo "design_tokens=true"
+              echo "generate_validate=true"
+              echo "build=true"
+              echo "test=true"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          run_format=false
+          run_code=false
+          run_design_tokens=false
+          run_generate_validate=false
+
+          while IFS= read -r path; do
+            # Docs-only paths are handled by the Docs workflow, so they do not
+            # need the main CI jobs.
+            case "$path" in
+              docs/*|apps/docs/*|*.md|.github/PULL_REQUEST_TEMPLATE.md|.github/PULL_REQUEST_TEMPLATE/*)
+                continue
+                ;;
+            esac
+
+            # Any remaining file is at least relevant to formatting.
+            run_format=true
+
+            case "$path" in
+              apps/auth/*|runtime/*|packages/*|plugins/*|scripts/*|bin/*|__tests__/*)
+                run_code=true
+                ;;
+              package.json|pnpm-lock.yaml|pnpm-workspace.yaml|turbo.json|tsconfig.json)
+                run_code=true
+                ;;
+              eslint.config.*|prettier.config.*|vitest.config.*|playwright.config.*)
+                run_code=true
+                ;;
+              Dockerfile|docker-compose*.yml|.env.example|.github/actions/setup/*)
+                run_code=true
+                ;;
+            esac
+
+            case "$path" in
+              packages/ui/src/*|runtime/app/*|plugins/*/app/*|scripts/design-tokens-check.ts)
+                run_design_tokens=true
+                ;;
+            esac
+
+            case "$path" in
+              plugins/*/manifest.json|plugins/*/package.json|packages/manifest/*)
+                run_generate_validate=true
+                ;;
+              scripts/generate-registry.ts|scripts/install-plugins.ts)
+                run_generate_validate=true
+                ;;
+              scripts/__tests__/generate-registry.test.ts|runtime/src/registry.ts|runtime/generated/*)
+                run_generate_validate=true
+                ;;
+            esac
+          done < /tmp/changed-files
+
+          {
+            echo "format=$run_format"
+            echo "lint=$run_code"
+            echo "typecheck=$run_code"
+            echo "design_tokens=$run_design_tokens"
+            echo "generate_validate=$run_generate_validate"
+            echo "build=$run_code"
+            echo "test=$run_code"
+          } >> "$GITHUB_OUTPUT"
+
   format:
     name: Format
     runs-on: ubuntu-latest
+    needs: changes
     if: >-
       github.event_name != 'pull_request' ||
       (github.event.pull_request.draft == false &&
-      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
+      needs.changes.outputs.format == 'true')
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -44,10 +156,12 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    needs: changes
     if: >-
       github.event_name != 'pull_request' ||
       (github.event.pull_request.draft == false &&
-      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
+      needs.changes.outputs.lint == 'true')
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -56,10 +170,12 @@ jobs:
   typecheck:
     name: Typecheck
     runs-on: ubuntu-latest
+    needs: changes
     if: >-
       github.event_name != 'pull_request' ||
       (github.event.pull_request.draft == false &&
-      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
+      needs.changes.outputs.typecheck == 'true')
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -68,10 +184,12 @@ jobs:
   design-tokens:
     name: Design tokens
     runs-on: ubuntu-latest
+    needs: changes
     if: >-
       github.event_name != 'pull_request' ||
       (github.event.pull_request.draft == false &&
-      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
+      needs.changes.outputs.design_tokens == 'true')
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -80,10 +198,12 @@ jobs:
   generate-validate:
     name: Generate & validate registry
     runs-on: ubuntu-latest
+    needs: changes
     if: >-
       github.event_name != 'pull_request' ||
       (github.event.pull_request.draft == false &&
-      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
+      needs.changes.outputs.generate_validate == 'true')
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -96,10 +216,12 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    needs: changes
     if: >-
       github.event_name != 'pull_request' ||
       (github.event.pull_request.draft == false &&
-      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
+      needs.changes.outputs.build == 'true')
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -108,10 +230,12 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    needs: changes
     if: >-
       github.event_name != 'pull_request' ||
       (github.event.pull_request.draft == false &&
-      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
+      needs.changes.outputs.test == 'true')
     # A throwaway Postgres so the env-gated *.pg.test.ts parity suites run in CI
     # instead of skipping (NFR-03). SQLite tests need no service.
     services:

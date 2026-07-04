@@ -141,6 +141,17 @@ export function PasskeySection({ initialPasskeys }: { initialPasskeys: PasskeyEn
       if (res.ok) {
         setPasskeys((await res.json()) as PasskeyEntry[]);
       }
+      void fetch('/api/account/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateId: 'account.passkey_added',
+          subject: 'A passkey was added to your Sovereign account',
+          text: 'A passkey was added to your Sovereign account.',
+          html: '<p>A passkey was added to your Sovereign account.</p>',
+          metadata: { name },
+        }),
+      });
     });
   }
 

@@ -510,7 +510,7 @@ Task 0.5.24 (RFC 0019 — test seeding infrastructure this extends)
 
 ---
 
-#### 📋 1.14 — Account and security email delivery coverage (RFC 0062)
+#### ✅ 1.14 — Account and security email delivery coverage (RFC 0062)
 
 **Goal:** Make account lifecycle and security-sensitive user-management emails a consistent
 platform behavior instead of scattered ad-hoc sends. This task covers authentication,

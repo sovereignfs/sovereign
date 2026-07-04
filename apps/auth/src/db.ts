@@ -11,7 +11,8 @@ import { getEnv } from './env';
  *
  * better-auth manages its own user/session/account/verification tables (created
  * by its migrator, see ./migrate); we add an `invites` table (invite-only gate)
- * and an `auth_settings` table (the Console invite-only toggle). better-auth
+ * an `auth_settings` table (the Console invite-only toggle), and an auth-local
+ * `auth_email_delivery_log` table for authentication email diagnostics. better-auth
  * receives the raw driver via `getAuthDatabase()`; the app's own queries go
  * through the async `authGet`/`authAll`/`authRun` helpers, which paper over the
  * better-sqlite3 (sync) vs node-postgres (async) split.
@@ -116,6 +117,22 @@ export async function ensureAuthTables(): Promise<void> {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL,
       updated_at ${ts} NOT NULL
+    )`,
+  );
+  await authRun(
+    `CREATE TABLE IF NOT EXISTS auth_email_delivery_log (
+      id TEXT PRIMARY KEY,
+      created_at ${ts} NOT NULL,
+      delivery_class TEXT NOT NULL,
+      template_id TEXT NOT NULL,
+      source TEXT NOT NULL,
+      recipient_user_id TEXT,
+      recipient_email_hash TEXT,
+      actor_user_id TEXT,
+      status TEXT NOT NULL,
+      provider_message_id TEXT,
+      error_code TEXT,
+      metadata TEXT
     )`,
   );
 }

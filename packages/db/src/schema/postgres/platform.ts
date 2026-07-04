@@ -142,6 +142,22 @@ export const activityLog = pgTable('activity_log', {
   createdAt: bigint('created_at', { mode: 'number' }).notNull(),
 });
 
+export const emailDeliveryLog = pgTable('email_delivery_log', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  deliveryClass: text('delivery_class').notNull(),
+  templateId: text('template_id').notNull(),
+  source: text('source').notNull(),
+  recipientUserId: text('recipient_user_id'),
+  recipientEmailHash: text('recipient_email_hash'),
+  actorUserId: text('actor_user_id'),
+  status: text('status').notNull(),
+  providerMessageId: text('provider_message_id'),
+  errorCode: text('error_code'),
+  metadata: text('metadata'),
+});
+
 /** Browser Web Push subscriptions (RFC 0016). Mirror of SQLite schema. */
 export const pushSubscriptions = pgTable('push_subscriptions', {
   id: text('id').primaryKey(),

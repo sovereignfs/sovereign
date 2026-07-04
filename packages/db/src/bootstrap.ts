@@ -91,6 +91,25 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
        ON activity_log (actor_id)`,
     `CREATE INDEX IF NOT EXISTS activity_log_subject
        ON activity_log (subject_user_id)`,
+    `CREATE TABLE IF NOT EXISTS email_delivery_log (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      created_at ${ts} NOT NULL,
+      delivery_class TEXT NOT NULL,
+      template_id TEXT NOT NULL,
+      source TEXT NOT NULL,
+      recipient_user_id TEXT,
+      recipient_email_hash TEXT,
+      actor_user_id TEXT,
+      status TEXT NOT NULL,
+      provider_message_id TEXT,
+      error_code TEXT,
+      metadata TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS email_delivery_log_tenant_created
+       ON email_delivery_log (tenant_id, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS email_delivery_log_status_created
+       ON email_delivery_log (status, created_at DESC)`,
     // RFC 0015 — Notification Center
     `CREATE TABLE IF NOT EXISTS notifications (
       id TEXT PRIMARY KEY,

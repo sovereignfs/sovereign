@@ -400,6 +400,109 @@ export async function recordActivity(pdb: PlatformDb, input: RecordActivityInput
   );
 }
 
+export type EmailDeliveryClass = 'authentication' | 'security' | 'administrative' | 'communication';
+
+export type EmailDeliveryStatus = 'skipped' | 'queued' | 'sent' | 'failed';
+
+export interface EmailDeliveryLogRow {
+  id: string;
+  tenantId: string;
+  createdAt: number;
+  deliveryClass: EmailDeliveryClass;
+  templateId: string;
+  source: string;
+  recipientUserId: string | null;
+  recipientEmailHash: string | null;
+  actorUserId: string | null;
+  status: EmailDeliveryStatus;
+  providerMessageId: string | null;
+  errorCode: string | null;
+  metadata: string | null;
+}
+
+export interface RecordEmailDeliveryInput {
+  id: string;
+  deliveryClass: EmailDeliveryClass;
+  templateId: string;
+  source: string;
+  recipientUserId?: string | null;
+  recipientEmailHash?: string | null;
+  actorUserId?: string | null;
+  status: EmailDeliveryStatus;
+  providerMessageId?: string | null;
+  errorCode?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+/** Append one non-secret email delivery diagnostic row (RFC 0062). */
+export async function recordEmailDelivery(
+  pdb: PlatformDb,
+  input: RecordEmailDeliveryInput,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  const meta = input.metadata != null ? JSON.stringify(input.metadata) : null;
+  await dbRun(
+    pdb,
+    sql`INSERT INTO email_delivery_log
+          (id, tenant_id, created_at, delivery_class, template_id, source,
+           recipient_user_id, recipient_email_hash, actor_user_id, status,
+           provider_message_id, error_code, metadata)
+        VALUES
+          (${input.id}, ${DEFAULT_TENANT_ID}, ${now}, ${input.deliveryClass},
+           ${input.templateId}, ${input.source}, ${input.recipientUserId ?? null},
+           ${input.recipientEmailHash ?? null}, ${input.actorUserId ?? null},
+           ${input.status}, ${input.providerMessageId ?? null}, ${input.errorCode ?? null},
+           ${meta})`,
+  );
+}
+
+export interface EmailDeliveryDiagnostics {
+  smtpConfigured: boolean;
+  lastSendStatus: EmailDeliveryStatus | null;
+  lastSendAt: number | null;
+  lastFailureCode: string | null;
+  recentFailureCount: number;
+}
+
+export async function getEmailDeliveryDiagnostics(
+  pdb: PlatformDb,
+  smtpConfigured: boolean,
+  sinceSeconds: number = Math.floor(Date.now() / 1000) - 86400,
+): Promise<EmailDeliveryDiagnostics> {
+  const last = await dbGet<{ status: EmailDeliveryStatus; createdAt: number }>(
+    pdb,
+    sql`SELECT status, created_at AS "createdAt"
+        FROM email_delivery_log
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+        ORDER BY created_at DESC
+        LIMIT 1`,
+  );
+  const lastFailure = await dbGet<{ errorCode: string | null }>(
+    pdb,
+    sql`SELECT error_code AS "errorCode"
+        FROM email_delivery_log
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND status = 'failed'
+        ORDER BY created_at DESC
+        LIMIT 1`,
+  );
+  const recentFailures = await dbGet<{ c: number | string }>(
+    pdb,
+    sql`SELECT COUNT(*) AS c
+        FROM email_delivery_log
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND status = 'failed'
+          AND created_at >= ${sinceSeconds}`,
+  );
+  return {
+    smtpConfigured,
+    lastSendStatus: last?.status ?? null,
+    lastSendAt: last?.createdAt ?? null,
+    lastFailureCode: lastFailure?.errorCode ?? null,
+    recentFailureCount: Number(recentFailures?.c ?? 0),
+  };
+}
+
 /**
  * Personal activity feed — events where the given user is actor or subject,
  * visibility = 'user'. Newest-first, limited to `limit` rows starting at

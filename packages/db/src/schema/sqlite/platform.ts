@@ -163,6 +163,26 @@ export const activityLog = sqliteTable('activity_log', {
   createdAt: integer('created_at').notNull(),
 });
 
+/**
+ * Non-secret email delivery diagnostics (RFC 0062). Stores metadata needed for
+ * operator health/audit without raw recipients, message bodies, reset tokens, or invite tokens.
+ */
+export const emailDeliveryLog = sqliteTable('email_delivery_log', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  createdAt: integer('created_at').notNull(),
+  deliveryClass: text('delivery_class').notNull(),
+  templateId: text('template_id').notNull(),
+  source: text('source').notNull(),
+  recipientUserId: text('recipient_user_id'),
+  recipientEmailHash: text('recipient_email_hash'),
+  actorUserId: text('actor_user_id'),
+  status: text('status').notNull(),
+  providerMessageId: text('provider_message_id'),
+  errorCode: text('error_code'),
+  metadata: text('metadata'),
+});
+
 export type AccountPrefs = typeof accountPrefs.$inferSelect;
 export type NewAccountPrefs = typeof accountPrefs.$inferInsert;
 
@@ -298,6 +318,8 @@ export type DataAccessLogEntry = typeof dataAccessLog.$inferSelect;
 export type NewDataAccessLogEntry = typeof dataAccessLog.$inferInsert;
 export type ActivityLog = typeof activityLog.$inferSelect;
 export type NewActivityLog = typeof activityLog.$inferInsert;
+export type EmailDeliveryLog = typeof emailDeliveryLog.$inferSelect;
+export type NewEmailDeliveryLog = typeof emailDeliveryLog.$inferInsert;
 export type Entitlement = typeof entitlements.$inferSelect;
 export type NewEntitlement = typeof entitlements.$inferInsert;
 export type InstanceConfigRow = typeof instanceConfig.$inferSelect;

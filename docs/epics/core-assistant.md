@@ -1,6 +1,6 @@
 # Epic: Core Assistant
 
-> Built-in Jarvis workspace assistant and optional local inference sidecar.
+> First runtime phase of the Sovereign Harness roadmap: Jarvis and local inference.
 
 ## Status
 
@@ -8,16 +8,19 @@
 
 ## Overview
 
-The Core Assistant is a runtime-owned Sovereign feature that gives users a
-lightweight, local-first workspace assistant. It is implemented as `assistant`
-in architecture and code, presented as Jarvis by default in the UI, and powered
-initially by an optional `apps/inference` sidecar.
+The Core Assistant is the first runtime phase of the broader Sovereign Harness
+roadmap. It gives users a lightweight, local-first workspace assistant before
+the full Harness plugin exists. It is implemented as `assistant` in architecture
+and code, presented as Jarvis by default in the UI, and powered initially by an
+optional `apps/inference` sidecar.
 
 Jarvis is not an installable plugin and not an autonomous agent framework. It is
 user-initiated, short-context, platform-owned, and bounded by deterministic
 tool validation, current-user authorization, confirmation gates, and audit
-events. Harness and Council remain the advanced AI plugins for orchestration,
-memory, multi-model work, and deliberation.
+events. The future Harness plugin remains the advanced orchestration product for
+durable conversations, memory, run traces, richer provider routing, and
+consent-gated plugin context. Council remains adjacent as the multi-model
+deliberation workspace.
 
 ## Tasks
 
@@ -175,8 +178,8 @@ extensions are ready for design.
 - Model recommendations are based on Jarvis-specific prompt tests, not generic
   benchmarks alone.
 - Any package extraction has at least two real consumers or a public contract.
-- Harness and Council remain separate components with no runtime-internal
-  coupling to Jarvis.
+- Jarvis remains the first runtime phase of the Harness roadmap without
+  introducing runtime-internal coupling to the future Harness plugin or Council.
 
 ## Related RFCs
 

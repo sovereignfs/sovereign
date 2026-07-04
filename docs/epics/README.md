@@ -30,6 +30,6 @@ Full architecture and requirements: [sovereign-proposal-plan-srs.md](../sovereig
 | 19  | [Sovereign Council](sovereign-council.md)     | 📋 Planned     | Multi-model deliberation, brainstorming, and report generation                      |
 | 20  | [Mobile App Shell](mobile.md)                 | 📋 Planned     | Capacitor shell app loading a self-hosted instance — iOS and Android                |
 | 21  | [Sovereign Wallet](sovereign-wallet.md)       | 📋 Planned     | Encrypted wallet for QR loyalty cards and sensitive document snapshots              |
-| 22  | [Core Assistant](core-assistant.md)           | 📋 Planned     | Built-in Jarvis workspace assistant and optional local inference sidecar            |
+| 22  | [Core Assistant](core-assistant.md)           | 📋 Planned     | First Harness runtime phase: Jarvis workspace assistant and local inference         |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned_

@@ -46,10 +46,10 @@ export default async function LauncherPage() {
           <p className={styles.subtitle}>Your installed apps and tools.</p>
         </div>
         <div className={styles.empty}>
-          <p className={styles.emptyTitle}>No plugins installed yet</p>
+          <p className={styles.emptyTitle}>No apps installed yet</p>
           {isAdmin ? (
             <p className={styles.emptyText}>
-              Install and enable plugins from the{' '}
+              Install and enable apps from the{' '}
               <Link href="/console/plugins" className={styles.emptyLink}>
                 Console
               </Link>
@@ -57,7 +57,7 @@ export default async function LauncherPage() {
             </p>
           ) : (
             <p className={styles.emptyText}>
-              Ask your administrator to install plugins for this workspace.
+              Ask your administrator to install apps for this workspace.
             </p>
           )}
         </div>

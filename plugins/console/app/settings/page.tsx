@@ -1,11 +1,12 @@
 import styles from '../console.module.css';
-import { TenantForm, InviteOnlyForm, RootPluginForm } from './SettingsForms';
+import { TenantForm, InviteOnlyForm, ExampleAppsForm, RootPluginForm } from './SettingsForms';
 
 const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
 
 interface Settings {
   tenantName: string;
   inviteOnly: boolean;
+  examplesEnabled: boolean;
   rootPluginId: string;
 }
 
@@ -27,7 +28,12 @@ async function adminGet<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-const DEFAULT_SETTINGS: Settings = { tenantName: 'Sovereign', inviteOnly: false, rootPluginId: '' };
+const DEFAULT_SETTINGS: Settings = {
+  tenantName: 'Sovereign',
+  inviteOnly: false,
+  examplesEnabled: false,
+  rootPluginId: '',
+};
 
 function settled<T>(result: PromiseSettledResult<T>, fallback: T): T {
   return result.status === 'fulfilled' ? result.value : fallback;
@@ -54,6 +60,11 @@ export default async function SettingsPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Registration</h2>
         <InviteOnlyForm initialValue={settings.inviteOnly} />
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Example plugins</h2>
+        <ExampleAppsForm initialValue={settings.examplesEnabled} />
       </section>
 
       <section className={styles.section}>

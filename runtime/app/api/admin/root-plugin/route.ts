@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { DEFAULT_ROOT_PLUGIN_ID, getPlatformSetting, listDisabledPluginIds } from '@sovereignfs/db';
+import { DEFAULT_ROOT_PLUGIN_ID, getPlatformSetting } from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
 import { getPlatformDb } from '@/src/db';
+import { getDisabledPluginIds } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
 import { resolveRootRoutePrefix } from '@/src/root-plugin';
 
@@ -17,7 +18,7 @@ export async function GET(request: Request): Promise<Response> {
 
   const db = await getPlatformDb();
   const rootPluginId = (await getPlatformSetting(db, 'root_plugin_id')) ?? DEFAULT_ROOT_PLUGIN_ID;
-  const disabledIds = new Set(await listDisabledPluginIds(db));
+  const disabledIds = new Set(await getDisabledPluginIds(db));
 
   const routePrefix = resolveRootRoutePrefix(rootPluginId, getInstalledPlugins(), disabledIds);
   return NextResponse.json({ routePrefix });

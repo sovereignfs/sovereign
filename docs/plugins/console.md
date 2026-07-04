@@ -136,19 +136,20 @@ role.
 
 Mirrors SRS §4.4. These are the acceptance surface for the plugin.
 
-| ID     | Requirement                                                                                                                                                                                                                         |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CON-01 | Accessible only to `platform:admin` (`console:access`).                                                                                                                                                                             |
-| CON-02 | View all registered users with role, status, and join date.                                                                                                                                                                         |
-| CON-03 | Invite a new user by email — generate an invite token, send the invite email.                                                                                                                                                       |
-| CON-04 | Deactivate and reactivate user accounts.                                                                                                                                                                                            |
-| CON-05 | Change a user's role between `platform:admin` and `platform:user`.                                                                                                                                                                  |
-| CON-06 | View all installed plugins with version and enabled/disabled status.                                                                                                                                                                |
-| CON-07 | Enable or disable a plugin — disabling hides it from the launcher and blocks its routes.                                                                                                                                            |
-| CON-08 | Configure tenant settings: tenant name.                                                                                                                                                                                             |
-| CON-09 | Display a system health summary: runtime version, DB type + connection status, auth status, disk usage.                                                                                                                             |
-| CON-10 | Toggle invite-only registration from Console without editing environment config.                                                                                                                                                    |
-| CON-11 | View the current root plugin and change it to any installed, enabled, non-adminOnly plugin. Change takes effect immediately without restart. The root plugin serves the platform root `/`; the sidebar's first icon resolves to it. |
+| ID     | Requirement                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CON-01 | Accessible only to `platform:admin` (`console:access`).                                                                                                                                                                                                                                                                                                                                                                                     |
+| CON-02 | View all registered users with role, status, and join date.                                                                                                                                                                                                                                                                                                                                                                                 |
+| CON-03 | Invite a new user by email — generate an invite token, send the invite email.                                                                                                                                                                                                                                                                                                                                                               |
+| CON-04 | Deactivate and reactivate user accounts.                                                                                                                                                                                                                                                                                                                                                                                                    |
+| CON-05 | Change a user's role between `platform:admin` and `platform:user`.                                                                                                                                                                                                                                                                                                                                                                          |
+| CON-06 | View all installed plugins with version and enabled/disabled status.                                                                                                                                                                                                                                                                                                                                                                        |
+| CON-07 | Enable or disable a plugin — disabling hides it from the launcher and blocks its routes.                                                                                                                                                                                                                                                                                                                                                    |
+| CON-08 | Configure tenant settings: tenant name.                                                                                                                                                                                                                                                                                                                                                                                                     |
+| CON-09 | Display a system health summary: runtime version, DB type + connection status, auth status, disk usage.                                                                                                                                                                                                                                                                                                                                     |
+| CON-10 | Toggle invite-only registration from Console without editing environment config.                                                                                                                                                                                                                                                                                                                                                            |
+| CON-11 | View the current root plugin and change it to any installed, enabled, non-adminOnly plugin. Change takes effect immediately without restart. The root plugin serves the platform root `/`; the sidebar's first icon resolves to it.                                                                                                                                                                                                         |
+| CON-12 | Show or hide the bundled example plugins (manifest `example: true`) instance-wide from a Settings → Example plugins toggle, persisted in `platform_settings` and overriding the `SOVEREIGN_EXAMPLES_ENABLED` env default (no restart). Example plugins are also grouped in their own section on the Plugins page where each can be enabled/disabled individually (CON-07), overriding the instance default. Examples are hidden by default. |
 
 ## Directory structure
 
@@ -167,9 +168,9 @@ plugins/console/
 │   │   └── invite/
 │   │       └── page.tsx     # invite form (CON-03)
 │   ├── plugins/
-│   │   └── page.tsx         # installed plugins + enable/disable (CON-06, CON-07)
+│   │   └── page.tsx         # installed plugins + enable/disable + example group (CON-06, CON-07)
 │   ├── settings/
-│   │   └── page.tsx         # tenant name, invite-only toggle, root plugin (CON-08, CON-10, CON-11)
+│   │   └── page.tsx         # tenant name, invite-only, example plugins, root plugin (CON-08, CON-10, CON-11, CON-12)
 │   └── health/
 │       └── page.tsx         # system health dashboard (CON-09)
 ├── db/
@@ -186,12 +187,12 @@ the implementation tasks.
 Console reads and writes **platform tables**, never its own. The tables it
 touches:
 
-| Table               | Owner                       | Console use                                                 |
-| ------------------- | --------------------------- | ----------------------------------------------------------- |
-| users (auth)        | better-auth / `packages/db` | List, role, status, join date (CON-02/04/05).               |
-| `plugin_status`     | platform (`packages/db`)    | Per-plugin enabled/disabled flag (CON-06/07).               |
-| `tenants`           | platform (`packages/db`)    | Tenant name + invite-only flag (CON-08/10).                 |
-| `platform_settings` | platform (`packages/db`)    | Key-value config; `root_plugin_id` key for CON-11 (PLT-15). |
+| Table               | Owner                       | Console use                                                                       |
+| ------------------- | --------------------------- | --------------------------------------------------------------------------------- |
+| users (auth)        | better-auth / `packages/db` | List, role, status, join date (CON-02/04/05).                                     |
+| `plugin_status`     | platform (`packages/db`)    | Per-plugin enabled/disabled flag (CON-06/07).                                     |
+| `tenants`           | platform (`packages/db`)    | Tenant name + invite-only flag (CON-08/10).                                       |
+| `platform_settings` | platform (`packages/db`)    | Key-value config; `root_plugin_id` (CON-11, PLT-15), `examples_enabled` (CON-12). |
 
 Resolved decisions (gaps the SRS left open):
 

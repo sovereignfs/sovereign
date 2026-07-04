@@ -4,7 +4,7 @@
 
 ## Status
 
-🔨 In progress — 12.1–12.2 complete; 12.3 planned (admin disable surface).
+✅ Complete — 12.1 (starter template & examples), 12.2 (extraction to own repo), 12.3 (admin disable surface).
 
 ## Overview
 
@@ -93,7 +93,7 @@ change; `runtime`/`bin` patch only if discovery or install code changes.
 
 ---
 
-#### 📋 12.3 — Admin disable surface for example plugins
+#### ✅ 12.3 — Admin disable surface for example plugins
 
 **Goal:** Give operators a first-class way to turn example plugins off — all at
 once or one at a time — and to identify which installed plugins are examples.
@@ -117,14 +117,18 @@ is no bulk toggle.
   the `sovereign-examples` repo. Surface the flag through the generated registry
   so Console and middleware can read it. Update `docs/plugin-development.md` and
   the docs-parity test.
-- **Console bulk control:** on the Plugins page, group example plugins into a
-  section with a single "Disable all examples" / "Enable all examples" action
-  (a server action iterating the example set and writing `plugin_status`), while
-  keeping the existing per-plugin toggle for individual examples.
-- **Default posture (confirm during design):** optionally gate examples to
-  disabled-by-default outside dev (env-driven), opt-in via Console — so a fresh
-  production instance ships them installed but hidden.
-- **Activity log:** record bulk enable/disable actions.
+- **Console controls:** a **Settings → Example plugins** toggle shows/hides all
+  example plugins instance-wide (persisted in `platform_settings`), and the Plugins
+  page groups the example plugins into their own section where each can still be
+  toggled individually (overriding the instance default).
+- **Default posture:** examples ship inside the image but are **hidden by
+  default**. Resolution precedence (highest first): an explicit per-plugin
+  `plugin_status` row → the persisted `examples_enabled` instance setting (the
+  Settings toggle) → the `SOVEREIGN_EXAMPLES_ENABLED` env seed → off. Implemented
+  as a single effective-disabled resolver (`runtime/src/plugin-status.ts`) shared
+  by the middleware gate, launcher, sidebar shell, root-plugin selection, and
+  portability, so a hidden example 404s and shows no launcher/sidebar icon.
+- **Activity log:** record the Settings toggle and per-plugin changes.
 - Update `docs/plugins/console.md` with a new CON entry for the example
   disable surface.
 
@@ -136,14 +140,13 @@ marker is set).
 
 **Review checklist:**
 
-- The Console Plugins page shows the seven examples grouped, with a working bulk
-  disable/enable that toggles all of them and a per-example toggle that toggles
-  one.
-- Disabling an example (bulk or individual) 404s its routes and removes its
-  launcher tile immediately, with no rebuild; re-enabling restores them.
+- The Settings → Example plugins toggle shows/hides all example plugins instance-wide,
+  and the Plugins page groups the examples with a working per-example toggle.
+- Hiding examples (via the toggle or the env default) 404s their routes and
+  removes their launcher/sidebar icons immediately, with no rebuild; showing them
+  again restores them. A per-plugin toggle overrides the instance default.
 - `packages/manifest` accepts `example: true` and the docs-parity test passes.
-- A non-example platform plugin (console/launcher/account) is never swept up by
-  the bulk action.
+- A non-example platform plugin (console/launcher/account) is never affected.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
 ---

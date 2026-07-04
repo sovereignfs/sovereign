@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { listDisabledPluginIds } from '@sovereignfs/db';
 import { getPlatformDb } from '@/src/db';
+import { getDisabledPluginIds } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
 import { selectLauncherPlugins } from '@/src/launcher-plugins';
 
@@ -13,7 +13,7 @@ import { selectLauncherPlugins } from '@/src/launcher-plugins';
 export async function GET(request: Request): Promise<Response> {
   const role = request.headers.get('x-sovereign-user-role') ?? 'platform:user';
 
-  const disabledIds = new Set(await listDisabledPluginIds(await getPlatformDb()));
+  const disabledIds = new Set(await getDisabledPluginIds(await getPlatformDb()));
 
   const plugins = selectLauncherPlugins(getInstalledPlugins(), disabledIds, role);
   return NextResponse.json({ plugins });

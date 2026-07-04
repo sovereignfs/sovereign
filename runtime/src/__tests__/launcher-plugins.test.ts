@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { selectLauncherPlugins, type LauncherPluginInput } from '../launcher-plugins';
+import {
+  selectLauncherPlugins,
+  selectSidebarPlugins,
+  type LauncherPluginInput,
+} from '../launcher-plugins';
 
 const plugins: LauncherPluginInput[] = [
   { id: 'fs.sovereign.launcher', name: 'Launcher', routePrefix: '/launcher' },
@@ -50,5 +54,23 @@ describe('selectLauncherPlugins', () => {
   it('returns an empty list when only chrome plugins are installed', () => {
     const chromeOnly = plugins.filter((p) => p.id.startsWith('fs.sovereign.'));
     expect(selectLauncherPlugins(chromeOnly, none, 'platform:admin')).toEqual([]);
+  });
+});
+
+describe('selectSidebarPlugins', () => {
+  it('excludes chrome plugins from the sidebar icons', () => {
+    const ids = selectSidebarPlugins(plugins, none).map((p) => p.id);
+    expect(ids).toEqual(['fs.example.tasks', 'fs.example.audit']);
+  });
+
+  it('excludes disabled plugins so no icon 404s', () => {
+    const ids = selectSidebarPlugins(plugins, new Set(['fs.example.tasks'])).map((p) => p.id);
+    expect(ids).toEqual(['fs.example.audit']);
+  });
+
+  it('preserves input order', () => {
+    const reversed = [...plugins].reverse();
+    const ids = selectSidebarPlugins(reversed, none).map((p) => p.id);
+    expect(ids).toEqual(['fs.example.audit', 'fs.example.tasks']);
   });
 });

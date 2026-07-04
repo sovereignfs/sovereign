@@ -138,6 +138,8 @@ open architectural questions.
 | —       | Overlay size variants for platform plugins                  | ✅     | [2.19](epics/platform-shell.md#219--overlay-size-variants-for-platform-plugins)              |
 | 0.11.2  | Design system stabilization                                 | ✅     | [9.12](epics/design-system.md#912--design-system-stabilization)                              |
 | 0.11.3  | Per-plugin database dialect selection (RFC 0036)            | ✅     | [3.15](epics/plugins-runtime.md#315--per-plugin-database-dialect-selection-rfc-0036)         |
+| 0.12.0  | Extract example plugins to their own repository             | ✅     | [12.2](epics/example-plugins.md#122--extract-example-plugins-to-their-own-repository)        |
+| 0.13.0  | Admin disable surface for example plugins                   | ✅     | [12.3](epics/example-plugins.md#123--admin-disable-surface-for-example-plugins)              |
 
 ---
 
@@ -200,8 +202,6 @@ once prioritised.
 | —       | Middleware decomposition                                                  | 📋     | [2.17](epics/platform-shell.md#217--middleware-decomposition)                                                              |
 | —       | Generate script decomposition                                             | 📋     | [3.23](epics/plugins-runtime.md#323--generate-script-decomposition)                                                        |
 | —       | Account plugin workflow coverage                                          | 📋     | [14.2](epics/plugin-accounts.md#142--account-plugin-workflow-coverage)                                                     |
-| 0.12.0  | Extract example plugins to their own repository                           | ✅     | [12.2](epics/example-plugins.md#122--extract-example-plugins-to-their-own-repository)                                      |
-| 0.13.0  | Admin disable surface for example plugins                                 | ✅     | [12.3](epics/example-plugins.md#123--admin-disable-surface-for-example-plugins)                                            |
 | —       | Console plugin workflow coverage                                          | 📋     | [13.5](epics/plugin-console.md#135--console-plugin-workflow-coverage)                                                      |
 | —       | Console primitive migration, Phase 2                                      | 📋     | [13.6](epics/plugin-console.md#136--console-primitive-migration-phase-2)                                                   |
 | —       | Launcher plugin workflow coverage                                         | 📋     | [15.2](epics/plugin-launcher.md#152--launcher-plugin-workflow-coverage)                                                    |

@@ -1,4 +1,4 @@
-/* Auth pages: /login, /register, /login/2fa */
+/* Shared auth pages: /login, /register, /forgot-password, /reset-password, /login/2fa */
 
 /* iOS rubber-band suppression. These pages size .page to the exact viewport
    height, so the document never overflows and thus never scrolls — but iOS

@@ -95,12 +95,13 @@ services:
       # Internal address for server-to-server calls (runtime → auth) over the
       # Docker bridge network. Never browser-reachable.
       SOVEREIGN_AUTH_URL: 'http://auth:3001'
-      # Browser-facing auth URL for login redirects — must be reachable from the
-      # user's browser (unlike SOVEREIGN_AUTH_URL above, the internal service
-      # name). Precedence: an explicit SOVEREIGN_AUTH_PUBLIC_URL wins; otherwise
-      # it falls back to AUTH_BASE_URL (your public auth domain in a real
-      # deployment); otherwise to the mapped auth host port so local prod testing
-      # works without a reverse proxy (browser → localhost:4001, not auth:3001).
+      # Browser-facing auth URL for compatibility routes — must be reachable
+      # from the user's browser if those routes are linked directly (unlike
+      # SOVEREIGN_AUTH_URL above, the internal service name). Precedence: an
+      # explicit SOVEREIGN_AUTH_PUBLIC_URL wins; otherwise it falls back to
+      # AUTH_BASE_URL (your public auth domain in a real deployment); otherwise
+      # to the mapped auth host port so local prod testing works without a
+      # reverse proxy (browser → localhost:4001, not auth:3001).
       SOVEREIGN_AUTH_PUBLIC_URL: '${SOVEREIGN_AUTH_PUBLIC_URL:-${AUTH_BASE_URL:-http://localhost:${AUTH_PORT:-4001}}}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
       # Shared signing secret — the runtime verifies the auth server's session

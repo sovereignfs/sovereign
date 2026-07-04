@@ -4,7 +4,7 @@ import { type FormEvent, useRef, useState } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
 import { ViewportHeightSync } from '../ViewportHeightSync';
-import styles from '../login.module.css';
+import styles from '../../auth-page.module.css';
 
 type Mode = 'totp' | 'backup';
 

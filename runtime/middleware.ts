@@ -169,9 +169,8 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const nonce = generateNonce();
   const csp = buildContentSecurityPolicy(nonce, {
     isProd: process.env.NODE_ENV === 'production',
-    // Allow the logout form's cross-origin redirect to the auth login page
-    // (form-action checks the whole redirect chain). Same browser-facing auth
-    // URL the /login and logout routes redirect to.
+    // Allow direct posts from auth-server compatibility pages while the auth
+    // app remains browser-reachable during the route migration.
     authFormActionOrigin: authPublicOrigin(),
   });
   const applyCsp = (response: NextResponse): NextResponse => {

@@ -57,6 +57,7 @@ jobs:
             echo "SOVEREIGN_AUTH_PUBLIC_URL=http://localhost:3001"
             echo "NEXT_PUBLIC_RUNTIME_URL=http://localhost:3000"
             echo "AUTH_INVITE_ONLY=false"
+            echo "SOVEREIGN_EXAMPLES_ENABLED=true"
           } >> .env
 
       - name: Run Playwright tests

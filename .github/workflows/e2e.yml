@@ -34,9 +34,14 @@ jobs:
       # Clone the example plugins at their pinned ref, then compose all plugin
       # routes so `next dev` starts cleanly. The paywall golden path exercises
       # the example-monetized plugin, so the examples must be present.
-      # install:plugins runs generate itself once it clones.
+      # install:plugins runs generate itself once it clones. The cloned plugins
+      # are intentionally absent from the committed lockfile, so refresh the CI
+      # workspace graph after materializing them instead of disabling pnpm's
+      # dependency verification for the test command.
       - name: Install and compose plugins
-        run: pnpm install:plugins
+        run: |
+          pnpm install:plugins
+          pnpm install --no-frozen-lockfile
 
       # Write a minimal .env for both apps. Secrets must be set in the repo's
       # Settings → Secrets and variables → Actions.
@@ -58,10 +63,6 @@ jobs:
         run: pnpm test:e2e
         env:
           CI: 'true'
-          # install:plugins intentionally materializes gitignored external plugin
-          # packages after the frozen install. They are not part of pnpm-lock.yaml,
-          # so pnpm's pre-run dependency verification must stay off for this step.
-          PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: 'false'
 
       - name: Upload test report
         uses: actions/upload-artifact@v4

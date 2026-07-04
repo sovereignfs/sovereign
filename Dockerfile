@@ -29,9 +29,13 @@ RUN apk add --no-cache git
 # explicit generate is a safety net for the empty-config case (install:plugins
 # only generates when it actually clones something).
 RUN pnpm install:plugins
-RUN PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false pnpm run generate
+# External plugin package manifests are intentionally absent from the committed
+# lockfile. Refresh the builder's workspace graph after cloning pinned plugins,
+# while keeping the initial source-tree install frozen.
+RUN pnpm install --no-frozen-lockfile
+RUN pnpm run generate
 # tsup packages → next build → runtime/.next/standalone
-RUN PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false pnpm --filter @sovereignfs/runtime build
+RUN pnpm --filter @sovereignfs/runtime build
 
 # ---- runner: minimal non-root production image ----------------------------
 FROM node:24-alpine AS runner

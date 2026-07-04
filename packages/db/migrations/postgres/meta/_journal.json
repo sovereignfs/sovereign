@@ -50,6 +50,13 @@
       "when": 1782300000000,
       "tag": "0006_account_sidebar_plugins",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782400000000,
+      "tag": "0007_email_delivery_log",
+      "breakpoints": true
     }
   ]
 }

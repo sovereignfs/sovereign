@@ -155,7 +155,7 @@ to get started — every variable is documented there.
 | `DATABASE_URL`                    | no       | `file:./data/sovereign.db`                          | Runtime database. SQLite file path (relative paths resolve against the repo root) or a `postgres://` URL.                                                                                                                                                                                                                                                                                                                                        |
 | `DB_DIALECT`                      | no       | `sqlite`                                            | Set to `postgres` when using PostgreSQL.                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `PGSSLROOTCERT`                   | no       | —                                                   | Path to a CA PEM file for Postgres TLS certificate verification. Only meaningful when `DATABASE_URL` / `AUTH_DATABASE_URL` includes `sslmode=verify-full`. Follows the standard libpq convention (same env var accepted by `psql` and `pg_dump`).                                                                                                                                                                                                |
-| `SMTP_HOST`                       | no       | `localhost` (dev) / — (prod)                        | SMTP server host. In non-production builds, defaults to `localhost` so Mailpit works out of the box with no config. In production, leave unset to disable email (the app still runs) or set to your SMTP relay.                                                                                                                                                                                                                                  |
+| `SMTP_HOST`                       | no       | `localhost` (dev) / — (prod)                        | SMTP server host. In non-production builds, defaults to `localhost` so Mailpit works out of the box with no config. In production, leave unset to disable email (the app still runs) or set to your SMTP relay. Password reset and any future required email-verification flows cannot complete when SMTP is disabled.                                                                                                                           |
 | `SMTP_PORT`                       | no       | `587`                                               | SMTP port.                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `SMTP_USER`                       | no       | —                                                   | SMTP username.                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `SMTP_PASS`                       | no       | —                                                   | SMTP password.                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -606,6 +606,24 @@ SMTP_HOST=mailpit   # the Docker service name; omit when running pnpm dev native
 
 - **SMTP (internal):** `mailpit:1025`
 - **Web inbox:** `http://localhost:8025`
+
+## Production email behavior
+
+Sovereign classifies outbound email by delivery class:
+
+- Authentication email, such as password reset and future required email verification, is required
+  to complete the flow. In production without `SMTP_HOST`, those flows fail closed with a generic
+  delivery error rather than exposing SMTP details to the user.
+- Security email, such as account-created, password-changed, MFA/passkey changes, and account
+  deletion, is best-effort after the state change. Failures are logged but do not roll back the
+  completed security action.
+- Administrative email, such as invites, role changes, deactivation, reactivation, and admin MFA
+  reset, is best-effort but surfaces a warning to the admin where the UI has a copy-link fallback.
+
+Console → Health reports sanitized email diagnostics: whether SMTP is configured, the last delivery
+status and timestamp, the last failure code, and the number of failures in the last 24 hours. The
+delivery log stores non-secret metadata only. It does not store message bodies, reset tokens, invite
+tokens, or raw recipient email addresses.
 
 ---
 

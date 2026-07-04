@@ -14,8 +14,12 @@ export function InviteForm({ onSuccess }: { onSuccess?: () => void }) {
     return (
       <div className={styles.successBox}>
         <p>
-          Invitation sent to <strong>{state.email}</strong>.
+          {state.emailWarning ? 'Invitation created for ' : 'Invitation sent to '}
+          <strong>{state.email}</strong>.
         </p>
+        {state.emailWarning && (
+          <p className={styles.errorText}>Email delivery warning: {state.emailWarning}</p>
+        )}
         <p className={styles.tokenNote}>
           If email is not configured, share this token manually:{' '}
           <code className={styles.token}>{state.token}</code>

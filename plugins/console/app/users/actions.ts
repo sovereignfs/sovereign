@@ -7,6 +7,7 @@ import { logActivity } from '@/src/activity';
 import { deleteUser } from '@/src/user-deletion';
 
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
 
 async function actorId(): Promise<string | null> {
   return (await headers()).get('x-sovereign-user-id');
@@ -22,6 +23,38 @@ async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
       ...(init?.headers as Record<string, string>),
     },
   });
+}
+
+async function sendAdminEmail(input: {
+  templateId: string;
+  toUserId?: string | null;
+  toEmail: string;
+  actorUserId?: string | null;
+  subject: string;
+  text: string;
+  html: string;
+  metadata?: Record<string, string | number | boolean | null>;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
+  const res = await fetch(`${SELF_URL}/api/admin/email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminKey}`,
+    },
+    body: JSON.stringify({
+      deliveryClass: 'administrative',
+      source: 'console',
+      ...input,
+    }),
+  });
+  const data = (await res.json().catch(() => null)) as {
+    status?: 'skipped' | 'sent' | 'failed';
+    errorCode?: string;
+    error?: string;
+  } | null;
+  if (res.ok && data?.status !== 'skipped') return { ok: true };
+  return { ok: false, error: data?.errorCode ?? data?.error ?? `email ${res.status}` };
 }
 
 export async function changeRoleAction(formData: FormData): Promise<void> {
@@ -40,6 +73,17 @@ export async function changeRoleAction(formData: FormData): Promise<void> {
     body: JSON.stringify({ role }),
   });
   if (!res.ok) throw new Error(`Failed to change role: ${res.status}`);
+  const updated = (await res.json()) as { id: string; email: string; role: string };
+  void sendAdminEmail({
+    templateId: 'console.role_changed',
+    toUserId: updated.id,
+    toEmail: updated.email,
+    actorUserId: session.user.id,
+    subject: 'Your Sovereign role changed',
+    text: `Your Sovereign role changed to ${role}.`,
+    html: `<p>Your Sovereign role changed to <strong>${role}</strong>.</p>`,
+    metadata: { role },
+  });
   void logActivity({
     actorId: await actorId(),
     actorType: 'user',
@@ -66,6 +110,23 @@ export async function toggleActiveAction(formData: FormData): Promise<void> {
     body: JSON.stringify({ active }),
   });
   if (!res.ok) throw new Error(`Failed to update user status: ${res.status}`);
+  const updated = (await res.json()) as { id: string; email: string };
+  void sendAdminEmail({
+    templateId: active ? 'console.account_reactivated' : 'console.account_deactivated',
+    toUserId: updated.id,
+    toEmail: updated.email,
+    actorUserId: session.user.id,
+    subject: active
+      ? 'Your Sovereign account was reactivated'
+      : 'Your Sovereign account was deactivated',
+    text: active
+      ? 'Your Sovereign account was reactivated.'
+      : 'Your Sovereign account was deactivated. Contact your instance operator if this was unexpected.',
+    html: active
+      ? '<p>Your Sovereign account was reactivated.</p>'
+      : '<p>Your Sovereign account was deactivated. Contact your instance operator if this was unexpected.</p>',
+    metadata: { active },
+  });
   void logActivity({
     actorId: await actorId(),
     actorType: 'user',
@@ -87,6 +148,16 @@ export async function resetMfaAction(formData: FormData): Promise<void> {
     body: JSON.stringify({ resetMfa: true }),
   });
   if (!res.ok) throw new Error(`Failed to reset MFA: ${res.status}`);
+  const updated = (await res.json()) as { id: string; email: string };
+  void sendAdminEmail({
+    templateId: 'console.mfa_reset',
+    toUserId: updated.id,
+    toEmail: updated.email,
+    actorUserId: await actorId(),
+    subject: 'Your Sovereign MFA was reset',
+    text: 'An administrator reset MFA on your Sovereign account.',
+    html: '<p>An administrator reset MFA on your Sovereign account.</p>',
+  });
   void logActivity({
     actorId: await actorId(),
     actorType: 'user',
@@ -158,7 +229,7 @@ export async function cancelInviteAction(formData: FormData): Promise<void> {
 }
 
 export type InviteState =
-  | { success: true; token: string; email: string }
+  | { success: true; token: string; email: string; emailWarning?: string }
   | { success: false; error: string };
 
 export async function sendInviteAction(
@@ -191,8 +262,10 @@ export async function sendInviteAction(
   const runtimeUrlKey = 'NEXT_PUBLIC_RUNTIME_URL';
   const runtimeUrl = process.env[runtimeUrlKey] ?? `http://localhost:${process.env.PORT ?? '3000'}`;
   const registerUrl = `${runtimeUrl}/register?token=${token}`;
-  await sdk.mailer.send({
-    to: email,
+  const emailResult = await sendAdminEmail({
+    templateId: 'console.invite_created',
+    toEmail: email,
+    actorUserId: session.user.id,
     subject: 'You have been invited to Sovereign',
     text: [
       'You have been invited to join this Sovereign instance.',
@@ -200,6 +273,7 @@ export async function sendInviteAction(
       `Create your account at: ${registerUrl}`,
     ].join('\n'),
     html: `<p>You have been invited to join this Sovereign instance.</p><p><a href="${registerUrl}">Create your account</a></p>`,
+    metadata: { expiresInDays: expiresInDays ?? null },
   });
 
   void logActivity({
@@ -211,5 +285,10 @@ export async function sendInviteAction(
     metadata: { email },
   });
 
-  return { success: true, token, email };
+  return {
+    success: true,
+    token,
+    email,
+    ...(emailResult.ok ? {} : { emailWarning: emailResult.error }),
+  };
 }

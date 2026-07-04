@@ -49,6 +49,20 @@ async function authPost(path: string, body: Record<string, unknown>): Promise<Re
   });
 }
 
+async function sendAccountSecurityEmail(input: {
+  templateId: string;
+  subject: string;
+  text: string;
+  html: string;
+  metadata?: Record<string, string | number | boolean | null>;
+}): Promise<void> {
+  await fetch(`${SELF_URL}/api/account/email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', cookie: await sessionCookie() },
+    body: JSON.stringify(input),
+  }).catch(() => undefined);
+}
+
 export type DisplayNameResult = { ok: true; message: string } | { ok: false; error: string };
 
 /** Change the display name (ACC-02). Delegates to better-auth's update-user. */
@@ -157,6 +171,12 @@ export async function changePasswordAction(
     return { ok: false, error: err instanceof Error ? err.message : 'Failed to change password.' };
   }
   void sdk.activity.log({ action: 'account.password_changed', summary: 'Password changed' });
+  void sendAccountSecurityEmail({
+    templateId: 'account.password_changed',
+    subject: 'Your Sovereign password was changed',
+    text: 'The password for your Sovereign account was changed.',
+    html: '<p>The password for your Sovereign account was changed.</p>',
+  });
   return { ok: true };
 }
 
@@ -291,6 +311,12 @@ export async function verifyTotpEnrollmentAction(
   await forwardAuthCookies(res);
   await invalidateSessionCache();
   void sdk.activity.log({ action: 'account.totp_enabled', summary: 'TOTP two-factor enabled' });
+  void sendAccountSecurityEmail({
+    templateId: 'account.totp_enabled',
+    subject: 'TOTP was enabled on your Sovereign account',
+    text: 'TOTP two-factor authentication was enabled on your Sovereign account.',
+    html: '<p>TOTP two-factor authentication was enabled on your Sovereign account.</p>',
+  });
   revalidatePath('/account/security');
   return { ok: true };
 }
@@ -313,6 +339,12 @@ export async function disableTotpAction(
   }
   await invalidateSessionCache();
   void sdk.activity.log({ action: 'account.totp_disabled', summary: 'TOTP two-factor disabled' });
+  void sendAccountSecurityEmail({
+    templateId: 'account.totp_disabled',
+    subject: 'TOTP was disabled on your Sovereign account',
+    text: 'TOTP two-factor authentication was disabled on your Sovereign account.',
+    html: '<p>TOTP two-factor authentication was disabled on your Sovereign account.</p>',
+  });
   revalidatePath('/account/security');
   return { ok: true };
 }
@@ -340,6 +372,12 @@ export async function regenerateBackupCodesAction(
     action: 'account.backup_codes_regenerated',
     summary: 'Backup codes regenerated',
   });
+  void sendAccountSecurityEmail({
+    templateId: 'account.mfa_backup_codes_regenerated',
+    subject: 'Sovereign backup codes were regenerated',
+    text: 'Backup codes for your Sovereign account were regenerated.',
+    html: '<p>Backup codes for your Sovereign account were regenerated.</p>',
+  });
   return { ok: true, codes };
 }
 
@@ -362,6 +400,12 @@ export async function deletePasskeyAction(
     return { ok: false, error: data?.message ?? 'Failed to remove passkey.' };
   }
   void sdk.activity.log({ action: 'account.passkey_removed', summary: 'Passkey removed' });
+  void sendAccountSecurityEmail({
+    templateId: 'account.passkey_removed',
+    subject: 'A passkey was removed from your Sovereign account',
+    text: 'A passkey was removed from your Sovereign account.',
+    html: '<p>A passkey was removed from your Sovereign account.</p>',
+  });
   revalidatePath('/account/security');
   return { ok: true };
 }

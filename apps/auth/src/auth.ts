@@ -5,7 +5,7 @@ import { twoFactor } from 'better-auth/plugins/two-factor';
 import { passkey } from '@better-auth/passkey';
 import { authGet, authRun, getAuthDatabase } from './db';
 import { getEnv } from './env';
-import { sendMail } from './mailer';
+import { sendAuthPlatformEmail } from './platform-email';
 import { readInviteOnlySetting, resolveInviteOnly } from './settings';
 
 function buildOptions(): BetterAuthOptions {
@@ -41,13 +41,17 @@ function buildOptions(): BetterAuthOptions {
       autoSignIn: true,
       sendResetPassword: async ({ user, token }) => {
         const resetUrl = `${env.baseUrl}/reset-password?token=${token}`;
-        await sendMail({
-          to: user.email,
+        await sendAuthPlatformEmail({
+          templateId: 'auth.password_reset',
+          deliveryClass: 'authentication',
+          toUserId: user.id,
+          toEmail: user.email,
           subject: 'Reset your Sovereign password',
           html: `<p>You requested a password reset. Click the link below to choose a new password.</p>
 <p><a href="${resetUrl}">${resetUrl}</a></p>
 <p>This link expires in 1 hour. If you did not request a password reset, you can ignore this email.</p>`,
           text: `You requested a password reset.\n\nReset your password: ${resetUrl}\n\nThis link expires in 1 hour. If you did not request this, ignore this email.`,
+          metadata: { flow: 'password_reset' },
         });
       },
       // Minimum password length (better-auth default is 8, but being explicit
@@ -125,6 +129,19 @@ function buildOptions(): BetterAuthOptions {
 
             // First user becomes the platform owner (RFC 0021).
             return { data: { ...user, role: isFirst ? 'platform:owner' : 'platform:user' } };
+          },
+          after: async (user) => {
+            await sendAuthPlatformEmail({
+              templateId: 'auth.account_created',
+              deliveryClass: 'security',
+              toUserId: user.id,
+              toEmail: user.email,
+              subject: 'Your Sovereign account was created',
+              html: `<p>Your Sovereign account was created successfully.</p>
+<p>If you did not create this account, contact your instance operator.</p>`,
+              text: `Your Sovereign account was created successfully.\n\nIf you did not create this account, contact your instance operator.`,
+              metadata: { role: typeof user.role === 'string' ? user.role : null },
+            });
           },
         },
       },

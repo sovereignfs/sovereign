@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { DEFAULT_TENANT_ID } from '@sovereignfs/db';
 import { logActivity } from '@/src/activity';
 import { deleteUser } from '@/src/user-deletion';
+import { sendPlatformEmail } from '@/src/platform-email';
 
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
 
@@ -69,6 +70,19 @@ export async function DELETE(request: Request): Promise<Response> {
     visibility: 'admin',
     summary: 'User initiated account deletion',
     metadata: { userId },
+  });
+
+  await sendPlatformEmail({
+    templateId: 'account.account_deleted',
+    deliveryClass: 'security',
+    toUserId: userId,
+    toEmail: userEmail,
+    actorUserId: userId,
+    source: 'runtime',
+    subject: 'Your Sovereign account was deleted',
+    text: 'Your Sovereign account deletion was processed.',
+    html: '<p>Your Sovereign account deletion was processed.</p>',
+    metadata: { selfService: true },
   });
 
   await deleteUser(userId, DEFAULT_TENANT_ID);

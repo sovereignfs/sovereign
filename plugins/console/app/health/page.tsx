@@ -7,6 +7,13 @@ interface HealthReport {
   platformVersion: string;
   database: { dialect: string; status: 'ok' | 'error'; sizeBytes: number | null };
   auth: { status: 'ok' | 'unreachable' };
+  email: {
+    smtpConfigured: boolean;
+    lastSendStatus: 'skipped' | 'queued' | 'sent' | 'failed' | null;
+    lastSendAt: number | null;
+    lastFailureCode: string | null;
+    recentFailureCount: number;
+  };
   uptimeSeconds: number;
 }
 
@@ -14,6 +21,13 @@ const DEFAULT_HEALTH: HealthReport = {
   platformVersion: 'unknown',
   database: { dialect: 'unknown', status: 'error', sizeBytes: null },
   auth: { status: 'unreachable' },
+  email: {
+    smtpConfigured: false,
+    lastSendStatus: null,
+    lastSendAt: null,
+    lastFailureCode: null,
+    recentFailureCount: 0,
+  },
   uptimeSeconds: 0,
 };
 
@@ -46,6 +60,11 @@ function formatUptime(seconds: number): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
   const hours = Math.floor(seconds / 3600);
   return `${hours}h ${Math.floor((seconds % 3600) / 60)}m`;
+}
+
+function formatTimestamp(seconds: number | null): string {
+  if (!seconds) return 'Never';
+  return new Date(seconds * 1000).toLocaleString();
 }
 
 function StatusBadge({
@@ -105,6 +124,27 @@ export default async function HealthPage() {
               badLabel="Unreachable"
             />
           </span>
+        </li>
+
+        <li className={styles.healthCard}>
+          <span className={styles.cardDesc}>Email delivery</span>
+          <span className={styles.healthValue}>
+            <StatusBadge
+              ok={health.email.smtpConfigured}
+              okLabel="SMTP configured"
+              badLabel="SMTP missing"
+            />
+          </span>
+          <span className={styles.cardDesc}>
+            Last send: {health.email.lastSendStatus ?? 'none'} ·{' '}
+            {formatTimestamp(health.email.lastSendAt)}
+          </span>
+          {health.email.lastFailureCode && (
+            <span className={styles.cardDesc}>
+              Last failure: {health.email.lastFailureCode} · {health.email.recentFailureCount} in
+              24h
+            </span>
+          )}
         </li>
 
         <li className={styles.healthCard}>

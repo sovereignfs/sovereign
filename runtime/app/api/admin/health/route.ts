@@ -1,6 +1,12 @@
 import { statSync } from 'node:fs';
 import { NextResponse } from 'next/server';
-import { getLastMigrationResult, pingDb, resolveDialect, resolveSqlitePath } from '@sovereignfs/db';
+import {
+  getEmailDeliveryDiagnostics,
+  getLastMigrationResult,
+  pingDb,
+  resolveDialect,
+  resolveSqlitePath,
+} from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
 import { isDevModeConfigured } from '@/src/dev-mode';
 import { getPlatformDb } from '@/src/db';
@@ -8,6 +14,7 @@ import { getBroker } from '@/src/notification-broker';
 import { getIncompatiblePlugins } from '@/src/plugin-compat';
 import { getPlatformVersion } from '@/src/platform-version';
 import { getInstalledPlugins } from '@/src/registry';
+import { isSmtpConfigured } from '@/src/platform-email';
 
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
 
@@ -45,6 +52,13 @@ interface HealthReport {
     transport: 'polling' | 'sse' | 'redis';
     brokerConnected: boolean;
   };
+  email: {
+    smtpConfigured: boolean;
+    lastSendStatus: 'skipped' | 'queued' | 'sent' | 'failed' | null;
+    lastSendAt: number | null;
+    lastFailureCode: string | null;
+    recentFailureCount: number;
+  };
   uptimeSeconds: number;
 }
 
@@ -55,8 +69,9 @@ export async function GET(request: Request): Promise<Response> {
   const resolved = resolveDialect();
 
   let dbStatus: 'ok' | 'error' = 'ok';
+  const pdb = await getPlatformDb();
   try {
-    await pingDb(await getPlatformDb());
+    await pingDb(pdb);
   } catch {
     dbStatus = 'error';
   }
@@ -94,6 +109,7 @@ export async function GET(request: Request): Promise<Response> {
       : null;
 
   const installedPlugins = getInstalledPlugins();
+  const emailDiagnostics = await getEmailDeliveryDiagnostics(pdb, isSmtpConfigured());
 
   const rawTransport = process.env.NOTIFICATION_TRANSPORT ?? 'polling';
   const notifTransport: 'polling' | 'sse' | 'redis' =
@@ -130,6 +146,7 @@ export async function GET(request: Request): Promise<Response> {
       transport: notifTransport,
       brokerConnected,
     },
+    email: emailDiagnostics,
     uptimeSeconds: Math.floor(process.uptime()),
   };
   return NextResponse.json(report);

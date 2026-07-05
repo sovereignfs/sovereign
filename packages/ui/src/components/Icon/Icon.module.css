@@ -6,6 +6,11 @@
   /* Color follows the surrounding text via currentColor — no token needed. */
 }
 
+.xs {
+  width: var(--sv-icon-size-xs);
+  height: var(--sv-icon-size-xs);
+}
+
 .sm {
   width: var(--sv-icon-size-sm);
   height: var(--sv-icon-size-sm);

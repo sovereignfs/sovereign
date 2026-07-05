@@ -110,6 +110,26 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
        ON email_delivery_log (tenant_id, created_at DESC)`,
     `CREATE INDEX IF NOT EXISTS email_delivery_log_status_created
        ON email_delivery_log (status, created_at DESC)`,
+    // RFC 0043 — Plugin secret vault. `ciphertext` is encrypted by runtime code;
+    // this package stores opaque bytes plus non-secret metadata only.
+    `CREATE TABLE IF NOT EXISTS plugin_secrets (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      plugin_id TEXT NOT NULL,
+      scope TEXT NOT NULL,
+      user_id TEXT,
+      label TEXT NOT NULL,
+      ciphertext TEXT NOT NULL,
+      metadata TEXT,
+      created_at ${ts} NOT NULL,
+      updated_at ${ts} NOT NULL,
+      last_used_at ${ts},
+      deleted_at ${ts}
+    )`,
+    `CREATE INDEX IF NOT EXISTS plugin_secrets_plugin_scope_idx
+       ON plugin_secrets (tenant_id, plugin_id, scope, deleted_at)`,
+    `CREATE INDEX IF NOT EXISTS plugin_secrets_user_idx
+       ON plugin_secrets (tenant_id, user_id, deleted_at)`,
     // RFC 0015 — Notification Center
     `CREATE TABLE IF NOT EXISTS notifications (
       id TEXT PRIMARY KEY,

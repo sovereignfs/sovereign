@@ -183,6 +183,25 @@ export const emailDeliveryLog = sqliteTable('email_delivery_log', {
   metadata: text('metadata'),
 });
 
+/**
+ * Platform-managed vault for runtime-created plugin secrets (RFC 0043).
+ * `ciphertext` is opaque encrypted material; `metadata` is JSON without secret values.
+ */
+export const pluginSecrets = sqliteTable('plugin_secrets', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  pluginId: text('plugin_id').notNull(),
+  scope: text('scope').notNull(),
+  userId: text('user_id'),
+  label: text('label').notNull(),
+  ciphertext: text('ciphertext').notNull(),
+  metadata: text('metadata'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  lastUsedAt: integer('last_used_at'),
+  deletedAt: integer('deleted_at'),
+});
+
 export type AccountPrefs = typeof accountPrefs.$inferSelect;
 export type NewAccountPrefs = typeof accountPrefs.$inferInsert;
 
@@ -320,6 +339,8 @@ export type ActivityLog = typeof activityLog.$inferSelect;
 export type NewActivityLog = typeof activityLog.$inferInsert;
 export type EmailDeliveryLog = typeof emailDeliveryLog.$inferSelect;
 export type NewEmailDeliveryLog = typeof emailDeliveryLog.$inferInsert;
+export type PluginSecret = typeof pluginSecrets.$inferSelect;
+export type NewPluginSecret = typeof pluginSecrets.$inferInsert;
 export type Entitlement = typeof entitlements.$inferSelect;
 export type NewEntitlement = typeof entitlements.$inferInsert;
 export type InstanceConfigRow = typeof instanceConfig.$inferSelect;

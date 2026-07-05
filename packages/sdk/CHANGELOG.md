@@ -5,6 +5,20 @@ follows [Semantic Versioning](https://semver.org); see
 [`docs/sdk-stability.md`](../../docs/sdk-stability.md) for the stability policy
 and which parts of the surface the guarantee covers.
 
+## 1.15.0
+
+**New surface: `sdk.secrets`** (RFC 0043 / Task 8.6). Experimental.
+
+- `sdk.secrets.create({ scope, label, value, metadata? })` stores a runtime-created
+  plugin secret in the platform vault.
+- `sdk.secrets.get(id)` returns the plaintext value to server-side plugin code only.
+- `sdk.secrets.list(scope?)` returns metadata-only `SecretRef` rows.
+- `sdk.secrets.update(id, value)` rotates the stored value.
+- `sdk.secrets.delete(id)` revokes future reads.
+
+Secret values are encrypted by the runtime, scoped to the calling plugin and
+current user where applicable, never exported, and never returned by list calls.
+
 ## 1.14.0
 
 **New surface: `sdk.directory`** (RFC 0041 / Task 1.12). Experimental.

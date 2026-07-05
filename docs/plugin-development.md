@@ -459,6 +459,42 @@ before starting the platform. The platform logs a warning at startup for any
 non-secret values. The generate script reads it and merges it as defaults.
 Secret vars must always be set in the actual environment — never in `.env`.
 
+### Runtime secrets (`sdk.secrets`, RFC 0043)
+
+Use plugin-scoped env vars for deployment-time secrets that operators supply
+before startup. Use `sdk.secrets` for secrets created at runtime, such as OAuth
+refresh tokens, personal access tokens, webhook signing secrets, and per-user API
+keys.
+
+```ts
+import { sdk } from '@sovereignfs/sdk';
+
+const ref = await sdk.secrets.create({
+  scope: 'user',
+  label: 'GitHub connection',
+  value: refreshToken,
+  metadata: { provider: 'github' },
+});
+
+const token = await sdk.secrets.get(ref.id);
+await sdk.secrets.update(ref.id, rotatedRefreshToken);
+await sdk.secrets.delete(ref.id);
+```
+
+Scopes:
+
+| Scope      | Use for                                                            |
+| ---------- | ------------------------------------------------------------------ |
+| `user`     | A credential for the current user and calling plugin.              |
+| `plugin`   | A runtime secret shared by the calling plugin across users.        |
+| `instance` | Instance-wide plugin configuration; requires `instance:configure`. |
+
+`sdk.secrets.list(scope?)` returns metadata-only refs. Plaintext values are
+never returned by list calls, never exported, and never shown in Account UI.
+Account deletion hard-deletes user-scoped vault rows. User exports include
+metadata only so users can see which connections need to be re-created after
+import.
+
 ### `capabilities` — plugin-declared capabilities (RFC 0022)
 
 Plugins can declare their own fine-grained capabilities that gate features
@@ -833,6 +869,11 @@ The SDK surface (`sdk.*`):
   default, 50 maximum. Do not call Console/admin user routes from plugins; store
   selected user IDs in your own membership/share table and resolve them through
   this SDK surface when rendering.
+- **`secrets`** — encrypted runtime-created plugin secrets (RFC 0043). Use
+  `create/get/list/update/delete` for OAuth tokens, PATs, webhook secrets, and
+  other values created after deployment. `list` returns metadata only; exports
+  never include plaintext values. Use plugin-scoped env vars for operator-supplied
+  deployment secrets instead.
 - **`data`** — cross-plugin data sharing (RFC 0002). `sdk.data.provide(contract,
 resolver)` registers a resolver; `sdk.data.query(ref, params)` reads from
   another plugin's contract (throws `ConsentRequiredError` without a user grant).

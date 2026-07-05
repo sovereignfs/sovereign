@@ -9,6 +9,10 @@ import type {
   ResolveUsersInput,
   SearchUsersInput,
   SendNotificationInput,
+  CreateSecretInput,
+  SecretContext,
+  SecretRef,
+  SecretScope,
 } from './types';
 
 /**
@@ -92,6 +96,13 @@ export interface SdkHost {
      * supplies the payload fields.
      */
     send(input: SendNotificationInput, pluginId: string): Promise<void>;
+  };
+  secrets: {
+    create(input: CreateSecretInput, context: SecretContext): Promise<SecretRef>;
+    get(id: string, context: SecretContext): Promise<string | null>;
+    list(scope: SecretScope | undefined, context: SecretContext): Promise<SecretRef[]>;
+    update(id: string, value: string, context: SecretContext): Promise<SecretRef>;
+    delete(id: string, context: SecretContext): Promise<void>;
   };
 }
 

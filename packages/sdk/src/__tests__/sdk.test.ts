@@ -69,6 +69,39 @@ beforeAll(() => {
         /* no-op */
       },
     },
+    secrets: {
+      async create(input) {
+        return {
+          id: 'secret-1',
+          scope: input.scope,
+          label: input.label,
+          metadata: input.metadata ?? null,
+          createdAt: 1,
+          updatedAt: 1,
+          lastUsedAt: null,
+        };
+      },
+      async get(_id) {
+        return 'secret';
+      },
+      async list() {
+        return [];
+      },
+      async update(_id, _value) {
+        return {
+          id: 'secret-1',
+          scope: 'user',
+          label: 'Updated',
+          metadata: null,
+          createdAt: 1,
+          updatedAt: 2,
+          lastUsedAt: null,
+        };
+      },
+      async delete(_id) {
+        /* no-op */
+      },
+    },
   });
 });
 
@@ -112,6 +145,11 @@ describe('sdk surface', () => {
     expect(typeof sdk.storage.put).toBe('function');
     expect(typeof sdk.storage.get).toBe('function');
     expect(typeof sdk.notifications.send).toBe('function');
+    expect(typeof sdk.secrets.create).toBe('function');
+    expect(typeof sdk.secrets.get).toBe('function');
+    expect(typeof sdk.secrets.list).toBe('function');
+    expect(typeof sdk.secrets.update).toBe('function');
+    expect(typeof sdk.secrets.delete).toBe('function');
     expect(typeof sdk.events.publish).toBe('function');
     expect(typeof sdk.events.subscribe).toBe('function');
   });

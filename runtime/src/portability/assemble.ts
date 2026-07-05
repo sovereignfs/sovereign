@@ -18,6 +18,17 @@ export interface PlatformExportData {
   image: string | null;
   timezone: string;
   theme: string;
+  /** Metadata-only plugin vault entries. Plaintext secret values are never exported. */
+  vaultSecrets: {
+    id: string;
+    pluginId: string;
+    scope: 'user';
+    label: string;
+    metadata: Record<string, unknown> | null;
+    createdAt: number;
+    updatedAt: number;
+    lastUsedAt: number | null;
+  }[];
   /** The avatar file bytes + extension, read from disk by the caller. */
   avatar: { ext: string; bytes: Uint8Array } | null;
 }
@@ -51,6 +62,7 @@ export async function assembleExport(args: AssembleArgs): Promise<Uint8Array> {
   const accountJson = jsonToU8({
     profile: { name: args.platform.name, email: args.platform.email, image: args.platform.image },
     preferences: { timezone: args.platform.timezone, theme: args.platform.theme },
+    vaultSecrets: args.platform.vaultSecrets,
   });
   files['platform/account.json'] = accountJson;
   sections.push({ pluginId: PLATFORM_SECTION_ID, schemaVersion: 1, checksum: sha256(accountJson) });

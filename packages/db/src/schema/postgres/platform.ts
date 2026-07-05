@@ -158,6 +158,22 @@ export const emailDeliveryLog = pgTable('email_delivery_log', {
   metadata: text('metadata'),
 });
 
+/** Platform-managed vault for runtime-created plugin secrets (RFC 0043). */
+export const pluginSecrets = pgTable('plugin_secrets', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  pluginId: text('plugin_id').notNull(),
+  scope: text('scope').notNull(),
+  userId: text('user_id'),
+  label: text('label').notNull(),
+  ciphertext: text('ciphertext').notNull(),
+  metadata: text('metadata'),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+  lastUsedAt: bigint('last_used_at', { mode: 'number' }),
+  deletedAt: bigint('deleted_at', { mode: 'number' }),
+});
+
 /** Browser Web Push subscriptions (RFC 0016). Mirror of SQLite schema. */
 export const pushSubscriptions = pgTable('push_subscriptions', {
   id: text('id').primaryKey(),

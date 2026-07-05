@@ -4,10 +4,17 @@ import {
   DEFAULT_TENANT_ID,
   DEFAULT_ROOT_PLUGIN_ID,
   bootstrapPlatformDb,
+  createPluginSecret,
+  deletePluginSecret,
+  deleteUserData,
   getAccountPrefs,
   getDefaultTenant,
+  getPluginSecret,
   getInstanceConfig,
   getPlatformSetting,
+  listPluginSecrets,
+  listUserPluginSecretRefs,
+  markPluginSecretUsed,
   listAdminActivity,
   listDisabledPluginIds,
   listPluginStatus,
@@ -18,6 +25,7 @@ import {
   setPlatformSetting,
   setPluginEnabled,
   setTenantName,
+  updatePluginSecret,
   type PlatformDb,
 } from '../platform-db';
 
@@ -360,6 +368,77 @@ describe('activity log helpers (RFC 0005)', () => {
     expect(row?.targetType).toBeNull();
     expect(row?.summary).toBeNull();
     expect(row?.metadata).toBeNull();
+  });
+});
+
+describe('plugin secret vault helpers (RFC 0043)', () => {
+  it('keeps plugin and user scopes isolated and hides soft-deleted rows', async () => {
+    const db = await freshDb();
+    const context = { tenantId: DEFAULT_TENANT_ID, pluginId: 'com.example.notes', userId: 'u1' };
+    const ref = await createPluginSecret(db, {
+      ...context,
+      id: 'secret-1',
+      scope: 'user',
+      label: 'OAuth token',
+      ciphertext: 'encrypted-value',
+      metadata: '{"provider":"example"}',
+    });
+
+    expect(ref).toMatchObject({ id: 'secret-1', scope: 'user', label: 'OAuth token' });
+    expect(await getPluginSecret(db, 'secret-1', context)).toMatchObject({
+      ciphertext: 'encrypted-value',
+    });
+    expect(
+      await getPluginSecret(db, 'secret-1', { ...context, pluginId: 'com.example.other' }),
+    ).toBeUndefined();
+    expect(await getPluginSecret(db, 'secret-1', { ...context, userId: 'u2' })).toBeUndefined();
+
+    await markPluginSecretUsed(db, 'secret-1', context);
+    const [listed] = await listPluginSecrets(db, context, 'user');
+    expect(listed?.lastUsedAt).toBeGreaterThan(0);
+
+    await deletePluginSecret(db, 'secret-1', context);
+    expect(await listPluginSecrets(db, context)).toEqual([]);
+  });
+
+  it('exports metadata-only user secret refs and hard-deletes them with user data', async () => {
+    const db = await freshDb();
+    await createPluginSecret(db, {
+      tenantId: DEFAULT_TENANT_ID,
+      pluginId: 'com.example.notes',
+      userId: 'u1',
+      id: 'secret-1',
+      scope: 'user',
+      label: 'OAuth token',
+      ciphertext: 'encrypted-value',
+    });
+    await createPluginSecret(db, {
+      tenantId: DEFAULT_TENANT_ID,
+      pluginId: 'com.example.notes',
+      userId: null,
+      id: 'secret-2',
+      scope: 'plugin',
+      label: 'Webhook key',
+      ciphertext: 'encrypted-plugin-value',
+    });
+
+    expect(await listUserPluginSecretRefs(db, 'u1')).toHaveLength(1);
+    await updatePluginSecret(
+      db,
+      'secret-1',
+      { tenantId: DEFAULT_TENANT_ID, pluginId: 'com.example.notes', userId: 'u1' },
+      'encrypted-value-2',
+    );
+    await deleteUserData(db, 'u1');
+
+    expect(await listUserPluginSecretRefs(db, 'u1')).toEqual([]);
+    expect(
+      await getPluginSecret(db, 'secret-2', {
+        tenantId: DEFAULT_TENANT_ID,
+        pluginId: 'com.example.notes',
+        userId: null,
+      }),
+    ).toBeDefined();
   });
 });
 

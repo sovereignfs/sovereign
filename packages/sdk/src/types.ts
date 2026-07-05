@@ -133,3 +133,36 @@ export interface SendNotificationInput {
   /** Optional `<Icon>` name from `@sovereignfs/ui` to show on the notification. */
   icon?: string;
 }
+
+/** Runtime-created secret scope for the experimental plugin vault (RFC 0043). */
+export type SecretScope = 'user' | 'plugin' | 'instance';
+
+/** Metadata returned for a stored secret. Plaintext values are never included. */
+export interface SecretRef {
+  id: string;
+  scope: SecretScope;
+  label: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: number;
+  updatedAt: number;
+  lastUsedAt: number | null;
+}
+
+export interface CreateSecretInput {
+  scope: SecretScope;
+  label: string;
+  value: string;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface UpdateSecretInput {
+  id: string;
+  value: string;
+}
+
+export interface SecretContext {
+  tenantId: string;
+  pluginId: string;
+  userId: string | null;
+  capabilities: readonly string[];
+}

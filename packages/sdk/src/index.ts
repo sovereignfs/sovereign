@@ -8,6 +8,7 @@ import * as mailer from './mailer';
 import { notifications } from './notifications';
 import * as platform from './platform';
 import { portability } from './portability';
+import { secrets } from './secrets';
 import { billing, events, storage } from './unimplemented';
 
 /**
@@ -22,10 +23,11 @@ import { billing, events, storage } from './unimplemented';
  * (cross-plugin data sharing, RFC 0002), `activity` (activity log, RFC 0005),
  * `portability` (user data export/import, RFC 0007), `env` (plugin-scoped env
  * vars, RFC 0018), `notifications` (notification center, RFC 0015),
- * `directory` (member selection, RFC 0041),
+ * `directory` (member selection, RFC 0041), `secrets` (plugin secret vault,
+ * RFC 0043),
  * `billing` (plugin monetization / entitlement gating, RFC 0003), `storage`,
  * `events`. `data`, `activity`, `portability`, `env`, `notifications`, and
- * `directory` are
+ * `directory`, and `secrets` are
  * implemented; `billing`, `storage`, and `events` throw `NotImplementedError`
  * until their backing mechanisms ship. Their shape may change before they stabilise.
  */
@@ -40,6 +42,7 @@ export const sdk = {
   storage,
   directory,
   notifications,
+  secrets,
   events,
   activity,
   portability,
@@ -79,4 +82,9 @@ export type {
   ActivityLogEntry,
   DrizzleClient,
   SendNotificationInput,
+  CreateSecretInput,
+  SecretContext,
+  SecretRef,
+  SecretScope,
+  UpdateSecretInput,
 } from './types';

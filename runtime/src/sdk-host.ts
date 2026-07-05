@@ -3,17 +3,23 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   DEFAULT_TENANT_ID,
+  createPluginSecret,
+  deletePluginSecret,
   findWorkspaceRoot,
   getConsentGrant,
   getDefaultTenant,
   getInstanceId,
   getPlatformSetting,
+  getPluginSecret,
   getPluginDb,
   getInstanceConfig,
+  listPluginSecrets,
   logDataAccess,
+  markPluginSecretUsed,
   provisionPluginDb,
   recordActivity,
   sendNotification,
+  updatePluginSecret,
 } from '@sovereignfs/db';
 import { getPlatformDb } from './db';
 import { createMailer } from '@sovereignfs/mailer';
@@ -30,6 +36,9 @@ import type {
   ImportHandler,
   ResolveUsersInput,
   SearchUsersInput,
+  SecretContext,
+  SecretRef,
+  SecretScope,
   SendNotificationInput,
 } from '@sovereignfs/sdk';
 import { registerDeleter, registerExporter, registerImporter } from './portability/registry';
@@ -41,6 +50,13 @@ import {
   normalizeSearchUsersInput,
   toDirectoryUsers,
 } from './directory';
+import {
+  decryptSecretValue,
+  encryptSecretValue,
+  metadataToJson,
+  normalizeSecretLabel,
+  toSecretRef,
+} from './secrets';
 
 let _version: string | undefined;
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
@@ -70,6 +86,33 @@ const _mailer = createMailer();
  * `sdk.data.provide('contract', resolver)`. Resets on server restart.
  */
 const _resolverRegistry = new Map<string, DataContractResolver>();
+
+function requireInstanceSecretCapability(scope: SecretScope, context: SecretContext): void {
+  if (scope === 'instance' && !context.capabilities.includes('instance:configure')) {
+    throw new Error('sdk.secrets instance scope requires the instance:configure capability.');
+  }
+}
+
+async function auditSecretOperation(
+  action: string,
+  context: SecretContext,
+  ref: { id: string; scope: SecretScope; label: string },
+): Promise<void> {
+  const pdb = await getPlatformDb();
+  await recordActivity(pdb, {
+    id: randomUUID(),
+    actorId: context.userId,
+    actorType: context.userId ? 'user' : 'plugin',
+    action,
+    subjectUserId: ref.scope === 'user' ? context.userId : null,
+    targetType: 'plugin_secret',
+    targetId: ref.id,
+    pluginId: context.pluginId,
+    visibility: ref.scope === 'user' ? 'user' : 'admin',
+    summary: `Plugin secret ${action.split('.').at(-1) ?? 'changed'}: ${ref.label}`,
+    metadata: { scope: ref.scope },
+  });
+}
 
 async function fetchDirectoryUsers(body: Record<string, unknown>): Promise<DirectoryUser[]> {
   const res = await fetch(`${AUTH_URL}/api/admin/directory`, {
@@ -276,6 +319,85 @@ provideHost({
         category: input.category,
         icon: input.icon,
       });
+    },
+  },
+  secrets: {
+    async create(input, context): Promise<SecretRef> {
+      requireInstanceSecretCapability(input.scope, context);
+      const label = normalizeSecretLabel(input.label);
+      const scopedUserId = input.scope === 'user' ? context.userId : null;
+      const ciphertext = encryptSecretValue(input.value, {
+        tenantId: context.tenantId,
+        pluginId: context.pluginId,
+        scope: input.scope,
+        userId: scopedUserId,
+      });
+      const row = await createPluginSecret(await getPlatformDb(), {
+        id: randomUUID(),
+        tenantId: context.tenantId,
+        pluginId: context.pluginId,
+        userId: context.userId,
+        scope: input.scope,
+        label,
+        ciphertext,
+        metadata: metadataToJson(input.metadata),
+      });
+      const ref = toSecretRef(row);
+      await auditSecretOperation('plugin.secret.created', context, ref);
+      return ref;
+    },
+
+    async get(id, context): Promise<string | null> {
+      const pdb = await getPlatformDb();
+      const row = await getPluginSecret(pdb, id, context);
+      if (!row) return null;
+      requireInstanceSecretCapability(row.scope, context);
+      const value = decryptSecretValue(row.ciphertext, {
+        tenantId: row.tenantId,
+        pluginId: row.pluginId,
+        scope: row.scope,
+        userId: row.userId,
+      });
+      await markPluginSecretUsed(pdb, id, context);
+      await auditSecretOperation('plugin.secret.read', context, row);
+      return value;
+    },
+
+    async list(scope, context): Promise<SecretRef[]> {
+      if (scope) requireInstanceSecretCapability(scope, context);
+      const rows = await listPluginSecrets(await getPlatformDb(), context, scope);
+      return rows
+        .filter(
+          (row) => row.scope !== 'instance' || context.capabilities.includes('instance:configure'),
+        )
+        .map(toSecretRef);
+    },
+
+    async update(id, value, context): Promise<SecretRef> {
+      const pdb = await getPlatformDb();
+      const row = await getPluginSecret(pdb, id, context);
+      if (!row) throw new Error('Plugin secret not found.');
+      requireInstanceSecretCapability(row.scope, context);
+      const ciphertext = encryptSecretValue(value, {
+        tenantId: row.tenantId,
+        pluginId: row.pluginId,
+        scope: row.scope,
+        userId: row.userId,
+      });
+      const updated = await updatePluginSecret(pdb, id, context, ciphertext);
+      if (!updated) throw new Error('Plugin secret not found.');
+      const ref = toSecretRef(updated);
+      await auditSecretOperation('plugin.secret.updated', context, ref);
+      return ref;
+    },
+
+    async delete(id, context): Promise<void> {
+      const pdb = await getPlatformDb();
+      const row = await getPluginSecret(pdb, id, context);
+      if (!row) return;
+      requireInstanceSecretCapability(row.scope, context);
+      await deletePluginSecret(pdb, id, context);
+      await auditSecretOperation('plugin.secret.deleted', context, row);
     },
   },
 });

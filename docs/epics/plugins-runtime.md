@@ -780,7 +780,7 @@ Task 1.14 (shared delivery wrapper and delivery log).
 
 ---
 
-#### 📋 3.27 — Admin-managed external provider configuration
+#### ✅ 3.27 — Admin-managed external provider configuration
 
 **Goal:** Let instance admins configure plugin-owned external provider settings,
 such as OAuth client IDs/secrets, through Console instead of requiring

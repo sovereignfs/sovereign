@@ -5,6 +5,19 @@ follows [Semantic Versioning](https://semver.org); see
 [`docs/sdk-stability.md`](../../docs/sdk-stability.md) for the stability policy
 and which parts of the surface the guarantee covers.
 
+## 1.17.0
+
+**Provider config read helper** (Task 3.27). Experimental.
+
+- `sdk.connections.getProviderConfig(provider)` returns the calling plugin's
+  effective server-side provider config.
+- Effective config merges plugin-scoped runtime env vars with Console-managed
+  provider config. Console-managed values take precedence.
+- New exported types: `ProviderConfig` and `ProviderConfigSource`.
+
+Secret values are returned only to server-side plugin code in the calling
+plugin's request context. Console/API reads expose metadata only.
+
 ## 1.15.0
 
 **New surface: `sdk.secrets`** (RFC 0043 / Task 8.6). Experimental.

@@ -910,6 +910,228 @@ export async function listAllPluginConnectionRefs(
   return rows.map(mapPluginConnectionRow);
 }
 
+// ─── Admin-managed external provider config helpers (Task 3.27) ─────────────
+
+export type PluginProviderConfigStatus = 'configured' | 'error';
+
+export interface PluginProviderConfigRow {
+  id: string;
+  tenantId: string;
+  pluginId: string;
+  provider: string;
+  label: string;
+  publicConfig: string | null;
+  secretRef: string | null;
+  callbackUrl: string | null;
+  scopes: string | null;
+  status: PluginProviderConfigStatus;
+  lastCheckedAt: number | null;
+  lastError: string | null;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt: number | null;
+}
+
+export interface UpsertPluginProviderConfigInput {
+  id: string;
+  tenantId: string;
+  pluginId: string;
+  provider: string;
+  label: string;
+  publicConfig?: string | null;
+  secretRef?: string | null;
+  callbackUrl?: string | null;
+  scopes?: string | null;
+}
+
+function isProviderConfigStatus(value: string): value is PluginProviderConfigStatus {
+  return value === 'configured' || value === 'error';
+}
+
+function requireProviderConfigStatus(value: string): PluginProviderConfigStatus {
+  if (!isProviderConfigStatus(value)) throw new Error(`Invalid provider config status: ${value}`);
+  return value;
+}
+
+function mapPluginProviderConfigRow(row: PluginProviderConfigRow): PluginProviderConfigRow {
+  return { ...row, status: requireProviderConfigStatus(row.status) };
+}
+
+/** List active provider config metadata across the instance for Console. */
+export async function listAllPluginProviderConfigs(
+  pdb: PlatformDb,
+  tenantId = DEFAULT_TENANT_ID,
+): Promise<PluginProviderConfigRow[]> {
+  const rows = await dbAll<PluginProviderConfigRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId", provider,
+               label, public_config AS "publicConfig", secret_ref AS "secretRef",
+               callback_url AS "callbackUrl", scopes, status,
+               last_checked_at AS "lastCheckedAt", last_error AS "lastError",
+               created_at AS "createdAt", updated_at AS "updatedAt",
+               deleted_at AS "deletedAt"
+        FROM plugin_provider_configs
+        WHERE tenant_id = ${tenantId}
+          AND deleted_at IS NULL
+        ORDER BY updated_at DESC`,
+  );
+  return rows.map(mapPluginProviderConfigRow);
+}
+
+/** Fetch one active provider config for a plugin/provider pair. */
+export async function getPluginProviderConfig(
+  pdb: PlatformDb,
+  tenantId: string,
+  pluginId: string,
+  provider: string,
+): Promise<PluginProviderConfigRow | undefined> {
+  const row = await dbGet<PluginProviderConfigRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId", provider,
+               label, public_config AS "publicConfig", secret_ref AS "secretRef",
+               callback_url AS "callbackUrl", scopes, status,
+               last_checked_at AS "lastCheckedAt", last_error AS "lastError",
+               created_at AS "createdAt", updated_at AS "updatedAt",
+               deleted_at AS "deletedAt"
+        FROM plugin_provider_configs
+        WHERE tenant_id = ${tenantId}
+          AND plugin_id = ${pluginId}
+          AND provider = ${provider}
+          AND deleted_at IS NULL
+        ORDER BY updated_at DESC
+        LIMIT 1`,
+  );
+  return row ? mapPluginProviderConfigRow(row) : undefined;
+}
+
+/** Create or update one active instance-level provider config row. */
+export async function upsertPluginProviderConfig(
+  pdb: PlatformDb,
+  input: UpsertPluginProviderConfigInput,
+): Promise<PluginProviderConfigRow> {
+  const now = Math.floor(Date.now() / 1000);
+  const existing = await getPluginProviderConfig(
+    pdb,
+    input.tenantId,
+    input.pluginId,
+    input.provider,
+  );
+  if (!existing) {
+    await dbRun(
+      pdb,
+      sql`INSERT INTO plugin_provider_configs
+            (id, tenant_id, plugin_id, provider, label, public_config, secret_ref,
+             callback_url, scopes, status, last_checked_at, last_error,
+             created_at, updated_at, deleted_at)
+          VALUES
+            (${input.id}, ${input.tenantId}, ${input.pluginId}, ${input.provider},
+             ${input.label}, ${input.publicConfig ?? null}, ${input.secretRef ?? null},
+             ${input.callbackUrl ?? null}, ${input.scopes ?? null}, 'configured',
+             NULL, NULL, ${now}, ${now}, NULL)`,
+    );
+    const row = await getPluginProviderConfig(pdb, input.tenantId, input.pluginId, input.provider);
+    if (!row) throw new Error('Plugin provider config was not readable after creation.');
+    return row;
+  }
+
+  const nextSecretRef = input.secretRef === undefined ? existing.secretRef : input.secretRef;
+  await dbRun(
+    pdb,
+    sql`UPDATE plugin_provider_configs
+        SET label = ${input.label},
+            public_config = ${input.publicConfig ?? null},
+            secret_ref = ${nextSecretRef},
+            callback_url = ${input.callbackUrl ?? null},
+            scopes = ${input.scopes ?? null},
+            status = 'configured',
+            last_error = NULL,
+            updated_at = ${now}
+        WHERE id = ${existing.id}
+          AND tenant_id = ${input.tenantId}
+          AND deleted_at IS NULL`,
+  );
+  const row = await getPluginProviderConfig(pdb, input.tenantId, input.pluginId, input.provider);
+  if (!row) throw new Error('Plugin provider config was not readable after update.');
+  return row;
+}
+
+/** Record a Console-side provider config test result without storing raw provider errors. */
+export async function markPluginProviderConfigChecked(
+  pdb: PlatformDb,
+  id: string,
+  tenantId = DEFAULT_TENANT_ID,
+  error?: string | null,
+): Promise<PluginProviderConfigRow | undefined> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE plugin_provider_configs
+        SET status = ${error ? 'error' : 'configured'},
+            last_checked_at = ${now},
+            last_error = ${error ?? null},
+            updated_at = ${now}
+        WHERE id = ${id}
+          AND tenant_id = ${tenantId}
+          AND deleted_at IS NULL`,
+  );
+  const row = await dbGet<PluginProviderConfigRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId", provider,
+               label, public_config AS "publicConfig", secret_ref AS "secretRef",
+               callback_url AS "callbackUrl", scopes, status,
+               last_checked_at AS "lastCheckedAt", last_error AS "lastError",
+               created_at AS "createdAt", updated_at AS "updatedAt",
+               deleted_at AS "deletedAt"
+        FROM plugin_provider_configs
+        WHERE id = ${id}
+          AND tenant_id = ${tenantId}
+          AND deleted_at IS NULL
+        LIMIT 1`,
+  );
+  return row ? mapPluginProviderConfigRow(row) : undefined;
+}
+
+/** Soft-delete one provider config and its linked instance-scoped vault secret, when present. */
+export async function deletePluginProviderConfig(
+  pdb: PlatformDb,
+  id: string,
+  tenantId = DEFAULT_TENANT_ID,
+): Promise<PluginProviderConfigRow | undefined> {
+  const existing = await dbGet<PluginProviderConfigRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId", provider,
+               label, public_config AS "publicConfig", secret_ref AS "secretRef",
+               callback_url AS "callbackUrl", scopes, status,
+               last_checked_at AS "lastCheckedAt", last_error AS "lastError",
+               created_at AS "createdAt", updated_at AS "updatedAt",
+               deleted_at AS "deletedAt"
+        FROM plugin_provider_configs
+        WHERE id = ${id}
+          AND tenant_id = ${tenantId}
+          AND deleted_at IS NULL
+        LIMIT 1`,
+  );
+  if (!existing) return undefined;
+  const mapped = mapPluginProviderConfigRow(existing);
+  if (mapped.secretRef) {
+    await deletePluginSecret(pdb, mapped.secretRef, {
+      tenantId: mapped.tenantId,
+      pluginId: mapped.pluginId,
+      userId: null,
+    });
+  }
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE plugin_provider_configs
+        SET deleted_at = ${now}, updated_at = ${now}
+        WHERE id = ${id}
+          AND tenant_id = ${tenantId}
+          AND deleted_at IS NULL`,
+  );
+  return mapped;
+}
+
 // ─── Activity log helpers (RFC 0005) ─────────────────────────────────────────
 
 export interface ActivityLogRow {

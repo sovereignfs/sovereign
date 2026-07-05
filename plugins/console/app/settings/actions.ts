@@ -154,3 +154,74 @@ export async function uploadFaviconAction(
   revalidatePath('/');
   return { ok: true, message: 'Favicon uploaded.' };
 }
+
+export async function saveProviderConfigAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  await sdk.auth.requireSession();
+  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
+  const pluginId = formData.get('pluginId') as string | null;
+  const provider = formData.get('provider') as string | null;
+  if (!pluginId || !provider) return { ok: false, error: 'Provider identity is missing.' };
+
+  const publicValues: Record<string, string> = {};
+  const secretValues: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (typeof value !== 'string') continue;
+    if (key.startsWith('public:')) publicValues[key.slice('public:'.length)] = value;
+    if (key.startsWith('secret:')) secretValues[key.slice('secret:'.length)] = value;
+  }
+
+  const res = await fetch(`${SELF_URL}/api/admin/provider-configs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminKey}` },
+    body: JSON.stringify({ pluginId, provider, publicValues, secretValues }),
+  });
+  if (!res.ok) {
+    const detail = ((await res.json().catch(() => null)) as { error?: string } | null)?.error;
+    return { ok: false, error: detail ?? `Failed to save provider config: ${res.status}` };
+  }
+  revalidatePath('/console/settings');
+  return { ok: true, message: 'Provider config saved.' };
+}
+
+export async function testProviderConfigAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  await sdk.auth.requireSession();
+  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
+  const id = formData.get('id') as string | null;
+  if (!id) return { ok: false, error: 'Save the provider config before testing.' };
+  const res = await fetch(`${SELF_URL}/api/admin/provider-configs/${encodeURIComponent(id)}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${adminKey}` },
+  });
+  const body = (await res.json().catch(() => null)) as { error?: string } | null;
+  if (!res.ok || body?.error) {
+    return { ok: false, error: body?.error ?? `Provider config test failed: ${res.status}` };
+  }
+  revalidatePath('/console/settings');
+  return { ok: true, message: 'Provider config test passed.' };
+}
+
+export async function deleteProviderConfigAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  await sdk.auth.requireSession();
+  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
+  const id = formData.get('id') as string | null;
+  if (!id) return { ok: false, error: 'No saved provider config to remove.' };
+  const res = await fetch(`${SELF_URL}/api/admin/provider-configs/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${adminKey}` },
+  });
+  if (!res.ok) {
+    const detail = ((await res.json().catch(() => null)) as { error?: string } | null)?.error;
+    return { ok: false, error: detail ?? `Failed to remove provider config: ${res.status}` };
+  }
+  revalidatePath('/console/settings');
+  return { ok: true, message: 'Provider config removed.' };
+}

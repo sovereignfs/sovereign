@@ -231,6 +231,67 @@ describe('validateManifest', () => {
     expect(res.valid).toBe(true);
   });
 
+  it('accepts external provider config declarations (Task 3.27)', () => {
+    const res = validateManifest({
+      ...base,
+      connections: {
+        providers: [
+          {
+            id: 'github',
+            title: 'GitHub',
+            callbackPath: '/connections/github/callback',
+            scopes: ['user'],
+            config: {
+              public: {
+                clientId: {
+                  label: 'Client ID',
+                  env: 'GITHUB_CLIENT_ID',
+                  required: true,
+                },
+              },
+              secrets: {
+                clientSecret: {
+                  label: 'Client secret',
+                  env: 'GITHUB_CLIENT_SECRET',
+                  required: true,
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects malformed external provider config env keys (Task 3.27)', () => {
+    const res = validateManifest({
+      ...base,
+      connections: {
+        providers: [
+          {
+            id: 'github',
+            title: 'GitHub',
+            callbackPath: '/connections/github/callback',
+            scopes: ['user'],
+            config: {
+              secrets: {
+                clientSecret: {
+                  label: 'Client secret',
+                  env: 'github-client-secret',
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('provider config env keys');
+    }
+  });
+
   it('rejects connection callback paths outside the plugin route tree (RFC 0049)', () => {
     const res = validateManifest({
       ...base,

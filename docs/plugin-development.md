@@ -511,6 +511,22 @@ returned secret reference and sanitized provider metadata on the connection row.
         "title": "Google Mail",
         "callbackPath": "/connections/google/callback",
         "scopes": ["user"],
+        "config": {
+          "public": {
+            "clientId": {
+              "label": "Client ID",
+              "env": "GOOGLE_CLIENT_ID",
+              "required": true,
+            },
+          },
+          "secrets": {
+            "clientSecret": {
+              "label": "Client secret",
+              "env": "GOOGLE_CLIENT_SECRET",
+              "required": true,
+            },
+          },
+        },
       },
     ],
   },
@@ -551,6 +567,40 @@ plugin-owned; call the provider first, then `sdk.connections.disconnect(id)`.
 Token refresh failures should call `sdk.connections.markError(id, { error,
 status: 'needs_reauth' })` with sanitized messages only. Account and Console
 show connection metadata and status; they never show credentials.
+
+Provider declarations may include `config.public` and `config.secrets` maps for
+instance-level settings such as OAuth client IDs and client secrets. Console
+shows those fields to admins, displays the absolute callback URL, stores public
+values in platform metadata, and stores secret values through the plugin secret
+vault. Field `env` names are plugin-scoped runtime fallbacks; for the example
+above, `GOOGLE_CLIENT_ID` resolves as
+`SV_PLUGIN_<PLUGIN_SLUG>_GOOGLE_CLIENT_ID`. Console-managed values take
+precedence over env-provided values, so operators can rotate credentials without
+changing deployment env vars or restarting the app. Leaving a secret input blank
+keeps the stored secret; submitting a new value rotates the vault entry. Removing
+the provider config deletes the linked vault secret reference.
+
+Read the effective provider config server-side:
+
+```ts
+const config = await sdk.connections.getProviderConfig('email.google');
+if (!config.configured) {
+  throw new Error(`Google Mail is not configured: ${config.missingRequired.join(', ')}`);
+}
+
+const params = new URLSearchParams({
+  client_id: config.publicValues.clientId,
+  redirect_uri: config.callbackUrl ?? '',
+  scope: 'https://www.googleapis.com/auth/gmail.readonly',
+});
+```
+
+`getProviderConfig()` is scoped to the calling plugin from the request context,
+so a plugin cannot read another plugin's provider settings. Secret values are
+returned only to server-side plugin code through this SDK call; they are not
+included in Console reads, activity logs, exports, generated files, or plugin
+tables. Test failures and provider errors should be sanitized before storing
+them with `sdk.connections.markError()` or showing them in Console.
 
 ### `capabilities` — plugin-declared capabilities (RFC 0022)
 
@@ -1003,7 +1053,10 @@ remapId(originalId) }` — use `remapId` to translate stored IDs to fresh ones
   `sdk.connections.create/list/get/update/disconnect/markUsed/markError`
   manages platform-owned metadata rows for the calling plugin; all credential
   values stay in `sdk.secrets`. `createOAuthState` and `verifyOAuthState` provide
-  signed OAuth callback state helpers.
+  signed OAuth callback state helpers. `getProviderConfig(provider)` returns the
+  calling plugin's effective server-side provider config, merging plugin-scoped
+  runtime env vars with Console-managed config where Console values take
+  precedence.
 - **`notifications`** — Notification Center (RFC 0015). `sdk.notifications.send(input, requestHeaders)`
   delivers a notification to a user's inbox. Requires the `notifications:send` manifest
   permission. The runtime injects `source` (plugin ID) and `sourceType` automatically —

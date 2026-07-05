@@ -10,6 +10,7 @@ import type {
   CreateConnectionInput,
   MarkConnectionErrorInput,
   OAuthStateInput,
+  ProviderConfig,
   UpdateConnectionInput,
 } from './types';
 
@@ -96,5 +97,10 @@ export const connections = {
     const context = await connectionContext();
     requireUserForUserScope('user', context.userId);
     return requireHost().connections.verifyOAuthState(state, context);
+  },
+
+  async getProviderConfig(provider: string): Promise<ProviderConfig> {
+    const context = await connectionContext();
+    return requireHost().connections.getProviderConfig(provider, context);
   },
 };

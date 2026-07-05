@@ -56,6 +56,28 @@ export type ManifestDatabase = z.infer<typeof manifestDatabaseSchema>;
 export type ManifestDatabaseDialect = 'sqlite';
 export type ManifestDatabaseIsolation = 'shared' | 'isolated';
 
+const providerConfigFieldKeySchema = z
+  .string()
+  .regex(
+    /^[A-Za-z][A-Za-z0-9_]*$/,
+    'provider config field keys must start with a letter and contain only letters, digits, or underscores',
+  );
+
+const providerConfigFieldSchema = z
+  .object({
+    label: z.string().min(1),
+    description: z.string().optional(),
+    env: z
+      .string()
+      .regex(
+        /^[A-Z][A-Z0-9_]*$/,
+        'provider config env keys must start with a capital letter and contain only capital letters, digits, and underscores',
+      )
+      .optional(),
+    required: z.boolean().optional(),
+  })
+  .strict();
+
 export function manifestDatabaseIsolation(database: unknown): ManifestDatabaseIsolation {
   if (database === 'isolated') return 'isolated';
   if (
@@ -279,6 +301,17 @@ const manifestObjectSchema = z
                 title: z.string().min(1),
                 callbackPath: z.string().min(1).startsWith('/', 'callbackPath must start with "/"'),
                 scopes: z.array(z.enum(['user', 'plugin', 'instance'])).min(1),
+                config: z
+                  .object({
+                    public: z
+                      .record(providerConfigFieldKeySchema, providerConfigFieldSchema)
+                      .optional(),
+                    secrets: z
+                      .record(providerConfigFieldKeySchema, providerConfigFieldSchema)
+                      .optional(),
+                  })
+                  .strict()
+                  .optional(),
               })
               .strict(),
           )

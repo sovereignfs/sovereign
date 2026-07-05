@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { groupClones, parsePluginsConfig, planInstall } from '../install-plugins';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  groupClones,
+  isPluginInstalled,
+  parsePluginsConfig,
+  planInstall,
+} from '../install-plugins';
 
 describe('parsePluginsConfig', () => {
   it('parses an empty plugins array', () => {
@@ -124,5 +132,36 @@ describe('groupClones', () => {
       { id: 'b', repository: 'repo1', ref: 'sha2' },
     ]);
     expect(groups).toHaveLength(2);
+  });
+});
+
+describe('isPluginInstalled', () => {
+  let pluginsDir: string;
+
+  beforeEach(() => {
+    pluginsDir = mkdtempSync(join(tmpdir(), 'install-plugins-'));
+  });
+
+  afterEach(() => {
+    rmSync(pluginsDir, { recursive: true, force: true });
+  });
+
+  it('is false when neither the plain nor .local directory exists', () => {
+    expect(isPluginInstalled('sovereign-tasks', pluginsDir)).toBe(false);
+  });
+
+  it('is true when plugins/<id> exists', () => {
+    mkdirSync(join(pluginsDir, 'sovereign-tasks'));
+    expect(isPluginInstalled('sovereign-tasks', pluginsDir)).toBe(true);
+  });
+
+  // The bug this guards against: a developer's plugins/<id>.local dev-override
+  // checkout must count as "already installed" too, or a fresh install:plugins
+  // run reclones the real repo alongside it — both declare the same manifest
+  // id, producing a duplicate registry entry (a broken React key in the nav
+  // rail at runtime).
+  it('is true when only plugins/<id>.local exists', () => {
+    mkdirSync(join(pluginsDir, 'sovereign-tasks.local'));
+    expect(isPluginInstalled('sovereign-tasks', pluginsDir)).toBe(true);
   });
 });

@@ -7,7 +7,7 @@
     "dev": "tsx ../scripts/dev.ts",
     "generate": "tsx ../scripts/generate-registry.ts",
     "build": "next build",
-    "start": "tsx ../scripts/next-server.ts runtime start",
+    "start": "node ../scripts/next-server.mjs runtime start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

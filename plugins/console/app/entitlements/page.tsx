@@ -11,7 +11,7 @@ interface MemberRow {
   status: 'active' | 'deactivated' | 'invited';
 }
 
-const RUNTIME_URL = `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
+const RUNTIME_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 const AUTH_URL =
   process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 

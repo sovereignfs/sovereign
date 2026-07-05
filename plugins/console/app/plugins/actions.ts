@@ -3,9 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { sdk } from '@sovereignfs/sdk';
 
-// Self-fetch address for the runtime's own admin API. In native dev the runtime
-// may run on RUNTIME_PORT; in Docker the container listens on PORT.
-const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
+// Self-fetch address for the runtime's own admin API. Native dev may run on
+// RUNTIME_PORT; otherwise the runtime defaults to localhost:3000.
+const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
 async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';

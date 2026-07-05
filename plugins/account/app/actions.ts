@@ -9,7 +9,7 @@ import { validatePasswordChange } from './_lib/password';
 
 const AUTH_URL =
   process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
-const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
+const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
 async function sessionCookie(): Promise<string> {
   return (await headers()).get('cookie') ?? '';

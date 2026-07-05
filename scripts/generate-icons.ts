@@ -14,7 +14,7 @@
  *
  * Lucide license: ISC — see `packages/ui/NOTICE`.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ICON_LIST, type IconName } from './icon-list.ts';
@@ -116,6 +116,22 @@ async function main() {
   }
 
   writeFileSync(join(OUT_DIR, 'index.ts'), indexFile(ICON_LIST));
+
+  // Prune .tsx files for icons removed from ICON_LIST — otherwise a stale
+  // file lingers on disk (unreferenced by index.ts, so silently unused) after
+  // an icon is dropped from the curated list, exactly as happened before this
+  // check existed: sliders-horizontal.tsx and terminal.tsx survived on disk
+  // after icon-list.ts was trimmed, undetected until the next regeneration.
+  const currentNames = new Set<string>(ICON_LIST);
+  for (const entry of readdirSync(OUT_DIR, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.tsx')) continue;
+    const name = entry.name.slice(0, -'.tsx'.length);
+    if (!currentNames.has(name as IconName)) {
+      rmSync(join(OUT_DIR, entry.name));
+      console.log(`  ✗ ${name} (removed — no longer in icon-list.ts)`);
+    }
+  }
+
   console.log(
     `\n[generate-icons] ${String(ICON_LIST.length)} icons → packages/ui/src/components/Icon/icons/`,
   );

@@ -214,6 +214,43 @@ describe('validateManifest', () => {
     expect(res.valid).toBe(false);
   });
 
+  it('accepts external connection provider declarations (RFC 0049)', () => {
+    const res = validateManifest({
+      ...base,
+      connections: {
+        providers: [
+          {
+            id: 'email.google',
+            title: 'Google Mail',
+            callbackPath: '/connections/google/callback',
+            scopes: ['user'],
+          },
+        ],
+      },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects connection callback paths outside the plugin route tree (RFC 0049)', () => {
+    const res = validateManifest({
+      ...base,
+      connections: {
+        providers: [
+          {
+            id: 'Email.Google',
+            title: 'Google Mail',
+            callbackPath: 'connections/google/callback',
+            scopes: ['user'],
+          },
+        ],
+      },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('callbackPath');
+    }
+  });
+
   // RFC 0022 — plugin-declared capabilities
   it('accepts a manifest with a capabilities field (RFC 0022)', () => {
     const res = validateManifest({

@@ -52,6 +52,7 @@ group during the pre-v1 hardening period:
 - `sdk.notifications` — Notification Center (RFC 0015). `sdk.notifications.send()` delivers in-app notifications to users; requires the `notifications:send` manifest permission. Polling default (30s), SSE optional.
 - `sdk.directory` — member search and explicit user resolution for display-safe user selection (RFC 0041).
 - `sdk.secrets` — encrypted runtime-created plugin secrets (RFC 0043). Values are server-side only; list/export surfaces expose metadata only.
+- `sdk.connections` — external provider connection metadata and OAuth state helpers (RFC 0049). Credential values remain in `sdk.secrets`; Account/Console surfaces expose metadata only.
 
 These surfaces are **reserved** — they exist as stubs and throw
 `NotImplementedError` (or in `sdk.billing`'s case, `EntitlementRequiredError`).

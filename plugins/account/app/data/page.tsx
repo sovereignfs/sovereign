@@ -24,9 +24,21 @@ interface VaultSecret {
   lastUsedAt: number | null;
 }
 
+interface ExternalConnection {
+  id: string;
+  pluginId: string;
+  scope: 'user' | 'plugin' | 'instance';
+  provider: string;
+  label: string;
+  status: 'connected' | 'needs_reauth' | 'paused' | 'disconnected' | 'error';
+  updatedAt: number;
+  lastUsedAt: number | null;
+}
+
 export default function DataPage() {
   const [grants, setGrants] = useState<ConsentGrant[]>([]);
   const [secrets, setSecrets] = useState<VaultSecret[]>([]);
+  const [connections, setConnections] = useState<ExternalConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,6 +54,14 @@ export default function DataPage() {
       if (!secretsRes.ok) throw new Error(`Failed to load vault metadata: ${secretsRes.status}`);
       const secretsData = (await secretsRes.json()) as { secrets: VaultSecret[] };
       setSecrets(secretsData.secrets);
+      const connectionsRes = await fetch('/api/account/connections', { cache: 'no-store' });
+      if (!connectionsRes.ok) {
+        throw new Error(`Failed to load connection metadata: ${connectionsRes.status}`);
+      }
+      const connectionsData = (await connectionsRes.json()) as {
+        connections: ExternalConnection[];
+      };
+      setConnections(connectionsData.connections);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -61,6 +81,11 @@ export default function DataPage() {
   const revokeSecret = async (id: string) => {
     const res = await fetch(`/api/account/secrets/${id}`, { method: 'DELETE' });
     if (res.ok) setSecrets((prev) => prev.filter((secret) => secret.id !== id));
+  };
+
+  const disconnectConnection = async (id: string) => {
+    const res = await fetch(`/api/account/connections/${id}`, { method: 'DELETE' });
+    if (res.ok) setConnections((prev) => prev.filter((conn) => conn.id !== id));
   };
 
   return (
@@ -93,6 +118,44 @@ export default function DataPage() {
                   onClick={() => void revoke(grant.id)}
                 >
                   Revoke
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Connected accounts</h2>
+          <p className={styles.sectionSubtitle}>
+            These external provider accounts are connected by apps. Disconnecting removes the saved
+            credential reference where possible.
+          </p>
+        </div>
+
+        {loading && <p className={styles.help}>Loading&hellip;</p>}
+        {!loading && connections.length === 0 && (
+          <p className={styles.help}>No connected external accounts.</p>
+        )}
+
+        {connections.length > 0 && (
+          <ul className={styles.sessionGroup}>
+            {connections.map((conn) => (
+              <li key={conn.id} className={styles.sessionRow}>
+                <div className={styles.sessionInfo}>
+                  <span className={styles.sessionDevice}>{conn.label}</span>
+                  <span className={styles.sessionMeta}>
+                    {conn.pluginId} · {conn.provider} · {conn.status} · Updated{' '}
+                    {new Date(conn.updatedAt * 1000).toLocaleString()}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className={styles.revokeButton}
+                  onClick={() => void disconnectConnection(conn.id)}
+                >
+                  Disconnect
                 </button>
               </li>
             ))}

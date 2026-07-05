@@ -130,6 +130,30 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
        ON plugin_secrets (tenant_id, plugin_id, scope, deleted_at)`,
     `CREATE INDEX IF NOT EXISTS plugin_secrets_user_idx
        ON plugin_secrets (tenant_id, user_id, deleted_at)`,
+    // RFC 0049 — External connection metadata. Secrets are referenced by id
+    // only and stay in `plugin_secrets`.
+    `CREATE TABLE IF NOT EXISTS plugin_connections (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      plugin_id TEXT NOT NULL,
+      scope TEXT NOT NULL,
+      user_id TEXT,
+      provider TEXT NOT NULL,
+      label TEXT NOT NULL,
+      status TEXT NOT NULL,
+      secret_ref TEXT,
+      metadata TEXT,
+      last_checked_at ${ts},
+      last_used_at ${ts},
+      last_error TEXT,
+      created_at ${ts} NOT NULL,
+      updated_at ${ts} NOT NULL,
+      disconnected_at ${ts}
+    )`,
+    `CREATE INDEX IF NOT EXISTS plugin_connections_plugin_provider_idx
+       ON plugin_connections (tenant_id, plugin_id, provider, status)`,
+    `CREATE INDEX IF NOT EXISTS plugin_connections_user_idx
+       ON plugin_connections (tenant_id, user_id, status)`,
     // RFC 0015 — Notification Center
     `CREATE TABLE IF NOT EXISTS notifications (
       id TEXT PRIMARY KEY,

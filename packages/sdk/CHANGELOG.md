@@ -120,6 +120,19 @@ Defined capabilities (v1): `plugin:access`, `profile:manage`, `console:access`,
 `user:view`, `user:manage`, `plugin:manage`, `tenant:view`, `tenant:configure`,
 `health:view`, `activity:view`, `role:assign`.
 
+## 1.16.0
+
+**New surface: `sdk.connections`** (external provider connections, RFC 0049 /
+Task 3.19). Experimental — not covered by the v1 stability guarantee.
+
+- `sdk.connections.create/list/get/update/disconnect/markUsed/markError`
+  manages platform-owned, metadata-only external connection records scoped to
+  the calling plugin, tenant, user, and provider.
+- Credential material stays in `sdk.secrets`; connection rows store only
+  metadata and secret references.
+- `createOAuthState` and `verifyOAuthState` provide signed, expiry-bound OAuth
+  state helpers for server-side callback validation.
+
 ## 1.5.0
 
 **New surface: `sdk.env`** (plugin-scoped environment variables, RFC 0018 / Task

@@ -162,6 +162,7 @@ serves at `/tasks/lists`.
 | `data`          | object (see below)                       | no                                   | Cross-plugin data sharing declarations (RFC 0002). Declare the contracts this plugin exposes (`data.provides`) and the ones it reads (`data.consumes`). Requires the matching `data:provide` / `data:consume` permissions.                                                                         |
 | `env`           | object (see below)                       | no                                   | Plugin-scoped environment variable declarations (RFC 0018). Keys are auto-namespaced to `SV_PLUGIN_<SLUG>_<KEY>`; read them via `sdk.env.get('KEY')` in server code.                                                                                                                               |
 | `capabilities`  | object (see below)                       | no                                   | Plugin-declared capabilities (RFC 0022). Each key is a local name auto-namespaced to `<pluginId>:<capName>`; enforce access inside the plugin via `sdk.auth.hasCapability`.                                                                                                                        |
+| `connections`   | object (see below)                       | no                                   | External provider connection declarations (RFC 0049). Lists OAuth/connect-account providers and callback paths for platform-visible connection metadata.                                                                                                                                           |
 | `monetization`  | object (see below)                       | no                                   | Monetization model (RFC 0003). Declares the billing model, tiers, and the author's Ed25519 public key for offline license verification. Only `sovereign`/`community` plugins may declare this.                                                                                                     |
 | `repository`    | string (URL)                             | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                                                                          |
 
@@ -494,6 +495,62 @@ never returned by list calls, never exported, and never shown in Account UI.
 Account deletion hard-deletes user-scoped vault rows. User exports include
 metadata only so users can see which connections need to be re-created after
 import.
+
+### External connections (`sdk.connections`, RFC 0049)
+
+Use `sdk.connections` for runtime connection metadata around external accounts
+or providers. Store credential material first with `sdk.secrets`; store only the
+returned secret reference and sanitized provider metadata on the connection row.
+
+```jsonc
+{
+  "connections": {
+    "providers": [
+      {
+        "id": "email.google",
+        "title": "Google Mail",
+        "callbackPath": "/connections/google/callback",
+        "scopes": ["user"],
+      },
+    ],
+  },
+}
+```
+
+```ts
+import { sdk } from '@sovereignfs/sdk';
+
+const state = await sdk.connections.createOAuthState({
+  provider: 'email.google',
+  callbackPath: '/connections/google/callback',
+});
+
+// In the callback route, validate `state`, exchange the provider code
+// server-side, save tokens in the vault, then create/update metadata.
+await sdk.connections.verifyOAuthState(stateFromProvider);
+const secret = await sdk.secrets.create({
+  scope: 'user',
+  label: 'Google Mail tokens',
+  value: JSON.stringify(tokens),
+  metadata: { provider: 'email.google' },
+});
+await sdk.connections.create({
+  scope: 'user',
+  provider: 'email.google',
+  label: 'Google Mail',
+  secretRef: secret.id,
+  metadata: { account: 'user@example.com' },
+});
+```
+
+OAuth state tokens are signed, expiry-bound, tied to the calling plugin and
+current user, and rejected after successful validation in the running process.
+Disconnecting a connection removes the associated vault secret reference and
+soft-deletes the linked secret where possible. Provider-side token revocation is
+plugin-owned; call the provider first, then `sdk.connections.disconnect(id)`.
+Token refresh failures should call `sdk.connections.markError(id, { error,
+status: 'needs_reauth' })` with sanitized messages only. Account and Console
+show connection metadata and status; they never show credentials.
 
 ### `capabilities` — plugin-declared capabilities (RFC 0022)
 
@@ -942,6 +999,11 @@ remapId(originalId) }` — use `remapId` to translate stored IDs to fresh ones
   the `x-sovereign-plugin-id` request header. Returns `null` when absent or
   called outside a plugin route. Declare vars in the manifest `env` field
   (see above). Server-side only (uses `next/headers`).
+- **`connections`** — external provider connection metadata (RFC 0049).
+  `sdk.connections.create/list/get/update/disconnect/markUsed/markError`
+  manages platform-owned metadata rows for the calling plugin; all credential
+  values stay in `sdk.secrets`. `createOAuthState` and `verifyOAuthState` provide
+  signed OAuth callback state helpers.
 - **`notifications`** — Notification Center (RFC 0015). `sdk.notifications.send(input, requestHeaders)`
   delivers a notification to a user's inbox. Requires the `notifications:send` manifest
   permission. The runtime injects `source` (plugin ID) and `sourceType` automatically —

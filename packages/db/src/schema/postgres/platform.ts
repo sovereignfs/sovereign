@@ -174,6 +174,26 @@ export const pluginSecrets = pgTable('plugin_secrets', {
   deletedAt: bigint('deleted_at', { mode: 'number' }),
 });
 
+/** Platform-owned metadata for plugin-managed external service connections (RFC 0049). */
+export const pluginConnections = pgTable('plugin_connections', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  pluginId: text('plugin_id').notNull(),
+  scope: text('scope').notNull(),
+  userId: text('user_id'),
+  provider: text('provider').notNull(),
+  label: text('label').notNull(),
+  status: text('status').notNull(),
+  secretRef: text('secret_ref'),
+  metadata: text('metadata'),
+  lastCheckedAt: bigint('last_checked_at', { mode: 'number' }),
+  lastUsedAt: bigint('last_used_at', { mode: 'number' }),
+  lastError: text('last_error'),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+  disconnectedAt: bigint('disconnected_at', { mode: 'number' }),
+});
+
 /** Browser Web Push subscriptions (RFC 0016). Mirror of SQLite schema. */
 export const pushSubscriptions = pgTable('push_subscriptions', {
   id: text('id').primaryKey(),

@@ -4,21 +4,28 @@ import { join } from 'node:path';
 import {
   DEFAULT_TENANT_ID,
   createPluginSecret,
+  createPluginConnection,
   deletePluginSecret,
+  disconnectPluginConnection,
   findWorkspaceRoot,
   getConsentGrant,
   getDefaultTenant,
   getInstanceId,
   getPlatformSetting,
   getPluginSecret,
+  getPluginConnection,
   getPluginDb,
   getInstanceConfig,
+  listPluginConnections,
   listPluginSecrets,
   logDataAccess,
+  markPluginConnectionError,
+  markPluginConnectionUsed,
   markPluginSecretUsed,
   provisionPluginDb,
   recordActivity,
   sendNotification,
+  updatePluginConnection,
   updatePluginSecret,
 } from '@sovereignfs/db';
 import { getPlatformDb } from './db';
@@ -28,6 +35,8 @@ import { ConsentRequiredError, provideHost } from '@sovereignfs/sdk';
 import { registry } from '../generated/registry';
 import type {
   ActivityLogEntry,
+  ConnectionContext,
+  ConnectionRef,
   DataContractRef,
   DataContractResolver,
   DirectoryUser,
@@ -50,6 +59,16 @@ import {
   normalizeSearchUsersInput,
   toDirectoryUsers,
 } from './directory';
+import {
+  createOAuthStateToken,
+  errorToJson,
+  metadataToJson as connectionMetadataToJson,
+  normalizeConnectionLabel,
+  normalizeProvider,
+  requireInstanceConnectionCapability,
+  toConnectionRef,
+  verifyOAuthStateToken,
+} from './connections';
 import {
   decryptSecretValue,
   encryptSecretValue,
@@ -112,6 +131,27 @@ async function auditSecretOperation(
     visibility: ref.scope === 'user' ? 'user' : 'admin',
     summary: `Plugin secret ${action.split('.').at(-1) ?? 'changed'}: ${ref.label}`,
     metadata: { scope: ref.scope },
+  });
+}
+
+async function auditConnectionOperation(
+  action: string,
+  context: ConnectionContext,
+  ref: { id: string; scope: string; label: string; provider: string },
+): Promise<void> {
+  const pdb = await getPlatformDb();
+  await recordActivity(pdb, {
+    id: randomUUID(),
+    actorId: context.userId,
+    actorType: context.userId ? 'user' : 'plugin',
+    action,
+    subjectUserId: ref.scope === 'user' ? context.userId : null,
+    targetType: 'plugin_connection',
+    targetId: ref.id,
+    pluginId: context.pluginId,
+    visibility: ref.scope === 'user' ? 'user' : 'admin',
+    summary: `External connection ${action.split('.').at(-1) ?? 'changed'}: ${ref.label}`,
+    metadata: { scope: ref.scope, provider: ref.provider },
   });
 }
 
@@ -399,6 +439,111 @@ provideHost({
       requireInstanceSecretCapability(row.scope, context);
       await deletePluginSecret(pdb, id, context);
       await auditSecretOperation('plugin.secret.deleted', context, row);
+    },
+  },
+  connections: {
+    async create(input, context): Promise<ConnectionRef> {
+      requireInstanceConnectionCapability(input.scope, context.capabilities);
+      const row = await createPluginConnection(await getPlatformDb(), {
+        id: randomUUID(),
+        tenantId: context.tenantId,
+        pluginId: context.pluginId,
+        userId: context.userId,
+        scope: input.scope,
+        provider: normalizeProvider(input.provider),
+        label: normalizeConnectionLabel(input.label),
+        secretRef: input.secretRef ?? null,
+        metadata: connectionMetadataToJson(input.metadata),
+      });
+      const ref = toConnectionRef(row);
+      await auditConnectionOperation('plugin.connection.created', context, row);
+      return ref;
+    },
+
+    async list(filter, context): Promise<ConnectionRef[]> {
+      if (filter?.scope) {
+        requireInstanceConnectionCapability(filter.scope, context.capabilities);
+      }
+      const rows = await listPluginConnections(await getPlatformDb(), context, {
+        ...filter,
+        provider: filter?.provider ? normalizeProvider(filter.provider) : undefined,
+      });
+      return rows
+        .filter(
+          (row) => row.scope !== 'instance' || context.capabilities.includes('instance:configure'),
+        )
+        .map(toConnectionRef);
+    },
+
+    async get(id, context): Promise<ConnectionRef | null> {
+      const row = await getPluginConnection(await getPlatformDb(), id, context);
+      if (!row) return null;
+      requireInstanceConnectionCapability(row.scope, context.capabilities);
+      return toConnectionRef(row);
+    },
+
+    async update(id, input, context): Promise<ConnectionRef> {
+      const pdb = await getPlatformDb();
+      const existing = await getPluginConnection(pdb, id, context);
+      if (!existing) throw new Error('Plugin connection not found.');
+      requireInstanceConnectionCapability(existing.scope, context.capabilities);
+      const updated = await updatePluginConnection(pdb, id, context, {
+        label: input.label ? normalizeConnectionLabel(input.label) : undefined,
+        status: input.status,
+        metadata:
+          input.metadata === undefined ? undefined : connectionMetadataToJson(input.metadata),
+        secretRef: input.secretRef,
+        lastCheckedAt: input.lastCheckedAt,
+      });
+      if (!updated) throw new Error('Plugin connection not found.');
+      await auditConnectionOperation('plugin.connection.updated', context, updated);
+      return toConnectionRef(updated);
+    },
+
+    async disconnect(id, context): Promise<void> {
+      const pdb = await getPlatformDb();
+      const existing = await getPluginConnection(pdb, id, context);
+      if (!existing) return;
+      requireInstanceConnectionCapability(existing.scope, context.capabilities);
+      await disconnectPluginConnection(pdb, id, context);
+      await auditConnectionOperation('plugin.connection.disconnected', context, existing);
+    },
+
+    async markUsed(id, context): Promise<void> {
+      await markPluginConnectionUsed(await getPlatformDb(), id, context);
+    },
+
+    async markError(id, input, context): Promise<ConnectionRef> {
+      const row = await markPluginConnectionError(
+        await getPlatformDb(),
+        id,
+        context,
+        errorToJson(input.error),
+        input.status ?? 'error',
+      );
+      if (!row) throw new Error('Plugin connection not found.');
+      await auditConnectionOperation('plugin.connection.error', context, row);
+      return toConnectionRef(row);
+    },
+
+    async createOAuthState(input, context): Promise<string> {
+      if (!context.userId) throw new Error('OAuth state creation requires an authenticated user.');
+      return createOAuthStateToken({
+        pluginId: context.pluginId,
+        userId: context.userId,
+        provider: input.provider,
+        callbackPath: input.callbackPath,
+        nonce: input.nonce,
+        metadata: input.metadata,
+        expiresInSeconds: input.expiresInSeconds,
+      });
+    },
+
+    async verifyOAuthState(state, context) {
+      return verifyOAuthStateToken(state, {
+        pluginId: context.pluginId,
+        userId: context.userId,
+      });
     },
   },
 });

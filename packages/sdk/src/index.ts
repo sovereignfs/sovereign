@@ -1,5 +1,6 @@
 import * as auth from './auth';
 import { activity } from './activity';
+import { connections } from './connections';
 import { data } from './data';
 import { directory } from './directory';
 import * as db from './db';
@@ -24,12 +25,12 @@ import { billing, events, storage } from './unimplemented';
  * `portability` (user data export/import, RFC 0007), `env` (plugin-scoped env
  * vars, RFC 0018), `notifications` (notification center, RFC 0015),
  * `directory` (member selection, RFC 0041), `secrets` (plugin secret vault,
- * RFC 0043),
+ * RFC 0043), `connections` (external provider connections, RFC 0049),
  * `billing` (plugin monetization / entitlement gating, RFC 0003), `storage`,
- * `events`. `data`, `activity`, `portability`, `env`, `notifications`, and
- * `directory`, and `secrets` are
- * implemented; `billing`, `storage`, and `events` throw `NotImplementedError`
- * until their backing mechanisms ship. Their shape may change before they stabilise.
+ * `events`. `data`, `activity`, `portability`, `env`, `notifications`,
+ * `directory`, `secrets`, and `connections` are implemented; `billing`,
+ * `storage`, and `events` throw `NotImplementedError` until their backing
+ * mechanisms ship. Their shape may change before they stabilise.
  */
 export const sdk = {
   // Stable (v1.0.0).
@@ -43,6 +44,7 @@ export const sdk = {
   directory,
   notifications,
   secrets,
+  connections,
   events,
   activity,
   portability,
@@ -82,9 +84,20 @@ export type {
   ActivityLogEntry,
   DrizzleClient,
   SendNotificationInput,
+  ConnectionContext,
+  ConnectionListFilter,
+  ConnectionOAuthState,
+  ConnectionRef,
+  ConnectionScope,
+  ConnectionStatus,
+  CreateConnectionInput,
+  MarkConnectionErrorInput,
+  OAuthStateInput,
+  SanitizedConnectionError,
   CreateSecretInput,
   SecretContext,
   SecretRef,
   SecretScope,
   UpdateSecretInput,
+  UpdateConnectionInput,
 } from './types';

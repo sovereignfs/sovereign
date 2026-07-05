@@ -587,6 +587,329 @@ export async function hardDeleteUserPluginSecrets(
   );
 }
 
+// ─── Plugin external connection helpers (RFC 0049) ──────────────────────────
+
+export type PluginConnectionScope = 'user' | 'plugin' | 'instance';
+export type PluginConnectionStatus =
+  | 'connected'
+  | 'needs_reauth'
+  | 'paused'
+  | 'disconnected'
+  | 'error';
+
+export interface PluginConnectionAccessContext {
+  tenantId: string;
+  pluginId: string;
+  userId: string | null;
+}
+
+export interface PluginConnectionRefRow {
+  id: string;
+  tenantId: string;
+  pluginId: string;
+  scope: PluginConnectionScope;
+  userId: string | null;
+  provider: string;
+  label: string;
+  status: PluginConnectionStatus;
+  secretRef: string | null;
+  metadata: string | null;
+  lastCheckedAt: number | null;
+  lastUsedAt: number | null;
+  lastError: string | null;
+  createdAt: number;
+  updatedAt: number;
+  disconnectedAt: number | null;
+}
+
+export interface CreatePluginConnectionInput extends PluginConnectionAccessContext {
+  id: string;
+  scope: PluginConnectionScope;
+  provider: string;
+  label: string;
+  secretRef?: string | null;
+  metadata?: string | null;
+}
+
+export interface UpdatePluginConnectionInput {
+  label?: string;
+  status?: PluginConnectionStatus;
+  metadata?: string | null;
+  secretRef?: string | null;
+  lastCheckedAt?: number | null;
+}
+
+export interface PluginConnectionListFilter {
+  provider?: string;
+  scope?: PluginConnectionScope;
+  includeDisconnected?: boolean;
+}
+
+function isPluginConnectionScope(value: string): value is PluginConnectionScope {
+  return value === 'user' || value === 'plugin' || value === 'instance';
+}
+
+function requirePluginConnectionScope(value: string): PluginConnectionScope {
+  if (!isPluginConnectionScope(value)) throw new Error(`Invalid plugin connection scope: ${value}`);
+  return value;
+}
+
+function isPluginConnectionStatus(value: string): value is PluginConnectionStatus {
+  return (
+    value === 'connected' ||
+    value === 'needs_reauth' ||
+    value === 'paused' ||
+    value === 'disconnected' ||
+    value === 'error'
+  );
+}
+
+function requirePluginConnectionStatus(value: string): PluginConnectionStatus {
+  if (!isPluginConnectionStatus(value)) {
+    throw new Error(`Invalid plugin connection status: ${value}`);
+  }
+  return value;
+}
+
+function mapPluginConnectionRow(row: PluginConnectionRefRow): PluginConnectionRefRow {
+  return {
+    ...row,
+    scope: requirePluginConnectionScope(row.scope),
+    status: requirePluginConnectionStatus(row.status),
+  };
+}
+
+function canAccessConnection(
+  row: PluginConnectionRefRow,
+  context: PluginConnectionAccessContext,
+): boolean {
+  if (row.tenantId !== context.tenantId || row.pluginId !== context.pluginId) return false;
+  if (row.scope === 'user') return Boolean(context.userId) && row.userId === context.userId;
+  return row.userId === null;
+}
+
+/** Create metadata for one plugin-owned external service connection. */
+export async function createPluginConnection(
+  pdb: PlatformDb,
+  input: CreatePluginConnectionInput,
+): Promise<PluginConnectionRefRow> {
+  if (input.scope === 'user' && !input.userId) {
+    throw new Error('User-scoped plugin connections require a userId.');
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const userId = input.scope === 'user' ? input.userId : null;
+  await dbRun(
+    pdb,
+    sql`INSERT INTO plugin_connections
+          (id, tenant_id, plugin_id, scope, user_id, provider, label, status,
+           secret_ref, metadata, last_checked_at, last_used_at, last_error,
+           created_at, updated_at, disconnected_at)
+        VALUES
+          (${input.id}, ${input.tenantId}, ${input.pluginId}, ${input.scope}, ${userId},
+           ${input.provider}, ${input.label}, 'connected', ${input.secretRef ?? null},
+           ${input.metadata ?? null}, NULL, NULL, NULL, ${now}, ${now}, NULL)`,
+  );
+  const row = await getPluginConnection(pdb, input.id, input);
+  if (!row) throw new Error('Plugin connection was not readable after creation.');
+  return row;
+}
+
+/** Fetch one accessible connection metadata row. Secret values are never returned. */
+export async function getPluginConnection(
+  pdb: PlatformDb,
+  id: string,
+  context: PluginConnectionAccessContext,
+): Promise<PluginConnectionRefRow | undefined> {
+  const row = await dbGet<PluginConnectionRefRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId", scope,
+               user_id AS "userId", provider, label, status, secret_ref AS "secretRef",
+               metadata, last_checked_at AS "lastCheckedAt", last_used_at AS "lastUsedAt",
+               last_error AS "lastError", created_at AS "createdAt", updated_at AS "updatedAt",
+               disconnected_at AS "disconnectedAt"
+        FROM plugin_connections
+        WHERE id = ${id}
+          AND tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}
+        LIMIT 1`,
+  );
+  if (!row) return undefined;
+  const mapped = mapPluginConnectionRow(row);
+  return canAccessConnection(mapped, context) ? mapped : undefined;
+}
+
+/** List accessible connection metadata for one plugin context. */
+export async function listPluginConnections(
+  pdb: PlatformDb,
+  context: PluginConnectionAccessContext,
+  filter: PluginConnectionListFilter = {},
+): Promise<PluginConnectionRefRow[]> {
+  const rows = await dbAll<PluginConnectionRefRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId", scope,
+               user_id AS "userId", provider, label, status, secret_ref AS "secretRef",
+               metadata, last_checked_at AS "lastCheckedAt", last_used_at AS "lastUsedAt",
+               last_error AS "lastError", created_at AS "createdAt", updated_at AS "updatedAt",
+               disconnected_at AS "disconnectedAt"
+        FROM plugin_connections
+        WHERE tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}
+        ORDER BY updated_at DESC`,
+  );
+  return rows
+    .map(mapPluginConnectionRow)
+    .filter((row) => canAccessConnection(row, context))
+    .filter((row) => (filter.provider ? row.provider === filter.provider : true))
+    .filter((row) => (filter.scope ? row.scope === filter.scope : true))
+    .filter((row) => (filter.includeDisconnected ? true : row.status !== 'disconnected'));
+}
+
+/** Update non-secret metadata for one accessible connection. */
+export async function updatePluginConnection(
+  pdb: PlatformDb,
+  id: string,
+  context: PluginConnectionAccessContext,
+  input: UpdatePluginConnectionInput,
+): Promise<PluginConnectionRefRow | undefined> {
+  const existing = await getPluginConnection(pdb, id, context);
+  if (!existing) return undefined;
+  const now = Math.floor(Date.now() / 1000);
+  const label = input.label ?? existing.label;
+  const status = input.status ?? existing.status;
+  const metadata = input.metadata === undefined ? existing.metadata : input.metadata;
+  const secretRef = input.secretRef === undefined ? existing.secretRef : input.secretRef;
+  const lastCheckedAt =
+    input.lastCheckedAt === undefined ? existing.lastCheckedAt : input.lastCheckedAt;
+  const disconnectedAt =
+    status === 'disconnected' ? (existing.disconnectedAt ?? now) : existing.disconnectedAt;
+  await dbRun(
+    pdb,
+    sql`UPDATE plugin_connections
+        SET label = ${label},
+            status = ${status},
+            metadata = ${metadata},
+            secret_ref = ${secretRef},
+            last_checked_at = ${lastCheckedAt},
+            updated_at = ${now},
+            disconnected_at = ${disconnectedAt}
+        WHERE id = ${id}
+          AND tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}`,
+  );
+  return getPluginConnection(pdb, id, context);
+}
+
+/** Mark an accessible connection as used by the plugin. */
+export async function markPluginConnectionUsed(
+  pdb: PlatformDb,
+  id: string,
+  context: PluginConnectionAccessContext,
+): Promise<void> {
+  const existing = await getPluginConnection(pdb, id, context);
+  if (!existing || existing.status === 'disconnected') return;
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE plugin_connections
+        SET last_used_at = ${now}, updated_at = ${now}
+        WHERE id = ${id}
+          AND tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}`,
+  );
+}
+
+/** Store a sanitized provider error and move the connection to `error` or `needs_reauth`. */
+export async function markPluginConnectionError(
+  pdb: PlatformDb,
+  id: string,
+  context: PluginConnectionAccessContext,
+  error: string,
+  status: Extract<PluginConnectionStatus, 'error' | 'needs_reauth'> = 'error',
+): Promise<PluginConnectionRefRow | undefined> {
+  const existing = await getPluginConnection(pdb, id, context);
+  if (!existing) return undefined;
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE plugin_connections
+        SET status = ${status}, last_error = ${error}, updated_at = ${now}
+        WHERE id = ${id}
+          AND tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}`,
+  );
+  return getPluginConnection(pdb, id, context);
+}
+
+/**
+ * Disconnect one connection and soft-delete its associated vault secret, when
+ * present. Provider-side revocation is plugin-owned and should happen before
+ * calling this helper when the provider supports it.
+ */
+export async function disconnectPluginConnection(
+  pdb: PlatformDb,
+  id: string,
+  context: PluginConnectionAccessContext,
+): Promise<void> {
+  const existing = await getPluginConnection(pdb, id, context);
+  if (!existing) return;
+  if (existing.secretRef) {
+    await deletePluginSecret(pdb, existing.secretRef, context);
+  }
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE plugin_connections
+        SET status = 'disconnected',
+            secret_ref = NULL,
+            updated_at = ${now},
+            disconnected_at = ${existing.disconnectedAt ?? now}
+        WHERE id = ${id}
+          AND tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}`,
+  );
+}
+
+/** List metadata for a user's Account surface across all plugins. */
+export async function listUserPluginConnectionRefs(
+  pdb: PlatformDb,
+  userId: string,
+  tenantId = DEFAULT_TENANT_ID,
+): Promise<PluginConnectionRefRow[]> {
+  const rows = await dbAll<PluginConnectionRefRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId", scope,
+               user_id AS "userId", provider, label, status, secret_ref AS "secretRef",
+               metadata, last_checked_at AS "lastCheckedAt", last_used_at AS "lastUsedAt",
+               last_error AS "lastError", created_at AS "createdAt", updated_at AS "updatedAt",
+               disconnected_at AS "disconnectedAt"
+        FROM plugin_connections
+        WHERE tenant_id = ${tenantId}
+          AND scope = 'user'
+          AND user_id = ${userId}
+        ORDER BY updated_at DESC`,
+  );
+  return rows.map(mapPluginConnectionRow);
+}
+
+/** List all connection metadata for the Console operator surface. */
+export async function listAllPluginConnectionRefs(
+  pdb: PlatformDb,
+  tenantId = DEFAULT_TENANT_ID,
+): Promise<PluginConnectionRefRow[]> {
+  const rows = await dbAll<PluginConnectionRefRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId", scope,
+               user_id AS "userId", provider, label, status, secret_ref AS "secretRef",
+               metadata, last_checked_at AS "lastCheckedAt", last_used_at AS "lastUsedAt",
+               last_error AS "lastError", created_at AS "createdAt", updated_at AS "updatedAt",
+               disconnected_at AS "disconnectedAt"
+        FROM plugin_connections
+        WHERE tenant_id = ${tenantId}
+        ORDER BY updated_at DESC`,
+  );
+  return rows.map(mapPluginConnectionRow);
+}
+
 // ─── Activity log helpers (RFC 0005) ─────────────────────────────────────────
 
 export interface ActivityLogRow {
@@ -1466,6 +1789,13 @@ export async function deleteUserData(
   platformRowsDeleted++;
   await del(
     sql`DELETE FROM data_access_log WHERE tenant_id = ${DEFAULT_TENANT_ID} AND user_id = ${userId}`,
+  );
+  platformRowsDeleted++;
+  await del(
+    sql`DELETE FROM plugin_connections
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND scope = 'user'
+          AND user_id = ${userId}`,
   );
   platformRowsDeleted++;
   await del(

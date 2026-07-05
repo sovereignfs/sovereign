@@ -516,7 +516,7 @@ minor (new optional params on exported functions), `runtime` → patch, `bin/sv`
 
 ---
 
-#### 📋 3.19 — Plugin external connections (RFC 0049)
+#### ✅ 3.19 — Plugin external connections (RFC 0049)
 
 **Goal:** Add a platform pattern for plugin-owned external provider connections, including OAuth/connect-account lifecycle, connection metadata, secret-vault integration, reconnect, disconnect, and operator visibility.
 

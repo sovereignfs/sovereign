@@ -18,6 +18,19 @@ interface PluginRow {
   enabled: boolean;
 }
 
+interface ExternalConnection {
+  id: string;
+  pluginId: string;
+  scope: 'user' | 'plugin' | 'instance';
+  userId: string | null;
+  provider: string;
+  label: string;
+  status: 'connected' | 'needs_reauth' | 'paused' | 'disconnected' | 'error';
+  updatedAt: number;
+  lastUsedAt: number | null;
+  disconnectedAt: number | null;
+}
+
 async function adminGet<T>(path: string): Promise<T> {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   const res = await fetch(`${SELF_URL}${path}`, {
@@ -44,8 +57,12 @@ export default async function SettingsPage() {
     adminGet<Settings>('/api/admin/settings'),
     adminGet<PluginRow[]>('/api/admin/plugins'),
   ]);
+  const connectionsResult = await adminGet<{ connections: ExternalConnection[] }>(
+    '/api/admin/connections',
+  ).catch(() => ({ connections: [] }));
   const settings = settled(settingsResult, DEFAULT_SETTINGS);
   const plugins = settled(pluginsResult, [] as PluginRow[]);
+  const connections = connectionsResult.connections;
 
   const rootCandidates = plugins.filter((p) => p.enabled && !p.adminOnly && p.shell !== 'overlay');
   const rootInstalled = rootCandidates.some((p) => p.id === settings.rootPluginId);
@@ -77,6 +94,47 @@ export default async function SettingsPage() {
         <p className={styles.helpText}>
           Current setting: <code className={styles.codeInline}>{settings.rootPluginId}</code>
         </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>External connections</h2>
+        {connections.length === 0 && (
+          <p className={styles.helpText}>No app-owned external connections are registered.</p>
+        )}
+        {connections.length > 0 && (
+          <div className={styles.tableCard}>
+            <div className={styles.tableWrapper}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Label</th>
+                    <th>App</th>
+                    <th>Provider</th>
+                    <th>Scope</th>
+                    <th>User</th>
+                    <th>Status</th>
+                    <th>Updated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {connections.map((conn) => (
+                    <tr key={conn.id}>
+                      <td>{conn.label}</td>
+                      <td>
+                        <code className={styles.codeInline}>{conn.pluginId}</code>
+                      </td>
+                      <td>{conn.provider}</td>
+                      <td>{conn.scope}</td>
+                      <td>{conn.userId ?? '-'}</td>
+                      <td>{conn.status}</td>
+                      <td>{new Date(conn.updatedAt * 1000).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

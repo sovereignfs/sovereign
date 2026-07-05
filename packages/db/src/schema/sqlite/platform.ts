@@ -202,6 +202,30 @@ export const pluginSecrets = sqliteTable('plugin_secrets', {
   deletedAt: integer('deleted_at'),
 });
 
+/**
+ * Platform-owned metadata for plugin-managed external service connections
+ * (RFC 0049). Credential material lives in `plugin_secrets`; this table stores
+ * only labels, status, provider IDs, sanitized metadata, and secret references.
+ */
+export const pluginConnections = sqliteTable('plugin_connections', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  pluginId: text('plugin_id').notNull(),
+  scope: text('scope').notNull(),
+  userId: text('user_id'),
+  provider: text('provider').notNull(),
+  label: text('label').notNull(),
+  status: text('status').notNull(),
+  secretRef: text('secret_ref'),
+  metadata: text('metadata'),
+  lastCheckedAt: integer('last_checked_at'),
+  lastUsedAt: integer('last_used_at'),
+  lastError: text('last_error'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  disconnectedAt: integer('disconnected_at'),
+});
+
 export type AccountPrefs = typeof accountPrefs.$inferSelect;
 export type NewAccountPrefs = typeof accountPrefs.$inferInsert;
 
@@ -341,6 +365,8 @@ export type EmailDeliveryLog = typeof emailDeliveryLog.$inferSelect;
 export type NewEmailDeliveryLog = typeof emailDeliveryLog.$inferInsert;
 export type PluginSecret = typeof pluginSecrets.$inferSelect;
 export type NewPluginSecret = typeof pluginSecrets.$inferInsert;
+export type PluginConnection = typeof pluginConnections.$inferSelect;
+export type NewPluginConnection = typeof pluginConnections.$inferInsert;
 export type Entitlement = typeof entitlements.$inferSelect;
 export type NewEntitlement = typeof entitlements.$inferInsert;
 export type InstanceConfigRow = typeof instanceConfig.$inferSelect;

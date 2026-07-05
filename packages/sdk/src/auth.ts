@@ -6,7 +6,8 @@ const DEFAULT_TENANT_ID = 'default';
 import { markCurrentSessions, type RawSession } from './sessions';
 import type { ActiveSession, ChangePasswordInput, Session } from './types';
 
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
 /** Returns the current user session from runtime-injected headers, or null if unauthenticated. */
 export async function getSession(): Promise<Session | null> {

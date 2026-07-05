@@ -16,7 +16,8 @@ import { getPlatformVersion } from '@/src/platform-version';
 import { getInstalledPlugins } from '@/src/registry';
 import { isSmtpConfigured } from '@/src/platform-email';
 
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
 interface HealthReport {
   platformVersion: string;

@@ -10,7 +10,8 @@ import type { PlatformExportData } from './assemble';
 import type { PlatformAccountSection } from './restore';
 import { toSecretRef } from '@/src/secrets';
 
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 const ALLOWED_AVATAR_EXT = new Set(['jpg', 'jpeg', 'png', 'webp']);
 
 /**

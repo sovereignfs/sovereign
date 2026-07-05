@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --port 3001",
+    "dev": "tsx ../../scripts/next-server.ts auth dev",
     "build": "next build",
-    "start": "next start --port 3001",
+    "start": "tsx ../../scripts/next-server.ts auth start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

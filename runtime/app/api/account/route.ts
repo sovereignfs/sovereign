@@ -4,7 +4,8 @@ import { logActivity } from '@/src/activity';
 import { deleteUser } from '@/src/user-deletion';
 import { sendPlatformEmail } from '@/src/platform-email';
 
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
 /**
  * DELETE /api/account — self-service account deletion (RFC 0033).

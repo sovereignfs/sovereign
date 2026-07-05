@@ -7,7 +7,8 @@ import {
   verifiedUserFromCache,
 } from './session-verify';
 
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
 /**
  * Read and verify the request's session from a Server Component, mirroring the

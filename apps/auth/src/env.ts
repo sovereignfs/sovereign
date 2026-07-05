@@ -58,7 +58,9 @@ let cached: AuthEnv | undefined;
  * fires when the server first handles a request.
  */
 export function getEnv(): AuthEnv {
-  const baseUrl = process.env.AUTH_BASE_URL || 'http://localhost:3001';
+  const defaultAuthUrl = `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
+  const defaultRuntimeUrl = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
+  const baseUrl = process.env.AUTH_BASE_URL || defaultAuthUrl;
 
   // Derive rpID from baseUrl hostname if not explicitly set.
   let defaultRpId = 'localhost';
@@ -77,7 +79,7 @@ export function getEnv(): AuthEnv {
   //      auth app still exposes compatibility pages/routes.
   // In production, set AUTH_WEBAUTHN_ORIGIN to a comma-separated list of both
   // your runtime URL and auth server URL (e.g. https://app.example.com,https://auth.example.com).
-  const runtimeOrigin = process.env.NEXT_PUBLIC_RUNTIME_URL || 'http://localhost:3000';
+  const runtimeOrigin = process.env.NEXT_PUBLIC_RUNTIME_URL || defaultRuntimeUrl;
   const authPublicOrigin = process.env.SOVEREIGN_AUTH_PUBLIC_URL || baseUrl;
   const defaultWebAuthnOrigins =
     runtimeOrigin === authPublicOrigin ? runtimeOrigin : `${runtimeOrigin},${authPublicOrigin}`;

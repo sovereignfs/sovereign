@@ -230,3 +230,36 @@ export const LeftAligned: Story = {
     );
   },
 };
+
+/** `panelStyle` overrides the panel's own chrome (square corners here) —
+ *  an escape hatch for compact pickers where the default rounded panel
+ *  doesn't fit the content (e.g. a small colour-swatch grid). */
+export const SquareCorners: Story = {
+  render: (_args) => {
+    const [open, setOpen] = useState(false);
+    return (
+      <div style={{ padding: 40 }}>
+        <Popover
+          open={open}
+          onClose={() => setOpen(false)}
+          align="left"
+          width={160}
+          panelStyle={{ borderRadius: 0 }}
+          aria-label="Colour"
+          trigger={<Button onClick={() => setOpen((o) => !o)}>Open (square panel)</Button>}
+        >
+          <div
+            style={{
+              padding: 16,
+              fontFamily: 'var(--sv-font-family)',
+              fontSize: 'var(--sv-font-size-sm)',
+              color: 'var(--sv-color-text-muted)',
+            }}
+          >
+            No rounded corners.
+          </div>
+        </Popover>
+      </div>
+    );
+  },
+};

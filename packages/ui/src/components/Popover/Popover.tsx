@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, type ReactElement, type ReactNode } from 'react';
+import { useEffect, useRef, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import styles from './Popover.module.css';
 
 export interface PopoverProps {
@@ -12,6 +12,13 @@ export interface PopoverProps {
   align?: 'left' | 'right';
   /** Panel width in px. Default: 288. */
   width?: number;
+  /**
+   * Inline style overrides for the panel, merged after `width`. Escape hatch
+   * for callers that need to override the panel's own chrome (e.g. no
+   * rounded corners for a compact swatch picker) — inline styles always win
+   * regardless of CSS module load order, unlike passing an extra className.
+   */
+  panelStyle?: CSSProperties;
   'aria-label': string;
   children: ReactNode;
 }
@@ -29,6 +36,7 @@ export function Popover({
   onClose,
   align = 'right',
   width = 288,
+  panelStyle,
   'aria-label': ariaLabel,
   children,
 }: PopoverProps) {
@@ -65,7 +73,7 @@ export function Popover({
           aria-label={ariaLabel}
           aria-modal={false}
           className={[styles.panel, styles[align]].join(' ')}
-          style={{ width }}
+          style={{ width, ...panelStyle }}
         >
           {children}
         </div>

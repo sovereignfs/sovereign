@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx ../../scripts/next-server.ts auth dev",
+    "dev": "node ../../scripts/next-server.mjs auth dev",
     "build": "next build",
-    "start": "tsx ../../scripts/next-server.ts auth start",
+    "start": "node ../../scripts/next-server.mjs auth start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

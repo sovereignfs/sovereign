@@ -456,7 +456,7 @@ Task 0.5.24 (RFC 0019 — test seeding infrastructure this extends)
 
 ---
 
-#### 📋 1.12 — User directory and member selection SDK (RFC 0041)
+#### ✅ 1.12 — User directory and member selection SDK (RFC 0041)
 
 **Goal:** Provide a privacy-preserving SDK and runtime surface that lets plugins find and select active users for sharing, assignment, membership, and message-recipient workflows without using admin APIs.
 

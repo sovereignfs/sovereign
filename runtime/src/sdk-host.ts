@@ -24,16 +24,26 @@ import type {
   ActivityLogEntry,
   DataContractRef,
   DataContractResolver,
+  DirectoryUser,
   DeletionHandler,
   ExportResolver,
   ImportHandler,
+  ResolveUsersInput,
+  SearchUsersInput,
   SendNotificationInput,
 } from '@sovereignfs/sdk';
 import { registerDeleter, registerExporter, registerImporter } from './portability/registry';
 import { fanOutPushToUser } from './push';
 import { getBroker } from './notification-broker';
+import {
+  checkDirectoryRateLimit,
+  normalizeResolveUsersInput,
+  normalizeSearchUsersInput,
+  toDirectoryUsers,
+} from './directory';
 
 let _version: string | undefined;
+const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
 
 /**
  * The platform version from the workspace root package.json (tracks roadmap
@@ -60,6 +70,21 @@ const _mailer = createMailer();
  * `sdk.data.provide('contract', resolver)`. Resets on server restart.
  */
 const _resolverRegistry = new Map<string, DataContractResolver>();
+
+async function fetchDirectoryUsers(body: Record<string, unknown>): Promise<DirectoryUser[]> {
+  const res = await fetch(`${AUTH_URL}/api/admin/directory`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${process.env.SOVEREIGN_ADMIN_KEY ?? ''}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`Directory lookup failed (${String(res.status)}).`);
+  }
+  return toDirectoryUsers((await res.json().catch(() => [])) as unknown[]);
+}
 
 provideHost({
   db: {
@@ -98,6 +123,37 @@ provideHost({
         instancePrimaryColor: instanceCfg.instancePrimary ?? undefined,
         instanceId,
       };
+    },
+  },
+  directory: {
+    async searchUsers(
+      input: SearchUsersInput,
+      requestingUserId: string,
+      tenantId: string,
+    ): Promise<DirectoryUser[]> {
+      const limited = checkDirectoryRateLimit(`${tenantId}:${requestingUserId}:sdk`);
+      if (!limited.allowed) {
+        throw new Error(
+          `Directory rate limit exceeded. Retry after ${String(limited.retryAfterSeconds ?? 60)} seconds.`,
+        );
+      }
+      const normalized = normalizeSearchUsersInput(input);
+      return fetchDirectoryUsers({ mode: 'search', ...normalized });
+    },
+    async resolveUsers(
+      input: ResolveUsersInput,
+      requestingUserId: string,
+      tenantId: string,
+    ): Promise<DirectoryUser[]> {
+      const limited = checkDirectoryRateLimit(`${tenantId}:${requestingUserId}:sdk`);
+      if (!limited.allowed) {
+        throw new Error(
+          `Directory rate limit exceeded. Retry after ${String(limited.retryAfterSeconds ?? 60)} seconds.`,
+        );
+      }
+      const normalized = normalizeResolveUsersInput(input);
+      if (normalized.ids.length === 0) return [];
+      return fetchDirectoryUsers({ mode: 'resolve', ...normalized });
     },
   },
   data: {

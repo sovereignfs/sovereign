@@ -32,6 +32,14 @@ beforeAll(() => {
         return mockConfig;
       },
     },
+    directory: {
+      async searchUsers() {
+        return [];
+      },
+      async resolveUsers() {
+        return [];
+      },
+    },
     data: {
       provide(contract, resolver) {
         mockDataResolvers.set(contract, resolver as (...args: unknown[]) => Promise<unknown[]>);
@@ -75,6 +83,11 @@ describe('sdk surface', () => {
     expect(typeof sdk.db.getClient).toBe('function');
     expect(typeof sdk.mailer.send).toBe('function');
     expect(typeof sdk.platform.getConfig).toBe('function');
+  });
+
+  it('exposes the directory surface (RFC 0041)', () => {
+    expect(typeof sdk.directory.searchUsers).toBe('function');
+    expect(typeof sdk.directory.resolveUsers).toBe('function');
   });
 
   it('exposes the stable data surface (RFC 0002)', () => {

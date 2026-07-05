@@ -5,6 +5,21 @@ follows [Semantic Versioning](https://semver.org); see
 [`docs/sdk-stability.md`](../../docs/sdk-stability.md) for the stability policy
 and which parts of the surface the guarantee covers.
 
+## 1.14.0
+
+**New surface: `sdk.directory`** (RFC 0041 / Task 1.12). Experimental.
+
+- `sdk.directory.searchUsers({ query, limit? })` searches active users in the
+  current tenant by display name or email.
+- `sdk.directory.resolveUsers({ ids })` resolves explicit stored user IDs to
+  display-safe profile rows for active users.
+- New exported types: `DirectoryUser`, `SearchUsersInput`, and `ResolveUsersInput`.
+
+The directory returns only `{ id, email, name, image }`. It excludes inactive
+users, roles, capabilities, session state, MFA state, test-user flags, and
+admin-only metadata. Search requires at least two characters and is capped to 20
+results by default, 50 maximum.
+
 ## 1.11.0
 
 **`PlatformConfig.brandName` and `brandPrimaryColor` renamed** (RFC 0032 / Task 0.9.0).

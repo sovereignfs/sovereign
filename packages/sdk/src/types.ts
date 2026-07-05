@@ -35,6 +35,23 @@ export interface ChangePasswordInput {
   newPassword: string;
 }
 
+/** Display-safe user shape returned by `sdk.directory` (RFC 0041). */
+export interface DirectoryUser {
+  id: string;
+  email: string;
+  name: string | null;
+  image: string | null;
+}
+
+export interface SearchUsersInput {
+  query: string;
+  limit?: number;
+}
+
+export interface ResolveUsersInput {
+  ids: string[];
+}
+
 export interface MailOptions {
   to: string | string[];
   subject: string;

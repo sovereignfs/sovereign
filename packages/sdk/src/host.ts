@@ -2,9 +2,12 @@ import type { DataContractRef, DataContractResolver } from './data';
 import type { DeletionHandler, ExportResolver, ImportHandler } from './portability';
 import type {
   ActivityLogEntry,
+  DirectoryUser,
   DrizzleClient,
   MailOptions,
   PlatformConfig,
+  ResolveUsersInput,
+  SearchUsersInput,
   SendNotificationInput,
 } from './types';
 
@@ -27,6 +30,26 @@ export interface SdkHost {
   };
   platform: {
     getConfig(): Promise<PlatformConfig>;
+  };
+  directory: {
+    /**
+     * Search active users in the current tenant. `requestingUserId` and
+     * `tenantId` come from runtime-injected request context, not plugin input.
+     */
+    searchUsers(
+      input: SearchUsersInput,
+      requestingUserId: string,
+      tenantId: string,
+    ): Promise<DirectoryUser[]>;
+    /**
+     * Resolve explicit user IDs to display-safe profile fields for active users
+     * in the current tenant.
+     */
+    resolveUsers(
+      input: ResolveUsersInput,
+      requestingUserId: string,
+      tenantId: string,
+    ): Promise<DirectoryUser[]>;
   };
   data: {
     /** Register a resolver for a contract this plugin provides. */

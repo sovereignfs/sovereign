@@ -1170,7 +1170,13 @@ const db = await sdk.db.getClient();
 **Rules that apply in both modes:**
 
 - `tenant_id` on every user-scoped table (multi-tenancy readiness).
-- Dialect-agnostic Drizzle schemas — must run on SQLite and Postgres.
+- Your `schema.ts` can target one dialect (typically `sqlite-core`) — Drizzle's
+  query builder is bound to the client connection, not the table object, so it
+  works against Postgres too, **but only if Postgres columns serialize
+  identically** (plain `integer` for booleans/timestamps, never native
+  `boolean`/`bigint`). You still need a separate `pgTable`-based schema file to
+  generate Postgres migrations — `drizzle-kit` cannot read a `sqliteTable()`
+  schema for that. See `docs/plugin-database.md` for the full pattern.
 
 See **[`docs/plugin-database.md`](../docs/plugin-database.md)** for the full reference:
 shared conventions, isolated provisioning details (SQLite file path, Postgres schema

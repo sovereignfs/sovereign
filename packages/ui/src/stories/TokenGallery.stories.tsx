@@ -58,7 +58,12 @@ const RADIUS_TOKENS = [
   '--sv-radius-3xl',
   '--sv-radius-full',
 ];
-const ICON_SIZE_TOKENS = ['--sv-icon-size-sm', '--sv-icon-size-md', '--sv-icon-size-lg'];
+const ICON_SIZE_TOKENS = [
+  '--sv-icon-size-xs',
+  '--sv-icon-size-sm',
+  '--sv-icon-size-md',
+  '--sv-icon-size-lg',
+];
 
 const FONT_SIZE_TOKENS = [
   '--sv-font-size-label',

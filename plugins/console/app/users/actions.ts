@@ -6,8 +6,9 @@ import { sdk } from '@sovereignfs/sdk';
 import { logActivity } from '@/src/activity';
 import { deleteUser } from '@/src/user-deletion';
 
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
-const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
+const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
 
 async function actorId(): Promise<string | null> {
   return (await headers()).get('x-sovereign-user-id');

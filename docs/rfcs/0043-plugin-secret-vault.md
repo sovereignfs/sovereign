@@ -7,7 +7,7 @@ author: kasunben
 scope: >
   packages/sdk, packages/db, runtime, packages/manifest, plugins/account,
   plugins/console, docs; builds on RFC 0008 and RFC 0018
-incorporated_into_plan: 'No — documentation-first. This RFC specifies a secure per-plugin and per-user secret storage surface; scheduling and task IDs are deferred.'
+incorporated_into_plan: 'Yes — epic task 8.6'
 ---
 
 # RFC 0043 — Plugin Secret Vault

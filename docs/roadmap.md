@@ -173,6 +173,7 @@ once prioritised.
 | —       | Subtle Sovereign attribution (RFC 0027)                                   | 📋     | [9.13](epics/design-system.md#913--subtle-sovereign-attribution-rfc-0027)                                                  |
 | —       | Local visual regression testing (RFC 0059)                                | 📋     | [9.14](epics/design-system.md#914--local-visual-regression-testing-rfc-0059)                                               |
 | —       | NavTabs Link support + PageHeader heading level                           | 📋     | [9.15](epics/design-system.md#915--navtabs-link-support--pageheader-heading-level)                                         |
+| —       | Editor workflow primitives for content plugins                            | 📋     | [9.16](epics/design-system.md#916--editor-workflow-primitives-for-content-plugins)                                         |
 | —       | Messages and notification detail (RFC 0048)                               | 📋     | [4.4](epics/notification-center.md#44--messages-and-notification-detail-rfc-0048)                                          |
 | —       | User directory and member selection SDK (RFC 0041)                        | 📋     | [1.12](epics/users-auth.md#112--user-directory-and-member-selection-sdk-rfc-0041)                                          |
 | —       | Plugin-scoped roles and grants (RFC 0054)                                 | 📋     | [1.13](epics/users-auth.md#113--plugin-scoped-roles-and-grants-rfc-0054)                                                   |
@@ -208,6 +209,7 @@ once prioritised.
 | —       | SDK boundary and runtime contract tests                                   | 📋     | [3.24](epics/plugins-runtime.md#324--sdk-boundary-and-runtime-contract-tests)                                              |
 | —       | Plugin external dependency resolution (RFC 0057)                          | 📋     | [3.25](epics/plugins-runtime.md#325--plugin-external-dependency-resolution-rfc-0057)                                       |
 | —       | Plugin mailer permission and SDK email surface (RFC 0062)                 | 📋     | [3.26](epics/plugins-runtime.md#326--plugin-mailer-permission-and-sdk-email-surface-rfc-0062)                              |
+| —       | Admin-managed external provider configuration                             | 📋     | [3.27](epics/plugins-runtime.md#327--admin-managed-external-provider-configuration)                                        |
 | —       | Middleware internal fetch caching review                                  | 📋     | [2.18](epics/platform-shell.md#218--middleware-internal-fetch-caching-review)                                              |
 | —       | Typecheck performance and project references                              | 📋     | [0.14](epics/infrastructure.md#014--typecheck-performance-and-project-references)                                          |
 | —       | Operational consistency checks                                            | 📋     | [0.15](epics/infrastructure.md#015--operational-consistency-checks)                                                        |

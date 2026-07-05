@@ -611,3 +611,46 @@ because 9.12 found the gap.
   other visual change.
 - Both changes are additive (new optional props, existing defaults
   unchanged) — no `@sovereignfs/ui` version bump beyond minor.
+
+---
+
+#### 📋 9.16 — Editor workflow primitives for content plugins
+
+**Goal:** Add the reusable `@sovereignfs/ui` primitives needed by Plainwrite-style
+editor workflows so content/data-entry plugins do not hand-roll status chips,
+resizable editing layouts, tag arrays, or code-oriented textareas.
+
+**Deliverables:**
+
+- **`StatusBadge`** — compact inline status indicator for states such as
+  unmodified, draft, committed, conflict, pending delete, synced, warning, and
+  error. Uses semantic status tokens and supports accessible labels.
+- **`SplitPane`** — responsive two-pane layout for editor/preview or
+  list/detail workflows. Supports fixed and resizable panes on desktop, stable
+  min/max constraints, and a single-column fallback on narrow viewports.
+- **`TagInput`** — multi-value text input where each value renders as a
+  removable chip. Supports keyboard add/remove, paste splitting, validation
+  messages, and `FormField` integration.
+- **`CodeTextarea`** — monospace textarea for Markdown/YAML/JSON-style editing
+  with predictable whitespace handling, resize constraints, invalid state, and
+  `FormField` integration.
+- Add Storybook stories for default, error, disabled, keyboard, long-content,
+  and mobile states for each primitive.
+- Add each primitive to the Component Gallery and update `docs/design-system.md`
+  / `docs/plugin-development.md` with recommended editor-workflow patterns.
+
+**Dependencies:** Task 9.11 (component gaps), Task 9.12 (design system
+stabilization), Task 9.15 where navigation/header adoption affects editor
+screens.
+
+**SRS reference:** Design system plugin readiness; Plainwrite editor UI needs.
+
+**Review checklist:**
+
+- Plainwrite can build its file status list, Markdown/preview layout,
+  frontmatter tag fields, and raw YAML editor without plugin-local generic
+  control CSS.
+- Components use only `--sv-*` tokens and keep stable dimensions across content
+  and viewport changes.
+- Keyboard and screen-reader interactions are documented and covered in stories.
+- `pnpm --filter @sovereignfs/ui typecheck` passes.

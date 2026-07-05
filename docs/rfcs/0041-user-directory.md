@@ -7,7 +7,7 @@ author: kasunben
 scope: >
   packages/sdk, runtime, apps/auth, packages/db, plugins/account, plugins/console,
   docs; builds on RFC 0021 and RFC 0035
-incorporated_into_plan: 'No — documentation-first. This RFC specifies a platform user-directory surface for plugins; scheduling and task IDs are deferred.'
+incorporated_into_plan: 'Yes — epic task 1.12'
 ---
 
 # RFC 0041 — User Directory and Member Selection SDK

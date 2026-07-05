@@ -5,7 +5,7 @@ status: Draft
 date: June 2026
 author: kasunben
 scope: packages/sdk, packages/manifest, runtime, plugins/account, docs; builds on RFC 0002, RFC 0005, RFC 0022, RFC 0035, RFC 0040
-incorporated_into_plan: 'No — documentation-first. This RFC specifies a consented tool/action contract for plugins; scheduling and task IDs are deferred.'
+incorporated_into_plan: 'Yes — epic task 3.18'
 ---
 
 # RFC 0047 — Plugin Tool Contracts

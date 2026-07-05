@@ -778,6 +778,52 @@ Task 1.14 (shared delivery wrapper and delivery log).
 - Rate limits prevent high-volume accidental or malicious plugin email sends.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
+---
+
+#### 📋 3.27 — Admin-managed external provider configuration
+
+**Goal:** Let instance admins configure plugin-owned external provider settings,
+such as OAuth client IDs/secrets, through Console instead of requiring
+deployment-time environment variables and restarts for every provider.
+
+This closes the Plainwrite-class gap where a plugin can use plugin-scoped env
+vars for `PLAINWRITE_GITHUB_CLIENT_ID` / `PLAINWRITE_GITHUB_CLIENT_SECRET`, but
+there is no standard operator UI or platform storage model for provider
+configuration created after deployment.
+
+**Deliverables:**
+
+- Define a manifest or plugin metadata pattern for external provider config
+  fields: provider ID, display name, public values, secret values, callback URL
+  hints, and required scopes.
+- Add Console surfaces for admins to create, update, test, and remove
+  instance-level provider configuration for installed plugins.
+- Store secret values through the plugin secret vault; store non-secret provider
+  metadata in platform-owned tables.
+- Preserve plugin-scoped env vars as the deployment-time fallback and define
+  precedence between env-provided and Console-managed config.
+- Expose a server-side SDK or runtime helper for plugins to read their effective
+  provider configuration without accessing other plugins' settings.
+- Document OAuth app setup, callback URL display, rotation, disconnect, and
+  sanitized error handling patterns for plugin authors and operators.
+
+**Dependencies:** Task 8.6 (plugin secret vault), Task 3.19 (plugin external
+connections), Task 3.11 (plugin-scoped environment variables), Task 13.3/13.4
+(Console plugin management/settings patterns).
+
+**SRS reference:** RFC 0018, RFC 0043, RFC 0049; Plainwrite provider
+configuration gap.
+
+**Review checklist:**
+
+- An admin can configure a GitHub-style OAuth provider for an installed plugin
+  without editing `.env` or restarting the instance.
+- Provider secrets are never stored in plugin tables, logs, activity rows,
+  generated files, or exports.
+- Plugins can read only their own effective provider configuration.
+- Env-provided config remains supported for immutable/provisioned deployments.
+- Docs explain when to use env vars vs Console-managed provider config.
+
 ## Related RFCs
 
 - [RFC 0004 — Per-plugin database](../rfcs/0004-per-plugin-database.md)

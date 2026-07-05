@@ -28,6 +28,7 @@ import { InfoIcon } from './info';
 import { AlertTriangleIcon } from './alert-triangle';
 import { CalendarIcon } from './calendar';
 import { SlidersHorizontalIcon } from './sliders-horizontal';
+import { EllipsisVerticalIcon } from './ellipsis-vertical';
 
 export type IconName =
   | 'house'
@@ -57,7 +58,8 @@ export type IconName =
   | 'info'
   | 'alert-triangle'
   | 'calendar'
-  | 'sliders-horizontal';
+  | 'sliders-horizontal'
+  | 'ellipsis-vertical';
 
 export type IconComponent = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
@@ -90,6 +92,7 @@ export const ICONS: Record<IconName, IconComponent> = {
   'alert-triangle': AlertTriangleIcon,
   calendar: CalendarIcon,
   'sliders-horizontal': SlidersHorizontalIcon,
+  'ellipsis-vertical': EllipsisVerticalIcon,
 };
 
 export { HouseIcon } from './house';
@@ -120,3 +123,4 @@ export { InfoIcon } from './info';
 export { AlertTriangleIcon } from './alert-triangle';
 export { CalendarIcon } from './calendar';
 export { SlidersHorizontalIcon } from './sliders-horizontal';
+export { EllipsisVerticalIcon } from './ellipsis-vertical';

@@ -40,6 +40,7 @@ export const ICON_LIST = [
   'alert-triangle',
   'calendar',
   'sliders-horizontal',
+  'ellipsis-vertical',
 ] as const;
 
 export type IconName = (typeof ICON_LIST)[number];

@@ -11,8 +11,9 @@ interface MemberRow {
   status: 'active' | 'deactivated' | 'invited';
 }
 
-const RUNTIME_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const RUNTIME_URL = `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
 async function loadEntitlements(): Promise<EntitlementRow[]> {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';

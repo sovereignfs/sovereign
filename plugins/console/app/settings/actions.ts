@@ -5,7 +5,7 @@ import { sdk } from '@sovereignfs/sdk';
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 
-const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
+const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
 
 export type ActionResult = { ok: true; message: string } | { ok: false; error: string };
 

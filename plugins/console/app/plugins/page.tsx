@@ -213,7 +213,7 @@ function PluginTable({ plugins }: { plugins: PluginRow[] }) {
 
 async function getPlugins(): Promise<PluginRow[]> {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
-  const selfUrl = `http://localhost:${process.env.PORT ?? '3000'}`;
+  const selfUrl = `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
   try {
     const res = await fetch(`${selfUrl}/api/admin/plugins`, {
       headers: { Authorization: `Bearer ${adminKey}` },

@@ -6,7 +6,8 @@ import styles from '../account.module.css';
 
 export const dynamic = 'force-dynamic';
 
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
 /**
  * Read the authoritative name/image straight from the auth server (uncached).

@@ -21,7 +21,8 @@ export default async function SecurityPage() {
   const h = await headers();
   const cookie = h.get('cookie') ?? '';
 
-  const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+  const AUTH_URL =
+    process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
   // Fetch session with cache disabled to get the up-to-date twoFactorEnabled flag.
   const sessionRes = await fetch(`${AUTH_URL}/api/auth/get-session?disableCookieCache=true`, {

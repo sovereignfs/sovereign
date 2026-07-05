@@ -107,8 +107,10 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.10.9`**
-  (phases 0.3–0.9 tasks complete, patches .6–.10 from production hotfixes, .1–.2 from docs tasks 16.1–16.2, .3–.9 from iOS PWA stability patches, Docker/logout/sidebar fixes, and mobile overscroll/viewport/layout fixes). The
+  to `1.0.0` marks the public release.** The current version is **`0.18.2`**
+  (all pre-v1 roadmap tasks through slot `0.13.0` complete; subsequent minor
+  bumps track post-slot tasks such as the admin-managed external provider config,
+  and patch versions cover UI additions and production hotfixes). The
   downgrade guard, plugin compatibility gates (RFC 0024), and `/api/admin/health`
   all read this value; see `docs/upgrade.md` for the runtime version map and
   v1.0.0 release checklist.
@@ -372,7 +374,9 @@ Docker Compose.
 ## Monorepo layout
 
 ```
-apps/auth/          better-auth wrapper (the only separate Next.js app)
+apps/
+  auth/             better-auth wrapper (the only separate Next.js app)
+  docs/             VitePress documentation site (@sovereignfs/docs, private)
 packages/
   tsconfig/         shared TS configs (base/nextjs/library) — extend these
   db/               Drizzle client factory + schema + migration runner
@@ -380,6 +384,7 @@ packages/
   mailer/           SMTP abstraction (no-op when unconfigured)
   ui/               shared component library + design tokens
   sdk/              plugin↔platform contract (types + impls)
+  create-plugin/    `npm create @sovereignfs/plugin` scaffolder — published
 runtime/            Sovereign Core (Next.js shell, middleware, registry, SDK bridge)
   generated/        built from manifests — never hand-edit
 plugins/console/    core admin plugin (platform type)
@@ -398,6 +403,8 @@ _federated systems_ — reflecting the project's long-term federated direction
 
 - `packages/sdk` → `@sovereignfs/sdk` — **published** (plugin contract).
 - `packages/ui` → `@sovereignfs/ui` — **published** (design system).
+- `packages/create-plugin` → `@sovereignfs/create-plugin` — **published**
+  (`npm create @sovereignfs/plugin` scaffolder; ships a `create-plugin` bin).
 - `packages/db` → `@sovereignfs/db` — internal, `"private": true`.
 - `packages/manifest` → `@sovereignfs/manifest` — internal, `"private": true`.
 - `packages/mailer` → `@sovereignfs/mailer` — internal, `"private": true`.
@@ -410,7 +417,7 @@ The "do not publish" signal is `"private": true` in the package's
 `package.json` — **not** the scope. A single scope we own avoids the
 dependency-confusion risk of aliasing a scope owned by someone else
 (`@sovereign` is taken on npm; `@sovereignos`/`-stack`/`-core` collide with
-existing products). Only `sdk` and `ui` ever reach npm.
+existing products). Only `sdk`, `ui`, and `create-plugin` ever reach npm.
 
 ## Commands
 
@@ -463,7 +470,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 ## Status
 
-Current platform version: **`0.10.9`**. All roadmap tasks through slot `0.10.2` are complete; patches `.3`–`.9` are hotfixes.
+Current platform version: **`0.18.2`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
 
 For the full task history and current roadmap position, see:
 

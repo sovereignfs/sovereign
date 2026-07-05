@@ -261,7 +261,9 @@ export async function sendInviteAction(
   // Read via a computed key so Next.js does not inline the value at build time
   // (the Docker image builds without .env, freezing a literal to localhost:3000).
   const runtimeUrlKey = 'NEXT_PUBLIC_RUNTIME_URL';
-  const runtimeUrl = process.env[runtimeUrlKey] ?? `http://localhost:${process.env.PORT ?? '3000'}`;
+  const runtimeUrl =
+    process.env[runtimeUrlKey] ??
+    `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
   const registerUrl = `${runtimeUrl}/register?token=${token}`;
   const emailResult = await sendAdminEmail({
     templateId: 'console.invite_created',

@@ -2,7 +2,7 @@ import styles from '../console.module.css';
 import { ProviderConfigsSection, type ProviderConfigRow } from './ProviderConfigForms';
 import { TenantForm, InviteOnlyForm, ExampleAppsForm, RootPluginForm } from './SettingsForms';
 
-const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
+const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
 
 interface Settings {
   tenantName: string;

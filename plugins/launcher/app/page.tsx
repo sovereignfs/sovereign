@@ -9,10 +9,10 @@ import styles from './launcher.module.css';
 // Always reflect the current registry + enabled state on each visit.
 export const dynamic = 'force-dynamic';
 
-// The runtime always listens on :3000; self-fetch its own API rather than the
-// public URL (which may sit behind a reverse proxy the container can't hairpin
-// through) — same rationale as the Console pages.
-const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
+// Self-fetch the runtime API. Native dev may run on RUNTIME_PORT; Docker uses
+// the container PORT and may sit behind a reverse proxy the container can't
+// hairpin through.
+const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
 
 interface LauncherPlugin extends PluginTileData {
   adminOnly: boolean;

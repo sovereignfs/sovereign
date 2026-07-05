@@ -6,7 +6,7 @@ import {
   type InstanceValues,
 } from '../settings/SettingsForms';
 
-const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
+const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
 
 const DEFAULT_INSTANCE: InstanceValues = {
   instanceName: 'Sovereign',

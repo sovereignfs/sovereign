@@ -322,7 +322,8 @@ ecosystem actively uses.
 **Current icons:** `house`, `settings`, `log-out`, `chevron-right/left/down/up`,
 `x`, `check`, `plus`, `trash-2`, `pencil`, `rotate-ccw`, `search`, `user`,
 `shield`, `lock`, `eye`, `eye-off`, `mail`, `bell`, `activity`, `package`,
-`grid-2x2`, `info`, `alert-triangle`, `calendar`.
+`grid-2x2`, `info`, `alert-triangle`, `calendar`, `sliders-horizontal`,
+`ellipsis-vertical`.
 
 ### Plugin-identity icons vs UI-affordance icons
 

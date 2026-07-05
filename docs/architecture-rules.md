@@ -276,3 +276,32 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   container recreates and is missing from backups, and the runtime fails to boot
   (`Can't find meta/_journal.json`). Never drop the `pnpm-workspace.yaml` COPY
   from either Dockerfile.
+- **The runtime Dockerfile must ship every plugin's `manifest.json` and
+  `migrations/` folder into the runner image**, staged into a curated
+  `/app/.deploy/plugins` directory in the builder stage (not the full
+  `plugins/*/` tree — that would drag each plugin's `app/` source and
+  `node_modules` into the production image for no benefit, since routes are
+  already compiled into the standalone build). `runAllPluginMigrations()`
+  (`runtime/src/plugin-migrations.ts`) and `buildIdToDirMap()` resolve these
+  paths at server startup relative to the workspace root; if absent, a
+  missing-migrations plugin is **silently skipped** (`existsSync` guard, no
+  error logged) rather than failing loudly — this was the case for every
+  shared/isolated-mode plugin until Sovereign Tasks (bundled with the
+  platform by default) was the first to actually need it, surfacing as a
+  production 500
+  (`relation "..." does not exist`) with nothing in the logs pointing at the
+  cause.
+- **A shared or isolated-mode plugin whose application code queries through
+  one dialect's schema (typically `sqlite-core`) needs a genuinely separate
+  `pgTable`-based schema file to generate Postgres migrations from** —
+  `drizzle-kit generate --dialect postgresql` cannot read a `sqliteTable()`
+  schema; it silently reports zero tables. That Postgres schema file must
+  use plain `integer` for booleans/timestamps, never native Postgres
+  `boolean`/`bigint` — Drizzle's query-builder dialect is bound to the
+  client connection, not to the table object's origin, so the existing
+  SQLite-typed query code keeps working against a Postgres-backed client
+  only if the physical columns serialize identically to what the SQLite
+  column mappers already produce. See `docs/plugin-database.md` for the
+  full pattern (`packages/db/src/schema/{sqlite,postgres}/platform.ts` is a
+  different case — the platform's own query code is dialect-aware via
+  `packages/db/src/exec.ts`, so its Postgres schema uses native types).

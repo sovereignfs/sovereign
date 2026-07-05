@@ -37,6 +37,25 @@ RUN pnpm run generate
 # tsup packages → next build → runtime/.next/standalone
 RUN pnpm --filter @sovereignfs/runtime build
 
+# Stage each plugin's manifest.json + migrations/ (if any) into a curated
+# directory for the runner — not the full plugins/ tree, which would drag
+# app/ source and each plugin's own node_modules into the production image
+# for no benefit (routes are already compiled into the standalone build).
+# Both files are genuine runtime dependencies of runAllPluginMigrations()
+# (runtime/src/plugin-migrations.ts) and buildIdToDirMap(), which resolve
+# `plugins/<dir>/manifest.json` and `plugins/<dir>/migrations/{sqlite,postgres}/`
+# relative to the workspace root at server startup — previously absent from
+# the runner image entirely, so every shared/isolated plugin's migrations
+# were silently skipped (existsSync check) with no error logged.
+RUN mkdir -p /app/.deploy/plugins && \
+  for dir in plugins/*/; do \
+    id="$(basename "$dir")"; \
+    dest="/app/.deploy/plugins/$id"; \
+    mkdir -p "$dest"; \
+    [ -f "$dir/manifest.json" ] && cp "$dir/manifest.json" "$dest/"; \
+    [ -d "$dir/migrations" ] && cp -r "$dir/migrations" "$dest/migrations"; \
+  done
+
 # ---- runner: minimal non-root production image ----------------------------
 FROM node:24-alpine AS runner
 ENV NODE_ENV=production
@@ -57,6 +76,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/runtime/.next/static ./runtime/.n
 COPY --from=builder --chown=nextjs:nodejs /app/runtime/public ./runtime/public
 # Platform DB migrations — not traced by Next.js (runtime data, not imports).
 COPY --from=builder --chown=nextjs:nodejs /app/packages/db/migrations ./packages/db/migrations
+# Per-plugin manifest.json + migrations/ (curated staging, see builder stage) —
+# read at startup by runAllPluginMigrations() to apply shared/isolated-mode
+# plugin migrations against the platform (or a dedicated plugin) database.
+COPY --from=builder --chown=nextjs:nodejs /app/.deploy/plugins ./plugins
 # Workspace root marker: the standalone server.js calls process.chdir(__dirname)
 # which moves cwd from /app to /app/runtime. findWorkspaceRoot() then walks up
 # and stops here (/app/pnpm-workspace.yaml), returning /app — so migration

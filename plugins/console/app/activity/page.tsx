@@ -4,7 +4,7 @@ import { ActivitySearch } from '../_components/ActivitySearch';
 import styles from '../console.module.css';
 
 const PAGE_SIZE = 8;
-const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
+const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
 interface ActivityEvent {
   id: string;

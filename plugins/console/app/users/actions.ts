@@ -8,7 +8,7 @@ import { deleteUser } from '@/src/user-deletion';
 
 const AUTH_URL =
   process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
-const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
+const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
 async function actorId(): Promise<string | null> {
   return (await headers()).get('x-sovereign-user-id');
@@ -262,8 +262,7 @@ export async function sendInviteAction(
   // (the Docker image builds without .env, freezing a literal to localhost:3000).
   const runtimeUrlKey = 'NEXT_PUBLIC_RUNTIME_URL';
   const runtimeUrl =
-    process.env[runtimeUrlKey] ??
-    `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
+    process.env[runtimeUrlKey] ?? `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
   const registerUrl = `${runtimeUrl}/register?token=${token}`;
   const emailResult = await sendAdminEmail({
     templateId: 'console.invite_created',

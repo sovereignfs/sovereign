@@ -133,7 +133,8 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   via `selectLauncherPlugins`; `sdk.db` replaces this fetch in Task 0.5.5.
 - **The `/api/*` namespace is split: reserved runtime segments vs. the public
   provider namespace (PLT-16).** The runtime serves its own first-level segments
-  — `account`, `admin`, `health`, `plugins` (`runtime/app/api/*`) — listed in
+  — `account`, `admin`, `auth`, `health`, `instance`, `manifest`, `plugins`
+  (`runtime/app/api/*`) — listed in
   `RESERVED_API_SEGMENTS` (`runtime/src/api-namespace.ts`); a parity test asserts
   the set matches the on-disk dirs, so a new runtime API route can't silently
   become delegatable. Every other `/api/<slug>/*` is the **public** namespace:

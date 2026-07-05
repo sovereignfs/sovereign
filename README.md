@@ -40,7 +40,7 @@ Node ≥20 + `pnpm` for local development.
 ```bash
 git clone https://github.com/sovereignfs/sovereign.git
 cd sovereign
-cp .env.example .env          # set AUTH_SECRET, SOVEREIGN_ADMIN_KEY, NEXT_PUBLIC_RUNTIME_URL
+cp .env.example .env          # set AUTH_SECRET and SOVEREIGN_ADMIN_KEY
 docker compose up --build
 ```
 

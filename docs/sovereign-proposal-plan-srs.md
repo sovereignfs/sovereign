@@ -509,26 +509,42 @@ sdk.auth.getSession(): Promise<Session | null>
 sdk.auth.requireSession(): Promise<Session>  // throws if unauthenticated
 
 // Database
-sdk.db.getClient(): DrizzleClient  // scoped Drizzle instance
+sdk.db.getClient(): Promise<DrizzleClient>  // scoped Drizzle instance
 
 // Mailer
 sdk.mailer.send(options: MailOptions): Promise<void>
 
 // Platform config
-sdk.platform.getConfig(): PlatformConfig
+sdk.platform.getConfig(): Promise<PlatformConfig>
 ```
 
-**Declared but unimplemented in v1 (stub throws NotImplementedError):**
+**Experimental / implemented but not yet part of the stable SDK guarantee:**
+
+```typescript
+sdk.data.provide(contract: string, resolver: DataContractResolver): void
+sdk.data.query(ref: DataContractRef, params?: unknown): Promise<unknown[]>
+sdk.activity.log(entry: ActivityLogEntry): Promise<void>
+sdk.portability.provideExport(resolver: ExportResolver): void
+sdk.portability.provideImport(handler: ImportHandler): void
+sdk.portability.provideDelete(handler: DeletionHandler): void
+sdk.env.get(key: string): Promise<string | null>
+sdk.notifications.send(input: SendNotificationInput, requestHeaders?: Headers): Promise<void>
+```
+
+**Declared but unimplemented in v1 (stub throws `NotImplementedError`):**
 
 ```typescript
 sdk.storage.put(key: string, value: Buffer): Promise<void>
 sdk.storage.get(key: string): Promise<Buffer | null>
-sdk.notifications.send(userId: string, message: string): Promise<void>
 sdk.events.publish(event: string, payload: unknown): Promise<void>
 sdk.events.subscribe(event: string, handler: Function): void
 ```
 
-Plugins declare which SDK capabilities they use in their manifest under `"permissions"`. This serves as documentation and forward-compatibility signalling, not runtime enforcement in v1.
+Plugins declare which SDK capabilities they use in their manifest under `"permissions"`.
+In the current implementation, these declarations are enforced for the user data
+portability participation paths (`data:export` / `data:import`) and otherwise
+serve as documentation and forward-compatibility signalling until full SDK host
+permission gates are added.
 
 ### 3.7 Database Layer
 
@@ -776,10 +792,11 @@ User-facing, self-service data ownership — distinct from the operator backup o
 §3.15. A user exports their own data to a **versioned ZIP**, restores it, or
 migrates it to another Sovereign instance. Because per-user data is scattered
 across heterogeneously-owned plugin tables, plugins contribute their slice
-through a reserved `sdk.portability` surface (`provideExport`/`provideImport`),
-runtime-mediated so a plugin only ever touches the current user's own data.
-Reserved `data:export`/`data:import` permissions gate participation; the Account
-plugin gains a Data tab. Bundle format, flows, and UI are deferred per RFC 0007.
+through the implemented `sdk.portability` surface
+(`provideExport`/`provideImport`/`provideDelete`), runtime-mediated so a plugin
+only ever touches the current user's own data. The `data:export`/`data:import`
+permissions gate participation; the Account plugin includes a Data tab for
+export/import flows.
 
 ### 3.17 Security & Encryption Architecture (RFC 0008)
 
@@ -788,10 +805,10 @@ transport/TLS enforcement, Postgres SSL) and **at-rest encryption** (operator
 disk/volume, app-level SQLCipher DB, encrypted backups/exports, avatar/blob
 encryption) under a **local-keyfile envelope key hierarchy** (master KEK → wrapped
 DEKs; no external dependency, fail-fast when enabled — the operator owns the key,
-and losing it loses the data). **Field-level encryption** is specified behind a
-reserved `sdk.crypto` surface + `crypto:use` permission; **zero-knowledge E2EE**
-is charted honestly as the post-v1 direction (it breaks server-side search, SSR,
-and server-side plugin processing). At-rest with server-held keys protects data
+and losing it loses the data). **Field-level encryption** is planned as a future
+SDK surface and manifest permission; **zero-knowledge E2EE** is charted honestly
+as the post-v1 direction (it breaks server-side search, SSR, and server-side
+plugin processing). At-rest with server-held keys protects data
 off the host (theft, backups) but **not** a curious operator or an RCE attacker —
 only the zero-knowledge tier does. Amends §3.15 (encrypted backups) and §3.16
 (encrypted exports). **Phasing:** Tier 0 (hardening) and Tier 1 (transport) target
@@ -1136,15 +1153,14 @@ type Permission =
   | 'db:readOnly'
   | 'mailer:send'
   | 'storage:readWrite' // not implemented v1
-  | 'notifications:send' // not implemented v1
+  | 'notifications:send' // send notifications via sdk.notifications (RFC 0015)
   | 'events:publish' // not implemented v1
   | 'events:subscribe' // not implemented v1
-  | 'data:provide' // cross-plugin data sharing — expose contracts (RFC 0002); reserved, not implemented v1
-  | 'data:consume' // cross-plugin data sharing — consume contracts (RFC 0002); reserved, not implemented v1
-  | 'activity:write' // activity log — record scoped events via sdk.activity (RFC 0005); reserved, not implemented v1
-  | 'data:export' // user data portability — contribute to a user's export (RFC 0007); reserved, not implemented v1
-  | 'data:import' // user data portability — accept imported user data (RFC 0007); reserved, not implemented v1
-  | 'crypto:use' // field-level encryption — encrypt/decrypt fields via sdk.crypto (RFC 0008); reserved, not implemented v1
+  | 'data:provide' // cross-plugin data sharing — expose contracts via sdk.data (RFC 0002)
+  | 'data:consume' // cross-plugin data sharing — consume contracts via sdk.data (RFC 0002)
+  | 'activity:write' // activity log — record scoped events via sdk.activity (RFC 0005)
+  | 'data:export' // user data portability — contribute to a user's export (RFC 0007)
+  | 'data:import' // user data portability — accept imported user data (RFC 0007)
   | 'admin:*'; // grants admin-only routes. Equivalent to declaring adminOnly: true in the manifest — the middleware maps adminOnly to this capability check. Prefer adminOnly in the manifest; admin:* in permissions is for future fine-grained plugin-level admin scopes.
 ```
 

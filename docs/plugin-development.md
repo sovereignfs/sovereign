@@ -182,9 +182,9 @@ manifest validation until the corresponding runtime support ships.
 
 ### `permissions`
 
-Declared capabilities. The v1-functional ones:
+Declared SDK capabilities. The v1-functional ones:
 
-| Permission     | Grants                                                                                     |
+| Permission     | Declares                                                                                   |
 | -------------- | ------------------------------------------------------------------------------------------ |
 | `auth:session` | Read the current session via `sdk.auth`.                                                   |
 | `db:readWrite` | Read/write access to the platform DB via `sdk.db`.                                         |
@@ -202,6 +202,13 @@ Declared capabilities. The v1-functional ones:
 
 Reserved (declaring them is allowed; the backing surfaces throw `NotImplementedError` until
 implemented): `storage:readWrite`, `events:publish`, `events:subscribe`.
+
+Permission declarations are part of the manifest contract and are used by
+platform flows such as portability (`data:export` / `data:import`). Other SDK
+host surfaces currently rely on the declaration as compatibility metadata rather
+than a complete runtime authorization boundary; plugins should still declare the
+permissions they use so future host-side gates can be enforced without changing
+the manifest.
 
 ### `apiProvider` and the public `/api/*` namespace (PLT-16)
 

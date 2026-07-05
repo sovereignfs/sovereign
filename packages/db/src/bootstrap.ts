@@ -154,6 +154,29 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
        ON plugin_connections (tenant_id, plugin_id, provider, status)`,
     `CREATE INDEX IF NOT EXISTS plugin_connections_user_idx
        ON plugin_connections (tenant_id, user_id, status)`,
+    // Task 3.27 — Admin-managed external provider configuration.
+    // Secret field values are stored through plugin_secrets and referenced here.
+    `CREATE TABLE IF NOT EXISTS plugin_provider_configs (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      plugin_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      label TEXT NOT NULL,
+      public_config TEXT,
+      secret_ref TEXT,
+      callback_url TEXT,
+      scopes TEXT,
+      status TEXT NOT NULL,
+      last_checked_at ${ts},
+      last_error TEXT,
+      created_at ${ts} NOT NULL,
+      updated_at ${ts} NOT NULL,
+      deleted_at ${ts}
+    )`,
+    `CREATE INDEX IF NOT EXISTS plugin_provider_configs_active_idx
+       ON plugin_provider_configs (tenant_id, plugin_id, provider, deleted_at)`,
+    `CREATE INDEX IF NOT EXISTS plugin_provider_configs_plugin_idx
+       ON plugin_provider_configs (tenant_id, plugin_id, deleted_at)`,
     // RFC 0015 — Notification Center
     `CREATE TABLE IF NOT EXISTS notifications (
       id TEXT PRIMARY KEY,

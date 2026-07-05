@@ -71,6 +71,13 @@
       "when": 1782600000000,
       "tag": "0009_plugin_external_connections",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1782700000000,
+      "tag": "0010_plugin_provider_configs",
+      "breakpoints": true
     }
   ]
 }

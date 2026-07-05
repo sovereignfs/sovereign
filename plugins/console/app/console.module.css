@@ -650,6 +650,58 @@
   color: var(--sv-color-text-muted);
 }
 
+.providerConfigGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--sv-space-4);
+}
+
+.providerConfigCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+  padding: var(--sv-space-4);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-surface-raised);
+}
+
+.providerConfigHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sv-space-3);
+}
+
+.providerConfigTitle {
+  margin: 0;
+  font-size: var(--sv-font-size-base);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.providerConfigStatus {
+  padding: 2px var(--sv-space-2);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-xs);
+  white-space: nowrap;
+}
+
+.providerConfigForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+}
+
+.providerConfigActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sv-space-2);
+}
+
 /* ── File drop zone ──────────────────────────────────────────────────────── */
 
 .fileDropZone {

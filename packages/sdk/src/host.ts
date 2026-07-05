@@ -6,6 +6,7 @@ import type {
   DrizzleClient,
   MailOptions,
   PlatformConfig,
+  ProviderConfig,
   ResolveUsersInput,
   SearchUsersInput,
   SendNotificationInput,
@@ -133,6 +134,7 @@ export interface SdkHost {
     ): Promise<ConnectionRef>;
     createOAuthState(input: OAuthStateInput, context: ConnectionContext): Promise<string>;
     verifyOAuthState(state: string, context: ConnectionContext): Promise<ConnectionOAuthState>;
+    getProviderConfig(provider: string, context: ConnectionContext): Promise<ProviderConfig>;
   };
 }
 

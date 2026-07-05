@@ -194,6 +194,25 @@ export const pluginConnections = pgTable('plugin_connections', {
   disconnectedAt: bigint('disconnected_at', { mode: 'number' }),
 });
 
+/** Instance-level external provider configuration managed by admins (Task 3.27). */
+export const pluginProviderConfigs = pgTable('plugin_provider_configs', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  pluginId: text('plugin_id').notNull(),
+  provider: text('provider').notNull(),
+  label: text('label').notNull(),
+  publicConfig: text('public_config'),
+  secretRef: text('secret_ref'),
+  callbackUrl: text('callback_url'),
+  scopes: text('scopes'),
+  status: text('status').notNull(),
+  lastCheckedAt: bigint('last_checked_at', { mode: 'number' }),
+  lastError: text('last_error'),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+  deletedAt: bigint('deleted_at', { mode: 'number' }),
+});
+
 /** Browser Web Push subscriptions (RFC 0016). Mirror of SQLite schema. */
 export const pushSubscriptions = pgTable('push_subscriptions', {
   id: text('id').primaryKey(),

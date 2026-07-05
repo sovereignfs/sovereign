@@ -180,6 +180,19 @@ beforeAll(() => {
           expiresAt: 2,
         };
       },
+      async getProviderConfig(provider) {
+        return {
+          provider,
+          label: 'Google Mail',
+          configured: true,
+          source: 'console',
+          publicValues: { clientId: 'client-id' },
+          secretValues: { clientSecret: 'client-secret' },
+          callbackUrl: 'https://example.test/notes/connections/google/callback',
+          scopes: ['user'],
+          missingRequired: [],
+        };
+      },
     },
   });
 });
@@ -238,6 +251,7 @@ describe('sdk surface', () => {
     expect(typeof sdk.connections.markError).toBe('function');
     expect(typeof sdk.connections.createOAuthState).toBe('function');
     expect(typeof sdk.connections.verifyOAuthState).toBe('function');
+    expect(typeof sdk.connections.getProviderConfig).toBe('function');
     expect(typeof sdk.events.publish).toBe('function');
     expect(typeof sdk.events.subscribe).toBe('function');
   });

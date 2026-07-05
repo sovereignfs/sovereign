@@ -242,6 +242,22 @@ export interface ConnectionOAuthState {
   expiresAt: number;
 }
 
+/** Source summary for effective external provider configuration (Task 3.27). */
+export type ProviderConfigSource = 'env' | 'console' | 'mixed' | 'missing';
+
+/** Server-side effective external provider config for the calling plugin. */
+export interface ProviderConfig {
+  provider: string;
+  label: string;
+  configured: boolean;
+  source: ProviderConfigSource;
+  publicValues: Record<string, string>;
+  secretValues: Record<string, string>;
+  callbackUrl: string | null;
+  scopes: readonly string[];
+  missingRequired: readonly string[];
+}
+
 export interface ConnectionContext {
   tenantId: string;
   pluginId: string;

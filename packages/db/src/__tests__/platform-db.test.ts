@@ -7,20 +7,24 @@ import {
   createPluginConnection,
   createPluginSecret,
   deletePluginSecret,
+  deletePluginProviderConfig,
   deleteUserData,
   disconnectPluginConnection,
   getAccountPrefs,
   getDefaultTenant,
   getPluginConnection,
+  getPluginProviderConfig,
   getPluginSecret,
   getInstanceConfig,
   getPlatformSetting,
   listPluginConnections,
+  listAllPluginProviderConfigs,
   listPluginSecrets,
   listUserPluginConnectionRefs,
   listUserPluginSecretRefs,
   markPluginConnectionError,
   markPluginConnectionUsed,
+  markPluginProviderConfigChecked,
   markPluginSecretUsed,
   listAdminActivity,
   listDisabledPluginIds,
@@ -33,6 +37,7 @@ import {
   setPluginEnabled,
   setTenantName,
   updatePluginConnection,
+  upsertPluginProviderConfig,
   updatePluginSecret,
   type PlatformDb,
 } from '../platform-db';
@@ -539,6 +544,67 @@ describe('plugin external connection helpers (RFC 0049)', () => {
         userId: null,
       }),
     ).toBeDefined();
+  });
+});
+
+describe('plugin external provider config helpers', () => {
+  it('stores instance-level provider config metadata and deletes linked vault secrets', async () => {
+    const db = await freshDb();
+    await createPluginSecret(db, {
+      tenantId: DEFAULT_TENANT_ID,
+      pluginId: 'com.example.notes',
+      userId: null,
+      id: 'secret-provider-1',
+      scope: 'instance',
+      label: 'GitHub credentials',
+      ciphertext: 'encrypted-json',
+    });
+
+    const created = await upsertPluginProviderConfig(db, {
+      id: 'provider-config-1',
+      tenantId: DEFAULT_TENANT_ID,
+      pluginId: 'com.example.notes',
+      provider: 'github',
+      label: 'GitHub',
+      publicConfig: '{"clientId":"client-id"}',
+      secretRef: 'secret-provider-1',
+      callbackUrl: 'https://example.test/notes/connections/github/callback',
+      scopes: '["user"]',
+    });
+
+    expect(created).toMatchObject({
+      id: 'provider-config-1',
+      pluginId: 'com.example.notes',
+      provider: 'github',
+      status: 'configured',
+      secretRef: 'secret-provider-1',
+    });
+    expect(
+      await getPluginProviderConfig(db, DEFAULT_TENANT_ID, 'com.example.notes', 'github'),
+    ).toMatchObject({ id: 'provider-config-1' });
+    expect(await listAllPluginProviderConfigs(db)).toHaveLength(1);
+
+    const checked = await markPluginProviderConfigChecked(
+      db,
+      'provider-config-1',
+      DEFAULT_TENANT_ID,
+      'Missing required fields: clientSecret',
+    );
+    expect(checked).toMatchObject({ status: 'error' });
+
+    const deleted = await deletePluginProviderConfig(db, 'provider-config-1');
+    expect(deleted).toMatchObject({ id: 'provider-config-1', secretRef: 'secret-provider-1' });
+    expect(await listAllPluginProviderConfigs(db)).toEqual([]);
+    expect(
+      await getPluginProviderConfig(db, DEFAULT_TENANT_ID, 'com.example.notes', 'github'),
+    ).toBeUndefined();
+    expect(
+      await getPluginSecret(db, 'secret-provider-1', {
+        tenantId: DEFAULT_TENANT_ID,
+        pluginId: 'com.example.notes',
+        userId: null,
+      }),
+    ).toBeUndefined();
   });
 });
 

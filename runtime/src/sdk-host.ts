@@ -49,6 +49,7 @@ import type {
   SecretRef,
   SecretScope,
   SendNotificationInput,
+  ProviderConfig,
 } from '@sovereignfs/sdk';
 import { registerDeleter, registerExporter, registerImporter } from './portability/registry';
 import { fanOutPushToUser } from './push';
@@ -76,6 +77,7 @@ import {
   normalizeSecretLabel,
   toSecretRef,
 } from './secrets';
+import { resolveProviderConfig } from './provider-configs';
 
 let _version: string | undefined;
 const AUTH_URL =
@@ -544,6 +546,30 @@ provideHost({
         pluginId: context.pluginId,
         userId: context.userId,
       });
+    },
+
+    async getProviderConfig(provider, context): Promise<ProviderConfig> {
+      const manifest = registry.find((candidate) => candidate.id === context.pluginId);
+      if (!manifest) throw new Error('Calling plugin is not installed.');
+      const providerId = normalizeProvider(provider);
+      const declaration = manifest.connections?.providers.find(
+        (candidate) => candidate.id === providerId,
+      );
+      if (!declaration) throw new Error('Provider is not declared by the calling plugin manifest.');
+      const effective = await resolveProviderConfig({
+        tenantId: context.tenantId,
+        manifest,
+        provider: declaration,
+        includeSecrets: true,
+      });
+      const {
+        id: _id,
+        status: _status,
+        lastCheckedAt: _lastCheckedAt,
+        lastError: _lastError,
+        ...sdkConfig
+      } = effective;
+      return sdkConfig;
     },
   },
 });

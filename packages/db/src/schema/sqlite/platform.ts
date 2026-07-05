@@ -226,6 +226,29 @@ export const pluginConnections = sqliteTable('plugin_connections', {
   disconnectedAt: integer('disconnected_at'),
 });
 
+/**
+ * Instance-level external provider configuration managed by admins (Task 3.27).
+ * Secret field values live in `plugin_secrets`; this table stores non-secret
+ * public values, callback/scopes metadata, status, and the vault reference.
+ */
+export const pluginProviderConfigs = sqliteTable('plugin_provider_configs', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  pluginId: text('plugin_id').notNull(),
+  provider: text('provider').notNull(),
+  label: text('label').notNull(),
+  publicConfig: text('public_config'),
+  secretRef: text('secret_ref'),
+  callbackUrl: text('callback_url'),
+  scopes: text('scopes'),
+  status: text('status').notNull(),
+  lastCheckedAt: integer('last_checked_at'),
+  lastError: text('last_error'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  deletedAt: integer('deleted_at'),
+});
+
 export type AccountPrefs = typeof accountPrefs.$inferSelect;
 export type NewAccountPrefs = typeof accountPrefs.$inferInsert;
 
@@ -367,6 +390,8 @@ export type PluginSecret = typeof pluginSecrets.$inferSelect;
 export type NewPluginSecret = typeof pluginSecrets.$inferInsert;
 export type PluginConnection = typeof pluginConnections.$inferSelect;
 export type NewPluginConnection = typeof pluginConnections.$inferInsert;
+export type PluginProviderConfig = typeof pluginProviderConfigs.$inferSelect;
+export type NewPluginProviderConfig = typeof pluginProviderConfigs.$inferInsert;
 export type Entitlement = typeof entitlements.$inferSelect;
 export type NewEntitlement = typeof entitlements.$inferInsert;
 export type InstanceConfigRow = typeof instanceConfig.$inferSelect;

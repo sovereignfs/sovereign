@@ -1,4 +1,5 @@
 import styles from '../console.module.css';
+import { ProviderConfigsSection, type ProviderConfigRow } from './ProviderConfigForms';
 import { TenantForm, InviteOnlyForm, ExampleAppsForm, RootPluginForm } from './SettingsForms';
 
 const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
@@ -60,9 +61,13 @@ export default async function SettingsPage() {
   const connectionsResult = await adminGet<{ connections: ExternalConnection[] }>(
     '/api/admin/connections',
   ).catch(() => ({ connections: [] }));
+  const providerConfigsResult = await adminGet<{ providers: ProviderConfigRow[] }>(
+    '/api/admin/provider-configs',
+  ).catch(() => ({ providers: [] }));
   const settings = settled(settingsResult, DEFAULT_SETTINGS);
   const plugins = settled(pluginsResult, [] as PluginRow[]);
   const connections = connectionsResult.connections;
+  const providerConfigs = providerConfigsResult.providers;
 
   const rootCandidates = plugins.filter((p) => p.enabled && !p.adminOnly && p.shell !== 'overlay');
   const rootInstalled = rootCandidates.some((p) => p.id === settings.rootPluginId);
@@ -135,6 +140,11 @@ export default async function SettingsPage() {
             </div>
           </div>
         )}
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>External provider configuration</h2>
+        <ProviderConfigsSection providers={providerConfigs} />
       </section>
     </div>
   );

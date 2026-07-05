@@ -79,6 +79,8 @@ export type {
   DirectoryUser,
   MailOptions,
   PlatformConfig,
+  ProviderConfig,
+  ProviderConfigSource,
   ResolveUsersInput,
   SearchUsersInput,
   ActivityLogEntry,

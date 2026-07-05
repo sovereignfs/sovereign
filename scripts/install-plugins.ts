@@ -177,6 +177,21 @@ function copyCheckout(cloneDir: string, subdir: string | undefined, dest: string
   });
 }
 
+/**
+ * True when `plugins/<id>` already exists, OR when a `<id>.local` directory
+ * does — the documented convention for a personal, gitignored dev-override
+ * checkout (see docs/plugin-development.md). Without the `.local` check, a
+ * fresh `pnpm dev`/`install:plugins` run reclones the real repo into
+ * `plugins/<id>` alongside a developer's own `.local` checkout of the same
+ * plugin — both declare the same manifest id, so the generated registry ends
+ * up with two entries sharing one React key (`generate-registry.ts`'s
+ * `duplicatePluginIds` check now also catches this at generate time, as a
+ * second line of defense).
+ */
+export function isPluginInstalled(id: string, pluginsDir: string = PLUGINS_DIR): boolean {
+  return existsSync(join(pluginsDir, id)) || existsSync(join(pluginsDir, `${id}.local`));
+}
+
 function main(): void {
   if (!existsSync(CONFIG_PATH)) {
     console.log(
@@ -191,7 +206,7 @@ function main(): void {
     return;
   }
 
-  const { toClone, toSkip } = planInstall(config, (id) => existsSync(join(PLUGINS_DIR, id)));
+  const { toClone, toSkip } = planInstall(config, (id) => isPluginInstalled(id));
 
   for (const entry of toSkip) {
     console.log(`[install-plugins] ${entry.id} already present — skipping.`);

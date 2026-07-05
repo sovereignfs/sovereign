@@ -141,6 +141,30 @@ export function duplicateApiProviders(plugins: PluginEntry[]): SovereignManifest
   return findApiProvider(plugins.map((p) => p.manifest)).duplicates;
 }
 
+/**
+ * Two directories under `plugins/` whose manifests declare the same `id` —
+ * e.g. a real clone at `plugins/<id>` alongside a personal `.local` dev
+ * override of the same plugin (`install-plugins.ts` now skips cloning when a
+ * `.local` directory already exists, specifically to prevent this, but this
+ * check exists as a second line of defense so any other cause fails loudly at
+ * generate time instead of silently producing a duplicate registry entry
+ * (broken React key downstream in the nav rail, unpredictable route/env-var
+ * resolution since both entries compose to the same routePrefix).
+ */
+export function duplicatePluginIds(plugins: PluginEntry[]): Map<string, string[]> {
+  const dirsById = new Map<string, string[]>();
+  for (const { dir, manifest } of plugins) {
+    const dirs = dirsById.get(manifest.id) ?? [];
+    dirs.push(dir);
+    dirsById.set(manifest.id, dirs);
+  }
+  const duplicates = new Map<string, string[]>();
+  for (const [id, dirs] of dirsById) {
+    if (dirs.length > 1) duplicates.set(id, dirs);
+  }
+  return duplicates;
+}
+
 function readPlugins(): PluginEntry[] {
   if (!existsSync(PLUGINS_DIR)) return [];
   const plugins: PluginEntry[] = [];
@@ -181,6 +205,24 @@ function readPlugins(): PluginEntry[] {
   }
 
   const sortedPlugins = sortPluginEntries(plugins);
+
+  // Two directories declaring the same manifest id — most commonly a real
+  // clone at plugins/<id> alongside a plugins/<id>.local dev override. Fail
+  // loudly rather than composing both to the same routePrefix and letting the
+  // nav rail render a broken duplicate React key at request time.
+  const idDuplicates = duplicatePluginIds(sortedPlugins);
+  if (idDuplicates.size > 0) {
+    console.error('[generate] more than one plugin directory declares the same manifest id:');
+    for (const [id, dirs] of idDuplicates) {
+      console.error(`  - "${id}": ${dirs.join(', ')}`);
+    }
+    console.error(
+      '  Remove one of the directories (a plugins/<id>.local dev override should ' +
+        'make install-plugins.ts skip cloning the real plugins/<id> — see its ' +
+        '"already installed" check).',
+    );
+    process.exit(1);
+  }
 
   // PLT-16: at most one plugin may serve the public /api/* namespace. Fail
   // loudly rather than picking one non-deterministically at request time.

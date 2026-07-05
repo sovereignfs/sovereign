@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   collectPluginEnv,
   duplicateApiProviders,
+  duplicatePluginIds,
   linkOrCopyTarget,
   pruneGeneratedEntries,
   pruneStalePluginIcons,
@@ -102,6 +103,34 @@ describe('plugin generation guards', () => {
       'com.example.zeta',
     ]);
     expect(sorted.map((plugin) => plugin.dir)).toEqual(['a-dir', 'm-dir', 'z-dir']);
+  });
+
+  // Guards against a real clone (plugins/<id>) coexisting with a personal
+  // plugins/<id>.local dev override — both declare the same manifest id,
+  // which install-plugins.ts's isPluginInstalled() now prevents at the
+  // source, but this is a second line of defense so any other cause (e.g. two
+  // differently-named directories both declaring the same id by mistake)
+  // fails loudly at generate time instead of producing a duplicate registry
+  // entry (a broken React key in the nav rail at runtime).
+  it('detects two directories declaring the same manifest id', () => {
+    const duplicates = duplicatePluginIds([
+      entry('sovereign-tasks', { id: 'fs.sovereign.tasks' }),
+      entry('sovereign-tasks.local', { id: 'fs.sovereign.tasks' }),
+      entry('console', { id: 'fs.sovereign.console' }),
+    ]);
+
+    expect(Object.fromEntries(duplicates)).toEqual({
+      'fs.sovereign.tasks': ['sovereign-tasks', 'sovereign-tasks.local'],
+    });
+  });
+
+  it('reports no duplicates when every manifest id is unique', () => {
+    const duplicates = duplicatePluginIds([
+      entry('a', { id: 'com.example.a' }),
+      entry('b', { id: 'com.example.b' }),
+    ]);
+
+    expect(duplicates.size).toBe(0);
   });
 });
 

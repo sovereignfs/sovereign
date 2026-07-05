@@ -137,26 +137,35 @@ function isVersionGreater(a: string, b: string): boolean {
 }
 
 /**
- * Apply all pending migrations for one isolated plugin's dedicated store.
+ * Apply all pending migrations for one plugin's store — isolated (dedicated
+ * file/schema) or shared (platform DB).
  *
  * Unlike the platform migration runner, this function does NOT manage
  * downgrade detection or platform-version bookkeeping — it only applies
  * Drizzle migrations from the plugin's own `migrations/{sqlite,postgres}/`
  * folder. The plugin is responsible for all schema state in its store.
  *
- * Each store tracks applied migrations in its own `__drizzle_migrations`
- * table (Drizzle's default), so version state is per-database and never
- * interleaves with the platform DB's migration log.
+ * `migrationsTable` MUST be passed (and must be unique per plugin) whenever
+ * `pluginDb` is the platform DB (shared mode) — Drizzle's migrator tracks
+ * "already applied" by comparing only the single most recent `created_at` row
+ * in the table, not per-plugin or per-hash. Reusing the default
+ * `__drizzle_migrations` table across the platform's own migrations and a
+ * plugin's would let whichever history has later timestamps make the other
+ * look already-applied and silently skip forever. See
+ * `pluginMigrationsTableName` for the naming convention. Isolated plugins
+ * don't need this — each already has its own dedicated store, so the default
+ * table name never collides with anything else.
  */
 export async function runPluginMigrations(
   pluginDb: PluginDb,
   migrationsFolder: string,
+  migrationsTable?: string,
 ): Promise<void> {
   if (pluginDb.dialect === 'sqlite') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    migrateSqlite(pluginDb.db as any, { migrationsFolder });
+    migrateSqlite(pluginDb.db as any, { migrationsFolder, migrationsTable });
     return;
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await migratePg(pluginDb.db as any, { migrationsFolder });
+  await migratePg(pluginDb.db as any, { migrationsFolder, migrationsTable });
 }

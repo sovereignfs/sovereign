@@ -14,16 +14,16 @@ This document covers both modes in full. Start with
 
 ## Choosing a mode
 
-|                           | Shared                               | Isolated                                        |
-| ------------------------- | ------------------------------------ | ----------------------------------------------- |
-| Default                   | ✅                                   | opt-in                                          |
-| Setup cost                | Zero (just use slug-prefixed tables) | Add `"database": "isolated"` to manifest        |
-| Table prefix required     | Yes — slug (e.g. `tasks_lists`)      | No — own namespace                              |
-| Cross-plugin SQL joins    | Possible (same DB)                   | Not possible; use `sdk.data`                    |
-| Uninstall                 | Tables remain — manual cleanup       | Entire store dropped automatically              |
-| Per-plugin backup/restore | Not directly                         | `data/plugins/<id>.db` (SQLite) or named schema |
-| Migration tracking        | Shared `__drizzle_migrations`        | Per-store `__drizzle_migrations`                |
-| Blast-radius isolation    | Tables only                          | Full store                                      |
+|                           | Shared                                  | Isolated                                        |
+| ------------------------- | --------------------------------------- | ----------------------------------------------- |
+| Default                   | ✅                                      | opt-in                                          |
+| Setup cost                | Zero (just use slug-prefixed tables)    | Add `"database": "isolated"` to manifest        |
+| Table prefix required     | Yes — slug (e.g. `tasks_lists`)         | No — own namespace                              |
+| Cross-plugin SQL joins    | Possible (same DB)                      | Not possible; use `sdk.data`                    |
+| Uninstall                 | Tables remain — manual cleanup          | Entire store dropped automatically              |
+| Per-plugin backup/restore | Not directly                            | `data/plugins/<id>.db` (SQLite) or named schema |
+| Migration tracking        | Own `__drizzle_migrations_<slug>` table | Per-store `__drizzle_migrations`                |
+| Blast-radius isolation    | Tables only                             | Full store                                      |
 
 **Use shared** (the default) unless you have a specific reason:
 
@@ -87,7 +87,17 @@ const rows = await db.select().from(tasks).where(eq(tasks.userId, session.user.i
 
 Shared plugins place migration files at `plugins/<id>/migrations/sqlite/` and
 `plugins/<id>/migrations/postgres/`. The platform migration runner applies them at startup
-against the platform database, alongside platform-level migrations.
+against the platform database, after platform-level migrations have already run.
+
+**Each shared-mode plugin tracks its applied migrations in its own
+`__drizzle_migrations_<slug>` table** (e.g. `__drizzle_migrations_fs_sovereign_tasks`),
+not the platform's own `__drizzle_migrations` table. Drizzle's migrator decides
+"already applied" purely by comparing a migration's timestamp against the single
+most recent row in whatever table it's given — reusing the platform's table would let
+the newer of the two histories make the older one look already-applied and silently
+skip it forever. This is handled automatically by the migration runner
+(`pluginMigrationsTableName()` in `packages/db`); plugin authors don't need to do
+anything beyond following the standard layout above.
 
 Generate a migration with drizzle-kit (from the repo root, pointing at the platform DB):
 
@@ -358,7 +368,19 @@ names in queries resolve to the plugin's schema. The platform pool is unaffected
 ### Migration runner
 
 `runtime/src/plugin-migrations.ts` (called from `instrumentation.ts`) iterates the
-registry, finds isolated plugins with a `migrations/<dialect>/` folder, and calls
-`runPluginMigrations(pluginDb, folder)` from `packages/db/src/migrate.ts`. That function
-calls Drizzle's built-in `migrate()` for the appropriate dialect, which creates
-`__drizzle_migrations` in the target store on first run and tracks applied files by hash.
+registry, finds every plugin (isolated or shared) with a `migrations/<dialect>/` folder,
+and calls `runPluginMigrations(pluginDb, folder, migrationsTable?)` from
+`packages/db/src/migrate.ts`. That function calls Drizzle's built-in `migrate()` for the
+appropriate dialect, which creates the migrations-tracking table on first run and tracks
+applied files.
+
+For isolated plugins, `migrationsTable` is omitted — Drizzle's default
+`__drizzle_migrations` is fine since each isolated store is already its own dedicated
+database. For shared plugins, the runner passes
+`pluginMigrationsTableName(manifest.id)` (`packages/db/src/plugin-client.ts`), giving
+each one its own uniquely-named table in the platform DB. This matters because
+Drizzle's migrator (`drizzle-orm/*/migrator`) tracks "already applied" by comparing a
+migration's own timestamp against only the single most recent `created_at` row in
+the table — not a per-migration or per-plugin hash lookup. Two independent migration
+histories (the platform's own, and a plugin's) sharing one table would let whichever
+has later timestamps make the other look already-applied and skip silently, forever.

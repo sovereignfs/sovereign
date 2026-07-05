@@ -5,6 +5,7 @@ import {
   getPluginDb,
   getPlatformDb,
   pluginMigrationsFolder,
+  pluginMigrationsTableName,
   provisionPluginDb,
   resolveDialect,
   runPluginMigrations,
@@ -62,7 +63,11 @@ export async function runAllPluginMigrations(): Promise<void> {
         // discriminated union). The cast is safe: runPluginMigrations only
         // accesses .dialect and .db, both of which exist on PlatformDb.
         const pdb = await getPlatformDb();
-        await runPluginMigrations(pdb as unknown as PluginDb, folder);
+        await runPluginMigrations(
+          pdb as unknown as PluginDb,
+          folder,
+          pluginMigrationsTableName(manifest.id),
+        );
       }
     } catch (err) {
       console.error(`[sovereign] Failed to run migrations for plugin "${manifest.id}":`, err);

@@ -151,6 +151,29 @@
   padding: 0;
 }
 
+/* Desktop full-bleed plugins additionally get a hard-locked viewport height
+   instead of the shell's default auto-growing min-height, so their own
+   internal column/scroll layout can rely on height: 100% cascading
+   correctly. Without this, CSS Grid's default `min-height: auto` on grid
+   items lets .content grow to fit its content instead of clamping to the
+   viewport — height: 100% inside the plugin then resolves against content
+   height, not viewport height, so the whole document scrolls as one unit
+   instead of the plugin's own internal panes scrolling independently.
+   Scoped to desktop only (min-width matching the mobile breakpoint below) —
+   mobile already hard-locks .shell/.content unconditionally, and :has()
+   would otherwise out-specificity that block regardless of source order. */
+@media (min-width: 769px) {
+  .shell:has([data-plugin-fullbleed]) {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .content:has([data-plugin-fullbleed]) {
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
 .mobileHeader {
   display: none;
 }

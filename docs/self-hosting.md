@@ -130,6 +130,24 @@ To drop the examples from the image entirely (rather than just hiding them),
 remove their entries from `sovereign.plugins.json` before building — nothing will
 be cloned or composed.
 
+## Bundled default plugins
+
+**Sovereign Tasks** ships with every default install the same way the example
+plugins do — declared in `sovereign.plugins.json`, pinned to a commit, cloned
+into `plugins/sovereign-tasks/` during the Docker build (or `pnpm
+install:plugins` locally). Unlike the examples, Tasks is a real feature and is
+**visible and enabled from first boot** — there's no hidden-by-default toggle
+for it.
+
+Tasks is maintained in its own repository
+([`sovereignfs/sovereign-tasks`](https://github.com/sovereignfs/sovereign-tasks))
+and released independently of the platform, but bundling it here means
+operators get it out of the box without a manual `sv plugin add`. If you don't
+want it, disable or uninstall it from **Console → Plugins** like any other
+plugin — the same lifecycle covers every plugin regardless of how its code got
+onto disk. To drop it from the image entirely, remove its entry from
+`sovereign.plugins.json` before building, same as the examples above.
+
 ---
 
 ## Environment variables

@@ -27,7 +27,8 @@ interface MemberRow {
 }
 
 async function getMembers(): Promise<MemberRow[]> {
-  const authUrl = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+  const authUrl =
+    process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   try {
     const res = await fetch(`${authUrl}/api/admin/users`, {

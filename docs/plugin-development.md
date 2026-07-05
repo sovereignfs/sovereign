@@ -819,6 +819,20 @@ The SDK surface (`sdk.*`):
   configured; `instancePrimaryColor` is a validated 6-digit hex string or
   `undefined`. Use these to display the operator's instance identity in plugin UI without
   reading CSS variables.
+- **`directory`** — member selection for sharing, assignment, membership, and
+  recipient flows (RFC 0041). No manifest permission is required. Use
+  `searchUsers({ query, limit? })` for user-picker search and
+  `resolveUsers({ ids })` to refresh profile labels for IDs already stored in
+  your plugin tables. Both methods return only active users in the current
+  tenant and only display-safe fields: `{ id, email, name, image }`.
+  ```ts
+  const matches = await sdk.directory.searchUsers({ query: 'kas', limit: 10 });
+  const selected = await sdk.directory.resolveUsers({ ids: memberUserIds });
+  ```
+  Queries must be at least two characters and are capped to 20 results by
+  default, 50 maximum. Do not call Console/admin user routes from plugins; store
+  selected user IDs in your own membership/share table and resolve them through
+  this SDK surface when rendering.
 - **`data`** — cross-plugin data sharing (RFC 0002). `sdk.data.provide(contract,
 resolver)` registers a resolver; `sdk.data.query(ref, params)` reads from
   another plugin's contract (throws `ConsentRequiredError` without a user grant).

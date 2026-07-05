@@ -1,6 +1,7 @@
 import * as auth from './auth';
 import { activity } from './activity';
 import { data } from './data';
+import { directory } from './directory';
 import * as db from './db';
 import { env } from './env';
 import * as mailer from './mailer';
@@ -21,8 +22,10 @@ import { billing, events, storage } from './unimplemented';
  * (cross-plugin data sharing, RFC 0002), `activity` (activity log, RFC 0005),
  * `portability` (user data export/import, RFC 0007), `env` (plugin-scoped env
  * vars, RFC 0018), `notifications` (notification center, RFC 0015),
+ * `directory` (member selection, RFC 0041),
  * `billing` (plugin monetization / entitlement gating, RFC 0003), `storage`,
- * `events`. `data`, `activity`, `portability`, `env`, and `notifications` are
+ * `events`. `data`, `activity`, `portability`, `env`, `notifications`, and
+ * `directory` are
  * implemented; `billing`, `storage`, and `events` throw `NotImplementedError`
  * until their backing mechanisms ship. Their shape may change before they stabilise.
  */
@@ -35,6 +38,7 @@ export const sdk = {
   // Experimental / reserved — shape may change; some throw until implemented.
   data,
   storage,
+  directory,
   notifications,
   events,
   activity,
@@ -67,8 +71,11 @@ export type {
   SessionUser,
   ActiveSession,
   ChangePasswordInput,
+  DirectoryUser,
   MailOptions,
   PlatformConfig,
+  ResolveUsersInput,
+  SearchUsersInput,
   ActivityLogEntry,
   DrizzleClient,
   SendNotificationInput,

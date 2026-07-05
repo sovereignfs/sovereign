@@ -7,7 +7,7 @@
   "license": "AGPL-3.0-or-later",
   "packageManager": "pnpm@11.5.2",
   "engines": {
-    "node": ">=20"
+    "node": ">=24 <25"
   },
   "scripts": {
     "build": "turbo build",

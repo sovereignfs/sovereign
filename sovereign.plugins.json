@@ -1,6 +1,11 @@
 {
   "plugins": [
     {
+      "id": "sovereign-tasks",
+      "repository": "https://github.com/sovereignfs/sovereign-tasks.git",
+      "ref": "29632f1e512cc49a8e2ad72a7c14ace4446c2f77"
+    },
+    {
       "id": "example-basic",
       "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
       "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",

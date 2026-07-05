@@ -39,6 +39,7 @@ export const ICON_LIST = [
   'info',
   'alert-triangle',
   'calendar',
+  'sliders-horizontal',
 ] as const;
 
 export type IconName = (typeof ICON_LIST)[number];

@@ -20,8 +20,10 @@ Please try re-compiling or re-installing the module
 
 **Cause:** `better-sqlite3` is a native Node module. Its compiled binary is tied
 to the Node ABI version that was active when `node_modules` was installed. This
-happens when the checkout's dependencies were installed with one Node version
-and `pnpm dev` later runs with another.
+happens when the checkout's dependencies were installed or rebuilt with one Node
+version and `pnpm dev` later runs with another. Sovereign pins local development
+to Node 24, matching the Docker `node:24-alpine` images, so Node 26-built
+bindings will fail under a Node 24 dev process.
 
 **Diagnose:** In the same terminal where `pnpm dev` fails, check the active Node
 version and ABI:
@@ -31,8 +33,15 @@ node -p "process.version + ' ABI ' + process.versions.modules"
 ```
 
 If the error says the installed binary was compiled for a different
-`NODE_MODULE_VERSION`, rebuild or reinstall dependencies with the Node version
-you will use for development.
+`NODE_MODULE_VERSION`, first make sure the repository's pinned Node is active:
+
+```bash
+nvm use
+node -p "process.version + ' ABI ' + process.versions.modules"
+```
+
+The expected local major version is Node 24. If your shell reports a different
+major, fix that before rebuilding dependencies.
 
 **Fix:** First try rebuilding the native dependency:
 
@@ -50,8 +59,11 @@ pnpm dev
 ```
 
 Make sure the same Node version is active for both `pnpm install` and
-`pnpm dev`. Docker production images build their own dependencies inside the
-container, so this is a local/native development issue.
+`pnpm dev`. The repo includes `.nvmrc`, `.node-version`, `engines.node`, and
+pnpm `engine-strict`/`use-node-version` settings so unsupported Node majors fail
+early instead of silently compiling incompatible native bindings. Docker
+production images build their own dependencies inside the container, so this is
+a local/native development issue.
 
 ---
 

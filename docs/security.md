@@ -84,8 +84,9 @@ Task 1.0.1; zero-knowledge E2EE is charted but out of v1 scope.
   - `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
     `Referrer-Policy: strict-origin-when-cross-origin`,
     `Permissions-Policy` (camera/microphone/geolocation/topics disabled).
-- **No secrets with defaults.** `AUTH_SECRET` / `SOVEREIGN_AUTH_SECRET` and
-  `SOVEREIGN_ADMIN_KEY` have no fallback — the apps refuse to start if unset.
+- **No secrets with defaults.** `AUTH_SECRET` / `SOVEREIGN_AUTH_SECRET`,
+  `SOVEREIGN_ADMIN_KEY`, and vault encryption keys have no plaintext fallback.
+  Features that require them fail closed when unset.
 - **Session cookies** are `httpOnly`; the signed `session_data` cache cookie is
   HMAC-verified offline and carries `Secure` in production (`__Secure-` prefix).
 - **Transport:** Postgres connects over TLS when the connection string sets

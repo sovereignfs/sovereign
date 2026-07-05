@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getAccountPrefs, setAccountPrefs } from '@sovereignfs/db';
+import { getAccountPrefs, listUserPluginSecretRefs, setAccountPrefs } from '@sovereignfs/db';
 import { isValidTheme, isValidTimezone } from '@/src/account';
 import { avatarsDir, findAvatarFile } from '@/src/avatars';
 import { getPlatformDb } from '@/src/db';
@@ -8,6 +8,7 @@ import { getDisabledPluginIds } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
 import type { PlatformExportData } from './assemble';
 import type { PlatformAccountSection } from './restore';
+import { toSecretRef } from '@/src/secrets';
 
 const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
 const ALLOWED_AVATAR_EXT = new Set(['jpg', 'jpeg', 'png', 'webp']);
@@ -54,7 +55,13 @@ export async function gatherPlatformExport(
     // best-effort; fall through with nulls
   }
 
-  const prefs = await getAccountPrefs(await getPlatformDb(), userId);
+  const pdb = await getPlatformDb();
+  const prefs = await getAccountPrefs(pdb, userId);
+  const vaultSecrets = (await listUserPluginSecretRefs(pdb, userId)).map((row) => ({
+    ...toSecretRef(row),
+    pluginId: row.pluginId,
+    scope: 'user' as const,
+  }));
 
   let avatar: { ext: string; bytes: Uint8Array } | null = null;
   const path = findAvatarFile(userId);
@@ -63,7 +70,15 @@ export async function gatherPlatformExport(
     avatar = { ext, bytes: new Uint8Array(readFileSync(path)) };
   }
 
-  return { name, email, image, timezone: prefs.timezone, theme: prefs.theme, avatar };
+  return {
+    name,
+    email,
+    image,
+    timezone: prefs.timezone,
+    theme: prefs.theme,
+    vaultSecrets,
+    avatar,
+  };
 }
 
 /** Server-to-server better-auth update-user (CSRF Origin = the auth base URL). */

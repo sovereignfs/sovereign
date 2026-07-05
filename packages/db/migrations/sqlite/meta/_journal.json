@@ -57,6 +57,13 @@
       "when": 1782400000000,
       "tag": "0007_email_delivery_log",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1782500000000,
+      "tag": "0008_plugin_secret_vault",
+      "breakpoints": true
     }
   ]
 }

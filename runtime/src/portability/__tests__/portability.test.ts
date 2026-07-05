@@ -11,6 +11,7 @@ const PLATFORM: PlatformExportData = {
   image: null,
   timezone: 'UTC',
   theme: 'system',
+  vaultSecrets: [],
   avatar: { ext: 'png', bytes: new Uint8Array([137, 80, 78, 71]) },
 };
 
@@ -42,6 +43,9 @@ describe('assembleExport', () => {
     const account = u8ToJson<PlatformAccountSection>(getEntry(files, 'platform/account.json'));
     expect(account.profile.name).toBe('Ada');
     expect(account.preferences.timezone).toBe('UTC');
+    expect((account as PlatformAccountSection & { vaultSecrets: unknown[] }).vaultSecrets).toEqual(
+      [],
+    );
 
     const manifest = u8ToJson<{ formatVersion: number; sections: { pluginId: string }[] }>(
       getEntry(files, 'manifest.json'),

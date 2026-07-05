@@ -349,6 +349,244 @@ export async function logDataAccess(
   );
 }
 
+// ─── Plugin secret vault helpers (RFC 0043) ─────────────────────────────────
+
+export type PluginSecretScope = 'user' | 'plugin' | 'instance';
+
+export interface PluginSecretAccessContext {
+  tenantId: string;
+  pluginId: string;
+  userId: string | null;
+}
+
+export interface PluginSecretRefRow {
+  id: string;
+  tenantId: string;
+  pluginId: string;
+  scope: PluginSecretScope;
+  userId: string | null;
+  label: string;
+  metadata: string | null;
+  createdAt: number;
+  updatedAt: number;
+  lastUsedAt: number | null;
+}
+
+export interface PluginSecretRow extends PluginSecretRefRow {
+  ciphertext: string;
+  deletedAt: number | null;
+}
+
+export interface CreatePluginSecretInput extends PluginSecretAccessContext {
+  id: string;
+  scope: PluginSecretScope;
+  label: string;
+  ciphertext: string;
+  metadata?: string | null;
+}
+
+function isPluginSecretScope(value: string): value is PluginSecretScope {
+  return value === 'user' || value === 'plugin' || value === 'instance';
+}
+
+function requirePluginSecretScope(value: string): PluginSecretScope {
+  if (!isPluginSecretScope(value)) throw new Error(`Invalid plugin secret scope: ${value}`);
+  return value;
+}
+
+function canAccessSecret(
+  row: PluginSecretRow | PluginSecretRefRow,
+  context: PluginSecretAccessContext,
+): boolean {
+  if (row.tenantId !== context.tenantId || row.pluginId !== context.pluginId) return false;
+  if (row.scope === 'user') return Boolean(context.userId) && row.userId === context.userId;
+  return row.userId === null;
+}
+
+function mapPluginSecretRow(row: PluginSecretRow): PluginSecretRow {
+  return { ...row, scope: requirePluginSecretScope(row.scope) };
+}
+
+function mapPluginSecretRefRow(row: PluginSecretRefRow): PluginSecretRefRow {
+  return { ...row, scope: requirePluginSecretScope(row.scope) };
+}
+
+/** Store encrypted secret material plus non-secret metadata. */
+export async function createPluginSecret(
+  pdb: PlatformDb,
+  input: CreatePluginSecretInput,
+): Promise<PluginSecretRefRow> {
+  if (input.scope === 'user' && !input.userId) {
+    throw new Error('User-scoped plugin secrets require a userId.');
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const userId = input.scope === 'user' ? input.userId : null;
+  await dbRun(
+    pdb,
+    sql`INSERT INTO plugin_secrets
+          (id, tenant_id, plugin_id, scope, user_id, label, ciphertext,
+           metadata, created_at, updated_at, last_used_at, deleted_at)
+        VALUES
+          (${input.id}, ${input.tenantId}, ${input.pluginId}, ${input.scope},
+           ${userId}, ${input.label}, ${input.ciphertext}, ${input.metadata ?? null},
+           ${now}, ${now}, NULL, NULL)`,
+  );
+  const row = await getPluginSecret(pdb, input.id, input);
+  if (!row) throw new Error('Plugin secret was not readable after creation.');
+  const { ciphertext: _ciphertext, deletedAt: _deletedAt, ...ref } = row;
+  return ref;
+}
+
+/** Fetch one accessible, non-deleted secret row including ciphertext. */
+export async function getPluginSecret(
+  pdb: PlatformDb,
+  id: string,
+  context: PluginSecretAccessContext,
+): Promise<PluginSecretRow | undefined> {
+  const row = await dbGet<PluginSecretRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId", scope,
+               user_id AS "userId", label, ciphertext, metadata,
+               created_at AS "createdAt", updated_at AS "updatedAt",
+               last_used_at AS "lastUsedAt", deleted_at AS "deletedAt"
+        FROM plugin_secrets
+        WHERE id = ${id}
+          AND tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}
+          AND deleted_at IS NULL
+        LIMIT 1`,
+  );
+  if (!row) return undefined;
+  const mapped = mapPluginSecretRow(row);
+  return canAccessSecret(mapped, context) ? mapped : undefined;
+}
+
+/** Update last-used time for an accessible secret read. */
+export async function markPluginSecretUsed(
+  pdb: PlatformDb,
+  id: string,
+  context: PluginSecretAccessContext,
+): Promise<void> {
+  const row = await getPluginSecret(pdb, id, context);
+  if (!row) return;
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE plugin_secrets
+        SET last_used_at = ${now}
+        WHERE id = ${id}
+          AND tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}
+          AND deleted_at IS NULL`,
+  );
+}
+
+/** List accessible non-deleted secret metadata; ciphertext is never returned. */
+export async function listPluginSecrets(
+  pdb: PlatformDb,
+  context: PluginSecretAccessContext,
+  scope?: PluginSecretScope,
+): Promise<PluginSecretRefRow[]> {
+  const rows = await dbAll<PluginSecretRefRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId", scope,
+               user_id AS "userId", label, metadata,
+               created_at AS "createdAt", updated_at AS "updatedAt",
+               last_used_at AS "lastUsedAt"
+        FROM plugin_secrets
+        WHERE tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}
+          AND deleted_at IS NULL
+        ORDER BY updated_at DESC`,
+  );
+  return rows
+    .map(mapPluginSecretRefRow)
+    .filter((row) => (scope ? row.scope === scope : true))
+    .filter((row) => canAccessSecret(row, context));
+}
+
+/** List metadata for a user's export/account surface across all plugins. */
+export async function listUserPluginSecretRefs(
+  pdb: PlatformDb,
+  userId: string,
+  tenantId = DEFAULT_TENANT_ID,
+): Promise<PluginSecretRefRow[]> {
+  const rows = await dbAll<PluginSecretRefRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId", scope,
+               user_id AS "userId", label, metadata,
+               created_at AS "createdAt", updated_at AS "updatedAt",
+               last_used_at AS "lastUsedAt"
+        FROM plugin_secrets
+        WHERE tenant_id = ${tenantId}
+          AND scope = 'user'
+          AND user_id = ${userId}
+          AND deleted_at IS NULL
+        ORDER BY updated_at DESC`,
+  );
+  return rows.map(mapPluginSecretRefRow);
+}
+
+/** Replace encrypted secret material for an accessible secret row. */
+export async function updatePluginSecret(
+  pdb: PlatformDb,
+  id: string,
+  context: PluginSecretAccessContext,
+  ciphertext: string,
+): Promise<PluginSecretRefRow | undefined> {
+  const existing = await getPluginSecret(pdb, id, context);
+  if (!existing) return undefined;
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE plugin_secrets
+        SET ciphertext = ${ciphertext}, updated_at = ${now}
+        WHERE id = ${id}
+          AND tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}
+          AND deleted_at IS NULL`,
+  );
+  const row = await getPluginSecret(pdb, id, context);
+  if (!row) return undefined;
+  const { ciphertext: _ciphertext, deletedAt: _deletedAt, ...ref } = row;
+  return ref;
+}
+
+/** Soft-delete an accessible secret so future reads are immediately revoked. */
+export async function deletePluginSecret(
+  pdb: PlatformDb,
+  id: string,
+  context: PluginSecretAccessContext,
+): Promise<void> {
+  const existing = await getPluginSecret(pdb, id, context);
+  if (!existing) return;
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE plugin_secrets
+        SET deleted_at = ${now}, updated_at = ${now}
+        WHERE id = ${id}
+          AND tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}
+          AND deleted_at IS NULL`,
+  );
+}
+
+/** Hard-delete user-scoped plugin secrets during account deletion (RFC 0033/0043). */
+export async function hardDeleteUserPluginSecrets(
+  pdb: PlatformDb,
+  userId: string,
+  tenantId = DEFAULT_TENANT_ID,
+): Promise<void> {
+  await dbRun(
+    pdb,
+    sql`DELETE FROM plugin_secrets
+        WHERE tenant_id = ${tenantId}
+          AND scope = 'user'
+          AND user_id = ${userId}`,
+  );
+}
+
 // ─── Activity log helpers (RFC 0005) ─────────────────────────────────────────
 
 export interface ActivityLogRow {
@@ -1228,6 +1466,13 @@ export async function deleteUserData(
   platformRowsDeleted++;
   await del(
     sql`DELETE FROM data_access_log WHERE tenant_id = ${DEFAULT_TENANT_ID} AND user_id = ${userId}`,
+  );
+  platformRowsDeleted++;
+  await del(
+    sql`DELETE FROM plugin_secrets
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND scope = 'user'
+          AND user_id = ${userId}`,
   );
   platformRowsDeleted++;
   await del(

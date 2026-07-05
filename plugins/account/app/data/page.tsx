@@ -14,8 +14,19 @@ interface ConsentGrant {
   grantedAt: number;
 }
 
+interface VaultSecret {
+  id: string;
+  pluginId: string;
+  scope: 'user' | 'plugin' | 'instance';
+  label: string;
+  createdAt: number;
+  updatedAt: number;
+  lastUsedAt: number | null;
+}
+
 export default function DataPage() {
   const [grants, setGrants] = useState<ConsentGrant[]>([]);
+  const [secrets, setSecrets] = useState<VaultSecret[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +38,10 @@ export default function DataPage() {
       if (!res.ok) throw new Error(`Failed to load grants: ${res.status}`);
       const data = (await res.json()) as { grants: ConsentGrant[] };
       setGrants(data.grants);
+      const secretsRes = await fetch('/api/account/secrets', { cache: 'no-store' });
+      if (!secretsRes.ok) throw new Error(`Failed to load vault metadata: ${secretsRes.status}`);
+      const secretsData = (await secretsRes.json()) as { secrets: VaultSecret[] };
+      setSecrets(secretsData.secrets);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -41,6 +56,11 @@ export default function DataPage() {
   const revoke = async (id: string) => {
     const res = await fetch(`/api/account/data-grants/${id}`, { method: 'DELETE' });
     if (res.ok) setGrants((prev) => prev.filter((g) => g.id !== id));
+  };
+
+  const revokeSecret = async (id: string) => {
+    const res = await fetch(`/api/account/secrets/${id}`, { method: 'DELETE' });
+    if (res.ok) setSecrets((prev) => prev.filter((secret) => secret.id !== id));
   };
 
   return (
@@ -71,6 +91,43 @@ export default function DataPage() {
                   type="button"
                   className={styles.revokeButton}
                   onClick={() => void revoke(grant.id)}
+                >
+                  Revoke
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Saved app credentials</h2>
+          <p className={styles.sectionSubtitle}>
+            These entries are encrypted credentials saved by apps on your behalf. Values are never
+            shown or included in exports.
+          </p>
+        </div>
+
+        {loading && <p className={styles.help}>Loading&hellip;</p>}
+        {!loading && secrets.length === 0 && (
+          <p className={styles.help}>No saved app credentials.</p>
+        )}
+
+        {secrets.length > 0 && (
+          <ul className={styles.sessionGroup}>
+            {secrets.map((secret) => (
+              <li key={secret.id} className={styles.sessionRow}>
+                <div className={styles.sessionInfo}>
+                  <span className={styles.sessionDevice}>{secret.label}</span>
+                  <span className={styles.sessionMeta}>
+                    {secret.pluginId} · Updated {new Date(secret.updatedAt * 1000).toLocaleString()}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className={styles.revokeButton}
+                  onClick={() => void revokeSecret(secret.id)}
                 >
                   Revoke
                 </button>

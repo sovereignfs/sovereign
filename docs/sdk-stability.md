@@ -50,6 +50,8 @@ group during the pre-v1 hardening period:
 - `sdk.portability` — user data export/import (RFC 0007, `data:export`/`data:import` permissions).
 - `sdk.env` — plugin-scoped environment variable accessor (RFC 0018). `sdk.env.get(key)` reads `SV_PLUGIN_<SLUG>_<KEY>` scoped to the calling plugin; server-side only.
 - `sdk.notifications` — Notification Center (RFC 0015). `sdk.notifications.send()` delivers in-app notifications to users; requires the `notifications:send` manifest permission. Polling default (30s), SSE optional.
+- `sdk.directory` — member search and explicit user resolution for display-safe user selection (RFC 0041).
+- `sdk.secrets` — encrypted runtime-created plugin secrets (RFC 0043). Values are server-side only; list/export surfaces expose metadata only.
 
 These surfaces are **reserved** — they exist as stubs and throw
 `NotImplementedError` (or in `sdk.billing`'s case, `EntitlementRequiredError`).

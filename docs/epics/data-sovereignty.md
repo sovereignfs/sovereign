@@ -98,7 +98,7 @@
 
 ---
 
-#### 📋 8.6 — Plugin secret vault (RFC 0043)
+#### ✅ 8.6 — Plugin secret vault (RFC 0043)
 
 **Goal:** Add a platform-managed secret vault for runtime plugin secrets such as OAuth tokens, personal access tokens, API keys, webhook secrets, and user/provider refresh tokens.
 

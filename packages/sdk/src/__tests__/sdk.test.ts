@@ -102,6 +102,85 @@ beforeAll(() => {
         /* no-op */
       },
     },
+    connections: {
+      async create(input) {
+        return {
+          id: 'conn-1',
+          scope: input.scope,
+          provider: input.provider,
+          label: input.label,
+          status: 'connected',
+          secretRef: input.secretRef ?? null,
+          metadata: input.metadata ?? null,
+          lastCheckedAt: null,
+          lastUsedAt: null,
+          lastError: null,
+          createdAt: 1,
+          updatedAt: 1,
+          disconnectedAt: null,
+        };
+      },
+      async list() {
+        return [];
+      },
+      async get() {
+        return null;
+      },
+      async update(_id, input) {
+        return {
+          id: 'conn-1',
+          scope: 'user',
+          provider: 'email.google',
+          label: input.label ?? 'Google Mail',
+          status: input.status ?? 'connected',
+          secretRef: input.secretRef ?? null,
+          metadata: input.metadata ?? null,
+          lastCheckedAt: input.lastCheckedAt ?? null,
+          lastUsedAt: null,
+          lastError: null,
+          createdAt: 1,
+          updatedAt: 2,
+          disconnectedAt: null,
+        };
+      },
+      async disconnect() {
+        /* no-op */
+      },
+      async markUsed() {
+        /* no-op */
+      },
+      async markError(_id, input) {
+        return {
+          id: 'conn-1',
+          scope: 'user',
+          provider: 'email.google',
+          label: 'Google Mail',
+          status: input.status ?? 'error',
+          secretRef: null,
+          metadata: null,
+          lastCheckedAt: null,
+          lastUsedAt: null,
+          lastError: input.error,
+          createdAt: 1,
+          updatedAt: 2,
+          disconnectedAt: null,
+        };
+      },
+      async createOAuthState() {
+        return 'state';
+      },
+      async verifyOAuthState() {
+        return {
+          pluginId: 'com.example.notes',
+          provider: 'email.google',
+          userId: 'u1',
+          callbackPath: '/connections/google/callback',
+          nonce: 'nonce',
+          metadata: null,
+          expiresAt: 2,
+        };
+      },
+    },
   });
 });
 
@@ -150,6 +229,15 @@ describe('sdk surface', () => {
     expect(typeof sdk.secrets.list).toBe('function');
     expect(typeof sdk.secrets.update).toBe('function');
     expect(typeof sdk.secrets.delete).toBe('function');
+    expect(typeof sdk.connections.create).toBe('function');
+    expect(typeof sdk.connections.list).toBe('function');
+    expect(typeof sdk.connections.get).toBe('function');
+    expect(typeof sdk.connections.update).toBe('function');
+    expect(typeof sdk.connections.disconnect).toBe('function');
+    expect(typeof sdk.connections.markUsed).toBe('function');
+    expect(typeof sdk.connections.markError).toBe('function');
+    expect(typeof sdk.connections.createOAuthState).toBe('function');
+    expect(typeof sdk.connections.verifyOAuthState).toBe('function');
     expect(typeof sdk.events.publish).toBe('function');
     expect(typeof sdk.events.subscribe).toBe('function');
   });

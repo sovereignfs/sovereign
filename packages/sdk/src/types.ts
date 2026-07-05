@@ -166,3 +166,85 @@ export interface SecretContext {
   userId: string | null;
   capabilities: readonly string[];
 }
+
+/** Runtime-created external provider connection scope (RFC 0049). */
+export type ConnectionScope = 'user' | 'plugin' | 'instance';
+
+/** Metadata status for a plugin-owned external provider connection. */
+export type ConnectionStatus = 'connected' | 'needs_reauth' | 'paused' | 'disconnected' | 'error';
+
+/** Metadata returned for an external connection. Secret values are never included. */
+export interface ConnectionRef {
+  id: string;
+  scope: ConnectionScope;
+  provider: string;
+  label: string;
+  status: ConnectionStatus;
+  secretRef: string | null;
+  metadata: Record<string, unknown> | null;
+  lastCheckedAt: number | null;
+  lastUsedAt: number | null;
+  lastError: SanitizedConnectionError | null;
+  createdAt: number;
+  updatedAt: number;
+  disconnectedAt: number | null;
+}
+
+export interface CreateConnectionInput {
+  scope: ConnectionScope;
+  provider: string;
+  label: string;
+  secretRef?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface ConnectionListFilter {
+  provider?: string;
+  scope?: ConnectionScope;
+  includeDisconnected?: boolean;
+}
+
+export interface UpdateConnectionInput {
+  label?: string;
+  status?: ConnectionStatus;
+  metadata?: Record<string, unknown> | null;
+  secretRef?: string | null;
+  lastCheckedAt?: number | null;
+}
+
+export interface SanitizedConnectionError {
+  code?: string;
+  message: string;
+  retryable?: boolean;
+  status?: number;
+}
+
+export interface MarkConnectionErrorInput {
+  error: SanitizedConnectionError;
+  status?: Extract<ConnectionStatus, 'error' | 'needs_reauth'>;
+}
+
+export interface OAuthStateInput {
+  provider: string;
+  callbackPath: string;
+  nonce?: string;
+  metadata?: Record<string, unknown> | null;
+  expiresInSeconds?: number;
+}
+
+export interface ConnectionOAuthState {
+  pluginId: string;
+  provider: string;
+  userId: string;
+  callbackPath: string;
+  nonce: string;
+  metadata: Record<string, unknown> | null;
+  expiresAt: number;
+}
+
+export interface ConnectionContext {
+  tenantId: string;
+  pluginId: string;
+  userId: string | null;
+  capabilities: readonly string[];
+}

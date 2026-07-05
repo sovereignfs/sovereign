@@ -260,6 +260,33 @@ const manifestObjectSchema = z
       )
       .optional(),
     /**
+     * External provider connection declarations (RFC 0049). These are
+     * display/validation metadata for plugin-owned OAuth or connect-account
+     * flows. Callback paths resolve under the plugin route prefix.
+     */
+    connections: z
+      .object({
+        providers: z
+          .array(
+            z
+              .object({
+                id: z
+                  .string()
+                  .regex(
+                    /^[a-z0-9][a-z0-9._-]{1,119}$/,
+                    'provider id must be lowercase and may contain dots, underscores, or hyphens',
+                  ),
+                title: z.string().min(1),
+                callbackPath: z.string().min(1).startsWith('/', 'callbackPath must start with "/"'),
+                scopes: z.array(z.enum(['user', 'plugin', 'instance'])).min(1),
+              })
+              .strict(),
+          )
+          .min(1),
+      })
+      .strict()
+      .optional(),
+    /**
      * Plugin monetization model (RFC 0003). Optional — omitting it (or setting
      * `model: "free"`) means the plugin is free to all users. Only `sovereign` and
      * `community` plugins may declare a paid model; platform plugins are always free.

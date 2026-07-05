@@ -4,16 +4,23 @@ import {
   DEFAULT_TENANT_ID,
   DEFAULT_ROOT_PLUGIN_ID,
   bootstrapPlatformDb,
+  createPluginConnection,
   createPluginSecret,
   deletePluginSecret,
   deleteUserData,
+  disconnectPluginConnection,
   getAccountPrefs,
   getDefaultTenant,
+  getPluginConnection,
   getPluginSecret,
   getInstanceConfig,
   getPlatformSetting,
+  listPluginConnections,
   listPluginSecrets,
+  listUserPluginConnectionRefs,
   listUserPluginSecretRefs,
+  markPluginConnectionError,
+  markPluginConnectionUsed,
   markPluginSecretUsed,
   listAdminActivity,
   listDisabledPluginIds,
@@ -25,6 +32,7 @@ import {
   setPlatformSetting,
   setPluginEnabled,
   setTenantName,
+  updatePluginConnection,
   updatePluginSecret,
   type PlatformDb,
 } from '../platform-db';
@@ -434,6 +442,98 @@ describe('plugin secret vault helpers (RFC 0043)', () => {
     expect(await listUserPluginSecretRefs(db, 'u1')).toEqual([]);
     expect(
       await getPluginSecret(db, 'secret-2', {
+        tenantId: DEFAULT_TENANT_ID,
+        pluginId: 'com.example.notes',
+        userId: null,
+      }),
+    ).toBeDefined();
+  });
+});
+
+describe('plugin external connection helpers (RFC 0049)', () => {
+  it('keeps connection metadata plugin/user scoped and disconnects linked secrets', async () => {
+    const db = await freshDb();
+    const context = { tenantId: DEFAULT_TENANT_ID, pluginId: 'com.example.notes', userId: 'u1' };
+    await createPluginSecret(db, {
+      ...context,
+      id: 'secret-conn-1',
+      scope: 'user',
+      label: 'Google token',
+      ciphertext: 'encrypted-token',
+    });
+
+    const ref = await createPluginConnection(db, {
+      ...context,
+      id: 'conn-1',
+      scope: 'user',
+      provider: 'email.google',
+      label: 'Google Mail',
+      secretRef: 'secret-conn-1',
+      metadata: '{"account":"user@example.test"}',
+    });
+
+    expect(ref).toMatchObject({
+      id: 'conn-1',
+      scope: 'user',
+      provider: 'email.google',
+      status: 'connected',
+      secretRef: 'secret-conn-1',
+    });
+    expect(await getPluginConnection(db, 'conn-1', context)).toBeDefined();
+    expect(
+      await getPluginConnection(db, 'conn-1', { ...context, pluginId: 'com.example.other' }),
+    ).toBeUndefined();
+    expect(await getPluginConnection(db, 'conn-1', { ...context, userId: 'u2' })).toBeUndefined();
+
+    await markPluginConnectionUsed(db, 'conn-1', context);
+    await markPluginConnectionError(db, 'conn-1', context, '{"message":"expired"}', 'needs_reauth');
+    const [listed] = await listPluginConnections(db, context, { provider: 'email.google' });
+    expect(listed).toMatchObject({ status: 'needs_reauth', lastError: '{"message":"expired"}' });
+    expect(listed?.lastUsedAt).toBeGreaterThan(0);
+
+    const updated = await updatePluginConnection(db, 'conn-1', context, {
+      label: 'Work Google Mail',
+      status: 'connected',
+      metadata: '{"account":"work@example.test"}',
+    });
+    expect(updated).toMatchObject({ label: 'Work Google Mail', status: 'connected' });
+
+    await disconnectPluginConnection(db, 'conn-1', context);
+    expect(await getPluginSecret(db, 'secret-conn-1', context)).toBeUndefined();
+    expect(await getPluginConnection(db, 'conn-1', context)).toMatchObject({
+      status: 'disconnected',
+      secretRef: null,
+    });
+    expect(await listPluginConnections(db, context)).toEqual([]);
+    expect(await listPluginConnections(db, context, { includeDisconnected: true })).toHaveLength(1);
+  });
+
+  it('lists user connection metadata and deletes user-scoped rows with user data', async () => {
+    const db = await freshDb();
+    await createPluginConnection(db, {
+      tenantId: DEFAULT_TENANT_ID,
+      pluginId: 'com.example.notes',
+      userId: 'u1',
+      id: 'conn-user',
+      scope: 'user',
+      provider: 'openrouter',
+      label: 'OpenRouter',
+    });
+    await createPluginConnection(db, {
+      tenantId: DEFAULT_TENANT_ID,
+      pluginId: 'com.example.notes',
+      userId: null,
+      id: 'conn-plugin',
+      scope: 'plugin',
+      provider: 'stripe',
+      label: 'Stripe',
+    });
+
+    expect(await listUserPluginConnectionRefs(db, 'u1')).toHaveLength(1);
+    await deleteUserData(db, 'u1');
+    expect(await listUserPluginConnectionRefs(db, 'u1')).toEqual([]);
+    expect(
+      await getPluginConnection(db, 'conn-plugin', {
         tenantId: DEFAULT_TENANT_ID,
         pluginId: 'com.example.notes',
         userId: null,

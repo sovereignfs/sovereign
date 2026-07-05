@@ -64,6 +64,13 @@
       "when": 1782500000000,
       "tag": "0008_plugin_secret_vault",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782600000000,
+      "tag": "0009_plugin_external_connections",
+      "breakpoints": true
     }
   ]
 }

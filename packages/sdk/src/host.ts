@@ -10,9 +10,17 @@ import type {
   SearchUsersInput,
   SendNotificationInput,
   CreateSecretInput,
+  ConnectionContext,
+  ConnectionListFilter,
+  ConnectionOAuthState,
+  ConnectionRef,
+  CreateConnectionInput,
+  MarkConnectionErrorInput,
+  OAuthStateInput,
   SecretContext,
   SecretRef,
   SecretScope,
+  UpdateConnectionInput,
 } from './types';
 
 /**
@@ -103,6 +111,28 @@ export interface SdkHost {
     list(scope: SecretScope | undefined, context: SecretContext): Promise<SecretRef[]>;
     update(id: string, value: string, context: SecretContext): Promise<SecretRef>;
     delete(id: string, context: SecretContext): Promise<void>;
+  };
+  connections: {
+    create(input: CreateConnectionInput, context: ConnectionContext): Promise<ConnectionRef>;
+    list(
+      filter: ConnectionListFilter | undefined,
+      context: ConnectionContext,
+    ): Promise<ConnectionRef[]>;
+    get(id: string, context: ConnectionContext): Promise<ConnectionRef | null>;
+    update(
+      id: string,
+      input: UpdateConnectionInput,
+      context: ConnectionContext,
+    ): Promise<ConnectionRef>;
+    disconnect(id: string, context: ConnectionContext): Promise<void>;
+    markUsed(id: string, context: ConnectionContext): Promise<void>;
+    markError(
+      id: string,
+      input: MarkConnectionErrorInput,
+      context: ConnectionContext,
+    ): Promise<ConnectionRef>;
+    createOAuthState(input: OAuthStateInput, context: ConnectionContext): Promise<string>;
+    verifyOAuthState(state: string, context: ConnectionContext): Promise<ConnectionOAuthState>;
   };
 }
 

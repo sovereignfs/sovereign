@@ -1128,7 +1128,8 @@ Run a plugin against a local platform checkout:
    ```
    or declare it in `sovereign.plugins.json` and run `pnpm install:plugins`.
    All paths clone into `plugins/<id>/` and compose it.
-2. **Develop** — `pnpm dev` starts the runtime (`:3000`) and auth (`:3001`).
+2. **Develop** — `pnpm dev` starts the runtime (`:3000`) and auth (`:3001`) by
+   default, or the `RUNTIME_PORT` / `AUTH_PORT` values from the root `.env`.
    Edits under `plugins/<id>/app/` are re-composed and hot-reloaded
    automatically.
 3. **Remove it** — `pnpm sv plugin remove <id>` (deletes the directory and

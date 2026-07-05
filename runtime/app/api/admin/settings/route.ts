@@ -18,7 +18,8 @@ import {
 import { getInstalledPlugins } from '@/src/registry';
 import { validateRootPlugin } from '@/src/root-plugin';
 
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
 async function readSettings() {
   const db = await getPlatformDb();

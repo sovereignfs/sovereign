@@ -5,7 +5,8 @@ import {
   toDirectoryUsers,
 } from '@/src/directory';
 
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
 function jsonError(message: string, status: number, headers?: HeadersInit): NextResponse {
   return NextResponse.json({ error: message }, { status, headers });

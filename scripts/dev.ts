@@ -18,12 +18,16 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadRootEnv } from './load-root-env';
 
 const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(SCRIPTS_DIR, '..');
 const RUNTIME_DIR = join(ROOT, 'runtime');
 const GENERATE = join(SCRIPTS_DIR, 'generate-registry.ts');
 const INSTALL_PLUGINS = join(SCRIPTS_DIR, 'install-plugins.ts');
+loadRootEnv(ROOT);
+
+const RUNTIME_PORT = process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000';
 
 const children = new Set<ChildProcess>();
 let shuttingDown = false;
@@ -68,4 +72,4 @@ if (initial.status !== 0) process.exit(initial.status ?? 1);
 
 // 2. Re-copy on plugin changes. 3. Start the Next dev server.
 start('tsx', [GENERATE, '--watch'], ROOT);
-start('next', ['dev', '--port', '3000'], RUNTIME_DIR);
+start('next', ['dev', '--port', RUNTIME_PORT], RUNTIME_DIR);

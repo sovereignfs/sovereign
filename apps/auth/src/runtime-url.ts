@@ -15,5 +15,5 @@
  */
 export function runtimePublicUrl(): string {
   const key = 'NEXT_PUBLIC_RUNTIME_URL';
-  return process.env[key] ?? 'http://localhost:3000';
+  return process.env[key] ?? `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 }

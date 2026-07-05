@@ -19,13 +19,14 @@ import {
   verifiedUserFromCache,
 } from '@/src/session-verify';
 
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
 // Self-fetch address for the runtime's own Node-runtime API routes. The server
 // always listens on :3000 (scripts/dev.ts and the start script both pin it),
 // so localhost is reliable in every environment — unlike the public URL, which
 // may sit behind a reverse proxy the container cannot hairpin through.
-const SELF_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
+const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
 
 /**
  * The browser-facing auth origin (scheme + host + port) for the CSP form-action

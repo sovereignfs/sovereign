@@ -59,7 +59,8 @@ import {
 } from './secrets';
 
 let _version: string | undefined;
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
 /**
  * The platform version from the workspace root package.json (tracks roadmap

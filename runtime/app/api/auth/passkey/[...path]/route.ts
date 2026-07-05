@@ -10,7 +10,8 @@
  */
 import { headers } from 'next/headers';
 
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
 async function proxy(req: Request, path: string[]): Promise<Response> {
   const h = await headers();

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
 /**
  * GET /api/account/passkeys — list the current user's registered passkeys.

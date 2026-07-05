@@ -5,7 +5,8 @@ import { validateAvatar } from '@/src/account';
 import { logActivity } from '@/src/activity';
 import { avatarsDir } from '@/src/avatars';
 
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
 /**
  * Upload/replace the current user's avatar (ACC-03). Session-gated by the

@@ -8,7 +8,8 @@ import { getAllDeleters } from './portability/registry';
 import { getPluginDb } from '@sovereignfs/db';
 import { getInstalledPlugins } from './registry';
 
-const AUTH_URL = process.env.SOVEREIGN_AUTH_URL ?? 'http://localhost:3001';
+const AUTH_URL =
+  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 const DELETION_TIMEOUT_MS = 30_000;
 
 export interface PluginDeletionResult {

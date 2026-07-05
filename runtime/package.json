@@ -7,7 +7,7 @@
     "dev": "tsx ../scripts/dev.ts",
     "generate": "tsx ../scripts/generate-registry.ts",
     "build": "next build",
-    "start": "next start --port 3000",
+    "start": "tsx ../scripts/next-server.ts runtime start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

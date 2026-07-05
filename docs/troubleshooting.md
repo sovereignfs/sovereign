@@ -6,6 +6,55 @@ Known issues, workarounds, and debugging notes for Sovereign development and sel
 
 ## Development server
 
+### `better-sqlite3.node` was compiled against a different Node.js version
+
+**Symptom:** `pnpm dev` starts compiling auth/runtime instrumentation, then fails
+with an error like:
+
+```text
+The module '.../node_modules/better-sqlite3/build/Release/better_sqlite3.node'
+was compiled against a different Node.js version using NODE_MODULE_VERSION ...
+This version of Node.js requires NODE_MODULE_VERSION ...
+Please try re-compiling or re-installing the module
+```
+
+**Cause:** `better-sqlite3` is a native Node module. Its compiled binary is tied
+to the Node ABI version that was active when `node_modules` was installed. This
+happens when the checkout's dependencies were installed with one Node version
+and `pnpm dev` later runs with another.
+
+**Diagnose:** In the same terminal where `pnpm dev` fails, check the active Node
+version and ABI:
+
+```bash
+node -p "process.version + ' ABI ' + process.versions.modules"
+```
+
+If the error says the installed binary was compiled for a different
+`NODE_MODULE_VERSION`, rebuild or reinstall dependencies with the Node version
+you will use for development.
+
+**Fix:** First try rebuilding the native dependency:
+
+```bash
+pnpm rebuild better-sqlite3
+pnpm dev
+```
+
+If the mismatch persists, remove the stale install and reinstall:
+
+```bash
+rm -rf node_modules
+pnpm install
+pnpm dev
+```
+
+Make sure the same Node version is active for both `pnpm install` and
+`pnpm dev`. Docker production images build their own dependencies inside the
+container, so this is a local/native development issue.
+
+---
+
 ### 404 on first navigation to an overlay plugin after server restart
 
 **Symptom:** Clicking the Console or Account icon in the sidebar shows "404 — This page could not be found." The server log shows `200` for the same request (or the route compiles immediately before the 200 line).

@@ -2,15 +2,32 @@
  * generate-registry — composes installed plugins into the runtime.
  *
  * Scans `plugins/<dir>/manifest.json`, validates each via `@sovereignfs/manifest`,
- * writes the typed plugin registry to `runtime/generated/registry.ts`, and copies
+ * writes the typed plugin registry to `runtime/generated/registry.ts`, and links
  * each plugin's `app/` into the runtime App Router at its `routePrefix`. An
  * invalid manifest fails the build.
  *
- * Copies, not symlinks, in every environment: Next's dev route watcher does not
- * follow symlinked route directories, so a symlinked plugin would 404 under
- * `next dev` (it works under `next build`, which does follow them). Copying
- * keeps dev and prod identical. The dev orchestrator (`scripts/dev.ts`) runs
- * this in `--watch` mode so edits under `plugins/` re-copy and trigger HMR.
+ * Copies in dev, symlinks in production (`NODE_ENV`) — deliberately different
+ * per environment, revisiting an earlier version of this file that used copies
+ * everywhere:
+ *   - Dev must use copies. Next's dev route watcher does not discover routes
+ *     through symlinked directories — a symlinked plugin genuinely 404s under
+ *     `next dev` (verified against Next 15.5.19; this is not an old/fixed
+ *     limitation). `scripts/dev.ts` runs this in `--watch` mode so edits under
+ *     `plugins/` re-copy and trigger HMR.
+ *   - Production uses a symlink instead of a copy specifically so a composed
+ *     plugin's imports resolve through *its own* `node_modules` (correct pnpm
+ *     per-package isolation) rather than requiring every dependency a bundled
+ *     plugin happens to use to also be hand-declared in `runtime/package.json`
+ *     — a copy severs the file from its originating package, which is what
+ *     broke the first production build that bundled a plugin with
+ *     dependencies `runtime` didn't already have (`@dnd-kit/*`, `rrule` for
+ *     Tasks). `next build`'s webpack does follow the symlink correctly; only
+ *     `next dev`'s route discovery doesn't.
+ *   - TypeScript's own module resolution does not follow the symlink to find
+ *     a plugin's `node_modules` either (confirmed: `preserveSymlinks` doesn't
+ *     change this) — so `runtime/tsconfig.json` excludes composed plugin
+ *     directories from its own type-check scope. This isn't a loss: each
+ *     plugin already typechecks itself in its own repo/CI.
  *
  * Composition target is chosen by the manifest `shell` value so the plugin
  * inherits the right layout from the route tree (no per-request branching):
@@ -31,11 +48,13 @@
 import {
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
   watch,
   writeFileSync,
 } from 'node:fs';
@@ -49,6 +68,12 @@ import {
   validateManifest,
   type SovereignManifest,
 } from '@sovereignfs/manifest';
+
+// See the module doc comment above for why this differs from dev: symlinks
+// let a composed plugin resolve its own dependencies via its own
+// node_modules, but Next's dev route watcher doesn't discover routes through
+// symlinked directories, so dev must keep using real copies.
+const isProd = process.env.NODE_ENV === 'production';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PLUGINS_DIR = join(ROOT, 'plugins');
@@ -256,6 +281,16 @@ function composeTargets(manifest: SovereignManifest): string[] {
  * Next.js forgets its compiled route map mid-navigation.
  */
 function syncDir(src: string, dest: string): void {
+  // Guard against a stale symlink left at `dest` from a prior production
+  // compose (e.g. a local `NODE_ENV=production pnpm generate` run) — mkdirSync
+  // treats an existing symlink-to-directory as already-there and no-ops,
+  // which would silently keep syncing into the *symlink target* instead of a
+  // real per-dev directory.
+  try {
+    if (lstatSync(dest).isSymbolicLink()) rmSync(dest, { recursive: true, force: true });
+  } catch {
+    // dest doesn't exist yet — nothing to clean up.
+  }
   mkdirSync(dest, { recursive: true });
 
   const srcNames = new Set(readdirSync(src));
@@ -283,6 +318,25 @@ function syncDir(src: string, dest: string): void {
       if (needsCopy) cpSync(srcPath, destPath);
     }
   }
+}
+
+/**
+ * Compose one plugin's `app/` into `dest` — symlink in production, incremental
+ * copy in dev. Production only runs this once before a single `next build`
+ * (no live server to disrupt), so a fresh symlink each run is simplest and
+ * correct; dev's `syncDir` must instead avoid touching unchanged files (see
+ * its own doc comment) to keep the dev route watcher and HMR stable.
+ *
+ * `isProd` is an explicit parameter (rather than reading the module-level
+ * `isProd` directly) so this is a pure, independently-testable unit.
+ */
+export function linkOrCopyTarget(srcApp: string, dest: string, isProd: boolean): void {
+  if (isProd) {
+    rmSync(dest, { recursive: true, force: true });
+    symlinkSync(srcApp, dest, 'dir');
+    return;
+  }
+  syncDir(srcApp, dest);
 }
 
 export function pruneGeneratedEntries(
@@ -317,7 +371,7 @@ function composePlugins(plugins: PluginEntry[]): void {
     // The public path is the manifest routePrefix, not the source dir name.
     for (const dest of composeTargets(manifest)) {
       mkdirSync(dirname(dest), { recursive: true });
-      syncDir(srcApp, dest);
+      linkOrCopyTarget(srcApp, dest, isProd);
       // Record which first-level segment this occupies so we can prune stale
       // sibling dirs without touching the ones we just wrote.
       const firstSeg = (base: string) => relative(base, dest).split(sep)[0] ?? '';
@@ -637,7 +691,9 @@ export function generate(): void {
   const envDecls = processPluginEnv(plugins);
   writePluginEnv(envDecls);
   writePluginCapabilities(plugins);
-  console.log(`[generate] ${String(plugins.length)} plugin(s) composed.`);
+  console.log(
+    `[generate] ${String(plugins.length)} plugin(s) composed (${isProd ? 'symlink' : 'copy'}).`,
+  );
 }
 
 function isCliEntrypoint(): boolean {

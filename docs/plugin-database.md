@@ -56,10 +56,26 @@ This document covers both modes in full. Start with
   `_` (e.g. `io.example.tasks` → `io_example_tasks`). Tables: `io_example_tasks_lists`,
   `io_example_tasks_items`. This is the only namespace mechanism — there is no query-level
   auto-scoping.
-- **Stay dialect-agnostic.** The same schema must run on SQLite (the default) and Postgres
-  (production with `DATABASE_URL`). Use `integer` for IDs, not SQLite's implicit rowid.
-  Use `text` for booleans where SQLite lacks a native type. See
-  `packages/db/src/schema/sqlite/platform.ts` for reference patterns.
+- **Application code queries through one dialect's schema — usually `sqlite-core` —
+  and that's fine.** `sdk.db.getClient()` returns a client whose query-builder dialect
+  (`node-postgres` vs `better-sqlite3`) is bound to the connection, not to the table
+  object passed to `.from()`/`.insert()`. A `sqliteTable()`-defined table works
+  correctly against a Postgres-backed client at query time (verified empirically)
+  **as long as the physical Postgres columns use types that serialize identically**:
+  plain `integer` for booleans, IDs, and timestamps — never native Postgres `boolean`
+  or `bigint` — matching what Drizzle's SQLite column mappers already produce.
+  Reaching for a native Postgres type here breaks writes at runtime the first time a
+  boolean or bigint column round-trips through the mismatched serializer.
+- **You still need a genuine, separate Postgres schema file to generate Postgres
+  migrations from.** `drizzle-kit generate --dialect postgresql` cannot read a
+  `sqliteTable()`-based schema file — it silently reports zero tables found. Keep a
+  second file (e.g. `db/schema.postgres.ts`, using `pgTable`/`integer`, a structural
+  mirror of your real schema) whose only job is driving migration generation;
+  application code never imports it. See `packages/db/src/schema/{sqlite,postgres}/platform.ts`
+  for the platform's own reference pair — note the platform's own Postgres schema uses
+  native `boolean`/`bigint` because the platform's _own_ query code is dialect-aware
+  (`packages/db/src/exec.ts`); a plugin whose application code is not dialect-aware
+  must not copy that part of the pattern.
 - **Add `tenant_id` to user-scoped tables.** v1 is single-tenant but the column is required
   from day one — multi-tenancy is a future concern and tables without `tenant_id` will need
   a migration later.
@@ -99,14 +115,19 @@ skip it forever. This is handled automatically by the migration runner
 (`pluginMigrationsTableName()` in `packages/db`); plugin authors don't need to do
 anything beyond following the standard layout above.
 
-Generate a migration with drizzle-kit (from the repo root, pointing at the platform DB):
+Generate migrations with drizzle-kit — **from your plugin's own repo**, once per
+dialect, each against its own schema file:
 
 ```bash
-pnpm drizzle-kit generate --schema plugins/io.example.tasks/db/schema.ts
+# SQLite — from db/schema.ts (the schema application code queries against):
+pnpm drizzle-kit generate --schema db/schema.ts --out migrations/sqlite --dialect sqlite
+
+# Postgres — from a separate db/schema.postgres.ts (see the rules above):
+pnpm drizzle-kit generate --schema db/schema.postgres.ts --out migrations/postgres --dialect postgresql
 ```
 
-Then move the output to `plugins/io.example.tasks/migrations/sqlite/` (and generate
-the Postgres variant separately).
+Review the generated SQL before committing — migration files are committed to your
+plugin's own source repository, not this one.
 
 ---
 
@@ -178,9 +199,10 @@ export const lists = sqliteTable('lists', {
 - **`tenant_id` on user-scoped tables.** Even though the store is dedicated to your
   plugin, multi-tenancy readiness applies across the whole platform. Every table that
   scopes data to a user must carry `tenant_id`.
-- **Dialect-agnostic Drizzle schemas.** SQLite and Postgres have differences:
-  `integer` vs `bigint` for timestamps, `boolean` is `integer` in SQLite, etc.
-  Use the same patterns as the platform schema in `packages/db/src/schema/`.
+- **Application code stays on one schema file (typically `sqlite-core`); Postgres
+  columns must serialize identically to it.** Same rule as shared mode above: never
+  use native Postgres `boolean`/`bigint` if your application code keeps querying
+  through the SQLite-typed schema, or writes will fail at runtime.
 
 ### Migrations for isolated plugins
 
@@ -199,25 +221,22 @@ dedicated store.
 table inside that store — completely independent of the platform DB's migration log.
 Version state is per-database.
 
-**Generating migrations with drizzle-kit:**
+**Generating migrations with drizzle-kit:** run from your plugin's own repo, once
+per dialect, **each against its own schema file** — `drizzle-kit generate --dialect
+postgresql` cannot read a `sqliteTable()`-based schema (it silently reports zero
+tables found), so a genuine second `pgTable`-based file is required:
 
 ```bash
-# From repo root, point at the plugin's schema.
-# For SQLite (development):
-pnpm drizzle-kit generate \
-  --schema plugins/io.example.tasks/db/schema.ts \
-  --out plugins/io.example.tasks/migrations/sqlite \
-  --dialect sqlite
+# SQLite — from db/schema.ts (the schema application code queries against):
+pnpm drizzle-kit generate --schema db/schema.ts --out migrations/sqlite --dialect sqlite
 
-# For Postgres (production parity):
-pnpm drizzle-kit generate \
-  --schema plugins/io.example.tasks/db/schema.ts \
-  --out plugins/io.example.tasks/migrations/postgres \
-  --dialect postgresql
+# Postgres — from a separate db/schema.postgres.ts, structurally mirroring
+# db/schema.ts but never using native Postgres boolean/bigint (see above):
+pnpm drizzle-kit generate --schema db/schema.postgres.ts --out migrations/postgres --dialect postgresql
 ```
 
-Move / review the generated SQL before committing. Migration files are committed
-to your plugin's source repository.
+Review the generated SQL before committing. Migration files are committed
+to your plugin's own source repository.
 
 **Startup order:** platform migrations run first, then per-plugin migrations in
 registry order. A failed plugin migration is logged but does not abort startup —

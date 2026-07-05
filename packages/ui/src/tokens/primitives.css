@@ -78,6 +78,7 @@
   --sv-font-weight-bold: 700;
 
   /* Icon sizes — scale tokens used directly by the Icon component */
+  --sv-icon-size-xs: 0.75rem; /* 12px — inline metadata (e.g. a due-date badge) */
   --sv-icon-size-sm: 1rem; /* 16px — inline with body text */
   --sv-icon-size-md: 1.25rem; /* 20px — standard affordance */
   --sv-icon-size-lg: 1.5rem; /* 24px — prominent / standalone */

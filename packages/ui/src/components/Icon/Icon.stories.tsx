@@ -18,7 +18,7 @@ const meta = {
   },
   argTypes: {
     name: { control: 'select', options: ALL_NAMES },
-    size: { control: 'select', options: ['sm', 'md', 'lg'] },
+    size: { control: 'select', options: ['xs', 'sm', 'md', 'lg'] },
   },
 } satisfies Meta<typeof Icon>;
 
@@ -35,17 +35,18 @@ export const Meaningful: Story = {
   args: { name: 'settings', size: 'md', 'aria-label': 'Open settings' },
 };
 
+export const SizeExtraSmall: Story = { args: { name: 'bell', size: 'xs', 'aria-hidden': true } };
 export const SizeSmall: Story = { args: { name: 'bell', size: 'sm', 'aria-hidden': true } };
 export const SizeMedium: Story = { args: { name: 'bell', size: 'md', 'aria-hidden': true } };
 export const SizeLarge: Story = { args: { name: 'bell', size: 'lg', 'aria-hidden': true } };
 
-/** Full icon grid — every name across all three sizes. */
+/** Full icon grid — every name across all four sizes. */
 export const AllIcons: Story = {
   parameters: { layout: 'padded' },
   args: { name: 'house', 'aria-hidden': true },
   render: (_args) => (
     <div>
-      {(['sm', 'md', 'lg'] as const).map((sz) => (
+      {(['xs', 'sm', 'md', 'lg'] as const).map((sz) => (
         <section key={sz} style={{ marginBottom: 32 }}>
           <h3
             style={{

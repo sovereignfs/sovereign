@@ -80,7 +80,7 @@ variables are available globally to every plugin.
 | Font size     | `--sv-font-size-label` (11px), `-xs` (12px), `-caption` (13px), `-sm` (14px), `-md` (16px), `-lg` (18px), `-xl` (20px), `-2xl` (24px) |
 | Font weight   | `--sv-font-weight-regular` (400), `-medium` (500), `-semibold` (600), `-bold` (700)                                                   |
 | Radius        | `--sv-radius-sm` (6px), `-md` (8px), `-lg` (11px), `-xl` (12px), `-2xl` (14px), `-3xl` (20px), `-full`                                |
-| Icon size     | `--sv-icon-size-sm` (16px), `-md` (20px), `-lg` (24px)                                                                                |
+| Icon size     | `--sv-icon-size-xs` (12px), `-sm` (16px), `-md` (20px), `-lg` (24px)                                                                  |
 
 **Font families:** `--sv-font-family` names Hanken Grotesk as the preferred body font
 with a full system-font fallback stack; `--sv-font-family-mono` names JetBrains Mono.
@@ -285,13 +285,13 @@ import { Icon } from '@sovereignfs/ui';
 
 **Props:**
 
-| Prop          | Type                   | Default  | Description                                                   |
-| ------------- | ---------------------- | -------- | ------------------------------------------------------------- |
-| `name`        | `IconName`             | required | Name from the curated icon set                                |
-| `size`        | `"sm" \| "md" \| "lg"` | `"md"`   | Binds to `--sv-icon-size-*` tokens (16 / 20 / 24px)           |
-| `className`   | `string`               | —        | Additional CSS class on the SVG                               |
-| `aria-hidden` | `true`                 | —        | Decorative use — provide one of `aria-hidden` or `aria-label` |
-| `aria-label`  | `string`               | —        | Meaningful use — adds `role="img"` automatically              |
+| Prop          | Type                           | Default  | Description                                                   |
+| ------------- | ------------------------------ | -------- | ------------------------------------------------------------- |
+| `name`        | `IconName`                     | required | Name from the curated icon set                                |
+| `size`        | `"xs" \| "sm" \| "md" \| "lg"` | `"md"`   | Binds to `--sv-icon-size-*` tokens (12 / 16 / 20 / 24px)      |
+| `className`   | `string`                       | —        | Additional CSS class on the SVG                               |
+| `aria-hidden` | `true`                         | —        | Decorative use — provide one of `aria-hidden` or `aria-label` |
+| `aria-label`  | `string`                       | —        | Meaningful use — adds `role="img"` automatically              |
 
 **Color** follows `currentColor` — an icon inherits the text color of its container
 and recolors with theme changes automatically. No extra CSS required.
@@ -300,11 +300,12 @@ and recolors with theme changes automatically. No extra CSS required.
 
 Icons use the `--sv-icon-size-*` primitive scale tokens:
 
-| Token               | Value | Use                           |
-| ------------------- | ----- | ----------------------------- |
-| `--sv-icon-size-sm` | 16px  | Inline with body text         |
-| `--sv-icon-size-md` | 20px  | Standard affordance (default) |
-| `--sv-icon-size-lg` | 24px  | Prominent / standalone        |
+| Token               | Value | Use                                     |
+| ------------------- | ----- | --------------------------------------- |
+| `--sv-icon-size-xs` | 12px  | Inline metadata (e.g. a due-date badge) |
+| `--sv-icon-size-sm` | 16px  | Inline with body text                   |
+| `--sv-icon-size-md` | 20px  | Standard affordance (default)           |
+| `--sv-icon-size-lg` | 24px  | Prominent / standalone                  |
 
 ### Curated icon set
 
@@ -321,7 +322,7 @@ ecosystem actively uses.
 **Current icons:** `house`, `settings`, `log-out`, `chevron-right/left/down/up`,
 `x`, `check`, `plus`, `trash-2`, `pencil`, `rotate-ccw`, `search`, `user`,
 `shield`, `lock`, `eye`, `eye-off`, `mail`, `bell`, `activity`, `package`,
-`grid-2x2`, `info`, `alert-triangle`.
+`grid-2x2`, `info`, `alert-triangle`, `calendar`.
 
 ### Plugin-identity icons vs UI-affordance icons
 

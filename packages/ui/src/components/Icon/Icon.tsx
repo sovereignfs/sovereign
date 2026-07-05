@@ -12,7 +12,7 @@ export interface IconProps {
   /** Name of the icon from the curated Sovereign set. */
   name: IconName;
   /** Visual size. Defaults to `"md"` (20 px). */
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   /** Additional CSS class applied to the SVG element. */
   className?: string;
 }

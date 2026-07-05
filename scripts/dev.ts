@@ -1,12 +1,12 @@
 /**
  * dev — runtime development orchestrator.
  *
- * Plugins compose into the runtime App Router as copies (see
- * `scripts/generate-registry.ts`): Next's dev route watcher does not follow
- * symlinked route directories, so a symlinked plugin route 404s under
- * `next dev`. Copying keeps dev and prod identical. To preserve live-edit DX,
- * this script runs the generate watcher — which re-copies on any change under
- * `plugins/` — alongside the Next dev server.
+ * Plugins compose into the runtime App Router as copies in dev (see
+ * `scripts/generate-registry.ts` for why this differs from production, which
+ * uses symlinks): Next's dev route watcher does not follow symlinked route
+ * directories, so a symlinked plugin route 404s under `next dev`. To preserve
+ * live-edit DX, this script runs the generate watcher — which re-copies on any
+ * change under `plugins/` — alongside the Next dev server.
  *
  * Order matters: compose once synchronously so the routes exist before Next's
  * first scan, then start the watcher and the dev server. Ctrl+C — or any child

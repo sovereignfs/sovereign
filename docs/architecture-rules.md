@@ -43,11 +43,18 @@ Full reference for load-bearing constraints enforced by ESLint, CI, or runtime b
   rewrites). The route segment is the manifest `routePrefix`, not the source
   directory name, so `routePrefix` is the single source of truth for a plugin's
   URL; the `(plugins)` route group is URL-transparent, so `routePrefix: /console`
-  serves at `/console`. The composed segments are **copies** (in every
-  environment — Next's dev route watcher does not follow symlinked route dirs)
-  and are gitignored by a `.gitignore` inside each route group — never edit or
-  commit them. Source of truth is always `plugins/[id]/app/`. `shell: minimal` (a
-  chrome-free group) is not wired yet; the generate script fails loudly on it.
+  serves at `/console`. The composed segments are **copies in dev, symlinks in
+  production** (`NODE_ENV`) — dev must copy because Next's dev route watcher
+  does not follow symlinked route dirs (a symlinked plugin 404s under `next
+  dev`); production uses a real symlink instead so a plugin's imports resolve
+  through _its own_ `node_modules` rather than requiring every dependency it
+  uses to also be declared in `runtime/package.json`. Composed segments are
+  gitignored by a `.gitignore` inside each route group — never edit or commit
+  them. Source of truth is always `plugins/[id]/app/`. Because production's
+  symlink isn't followed by TypeScript's own module resolution either,
+  `runtime/tsconfig.json` excludes composed plugin directories (`(plugins)`
+  and `(minimal)`) from its type scope — each plugin already typechecks
+  itself in its own repo/CI.
   **`shell: overlay` (RFC 0001, Task 0.5.10) composes TWICE:** the full-page
   fallback under `(plugins)/<routePrefix>/` (same as default) **and** an
   interception copy under `(plugins)/@modal/(.)<routePrefix>/`. The `@modal`

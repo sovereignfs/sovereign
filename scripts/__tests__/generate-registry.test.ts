@@ -1,4 +1,12 @@
-import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { SovereignManifest } from '@sovereignfs/manifest';
@@ -6,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   collectPluginEnv,
   duplicateApiProviders,
+  linkOrCopyTarget,
   pruneGeneratedEntries,
   pruneStalePluginIcons,
   renderPluginCapabilities,
@@ -209,6 +218,69 @@ describe('plugin env generation', () => {
     expect(rejected.ok).toBe(false);
     expect(rejected.error).toContain('marked secret');
     expect(rejected.error).toContain('plugins/notes/.env');
+  });
+});
+
+describe('linkOrCopyTarget — dev copies, production symlinks', () => {
+  let root: string;
+  let src: string;
+  let dest: string;
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'generate-registry-compose-'));
+    src = join(root, 'plugin-app');
+    dest = join(root, 'composed');
+    mkdirSync(src);
+    writeFileSync(join(src, 'page.tsx'), 'export default function Page() {}');
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('dev: copies files into a real directory, not a symlink', () => {
+    linkOrCopyTarget(src, dest, false);
+
+    expect(lstatSync(dest).isSymbolicLink()).toBe(false);
+    expect(existsSync(join(dest, 'page.tsx'))).toBe(true);
+    expect(readFileSync(join(dest, 'page.tsx'), 'utf8')).toContain('export default');
+  });
+
+  it('dev: re-running only touches files that actually changed', () => {
+    linkOrCopyTarget(src, dest, false);
+    const firstCopyMtime = lstatSync(join(dest, 'page.tsx')).mtimeMs;
+
+    // Re-run with no source change — the unchanged file must not be rewritten
+    // (rewriting would spuriously invalidate Next's dev route watcher).
+    linkOrCopyTarget(src, dest, false);
+    expect(lstatSync(join(dest, 'page.tsx')).mtimeMs).toBe(firstCopyMtime);
+  });
+
+  it('production: creates a real symlink to the plugin source, not a copy', () => {
+    linkOrCopyTarget(src, dest, true);
+
+    expect(lstatSync(dest).isSymbolicLink()).toBe(true);
+    // Resolves back to the plugin's own app/ — this is exactly what lets a
+    // composed plugin's imports find its own node_modules at build time.
+    expect(existsSync(join(dest, 'page.tsx'))).toBe(true);
+    expect(readFileSync(join(dest, 'page.tsx'), 'utf8')).toContain('export default');
+  });
+
+  it('production: replaces a stale copy left over from a previous dev run', () => {
+    linkOrCopyTarget(src, dest, false); // dev leaves a real directory
+    expect(lstatSync(dest).isSymbolicLink()).toBe(false);
+
+    linkOrCopyTarget(src, dest, true); // production must replace it with a symlink
+    expect(lstatSync(dest).isSymbolicLink()).toBe(true);
+  });
+
+  it('dev: replaces a stale symlink left over from a previous production run', () => {
+    linkOrCopyTarget(src, dest, true); // production leaves a symlink
+    expect(lstatSync(dest).isSymbolicLink()).toBe(true);
+
+    linkOrCopyTarget(src, dest, false); // dev must replace it with a real directory
+    expect(lstatSync(dest).isSymbolicLink()).toBe(false);
+    expect(existsSync(join(dest, 'page.tsx'))).toBe(true);
   });
 });
 

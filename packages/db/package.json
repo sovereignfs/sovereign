@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/db",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "private": true,
   "type": "module",
   "description": "Drizzle client factory, platform schema, and migration runner for Sovereign.",

@@ -80,6 +80,7 @@ export {
   dropPluginDb,
   getPluginDb,
   pluginMigrationsFolder,
+  pluginMigrationsTableName,
   pluginSchemaName,
   pluginSqliteUrl,
   provisionPluginDb,

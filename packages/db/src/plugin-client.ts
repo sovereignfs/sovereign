@@ -53,6 +53,23 @@ export function pluginSqliteUrl(pluginId: string): string {
   return `file:./data/plugins/${pluginId}.db`;
 }
 
+/**
+ * Drizzle migrations-tracking table for a `database: "shared"` plugin.
+ *
+ * Drizzle's own migrator (`sqlite-core`/`pg-core` dialect.migrate()) tracks
+ * "already applied" purely by comparing each migration's folder timestamp
+ * against the single most recent `created_at` row in the table — it has no
+ * per-plugin or per-hash lookup. Sharing the default `__drizzle_migrations`
+ * table between the platform's own migrations and a plugin's migrations means
+ * whichever history has the later timestamps makes the other's migrations
+ * look "already applied" and silently skips them forever. Giving every
+ * shared-mode plugin its own uniquely-named table keeps each history
+ * independent, mirroring `pluginSchemaName`'s naming convention.
+ */
+export function pluginMigrationsTableName(pluginId: string): string {
+  return `__drizzle_migrations_${pluginId.replace(/[.-]/g, '_')}`;
+}
+
 function pgSsl(url: string): false | { rejectUnauthorized: boolean; ca?: string } {
   const mode = pgSslMode(url);
   if (mode === null) return false;

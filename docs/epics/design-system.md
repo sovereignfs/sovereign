@@ -614,7 +614,7 @@ because 9.12 found the gap.
 
 ---
 
-#### 📋 9.16 — Editor workflow primitives for content plugins
+#### ✅ 9.16 — Editor workflow primitives for content plugins
 
 **Goal:** Add the reusable `@sovereignfs/ui` primitives needed by Plainwrite-style
 editor workflows so content/data-entry plugins do not hand-roll status chips,

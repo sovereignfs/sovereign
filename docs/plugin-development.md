@@ -1125,15 +1125,55 @@ import { Button, FormField, Input, Select, Textarea } from '@sovereignfs/ui';
 works with any control — `Input`, `Select`, `Textarea`, or a native element —
 as long as it forwards `id`/`aria-*` to the underlying form element.
 
+#### Editor workflow primitives
+
+Content and data-entry plugins should use the editor primitives before adding
+plugin-local generic control CSS:
+
+```tsx
+import {
+  CodeTextarea,
+  FormField,
+  SplitPane,
+  StatusBadge,
+  TagInput,
+} from '@sovereignfs/ui';
+
+<StatusBadge status="draft">Draft</StatusBadge>
+
+<SplitPane
+  primary={<CodeTextarea aria-label="Markdown source" defaultValue={source} />}
+  secondary={<article>{preview}</article>}
+/>
+
+<FormField label="Tags" hint="Press Enter or comma to add a tag.">
+  {(field) => <TagInput {...field} value={tags} onChange={setTags} />}
+</FormField>
+
+<FormField label="Raw frontmatter" error={yamlError}>
+  {(field) => <CodeTextarea {...field} invalid={Boolean(yamlError)} defaultValue={yaml} />}
+</FormField>
+```
+
+Use `StatusBadge` for file sync and lifecycle states such as draft, synced,
+conflict, pending delete, warning, and error. Use `SplitPane` for editor/preview
+or list/detail layouts instead of hand-rolled resizable panes; it stacks to one
+column on narrow screens and keeps the separator keyboard-operable. Use
+`TagInput` for frontmatter arrays and lightweight labels; it handles Enter,
+comma, Backspace, paste splitting, duplicate rejection, and validation messages.
+Use `CodeTextarea` for Markdown/YAML/JSON where whitespace and monospace
+rendering matter.
+
 #### When to reach for a primitive vs. local CSS
 
 Use a `@sovereignfs/ui` primitive (`Button`, `Input`, `Select`, `Textarea`,
-`Checkbox`, `FormField`, `Card`, `Badge`, `PageHeader`, `SystemBanner`, …) for
-any generic control or page-structure pattern — anything another plugin, or
-the platform shell, would plausibly need too. Keep CSS local for layout that
-is genuinely specific to your plugin's domain (a custom data table, a
-drag-and-drop list, a chart) — the design system does not try to cover every
-possible layout, only the repeated primitives.
+`CodeTextarea`, `TagInput`, `Checkbox`, `FormField`, `Card`, `Badge`,
+`StatusBadge`, `SplitPane`, `PageHeader`, `SystemBanner`, …) for any generic
+control or page-structure pattern — anything another plugin, or the platform
+shell, would plausibly need too. Keep CSS local for layout that is genuinely
+specific to your plugin's domain (a custom data table, a graph, a canvas) — the
+design system does not try to cover every possible layout, only the repeated
+primitives.
 
 A short "do not" list:
 

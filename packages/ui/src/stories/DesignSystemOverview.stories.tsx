@@ -11,7 +11,11 @@ import { EmptyState } from '../components/EmptyState/EmptyState';
 import { FormField } from '../components/FormField/FormField';
 import { Icon } from '../components/Icon/Icon';
 import { Input } from '../components/Input/Input';
+import { CodeTextarea } from '../components/CodeTextarea/CodeTextarea';
 import { Textarea } from '../components/Textarea/Textarea';
+import { StatusBadge } from '../components/StatusBadge/StatusBadge';
+import { SplitPane } from '../components/SplitPane/SplitPane';
+import { TagInput } from '../components/TagInput/TagInput';
 import { NavTabs } from '../components/NavTabs/NavTabs';
 import { PageHeader } from '../components/PageHeader/PageHeader';
 import { Popover } from '../components/Popover/Popover';
@@ -565,6 +569,11 @@ function ToastDemo() {
       Fire toast
     </Button>
   );
+}
+
+function TagInputDemo() {
+  const [tags, setTags] = useState(['draft', 'frontmatter']);
+  return <TagInput value={tags} onChange={setTags} aria-label="Tags" />;
 }
 
 // ---------------------------------------------------------------------------
@@ -1184,7 +1193,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
         <section style={{ marginBottom: 'var(--sv-space-12)' }}>
           <SectionHeader
             title="Component gallery"
-            subtitle="All 15 components — click each story in the sidebar for the full API, variants, and controls."
+            subtitle="All 22 components — click each story in the sidebar for the full API, variants, and controls."
           />
 
           <div style={{ marginBottom: 'var(--sv-space-6)' }}>
@@ -1232,6 +1241,18 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               <Badge variant="mono">v1.2.0</Badge>
             </ComponentCard>
 
+            {/* StatusBadge */}
+            <ComponentCard
+              name="StatusBadge"
+              importLine="import { StatusBadge } from '@sovereignfs/ui';"
+              usage="Inline status indicator for editor sync, draft, conflict, and delete-pending states. RSC-safe."
+            >
+              <StatusBadge status="draft" />
+              <StatusBadge status="synced" />
+              <StatusBadge status="conflict" />
+              <StatusBadge status="pending-delete" />
+            </ComponentCard>
+
             {/* Input */}
             <ComponentCard
               name="Input"
@@ -1242,6 +1263,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                 <Input placeholder="Email address" type="email" style={{ width: '100%' }} />
                 <Input placeholder="Disabled" disabled style={{ width: '100%' }} />
               </div>
+            </ComponentCard>
+
+            {/* TagInput */}
+            <ComponentCard
+              name="TagInput"
+              importLine="import { TagInput } from '@sovereignfs/ui';"
+              usage="Controlled multi-value input for tags and frontmatter arrays. Enter/comma adds, Backspace removes, paste can split multiple tags."
+            >
+              <TagInputDemo />
             </ComponentCard>
 
             {/* Select */}
@@ -1409,6 +1439,55 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                 aria-label="Description"
                 placeholder="Add a description…"
                 style={{ width: '100%' }}
+              />
+            </ComponentCard>
+
+            {/* CodeTextarea */}
+            <ComponentCard
+              name="CodeTextarea"
+              importLine="import { CodeTextarea } from '@sovereignfs/ui';"
+              usage="Monospace textarea for Markdown, YAML, JSON, and raw frontmatter editing. Pair with FormField for labels and validation."
+            >
+              <CodeTextarea
+                aria-label="YAML source"
+                defaultValue={'title: Release notes\ntags:\n  - launch'}
+                rows={5}
+                style={{ width: '100%' }}
+              />
+            </ComponentCard>
+
+            {/* SplitPane */}
+            <ComponentCard
+              name="SplitPane"
+              importLine="import { SplitPane } from '@sovereignfs/ui';"
+              usage="Responsive editor/preview or list/detail layout. Desktop panes are resizable with pointer and keyboard controls; mobile stacks to one column."
+            >
+              <SplitPane
+                defaultPrimarySize={44}
+                primary={
+                  <div
+                    style={{
+                      padding: 'var(--sv-space-3)',
+                      fontFamily: ffm,
+                      fontSize: 'var(--sv-font-size-xs)',
+                      color: 'var(--sv-color-text-primary)',
+                    }}
+                  >
+                    # Draft
+                  </div>
+                }
+                secondary={
+                  <div
+                    style={{
+                      padding: 'var(--sv-space-3)',
+                      fontFamily: ff,
+                      fontSize: 'var(--sv-font-size-sm)',
+                      color: 'var(--sv-color-text-primary)',
+                    }}
+                  >
+                    Draft preview
+                  </div>
+                }
               />
             </ComponentCard>
 

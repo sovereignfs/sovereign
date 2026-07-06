@@ -1,0 +1,139 @@
+.wrapper {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: var(--sv-space-1);
+}
+
+.control {
+  display: flex;
+  min-height: 40px;
+  width: 100%;
+  align-items: center;
+  gap: var(--sv-space-1);
+  flex-wrap: wrap;
+  padding: 5px var(--sv-space-2);
+  color: var(--sv-color-text-primary);
+  background: var(--sv-color-surface);
+  border: 1px solid var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-md);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.control:focus-within {
+  border-color: var(--sv-color-accent);
+  box-shadow: 0 0 0 2px var(--sv-color-focus-ring);
+}
+
+.invalid {
+  border-color: var(--sv-color-error-border);
+}
+
+.invalid:focus-within {
+  border-color: var(--sv-color-error-border);
+  box-shadow: 0 0 0 2px var(--sv-color-error-border);
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tag {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 28px;
+  align-items: center;
+  gap: var(--sv-space-1);
+  padding-inline: var(--sv-space-2) 2px;
+  color: var(--sv-color-text-primary);
+  background: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-full);
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-medium);
+}
+
+.tagLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.removeButton {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--sv-color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--sv-radius-full);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+
+.removeButton:hover:not(:disabled) {
+  color: var(--sv-color-text-primary);
+  background: var(--sv-color-surface);
+}
+
+.removeButton:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 1px;
+}
+
+.removeButton:disabled {
+  cursor: not-allowed;
+}
+
+.input {
+  min-width: 120px;
+  flex: 1 1 140px;
+  height: 28px;
+  padding: 0 var(--sv-space-1);
+  color: var(--sv-color-text-primary);
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-sm);
+  line-height: 1.5;
+}
+
+.input::placeholder {
+  color: var(--sv-color-text-muted);
+}
+
+.input:disabled {
+  cursor: not-allowed;
+}
+
+.hint,
+.error {
+  margin: 0;
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-caption);
+  line-height: 1.4;
+}
+
+.hint {
+  color: var(--sv-color-text-muted);
+}
+
+.error {
+  color: var(--sv-color-error-text);
+}
+
+@media (pointer: coarse) {
+  .input {
+    font-size: var(--sv-font-size-md);
+  }
+}

@@ -1,0 +1,59 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 24px;
+  gap: var(--sv-space-1);
+  padding: 2px var(--sv-space-2);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-full);
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-semibold);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: var(--sv-radius-full);
+  background: currentColor;
+}
+
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.neutral {
+  color: var(--sv-color-text-muted);
+  background: var(--sv-color-surface-sunken);
+  border-color: var(--sv-color-border);
+}
+
+.info {
+  color: var(--sv-color-info-text);
+  background: var(--sv-color-info-surface);
+  border-color: var(--sv-color-info-border);
+}
+
+.success {
+  color: var(--sv-color-success-text);
+  background: var(--sv-color-success-surface);
+  border-color: var(--sv-color-success-border);
+}
+
+.warning {
+  color: var(--sv-color-warning-text);
+  background: var(--sv-color-warning-surface);
+  border-color: var(--sv-color-warning-border);
+}
+
+.error {
+  color: var(--sv-color-error-text);
+  background: var(--sv-color-error-surface);
+  border-color: var(--sv-color-error-border);
+}

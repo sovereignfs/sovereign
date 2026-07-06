@@ -10,7 +10,7 @@
 
 Task 0.5.28 delivered three entry points to the same canonical skeleton: a GitHub template repo (`sovereign-plugin-template`), a `sv plugin new <name>` CLI command, and an `npm create @sovereignfs/plugin` initializer. Capability-demo examples (`example-basic`, `example-api`) demonstrate runtime composition, route-guard patterns, `apiProvider`, and plugin-declared capabilities (Task 0.6.1 extends `example-basic` to demo the `capabilities` manifest field). These examples also serve as fixtures for integration and E2E tests.
 
-The example set has since grown to seven plugins (`example-basic`, `example-api`, `example-minimal`, `example-monetized`, `example-overlay-small/medium/large`) committed directly in `plugins/` via a gitignore allowlist. Tasks 12.2–12.3 move that set out of the monorepo into a dedicated `sovereign-examples` repository — re-bundled at build time so a default install still ships them — and give operators a first-class way to identify and disable example plugins (in bulk or one at a time) so a production instance need not surface demo apps.
+The example set has since grown to seven plugins (`example-basic`, `example-api`, `example-minimal`, `example-monetized`, `example-overlay-small/medium/large`) committed directly in `plugins/` via a gitignore allowlist. Tasks 12.2–12.3 move that set out of the monorepo into the dedicated `sovereign-plugins-examples` repository — re-bundled at build time so a default install still ships them — and give operators a first-class way to identify and disable example plugins (in bulk or one at a time) so a production instance need not surface demo apps.
 
 ## Related RFCs
 
@@ -36,7 +36,7 @@ More worked examples (e.g. `example-monetized` for the monetization paywall patt
 #### ✅ 12.2 — Extract example plugins to their own repository
 
 **Goal:** Move the seven bundled example plugins out of this monorepo into a
-dedicated `sovereign-examples` repository, then re-bundle them at build/install
+dedicated `sovereign-plugins-examples` repository, then re-bundle them at build/install
 time via the existing clone-at-build mechanism so a default install still ships
 with them. Keeps the platform tree focused on the runtime and its core platform
 plugins, while examples version and iterate independently.
@@ -55,7 +55,7 @@ source-agnostic — a cloned plugin is composed identically to a committed one.
 
 **Deliverables:**
 
-- New `sovereign-examples` repository containing the seven plugin dirs (verbatim,
+- New `sovereign-plugins-examples` repository containing the seven plugin dirs (verbatim,
   manifests unchanged for this task).
 - Remove the seven dirs from this monorepo and drop their allowlist lines in
   `.gitignore:35-41`; the generic `/plugins/*/` ignore then covers them as cloned
@@ -114,7 +114,7 @@ is no bulk toggle.
 - **Manifest marker:** add an optional `example: true` flag to
   `packages/manifest/src/schema.ts` (preferred over overloading `type`, which the
   examples already use inconsistently); set it on all seven example manifests in
-  the `sovereign-examples` repo. Surface the flag through the generated registry
+  the `sovereign-plugins-examples` repo. Surface the flag through the generated registry
   so Console and middleware can read it. Update `docs/plugin-development.md` and
   the docs-parity test.
 - **Console controls:** a **Settings → Example plugins** toggle shows/hides all

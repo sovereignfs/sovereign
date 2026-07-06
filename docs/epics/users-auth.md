@@ -560,6 +560,41 @@ with plain fallback first).
 
 ---
 
+#### 📋 1.15 — User groups foundation (RFC 0065)
+
+**Goal:** Add platform-managed user groups so admins can define reusable user audiences for
+plugin access policies and future operator workflows.
+
+**Deliverables:**
+
+- Add `user_groups` and `user_group_members` tables with `tenant_id` scoping, stable IDs,
+  human-readable names, slugs, and created/updated metadata.
+- Add DB helpers for group CRUD, membership add/remove/list, and effective group membership
+  lookup for a user.
+- Add Console-backed management surfaces or internal admin actions for create, rename,
+  describe, delete, and membership changes.
+- Emit activity events for group create/update/delete and membership add/remove.
+- Prevent accidental deletion of a group currently referenced by a plugin access policy
+  unless an admin explicitly confirms the impact.
+- Document that groups are platform audiences, not plugin-domain roles or plugin-scoped
+  grants.
+
+**Dependencies:** Task 1.5 (platform roles/capabilities), Task 5.1 (activity logging), Task
+13.3 (Console plugin management).
+
+**SRS reference:** [RFC 0065](../rfcs/0065-user-groups-plugin-access.md)
+
+**Review checklist:**
+
+- Admins/owners can create, update, and delete groups according to platform capabilities.
+- Admins/owners can add and remove users from groups.
+- Membership lookup is tenant-scoped and cannot cross tenants.
+- Group changes are audited.
+- In-use groups cannot be deleted silently.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0012 — Passkeys & TOTP MFA](../rfcs/0012-passkeys-and-mfa.md)
@@ -568,6 +603,7 @@ with plain fallback first).
 - [RFC 0033 — User data deletion](../rfcs/0033-user-data-deletion.md)
 - [RFC 0035 — Progressive user verification](../rfcs/0035-progressive-user-verification.md)
 - [RFC 0041 — User directory and member selection SDK](../rfcs/0041-user-directory.md)
+- [RFC 0065 — User groups and plugin access policy](../rfcs/0065-user-groups-plugin-access.md)
 - [RFC 0054 — Plugin-scoped roles and grants](../rfcs/0054-plugin-scoped-roles-and-grants.md)
 - [RFC 0062 — Email delivery coverage](../rfcs/0062-email-delivery-coverage.md)
 

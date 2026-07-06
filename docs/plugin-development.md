@@ -74,6 +74,8 @@ Browse the [`sovereign-plugins-examples`](https://github.com/sovereignfs/soverei
 repository for fully-working code to adapt. After a build (or a local
 `pnpm install:plugins`) the cloned copies are also under `plugins/example-*/`,
 but those are git-ignored working copies — the repository is the source of truth.
+See [Sovereign repositories](repositories.md) for the full first-party repository
+map.
 
 The `example-monetized` plugin ships with a committed demo keypair and a
 pre-signed token, so you can test the paywall → import → access flow immediately
@@ -912,7 +914,7 @@ The manifest value is not required to change. If you do update it (e.g. when pub
   "shell": "default",
   "icon": "icon.svg",
   "permissions": ["auth:session", "db:readWrite"],
-  "repository": "https://github.com/sovereignfs/sovereign-plugin-tasks",
+  "repository": "https://github.com/sovereignfs/sovereign-tasks",
   "compatibility": { "minPlatformVersion": "0.5.0" }
 }
 ```

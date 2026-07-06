@@ -28,5 +28,5 @@ features:
   - title: Design system included
     details: '@sovereignfs/ui ships CSS custom property tokens and typed React components. Plugin developers get a consistent look for free.'
   - title: Open source
-    details: AGPL-3.0. Fork it, self-host it, contribute back. The registry and plugin templates make it easy to build and share plugins.
+    details: AGPL-3.0. Fork it, self-host it, contribute back. The repository map, registry, and plugin templates make it easy to build and share plugins.
 ---

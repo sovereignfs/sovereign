@@ -566,6 +566,10 @@ variant, both light and dark themes, and responsive viewports.
 **Hosted:** [sovereignfs.github.io/storybook](https://sovereignfs.github.io/storybook/)
 — deployed by pushing a `sb-v*` tag (e.g. `git tag sb-v0.11.0 && git push origin sb-v0.11.0`),
 via `.github/workflows/storybook-deploy.yml`.
+The built static site is published to
+[`sovereignfs/storybook`](https://github.com/sovereignfs/storybook); source
+stories live in this repository. See [Sovereign repositories](repositories.md)
+for the full support-repository map.
 
 ### Running locally
 

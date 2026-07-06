@@ -2,7 +2,9 @@
 
 Sovereign is designed to run on a single machine. Docker Compose is the
 canonical deployment path — two containers (runtime + auth) on a shared
-internal network, with the runtime exposed as the single public entry point.
+internal network. For production, put a reverse proxy in front of the public
+runtime origin and the browser-facing auth origin; server-to-server runtime →
+auth traffic still uses the internal Docker hostname.
 
 ---
 
@@ -88,8 +90,9 @@ Browser → localhost:4000 (runtime)   localhost:4001 (auth — for local QA)
 
 Both the runtime and the auth server are mapped to host ports in both Compose
 files. In production, place a reverse proxy (nginx, Caddy, Traefik) in front
-of the runtime port only — auth should not be directly reachable from the
-internet. Override `AUTH_PORT` and `RUNTIME_PORT` to use different host ports.
+of the runtime and browser-facing auth ports, normally as separate domains such
+as `example.com` and `auth.example.com`. Override `AUTH_PORT` and
+`RUNTIME_PORT` to use different host ports.
 
 ---
 
@@ -147,6 +150,9 @@ want it, disable or uninstall it from **Console → Plugins** like any other
 plugin — the same lifecycle covers every plugin regardless of how its code got
 onto disk. To drop it from the image entirely, remove its entry from
 `sovereign.plugins.json` before building, same as the examples above.
+
+See [Sovereign repositories](repositories.md) for the full map of platform,
+plugin, documentation, and deployment-support repositories.
 
 ---
 
@@ -282,11 +288,12 @@ and after you sign in or register the auth server sends you back to
 ### Deploying to a real VPS or server
 
 > **Recommended path:** use the **[sovereign-infra](https://github.com/sovereignfs/sovereign-infra)**
-> GitHub template. It wires up Caddy (auto-TLS), age-encrypted secrets, daily
-> encrypted backups, and a GitHub Actions CI/CD pipeline that deploys a new
-> release with a single `git tag v0.9.10 && git push`. Fork it, run
-> `./configure.sh`, and follow the README. The manual instructions below still
-> apply — `sovereign-infra` automates them.
+> GitHub template. It is an operator-owned infra repository for an Ubuntu VPS:
+> Caddy (auto-TLS), age-encrypted `.env` files, daily encrypted backups, and a
+> GitHub Actions CI/CD pipeline. The platform repo publishes Docker images on a
+> `v*` release tag; your infra repo deploys those images when you push the same
+> tag there. Fork it, run `./configure.sh`, and follow the README. The manual
+> instructions below still apply — `sovereign-infra` automates them.
 
 > **The most common mistake:** leaving `AUTH_BASE_URL` and
 > `NEXT_PUBLIC_RUNTIME_URL` at their defaults. They default to `localhost:*`
@@ -323,19 +330,25 @@ password changes, session verification). Without it those calls return 403.
 
 ### Reverse proxy
 
-Place a reverse proxy in front of the runtime port (`4000`) only — the auth
-port (`4001`) should not be directly reachable from the internet (it is
-firewalled at the host or load balancer level). A minimal **Caddy** example:
+Place a reverse proxy in front of the runtime port (`4000`) and the
+browser-facing auth port (`4001`). The auth server still talks to the runtime
+through shared cookies and public callback origins, while server-to-server calls
+from runtime to auth use the internal Docker hostname (`http://auth:3001`).
+
+The `sovereign-infra` template uses two domains:
 
 ```
-your-domain.com {
+example.com {
     reverse_proxy localhost:4000
+}
+
+auth.example.com {
+    reverse_proxy localhost:4001
 }
 ```
 
-With Caddy in front, the runtime handles all public traffic, including the
-browser-facing auth pages; server-side auth API calls still go to the auth
-service internally. TLS is handled by Caddy automatically.
+With Caddy in front, both browser origins get TLS automatically. Do not expose
+Postgres or the internal Docker network publicly.
 
 **TLS is required in production.** Sovereign sets `Strict-Transport-Security`
 (HSTS) and other security headers on every response in production, and serves
@@ -506,11 +519,17 @@ cp -r apps/auth/.next/static apps/auth/.next/standalone/apps/auth/.next/static
 pm2 reload ecosystem.config.js   # zero-downtime reload where possible
 ```
 
-Back up before upgrading (see [Backups and restore](#backups-and-restore) below):
+Back up before upgrading. Once RFC 0064 lands, use the platform-owned CLI flow:
 
 ```bash
 pnpm sv backup
 ```
+
+Until then, the current `sovereign-infra` template ships GitHub-specific backup
+helper scripts for VPS operators. Those scripts age-encrypt Postgres, user avatars, the plugin
+manifest, and isolated plugin SQLite databases before pushing them to a private GitHub backup
+repository. RFC 0064 tracks the platform-owned future `sv backup`/`sv restore` flow, which
+generalizes Git-backed encrypted backups beyond the infra template.
 
 ---
 

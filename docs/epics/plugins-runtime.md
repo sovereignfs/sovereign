@@ -98,12 +98,12 @@ and `files` fields pointing to `dist/`.
   {
     "plugins": [
       {
-        "id": "io.openfs.sovereign.tasks",
-        "repository": "https://github.com/sovereignfs/sovereign-plugin-tasks"
+        "id": "fs.sovereign.tasks",
+        "repository": "https://github.com/sovereignfs/sovereign-tasks"
       },
       {
-        "id": "io.openfs.sovereign.splitify",
-        "repository": "https://github.com/sovereignfs/sovereign-plugin-splitify"
+        "id": "io.example.plugin",
+        "repository": "https://github.com/example/sovereign-plugin-example"
       }
     ]
   }

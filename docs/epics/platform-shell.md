@@ -595,6 +595,46 @@ polish), Task 9.1 (design tokens).
 - Mobile and desktop layouts keep buttons visible and avoid overlapping quote text.
 - `pnpm format:check && pnpm lint && pnpm typecheck`
 
+---
+
+#### 📋 2.21 — Plugin access policy enforcement (RFC 0065)
+
+**Goal:** Enforce platform-level plugin availability so installed plugins are visible and
+openable only to users allowed by the configured access policy.
+
+**Deliverables:**
+
+- Extend plugin status/configuration persistence with an `access_policy` value:
+  `everyone`, `admins`, `selected_users`, `selected_groups`, or `disabled`.
+- Add direct user and group grant tables for plugin access, scoped by tenant and plugin.
+- Migrate existing enabled plugins to `everyone` and preserve disabled plugins as effective
+  `disabled`.
+- Add a centralized `canOpenPlugin` resolver used by runtime routing, shell navigation,
+  Launcher, and authenticated plugin API delegation.
+- Filter Launcher, sidebar, mobile navigation, `/api/plugins`, and related plugin discovery
+  surfaces by effective access.
+- Return 404 for direct plugin app routes when the current user is not allowed to open the
+  plugin.
+- Treat `disabled` as the strongest state: no user can open the app even if they are an
+  admin/owner or have a direct/group grant.
+- Fall back from an inaccessible root plugin to Launcher, and show a platform-owned "No apps
+  available" state when nothing is openable.
+
+**Dependencies:** Task 1.15 (user groups), Task 13.7 (Console plugin access management), Task
+15.1 (Launcher plugin), Task 2.13 (sidebar customization).
+
+**SRS reference:** [RFC 0065](../rfcs/0065-user-groups-plugin-access.md)
+
+**Review checklist:**
+
+- Each policy grants and denies the expected users in resolver tests.
+- Unauthorized direct plugin app routes return 404.
+- Launcher, sidebar, mobile navigation, and plugin discovery APIs hide inaccessible plugins.
+- Admins/owners can manage an inaccessible plugin from Console without automatically opening
+  it.
+- Root plugin fallback does not leak inaccessible plugin names.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
 ## Related RFCs
 
 - [RFC 0001 — Overlay shell variant](../rfcs/0001-overlay-shell-variant.md)
@@ -606,6 +646,7 @@ polish), Task 9.1 (design tokens).
 - [RFC 0020 — Production dev-mode & diagnostics](../rfcs/0020-production-dev-mode.md)
 - [RFC 0042 — Public plugin page routes](../rfcs/0042-public-plugin-routes.md)
 - [RFC 0050 — Public plugin webhooks](../rfcs/0050-public-plugin-webhooks.md)
+- [RFC 0065 — User groups and plugin access policy](../rfcs/0065-user-groups-plugin-access.md)
 
 ## Related Docs
 

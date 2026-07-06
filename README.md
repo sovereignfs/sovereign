@@ -82,13 +82,17 @@ bin/sv            the sv CLI
 - [Self-hosting](docs/self-hosting.md) — deployment, configuration, operations,
   and production setup. For VPS deployments, see the
   [sovereign-infra](https://github.com/sovereignfs/sovereign-infra) template
-  (Caddy + Docker + age-encrypted secrets + GitHub Actions CI/CD).
+  (operator-owned Caddy + Docker + age-encrypted secrets + GitHub Actions
+  CI/CD).
 - [Plugin development](docs/plugin-development.md) — SDK usage, plugin structure,
   manifests, routing, and runtime integration.
 - [SDK stability](docs/sdk-stability.md) — the `@sovereignfs/sdk` semver policy
   and which parts of the surface are stable vs experimental.
 - [Architecture](docs/architecture.md) — platform boundaries, package layout, and
   how the runtime, plugins, auth, and data layers connect.
+- [Repository map](docs/repositories.md) — canonical list of the primary,
+  plugin, docs, Storybook, infra, and legacy repositories in the Sovereign
+  project.
 - [Security](docs/security.md) — threat model, the no-telemetry guarantee,
   security headers/CSP, and a self-hoster hardening checklist.
 - [Design system](docs/design-system.md) — shared UI tokens, components, and

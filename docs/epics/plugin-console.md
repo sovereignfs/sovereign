@@ -179,6 +179,44 @@ change as the broader stabilization work.
   cancellation, or plugin install/remove flows — these are admin-destructive
   actions and need manual re-verification, not just typecheck/lint.
 
+---
+
+#### 📋 13.7 — Console plugin access management (RFC 0065)
+
+**Goal:** Give admins/owners an explicit Console workflow for deciding which users can open
+each installed plugin.
+
+**Deliverables:**
+
+- Add an Access section to Console plugin detail/management surfaces.
+- Support the policy choices from RFC 0065: Everyone, Admins and owners, Selected users,
+  Selected groups, and Disabled.
+- Add a user picker for `selected_users`, backed by user directory/member-selection
+  primitives.
+- Add a group picker for `selected_groups`, backed by the user groups foundation.
+- Show an effective-access summary and warnings for empty selected-user/group policies.
+- Make it clear that Console management access is separate from plugin app access; admins
+  can manage a plugin without automatically being able to open it.
+- Align disabled plugin language with runtime enforcement: disabled plugins remain installed
+  and manageable, but cannot be opened by anyone.
+- Emit activity events for policy changes and user/group grant changes.
+- Update operator docs for common workflows: enable for everyone, limit to admins, grant a
+  user, grant a group, disable without uninstalling.
+
+**Dependencies:** Task 1.15 (user groups), Task 2.21 (plugin access policy enforcement), Task
+13.3 (Console plugin management), Task 1.12 (user directory/member selection).
+
+**SRS reference:** [RFC 0065](../rfcs/0065-user-groups-plugin-access.md)
+
+**Review checklist:**
+
+- Admins/owners can change plugin policy and grants from Console.
+- Empty selected-user/group policies show clear warnings before saving or after save.
+- Admins/owners are not silently granted app access for selected-user/group policies.
+- Disabled plugins cannot be opened from Console app-launch affordances.
+- Policy and grant changes are audited.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
 Subsequent tasks added Console sections as part of other epics:
 
 | Task   | Feature added to Console                                                   | Primary epic                        |
@@ -191,6 +229,8 @@ Subsequent tasks added Console sections as part of other epics:
 | 0.8.4  | Instance identity / branding section                                       | [Theming](theming.md)               |
 | 9.9    | Email Templates section                                                    | [Theming](theming.md)               |
 | 1.7    | Admin delete user action                                                   | [Users & Auth](users-auth.md)       |
+| 1.15   | User groups management                                                     | [Users & Auth](users-auth.md)       |
+| 2.21   | Plugin access policy management                                            | [Platform Shell](platform-shell.md) |
 
 ## Related Docs
 

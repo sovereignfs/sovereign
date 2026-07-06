@@ -225,6 +225,136 @@ portability hooks).
 
 ---
 
+#### 📋 8.10 — Encrypted operator backup bundle (RFC 0064)
+
+**Goal:** Replace the current ad hoc local backup archive shape with a
+manifested, encrypted operator backup bundle that can be stored locally or sent
+to a remote backend. This is full-instance disaster recovery, distinct from
+Account-level user portability.
+
+**Deliverables:**
+
+- Add a versioned `backup-manifest.json` with backup ID, source instance,
+  platform/schema version, DB dialect, artifact inventory, checksums, encryption
+  metadata, and consistency status.
+- Add per-plugin artifact inventory covering shared-table plugins, isolated
+  plugin DBs, plugin storage roots, plugin vault ciphertext/metadata, installed
+  plugin status, and manifest/version metadata.
+- Encrypt the final backup payload before it leaves the host by default.
+- Never include plaintext `.env`; capture it only as `config/.env.enc`, plus
+  `env.required.json` / `env.public.json` metadata for restore planning.
+- Add explicit `sv restore env <backup>` flow that decrypts `.env.enc` to an
+  operator-selected output path instead of overwriting the live `.env`.
+- Improve SQLite backup consistency with SQLite online backup / `VACUUM INTO`
+  and a backup lock or explicit `best-effort` manifest marker when a full
+  cross-store lock is not available.
+- Preserve existing local archive restore support for manual and air-gapped
+  deployments.
+
+**Dependencies:** Task 8.1 (`sv backup`/`restore` baseline), RFC 0008 key-management guidance. This task should not wait for full DB-at-rest encryption from Task 8.5.
+
+**SRS reference:** [RFC 0064](../rfcs/0064-git-backed-operator-backups.md), RFC 0006, RFC 0008
+
+**Review checklist:**
+
+- A remote-ready backup bundle contains no plaintext `.env` and no backup
+  key/passphrase.
+- The manifest makes it clear which artifacts belong to each installed plugin.
+- Corrupt or tampered payloads fail before restore writes any data.
+- Local restore still works for operators who do not configure a remote backend.
+- Docs clearly distinguish operator backups from user data export/import.
+
+---
+
+#### 📋 8.11 — Git-backed backup remote (RFC 0064)
+
+**Goal:** Add the first remote backup backend: any Git server with an empty
+private backup repository, using encrypted backup payloads by default.
+
+**Deliverables:**
+
+- Add Git backend configuration (`SV_BACKUP_BACKEND=git`,
+  `SV_BACKUP_GIT_REPOSITORY`, `SV_BACKUP_GIT_BRANCH`,
+  `SV_BACKUP_GIT_TOKEN`, backup key/passphrase vars) to `.env.example` and
+  operator docs.
+- Support HTTPS token auth for generic Git servers without persisting the token
+  into `.git/config`; support SSH URLs through the operator's existing SSH setup.
+- Implement `sv backup create`, `sv backup push`, `sv backup list`, and
+  `sv restore latest | <backup-tag>` for remote-backed backups.
+- Store each backup as an orphan commit tagged with a stable
+  `sv-backup/<timestamp>/v<platform>` tag, plus non-secret remote metadata for
+  listing.
+- Enforce encrypted remote backups by default; allow
+  `--allow-plaintext-remote` only with a high-friction warning, while still
+  requiring `.env.enc`.
+- Add size policy warnings and limits: warn above 250 MiB, require explicit
+  confirmation above 1 GiB, and allow operators to raise the configured maximum.
+
+**Dependencies:** Task 8.10
+
+**SRS reference:** [RFC 0064](../rfcs/0064-git-backed-operator-backups.md), RFC 0006, RFC 0008
+
+**Review checklist:**
+
+- A leaked Git repository or Git token exposes only ciphertext by default.
+- `restore latest` resolves the newest valid remote backup, verifies it, and
+  stages it locally before writing data.
+- The implementation works with a generic Git remote, not GitHub-specific APIs.
+- Multi-GB backups produce clear guidance to use a future object-storage backend
+  instead of silently bloating Git history.
+
+---
+
+#### 📋 8.12 — Backup retention, deletion, and scoped restore guards (RFC 0064)
+
+**Goal:** Make remote backup history manageable and make destructive restores
+safer by default, including the ability to restore only one plugin's data from a
+full-instance backup.
+
+**Deliverables:**
+
+- Add `sv backup delete --older-than <duration>`, `sv backup delete --keep <n>`,
+  and `sv backup prune` for Git-backed backups.
+- Make deletion dry-run by default unless `--yes` is passed.
+- Never delete the newest successful backup; support protected tag patterns for
+  operator-pinned restore points.
+- Update any remote backup index after deletion and verify that `restore latest`
+  still resolves to a valid backup.
+- Document that remote storage may not shrink until the Git server performs
+  garbage collection.
+- Add restore guards for platform-version compatibility, DB dialect/artifact
+  compatibility, required key/passphrase presence, checksum/authentication
+  validation, and free staging disk space.
+- Refuse backups created by a newer platform version by default, with an
+  explicit `--force` override and safer-path guidance.
+- Add `sv restore plugin <plugin-id> --from <backup-tag>` with dry-run and
+  staging support for plugin-scoped recovery.
+- Validate plugin manifest/version compatibility before plugin-scoped restore;
+  block or force-confirm when cross-plugin references, queued jobs, external
+  connection state, or newer schema migrations make isolated restore unsafe.
+- Keep platform identity rows out of plugin-scoped restore unless a future task
+  defines a safe explicit mapping.
+
+**Dependencies:** Task 8.11
+
+**SRS reference:** [RFC 0064](../rfcs/0064-git-backed-operator-backups.md), RFC 0006, RFC 0008
+
+**Review checklist:**
+
+- `--older-than 30d` / `60d` selects the expected backup tags without deleting
+  anything until confirmed.
+- Retention cannot leave the remote with zero restorable backups.
+- Restore refuses newer-platform backups by default and explains the matching or
+  newer binary requirement.
+- Plugin-scoped restore can recover one plugin's DB/files without restoring the
+  whole instance.
+- Unsafe plugin-scoped restores are blocked or require an explicit `--force`
+  acknowledgement with repair guidance.
+- Docs include tested examples for listing, deleting, pruning, and restoring
+  backups.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)
@@ -236,6 +366,7 @@ portability hooks).
 - [RFC 0044 — Plugin file storage](../rfcs/0044-plugin-storage.md)
 - [RFC 0052 — Plugin portability hooks](../rfcs/0052-plugin-portability-hooks.md)
 - [RFC 0060 — Client-side encryption core](../rfcs/0060-client-side-encryption-core.md)
+- [RFC 0064 — Git-backed operator backups](../rfcs/0064-git-backed-operator-backups.md)
 
 ## Related Docs
 

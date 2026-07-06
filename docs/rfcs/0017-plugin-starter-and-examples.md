@@ -62,9 +62,11 @@ authoring from "study the platform" into "fork and edit."
   is not yet** — its `dist` imports the private `@sovereignfs/db`/`@sovereignfs/mailer`
   (CLAUDE.md, Task 0.5.8 caveat). A standalone template can't `npm install
 @sovereignfs/sdk` until that is resolved.
-- **Conventions** — GitHub org `sovereignfs`; repos `sovereign-plugin-<name>`;
-  plugin ids `io.openfs.sovereign.<name>` (community/first-party) and
-  `fs.sovereign.*` (built-ins); npm scope `@sovereignfs/*`.
+- **Conventions** — GitHub org `sovereignfs`; repos use clear `sovereign-*`
+  names; plugin ids use `fs.sovereign.*` for first-party platform/default/example
+  plugins and community reverse-DNS for third-party plugins; npm scope
+  `@sovereignfs/*`. The current first-party repository map is
+  [`docs/repositories.md`](../repositories.md).
 
 ## Prerequisite — `@sovereignfs/sdk` on npm
 
@@ -115,10 +117,11 @@ copy). Keeping those in sync is an open question.
 
 ### Example plugins (capability demos)
 
-Purpose-built, single-concept repos named `sovereign-plugin-example-<x>` (ids
-`io.openfs.sovereign.example.<x>`). Each is the **smallest** thing that teaches one
-ability — explicitly **teaching artifacts**, distinct from the real first-party
-plugins (Tasks/Splitify/API Composer have their own specs and are _not_ examples).
+Purpose-built, single-concept plugins live together in
+[`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples)
+with ids under `fs.sovereign.example.*`. Each is the **smallest** thing that
+teaches one ability — explicitly **teaching artifacts**, distinct from real
+first-party product plugins such as Tasks.
 Candidate set (recommend shipping **a couple** first — `example-basic` +
 `example-api`):
 
@@ -152,10 +155,10 @@ question below.
 
 ### Naming & conventions
 
-Consolidate the rules so the starter models them: org `sovereignfs`, repos
-`sovereign-plugin-<name>` (examples carry the `example-` infix to signal
-"demo, not product"), ids `io.openfs.sovereign[.example].<name>`, npm scope
-`@sovereignfs/*`.
+Consolidate the rules so the starter models them: org `sovereignfs`, clear
+`sovereign-*` repository names, `fs.sovereign.*` for first-party
+platform/default/example plugin ids, community reverse-DNS for third-party ids,
+and npm scope `@sovereignfs/*`.
 
 ### Tie to the registry (Task 0.5.19)
 

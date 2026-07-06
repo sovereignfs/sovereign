@@ -155,6 +155,7 @@ export default defineConfig({
           items: [
             { text: 'Self-Hosting', link: '/self-hosting' },
             { text: 'Architecture', link: '/architecture' },
+            { text: 'Repositories', link: '/repositories' },
             { text: 'Security', link: '/security' },
             { text: 'Upgrade Guide', link: '/upgrade' },
             { text: 'Troubleshooting', link: '/troubleshooting' },

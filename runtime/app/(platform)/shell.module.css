@@ -267,11 +267,17 @@
     overscroll-behavior: none;
   }
 
-  /* Full-bleed plugins drop side/top padding on mobile too, but keep the
-     fixed-footer clearance so content isn't hidden under the nav bar. */
+  /* Full-bleed plugins drop all padding on mobile, footer clearance included.
+     Unlike the non-fullbleed rule above, no bottom padding is added here —
+     the footer nav (MobileNav) is a normal `position: relative` grid child
+     occupying .shell's own 3rd (auto) row, not an overlay floating on top of
+     .content, so the grid's 1fr content row already excludes its height with
+     no overlap to guard against. A full-bleed plugin's own shell fills this
+     cell via height: 100% — any padding-bottom here would eat straight into
+     that, leaving a permanent visible gap between the plugin's own content
+     and the footer instead of the two sitting flush. */
   .content:has([data-plugin-fullbleed]) {
     padding: 0;
-    padding-bottom: var(--sv-shell-footer-height, 60px);
   }
 
   .mobileHeader {

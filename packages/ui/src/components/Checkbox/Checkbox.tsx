@@ -51,18 +51,28 @@ export function Checkbox({
           </svg>
         )}
       </span>
-      <label
-        htmlFor={inputId}
-        className={[
-          styles.label,
-          strikeThrough && checked ? styles.struck : '',
-          disabled ? styles.disabled : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-      >
-        {label}
-      </label>
+      {/* Callers pass label="" for icon-only/screen-reader-only usage (an
+          aria-label on the Checkbox's own root covers accessibility in that
+          case) — omitting the element entirely, rather than rendering an
+          empty <label>, matters because .root's flex `gap` still applies
+          between .box and a rendered-but-empty label, silently adding an
+          extra --sv-space-2 of invisible space after the checkbox that
+          every icon-only consumer was unknowingly stacking on top of their
+          own layout's spacing. */}
+      {label && (
+        <label
+          htmlFor={inputId}
+          className={[
+            styles.label,
+            strikeThrough && checked ? styles.struck : '',
+            disabled ? styles.disabled : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          {label}
+        </label>
+      )}
     </span>
   );
 }

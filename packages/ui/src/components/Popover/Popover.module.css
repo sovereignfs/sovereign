@@ -11,7 +11,16 @@
   border: 1px solid var(--sv-color-border);
   border-radius: var(--sv-radius-2xl);
   box-shadow: var(--sv-shadow-popover);
-  overflow: hidden;
+  /* auto, not hidden: Popover.tsx applies an inline max-height only when the
+     panel is taller than the room actually available on whichever side it
+     opens (e.g. a tall calendar on a short mobile viewport, where neither
+     above nor below has enough space for the whole thing) — auto lets that
+     capped case scroll internally instead of silently clipping content with
+     no way to reach it. When no max-height is applied (the common case, panel
+     already fits), auto behaves identically to hidden — nothing to scroll,
+     content still clips at the rounded corners exactly as before. */
+  overflow-x: hidden;
+  overflow-y: auto;
   /* Slide in from slightly above */
   animation: sv-popover-in 0.12s ease;
 }
@@ -41,4 +50,25 @@
 /* Alignment: left edge of panel aligns to left edge of trigger */
 .left {
   left: 0;
+}
+
+/* Collision flip: opens above the trigger instead of below, when the panel
+   wouldn't fit within the viewport underneath it (see Popover.tsx's
+   layout-effect measurement). Same slide-in treatment, mirrored to slide up
+   from slightly below instead of down from slightly above. */
+.upward {
+  top: auto;
+  bottom: calc(100% + var(--sv-space-2));
+  animation-name: sv-popover-in-upward;
+}
+
+@keyframes sv-popover-in-upward {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

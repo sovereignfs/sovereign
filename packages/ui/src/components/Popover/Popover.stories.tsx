@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Floating panel anchored below a trigger. Non-modal: closes on outside click or Escape. `align` controls which trigger edge the panel aligns to.',
+          'Floating panel anchored to a trigger, below it by default. Non-modal: closes on outside click or Escape. `align` controls which trigger edge the panel aligns to; `width` accepts a fixed px number or `"trigger"` to match the trigger\'s own rendered width. Automatically flips to open upward instead of downward if the panel wouldn\'t fit below the trigger within the viewport.',
       },
     },
   },
@@ -257,6 +257,98 @@ export const SquareCorners: Story = {
             }}
           >
             No rounded corners.
+          </div>
+        </Popover>
+      </div>
+    );
+  },
+};
+
+/** `width="trigger"` matches the panel's width to the trigger's own rendered
+ *  width — for a dropdown under a full-width form field, a fixed px value
+ *  would either overflow or leave a gap depending on the field's own width. */
+export const MatchesTriggerWidth: Story = {
+  render: (_args) => {
+    const [open, setOpen] = useState(false);
+    return (
+      <div style={{ padding: 40, width: 360 }}>
+        <Popover
+          open={open}
+          onClose={() => setOpen(false)}
+          align="left"
+          width="trigger"
+          aria-label="Set due date"
+          trigger={
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                textAlign: 'left',
+                padding: '10px 14px',
+                border: '1px solid var(--sv-color-border)',
+                borderRadius: 'var(--sv-radius-md)',
+                background: 'var(--sv-color-surface-raised)',
+                fontFamily: 'var(--sv-font-family)',
+                fontSize: 'var(--sv-font-size-sm)',
+                color: 'var(--sv-color-text-primary)',
+                cursor: 'pointer',
+              }}
+            >
+              No due date
+            </button>
+          }
+        >
+          <div
+            style={{
+              padding: 16,
+              fontFamily: 'var(--sv-font-family)',
+              fontSize: 'var(--sv-font-size-sm)',
+              color: 'var(--sv-color-text-muted)',
+            }}
+          >
+            Panel width matches the 360px trigger above exactly, instead of a fixed pixel value that
+            would overflow or leave a gap at other trigger widths.
+          </div>
+        </Popover>
+      </div>
+    );
+  },
+};
+
+/** Flips to open upward automatically when the panel wouldn't fit below the
+ *  trigger within the viewport — no prop needed, this is always on. */
+export const OpensUpward: Story = {
+  render: (_args) => {
+    const [open, setOpen] = useState(false);
+    return (
+      <div
+        style={{
+          height: '70vh',
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          paddingBottom: 24,
+        }}
+      >
+        <Popover
+          open={open}
+          onClose={() => setOpen(false)}
+          align="left"
+          aria-label="Options"
+          trigger={<Button onClick={() => setOpen((o) => !o)}>Open (near viewport bottom)</Button>}
+        >
+          <div
+            style={{
+              padding: 16,
+              fontFamily: 'var(--sv-font-family)',
+              fontSize: 'var(--sv-font-size-sm)',
+              color: 'var(--sv-color-text-muted)',
+            }}
+          >
+            This trigger sits near the bottom of the viewport, so the panel opens upward instead of
+            getting clipped below.
           </div>
         </Popover>
       </div>

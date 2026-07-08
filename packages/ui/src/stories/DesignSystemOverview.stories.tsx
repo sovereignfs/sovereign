@@ -174,6 +174,8 @@ const COLOR_GROUPS: Array<{
       { token: '--sv-color-text-muted', name: 'text-muted' },
       { token: '--sv-color-text-subtle', name: 'text-subtle' },
       { token: '--sv-color-text-on-accent', name: 'text-on-accent' },
+      { token: '--sv-color-text-on-error', name: 'text-on-error' },
+      { token: '--sv-color-text-on-success', name: 'text-on-success' },
     ],
   },
   {
@@ -201,6 +203,7 @@ const COLOR_GROUPS: Array<{
       { token: '--sv-color-error-surface', name: 'error-surface' },
       { token: '--sv-color-error-text', name: 'error-text' },
       { token: '--sv-color-error-border', name: 'error-border' },
+      { token: '--sv-color-error-solid', name: 'error-solid' },
     ],
   },
   {
@@ -219,6 +222,7 @@ const COLOR_GROUPS: Array<{
       { token: '--sv-color-success-surface', name: 'success-surface' },
       { token: '--sv-color-success-text', name: 'success-text' },
       { token: '--sv-color-success-border', name: 'success-border' },
+      { token: '--sv-color-success-solid', name: 'success-solid' },
     ],
   },
   {

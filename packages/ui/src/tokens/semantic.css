@@ -45,6 +45,19 @@
   --sv-color-success-text: var(--sv-green-800);
   --sv-color-success-border: var(--sv-green-200);
 
+  /* Status solids — a saturated fill for status affordances that need to
+     read as a filled action button rather than a tinted surface (e.g. a
+     mobile swipe-to-reveal Delete/Done action). Paired with
+     --sv-color-text-on-error/-success (white) for the icon/label on top.
+     Intentionally NOT overridden under [data-theme='dark'] below — like
+     --sv-color-accent-subtle, a solid action fill reads the same regardless
+     of overall page theme; it's the surrounding surface that inverts, not
+     this fixed-contrast pairing. */
+  --sv-color-error-solid: var(--sv-red-700);
+  --sv-color-success-solid: var(--sv-green-800);
+  --sv-color-text-on-error: var(--sv-white);
+  --sv-color-text-on-success: var(--sv-white);
+
   /* Info surfaces — blue palette. Use for informational banners and badges.
      Never hardcode colour hex in components — reference these tokens. */
   --sv-color-info-surface: var(--sv-blue-100);

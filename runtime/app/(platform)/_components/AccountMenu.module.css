@@ -99,6 +99,10 @@
   align-items: center;
   gap: var(--sv-space-2);
   width: 100%;
+  /* Min row height so menu items are comfortably tappable on touch
+     (WCAG 2.5.5 / Apple HIG); rows already center-align, so this only grows
+     the hit area, it doesn't shift the label. */
+  min-height: var(--sv-touch-target-min, 44px);
   padding: var(--sv-space-2) var(--sv-space-3);
   border: none;
   border-radius: var(--sv-radius-sm);
@@ -111,8 +115,12 @@
   cursor: pointer;
 }
 
-.item:hover {
-  background: var(--sv-color-surface-sunken);
+/* Hover-guarded — this menu opens in the mobile header too, where a tapped
+   item would otherwise keep its hover background until the next tap elsewhere. */
+@media (hover: hover) {
+  .item:hover {
+    background: var(--sv-color-surface-sunken);
+  }
 }
 
 .item:focus-visible {
@@ -124,6 +132,8 @@
   color: var(--sv-color-error-text);
 }
 
-.itemDestructive:hover {
-  background: var(--sv-color-error-surface);
+@media (hover: hover) {
+  .itemDestructive:hover {
+    background: var(--sv-color-error-surface);
+  }
 }

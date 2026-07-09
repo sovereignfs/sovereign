@@ -30,6 +30,37 @@ body {
   overscroll-behavior: none;
 }
 
+/* Global touch hygiene — the baseline that makes the installed PWA feel like a
+   native app rather than a web page. Applied at the document level so every
+   route and every plugin inherits it with no per-component work. */
+html {
+  /* Kill the translucent grey box iOS/Android paint over a tapped element.
+     -webkit-tap-highlight-color is inherited, so setting it here removes the
+     flash everywhere — a native app never shows it. */
+  -webkit-tap-highlight-color: transparent;
+  /* Stop mobile engines auto-inflating text on orientation change / narrow
+     columns. The --sv-font-size-* tokens are already calibrated for 375px, so
+     inflation only throws the type scale off. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Remove the legacy ~300ms tap delay and the browser's double-tap-to-zoom on
+   interactive controls, so a tap registers instantly and a double-tap gesture
+   (e.g. a double-tap-to-rename) isn't shadowed by the zoom. Deliberately NOT on
+   html/body — those keep the default touch-action so pinch-to-zoom on page
+   content stays available (accessibility). A control that owns a custom drag
+   gesture (e.g. a dnd-kit handle) still overrides this with its own
+   `touch-action` via a higher-specificity class selector. */
+a,
+button,
+input,
+select,
+textarea,
+[role='button'] {
+  touch-action: manipulation;
+}
+
 /* Prevent horizontal scroll on mobile where the shell grid can momentarily
    exceed 1fr (e.g. nowrap content in the account tab bar or search overlay).
    Scoped to mobile only — applying overflow-x: hidden on <html> at desktop

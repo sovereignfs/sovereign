@@ -18,9 +18,14 @@
   color: var(--sv-color-text-muted);
 }
 
-.trigger:hover {
-  background: var(--sv-color-surface-sunken);
-  color: var(--sv-color-text-primary);
+/* Hover-guarded: the bell renders in the mobile header (touch), and on hybrid
+   touch-laptops the sidebar bell can be tapped too — an unguarded :hover would
+   stick after the tap. */
+@media (hover: hover) {
+  .trigger:hover {
+    background: var(--sv-color-surface-sunken);
+    color: var(--sv-color-text-primary);
+  }
 }
 
 .triggerActive {
@@ -28,11 +33,13 @@
   color: var(--sv-color-text-primary);
 }
 
-/* Mobile header: match the avatar size */
+/* Mobile header: min hit area for the bell (WCAG 2.5.5 / Apple HIG). The
+   background is transparent at rest, so the enlarged tap target is invisible
+   until pressed — the 20px icon stays centered and the same size. */
 @media (max-width: 768px) {
   .trigger:not(.triggerSidebar) {
-    width: 36px;
-    height: 36px;
+    width: var(--sv-touch-target-min, 44px);
+    height: var(--sv-touch-target-min, 44px);
   }
 }
 
@@ -44,8 +51,10 @@
   color: var(--sv-color-text-primary);
 }
 
-.triggerSidebar:hover {
-  background: var(--sv-color-border);
+@media (hover: hover) {
+  .triggerSidebar:hover {
+    background: var(--sv-color-border);
+  }
 }
 
 .triggerSidebarActive {
@@ -140,8 +149,10 @@
   white-space: nowrap;
 }
 
-.actionBtn:hover {
-  color: var(--sv-color-text-primary);
+@media (hover: hover) {
+  .actionBtn:hover {
+    color: var(--sv-color-text-primary);
+  }
 }
 
 .closeBtn {
@@ -163,9 +174,11 @@
   height: 14px;
 }
 
-.closeBtn:hover {
-  color: var(--sv-color-text-primary);
-  background: var(--sv-color-surface-sunken);
+@media (hover: hover) {
+  .closeBtn:hover {
+    color: var(--sv-color-text-primary);
+    background: var(--sv-color-surface-sunken);
+  }
 }
 
 /* ── List ────────────────────────────────────────────────────────────────── */
@@ -272,8 +285,10 @@
   line-height: 1.4;
 }
 
-a.itemTitle:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  a.itemTitle:hover {
+    text-decoration: underline;
+  }
 }
 
 .itemTime {
@@ -319,7 +334,9 @@ a.itemTitle:hover {
   height: 12px;
 }
 
-.dismissBtn:hover {
-  color: var(--sv-color-text-primary);
-  background: var(--sv-color-surface-sunken);
+@media (hover: hover) {
+  .dismissBtn:hover {
+    color: var(--sv-color-text-primary);
+    background: var(--sv-color-surface-sunken);
+  }
 }

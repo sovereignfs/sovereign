@@ -300,7 +300,15 @@ const manifestObjectSchema = z
                   ),
                 title: z.string().min(1),
                 callbackPath: z.string().min(1).startsWith('/', 'callbackPath must start with "/"'),
-                scopes: z.array(z.enum(['user', 'plugin', 'instance'])).min(1),
+                /**
+                 * Provider-defined OAuth/API scope identifiers (e.g. `"repo"`,
+                 * `"read:user"`, `"https://www.googleapis.com/auth/gmail.readonly"`) —
+                 * free-form strings meaningful to the external provider, not the
+                 * `sdk.secrets` storage-scope enum. Admins can override the
+                 * effective set per connection; this is the manifest-declared
+                 * default (see `runtime/src/provider-configs.ts` `parseProviderScopes`).
+                 */
+                scopes: z.array(z.string().min(1)).min(1),
                 config: z
                   .object({
                     public: z

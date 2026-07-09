@@ -5,6 +5,8 @@ node_modules
 pnpm-lock.yaml
 # Local / private working area (git-ignored; backed by a separate private repo).
 /local
+# Claude Code memory (remember plugin) — git-ignored, per-machine scratch state.
+.remember
 runtime/app/(platform)/(plugins)
 runtime/generated
 runtime/public/sw.js

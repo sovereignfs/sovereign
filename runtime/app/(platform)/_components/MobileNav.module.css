@@ -37,8 +37,14 @@
   outline: none;
 }
 
-.navItem:hover {
-  color: var(--sv-color-text-primary);
+/* Hover only where a real hovering pointer exists — on touch, :hover state
+   sticks after a tap until the next tap elsewhere, leaving controls looking
+   stuck in their hover style. This whole footer is mobile-only (touch), so
+   the guard matters here in particular. */
+@media (hover: hover) {
+  .navItem:hover {
+    color: var(--sv-color-text-primary);
+  }
 }
 
 .navItem:focus-visible {
@@ -113,8 +119,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  /* Min hit area (WCAG 2.5.5 / Apple HIG) — this is a touch-only surface, so
+     the close button must be comfortably thumb-tappable. The icon inside stays
+     visually small; only the tap target grows. */
+  width: var(--sv-touch-target-min, 44px);
+  height: var(--sv-touch-target-min, 44px);
   border: none;
   border-radius: var(--sv-radius-full);
   background: var(--sv-color-surface-sunken);
@@ -126,9 +135,11 @@
   outline: none;
 }
 
-.drawerClose:hover {
-  background: var(--sv-color-border);
-  color: var(--sv-color-text-primary);
+@media (hover: hover) {
+  .drawerClose:hover {
+    background: var(--sv-color-border);
+    color: var(--sv-color-text-primary);
+  }
 }
 
 .drawerClose:focus-visible {
@@ -156,8 +167,10 @@
   color: var(--sv-color-text-primary);
 }
 
-.drawerGridItem:hover .drawerGridIcon {
-  background: var(--sv-color-border);
+@media (hover: hover) {
+  .drawerGridItem:hover .drawerGridIcon {
+    background: var(--sv-color-border);
+  }
 }
 
 .drawerGridItem:focus-visible {

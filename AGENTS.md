@@ -179,6 +179,14 @@ not see "plugin" unless the surface is explicitly developer-facing.
 
 For `packages/ui`, semantic tokens and component APIs are public contracts for
 plugin developers. Components must use `--sv-*` tokens, not hardcoded values.
+
+**DS-first: plugins are consumers.** Reusable UI/UX capability (interaction
+hooks, overlay surfaces, secondary headers, motion, controls) is implemented in
+`packages/ui` — or the runtime shell when it is shell chrome — and consumed by
+plugins, never implemented plugin-locally "to be promoted later". React-coupled
+UI utilities belong in `@sovereignfs/ui`, not `@sovereignfs/sdk`. See
+`docs/design-system.md` (Design principles) and `docs/architecture-rules.md`.
+
 Storybook must stay current when UI components or tokens change:
 
 - New component: add `packages/ui/src/stories/<Name>.stories.tsx` with at least

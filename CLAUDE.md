@@ -277,6 +277,13 @@ import { Button, Card, Input, Badge } from '@sovereignfs/ui';
 - Components must never hardcode values — always reference `--sv-*` tokens.
 - Dark mode and instance theming work by swapping semantic token values at `:root`;
   no component changes required.
+- **DS-first: plugins are consumers.** Reusable UI/UX capability — interaction
+  hooks (long-press, double-tap, `useIsMobile`), overlay surfaces, secondary
+  headers, motion, controls — is implemented in `packages/ui` (or the runtime
+  shell for shell chrome) and consumed by plugins, never implemented
+  plugin-locally "to be promoted later". React-coupled UI utilities belong in
+  `@sovereignfs/ui`, not the SDK. Full statement: `docs/design-system.md`
+  Design principles; rule detail: `docs/architecture-rules.md`.
 
 ### Storybook hygiene (enforced per-PR)
 

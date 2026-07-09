@@ -223,12 +223,46 @@ describe('validateManifest', () => {
             id: 'email.google',
             title: 'Google Mail',
             callbackPath: '/connections/google/callback',
-            scopes: ['user'],
+            scopes: ['https://www.googleapis.com/auth/gmail.readonly'],
           },
         ],
       },
     });
     expect(res.valid).toBe(true);
+  });
+
+  it('accepts provider-defined OAuth scope strings that are not "user"/"plugin"/"instance"', () => {
+    const res = validateManifest({
+      ...base,
+      connections: {
+        providers: [
+          {
+            id: 'git.github',
+            title: 'GitHub',
+            callbackPath: '/connections/github/callback',
+            scopes: ['repo', 'read:user'],
+          },
+        ],
+      },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects an empty connection provider scopes array', () => {
+    const res = validateManifest({
+      ...base,
+      connections: {
+        providers: [
+          {
+            id: 'git.github',
+            title: 'GitHub',
+            callbackPath: '/connections/github/callback',
+            scopes: [],
+          },
+        ],
+      },
+    });
+    expect(res.valid).toBe(false);
   });
 
   it('accepts external provider config declarations (Task 3.27)', () => {

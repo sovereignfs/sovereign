@@ -512,7 +512,7 @@ returned secret reference and sanitized provider metadata on the connection row.
         "id": "email.google",
         "title": "Google Mail",
         "callbackPath": "/connections/google/callback",
-        "scopes": ["user"],
+        "scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
         "config": {
           "public": {
             "clientId": {
@@ -534,6 +534,12 @@ returned secret reference and sanitized provider metadata on the connection row.
   },
 }
 ```
+
+`scopes` is a free-form list of provider-defined OAuth/API scope identifiers
+(e.g. GitHub's `"repo"`, `"read:user"`) — not the `sdk.secrets` storage-scope
+enum (`user` / `plugin` / `instance`), which is a different, unrelated
+concept. It's the manifest-declared default; an admin can override the
+effective scopes for a connection independently.
 
 ```ts
 import { sdk } from '@sovereignfs/sdk';

@@ -7,6 +7,15 @@ Full reference for load-bearing constraints enforced by ESLint, CI, or runtime b
 - **SDK is the only plugin↔platform contract.** Plugins MUST NOT import from
   `runtime/src`. ESLint enforces this (established in Task 0.3.3, verified in
   Task 0.3.8). Plugins use `packages/sdk` only.
+- **Reusable UI/UX capability ships from the design system, not from plugins.**
+  Interaction hooks, overlay surfaces, secondary headers, motion, and controls
+  belong in `packages/ui` (or the runtime shell when they are shell chrome);
+  plugins — including first-party ones like Sovereign Tasks — only consume
+  them. A fix discovered inside a plugin is designed as a `packages/ui`
+  addition plus a thin adoption change in the plugin, never as a plugin-local
+  implementation "to be promoted later". React-coupled UI utilities live in
+  `@sovereignfs/ui`, not `@sovereignfs/sdk` (the SDK stays a framework-lean
+  capability contract). See "Design principles" in `docs/design-system.md`.
 - **`@sovereignfs/sdk` is a types-first contract with zero runtime dependencies**
   (RFC 0023, Task 0.5.21). `packages/sdk` does not import `@sovereignfs/db` or
   `@sovereignfs/mailer`. Implementations are registered by the runtime at startup

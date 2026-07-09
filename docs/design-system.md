@@ -36,6 +36,14 @@ and tokens inside a plugin) lives in `docs/plugin-development.md` (from v0.5).
   keyboard operability are part of "done," not a later pass.
 - **No framework lock-in for tokens.** Tokens are plain CSS custom properties —
   consumable from any CSS, no JS import required.
+- **DS-first: plugins are consumers.** Reusable UI/UX capability — interaction
+  hooks, overlay surfaces, secondary headers, motion, controls (pickers,
+  calendars) — ships from `@sovereignfs/ui`, or from the runtime shell when it
+  is shell chrome. It is never implemented plugin-locally: when a gap or defect
+  is discovered while working in a plugin, the fix is designed as a
+  design-system addition that the plugin then consumes — not built in the
+  plugin "to be promoted later". Plugin repositories keep only consumption
+  code and genuinely plugin-specific logic.
 
 ## Token architecture
 
@@ -508,6 +516,71 @@ guideline for reliable tap without precision pointing:
 
 This applies on mobile. Desktop icon-only controls (sidebar icons) can be
 smaller because mouse interaction is more precise.
+
+### Interaction hooks
+
+Touch gesture handling is deceptively easy to get wrong — a naive long-press
+timer or a hand-rolled `matchMedia` check reliably misfires in ways that read
+as "the app feels janky." These hooks carry the fixes so no plugin has to
+rediscover them. Per the DS-first principle (see "Design principles" above),
+build touch gesture handling here, not in a plugin.
+
+```tsx
+import {
+  useLongPress,
+  useDoubleTapHandler,
+  useSingleOrDoubleTap,
+  useIsMobile,
+} from '@sovereignfs/ui';
+```
+
+**`useLongPress({ onLongPress, delay?, moveTolerance?, suppressClickMs?, vibrate?, disabled? })`**
+Returns a props object to spread onto the target element
+(`onPointerDown`/`onPointerMove`/`onPointerUp`/`onPointerCancel`/`onPointerLeave`/
+`onContextMenu`/`onClick`/`style`). Handles the failure modes a bare
+`setTimeout` misses:
+
+- **Movement tolerance** (`moveTolerance`, default 10px): a real finger jitters
+  a few px even holding still — cancelling on _any_ movement makes the gesture
+  misfire constantly.
+- **`pointercancel`**, not just `pointerup`/`pointermove`/`pointerleave`: when
+  the browser converts the touch into a scroll, the timer is cleared instead
+  of firing mid-scroll.
+- **OS callout suppression**: `onContextMenu` preempts Android's link/image
+  context menu; the returned `style` sets `-webkit-touch-callout: none` (iOS
+  link-preview), `user-select: none`, and `touch-action: manipulation` — but
+  only when the device's primary pointer is coarse (`(pointer: coarse)`), so
+  desktop mouse text-selection is never disabled by a hook that only matters
+  for touch.
+- **Time-boxed click suppression** (`suppressClickMs`, default 700ms): the
+  click that may or may not follow a fired long-press is swallowed for a
+  bounded window, not indefinitely — iOS often sends no click at all after a
+  long hold, so a flag that only clears "on the next click" stays armed and
+  silently eats the user's next unrelated tap.
+
+```tsx
+function Row({ onSelect }: { onSelect: () => void }) {
+  const longPress = useLongPress({ onLongPress: onSelect });
+  return <div {...longPress}>Hold to select</div>;
+}
+```
+
+**`useDoubleTapHandler(onDoubleTap)`** / **`useSingleOrDoubleTap(onSingle, onDouble)`**
+Desktop double-clicks report `e.detail === 2` natively; touch has no
+equivalent signal, so double-tap is detected by timing two taps within 350ms.
+Use `useDoubleTapHandler` when the single tap has no default action to cancel
+(e.g. a colour swatch). Use `useSingleOrDoubleTap` when it does (e.g.
+navigation) — it defers the single action by the double-tap window so a
+following second tap can still preempt it; this means every single tap through
+it incurs that latency, so reach for it only where the preemption is genuinely
+needed.
+
+**`useIsMobile(breakpointPx?)`** and **`MOBILE_BREAKPOINT_PX` (768)**
+SSR-safe viewport check — defaults to `false` (desktop) until the client mounts
+and reads the real viewport, matching every other SSR-safe hook in this
+system. Defaults to the platform's single documented breakpoint (768px, see
+above); pass a different value only when a layout genuinely needs its own
+threshold.
 
 ### `Dialog` vs `Drawer`
 

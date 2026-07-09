@@ -57,3 +57,6 @@ export { Checkbox } from './components/Checkbox/Checkbox';
 export type { CheckboxProps } from './components/Checkbox/Checkbox';
 export { DragHandleRow } from './components/DragHandleRow/DragHandleRow';
 export type { DragHandleRowProps } from './components/DragHandleRow/DragHandleRow';
+export { useLongPress, useDoubleTapHandler, useSingleOrDoubleTap, useIsMobile } from './hooks';
+export { MOBILE_BREAKPOINT_PX } from './hooks';
+export type { UseLongPressOptions, LongPressHandlers } from './hooks';

@@ -170,8 +170,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: var(--sv-space-8);
-    height: var(--sv-space-8);
+    /* 44px min hit area (WCAG 2.5.5 / Apple HIG) — this close button is only
+       rendered on mobile (touch), so it must be comfortably thumb-tappable.
+       The × glyph stays its font-size; only the tap target grows. */
+    width: var(--sv-touch-target-min, 44px);
+    height: var(--sv-touch-target-min, 44px);
     flex-shrink: 0;
     border: none;
     border-radius: var(--sv-radius-md);
@@ -182,9 +185,13 @@
     cursor: pointer;
   }
 
-  .mobileBarClose:hover {
-    background: var(--sv-color-surface-sunken);
-    color: var(--sv-color-text-primary);
+  /* Hover-guarded — this button only exists on mobile (touch), where an
+     unguarded :hover would stick after the tap that dismisses the dialog. */
+  @media (hover: hover) {
+    .mobileBarClose:hover {
+      background: var(--sv-color-surface-sunken);
+      color: var(--sv-color-text-primary);
+    }
   }
 
   /* Remove top padding so the sticky plugin header sits flush against the

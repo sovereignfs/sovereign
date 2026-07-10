@@ -1,0 +1,55 @@
+/* Sheet — fills the same rect as a plugin's content area (between the shell's
+ * sticky header and footer nav — see --sv-shell-header-height /
+ * --sv-shell-footer-height, set by the shell), sliding in from an edge
+ * instead of Dialog's centered box or Drawer's partial-height sheet-over-
+ * scrim. z-index matches Dialog/Drawer's scrim so it layers consistently
+ * with any other overlay. No scrim of its own — see the component doc
+ * comment for why. */
+
+.panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--sv-shell-header-height, 0);
+  bottom: var(--sv-shell-footer-height, 0);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  background: var(--sv-color-surface);
+  outline: none;
+  transform: translateY(100%);
+  transition: transform var(--sv-motion-duration-base) var(--sv-motion-ease-out);
+}
+
+.panelOpen {
+  transform: translateY(0);
+}
+
+/* Opt-in top variant (slideFrom="top") — a short options/actions menu opened
+ * from a header button reads more naturally sliding down from that button's
+ * edge than traveling up from off-screen bottom. :not(.panelOpen) is what
+ * lets this coexist with .panelOpen above despite equal-looking single-class
+ * specificity elsewhere in this file: its (0,2,0) beats .panelOpen's (0,1,0)
+ * while closed/entering/closing, and yields to it (transform: translateY(0),
+ * same value either direction) once open. */
+.panelFromTop:not(.panelOpen) {
+  transform: translateY(-100%);
+}
+
+/* See Dialog.module.css's identical rule for why 0.01ms rather than 0. */
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* Always the scroll container, with or without OverlayHeader present (see
+ * Sheet.tsx). No opinionated padding here — matches Drawer's convention of
+ * leaving horizontal/top padding and safe-area-bottom clearance to the
+ * content itself, since a Sheet's content shape varies far more than a
+ * fixed-size Dialog's. */
+.content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

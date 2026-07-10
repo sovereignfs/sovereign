@@ -1,0 +1,100 @@
+/* ConfirmDialog — built on the native <dialog> element (see the component's
+ * own doc comment for why: content-sized, top-layer stacking, ::backdrop for
+ * free). Tokens only. */
+
+.dialog {
+  border: none;
+  border-radius: var(--sv-radius-lg);
+  background: var(--sv-color-surface);
+  box-shadow: var(--sv-shadow-overlay);
+  padding: 0;
+  width: 22rem;
+  max-width: calc(100vw - var(--sv-space-8));
+}
+
+.dialog::backdrop {
+  background: var(--sv-color-scrim);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+  padding: var(--sv-space-6);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--sv-font-size-lg);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.message {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-error-text);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border: 1px solid var(--sv-color-error-border);
+  border-radius: var(--sv-radius-sm);
+  background-color: var(--sv-color-error-surface);
+}
+
+.actions {
+  display: flex;
+  gap: var(--sv-space-3);
+  justify-content: flex-end;
+}
+
+/* Matches Button's own .button + .md structural rules exactly (padding,
+ * radius, font weight, focus-visible ring, disabled state) so it reads as
+ * the same control family — only the color scheme differs. Not built as an
+ * override of Button's own CSS module: cross-module class-order in the
+ * cascade isn't guaranteed, and an inline-style override would defeat
+ * Button's own :hover rule (inline styles always win over an external
+ * stylesheet, hover or not). A plain button with its own tokens sidesteps
+ * both problems.
+ *
+ * Hover is intentionally unguarded (no @media (hover: hover)) — matches
+ * Button's own current state; both get the hover-guard sweep together in a
+ * later pass, not here. */
+.destructiveConfirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sv-space-2);
+  padding: 13px var(--sv-space-4);
+  border: 1px solid transparent;
+  border-radius: var(--sv-radius-md);
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
+  line-height: 1;
+  cursor: pointer;
+  background-color: var(--sv-color-error-solid);
+  color: var(--sv-color-text-on-error);
+  transition: background-color 0.15s ease;
+}
+
+/* Derived via color-mix from the semantic token, not a raw --sv-red-800
+   primitive (the original .dangerButton pattern this replaces did reference
+   the primitive directly — fixed here, not carried forward). */
+.destructiveConfirm:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--sv-color-error-solid) 85%, black);
+}
+
+.destructiveConfirm:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.destructiveConfirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

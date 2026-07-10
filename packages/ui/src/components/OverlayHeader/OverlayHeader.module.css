@@ -1,0 +1,98 @@
+/* OverlayHeader — shared fixed secondary header for Dialog's mobile mode,
+ * Sheet, and Drawer. Not itself pinned via position — the consumer renders it
+ * as a flex-shrink: 0 sibling before its own scrolling content region (see
+ * the component's own doc comment). */
+
+.header {
+  flex-shrink: 0;
+  background: var(--sv-color-surface);
+  border-bottom: 1px solid var(--sv-color-border);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  padding: var(--sv-space-3) var(--sv-space-4);
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sv-touch-target-min, 44px);
+  height: var(--sv-touch-target-min, 44px);
+  flex-shrink: 0;
+  /* Pull the touch-target padding back so the chevron glyph still sits close
+     to the title, matching the visual (not hit-area) spacing of .row's own
+     gap — otherwise a 44px box reads as a large empty gap before the title. */
+  margin-left: calc(-1 * (var(--sv-touch-target-min, 44px) - var(--sv-icon-size-md)) / 2);
+  margin-right: calc(
+    -1 * (var(--sv-touch-target-min, 44px) - var(--sv-icon-size-md)) / 2 + var(--sv-space-1)
+  );
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  color: var(--sv-color-text-muted);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .backButton:hover {
+    background: var(--sv-color-surface-sunken);
+    color: var(--sv-color-text-primary);
+  }
+}
+
+.backButton:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--sv-font-size-xl);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.action {
+  flex-shrink: 0;
+}
+
+.closeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sv-touch-target-min, 44px);
+  height: var(--sv-touch-target-min, 44px);
+  flex-shrink: 0;
+  /* Pull the touch-target padding back so the × sits flush with the row's own
+     edge padding, same reasoning as .backButton above. */
+  margin-right: calc(-1 * (var(--sv-touch-target-min, 44px) - var(--sv-icon-size-sm)) / 2);
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  color: var(--sv-color-text-muted);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .closeButton:hover {
+    background: var(--sv-color-surface-sunken);
+    color: var(--sv-color-text-primary);
+  }
+}
+
+.closeButton:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.secondRow {
+  padding: 0 var(--sv-space-2) var(--sv-space-2);
+}

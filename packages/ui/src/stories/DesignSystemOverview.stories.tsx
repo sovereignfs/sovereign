@@ -1363,7 +1363,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="Button"
               importLine="import { Button } from '@sovereignfs/ui';"
-              usage="Primary interactive control. Four variants: primary, secondary, ghost, destructive. Two sizes: md (default), sm."
+              usage="Primary interactive control. Four variants: primary, secondary, ghost, destructive. Two sizes: md (default), sm. loading disables the button, sets aria-busy, and shows a spinner. 44px min-height under (pointer: coarse); hover behind (hover: hover)."
             >
               <Button>Primary</Button>
               <Button variant="secondary">Secondary</Button>
@@ -1371,6 +1371,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               <Button variant="destructive" size="sm">
                 Delete
               </Button>
+              <Button loading>Saving…</Button>
             </ComponentCard>
 
             {/* Badge */}
@@ -1795,7 +1796,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="Checkbox"
               importLine="import { Checkbox } from '@sovereignfs/ui';"
-              usage="Accessible checkbox with optional animated strike-through on the label when checked. Used in task lists."
+              usage="Accessible checkbox with optional animated strike-through on the label when checked. Used in task lists. Tap target expands to 44px under (pointer: coarse) without growing the visible 18px box."
             >
               {(() => {
                 const [a, setA] = useState(false);

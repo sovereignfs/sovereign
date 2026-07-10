@@ -657,6 +657,7 @@ function ConfirmDialogDemo() {
 
 function MenuDemo() {
   const [open, setOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'manual' | 'title' | 'due'>('manual');
   return (
     <Menu
       open={open}
@@ -669,6 +670,11 @@ function MenuDemo() {
         </Button>
       }
       items={[
+        { type: 'label', label: 'Sort by' },
+        { label: 'Manual', checked: sortBy === 'manual', onSelect: () => setSortBy('manual') },
+        { label: 'Title', checked: sortBy === 'title', onSelect: () => setSortBy('title') },
+        { label: 'Due date', checked: sortBy === 'due', onSelect: () => setSortBy('due') },
+        { type: 'separator' },
         { label: 'Rename', icon: 'pencil', onSelect: () => {} },
         { label: 'Duplicate', icon: 'plus', onSelect: () => {} },
         { label: 'Delete', icon: 'trash-2', destructive: true, onSelect: () => {} },
@@ -1555,7 +1561,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="Menu"
               importLine="import { Menu } from '@sovereignfs/ui';"
-              usage="Adaptive action menu: Popover on desktop, Drawer on mobile. Same items list renders in both — for '⋯' row/list actions."
+              usage="Adaptive action menu: Popover on desktop, Drawer on mobile. Same items list renders in both — for '⋯' row/list actions. Entries can be a plain item, a { type: 'label' } section heading, a { type: 'separator' } divider, or a checkable item (pass checked on every item in the group) for a mutually-exclusive set like sort order."
             >
               <MenuDemo />
             </ComponentCard>

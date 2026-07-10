@@ -54,3 +54,29 @@
     background: var(--sv-color-error-surface);
   }
 }
+
+/* Reserved checkmark gutter for a checkable item — sized so unchecked
+   siblings in the same group still align with the checked one's icon. */
+.check {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: var(--sv-icon-size-sm);
+  height: var(--sv-icon-size-sm);
+  align-items: center;
+  justify-content: center;
+}
+
+.label {
+  padding: var(--sv-space-2) var(--sv-space-3) var(--sv-space-1);
+  font-size: var(--sv-font-size-label);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.separator {
+  height: 1px;
+  margin: var(--sv-space-1) var(--sv-space-2);
+  background: var(--sv-color-border);
+}

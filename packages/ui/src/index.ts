@@ -42,7 +42,13 @@ export type { SheetProps } from './components/Sheet/Sheet';
 export { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog';
 export type { ConfirmDialogProps } from './components/ConfirmDialog/ConfirmDialog';
 export { Menu } from './components/Menu/Menu';
-export type { MenuProps, MenuItem } from './components/Menu/Menu';
+export type {
+  MenuProps,
+  MenuItem,
+  MenuLabel,
+  MenuSeparator,
+  MenuEntry,
+} from './components/Menu/Menu';
 export { ToastProvider, useToast } from './components/Toast/Toast';
 export type { ToastItem, ToastContextValue } from './components/Toast/Toast';
 export { Card } from './components/Card/Card';

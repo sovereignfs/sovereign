@@ -761,6 +761,40 @@ interactive. Defaults to `0` (full-viewport scrim) for standalone use:
 Plugin code does not need to set this; it is a platform-level concern wired by
 the shell.
 
+### `Calendar` and `DatePicker`
+
+```tsx
+import { DatePicker } from '@sovereignfs/ui';
+
+<DatePicker
+  value={dueDate}
+  onChange={setDueDate}
+  aria-label="Due date"
+  placeholder="Select date"
+/>;
+```
+
+`Calendar` is a keyboard-navigable month grid — date-only (no time or range
+selection yet; recurrence UI stays plugin-side). Keyboard follows the WAI-ARIA
+APG grid pattern with roving tabindex: arrow keys move focus by day/week,
+Home/End jump to the start/end of the focused week, PageUp/PageDown change
+month, Enter/Space selects. `minDate`/`maxDate` disable out-of-range dates.
+
+`DatePicker` wraps `Calendar` behind a form-field trigger (styled to match
+`Input`): `Popover` on desktop, a bottom-sheet `Drawer` on mobile — the
+platform's standard adaptive-surface pattern (see `Menu`, `docs/design-system.md`'s
+Responsive & mobile section). Unlike `Menu`, the trigger is built in rather
+than supplied by the caller, since a date picker is a form field, not an
+arbitrary action-menu trigger.
+
+```tsx
+import { Calendar } from '@sovereignfs/ui';
+
+// Embed the grid directly (e.g. inside a custom Popover/Drawer) instead of
+// using DatePicker's built-in trigger:
+<Calendar value={selected} onChange={setSelected} minDate={today} aria-label="Pick a date" />;
+```
+
 ---
 
 ## Component stories (Storybook)

@@ -33,6 +33,8 @@ import { OverlayHeader } from '../components/OverlayHeader/OverlayHeader';
 import { Sheet } from '../components/Sheet/Sheet';
 import { ConfirmDialog } from '../components/ConfirmDialog/ConfirmDialog';
 import { Menu } from '../components/Menu/Menu';
+import { Calendar } from '../components/Calendar/Calendar';
+import { DatePicker } from '../components/DatePicker/DatePicker';
 
 // ---------------------------------------------------------------------------
 // Shared primitives
@@ -672,6 +674,29 @@ function MenuDemo() {
         { label: 'Delete', icon: 'trash-2', destructive: true, onSelect: () => {} },
       ]}
     />
+  );
+}
+
+function CalendarDemo() {
+  const [value, setValue] = useState<Date | null>(new Date());
+  return (
+    <div style={{ width: '100%', maxWidth: 320 }}>
+      <Calendar value={value} onChange={setValue} aria-label="Example calendar" />
+    </div>
+  );
+}
+
+function DatePickerDemo() {
+  const [value, setValue] = useState<Date | null>(null);
+  return (
+    <div style={{ width: '100%', maxWidth: 240 }}>
+      <DatePicker
+        value={value}
+        onChange={setValue}
+        aria-label="Due date"
+        placeholder="Select date"
+      />
+    </div>
   );
 }
 
@@ -1532,6 +1557,24 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Adaptive action menu: Popover on desktop, Drawer on mobile. Same items list renders in both — for '⋯' row/list actions."
             >
               <MenuDemo />
+            </ComponentCard>
+
+            {/* Calendar */}
+            <ComponentCard
+              name="Calendar"
+              importLine="import { Calendar } from '@sovereignfs/ui';"
+              usage="Keyboard-navigable month grid. Date-only (no time/range yet). Arrow keys, Home/End, PageUp/PageDown, Enter/Space to select."
+            >
+              <CalendarDemo />
+            </ComponentCard>
+
+            {/* DatePicker */}
+            <ComponentCard
+              name="DatePicker"
+              importLine="import { DatePicker } from '@sovereignfs/ui';"
+              usage="Form field pairing a trigger with Calendar: Popover on desktop, Drawer on mobile. Built-in trigger, unlike Menu's caller-supplied one."
+            >
+              <DatePickerDemo />
             </ComponentCard>
 
             {/* SystemBanner */}

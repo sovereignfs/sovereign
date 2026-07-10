@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
 // ---------------------------------------------------------------------------
@@ -95,6 +96,31 @@ const SHADOW_TOKENS = [
   '--sv-shadow-control',
 ];
 
+// Realistic duration+easing pairings, not every combination — matches how
+// Dialog/Drawer actually use these tokens (see motion.ts).
+const MOTION_PAIRS: { durationToken: string; easeToken: string; use: string }[] = [
+  {
+    durationToken: '--sv-motion-duration-fast',
+    easeToken: '--sv-motion-ease-out',
+    use: 'micro-interaction',
+  },
+  {
+    durationToken: '--sv-motion-duration-base',
+    easeToken: '--sv-motion-ease-out',
+    use: 'Dialog / Drawer entrance',
+  },
+  {
+    durationToken: '--sv-motion-duration-slow',
+    easeToken: '--sv-motion-ease-in-out',
+    use: 'larger surface / longer travel',
+  },
+  {
+    durationToken: '--sv-motion-duration-base',
+    easeToken: '--sv-motion-ease-spring',
+    use: 'emphasis (use sparingly)',
+  },
+];
+
 // ---------------------------------------------------------------------------
 
 const row: React.CSSProperties = {
@@ -159,6 +185,49 @@ function ScaleRow({
       {renderPreview(computed)}
       <span style={label}>{token}</span>
       <span style={value}>{computed}</span>
+    </div>
+  );
+}
+
+// Auto-loops so the duration/easing is visible without needing to interact —
+// same technique Dialog/Drawer use for their own open/close transition
+// (see motion.ts), just driven by a timer instead of an `open` prop.
+function MotionRow({ durationToken, easeToken, use }: (typeof MOTION_PAIRS)[number]) {
+  const [toggled, setToggled] = useState(false);
+  useEffect(() => {
+    const id = setInterval(() => setToggled((v) => !v), 900);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div style={row}>
+      <div
+        style={{
+          position: 'relative',
+          width: 120,
+          height: 24,
+          background: 'var(--sv-color-surface-sunken)',
+          borderRadius: 4,
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: 2,
+            left: 2,
+            width: 20,
+            height: 20,
+            borderRadius: '50%',
+            background: 'var(--sv-color-accent)',
+            transform: `translateX(${toggled ? 96 : 0}px)`,
+            transition: `transform var(${durationToken}) var(${easeToken})`,
+          }}
+        />
+      </div>
+      <span style={label}>
+        {durationToken} · {easeToken}
+      </span>
+      <span style={value}>{use}</span>
     </div>
   );
 }
@@ -338,6 +407,12 @@ function TokenGalleryComponent() {
               />
             )}
           />
+        ))}
+      </Section>
+
+      <Section title="Motion">
+        {MOTION_PAIRS.map((pair) => (
+          <MotionRow key={`${pair.durationToken}-${pair.easeToken}`} {...pair} />
         ))}
       </Section>
     </div>

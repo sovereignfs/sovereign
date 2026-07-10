@@ -835,6 +835,27 @@ renders in both. Selecting an item both closes the menu and calls its
 Replaces the desktop-Popover/mobile-Drawer fork a `⋯` action menu otherwise
 re-derives per plugin.
 
+`items` accepts three entry shapes, mixed freely in one list — enough to
+express a native-OS-style menu with grouped sections above a run of plain
+actions:
+
+```tsx
+items={[
+  { type: 'label', label: 'Sort by' }, // non-interactive section heading
+  { label: 'Manual', checked: sortBy === 'manual', onSelect: () => setSortBy('manual') },
+  { label: 'Title', checked: sortBy === 'title', onSelect: () => setSortBy('title') },
+  { type: 'separator' }, // a divider
+  { label: 'Delete list', icon: 'trash-2', destructive: true, onSelect: handleDelete },
+]}
+```
+
+`checked` marks an item as one of a mutually-exclusive set — it renders
+`role="menuitemradio"` with a leading checkmark instead of `role="menuitem"`.
+Pass it on **every** item in the group, including the unchecked ones, so
+their labels stay aligned with the checked one's reserved checkmark gutter;
+omit it entirely on plain action items (e.g. "Delete list"), which render
+with no reserved leading space at all.
+
 ### `--sv-dialog-inset-top`
 
 Mirrors `--sv-dialog-inset-left` on the vertical axis. The runtime shell sets it

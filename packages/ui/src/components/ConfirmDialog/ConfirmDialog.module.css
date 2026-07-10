@@ -53,17 +53,13 @@
 }
 
 /* Matches Button's own .button + .md structural rules exactly (padding,
- * radius, font weight, focus-visible ring, disabled state) so it reads as
- * the same control family — only the color scheme differs. Not built as an
- * override of Button's own CSS module: cross-module class-order in the
- * cascade isn't guaranteed, and an inline-style override would defeat
- * Button's own :hover rule (inline styles always win over an external
- * stylesheet, hover or not). A plain button with its own tokens sidesteps
- * both problems.
- *
- * Hover is intentionally unguarded (no @media (hover: hover)) — matches
- * Button's own current state; both get the hover-guard sweep together in a
- * later pass, not here. */
+ * radius, font weight, focus-visible ring, disabled state, touch target,
+ * hover guard, active/pressed state) so it reads as the same control family
+ * — only the color scheme differs. Not built as an override of Button's own
+ * CSS module: cross-module class-order in the cascade isn't guaranteed, and
+ * an inline-style override would defeat Button's own :hover rule (inline
+ * styles always win over an external stylesheet, hover or not). A plain
+ * button with its own tokens sidesteps both problems. */
 .destructiveConfirm {
   display: inline-flex;
   align-items: center;
@@ -77,16 +73,29 @@
   font-weight: var(--sv-font-weight-semibold);
   line-height: 1;
   cursor: pointer;
+  touch-action: manipulation;
   background-color: var(--sv-color-error-solid);
   color: var(--sv-color-text-on-error);
   transition: background-color 0.15s ease;
 }
 
+@media (pointer: coarse) {
+  .destructiveConfirm {
+    min-height: var(--sv-touch-target-min, 44px);
+  }
+}
+
 /* Derived via color-mix from the semantic token, not a raw --sv-red-800
    primitive (the original .dangerButton pattern this replaces did reference
    the primitive directly — fixed here, not carried forward). */
-.destructiveConfirm:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--sv-color-error-solid) 85%, black);
+@media (hover: hover) {
+  .destructiveConfirm:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--sv-color-error-solid) 85%, black);
+  }
+}
+
+.destructiveConfirm:active:not(:disabled) {
+  background-color: color-mix(in srgb, var(--sv-color-error-solid) 80%, black);
 }
 
 .destructiveConfirm:focus-visible {

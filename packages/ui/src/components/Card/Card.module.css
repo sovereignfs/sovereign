@@ -24,8 +24,10 @@
   transition: border-color 0.15s ease;
 }
 
-.interactive:hover {
-  border-color: var(--sv-color-border-strong);
+@media (hover: hover) {
+  .interactive:hover {
+    border-color: var(--sv-color-border-strong);
+  }
 }
 
 .interactive:focus-visible {

@@ -134,9 +134,11 @@
   cursor: pointer;
 }
 
-.close:hover {
-  background: var(--sv-color-surface-sunken);
-  color: var(--sv-color-text-primary);
+@media (hover: hover) {
+  .close:hover {
+    background: var(--sv-color-surface-sunken);
+    color: var(--sv-color-text-primary);
+  }
 }
 
 .close:focus-visible {

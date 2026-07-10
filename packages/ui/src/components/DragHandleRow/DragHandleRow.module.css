@@ -5,9 +5,15 @@
   position: relative;
 }
 
-.row:not(:hover) .handle,
-.row:not(:focus-within) .handle {
-  opacity: 0;
+/* Hover-reveal only where hover genuinely exists — on touch the handle would
+   otherwise never become visible (tap-generated hover doesn't count as a
+   sustained hover state, and :not(:hover) is always true with no hover
+   capability at all), so it stays visible by default there. */
+@media (hover: hover) {
+  .row:not(:hover) .handle,
+  .row:not(:focus-within) .handle {
+    opacity: 0;
+  }
 }
 
 .handle {

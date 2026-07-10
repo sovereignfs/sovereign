@@ -9,6 +9,9 @@
   font-weight: var(--sv-font-weight-medium);
   line-height: 1;
   cursor: pointer;
+  /* Removes the ~300ms double-tap-to-zoom delay on touch — this is a tap
+     target, never a pinch-zoom surface. */
+  touch-action: manipulation;
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
@@ -25,6 +28,15 @@
   cursor: not-allowed;
 }
 
+/* Touch target: gated to (pointer: coarse) — the *primary* pointer, not
+   (any-pointer: coarse) — so a touchscreen laptop with mouse/trackpad as
+   primary keeps desktop density (see mobile design-system plan, Part 4 #5). */
+@media (pointer: coarse) {
+  .button {
+    min-height: var(--sv-touch-target-min, 44px);
+  }
+}
+
 /* Sizes */
 .sm {
   padding: var(--sv-space-1) var(--sv-space-3);
@@ -37,14 +49,51 @@
   font-weight: var(--sv-font-weight-semibold);
 }
 
+/* Loading spinner — a self-contained token-only spinner rather than reusing
+   the Spinner component: Spinner's border colors are semantic-fixed
+   (`--sv-color-accent`), which would be invisible against a primary button's
+   accent background, and overriding a second CSS module's rule on the same
+   element is a cross-module cascade-order gamble (see ConfirmDialog's
+   `.destructiveConfirm` comment for the same tradeoff). `currentColor` picks
+   up each variant's own text color for free. */
+.spinner {
+  display: inline-block;
+  width: var(--sv-icon-size-sm);
+  height: var(--sv-icon-size-sm);
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: var(--sv-radius-full);
+  opacity: 0.7;
+  animation: button-spin 0.7s linear infinite;
+}
+
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-play-state: paused;
+  }
+}
+
 /* Variants */
 .primary {
   background-color: var(--sv-color-accent);
   color: var(--sv-color-text-on-accent);
 }
 
-.primary:hover:not(:disabled) {
-  background-color: var(--sv-color-accent-hover);
+@media (hover: hover) {
+  .primary:hover:not(:disabled) {
+    background-color: var(--sv-color-accent-hover);
+  }
+}
+
+.primary:active:not(:disabled) {
+  background-color: color-mix(in srgb, var(--sv-color-accent) 80%, black);
 }
 
 .secondary {
@@ -53,8 +102,14 @@
   border-color: var(--sv-color-border-strong);
 }
 
-.secondary:hover:not(:disabled) {
-  background-color: var(--sv-color-surface-sunken);
+@media (hover: hover) {
+  .secondary:hover:not(:disabled) {
+    background-color: var(--sv-color-surface-sunken);
+  }
+}
+
+.secondary:active:not(:disabled) {
+  background-color: color-mix(in srgb, var(--sv-color-surface-sunken) 85%, black);
 }
 
 .ghost {
@@ -62,8 +117,14 @@
   color: var(--sv-color-text-primary);
 }
 
-.ghost:hover:not(:disabled) {
-  background-color: var(--sv-color-surface-sunken);
+@media (hover: hover) {
+  .ghost:hover:not(:disabled) {
+    background-color: var(--sv-color-surface-sunken);
+  }
+}
+
+.ghost:active:not(:disabled) {
+  background-color: color-mix(in srgb, var(--sv-color-surface-sunken) 85%, black);
 }
 
 .destructive {
@@ -72,6 +133,12 @@
   border-color: var(--sv-color-error-border);
 }
 
-.destructive:hover:not(:disabled) {
-  background-color: var(--sv-color-error-surface);
+@media (hover: hover) {
+  .destructive:hover:not(:disabled) {
+    background-color: var(--sv-color-error-surface);
+  }
+}
+
+.destructive:active:not(:disabled) {
+  background-color: color-mix(in srgb, var(--sv-color-error-surface) 85%, black);
 }

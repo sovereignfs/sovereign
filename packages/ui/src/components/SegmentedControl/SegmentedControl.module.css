@@ -48,6 +48,8 @@
   color: var(--sv-color-text-muted);
 }
 
-.inactive:hover {
-  color: var(--sv-color-text-primary);
+@media (hover: hover) {
+  .inactive:hover {
+    color: var(--sv-color-text-primary);
+  }
 }

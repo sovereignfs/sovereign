@@ -14,6 +14,14 @@
   display: flex;
   align-items: flex-end;
   background: var(--sv-color-scrim);
+  /* Entrance/exit fade — same two-phase-mount pattern as Dialog (see motion.ts
+     and Drawer.tsx). */
+  opacity: 0;
+  transition: opacity var(--sv-motion-duration-base) var(--sv-motion-ease-out);
+}
+
+.scrimOpen {
+  opacity: 1;
 }
 
 .panel {
@@ -28,4 +36,57 @@
   /* Pull content above the home indicator / bottom bar in standalone mode. */
   padding-bottom: env(safe-area-inset-bottom);
   outline: none;
+  /* Slide up from below the viewport. Always a bottom sheet, so unlike Dialog
+     there's no desktop-vs-mobile fork here. */
+  transform: translateY(100%);
+  transition: transform var(--sv-motion-duration-base) var(--sv-motion-ease-out);
+}
+
+.panelOpen {
+  transform: translateY(0);
+}
+
+/* 'half' snapHeight — a fixed height instead of the default content-sized cap
+ * above. Per the design-system's "half screen or less" convention for
+ * Drawer; content taller than this belongs in Sheet instead. */
+.panelHalf {
+  height: 50dvh;
+  max-height: 50dvh;
+}
+
+/* See Dialog.module.css's identical rule for why 0.01ms rather than 0. */
+@media (prefers-reduced-motion: reduce) {
+  .scrim,
+  .panel {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* Grab handle — the sole drag-initiation region for swipe-down-to-dismiss
+ * (see Drawer.tsx's doc comment for why not the whole panel). The visual bar
+ * (::before) stays the small, established 36x4px size; only the hit area
+ * grows to a comfortable touch target. */
+.handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: var(--sv-touch-target-min, 44px);
+  flex-shrink: 0;
+  cursor: grab;
+  /* JS-driven drag — the browser must not treat a press here as a
+     scroll/pan gesture that would fight it. */
+  touch-action: none;
+}
+
+.handle:active {
+  cursor: grabbing;
+}
+
+.handle::before {
+  content: '';
+  width: 36px;
+  height: 4px;
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-border-strong);
 }

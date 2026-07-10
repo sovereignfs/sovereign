@@ -91,16 +91,8 @@
 }
 
 /* ── Drawer ──────────────────────────────────────────────────────────────── */
-
-/* Drag handle pill */
-.handle {
-  width: 36px;
-  height: 4px;
-  margin: var(--sv-space-3) auto var(--sv-space-1);
-  border-radius: var(--sv-radius-full);
-  background: var(--sv-color-border-strong);
-  flex-shrink: 0;
-}
+/* The grab handle is now built into Drawer itself (@sovereignfs/ui) — see its
+   own doc comment. Nothing to render here anymore. */
 
 .drawerHeader {
   display: flex;

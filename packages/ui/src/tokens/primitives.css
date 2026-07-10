@@ -97,4 +97,22 @@
      touch without a pointing device. Applied to icon-only controls on mobile
      (avatar, footer button, Drawer nav items). */
   --sv-touch-target-min: 44px;
+
+  /* Motion scale — durations and easings for overlay enter/exit transitions
+     (Dialog, Drawer, and their Phase-B successors: Sheet, ConfirmDialog,
+     Menu). Theme-stable like the other scale tokens above — dark mode does
+     not change motion, so there is no semantic tier. Components must pair
+     every transition with `@media (prefers-reduced-motion: reduce)` collapsing
+     it to near-instant; the durations here are not a substitute for that. */
+  --sv-motion-duration-fast: 150ms; /* micro-interactions — hover/press feedback */
+  --sv-motion-duration-base: 250ms; /* default overlay enter/exit (Dialog, Drawer) */
+  --sv-motion-duration-slow: 350ms; /* larger surfaces / bigger travel distance */
+  --sv-motion-ease-out: cubic-bezier(0, 0, 0.2, 1); /* entrances — fast start, gentle settle */
+  --sv-motion-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1); /* state changes with no fixed direction */
+  --sv-motion-ease-spring: cubic-bezier(
+    0.34,
+    1.56,
+    0.64,
+    1
+  ); /* slight overshoot — playful emphasis, use sparingly */
 }

@@ -1,0 +1,57 @@
+/* DatePicker — trigger styled to match Input's height/border/radius/focus
+ * ring for visual consistency as a form field. */
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-2);
+  width: 100%;
+  padding: var(--sv-space-2) var(--sv-space-3);
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-sm);
+  line-height: 1.5;
+  color: var(--sv-color-text-primary);
+  background-color: var(--sv-color-surface);
+  border: 1px solid var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-md);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* Same iOS auto-zoom fix as Input — see its own module.css for why. */
+@media (pointer: coarse) {
+  .trigger {
+    font-size: var(--sv-font-size-md);
+  }
+}
+
+.trigger:focus-visible {
+  outline: none;
+  border-color: var(--sv-color-accent);
+  box-shadow: 0 0 0 2px var(--sv-color-focus-ring);
+}
+
+.trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.triggerValue {
+  color: var(--sv-color-text-primary);
+}
+
+.triggerPlaceholder {
+  color: var(--sv-color-text-muted);
+}
+
+.popoverBody {
+  padding: var(--sv-space-3);
+}
+
+.drawerBody {
+  padding: var(--sv-space-4);
+  padding-bottom: max(var(--sv-space-4), env(safe-area-inset-bottom));
+}

@@ -1,0 +1,126 @@
+/* Calendar — month grid. Tokens only. Grid columns are equal-width via
+ * `1fr` repeated 7 times rather than a fixed px size, so the component
+ * scales cleanly inside both a Popover panel (desktop) and a full-width
+ * Drawer sheet (mobile). */
+
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  font-family: var(--sv-font-family);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-2);
+}
+
+.navButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sv-touch-target-min, 44px);
+  height: var(--sv-touch-target-min, 44px);
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  color: var(--sv-color-text-muted);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .navButton:hover {
+    background: var(--sv-color-surface-sunken);
+    color: var(--sv-color-text-primary);
+  }
+}
+
+.navButton:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.monthLabel {
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-1);
+}
+
+.weekdayRow,
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.weekday {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--sv-space-6);
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-subtle);
+  text-transform: uppercase;
+}
+
+.day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  /* Square-ish cell that also clears the touch-target minimum — height
+     drives the grid's row size; width fills its 1fr column. */
+  min-height: var(--sv-touch-target-min, 44px);
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  color: var(--sv-color-text-primary);
+  font-size: var(--sv-font-size-sm);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .day:hover:not(:disabled) {
+    background: var(--sv-color-surface-sunken);
+  }
+}
+
+.day:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.day:disabled {
+  color: var(--sv-color-text-subtle);
+  cursor: not-allowed;
+}
+
+.dayOutside {
+  color: var(--sv-color-text-subtle);
+}
+
+.dayToday {
+  font-weight: var(--sv-font-weight-semibold);
+  box-shadow: inset 0 0 0 1px var(--sv-color-border-strong);
+}
+
+.daySelected,
+.daySelected:disabled {
+  background: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+}
+
+@media (hover: hover) {
+  .daySelected:hover:not(:disabled) {
+    background: var(--sv-color-accent-hover);
+  }
+}

@@ -582,33 +582,167 @@ system. Defaults to the platform's single documented breakpoint (768px, see
 above); pass a different value only when a layout genuinely needs its own
 threshold.
 
-### `Dialog` vs `Drawer`
+### Motion
 
-|                | `Dialog`                                         | `Drawer`                                            |
-| -------------- | ------------------------------------------------ | --------------------------------------------------- |
-| Position       | Centered on desktop, full-screen sheet on mobile | Always a bottom sheet                               |
-| Use when       | Modal: the user must act before continuing       | Navigation or options revealed by tapping a trigger |
-| Dismiss        | Esc, scrim click, close button                   | Esc, scrim click                                    |
-| Platform usage | Overlay-shell plugins (Console, Account)         | Mobile plugin-navigation (Apps button)              |
+Primitive tokens for overlay enter/exit transitions, theme-stable like the
+other scale tokens (no semantic tier — dark mode does not change motion):
 
-The `Drawer` is the right choice for panels the user **slides into**, not dialogs
-that **block** a workflow. Both share the same `--sv-color-scrim` and
-`--sv-shadow-overlay` tokens and the same focus-trap / Esc / scrim-click
-dismissal convention.
+```css
+--sv-motion-duration-fast: 150ms; /* micro-interactions */
+--sv-motion-duration-base: 250ms; /* default overlay enter/exit */
+--sv-motion-duration-slow: 350ms; /* larger surfaces, longer travel */
+--sv-motion-ease-out: cubic-bezier(0, 0, 0.2, 1); /* entrances */
+--sv-motion-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1); /* state changes */
+--sv-motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* emphasis — use sparingly */
+```
+
+`Dialog` and `Drawer` (and their Phase-B successors: Sheet, ConfirmDialog,
+Menu) use `--sv-motion-duration-base` / `--sv-motion-ease-out` for their
+enter/exit transitions — fade + scale for `Dialog` on desktop, slide-up on
+mobile and for `Drawer` always. Both components' public `open`/`onClose` API
+is unchanged: closing stays internally mounted for the exit transition before
+actually unmounting, so a consumer never needs to coordinate with the
+animation.
+
+**Building an animated overlay in `packages/ui`:** use the internal
+`useMountTransition(open, durationMs)` hook (`src/motion.ts`, not exported
+from `index.ts`) — a two-phase-mount state machine (`entering` → `open` on
+open, `closing` → `closed` on close) that both `Dialog` and `Drawer` share, so
+every overlay in the system animates consistently instead of each component
+re-deriving the same rAF-timing logic. Pair it with `usePrefersReducedMotion()`
+(same file) to pass a near-zero `durationMs` when the user has motion
+disabled, **and** add a matching `@media (prefers-reduced-motion: reduce)`
+CSS rule collapsing the same transition to near-instant — the JS unmount timer
+and the CSS transition duration must agree, or the component stays mounted
+(invisibly) for the normal duration even though it already looks closed.
+
+### Overlay surfaces — which component for which job
+
+One API per surface; presentation adapts per platform. On mobile the shell
+chrome (header + footer nav) **stays visible and interactive** — these
+overlays fill the space between, never cover it.
+
+|                          | Desktop                                                     | Mobile                                                                                           | Use when                                                                              |
+| ------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `Dialog` (sm/md/lg/full) | Centered fixed-size modal                                   | Full-page modal page between shell header/footer, slide transition, `OverlayHeader` on top       | Modal: the user must act before continuing (overlay-shell plugins — Console, Account) |
+| `ConfirmDialog`          | Small content-sized centered card                           | Same centered card (decision D4 — not a full-screen sheet)                                       | Destructive / confirm prompts                                                         |
+| `Drawer`                 | Bottom sheet (rare on desktop)                              | Partial-height bottom sheet (half screen or less), grab handle, swipe-down dismiss, `snapHeight` | Navigation or options revealed by tapping a trigger (Apps button, `Menu` on mobile)   |
+| `Sheet`                  | n/a — desktop shows the same content inline (columns/panes) | Full-page slide-in page replacement                                                              | Detail views inside a plugin (task detail, list edit)                                 |
+| `Menu` (adaptive)        | `Popover`                                                   | `Drawer`                                                                                         | Context / `⋯` action menus                                                            |
+
+All overlay components share `--sv-color-scrim` / `--sv-shadow-overlay` tokens,
+the same focus-trap / Esc / scrim-click dismissal convention (`Sheet` has no
+scrim — see its own doc comment), and the two-phase-mount animation described
+in [Motion](#motion) above.
+
+### `OverlayHeader`
+
+```tsx
+import { OverlayHeader } from '@sovereignfs/ui';
+
+<OverlayHeader
+  title="Edit list"
+  onClose={onClose}
+  onBack={onBack}
+  action={<Button size="sm">Save</Button>}
+/>;
+```
+
+The shared fixed secondary header for `Dialog`'s mobile mode, `Sheet`, and
+`Drawer`: title + close, optional back button, trailing action, and an
+optional second row (e.g. a tab strip). Not itself `position: sticky` or
+`fixed` — it stays visually pinned because the consuming overlay renders it as
+a non-scrolling flex sibling before its own scrollable content region. `title`
+is optional (some consumers need the close button present with no title);
+content with a fully custom header (e.g. an editable title) should render its
+own header instead of using this component.
 
 ### `Drawer` component
 
 ```tsx
 import { Drawer } from '@sovereignfs/ui';
 
-<Drawer open={open} onClose={() => setOpen(false)} aria-label="App navigation">
+<Drawer open={open} onClose={() => setOpen(false)} aria-label="App navigation" snapHeight="content">
   {/* any content — lists, grids, etc. */}
 </Drawer>;
 ```
 
-The `Drawer` panel sizes to its content (capped at `80dvh`), is safe-area-aware
-on the bottom (`env(safe-area-inset-bottom)` padding), and is focus-trapped.
-The scrim covers the full viewport so it works in any shell context.
+The `Drawer` panel sizes to its content by default (capped at `80dvh`;
+`snapHeight="half"` fixes it to `50dvh` instead — per the "half screen or
+less" convention, taller content belongs in `Sheet`), is safe-area-aware on
+the bottom (`env(safe-area-inset-bottom)` padding), and is focus-trapped. The
+scrim covers the full viewport so it works in any shell context. A built-in
+grab handle is the sole drag-initiation region for swipe-down-to-dismiss
+(dragging body content would fight its own internal scroll) — release past
+100px dismisses; release under that, or a `pointercancel`, snaps back open.
+
+### `Sheet` component
+
+```tsx
+import { Sheet } from '@sovereignfs/ui';
+
+<Sheet open={open} onClose={onClose} title="Task detail">
+  {/* detail content */}
+</Sheet>;
+```
+
+Fills a plugin's content area between the shell's fixed header and footer,
+sliding in from an edge (`slideFrom="bottom"` default, or `"top"` for a short
+options menu near a header trigger) instead of centering like `Dialog`. No
+desktop equivalent — a desktop layout shows the same content inline (columns,
+panes) rather than mounting a `Sheet` at all. No scrim: a Sheet visually
+_replaces_ the region it covers, so there's no "outside" to tap-dismiss.
+Passing `title` renders a built-in `OverlayHeader`; omit it when the content
+supplies its own header.
+
+### `ConfirmDialog` component
+
+```tsx
+import { ConfirmDialog } from '@sovereignfs/ui';
+
+<ConfirmDialog
+  open={open}
+  onClose={onClose}
+  onConfirm={onConfirm}
+  title="Remove passkey"
+  message="You will no longer be able to sign in with this passkey."
+  confirmLabel="Remove"
+  destructive
+/>;
+```
+
+Built on the native `<dialog>` element (top-layer rendering and `::backdrop`
+for free — what makes a confirm opened _from inside_ another overlay reliably
+stack above it with no manual z-index scheme), not `Dialog`, which is a
+fixed-size box by design. `destructive` renders a solid red confirm action
+(via `--sv-color-error-solid` / `--sv-color-text-on-error`, not `Button`'s own
+`destructive` variant, which is an outlined/lower-emphasis style). `pending` +
+`error` support an async `onConfirm` that should keep the dialog open to
+report a failure — `onConfirm` never closes the dialog itself; the caller
+decides via `onClose`/`open`.
+
+### `Menu` component
+
+```tsx
+import { Menu } from '@sovereignfs/ui';
+
+<Menu
+  trigger={<Button size="sm">Actions</Button>}
+  open={open}
+  onClose={onClose}
+  aria-label="List actions"
+  items={[
+    { label: 'Rename', icon: 'pencil', onSelect: handleRename },
+    { label: 'Delete', icon: 'trash-2', destructive: true, onSelect: handleDelete },
+  ]}
+/>;
+```
+
+Adaptive: `Popover` on desktop, `Drawer` on mobile — the same `items` list
+renders in both. Selecting an item both closes the menu and calls its
+`onSelect`; a consumer's `onSelect` never needs to call `onClose` itself.
+Replaces the desktop-Popover/mobile-Drawer fork a `⋯` action menu otherwise
+re-derives per plugin.
 
 ### `--sv-dialog-inset-top`
 

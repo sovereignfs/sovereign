@@ -29,6 +29,10 @@ import { Toggle } from '../components/Toggle/Toggle';
 import { Tooltip } from '../components/Tooltip/Tooltip';
 import { Checkbox } from '../components/Checkbox/Checkbox';
 import { DragHandleRow } from '../components/DragHandleRow/DragHandleRow';
+import { OverlayHeader } from '../components/OverlayHeader/OverlayHeader';
+import { Sheet } from '../components/Sheet/Sheet';
+import { ConfirmDialog } from '../components/ConfirmDialog/ConfirmDialog';
+import { Menu } from '../components/Menu/Menu';
 
 // ---------------------------------------------------------------------------
 // Shared primitives
@@ -553,6 +557,121 @@ function PopoverDemo() {
         ))}
       </div>
     </Popover>
+  );
+}
+
+function OverlayHeaderDemo() {
+  return (
+    <div
+      style={{
+        width: '100%',
+        maxWidth: 360,
+        border: '1px solid var(--sv-color-border)',
+        borderRadius: 'var(--sv-radius-lg)',
+        overflow: 'hidden',
+      }}
+    >
+      <OverlayHeader
+        title="Edit list"
+        onClose={() => {}}
+        onBack={() => {}}
+        action={
+          <Button size="sm" variant="ghost" onClick={() => {}}>
+            Save
+          </Button>
+        }
+      />
+    </div>
+  );
+}
+
+function SheetDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button size="sm" onClick={() => setOpen(true)}>
+        Open sheet
+      </Button>
+      {/* Storybook has no --sv-shell-header-height/--sv-shell-footer-height, so
+          the panel fills this fixed-height preview box instead of the real
+          app's header-to-footer region — same component, just no shell
+          around it here. */}
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: 360,
+          height: 280,
+          marginTop: 12,
+          border: '1px solid var(--sv-color-border)',
+          borderRadius: 'var(--sv-radius-lg)',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ position: 'absolute', inset: 0 }}>
+          <Sheet
+            open={open}
+            onClose={() => setOpen(false)}
+            title="Task detail"
+            aria-label="Task detail"
+          >
+            <div
+              style={{
+                padding: 16,
+                fontFamily: ff,
+                fontSize: 14,
+                color: 'var(--sv-color-text-muted)',
+              }}
+            >
+              Full-page overlay content — same pattern the tasks plugin used for its task-detail and
+              list-edit panels.
+            </div>
+          </Sheet>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ConfirmDialogDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button size="sm" variant="destructive" onClick={() => setOpen(true)}>
+        Remove passkey
+      </Button>
+      <ConfirmDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        onConfirm={() => setOpen(false)}
+        title="Remove passkey"
+        message="You will no longer be able to sign in with this passkey."
+        confirmLabel="Remove"
+        destructive
+      />
+    </>
+  );
+}
+
+function MenuDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <Menu
+      open={open}
+      onClose={() => setOpen(false)}
+      aria-label="List actions"
+      align="left"
+      trigger={
+        <Button size="sm" variant="ghost" onClick={() => setOpen((o) => !o)}>
+          <Icon name="settings" size="sm" aria-hidden /> Actions
+        </Button>
+      }
+      items={[
+        { label: 'Rename', icon: 'pencil', onSelect: () => {} },
+        { label: 'Duplicate', icon: 'plus', onSelect: () => {} },
+        { label: 'Delete', icon: 'trash-2', destructive: true, onSelect: () => {} },
+      ]}
+    />
   );
 }
 
@@ -1365,9 +1484,36 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="Drawer"
               importLine="import { Drawer } from '@sovereignfs/ui';"
-              usage="Bottom-sheet panel for mobile navigation. Esc, scrim-click, focus trap. Respects safe-area-inset-bottom."
+              usage="Bottom-sheet panel. Esc, scrim-click, or swipe-down on the built-in grab handle to dismiss. snapHeight: 'content' (default, capped 80dvh) or 'half' (fixed 50dvh). Respects safe-area-inset-bottom."
             >
               <DrawerDemo />
+            </ComponentCard>
+
+            {/* OverlayHeader */}
+            <ComponentCard
+              name="OverlayHeader"
+              importLine="import { OverlayHeader } from '@sovereignfs/ui';"
+              usage="Shared fixed secondary header for Dialog's mobile mode, Sheet, and Drawer: title + close, optional back button, trailing action, and a second row for tab strips."
+            >
+              <OverlayHeaderDemo />
+            </ComponentCard>
+
+            {/* Sheet */}
+            <ComponentCard
+              name="Sheet"
+              importLine="import { Sheet } from '@sovereignfs/ui';"
+              usage="Full-page overlay filling a plugin's content area between the shell header and footer — for detail views (task detail, list edit). No desktop equivalent; a desktop layout shows the same content inline instead."
+            >
+              <SheetDemo />
+            </ComponentCard>
+
+            {/* ConfirmDialog */}
+            <ComponentCard
+              name="ConfirmDialog"
+              importLine="import { ConfirmDialog } from '@sovereignfs/ui';"
+              usage="Small, content-sized confirm/cancel prompt. Same presentation on desktop and mobile — not a full-screen sheet. destructive for a solid red confirm action; pending + error for an async onConfirm."
+            >
+              <ConfirmDialogDemo />
             </ComponentCard>
 
             {/* Popover */}
@@ -1377,6 +1523,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Floating panel anchored below a trigger. Non-modal. Closes on outside click or Escape. Left or right aligned."
             >
               <PopoverDemo />
+            </ComponentCard>
+
+            {/* Menu */}
+            <ComponentCard
+              name="Menu"
+              importLine="import { Menu } from '@sovereignfs/ui';"
+              usage="Adaptive action menu: Popover on desktop, Drawer on mobile. Same items list renders in both — for '⋯' row/list actions."
+            >
+              <MenuDemo />
             </ComponentCard>
 
             {/* SystemBanner */}

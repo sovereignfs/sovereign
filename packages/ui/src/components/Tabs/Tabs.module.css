@@ -44,6 +44,8 @@
   font-weight: var(--sv-font-weight-medium);
 }
 
-.inactive:hover {
-  color: var(--sv-color-text-primary);
+@media (hover: hover) {
+  .inactive:hover {
+    color: var(--sv-color-text-primary);
+  }
 }

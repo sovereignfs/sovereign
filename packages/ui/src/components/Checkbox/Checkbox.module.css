@@ -7,10 +7,11 @@
 
 /* The visual box */
 .box {
+  --checkbox-box-size: 18px;
   position: relative;
   flex-shrink: 0;
-  width: 18px;
-  height: 18px;
+  width: var(--checkbox-box-size);
+  height: var(--checkbox-box-size);
   border-radius: var(--sv-radius-sm);
   border: 1.5px solid var(--sv-color-border-strong);
   background: var(--sv-color-surface);
@@ -41,6 +42,17 @@
 
 .input:disabled {
   cursor: not-allowed;
+}
+
+/* Expand the tappable region to the platform's minimum touch target without
+   growing the visible box — consumers (e.g. task rows) align the box to the
+   pixel against header icons, so its visual footprint and layout must stay
+   identical. Gated to (pointer: coarse), the *primary* pointer, so a
+   touchscreen laptop with mouse/trackpad as primary keeps desktop density. */
+@media (pointer: coarse) {
+  .input {
+    inset: calc((var(--checkbox-box-size) - var(--sv-touch-target-min, 44px)) / 2);
+  }
 }
 
 .input:focus-visible + .tick,

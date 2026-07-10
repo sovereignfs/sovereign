@@ -137,4 +137,61 @@ describe('Menu', () => {
     const deleteClass = screen.getByRole('menuitem', { name: 'Delete' }).className;
     expect(deleteClass).not.toBe(renameClass);
   });
+
+  it('renders section labels and separators as non-interactive entries', () => {
+    render(
+      <Menu
+        trigger={<button type="button">Open menu</button>}
+        open
+        onClose={() => {}}
+        items={[
+          { type: 'label', label: 'Sort by' },
+          { label: 'Title', onSelect: vi.fn(), checked: true },
+          { type: 'separator' },
+          { label: 'Delete list', onSelect: vi.fn(), destructive: true },
+        ]}
+        aria-label="List actions"
+      />,
+    );
+    expect(screen.getByText('Sort by').getAttribute('role')).toBe('presentation');
+    expect(screen.getByRole('separator')).toBeTruthy();
+    // Only the plain action item is a plain menuitem; the checkable one is a menuitemradio.
+    expect(screen.getAllByRole('menuitem')).toHaveLength(1);
+  });
+
+  it('renders a checkable item as menuitemradio with aria-checked', () => {
+    render(
+      <Menu
+        trigger={<button type="button">Open menu</button>}
+        open
+        onClose={() => {}}
+        items={[
+          { label: 'Manual', onSelect: vi.fn(), checked: false },
+          { label: 'Title', onSelect: vi.fn(), checked: true },
+        ]}
+        aria-label="List actions"
+      />,
+    );
+    const unchecked = screen.getByRole('menuitemradio', { name: 'Manual' });
+    const checked = screen.getByRole('menuitemradio', { name: 'Title' });
+    expect(unchecked.getAttribute('aria-checked')).toBe('false');
+    expect(checked.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('closes and selects when a checkable item is clicked', () => {
+    const onClose = vi.fn();
+    const onSelect = vi.fn();
+    render(
+      <Menu
+        trigger={<button type="button">Open menu</button>}
+        open
+        onClose={onClose}
+        items={[{ label: 'Title', onSelect, checked: false }]}
+        aria-label="List actions"
+      />,
+    );
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Title' }));
+    expect(onSelect).toHaveBeenCalledOnce();
+    expect(onClose).toHaveBeenCalledOnce();
+  });
 });

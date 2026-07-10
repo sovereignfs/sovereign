@@ -1,10 +1,33 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { Dialog } from '../Dialog';
 
+// Dialog's exit animation reads prefers-reduced-motion via matchMedia, which
+// jsdom does not implement. `matches: false` (motion enabled) exercises the
+// normal animated path; the actual reduced-motion behaviour is covered by
+// motion.ts's own tests.
+function installMatchMedia() {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
+}
+
 describe('Dialog', () => {
-  afterEach(cleanup);
+  beforeEach(installMatchMedia);
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    cleanup();
+  });
 
   it('renders nothing when closed', () => {
     render(

@@ -31,6 +31,16 @@
   padding: var(--sv-space-8);
   padding-left: calc(var(--sv-dialog-inset-left, 0px) + var(--sv-space-8));
   background: var(--sv-color-scrim);
+  /* Entrance/exit fade. The Dialog component drives this via a two-phase
+     mount (see motion.ts) — .scrimOpen is added one frame after mount so this
+     transition has somewhere to animate from, and removed (while staying
+     mounted) for the exit before the component actually unmounts. */
+  opacity: 0;
+  transition: opacity var(--sv-motion-duration-base) var(--sv-motion-ease-out);
+}
+
+.scrimOpen {
+  opacity: 1;
 }
 
 .panel {
@@ -43,6 +53,30 @@
   border: 1px solid var(--sv-color-border);
   border-radius: var(--sv-radius-lg);
   box-shadow: var(--sv-shadow-overlay);
+  /* Desktop entrance: fade + gentle scale-up. Same two-phase-mount pattern as
+     .scrim above. Mobile overrides this to a slide-up instead (below). */
+  opacity: 0;
+  transform: scale(0.96);
+  transition:
+    opacity var(--sv-motion-duration-base) var(--sv-motion-ease-out),
+    transform var(--sv-motion-duration-base) var(--sv-motion-ease-out);
+}
+
+.panelOpen {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* prefers-reduced-motion: collapse both fade/scale and slide to near-instant.
+   Not literally 0 — a 0ms transition can skip applying entirely in some
+   engines, and the JS unmount timer (Dialog.tsx's MOTION_DURATION_MS,
+   switched to ~0 via usePrefersReducedMotion) needs a transition to still be
+   "present" for the visual state to actually reach its end value in time. */
+@media (prefers-reduced-motion: reduce) {
+  .scrim,
+  .panel {
+    transition-duration: 0.01ms;
+  }
 }
 
 .content {
@@ -53,7 +87,7 @@
   /* Disable elastic overscroll within the dialog: `none` stops both scroll-
      chaining to the parent and the iOS rubber-band bounce inside the panel.
      `contain` only prevents chaining — the panel itself still bounces, which
-     reveals white panel-background between the mobileBar and the sticky tab
+     reveals white panel-background between OverlayHeader and the sticky tab
      strip on iOS PWA. A dialog is a bounded surface where bounce is a visual
      bug, not a feature. */
   overscroll-behavior: none;
@@ -110,8 +144,10 @@
   outline-offset: 2px;
 }
 
-/* Hidden on desktop; shown only on mobile where it replaces the close button. */
-.mobileBar {
+/* Hidden on desktop; shown only on mobile where it replaces the close button.
+ * OverlayHeader owns its own background/border/padding — this wrapper class
+ * only toggles visibility per breakpoint. */
+.mobileHeader {
   display: none;
 }
 
@@ -122,10 +158,14 @@
 @media (max-width: 768px) {
   /* On mobile the overlay feels like a full-page push, not a floating modal.
      Remove the dim scrim and panel chrome so it's indistinguishable from a
-     regular page render. router.back() still closes it correctly. */
+     regular page render. router.back() still closes it correctly.
+     bottom stops the scrim above the footer nav (matching Drawer) instead of
+     running the full viewport height — the panel used to extend under the
+     footer with only .content's own padding compensating for it. */
   .scrim {
     padding: 0;
     background: transparent;
+    bottom: var(--sv-shell-footer-height, 0);
   }
 
   .panel,
@@ -143,61 +183,39 @@
     background: var(--sv-color-surface);
   }
 
-  /* Desktop close button is replaced by mobileBar on mobile. */
+  /* Mobile entrance is a slide-up, not the desktop fade+scale — matches "page
+     push" framing above. No opacity change (the panel is opaque full-screen
+     content, not a floating box), so only transform needs a transition here. */
+  .panel {
+    opacity: 1;
+    transform: translateY(100%);
+    transition: transform var(--sv-motion-duration-base) var(--sv-motion-ease-out);
+  }
+
+  .panelOpen {
+    transform: translateY(0);
+  }
+
+  /* Desktop close button is replaced by OverlayHeader on mobile. */
   .close {
     display: none;
   }
 
-  /* Title + close button in one solid row. Being a flex sibling before
-     .content means it never scrolls — the content area scrolls below it. */
-  .mobileBar {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-    padding: var(--sv-space-3) var(--sv-space-4);
-    background: var(--sv-color-surface);
-    border-bottom: 1px solid var(--sv-color-border);
+  /* Title + close button in one solid row, via the shared OverlayHeader
+     component. Being a flex sibling before .content means it never scrolls —
+     the content area scrolls below it. */
+  .mobileHeader {
+    display: block;
   }
 
-  .mobileBarTitle {
-    flex: 1;
-    font-size: var(--sv-font-size-xl);
-    font-weight: var(--sv-font-weight-semibold);
-    color: var(--sv-color-text-primary);
-  }
-
-  .mobileBarClose {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    /* 44px min hit area (WCAG 2.5.5 / Apple HIG) — this close button is only
-       rendered on mobile (touch), so it must be comfortably thumb-tappable.
-       The × glyph stays its font-size; only the tap target grows. */
-    width: var(--sv-touch-target-min, 44px);
-    height: var(--sv-touch-target-min, 44px);
-    flex-shrink: 0;
-    border: none;
-    border-radius: var(--sv-radius-md);
-    background: transparent;
-    color: var(--sv-color-text-muted);
-    font-size: var(--sv-font-size-xl);
-    line-height: 1;
-    cursor: pointer;
-  }
-
-  /* Hover-guarded — this button only exists on mobile (touch), where an
-     unguarded :hover would stick after the tap that dismisses the dialog. */
-  @media (hover: hover) {
-    .mobileBarClose:hover {
-      background: var(--sv-color-surface-sunken);
-      color: var(--sv-color-text-primary);
-    }
-  }
-
-  /* Remove top padding so the sticky plugin header sits flush against the
-     mobileBar — no gap for scrolling content to bleed through. */
+  /* Remove top padding so the sticky plugin header sits flush against
+     OverlayHeader — no gap for scrolling content to bleed through.
+     padding-bottom no longer adds --sv-shell-footer-height on top of
+     --sv-space-6 — the scrim above already stops short of the footer, so
+     .content doesn't need to additionally compensate for it here (that used
+     to double-count the footer clearance). */
   .content {
     padding-top: 0;
-    padding-bottom: calc(var(--sv-shell-footer-height, 60px) + var(--sv-space-6, 24px));
+    padding-bottom: var(--sv-space-6, 24px);
   }
 }

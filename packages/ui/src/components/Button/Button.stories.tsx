@@ -18,6 +18,7 @@ const meta = {
     variant: { control: 'select', options: ['primary', 'secondary', 'ghost', 'destructive'] },
     size: { control: 'select', options: ['sm', 'md'] },
     disabled: { control: 'boolean' },
+    loading: { control: 'boolean' },
     children: { control: 'text' },
   },
   args: {
@@ -40,6 +41,11 @@ export const Medium: Story = { args: { size: 'md' } };
 
 export const Disabled: Story = { args: { disabled: true } };
 export const DisabledSecondary: Story = { args: { variant: 'secondary', disabled: true } };
+
+export const Loading: Story = { args: { loading: true, children: 'Saving…' } };
+export const LoadingSecondary: Story = {
+  args: { variant: 'secondary', loading: true, children: 'Saving…' },
+};
 
 export const WithLeadingIcon: Story = {
   args: {

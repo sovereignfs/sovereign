@@ -517,6 +517,97 @@ guideline for reliable tap without precision pointing:
 This applies on mobile. Desktop icon-only controls (sidebar icons) can be
 smaller because mouse interaction is more precise.
 
+### Hover guard convention — `@media (hover: hover)`
+
+Every `:hover` rule in `packages/ui` is wrapped in `@media (hover: hover)`.
+Without the guard, a tap on a touch device generates a synthetic hover state
+that **sticks** until the user taps elsewhere — a button stays visibly
+"hovered" (often mid-transition to its darker/lighter hover color) after the
+tap has already completed its action, reading as a stuck or broken control:
+
+```css
+/* Wrong — sticks after a tap on touch devices */
+.button:hover {
+  background-color: var(--sv-color-accent-hover);
+}
+
+/* Right */
+@media (hover: hover) {
+  .button:hover {
+    background-color: var(--sv-color-accent-hover);
+  }
+}
+```
+
+`:focus-visible` and `:active` are never guarded — focus and press feedback
+are wanted on every input type, hover feedback is not. When a selector
+combines `:hover` with another pseudo-class in one rule (e.g. `.handle:hover,
+.handle:focus-visible`), split it: only the `:hover` branch goes behind the
+guard.
+
+A hover-triggered _reveal_ (an element that is invisible until its container
+is hovered, e.g. `DragHandleRow`'s drag handle) needs the same guard for a
+different reason: `:not(:hover)` is unconditionally true wherever hover
+doesn't exist at all, so an unguarded reveal-on-hover pattern never reveals
+anything on a touch device. Gate the whole hide rule behind `@media (hover:
+hover)` so the element defaults to visible when hover isn't available.
+
+### Button and Checkbox touch ergonomics
+
+`Button`:
+
+- **Touch target** — `min-height: var(--sv-touch-target-min, 44px)` under
+  `@media (pointer: coarse)` (all sizes, including `sm`).
+- **`:active` pressed state** — a `color-mix()`-darkened background per
+  variant, unguarded (touch and mouse both want press feedback; see
+  [Hybrid devices](#gap-checkbox-hit-area) below for why this is safe on
+  desktop).
+- **`loading`** — new boolean prop. Disables the button, sets `aria-busy`,
+  and renders a small `currentColor` spinner before the children (children
+  stay mounted and visible — the spinner doesn't replace them). The spinner
+  is a self-contained token-only element in `Button.module.css`, not a reuse
+  of the `Spinner` component: `Spinner`'s border colors are semantic-fixed
+  (`--sv-color-accent`), which would be invisible against a `primary`
+  button's accent background, and overriding one CSS module's rule from a
+  second module on the same element is a cross-module cascade-order gamble
+  (same tradeoff `ConfirmDialog`'s `.destructiveConfirm` already documents).
+  `currentColor` picks up each variant's own text color for free.
+- **`touch-action: manipulation`** — removes the ~300ms double-tap-to-zoom
+  delay on touch.
+
+`ConfirmDialog`'s `.destructiveConfirm` — a plain `<button>` styled to match
+`Button`'s `.button` + `.md` rules exactly (see the component doc above for
+why it isn't a literal reuse of `Button`) — carries the same touch target,
+hover guard, and active state so the two stay visually identical.
+
+`Checkbox`:
+
+- **Hit-area expansion, not box growth.** <a id="gap-checkbox-hit-area"></a>
+  The visible box stays 18px (task rows align it to the pixel against header
+  icons — growing the box would shift layout). The invisible native
+  `<input type="checkbox">`, which already covers the box via `position:
+absolute; inset: 0`, expands past the box's edges under `@media (pointer:
+coarse)`:
+
+  ```css
+  .box {
+    --checkbox-box-size: 18px;
+  }
+
+  @media (pointer: coarse) {
+    .input {
+      inset: calc((var(--checkbox-box-size) - var(--sv-touch-target-min, 44px)) / 2);
+    }
+  }
+  ```
+
+Both expansions gate on `(pointer: coarse)` — the **primary** pointer, not
+`(any-pointer: coarse)`. A touchscreen laptop with a mouse/trackpad as its
+primary pointer keeps desktop density; only a device whose primary input is
+actually a finger gets the larger target. This also means `Button`'s new
+`:active` state renders on a plain mouse click, not just touch — that is
+intended pressed-state feedback, not a mobile-only affordance.
+
 ### Interaction hooks
 
 Touch gesture handling is deceptively easy to get wrong — a naive long-press

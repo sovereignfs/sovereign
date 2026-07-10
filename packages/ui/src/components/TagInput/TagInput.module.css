@@ -80,9 +80,11 @@
   line-height: 1;
 }
 
-.removeButton:hover:not(:disabled) {
-  color: var(--sv-color-text-primary);
-  background: var(--sv-color-surface);
+@media (hover: hover) {
+  .removeButton:hover:not(:disabled) {
+    color: var(--sv-color-text-primary);
+    background: var(--sv-color-surface);
+  }
 }
 
 .removeButton:focus-visible {

@@ -96,8 +96,10 @@
   font-size: var(--sv-font-size-md);
 }
 
-.close:hover {
-  color: var(--sv-color-text-primary);
+@media (hover: hover) {
+  .close:hover {
+    color: var(--sv-color-text-primary);
+  }
 }
 
 @keyframes toastIn {

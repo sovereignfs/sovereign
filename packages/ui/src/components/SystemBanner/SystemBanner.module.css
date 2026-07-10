@@ -38,8 +38,10 @@
   transition: opacity 0.12s ease;
 }
 
-.dismiss:hover {
-  opacity: 1;
+@media (hover: hover) {
+  .dismiss:hover {
+    opacity: 1;
+  }
 }
 
 .dismiss:focus-visible {

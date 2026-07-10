@@ -51,12 +51,14 @@
   transform: translate(-50%, -50%);
 }
 
-.handle:hover,
-.handle:focus-visible {
-  background: var(--sv-color-accent-subtle);
+@media (hover: hover) {
+  .handle:hover {
+    background: var(--sv-color-accent-subtle);
+  }
 }
 
 .handle:focus-visible {
+  background: var(--sv-color-accent-subtle);
   outline: 2px solid var(--sv-color-focus-ring);
   outline-offset: -2px;
 }

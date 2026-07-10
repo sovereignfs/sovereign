@@ -20,7 +20,12 @@
   transition: opacity 0.1s ease;
 }
 
-.wrapper:hover .tip,
+@media (hover: hover) {
+  .wrapper:hover .tip {
+    opacity: 1;
+  }
+}
+
 .wrapper:focus-within .tip {
   opacity: 1;
 }

@@ -9,6 +9,7 @@
  * 4. Check all installed plugins for platform-version compatibility, disable
  *    incompatible ones in the DB, and record reasons for health/admin routes.
  * 5. Initialise the notification broker (RFC 0034).
+ * 6. Start the minimal plugin scheduler (RFC 0046 Phase 1).
  *
  * The guard on NEXT_RUNTIME keeps everything out of the Edge runtime context,
  * where Node.js-native packages (better-sqlite3, node-postgres) cannot load.
@@ -51,7 +52,14 @@ export async function register(): Promise<void> {
       logger.info({ transport: 'polling' }, 'Notification broker: polling (default)');
     }
 
+    // Minimal plugin scheduler (RFC 0046 Phase 1) — invokes the
+    // manifest-declared schedule handlers composed into
+    // generated/plugin-schedules.ts. No-op when nothing declares a schedule.
+    const { startScheduler, stopScheduler } = await import('./src/scheduler');
+    startScheduler();
+
     process.on('SIGTERM', () => {
+      stopScheduler();
       void closeBroker();
     });
   }

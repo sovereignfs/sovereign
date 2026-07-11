@@ -655,6 +655,7 @@ the release you are running.
 | 0.31.0          | Notification transport (RFC 0034)                                         |
 | 0.32.0          | Sidebar customization (epic task 2.13)                                    |
 | 0.33.0          | Instance identity — `instanceId` field + terminology cleanup (RFC 0039)   |
+| 0.38.0          | Plugin background schedules — Phase 1 (RFC 0046)                          |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

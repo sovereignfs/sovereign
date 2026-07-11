@@ -164,6 +164,7 @@ serves at `/tasks/lists`.
 | `data`          | object (see below)                       | no                                   | Cross-plugin data sharing declarations (RFC 0002). Declare the contracts this plugin exposes (`data.provides`) and the ones it reads (`data.consumes`). Requires the matching `data:provide` / `data:consume` permissions.                                                                         |
 | `env`           | object (see below)                       | no                                   | Plugin-scoped environment variable declarations (RFC 0018). Keys are auto-namespaced to `SV_PLUGIN_<SLUG>_<KEY>`; read them via `sdk.env.get('KEY')` in server code.                                                                                                                               |
 | `capabilities`  | object (see below)                       | no                                   | Plugin-declared capabilities (RFC 0022). Each key is a local name auto-namespaced to `<pluginId>:<capName>`; enforce access inside the plugin via `sdk.auth.hasCapability`.                                                                                                                        |
+| `schedules`     | array (see below)                        | no                                   | Recurring background schedules (RFC 0046 Phase 1). Each entry names a server-side handler module inside `app/` that the platform's in-process scheduler invokes every `intervalMinutes` while the plugin is enabled.                                                                               |
 | `connections`   | object (see below)                       | no                                   | External provider connection declarations (RFC 0049). Lists OAuth/connect-account providers and callback paths for platform-visible connection metadata.                                                                                                                                           |
 | `monetization`  | object (see below)                       | no                                   | Monetization model (RFC 0003). Declares the billing model, tiers, and the author's Ed25519 public key for offline license verification. Only `sovereign`/`community` plugins may declare this.                                                                                                     |
 | `repository`    | string (URL)                             | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                                                                          |
@@ -719,6 +720,61 @@ automatically delivers a background push notification to every subscribed device
 recipient — on top of the in-app bell delivery. Plugins call the same `sdk.notifications.send()`
 API regardless; the push fan-out is invisible and requires no plugin changes. Users opt in and
 out per-device via **Account → Notifications → Enable push notifications**.
+
+### `schedules` — recurring background jobs (RFC 0046 Phase 1)
+
+Plugins can declare recurring server-side jobs that run without any browser
+request — e.g. sending scheduled reminders, cleaning up expired rows, or
+refreshing cached data. The platform's in-process scheduler invokes each
+declared handler every `intervalMinutes` while the plugin is installed and
+enabled.
+
+```json
+"schedules": [
+  { "id": "due-reminders", "intervalMinutes": 1, "entry": "app/_jobs/due-reminders.ts" }
+]
+```
+
+| Field             | Notes                                                                                                                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`              | Stable schedule identifier, unique within the plugin (lowercase kebab-case).                                                                                                  |
+| `intervalMinutes` | Minimum minutes between invocations (integer ≥ 1). A floor, not an exact cadence.                                                                                             |
+| `entry`           | Handler module path relative to the plugin root, inside `app/`. Must be a `.ts` module; use an underscore-prefixed directory (e.g. `app/_jobs/`) so it never becomes a route. |
+
+The entry module's **default export** is a `ScheduleHandler` from
+`@sovereignfs/sdk`:
+
+```ts
+// app/_jobs/due-reminders.ts
+import { sdk, type ScheduleContext } from '@sovereignfs/sdk';
+
+export default async function dueReminders(ctx: ScheduleContext): Promise<void> {
+  const db = await sdk.db();
+  // …query your plugin's tables, then notify:
+  await sdk.notifications.send(
+    { recipientUserId: userId, title: 'Task due', url: '/tasks' },
+    ctx.headers, // synthetic headers carrying this plugin's identity
+  );
+}
+```
+
+**Handlers must be idempotent.** Phase 1 is deliberately not a job queue:
+there is no persistence, no retries, and no backoff. The last-run marker lives
+in memory, so a restarted instance re-arms every schedule, and each replica of
+a multi-node deployment ticks independently — claim work with conditional
+updates (e.g. `UPDATE … WHERE sent_at IS NULL`) before acting on it, and only
+act when the claim succeeded. Thrown errors are caught and logged; the failed
+schedule waits out its own interval before running again.
+
+**No originating request.** There is no session and no user in scope —
+handlers run as the plugin itself. `ctx.headers` carries the plugin's identity
+for SDK surfaces that attribute by request headers (`sdk.notifications.send`).
+Query the users to act for from your own tables (always scoped by `tenant_id`).
+
+**Dev-mode caveat:** schedule handlers are composed into the runtime at
+generate time and imported at server startup — editing a handler requires a
+dev-server restart (unlike routes, they do not hot-reload). Operators can
+disable all plugin schedules with `SOVEREIGN_SCHEDULER_DISABLED=1`.
 
 ### `monetization` — plugin monetization (RFC 0003)
 

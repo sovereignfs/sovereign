@@ -264,3 +264,33 @@ export interface ConnectionContext {
   userId: string | null;
   capabilities: readonly string[];
 }
+
+/**
+ * Context passed to a plugin's schedule handler (RFC 0046, Phase 1 subset).
+ * There is no originating HTTP request — the platform's in-process scheduler
+ * invokes handlers directly — so the runtime supplies synthetic `headers`
+ * pre-stamped with the calling plugin's identity. Pass them to SDK methods
+ * that attribute by request headers (e.g.
+ * `sdk.notifications.send(input, ctx.headers)`).
+ */
+export interface ScheduleContext {
+  /** The invoking plugin's manifest id (e.g. `fs.sovereign.tasks`). */
+  pluginId: string;
+  /** The schedule's manifest-declared id (e.g. `due-reminders`). */
+  scheduleId: string;
+  /** Synthetic headers carrying `x-sovereign-plugin-id` for SDK attribution. */
+  headers: Headers;
+}
+
+/**
+ * A plugin's schedule handler — the **default export** of a manifest-declared
+ * `schedules[].entry` module. Invoked server-side every `intervalMinutes`
+ * while the plugin is installed and enabled.
+ *
+ * Handlers must be idempotent: the interval is a floor, not an exact cadence,
+ * and restarts or multiple replicas can invoke a handler again sooner than
+ * the interval — claim work with conditional updates before acting on it.
+ * Thrown errors are caught and logged by the platform; there are no retries
+ * in Phase 1.
+ */
+export type ScheduleHandler = (ctx: ScheduleContext) => Promise<void>;

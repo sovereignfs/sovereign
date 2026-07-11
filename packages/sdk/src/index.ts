@@ -97,6 +97,8 @@ export type {
   OAuthStateInput,
   SanitizedConnectionError,
   CreateSecretInput,
+  ScheduleContext,
+  ScheduleHandler,
   SecretContext,
   SecretRef,
   SecretScope,

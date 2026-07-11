@@ -282,6 +282,52 @@ const manifestObjectSchema = z
       )
       .optional(),
     /**
+     * Recurring background schedules (RFC 0046, Phase 1 subset). Each entry
+     * names a server-side handler module inside the plugin's `app/` directory
+     * whose **default export** is a `ScheduleHandler` (`@sovereignfs/sdk`).
+     * The platform's in-process scheduler invokes it every `intervalMinutes`
+     * while the plugin is installed and enabled.
+     *
+     * Use an underscore-prefixed directory (e.g. `app/_jobs/`) so the module
+     * composes into the runtime route tree without becoming a route. Handlers
+     * must be idempotent: the interval is a floor, not an exact cadence, and a
+     * restarted (or multi-replica) instance may invoke a handler again sooner
+     * than the interval — claim work with conditional updates before acting.
+     */
+    schedules: z
+      .array(
+        z
+          .object({
+            /** Stable schedule identifier, unique within the plugin (lowercase kebab-case). */
+            id: z
+              .string()
+              .regex(
+                /^[a-z][a-z0-9-]*$/,
+                'schedule id must start with a lowercase letter and contain only lowercase letters, digits, and hyphens',
+              ),
+            /** Minimum minutes between invocations (integer ≥ 1). */
+            intervalMinutes: z.number().int().min(1),
+            /**
+             * Handler module path relative to the plugin root, inside `app/`
+             * (e.g. `"app/_jobs/due-reminders.ts"`). Must be a `.ts` module and
+             * must not traverse outside the plugin (`..` is rejected).
+             */
+            entry: z
+              .string()
+              .startsWith('app/', "entry must be a path inside the plugin's app/ directory")
+              .endsWith('.ts', 'entry must be a .ts module')
+              .refine((p) => !p.split('/').includes('..'), {
+                message: 'entry must not contain ".." path segments',
+              }),
+          })
+          .strict(),
+      )
+      .min(1)
+      .refine((arr) => new Set(arr.map((s) => s.id)).size === arr.length, {
+        message: 'schedule ids must be unique within the plugin',
+      })
+      .optional(),
+    /**
      * External provider connection declarations (RFC 0049). These are
      * display/validation metadata for plugin-owned OAuth or connect-account
      * flows. Callback paths resolve under the plugin route prefix.

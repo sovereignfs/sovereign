@@ -111,6 +111,25 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.37 → v0.38
+
+- **Plugin background schedules — Phase 1 (RFC 0046).** Plugins can now declare
+  recurring server-side jobs (manifest `schedules`) that the runtime invokes
+  in-process on a 60-second tick, independent of any browser request. **No
+  action required** — the scheduler starts automatically at boot and is a
+  no-op when no installed plugin declares a schedule.
+- **New optional `SOVEREIGN_SCHEDULER_DISABLED` env var.** Set to `1` to stop
+  the runtime invoking plugin schedules — a kill-switch for debugging a
+  misbehaving plugin job. Unset (default) = scheduler runs. See
+  [`docs/self-hosting.md`](self-hosting.md#environment-variables).
+- **`@sovereignfs/sdk` gains `ScheduleContext`/`ScheduleHandler` types.**
+  Additive, experimental tier — no existing SDK surface changed.
+- **No database schema change** at the platform layer. Individual plugins
+  that adopt `schedules` may ship their own migrations (e.g.
+  `sovereign-tasks` 0.11.0's `tasks_notification_prefs` table).
+- **`runtime` → 0.38.0**, **`@sovereignfs/manifest` → 0.18.0**,
+  **`@sovereignfs/sdk` → 1.18.0**.
+
 ### v0.27 → v0.28
 
 - **White-labeling Phase 1 (RFC 0027).** Operators can now set a brand name,

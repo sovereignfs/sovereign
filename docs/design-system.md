@@ -748,6 +748,51 @@ is optional (some consumers need the close button present with no title);
 content with a fully custom header (e.g. an editable title) should render its
 own header instead of using this component.
 
+### `useOverlaySecondRow` — the double-header problem
+
+An overlay-shell plugin (Console, Account) is rendered by `Dialog` on mobile,
+which shows its own `OverlayHeader` (title from the manifest + close) above
+the plugin's `children`. If the plugin _also_ renders its own title/tab-strip
+header as ordinary content, mobile ends up with two stacked header bars — the
+Dialog's and the plugin's own. `useOverlaySecondRow` solves this by letting
+content **inside** `Dialog` (however deeply nested — a plugin's route layout,
+several component layers below wherever `<Dialog>` itself is instantiated)
+supply the Dialog's second-row content directly:
+
+```tsx
+import { useOverlaySecondRow } from '@sovereignfs/ui';
+
+function AccountLayout({ children }) {
+  const tabStrip = <nav aria-label="Account sections">{/* ...tab links... */}</nav>;
+  // true when an enclosing Dialog actually received the tab strip; false
+  // when this layout is rendered standalone (no Dialog ancestor) — e.g. a
+  // hard-navigated, non-overlay route showing the same layout.
+  const insideOverlay = useOverlaySecondRow(tabStrip);
+
+  return (
+    <div>
+      {/* Only reached when NOT inside a Dialog — hide this inline copy on
+          mobile when insideOverlay is true, since the Dialog's own
+          OverlayHeader is showing tabStrip there instead. */}
+      <header className={insideOverlay ? 'hiddenOnMobile' : undefined}>
+        <h1>Account</h1>
+        {tabStrip}
+      </header>
+      {children}
+    </div>
+  );
+}
+```
+
+A no-op (returns `false`, does nothing) when there is no enclosing `Dialog` —
+safe to call unconditionally, including from a layout that's also rendered on
+a plain non-overlay route. The caller is still responsible for hiding its own
+inline header copy on mobile when the return value is `true`, via its own CSS
+— `useOverlaySecondRow` only moves the content, it doesn't hide anything
+itself, since the same JSX renders in both places by design (single source of
+tab-strip markup, no duplicated component). See `plugins/account/app/layout.tsx`
+and `plugins/console/app/layout.tsx` for the reference implementation.
+
 ### `Drawer` component
 
 ```tsx

@@ -4,7 +4,7 @@ import { useActionState, useTransition, useState, useRef } from 'react';
 import { createAuthClient } from 'better-auth/react';
 import type { BetterAuthClientPlugin } from 'better-auth/client';
 import { passkeyClient } from '@better-auth/passkey/client';
-import { Button, Dialog } from '@sovereignfs/ui';
+import { ConfirmDialog } from '@sovereignfs/ui';
 import { type PasskeyDeleteState, deletePasskeyAction } from '../actions';
 import styles from '../account.module.css';
 
@@ -71,35 +71,23 @@ function PasskeyRow({ passkey, onRemoved }: { passkey: PasskeyEntry; onRemoved: 
       >
         {pending ? 'Removing…' : 'Remove'}
       </button>
-      <Dialog
+      <ConfirmDialog
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
-        size="sm"
-        aria-label="Remove passkey"
-      >
-        <div className={styles.confirmDialog}>
-          <h2 className={styles.confirmTitle}>Remove passkey</h2>
-          <p className={styles.confirmMessage}>
+        title="Remove passkey"
+        message={
+          <>
             Remove &ldquo;{passkey.name ?? 'Unnamed passkey'}&rdquo;? You will no longer be able to
             sign in with this passkey.
-          </p>
-          <div className={styles.confirmActions}>
-            <Button type="button" variant="secondary" onClick={() => setConfirmOpen(false)}>
-              Cancel
-            </Button>
-            <button
-              type="button"
-              className={styles.dangerButton}
-              onClick={() => {
-                setConfirmOpen(false);
-                formRef.current?.requestSubmit();
-              }}
-            >
-              Remove
-            </button>
-          </div>
-        </div>
-      </Dialog>
+          </>
+        }
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() => {
+          setConfirmOpen(false);
+          formRef.current?.requestSubmit();
+        }}
+      />
       <form ref={formRef} action={formAction} style={{ display: 'none' }}>
         <input type="hidden" name="id" value={passkey.id} />
       </form>

@@ -1,4 +1,7 @@
+'use client';
+
 import type { ReactNode } from 'react';
+import { useOverlaySecondRow } from '@sovereignfs/ui';
 import styles from './console.module.css';
 import { ConsoleNavLink } from './_components/ConsoleNavLink';
 
@@ -23,22 +26,36 @@ const sections = [
 ];
 
 export default function ConsoleLayout({ children }: { children: ReactNode }) {
+  const navStrip = (
+    <nav className={styles.nav} aria-label="Console sections">
+      {sections.map((section) => (
+        <ConsoleNavLink
+          key={section.href}
+          href={section.href}
+          className={styles.navLink}
+          activeClassName={`${styles.navLink} ${styles.navLinkActive}`}
+        >
+          {section.label}
+        </ConsoleNavLink>
+      ))}
+    </nav>
+  );
+
+  // Hands the section nav up to the enclosing Dialog's mobile OverlayHeader
+  // (soft-navigated overlay case) — a no-op, returning false, on the
+  // standalone hard-navigation route, which has no Dialog ancestor and must
+  // keep rendering its own header below at every width.
+  const insideOverlay = useOverlaySecondRow(navStrip);
+
   return (
     <div className={styles.console}>
-      <header className={styles.header}>
+      <header
+        className={[styles.header, insideOverlay ? styles.headerHiddenOnMobile : '']
+          .filter(Boolean)
+          .join(' ')}
+      >
         <h1 className={styles.title}>Console</h1>
-        <nav className={styles.nav} aria-label="Console sections">
-          {sections.map((section) => (
-            <ConsoleNavLink
-              key={section.href}
-              href={section.href}
-              className={styles.navLink}
-              activeClassName={`${styles.navLink} ${styles.navLinkActive}`}
-            >
-              {section.label}
-            </ConsoleNavLink>
-          ))}
-        </nav>
+        {navStrip}
       </header>
       <div className={styles.body}>{children}</div>
     </div>

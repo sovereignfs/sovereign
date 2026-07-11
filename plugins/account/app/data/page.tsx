@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, FormField, Input } from '@sovereignfs/ui';
+import { useCallback, useEffect, useState } from 'react';
+import { ConfirmDialog, FormField, Input } from '@sovereignfs/ui';
 import { PortabilityPanel } from '../_components/PortabilityPanel';
 import styles from '../account.module.css';
 
@@ -212,30 +212,19 @@ function DeleteAccountSection() {
   const [password, setPassword] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    const el = dialogRef.current;
-    if (!el) return;
     if (open) {
       setPassword('');
       setError(null);
-      el.showModal();
-    } else {
-      el.close();
     }
   }, [open]);
 
-  useEffect(() => {
-    const el = dialogRef.current;
-    if (!el) return;
-    const handleClose = () => setOpen(false);
-    el.addEventListener('close', handleClose);
-    return () => el.removeEventListener('close', handleClose);
-  }, []);
-
   async function onDelete() {
-    if (!password) return;
+    if (!password) {
+      setError('Enter your password to confirm.');
+      return;
+    }
     setDeleting(true);
     setError(null);
     try {
@@ -284,48 +273,37 @@ function DeleteAccountSection() {
         </div>
       </section>
 
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
-      <dialog
-        ref={dialogRef}
-        className={styles.confirmNativeDialog}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) setOpen(false);
-        }}
-      >
-        <div className={styles.confirmDialog}>
-          <h2 className={styles.confirmTitle}>Delete your account?</h2>
-          <p className={styles.confirmMessage}>
-            All your data will be permanently removed, including your profile, preferences, activity
-            history, notifications, and any data held by installed plugins. This cannot be undone.
-          </p>
-          <FormField label="Confirm with your password" id="delete-account-password">
-            {(field) => (
-              <Input
-                {...field}
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={deleting}
-              />
-            )}
-          </FormField>
-          {error && <p className={styles.error}>{error}</p>}
-          <div className={styles.confirmActions}>
-            <Button type="button" onClick={() => setOpen(false)} disabled={deleting}>
-              Cancel
-            </Button>
-            <button
-              type="button"
-              className={styles.dangerButton}
-              onClick={() => void onDelete()}
-              disabled={!password || deleting}
-            >
-              {deleting ? 'Deleting…' : 'Delete permanently'}
-            </button>
-          </div>
-        </div>
-      </dialog>
+      <ConfirmDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Delete your account?"
+        message={
+          <>
+            <p className={styles.confirmMessage}>
+              All your data will be permanently removed, including your profile, preferences,
+              activity history, notifications, and any data held by installed plugins. This cannot
+              be undone.
+            </p>
+            <FormField label="Confirm with your password" id="delete-account-password">
+              {(field) => (
+                <Input
+                  {...field}
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={deleting}
+                />
+              )}
+            </FormField>
+          </>
+        }
+        confirmLabel={deleting ? 'Deleting…' : 'Delete permanently'}
+        destructive
+        pending={deleting}
+        error={error}
+        onConfirm={() => void onDelete()}
+      />
     </>
   );
 }

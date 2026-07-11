@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Button } from '@sovereignfs/ui';
+import { useState, useRef } from 'react';
+import { ConfirmDialog } from '@sovereignfs/ui';
 import {
   toggleActiveAction,
   resetMfaAction,
@@ -9,65 +9,6 @@ import {
   cancelInviteAction,
 } from './actions';
 import styles from '../console.module.css';
-
-interface ConfirmDialogProps {
-  open: boolean;
-  onClose: () => void;
-  title: string;
-  message: string;
-  confirmLabel: string;
-  onConfirm: () => void;
-}
-
-function ConfirmDialog({
-  open,
-  onClose,
-  title,
-  message,
-  confirmLabel,
-  onConfirm,
-}: ConfirmDialogProps) {
-  const ref = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (open) el.showModal();
-    else el.close();
-  }, [open]);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const handleClose = () => onClose();
-    el.addEventListener('close', handleClose);
-    return () => el.removeEventListener('close', handleClose);
-  }, [onClose]);
-
-  return (
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
-    <dialog
-      ref={ref}
-      className={styles.confirmNativeDialog}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className={styles.confirmDialog}>
-        <h2 className={styles.confirmTitle}>{title}</h2>
-        <p className={styles.confirmMessage}>{message}</p>
-        <div className={styles.confirmActions}>
-          <Button type="button" onClick={onClose}>
-            Cancel
-          </Button>
-          <button type="button" className={styles.dangerButton} onClick={onConfirm}>
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </dialog>
-  );
-}
 
 export function DeactivateButton({ userId, name }: { userId: string; name: string }) {
   const [open, setOpen] = useState(false);
@@ -102,6 +43,7 @@ export function DeactivateButton({ userId, name }: { userId: string; name: strin
         title="Deactivate user"
         message={`Deactivate ${name || userId}? They will not be able to sign in until reactivated.`}
         confirmLabel="Deactivate"
+        destructive
         onConfirm={() => {
           setOpen(false);
           formRef.current?.requestSubmit();
@@ -150,6 +92,7 @@ export function DeleteButton({ userId, name }: { userId: string; name: string })
         title={`Delete user: ${name || userId}?`}
         message="This will permanently remove all their data from this instance, including their profile, activity history, plugin data, and files. This cannot be undone."
         confirmLabel="Delete permanently"
+        destructive
         onConfirm={() => {
           setOpen(false);
           formRef.current?.requestSubmit();
@@ -195,6 +138,7 @@ export function ResetMfaButton({ userId, name }: { userId: string; name: string 
         title="Reset MFA"
         message={`Remove all MFA methods for ${name || userId}? They will be able to sign in with only their password.`}
         confirmLabel="Reset MFA"
+        destructive
         onConfirm={() => {
           setOpen(false);
           formRef.current?.requestSubmit();
@@ -242,6 +186,7 @@ export function CancelInviteButton({ email }: { email: string }) {
         title="Cancel invite"
         message={`Cancel the pending invite for ${email}? They will no longer be able to use this invite link.`}
         confirmLabel="Cancel invite"
+        destructive
         onConfirm={() => {
           setOpen(false);
           formRef.current?.requestSubmit();

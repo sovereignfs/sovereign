@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useTransition, useRef, useEffect } from 'react';
-import { Badge, Button, FormField, Input } from '@sovereignfs/ui';
+import { useState, useTransition } from 'react';
+import { Badge, Button, ConfirmDialog, FormField, Input } from '@sovereignfs/ui';
 import {
   checkPluginManifestAction,
   installPluginAction,
@@ -167,22 +167,6 @@ export function RemovePluginButton({
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const el = dialogRef.current;
-    if (!el) return;
-    if (open) el.showModal();
-    else el.close();
-  }, [open]);
-
-  useEffect(() => {
-    const el = dialogRef.current;
-    if (!el) return;
-    const handleClose = () => setOpen(false);
-    el.addEventListener('close', handleClose);
-    return () => el.removeEventListener('close', handleClose);
-  }, []);
 
   function handleRemove() {
     setError(null);
@@ -224,36 +208,22 @@ export function RemovePluginButton({
         )}
       </button>
 
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
-      <dialog
-        ref={dialogRef}
-        className={styles.confirmNativeDialog}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) setOpen(false);
-        }}
-      >
-        <div className={styles.confirmDialog}>
-          <h2 className={styles.confirmTitle}>Remove plugin</h2>
-          <p className={styles.confirmMessage}>
+      <ConfirmDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Remove plugin"
+        message={
+          <>
             Remove <strong>{pluginName}</strong>? Its files will be deleted from the server. This
             cannot be undone without reinstalling.
-          </p>
-          {error && <p className={styles.feedbackError}>{error}</p>}
-          <div className={styles.confirmActions}>
-            <Button type="button" onClick={() => setOpen(false)} disabled={isPending}>
-              Cancel
-            </Button>
-            <button
-              type="button"
-              className={styles.dangerButton}
-              onClick={handleRemove}
-              disabled={isPending}
-            >
-              {isPending ? 'Removing…' : 'Remove'}
-            </button>
-          </div>
-        </div>
-      </dialog>
+          </>
+        }
+        confirmLabel={isPending ? 'Removing…' : 'Remove'}
+        destructive
+        pending={isPending}
+        error={error}
+        onConfirm={handleRemove}
+      />
     </>
   );
 }

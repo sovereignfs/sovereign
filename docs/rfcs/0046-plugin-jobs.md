@@ -1,7 +1,7 @@
 ---
 rfc: 0046
 title: Plugin background jobs and schedules
-status: Draft
+status: Partially implemented (Phase 1 subset)
 date: June 2026
 author: kasunben
 scope: packages/sdk, runtime, packages/db, packages/manifest, docs; builds on RFC 0005 and RFC 0015
@@ -184,6 +184,7 @@ Rejected. Notifications are delivery events, not durable job execution.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | June 2026 | Initial draft |
+| Version | Date      | Change                                                                                                                                                                                                                                                                                                                                                                     |
+| ------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | June 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                              |
+| 0.2     | July 2026 | Phase 1 subset shipped: manifest-declared interval `schedules` (id / intervalMinutes / entry), an in-process runtime scheduler (60s tick, in-memory elapse tracking, disabled-plugin skip, error containment, `SOVEREIGN_SCHEDULER_DISABLED` kill-switch), and `ScheduleContext`/`ScheduleHandler` SDK types. No queue, persistence, retries, cron, or `sdk.jobs` API yet. |

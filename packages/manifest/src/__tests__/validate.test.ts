@@ -397,4 +397,70 @@ describe('validateManifest', () => {
     });
     expect(res.valid).toBe(false);
   });
+
+  it('accepts a valid schedules declaration (RFC 0046 Phase 1)', () => {
+    const res = validateManifest({
+      ...base,
+      schedules: [{ id: 'due-reminders', intervalMinutes: 1, entry: 'app/_jobs/due-reminders.ts' }],
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects a schedule entry outside app/', () => {
+    const res = validateManifest({
+      ...base,
+      schedules: [{ id: 'x', intervalMinutes: 1, entry: 'lib/jobs.ts' }],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects a schedule entry that traverses out of the plugin', () => {
+    const res = validateManifest({
+      ...base,
+      schedules: [{ id: 'x', intervalMinutes: 1, entry: 'app/../../etc/passwd.ts' }],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects a non-.ts schedule entry', () => {
+    const res = validateManifest({
+      ...base,
+      schedules: [{ id: 'x', intervalMinutes: 1, entry: 'app/_jobs/handler.tsx' }],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects non-integer and sub-minute intervals', () => {
+    for (const intervalMinutes of [0, -1, 1.5]) {
+      const res = validateManifest({
+        ...base,
+        schedules: [{ id: 'x', intervalMinutes, entry: 'app/_jobs/x.ts' }],
+      });
+      expect(res.valid).toBe(false);
+    }
+  });
+
+  it('rejects duplicate schedule ids within a plugin', () => {
+    const res = validateManifest({
+      ...base,
+      schedules: [
+        { id: 'same', intervalMinutes: 1, entry: 'app/_jobs/a.ts' },
+        { id: 'same', intervalMinutes: 5, entry: 'app/_jobs/b.ts' },
+      ],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects schedule ids that are not kebab-case lowercase', () => {
+    const res = validateManifest({
+      ...base,
+      schedules: [{ id: 'DueReminders', intervalMinutes: 1, entry: 'app/_jobs/x.ts' }],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects an empty schedules array', () => {
+    const res = validateManifest({ ...base, schedules: [] });
+    expect(res.valid).toBe(false);
+  });
 });

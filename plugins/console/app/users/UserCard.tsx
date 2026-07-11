@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
-import { Badge, Button, useToast } from '@sovereignfs/ui';
+import { useState, useTransition } from 'react';
+import { Badge, ConfirmDialog, Icon, Menu, type MenuEntry, useToast } from '@sovereignfs/ui';
 import {
   cancelInviteAction,
   changeRoleAction,
@@ -37,71 +37,6 @@ const ASSIGNABLE_ROLES = [
   { value: 'platform:user', label: 'User' },
 ] as const;
 
-function ConfirmSheet({
-  open,
-  onClose,
-  title,
-  message,
-  confirmLabel,
-  danger,
-  onConfirm,
-}: {
-  open: boolean;
-  onClose: () => void;
-  title: string;
-  message: string;
-  confirmLabel: string;
-  danger?: boolean;
-  onConfirm: () => void;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (open) el.showModal();
-    else el.close();
-  }, [open]);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const onClose_ = () => onClose();
-    el.addEventListener('close', onClose_);
-    return () => el.removeEventListener('close', onClose_);
-  }, [onClose]);
-
-  return (
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
-    <dialog
-      ref={ref}
-      className={styles.confirmNativeDialog}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className={styles.confirmDialog}>
-        <h2 className={styles.confirmTitle}>{title}</h2>
-        <p className={styles.confirmMessage}>{message}</p>
-        <div className={styles.confirmActions}>
-          <Button type="button" onClick={onClose}>
-            Cancel
-          </Button>
-          {danger ? (
-            <button type="button" className={styles.dangerButton} onClick={onConfirm}>
-              {confirmLabel}
-            </button>
-          ) : (
-            <Button type="button" onClick={onConfirm}>
-              {confirmLabel}
-            </Button>
-          )}
-        </div>
-      </div>
-    </dialog>
-  );
-}
-
 export function UserCard({
   member,
   canAssignRoles,
@@ -116,7 +51,6 @@ export function UserCard({
   const [currentRole, setCurrentRole] = useState(member.role ?? 'platform:user');
   const [isPending, startTransition] = useTransition();
   const toast = useToast();
-  const menuRef = useRef<HTMLDivElement>(null);
 
   const isOwner = member.role === 'platform:owner';
   const actionsLocked = isOwner || !canManageUsers;
@@ -128,19 +62,7 @@ export function UserCard({
   const showCancelInvite = member.status === 'invited' && canManageUsers;
   const hasMenu = showRoleOptions || showStatusActions || showCancelInvite;
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    function handlePointerDown(e: PointerEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener('pointerdown', handlePointerDown);
-    return () => document.removeEventListener('pointerdown', handlePointerDown);
-  }, [menuOpen]);
-
   function changeRole(newRole: string) {
-    setMenuOpen(false);
     if (!userId) return;
     const prev = currentRole;
     setCurrentRole(newRole);
@@ -169,6 +91,40 @@ export function UserCard({
     });
   }
 
+  const menuItems: MenuEntry[] = [
+    ...(showRoleOptions
+      ? ([
+          ...ASSIGNABLE_ROLES.filter((r) => r.value !== currentRole).map((r) => ({
+            label: `Make ${r.label}`,
+            onSelect: () => changeRole(r.value),
+          })),
+          ...(showStatusActions || showCancelInvite ? [{ type: 'separator' as const }] : []),
+        ] satisfies MenuEntry[])
+      : []),
+    ...(showStatusActions
+      ? ([
+          ...(member.status === 'active'
+            ? [{ label: 'Deactivate', onSelect: () => setConfirm('deactivate') }]
+            : []),
+          ...(member.status === 'deactivated'
+            ? [{ label: 'Reactivate', onSelect: () => setConfirm('reactivate') }]
+            : []),
+          { label: 'Reset MFA', onSelect: () => setConfirm('reset-mfa') },
+          { type: 'separator' as const },
+          { label: 'Delete user', destructive: true, onSelect: () => setConfirm('delete') },
+        ] satisfies MenuEntry[])
+      : []),
+    ...(showCancelInvite
+      ? ([
+          {
+            label: 'Cancel invite',
+            destructive: true,
+            onSelect: () => setConfirm('cancel-invite'),
+          },
+        ] satisfies MenuEntry[])
+      : []),
+  ];
+
   return (
     <div className={styles.userCard}>
       {/* Avatar */}
@@ -195,116 +151,28 @@ export function UserCard({
 
       {/* ⋯ menu */}
       {hasMenu && (
-        <div ref={menuRef} className={styles.userCardMenuWrap}>
-          <button
-            type="button"
-            className={styles.userCardMenuBtn}
-            aria-label={`Actions for ${member.name ?? member.email}`}
-            aria-expanded={menuOpen}
-            aria-haspopup="menu"
-            disabled={isPending}
-            onClick={() => setMenuOpen((v) => !v)}
-          >
-            •••
-          </button>
-
-          {menuOpen && (
-            <div className={styles.userCardMenu} role="menu">
-              {/* Role options — show all assignable roles except the current one */}
-              {showRoleOptions && (
-                <>
-                  {ASSIGNABLE_ROLES.filter((r) => r.value !== currentRole).map((r) => (
-                    <button
-                      key={r.value}
-                      type="button"
-                      className={styles.userCardMenuItem}
-                      role="menuitem"
-                      onClick={() => changeRole(r.value)}
-                    >
-                      Make {r.label}
-                    </button>
-                  ))}
-                  {(showStatusActions || showCancelInvite) && (
-                    <div className={styles.userCardMenuDivider} role="separator" />
-                  )}
-                </>
-              )}
-
-              {/* Status / lifecycle actions */}
-              {showStatusActions && (
-                <>
-                  {member.status === 'active' && (
-                    <button
-                      type="button"
-                      className={styles.userCardMenuItem}
-                      role="menuitem"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        setConfirm('deactivate');
-                      }}
-                    >
-                      Deactivate
-                    </button>
-                  )}
-                  {member.status === 'deactivated' && (
-                    <button
-                      type="button"
-                      className={styles.userCardMenuItem}
-                      role="menuitem"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        setConfirm('reactivate');
-                      }}
-                    >
-                      Reactivate
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className={styles.userCardMenuItem}
-                    role="menuitem"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setConfirm('reset-mfa');
-                    }}
-                  >
-                    Reset MFA
-                  </button>
-                  <div className={styles.userCardMenuDivider} role="separator" />
-                  <button
-                    type="button"
-                    className={`${styles.userCardMenuItem} ${styles.userCardMenuItemDanger}`}
-                    role="menuitem"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setConfirm('delete');
-                    }}
-                  >
-                    Delete user
-                  </button>
-                </>
-              )}
-
-              {showCancelInvite && (
-                <button
-                  type="button"
-                  className={`${styles.userCardMenuItem} ${styles.userCardMenuItemDanger}`}
-                  role="menuitem"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setConfirm('cancel-invite');
-                  }}
-                >
-                  Cancel invite
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        <Menu
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          aria-label={`Actions for ${member.name ?? member.email}`}
+          align="right"
+          items={menuItems}
+          trigger={
+            <button
+              type="button"
+              className={styles.userCardMenuBtn}
+              aria-label={`Actions for ${member.name ?? member.email}`}
+              disabled={isPending}
+              onClick={() => setMenuOpen((v) => !v)}
+            >
+              <Icon name="ellipsis-vertical" size="sm" aria-hidden />
+            </button>
+          }
+        />
       )}
 
       {/* Confirm dialogs */}
-      <ConfirmSheet
+      <ConfirmDialog
         open={confirm === 'deactivate'}
         onClose={() => setConfirm(null)}
         title="Deactivate user"
@@ -318,7 +186,7 @@ export function UserCard({
           runAction(() => toggleActiveAction(fd));
         }}
       />
-      <ConfirmSheet
+      <ConfirmDialog
         open={confirm === 'reactivate'}
         onClose={() => setConfirm(null)}
         title="Reactivate user"
@@ -332,7 +200,7 @@ export function UserCard({
           runAction(() => toggleActiveAction(fd));
         }}
       />
-      <ConfirmSheet
+      <ConfirmDialog
         open={confirm === 'reset-mfa'}
         onClose={() => setConfirm(null)}
         title="Reset MFA"
@@ -345,13 +213,13 @@ export function UserCard({
           runAction(() => resetMfaAction(fd));
         }}
       />
-      <ConfirmSheet
+      <ConfirmDialog
         open={confirm === 'delete'}
         onClose={() => setConfirm(null)}
         title={`Delete ${member.name || member.email}?`}
         message="This permanently removes all their data — profile, activity, plugin data, and files. Cannot be undone."
         confirmLabel="Delete permanently"
-        danger
+        destructive
         onConfirm={() => {
           setConfirm(null);
           const fd = new FormData();
@@ -359,13 +227,13 @@ export function UserCard({
           runAction(() => deleteUserAction(fd));
         }}
       />
-      <ConfirmSheet
+      <ConfirmDialog
         open={confirm === 'cancel-invite'}
         onClose={() => setConfirm(null)}
         title="Cancel invite"
         message={`Cancel the pending invite for ${member.email}? The invite link will stop working.`}
         confirmLabel="Cancel invite"
-        danger
+        destructive
         onConfirm={() => {
           setConfirm(null);
           const fd = new FormData();

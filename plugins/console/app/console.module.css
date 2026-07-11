@@ -481,64 +481,11 @@
   color: var(--sv-color-error-text);
 }
 
-/* ── Confirm dialog ─────────────────────────────────────────────────────── */
-
-.confirmNativeDialog {
-  position: fixed;
-  border: none;
-  border-radius: var(--sv-radius-lg);
-  background: var(--sv-color-surface);
-  box-shadow: var(--sv-shadow-overlay);
-  padding: 0;
-  width: 22rem;
-  max-width: calc(100vw - var(--sv-space-8));
-}
-
-.confirmNativeDialog::backdrop {
-  background: var(--sv-color-scrim);
-}
-
-.confirmDialog {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sv-space-4);
-  padding: var(--sv-space-6);
-}
-
-.confirmTitle {
-  margin: 0;
-  font-size: var(--sv-font-size-lg);
-  font-weight: var(--sv-font-weight-semibold);
-  color: var(--sv-color-text-primary);
-}
-
-.confirmMessage {
-  margin: 0;
-  font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-muted);
-}
-
-.confirmActions {
-  display: flex;
-  gap: var(--sv-space-3);
-  justify-content: flex-end;
-}
-
-.dangerButton {
-  display: inline-block;
-  padding: var(--sv-space-2) var(--sv-space-4);
-  border: none;
-  border-radius: var(--sv-radius-md);
-  background-color: var(--sv-color-error-text);
-  color: #fff;
-  font-size: var(--sv-font-size-sm);
-  font-weight: var(--sv-font-weight-medium);
-  cursor: pointer;
-}
-
-.dangerButton:hover {
-  opacity: 0.88;
-}
+/* Every confirm prompt in this plugin (RemovePluginButton, UserActionButtons,
+   UserCard) now uses @sovereignfs/ui's ConfirmDialog, which owns its own
+   panel/backdrop/typography/action-button chrome — the native <dialog>-based
+   classes this section used to hold (.confirmNativeDialog, .confirmDialog,
+   .confirmTitle, .confirmMessage, .confirmActions, .dangerButton) are gone. */
 
 /* ── Utility ────────────────────────────────────────────────────────────── */
 
@@ -1292,12 +1239,10 @@
   letter-spacing: 0.04em;
 }
 
-/* ⋯ action menu */
-.userCardMenuWrap {
-  position: relative;
-  flex-shrink: 0;
-}
-
+/* ⋯ action menu trigger — the menu panel itself (options, dividers, danger
+   items) is now @sovereignfs/ui's Menu (Popover on desktop, Drawer on
+   mobile), which owns that chrome; only the trigger button styling stays
+   plugin-local. */
 .userCardMenuBtn {
   display: flex;
   align-items: center;
@@ -1312,6 +1257,7 @@
   letter-spacing: 0.05em;
   cursor: pointer;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .userCardMenuBtn:hover {
@@ -1324,56 +1270,7 @@
   cursor: not-allowed;
 }
 
-.userCardMenu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 4px);
-  z-index: 50;
-  min-width: 160px;
-  background: var(--sv-color-surface-raised);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-md);
-  box-shadow: var(--sv-shadow-overlay);
-  overflow: hidden;
-  padding: var(--sv-space-1) 0;
-}
-
-.userCardMenuItem {
-  display: block;
-  width: 100%;
-  padding: var(--sv-space-2) var(--sv-space-4);
-  border: none;
-  background: transparent;
-  color: var(--sv-color-text-primary);
-  font-size: var(--sv-font-size-sm);
-  text-align: left;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.userCardMenuItem:hover {
-  background: var(--sv-color-surface-sunken);
-}
-
-.userCardMenuItemDanger {
-  color: var(--sv-red-700);
-}
-
-.userCardMenuItemDanger:hover {
-  background: var(--sv-color-error-surface);
-}
-
-.userCardMenuDivider {
-  height: 1px;
-  background: var(--sv-color-border);
-  margin: var(--sv-space-1) 0;
-}
-
 @media (max-width: 768px) {
-  .title {
-    display: none;
-  }
-
   /* Collapse the console flex gap on mobile so the space below the tab strip
      is governed solely by the header's margin-bottom (below) — mirrors the
      account plugin's mobile treatment so both read identically. */
@@ -1381,6 +1278,9 @@
     gap: 0;
   }
 
+  /* Only reached on the standalone (hard-navigation) route — the soft-navigated
+     overlay case hides this whole header instead (see .headerHiddenOnMobile)
+     because the Dialog's own OverlayHeader shows the title and nav strip there. */
   .header {
     position: sticky;
     top: 0;
@@ -1403,6 +1303,14 @@
   }
 
   .nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Set by ConsoleLayout only when useOverlaySecondRow found an enclosing
+     Dialog — the nav strip is rendered there instead (Dialog's mobile
+     OverlayHeader), so this inline copy (title + nav) would otherwise
+     duplicate it. */
+  .headerHiddenOnMobile {
     display: none;
   }
 

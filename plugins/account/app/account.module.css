@@ -25,13 +25,6 @@
 }
 
 @media (max-width: 768px) {
-  /* The Dialog mobileBar provides the "Account" title on mobile — hide the
-     plugin's own h1 to avoid duplication. (On direct/hard navigation the tab
-     strip still makes the context obvious.) */
-  .title {
-    display: none;
-  }
-
   /* Collapse the account flex gap on mobile; the space below the tab strip is
      then governed solely by the header's margin-bottom (below). The default
      gap: space-6 (24px) plus that margin gave far too much room between the
@@ -40,7 +33,10 @@
     gap: 0;
   }
 
-  /* Stick the tab strip so the active section is always visible while scrolling. */
+  /* Stick the tab strip so the active section is always visible while scrolling.
+     Only reached on the standalone (hard-navigation) route — the soft-navigated
+     overlay case hides this whole header instead (see .headerHiddenOnMobile)
+     because the Dialog's own OverlayHeader shows the title and tab strip there. */
   .header {
     position: sticky;
     top: 0;
@@ -65,6 +61,14 @@
   }
 
   .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Set by AccountLayout only when useOverlaySecondRow found an enclosing
+     Dialog — the tab strip is rendered there instead (Dialog's mobile
+     OverlayHeader), so this inline copy (title + tabs) would otherwise
+     duplicate it. */
+  .headerHiddenOnMobile {
     display: none;
   }
 }
@@ -586,45 +590,19 @@
 }
 
 /* ── Confirm dialog ─────────────────────────────────────────────────────── */
-
-.confirmNativeDialog {
-  border: none;
-  border-radius: var(--sv-radius-lg);
-  background: var(--sv-color-surface);
-  box-shadow: var(--sv-shadow-overlay);
-  padding: 0;
-  width: 22rem;
-  max-width: calc(100vw - var(--sv-space-8));
-}
-
-.confirmNativeDialog::backdrop {
-  background: var(--sv-color-scrim);
-}
-
-.confirmDialog {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sv-space-4);
-  padding: var(--sv-space-6);
-}
-
-.confirmTitle {
-  margin: 0;
-  font-size: var(--sv-font-size-lg);
-  font-weight: var(--sv-font-weight-semibold);
-  color: var(--sv-color-text-primary);
-}
+/* The native <dialog>/panel chrome classes this section used to hold
+   (.confirmNativeDialog, .confirmDialog, .confirmTitle, .confirmActions) are
+   gone — every confirm prompt in this plugin now uses @sovereignfs/ui's
+   ConfirmDialog, which owns that chrome itself. .confirmMessage survives:
+   ConfirmDialog's `message` prop accepts rich content, and this plugin still
+   passes its own <p> for the delete-account confirm's intro paragraph
+   (data/page.tsx) so it can sit alongside a password FormField in the same
+   message slot. */
 
 .confirmMessage {
   margin: 0;
   font-size: var(--sv-font-size-sm);
   color: var(--sv-color-text-muted);
-}
-
-.confirmActions {
-  display: flex;
-  gap: var(--sv-space-3);
-  justify-content: flex-end;
 }
 
 .dangerButton {

@@ -446,7 +446,10 @@ const config = await sdk.platform.getConfig();
 
 This section covers the design-system conventions for building mobile-responsive
 UI — the breakpoint constant, the `Drawer` primitive, touch-target sizing, safe
-areas, and dynamic viewport height. (RFC 0013.)
+areas, and dynamic viewport height. (RFC 0013.) For the practical, plugin-author-
+facing version of this material — a long-press recipe, a PWA-feel checklist, and
+guidance on when double-tap latency is and isn't worth it — see
+[`docs/plugin-development.md`'s "Building for mobile"](./plugin-development.md#building-for-mobile).
 
 ### Breakpoint convention
 

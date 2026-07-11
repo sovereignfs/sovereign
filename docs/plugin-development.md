@@ -1561,6 +1561,105 @@ If you must build a custom interactive widget (tabs, accordion, carousel), follo
 - Implement the full keyboard model (arrow keys, Home/End, Enter/Space) expected for that role
 - Ensure focus is moved programmatically when content changes visibility
 
+## Building for mobile
+
+Sovereign runs as an installable PWA as well as a browser tab, and the platform shell already carries the baseline that makes that feel native rather than "a website on a phone" — global touch hygiene, safe-area insets, the mobile breakpoint, and gesture primitives all live in `@sovereignfs/ui` and `runtime/app/globals.css`. This section is the practical, plugin-author-facing version of that; the full component-level internals (why each rule exists, exact token values, CSS specifics) live in [`docs/design-system.md`](./design-system.md#responsive--mobile) — this section links out to it rather than duplicating it.
+
+### Breakpoint
+
+Fork behaviour by viewport with `useIsMobile()`, not a hand-rolled `matchMedia` call — it is SSR-safe (defaults to `false` until the client mounts, avoiding a hydration mismatch) and defaults to the platform's single canonical breakpoint:
+
+```tsx
+import { useIsMobile } from '@sovereignfs/ui';
+
+function Toolbar() {
+  const isMobile = useIsMobile(); // true at ≤768px
+  return isMobile ? <MobileToolbar /> : <DesktopToolbar />;
+}
+```
+
+768px is the platform default (matches the shell chrome and `Dialog`'s own mobile switch) — reach for it first. A layout with a genuinely different fork point (e.g. a three-column layout that needs to collapse earlier) may pass its own `breakpointPx`, but document why inline; an undocumented custom threshold is how breakpoints silently drift across a codebase. See [design-system.md's breakpoint convention](./design-system.md#breakpoint-convention) for the full rationale.
+
+### Touch targets
+
+Every tappable control needs a **44px** minimum hit area (Apple HIG / Material Design / WCAG 2.5.5) — below that, taps misfire and read as broken UI, not just "small." `@sovereignfs/ui` components already handle this themselves (`Button` grows to 44px under `@media (pointer: coarse)`; `Checkbox`'s hit area expands past its visible 18px box the same way); if you build your own icon-only control, size it against `--sv-touch-target-min`:
+
+```css
+.myIconButton {
+  min-width: var(--sv-touch-target-min, 44px);
+  min-height: var(--sv-touch-target-min, 44px);
+}
+```
+
+Gate any coarse-pointer-only sizing behind `@media (pointer: coarse)`, not a viewport-width media query — a touchscreen laptop with a mouse/trackpad as its primary pointer should keep desktop density, and `pointer: coarse` (the _primary_ pointer) is what distinguishes that from an actual touch device. See [design-system.md's touch-target and Button/Checkbox sections](./design-system.md#touch-targets---sv-touch-target-min) for the full pattern.
+
+### Hover guards
+
+Every `:hover` rule needs `@media (hover: hover)`, or a tap generates a synthetic hover state that **sticks** until the next tap elsewhere — a button reads as stuck mid-transition to its hover color after the tap already completed its action:
+
+```css
+@media (hover: hover) {
+  .myControl:hover {
+    background-color: var(--sv-color-surface-sunken);
+  }
+}
+```
+
+`:focus-visible` and `:active` are never guarded — both are wanted on every input type. `@sovereignfs/ui` follows this convention throughout; apply the same guard in your own plugin CSS. Full writeup, including the hover-_reveal_ case (`:not(:hover)` is unconditionally true with no hover capability at all): [design-system.md's hover guard convention](./design-system.md#hover-guard-convention--media-hover-hover).
+
+### The long-press recipe
+
+A bare `setTimeout` on `pointerdown` is not a long-press gesture — it misfires on finger jitter, survives a `pointercancel` (the browser converting the touch into a scroll) and fires mid-scroll, and does nothing to suppress the OS's own reaction to a long hold (iOS's link-preview callout, Android's context menu). `useLongPress` carries the full fix:
+
+```tsx
+import { useLongPress } from '@sovereignfs/ui';
+
+function TaskRow({ task, onSelect }: { task: Task; onSelect: () => void }) {
+  const longPress = useLongPress({ onLongPress: onSelect });
+  return (
+    <div {...longPress} className={styles.row}>
+      {task.title}
+    </div>
+  );
+}
+```
+
+The returned props (`onPointerDown`/`onPointerMove`/`onPointerUp`/`onPointerCancel`/`onPointerLeave`/`onContextMenu`/`onClick`/`style`) spread directly onto the target element — nothing else to wire up. It only ever fires for genuine touch input (`pointerType === 'touch'`); a mouse holding the same element for 500ms never triggers it, so desktop interactions (e.g. ctrl/cmd-click for bulk select) are unaffected. Full mechanism: [design-system.md's interaction hooks section](./design-system.md#interaction-hooks).
+
+### Double-tap — use sparingly, and prefer an explicit affordance
+
+`useDoubleTapHandler` and `useSingleOrDoubleTap` exist for double-tap gestures, but **`useSingleOrDoubleTap` defers every single tap by the double-tap detection window (350ms)** — touch has no equivalent to a mouse's native `e.detail === 2`, so the only way to know a second tap isn't coming is to wait out the window before committing to the single action. That latency is paid on **every** tap through it, not just the double, which reads as sluggish on a primary navigation gesture.
+
+Before reaching for double-tap on mobile, consider whether the action it guards (rename, secondary options) is better served by an explicit affordance instead — a visible "⋯" button, or `useLongPress` — so a single tap can navigate immediately with no latency tax. This is a real lesson from the reference implementation: `sovereign-tasks` originally double-tap-to-renamed a list row on mobile, paying the 350ms tax on every navigating tap; it was replaced with immediate single-tap navigation plus an explicit "⋯" menu entry for rename.
+
+```tsx
+import { useDoubleTapHandler } from '@sovereignfs/ui';
+
+// Safe here: the single tap on a colour swatch has no default action to preempt.
+function ColorSwatch({ color, onPick }: { color: string; onPick: () => void }) {
+  const handleDoubleClick = useDoubleTapHandler(onPick);
+  return <button onClick={handleDoubleClick} style={{ background: color }} />;
+}
+```
+
+### PWA-feel checklist
+
+The shell already handles the following globally — nothing to add per plugin:
+
+- [x] No translucent tap-highlight flash (`-webkit-tap-highlight-color: transparent`)
+- [x] No text auto-inflation on orientation change (`text-size-adjust: 100%`)
+- [x] No ~300ms tap delay / double-tap-to-zoom on interactive elements (`touch-action: manipulation` on links, buttons, inputs, `[role="button"]`)
+- [x] No iOS Safari rubber-band bounce at the document level (`overscroll-behavior: none`)
+- [x] No iOS Safari viewport zoom on focusing a small-font input (native inputs clamped to ≥16px in standalone/PWA mode)
+- [x] Safe-area insets (`env(safe-area-inset-*)`) already factored into the shell header/footer and `Dialog`'s mobile inset
+
+Still your responsibility per component:
+
+- [ ] A custom drag handle (dnd-kit or hand-rolled) sets its own `touch-action: none` — the global `manipulation` default lets the browser's own scroll/zoom gestures compete with a drag unless overridden
+- [ ] Any element you position `fixed` or `sticky` yourself accounts for `env(safe-area-inset-bottom)` if it can sit near the device's home-indicator area — `@sovereignfs/ui`'s own overlays (`Drawer`, `Sheet`, `Dialog`) already do this; a plugin-local fixed element does not get it for free
+- [ ] Test in **both** Safari-the-browser-tab and the installed **PWA standalone** mode on iOS — behaviour genuinely differs (the standalone-mode zoom-persists-after-blur case above is one example) and testing only the browser tab misses it
+- [ ] Verify on Android Chrome too — long-press, swipe, and scroll-vs-gesture arbitration have platform-specific quirks that don't always match iOS
+
 ## Publishing & the registry
 
 To distribute a plugin, set `type` to `sovereign` or `community` and point

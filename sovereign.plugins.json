@@ -3,7 +3,7 @@
     {
       "id": "sovereign-tasks",
       "repository": "https://github.com/sovereignfs/sovereign-tasks.git",
-      "ref": "v0.10.2"
+      "ref": "v0.11.0"
     },
     {
       "id": "example-basic",

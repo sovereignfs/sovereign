@@ -205,19 +205,19 @@
 
   /* Title + close button in one solid row, via the shared OverlayHeader
      component. Being a flex sibling before .content means it never scrolls —
-     the content area scrolls below it. */
+     the content area scrolls below it.
+     .content itself needs no mobile override here any more: it used to zero
+     out padding-top so a plugin's hand-rolled sticky header (rendered as
+     .content's own first child, right below OverlayHeader) would sit flush
+     against it. That case no longer exists — a plugin with a tab strip/
+     secondary nav now hands it to OverlayHeader's own secondRow slot
+     (useOverlaySecondRow) instead of rendering it inside .content; Account
+     and Console both migrated to this (mobile design-system plan, Phase
+     C1b). With .content's first child back to being genuine page content, it
+     needs the same breathing room from the header that .content's own base
+     padding (var(--sv-space-6) on every side) already provides everywhere
+     else. */
   .mobileHeader {
     display: block;
-  }
-
-  /* Remove top padding so the sticky plugin header sits flush against
-     OverlayHeader — no gap for scrolling content to bleed through.
-     padding-bottom no longer adds --sv-shell-footer-height on top of
-     --sv-space-6 — the scrim above already stops short of the footer, so
-     .content doesn't need to additionally compensate for it here (that used
-     to double-count the footer clearance). */
-  .content {
-    padding-top: 0;
-    padding-bottom: var(--sv-space-6, 24px);
   }
 }

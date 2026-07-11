@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import Link from 'next/link';
 import { Icon } from '@sovereignfs/ui';
 import styles from './MobileSearch.module.css';
@@ -24,10 +24,14 @@ export function MobileSearch({
   open,
   onClose,
   plugins,
+  footerRef,
 }: {
   open: boolean;
   onClose: () => void;
   plugins: PluginEntry[];
+  /** The footer nav element (MobileNav's sibling `<nav>`) — measured directly
+   *  for its real rendered height; see the viewport effect below for why. */
+  footerRef: RefObject<HTMLElement | null>;
 }) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -78,11 +82,17 @@ export function MobileSearch({
 
     const update = () => {
       const keyboardHeight = window.innerHeight - (vv.offsetTop + vv.height);
-      // Read the actual footer height from the CSS variable (includes safe-area-inset-bottom).
-      const footerHeight =
-        parseFloat(
-          getComputedStyle(document.documentElement).getPropertyValue('--sv-shell-footer-height'),
-        ) || 60;
+      // Measure the footer nav's own real rendered height (includes
+      // safe-area-inset-bottom on devices with a home indicator) rather than
+      // reading --sv-shell-footer-height via getComputedStyle + parseFloat:
+      // that variable's value is a CSS calc() *expression string* (e.g.
+      // "calc(\n 60px + max(0px, env(safe-area-inset-bottom) - 8px)\n)"),
+      // which parseFloat cannot evaluate — it silently returns NaN, so
+      // `|| 60` always won, permanently ignoring the safe-area inset and
+      // under-reserving space below the overlay on notched/home-indicator
+      // iPhones. getBoundingClientRect().height reflects the fully-resolved
+      // layout regardless of how the CSS computed it.
+      const footerHeight = footerRef.current?.getBoundingClientRect().height ?? 60;
       el.style.bottom = `${Math.max(footerHeight, keyboardHeight)}px`;
     };
 

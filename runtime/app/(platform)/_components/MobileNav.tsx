@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Drawer, Icon } from '@sovereignfs/ui';
@@ -33,10 +33,11 @@ export function MobileNav({
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
   const isHome = pathname === '/';
+  const footerRef = useRef<HTMLElement>(null);
 
   return (
     <>
-      <nav className={styles.footer} aria-label="App navigation">
+      <nav ref={footerRef} className={styles.footer} aria-label="App navigation">
         <Link
           href="/"
           className={`${styles.navItem} ${isHome ? styles.navItemActive : ''}`}
@@ -70,7 +71,12 @@ export function MobileNav({
         </button>
       </nav>
 
-      <MobileSearch open={searchOpen} onClose={() => setSearchOpen(false)} plugins={plugins} />
+      <MobileSearch
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        plugins={plugins}
+        footerRef={footerRef}
+      />
 
       <Drawer open={open} onClose={() => setOpen(false)} aria-label="App navigation">
         <div className={styles.drawerHeader}>

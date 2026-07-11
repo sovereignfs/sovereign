@@ -61,6 +61,23 @@ textarea,
   touch-action: manipulation;
 }
 
+/* Suppress iOS Safari's native long-press context menu (link preview / "Open,
+   Add to Reading List, Copy Link, Share…") on every in-app link. This is
+   separate from useLongPress's own -webkit-touch-callout suppression — that
+   hook only applies its style to whichever element calls it (e.g. a task row
+   using long-press for bulk-select), not to plain navigational links that
+   never call it at all (e.g. a list row's own <Link>). Without this, ANY
+   `<a href>` long-press shows Safari's own native menu regardless of whether
+   the app has custom long-press behaviour on it — a native browser affordance
+   that reads as broken/out-of-place in an installed PWA, where every other
+   long-press gesture is app-owned. Has no effect on non-WebKit engines or on
+   desktop (the property does nothing without a touch long-press to trigger
+   it), so this is safe unconditionally — no @media (pointer: coarse) gate
+   needed. */
+a {
+  -webkit-touch-callout: none;
+}
+
 /* Prevent horizontal scroll on mobile where the shell grid can momentarily
    exceed 1fr (e.g. nowrap content in the account tab bar or search overlay).
    Scoped to mobile only — applying overflow-x: hidden on <html> at desktop

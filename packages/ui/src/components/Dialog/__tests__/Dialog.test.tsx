@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { Dialog } from '../Dialog';
+import { Dialog, useOverlaySecondRow } from '../Dialog';
 
 // Dialog's exit animation reads prefers-reduced-motion via matchMedia, which
 // jsdom does not implement. `matches: false` (motion enabled) exercises the
@@ -92,5 +92,46 @@ describe('Dialog', () => {
       </Dialog>,
     );
     expect(screen.getByRole('dialog').className).toContain('sm');
+  });
+
+  it('renders a descendant-supplied secondRow via useOverlaySecondRow', () => {
+    function TabStrip() {
+      useOverlaySecondRow(<nav>Tab strip</nav>);
+      return null;
+    }
+    render(
+      <Dialog open onClose={() => {}} title="Account" aria-label="Account">
+        <TabStrip />
+      </Dialog>,
+    );
+    expect(screen.getByText('Tab strip')).toBeTruthy();
+  });
+
+  it('removes the secondRow when the supplying descendant unmounts', () => {
+    function TabStrip() {
+      useOverlaySecondRow(<nav>Tab strip</nav>);
+      return null;
+    }
+    function Harness({ showTabs }: { showTabs: boolean }) {
+      return (
+        <Dialog open onClose={() => {}} title="Account" aria-label="Account">
+          {showTabs && <TabStrip />}
+        </Dialog>
+      );
+    }
+    const { rerender } = render(<Harness showTabs />);
+    expect(screen.getByText('Tab strip')).toBeTruthy();
+    rerender(<Harness showTabs={false} />);
+    expect(screen.queryByText('Tab strip')).toBeNull();
+  });
+
+  it('is a no-op when called outside a Dialog', () => {
+    function Standalone() {
+      useOverlaySecondRow(<nav>Tab strip</nav>);
+      return <span>Standalone content</span>;
+    }
+    render(<Standalone />);
+    expect(screen.getByText('Standalone content')).toBeTruthy();
+    expect(screen.queryByText('Tab strip')).toBeNull();
   });
 });

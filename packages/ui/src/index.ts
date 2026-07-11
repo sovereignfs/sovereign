@@ -31,7 +31,7 @@ export { SplitPane } from './components/SplitPane/SplitPane';
 export type { SplitPaneProps } from './components/SplitPane/SplitPane';
 export { TagInput } from './components/TagInput/TagInput';
 export type { TagInputProps } from './components/TagInput/TagInput';
-export { Dialog } from './components/Dialog/Dialog';
+export { Dialog, useOverlaySecondRow } from './components/Dialog/Dialog';
 export type { DialogProps, DialogSize } from './components/Dialog/Dialog';
 export { Drawer } from './components/Drawer/Drawer';
 export type { DrawerProps } from './components/Drawer/Drawer';

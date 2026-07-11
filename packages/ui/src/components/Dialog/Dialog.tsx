@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect, useRef } from 'react';
+import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { lockBodyScroll, unlockBodyScroll } from '../../scroll-lock';
 import { useMountTransition, usePrefersReducedMotion } from '../../motion';
 import { OverlayHeader } from '../OverlayHeader/OverlayHeader';
@@ -11,6 +11,46 @@ import styles from './Dialog.module.css';
 // and the CSS transition duration can't silently drift apart at build time;
 // change both together if this value ever changes.
 const MOTION_DURATION_MS = 250;
+
+// undefined (the default, outside any Provider) means "no Dialog ancestor" —
+// distinct from a real setter function, so useOverlaySecondRow can silently
+// no-op when called outside a Dialog instead of throwing.
+const OverlaySecondRowContext = createContext<((node: ReactNode | null) => void) | undefined>(
+  undefined,
+);
+
+/**
+ * Lets content deep inside a `Dialog` (e.g. a plugin's own route layout,
+ * rendered several levels below wherever the `Dialog` itself is
+ * instantiated) supply the second-row content of the Dialog's mobile
+ * `OverlayHeader` — typically a tab strip. Solves the "double header"
+ * problem: without this, a plugin's own tab strip has no way to reach the
+ * Dialog's header and ends up rendered a second time, as its own sticky bar,
+ * inside the scrolling content area.
+ *
+ * A no-op when there is no enclosing `Dialog` (e.g. the same plugin layout
+ * also rendered on a plain, non-overlay route) — safe to call unconditionally.
+ * Returns whether an enclosing `Dialog` actually received the content, so a
+ * caller that also renders its own inline header/tab-strip copy for the
+ * no-Dialog case can hide that copy on mobile specifically when this
+ * returned `true` (the Dialog's own header is showing it instead there).
+ *
+ * ```tsx
+ * function AccountLayout({ children }) {
+ *   const insideOverlay = useOverlaySecondRow(<nav>...tab strip...</nav>);
+ *   return <div>{children}</div>;
+ * }
+ * ```
+ */
+export function useOverlaySecondRow(node: ReactNode | null): boolean {
+  const setSecondRow = useContext(OverlaySecondRowContext);
+  useEffect(() => {
+    if (!setSecondRow) return;
+    setSecondRow(node);
+    return () => setSecondRow(null);
+  }, [setSecondRow, node]);
+  return setSecondRow !== undefined;
+}
 
 export type DialogSize = 'sm' | 'md' | 'lg' | 'full';
 
@@ -60,6 +100,7 @@ export function Dialog({
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const reducedMotion = usePrefersReducedMotion();
   const { mounted, phase } = useMountTransition(open, reducedMotion ? 0 : MOTION_DURATION_MS);
+  const [secondRow, setSecondRow] = useState<ReactNode | null>(null);
 
   // Prevent document-level scroll for the whole mounted lifetime, including
   // the exit animation — not just while `open` — so the background can't
@@ -143,8 +184,15 @@ export function Dialog({
           .join(' ')}
       >
         {/* Mobile: shared OverlayHeader (title + close in one row, hidden on
-            desktop via CSS — see .mobileHeader). */}
-        <OverlayHeader title={title} onClose={onClose} className={styles.mobileHeader} />
+            desktop via CSS — see .mobileHeader). secondRow is populated by a
+            descendant's useOverlaySecondRow call, e.g. a plugin's own tab
+            strip — see that hook's doc comment for why. */}
+        <OverlayHeader
+          title={title}
+          onClose={onClose}
+          secondRow={secondRow}
+          className={styles.mobileHeader}
+        />
         {/* Desktop: absolute close button (hidden on mobile via CSS). */}
         <button type="button" className={styles.close} aria-label="Close" onClick={onClose}>
           ×
@@ -152,7 +200,11 @@ export function Dialog({
         {/* The panel is a fixed-size box; only this region scrolls, so the
             panel never resizes with its content and the close button stays
             pinned. */}
-        <div className={styles.content}>{children}</div>
+        <div className={styles.content}>
+          <OverlaySecondRowContext.Provider value={setSecondRow}>
+            {children}
+          </OverlaySecondRowContext.Provider>
+        </div>
       </div>
     </div>
   );

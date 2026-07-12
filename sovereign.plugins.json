@@ -6,6 +6,11 @@
       "ref": "v0.11.0"
     },
     {
+      "id": "sovereign-plainwrite",
+      "repository": "https://github.com/sovereignfs/sovereign-plainwrite.git",
+      "ref": "v0.15.0"
+    },
+    {
       "id": "example-basic",
       "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
       "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",

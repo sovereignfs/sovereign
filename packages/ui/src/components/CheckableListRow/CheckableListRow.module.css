@@ -1,0 +1,95 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  width: 100%;
+}
+
+.tapTarget {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  flex: 1;
+  min-width: 0;
+  min-height: var(--sv-touch-target-min);
+  cursor: pointer;
+}
+
+.tapTarget:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--sv-radius-sm);
+}
+
+/* Visual box — matches Checkbox.module.css's .box/.checked/.tick. */
+.box {
+  --checkbox-box-size: 18px;
+  flex-shrink: 0;
+  width: var(--checkbox-box-size);
+  height: var(--checkbox-box-size);
+  border-radius: var(--sv-radius-sm);
+  border: 1.5px solid var(--sv-color-border-strong);
+  background: var(--sv-color-surface);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checked {
+  background-color: var(--sv-color-accent);
+  border-color: var(--sv-color-accent);
+  color: var(--sv-white);
+}
+
+.tick {
+  width: 10px;
+  height: 8px;
+  pointer-events: none;
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--sv-color-text-muted);
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+  position: relative;
+}
+
+.label::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 1.5px;
+  background: var(--sv-color-text-muted);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.2s ease;
+}
+
+.struck {
+  color: var(--sv-color-text-muted);
+}
+
+.struck::after {
+  transform: scaleX(1);
+}
+
+.trailing {
+  flex-shrink: 0;
+}

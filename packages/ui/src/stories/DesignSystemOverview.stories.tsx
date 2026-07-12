@@ -10,6 +10,8 @@ import { Drawer } from '../components/Drawer/Drawer';
 import { EmptyState } from '../components/EmptyState/EmptyState';
 import { FormField } from '../components/FormField/FormField';
 import { Icon } from '../components/Icon/Icon';
+import type { IconName } from '../components/Icon/Icon';
+import { IconPicker } from '../components/IconPicker/IconPicker';
 import { Input } from '../components/Input/Input';
 import { CodeTextarea } from '../components/CodeTextarea/CodeTextarea';
 import { Textarea } from '../components/Textarea/Textarea';
@@ -729,6 +731,31 @@ function ToastDemo() {
 function TagInputDemo() {
   const [tags, setTags] = useState(['draft', 'frontmatter']);
   return <TagInput value={tags} onChange={setTags} aria-label="Tags" />;
+}
+
+function IconPickerDemo() {
+  const [value, setValue] = useState<IconName | null>('banana');
+  const options: IconName[] = [
+    'banana',
+    'apple',
+    'carrot',
+    'egg',
+    'milk',
+    'beef',
+    'drumstick',
+    'fish',
+    'croissant',
+    'cookie',
+  ];
+  return (
+    <IconPicker
+      value={value}
+      onChange={setValue}
+      options={options}
+      aria-label="Item icon"
+      triggerLabel={value ?? 'Choose icon'}
+    />
+  );
 }
 
 function SuggestionInputDemo() {
@@ -1458,6 +1485,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               <div style={{ width: '100%' }}>
                 <SuggestionInputDemo />
               </div>
+            </ComponentCard>
+
+            {/* IconPicker */}
+            <ComponentCard
+              name="IconPicker"
+              importLine="import { IconPicker } from '@sovereignfs/ui';"
+              usage="Trigger button + Popover grid for a curated, bounded icon set (e.g. a plugin's category icons) — not the full icon library."
+            >
+              <IconPickerDemo />
             </ComponentCard>
 
             {/* Select */}

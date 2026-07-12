@@ -80,6 +80,8 @@ export type {
   SuggestionInputProps,
   SuggestionOption,
 } from './components/SuggestionInput/SuggestionInput';
+export { IconPicker } from './components/IconPicker/IconPicker';
+export type { IconPickerProps } from './components/IconPicker/IconPicker';
 export { useLongPress, useDoubleTapHandler, useSingleOrDoubleTap, useIsMobile } from './hooks';
 export { MOBILE_BREAKPOINT_PX } from './hooks';
 export type { UseLongPressOptions, LongPressHandlers } from './hooks';

@@ -29,6 +29,26 @@ import { AlertTriangleIcon } from './alert-triangle';
 import { CalendarIcon } from './calendar';
 import { SlidersHorizontalIcon } from './sliders-horizontal';
 import { EllipsisVerticalIcon } from './ellipsis-vertical';
+import { BananaIcon } from './banana';
+import { AppleIcon } from './apple';
+import { CarrotIcon } from './carrot';
+import { EggIcon } from './egg';
+import { BeefIcon } from './beef';
+import { FishIcon } from './fish';
+import { CoffeeIcon } from './coffee';
+import { WineIcon } from './wine';
+import { BeerIcon } from './beer';
+import { CookieIcon } from './cookie';
+import { PizzaIcon } from './pizza';
+import { CandyIcon } from './candy';
+import { SaladIcon } from './salad';
+import { MilkIcon } from './milk';
+import { DrumstickIcon } from './drumstick';
+import { CroissantIcon } from './croissant';
+import { CupSodaIcon } from './cup-soda';
+import { SprayCanIcon } from './spray-can';
+import { SnowflakeIcon } from './snowflake';
+import { ShoppingBasketIcon } from './shopping-basket';
 
 export type IconName =
   | 'house'
@@ -59,7 +79,27 @@ export type IconName =
   | 'alert-triangle'
   | 'calendar'
   | 'sliders-horizontal'
-  | 'ellipsis-vertical';
+  | 'ellipsis-vertical'
+  | 'banana'
+  | 'apple'
+  | 'carrot'
+  | 'egg'
+  | 'beef'
+  | 'fish'
+  | 'coffee'
+  | 'wine'
+  | 'beer'
+  | 'cookie'
+  | 'pizza'
+  | 'candy'
+  | 'salad'
+  | 'milk'
+  | 'drumstick'
+  | 'croissant'
+  | 'cup-soda'
+  | 'spray-can'
+  | 'snowflake'
+  | 'shopping-basket';
 
 export type IconComponent = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
@@ -93,6 +133,26 @@ export const ICONS: Record<IconName, IconComponent> = {
   calendar: CalendarIcon,
   'sliders-horizontal': SlidersHorizontalIcon,
   'ellipsis-vertical': EllipsisVerticalIcon,
+  banana: BananaIcon,
+  apple: AppleIcon,
+  carrot: CarrotIcon,
+  egg: EggIcon,
+  beef: BeefIcon,
+  fish: FishIcon,
+  coffee: CoffeeIcon,
+  wine: WineIcon,
+  beer: BeerIcon,
+  cookie: CookieIcon,
+  pizza: PizzaIcon,
+  candy: CandyIcon,
+  salad: SaladIcon,
+  milk: MilkIcon,
+  drumstick: DrumstickIcon,
+  croissant: CroissantIcon,
+  'cup-soda': CupSodaIcon,
+  'spray-can': SprayCanIcon,
+  snowflake: SnowflakeIcon,
+  'shopping-basket': ShoppingBasketIcon,
 };
 
 export { HouseIcon } from './house';
@@ -124,3 +184,23 @@ export { AlertTriangleIcon } from './alert-triangle';
 export { CalendarIcon } from './calendar';
 export { SlidersHorizontalIcon } from './sliders-horizontal';
 export { EllipsisVerticalIcon } from './ellipsis-vertical';
+export { BananaIcon } from './banana';
+export { AppleIcon } from './apple';
+export { CarrotIcon } from './carrot';
+export { EggIcon } from './egg';
+export { BeefIcon } from './beef';
+export { FishIcon } from './fish';
+export { CoffeeIcon } from './coffee';
+export { WineIcon } from './wine';
+export { BeerIcon } from './beer';
+export { CookieIcon } from './cookie';
+export { PizzaIcon } from './pizza';
+export { CandyIcon } from './candy';
+export { SaladIcon } from './salad';
+export { MilkIcon } from './milk';
+export { DrumstickIcon } from './drumstick';
+export { CroissantIcon } from './croissant';
+export { CupSodaIcon } from './cup-soda';
+export { SprayCanIcon } from './spray-can';
+export { SnowflakeIcon } from './snowflake';
+export { ShoppingBasketIcon } from './shopping-basket';

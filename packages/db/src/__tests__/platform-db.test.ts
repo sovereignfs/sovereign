@@ -6,8 +6,10 @@ import {
   bootstrapPlatformDb,
   createPluginConnection,
   createPluginSecret,
+  createStorageObject,
   deletePluginSecret,
   deletePluginProviderConfig,
+  deleteStorageObject,
   deleteUserData,
   disconnectPluginConnection,
   getAccountPrefs,
@@ -17,9 +19,13 @@ import {
   getPluginSecret,
   getInstanceConfig,
   getPlatformSetting,
+  getStorageObjectByIdForToken,
+  getStorageObjectByKey,
+  hardDeleteUserStorageObjects,
   listPluginConnections,
   listAllPluginProviderConfigs,
   listPluginSecrets,
+  listStorageObjects,
   listUserPluginConnectionRefs,
   listUserPluginSecretRefs,
   markPluginConnectionError,
@@ -36,6 +42,7 @@ import {
   setPlatformSetting,
   setPluginEnabled,
   setTenantName,
+  sumPluginStorageBytes,
   updatePluginConnection,
   upsertPluginProviderConfig,
   updatePluginSecret,
@@ -452,6 +459,144 @@ describe('plugin secret vault helpers (RFC 0043)', () => {
         userId: null,
       }),
     ).toBeDefined();
+  });
+});
+
+describe('plugin storage object helpers (RFC 0044)', () => {
+  it('scopes reads by tenant/plugin/owner and hides objects from other plugins/users', async () => {
+    const db = await freshDb();
+    const context = { tenantId: DEFAULT_TENANT_ID, pluginId: 'com.example.notes', userId: 'u1' };
+    const row = await createStorageObject(db, {
+      ...context,
+      id: 'obj-1',
+      ownerUserId: 'u1',
+      key: 'attachments/receipt.png',
+      contentType: 'image/png',
+      size: 1024,
+      checksum: 'abc123',
+      metadata: null,
+    });
+
+    expect(row).toMatchObject({ id: 'obj-1', key: 'attachments/receipt.png', size: 1024 });
+    expect(await getStorageObjectByKey(db, 'attachments/receipt.png', context)).toMatchObject({
+      id: 'obj-1',
+    });
+    expect(
+      await getStorageObjectByKey(db, 'attachments/receipt.png', {
+        ...context,
+        pluginId: 'com.example.other',
+      }),
+    ).toBeUndefined();
+    expect(
+      await getStorageObjectByKey(db, 'attachments/receipt.png', { ...context, userId: 'u2' }),
+    ).toBeUndefined();
+  });
+
+  it('lists by key prefix and sums bytes for quota accounting', async () => {
+    const db = await freshDb();
+    const context = { tenantId: DEFAULT_TENANT_ID, pluginId: 'com.example.notes', userId: 'u1' };
+    await createStorageObject(db, {
+      ...context,
+      id: 'obj-1',
+      ownerUserId: 'u1',
+      key: 'imports/a.csv',
+      contentType: 'text/csv',
+      size: 100,
+      checksum: 'a',
+      metadata: null,
+    });
+    await createStorageObject(db, {
+      ...context,
+      id: 'obj-2',
+      ownerUserId: 'u1',
+      key: 'exports/b.csv',
+      contentType: 'text/csv',
+      size: 200,
+      checksum: 'b',
+      metadata: null,
+    });
+
+    expect(await listStorageObjects(db, context)).toHaveLength(2);
+    expect(await listStorageObjects(db, context, 'imports/')).toHaveLength(1);
+    expect(await sumPluginStorageBytes(db, DEFAULT_TENANT_ID, 'com.example.notes')).toBe(300);
+  });
+
+  it('deletes an accessible object and drops it from list/sum', async () => {
+    const db = await freshDb();
+    const context = { tenantId: DEFAULT_TENANT_ID, pluginId: 'com.example.notes', userId: 'u1' };
+    await createStorageObject(db, {
+      ...context,
+      id: 'obj-1',
+      ownerUserId: 'u1',
+      key: 'imports/a.csv',
+      contentType: 'text/csv',
+      size: 100,
+      checksum: 'a',
+      metadata: null,
+    });
+
+    const deleted = await deleteStorageObject(db, 'obj-1', context);
+    expect(deleted?.id).toBe('obj-1');
+    expect(await listStorageObjects(db, context)).toEqual([]);
+    expect(await sumPluginStorageBytes(db, DEFAULT_TENANT_ID, 'com.example.notes')).toBe(0);
+  });
+
+  it('hard-deletes only user-owned objects on account deletion, leaving plugin-scoped ones', async () => {
+    const db = await freshDb();
+    await createStorageObject(db, {
+      tenantId: DEFAULT_TENANT_ID,
+      pluginId: 'com.example.notes',
+      id: 'obj-user',
+      ownerUserId: 'u1',
+      key: 'attachments/a.png',
+      contentType: 'image/png',
+      size: 10,
+      checksum: 'a',
+      metadata: null,
+    });
+    await createStorageObject(db, {
+      tenantId: DEFAULT_TENANT_ID,
+      pluginId: 'com.example.notes',
+      id: 'obj-plugin',
+      ownerUserId: null,
+      key: 'shared/logo.png',
+      contentType: 'image/png',
+      size: 20,
+      checksum: 'b',
+      metadata: null,
+    });
+
+    const deleted = await hardDeleteUserStorageObjects(db, 'u1');
+    expect(deleted.map((r) => r.id)).toEqual(['obj-user']);
+
+    const remaining = await listStorageObjects(db, {
+      tenantId: DEFAULT_TENANT_ID,
+      pluginId: 'com.example.notes',
+      userId: null,
+    });
+    expect(remaining.map((r) => r.id)).toEqual(['obj-plugin']);
+  });
+
+  it('getStorageObjectByIdForToken bypasses owner scoping but still respects tenant/plugin', async () => {
+    const db = await freshDb();
+    await createStorageObject(db, {
+      tenantId: DEFAULT_TENANT_ID,
+      pluginId: 'com.example.notes',
+      id: 'obj-1',
+      ownerUserId: 'u1',
+      key: 'attachments/a.png',
+      contentType: 'image/png',
+      size: 10,
+      checksum: 'a',
+      metadata: null,
+    });
+
+    expect(
+      await getStorageObjectByIdForToken(db, 'obj-1', DEFAULT_TENANT_ID, 'com.example.notes'),
+    ).toMatchObject({ id: 'obj-1' });
+    expect(
+      await getStorageObjectByIdForToken(db, 'obj-1', DEFAULT_TENANT_ID, 'com.example.other'),
+    ).toBeUndefined();
   });
 });
 

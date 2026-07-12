@@ -10,7 +10,8 @@ import { notifications } from './notifications';
 import * as platform from './platform';
 import { portability } from './portability';
 import { secrets } from './secrets';
-import { billing, events, storage } from './unimplemented';
+import { storage } from './storage';
+import { billing, events } from './unimplemented';
 
 /**
  * The Sovereign SDK — the only contract between a plugin and the platform.
@@ -25,12 +26,12 @@ import { billing, events, storage } from './unimplemented';
  * `portability` (user data export/import, RFC 0007), `env` (plugin-scoped env
  * vars, RFC 0018), `notifications` (notification center, RFC 0015),
  * `directory` (member selection, RFC 0041), `secrets` (plugin secret vault,
- * RFC 0043), `connections` (external provider connections, RFC 0049),
- * `billing` (plugin monetization / entitlement gating, RFC 0003), `storage`,
- * `events`. `data`, `activity`, `portability`, `env`, `notifications`,
- * `directory`, `secrets`, and `connections` are implemented; `billing`,
- * `storage`, and `events` throw `NotImplementedError` until their backing
- * mechanisms ship. Their shape may change before they stabilise.
+ * RFC 0043), `storage` (plugin file storage, RFC 0044), `connections`
+ * (external provider connections, RFC 0049), `billing` (plugin monetization /
+ * entitlement gating, RFC 0003), `events`. `data`, `activity`, `portability`,
+ * `env`, `notifications`, `directory`, `secrets`, `storage`, and `connections`
+ * are implemented; `billing` and `events` throw `NotImplementedError` until
+ * their backing mechanisms ship. Their shape may change before they stabilise.
  */
 export const sdk = {
   // Stable (v1.0.0).
@@ -102,6 +103,9 @@ export type {
   SecretContext,
   SecretRef,
   SecretScope,
+  StorageContext,
+  StorageObject,
+  StoragePutInput,
   UpdateSecretInput,
   UpdateConnectionInput,
 } from './types';

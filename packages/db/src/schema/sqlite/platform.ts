@@ -184,6 +184,27 @@ export const emailDeliveryLog = sqliteTable('email_delivery_log', {
 });
 
 /**
+ * Plugin-scoped file storage metadata (RFC 0044). Bytes live on disk under
+ * `data/plugins/<pluginId>/storage/<id>` (opaque physical filename — the
+ * plugin-facing `key` never touches the filesystem, so there is no path
+ * traversal surface); this table is the only place `key` is resolved to a
+ * physical object.
+ */
+export const pluginStorageObjects = sqliteTable('plugin_storage_objects', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  pluginId: text('plugin_id').notNull(),
+  ownerUserId: text('owner_user_id'),
+  key: text('key').notNull(),
+  contentType: text('content_type').notNull(),
+  size: integer('size').notNull(),
+  checksum: text('checksum').notNull(),
+  metadata: text('metadata'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+/**
  * Platform-managed vault for runtime-created plugin secrets (RFC 0043).
  * `ciphertext` is opaque encrypted material; `metadata` is JSON without secret values.
  */
@@ -386,6 +407,8 @@ export type ActivityLog = typeof activityLog.$inferSelect;
 export type NewActivityLog = typeof activityLog.$inferInsert;
 export type EmailDeliveryLog = typeof emailDeliveryLog.$inferSelect;
 export type NewEmailDeliveryLog = typeof emailDeliveryLog.$inferInsert;
+export type PluginStorageObject = typeof pluginStorageObjects.$inferSelect;
+export type NewPluginStorageObject = typeof pluginStorageObjects.$inferInsert;
 export type PluginSecret = typeof pluginSecrets.$inferSelect;
 export type NewPluginSecret = typeof pluginSecrets.$inferInsert;
 export type PluginConnection = typeof pluginConnections.$inferSelect;

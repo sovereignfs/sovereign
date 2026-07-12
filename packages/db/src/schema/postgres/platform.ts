@@ -158,6 +158,27 @@ export const emailDeliveryLog = pgTable('email_delivery_log', {
   metadata: text('metadata'),
 });
 
+/**
+ * Plugin-scoped file storage metadata (RFC 0044). Bytes live on disk under
+ * `data/plugins/<pluginId>/storage/<id>` (opaque physical filename — the
+ * plugin-facing `key` never touches the filesystem, so there is no path
+ * traversal surface); this table is the only place `key` is resolved to a
+ * physical object.
+ */
+export const pluginStorageObjects = pgTable('plugin_storage_objects', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  pluginId: text('plugin_id').notNull(),
+  ownerUserId: text('owner_user_id'),
+  key: text('key').notNull(),
+  contentType: text('content_type').notNull(),
+  size: bigint('size', { mode: 'number' }).notNull(),
+  checksum: text('checksum').notNull(),
+  metadata: text('metadata'),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+});
+
 /** Platform-managed vault for runtime-created plugin secrets (RFC 0043). */
 export const pluginSecrets = pgTable('plugin_secrets', {
   id: text('id').primaryKey(),

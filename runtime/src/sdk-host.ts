@@ -5,7 +5,9 @@ import {
   DEFAULT_TENANT_ID,
   createPluginSecret,
   createPluginConnection,
+  createStorageObject,
   deletePluginSecret,
+  deleteStorageObject,
   disconnectPluginConnection,
   findWorkspaceRoot,
   getConsentGrant,
@@ -16,8 +18,10 @@ import {
   getPluginConnection,
   getPluginDb,
   getInstanceConfig,
+  getStorageObjectByKey,
   listPluginConnections,
   listPluginSecrets,
+  listStorageObjects,
   logDataAccess,
   markPluginConnectionError,
   markPluginConnectionUsed,
@@ -25,6 +29,7 @@ import {
   provisionPluginDb,
   recordActivity,
   sendNotification,
+  sumPluginStorageBytes,
   updatePluginConnection,
   updatePluginSecret,
 } from '@sovereignfs/db';
@@ -50,6 +55,7 @@ import type {
   SecretScope,
   SendNotificationInput,
   ProviderConfig,
+  StorageObject,
 } from '@sovereignfs/sdk';
 import { registerDeleter, registerExporter, registerImporter } from './portability/registry';
 import { fanOutPushToUser } from './push';
@@ -77,6 +83,19 @@ import {
   normalizeSecretLabel,
   toSecretRef,
 } from './secrets';
+import {
+  checksumOf,
+  createStorageToken,
+  deleteObjectBytes,
+  maxObjectBytes,
+  maxPluginBytes,
+  readObjectBytes,
+  storageMetadataToJson,
+  StorageQuotaExceededError,
+  toBuffer,
+  toStorageObject,
+  writeObjectBytes,
+} from './storage';
 import { resolveProviderConfig } from './provider-configs';
 
 let _version: string | undefined;
@@ -362,6 +381,80 @@ provideHost({
         category: input.category,
         icon: input.icon,
       });
+    },
+  },
+  storage: {
+    async put(input, context): Promise<StorageObject> {
+      const bytes = await toBuffer(input.body);
+      if (bytes.length > maxObjectBytes()) {
+        throw new StorageQuotaExceededError(
+          `Object exceeds the maximum size of ${String(maxObjectBytes())} bytes.`,
+        );
+      }
+      const pdb = await getPlatformDb();
+      const currentTotal = await sumPluginStorageBytes(pdb, context.tenantId, context.pluginId);
+      if (currentTotal + bytes.length > maxPluginBytes()) {
+        throw new StorageQuotaExceededError(
+          `Plugin storage quota of ${String(maxPluginBytes())} bytes would be exceeded.`,
+        );
+      }
+
+      const id = randomUUID();
+      writeObjectBytes(context.pluginId, id, bytes);
+      try {
+        const row = await createStorageObject(pdb, {
+          id,
+          tenantId: context.tenantId,
+          pluginId: context.pluginId,
+          ownerUserId: input.ownerUserId ?? null,
+          key: input.key,
+          contentType: input.contentType,
+          size: bytes.length,
+          checksum: checksumOf(bytes),
+          metadata: storageMetadataToJson(input.metadata),
+        });
+        return toStorageObject(row);
+      } catch (err) {
+        // Metadata row failed — don't leave an orphaned physical object behind.
+        deleteObjectBytes(context.pluginId, id);
+        throw err;
+      }
+    },
+
+    async get(key, context): Promise<(StorageObject & { body: ReadableStream }) | null> {
+      const pdb = await getPlatformDb();
+      const row = await getStorageObjectByKey(pdb, key, context);
+      if (!row) return null;
+      const bytes = readObjectBytes(context.pluginId, row.id);
+      if (!bytes) return null;
+      return { ...toStorageObject(row), body: new Blob([new Uint8Array(bytes)]).stream() };
+    },
+
+    async delete(key, context): Promise<void> {
+      const pdb = await getPlatformDb();
+      const row = await getStorageObjectByKey(pdb, key, context);
+      if (!row) return;
+      const deleted = await deleteStorageObject(pdb, row.id, context);
+      if (deleted) deleteObjectBytes(context.pluginId, deleted.id);
+    },
+
+    async list(prefix, context): Promise<StorageObject[]> {
+      const pdb = await getPlatformDb();
+      const rows = await listStorageObjects(pdb, context, prefix);
+      return rows.map(toStorageObject);
+    },
+
+    async getSignedUrl(key, options, context): Promise<string> {
+      const pdb = await getPlatformDb();
+      const row = await getStorageObjectByKey(pdb, key, context);
+      if (!row) throw new Error(`Storage object not found for key "${key}".`);
+      const token = createStorageToken({
+        tenantId: context.tenantId,
+        pluginId: context.pluginId,
+        objectId: row.id,
+        expiresInSeconds: options?.expiresInSeconds,
+      });
+      return `/api/storage/${token}`;
     },
   },
   secrets: {

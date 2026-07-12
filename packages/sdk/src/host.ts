@@ -21,6 +21,9 @@ import type {
   SecretContext,
   SecretRef,
   SecretScope,
+  StorageContext,
+  StorageObject,
+  StoragePutInput,
   UpdateConnectionInput,
 } from './types';
 
@@ -105,6 +108,20 @@ export interface SdkHost {
      * supplies the payload fields.
      */
     send(input: SendNotificationInput, pluginId: string): Promise<void>;
+  };
+  storage: {
+    put(input: StoragePutInput, context: StorageContext): Promise<StorageObject>;
+    get(
+      key: string,
+      context: StorageContext,
+    ): Promise<(StorageObject & { body: ReadableStream }) | null>;
+    delete(key: string, context: StorageContext): Promise<void>;
+    list(prefix: string | undefined, context: StorageContext): Promise<StorageObject[]>;
+    getSignedUrl(
+      key: string,
+      options: { expiresInSeconds?: number } | undefined,
+      context: StorageContext,
+    ): Promise<string>;
   };
   secrets: {
     create(input: CreateSecretInput, context: SecretContext): Promise<SecretRef>;

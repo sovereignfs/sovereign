@@ -204,8 +204,10 @@ Declared SDK capabilities. The v1-functional ones:
 
 | `notifications:send` | Send notifications to users via `sdk.notifications.send()` (RFC 0015). |
 
+| `storage:readWrite` | Read/write plugin-scoped binary objects via `sdk.storage` (RFC 0044). |
+
 Reserved (declaring them is allowed; the backing surfaces throw `NotImplementedError` until
-implemented): `storage:readWrite`, `events:publish`, `events:subscribe`.
+implemented): `events:publish`, `events:subscribe`.
 
 Permission declarations are part of the manifest contract and are used by
 platform flows such as portability (`data:export` / `data:import`). Other SDK
@@ -1136,7 +1138,10 @@ remapId(originalId) }` — use `remapId` to translate stored IDs to fresh ones
   See [`monetization` manifest field](#monetization--plugin-monetization-rfc-0003) above.
   > **Reserved** — stubs are in place; the live implementation ships in a future
   > release. Both methods throw `NotImplementedError` until then.
-- **Reserved** (throw `NotImplementedError` in v1): `storage`, `events`.
+- **`storage`** — plugin-scoped binary object storage (RFC 0044). Requires the
+  `storage:readWrite` manifest permission. See
+  [Plugin file storage (RFC 0044)](#plugin-file-storage-rfc-0044) below.
+- **Reserved** (throw `NotImplementedError` in v1): `events`.
 
 ### The SDK boundary rule
 
@@ -1338,6 +1343,63 @@ const db = await sdk.db.getClient();
 See **[`docs/plugin-database.md`](../docs/plugin-database.md)** for the full reference:
 shared conventions, isolated provisioning details (SQLite file path, Postgres schema
 naming), migration setup, lifecycle (provision / uninstall / `--keep-data`), and backup.
+
+## Plugin file storage (RFC 0044)
+
+`sdk.storage` gives a plugin a scoped place to put binary objects — attachments,
+generated documents, imports/exports, thumbnails, media captured from the browser —
+without inventing ad hoc paths. Requires the `storage:readWrite` manifest permission.
+
+```ts
+import { sdk } from '@sovereignfs/sdk';
+
+const object = await sdk.storage.put({
+  key: 'receipts/2026-01.pdf',
+  body: fileBytes, // Blob | ArrayBuffer | Uint8Array
+  contentType: 'application/pdf',
+  ownerUserId: session.user.id, // omit for a plugin-scoped (not per-user) object
+  metadata: { source: 'import' },
+});
+
+const found = await sdk.storage.get('receipts/2026-01.pdf'); // { ...metadata, body: ReadableStream } | null
+await sdk.storage.delete('receipts/2026-01.pdf');
+const all = await sdk.storage.list('receipts/'); // optional key prefix filter
+
+// Short-lived, read-only download URL (default 5 min, max 1 hour):
+const url = await sdk.storage.getSignedUrl('receipts/2026-01.pdf', { expiresInSeconds: 600 });
+```
+
+**Ownership and access.** An object created with `ownerUserId` is only readable/listable
+by that user (or, once other users can see it, never — there is no sharing). Omitting
+`ownerUserId` makes an object plugin-scoped: any request in that plugin/tenant can read
+it, which is the right shape for plugin-generated assets nobody "owns" (a shared logo, a
+generated report template). `key` is the plugin-facing logical path — the physical
+filename on disk is always a server-generated opaque ID, so a caller-supplied `key` can
+never path-traverse into another object or outside the plugin's storage directory.
+
+**Files are private by default.** `sdk.storage.get()`/`getSignedUrl()` are the only ways
+to read bytes back — there is no public URL construction. Serve a file to the browser
+either from your own authenticated route handler (call `sdk.storage.get()` there after
+your own membership/ownership check) or via `getSignedUrl()`, which returns a
+`/api/storage/<token>` URL good for one object until it expires. The token is
+HMAC-signed and cannot be extended or widened by editing it; the runtime serves it with
+`Cache-Control: private, no-store` and does not require a session cookie (so it works
+from a plain `<img src>` or direct download link). Public, permanent file hosting is out
+of scope for v1 — combine a public plugin route (RFC 0042) with your own authorization
+check if you need that.
+
+**Backend.** v1 ships a local-filesystem backend only, under
+`data/plugins/<pluginId>/storage/` — no S3/CDN configuration is required or possible yet.
+This is intentionally invisible to plugin code: if the platform later adds an
+S3-compatible backend, `sdk.storage` calls do not change.
+
+**Quotas.** Conservative default limits apply per object and per plugin (see
+[`SOVEREIGN_STORAGE_MAX_OBJECT_BYTES` / `SOVEREIGN_STORAGE_MAX_PLUGIN_BYTES`](self-hosting.md)
+in `self-hosting.md`); `sdk.storage.put()` throws when either limit would be exceeded.
+
+**Lifecycle.** User-owned storage objects (rows and physical files) are deleted
+automatically when that user's account is deleted (RFC 0033). Deleting an object via
+`sdk.storage.delete()` removes both the metadata row and the physical file immediately.
 
 ## Local development
 

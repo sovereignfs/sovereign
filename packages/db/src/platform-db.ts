@@ -349,6 +349,226 @@ export async function logDataAccess(
   );
 }
 
+// ─── Plugin storage object helpers (RFC 0044) ───────────────────────────────
+
+export interface StorageAccessContext {
+  tenantId: string;
+  pluginId: string;
+  userId: string | null;
+}
+
+export interface PluginStorageObjectRow {
+  id: string;
+  tenantId: string;
+  pluginId: string;
+  ownerUserId: string | null;
+  key: string;
+  contentType: string;
+  size: number;
+  checksum: string;
+  metadata: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CreateStorageObjectInput {
+  id: string;
+  tenantId: string;
+  pluginId: string;
+  ownerUserId: string | null;
+  key: string;
+  contentType: string;
+  size: number;
+  checksum: string;
+  metadata: string | null;
+}
+
+/** A row is readable by a context that owns it, or — for unowned (plugin-scoped) objects — any caller in the same plugin/tenant. */
+function canAccessStorageObject(
+  row: PluginStorageObjectRow,
+  context: StorageAccessContext,
+): boolean {
+  if (row.tenantId !== context.tenantId || row.pluginId !== context.pluginId) return false;
+  if (row.ownerUserId === null) return true;
+  return row.ownerUserId === context.userId;
+}
+
+/** Insert storage object metadata. Caller has already written the physical bytes. */
+export async function createStorageObject(
+  pdb: PlatformDb,
+  input: CreateStorageObjectInput,
+): Promise<PluginStorageObjectRow> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO plugin_storage_objects
+          (id, tenant_id, plugin_id, owner_user_id, key, content_type, size,
+           checksum, metadata, created_at, updated_at)
+        VALUES
+          (${input.id}, ${input.tenantId}, ${input.pluginId}, ${input.ownerUserId},
+           ${input.key}, ${input.contentType}, ${input.size}, ${input.checksum},
+           ${input.metadata}, ${now}, ${now})`,
+  );
+  const row = await getStorageObjectById(pdb, input.id, {
+    tenantId: input.tenantId,
+    pluginId: input.pluginId,
+    userId: input.ownerUserId,
+  });
+  if (!row) throw new Error('Storage object was not readable after creation.');
+  return row;
+}
+
+/** Fetch one accessible storage object row by opaque id. */
+export async function getStorageObjectById(
+  pdb: PlatformDb,
+  id: string,
+  context: StorageAccessContext,
+): Promise<PluginStorageObjectRow | undefined> {
+  const row = await dbGet<PluginStorageObjectRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId",
+               owner_user_id AS "ownerUserId", key, content_type AS "contentType",
+               size, checksum, metadata,
+               created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM plugin_storage_objects
+        WHERE id = ${id}
+          AND tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}
+        LIMIT 1`,
+  );
+  if (!row) return undefined;
+  return canAccessStorageObject(row, context) ? row : undefined;
+}
+
+/**
+ * Fetch one storage object row by opaque id, scoped only to tenant/plugin —
+ * no owner check. For the signed-download route only: the HMAC-signed token
+ * itself (which embeds tenantId/pluginId/objectId and cannot be forged or
+ * altered) is the authorization proof at that point, mirroring how an
+ * S3 presigned URL bypasses IAM checks. Never call this from a plugin-facing
+ * SDK path — those must go through `getStorageObjectById`/`getStorageObjectByKey`.
+ */
+export async function getStorageObjectByIdForToken(
+  pdb: PlatformDb,
+  id: string,
+  tenantId: string,
+  pluginId: string,
+): Promise<PluginStorageObjectRow | undefined> {
+  return dbGet<PluginStorageObjectRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId",
+               owner_user_id AS "ownerUserId", key, content_type AS "contentType",
+               size, checksum, metadata,
+               created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM plugin_storage_objects
+        WHERE id = ${id}
+          AND tenant_id = ${tenantId}
+          AND plugin_id = ${pluginId}
+        LIMIT 1`,
+  );
+}
+
+/** Fetch one accessible storage object row by its plugin-facing key (most recent if duplicated). */
+export async function getStorageObjectByKey(
+  pdb: PlatformDb,
+  key: string,
+  context: StorageAccessContext,
+): Promise<PluginStorageObjectRow | undefined> {
+  const row = await dbGet<PluginStorageObjectRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId",
+               owner_user_id AS "ownerUserId", key, content_type AS "contentType",
+               size, checksum, metadata,
+               created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM plugin_storage_objects
+        WHERE key = ${key}
+          AND tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}
+        ORDER BY created_at DESC
+        LIMIT 1`,
+  );
+  if (!row) return undefined;
+  return canAccessStorageObject(row, context) ? row : undefined;
+}
+
+/** List accessible storage objects, optionally filtered by key prefix. */
+export async function listStorageObjects(
+  pdb: PlatformDb,
+  context: StorageAccessContext,
+  prefix?: string,
+): Promise<PluginStorageObjectRow[]> {
+  const rows = await dbAll<PluginStorageObjectRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId",
+               owner_user_id AS "ownerUserId", key, content_type AS "contentType",
+               size, checksum, metadata,
+               created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM plugin_storage_objects
+        WHERE tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}
+        ORDER BY updated_at DESC`,
+  );
+  return rows
+    .filter((row) => canAccessStorageObject(row, context))
+    .filter((row) => (prefix ? row.key.startsWith(prefix) : true));
+}
+
+/** Hard-delete one accessible storage object's metadata row. Returns the row so the caller can delete its physical bytes. */
+export async function deleteStorageObject(
+  pdb: PlatformDb,
+  id: string,
+  context: StorageAccessContext,
+): Promise<PluginStorageObjectRow | undefined> {
+  const existing = await getStorageObjectById(pdb, id, context);
+  if (!existing) return undefined;
+  await dbRun(
+    pdb,
+    sql`DELETE FROM plugin_storage_objects
+        WHERE id = ${id}
+          AND tenant_id = ${context.tenantId}
+          AND plugin_id = ${context.pluginId}`,
+  );
+  return existing;
+}
+
+/** Sum of bytes currently stored for a plugin (quota accounting). */
+export async function sumPluginStorageBytes(
+  pdb: PlatformDb,
+  tenantId: string,
+  pluginId: string,
+): Promise<number> {
+  const row = await dbGet<{ total: number | null }>(
+    pdb,
+    sql`SELECT SUM(size) AS total
+        FROM plugin_storage_objects
+        WHERE tenant_id = ${tenantId} AND plugin_id = ${pluginId}`,
+  );
+  return row?.total ?? 0;
+}
+
+/** Hard-delete every storage object owned by a user across all plugins (account deletion, RFC 0033). Returns the deleted rows so callers can remove physical bytes. */
+export async function hardDeleteUserStorageObjects(
+  pdb: PlatformDb,
+  userId: string,
+  tenantId = DEFAULT_TENANT_ID,
+): Promise<PluginStorageObjectRow[]> {
+  const rows = await dbAll<PluginStorageObjectRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId",
+               owner_user_id AS "ownerUserId", key, content_type AS "contentType",
+               size, checksum, metadata,
+               created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM plugin_storage_objects
+        WHERE tenant_id = ${tenantId} AND owner_user_id = ${userId}`,
+  );
+  await dbRun(
+    pdb,
+    sql`DELETE FROM plugin_storage_objects
+        WHERE tenant_id = ${tenantId} AND owner_user_id = ${userId}`,
+  );
+  return rows;
+}
+
 // ─── Plugin secret vault helpers (RFC 0043) ─────────────────────────────────
 
 export type PluginSecretScope = 'user' | 'plugin' | 'instance';

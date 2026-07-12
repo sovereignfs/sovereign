@@ -194,6 +194,33 @@ beforeAll(() => {
         };
       },
     },
+    storage: {
+      async put(input) {
+        return {
+          id: 'obj-1',
+          pluginId: 'com.example.notes',
+          ownerUserId: input.ownerUserId ?? null,
+          key: input.key,
+          contentType: input.contentType,
+          size: 3,
+          checksum: 'checksum',
+          createdAt: 1,
+          updatedAt: 1,
+        };
+      },
+      async get(_key) {
+        return null;
+      },
+      async delete(_key) {
+        /* no-op */
+      },
+      async list() {
+        return [];
+      },
+      async getSignedUrl(_key) {
+        return 'https://example.test/api/storage/signed-token';
+      },
+    },
   });
 });
 
@@ -236,6 +263,9 @@ describe('sdk surface', () => {
   it('exposes the experimental / reserved surface', () => {
     expect(typeof sdk.storage.put).toBe('function');
     expect(typeof sdk.storage.get).toBe('function');
+    expect(typeof sdk.storage.delete).toBe('function');
+    expect(typeof sdk.storage.list).toBe('function');
+    expect(typeof sdk.storage.getSignedUrl).toBe('function');
     expect(typeof sdk.notifications.send).toBe('function');
     expect(typeof sdk.secrets.create).toBe('function');
     expect(typeof sdk.secrets.get).toBe('function');
@@ -285,11 +315,6 @@ describe('sdk — host guard', () => {
 });
 
 describe('sdk — experimental surfaces throw NotImplementedError', () => {
-  it('storage.put / storage.get', () => {
-    expect(() => sdk.storage.put('k', Buffer.from('x'))).toThrow(/not implemented in Sovereign v1/);
-    expect(() => sdk.storage.get('k')).toThrow(NotImplementedError);
-  });
-
   it('notifications.send delegates to the registered host (RFC 0015)', async () => {
     // No longer throws NotImplementedError — now delegates to the host.
     await expect(

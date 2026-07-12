@@ -12,6 +12,7 @@ import { FormField } from '../components/FormField/FormField';
 import { Icon } from '../components/Icon/Icon';
 import type { IconName } from '../components/Icon/Icon';
 import { IconPicker } from '../components/IconPicker/IconPicker';
+import { QuantityStepper } from '../components/QuantityStepper/QuantityStepper';
 import { Input } from '../components/Input/Input';
 import { CodeTextarea } from '../components/CodeTextarea/CodeTextarea';
 import { Textarea } from '../components/Textarea/Textarea';
@@ -731,6 +732,11 @@ function ToastDemo() {
 function TagInputDemo() {
   const [tags, setTags] = useState(['draft', 'frontmatter']);
   return <TagInput value={tags} onChange={setTags} aria-label="Tags" />;
+}
+
+function QuantityStepperDemo() {
+  const [value, setValue] = useState(6);
+  return <QuantityStepper value={value} onChange={setValue} unit="pcs" aria-label="Quantity" />;
 }
 
 function IconPickerDemo() {
@@ -1494,6 +1500,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Trigger button + Popover grid for a curated, bounded icon set (e.g. a plugin's category icons) — not the full icon library."
             >
               <IconPickerDemo />
+            </ComponentCard>
+
+            {/* QuantityStepper */}
+            <ComponentCard
+              name="QuantityStepper"
+              importLine="import { QuantityStepper } from '@sovereignfs/ui';"
+              usage="Numeric input with +/- buttons and an optional read-only unit suffix. Supports fractional step values (e.g. 0.5 kg)."
+            >
+              <QuantityStepperDemo />
             </ComponentCard>
 
             {/* Select */}

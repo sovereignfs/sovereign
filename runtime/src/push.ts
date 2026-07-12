@@ -65,21 +65,45 @@ function applyVapid() {
  * Respects the user's muted-category preference.
  */
 export async function fanOutPushToUser(userId: string, payload: PushPayload): Promise<void> {
-  if (!pushEnabled()) return;
+  // Every early exit below logs at info level. Push delivery is fire-and-forget
+  // with no user-visible error surface, so when an operator asks "why did no
+  // push arrive?" the answer must be reconstructable from LOG_LEVEL=info logs
+  // alone — a silent return here is indistinguishable from a delivery failure.
+  if (!pushEnabled()) {
+    logger.info('push: skipped — VAPID keys not configured', { userId });
+    return;
+  }
 
   const pdb = await getPlatformDb();
 
   // Skip if the user muted this category.
   const prefs = await getNotificationPrefs(pdb, userId);
-  if (payload.category && prefs.mutedCategories.includes(payload.category)) return;
+  if (payload.category && prefs.mutedCategories.includes(payload.category)) {
+    logger.info('push: skipped — category muted by user', {
+      userId,
+      category: payload.category,
+    });
+    return;
+  }
 
   const subs = await getPushSubscriptionsForUser(pdb, userId);
-  if (subs.length === 0) return;
+  if (subs.length === 0) {
+    logger.info('push: skipped — user has no push subscriptions (no device ever enabled push)', {
+      userId,
+    });
+    return;
+  }
 
   applyVapid();
-  await Promise.allSettled(
+  const results = await Promise.allSettled(
     subs.map((sub) => sendOne(pdb, sub.endpoint, { p256dh: sub.p256dh, auth: sub.auth }, payload)),
   );
+  logger.info('push: fan-out complete', {
+    userId,
+    devices: subs.length,
+    delivered: results.filter((r) => r.status === 'fulfilled' && r.value === 'sent').length,
+    pushServices: [...new Set(subs.map((s) => safeHost(s.endpoint)))],
+  });
 }
 
 /**
@@ -87,16 +111,31 @@ export async function fanOutPushToUser(userId: string, payload: PushPayload): Pr
  * Does NOT respect per-user category prefs — broadcast is always delivered.
  */
 export async function fanOutPushToUsers(userIds: string[], payload: PushPayload): Promise<void> {
-  if (!pushEnabled() || userIds.length === 0) return;
+  if (!pushEnabled() || userIds.length === 0) {
+    logger.info('push: broadcast skipped — VAPID keys not configured or empty audience', {
+      recipients: userIds.length,
+    });
+    return;
+  }
 
   const pdb = await getPlatformDb();
   const subs = await getPushSubscriptionsByUsers(pdb, userIds);
-  if (subs.length === 0) return;
+  if (subs.length === 0) {
+    logger.info('push: broadcast skipped — no subscribed devices in audience', {
+      recipients: userIds.length,
+    });
+    return;
+  }
 
   applyVapid();
-  await Promise.allSettled(
+  const results = await Promise.allSettled(
     subs.map((sub) => sendOne(pdb, sub.endpoint, { p256dh: sub.p256dh, auth: sub.auth }, payload)),
   );
+  logger.info('push: broadcast fan-out complete', {
+    recipients: userIds.length,
+    devices: subs.length,
+    delivered: results.filter((r) => r.status === 'fulfilled' && r.value === 'sent').length,
+  });
 }
 
 async function sendOne(
@@ -104,16 +143,23 @@ async function sendOne(
   endpoint: string,
   keys: { p256dh: string; auth: string },
   payload: PushPayload,
-): Promise<void> {
+): Promise<'sent' | 'pruned' | 'failed'> {
   try {
     await webpush.sendNotification({ endpoint, keys }, JSON.stringify(payload));
+    return 'sent';
   } catch (err: unknown) {
     // Prune a subscription the push service reports as gone (device
     // unregistered). 410 is the spec status; some services return 404 for the
-    // same condition (RFC 0016 names both).
+    // same condition (RFC 0016 names both). Logged at info (not warn): pruning
+    // is routine hygiene, but an operator tracing a missing push needs to see
+    // that the device's subscription just ceased to exist.
     if (isWebPushError(err) && (err.statusCode === 410 || err.statusCode === 404)) {
       await deletePushSubscription(pdb, endpoint).catch(() => undefined);
-      return;
+      logger.info('push: pruned dead subscription', {
+        statusCode: err.statusCode,
+        pushService: safeHost(endpoint),
+      });
+      return 'pruned';
     }
     // Anything else is a real delivery failure (403 bad VAPID JWT, 401, 413
     // payload too large, network error…). These used to be swallowed
@@ -126,6 +172,7 @@ async function sendOne(
       body: isWebPushError(err) ? err.body : undefined,
       err: err instanceof Error ? err.message : String(err),
     });
+    return 'failed';
   }
 }
 

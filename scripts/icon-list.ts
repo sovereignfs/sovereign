@@ -41,6 +41,30 @@ export const ICON_LIST = [
   'calendar',
   'sliders-horizontal',
   'ellipsis-vertical',
+  // Grocery item / category (Sovereign Shopper, SHP-05) — a curated set
+  // covering common items directly plus a representative icon per category
+  // as the fallback when no item-level match exists. See
+  // plugins/sovereign-shopper's lib/icons.ts for the keyword/category maps.
+  'banana',
+  'apple',
+  'carrot',
+  'egg',
+  'beef',
+  'fish',
+  'coffee',
+  'wine',
+  'beer',
+  'cookie',
+  'pizza',
+  'candy',
+  'salad',
+  'milk',
+  'drumstick',
+  'croissant',
+  'cup-soda',
+  'spray-can',
+  'snowflake',
+  'shopping-basket',
 ] as const;
 
 export type IconName = (typeof ICON_LIST)[number];

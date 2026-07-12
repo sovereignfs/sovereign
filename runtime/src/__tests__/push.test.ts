@@ -10,7 +10,7 @@ vi.mock('web-push', () => ({
   },
 }));
 
-const { deletePushSubscription, getNotificationPrefs, getPushSubscriptionsForUser, warn } =
+const { deletePushSubscription, getNotificationPrefs, getPushSubscriptionsForUser, warn, info } =
   vi.hoisted(() => ({
     deletePushSubscription: vi.fn(async () => undefined),
     getNotificationPrefs: vi.fn(
@@ -23,6 +23,7 @@ const { deletePushSubscription, getNotificationPrefs, getPushSubscriptionsForUse
       { endpoint: 'https://web.push.apple.com/QOnjBEyWiC6H', p256dh: 'k', auth: 'a' },
     ]),
     warn: vi.fn<(msg: string, meta?: Record<string, unknown>) => void>(),
+    info: vi.fn<(msg: string, meta?: Record<string, unknown>) => void>(),
   }));
 
 vi.mock('@sovereignfs/db', () => ({
@@ -39,7 +40,7 @@ vi.mock('../db', () => ({
 vi.mock('../logger', () => ({
   logger: {
     warn,
-    info: vi.fn(),
+    info,
     error: vi.fn(),
     debug: vi.fn(),
   },
@@ -137,5 +138,57 @@ describe('fanOutPushToUser', () => {
     sendNotification.mockResolvedValue({} as never);
     await fanOutPushToUser('u1', { title: 'T' });
     expect(warn.mock.calls.some(([msg]) => msg.includes('VAPID_CONTACT'))).toBe(false);
+  });
+
+  // Every silent-return path must leave an info-level trace — push delivery is
+  // fire-and-forget, so the log is the ONLY place an operator can see why no
+  // push arrived (e.g. "user never enabled push on any device").
+  it('logs the reason when the user has no subscriptions', async () => {
+    getPushSubscriptionsForUser.mockResolvedValueOnce([]);
+    await fanOutPushToUser('u1', { title: 'T' });
+    expect(sendNotification).not.toHaveBeenCalled();
+    expect(info.mock.calls.some(([msg]) => msg.includes('no push subscriptions'))).toBe(true);
+  });
+
+  it('logs the reason when VAPID keys are not configured', async () => {
+    delete process.env.VAPID_PUBLIC_KEY;
+    await fanOutPushToUser('u1', { title: 'T' });
+    expect(info.mock.calls.some(([msg]) => msg.includes('VAPID keys not configured'))).toBe(true);
+  });
+
+  it('logs the reason when the category is muted', async () => {
+    getNotificationPrefs.mockResolvedValueOnce({
+      mutedCategories: ['info'],
+      pollIntervalSecs: 30,
+    });
+    await fanOutPushToUser('u1', { title: 'T', category: 'info' });
+    expect(info.mock.calls.some(([msg]) => msg.includes('category muted'))).toBe(true);
+  });
+
+  it('logs a fan-out summary with the delivered count on success', async () => {
+    sendNotification.mockResolvedValueOnce({} as never);
+    await fanOutPushToUser('u1', { title: 'T' });
+    const summary = info.mock.calls.find(([msg]) => msg.includes('fan-out complete'));
+    expect(summary).toBeDefined();
+    expect(summary?.[1]?.devices).toBe(1);
+    expect(summary?.[1]?.delivered).toBe(1);
+    expect(summary?.[1]?.pushServices).toEqual(['web.push.apple.com']);
+  });
+
+  it('counts a failed send as not delivered in the summary', async () => {
+    sendNotification.mockRejectedValueOnce(webPushError(403, 'BadJwtToken'));
+    await fanOutPushToUser('u1', { title: 'T' });
+    const summary = info.mock.calls.find(([msg]) => msg.includes('fan-out complete'));
+    expect(summary?.[1]?.devices).toBe(1);
+    expect(summary?.[1]?.delivered).toBe(0);
+  });
+
+  it('logs the prune at info level (routine hygiene, not a failure)', async () => {
+    sendNotification.mockRejectedValueOnce(webPushError(410));
+    await fanOutPushToUser('u1', { title: 'T' });
+    const prune = info.mock.calls.find(([msg]) => msg.includes('pruned dead subscription'));
+    expect(prune).toBeDefined();
+    expect(prune?.[1]?.pushService).toBe('web.push.apple.com');
+    expect(JSON.stringify(prune?.[1])).not.toContain('QOnjBEyWiC6H');
   });
 });

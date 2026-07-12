@@ -13,11 +13,12 @@ and which docs should point to it.
 
 ## Plugin repositories
 
-| Repository                                                                                            | Status          | Purpose                                                                                                                                                                                |
-| ----------------------------------------------------------------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`sovereignfs/sovereign-plugin-template`](https://github.com/sovereignfs/sovereign-plugin-template)   | Active template | Canonical standalone plugin starter repository. Use this when creating a plugin outside the monorepo.                                                                                  |
-| [`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples) | Active          | Example plugins demonstrating basic, API provider, minimal shell, monetized, and overlay app patterns. The platform bundles these at build/install time as hidden-by-default examples. |
-| [`sovereignfs/sovereign-tasks`](https://github.com/sovereignfs/sovereign-tasks)                       | Active          | Default bundled Tasks plugin. It is a real product plugin, visible from first boot, and versioned independently of the platform.                                                       |
+| Repository                                                                                            | Status          | Purpose                                                                                                                                                                                        |
+| ----------------------------------------------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`sovereignfs/sovereign-plugin-template`](https://github.com/sovereignfs/sovereign-plugin-template)   | Active template | Canonical standalone plugin starter repository. Use this when creating a plugin outside the monorepo.                                                                                          |
+| [`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples) | Active          | Example plugins demonstrating basic, API provider, minimal shell, monetized, and overlay app patterns. The platform bundles these at build/install time as hidden-by-default examples.         |
+| [`sovereignfs/sovereign-tasks`](https://github.com/sovereignfs/sovereign-tasks)                       | Active          | Default bundled Tasks plugin. It is a real product plugin, visible from first boot, and versioned independently of the platform.                                                               |
+| [`sovereignfs/sovereign-plainwrite`](https://github.com/sovereignfs/sovereign-plainwrite)             | Active          | Default bundled Plainwrite plugin — a git-backed content editor for static site generators. It is a real product plugin, visible from first boot, and versioned independently of the platform. |
 
 ## Documentation and deployment support
 
@@ -31,6 +32,7 @@ and which docs should point to it.
 
 - Use `sovereignfs/sovereign-plugins-examples`, not `sovereign-examples`.
 - Use `sovereignfs/sovereign-tasks`, not `sovereign-plugin-tasks`.
+- Use `sovereignfs/sovereign-plainwrite`, not `sovereign-plugin-plainwrite`.
 - `sovereignfs/storybook` and `sovereignfs/sovereignfs.github.io` are deployment
   targets. Edit source stories and docs in `sovereignfs/sovereign`.
 - `sovereignfs/sovereign-infra` is a template that operators fork or use as a
@@ -38,5 +40,5 @@ and which docs should point to it.
   operator's infra repository controls when those images are deployed to the
   operator's VPS.
 - Historical planning docs may mention older candidate repositories such as
-  Splitify, Plainwrite, API Composer, or PaperTrail. They are not part of the
+  Splitify, API Composer, or PaperTrail. They are not part of the
   current support-repository set unless this page is updated.

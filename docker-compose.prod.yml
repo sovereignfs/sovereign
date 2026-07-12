@@ -104,6 +104,15 @@ services:
       # reverse proxy (browser → localhost:4001, not auth:3001).
       SOVEREIGN_AUTH_PUBLIC_URL: '${SOVEREIGN_AUTH_PUBLIC_URL:-${AUTH_BASE_URL:-http://localhost:${AUTH_PORT:-4001}}}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
+      # 32-byte key for the plugin secret vault (sdk.secrets) — encrypts
+      # values like a plugin-stored GitHub PAT at rest. No default (fails
+      # closed if unset, per the platform's "no secrets with defaults" rule):
+      # generate with `openssl rand -base64 32`. Required by any plugin that
+      # calls sdk.secrets, including the bundled Plainwrite plugin's GitHub
+      # PAT credential flow — leaving this unset surfaces as a runtime error
+      # ("SOVEREIGN_VAULT_KEY is required...") the first time a user tries to
+      # save a PAT, not at container startup.
+      SOVEREIGN_VAULT_KEY: '${SOVEREIGN_VAULT_KEY}'
       # Shared signing secret — the runtime verifies the auth server's session
       # cookie locally with it (SRS AUTH-05); must match the auth service.
       AUTH_SECRET: '${AUTH_SECRET}'

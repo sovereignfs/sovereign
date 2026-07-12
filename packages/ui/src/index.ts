@@ -75,6 +75,11 @@ export { Calendar } from './components/Calendar/Calendar';
 export type { CalendarProps } from './components/Calendar/Calendar';
 export { DatePicker } from './components/DatePicker/DatePicker';
 export type { DatePickerProps } from './components/DatePicker/DatePicker';
+export { SuggestionInput } from './components/SuggestionInput/SuggestionInput';
+export type {
+  SuggestionInputProps,
+  SuggestionOption,
+} from './components/SuggestionInput/SuggestionInput';
 export { useLongPress, useDoubleTapHandler, useSingleOrDoubleTap, useIsMobile } from './hooks';
 export { MOBILE_BREAKPOINT_PX } from './hooks';
 export type { UseLongPressOptions, LongPressHandlers } from './hooks';

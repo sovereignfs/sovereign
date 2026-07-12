@@ -27,6 +27,7 @@ export const RESERVED_API_SEGMENTS: ReadonlySet<string> = new Set([
   'instance',
   'manifest',
   'plugins',
+  'storage',
 ]);
 
 /** The first path segment after `/api/`, or '' when there is none. */

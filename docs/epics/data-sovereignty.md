@@ -124,7 +124,7 @@
 
 ---
 
-#### 📋 8.7 — Plugin file storage (RFC 0044)
+#### ✅ 8.7 — Plugin file storage (RFC 0044)
 
 **Goal:** Implement `sdk.storage` as a plugin-scoped file storage surface for attachments, generated assets, imports, exports, thumbnails, and other plugin-owned binary objects, with a documented content-delivery model that keeps CDN/object storage optional and backend-neutral.
 

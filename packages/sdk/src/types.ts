@@ -134,6 +134,34 @@ export interface SendNotificationInput {
   icon?: string;
 }
 
+/** Plugin-scoped file storage object metadata (RFC 0044). */
+export interface StorageObject {
+  id: string;
+  pluginId: string;
+  ownerUserId: string | null;
+  key: string;
+  contentType: string;
+  size: number;
+  checksum: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface StoragePutInput {
+  key: string;
+  body: Blob | ArrayBuffer | Uint8Array;
+  contentType: string;
+  /** Owner of the object. Omit for a plugin-scoped (not per-user) object. */
+  ownerUserId?: string;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface StorageContext {
+  tenantId: string;
+  pluginId: string;
+  userId: string | null;
+}
+
 /** Runtime-created secret scope for the experimental plugin vault (RFC 0043). */
 export type SecretScope = 'user' | 'plugin' | 'instance';
 

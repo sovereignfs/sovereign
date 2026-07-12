@@ -347,7 +347,9 @@ export const config = {
     // Exclude: auth pages, admin API (self-authenticated), public liveness probe,
     // brand assets (must load on the login page pre-session), dynamic manifest
     // (browsers fetch it before login for PWA install), offline fallback, PWA
-    // assets, and Next.js static assets.
-    '/((?!login|register|forgot-password|reset-password|offline|api/auth|api/admin|api/health|api/instance|api/manifest|manifest.json|sw.js|workbox-|fallback-|icons/|_next/static|_next/image|favicon.ico).*)',
+    // assets, Next.js static assets, and the signed-URL storage download route
+    // (RFC 0044 — self-authenticated by its HMAC-signed token, not a session;
+    // must work for a plain `<img src>`/direct fetch with no session cookie).
+    '/((?!login|register|forgot-password|reset-password|offline|api/auth|api/admin|api/health|api/instance|api/manifest|api/storage|manifest.json|sw.js|workbox-|fallback-|icons/|_next/static|_next/image|favicon.ico).*)',
   ],
 };

@@ -1,11 +1,11 @@
 ---
 rfc: 0044
 title: Plugin file storage
-status: Draft
+status: Implemented
 date: June 2026
 author: kasunben
 scope: packages/sdk, packages/db, runtime, packages/manifest, docs; builds on RFC 0007 and RFC 0008
-incorporated_into_plan: 'No — documentation-first. This RFC specifies a plugin file-storage surface; scheduling and task IDs are deferred.'
+incorporated_into_plan: 'Yes — epic task 8.7'
 ---
 
 # RFC 0044 — Plugin File Storage
@@ -280,7 +280,8 @@ URLs or route requests through explicit plugin/public routes.
 
 ## Changelog
 
-| Version | Date      | Change                                                |
-| ------- | --------- | ----------------------------------------------------- |
-| 0.2     | July 2026 | Added backend tiers, content delivery, and CDN stance |
-| 0.1     | June 2026 | Initial draft                                         |
+| Version | Date      | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.3     | July 2026 | Implemented (epic task 8.7): `sdk.storage` put/get/delete/list/getSignedUrl backed by the Tier 0 local filesystem backend (`data/plugins/<pluginId>/storage/`), `plugin_storage_objects` metadata table, quota enforcement (`SOVEREIGN_STORAGE_MAX_OBJECT_BYTES`/`SOVEREIGN_STORAGE_MAX_PLUGIN_BYTES`), a signed-download route (`/api/storage/[token]`, HMAC-signed, expiry-bound, `Cache-Control: private, no-store`, no session required), and user-deletion cleanup (row + physical file). Export/import interop needs no new mechanism — a plugin's `sdk.storage`-backed export already fits RFC 0007's existing `blobs` field on `PluginExportSection`. Deferred to future RFCs/tasks per the open questions below: object encryption, S3-compatible backend (Tier 2), CDN-fronted delivery (Tier 3), and image thumbnailing. |
+| 0.2     | July 2026 | Added backend tiers, content delivery, and CDN stance                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 0.1     | June 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |

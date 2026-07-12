@@ -1,0 +1,63 @@
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  padding: var(--sv-space-2);
+  border: 1px solid var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface);
+  color: var(--sv-color-text-primary);
+  cursor: pointer;
+}
+
+.trigger:hover {
+  background: var(--sv-color-surface-sunken);
+}
+
+.trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sv-icon-size-md);
+  height: var(--sv-icon-size-md);
+  color: var(--sv-color-text-subtle);
+  font-size: var(--sv-font-size-sm);
+}
+
+.triggerLabel {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--sv-space-1);
+  padding: var(--sv-space-2);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sv-touch-target-min);
+  height: var(--sv-touch-target-min);
+  border: none;
+  border-radius: var(--sv-radius-sm);
+  background: transparent;
+  color: var(--sv-color-text-primary);
+  cursor: pointer;
+}
+
+.option:hover {
+  background: var(--sv-color-surface-sunken);
+}
+
+.optionSelected {
+  background: var(--sv-color-accent-subtle);
+}

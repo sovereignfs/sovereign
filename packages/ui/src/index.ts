@@ -82,6 +82,8 @@ export type {
 } from './components/SuggestionInput/SuggestionInput';
 export { IconPicker } from './components/IconPicker/IconPicker';
 export type { IconPickerProps } from './components/IconPicker/IconPicker';
+export { QuantityStepper } from './components/QuantityStepper/QuantityStepper';
+export type { QuantityStepperProps } from './components/QuantityStepper/QuantityStepper';
 export { useLongPress, useDoubleTapHandler, useSingleOrDoubleTap, useIsMobile } from './hooks';
 export { MOBILE_BREAKPOINT_PX } from './hooks';
 export type { UseLongPressOptions, LongPressHandlers } from './hooks';

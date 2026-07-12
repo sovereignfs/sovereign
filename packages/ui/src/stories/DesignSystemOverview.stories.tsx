@@ -16,6 +16,7 @@ import { Textarea } from '../components/Textarea/Textarea';
 import { StatusBadge } from '../components/StatusBadge/StatusBadge';
 import { SplitPane } from '../components/SplitPane/SplitPane';
 import { TagInput } from '../components/TagInput/TagInput';
+import { SuggestionInput } from '../components/SuggestionInput/SuggestionInput';
 import { NavTabs } from '../components/NavTabs/NavTabs';
 import { PageHeader } from '../components/PageHeader/PageHeader';
 import { Popover } from '../components/Popover/Popover';
@@ -730,6 +731,25 @@ function TagInputDemo() {
   return <TagInput value={tags} onChange={setTags} aria-label="Tags" />;
 }
 
+function SuggestionInputDemo() {
+  const [value, setValue] = useState('ban');
+  const options = ['Bananas', 'Banana bread mix']
+    .filter((label) => label.toLowerCase().includes(value.trim().toLowerCase()))
+    .map((label, i) => ({ id: String(i), label }));
+  return (
+    <SuggestionInput
+      value={value}
+      onChange={setValue}
+      options={value.trim() ? options : []}
+      onSelect={(o) => setValue(o.label)}
+      placeholder="Add an item…"
+      aria-label="Add an item"
+      createLabel={(v) => `Add "${v}" as a new item`}
+      onCreate={setValue}
+    />
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
@@ -1427,6 +1447,17 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Controlled multi-value input for tags and frontmatter arrays. Enter/comma adds, Backspace removes, paste can split multiple tags."
             >
               <TagInputDemo />
+            </ComponentCard>
+
+            {/* SuggestionInput */}
+            <ComponentCard
+              name="SuggestionInput"
+              importLine="import { SuggestionInput } from '@sovereignfs/ui';"
+              usage="Text field with an anchored, keyboard-navigable async suggestion list, plus an optional trailing 'create new' row. Built on Popover."
+            >
+              <div style={{ width: '100%' }}>
+                <SuggestionInputDemo />
+              </div>
             </ComponentCard>
 
             {/* Select */}

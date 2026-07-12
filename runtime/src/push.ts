@@ -15,6 +15,7 @@ import {
   getPushSubscriptionsForUser,
 } from '@sovereignfs/db';
 import { getPlatformDb } from './db';
+import { logger } from './logger';
 
 export interface PushPayload {
   title: string;
@@ -29,10 +30,34 @@ export function pushEnabled(): boolean {
   return Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
 }
 
+/** Warn about an APNs-incompatible VAPID subject only once per process. */
+let warnedSubject = false;
+
+/** @internal test-only reset. */
+export function resetSubjectWarning(): void {
+  warnedSubject = false;
+}
+
 function applyVapid() {
   const pub = process.env.VAPID_PUBLIC_KEY ?? '';
   const priv = process.env.VAPID_PRIVATE_KEY ?? '';
-  webpush.setVapidDetails(process.env.VAPID_CONTACT ?? 'mailto:admin@localhost', pub, priv);
+  const subject = process.env.VAPID_CONTACT ?? 'mailto:admin@localhost';
+  // Apple's push service (web.push.apple.com — every iOS/Safari subscription)
+  // validates the VAPID JWT `sub` claim and rejects localhost/invalid subjects
+  // with 403 BadJwtToken. Chrome's FCM accepts nearly anything, so a bad
+  // subject looks like "push works everywhere except iOS". Warn loudly instead
+  // of failing: non-Apple endpoints still deliver, and self-hosters without
+  // iOS devices shouldn't be forced to configure a contact.
+  if (!warnedSubject && (!process.env.VAPID_CONTACT || subject.includes('localhost'))) {
+    warnedSubject = true;
+    logger.warn(
+      'push: VAPID_CONTACT is unset or points at localhost — Apple Push (iOS/Safari) rejects ' +
+        'such subjects with 403, so pushes to iOS devices will silently fail. Set ' +
+        'VAPID_CONTACT to a real mailto: address you monitor.',
+      { subject },
+    );
+  }
+  webpush.setVapidDetails(subject, pub, priv);
 }
 
 /**
@@ -83,13 +108,35 @@ async function sendOne(
   try {
     await webpush.sendNotification({ endpoint, keys }, JSON.stringify(payload));
   } catch (err: unknown) {
-    // Prune subscription that the push service reports as gone (device unregistered).
-    if (isWebPushError(err) && err.statusCode === 410) {
+    // Prune a subscription the push service reports as gone (device
+    // unregistered). 410 is the spec status; some services return 404 for the
+    // same condition (RFC 0016 names both).
+    if (isWebPushError(err) && (err.statusCode === 410 || err.statusCode === 404)) {
       await deletePushSubscription(pdb, endpoint).catch(() => undefined);
+      return;
     }
+    // Anything else is a real delivery failure (403 bad VAPID JWT, 401, 413
+    // payload too large, network error…). These used to be swallowed
+    // silently, which made "no push on iOS" undiagnosable — log the status
+    // and the push-service host (never the full endpoint: the path segment
+    // is a per-device capability URL).
+    logger.warn('push: send failed', {
+      statusCode: isWebPushError(err) ? err.statusCode : undefined,
+      pushService: safeHost(endpoint),
+      body: isWebPushError(err) ? err.body : undefined,
+      err: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
-function isWebPushError(err: unknown): err is { statusCode: number } {
+function safeHost(endpoint: string): string {
+  try {
+    return new URL(endpoint).host;
+  } catch {
+    return 'invalid-endpoint';
+  }
+}
+
+function isWebPushError(err: unknown): err is { statusCode: number; body?: string } {
   return typeof err === 'object' && err !== null && 'statusCode' in err;
 }

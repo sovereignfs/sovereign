@@ -13,6 +13,7 @@ import { Icon } from '../components/Icon/Icon';
 import type { IconName } from '../components/Icon/Icon';
 import { IconPicker } from '../components/IconPicker/IconPicker';
 import { QuantityStepper } from '../components/QuantityStepper/QuantityStepper';
+import { CheckableListRow } from '../components/CheckableListRow/CheckableListRow';
 import { Input } from '../components/Input/Input';
 import { CodeTextarea } from '../components/CodeTextarea/CodeTextarea';
 import { Textarea } from '../components/Textarea/Textarea';
@@ -737,6 +738,21 @@ function TagInputDemo() {
 function QuantityStepperDemo() {
   const [value, setValue] = useState(6);
   return <QuantityStepper value={value} onChange={setValue} unit="pcs" aria-label="Quantity" />;
+}
+
+function CheckableListRowDemo() {
+  const [checked, setChecked] = useState(false);
+  return (
+    <div style={{ width: '100%' }}>
+      <CheckableListRow
+        checked={checked}
+        onCheckedChange={setChecked}
+        label="Bananas"
+        icon={<Icon name="banana" size="md" aria-hidden />}
+        trailing={<span style={{ fontSize: 13, color: 'var(--sv-color-text-muted)' }}>6 pcs</span>}
+      />
+    </div>
+  );
 }
 
 function IconPickerDemo() {
@@ -1878,6 +1894,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   </Button>
                 </Tooltip>
               </div>
+            </ComponentCard>
+
+            {/* CheckableListRow */}
+            <ComponentCard
+              name="CheckableListRow"
+              importLine="import { CheckableListRow } from '@sovereignfs/ui';"
+              usage="Whole-row tap target that toggles a checked state, with strike-through on the label — for 'tap the row to mark it done' lists (not a form checkbox)."
+            >
+              <CheckableListRowDemo />
             </ComponentCard>
 
             {/* Checkbox */}

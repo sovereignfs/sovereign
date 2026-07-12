@@ -88,16 +88,27 @@ export function SuggestionInput({
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (!open) return;
-    if (e.key === 'ArrowDown') {
+    // Some synthetic input sources (seen from automated/CDP-driven key
+    // dispatch) send a keydown with `key`/`code` as "Unidentified" or empty
+    // and no `keyCode` either — nothing here can special-case that further,
+    // but checking the legacy numeric code costs nothing and covers sources
+    // that do populate it even when `key` doesn't (older browsers, some
+    // assistive tech, IME edge cases).
+    const isArrowDown = e.key === 'ArrowDown' || e.keyCode === 40;
+    const isArrowUp = e.key === 'ArrowUp' || e.keyCode === 38;
+    const isEnter = e.key === 'Enter' || e.keyCode === 13;
+    const isEscape = e.key === 'Escape' || e.keyCode === 27;
+
+    if (isArrowDown) {
       e.preventDefault();
       setActiveIndex((i) => (i + 1) % rowCount);
-    } else if (e.key === 'ArrowUp') {
+    } else if (isArrowUp) {
       e.preventDefault();
       setActiveIndex((i) => (i <= 0 ? rowCount - 1 : i - 1));
-    } else if (e.key === 'Enter') {
+    } else if (isEnter) {
       e.preventDefault();
       commitIndex(activeIndex === -1 ? 0 : activeIndex);
-    } else if (e.key === 'Escape') {
+    } else if (isEscape) {
       close();
     }
   }

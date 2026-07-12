@@ -121,11 +121,44 @@ pnpm generate   # recomposes all plugin routes
 
 ---
 
-## iOS PWA / mobile layout
+## iOS PWA / mobile
 
-Two distinct iOS-specific layout bugs, both surfaced only on real devices
-(installed standalone PWA and/or mobile Safari). They look similar — "empty
-space at the bottom" — but have different causes and fixes.
+The layout entries below are two distinct iOS-specific bugs, both surfaced
+only on real devices (installed standalone PWA and/or mobile Safari). They
+look similar — "empty space at the bottom" — but have different causes and
+fixes. The push entry is a configuration trap that only manifests on Apple
+devices.
+
+### Push notifications never arrive on iOS (the in-app bell works)
+
+**Symptom:** Notifications appear in the in-app notification pane, and push
+works on Android/desktop Chrome — but an iPhone/iPad running the installed
+PWA never shows a system notification.
+
+**Most common cause — `VAPID_CONTACT` unset.** Apple's push service validates
+the VAPID JWT subject and rejects the `mailto:admin@localhost` fallback with
+403, so every send to an iOS device fails while Chrome's push service (which
+is lenient) keeps working. Set `VAPID_CONTACT=mailto:<address you monitor>`
+in the runtime's environment and restart — no re-subscription is needed; the
+subject is stamped per send. The runtime warns at first send
+(`push: VAPID_CONTACT is unset or points at localhost…`) when this applies.
+
+**Checklist if that isn't it** (check the runtime logs for `push: send failed`
+entries with `pushService: web.push.apple.com` — the `statusCode`/`body`
+fields say which of these it is):
+
+1. iOS 16.4+ and the app **installed via Add to Home Screen and opened from
+   the home-screen icon** — Safari-tab subscriptions don't exist on iOS.
+2. Push enabled **from within the installed PWA** (Account → Notifications →
+   enable on this device), and iOS Settings → Notifications shows the app
+   with Allow Notifications on.
+3. The notification's category isn't muted in Account → Notifications (muted
+   categories skip the push branch entirely — nothing is logged).
+4. `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` set on the **runtime** service (not
+   just the auth service) — without both, push is disabled platform-wide and
+   the Account toggle hides itself.
+5. Web Push requires the production build: the service worker (and therefore
+   push) is disabled in `pnpm dev`.
 
 ### Sign-in screens rubber-band / bounce on press-and-drag
 

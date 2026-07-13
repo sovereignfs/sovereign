@@ -734,7 +734,9 @@ await sdk.notifications.send(
     body: 'Click to download your data archive.',
     url: '/myPlugin/exports',
     category: 'info', // 'info' | 'announcement' | 'security' | custom
-    icon: 'download', // optional <Icon> name from @sovereignfs/ui
+    // icon is optional — a URL to an image shown in the OS push notification.
+    // Defaults to your plugin's own /plugin-icons/<id>.svg; only set it to
+    // override with a notification-specific image instead.
   },
   await headers(), // pass the request headers so the runtime can read the plugin ID
 );

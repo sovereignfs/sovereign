@@ -130,7 +130,13 @@ export interface SendNotificationInput {
    * Custom plugin categories are allowed; `'security'` cannot be muted.
    */
   category?: string;
-  /** Optional `<Icon>` name from `@sovereignfs/ui` to show on the notification. */
+  /**
+   * Optional URL to an image shown in the OS push notification (the Push
+   * API's `icon` option — not an `@sovereignfs/ui` `<Icon>` name; nothing
+   * in-app reads this field today). Defaults to the sending plugin's own
+   * `/plugin-icons/<pluginId>.svg` when unset — only set this to override
+   * with a notification-specific image instead of the plugin's own icon.
+   */
   icon?: string;
 }
 

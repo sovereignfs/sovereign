@@ -191,4 +191,40 @@ describe('fanOutPushToUser', () => {
     expect(prune?.[1]?.pushService).toBe('web.push.apple.com');
     expect(JSON.stringify(prune?.[1])).not.toContain('QOnjBEyWiC6H');
   });
+
+  describe('per-plugin icon default', () => {
+    it('defaults icon to /plugin-icons/<source>.svg when unset', async () => {
+      sendNotification.mockResolvedValueOnce({} as never);
+      await fanOutPushToUser('u1', { title: 'T', source: 'fs.sovereign.tasks' });
+      const [, body] = sendNotification.mock.calls[0] ?? [];
+      expect(JSON.parse(body as string)).toMatchObject({
+        icon: '/plugin-icons/fs.sovereign.tasks.svg',
+      });
+    });
+
+    it('an explicit icon still wins over the plugin default', async () => {
+      sendNotification.mockResolvedValueOnce({} as never);
+      await fanOutPushToUser('u1', {
+        title: 'T',
+        source: 'fs.sovereign.tasks',
+        icon: '/custom-icon.png',
+      });
+      const [, body] = sendNotification.mock.calls[0] ?? [];
+      expect(JSON.parse(body as string)).toMatchObject({ icon: '/custom-icon.png' });
+    });
+
+    it('leaves icon undefined when there is no source and no explicit icon', async () => {
+      sendNotification.mockResolvedValueOnce({} as never);
+      await fanOutPushToUser('u1', { title: 'T' });
+      const [, body] = sendNotification.mock.calls[0] ?? [];
+      expect(JSON.parse(body as string).icon).toBeUndefined();
+    });
+
+    it('never leaks source into the payload actually sent to the push service', async () => {
+      sendNotification.mockResolvedValueOnce({} as never);
+      await fanOutPushToUser('u1', { title: 'T', source: 'fs.sovereign.tasks' });
+      const [, body] = sendNotification.mock.calls[0] ?? [];
+      expect(JSON.parse(body as string)).not.toHaveProperty('source');
+    });
+  });
 });

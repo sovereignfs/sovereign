@@ -30,6 +30,7 @@ export const permissionSchema = z.enum([
   'data:export',
   'data:import',
   'activity:write',
+  'e2ee:use',
   'admin:*',
 ]);
 

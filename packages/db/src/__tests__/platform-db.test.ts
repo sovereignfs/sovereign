@@ -4,6 +4,8 @@ import {
   DEFAULT_TENANT_ID,
   DEFAULT_ROOT_PLUGIN_ID,
   bootstrapPlatformDb,
+  createE2eeDeviceEnrollment,
+  createE2eeProfile,
   createPluginConnection,
   createPluginSecret,
   createStorageObject,
@@ -14,6 +16,8 @@ import {
   disconnectPluginConnection,
   getAccountPrefs,
   getDefaultTenant,
+  getE2eeProfile,
+  getE2eeRecoveryWrapper,
   getPluginConnection,
   getPluginProviderConfig,
   getPluginSecret,
@@ -21,7 +25,9 @@ import {
   getPlatformSetting,
   getStorageObjectByIdForToken,
   getStorageObjectByKey,
+  hardDeleteUserE2eeData,
   hardDeleteUserStorageObjects,
+  listE2eeDeviceEnrollments,
   listPluginConnections,
   listAllPluginProviderConfigs,
   listPluginSecrets,
@@ -37,6 +43,7 @@ import {
   listPluginStatus,
   listUserActivity,
   recordActivity,
+  revokeE2eeDeviceEnrollment,
   setAccountPrefs,
   setInstanceConfig,
   setPlatformSetting,
@@ -44,6 +51,7 @@ import {
   setTenantName,
   sumPluginStorageBytes,
   updatePluginConnection,
+  upsertE2eeRecoveryWrapper,
   upsertPluginProviderConfig,
   updatePluginSecret,
   type PlatformDb,
@@ -597,6 +605,138 @@ describe('plugin storage object helpers (RFC 0044)', () => {
     expect(
       await getStorageObjectByIdForToken(db, 'obj-1', DEFAULT_TENANT_ID, 'com.example.other'),
     ).toBeUndefined();
+  });
+});
+
+describe('client-side encryption profile helpers (RFC 0060)', () => {
+  it('creates and reads a profile scoped by tenant/user', async () => {
+    const db = await freshDb();
+    const created = await createE2eeProfile(db, {
+      id: 'profile-1',
+      tenantId: DEFAULT_TENANT_ID,
+      userId: 'u1',
+      cmkAlgorithm: 'AES-GCM-256',
+    });
+
+    expect(created).toMatchObject({
+      id: 'profile-1',
+      userId: 'u1',
+      status: 'active',
+      cmkAlgorithm: 'AES-GCM-256',
+    });
+    expect(await getE2eeProfile(db, DEFAULT_TENANT_ID, 'u1')).toMatchObject({ id: 'profile-1' });
+    expect(await getE2eeProfile(db, DEFAULT_TENANT_ID, 'u2')).toBeUndefined();
+  });
+
+  it('upserts the recovery wrapper — a second call replaces, not duplicates', async () => {
+    const db = await freshDb();
+    await upsertE2eeRecoveryWrapper(db, {
+      id: 'wrapper-1',
+      tenantId: DEFAULT_TENANT_ID,
+      userId: 'u1',
+      wrappedCmk: 'ciphertext-v1',
+      kdfAlgorithm: 'argon2id',
+      kdfParams: '{"m":19456,"t":2,"p":1}',
+      kdfSalt: 'salt-1',
+      algorithmVersion: 'v1',
+    });
+
+    const rotated = await upsertE2eeRecoveryWrapper(db, {
+      id: 'wrapper-2',
+      tenantId: DEFAULT_TENANT_ID,
+      userId: 'u1',
+      wrappedCmk: 'ciphertext-v2',
+      kdfAlgorithm: 'argon2id',
+      kdfParams: '{"m":19456,"t":2,"p":1}',
+      kdfSalt: 'salt-2',
+      algorithmVersion: 'v1',
+    });
+
+    // The row keeps its original id (INSERT ... ON CONFLICT DO UPDATE updates
+    // in place; it does not adopt the conflicting insert's id) but the
+    // ciphertext/salt reflect the rotation.
+    expect(rotated.wrappedCmk).toBe('ciphertext-v2');
+    expect(rotated.kdfSalt).toBe('salt-2');
+    expect(await getE2eeRecoveryWrapper(db, DEFAULT_TENANT_ID, 'u1')).toMatchObject({
+      wrappedCmk: 'ciphertext-v2',
+    });
+  });
+
+  it('enrolls devices, lists only active ones by default, and revoke excludes without deleting', async () => {
+    const db = await freshDb();
+    await createE2eeDeviceEnrollment(db, {
+      id: 'device-1',
+      tenantId: DEFAULT_TENANT_ID,
+      userId: 'u1',
+      deviceId: 'chrome-macbook',
+      deviceLabel: 'Chrome on MacBook',
+      wrappedCmk: 'wrapped-for-device-1',
+      algorithmVersion: 'v1',
+    });
+    await createE2eeDeviceEnrollment(db, {
+      id: 'device-2',
+      tenantId: DEFAULT_TENANT_ID,
+      userId: 'u1',
+      deviceId: 'safari-iphone',
+      deviceLabel: 'Safari on iPhone',
+      wrappedCmk: 'wrapped-for-device-2',
+      algorithmVersion: 'v1',
+    });
+
+    expect(await listE2eeDeviceEnrollments(db, DEFAULT_TENANT_ID, 'u1')).toHaveLength(2);
+
+    await revokeE2eeDeviceEnrollment(db, 'device-1', DEFAULT_TENANT_ID, 'u1');
+
+    const active = await listE2eeDeviceEnrollments(db, DEFAULT_TENANT_ID, 'u1');
+    expect(active.map((d) => d.id)).toEqual(['device-2']);
+
+    const withRevoked = await listE2eeDeviceEnrollments(db, DEFAULT_TENANT_ID, 'u1', {
+      includeRevoked: true,
+    });
+    expect(withRevoked.map((d) => d.id).sort()).toEqual(['device-1', 'device-2']);
+    expect(withRevoked.find((d) => d.id === 'device-1')?.revokedAt).not.toBeNull();
+  });
+
+  it('hard-deletes all three tables for a user on account deletion, leaving other users untouched', async () => {
+    const db = await freshDb();
+    await createE2eeProfile(db, {
+      id: 'profile-1',
+      tenantId: DEFAULT_TENANT_ID,
+      userId: 'u1',
+      cmkAlgorithm: 'AES-GCM-256',
+    });
+    await upsertE2eeRecoveryWrapper(db, {
+      id: 'wrapper-1',
+      tenantId: DEFAULT_TENANT_ID,
+      userId: 'u1',
+      wrappedCmk: 'ciphertext',
+      kdfAlgorithm: 'argon2id',
+      kdfParams: '{}',
+      kdfSalt: 'salt',
+      algorithmVersion: 'v1',
+    });
+    await createE2eeDeviceEnrollment(db, {
+      id: 'device-1',
+      tenantId: DEFAULT_TENANT_ID,
+      userId: 'u1',
+      deviceId: 'chrome-macbook',
+      deviceLabel: null,
+      wrappedCmk: 'wrapped',
+      algorithmVersion: 'v1',
+    });
+    await createE2eeProfile(db, {
+      id: 'profile-2',
+      tenantId: DEFAULT_TENANT_ID,
+      userId: 'u2',
+      cmkAlgorithm: 'AES-GCM-256',
+    });
+
+    await hardDeleteUserE2eeData(db, 'u1');
+
+    expect(await getE2eeProfile(db, DEFAULT_TENANT_ID, 'u1')).toBeUndefined();
+    expect(await getE2eeRecoveryWrapper(db, DEFAULT_TENANT_ID, 'u1')).toBeUndefined();
+    expect(await listE2eeDeviceEnrollments(db, DEFAULT_TENANT_ID, 'u1')).toEqual([]);
+    expect(await getE2eeProfile(db, DEFAULT_TENANT_ID, 'u2')).toMatchObject({ id: 'profile-2' });
   });
 });
 

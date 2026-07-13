@@ -205,6 +205,58 @@ export const pluginStorageObjects = sqliteTable('plugin_storage_objects', {
 });
 
 /**
+ * Client-side encryption profile (RFC 0060) — one row per user tracking
+ * setup state and algorithm metadata. Never holds the Client Master Key
+ * (CMK) itself, plaintext or otherwise — only wrapped copies live in
+ * `e2eeRecoveryWrappers`/`e2eeDeviceEnrollments`.
+ */
+export const e2eeProfiles = sqliteTable('e2ee_profiles', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  status: text('status').notNull().default('active'),
+  cmkAlgorithm: text('cmk_algorithm').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+/**
+ * The CMK wrapped by a key derived (KDF) from the user's recovery secret.
+ * One row per user — rotating the recovery secret replaces this row rather
+ * than accumulating history.
+ */
+export const e2eeRecoveryWrappers = sqliteTable('e2ee_recovery_wrappers', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  wrappedCmk: text('wrapped_cmk').notNull(),
+  kdfAlgorithm: text('kdf_algorithm').notNull(),
+  kdfParams: text('kdf_params').notNull(),
+  kdfSalt: text('kdf_salt').notNull(),
+  algorithmVersion: text('algorithm_version').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+/**
+ * The CMK wrapped by one enrolled device's own key. Many rows per user (one
+ * per enrolled device); `revokedAt` marks a removed device without deleting
+ * its history.
+ */
+export const e2eeDeviceEnrollments = sqliteTable('e2ee_device_enrollments', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  deviceId: text('device_id').notNull(),
+  deviceLabel: text('device_label'),
+  wrappedCmk: text('wrapped_cmk').notNull(),
+  algorithmVersion: text('algorithm_version').notNull(),
+  createdAt: integer('created_at').notNull(),
+  lastUsedAt: integer('last_used_at'),
+  revokedAt: integer('revoked_at'),
+});
+
+/**
  * Platform-managed vault for runtime-created plugin secrets (RFC 0043).
  * `ciphertext` is opaque encrypted material; `metadata` is JSON without secret values.
  */
@@ -409,6 +461,12 @@ export type EmailDeliveryLog = typeof emailDeliveryLog.$inferSelect;
 export type NewEmailDeliveryLog = typeof emailDeliveryLog.$inferInsert;
 export type PluginStorageObject = typeof pluginStorageObjects.$inferSelect;
 export type NewPluginStorageObject = typeof pluginStorageObjects.$inferInsert;
+export type E2eeProfile = typeof e2eeProfiles.$inferSelect;
+export type NewE2eeProfile = typeof e2eeProfiles.$inferInsert;
+export type E2eeRecoveryWrapper = typeof e2eeRecoveryWrappers.$inferSelect;
+export type NewE2eeRecoveryWrapper = typeof e2eeRecoveryWrappers.$inferInsert;
+export type E2eeDeviceEnrollment = typeof e2eeDeviceEnrollments.$inferSelect;
+export type NewE2eeDeviceEnrollment = typeof e2eeDeviceEnrollments.$inferInsert;
 export type PluginSecret = typeof pluginSecrets.$inferSelect;
 export type NewPluginSecret = typeof pluginSecrets.$inferInsert;
 export type PluginConnection = typeof pluginConnections.$inferSelect;

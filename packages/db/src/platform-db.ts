@@ -569,6 +569,248 @@ export async function hardDeleteUserStorageObjects(
   return rows;
 }
 
+// ─── Client-side encryption profile helpers (RFC 0060) ─────────────────────
+//
+// Step 1/2 of RFC 0060's adoption path only (epic task 8.9, sovereign-wallet
+// W-02): tables + CRUD. No `sdk.e2ee` runtime surface yet — that lands with
+// the actual crypto helpers (W-04). The server never sees a plaintext CMK;
+// these functions only ever read/write wrapped ciphertext and non-sensitive
+// KDF/algorithm metadata supplied by the caller.
+
+export interface E2eeProfileRow {
+  id: string;
+  tenantId: string;
+  userId: string;
+  status: string;
+  cmkAlgorithm: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CreateE2eeProfileInput {
+  id: string;
+  tenantId: string;
+  userId: string;
+  cmkAlgorithm: string;
+}
+
+export interface E2eeRecoveryWrapperRow {
+  id: string;
+  tenantId: string;
+  userId: string;
+  wrappedCmk: string;
+  kdfAlgorithm: string;
+  kdfParams: string;
+  kdfSalt: string;
+  algorithmVersion: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface UpsertE2eeRecoveryWrapperInput {
+  id: string;
+  tenantId: string;
+  userId: string;
+  wrappedCmk: string;
+  kdfAlgorithm: string;
+  kdfParams: string;
+  kdfSalt: string;
+  algorithmVersion: string;
+}
+
+export interface E2eeDeviceEnrollmentRow {
+  id: string;
+  tenantId: string;
+  userId: string;
+  deviceId: string;
+  deviceLabel: string | null;
+  wrappedCmk: string;
+  algorithmVersion: string;
+  createdAt: number;
+  lastUsedAt: number | null;
+  revokedAt: number | null;
+}
+
+export interface CreateE2eeDeviceEnrollmentInput {
+  id: string;
+  tenantId: string;
+  userId: string;
+  deviceId: string;
+  deviceLabel: string | null;
+  wrappedCmk: string;
+  algorithmVersion: string;
+}
+
+/** Create the (single, per-user) client-side encryption profile. */
+export async function createE2eeProfile(
+  pdb: PlatformDb,
+  input: CreateE2eeProfileInput,
+): Promise<E2eeProfileRow> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO e2ee_profiles
+          (id, tenant_id, user_id, status, cmk_algorithm, created_at, updated_at)
+        VALUES
+          (${input.id}, ${input.tenantId}, ${input.userId}, 'active',
+           ${input.cmkAlgorithm}, ${now}, ${now})`,
+  );
+  const row = await getE2eeProfile(pdb, input.tenantId, input.userId);
+  if (!row) throw new Error('E2EE profile was not readable after creation.');
+  return row;
+}
+
+/** Fetch the current user's client-side encryption profile, if set up. */
+export async function getE2eeProfile(
+  pdb: PlatformDb,
+  tenantId: string,
+  userId: string,
+): Promise<E2eeProfileRow | undefined> {
+  return dbGet<E2eeProfileRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", user_id AS "userId", status,
+               cmk_algorithm AS "cmkAlgorithm",
+               created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM e2ee_profiles
+        WHERE tenant_id = ${tenantId} AND user_id = ${userId}
+        LIMIT 1`,
+  );
+}
+
+/**
+ * Create or replace the user's recovery wrapper (rotating the recovery
+ * secret replaces this row rather than accumulating history — one wrapper
+ * per user).
+ */
+export async function upsertE2eeRecoveryWrapper(
+  pdb: PlatformDb,
+  input: UpsertE2eeRecoveryWrapperInput,
+): Promise<E2eeRecoveryWrapperRow> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO e2ee_recovery_wrappers
+          (id, tenant_id, user_id, wrapped_cmk, kdf_algorithm, kdf_params,
+           kdf_salt, algorithm_version, created_at, updated_at)
+        VALUES
+          (${input.id}, ${input.tenantId}, ${input.userId}, ${input.wrappedCmk},
+           ${input.kdfAlgorithm}, ${input.kdfParams}, ${input.kdfSalt},
+           ${input.algorithmVersion}, ${now}, ${now})
+        ON CONFLICT (tenant_id, user_id)
+        DO UPDATE SET wrapped_cmk = excluded.wrapped_cmk,
+                      kdf_algorithm = excluded.kdf_algorithm,
+                      kdf_params = excluded.kdf_params,
+                      kdf_salt = excluded.kdf_salt,
+                      algorithm_version = excluded.algorithm_version,
+                      updated_at = excluded.updated_at`,
+  );
+  const row = await getE2eeRecoveryWrapper(pdb, input.tenantId, input.userId);
+  if (!row) throw new Error('E2EE recovery wrapper was not readable after upsert.');
+  return row;
+}
+
+/** Fetch the user's recovery wrapper, if a recovery secret has been set up. */
+export async function getE2eeRecoveryWrapper(
+  pdb: PlatformDb,
+  tenantId: string,
+  userId: string,
+): Promise<E2eeRecoveryWrapperRow | undefined> {
+  return dbGet<E2eeRecoveryWrapperRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", user_id AS "userId",
+               wrapped_cmk AS "wrappedCmk", kdf_algorithm AS "kdfAlgorithm",
+               kdf_params AS "kdfParams", kdf_salt AS "kdfSalt",
+               algorithm_version AS "algorithmVersion",
+               created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM e2ee_recovery_wrappers
+        WHERE tenant_id = ${tenantId} AND user_id = ${userId}
+        LIMIT 1`,
+  );
+}
+
+/** Enroll a device, wrapping the CMK with that device's own key. */
+export async function createE2eeDeviceEnrollment(
+  pdb: PlatformDb,
+  input: CreateE2eeDeviceEnrollmentInput,
+): Promise<E2eeDeviceEnrollmentRow> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO e2ee_device_enrollments
+          (id, tenant_id, user_id, device_id, device_label, wrapped_cmk,
+           algorithm_version, created_at, last_used_at, revoked_at)
+        VALUES
+          (${input.id}, ${input.tenantId}, ${input.userId}, ${input.deviceId},
+           ${input.deviceLabel}, ${input.wrappedCmk}, ${input.algorithmVersion},
+           ${now}, NULL, NULL)`,
+  );
+  const rows = await listE2eeDeviceEnrollments(pdb, input.tenantId, input.userId);
+  const row = rows.find((r) => r.id === input.id);
+  if (!row) throw new Error('E2EE device enrollment was not readable after creation.');
+  return row;
+}
+
+/** List a user's device enrollments, most recently created first. */
+export async function listE2eeDeviceEnrollments(
+  pdb: PlatformDb,
+  tenantId: string,
+  userId: string,
+  options?: { includeRevoked?: boolean },
+): Promise<E2eeDeviceEnrollmentRow[]> {
+  const rows = await dbAll<E2eeDeviceEnrollmentRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", user_id AS "userId",
+               device_id AS "deviceId", device_label AS "deviceLabel",
+               wrapped_cmk AS "wrappedCmk", algorithm_version AS "algorithmVersion",
+               created_at AS "createdAt", last_used_at AS "lastUsedAt",
+               revoked_at AS "revokedAt"
+        FROM e2ee_device_enrollments
+        WHERE tenant_id = ${tenantId} AND user_id = ${userId}
+        ORDER BY created_at DESC`,
+  );
+  return options?.includeRevoked ? rows : rows.filter((r) => r.revokedAt === null);
+}
+
+/** Revoke one enrolled device (e.g. lost/decommissioned) without deleting its history. */
+export async function revokeE2eeDeviceEnrollment(
+  pdb: PlatformDb,
+  id: string,
+  tenantId: string,
+  userId: string,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE e2ee_device_enrollments
+        SET revoked_at = ${now}
+        WHERE id = ${id} AND tenant_id = ${tenantId} AND user_id = ${userId}`,
+  );
+}
+
+/**
+ * Hard-delete all client-side encryption material for a user (account
+ * deletion, RFC 0033). Ciphertext-only rows — deleting them cannot leak
+ * anything, unlike plaintext user data, so this can run unconditionally.
+ */
+export async function hardDeleteUserE2eeData(
+  pdb: PlatformDb,
+  userId: string,
+  tenantId = DEFAULT_TENANT_ID,
+): Promise<void> {
+  await dbRun(
+    pdb,
+    sql`DELETE FROM e2ee_device_enrollments WHERE tenant_id = ${tenantId} AND user_id = ${userId}`,
+  );
+  await dbRun(
+    pdb,
+    sql`DELETE FROM e2ee_recovery_wrappers WHERE tenant_id = ${tenantId} AND user_id = ${userId}`,
+  );
+  await dbRun(
+    pdb,
+    sql`DELETE FROM e2ee_profiles WHERE tenant_id = ${tenantId} AND user_id = ${userId}`,
+  );
+}
+
 // ─── Plugin secret vault helpers (RFC 0043) ─────────────────────────────────
 
 export type PluginSecretScope = 'user' | 'plugin' | 'instance';

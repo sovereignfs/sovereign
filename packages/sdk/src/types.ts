@@ -162,6 +162,66 @@ export interface StorageContext {
   userId: string | null;
 }
 
+/**
+ * Client-side encryption profile shapes (RFC 0060, epic task 8.9). Types only
+ * — no `sdk.e2ee` runtime surface exists yet (that lands with the actual
+ * crypto helpers). Distinct from server-side field crypto
+ * (`sdk.crypto.encryptField()`, RFC 0008): the runtime can decrypt a
+ * server-side field; it can never decrypt a client-side encrypted object.
+ *
+ * The Client Master Key (CMK) itself never exists server-side, plaintext or
+ * otherwise — only wrapped copies (`E2eeRecoveryWrapper`/
+ * `E2eeDeviceEnrollment`) and non-sensitive KDF/algorithm metadata do.
+ */
+export type E2eeProfileStatus = 'active' | 'disabled';
+
+/** Whether the current user has set up client-side encryption at all. */
+export interface E2eeProfile {
+  id: string;
+  userId: string;
+  status: E2eeProfileStatus;
+  /** e.g. `'AES-GCM-256'` — the algorithm used to encrypt objects under the CMK. */
+  cmkAlgorithm: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** The CMK wrapped by a key derived from the user's recovery secret. One per user. */
+export interface E2eeRecoveryWrapper {
+  id: string;
+  userId: string;
+  wrappedCmk: string;
+  kdfAlgorithm: string;
+  /** Opaque JSON-encoded KDF parameters (iterations, memory cost, etc.). */
+  kdfParams: string;
+  kdfSalt: string;
+  algorithmVersion: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** The CMK wrapped by one enrolled device's own key. Many per user. */
+export interface E2eeDeviceEnrollment {
+  id: string;
+  userId: string;
+  deviceId: string;
+  deviceLabel: string | null;
+  wrappedCmk: string;
+  algorithmVersion: string;
+  createdAt: number;
+  lastUsedAt: number | null;
+  /** `null` while the device is still enrolled. */
+  revokedAt: number | null;
+}
+
+/**
+ * Normalized state a plugin checks before touching client-side encrypted
+ * data — the SDK never hides the recovery model (RFC 0060 "SDK
+ * responsibilities"). `unsupported` means the browser lacks required
+ * WebCrypto primitives.
+ */
+export type E2eeState = 'not-set-up' | 'locked' | 'unlocked' | 'unsupported';
+
 /** Runtime-created secret scope for the experimental plugin vault (RFC 0043). */
 export type SecretScope = 'user' | 'plugin' | 'instance';
 

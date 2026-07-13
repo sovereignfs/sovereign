@@ -179,6 +179,58 @@ export const pluginStorageObjects = pgTable('plugin_storage_objects', {
   updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
 });
 
+/**
+ * Client-side encryption profile (RFC 0060) — one row per user tracking
+ * setup state and algorithm metadata. Never holds the Client Master Key
+ * (CMK) itself, plaintext or otherwise — only wrapped copies live in
+ * `e2eeRecoveryWrappers`/`e2eeDeviceEnrollments`.
+ */
+export const e2eeProfiles = pgTable('e2ee_profiles', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  status: text('status').notNull().default('active'),
+  cmkAlgorithm: text('cmk_algorithm').notNull(),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+});
+
+/**
+ * The CMK wrapped by a key derived (KDF) from the user's recovery secret.
+ * One row per user — rotating the recovery secret replaces this row rather
+ * than accumulating history.
+ */
+export const e2eeRecoveryWrappers = pgTable('e2ee_recovery_wrappers', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  wrappedCmk: text('wrapped_cmk').notNull(),
+  kdfAlgorithm: text('kdf_algorithm').notNull(),
+  kdfParams: text('kdf_params').notNull(),
+  kdfSalt: text('kdf_salt').notNull(),
+  algorithmVersion: text('algorithm_version').notNull(),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+});
+
+/**
+ * The CMK wrapped by one enrolled device's own key. Many rows per user (one
+ * per enrolled device); `revokedAt` marks a removed device without deleting
+ * its history.
+ */
+export const e2eeDeviceEnrollments = pgTable('e2ee_device_enrollments', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  deviceId: text('device_id').notNull(),
+  deviceLabel: text('device_label'),
+  wrappedCmk: text('wrapped_cmk').notNull(),
+  algorithmVersion: text('algorithm_version').notNull(),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  lastUsedAt: bigint('last_used_at', { mode: 'number' }),
+  revokedAt: bigint('revoked_at', { mode: 'number' }),
+});
+
 /** Platform-managed vault for runtime-created plugin secrets (RFC 0043). */
 export const pluginSecrets = pgTable('plugin_secrets', {
   id: text('id').primaryKey(),

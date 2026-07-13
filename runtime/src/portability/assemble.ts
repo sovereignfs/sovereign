@@ -10,6 +10,30 @@ import {
 } from './bundle';
 import { getExporter } from './registry';
 
+/**
+ * Client-side encryption material (RFC 0060) included in a platform export.
+ * Wrapped ciphertext and non-sensitive algorithm/KDF metadata only — the same
+ * "opaque to the server" shapes `sdk.e2ee` already persists. `null` when the
+ * user has no encryption profile set up.
+ */
+export interface PlatformE2eeExportData {
+  profile: { status: string; cmkAlgorithm: string };
+  recoveryWrapper: {
+    wrappedCmk: string;
+    kdfAlgorithm: string;
+    kdfParams: string;
+    kdfSalt: string;
+    algorithmVersion: string;
+  } | null;
+  /** Active (non-revoked) device enrollments only — a revoked device has no recovery value. */
+  deviceEnrollments: {
+    deviceId: string;
+    deviceLabel: string | null;
+    wrappedCmk: string;
+    algorithmVersion: string;
+  }[];
+}
+
 /** The platform-owned slice of a user's data (not contributed by a plugin). */
 export interface PlatformExportData {
   name: string | null;
@@ -31,6 +55,7 @@ export interface PlatformExportData {
   }[];
   /** The avatar file bytes + extension, read from disk by the caller. */
   avatar: { ext: string; bytes: Uint8Array } | null;
+  e2ee: PlatformE2eeExportData | null;
 }
 
 export interface AssembleArgs {
@@ -63,6 +88,7 @@ export async function assembleExport(args: AssembleArgs): Promise<Uint8Array> {
     profile: { name: args.platform.name, email: args.platform.email, image: args.platform.image },
     preferences: { timezone: args.platform.timezone, theme: args.platform.theme },
     vaultSecrets: args.platform.vaultSecrets,
+    e2ee: args.platform.e2ee,
   });
   files['platform/account.json'] = accountJson;
   sections.push({ pluginId: PLATFORM_SECTION_ID, schemaVersion: 1, checksum: sha256(accountJson) });

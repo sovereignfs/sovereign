@@ -7,12 +7,15 @@ import {
   readZip,
   u8ToJson,
 } from './bundle';
+import type { PlatformE2eeExportData } from './assemble';
 import { getImporter } from './registry';
 
 /** The platform-owned slice parsed from `platform/account.json`. */
 export interface PlatformAccountSection {
   profile: { name: string | null; email: string | null; image: string | null };
   preferences: { timezone: string; theme: string };
+  /** Absent in bundles exported before this field existed. */
+  e2ee?: PlatformE2eeExportData | null;
 }
 
 export interface ImportSectionResult {

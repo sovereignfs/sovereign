@@ -111,6 +111,31 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.40 → v0.41
+
+- **Client-side encryption core complete, steps 6 of 7 (RFC 0060) — epic task
+  8.9 done.** Account export now includes a user's encryption profile,
+  recovery wrapper, and active device enrollments (still wrapped ciphertext
+  and non-sensitive KDF/algorithm metadata only — never plaintext). Account
+  deletion already removed this data unconditionally; export was the missing
+  half. **No action required** — no schema change, existing `e2ee_*` tables
+  and DB helper functions were reused as-is.
+- **Import is additive-safe, never destructive.** If the importing user
+  already has an encryption profile on this instance, imported e2ee data is
+  silently skipped rather than overwriting a live setup that might not
+  correspond to the same Client Master Key.
+- **No `sdk.storage`/`sdk.portability` API change.** Plugin-owned encrypted
+  objects (e.g. a future Sovereign Wallet document) already compose through
+  each plugin's own export/import handlers calling `sdk.storage` directly —
+  documented in `docs/plugin-development.md`, no new platform mechanism
+  needed.
+- **`docs/security.md` corrected** — it previously described client-side
+  encryption as "post-v1 (charted)"; it's implemented and opt-in as of this
+  release.
+- **`runtime` → 0.41.0**. No SDK/db/manifest version change — this task only
+  touched the platform's internal export/import wiring
+  (`runtime/src/portability/`), not any published package's contract.
+
 ### v0.39 → v0.40
 
 - **Client-side encryption core, steps 1–5 of 7 (RFC 0060).** New `sdk.e2ee`
@@ -730,6 +755,7 @@ the release you are running.
 | 0.38.0          | Plugin background schedules — Phase 1 (RFC 0046)                                                                     |
 | 0.39.0          | Plugin file storage — `sdk.storage` (RFC 0044)                                                                       |
 | 0.40.0–0.40.1   | Client-side encryption core, steps 1–5 — `sdk.e2ee`, Account UX, object crypto, `sdk.storage` integration (RFC 0060) |
+| 0.41.0          | Client-side encryption core complete, step 6 — export/delete via `sdk.portability` (RFC 0060, epic task 8.9 done)    |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

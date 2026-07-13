@@ -13,6 +13,7 @@ const PLATFORM: PlatformExportData = {
   theme: 'system',
   vaultSecrets: [],
   avatar: { ext: 'png', bytes: new Uint8Array([137, 80, 78, 71]) },
+  e2ee: null,
 };
 
 function getEntry(files: Record<string, Uint8Array | undefined>, key: string): Uint8Array {

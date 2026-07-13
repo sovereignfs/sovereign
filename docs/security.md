@@ -55,23 +55,27 @@ Security controls are only meaningful against a stated adversary. **Assets:** th
 identity database (`auth.db`), the platform database (`sovereign.db`), plugin
 data, avatars/blobs, backups, secrets, and live sessions.
 
-| Threat                                     | Addressed by                                               | Ships in             | Residual risk                                           |
-| ------------------------------------------ | ---------------------------------------------------------- | -------------------- | ------------------------------------------------------- |
-| Network sniffing / MITM                    | Transport: TLS/HSTS at the edge, Postgres SSL              | **v1**               | Endpoint compromise.                                    |
-| XSS / injected scripts                     | Strict nonce-based CSP + security headers                  | **v1**               | A bug that echoes a valid nonce.                        |
-| Clickjacking                               | `X-Frame-Options: DENY` + `frame-ancestors 'none'`         | **v1**               | —                                                       |
-| Stolen or guessed password                 | TOTP / passkey second factor (opt-in per user)             | **v1**               | Users who haven't enrolled MFA have password-only auth. |
-| Forged session cookie                      | HMAC-signed cookie cache; Argon2id passwords (better-auth) | **v1**               | Stolen live cookie from a compromised device.           |
-| Compromised / curious plugin               | SDK boundary (plugins can't import runtime internals)      | **v1**               | A plugin still sees its own users' data.                |
-| Stolen disk / leaked backup / VPS snapshot | At-rest encryption (DB / backup / blob)                    | post-v1 (Task 1.0.1) | Until then, rely on host-level disk encryption.         |
-| Curious/malicious host or hosting provider | Field-level → zero-knowledge encryption                    | post-v1 (charted)    | The operator can read data at rest in v1.               |
-| RCE / compromised server process           | Only zero-knowledge E2EE mitigates                         | not planned for v1   | An attacker with code execution wins.                   |
+| Threat                                     | Addressed by                                                                             | Ships in                                | Residual risk                                                                                                           |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Network sniffing / MITM                    | Transport: TLS/HSTS at the edge, Postgres SSL                                            | **v1**                                  | Endpoint compromise.                                                                                                    |
+| XSS / injected scripts                     | Strict nonce-based CSP + security headers                                                | **v1**                                  | A bug that echoes a valid nonce.                                                                                        |
+| Clickjacking                               | `X-Frame-Options: DENY` + `frame-ancestors 'none'`                                       | **v1**                                  | —                                                                                                                       |
+| Stolen or guessed password                 | TOTP / passkey second factor (opt-in per user)                                           | **v1**                                  | Users who haven't enrolled MFA have password-only auth.                                                                 |
+| Forged session cookie                      | HMAC-signed cookie cache; Argon2id passwords (better-auth)                               | **v1**                                  | Stolen live cookie from a compromised device.                                                                           |
+| Compromised / curious plugin               | SDK boundary (plugins can't import runtime internals)                                    | **v1**                                  | A plugin still sees its own users' data.                                                                                |
+| Stolen disk / leaked backup / VPS snapshot | At-rest encryption (DB / backup / blob)                                                  | post-v1 (Task 1.0.1)                    | Until then, rely on host-level disk encryption.                                                                         |
+| Curious/malicious host or hosting provider | Field-level encryption; opt-in client-side encryption (RFC 0060) for plugins that use it | **v1 (opt-in)** / post-v1 (field-level) | Only data a plugin explicitly encrypts client-side is protected; most data still relies on host-level protection in v1. |
+| RCE / compromised server process           | Client-side encryption (RFC 0060) for the specific objects a plugin protects this way    | **v1 (opt-in, partial)**                | Data not passed through client-side encryption is still readable by an attacker with code execution.                    |
 
-**Honest framing.** v1 ships Tiers 0–1 of RFC 0008 (hardening + transport). It
-does **not** yet encrypt data at rest, so anyone who can read the server's disk
-or a raw backup can read the data. Protect the host accordingly (see the
-checklist). At-rest and field-level encryption are specified and deferred to
-Task 1.0.1; zero-knowledge E2EE is charted but out of v1 scope.
+**Honest framing.** v1 ships Tiers 0–1 of RFC 0008 (hardening + transport) plus
+Tier 4 (client-side/zero-knowledge encryption, RFC 0060) as an **opt-in
+capability** — the runtime and server-side plugin code can never decrypt an
+object a plugin chose to protect this way, even with full server access. It is
+not a blanket guarantee: most platform and plugin data is **not** encrypted at
+rest by default, so anyone who can read the server's disk or a raw backup can
+still read the bulk of it. Protect the host accordingly (see the checklist).
+At-rest and field-level encryption for the rest of the data model are
+specified and deferred to Task 1.0.1.
 
 ## What v1 enforces
 
@@ -98,6 +102,18 @@ Task 1.0.1; zero-knowledge E2EE is charted but out of v1 scope.
   with an `X-Retry-After` header. Rate limiting is stored in-memory per process
   (sufficient for single-instance deployments); a shared secondary storage (e.g.
   Redis) would be needed for multi-instance setups.
+- **Client-side encryption (RFC 0060) has no operator recovery path, by
+  design.** A user unlocks their Client Master Key with a recorded recovery
+  secret or an already-enrolled device — the server never holds a plaintext
+  copy or an escrow key. **Resetting a user's password does not recover their
+  encrypted data**; a lost recovery secret plus every enrolled device being
+  lost means that data is permanently unrecoverable, for anyone, including the
+  operator. Account deletion removes all client-side encryption material
+  (profile, recovery wrapper, device enrollments) unconditionally — this is
+  always safe, since none of it is ever plaintext. Account export includes
+  this same wrapped material (still ciphertext-only) so a user's ability to
+  unlock their data can travel with a data export/migration, provided they
+  still have their recovery secret.
 
 ## Self-hoster hardening checklist
 

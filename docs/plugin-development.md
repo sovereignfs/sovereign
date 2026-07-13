@@ -1519,6 +1519,20 @@ const fileBlob = await decryptBlob(objectDek, {
 });
 ```
 
+**Export/delete (RFC 0060 step 6).** The platform handles the core encryption
+profile/recovery-wrapper/device-enrollment rows itself — they're included in
+every account export (still wrapped ciphertext only) and removed
+unconditionally on account deletion, same as everything else `sdk.e2ee`
+persists. Your own encrypted objects are a different story: they're plugin
+data, so they go through your plugin's own `sdk.portability`
+`ExportResolver`/`ImportHandler`/`DeletionHandler` like any other plugin data —
+call `sdk.storage.list()`/`get()` yourself inside your export resolver to
+include the ciphertext `Blob`s and their `metadata` (wrapped DEK included) in
+your section's `blobs`, and `sdk.storage.put()` inside your import handler to
+restore them. There is no separate mechanism to learn — `sdk.storage` and
+`sdk.portability` already compose the same way they do for any other file a
+plugin stores.
+
 ## Local development
 
 Run a plugin against a local platform checkout:

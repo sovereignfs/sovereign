@@ -185,7 +185,7 @@
 
 ---
 
-#### 📋 8.9 — Client-side encryption core (RFC 0060)
+#### ✅ 8.9 — Client-side encryption core (RFC 0060)
 
 **Goal:** Make RFC 0008 Tier 4 concrete by adding a core client-side encryption
 capability that lets approved plugins store user data the runtime and operator

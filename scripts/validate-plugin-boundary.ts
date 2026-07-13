@@ -5,9 +5,11 @@
  * A plugin under active local development (e.g. `plugins/sovereign-tasks.local`)
  * is a full pnpm workspace member — that's what lets `pnpm dev` resolve its
  * deps and serve its routes live. As a side-effect, its presence routinely
- * produces local diffs in two normally-tracked platform files:
- *   - pnpm-lock.yaml     — gains an importers entry for the plugin directory
- *   - runtime/generated/registry.ts — gains a manifest entry for the plugin
+ * produces local diffs in normally-tracked, generated platform files:
+ *   - pnpm-lock.yaml                       — gains an importers entry for the plugin directory
+ *   - runtime/generated/registry.ts        — gains a manifest entry for the plugin
+ *   - runtime/generated/plugin-capabilities.ts — gains the plugin's declared capabilities
+ *   - runtime/generated/plugin-schedules.ts    — gains the plugin's declared schedules
  *
  * This script detects when those files are accidentally staged and silently
  * removes them from the commit (git restore --staged), leaving the on-disk
@@ -113,6 +115,34 @@ if (staged.includes('runtime/generated/registry.ts')) {
       fixes.push({
         file: 'runtime/generated/registry.ts',
         reason: `registers untracked plugin id: ${id}`,
+      });
+      break;
+    }
+  }
+}
+
+if (staged.includes('runtime/generated/plugin-capabilities.ts')) {
+  const capabilities = stagedContent('runtime/generated/plugin-capabilities.ts') ?? '';
+  for (const match of capabilities.matchAll(/^ {4}"pluginId":\s*"([^"]+)"/gm)) {
+    const id = match[1];
+    if (!trackedIds.has(id)) {
+      fixes.push({
+        file: 'runtime/generated/plugin-capabilities.ts',
+        reason: `declares a capability for untracked plugin id: ${id}`,
+      });
+      break;
+    }
+  }
+}
+
+if (staged.includes('runtime/generated/plugin-schedules.ts')) {
+  const schedules = stagedContent('runtime/generated/plugin-schedules.ts') ?? '';
+  for (const match of schedules.matchAll(/^ {4}pluginId:\s*"([^"]+)"/gm)) {
+    const id = match[1];
+    if (!trackedIds.has(id)) {
+      fixes.push({
+        file: 'runtime/generated/plugin-schedules.ts',
+        reason: `declares a schedule for untracked plugin id: ${id}`,
       });
       break;
     }

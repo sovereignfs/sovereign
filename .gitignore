@@ -64,6 +64,10 @@ runtime/public/worker-*.js
 # convenience (mirrors `pnpm dev`), kept out of the shared repo.
 .claude/settings.local.json
 .claude/launch.json
+# Ephemeral git worktrees created by spawned/isolated agent tasks — must never
+# be tracked or scanned by tooling (format/lint checks would otherwise pick up
+# another in-progress session's uncommitted work as if it were part of this one).
+.claude/worktrees/
 
 # Claude Code memory — private persistent context for the AI assistant.
 # Machine-local; never committed (would conflict across sessions/users).

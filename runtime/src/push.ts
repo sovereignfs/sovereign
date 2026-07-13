@@ -22,7 +22,25 @@ export interface PushPayload {
   body?: string;
   url?: string;
   category?: string;
+  /** URL to an image, shown as the OS push notification's icon. Defaults to
+   *  the sending plugin's own `/plugin-icons/<source>.svg` (see `source`
+   *  below) when unset. */
   icon?: string;
+  /**
+   * The sending plugin's id — used only server-side to compute `icon`'s
+   * default; never included in the payload actually delivered to the
+   * device (see `resolvePayload`). Omit for non-plugin sources (admin
+   * broadcasts have no per-plugin icon to fall back to).
+   */
+  source?: string;
+}
+
+/** Resolves the wire payload actually sent to the push service: defaults
+ *  `icon` to the sending plugin's own icon when unset, and strips the
+ *  server-only `source` field (the Push API has no use for it). */
+function resolvePayload(payload: PushPayload): Omit<PushPayload, 'source'> {
+  const { source, icon, ...rest } = payload;
+  return { ...rest, icon: icon ?? (source ? `/plugin-icons/${source}.svg` : undefined) };
 }
 
 /** True when VAPID keys are present in the environment. */
@@ -95,8 +113,9 @@ export async function fanOutPushToUser(userId: string, payload: PushPayload): Pr
   }
 
   applyVapid();
+  const resolved = resolvePayload(payload);
   const results = await Promise.allSettled(
-    subs.map((sub) => sendOne(pdb, sub.endpoint, { p256dh: sub.p256dh, auth: sub.auth }, payload)),
+    subs.map((sub) => sendOne(pdb, sub.endpoint, { p256dh: sub.p256dh, auth: sub.auth }, resolved)),
   );
   logger.info('push: fan-out complete', {
     userId,
@@ -128,8 +147,9 @@ export async function fanOutPushToUsers(userIds: string[], payload: PushPayload)
   }
 
   applyVapid();
+  const resolved = resolvePayload(payload);
   const results = await Promise.allSettled(
-    subs.map((sub) => sendOne(pdb, sub.endpoint, { p256dh: sub.p256dh, auth: sub.auth }, payload)),
+    subs.map((sub) => sendOne(pdb, sub.endpoint, { p256dh: sub.p256dh, auth: sub.auth }, resolved)),
   );
   logger.info('push: broadcast fan-out complete', {
     recipients: userIds.length,
@@ -142,7 +162,7 @@ async function sendOne(
   pdb: Awaited<ReturnType<typeof getPlatformDb>>,
   endpoint: string,
   keys: { p256dh: string; auth: string },
-  payload: PushPayload,
+  payload: Omit<PushPayload, 'source'>,
 ): Promise<'sent' | 'pruned' | 'failed'> {
   try {
     await webpush.sendNotification({ endpoint, keys }, JSON.stringify(payload));

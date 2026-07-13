@@ -482,12 +482,16 @@ provideHost({
       }
 
       // Fire-and-forget push fan-out (respects per-user muted-category prefs).
+      // source: pluginId lets fanOutPushToUser default the OS notification's
+      // icon to this plugin's own /plugin-icons/<pluginId>.svg when the
+      // plugin didn't pass an explicit icon.
       void fanOutPushToUser(input.recipientUserId, {
         title: input.title,
         body: input.body,
         url: input.url,
         category: input.category,
         icon: input.icon,
+        source: pluginId,
       });
     },
   },

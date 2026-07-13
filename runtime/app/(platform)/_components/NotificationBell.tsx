@@ -265,6 +265,22 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
     setUnreadCount(0);
   };
 
+  const markRead = async (id: string) => {
+    const item = items.find((n) => n.id === id);
+    if (!item || item.readAt != null) return;
+    setItems((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, readAt: Math.floor(Date.now() / 1000) } : n)),
+    );
+    setUnreadCount((c) => Math.max(0, c - 1));
+    await fetch('/api/account/notifications', {
+      method: 'POST',
+      credentials: 'same-origin',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'read', id }),
+    });
+  };
+
   const dismiss = async (id: string) => {
     await fetch('/api/account/notifications', {
       method: 'POST',
@@ -413,15 +429,34 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
               </li>
             )}
             {items.map((item) => (
-              <li key={item.id} className={styles.item}>
+              <li
+                key={item.id}
+                className={`${styles.item} ${item.readAt != null ? styles.itemRead : ''}`}
+              >
                 <div className={`${styles.categoryIcon} ${categoryColorClass(item.category)}`}>
                   <CategoryIcon category={item.category} />
                 </div>
                 <div className={styles.itemBody}>
                   {item.url ? (
-                    <a href={item.url} className={styles.itemTitle} onClick={() => setOpen(false)}>
+                    <a
+                      href={item.url}
+                      className={styles.itemTitle}
+                      onClick={() => {
+                        void markRead(item.id);
+                        setOpen(false);
+                      }}
+                    >
                       {item.title}
                     </a>
+                  ) : item.readAt == null ? (
+                    <button
+                      type="button"
+                      className={styles.itemTitle}
+                      aria-label={`Mark as read: ${item.title}`}
+                      onClick={() => void markRead(item.id)}
+                    >
+                      {item.title}
+                    </button>
                   ) : (
                     <span className={styles.itemTitle}>{item.title}</span>
                   )}

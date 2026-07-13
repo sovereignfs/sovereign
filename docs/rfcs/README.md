@@ -77,3 +77,4 @@ for the full process.
 | [0063](0063-core-assistant-jarvis.md)            | Core Assistant, Jarvis UI, and Local Inference Sidecar   | Draft                | Yes — epic tasks 22.1–22.5                                           |
 | [0064](0064-git-backed-operator-backups.md)      | Git-backed operator backups                              | Draft                | Yes — epic tasks 8.10, 8.11, 8.12                                    |
 | [0065](0065-user-groups-plugin-access.md)        | User groups and plugin access policy                     | Draft                | Yes — epic tasks 1.15, 2.21, 13.7                                    |
+| [0066](0066-sovereign-chat-p2p-identity.md)      | Sovereign Chat P2P identity and transport                | Draft                | Yes — epic tasks 23.1–23.12                                          |

@@ -56,6 +56,8 @@ Work is organized into domain epics. Each task has a **stable epic task ID** (`<
 | 19  | `sovereign-council.md`   | Multi-model deliberation workspace                        |
 | 20  | `mobile.md`              | Native mobile shell                                       |
 | 21  | `sovereign-wallet.md`    | Encrypted wallet platform plugin                          |
+| 22  | `core-assistant.md`      | Runtime assistant and local inference                     |
+| 23  | `p2p-chat.md`            | Companion P2P chat, identity, transport, and E2EE         |
 
 The epic index is `docs/epics/README.md` in the repository planning docs.
 

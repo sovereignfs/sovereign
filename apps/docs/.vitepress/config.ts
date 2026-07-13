@@ -139,6 +139,10 @@ const rfcSidebarItems = [
     text: 'RFC 0065 — User Groups and Plugin Access',
     link: '/rfcs/0065-user-groups-plugin-access',
   },
+  {
+    text: 'RFC 0066 — Sovereign Chat P2P Identity',
+    link: '/rfcs/0066-sovereign-chat-p2p-identity',
+  },
 ];
 
 export default defineConfig({

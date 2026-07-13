@@ -16,11 +16,18 @@ import type {
   ConnectionOAuthState,
   ConnectionRef,
   CreateConnectionInput,
+  CreateE2eeProfileInput,
+  E2eeContext,
+  E2eeDeviceEnrollment,
+  E2eeProfile,
+  E2eeRecoveryWrapper,
+  EnrollE2eeDeviceInput,
   MarkConnectionErrorInput,
   OAuthStateInput,
   SecretContext,
   SecretRef,
   SecretScope,
+  SetE2eeRecoveryWrapperInput,
   StorageContext,
   StorageObject,
   StoragePutInput,
@@ -122,6 +129,25 @@ export interface SdkHost {
       options: { expiresInSeconds?: number } | undefined,
       context: StorageContext,
     ): Promise<string>;
+  };
+  /**
+   * Client-side encryption profile persistence (RFC 0060). Pure metadata
+   * plumbing — no encryption happens here; the CMK is generated and
+   * wrapped/unwrapped entirely in the browser (`@sovereignfs/sdk`'s
+   * `e2ee-crypto`/`e2ee-device` modules) before these methods are ever
+   * called with the resulting ciphertext.
+   */
+  e2ee: {
+    getProfile(context: E2eeContext): Promise<E2eeProfile | null>;
+    createProfile(input: CreateE2eeProfileInput, context: E2eeContext): Promise<E2eeProfile>;
+    getRecoveryWrapper(context: E2eeContext): Promise<E2eeRecoveryWrapper | null>;
+    setRecoveryWrapper(
+      input: SetE2eeRecoveryWrapperInput,
+      context: E2eeContext,
+    ): Promise<E2eeRecoveryWrapper>;
+    enrollDevice(input: EnrollE2eeDeviceInput, context: E2eeContext): Promise<E2eeDeviceEnrollment>;
+    listDevices(context: E2eeContext): Promise<E2eeDeviceEnrollment[]>;
+    revokeDevice(id: string, context: E2eeContext): Promise<void>;
   };
   secrets: {
     create(input: CreateSecretInput, context: SecretContext): Promise<SecretRef>;

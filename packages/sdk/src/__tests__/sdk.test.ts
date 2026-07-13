@@ -221,6 +221,43 @@ beforeAll(() => {
         return 'https://example.test/api/storage/signed-token';
       },
     },
+    e2ee: {
+      async getProfile() {
+        return null;
+      },
+      async createProfile(input, context) {
+        return {
+          id: 'profile-1',
+          userId: context.userId,
+          status: 'active',
+          cmkAlgorithm: input.cmkAlgorithm,
+          createdAt: 1,
+          updatedAt: 1,
+        };
+      },
+      async getRecoveryWrapper() {
+        return null;
+      },
+      async setRecoveryWrapper(input, context) {
+        return { id: 'wrapper-1', userId: context.userId, ...input, createdAt: 1, updatedAt: 1 };
+      },
+      async enrollDevice(input, context) {
+        return {
+          id: 'device-1',
+          userId: context.userId,
+          ...input,
+          createdAt: 1,
+          lastUsedAt: null,
+          revokedAt: null,
+        };
+      },
+      async listDevices() {
+        return [];
+      },
+      async revokeDevice(_id) {
+        /* no-op */
+      },
+    },
   });
 });
 
@@ -284,6 +321,13 @@ describe('sdk surface', () => {
     expect(typeof sdk.connections.getProviderConfig).toBe('function');
     expect(typeof sdk.events.publish).toBe('function');
     expect(typeof sdk.events.subscribe).toBe('function');
+    expect(typeof sdk.e2ee.getProfile).toBe('function');
+    expect(typeof sdk.e2ee.createProfile).toBe('function');
+    expect(typeof sdk.e2ee.getRecoveryWrapper).toBe('function');
+    expect(typeof sdk.e2ee.setRecoveryWrapper).toBe('function');
+    expect(typeof sdk.e2ee.enrollDevice).toBe('function');
+    expect(typeof sdk.e2ee.listDevices).toBe('function');
+    expect(typeof sdk.e2ee.revokeDevice).toBe('function');
   });
 });
 

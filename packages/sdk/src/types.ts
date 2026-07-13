@@ -222,6 +222,31 @@ export interface E2eeDeviceEnrollment {
  */
 export type E2eeState = 'not-set-up' | 'locked' | 'unlocked' | 'unsupported';
 
+/** No plugin scoping — one profile per user, regardless of caller. */
+export interface E2eeContext {
+  tenantId: string;
+  userId: string;
+}
+
+export interface CreateE2eeProfileInput {
+  cmkAlgorithm: string;
+}
+
+export interface SetE2eeRecoveryWrapperInput {
+  wrappedCmk: string;
+  kdfAlgorithm: string;
+  kdfParams: string;
+  kdfSalt: string;
+  algorithmVersion: string;
+}
+
+export interface EnrollE2eeDeviceInput {
+  deviceId: string;
+  deviceLabel: string | null;
+  wrappedCmk: string;
+  algorithmVersion: string;
+}
+
 /** Runtime-created secret scope for the experimental plugin vault (RFC 0043). */
 export type SecretScope = 'user' | 'plugin' | 'instance';
 

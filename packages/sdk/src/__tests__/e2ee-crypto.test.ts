@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   generateCmk,
+  generateDek,
   generateDeviceKey,
   generateRecoverySecret,
   unwrapCmkWithDeviceKey,
   unwrapCmkWithRecoverySecret,
+  unwrapDekWithCmk,
   wrapCmkWithDeviceKey,
   wrapCmkWithRecoverySecret,
+  wrapDekWithCmk,
 } from '../e2ee-crypto';
 
 /** Encrypt/decrypt a probe value with a CMK to prove two `CryptoKey` handles are the same key. */
@@ -109,5 +112,45 @@ describe('device-key CMK wrap/unwrap', () => {
   it('generates a non-extractable device key', async () => {
     const deviceKey = await generateDeviceKey();
     expect(deviceKey.extractable).toBe(false);
+  });
+});
+
+describe('per-object DEK wrap/unwrap', () => {
+  it('round-trips: unwrapping with the same CMK recovers the same DEK', async () => {
+    const cmk = await generateCmk();
+    const dek = await generateDek();
+    const wrapped = await wrapDekWithCmk(dek, cmk);
+
+    const unwrapped = await unwrapDekWithCmk(wrapped, cmk);
+
+    const token = await roundTripsThrough(dek);
+    expect(await decrypts(unwrapped, token)).toBe('probe-value');
+  });
+
+  it('rejects unwrapping with a different CMK', async () => {
+    const cmk = await generateCmk();
+    const otherCmk = await generateCmk();
+    const dek = await generateDek();
+    const wrapped = await wrapDekWithCmk(dek, cmk);
+
+    await expect(unwrapDekWithCmk(wrapped, otherCmk)).rejects.toThrow();
+  });
+
+  it('produces a `wrappedDek` field, distinct from a wrapped CMK', async () => {
+    const cmk = await generateCmk();
+    const dek = await generateDek();
+    const wrapped = await wrapDekWithCmk(dek, cmk);
+
+    expect(wrapped).toHaveProperty('wrappedDek');
+    expect(wrapped.wrappedDek).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+
+  it('produces a different ciphertext on every call (fresh IV)', async () => {
+    const cmk = await generateCmk();
+    const dek = await generateDek();
+    const first = await wrapDekWithCmk(dek, cmk);
+    const second = await wrapDekWithCmk(dek, cmk);
+
+    expect(first.wrappedDek).not.toBe(second.wrappedDek);
   });
 });

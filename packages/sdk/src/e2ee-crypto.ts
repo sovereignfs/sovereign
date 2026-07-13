@@ -12,10 +12,10 @@
  * future Argon2id upgrade doesn't require a schema change, only a new
  * `kdfAlgorithm` value and a migration path for existing wrappers.
  *
- * Scope: CMK generation and *master-key* wrap/unwrap only (recovery secret,
- * device key). Per-object DEK wrap/unwrap and generic Blob/JSON
- * encrypt/decrypt helpers for plugin data are a later adoption-path step
- * (not implemented here).
+ * Scope: CMK generation, master-key wrap/unwrap (recovery secret, device
+ * key), and per-object Data Encryption Key (DEK) generation/wrap/unwrap.
+ * Generic Blob/JSON encrypt/decrypt helpers that use a DEK live in
+ * `e2ee-object.ts`; this module only handles key material.
  */
 
 const AES_GCM_KEY_LENGTH = 256;
@@ -27,6 +27,17 @@ const RECOVERY_SECRET_ENTROPY_BYTES = 20; // 160 bits
 export const CMK_ALGORITHM = 'AES-GCM-256';
 export const KDF_ALGORITHM = 'PBKDF2-SHA256';
 export const WRAP_ALGORITHM_VERSION = 'v1';
+
+/** The CMK both encrypts/decrypts content directly and wraps/unwraps per-object DEKs. */
+const CMK_KEY_USAGES: KeyUsage[] = ['encrypt', 'decrypt', 'wrapKey', 'unwrapKey'];
+/** A DEK only ever encrypts/decrypts object content — it never wraps another key. */
+const DEK_KEY_USAGES: KeyUsage[] = ['encrypt', 'decrypt'];
+
+/** Base64url `iv || ciphertext` for a wrapped key, plus the algorithm version it was wrapped under. */
+interface WrappedKey {
+  value: string;
+  algorithmVersion: string;
+}
 
 /** Ciphertext + metadata needed to unwrap a CMK later. Safe to store server-side as-is. */
 export interface WrappedCmk {
@@ -41,6 +52,13 @@ export interface RecoveryWrappedCmk extends WrappedCmk {
   /** JSON-encoded KDF parameters. */
   kdfParams: string;
   kdfSalt: string;
+}
+
+/** Ciphertext + metadata needed to unwrap a per-object DEK later. Safe to store server-side as-is. */
+export interface WrappedDek {
+  /** Base64url `iv || ciphertext`. */
+  wrappedDek: string;
+  algorithmVersion: string;
 }
 
 function toBase64Url(bytes: ArrayBuffer | Uint8Array): string {
@@ -80,12 +98,18 @@ export function generateRecoverySecret(): string {
   return out.match(/.{1,5}/g)?.join('-') ?? out;
 }
 
-/** Generate a new, extractable Client Master Key. */
+/**
+ * Generate a new, extractable Client Master Key. Includes `wrapKey`/
+ * `unwrapKey` usages (not just `encrypt`/`decrypt`) since the CMK wraps
+ * per-object DEKs (`wrapDekWithCmk`/`unwrapDekWithCmk` below) in addition to
+ * being itself wrapped by a recovery secret or device key.
+ */
 export function generateCmk(): Promise<CryptoKey> {
-  return crypto.subtle.generateKey({ name: 'AES-GCM', length: AES_GCM_KEY_LENGTH }, true, [
-    'encrypt',
-    'decrypt',
-  ]);
+  return crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: AES_GCM_KEY_LENGTH },
+    true,
+    CMK_KEY_USAGES,
+  );
 }
 
 async function deriveWrappingKeyFromSecret(secret: string, salt: Uint8Array): Promise<CryptoKey> {
@@ -143,7 +167,7 @@ export async function unwrapCmkWithRecoverySecret(
     { name: 'AES-GCM', iv: iv as BufferSource },
     { name: 'AES-GCM', length: AES_GCM_KEY_LENGTH },
     true,
-    ['encrypt', 'decrypt'],
+    CMK_KEY_USAGES,
   );
 }
 
@@ -161,37 +185,76 @@ export function generateDeviceKey(): Promise<CryptoKey> {
   ]);
 }
 
-/** Wrap the CMK with this device's own key. */
-export async function wrapCmkWithDeviceKey(
-  cmk: CryptoKey,
-  deviceKey: CryptoKey,
-): Promise<WrappedCmk> {
+async function wrapKeyWith(key: CryptoKey, wrappingKey: CryptoKey): Promise<WrappedKey> {
   const iv = crypto.getRandomValues(new Uint8Array(AES_GCM_IV_BYTES));
-  const wrapped = await crypto.subtle.wrapKey('raw', cmk, deviceKey, {
+  const wrapped = await crypto.subtle.wrapKey('raw', key, wrappingKey, {
     name: 'AES-GCM',
     iv: iv as BufferSource,
   });
   return {
-    wrappedCmk: toBase64Url(concatBytes(iv, new Uint8Array(wrapped))),
+    value: toBase64Url(concatBytes(iv, new Uint8Array(wrapped))),
     algorithmVersion: WRAP_ALGORITHM_VERSION,
   };
 }
 
-/** Unwrap the CMK using this device's own key. */
-export async function unwrapCmkWithDeviceKey(
-  wrapped: WrappedCmk,
-  deviceKey: CryptoKey,
+async function unwrapKeyWith(
+  wrappedValue: string,
+  wrappingKey: CryptoKey,
+  extractable: boolean,
+  usages: KeyUsage[],
 ): Promise<CryptoKey> {
-  const combined = fromBase64Url(wrapped.wrappedCmk);
+  const combined = fromBase64Url(wrappedValue);
   const iv = combined.slice(0, AES_GCM_IV_BYTES);
   const ciphertext = combined.slice(AES_GCM_IV_BYTES);
   return crypto.subtle.unwrapKey(
     'raw',
     ciphertext as BufferSource,
-    deviceKey,
+    wrappingKey,
     { name: 'AES-GCM', iv: iv as BufferSource },
     { name: 'AES-GCM', length: AES_GCM_KEY_LENGTH },
-    true,
-    ['encrypt', 'decrypt'],
+    extractable,
+    usages,
   );
+}
+
+/** Wrap the CMK with this device's own key. */
+export async function wrapCmkWithDeviceKey(
+  cmk: CryptoKey,
+  deviceKey: CryptoKey,
+): Promise<WrappedCmk> {
+  const { value, algorithmVersion } = await wrapKeyWith(cmk, deviceKey);
+  return { wrappedCmk: value, algorithmVersion };
+}
+
+/** Unwrap the CMK using this device's own key. */
+export function unwrapCmkWithDeviceKey(
+  wrapped: WrappedCmk,
+  deviceKey: CryptoKey,
+): Promise<CryptoKey> {
+  return unwrapKeyWith(wrapped.wrappedCmk, deviceKey, true, CMK_KEY_USAGES);
+}
+
+/**
+ * Generate a new, extractable per-object Data Encryption Key (DEK). One DEK
+ * per encrypted object/document — never reused across objects — so
+ * compromising a single object's key never exposes any other object (RFC
+ * 0060 key hierarchy: CMK wraps DEKs, DEKs encrypt object content).
+ */
+export function generateDek(): Promise<CryptoKey> {
+  return crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: AES_GCM_KEY_LENGTH },
+    true,
+    DEK_KEY_USAGES,
+  );
+}
+
+/** Wrap a per-object DEK with the (unlocked) CMK. Safe to store server-side as-is. */
+export async function wrapDekWithCmk(dek: CryptoKey, cmk: CryptoKey): Promise<WrappedDek> {
+  const { value, algorithmVersion } = await wrapKeyWith(dek, cmk);
+  return { wrappedDek: value, algorithmVersion };
+}
+
+/** Unwrap a per-object DEK using the (unlocked) CMK. Throws if the CMK doesn't match. */
+export function unwrapDekWithCmk(wrapped: WrappedDek, cmk: CryptoKey): Promise<CryptoKey> {
+  return unwrapKeyWith(wrapped.wrappedDek, cmk, true, DEK_KEY_USAGES);
 }

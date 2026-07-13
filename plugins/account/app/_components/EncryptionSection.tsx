@@ -2,7 +2,12 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { Button, ConfirmDialog, FormField, Input } from '@sovereignfs/ui';
-import type { E2eeDeviceEnrollment, E2eeProfile, E2eeRecoveryWrapper } from '@sovereignfs/sdk';
+import type {
+  E2eeDeviceEnrollment,
+  E2eeProfile,
+  E2eeRecoveryWrapper,
+  E2eeState,
+} from '@sovereignfs/sdk';
 import {
   CMK_ALGORITHM,
   generateCmk,
@@ -12,7 +17,8 @@ import {
   wrapCmkWithDeviceKey,
   wrapCmkWithRecoverySecret,
 } from '@sovereignfs/sdk/e2ee-crypto';
-import { getDeviceKey, getOrCreateDeviceId, storeDeviceKey } from '@sovereignfs/sdk/e2ee-device';
+import { getOrCreateDeviceId, storeDeviceKey } from '@sovereignfs/sdk/e2ee-device';
+import { getE2eeLocalState } from '@sovereignfs/sdk/e2ee-state';
 import { deviceHint } from '../_lib/device-hint';
 import { enrollDeviceAction, revokeE2eeDeviceAction, setupE2eeAction } from '../actions';
 import styles from '../account.module.css';
@@ -23,16 +29,9 @@ interface Props {
   initialDevices: E2eeDeviceEnrollment[];
 }
 
-type LocalState = 'checking' | 'unsupported' | 'not-set-up' | 'locked' | 'unlocked';
+/** `'checking'` is a local UI-only state before `getE2eeLocalState` resolves. */
+type LocalState = 'checking' | E2eeState;
 type View = 'idle' | 'setup-intro' | 'setup-secret' | 'unlock';
-
-function browserSupportsE2ee(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    typeof window.crypto?.subtle !== 'undefined' &&
-    typeof window.indexedDB !== 'undefined'
-  );
-}
 
 // ── Setup flow ────────────────────────────────────────────────────────────
 
@@ -292,21 +291,15 @@ export function EncryptionSection({
   const [view, setView] = useState<View>('idle');
 
   useEffect(() => {
-    if (!browserSupportsE2ee()) {
-      setLocalState('unsupported');
-      return;
-    }
-    if (!profile) {
-      setLocalState('not-set-up');
-      return;
-    }
-    const id = getOrCreateDeviceId();
-    setDeviceId(id);
-    void (async () => {
-      const key = await getDeviceKey(id);
-      const activeEnrollment = devices.find((d) => d.deviceId === id && d.revokedAt === null);
-      setLocalState(key && activeEnrollment ? 'unlocked' : 'locked');
-    })();
+    let cancelled = false;
+    void getE2eeLocalState(profile, devices).then((result) => {
+      if (cancelled) return;
+      setLocalState(result.state);
+      setDeviceId(result.deviceId);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [profile, devices]);
 
   if (localState === 'checking') return null;

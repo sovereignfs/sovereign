@@ -163,9 +163,10 @@ export interface StorageContext {
 }
 
 /**
- * Client-side encryption profile shapes (RFC 0060, epic task 8.9). Types only
- * — no `sdk.e2ee` runtime surface exists yet (that lands with the actual
- * crypto helpers). Distinct from server-side field crypto
+ * Client-side encryption profile shapes (RFC 0060, epic task 8.9). Persisted
+ * via `sdk.e2ee`; the browser-only crypto that produces/consumes the
+ * ciphertext these methods store lives in `e2ee-crypto`/`e2ee-device`/
+ * `e2ee-object`/`e2ee-state`. Distinct from server-side field crypto
  * (`sdk.crypto.encryptField()`, RFC 0008): the runtime can decrypt a
  * server-side field; it can never decrypt a client-side encrypted object.
  *

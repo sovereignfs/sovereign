@@ -29,9 +29,9 @@ import { billing, events } from './unimplemented';
  * `directory` (member selection, RFC 0041), `secrets` (plugin secret vault,
  * RFC 0043), `storage` (plugin file storage, RFC 0044), `connections`
  * (external provider connections, RFC 0049), `e2ee` (client-side encryption
- * profile persistence, RFC 0060 — profile/device plumbing only; no
- * encrypt/decrypt helpers yet, see `e2ee-crypto`/`e2ee-device` for the
- * browser-only crypto that produces the ciphertext these methods store),
+ * profile persistence, RFC 0060 — profile/device plumbing only; see
+ * `e2ee-crypto`/`e2ee-device`/`e2ee-object`/`e2ee-state` for the browser-only
+ * crypto and state helpers that produce the ciphertext these methods store),
  * `billing` (plugin monetization / entitlement gating, RFC 0003), `events`.
  * `data`, `activity`, `portability`, `env`, `notifications`, `directory`,
  * `secrets`, `storage`, `connections`, and `e2ee` are implemented; `billing`
@@ -62,23 +62,27 @@ export const sdk = {
 export { provideHost } from './host';
 export type { SdkHost } from './host';
 /**
- * Client-side CMK crypto (RFC 0060) — browser-only (WebCrypto/IndexedDB).
- * Deliberately NOT re-exported here: this barrel also reaches server-only
- * modules (e.g. `activity.ts`'s `next/headers` import), and Next.js's
- * client/server boundary check flags the whole module graph reachable from
- * an import — not just the specific named export used — so a `'use client'`
- * component importing anything from `@sovereignfs/sdk` directly would fail
- * to build. Import from the dedicated subpaths instead:
+ * Client-side CMK/DEK crypto and state helpers (RFC 0060) — browser-only
+ * (WebCrypto/IndexedDB). Deliberately NOT re-exported here: this barrel also
+ * reaches server-only modules (e.g. `activity.ts`'s `next/headers` import),
+ * and Next.js's client/server boundary check flags the whole module graph
+ * reachable from an import — not just the specific named export used — so a
+ * `'use client'` component importing anything from `@sovereignfs/sdk`
+ * directly would fail to build. Import from the dedicated subpaths instead:
  *
  * ```ts
  * import { generateCmk, wrapCmkWithRecoverySecret } from '@sovereignfs/sdk/e2ee-crypto';
  * import { getOrCreateDeviceId, storeDeviceKey } from '@sovereignfs/sdk/e2ee-device';
+ * import { encryptBlob, encryptJson } from '@sovereignfs/sdk/e2ee-object';
+ * import { getE2eeLocalState } from '@sovereignfs/sdk/e2ee-state';
  * ```
  *
  * Types are erased at compile time (no runtime module graph), so they stay
  * exported from the main barrel below for convenience.
  */
-export type { RecoveryWrappedCmk, WrappedCmk } from './e2ee-crypto';
+export type { RecoveryWrappedCmk, WrappedCmk, WrappedDek } from './e2ee-crypto';
+export type { EncryptedBlob, EncryptedJson } from './e2ee-object';
+export type { E2eeLocalState } from './e2ee-state';
 export {
   NotImplementedError,
   NotAuthenticatedError,

@@ -52,13 +52,14 @@ group during the pre-v1 hardening period:
 - `sdk.notifications` — Notification Center (RFC 0015). `sdk.notifications.send()` delivers in-app notifications to users; requires the `notifications:send` manifest permission. Polling default (30s), SSE optional.
 - `sdk.directory` — member search and explicit user resolution for display-safe user selection (RFC 0041).
 - `sdk.secrets` — encrypted runtime-created plugin secrets (RFC 0043). Values are server-side only; list/export surfaces expose metadata only.
+- `sdk.storage` — plugin-scoped binary object storage (RFC 0044). Local filesystem storage is implemented; future backends may expand the host implementation without changing plugin calls.
 - `sdk.connections` — external provider connection metadata, OAuth state helpers, and server-side effective provider config reads (RFC 0049). Credential values remain in `sdk.secrets`; Account/Console surfaces expose metadata only.
 
 These surfaces are **reserved** — they exist as stubs and throw
 `NotImplementedError` (or in `sdk.billing`'s case, `EntitlementRequiredError`).
 Their shape may change before they ship:
 
-- `sdk.storage`, `sdk.events` — reserved post-v1 surfaces.
+- `sdk.events` — reserved post-v1 surface.
 - `sdk.billing` — plugin monetization (RFC 0003). `getEntitlement(pluginId)` and
   `requireEntitlement(pluginId)` are exported as stubs; `EntitlementRequiredError`
   is exported. The platform's own paywall gating (middleware redirect + license

@@ -201,7 +201,7 @@ typecheck`.
 
 ## Environment notes
 
-- Node >=20; pnpm is pinned by the root `packageManager`.
+- Node >=24 <25; pnpm is pinned by the root `packageManager`.
 - Shared dev tooling is pinned through the pnpm `catalog:` in
   `pnpm-workspace.yaml`. When adding `typescript` or `tsup` to a package, use
   `"catalog:"`, never a literal version. Bump the catalog once instead of

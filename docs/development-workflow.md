@@ -43,7 +43,7 @@ Work is organized into domain epics. Each task has a **stable epic task ID** (`<
 | 6   | `analytics.md`           | Self-hosted privacy-first usage analytics                 |
 | 7   | `monetization.md`        | Ed25519 entitlement tokens, billing, payments             |
 | 8   | `data-sovereignty.md`    | Backup/restore, portability, per-plugin DB, deletion      |
-| 9   | `theming.md`             | Design system, white-labeling, instance identity, i18n    |
+| 9   | `design-system.md`       | Design system, white-labeling, instance identity, i18n    |
 | 10  | `accessibility.md`       | WCAG 2.1 AA, a11y lint, plugin a11y contract              |
 | 11  | `i18n.md`                | Internationalization infrastructure and translations      |
 | 12  | `example-plugins.md`     | Starter templates and capability-demo plugins             |
@@ -140,7 +140,7 @@ Status lives in exactly two places:
 **Epic task:** 9.9
 **Roadmap version:** 0.9.1
 **Branch:** feat/email-templates
-**Epic file:** docs/epics/theming.md
+**Epic file:** docs/epics/design-system.md
 
 ---
 

@@ -16,7 +16,7 @@ you need to get started.
 
 ## Development setup
 
-**Requirements:** Node.js ≥20, pnpm 11.5.2, Git. Docker is optional but
+**Requirements:** Node.js 24.x, pnpm 11.5.2, Git. Docker is optional but
 recommended for running the full stack locally.
 
 ```bash

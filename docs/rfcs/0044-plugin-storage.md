@@ -38,7 +38,8 @@ encryption.
 
 ## Current state
 
-- `sdk.storage` exists as a reserved surface that throws `NotImplementedError`.
+- `sdk.storage` exists as an implemented, host-backed surface for plugin-scoped
+  file storage.
 - The platform has user data export/import and deletion mechanisms.
 - Some runtime routes already serve specific files such as avatars and instance
   assets, but there is no general plugin file API.

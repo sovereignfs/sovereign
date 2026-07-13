@@ -17,7 +17,7 @@ Full architecture and requirements: [sovereign-proposal-plan-srs.md](../sovereig
 | 6   | [Analytics](analytics.md)                     | 📋 Planned     | Self-hosted, privacy-first usage analytics with DNT/GPC enforcement                 |
 | 7   | [Monetization](monetization.md)               | ⏳ In Progress | Plugin billing model, Ed25519 entitlement tokens, payment integrations              |
 | 8   | [Data Sovereignty](data-sovereignty.md)       | ⏳ In Progress | Backup/restore, portability export/import, per-plugin DB, data deletion, encryption |
-| 9   | [Theming](theming.md)                         | ⏳ In Progress | Design system, white-labeling, instance identity, email templates, Storybook        |
+| 9   | [Design System](design-system.md)             | ⏳ In Progress | Design system, white-labeling, instance identity, email templates, Storybook        |
 | 10  | [Accessibility](accessibility.md)             | ✅ Complete    | WCAG 2.1 AA audit, a11y lint rules, plugin developer a11y contract                  |
 | 11  | [i18n](i18n.md)                               | 📋 Planned     | Internationalization infrastructure and built-in translations                       |
 | 12  | [Example Plugins](example-plugins.md)         | ✅ Complete    | Plugin starter templates and capability-demo example plugins                        |

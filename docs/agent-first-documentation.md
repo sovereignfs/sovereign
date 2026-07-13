@@ -57,7 +57,7 @@ Domain-grouping helps with planning and orientation, but it still requires a nav
 **Epic task:** 9.9
 **Roadmap version:** 0.9.1
 **Branch:** feat/email-templates
-**Epic file:** docs/epics/theming.md
+**Epic file:** docs/epics/design-system.md
 
 ---
 

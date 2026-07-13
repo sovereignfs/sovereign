@@ -408,7 +408,7 @@ pnpm sv serve
 PM2 provides auto-restart on crash, startup hooks, and log management. Use it
 for any deployment that must survive server reboots.
 
-**Prerequisites:** Node.js ≥ 20, pnpm 11+, [PM2](https://pm2.keymetrics.io/)
+**Prerequisites:** Node.js 24.x, pnpm 11+, [PM2](https://pm2.keymetrics.io/)
 (`npm install -g pm2`).
 
 ### Build the standalone output

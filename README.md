@@ -33,7 +33,7 @@ owned by the person or organisation running it.
 ## Quick start
 
 Requirements: [Docker](https://docs.docker.com/get-docker/) with Compose, or
-Node ≥20 + `pnpm` for local development.
+Node 24.x + `pnpm` for local development.
 
 ### Run with Docker
 

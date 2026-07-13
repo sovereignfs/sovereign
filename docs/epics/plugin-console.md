@@ -226,8 +226,8 @@ Subsequent tasks added Console sections as part of other epics:
 | 0.6.0  | Role & capability assignment UI                                            | [Users & Auth](users-auth.md)       |
 | 0.8.0  | Entitlement oversight, manual payment confirmation, Ed25519 key management | [Monetization](monetization.md)     |
 | 0.8.3  | Richer `/api/admin/health` response                                        | [Platform Shell](platform-shell.md) |
-| 0.8.4  | Instance identity / branding section                                       | [Theming](theming.md)               |
-| 9.9    | Email Templates section                                                    | [Theming](theming.md)               |
+| 0.8.4  | Instance identity / branding section                                       | [Design System](design-system.md)   |
+| 9.9    | Email Templates section                                                    | [Design System](design-system.md)   |
 | 1.7    | Admin delete user action                                                   | [Users & Auth](users-auth.md)       |
 | 1.15   | User groups management                                                     | [Users & Auth](users-auth.md)       |
 | 2.21   | Plugin access policy management                                            | [Platform Shell](platform-shell.md) |

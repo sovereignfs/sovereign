@@ -109,6 +109,36 @@ const rfcSidebarItems = [
   },
   { text: 'RFC 0055 — Sovereign Council', link: '/rfcs/0055-sovereign-council' },
   { text: 'RFC 0056 — Sovereign Guide', link: '/rfcs/0056-sovereign-guide' },
+  { text: 'RFC 0057 — Plugin Dependency Hoisting', link: '/rfcs/0057-plugin-dep-hoisting' },
+  {
+    text: 'RFC 0058 — Native Mobile App Shell',
+    link: '/rfcs/0058-native-mobile-app-shell',
+  },
+  {
+    text: 'RFC 0059 — Local Visual Regression',
+    link: '/rfcs/0059-local-visual-regression-testing',
+  },
+  {
+    text: 'RFC 0060 — Client-Side Encryption',
+    link: '/rfcs/0060-client-side-encryption-core',
+  },
+  { text: 'RFC 0061 — Sovereign Wallet', link: '/rfcs/0061-sovereign-wallet' },
+  {
+    text: 'RFC 0062 — Email Delivery Coverage',
+    link: '/rfcs/0062-email-delivery-coverage',
+  },
+  {
+    text: 'RFC 0063 — Core Assistant',
+    link: '/rfcs/0063-core-assistant-jarvis',
+  },
+  {
+    text: 'RFC 0064 — Git-Backed Operator Backups',
+    link: '/rfcs/0064-git-backed-operator-backups',
+  },
+  {
+    text: 'RFC 0065 — User Groups and Plugin Access',
+    link: '/rfcs/0065-user-groups-plugin-access',
+  },
 ];
 
 export default defineConfig({

@@ -1,6 +1,6 @@
 {
   "name": "sovereign",
-  "version": "0.23.3",
+  "version": "0.24.0",
   "private": true,
   "type": "module",
   "description": "Sovereign — a modular, self-hostable workspace runtime.",

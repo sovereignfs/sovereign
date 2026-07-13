@@ -1,7 +1,7 @@
 ---
 rfc: 0060
 title: Client-side encryption core
-status: Draft
+status: Implemented
 date: July 2026
 author: kasunben
 scope: packages/sdk, packages/manifest, runtime, packages/db, docs; builds on RFC 0008, RFC 0044, RFC 0052
@@ -249,6 +249,7 @@ must not hold default recovery material for client-side encrypted data.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | July 2026 | Initial draft |
+| Version | Date      | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.2     | July 2026 | Implemented (epic task 8.9), adoption steps 1–6: `sdk.e2ee` profile/recovery-wrapper/device-enrollment persistence, Account setup/unlock/recovery UX, CMK/DEK generation and wrap/unwrap, `Blob`/JSON object encryption (`e2ee-crypto`/`e2ee-object`/`e2ee-device`/`e2ee-state`), `sdk.storage` integration via its `metadata` field, and export/delete via `sdk.portability` (platform export includes wrapped ciphertext + metadata; account deletion removes it unconditionally). Step 7 (Wallet built on top of this core) is Sovereign Wallet's own separate roadmap, not part of this epic. |
+| 0.1     | July 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |

@@ -15,9 +15,11 @@ export default defineConfig({
       // Tests sit in per-directory __tests__/ folders next to the source they cover.
       'packages/**/__tests__/**/*.test.{ts,tsx}',
       'apps/**/__tests__/**/*.test.{ts,tsx}',
-      // runtime/src only — the generated copies under runtime/app/(platform)/(plugins)/
-      // are intentionally excluded by anchoring to runtime/src/.
-      'runtime/src/__tests__/**/*.test.{ts,tsx}',
+      // runtime/src only, including nested __tests__ dirs (e.g.
+      // runtime/src/portability/__tests__/) — the generated copies under
+      // runtime/app/(platform)/(plugins)/ are intentionally excluded by
+      // anchoring to runtime/src/.
+      'runtime/src/**/__tests__/**/*.test.{ts,tsx}',
       // Plugin source trees. Only the source tree under plugins/ is matched —
       // the composed copies live under runtime/app/(platform)/(plugins)/ and
       // are not covered by any include pattern, so they are never double-run.

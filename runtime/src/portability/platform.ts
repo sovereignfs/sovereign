@@ -1,12 +1,24 @@
+import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getAccountPrefs, listUserPluginSecretRefs, setAccountPrefs } from '@sovereignfs/db';
+import {
+  DEFAULT_TENANT_ID,
+  createE2eeDeviceEnrollment,
+  createE2eeProfile,
+  getAccountPrefs,
+  getE2eeProfile,
+  getE2eeRecoveryWrapper,
+  listE2eeDeviceEnrollments,
+  listUserPluginSecretRefs,
+  setAccountPrefs,
+  upsertE2eeRecoveryWrapper,
+} from '@sovereignfs/db';
 import { isValidTheme, isValidTimezone } from '@/src/account';
 import { avatarsDir, findAvatarFile } from '@/src/avatars';
 import { getPlatformDb } from '@/src/db';
 import { getDisabledPluginIds } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
-import type { PlatformExportData } from './assemble';
+import type { PlatformE2eeExportData, PlatformExportData } from './assemble';
 import type { PlatformAccountSection } from './restore';
 import { toSecretRef } from '@/src/secrets';
 
@@ -71,6 +83,8 @@ export async function gatherPlatformExport(
     avatar = { ext, bytes: new Uint8Array(readFileSync(path)) };
   }
 
+  const e2ee = await gatherE2eeExport(pdb, userId);
+
   return {
     name,
     email,
@@ -79,6 +93,42 @@ export async function gatherPlatformExport(
     theme: prefs.theme,
     vaultSecrets,
     avatar,
+    e2ee,
+  };
+}
+
+/**
+ * Client-side encryption material for export (RFC 0060) — wrapped ciphertext
+ * and non-sensitive algorithm/KDF metadata only, same as everything `sdk.e2ee`
+ * already persists. `null` when the user has no encryption profile.
+ */
+export async function gatherE2eeExport(
+  pdb: Awaited<ReturnType<typeof getPlatformDb>>,
+  userId: string,
+): Promise<PlatformExportData['e2ee']> {
+  const profile = await getE2eeProfile(pdb, DEFAULT_TENANT_ID, userId);
+  if (!profile) return null;
+
+  const recoveryWrapperRow = await getE2eeRecoveryWrapper(pdb, DEFAULT_TENANT_ID, userId);
+  const deviceRows = await listE2eeDeviceEnrollments(pdb, DEFAULT_TENANT_ID, userId);
+
+  return {
+    profile: { status: profile.status, cmkAlgorithm: profile.cmkAlgorithm },
+    recoveryWrapper: recoveryWrapperRow
+      ? {
+          wrappedCmk: recoveryWrapperRow.wrappedCmk,
+          kdfAlgorithm: recoveryWrapperRow.kdfAlgorithm,
+          kdfParams: recoveryWrapperRow.kdfParams,
+          kdfSalt: recoveryWrapperRow.kdfSalt,
+          algorithmVersion: recoveryWrapperRow.algorithmVersion,
+        }
+      : null,
+    deviceEnrollments: deviceRows.map((row) => ({
+      deviceId: row.deviceId,
+      deviceLabel: row.deviceLabel,
+      wrappedCmk: row.wrappedCmk,
+      algorithmVersion: row.algorithmVersion,
+    })),
   };
 }
 
@@ -126,6 +176,57 @@ export async function applyPlatformImport(
     writeFileSync(join(dir, `${userId}.${ext}`), Buffer.from(avatar.bytes));
     await authUpdateUser(cookie, {
       image: `/api/account/avatar/${userId}?v=${String(Date.now())}`,
+    });
+  }
+
+  if (account.e2ee) {
+    await applyE2eeImport(userId, account.e2ee);
+  }
+}
+
+/**
+ * Restore client-side encryption material from an import bundle (RFC 0060).
+ * Never overwrites an existing encryption setup — if the importing user
+ * already has a profile on this instance, the imported e2ee data is silently
+ * skipped, since it may not correspond to the same CMK. Row ids are
+ * regenerated; `deviceId`/`wrappedCmk`/`algorithmVersion` are preserved
+ * verbatim, so a device enrollment is only useful again if the *same*
+ * browser (same locally-stored device key) performs the re-import.
+ */
+export async function applyE2eeImport(userId: string, e2ee: PlatformE2eeExportData): Promise<void> {
+  const pdb = await getPlatformDb();
+  const existing = await getE2eeProfile(pdb, DEFAULT_TENANT_ID, userId);
+  if (existing) return;
+
+  await createE2eeProfile(pdb, {
+    id: randomUUID(),
+    tenantId: DEFAULT_TENANT_ID,
+    userId,
+    cmkAlgorithm: e2ee.profile.cmkAlgorithm,
+  });
+
+  if (e2ee.recoveryWrapper) {
+    await upsertE2eeRecoveryWrapper(pdb, {
+      id: randomUUID(),
+      tenantId: DEFAULT_TENANT_ID,
+      userId,
+      wrappedCmk: e2ee.recoveryWrapper.wrappedCmk,
+      kdfAlgorithm: e2ee.recoveryWrapper.kdfAlgorithm,
+      kdfParams: e2ee.recoveryWrapper.kdfParams,
+      kdfSalt: e2ee.recoveryWrapper.kdfSalt,
+      algorithmVersion: e2ee.recoveryWrapper.algorithmVersion,
+    });
+  }
+
+  for (const device of e2ee.deviceEnrollments) {
+    await createE2eeDeviceEnrollment(pdb, {
+      id: randomUUID(),
+      tenantId: DEFAULT_TENANT_ID,
+      userId,
+      deviceId: device.deviceId,
+      deviceLabel: device.deviceLabel,
+      wrappedCmk: device.wrappedCmk,
+      algorithmVersion: device.algorithmVersion,
     });
   }
 }

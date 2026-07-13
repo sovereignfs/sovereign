@@ -4,6 +4,7 @@ import { connections } from './connections';
 import { data } from './data';
 import { directory } from './directory';
 import * as db from './db';
+import { e2ee } from './e2ee';
 import { env } from './env';
 import * as mailer from './mailer';
 import { notifications } from './notifications';
@@ -27,11 +28,15 @@ import { billing, events } from './unimplemented';
  * vars, RFC 0018), `notifications` (notification center, RFC 0015),
  * `directory` (member selection, RFC 0041), `secrets` (plugin secret vault,
  * RFC 0043), `storage` (plugin file storage, RFC 0044), `connections`
- * (external provider connections, RFC 0049), `billing` (plugin monetization /
- * entitlement gating, RFC 0003), `events`. `data`, `activity`, `portability`,
- * `env`, `notifications`, `directory`, `secrets`, `storage`, and `connections`
- * are implemented; `billing` and `events` throw `NotImplementedError` until
- * their backing mechanisms ship. Their shape may change before they stabilise.
+ * (external provider connections, RFC 0049), `e2ee` (client-side encryption
+ * profile persistence, RFC 0060 — profile/device plumbing only; no
+ * encrypt/decrypt helpers yet, see `e2ee-crypto`/`e2ee-device` for the
+ * browser-only crypto that produces the ciphertext these methods store),
+ * `billing` (plugin monetization / entitlement gating, RFC 0003), `events`.
+ * `data`, `activity`, `portability`, `env`, `notifications`, `directory`,
+ * `secrets`, `storage`, `connections`, and `e2ee` are implemented; `billing`
+ * and `events` throw `NotImplementedError` until their backing mechanisms
+ * ship. Their shape may change before they stabilise.
  */
 export const sdk = {
   // Stable (v1.0.0).
@@ -46,6 +51,7 @@ export const sdk = {
   notifications,
   secrets,
   connections,
+  e2ee,
   events,
   activity,
   portability,
@@ -55,6 +61,24 @@ export const sdk = {
 
 export { provideHost } from './host';
 export type { SdkHost } from './host';
+/**
+ * Client-side CMK crypto (RFC 0060) — browser-only (WebCrypto/IndexedDB).
+ * Deliberately NOT re-exported here: this barrel also reaches server-only
+ * modules (e.g. `activity.ts`'s `next/headers` import), and Next.js's
+ * client/server boundary check flags the whole module graph reachable from
+ * an import — not just the specific named export used — so a `'use client'`
+ * component importing anything from `@sovereignfs/sdk` directly would fail
+ * to build. Import from the dedicated subpaths instead:
+ *
+ * ```ts
+ * import { generateCmk, wrapCmkWithRecoverySecret } from '@sovereignfs/sdk/e2ee-crypto';
+ * import { getOrCreateDeviceId, storeDeviceKey } from '@sovereignfs/sdk/e2ee-device';
+ * ```
+ *
+ * Types are erased at compile time (no runtime module graph), so they stay
+ * exported from the main barrel below for convenience.
+ */
+export type { RecoveryWrappedCmk, WrappedCmk } from './e2ee-crypto';
 export {
   NotImplementedError,
   NotAuthenticatedError,
@@ -111,6 +135,10 @@ export type {
   E2eeRecoveryWrapper,
   E2eeDeviceEnrollment,
   E2eeState,
+  E2eeContext,
+  CreateE2eeProfileInput,
+  SetE2eeRecoveryWrapperInput,
+  EnrollE2eeDeviceInput,
   UpdateSecretInput,
   UpdateConnectionInput,
 } from './types';

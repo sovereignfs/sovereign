@@ -11,7 +11,15 @@ export interface PluginCapabilityDecl {
 }
 
 /** All plugin-declared capabilities across installed plugins. */
-export const PLUGIN_CAPABILITIES: PluginCapabilityDecl[] = [];
+export const PLUGIN_CAPABILITIES: PluginCapabilityDecl[] = [
+  {
+    "pluginId": "fs.sovereign.example-basic",
+    "capName": "view-advanced",
+    "namespacedCap": "fs.sovereign.example-basic:view-advanced",
+    "description": "Access the advanced section of the example plugin.",
+    "defaultGrant": "all"
+  }
+];
 
 /**
  * Plugin capabilities with `defaultGrant: 'all'` — automatically granted to
@@ -20,4 +28,6 @@ export const PLUGIN_CAPABILITIES: PluginCapabilityDecl[] = [];
  * `sdk.auth.hasCapability(session, '<pluginId>:<capName>')` works without a
  * DB lookup (RFC 0022).
  */
-export const ALL_GRANTED_PLUGIN_CAPS: string[] = [];
+export const ALL_GRANTED_PLUGIN_CAPS: string[] = [
+  "fs.sovereign.example-basic:view-advanced"
+];

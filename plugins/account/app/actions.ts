@@ -410,3 +410,98 @@ export async function deletePasskeyAction(
   revalidatePath('/account/security');
   return { ok: true };
 }
+
+// ── Client-side encryption (RFC 0060) ────────────────────────────────────
+//
+// All CMK generation and wrap/unwrap happens in the browser
+// (@sovereignfs/sdk's e2ee-crypto/e2ee-device modules) — these actions only
+// ever receive and persist the resulting ciphertext + non-sensitive
+// KDF/algorithm metadata. Nothing here can see plaintext key material.
+
+export type E2eeActionState = { ok: true } | { ok: false; error: string };
+
+/**
+ * First-time setup: create the profile, store the recovery wrapper, and
+ * enroll the current device — one atomic-from-the-UI's-perspective step
+ * (three separate host calls; a failure partway through just leaves the
+ * profile row without a device enrollment, which the unlock flow's "enroll
+ * this device" step recovers from on a later attempt).
+ */
+export async function setupE2eeAction(input: {
+  cmkAlgorithm: string;
+  recoveryWrapper: {
+    wrappedCmk: string;
+    kdfAlgorithm: string;
+    kdfParams: string;
+    kdfSalt: string;
+    algorithmVersion: string;
+  };
+  device: {
+    deviceId: string;
+    deviceLabel: string | null;
+    wrappedCmk: string;
+    algorithmVersion: string;
+  };
+}): Promise<E2eeActionState> {
+  await sdk.auth.requireSession();
+  try {
+    await sdk.e2ee.createProfile({ cmkAlgorithm: input.cmkAlgorithm });
+    await sdk.e2ee.setRecoveryWrapper(input.recoveryWrapper);
+    await sdk.e2ee.enrollDevice(input.device);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Failed to set up encryption.' };
+  }
+  void sdk.activity.log({
+    action: 'account.e2ee_enabled',
+    summary: 'Client-side encryption set up',
+  });
+  void sendAccountSecurityEmail({
+    templateId: 'account.e2ee_enabled',
+    subject: 'Client-side encryption was set up on your Sovereign account',
+    text: 'Client-side encryption was set up on your Sovereign account. If this was not you, review your account security immediately.',
+    html: '<p>Client-side encryption was set up on your Sovereign account. If this was not you, review your account security immediately.</p>',
+  });
+  revalidatePath('/account/security');
+  return { ok: true };
+}
+
+/**
+ * Enroll the current device after a successful recovery-secret unlock (the
+ * device already proved it can derive the CMK — this just registers its own
+ * local wrapped copy so future visits don't need the recovery secret again).
+ */
+export async function enrollDeviceAction(input: {
+  deviceId: string;
+  deviceLabel: string | null;
+  wrappedCmk: string;
+  algorithmVersion: string;
+}): Promise<E2eeActionState> {
+  await sdk.auth.requireSession();
+  try {
+    await sdk.e2ee.enrollDevice(input);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Failed to enroll this device.' };
+  }
+  void sdk.activity.log({
+    action: 'account.e2ee_device_enrolled',
+    summary: `Device enrolled for client-side encryption${input.deviceLabel ? `: ${input.deviceLabel}` : ''}`,
+  });
+  revalidatePath('/account/security');
+  return { ok: true };
+}
+
+/** Revoke an enrolled device (e.g. lost/decommissioned). Does not affect other devices or the recovery secret. */
+export async function revokeE2eeDeviceAction(deviceId: string): Promise<E2eeActionState> {
+  await sdk.auth.requireSession();
+  try {
+    await sdk.e2ee.revokeDevice(deviceId);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Failed to revoke device.' };
+  }
+  void sdk.activity.log({
+    action: 'account.e2ee_device_revoked',
+    summary: 'Device revoked from client-side encryption',
+  });
+  revalidatePath('/account/security');
+  return { ok: true };
+}

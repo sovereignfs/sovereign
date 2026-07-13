@@ -3,6 +3,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   DEFAULT_TENANT_ID,
+  createE2eeDeviceEnrollment,
+  createE2eeProfile,
+  type E2eeProfileRow,
   createPluginSecret,
   createPluginConnection,
   createStorageObject,
@@ -12,6 +15,8 @@ import {
   findWorkspaceRoot,
   getConsentGrant,
   getDefaultTenant,
+  getE2eeProfile,
+  getE2eeRecoveryWrapper,
   getInstanceId,
   getPlatformSetting,
   getPluginSecret,
@@ -19,6 +24,7 @@ import {
   getPluginDb,
   getInstanceConfig,
   getStorageObjectByKey,
+  listE2eeDeviceEnrollments,
   listPluginConnections,
   listPluginSecrets,
   listStorageObjects,
@@ -28,10 +34,12 @@ import {
   markPluginSecretUsed,
   provisionPluginDb,
   recordActivity,
+  revokeE2eeDeviceEnrollment,
   sendNotification,
   sumPluginStorageBytes,
   updatePluginConnection,
   updatePluginSecret,
+  upsertE2eeRecoveryWrapper,
 } from '@sovereignfs/db';
 import { getPlatformDb } from './db';
 import { createMailer } from '@sovereignfs/mailer';
@@ -46,6 +54,7 @@ import type {
   DataContractResolver,
   DirectoryUser,
   DeletionHandler,
+  E2eeProfile,
   ExportResolver,
   ImportHandler,
   ResolveUsersInput,
@@ -127,6 +136,13 @@ const _mailer = createMailer();
  * `sdk.data.provide('contract', resolver)`. Resets on server restart.
  */
 const _resolverRegistry = new Map<string, DataContractResolver>();
+
+function toE2eeProfile(row: E2eeProfileRow): E2eeProfile {
+  return {
+    ...row,
+    status: row.status === 'disabled' ? 'disabled' : 'active',
+  };
+}
 
 function requireInstanceSecretCapability(scope: SecretScope, context: SecretContext): void {
   if (scope === 'instance' && !context.capabilities.includes('instance:configure')) {
@@ -455,6 +471,60 @@ provideHost({
         expiresInSeconds: options?.expiresInSeconds,
       });
       return `/api/storage/${token}`;
+    },
+  },
+  e2ee: {
+    async getProfile(context) {
+      const pdb = await getPlatformDb();
+      const row = await getE2eeProfile(pdb, context.tenantId, context.userId);
+      return row ? toE2eeProfile(row) : null;
+    },
+
+    async createProfile(input, context) {
+      const pdb = await getPlatformDb();
+      const row = await createE2eeProfile(pdb, {
+        id: randomUUID(),
+        tenantId: context.tenantId,
+        userId: context.userId,
+        cmkAlgorithm: input.cmkAlgorithm,
+      });
+      return toE2eeProfile(row);
+    },
+
+    async getRecoveryWrapper(context) {
+      const pdb = await getPlatformDb();
+      const row = await getE2eeRecoveryWrapper(pdb, context.tenantId, context.userId);
+      return row ?? null;
+    },
+
+    async setRecoveryWrapper(input, context) {
+      const pdb = await getPlatformDb();
+      return upsertE2eeRecoveryWrapper(pdb, {
+        id: randomUUID(),
+        tenantId: context.tenantId,
+        userId: context.userId,
+        ...input,
+      });
+    },
+
+    async enrollDevice(input, context) {
+      const pdb = await getPlatformDb();
+      return createE2eeDeviceEnrollment(pdb, {
+        id: randomUUID(),
+        tenantId: context.tenantId,
+        userId: context.userId,
+        ...input,
+      });
+    },
+
+    async listDevices(context) {
+      const pdb = await getPlatformDb();
+      return listE2eeDeviceEnrollments(pdb, context.tenantId, context.userId);
+    },
+
+    async revokeDevice(id, context) {
+      const pdb = await getPlatformDb();
+      await revokeE2eeDeviceEnrollment(pdb, id, context.tenantId, context.userId);
     },
   },
   secrets: {

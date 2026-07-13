@@ -1,5 +1,6 @@
 import { headers } from 'next/headers';
 import { sdk } from '@sovereignfs/sdk';
+import { EncryptionSection } from '../_components/EncryptionSection';
 import { PasswordChangeForm } from '../_components/PasswordChangeForm';
 import { SessionList } from '../_components/SessionList';
 import { TotpSection } from '../_components/TotpSection';
@@ -40,8 +41,28 @@ export default async function SecurityPage() {
 
   const sessions = await sdk.auth.listSessions();
 
+  const [e2eeProfile, e2eeRecoveryWrapper, e2eeDevices] = await Promise.all([
+    sdk.e2ee.getProfile(),
+    sdk.e2ee.getRecoveryWrapper(),
+    sdk.e2ee.listDevices(),
+  ]);
+
   return (
     <div className={styles.sections}>
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Client-side encryption</h2>
+          <p className={styles.sectionSubtitle}>
+            Protect sensitive data from the operator and runtime, not just other users.
+          </p>
+        </div>
+        <EncryptionSection
+          initialProfile={e2eeProfile}
+          initialRecoveryWrapper={e2eeRecoveryWrapper}
+          initialDevices={e2eeDevices}
+        />
+      </section>
+
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Two-factor authentication</h2>

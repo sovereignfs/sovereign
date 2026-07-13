@@ -85,6 +85,13 @@
       "when": 1782800000000,
       "tag": "0011_plugin_storage_objects",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1783966605804,
+      "tag": "0012_free_grim_reaper",
+      "breakpoints": true
     }
   ]
 }

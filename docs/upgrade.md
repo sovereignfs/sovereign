@@ -113,29 +113,38 @@ Notes call out any required configuration changes, schema changes, or action req
 
 ### v0.39 → v0.40
 
-- **Client-side encryption core, steps 1–3 of 7 (RFC 0060).** New `sdk.e2ee`
-  persistence surface (profile/recovery-wrapper/device-enrollment plumbing —
-  no encrypt/decrypt helpers yet) and a new Account → Security section for
-  setup, recovery-secret unlock, and device enrollment/revocation. Three new
-  platform tables (`e2ee_profiles`, `e2ee_recovery_wrappers`,
-  `e2ee_device_enrollments`) auto-create via the existing bootstrap DDL path
-  — **no action required**. All CMK generation and wrap/unwrap happens in the
-  browser (WebCrypto); the server only ever stores wrapped ciphertext and
+- **Client-side encryption core, steps 1–5 of 7 (RFC 0060).** New `sdk.e2ee`
+  persistence surface (profile/recovery-wrapper/device-enrollment plumbing)
+  and a new Account → Security section for setup, recovery-secret unlock, and
+  device enrollment/revocation. Three new platform tables (`e2ee_profiles`,
+  `e2ee_recovery_wrappers`, `e2ee_device_enrollments`) auto-create via the
+  existing bootstrap DDL path — **no action required**. All CMK/DEK
+  generation, wrap/unwrap, and object encryption happens in the browser
+  (WebCrypto); the server only ever stores wrapped ciphertext and
   non-sensitive KDF/algorithm metadata, never plaintext key material.
 - **New optional `e2ee:use` manifest permission**, reserved for a future
   plugin consumer (not yet declared by any first-party plugin).
-- **`@sovereignfs/sdk` gains `sdk.e2ee.*`** plus browser-only
-  `generateCmk`/`wrapCmkWithRecoverySecret`/etc. (`e2ee-crypto`) and
-  `getOrCreateDeviceId`/`storeDeviceKey`/etc. (`e2ee-device`). Additive,
-  experimental tier — no existing SDK surface changed.
-- **Not yet implemented**: general-purpose encrypt/decrypt helpers for a
-  plugin's own objects, `sdk.storage` integration, and export/delete hook
-  integration — later steps of the same RFC 0060 adoption path.
-- **`runtime` → 0.40.0**, **`@sovereignfs/sdk` → 1.21.0**,
-  **`@sovereignfs/db` → 1.10.2**, **`@sovereignfs/manifest` → 0.19.0**. `db`
-  1.10.2 adds a missing unique index on `(tenant_id, user_id)` for
-  `e2ee_profiles`/`e2ee_recovery_wrappers` (migration `0013`) — the initial
-  `0012` migration created the tables without it, so the recovery-wrapper
+- **`@sovereignfs/sdk` gains `sdk.e2ee.*`** plus browser-only helpers across
+  four subpaths: `generateCmk`/`wrapCmkWithRecoverySecret`/etc.
+  (`e2ee-crypto`, also `generateDek`/`wrapDekWithCmk`/`unwrapDekWithCmk` for
+  per-object keys), `getOrCreateDeviceId`/`storeDeviceKey`/etc.
+  (`e2ee-device`), `encryptBlob`/`decryptBlob`/`encryptJson`/`decryptJson`
+  (`e2ee-object`), and `getE2eeLocalState` for normalized locked/unlocked
+  state detection (`e2ee-state`). Additive, experimental tier — no existing
+  SDK surface changed.
+- **`sdk.storage` integrated with client-side encryption (step 5).** No
+  dedicated storage method was needed — `StorageObject.metadata` (see the
+  `@sovereignfs/sdk` 1.22.0 → 1.23.0 migration note below) is where an
+  encrypted object's wrapped DEK and algorithm version travel alongside its
+  ciphertext.
+- **Not yet implemented**: export/delete hook integration — the final step of
+  the same RFC 0060 adoption path.
+- **`runtime` → 0.40.1**, **`@sovereignfs/sdk` → 1.23.0**,
+  **`@sovereignfs/db` → 1.10.2**, **`@sovereignfs/manifest` → 0.19.0**,
+  **`plugins/account` → 0.16.1**. `db` 1.10.2 adds a missing unique index on
+  `(tenant_id, user_id)` for `e2ee_profiles`/`e2ee_recovery_wrappers`
+  (migration `0013`) — the initial `0012` migration created the tables
+  without it, so the recovery-wrapper
   upsert's `ON CONFLICT` clause had no matching constraint to target and
   threw on first use.
 
@@ -494,6 +503,22 @@ See [`docs/plugin-database.md`](plugin-database.md) for the full reference.
 
 ## Published package migrations
 
+### `@sovereignfs/sdk` 1.22.0 → 1.23.0
+
+**`StorageObject` gains a `metadata` field** (RFC 0044/0060). `sdk.storage.put()`
+already accepted a `metadata` input, but it was silently dropped and never
+returned by `get()`/`list()`/`put()`'s response — a bug, not an intentional
+omission. It now round-trips unchanged, which is what makes `sdk.storage`
+usable for encrypted objects (RFC 0060 step 5): the wrapped per-object DEK and
+algorithm version travel alongside the ciphertext in this field instead of
+needing a separate table.
+
+If your own test code or a mock host implementation constructs a `StorageObject`
+value directly (rather than only reading one returned by `sdk.storage`), add a
+`metadata: null` (or the actual value) — TypeScript now requires it. Real
+plugin code that only calls `sdk.storage.get()`/`list()`/`put()` and reads the
+result needs no changes; the new field is simply present.
+
 ### `@sovereignfs/sdk` 1.1.0 → 1.2.0
 
 **`sdk.data.provide` / `sdk.data.query` are implemented** (RFC 0002).
@@ -669,42 +694,42 @@ The section headings above correspond to these runtime version transitions.
 `SOVEREIGN_VERSION` in Compose files should match the runtime version for
 the release you are running.
 
-| Runtime version | Key capability delivered                                                   |
-| --------------- | -------------------------------------------------------------------------- |
-| 0.2.0           | Platform DB (tenant_settings, root plugin config), Console settings        |
-| 0.3.0           | Launcher plugin, root-plugin-in-place rewrite                              |
-| 0.4.0           | Account plugin (profile + preferences)                                     |
-| 0.5.0           | Plugin install script, PWA configuration                                   |
-| 0.6.0           | Local session verification (cookie-cache, AUTH-05)                         |
-| 0.7.0           | Public `/api` namespace delegation (PLT-16)                                |
-| 0.8.0–0.9.1     | Overlay shell mode (RFC 0001), Dialog UI primitive                         |
-| 0.9.0           | Logout / self sign-out (AUTH-02)                                           |
-| 0.10.0          | Security hardening Tier 0 + Tier 1 (RFC 0008)                              |
-| 0.11.0          | SDK distribution (RFC 0023), zero-dep published SDK                        |
-| 0.12.0          | Plugin compatibility & versioning (RFC 0024)                               |
-| 0.13.0          | Cross-plugin data sharing (RFC 0002)                                       |
-| 0.14.0–0.14.1   | Activity log (RFC 0005), icon system (RFC 0011)                            |
-| 0.15.0          | Drizzle-kit migrations, `sv backup`/`restore`, downgrade guard (RFC 0006)  |
-| 0.16.0          | User data portability (RFC 0007)                                           |
-| 0.17.0          | Plugin-scoped env vars (RFC 0018)                                          |
-| 0.18.0          | Minimal shell mode (RFC 0014)                                              |
-| 0.19.0          | Mobile responsiveness & PWA hardening (RFC 0013)                           |
-| 0.20.0          | Passkeys & TOTP MFA (RFC 0012), offline connectivity banner                |
-| 0.21.0          | Platform roles & capabilities (RFC 0021)                                   |
-| 0.22.0          | Notification Center (RFC 0015)                                             |
-| 0.23.0          | Web Push notifications (RFC 0016)                                          |
-| 0.25.0–0.25.1   | Plugin monetization (RFC 0003), license generator, entitlements            |
-| 0.26.0          | Per-plugin isolated database (RFC 0004)                                    |
-| 0.27.0          | Production dev-mode & diagnostics (RFC 0020)                               |
-| 0.28.0          | White-labeling Phase 1 (RFC 0027)                                          |
-| 0.29.0          | Instance identity rename (RFC 0032)                                        |
-| 0.30.0          | User data deletion (RFC 0033)                                              |
-| 0.31.0          | Notification transport (RFC 0034)                                          |
-| 0.32.0          | Sidebar customization (epic task 2.13)                                     |
-| 0.33.0          | Instance identity — `instanceId` field + terminology cleanup (RFC 0039)    |
-| 0.38.0          | Plugin background schedules — Phase 1 (RFC 0046)                           |
-| 0.39.0          | Plugin file storage — `sdk.storage` (RFC 0044)                             |
-| 0.40.0          | Client-side encryption core, steps 1–3 — `sdk.e2ee`, Account UX (RFC 0060) |
+| Runtime version | Key capability delivered                                                                                             |
+| --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 0.2.0           | Platform DB (tenant_settings, root plugin config), Console settings                                                  |
+| 0.3.0           | Launcher plugin, root-plugin-in-place rewrite                                                                        |
+| 0.4.0           | Account plugin (profile + preferences)                                                                               |
+| 0.5.0           | Plugin install script, PWA configuration                                                                             |
+| 0.6.0           | Local session verification (cookie-cache, AUTH-05)                                                                   |
+| 0.7.0           | Public `/api` namespace delegation (PLT-16)                                                                          |
+| 0.8.0–0.9.1     | Overlay shell mode (RFC 0001), Dialog UI primitive                                                                   |
+| 0.9.0           | Logout / self sign-out (AUTH-02)                                                                                     |
+| 0.10.0          | Security hardening Tier 0 + Tier 1 (RFC 0008)                                                                        |
+| 0.11.0          | SDK distribution (RFC 0023), zero-dep published SDK                                                                  |
+| 0.12.0          | Plugin compatibility & versioning (RFC 0024)                                                                         |
+| 0.13.0          | Cross-plugin data sharing (RFC 0002)                                                                                 |
+| 0.14.0–0.14.1   | Activity log (RFC 0005), icon system (RFC 0011)                                                                      |
+| 0.15.0          | Drizzle-kit migrations, `sv backup`/`restore`, downgrade guard (RFC 0006)                                            |
+| 0.16.0          | User data portability (RFC 0007)                                                                                     |
+| 0.17.0          | Plugin-scoped env vars (RFC 0018)                                                                                    |
+| 0.18.0          | Minimal shell mode (RFC 0014)                                                                                        |
+| 0.19.0          | Mobile responsiveness & PWA hardening (RFC 0013)                                                                     |
+| 0.20.0          | Passkeys & TOTP MFA (RFC 0012), offline connectivity banner                                                          |
+| 0.21.0          | Platform roles & capabilities (RFC 0021)                                                                             |
+| 0.22.0          | Notification Center (RFC 0015)                                                                                       |
+| 0.23.0          | Web Push notifications (RFC 0016)                                                                                    |
+| 0.25.0–0.25.1   | Plugin monetization (RFC 0003), license generator, entitlements                                                      |
+| 0.26.0          | Per-plugin isolated database (RFC 0004)                                                                              |
+| 0.27.0          | Production dev-mode & diagnostics (RFC 0020)                                                                         |
+| 0.28.0          | White-labeling Phase 1 (RFC 0027)                                                                                    |
+| 0.29.0          | Instance identity rename (RFC 0032)                                                                                  |
+| 0.30.0          | User data deletion (RFC 0033)                                                                                        |
+| 0.31.0          | Notification transport (RFC 0034)                                                                                    |
+| 0.32.0          | Sidebar customization (epic task 2.13)                                                                               |
+| 0.33.0          | Instance identity — `instanceId` field + terminology cleanup (RFC 0039)                                              |
+| 0.38.0          | Plugin background schedules — Phase 1 (RFC 0046)                                                                     |
+| 0.39.0          | Plugin file storage — `sdk.storage` (RFC 0044)                                                                       |
+| 0.40.0–0.40.1   | Client-side encryption core, steps 1–5 — `sdk.e2ee`, Account UX, object crypto, `sdk.storage` integration (RFC 0060) |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

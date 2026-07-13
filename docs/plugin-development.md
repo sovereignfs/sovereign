@@ -1403,6 +1403,75 @@ in `self-hosting.md`); `sdk.storage.put()` throws when either limit would be exc
 automatically when that user's account is deleted (RFC 0033). Deleting an object via
 `sdk.storage.delete()` removes both the metadata row and the physical file immediately.
 
+## Client-side encryption (RFC 0060)
+
+`sdk.e2ee` (requires the `e2ee:use` manifest permission) persists client-side
+encryption metadata — a user's encryption profile, recovery-secret wrapper, and
+enrolled-device records. It only ever stores **opaque wrapped ciphertext and
+non-sensitive algorithm/KDF metadata**; the runtime and server-side plugin code
+never see a plaintext Client Master Key (CMK), Data Encryption Key (DEK), or
+decrypted object content. All actual cryptography happens in the browser via
+separate, browser-only subpath exports rather than the main `@sovereignfs/sdk`
+barrel — the barrel also reaches server-only modules, and importing it from a
+`'use client'` component fails to build:
+
+```ts
+// Key material — CMK generation, master-key wrap/unwrap, per-object DEK wrap/unwrap.
+import {
+  generateCmk,
+  generateDek,
+  generateRecoverySecret,
+  wrapCmkWithRecoverySecret,
+  unwrapCmkWithRecoverySecret,
+  wrapDekWithCmk,
+  unwrapDekWithCmk,
+} from '@sovereignfs/sdk/e2ee-crypto';
+
+// This device's local wrapping key, persisted in IndexedDB.
+import { getOrCreateDeviceId, storeDeviceKey, getDeviceKey } from '@sovereignfs/sdk/e2ee-device';
+
+// Encrypt/decrypt actual object content under a DEK.
+import { encryptBlob, decryptBlob, encryptJson, decryptJson } from '@sovereignfs/sdk/e2ee-object';
+
+// Normalized locked/unlocked/not-set-up/unsupported state detection.
+import { getE2eeLocalState } from '@sovereignfs/sdk/e2ee-state';
+```
+
+**Key hierarchy.** Recovery secret or an enrolled device's local key unlocks the
+CMK; the CMK wraps per-object DEKs; a DEK encrypts one object's binary content
+(`encryptBlob`/`decryptBlob`) and/or its human-readable metadata
+(`encryptJson`/`decryptJson`). Generate a fresh DEK per object — never reuse
+one across objects — so compromising a single object's key never exposes any
+other object.
+
+**Setup and unlock** (already built into the Account plugin's Security page —
+plugins do not need to build their own setup UX): `generateCmk()` in the
+browser, wrap it with a user-recorded recovery secret
+(`wrapCmkWithRecoverySecret`) and with this device's own key
+(`wrapCmkWithDeviceKey`), then persist both wrapped copies via
+`sdk.e2ee.setRecoveryWrapper()`/`sdk.e2ee.enrollDevice()`. A lost device and a
+lost recovery secret both mean the encrypted data is unrecoverable — there is
+no operator escrow, by design (the threat model assumes an operator can be
+compromised).
+
+**Checking state before touching encrypted data:** call `getE2eeLocalState(profile,
+devices)` with the profile/enrollments loaded from `sdk.e2ee`. It returns
+`{ state, deviceId, deviceKey, activeEnrollment }` where `state` is one of
+`'not-set-up' | 'locked' | 'unlocked' | 'unsupported'` — plugins must show
+locked-state UX (not silently fail) when `state !== 'unlocked'`, and must never
+attempt to unwrap a CMK/DEK unless `state === 'unlocked'`.
+
+**Encrypting an object once unlocked:**
+
+```ts
+const dek = await generateDek();
+const wrappedDek = await wrapDekWithCmk(dek, cmk); // cmk from unwrapCmkWithDeviceKey(...)
+const encryptedBlob = await encryptBlob(dek, fileBlob);
+const encryptedMetadata = await encryptJson(dek, { title, notes });
+// Store `wrappedDek`, `encryptedBlob.ciphertext` (via sdk.storage), and
+// `encryptedMetadata.ciphertext` — all opaque to the server.
+```
+
 ## Local development
 
 Run a plugin against a local platform checkout:

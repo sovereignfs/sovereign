@@ -641,7 +641,12 @@ export interface CreateE2eeDeviceEnrollmentInput {
   algorithmVersion: string;
 }
 
-/** Create the (single, per-user) client-side encryption profile. */
+/**
+ * Create the (single, per-user) client-side encryption profile. Idempotent —
+ * `ON CONFLICT` upserts rather than throwing, so retrying a partially-failed
+ * setup attempt (e.g. the profile insert succeeded but a later step in the
+ * same setup flow failed) doesn't hit the unique constraint.
+ */
 export async function createE2eeProfile(
   pdb: PlatformDb,
   input: CreateE2eeProfileInput,
@@ -653,7 +658,11 @@ export async function createE2eeProfile(
           (id, tenant_id, user_id, status, cmk_algorithm, created_at, updated_at)
         VALUES
           (${input.id}, ${input.tenantId}, ${input.userId}, 'active',
-           ${input.cmkAlgorithm}, ${now}, ${now})`,
+           ${input.cmkAlgorithm}, ${now}, ${now})
+        ON CONFLICT (tenant_id, user_id)
+        DO UPDATE SET status = 'active',
+                      cmk_algorithm = excluded.cmk_algorithm,
+                      updated_at = excluded.updated_at`,
   );
   const row = await getE2eeProfile(pdb, input.tenantId, input.userId);
   if (!row) throw new Error('E2EE profile was not readable after creation.');

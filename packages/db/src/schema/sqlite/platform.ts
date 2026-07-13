@@ -1,4 +1,4 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /**
  * Platform schema (SQLite dialect).
@@ -210,33 +210,43 @@ export const pluginStorageObjects = sqliteTable('plugin_storage_objects', {
  * (CMK) itself, plaintext or otherwise — only wrapped copies live in
  * `e2eeRecoveryWrappers`/`e2eeDeviceEnrollments`.
  */
-export const e2eeProfiles = sqliteTable('e2ee_profiles', {
-  id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull(),
-  userId: text('user_id').notNull(),
-  status: text('status').notNull().default('active'),
-  cmkAlgorithm: text('cmk_algorithm').notNull(),
-  createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
-});
+export const e2eeProfiles = sqliteTable(
+  'e2ee_profiles',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenant_id').notNull(),
+    userId: text('user_id').notNull(),
+    status: text('status').notNull().default('active'),
+    cmkAlgorithm: text('cmk_algorithm').notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => [uniqueIndex('e2ee_profiles_tenant_user_idx').on(table.tenantId, table.userId)],
+);
 
 /**
  * The CMK wrapped by a key derived (KDF) from the user's recovery secret.
  * One row per user — rotating the recovery secret replaces this row rather
  * than accumulating history.
  */
-export const e2eeRecoveryWrappers = sqliteTable('e2ee_recovery_wrappers', {
-  id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull(),
-  userId: text('user_id').notNull(),
-  wrappedCmk: text('wrapped_cmk').notNull(),
-  kdfAlgorithm: text('kdf_algorithm').notNull(),
-  kdfParams: text('kdf_params').notNull(),
-  kdfSalt: text('kdf_salt').notNull(),
-  algorithmVersion: text('algorithm_version').notNull(),
-  createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
-});
+export const e2eeRecoveryWrappers = sqliteTable(
+  'e2ee_recovery_wrappers',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenant_id').notNull(),
+    userId: text('user_id').notNull(),
+    wrappedCmk: text('wrapped_cmk').notNull(),
+    kdfAlgorithm: text('kdf_algorithm').notNull(),
+    kdfParams: text('kdf_params').notNull(),
+    kdfSalt: text('kdf_salt').notNull(),
+    algorithmVersion: text('algorithm_version').notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('e2ee_recovery_wrappers_tenant_user_idx').on(table.tenantId, table.userId),
+  ],
+);
 
 /**
  * The CMK wrapped by one enrolled device's own key. Many rows per user (one

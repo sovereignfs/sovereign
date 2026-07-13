@@ -132,7 +132,12 @@ Notes call out any required configuration changes, schema changes, or action req
   plugin's own objects, `sdk.storage` integration, and export/delete hook
   integration — later steps of the same RFC 0060 adoption path.
 - **`runtime` → 0.40.0**, **`@sovereignfs/sdk` → 1.21.0**,
-  **`@sovereignfs/db` → 1.10.1**, **`@sovereignfs/manifest` → 0.19.0**.
+  **`@sovereignfs/db` → 1.10.2**, **`@sovereignfs/manifest` → 0.19.0**. `db`
+  1.10.2 adds a missing unique index on `(tenant_id, user_id)` for
+  `e2ee_profiles`/`e2ee_recovery_wrappers` (migration `0013`) — the initial
+  `0012` migration created the tables without it, so the recovery-wrapper
+  upsert's `ON CONFLICT` clause had no matching constraint to target and
+  threw on first use.
 
 ### v0.37 → v0.38
 

@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX `e2ee_profiles_tenant_user_idx` ON `e2ee_profiles` (`tenant_id`,`user_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `e2ee_recovery_wrappers_tenant_user_idx` ON `e2ee_recovery_wrappers` (`tenant_id`,`user_id`);

@@ -1,4 +1,12 @@
-import { bigint, boolean, integer, pgTable, primaryKey, text } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  boolean,
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 
 /**
  * Platform schema (Postgres dialect). A 1:1 mirror of `../sqlite/platform.ts` —
@@ -185,33 +193,43 @@ export const pluginStorageObjects = pgTable('plugin_storage_objects', {
  * (CMK) itself, plaintext or otherwise — only wrapped copies live in
  * `e2eeRecoveryWrappers`/`e2eeDeviceEnrollments`.
  */
-export const e2eeProfiles = pgTable('e2ee_profiles', {
-  id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull(),
-  userId: text('user_id').notNull(),
-  status: text('status').notNull().default('active'),
-  cmkAlgorithm: text('cmk_algorithm').notNull(),
-  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
-  updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
-});
+export const e2eeProfiles = pgTable(
+  'e2ee_profiles',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenant_id').notNull(),
+    userId: text('user_id').notNull(),
+    status: text('status').notNull().default('active'),
+    cmkAlgorithm: text('cmk_algorithm').notNull(),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+    updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [uniqueIndex('e2ee_profiles_tenant_user_idx').on(table.tenantId, table.userId)],
+);
 
 /**
  * The CMK wrapped by a key derived (KDF) from the user's recovery secret.
  * One row per user — rotating the recovery secret replaces this row rather
  * than accumulating history.
  */
-export const e2eeRecoveryWrappers = pgTable('e2ee_recovery_wrappers', {
-  id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull(),
-  userId: text('user_id').notNull(),
-  wrappedCmk: text('wrapped_cmk').notNull(),
-  kdfAlgorithm: text('kdf_algorithm').notNull(),
-  kdfParams: text('kdf_params').notNull(),
-  kdfSalt: text('kdf_salt').notNull(),
-  algorithmVersion: text('algorithm_version').notNull(),
-  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
-  updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
-});
+export const e2eeRecoveryWrappers = pgTable(
+  'e2ee_recovery_wrappers',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenant_id').notNull(),
+    userId: text('user_id').notNull(),
+    wrappedCmk: text('wrapped_cmk').notNull(),
+    kdfAlgorithm: text('kdf_algorithm').notNull(),
+    kdfParams: text('kdf_params').notNull(),
+    kdfSalt: text('kdf_salt').notNull(),
+    algorithmVersion: text('algorithm_version').notNull(),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+    updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('e2ee_recovery_wrappers_tenant_user_idx').on(table.tenantId, table.userId),
+  ],
+);
 
 /**
  * The CMK wrapped by one enrolled device's own key. Many rows per user (one

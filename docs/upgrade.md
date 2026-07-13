@@ -132,7 +132,7 @@ Notes call out any required configuration changes, schema changes, or action req
   plugin's own objects, `sdk.storage` integration, and export/delete hook
   integration — later steps of the same RFC 0060 adoption path.
 - **`runtime` → 0.40.0**, **`@sovereignfs/sdk` → 1.21.0**,
-  **`@sovereignfs/db` → 1.10.0**, **`@sovereignfs/manifest` → 0.19.0**.
+  **`@sovereignfs/db` → 1.10.1**, **`@sovereignfs/manifest` → 0.19.0**.
 
 ### v0.37 → v0.38
 

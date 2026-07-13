@@ -78,6 +78,13 @@
       "when": 1782700000000,
       "tag": "0010_plugin_provider_configs",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1782800000000,
+      "tag": "0011_plugin_storage_objects",
+      "breakpoints": true
     }
   ]
 }

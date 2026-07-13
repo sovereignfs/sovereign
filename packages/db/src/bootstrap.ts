@@ -129,6 +129,52 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
        ON plugin_storage_objects (tenant_id, plugin_id, key)`,
     `CREATE INDEX IF NOT EXISTS plugin_storage_objects_owner_idx
        ON plugin_storage_objects (tenant_id, plugin_id, owner_user_id)`,
+    // RFC 0060 — Client-side encryption core. The server never holds a
+    // plaintext Client Master Key (CMK) — only wrapped copies (via a
+    // recovery secret or an enrolled device's own key) plus non-sensitive
+    // KDF/algorithm metadata. One profile row per user tracks setup state;
+    // recovery wrappers and device enrollments are separate, revocable rows.
+    `CREATE TABLE IF NOT EXISTS e2ee_profiles (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      cmk_algorithm TEXT NOT NULL,
+      created_at ${ts} NOT NULL,
+      updated_at ${ts} NOT NULL
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS e2ee_profiles_user_idx
+       ON e2ee_profiles (tenant_id, user_id)`,
+    `CREATE TABLE IF NOT EXISTS e2ee_recovery_wrappers (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      wrapped_cmk TEXT NOT NULL,
+      kdf_algorithm TEXT NOT NULL,
+      kdf_params TEXT NOT NULL,
+      kdf_salt TEXT NOT NULL,
+      algorithm_version TEXT NOT NULL,
+      created_at ${ts} NOT NULL,
+      updated_at ${ts} NOT NULL
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS e2ee_recovery_wrappers_user_idx
+       ON e2ee_recovery_wrappers (tenant_id, user_id)`,
+    `CREATE TABLE IF NOT EXISTS e2ee_device_enrollments (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      device_id TEXT NOT NULL,
+      device_label TEXT,
+      wrapped_cmk TEXT NOT NULL,
+      algorithm_version TEXT NOT NULL,
+      created_at ${ts} NOT NULL,
+      last_used_at ${ts},
+      revoked_at ${ts}
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS e2ee_device_enrollments_device_idx
+       ON e2ee_device_enrollments (tenant_id, user_id, device_id)`,
+    `CREATE INDEX IF NOT EXISTS e2ee_device_enrollments_user_idx
+       ON e2ee_device_enrollments (tenant_id, user_id, revoked_at)`,
     // RFC 0043 — Plugin secret vault. `ciphertext` is encrypted by runtime code;
     // this package stores opaque bytes plus non-secret metadata only.
     `CREATE TABLE IF NOT EXISTS plugin_secrets (

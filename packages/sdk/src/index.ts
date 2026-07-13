@@ -106,6 +106,11 @@ export type {
   StorageContext,
   StorageObject,
   StoragePutInput,
+  E2eeProfile,
+  E2eeProfileStatus,
+  E2eeRecoveryWrapper,
+  E2eeDeviceEnrollment,
+  E2eeState,
   UpdateSecretInput,
   UpdateConnectionInput,
 } from './types';

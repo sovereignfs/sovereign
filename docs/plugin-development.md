@@ -207,7 +207,9 @@ Declared SDK capabilities. The v1-functional ones:
 | `storage:readWrite` | Read/write plugin-scoped binary objects via `sdk.storage` (RFC 0044). |
 
 Reserved (declaring them is allowed; the backing surfaces throw `NotImplementedError` until
-implemented): `events:publish`, `events:subscribe`.
+implemented): `events:publish`, `events:subscribe`, `e2ee:use` (client-side encryption,
+`sdk.e2ee` — RFC 0060; distinct from any future server-side `sdk.crypto.encryptField()`
+field crypto, which the runtime _can_ decrypt).
 
 Permission declarations are part of the manifest contract and are used by
 platform flows such as portability (`data:export` / `data:import`). Other SDK

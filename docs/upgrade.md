@@ -111,6 +111,24 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.41 → v0.42
+
+- **Plugin portability export metadata (RFC 0052, partial).** `PluginExportSection`
+  gains `pluginVersion` (always overwritten by the runtime from the installed
+  manifest — a resolver cannot misreport it), `secretMetadata` (per-plugin
+  secret metadata, never plaintext values), and `warnings`. `ExportContext`
+  gains `options: { includeFiles }` so a resolver can honor the user's choice
+  to skip large attachments. All additive — existing resolvers that don't read
+  these fields are unaffected.
+- **Account → Data export gains an "include files and attachments" toggle**
+  (`?includeFiles=false` on `GET /api/account/export`), and a throwing plugin
+  exporter no longer aborts the whole export — it's excluded and recorded in
+  the bundle manifest's new `failures` list.
+- **Not yet implemented**: cross-plugin reference preservation in exports
+  (depends on RFC 0051, still unimplemented) — the remaining piece of RFC 0052.
+- **`runtime` → 0.42.0**, **`@sovereignfs/sdk` → 1.24.0**,
+  **`plugins/account` → 0.17.0**.
+
 ### v0.40 → v0.41
 
 - **Client-side encryption core complete, steps 6 of 7 (RFC 0060) — epic task
@@ -756,6 +774,7 @@ the release you are running.
 | 0.39.0          | Plugin file storage — `sdk.storage` (RFC 0044)                                                                       |
 | 0.40.0–0.40.1   | Client-side encryption core, steps 1–5 — `sdk.e2ee`, Account UX, object crypto, `sdk.storage` integration (RFC 0060) |
 | 0.41.0          | Client-side encryption core complete, step 6 — export/delete via `sdk.portability` (RFC 0060, epic task 8.9 done)    |
+| 0.42.0          | Plugin portability export metadata, partial (RFC 0052)                                                               |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

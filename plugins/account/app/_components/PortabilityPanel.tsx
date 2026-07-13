@@ -1,7 +1,7 @@
 'use client';
 
 import { type DragEvent, type FormEvent, useState } from 'react';
-import { Button } from '@sovereignfs/ui';
+import { Button, Checkbox } from '@sovereignfs/ui';
 import styles from '../account.module.css';
 
 interface ImportSummary {
@@ -17,6 +17,7 @@ interface ImportSummary {
 export function PortabilityPanel() {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [includeFiles, setIncludeFiles] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -27,7 +28,7 @@ export function PortabilityPanel() {
     setExporting(true);
     setExportError(null);
     try {
-      const res = await fetch('/api/account/export');
+      const res = await fetch(`/api/account/export?includeFiles=${String(includeFiles)}`);
       if (!res.ok) throw new Error(`Export failed (${res.status})`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -77,6 +78,14 @@ export function PortabilityPanel() {
           Download a copy of your account data — profile, preferences, avatar, and any participating
           plugins — as a ZIP archive you can keep or import elsewhere.
         </p>
+        <div style={{ marginBottom: 'var(--sv-space-3)' }}>
+          <Checkbox
+            checked={includeFiles}
+            onChange={setIncludeFiles}
+            label="Include files and attachments from participating apps"
+            disabled={exporting}
+          />
+        </div>
         <div style={{ alignSelf: 'flex-start' }}>
           <Button type="button" onClick={() => void onExport()} disabled={exporting}>
             {!exporting && (

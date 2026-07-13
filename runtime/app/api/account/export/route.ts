@@ -3,7 +3,7 @@ import { DEFAULT_TENANT_ID } from '@sovereignfs/db';
 import { logActivity } from '@/src/activity';
 import { getPlatformVersion } from '@/src/platform-version';
 import { assembleExport } from '@/src/portability/assemble';
-import { eligiblePluginIds, gatherPlatformExport } from '@/src/portability/platform';
+import { eligibleExportPlugins, gatherPlatformExport } from '@/src/portability/platform';
 
 // Public runtime URL recorded in the bundle for provenance. Read via a computed
 // key so Next does not inline NEXT_PUBLIC_* at build time (the value must track
@@ -14,10 +14,11 @@ function sourceInstance(): string | null {
 }
 
 /**
- * Export the current user's data as a versioned ZIP (RFC 0007 / ACC). Session-
- * gated by the middleware, which injects the verified `x-sovereign-user-id`;
- * a user can only ever export their own data. Synchronous with a size implied by
- * the data; large/async export is deferred (RFC 0007 open question).
+ * Export the current user's data as a versioned ZIP (RFC 0007 / RFC 0052 / ACC).
+ * Session-gated by the middleware, which injects the verified
+ * `x-sovereign-user-id`; a user can only ever export their own data.
+ * Synchronous with a size implied by the data; large/async export is deferred
+ * (RFC 0007 open question).
  */
 export async function GET(request: Request): Promise<Response> {
   const userId = request.headers.get('x-sovereign-user-id');
@@ -25,7 +26,10 @@ export async function GET(request: Request): Promise<Response> {
 
   const cookie = request.headers.get('cookie') ?? '';
   const platform = await gatherPlatformExport(userId, cookie);
-  const exportPlugins = await eligiblePluginIds('data:export');
+  const exportPlugins = await eligibleExportPlugins();
+  // `?includeFiles=false` lets the user skip attachments/blobs for a lighter
+  // export (RFC 0052 user-selected export options); defaults to including them.
+  const includeFiles = new URL(request.url).searchParams.get('includeFiles') !== 'false';
 
   const zip = await assembleExport({
     userId,
@@ -34,6 +38,7 @@ export async function GET(request: Request): Promise<Response> {
     platformVersion: getPlatformVersion(),
     sourceInstance: sourceInstance(),
     exportPlugins,
+    options: { includeFiles },
   });
 
   void logActivity({

@@ -92,8 +92,10 @@ export {
 export type { DataContractRef, DataContractResolver } from './data';
 export type {
   ExportContext,
+  ExportOptions,
   ImportContext,
   PluginExportSection,
+  ExportSecretMetadata,
   ExportResolver,
   ImportHandler,
   DeletionContext,

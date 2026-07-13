@@ -22,10 +22,16 @@ export const PLATFORM_SECTION_ID = 'platform';
 export interface BundleSectionMeta {
   /** `PLATFORM_SECTION_ID` for the platform slice, otherwise a plugin id. */
   pluginId: string;
+  /** The installed manifest version of the contributing plugin, if known. */
+  pluginVersion?: string;
   /** The section's own data-format version. */
   schemaVersion: number;
   /** sha256 (hex) of the section's `data.json` bytes — detects tampering/corruption. */
   checksum: string;
+  /** Metadata for secrets this section's plugin owns — never plaintext values. */
+  secretMetadata?: { label: string; provider: string; exists: boolean }[];
+  /** Non-fatal notices surfaced from assembling this section. */
+  warnings?: string[];
 }
 
 export interface BundleManifest {
@@ -42,6 +48,11 @@ export interface BundleManifest {
     email: string | null;
   };
   sections: BundleSectionMeta[];
+  /**
+   * Plugins whose exporter threw and were excluded from the bundle entirely
+   * (RFC 0052 — one plugin's failure must not abort the whole export).
+   */
+  failures?: { pluginId: string; error: string }[];
 }
 
 /** sha256 hex digest of bytes. */

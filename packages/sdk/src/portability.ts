@@ -5,6 +5,14 @@ import { requireHost } from './host';
 export interface ExportContext {
   userId: string;
   tenantId: string;
+  /** User-selected export scope (RFC 0052). */
+  options: ExportOptions;
+}
+
+/** User-selectable export scope, gathered by the Account Data tab. */
+export interface ExportOptions {
+  /** Whether to include plugin-contributed file blobs. Defaults to `true`. */
+  includeFiles: boolean;
 }
 
 /** Supplied by the runtime to an import handler — scoped to the importing user. */
@@ -19,16 +27,40 @@ export interface ImportContext {
   remapId(originalId: string): string;
 }
 
+/** Metadata about one of the plugin's own secrets, without its plaintext value. */
+export interface ExportSecretMetadata {
+  /** The secret's user-facing label (e.g. "Personal API key"). */
+  label: string;
+  /** The secret's provider/purpose (e.g. "openai", "smtp"). */
+  provider: string;
+  /** Whether a value is currently stored — never the value itself. */
+  exists: boolean;
+}
+
 /** One plugin's slice of a user's export. */
 export interface PluginExportSection {
   /** The contributing plugin's manifest `id`. */
   pluginId: string;
+  /**
+   * The installed manifest `version` of the contributing plugin, for provenance.
+   * A resolver may omit this — the runtime always overwrites it with the
+   * installed manifest's actual `version` before writing the bundle, so a
+   * plugin cannot misreport its own version.
+   */
+  pluginVersion?: string;
   /** The plugin's own data-format version (for forward/backward compatibility). */
   schemaVersion: number;
   /** Plugin-defined JSON payload (rows, references). */
   data: unknown;
   /** Optional binary attachments, keyed by relative path within the section. */
   blobs?: Record<string, Uint8Array>;
+  /**
+   * Metadata for secrets this plugin owns, scoped to the current user.
+   * Plaintext secret values must never appear here or anywhere in the export.
+   */
+  secretMetadata?: ExportSecretMetadata[];
+  /** Non-fatal notices about this section (e.g. a file that was skipped). */
+  warnings?: string[];
 }
 
 /** Produces one plugin's export section for the current user. */
@@ -57,7 +89,8 @@ export interface DeletionResult {
 export type DeletionHandler = (ctx: DeletionContext) => Promise<DeletionResult>;
 
 /**
- * User data portability (RFC 0007) — self-service export / restore / migration.
+ * User data portability (RFC 0007, RFC 0052) — self-service export / restore /
+ * migration.
  *
  * A plugin opts in by registering an **export resolver** and an **import
  * handler** (declare `data:export` / `data:import` in the manifest `permissions`).
@@ -72,6 +105,10 @@ export type DeletionHandler = (ctx: DeletionContext) => Promise<DeletionResult>;
  *   pluginId: 'com.example.tasks',
  *   schemaVersion: 1,
  *   data: await collectMyRowsFor(ctx.userId),
+ *   // only when ctx.options.includeFiles is true — large attachments should
+ *   // respect the user's export scope choice:
+ *   blobs: ctx.options.includeFiles ? await collectMyBlobsFor(ctx.userId) : undefined,
+ *   secretMetadata: await listMySecretMetadataFor(ctx.userId), // never plaintext
  * }));
  *
  * await sdk.portability.provideImport(async (section, ctx) => {
@@ -81,7 +118,10 @@ export type DeletionHandler = (ctx: DeletionContext) => Promise<DeletionResult>;
  *
  * The platform exports/imports its own data (profile, preferences, avatar)
  * directly; plugins contribute the rest. The user drives it from the
- * Account → Data tab.
+ * Account → Data tab, including whether to include files/attachments
+ * (`ctx.options.includeFiles`). A resolver that throws is excluded from the
+ * bundle and recorded in the manifest's `failures` list — one plugin's failure
+ * never aborts the whole export.
  *
  * Registration reads the calling plugin's id from the request context, so these
  * must run inside a plugin route (where `x-sovereign-plugin-id` is injected) —

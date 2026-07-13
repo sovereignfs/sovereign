@@ -40,6 +40,22 @@ export async function eligiblePluginIds(
     .map((m) => m.id);
 }
 
+/**
+ * Same eligibility rule as `eligiblePluginIds('data:export')`, but keyed to
+ * each plugin's installed manifest `version` — the assembler trusts this over
+ * anything a resolver reports about itself (RFC 0052 export metadata).
+ */
+export async function eligibleExportPlugins(): Promise<Record<string, string>> {
+  const disabled = new Set(await getDisabledPluginIds(await getPlatformDb()));
+  const result: Record<string, string> = {};
+  for (const m of getInstalledPlugins()) {
+    if (!disabled.has(m.id) && m.permissions.includes('data:export')) {
+      result[m.id] = m.version;
+    }
+  }
+  return result;
+}
+
 /** Gather the platform-owned slice of a user's data for export. */
 export async function gatherPlatformExport(
   userId: string,

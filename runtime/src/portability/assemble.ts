@@ -1,4 +1,4 @@
-import type { PluginExportSection } from '@sovereignfs/sdk';
+import type { ExportOptions, PluginExportSection } from '@sovereignfs/sdk';
 import {
   type BundleManifest,
   type BundleSectionMeta,
@@ -66,22 +66,30 @@ export interface AssembleArgs {
   /** Public instance URL recorded for provenance (cross-instance migration). */
   sourceInstance: string | null;
   /**
-   * Ids of installed, enabled plugins that declare the `data:export` permission.
-   * The caller computes this from the registry + plugin status + manifests; the
-   * assembler only invokes an exporter for an id in this allow-list.
+   * Ids of installed, enabled plugins that declare the `data:export` permission,
+   * mapped to their installed manifest `version`. The caller computes this from
+   * the registry + plugin status + manifests; the assembler only invokes an
+   * exporter for an id in this allow-list, and always trusts this map's version
+   * over anything a resolver returns.
    */
-  exportPlugins: string[];
+  exportPlugins: Record<string, string>;
+  /** User-selected export scope (RFC 0052). Defaults to including files. */
+  options?: ExportOptions;
 }
 
 /**
- * Assemble a user's export into a versioned ZIP (RFC 0007). Writes the platform
- * slice directly, then invokes each eligible plugin's registered export resolver
- * (scoped to the user). A plugin in `exportPlugins` with no registered resolver
- * is simply absent from the bundle.
+ * Assemble a user's export into a versioned ZIP (RFC 0007 / RFC 0052). Writes
+ * the platform slice directly, then invokes each eligible plugin's registered
+ * export resolver (scoped to the user). A plugin in `exportPlugins` with no
+ * registered resolver is simply absent from the bundle. A resolver that throws
+ * is recorded in the manifest's `failures` and excluded from the bundle —
+ * one plugin's failure never aborts the whole export.
  */
 export async function assembleExport(args: AssembleArgs): Promise<Uint8Array> {
+  const options: ExportOptions = args.options ?? { includeFiles: true };
   const files: Record<string, Uint8Array> = {};
   const sections: BundleSectionMeta[] = [];
+  const failures: { pluginId: string; error: string }[] = [];
 
   // Platform section: profile + preferences (+ avatar blob).
   const accountJson = jsonToU8({
@@ -92,27 +100,37 @@ export async function assembleExport(args: AssembleArgs): Promise<Uint8Array> {
   });
   files['platform/account.json'] = accountJson;
   sections.push({ pluginId: PLATFORM_SECTION_ID, schemaVersion: 1, checksum: sha256(accountJson) });
-  if (args.platform.avatar) {
+  if (options.includeFiles && args.platform.avatar) {
     files[`platform/avatar.${args.platform.avatar.ext}`] = args.platform.avatar.bytes;
   }
 
   // Plugin sections: each eligible, opted-in plugin contributes its own slice.
-  for (const pluginId of args.exportPlugins) {
+  for (const [pluginId, pluginVersion] of Object.entries(args.exportPlugins)) {
     const exporter = getExporter(pluginId);
     if (!exporter) continue;
-    const section: PluginExportSection = await exporter({
-      userId: args.userId,
-      tenantId: args.tenantId,
-    });
+
+    let section: PluginExportSection;
+    try {
+      section = await exporter({ userId: args.userId, tenantId: args.tenantId, options });
+    } catch (e) {
+      failures.push({ pluginId, error: e instanceof Error ? e.message : String(e) });
+      continue;
+    }
+
     const dataJson = jsonToU8(section.data);
     files[`plugins/${section.pluginId}/data.json`] = dataJson;
     sections.push({
       pluginId: section.pluginId,
+      pluginVersion,
       schemaVersion: section.schemaVersion,
       checksum: sha256(dataJson),
+      secretMetadata: section.secretMetadata,
+      warnings: section.warnings,
     });
-    for (const [path, bytes] of Object.entries(section.blobs ?? {})) {
-      files[`plugins/${section.pluginId}/blobs/${path}`] = bytes;
+    if (options.includeFiles) {
+      for (const [path, bytes] of Object.entries(section.blobs ?? {})) {
+        files[`plugins/${section.pluginId}/blobs/${path}`] = bytes;
+      }
     }
   }
 
@@ -122,6 +140,7 @@ export async function assembleExport(args: AssembleArgs): Promise<Uint8Array> {
     source: { instance: args.sourceInstance, platformVersion: args.platformVersion },
     subject: { userId: args.userId, email: args.platform.email },
     sections,
+    failures: failures.length > 0 ? failures : undefined,
   };
   files['manifest.json'] = jsonToU8(manifest);
 

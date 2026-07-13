@@ -1067,12 +1067,22 @@ resolver)` registers a resolver; `sdk.data.query(ref, params)` reads from
     metadata: { title: newList.title },
   });
   ```
-- **`portability`** — participate in user-initiated data export/import (RFC 0007).
-  Register an export resolver (`sdk.portability.provideExport(resolver)`) and/or
-  an import handler (`sdk.portability.provideImport(handler)`) from a server-side
-  handler (Server Component, Route Handler, or Server Action). The resolver
-  receives an `ExportContext { userId, tenantId }` and must return a
-  `PluginExportSection { pluginId, schemaVersion, data, blobs? }`. The handler
+- **`portability`** — participate in user-initiated data export/import
+  (RFC 0007, RFC 0052). Register an export resolver
+  (`sdk.portability.provideExport(resolver)`) and/or an import handler
+  (`sdk.portability.provideImport(handler)`) from a server-side handler (Server
+  Component, Route Handler, or Server Action). The resolver receives an
+  `ExportContext { userId, tenantId, options: { includeFiles } }` — respect
+  `options.includeFiles` when deciding whether to attach large blobs — and must
+  return a `PluginExportSection { pluginId, pluginVersion?, schemaVersion, data,
+  blobs?, secretMetadata?, warnings? }`. `pluginVersion` is optional; the runtime
+  always overwrites it with your plugin's installed manifest version, so you
+  can't misreport it. `secretMetadata` lists metadata for secrets your plugin
+  owns (`{ label, provider, exists }`) — **never** include plaintext secret
+  values anywhere in the export. `warnings` surfaces non-fatal notices (e.g. a
+  file that was skipped) in the bundle manifest. If your resolver throws, the
+  plugin is excluded from the bundle and recorded in the manifest's `failures`
+  list — it does not abort the rest of the user's export. The import handler
   receives the stored section plus an `ImportContext { userId, tenantId,
 remapId(originalId) }` — use `remapId` to translate stored IDs to fresh ones
   for the importing account (referential integrity). Declare `data:export` and/or
@@ -1083,10 +1093,12 @@ remapId(originalId) }` — use `remapId` to translate stored IDs to fresh ones
   // Server Component or Route Handler in your plugin:
   import { sdk } from '@sovereignfs/sdk';
 
-  await sdk.portability.provideExport(async ({ userId }) => ({
+  await sdk.portability.provideExport(async ({ userId, options }) => ({
     pluginId: 'io.example.tasks',
     schemaVersion: 1,
     data: { tasks: await myDb.getTasksForUser(userId) },
+    blobs: options.includeFiles ? await myDb.getAttachmentsForUser(userId) : undefined,
+    secretMetadata: await myDb.listSecretMetadataForUser(userId),
   }));
 
   await sdk.portability.provideImport(async (section, { userId, remapId }) => {

@@ -34,7 +34,7 @@ describe('assembleExport', () => {
       platform: PLATFORM,
       platformVersion: '0.6.0',
       sourceInstance: 'https://a.example.com',
-      exportPlugins: [],
+      exportPlugins: {},
     });
     const files = readZip(zip);
     expect(Object.keys(files)).toContain('manifest.json');
@@ -69,13 +69,20 @@ describe('assembleExport', () => {
       platform: PLATFORM,
       platformVersion: '0.6.0',
       sourceInstance: null,
-      exportPlugins: ['test.plugin'],
+      exportPlugins: { 'test.plugin': '1.2.0' },
     });
     const files = readZip(zip);
     expect(Object.keys(files)).toContain('plugins/test.plugin/data.json');
     expect(Object.keys(files)).toContain('plugins/test.plugin/blobs/note.txt');
     const data = u8ToJson<{ owner: string }>(getEntry(files, 'plugins/test.plugin/data.json'));
     expect(data.owner).toBe('u1'); // scoped to the requesting user
+
+    const manifest = u8ToJson<{ sections: { pluginId: string; pluginVersion?: string }[] }>(
+      getEntry(files, 'manifest.json'),
+    );
+    const section = manifest.sections.find((s) => s.pluginId === 'test.plugin');
+    // pluginVersion comes from the installed manifest, not the resolver.
+    expect(section?.pluginVersion).toBe('1.2.0');
   });
 
   it('does not invoke an exporter for a plugin outside the allow-list', async () => {
@@ -90,14 +97,91 @@ describe('assembleExport', () => {
       platform: PLATFORM,
       platformVersion: '0.6.0',
       sourceInstance: null,
-      exportPlugins: [], // not permitted/enabled
+      exportPlugins: {}, // not permitted/enabled
     });
     expect(called).toBe(false);
+  });
+
+  it('omits files when the caller opts out of includeFiles', async () => {
+    registerExporter('test.plugin', async () => ({
+      pluginId: 'test.plugin',
+      schemaVersion: 1,
+      data: { ok: true },
+      blobs: { 'note.txt': new Uint8Array([1, 2, 3]) },
+    }));
+    const zip = await assembleExport({
+      userId: 'u1',
+      tenantId: 'default',
+      platform: PLATFORM,
+      platformVersion: '0.6.0',
+      sourceInstance: null,
+      exportPlugins: { 'test.plugin': '1.0.0' },
+      options: { includeFiles: false },
+    });
+    const files = readZip(zip);
+    expect(Object.keys(files)).not.toContain('plugins/test.plugin/blobs/note.txt');
+    expect(Object.keys(files)).not.toContain('platform/avatar.png');
+  });
+
+  it('carries secretMetadata and warnings from a resolver into the manifest', async () => {
+    registerExporter('test.plugin', async () => ({
+      pluginId: 'test.plugin',
+      schemaVersion: 1,
+      data: {},
+      secretMetadata: [{ label: 'API key', provider: 'openai', exists: true }],
+      warnings: ['one attachment was too large and was skipped'],
+    }));
+    const zip = await assembleExport({
+      userId: 'u1',
+      tenantId: 'default',
+      platform: PLATFORM,
+      platformVersion: '0.6.0',
+      sourceInstance: null,
+      exportPlugins: { 'test.plugin': '1.0.0' },
+    });
+    const files = readZip(zip);
+    const manifest = u8ToJson<{
+      sections: { pluginId: string; secretMetadata?: unknown[]; warnings?: string[] }[];
+    }>(getEntry(files, 'manifest.json'));
+    const section = manifest.sections.find((s) => s.pluginId === 'test.plugin');
+    expect(section?.secretMetadata).toEqual([
+      { label: 'API key', provider: 'openai', exists: true },
+    ]);
+    expect(section?.warnings).toEqual(['one attachment was too large and was skipped']);
+  });
+
+  it('excludes a throwing exporter and records it as a failure, without aborting the export', async () => {
+    registerExporter('bad.plugin', async () => {
+      throw new Error('boom');
+    });
+    registerExporter('good.plugin', async () => ({
+      pluginId: 'good.plugin',
+      schemaVersion: 1,
+      data: { ok: true },
+    }));
+    const zip = await assembleExport({
+      userId: 'u1',
+      tenantId: 'default',
+      platform: PLATFORM,
+      platformVersion: '0.6.0',
+      sourceInstance: null,
+      exportPlugins: { 'bad.plugin': '1.0.0', 'good.plugin': '1.0.0' },
+    });
+    const files = readZip(zip);
+    expect(Object.keys(files)).toContain('plugins/good.plugin/data.json');
+    expect(Object.keys(files)).not.toContain('plugins/bad.plugin/data.json');
+
+    const manifest = u8ToJson<{
+      sections: { pluginId: string }[];
+      failures?: { pluginId: string; error: string }[];
+    }>(getEntry(files, 'manifest.json'));
+    expect(manifest.sections.map((s) => s.pluginId)).toContain('good.plugin');
+    expect(manifest.failures).toEqual([{ pluginId: 'bad.plugin', error: 'boom' }]);
   });
 });
 
 describe('applyImport', () => {
-  async function roundTripBundle(exportPlugins: string[]): Promise<Uint8Array> {
+  async function roundTripBundle(exportPlugins: Record<string, string>): Promise<Uint8Array> {
     return assembleExport({
       userId: 'u1',
       tenantId: 'default',
@@ -114,7 +198,7 @@ describe('applyImport', () => {
       schemaVersion: 1,
       data: { refs: ['src-1', 'src-1', 'src-2'] },
     }));
-    const bytes = await roundTripBundle(['test.plugin']);
+    const bytes = await roundTripBundle({ 'test.plugin': '1.0.0' });
 
     let platformApplied: PlatformAccountSection | undefined;
     let importedSection: PluginExportSection | undefined;
@@ -157,7 +241,7 @@ describe('applyImport', () => {
       schemaVersion: 1,
       data: {},
     }));
-    const bytes = await roundTripBundle(['test.plugin']);
+    const bytes = await roundTripBundle({ 'test.plugin': '1.0.0' });
 
     const summary = await applyImport({
       bytes,

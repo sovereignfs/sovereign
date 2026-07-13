@@ -31,5 +31,6 @@ Full architecture and requirements: [sovereign-proposal-plan-srs.md](../sovereig
 | 20  | [Mobile App Shell](mobile.md)                 | 📋 Planned     | Capacitor shell app loading a self-hosted instance — iOS and Android                |
 | 21  | [Sovereign Wallet](sovereign-wallet.md)       | 📋 Planned     | Encrypted wallet for QR loyalty cards and sensitive document snapshots              |
 | 22  | [Core Assistant](core-assistant.md)           | 📋 Planned     | First Harness runtime phase: Jarvis workspace assistant and local inference         |
+| 23  | [Sovereign P2P Chat](p2p-chat.md)             | 📋 Planned     | Companion app with federated identity, E2EE messaging, and Veilid transport         |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned_

@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.18.2 · **Last updated:** 2026-07-05
+**Version:** 0.18.2 · **Last updated:** 2026-07-13
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](epics/).
 
@@ -224,6 +224,18 @@ once prioritised.
 | —       | Sovereign Wallet loyalty card storage and QR/barcode rendering            | 📋     | [21.2](epics/sovereign-wallet.md#212--loyalty-card-storage-and-qrbarcode-rendering)                                        |
 | —       | Sovereign Wallet encrypted document snapshots                             | 📋     | [21.3](epics/sovereign-wallet.md#213--encrypted-document-snapshots)                                                        |
 | —       | Sovereign Wallet portability and deletion hooks                           | 📋     | [21.4](epics/sovereign-wallet.md#214--wallet-portability-and-deletion-hooks)                                               |
+| —       | Chat protocol selection and Veilid feasibility spike (RFC 0066)           | 📋     | [23.1](epics/p2p-chat.md#231--protocol-selection-and-veilid-feasibility-spike-rfc-0066)                                    |
+| —       | Chat companion app and deployment scaffold (RFC 0066)                     | 📋     | [23.2](epics/p2p-chat.md#232--chat-companion-app-and-deployment-scaffold)                                                  |
+| —       | Sovereign Chat Launch Profile and cookie boundary (RFC 0066)              | 📋     | [23.3](epics/p2p-chat.md#233--sovereign-chat-launch-profile-and-cookie-boundary)                                           |
+| —       | Chat identity, addresses, and instance discovery (RFC 0066)               | 📋     | [23.4](epics/p2p-chat.md#234--chat-identity-addresses-and-instance-discovery)                                              |
+| —       | Chat device enrollment, recovery, and revocation (RFC 0066)               | 📋     | [23.5](epics/p2p-chat.md#235--device-enrollment-recovery-and-revocation)                                                   |
+| —       | Veilid transport adapter and signed route discovery (RFC 0066)            | 📋     | [23.6](epics/p2p-chat.md#236--veilid-transport-adapter-and-signed-route-discovery)                                         |
+| —       | One-to-one E2EE messaging MVP (RFC 0066)                                  | 📋     | [23.7](epics/p2p-chat.md#237--one-to-one-e2ee-messaging-mvp)                                                               |
+| —       | Encrypted offline delivery, attachments, and notifications (RFC 0066)     | 📋     | [23.8](epics/p2p-chat.md#238--encrypted-offline-delivery-attachments-and-notifications)                                    |
+| —       | Chat same-instance hardening and deletion (RFC 0066)                      | 📋     | [23.9](epics/p2p-chat.md#239--same-instance-release-hardening-portability-and-deletion)                                    |
+| —       | Chat cross-instance federation and trust policy (RFC 0066)                | 📋     | [23.10](epics/p2p-chat.md#2310--cross-instance-federation-and-trust-policy)                                                |
+| —       | Chat group messaging and membership security (RFC 0066)                   | 📋     | [23.11](epics/p2p-chat.md#2311--group-messaging-and-membership-security)                                                   |
+| —       | Chat native transport and background delivery adapters (RFC 0066)         | 📋     | [23.12](epics/p2p-chat.md#2312--native-transport-and-background-delivery-adapters)                                         |
 
 ---
 

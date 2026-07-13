@@ -143,6 +143,8 @@ export interface StorageObject {
   contentType: string;
   size: number;
   checksum: string;
+  /** The `metadata` passed to `put()`, round-tripped back on `get()`/`list()`. */
+  metadata: Record<string, unknown> | null;
   createdAt: number;
   updatedAt: number;
 }

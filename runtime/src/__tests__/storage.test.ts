@@ -1,11 +1,32 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { PluginStorageObjectRow } from '@sovereignfs/db';
 import {
   checksumOf,
   createStorageToken,
   maxObjectBytes,
   maxPluginBytes,
+  metadataFromJson,
+  storageMetadataToJson,
+  toStorageObject,
   verifyStorageToken,
 } from '../storage';
+
+function fakeRow(overrides: Partial<PluginStorageObjectRow> = {}): PluginStorageObjectRow {
+  return {
+    id: 'obj-1',
+    tenantId: 'default',
+    pluginId: 'com.example.notes',
+    ownerUserId: null,
+    key: 'notes/1.txt',
+    contentType: 'text/plain',
+    size: 3,
+    checksum: 'checksum',
+    metadata: null,
+    createdAt: 1,
+    updatedAt: 1,
+    ...overrides,
+  };
+}
 
 const previousAuthSecret = process.env.SOVEREIGN_AUTH_SECRET;
 const previousMaxObjectBytes = process.env.SOVEREIGN_STORAGE_MAX_OBJECT_BYTES;
@@ -126,5 +147,37 @@ describe('storage quota defaults', () => {
   it('ignores invalid env values', () => {
     process.env.SOVEREIGN_STORAGE_MAX_OBJECT_BYTES = 'not-a-number';
     expect(maxObjectBytes()).toBeGreaterThan(0);
+  });
+});
+
+describe('storage object metadata round-trip', () => {
+  it('round-trips a metadata object through the stored JSON string', () => {
+    const metadata = { wrappedDek: 'opaque-ciphertext', algorithmVersion: 'v1' };
+    const json = storageMetadataToJson(metadata);
+    expect(metadataFromJson(json)).toEqual(metadata);
+  });
+
+  it('round-trips null metadata as null', () => {
+    expect(storageMetadataToJson(null)).toBeNull();
+    expect(metadataFromJson(null)).toBeNull();
+  });
+
+  it('toStorageObject includes metadata parsed back into an object', () => {
+    const row = fakeRow({ metadata: storageMetadataToJson({ wrappedDek: 'abc' }) });
+    expect(toStorageObject(row).metadata).toEqual({ wrappedDek: 'abc' });
+  });
+
+  it('toStorageObject returns null metadata when the row has none', () => {
+    const row = fakeRow({ metadata: null });
+    expect(toStorageObject(row).metadata).toBeNull();
+  });
+
+  it('metadataFromJson degrades to null on corrupt stored JSON rather than throwing', () => {
+    expect(metadataFromJson('{not valid json')).toBeNull();
+  });
+
+  it('rejects metadata over the 8 KiB limit on write, before it ever reaches the DB', () => {
+    const huge = { blob: 'x'.repeat(9000) };
+    expect(() => storageMetadataToJson(huge)).toThrow(/8 KiB/);
   });
 });

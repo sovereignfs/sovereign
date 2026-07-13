@@ -1363,7 +1363,8 @@ const object = await sdk.storage.put({
   metadata: { source: 'import' },
 });
 
-const found = await sdk.storage.get('receipts/2026-01.pdf'); // { ...metadata, body: ReadableStream } | null
+const found = await sdk.storage.get('receipts/2026-01.pdf'); // StorageObject & { body: ReadableStream } | null
+found?.metadata; // { source: 'import' } — round-tripped back exactly as passed to put()
 await sdk.storage.delete('receipts/2026-01.pdf');
 const all = await sdk.storage.list('receipts/'); // optional key prefix filter
 
@@ -1398,6 +1399,14 @@ S3-compatible backend, `sdk.storage` calls do not change.
 **Quotas.** Conservative default limits apply per object and per plugin (see
 [`SOVEREIGN_STORAGE_MAX_OBJECT_BYTES` / `SOVEREIGN_STORAGE_MAX_PLUGIN_BYTES`](self-hosting.md)
 in `self-hosting.md`); `sdk.storage.put()` throws when either limit would be exceeded.
+`metadata` has its own, separate 8 KiB cap, enforced at write time.
+
+**Metadata.** `metadata` is opaque, plugin-defined JSON — the platform never inspects
+it. It round-trips unchanged through `get()`/`list()`/`put()`'s return value, which is
+what makes it the right place for the small, non-sensitive routing fields an encrypted
+object needs alongside its ciphertext (see
+[Client-side encryption](#client-side-encryption-rfc-0060) below) — there is no
+separate metadata table or schema to extend.
 
 **Lifecycle.** User-owned storage objects (rows and physical files) are deleted
 automatically when that user's account is deleted (RFC 0033). Deleting an object via
@@ -1461,15 +1470,53 @@ devices)` with the profile/enrollments loaded from `sdk.e2ee`. It returns
 locked-state UX (not silently fail) when `state !== 'unlocked'`, and must never
 attempt to unwrap a CMK/DEK unless `state === 'unlocked'`.
 
-**Encrypting an object once unlocked:**
+**Encrypting an object and storing it via `sdk.storage` (RFC 0060 step 5):**
+there is no dedicated `sdk.e2ee` storage method — `sdk.storage`'s `metadata`
+field (opaque, plugin-defined JSON, round-tripped unchanged on `get()`/`list()`,
+see [Plugin file storage](#plugin-file-storage-rfc-0044) above) is exactly
+where the wrapped DEK and algorithm version belong, so the two SDK surfaces
+compose directly. Encryption happens in the browser; the resulting ciphertext
+`Blob` and metadata object are then passed to a server action or route handler
+that calls `sdk.storage`, same as any other upload:
 
 ```ts
+// In the browser, once state.state === 'unlocked' (cmk from unwrapCmkWithDeviceKey):
 const dek = await generateDek();
-const wrappedDek = await wrapDekWithCmk(dek, cmk); // cmk from unwrapCmkWithDeviceKey(...)
+const wrappedDek = await wrapDekWithCmk(dek, cmk);
 const encryptedBlob = await encryptBlob(dek, fileBlob);
 const encryptedMetadata = await encryptJson(dek, { title, notes });
-// Store `wrappedDek`, `encryptedBlob.ciphertext` (via sdk.storage), and
-// `encryptedMetadata.ciphertext` — all opaque to the server.
+// Hand `encryptedBlob`/`encryptedMetadata`/`wrappedDek` to your upload action.
+
+// Server-side (route handler / server action) — never sees plaintext:
+await sdk.storage.put({
+  key: `documents/${crypto.randomUUID()}`,
+  body: encryptedBlob.ciphertext, // opaque ciphertext Blob
+  contentType: 'application/octet-stream', // never the real content type — that's encrypted too
+  ownerUserId: session.user.id,
+  metadata: {
+    wrappedDek: wrappedDek.wrappedDek,
+    dekAlgorithmVersion: wrappedDek.algorithmVersion,
+    blobIv: encryptedBlob.iv,
+    blobAlgorithmVersion: encryptedBlob.algorithmVersion,
+    encryptedMetadata: encryptedMetadata.ciphertext,
+    metadataIv: encryptedMetadata.iv,
+  },
+});
+
+// Later, server-side: fetch the object (ciphertext + its own wrapped-DEK metadata)...
+const object = await sdk.storage.get(key);
+
+// ...then back in the browser, unwrap the DEK from that metadata and decrypt:
+const objectDek = await unwrapDekWithCmk(
+  { wrappedDek: object.metadata.wrappedDek, algorithmVersion: object.metadata.dekAlgorithmVersion },
+  cmk,
+);
+const fileBlob = await decryptBlob(objectDek, {
+  ciphertext: await new Response(object.body).blob(),
+  iv: object.metadata.blobIv,
+  algorithmVersion: object.metadata.blobAlgorithmVersion,
+  contentType: 'application/pdf', // whatever the plugin actually stored, decided by its own logic
+});
 ```
 
 ## Local development

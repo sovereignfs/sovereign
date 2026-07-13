@@ -204,6 +204,7 @@ beforeAll(() => {
           contentType: input.contentType,
           size: 3,
           checksum: 'checksum',
+          metadata: input.metadata ?? null,
           createdAt: 1,
           updatedAt: 1,
         };

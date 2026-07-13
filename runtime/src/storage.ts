@@ -82,6 +82,21 @@ export function storageMetadataToJson(
   return json;
 }
 
+/**
+ * Parse a stored metadata JSON string back into an object. Never throws —
+ * unreadable/corrupt stored JSON (should not happen; every write goes through
+ * `storageMetadataToJson`, but the column isn't schema-validated) degrades to
+ * `null` rather than taking down `get()`/`list()` for the whole object.
+ */
+export function metadataFromJson(json: string | null): Record<string, unknown> | null {
+  if (json == null) return null;
+  try {
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 export function toStorageObject(row: PluginStorageObjectRow): StorageObject {
   return {
     id: row.id,
@@ -91,6 +106,7 @@ export function toStorageObject(row: PluginStorageObjectRow): StorageObject {
     contentType: row.contentType,
     size: row.size,
     checksum: row.checksum,
+    metadata: metadataFromJson(row.metadata),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

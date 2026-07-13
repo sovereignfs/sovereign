@@ -92,6 +92,13 @@
       "when": 1783966605804,
       "tag": "0012_free_grim_reaper",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1783968071575,
+      "tag": "0013_common_smasher",
+      "breakpoints": true
     }
   ]
 }

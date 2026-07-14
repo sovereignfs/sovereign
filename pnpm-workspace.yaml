@@ -47,11 +47,35 @@ allowBuilds:
   sharp: false
   simple-git-hooks: false
 
+# VitePress's dev/build root is docs/ (the content srcDir), which sits outside
+# apps/docs and has no node_modules of its own. Vite/Rollup resolve packages by
+# walking up from docs/ to the repo root, so vitepress itself — and the
+# default-theme runtime deps its dev-server config force-resolves via the
+# "vitepress > <pkg>" nested-resolution syntax — must be reachable from the
+# repo root, not just inside apps/docs's own isolated node_modules.
+publicHoistPattern:
+  - vitepress
+  - vue
+  - '@vue/*'
+  - '@vueuse/*'
+  - mark.js
+  - minisearch
+
 # VitePress requires vue/server-renderer to be resolvable from its own context
-# (used in the SSR bundle). pnpm's strict isolation blocks this by default; the
-# extension promotes vue to a real dependency so pnpm links it into VitePress's
-# node_modules alongside it.
+# (used in the SSR bundle), and its dev-server config forces esbuild to
+# pre-resolve @vue/devtools-api, @vueuse/core, @vueuse/integrations, mark.js,
+# and minisearch via the "vitepress > <pkg>" nested-resolution syntax (see
+# optimizeDeps.include in VitePress's own Vite config). Both cases need the
+# package resolvable from *inside* vitepress's own node_modules, not just
+# hoisted to the workspace root. pnpm's strict isolation blocks this by
+# default; these extensions promote the packages to real dependencies of
+# vitepress so pnpm links them into its node_modules alongside it.
 packageExtensions:
   vitepress@*:
     dependencies:
       vue: '^3.5'
+      '@vue/devtools-api': '^7.7.0'
+      '@vueuse/core': '^12.4.0'
+      '@vueuse/integrations': '^12.4.0'
+      'mark.js': '8.11.1'
+      minisearch: '^7.1.1'

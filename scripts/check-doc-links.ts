@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import { getDocsRouteRewrites } from '../apps/docs/.vitepress/publication';
 
 type Finding = {
   file: string;
@@ -49,15 +50,7 @@ const ignoredDirectories = new Set([
   'test-results',
 ]);
 
-const docsRouteRewrites: Record<string, string> = {
-  '/docs/': 'docs/guides/index.md',
-  '/docs/users': 'docs/guides/users.md',
-  '/docs/pwa': 'docs/guides/pwa.md',
-  '/docs/operators': 'docs/guides/operators.md',
-  '/docs/developers': 'docs/guides/developers.md',
-  '/docs/architecture': 'docs/guides/architecture.md',
-  '/docs/contributing': 'docs/guides/contributing.md',
-};
+const docsRouteRewrites = getDocsRouteRewrites();
 
 function walk(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

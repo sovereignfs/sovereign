@@ -1,3 +1,11 @@
+---
+docSection: app-developers
+docType: reference
+audiences:
+  - app-developer
+  - contributor
+---
+
 # Sovereign Design System
 
 `@sovereignfs/ui` is the Sovereign Design System: design tokens and React

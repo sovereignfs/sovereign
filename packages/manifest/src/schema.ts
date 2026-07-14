@@ -375,6 +375,35 @@ const manifestObjectSchema = z
       .strict()
       .optional(),
     /**
+     * Optional sibling-plugin integrations (RFC 0051) — purely informational
+     * metadata for install/discovery UX (Console, Account, plugin UI hints).
+     * Declaring one here does not grant anything by itself; the consumer still
+     * needs the matching `data:consume` permission and user consent (RFC 0002)
+     * to actually read the provider's contract, or `sdk.plugins.get()` /
+     * `list()` to check availability at runtime. Never an install blocker.
+     */
+    integrations: z
+      .object({
+        optional: z
+          .array(
+            z
+              .object({
+                /** The sibling plugin's manifest `id`. */
+                provider: z.string().min(1),
+                /** Human-readable reason shown in install/discovery UI. */
+                reason: z.string().min(1),
+                /** Data contract names this integration would consume, if available. */
+                contracts: z.array(z.string().min(1)).optional(),
+                /** Tool names this integration would invoke (RFC 0047), if available. */
+                tools: z.array(z.string().min(1)).optional(),
+              })
+              .strict(),
+          )
+          .optional(),
+      })
+      .strict()
+      .optional(),
+    /**
      * Plugin monetization model (RFC 0003). Optional — omitting it (or setting
      * `model: "free"`) means the plugin is free to all users. Only `sovereign` and
      * `community` plugins may declare a paid model; platform plugins are always free.

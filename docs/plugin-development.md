@@ -394,6 +394,39 @@ Route Handler) that executes when the plugin is first loaded. Consumers can only
 query after the provider has registered — if you receive a resolver-not-found
 error, the provider plugin has not yet served a request in the current process.
 
+### `integrations` — optional sibling-plugin integrations (RFC 0051)
+
+Purely informational metadata for install/discovery UX (Console, Account,
+plugin UI hints) — declaring one here grants nothing by itself and is never an
+install blocker. To actually read another plugin's data you still need
+`data.consumes` + the `data:consume` permission + user consent (RFC 0002); use
+`sdk.plugins.get()`/`list()` at runtime to check whether the sibling is
+installed, enabled, and available before offering the integration.
+
+**Sub-fields:**
+
+| Field                   | Type  | Description                                                |
+| ----------------------- | ----- | ---------------------------------------------------------- |
+| `integrations.optional` | array | Sibling plugins this plugin can integrate with if present. |
+
+Each entry: `provider` (the sibling's manifest `id`), `reason` (human-readable,
+shown in install/discovery UI), `contracts` (optional array of data contract
+names this integration would consume), `tools` (optional array of RFC 0047
+tool names this integration would invoke — reserved, RFC 0047 not yet
+implemented).
+
+```json
+"integrations": {
+  "optional": [
+    {
+      "provider": "io.example.crm",
+      "reason": "Link records to contacts",
+      "contracts": ["crm.contacts"]
+    }
+  ]
+}
+```
+
 ### `env` — plugin-scoped environment variables (RFC 0018)
 
 Plugins can declare environment variables in the manifest `env` object. Each key
@@ -1122,6 +1155,39 @@ remapId(originalId) }` — use `remapId` to translate stored IDs to fresh ones
     const result = await (db as MyDb).delete(myTasks).where(eq(myTasks.userId, userId));
     return { deleted: result.rowsAffected ?? 0 };
   });
+  ```
+
+  **Cross-plugin references in exports (RFC 0051):** a `PluginExportSection`
+  may also include `references?: PluginReference[]` — opaque links your plugin
+  holds to another plugin's records (see `sdk.plugins` below for the shape).
+  These are carried as **inert metadata only**: the platform never
+  dereferences them on export or import, and importing a reference never
+  grants access to the provider plugin.
+
+- **`plugins`** — dependency discovery and cross-plugin references
+  (RFC 0051). `sdk.plugins.get(id)` / `sdk.plugins.list(filter?)` return
+  `PluginAvailability { id, name, routePrefix, icon?, installed, enabled,
+availableToUser, providesContracts }` for installed plugins —
+  `availableToUser` folds in disabled/adminOnly/paywall status for the
+  _current_ user (`false` outside an authenticated request). Use this before
+  offering an integration with an optional sibling plugin — declare it in the
+  manifest `integrations.optional` field (see above) for install/discovery UX.
+  `sdk.plugins.getConsentStatus(ref)` checks whether the current user has
+  granted your plugin's `data.consumes` contract without doing a full
+  `sdk.data.query()` call. Also exports `PluginReference { providerId,
+resourceType, resourceId, contract?, version?, labelSnapshot?, metadata?,
+linkedAt }` — the standard shape for storing an opaque pointer to another
+  plugin's record in your own tables. `resourceId` is opaque to you; treat a
+  stored reference as a nullable link and handle the provider being
+  uninstalled, disabled, revoked, or the resource deleted — a live dereference
+  always goes through `sdk.data.query()` and current consent, never the
+  reference alone.
+
+  ```ts
+  const crm = await sdk.plugins.get('io.example.crm');
+  if (crm?.availableToUser) {
+    // offer "Link to contact" — store a PluginReference pointing at the CRM record
+  }
   ```
 
 - **`env`** — plugin-scoped environment variables (RFC 0018). `sdk.env.get(key)`

@@ -1,5 +1,6 @@
 import { headers } from 'next/headers';
 import { requireHost } from './host';
+import type { PluginReference } from './plugins';
 
 /** Supplied by the runtime to an export resolver — scoped to the current user. */
 export interface ExportContext {
@@ -61,6 +62,15 @@ export interface PluginExportSection {
   secretMetadata?: ExportSecretMetadata[];
   /** Non-fatal notices about this section (e.g. a file that was skipped). */
   warnings?: string[];
+  /**
+   * Opaque links this plugin holds to other plugins' records (RFC 0051).
+   * Exported and imported as **inert metadata only** — the platform never
+   * dereferences them, whether or not the referenced provider plugin is also
+   * part of the same export. Importing a reference never grants access to
+   * the provider plugin; a live dereference still goes through
+   * `sdk.data.query()` and the current user's consent.
+   */
+  references?: PluginReference[];
 }
 
 /** Produces one plugin's export section for the current user. */

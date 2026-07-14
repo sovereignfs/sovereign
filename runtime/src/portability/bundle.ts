@@ -32,6 +32,20 @@ export interface BundleSectionMeta {
   secretMetadata?: { label: string; provider: string; exists: boolean }[];
   /** Non-fatal notices surfaced from assembling this section. */
   warnings?: string[];
+  /**
+   * Opaque cross-plugin references this section holds (RFC 0051), carried as
+   * inert metadata only — never dereferenced or used to grant access.
+   */
+  references?: {
+    providerId: string;
+    resourceType: string;
+    resourceId: string;
+    contract?: string;
+    version?: number;
+    labelSnapshot?: string;
+    metadata?: unknown;
+    linkedAt: string;
+  }[];
 }
 
 export interface BundleManifest {

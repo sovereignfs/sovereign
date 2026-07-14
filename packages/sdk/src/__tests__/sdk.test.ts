@@ -64,6 +64,26 @@ beforeAll(() => {
         /* no-op */
       },
     },
+    plugins: {
+      async get(id) {
+        if (id !== 'com.example.notes') return null;
+        return {
+          id,
+          name: 'Notes',
+          routePrefix: '/notes',
+          installed: true,
+          enabled: true,
+          availableToUser: true,
+          providesContracts: [],
+        };
+      },
+      async list() {
+        return [];
+      },
+      async getConsentStatus() {
+        return 'not_granted';
+      },
+    },
     notifications: {
       async send(_input, _pluginId) {
         /* no-op */
@@ -292,6 +312,12 @@ describe('sdk surface', () => {
   it('exposes the portability surface (RFC 0007)', () => {
     expect(typeof sdk.portability.provideExport).toBe('function');
     expect(typeof sdk.portability.provideImport).toBe('function');
+  });
+
+  it('exposes the plugins discovery surface (RFC 0051)', () => {
+    expect(typeof sdk.plugins.get).toBe('function');
+    expect(typeof sdk.plugins.list).toBe('function');
+    expect(typeof sdk.plugins.getConsentStatus).toBe('function');
   });
 
   it('exposes the env surface (RFC 0018)', () => {

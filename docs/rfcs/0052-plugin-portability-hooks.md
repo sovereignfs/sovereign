@@ -1,7 +1,7 @@
 ---
 rfc: 0052
 title: Plugin portability hooks
-status: Draft
+status: Implemented
 date: June 2026
 author: kasunben
 scope: packages/sdk, runtime, packages/db, plugins/account, plugins/console, docs; builds on RFC 0007, RFC 0033, RFC 0044, and RFC 0051

@@ -9,6 +9,7 @@ import { env } from './env';
 import * as mailer from './mailer';
 import { notifications } from './notifications';
 import * as platform from './platform';
+import { plugins } from './plugins';
 import { portability } from './portability';
 import { secrets } from './secrets';
 import { storage } from './storage';
@@ -32,11 +33,12 @@ import { billing, events } from './unimplemented';
  * profile persistence, RFC 0060 — profile/device plumbing only; see
  * `e2ee-crypto`/`e2ee-device`/`e2ee-object`/`e2ee-state` for the browser-only
  * crypto and state helpers that produce the ciphertext these methods store),
+ * `plugins` (dependency discovery and cross-plugin references, RFC 0051),
  * `billing` (plugin monetization / entitlement gating, RFC 0003), `events`.
  * `data`, `activity`, `portability`, `env`, `notifications`, `directory`,
- * `secrets`, `storage`, `connections`, and `e2ee` are implemented; `billing`
- * and `events` throw `NotImplementedError` until their backing mechanisms
- * ship. Their shape may change before they stabilise.
+ * `secrets`, `storage`, `connections`, `e2ee`, and `plugins` are implemented;
+ * `billing` and `events` throw `NotImplementedError` until their backing
+ * mechanisms ship. Their shape may change before they stabilise.
  */
 export const sdk = {
   // Stable (v1.0.0).
@@ -55,6 +57,7 @@ export const sdk = {
   events,
   activity,
   portability,
+  plugins,
   env,
   billing,
 };
@@ -102,6 +105,13 @@ export type {
   DeletionResult,
   DeletionHandler,
 } from './portability';
+export type {
+  PluginAvailability,
+  PluginContractSummary,
+  PluginListFilter,
+  ConsentStatus,
+  PluginReference,
+} from './plugins';
 export type {
   Session,
   SessionUser,

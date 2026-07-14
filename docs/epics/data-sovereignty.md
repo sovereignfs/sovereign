@@ -158,7 +158,7 @@
 
 ---
 
-#### 📋 8.8 — Plugin portability hooks (RFC 0052)
+#### ✅ 8.8 — Plugin portability hooks (RFC 0052)
 
 **Goal:** Add plugin-owned export/import/delete hooks so richer plugins can participate in Account-level portability without platform-specific table introspection.
 

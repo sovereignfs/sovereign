@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.18.2 · **Last updated:** 2026-07-13
+**Version:** 0.26.0 · **Last updated:** 2026-07-14
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](epics/).
 
@@ -181,7 +181,7 @@ once prioritised.
 | —       | User groups foundation (RFC 0065)                                         | 📋     | [1.15](epics/users-auth.md#115--user-groups-foundation-rfc-0065)                                                           |
 | —       | Plugin secret vault (RFC 0043)                                            | ✅     | [8.6](epics/data-sovereignty.md#86--plugin-secret-vault-rfc-0043)                                                          |
 | —       | Plugin file storage (RFC 0044)                                            | ✅     | [8.7](epics/data-sovereignty.md#87--plugin-file-storage-rfc-0044)                                                          |
-| —       | Plugin portability hooks (RFC 0052)                                       | 📋     | [8.8](epics/data-sovereignty.md#88--plugin-portability-hooks-rfc-0052)                                                     |
+| —       | Plugin portability hooks (RFC 0052)                                       | ✅     | [8.8](epics/data-sovereignty.md#88--plugin-portability-hooks-rfc-0052)                                                     |
 | —       | Client-side encryption core (RFC 0060)                                    | ✅     | [8.9](epics/data-sovereignty.md#89--client-side-encryption-core-rfc-0060)                                                  |
 | —       | Encrypted operator backup bundle (RFC 0064)                               | 📋     | [8.10](epics/data-sovereignty.md#810--encrypted-operator-backup-bundle-rfc-0064)                                           |
 | —       | Git-backed backup remote (RFC 0064)                                       | 📋     | [8.11](epics/data-sovereignty.md#811--git-backed-backup-remote-rfc-0064)                                                   |
@@ -194,7 +194,7 @@ once prioritised.
 | —       | Plugin events and realtime channels (RFC 0045)                            | 📋     | [3.17](epics/plugins-runtime.md#317--plugin-events-and-realtime-channels-rfc-0045)                                         |
 | —       | Plugin tool contracts (RFC 0047)                                          | 📋     | [3.18](epics/plugins-runtime.md#318--plugin-tool-contracts-rfc-0047)                                                       |
 | —       | Plugin external connections (RFC 0049)                                    | ✅     | [3.19](epics/plugins-runtime.md#319--plugin-external-connections-rfc-0049)                                                 |
-| —       | Cross-plugin references and dependency discovery (RFC 0051)               | 📋     | [3.20](epics/plugins-runtime.md#320--cross-plugin-references-and-dependency-discovery-rfc-0051)                            |
+| —       | Cross-plugin references and dependency discovery (RFC 0051)               | ✅     | [3.20](epics/plugins-runtime.md#320--cross-plugin-references-and-dependency-discovery-rfc-0051)                            |
 | —       | Plugin flow handoffs (RFC 0053)                                           | 📋     | [3.21](epics/plugins-runtime.md#321--plugin-flow-handoffs-rfc-0053)                                                        |
 | —       | Email channel for broadcasts and messages (RFC 0062)                      | 📋     | [4.5](epics/notification-center.md#45--email-channel-for-broadcasts-and-messages-rfc-0062)                                 |
 | —       | Sovereign Harness platform plugin (RFC 0040)                              | 📋     | [18.1](epics/sovereign-harness.md#181--sovereign-harness-platform-plugin-rfc-0040)                                         |

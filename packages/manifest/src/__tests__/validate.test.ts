@@ -463,4 +463,41 @@ describe('validateManifest', () => {
     const res = validateManifest({ ...base, schedules: [] });
     expect(res.valid).toBe(false);
   });
+
+  it('accepts a valid integrations.optional declaration (RFC 0051)', () => {
+    const res = validateManifest({
+      ...base,
+      integrations: {
+        optional: [
+          {
+            provider: 'io.example.crm',
+            reason: 'Link records to contacts',
+            contracts: ['crm.contacts'],
+          },
+        ],
+      },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects an integrations entry missing required fields', () => {
+    const res = validateManifest({
+      ...base,
+      integrations: { optional: [{ provider: 'io.example.crm' }] },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('reason');
+    }
+  });
+
+  it('rejects unknown keys inside an integrations entry', () => {
+    const res = validateManifest({
+      ...base,
+      integrations: {
+        optional: [{ provider: 'io.example.crm', reason: 'x', unexpected: true }],
+      },
+    });
+    expect(res.valid).toBe(false);
+  });
 });

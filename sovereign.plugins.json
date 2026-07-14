@@ -16,6 +16,11 @@
       "ref": "v0.2.0"
     },
     {
+      "id": "sovereign-wallet",
+      "repository": "https://github.com/sovereignfs/sovereign-wallet.git",
+      "ref": "v0.1.0"
+    },
+    {
       "id": "example-basic",
       "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
       "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",

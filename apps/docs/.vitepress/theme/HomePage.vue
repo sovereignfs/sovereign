@@ -148,8 +148,8 @@
           <p class="sv-eyebrow">For app builders</p>
           <h2>Start with the platform already handled</h2>
           <p class="sv-large-copy">
-            A Sovereign app is delivered as a plugin and uses stable platform contracts. Your code
-            can stay focused on the custom workflow your group actually needs.
+            A Sovereign app runs on stable platform contracts. Your code can stay focused on the
+            custom workflow your group actually needs.
           </p>
           <a class="sv-action sv-action-primary" href="/get-started/developers">Build an app</a>
         </div>
@@ -203,7 +203,7 @@
           </a>
           <a href="/get-started/developers">
             <span>Build an app</span>
-            <strong>Create a plugin on Sovereign's shared foundations.</strong>
+            <strong>Create an app on Sovereign's shared foundations.</strong>
           </a>
           <a href="/docs/">
             <span>Read the docs</span>

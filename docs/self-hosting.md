@@ -1,3 +1,10 @@
+---
+docSection: operators
+docType: guide
+audiences:
+  - operator
+---
+
 # Self-hosting Sovereign
 
 Sovereign is designed to run on a single machine. Docker Compose is the

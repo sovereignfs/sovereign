@@ -1,3 +1,10 @@
+---
+docSection: contributors
+docType: policy
+audiences:
+  - contributor
+---
+
 # Hard Architectural Rules
 
 Full reference for load-bearing constraints enforced by ESLint, CI, or runtime behaviour. CLAUDE.md carries a critical-violations summary; this document has the full detail.

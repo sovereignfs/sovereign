@@ -1,3 +1,10 @@
+---
+docSection: contributors
+docType: reference
+audiences:
+  - contributor
+---
+
 # Agent-First Documentation: A Case Study in Structuring a Codebase for AI-Assisted Development
 
 Most software projects accumulate documentation for humans. It is written in long-form prose, organised chronologically, and navigated with Cmd+F. When AI coding agents arrived, we handed them those same documents — and wondered why they kept losing context, re-reading irrelevant history, and drifting off course mid-task.

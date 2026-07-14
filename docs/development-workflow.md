@@ -1,3 +1,10 @@
+---
+docSection: contributors
+docType: guide
+audiences:
+  - contributor
+---
+
 # Sovereign — Development Workflow
 
 How tasks are planned, started, implemented, and closed out. Designed for agentic execution with human oversight.

@@ -1,3 +1,11 @@
+---
+docSection: operators
+docType: guide
+audiences:
+  - operator
+  - contributor
+---
+
 # Troubleshooting
 
 Known issues, workarounds, and debugging notes for Sovereign development and self-hosting.

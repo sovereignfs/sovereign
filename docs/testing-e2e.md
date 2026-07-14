@@ -1,3 +1,10 @@
+---
+docSection: contributors
+docType: guide
+audiences:
+  - contributor
+---
+
 # End-to-end testing
 
 Sovereign uses [Playwright](https://playwright.dev) for browser-driven end-to-end tests.

@@ -1,3 +1,12 @@
+---
+docSection: architecture-security
+docType: reference
+audiences:
+  - operator
+  - app-developer
+  - contributor
+---
+
 # Architecture
 
 A contributor-oriented summary of how Sovereign fits together. It distils the

@@ -1,3 +1,10 @@
+---
+docSection: contributors
+docType: guide
+audiences:
+  - contributor
+---
+
 # Real-device PWA testing
 
 Sovereign is an installable PWA, so browser mobile emulation is not enough for

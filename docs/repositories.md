@@ -1,3 +1,12 @@
+---
+docSection: architecture-security
+docType: reference
+audiences:
+  - operator
+  - app-developer
+  - contributor
+---
+
 # Sovereign repositories
 
 Sovereign uses a small set of first-party repositories. This page is the

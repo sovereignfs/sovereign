@@ -1,3 +1,10 @@
+---
+docSection: app-developers
+docType: guide
+audiences:
+  - app-developer
+---
+
 # Plugin development
 
 This guide is for building a Sovereign plugin. A plugin is a self-contained app
@@ -1921,7 +1928,7 @@ Every tappable control needs a **44px** minimum hit area (Apple HIG / Material D
 }
 ```
 
-Gate any coarse-pointer-only sizing behind `@media (pointer: coarse)`, not a viewport-width media query — a touchscreen laptop with a mouse/trackpad as its primary pointer should keep desktop density, and `pointer: coarse` (the _primary_ pointer) is what distinguishes that from an actual touch device. See [design-system.md's touch-target and Button/Checkbox sections](./design-system.md#touch-targets---sv-touch-target-min) for the full pattern.
+Gate any coarse-pointer-only sizing behind `@media (pointer: coarse)`, not a viewport-width media query — a touchscreen laptop with a mouse/trackpad as its primary pointer should keep desktop density, and `pointer: coarse` (the _primary_ pointer) is what distinguishes that from an actual touch device. See [design-system.md's touch-target and Button/Checkbox sections](./design-system.md#touch-targets-—-sv-touch-target-min) for the full pattern.
 
 ### Hover guards
 
@@ -1935,7 +1942,7 @@ Every `:hover` rule needs `@media (hover: hover)`, or a tap generates a syntheti
 }
 ```
 
-`:focus-visible` and `:active` are never guarded — both are wanted on every input type. `@sovereignfs/ui` follows this convention throughout; apply the same guard in your own plugin CSS. Full writeup, including the hover-_reveal_ case (`:not(:hover)` is unconditionally true with no hover capability at all): [design-system.md's hover guard convention](./design-system.md#hover-guard-convention--media-hover-hover).
+`:focus-visible` and `:active` are never guarded — both are wanted on every input type. `@sovereignfs/ui` follows this convention throughout; apply the same guard in your own plugin CSS. Full writeup, including the hover-_reveal_ case (`:not(:hover)` is unconditionally true with no hover capability at all): [design-system.md's hover guard convention](./design-system.md#hover-guard-convention-—-media-hover-hover).
 
 ### The long-press recipe
 

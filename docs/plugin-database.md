@@ -1,3 +1,10 @@
+---
+docSection: app-developers
+docType: reference
+audiences:
+  - app-developer
+---
+
 # Plugin database guide
 
 Sovereign gives every plugin access to a Drizzle client through `sdk.db.getClient()`.

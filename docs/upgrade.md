@@ -1,3 +1,11 @@
+---
+docSection: operators
+docType: guide
+audiences:
+  - operator
+  - app-developer
+---
+
 # Upgrade guide
 
 Migration notes for breaking changes and release-by-release upgrade steps.

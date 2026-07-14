@@ -1,3 +1,13 @@
+---
+docSection: architecture-security
+docType: reference
+audiences:
+  - user
+  - operator
+  - app-developer
+  - contributor
+---
+
 # Security
 
 This document describes Sovereign's **security posture** — the threat model, the

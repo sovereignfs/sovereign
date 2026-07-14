@@ -1,3 +1,11 @@
+---
+docSection: app-developers
+docType: policy
+audiences:
+  - app-developer
+  - contributor
+---
+
 # SDK stability & semver policy
 
 `@sovereignfs/sdk` is the **only** contract between a plugin and the Sovereign

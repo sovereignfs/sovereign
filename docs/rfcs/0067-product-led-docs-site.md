@@ -1,6 +1,6 @@
 # RFC 0067 — Product-led docs site and instance directory
 
-**Status:** Draft\
+**Status:** Implemented\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** `apps/docs`, public content under `docs/`; builds on RFC 0037\

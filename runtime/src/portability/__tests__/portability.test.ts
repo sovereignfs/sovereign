@@ -178,6 +178,38 @@ describe('assembleExport', () => {
     expect(manifest.sections.map((s) => s.pluginId)).toContain('good.plugin');
     expect(manifest.failures).toEqual([{ pluginId: 'bad.plugin', error: 'boom' }]);
   });
+
+  it('carries cross-plugin references through as inert metadata (RFC 0051)', async () => {
+    const reference = {
+      providerId: 'io.example.crm',
+      resourceType: 'contact',
+      resourceId: 'contact-123',
+      contract: 'crm.contacts',
+      version: 1,
+      labelSnapshot: 'Ada Lovelace',
+      linkedAt: '2026-01-01T00:00:00.000Z',
+    };
+    registerExporter('test.plugin', async () => ({
+      pluginId: 'test.plugin',
+      schemaVersion: 1,
+      data: {},
+      references: [reference],
+    }));
+    const zip = await assembleExport({
+      userId: 'u1',
+      tenantId: 'default',
+      platform: PLATFORM,
+      platformVersion: '0.6.0',
+      sourceInstance: null,
+      exportPlugins: { 'test.plugin': '1.0.0' },
+    });
+    const files = readZip(zip);
+    const manifest = u8ToJson<{
+      sections: { pluginId: string; references?: unknown[] }[];
+    }>(getEntry(files, 'manifest.json'));
+    const section = manifest.sections.find((s) => s.pluginId === 'test.plugin');
+    expect(section?.references).toEqual([reference]);
+  });
 });
 
 describe('applyImport', () => {
@@ -253,5 +285,36 @@ describe('applyImport', () => {
     const section = summary.sections.find((s) => s.pluginId === 'test.plugin');
     expect(section?.status).toBe('skipped');
     expect(section?.warning).toMatch(/not installed/);
+  });
+
+  it('passes cross-plugin references through to the import handler unchanged (RFC 0051)', async () => {
+    const reference = {
+      providerId: 'io.example.crm',
+      resourceType: 'contact',
+      resourceId: 'contact-123',
+      linkedAt: '2026-01-01T00:00:00.000Z',
+    };
+    registerExporter('test.plugin', async () => ({
+      pluginId: 'test.plugin',
+      schemaVersion: 1,
+      data: {},
+      references: [reference],
+    }));
+    const bytes = await roundTripBundle({ 'test.plugin': '1.0.0' });
+
+    let importedSection: PluginExportSection | undefined;
+    registerImporter('test.plugin', async (section) => {
+      importedSection = section;
+    });
+
+    await applyImport({
+      bytes,
+      userId: 'u2',
+      tenantId: 'default',
+      importPlugins: new Set(['test.plugin']),
+      platformImporter: async () => undefined,
+    });
+
+    expect(importedSection?.references).toEqual([reference]);
   });
 });

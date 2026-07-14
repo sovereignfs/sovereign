@@ -1,7 +1,7 @@
 ---
 rfc: 0051
 title: Cross-plugin references and dependency discovery
-status: Draft
+status: Implemented
 date: June 2026
 author: kasunben
 scope: packages/sdk, runtime, packages/db, packages/manifest, plugins/account, plugins/console, docs; builds on RFC 0002 and RFC 0047

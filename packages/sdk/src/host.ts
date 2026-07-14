@@ -1,5 +1,6 @@
 import type { DataContractRef, DataContractResolver } from './data';
 import type { DeletionHandler, ExportResolver, ImportHandler } from './portability';
+import type { ConsentStatus, PluginAvailability, PluginListFilter } from './plugins';
 import type {
   ActivityLogEntry,
   DirectoryUser,
@@ -107,6 +108,26 @@ export interface SdkHost {
     provideImport(pluginId: string, handler: ImportHandler): void;
     /** Register a plugin's deletion handler (RFC 0033), keyed by `pluginId`. */
     provideDelete(pluginId: string, handler: DeletionHandler): void;
+  };
+  plugins: {
+    /** Discover one installed plugin's status (RFC 0051), scoped to the given user. */
+    get(
+      id: string,
+      userId: string | null,
+      capabilities: readonly string[],
+    ): Promise<PluginAvailability | null>;
+    /** Discover installed plugins, optionally filtered, scoped to the given user. */
+    list(
+      filter: PluginListFilter | undefined,
+      userId: string | null,
+      capabilities: readonly string[],
+    ): Promise<PluginAvailability[]>;
+    /** Whether `userId` has an active consent grant for `ref`, requested by `consumerId`. */
+    getConsentStatus(
+      ref: DataContractRef,
+      consumerId: string,
+      userId: string,
+    ): Promise<ConsentStatus>;
   };
   notifications: {
     /**

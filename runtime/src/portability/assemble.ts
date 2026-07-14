@@ -126,6 +126,7 @@ export async function assembleExport(args: AssembleArgs): Promise<Uint8Array> {
       checksum: sha256(dataJson),
       secretMetadata: section.secretMetadata,
       warnings: section.warnings,
+      references: section.references,
     });
     if (options.includeFiles) {
       for (const [path, bytes] of Object.entries(section.blobs ?? {})) {

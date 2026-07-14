@@ -23,6 +23,7 @@ import {
   getPluginConnection,
   getPluginDb,
   getInstanceConfig,
+  getPaidPluginsWithoutEntitlement,
   getStorageObjectByKey,
   listE2eeDeviceEnrollments,
   listPluginConnections,
@@ -50,6 +51,7 @@ import type {
   ActivityLogEntry,
   ConnectionContext,
   ConnectionRef,
+  ConsentStatus,
   DataContractRef,
   DataContractResolver,
   DirectoryUser,
@@ -57,6 +59,8 @@ import type {
   E2eeProfile,
   ExportResolver,
   ImportHandler,
+  PluginAvailability,
+  PluginListFilter,
   ResolveUsersInput,
   SearchUsersInput,
   SecretContext,
@@ -66,6 +70,7 @@ import type {
   ProviderConfig,
   StorageObject,
 } from '@sovereignfs/sdk';
+import { getDisabledPluginIds } from './plugin-status';
 import { registerDeleter, registerExporter, registerImporter } from './portability/registry';
 import { fanOutPushToUser } from './push';
 import { getBroker } from './notification-broker';
@@ -136,6 +141,35 @@ const _mailer = createMailer();
  * `sdk.data.provide('contract', resolver)`. Resets on server restart.
  */
 const _resolverRegistry = new Map<string, DataContractResolver>();
+
+/** Build one plugin's discovery status (RFC 0051) from precomputed eligibility sets. */
+function toPluginAvailability(
+  manifest: (typeof registry)[number],
+  disabledIds: ReadonlySet<string>,
+  unentitledIds: ReadonlySet<string>,
+  capabilities: readonly string[],
+  hasUser: boolean,
+): PluginAvailability {
+  const enabled = !disabledIds.has(manifest.id);
+  const availableToUser =
+    hasUser &&
+    enabled &&
+    !(manifest.adminOnly === true && !capabilities.includes('console:access')) &&
+    !unentitledIds.has(manifest.id);
+  return {
+    id: manifest.id,
+    name: manifest.name,
+    routePrefix: manifest.routePrefix,
+    icon: manifest.icon,
+    installed: true,
+    enabled,
+    availableToUser,
+    providesContracts: (manifest.data?.provides ?? []).map((p) => ({
+      contract: p.contract,
+      version: p.version,
+    })),
+  };
+}
 
 function toE2eeProfile(row: E2eeProfileRow): E2eeProfile {
   return {
@@ -357,6 +391,64 @@ provideHost({
     },
     provideDelete(pluginId: string, handler: DeletionHandler): void {
       registerDeleter(pluginId, handler);
+    },
+  },
+  plugins: {
+    async get(
+      id: string,
+      userId: string | null,
+      capabilities: readonly string[],
+    ): Promise<PluginAvailability | null> {
+      const manifest = registry.find((m) => m.id === id);
+      if (!manifest) return null;
+      const pdb = await getPlatformDb();
+      const disabledIds = new Set(await getDisabledPluginIds(pdb));
+      let unentitledIds = new Set<string>();
+      if (userId && manifest.monetization && manifest.monetization.model !== 'free') {
+        unentitledIds = new Set(await getPaidPluginsWithoutEntitlement(pdb, userId, [manifest.id]));
+      }
+      return toPluginAvailability(manifest, disabledIds, unentitledIds, capabilities, !!userId);
+    },
+
+    async list(
+      filter: PluginListFilter | undefined,
+      userId: string | null,
+      capabilities: readonly string[],
+    ): Promise<PluginAvailability[]> {
+      const manifests = registry.filter(
+        (m) =>
+          !filter?.providesContract ||
+          (m.data?.provides ?? []).some((p) => p.contract === filter.providesContract),
+      );
+      const pdb = await getPlatformDb();
+      const disabledIds = new Set(await getDisabledPluginIds(pdb));
+      const paidIds = manifests
+        .filter((m) => m.monetization && m.monetization.model !== 'free')
+        .map((m) => m.id);
+      const unentitledIds =
+        userId && paidIds.length > 0
+          ? new Set(await getPaidPluginsWithoutEntitlement(pdb, userId, paidIds))
+          : new Set<string>();
+      return manifests.map((m) =>
+        toPluginAvailability(m, disabledIds, unentitledIds, capabilities, !!userId),
+      );
+    },
+
+    async getConsentStatus(
+      ref: DataContractRef,
+      consumerId: string,
+      userId: string,
+    ): Promise<ConsentStatus> {
+      const pdb = await getPlatformDb();
+      const grant = await getConsentGrant(
+        pdb,
+        userId,
+        consumerId,
+        ref.providerId,
+        ref.contract,
+        ref.version,
+      );
+      return grant ? 'granted' : 'not_granted';
     },
   },
   notifications: {

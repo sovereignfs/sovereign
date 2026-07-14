@@ -543,7 +543,7 @@ minor (new optional params on exported functions), `runtime` → patch, `bin/sv`
 
 ---
 
-#### 📋 3.20 — Cross-plugin references and dependency discovery (RFC 0051)
+#### ✅ 3.20 — Cross-plugin references and dependency discovery (RFC 0051)
 
 **Goal:** Let plugins discover optional dependencies and store stable, opaque references to provider-owned records without cross-plugin database coupling.
 

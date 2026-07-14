@@ -111,6 +111,31 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.42 → v0.43
+
+- **Cross-plugin references and dependency discovery (RFC 0051) — epic task
+  3.20 done.** New `sdk.plugins.get(id)` / `sdk.plugins.list(filter?)` return
+  `PluginAvailability` (install/enable status folded with the current user's
+  disabled/adminOnly/paywall gates) so a plugin can check an optional sibling
+  before offering an integration. `sdk.plugins.getConsentStatus(ref)` checks a
+  data-contract consent grant without a full `sdk.data.query()` call. New
+  `PluginReference` type defines the standard opaque-link shape (`providerId`,
+  `resourceType`, `resourceId`, `contract?`, `version?`, `labelSnapshot?`,
+  `metadata?`, `linkedAt`) for a plugin to store a pointer to another plugin's
+  record without a cross-plugin foreign key. **No action required** — purely
+  additive SDK surface, no schema change.
+- **New optional manifest `integrations.optional` field** — informational
+  sibling-plugin metadata for install/discovery UX (Console, Account, plugin
+  UI hints). Declaring one grants nothing by itself; never an install blocker.
+- **Plugin portability export metadata (RFC 0052) complete — epic task 8.8
+  done.** `PluginExportSection` gains `references?: PluginReference[]`,
+  carried through export and import as **inert metadata only** — the platform
+  never dereferences them; importing a reference never grants access to the
+  provider plugin. This was the last outstanding RFC 0052 deliverable (the
+  rest shipped in the v0.41 → v0.42 entry below).
+- **`runtime` → 0.43.0**, **`@sovereignfs/sdk` → 1.25.0**,
+  **`@sovereignfs/manifest` → 0.20.0**.
+
 ### v0.41 → v0.42
 
 - **Plugin portability export metadata (RFC 0052, partial).** `PluginExportSection`
@@ -775,6 +800,7 @@ the release you are running.
 | 0.40.0–0.40.1   | Client-side encryption core, steps 1–5 — `sdk.e2ee`, Account UX, object crypto, `sdk.storage` integration (RFC 0060) |
 | 0.41.0          | Client-side encryption core complete, step 6 — export/delete via `sdk.portability` (RFC 0060, epic task 8.9 done)    |
 | 0.42.0          | Plugin portability export metadata, partial (RFC 0052)                                                               |
+| 0.43.0          | Cross-plugin references and dependency discovery (RFC 0051); RFC 0052 complete                                       |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

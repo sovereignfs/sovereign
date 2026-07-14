@@ -104,9 +104,15 @@ export async function applyImport(args: ApplyImportArgs): Promise<ImportSummary>
     }
     const section: PluginExportSection = {
       pluginId: meta.pluginId,
+      pluginVersion: meta.pluginVersion,
       schemaVersion: meta.schemaVersion,
       data: u8ToJson(dataBytes),
       blobs: collectBlobs(files, meta.pluginId),
+      secretMetadata: meta.secretMetadata,
+      warnings: meta.warnings,
+      // Passed through as inert metadata only (RFC 0051) — the import handler
+      // may store them, but the platform never dereferences them here.
+      references: meta.references,
     };
     await importer(section, { userId: args.userId, tenantId: args.tenantId, remapId });
     results.push({ pluginId: meta.pluginId, status: 'imported' });

@@ -3,6 +3,7 @@ import {
   getPrivateDocumentPaths,
   getRfcSidebarItems,
   isPublicDocument,
+  pagePath,
   publicGuideRewrites,
 } from './publication';
 
@@ -34,6 +35,11 @@ const docsHubSidebarItems = [
   { text: 'Contribute', link: '/docs/contributing' },
 ];
 
+// Live GitHub Pages URL (RFC 0037) — used to build absolute canonical/social
+// preview URLs, since og: tags and <link rel="canonical"> require one.
+const siteUrl = 'https://sovereignfs.github.io';
+const socialPreviewImage = `${siteUrl}/social-preview.png`;
+
 export default defineConfig({
   srcDir: '../../docs',
   outDir: '.vitepress/dist',
@@ -47,6 +53,26 @@ export default defineConfig({
       pageData.description = '';
     }
   },
+  transformHead({ pageData, title, description }) {
+    const canonicalUrl = `${siteUrl}${pagePath(pageData.relativePath)}`;
+    return [
+      ['link', { rel: 'canonical', href: canonicalUrl }],
+      ['meta', { property: 'og:type', content: 'website' }],
+      ['meta', { property: 'og:site_name', content: 'Sovereign' }],
+      ['meta', { property: 'og:title', content: title }],
+      ['meta', { property: 'og:description', content: description }],
+      ['meta', { property: 'og:url', content: canonicalUrl }],
+      ['meta', { property: 'og:image', content: socialPreviewImage }],
+      ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+      ['meta', { name: 'twitter:title', content: title }],
+      ['meta', { name: 'twitter:description', content: description }],
+      ['meta', { name: 'twitter:image', content: socialPreviewImage }],
+    ];
+  },
+  head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+    ['link', { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }],
+  ],
   vite: {
     plugins: [
       {

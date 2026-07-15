@@ -120,3 +120,12 @@ export function getRfcSidebarItems(): Array<{ text: string; link: string }> {
       };
     });
 }
+
+/** Route a page's srcDir-relative path resolves to, for canonical/social URLs. */
+export function pagePath(relativePath: string): string {
+  const withoutExt = relativePath.replace(/\.md$/, '');
+  if (withoutExt === 'index') return '/';
+  return withoutExt.endsWith('/index')
+    ? `/${withoutExt.slice(0, -'index'.length)}`
+    : `/${withoutExt}`;
+}

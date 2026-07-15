@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getDocsRouteRewrites,
   getPrivateDocumentPaths,
+  getRfcSidebarItems,
   isPublicDocument,
+  pagePath,
   publicGuideRewrites,
 } from '../.vitepress/publication';
 
@@ -50,5 +53,40 @@ describe('docs publication policy', () => {
       'guides/architecture.md': 'docs/architecture.md',
       'guides/contributing.md': 'docs/contributing.md',
     });
+  });
+
+  it('derives docs route rewrites from publicGuideRewrites without drifting', () => {
+    expect(getDocsRouteRewrites()).toEqual({
+      '/docs/': 'docs/guides/index.md',
+      '/docs/users': 'docs/guides/users.md',
+      '/docs/pwa': 'docs/guides/pwa.md',
+      '/docs/operators': 'docs/guides/operators.md',
+      '/docs/developers': 'docs/guides/developers.md',
+      '/docs/architecture': 'docs/guides/architecture.md',
+      '/docs/contributing': 'docs/guides/contributing.md',
+    });
+  });
+
+  it('discovers every RFC file with a non-empty title and a matching link', () => {
+    const items = getRfcSidebarItems();
+
+    expect(items.length).toBeGreaterThan(0);
+    for (const item of items) {
+      expect(item.text).toMatch(/^RFC \d{4} — .+/);
+      expect(item.link).toMatch(/^\/rfcs\/\d{4}-/);
+    }
+
+    const links = items.map((item) => item.link);
+    expect(new Set(links).size).toBe(links.length);
+  });
+
+  it.each([
+    ['index.md', '/'],
+    ['self-hosting.md', '/self-hosting'],
+    ['product/index.md', '/product/'],
+    ['product/why-sovereign.md', '/product/why-sovereign'],
+    ['get-started/developers.md', '/get-started/developers'],
+  ])('resolves %s to route %s', (relativePath, expected) => {
+    expect(pagePath(relativePath)).toBe(expected);
   });
 });

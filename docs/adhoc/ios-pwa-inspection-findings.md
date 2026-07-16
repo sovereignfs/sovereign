@@ -62,6 +62,15 @@ verification.
 
 Do **not** fix this by adding `maximum-scale=1` / `user-scalable=no` to the viewport meta — that suppresses pinch-zoom for low-vision users (accessibility regression) and only masks the cause.
 
+> **Superseded 2026-07-16.** `runtime/app/layout.tsx`'s `viewport` export now sets
+> `maximumScale: 1, userScalable: false` — pinch-to-zoom is disabled app-wide
+> (separate issue from this input-zoom finding: users reported being able to
+> pinch-zoom the whole page during normal use, not just on input focus). This
+> was a deliberate, explicit tradeoff decision, not an oversight — see the PWA
+> stability session that made the change. It's conditioned on shipping a
+> compensating in-app text-size control (tracked as a follow-up) so low-vision
+> users retain a way to enlarge content without pinch-zoom.
+
 Note `packages/ui` is a published design-system contract: this is a visual change to a public component, so it needs a Storybook check and a version bump per NFR-04 rules (non-breaking → patch/minor).
 
 ---

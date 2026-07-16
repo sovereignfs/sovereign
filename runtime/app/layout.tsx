@@ -55,6 +55,15 @@ export const viewport: Viewport = {
   // (safe-area insets compensate in CSS with env(safe-area-inset-*)). Required
   // for the immersive black-translucent status bar on iOS standalone (RFC 0013).
   viewportFit: 'cover',
+  // Disables two-finger pinch-to-zoom app-wide (native-app feel, no accidental
+  // zoom mid-gesture on iOS). This reverses a prior explicit decision (see
+  // docs/adhoc/ios-pwa-inspection-findings.md #1) made to preserve pinch-zoom
+  // as a WCAG 1.4.4 (Resize Text) affordance for low-vision users — that
+  // finding explicitly says not to do this without a replacement. A
+  // compensating in-app text-size control is tracked as a required follow-up,
+  // not optional polish; don't remove this comment until that control ships.
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

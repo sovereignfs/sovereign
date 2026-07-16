@@ -167,6 +167,7 @@ once prioritised.
 | —       | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)        | 📋     | [11.2](epics/i18n.md#-112--internationalization-phase-2--platform-shell-adoption-rfc-0029)                                  |
 | —       | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](epics/design-system.md#-99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
 | —       | Email delivery failure activity logging (RFC 0062)                        | ✅     | [5.2](epics/activity-logs.md#-52--email-delivery-failure-activity-logging-rfc-0062)                                         |
+| —       | Launcher grid respects saved sidebar order                                | ✅     | [2.22](epics/platform-shell.md#-222--launcher-grid-respects-saved-sidebar-order)                                            |
 | —       | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](epics/design-system.md#-910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
 | —       | Non-Docker production deployment, Phase 2 — systemd (RFC 0026)            | 📋     | [0.13](epics/infrastructure.md#-013--non-docker-production-deployment-phase-2--systemd)                                     |
 | —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035)        | 📋     | [1.8](epics/users-auth.md#-18--progressive-user-verification-phase-1--infrastructure-rfc-0035)                              |

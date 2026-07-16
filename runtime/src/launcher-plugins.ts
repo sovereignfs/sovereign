@@ -1,3 +1,4 @@
+import type { SidebarPluginEntry } from '@sovereignfs/db';
 import { hasCapability } from './capabilities';
 import type { PluginRouteInfo } from './route-guard';
 
@@ -72,4 +73,42 @@ export function selectLauncherPlugins(
       ...(p.type ? { type: p.type } : {}),
       ...(p.icon ? { iconUrl: `/plugin-icons/${p.id}.svg` } : {}),
     }));
+}
+
+/**
+ * Apply a user's saved sidebar order (Task 2.13) to an already-filtered plugin
+ * list, shared by the sidebar chrome and the Launcher grid (Task 2.22) so both
+ * surfaces present a consistent order. `plugins` must already reflect the
+ * caller's own visibility rules (chrome exclusion, disabled plugins, and for
+ * the Launcher, role/admin filtering) — an id present in `saved` but absent
+ * from `plugins` is silently dropped, so a saved order can never resurrect a
+ * plugin the caller has already decided this request shouldn't see.
+ *
+ * `dropHidden` distinguishes the two callers' visibility semantics: the
+ * sidebar strip excludes entries the user marked hidden (`true`); the
+ * Launcher grid is the "see everything" view, so hidden entries stay in the
+ * result and are only reordered (`false`).
+ *
+ * Plugins not yet present in `saved` (newly installed since the user last
+ * customised their order) are appended at the end in their original order —
+ * matching the previous sidebar-only behavior this replaces.
+ */
+export function applySidebarOrder<T extends { id: string }>(
+  plugins: readonly T[],
+  saved: readonly SidebarPluginEntry[] | null,
+  options: { dropHidden: boolean },
+): T[] {
+  if (!saved) return [...plugins];
+  const idMap = new Map(plugins.map((p) => [p.id, p]));
+  const ordered = saved
+    .filter((e) => idMap.has(e.id) && !(options.dropHidden && e.hidden))
+    .flatMap((e) => {
+      const p = idMap.get(e.id);
+      return p ? [p] : [];
+    });
+  const knownIds = new Set(saved.map((e) => e.id));
+  for (const p of plugins) {
+    if (!knownIds.has(p.id)) ordered.push(p);
+  }
+  return ordered;
 }

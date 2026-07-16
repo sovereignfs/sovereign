@@ -7,7 +7,7 @@ import { hasCapability } from '@/src/capabilities';
 import { getPlatformDb } from '@/src/db';
 import { getDisabledPluginIds } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
-import { selectSidebarPlugins } from '@/src/launcher-plugins';
+import { applySidebarOrder, selectSidebarPlugins } from '@/src/launcher-plugins';
 import { InstanceProvider } from '@/src/instance-provider';
 import { AccountMenu } from './_components/AccountMenu';
 import { ClientShell } from './_components/ClientShell';
@@ -57,22 +57,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   let plugins = rawPlugins;
   if (userId) {
     const prefs = await getAccountPrefs(pdb, userId);
-    if (prefs.sidebarPlugins) {
-      const idMap = new Map(rawPlugins.map((p) => [p.id, p]));
-      // Saved order, excluding hidden entries and uninstalled plugin IDs
-      const ordered = prefs.sidebarPlugins
-        .filter((e) => !e.hidden && idMap.has(e.id))
-        .flatMap((e) => {
-          const p = idMap.get(e.id);
-          return p ? [p] : [];
-        });
-      // Newly installed plugins not yet in the saved list go at the end
-      const knownIds = new Set(prefs.sidebarPlugins.map((e) => e.id));
-      for (const p of rawPlugins) {
-        if (!knownIds.has(p.id)) ordered.push(p);
-      }
-      plugins = ordered;
-    }
+    plugins = applySidebarOrder(rawPlugins, prefs.sidebarPlugins, { dropHidden: true });
   }
 
   const pluginIcons = [...(launcher ? [launcher] : []), ...plugins].map((plugin) => {

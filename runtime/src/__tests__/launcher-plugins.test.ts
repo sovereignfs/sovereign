@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { SidebarPluginEntry } from '@sovereignfs/db';
 import {
+  applySidebarOrder,
   selectLauncherPlugins,
   selectSidebarPlugins,
   type LauncherPluginInput,
@@ -72,5 +74,64 @@ describe('selectSidebarPlugins', () => {
     const reversed = [...plugins].reverse();
     const ids = selectSidebarPlugins(reversed, none).map((p) => p.id);
     expect(ids).toEqual(['fs.example.audit', 'fs.example.tasks']);
+  });
+});
+
+describe('applySidebarOrder', () => {
+  const items = [
+    { id: 'tasks', name: 'Tasks' },
+    { id: 'notes', name: 'Notes' },
+    { id: 'audit', name: 'Audit' },
+  ];
+
+  it('returns the input unchanged when there is no saved preference', () => {
+    expect(applySidebarOrder(items, null, { dropHidden: true })).toEqual(items);
+  });
+
+  it('reorders to match the saved preference', () => {
+    const saved: SidebarPluginEntry[] = [
+      { id: 'audit', hidden: false },
+      { id: 'tasks', hidden: false },
+      { id: 'notes', hidden: false },
+    ];
+    const ids = applySidebarOrder(items, saved, { dropHidden: true }).map((p) => p.id);
+    expect(ids).toEqual(['audit', 'tasks', 'notes']);
+  });
+
+  it('drops hidden entries when dropHidden is true (sidebar chrome)', () => {
+    const saved: SidebarPluginEntry[] = [
+      { id: 'tasks', hidden: true },
+      { id: 'notes', hidden: false },
+      { id: 'audit', hidden: false },
+    ];
+    const ids = applySidebarOrder(items, saved, { dropHidden: true }).map((p) => p.id);
+    expect(ids).toEqual(['notes', 'audit']);
+  });
+
+  it('keeps hidden entries, only reordered, when dropHidden is false (Launcher grid)', () => {
+    const saved: SidebarPluginEntry[] = [
+      { id: 'tasks', hidden: true },
+      { id: 'notes', hidden: false },
+      { id: 'audit', hidden: false },
+    ];
+    const ids = applySidebarOrder(items, saved, { dropHidden: false }).map((p) => p.id);
+    expect(ids).toEqual(['tasks', 'notes', 'audit']);
+  });
+
+  it('appends a plugin not yet present in the saved list, in original order', () => {
+    const saved: SidebarPluginEntry[] = [{ id: 'notes', hidden: false }];
+    const ids = applySidebarOrder(items, saved, { dropHidden: true }).map((p) => p.id);
+    expect(ids).toEqual(['notes', 'tasks', 'audit']);
+  });
+
+  it('silently drops a saved id absent from the input list (e.g. an admin-only plugin not visible to this caller)', () => {
+    const saved: SidebarPluginEntry[] = [
+      { id: 'admin-only', hidden: false },
+      { id: 'audit', hidden: false },
+      { id: 'tasks', hidden: false },
+      { id: 'notes', hidden: false },
+    ];
+    const ids = applySidebarOrder(items, saved, { dropHidden: false }).map((p) => p.id);
+    expect(ids).toEqual(['audit', 'tasks', 'notes']);
   });
 });

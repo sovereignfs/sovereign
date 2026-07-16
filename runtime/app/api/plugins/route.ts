@@ -1,20 +1,31 @@
 import { NextResponse } from 'next/server';
+import { getAccountPrefs } from '@sovereignfs/db';
 import { getPlatformDb } from '@/src/db';
 import { getDisabledPluginIds } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
-import { selectLauncherPlugins } from '@/src/launcher-plugins';
+import { applySidebarOrder, selectLauncherPlugins } from '@/src/launcher-plugins';
 
 /**
  * Launcher-visible plugins for the current user (SRS LCH-01/03/04). Session-
  * gated by the middleware (not under the `/api/admin` exclusion), which injects
  * the verified role as `x-sovereign-user-role` — so this needs no admin key.
  * Returns enabled, non-chrome plugins; admin-only ones only for admins.
+ *
+ * Ordered by the user's saved sidebar preference (Task 2.22), when set — same
+ * order as the sidebar chrome, but hidden-from-sidebar plugins still appear
+ * here (Launcher is the "see everything" view; only the sidebar strip hides).
  */
 export async function GET(request: Request): Promise<Response> {
   const role = request.headers.get('x-sovereign-user-role') ?? 'platform:user';
+  const userId = request.headers.get('x-sovereign-user-id');
 
-  const disabledIds = new Set(await getDisabledPluginIds(await getPlatformDb()));
+  const pdb = await getPlatformDb();
+  const disabledIds = new Set(await getDisabledPluginIds(pdb));
 
-  const plugins = selectLauncherPlugins(getInstalledPlugins(), disabledIds, role);
+  const launcherPlugins = selectLauncherPlugins(getInstalledPlugins(), disabledIds, role);
+  const prefs = userId ? await getAccountPrefs(pdb, userId) : null;
+  const plugins = applySidebarOrder(launcherPlugins, prefs?.sidebarPlugins ?? null, {
+    dropHidden: false,
+  });
   return NextResponse.json({ plugins });
 }

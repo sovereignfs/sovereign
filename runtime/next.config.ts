@@ -55,6 +55,33 @@ const withPWA = withPWAInit({
   register: true,
   reloadOnOnline: true,
   fallbacks: { document: '/offline' },
+  // Bound the "pages" document cache entry with a network timeout, falling
+  // back to the cached `/offline` shell instead of hanging on a stalled
+  // request. Sovereign's pages are per-user SSR (nav, plugin list, etc.), so
+  // this intentionally stays NetworkFirst rather than switching to a
+  // stale-while-revalidate document cache — caching and replaying a
+  // rendered authenticated shell risks showing a stale/different user's
+  // content after logout/login on a shared device. This only bounds the
+  // worst case (a stalled request now falls back after 4s instead of
+  // hanging blank); it does not change typical-case latency on a fast
+  // network. See docs/adhoc/ios-pwa-inspection-findings.md #5.
+  extendDefaultRuntimeCaching: true,
+  workboxOptions: {
+    runtimeCaching: [
+      {
+        // Same matcher as the library's default "pages" entry (same-origin,
+        // non-API GET) — this only adds networkTimeoutSeconds to it.
+        urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
+          sameOrigin && !url.pathname.startsWith('/api/'),
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'pages',
+          expiration: { maxEntries: 32, maxAgeSeconds: 86400 },
+          networkTimeoutSeconds: 4,
+        },
+      },
+    ],
+  },
 });
 
 export default withPWA(nextConfig);

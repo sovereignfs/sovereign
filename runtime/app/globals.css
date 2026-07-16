@@ -122,5 +122,11 @@ a {
 body {
   font-family: var(--sv-font-family);
   color: var(--sv-color-text-primary);
-  background-color: var(--sv-color-surface-sunken);
+  /* Matches the iOS splash screens / manifest background_color / theme-color
+     meta (all --sv-color-surface) so there's no visible color shift in the
+     pre-paint window between the native launch image and .shell mounting.
+     Once .shell renders it fills 100dvh with its own backgrounds (sidebar:
+     --sv-color-surface, content: --sv-color-surface-sunken), so this value is
+     only ever seen during that transient gap — see scripts/generate-splash.ts. */
+  background-color: var(--sv-color-surface);
 }

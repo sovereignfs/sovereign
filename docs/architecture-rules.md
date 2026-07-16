@@ -281,6 +281,17 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   production build (`next build`). The PWA assets and the `/offline` fallback
   are excluded from the middleware session gate (they must load without a
   session).
+- **Never switch the service worker's document/page cache entries
+  (`pages`, `pages-rsc`, `pages-rsc-prefetch`) to a stale-serving strategy**
+  (`StaleWhileRevalidate`/`CacheFirst`). Sovereign's pages are per-user SSR
+  (nav, plugin list, account state) — replaying a cached rendered shell risks
+  showing a stale or different user's authenticated content after
+  logout/login on a shared device. Keep these `NetworkFirst`. The one safe
+  lever for the iOS "white flash on standalone launch" (a real, largely
+  irreducible WebKit launch-image-to-first-paint gap for non-native-wrapped
+  PWAs) is bounding the worst case with `networkTimeoutSeconds` +
+  `fallbacks.document` — configured in `runtime/next.config.ts` — not caching
+  the document itself. See `docs/adhoc/ios-pwa-inspection-findings.md` #5.
 - **Production images build from Next.js standalone output** (Task 0.5.2).
   Both `next.config.ts` set `output: 'standalone'` **and**
   `outputFileTracingRoot` to the monorepo root — required in a pnpm monorepo or

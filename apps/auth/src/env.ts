@@ -18,6 +18,13 @@ export interface AuthEnv {
   /** Shared secret for runtime→auth admin API calls. No default — must be set. */
   adminKey: string;
   /**
+   * Where the auth server reaches the runtime for server-to-server calls (the
+   * reverse of SOVEREIGN_AUTH_URL) — currently used to record email-delivery-
+   * failure activity log entries. Defaults to localhost for native dev; Docker
+   * Compose sets it to the internal service name (http://runtime:3000).
+   */
+  runtimeUrl: string;
+  /**
    * Cookie domain for cross-subdomain session sharing. When auth and runtime
    * live on different subdomains (e.g. auth.example.com and example.com),
    * set this to the shared parent domain (e.g. ".example.com") so session
@@ -95,6 +102,7 @@ export function getEnv(): AuthEnv {
     // the same as unset and fall back to the default.
     baseUrl,
     adminKey: required('SOVEREIGN_ADMIN_KEY'),
+    runtimeUrl: process.env.SOVEREIGN_RUNTIME_URL || defaultRuntimeUrl,
     trustedOrigins: (process.env.AUTH_TRUSTED_ORIGINS ?? '')
       .split(',')
       .map((s) => s.trim())

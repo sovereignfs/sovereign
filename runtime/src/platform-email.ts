@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { recordEmailDelivery, type EmailDeliveryClass } from '@sovereignfs/db';
 import { createMailer } from '@sovereignfs/mailer';
+import { logActivity } from './activity';
 import { getPlatformDb } from './db';
 
 export type PlatformEmailSource = 'auth' | 'runtime' | 'console' | 'account' | 'plugin';
@@ -41,6 +42,32 @@ function errorCode(error: unknown): string {
   return error instanceof Error && error.name ? error.name.slice(0, 120) : 'EMAIL_SEND_FAILED';
 }
 
+/**
+ * Records a non-'sent' delivery outcome to the activity log so it surfaces in
+ * Console's platform-wide feed and, when a specific recipient user is known,
+ * that user's own Account feed. No raw email address in the summary — the
+ * delivery log already hashes the recipient.
+ */
+async function logDeliveryOutcome(
+  input: PlatformEmailInput,
+  status: 'skipped' | 'failed',
+  errorCode: string,
+): Promise<void> {
+  await logActivity({
+    actorType: 'system',
+    action: 'email.delivery_failed',
+    subjectUserId: input.toUserId ?? null,
+    visibility: input.toUserId ? 'user' : 'admin',
+    summary: `${status === 'skipped' ? 'Skipped' : 'Failed to send'} "${input.templateId}" email (${input.deliveryClass})`,
+    metadata: {
+      templateId: input.templateId,
+      deliveryClass: input.deliveryClass,
+      status,
+      errorCode,
+    },
+  });
+}
+
 export async function sendPlatformEmail(input: PlatformEmailInput): Promise<PlatformEmailResult> {
   const pdb = await getPlatformDb();
   const baseLog = {
@@ -60,6 +87,7 @@ export async function sendPlatformEmail(input: PlatformEmailInput): Promise<Plat
       status: 'skipped',
       errorCode: 'SMTP_NOT_CONFIGURED',
     });
+    await logDeliveryOutcome(input, 'skipped', 'SMTP_NOT_CONFIGURED');
     return { status: 'skipped', errorCode: 'SMTP_NOT_CONFIGURED' };
   }
 
@@ -75,6 +103,7 @@ export async function sendPlatformEmail(input: PlatformEmailInput): Promise<Plat
   } catch (err) {
     const code = errorCode(err);
     await recordEmailDelivery(pdb, { ...baseLog, status: 'failed', errorCode: code });
+    await logDeliveryOutcome(input, 'failed', code);
     return { status: 'failed', errorCode: code };
   }
 }

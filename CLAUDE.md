@@ -212,6 +212,7 @@ The most likely rules to be accidentally broken. Full reference with context: `d
 - **Server-to-server calls to better-auth must send `Origin` header** equal to `SOVEREIGN_AUTH_URL` — CSRF check rejects originless POSTs with 403.
 - **A quick-entry input that commits on Enter must also commit on blur**, via `useCommitOnEnterOrBlur` (`@sovereignfs/ui`). iOS's native keyboard-accessory Done/checkmark only fires a `blur`, never a keydown or form submit — an Enter-only handler silently drops typed input. Exception: a field inside a form with its own always-visible submit button (login, payment) should NOT commit on blur. See `docs/plugin-development.md`'s "Committing quick-entry input".
 - **`touch-action`'s effective value is the intersection of an element's own value and every ancestor's**, not independently scoped. Declaring narrower values (e.g. `pan-y`) on nested perpendicular scroll containers (e.g. inside a `pan-x` carousel) can cancel both axes instead of routing between them — fix nested-scroller conflicts without touching `touch-action` on the nested pair.
+- **Never make the service worker's `pages`/`pages-rsc`/`pages-rsc-prefetch` cache entries stale-serving** (`StaleWhileRevalidate`/`CacheFirst`) — Sovereign's pages are per-user SSR, so replaying a cached document risks showing a stale/different user's shell after logout/login. Keep them `NetworkFirst`; bound worst-case latency with `networkTimeoutSeconds` + `fallbacks.document` instead (`runtime/next.config.ts`). Full detail: `docs/architecture-rules.md`.
 
 ## Design system (`packages/ui`)
 

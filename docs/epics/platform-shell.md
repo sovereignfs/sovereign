@@ -635,6 +635,47 @@ openable only to users allowed by the configured access policy.
 - Root plugin fallback does not leak inaccessible plugin names.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
+---
+
+#### ✅ 2.22 — Launcher grid respects saved sidebar order
+
+**Goal:** A user's saved sidebar plugin order (Task 2.13) is currently applied only to the
+sidebar/mobile-drawer chrome. Extend it to the Launcher's app grid so both surfaces present a
+consistent order, without changing Launcher's own visibility rules (hiding a plugin from the
+sidebar strip does not remove its Launcher tile — Launcher remains the "see everything" view).
+
+**Deliverables:**
+
+- `runtime` → **patch**: new exported `applySidebarOrder()` in `runtime/src/launcher-plugins.ts`,
+  factored out of the merge logic previously inlined in `(platform)/layout.tsx`. Takes the
+  caller's already-filtered plugin list, the user's saved `sidebar_plugins` entries (or `null`),
+  and a `dropHidden` flag — `true` for the sidebar chrome (hidden entries excluded entirely),
+  `false` for the Launcher grid (hidden entries stay, only reordered). Plugins not yet present in
+  the saved list are appended in their original order, matching the existing sidebar behavior.
+  Because each caller passes its own already role/admin-filtered list, an admin-only plugin
+  present in a saved order but not visible to the current caller (e.g. a non-admin's Launcher
+  request) is naturally dropped — the helper never needs to know about roles itself.
+- `(platform)/layout.tsx` refactored to call the new helper instead of its inline duplicate.
+- `runtime/app/api/plugins/route.ts` (the Launcher's data source, `GET /api/plugins`) now reads
+  `x-sovereign-user-id` (same header the layout already reads, injected by middleware for every
+  authenticated request), loads the user's `sidebar_plugins` prefs via `getAccountPrefs`, and
+  applies `applySidebarOrder(..., { dropHidden: false })` after `selectLauncherPlugins`'s existing
+  role/admin filtering.
+- `plugins/launcher` → no code change needed: it already renders whatever order `/api/plugins`
+  returns, splitting into main/admin sections by `adminOnly` — a stable sort preserves relative
+  order within each section.
+
+**Dependencies:** Task 2.13 (sidebar customization — the `sidebar_plugins` data this reads).
+
+**Review checklist:**
+
+- Reordering plugins in Account → Preferences → Sidebar and reloading the Launcher shows the same
+  relative order (within the main and admin sections separately).
+- Hiding a plugin from the sidebar strip does not remove its Launcher tile.
+- A newly installed plugin not yet in the saved order appears at the end of both surfaces.
+- A non-admin user's Launcher request never receives an admin-only plugin, saved order or not.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
 ## Related RFCs
 
 - [RFC 0001 — Overlay shell variant](../rfcs/0001-overlay-shell-variant.md)

@@ -69,3 +69,14 @@ customization), Task 7.1 (plugin monetization).
   admins.
 - Monetized plugin tile and paywall behavior have regression coverage.
 - Chrome plugins remain excluded from app tiles.
+
+---
+
+#### ✅ 2.22 — Launcher grid respects saved sidebar order
+
+> Full entry: **[2.22]** in [platform-shell.md](platform-shell.md) — Launcher grid respects saved
+> sidebar order. `/api/plugins` (the Launcher's data source) now applies the user's saved sidebar
+> plugin order after its own role/admin filtering, so tile order matches the sidebar's custom
+> order; hiding a plugin from the sidebar strip does not remove its Launcher tile.
+
+---

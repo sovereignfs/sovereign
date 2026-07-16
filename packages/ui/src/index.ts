@@ -86,6 +86,12 @@ export { QuantityStepper } from './components/QuantityStepper/QuantityStepper';
 export type { QuantityStepperProps } from './components/QuantityStepper/QuantityStepper';
 export { CheckableListRow } from './components/CheckableListRow/CheckableListRow';
 export type { CheckableListRowProps } from './components/CheckableListRow/CheckableListRow';
-export { useLongPress, useDoubleTapHandler, useSingleOrDoubleTap, useIsMobile } from './hooks';
+export {
+  useLongPress,
+  useDoubleTapHandler,
+  useSingleOrDoubleTap,
+  useIsMobile,
+  useCommitOnEnterOrBlur,
+} from './hooks';
 export { MOBILE_BREAKPOINT_PX } from './hooks';
-export type { UseLongPressOptions, LongPressHandlers } from './hooks';
+export type { UseLongPressOptions, LongPressHandlers, CommitOnEnterOrBlurHandlers } from './hooks';

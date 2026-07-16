@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Card } from '../components/Card/Card';
-import { useDoubleTapHandler, useIsMobile, useLongPress, useSingleOrDoubleTap } from '../hooks';
+import {
+  useCommitOnEnterOrBlur,
+  useDoubleTapHandler,
+  useIsMobile,
+  useLongPress,
+  useSingleOrDoubleTap,
+} from '../hooks';
 
 // ---------------------------------------------------------------------------
 // Shared primitives (mirrors MobilePatterns.stories.tsx's doc styling)
@@ -268,6 +274,42 @@ function DoubleTapDemo() {
   );
 }
 
+function CommitOnEnterOrBlurDemo() {
+  const [value, setValue] = useState('');
+  const [events, setEvents] = useState<string[]>([]);
+  const log = (msg: string) =>
+    setEvents((e) => [...e, `${new Date().toLocaleTimeString()} — ${msg}`]);
+  const commitHandlers = useCommitOnEnterOrBlur(() => log(`commit: "${value}"`));
+
+  return (
+    <div>
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        {...commitHandlers}
+        placeholder="Type, then press Enter or click away…"
+        style={{
+          width: '100%',
+          boxSizing: 'border-box',
+          padding: 'var(--sv-space-2) var(--sv-space-3)',
+          borderRadius: 'var(--sv-radius-md)',
+          border: '1px solid var(--sv-color-border-strong)',
+          background: 'var(--sv-color-surface)',
+          color: 'var(--sv-color-text-primary)',
+          fontFamily: ff,
+          fontSize: 'var(--sv-font-size-sm)',
+        }}
+      />
+      <EventLog events={events} />
+      <Callout type="info">
+        Tries to reproduce the bug this hook fixes: on iOS, tap into the field, type something, then
+        dismiss the keyboard via the native Done/checkmark toolbar instead of the Return key — both
+        now log a commit here, where an Enter-only handler would silently drop the checkmark path.
+      </Callout>
+    </div>
+  );
+}
+
 function IsMobileDemo() {
   const isMobile = useIsMobile();
   return (
@@ -344,6 +386,18 @@ function InteractionHooksDoc() {
           only when the single tap has a default action (e.g. navigation) a following double-tap
           must be able to preempt — every single tap through it pays the ~350ms wait.
         </Callout>
+      </section>
+
+      <section style={{ marginBottom: 'var(--sv-space-10)' }}>
+        <SectionHeader
+          title="useCommitOnEnterOrBlur"
+          subtitle="Unifies Enter-to-commit with iOS's native keyboard accessory toolbar, whose Done/checkmark only ever fires a blur, never a keydown."
+        />
+        <Card padding="md">
+          <CommitOnEnterOrBlurDemo />
+        </Card>
+        <CodeBlock>{`const commitHandlers = useCommitOnEnterOrBlur(() => createTask(title));
+<input value={title} onChange={...} {...commitHandlers} />`}</CodeBlock>
       </section>
 
       <section style={{ marginBottom: 'var(--sv-space-10)' }}>

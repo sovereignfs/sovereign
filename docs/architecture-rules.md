@@ -246,6 +246,31 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   TLS when the connection string sets `sslmode` (`pgSslMode` in
   `packages/db/src/client.ts`; CA via `PGSSLROOTCERT`). At-rest encryption
   (Tiers 2–4) is deferred to Task 1.0.01.
+- **A quick-entry input that commits on Enter must also commit on blur**, via
+  `useCommitOnEnterOrBlur` (`@sovereignfs/ui`). iOS Safari's native
+  "Previous / Next / Done" keyboard-accessory toolbar — added automatically
+  whenever a Sheet/form has more than one focusable field, with no supported
+  way to suppress it — only ever fires a `blur` when its Done/checkmark is
+  tapped, never a keydown and never a form submit. An `onKeyDown`-only Enter
+  handler silently discards whatever was typed the moment a user dismisses
+  the keyboard that way instead of pressing the on-screen Return key. Found
+  and fixed across `sovereign-tasks` and `sovereign-shopper`'s quick-add
+  rows (add task/subtask/list, mobile rename Sheet); see
+  `docs/plugin-development.md`'s "Committing quick-entry input" for the
+  pattern and its one exception (a field inside a form with its own
+  always-visible submit button — e.g. login, payment — should NOT commit on
+  blur; that's the correct, safer default there).
+- **The `touch-action` CSS property's effective value at any point is the
+  _intersection_ of that element's own value and every ancestor's value, not
+  independently scoped per element.** Declaring `pan-y` on a vertically
+  scrolling child nested inside an ancestor declaring `pan-x` (e.g. a native
+  horizontal swipe-between-lists carousel) does not "hand off" the horizontal
+  axis to the ancestor — the intersection of `{pan-y}` and `{pan-x}` is empty,
+  so neither axis is handled natively anywhere in that subtree, breaking both
+  gestures at once. Fix nested-scroller touch/scroll conflicts with
+  behavioural CSS that doesn't touch `touch-action` (e.g. `overflow-anchor`)
+  or JS-level gesture arbitration, not by declaring narrower `touch-action`
+  values on nested perpendicular scroll containers.
 - **The runtime is an installable PWA** (`@ducanh2912/next-pwa`, PLT-09). The
   web manifest (`runtime/public/manifest.json`) and PNG icons
   (`runtime/public/icons/`) are committed **source**; the service worker

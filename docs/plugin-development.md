@@ -1979,6 +1979,44 @@ function ColorSwatch({ color, onPick }: { color: string; onPick: () => void }) {
 }
 ```
 
+### Committing quick-entry input — Enter vs. iOS's keyboard toolbar
+
+iOS Safari adds its own "Previous / Next / Done" toolbar above the software
+keyboard whenever a Sheet or form has more than one focusable field nearby —
+there is no supported way to suppress it (it's WebKit's own field-detection
+heuristic, not something the page controls). Tapping that toolbar's
+Done/checkmark only ever fires a native `blur`; it is **not** a form submit
+and dispatches no keydown. A quick-entry input that commits only on Enter
+(`onKeyDown` checking `e.key === 'Enter'`) silently discards whatever was
+typed the moment a user dismisses the keyboard that way instead of pressing
+the on-screen Return key — the two dismissal paths look identical to the user
+but produce different outcomes. This was a real bug across `sovereign-tasks`
+and `sovereign-shopper`'s add-list/add-task/add-subtask rows before
+`useCommitOnEnterOrBlur` existed.
+
+```tsx
+import { useCommitOnEnterOrBlur } from '@sovereignfs/ui';
+
+function AddTaskRow({ onAdd }: { onAdd: (title: string) => void }) {
+  const [title, setTitle] = useState('');
+  const commit = () => {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    onAdd(trimmed);
+    setTitle('');
+  };
+  const commitHandlers = useCommitOnEnterOrBlur(commit);
+  return <input value={title} onChange={(e) => setTitle(e.target.value)} {...commitHandlers} />;
+}
+```
+
+Reach for this whenever Enter is the _sole_ way to commit a field (a quick-add
+row, an inline rename with no persistent Save button). It is the wrong tool
+for a field inside a form with its own always-visible submit button (login,
+a dialog's "Save", payment details) — there, silently submitting on blur would
+be surprising and possibly unsafe; leave Enter as a convenience shortcut and
+let the visible button be the real commit action. Full mechanism: [design-system.md's interaction hooks section](./design-system.md#interaction-hooks).
+
 ### PWA-feel checklist
 
 The shell already handles the following globally — nothing to add per plugin:
@@ -1994,6 +2032,7 @@ Still your responsibility per component:
 
 - [ ] A custom drag handle (dnd-kit or hand-rolled) sets its own `touch-action: none` — the global `manipulation` default lets the browser's own scroll/zoom gestures compete with a drag unless overridden
 - [ ] Any element you position `fixed` or `sticky` yourself accounts for `env(safe-area-inset-bottom)` if it can sit near the device's home-indicator area — `@sovereignfs/ui`'s own overlays (`Drawer`, `Sheet`, `Dialog`) already do this; a plugin-local fixed element does not get it for free
+- [ ] A quick-entry input that only commits on Enter also commits on blur via `useCommitOnEnterOrBlur` — see "Committing quick-entry input" above; otherwise iOS's native keyboard toolbar silently discards typed input
 - [ ] Test in **both** Safari-the-browser-tab and the installed **PWA standalone** mode on iOS — behaviour genuinely differs (the standalone-mode zoom-persists-after-blur case above is one example) and testing only the browser tab misses it
 - [ ] Verify on Android Chrome too — long-press, swipe, and scroll-vs-gesture arbitration have platform-specific quirks that don't always match iOS
 

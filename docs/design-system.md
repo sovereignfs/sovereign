@@ -637,6 +637,7 @@ import {
   useDoubleTapHandler,
   useSingleOrDoubleTap,
   useIsMobile,
+  useCommitOnEnterOrBlur,
 } from '@sovereignfs/ui';
 ```
 
@@ -680,6 +681,40 @@ navigation) — it defers the single action by the double-tap window so a
 following second tap can still preempt it; this means every single tap through
 it incurs that latency, so reach for it only where the preemption is genuinely
 needed.
+
+**`useCommitOnEnterOrBlur(onCommit)`**
+Returns `{ onKeyDown, onBlur }` to spread onto a quick-entry input/textarea so
+Enter and losing focus both commit through the same callback. iOS Safari adds
+its own "Previous / Next / Done" toolbar above the software keyboard whenever
+more than one focusable field is nearby (a Sheet with several fields, a form,
+etc.) — there is no supported way to suppress it, since it's WebKit's own
+field-detection heuristic, not something the page controls. Tapping that
+toolbar's Done/checkmark only ever fires a native `blur`; it is not a form
+submit and dispatches no keydown, so a field that commits only on Enter
+silently discards whatever was typed the moment a user dismisses the keyboard
+that way instead of pressing the on-screen Return key — the two dismissal
+paths look identical to the user but produce different outcomes.
+
+```tsx
+function AddTaskRow({ onAdd }: { onAdd: (title: string) => void }) {
+  const [title, setTitle] = useState('');
+  const commit = () => {
+    const trimmed = title.trim();
+    if (!trimmed) return; // onCommit owns its own empty no-op
+    onAdd(trimmed);
+    setTitle('');
+  };
+  const commitHandlers = useCommitOnEnterOrBlur(commit);
+  return <input value={title} onChange={(e) => setTitle(e.target.value)} {...commitHandlers} />;
+}
+```
+
+Use this for any input where Enter is the primary, sole way to commit (quick-add
+rows, inline rename) — not for a field inside a form with its own always-visible
+submit button (login, payment, a dialog's "Save"): there, losing focus should
+**not** silently submit, so leaving blur alone is correct. `onCommit` is called
+unconditionally on both Enter and blur; it owns any empty-value no-op itself, the
+same way every call site's commit function already guards before doing anything.
 
 **`useIsMobile(breakpointPx?)`** and **`MOBILE_BREAKPOINT_PX` (768)**
 SSR-safe viewport check — defaults to `false` (desktop) until the client mounts

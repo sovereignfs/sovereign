@@ -53,6 +53,10 @@ services:
       AUTH_TRUSTED_ORIGINS: '${AUTH_TRUSTED_ORIGINS:-http://auth:3001}'
       NEXT_PUBLIC_RUNTIME_URL: '${NEXT_PUBLIC_RUNTIME_URL:-http://localhost:3000}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
+      # Internal Docker service address for auth→runtime server-to-server calls
+      # (e.g. recording email-delivery-failure activity log entries). Mirrors
+      # SOVEREIGN_AUTH_URL on the runtime service below, reversed.
+      SOVEREIGN_RUNTIME_URL: 'http://runtime:3000'
     volumes:
       - ./data:/app/data
     networks:

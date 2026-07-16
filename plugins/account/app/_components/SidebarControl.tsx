@@ -1,8 +1,18 @@
 'use client';
 
-import { useState, useTransition, useRef } from 'react';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { useState, useTransition } from 'react';
 import { Button, Toggle } from '@sovereignfs/ui';
 import { updateSidebarPluginsAction } from '../actions';
+import { useReorderSensors } from '../_lib/dndSensors';
 import styles from '../account.module.css';
 
 interface PluginInfo {
@@ -46,7 +56,11 @@ function buildEntries(plugins: PluginInfo[], saved: PluginEntry[] | null): Plugi
 export function SidebarControl({ plugins, initial }: Props) {
   const [entries, setEntries] = useState<PluginEntry[]>(() => buildEntries(plugins, initial));
   const [, startTransition] = useTransition();
-  const dragIndex = useRef<number | null>(null);
+  // MouseSensor (handle-initiated, desktop) + TouchSensor (long-press lift,
+  // mobile — fixes reordering being unusable on iOS PWA/Safari, which never
+  // implements the native HTML5 Drag-and-Drop API for touch) + KeyboardSensor.
+  // See _lib/dndSensors.ts.
+  const sensors = useReorderSensors();
 
   const infoMap = new Map(plugins.map((p) => [p.id, p]));
 
@@ -65,28 +79,12 @@ export function SidebarControl({ plugins, initial }: Props) {
     save(plugins.map((p) => ({ id: p.id, hidden: false })));
   }
 
-  // HTML5 Drag-and-Drop handlers
-  function onDragStart(index: number): void {
-    dragIndex.current = index;
-  }
-
-  function onDragOver(e: React.DragEvent, index: number): void {
-    e.preventDefault();
-    const from = dragIndex.current;
-    if (from === null || from === index) return;
-    const next = [...entries];
-    const moved = next.splice(from, 1)[0];
-    if (!moved) return;
-    next.splice(index, 0, moved);
-    dragIndex.current = index;
-    setEntries(next);
-  }
-
-  function onDrop(): void {
-    dragIndex.current = null;
-    startTransition(() => {
-      void updateSidebarPluginsAction(entries);
-    });
+  function handleDragEnd(event: DragEndEvent): void {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = entries.findIndex((e) => e.id === active.id);
+    const newIndex = entries.findIndex((e) => e.id === over.id);
+    save(arrayMove(entries, oldIndex, newIndex));
   }
 
   if (plugins.length === 0) {
@@ -95,46 +93,82 @@ export function SidebarControl({ plugins, initial }: Props) {
 
   return (
     <div className={styles.sidebarControl}>
-      <ul className={styles.sidebarList}>
-        {entries.map((entry, index) => {
-          const info = infoMap.get(entry.id);
-          if (!info) return null;
-          return (
-            <li
-              key={entry.id}
-              className={styles.sidebarRow}
-              draggable
-              onDragStart={() => {
-                onDragStart(index);
-              }}
-              onDragOver={(e) => {
-                onDragOver(e, index);
-              }}
-              onDrop={onDrop}
-            >
-              <span className={styles.dragHandle} aria-hidden>
-                ⠿
-              </span>
-              <span className={styles.sidebarPluginIcon}>
-                {info.iconUrl ? (
-                  <img src={info.iconUrl} alt="" aria-hidden className={styles.sidebarPluginImg} />
-                ) : (
-                  <span aria-hidden>{monogram(info.name)}</span>
-                )}
-              </span>
-              <span className={styles.sidebarPluginName}>{info.name}</span>
-              <Toggle
-                checked={!entry.hidden}
-                onChange={() => toggle(entry.id)}
-                aria-label={`Show ${info.name} in sidebar`}
-              />
-            </li>
-          );
-        })}
-      </ul>
+      <DndContext
+        id="sidebar-plugins-dnd"
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={entries.map((e) => e.id)} strategy={verticalListSortingStrategy}>
+          <ul className={styles.sidebarList}>
+            {entries.map((entry) => {
+              const info = infoMap.get(entry.id);
+              if (!info) return null;
+              return (
+                <SidebarRow
+                  key={entry.id}
+                  entry={entry}
+                  info={info}
+                  onToggle={() => toggle(entry.id)}
+                />
+              );
+            })}
+          </ul>
+        </SortableContext>
+      </DndContext>
       <Button variant="secondary" onClick={reset}>
         Reset to default
       </Button>
     </div>
+  );
+}
+
+function SidebarRow({
+  entry,
+  info,
+  onToggle,
+}: {
+  entry: PluginEntry;
+  info: PluginInfo;
+  onToggle: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: entry.id,
+  });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={[styles.sidebarRow, isDragging ? styles.sidebarRowDragging : '']
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <button
+        type="button"
+        className={styles.dragHandle}
+        aria-label={`Drag to reorder ${info.name}`}
+        {...attributes}
+        {...listeners}
+      >
+        ⠿
+      </button>
+      <span className={styles.sidebarPluginIcon}>
+        {info.iconUrl ? (
+          <img src={info.iconUrl} alt="" aria-hidden className={styles.sidebarPluginImg} />
+        ) : (
+          <span aria-hidden>{monogram(info.name)}</span>
+        )}
+      </span>
+      <span className={styles.sidebarPluginName}>{info.name}</span>
+      <span data-no-dnd>
+        <Toggle
+          checked={!entry.hidden}
+          onChange={onToggle}
+          aria-label={`Show ${info.name} in sidebar`}
+        />
+      </span>
+    </li>
   );
 }

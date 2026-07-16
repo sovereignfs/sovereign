@@ -827,19 +827,36 @@
   border: 1px solid var(--sv-color-border);
   border-radius: var(--sv-radius-md);
   background-color: var(--sv-color-surface-raised);
-  cursor: grab;
 }
 
-.sidebarRow:active {
-  cursor: grabbing;
+.sidebarRowDragging {
+  /* Extra lift affordance for the touch long-press path, where there's no
+     hover state to already hint "this is being picked up" the way a mouse
+     drag has. dnd-kit owns the inline transform (the drag's live position) —
+     this only adds paint, never touches transform itself. */
+  opacity: 0.5;
 }
 
 .dragHandle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--sv-color-text-muted);
   font-size: var(--sv-font-size-lg);
   line-height: 1;
   user-select: none;
   flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: grab;
+  /* The drag is JS-driven (dnd-kit), so the browser must not treat a press on
+     the handle as a scroll/pan gesture that would fight it. */
+  touch-action: none;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
 }
 
 .sidebarPluginIcon {

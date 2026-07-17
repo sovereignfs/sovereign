@@ -355,6 +355,47 @@ full-instance backup.
 
 ---
 
+#### 📋 8.13 — Export completeness hardening (RFC 0068)
+
+**Goal:** Close the silent-non-participation gap in the RFC 0052 portability
+system so a user-initiated export reliably reports on every plugin they use,
+not only the ones that happen to have registered a hook.
+
+**Deliverables:**
+
+- Add `installedPlugins` (all plugins installed for the tenant, with export/
+  import participation flags) to `BundleManifest`, populated independently of
+  the permission-filtered eligibility list.
+- Add a `notExported` list recording plugins skipped during export because no
+  exporter is registered, instead of silently omitting them.
+- Surface non-participating installed plugins in the Account Data tab
+  (`PortabilityPanel.tsx`) so gaps are visible at export time.
+- Audit every shipped plugin's manifest `data:export`/`data:import`
+  permission declarations against actual `sdk.portability` hook
+  registrations; close each mismatch by implementing the hook or removing the
+  unearned permission.
+- Decide and document the stance on export size/assembly mode (documented
+  ceiling with a clear error vs. background job + download-when-ready), since
+  a "complete" multi-plugin export can exceed the current 50 MB import cap.
+- Bump `EXPORT_FORMAT_VERSION` to 2 for the additive manifest fields.
+
+**Dependencies:** Task 8.2 (user data portability), Task 8.8 (plugin
+portability hooks).
+
+**SRS reference:** [RFC 0068](../rfcs/0068-export-completeness-hardening.md)
+
+**Review checklist:**
+
+- An export's `manifest.json` lists every plugin installed for the user,
+  regardless of whether it participated in the export.
+- A plugin installed but lacking an export hook appears in `notExported` with
+  a reason, not silently absent from the bundle.
+- No shipped plugin declares `data:export`/`data:import` in its manifest
+  without a corresponding registered hook.
+- The documented size/assembly stance is enforced, not merely described.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)
@@ -367,6 +408,7 @@ full-instance backup.
 - [RFC 0052 — Plugin portability hooks](../rfcs/0052-plugin-portability-hooks.md)
 - [RFC 0060 — Client-side encryption core](../rfcs/0060-client-side-encryption-core.md)
 - [RFC 0064 — Git-backed operator backups](../rfcs/0064-git-backed-operator-backups.md)
+- [RFC 0068 — Export completeness hardening](../rfcs/0068-export-completeness-hardening.md)
 
 ## Related Docs
 

@@ -8,6 +8,11 @@ const areas = [
     description: 'Invite people, change roles, deactivate accounts.',
   },
   {
+    href: '/console/groups',
+    title: 'Groups',
+    description: 'Define reusable audiences for plugin access policies.',
+  },
+  {
     href: '/console/plugins',
     title: 'Plugins',
     description: 'View installed plugins and enable or disable them.',

@@ -16,6 +16,7 @@ import { ConsoleNavLink } from './_components/ConsoleNavLink';
 const sections = [
   { href: '/console', label: 'Overview' },
   { href: '/console/users', label: 'Users' },
+  { href: '/console/groups', label: 'Groups' },
   { href: '/console/plugins', label: 'Plugins' },
   { href: '/console/entitlements', label: 'Entitlements' },
   { href: '/console/settings', label: 'Settings' },

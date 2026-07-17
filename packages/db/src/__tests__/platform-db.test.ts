@@ -3,16 +3,19 @@ import { createClient } from '../client';
 import {
   DEFAULT_TENANT_ID,
   DEFAULT_ROOT_PLUGIN_ID,
+  addUserGroupMember,
   bootstrapPlatformDb,
   createE2eeDeviceEnrollment,
   createE2eeProfile,
   createPluginConnection,
   createPluginSecret,
   createStorageObject,
+  createUserGroup,
   deletePluginSecret,
   deletePluginProviderConfig,
   deleteStorageObject,
   deleteUserData,
+  deleteUserGroup,
   disconnectPluginConnection,
   getAccountPrefs,
   getDefaultTenant,
@@ -25,6 +28,10 @@ import {
   getPlatformSetting,
   getStorageObjectByIdForToken,
   getStorageObjectByKey,
+  getUserGroupById,
+  getUserGroupUsage,
+  grantUserCapability,
+  hasUserCapabilityGrant,
   hardDeleteUserE2eeData,
   hardDeleteUserStorageObjects,
   listE2eeDeviceEnrollments,
@@ -32,6 +39,10 @@ import {
   listAllPluginProviderConfigs,
   listPluginSecrets,
   listStorageObjects,
+  listUserCapabilityGrants,
+  listUserGroupMembers,
+  listUserGroups,
+  listUserGroupsForUser,
   listUserPluginConnectionRefs,
   listUserPluginSecretRefs,
   markPluginConnectionError,
@@ -43,7 +54,9 @@ import {
   listPluginStatus,
   listUserActivity,
   recordActivity,
+  removeUserGroupMember,
   revokeE2eeDeviceEnrollment,
+  revokeUserCapability,
   setAccountPrefs,
   setInstanceConfig,
   setPlatformSetting,
@@ -51,6 +64,7 @@ import {
   setTenantName,
   sumPluginStorageBytes,
   updatePluginConnection,
+  updateUserGroup,
   upsertE2eeRecoveryWrapper,
   upsertPluginProviderConfig,
   updatePluginSecret,
@@ -911,5 +925,138 @@ describe('plugin status helpers', () => {
     await setPluginEnabled(db, 'fs.test.alpha', true);
     expect(await listPluginStatus(db)).toEqual([{ pluginId: 'fs.test.alpha', enabled: true }]);
     expect(await listDisabledPluginIds(db)).toEqual([]);
+  });
+});
+
+describe('user group helpers (RFC 0065)', () => {
+  it('creates, reads, updates, and deletes a group', async () => {
+    const db = await freshDb();
+    await createUserGroup(db, 'grp_1', 'Finance', 'finance', 'Finance team', 'admin_1');
+
+    const created = await getUserGroupById(db, 'grp_1');
+    expect(created).toMatchObject({
+      id: 'grp_1',
+      name: 'Finance',
+      slug: 'finance',
+      description: 'Finance team',
+      createdByUserId: 'admin_1',
+    });
+
+    await updateUserGroup(db, 'grp_1', { name: 'Finance & Ops', description: null });
+    const updated = await getUserGroupById(db, 'grp_1');
+    expect(updated?.name).toBe('Finance & Ops');
+    expect(updated?.description).toBeNull();
+    expect(updated?.updatedAt).toBeGreaterThanOrEqual(updated?.createdAt ?? 0);
+
+    await deleteUserGroup(db, 'grp_1');
+    expect(await getUserGroupById(db, 'grp_1')).toBeUndefined();
+  });
+
+  it('lists groups ordered by name', async () => {
+    const db = await freshDb();
+    await createUserGroup(db, 'grp_b', 'Bravo', 'bravo', null, 'admin_1');
+    await createUserGroup(db, 'grp_a', 'Alpha', 'alpha', null, 'admin_1');
+
+    const groups = await listUserGroups(db);
+    expect(groups.map((g) => g.name)).toEqual(['Alpha', 'Bravo']);
+  });
+
+  it('adds and removes membership idempotently', async () => {
+    const db = await freshDb();
+    await createUserGroup(db, 'grp_1', 'Finance', 'finance', null, 'admin_1');
+
+    await addUserGroupMember(db, 'grp_1', 'user_1', 'admin_1');
+    await addUserGroupMember(db, 'grp_1', 'user_1', 'admin_1'); // idempotent, no duplicate row
+
+    const members = await listUserGroupMembers(db, 'grp_1');
+    expect(members).toEqual([
+      { userId: 'user_1', addedByUserId: 'admin_1', addedAt: expect.any(Number) },
+    ]);
+
+    await removeUserGroupMember(db, 'grp_1', 'user_1');
+    expect(await listUserGroupMembers(db, 'grp_1')).toEqual([]);
+
+    // removing a non-member is a no-op, not an error
+    await expect(removeUserGroupMember(db, 'grp_1', 'user_1')).resolves.toBeUndefined();
+  });
+
+  it('resolves effective group membership for a user across multiple groups', async () => {
+    const db = await freshDb();
+    await createUserGroup(db, 'grp_a', 'Alpha', 'alpha', null, 'admin_1');
+    await createUserGroup(db, 'grp_b', 'Bravo', 'bravo', null, 'admin_1');
+    await createUserGroup(db, 'grp_c', 'Charlie', 'charlie', null, 'admin_1');
+
+    await addUserGroupMember(db, 'grp_a', 'user_1', 'admin_1');
+    await addUserGroupMember(db, 'grp_c', 'user_1', 'admin_1');
+    await addUserGroupMember(db, 'grp_b', 'user_2', 'admin_1');
+
+    const groups = await listUserGroupsForUser(db, 'user_1');
+    expect(groups.map((g) => g.name)).toEqual(['Alpha', 'Charlie']);
+    expect(await listUserGroupsForUser(db, 'user_2')).toHaveLength(1);
+    expect(await listUserGroupsForUser(db, 'nobody')).toEqual([]);
+  });
+
+  it('deleting a group cascades its membership rows', async () => {
+    const db = await freshDb();
+    await createUserGroup(db, 'grp_1', 'Finance', 'finance', null, 'admin_1');
+    await addUserGroupMember(db, 'grp_1', 'user_1', 'admin_1');
+
+    await deleteUserGroup(db, 'grp_1');
+    expect(await listUserGroupMembers(db, 'grp_1')).toEqual([]);
+  });
+
+  it('reports no usage today — plugin access policies do not exist yet (Task 2.21)', async () => {
+    const db = await freshDb();
+    await createUserGroup(db, 'grp_1', 'Finance', 'finance', null, 'admin_1');
+    expect(await getUserGroupUsage(db, 'grp_1')).toEqual({
+      referencedByPluginAccessPolicies: false,
+    });
+  });
+});
+
+describe('user capability grant helpers (RFC 0070)', () => {
+  it('grants and lists a capability idempotently', async () => {
+    const db = await freshDb();
+    await grantUserCapability(db, 'user_1', 'plugins:self-manage', 'admin_1');
+    await grantUserCapability(db, 'user_1', 'plugins:self-manage', 'admin_1'); // idempotent
+
+    const grants = await listUserCapabilityGrants(db, 'user_1');
+    expect(grants).toEqual([
+      {
+        userId: 'user_1',
+        capability: 'plugins:self-manage',
+        grantedByUserId: 'admin_1',
+        grantedAt: expect.any(Number),
+      },
+    ]);
+  });
+
+  it('checks whether a specific grant exists', async () => {
+    const db = await freshDb();
+    expect(await hasUserCapabilityGrant(db, 'user_1', 'plugins:self-manage')).toBe(false);
+
+    await grantUserCapability(db, 'user_1', 'plugins:self-manage', 'admin_1');
+    expect(await hasUserCapabilityGrant(db, 'user_1', 'plugins:self-manage')).toBe(true);
+    expect(await hasUserCapabilityGrant(db, 'user_2', 'plugins:self-manage')).toBe(false);
+  });
+
+  it('revokes a grant; revoking a non-grant is a no-op', async () => {
+    const db = await freshDb();
+    await grantUserCapability(db, 'user_1', 'plugins:self-manage', 'admin_1');
+
+    await revokeUserCapability(db, 'user_1', 'plugins:self-manage');
+    expect(await hasUserCapabilityGrant(db, 'user_1', 'plugins:self-manage')).toBe(false);
+
+    await expect(
+      revokeUserCapability(db, 'user_1', 'plugins:self-manage'),
+    ).resolves.toBeUndefined();
+  });
+
+  it('scopes grants per user independently', async () => {
+    const db = await freshDb();
+    await grantUserCapability(db, 'user_1', 'plugins:self-manage', 'admin_1');
+
+    expect(await listUserCapabilityGrants(db, 'user_1')).toHaveLength(1);
+    expect(await listUserCapabilityGrants(db, 'user_2')).toEqual([]);
   });
 });

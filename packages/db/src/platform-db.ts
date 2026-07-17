@@ -217,6 +217,248 @@ export async function setPluginEnabled(
     .onConflictDoUpdate({ target: pg.pluginStatus.pluginId, set: { enabled, updatedAt: now } });
 }
 
+// ─── User groups (RFC 0065) ──────────────────────────────────────────────────
+
+export interface UserGroupRow {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  createdByUserId: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface UserGroupMemberRow {
+  userId: string;
+  addedByUserId: string;
+  addedAt: number;
+}
+
+/** Create a new user group. Caller supplies a pre-generated `id`. */
+export async function createUserGroup(
+  pdb: PlatformDb,
+  id: string,
+  name: string,
+  slug: string,
+  description: string | null,
+  createdByUserId: string,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO user_groups
+          (id, tenant_id, name, slug, description, created_by_user_id, created_at, updated_at)
+        VALUES
+          (${id}, ${DEFAULT_TENANT_ID}, ${name}, ${slug}, ${description}, ${createdByUserId},
+           ${now}, ${now})`,
+  );
+}
+
+/** Rename/describe an existing group. Only supplied fields are updated. */
+export async function updateUserGroup(
+  pdb: PlatformDb,
+  id: string,
+  fields: { name?: string; slug?: string; description?: string | null },
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  if (fields.name !== undefined) {
+    await dbRun(
+      pdb,
+      sql`UPDATE user_groups SET name = ${fields.name}, updated_at = ${now} WHERE id = ${id}`,
+    );
+  }
+  if (fields.slug !== undefined) {
+    await dbRun(
+      pdb,
+      sql`UPDATE user_groups SET slug = ${fields.slug}, updated_at = ${now} WHERE id = ${id}`,
+    );
+  }
+  if (fields.description !== undefined) {
+    await dbRun(
+      pdb,
+      sql`UPDATE user_groups SET description = ${fields.description}, updated_at = ${now} WHERE id = ${id}`,
+    );
+  }
+}
+
+/**
+ * Delete a group and its membership rows. Callers must check
+ * `getUserGroupUsage()` first and require explicit confirmation before calling
+ * this for an in-use group — this function does not itself guard against it.
+ */
+export async function deleteUserGroup(pdb: PlatformDb, id: string): Promise<void> {
+  await dbRun(pdb, sql`DELETE FROM user_group_members WHERE group_id = ${id}`);
+  await dbRun(pdb, sql`DELETE FROM user_groups WHERE id = ${id}`);
+}
+
+export async function getUserGroupById(
+  pdb: PlatformDb,
+  id: string,
+): Promise<UserGroupRow | undefined> {
+  return dbGet<UserGroupRow>(
+    pdb,
+    sql`SELECT id, name, slug, description, created_by_user_id AS "createdByUserId",
+               created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM user_groups
+        WHERE id = ${id}`,
+  );
+}
+
+export async function listUserGroups(pdb: PlatformDb): Promise<UserGroupRow[]> {
+  return dbAll<UserGroupRow>(
+    pdb,
+    sql`SELECT id, name, slug, description, created_by_user_id AS "createdByUserId",
+               created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM user_groups
+        ORDER BY name ASC`,
+  );
+}
+
+/**
+ * Whether a group is currently referenced by anything that should block a
+ * silent delete. Always false today — there is no plugin access policy
+ * concept yet (Task 2.21 adds `plugin_access_groups`). Extend this to check
+ * that table once it exists rather than adding a second usage-check path.
+ */
+export async function getUserGroupUsage(
+  _pdb: PlatformDb,
+  _id: string,
+): Promise<{ referencedByPluginAccessPolicies: boolean }> {
+  return { referencedByPluginAccessPolicies: false };
+}
+
+/** Add a user to a group. Idempotent — no-op if already a member. */
+export async function addUserGroupMember(
+  pdb: PlatformDb,
+  groupId: string,
+  userId: string,
+  addedByUserId: string,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO user_group_members (tenant_id, group_id, user_id, added_by_user_id, added_at)
+        VALUES (${DEFAULT_TENANT_ID}, ${groupId}, ${userId}, ${addedByUserId}, ${now})
+        ON CONFLICT (group_id, user_id) DO NOTHING`,
+  );
+}
+
+/** Remove a user from a group. No-op if not a member. */
+export async function removeUserGroupMember(
+  pdb: PlatformDb,
+  groupId: string,
+  userId: string,
+): Promise<void> {
+  await dbRun(
+    pdb,
+    sql`DELETE FROM user_group_members WHERE group_id = ${groupId} AND user_id = ${userId}`,
+  );
+}
+
+/** List the members of a single group. */
+export async function listUserGroupMembers(
+  pdb: PlatformDb,
+  groupId: string,
+): Promise<UserGroupMemberRow[]> {
+  return dbAll<UserGroupMemberRow>(
+    pdb,
+    sql`SELECT user_id AS "userId", added_by_user_id AS "addedByUserId", added_at AS "addedAt"
+        FROM user_group_members
+        WHERE group_id = ${groupId}
+        ORDER BY added_at ASC`,
+  );
+}
+
+/**
+ * Effective group membership for a user — every group they currently belong
+ * to. Tenant-scoped via the group row's tenant_id (membership rows don't need
+ * a separate tenant filter since a group can only be joined via its own id).
+ */
+export async function listUserGroupsForUser(
+  pdb: PlatformDb,
+  userId: string,
+): Promise<UserGroupRow[]> {
+  return dbAll<UserGroupRow>(
+    pdb,
+    sql`SELECT g.id, g.name, g.slug, g.description,
+               g.created_by_user_id AS "createdByUserId",
+               g.created_at AS "createdAt", g.updated_at AS "updatedAt"
+        FROM user_groups g
+        INNER JOIN user_group_members m ON m.group_id = g.id
+        WHERE m.user_id = ${userId}
+        ORDER BY g.name ASC`,
+  );
+}
+
+// ─── Per-user capability grants (RFC 0070) ───────────────────────────────────
+
+export interface UserCapabilityGrantRow {
+  userId: string;
+  capability: string;
+  grantedByUserId: string;
+  grantedAt: number;
+}
+
+/** Grant a user a capability. Idempotent — no-op if already granted. */
+export async function grantUserCapability(
+  pdb: PlatformDb,
+  userId: string,
+  capability: string,
+  grantedByUserId: string,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO user_capability_grants
+          (tenant_id, user_id, capability, granted_by_user_id, granted_at)
+        VALUES (${DEFAULT_TENANT_ID}, ${userId}, ${capability}, ${grantedByUserId}, ${now})
+        ON CONFLICT (user_id, capability) DO NOTHING`,
+  );
+}
+
+/** Revoke a capability grant. No-op if not granted. */
+export async function revokeUserCapability(
+  pdb: PlatformDb,
+  userId: string,
+  capability: string,
+): Promise<void> {
+  await dbRun(
+    pdb,
+    sql`DELETE FROM user_capability_grants WHERE user_id = ${userId} AND capability = ${capability}`,
+  );
+}
+
+/** List every capability grant held by a user. */
+export async function listUserCapabilityGrants(
+  pdb: PlatformDb,
+  userId: string,
+): Promise<UserCapabilityGrantRow[]> {
+  return dbAll<UserCapabilityGrantRow>(
+    pdb,
+    sql`SELECT user_id AS "userId", capability, granted_by_user_id AS "grantedByUserId",
+               granted_at AS "grantedAt"
+        FROM user_capability_grants
+        WHERE user_id = ${userId}
+        ORDER BY granted_at ASC`,
+  );
+}
+
+/** Whether a user holds a specific capability grant (independent of role). */
+export async function hasUserCapabilityGrant(
+  pdb: PlatformDb,
+  userId: string,
+  capability: string,
+): Promise<boolean> {
+  const row = await dbGet<{ capability: string }>(
+    pdb,
+    sql`SELECT capability FROM user_capability_grants
+        WHERE user_id = ${userId} AND capability = ${capability}
+        LIMIT 1`,
+  );
+  return row !== undefined;
+}
+
 // ─── Cross-plugin data sharing helpers (RFC 0002) ────────────────────────────
 
 export interface ConsentGrantRow {

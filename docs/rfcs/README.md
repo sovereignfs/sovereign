@@ -76,8 +76,9 @@ for the full process.
 | [0062](0062-email-delivery-coverage.md)          | Email delivery coverage                                  | Draft                       | Yes — epic tasks 1.14, 3.26, and 4.5                                 |
 | [0063](0063-core-assistant-jarvis.md)            | Core Assistant, Jarvis UI, and Local Inference Sidecar   | Draft                       | Yes — epic tasks 22.1–22.5                                           |
 | [0064](0064-git-backed-operator-backups.md)      | Git-backed operator backups                              | Draft                       | Yes — epic tasks 8.10, 8.11, 8.12                                    |
-| [0065](0065-user-groups-plugin-access.md)        | User groups and plugin access policy                     | Draft                       | Yes — epic tasks 1.15, 2.21, 13.7                                    |
+| [0065](0065-user-groups-plugin-access.md)        | User groups and plugin access policy                     | Draft                       | Yes — epic tasks 1.15, 1.17, 2.21, 2.23, 3.28, 13.7, 13.8, 15.3      |
 | [0066](0066-sovereign-chat-p2p-identity.md)      | Sovereign Chat P2P identity and transport                | Draft                       | Yes — epic tasks 23.1–23.12                                          |
 | [0067](0067-product-led-docs-site.md)            | Product-led docs site and instance directory             | Draft                       | No — implementation without epic or roadmap changes                  |
 | [0068](0068-export-completeness-hardening.md)    | Export completeness hardening                            | Draft                       | Yes — epic task 8.13                                                 |
 | [0069](0069-bring-your-own-database.md)          | Bring-your-own database (per-user external Postgres)     | Withdrawn (not recommended) | No                                                                   |
+| [0070](0070-per-user-capability-grants.md)       | Per-user capability grants                               | Draft                       | Yes — epic task 1.16                                                 |

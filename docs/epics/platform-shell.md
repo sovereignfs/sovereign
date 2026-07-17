@@ -605,12 +605,17 @@ openable only to users allowed by the configured access policy.
 **Deliverables:**
 
 - Extend plugin status/configuration persistence with an `access_policy` value:
-  `everyone`, `admins`, `selected_users`, `selected_groups`, or `disabled`.
+  `everyone`, `admins`, `selected_users`, `selected_groups`, or `disabled`, plus a
+  `self_service` boolean (default `false`, meaningful only for the two `selected_*` policies).
 - Add direct user and group grant tables for plugin access, scoped by tenant and plugin.
 - Migrate existing enabled plugins to `everyone` and preserve disabled plugins as effective
-  `disabled`.
+  `disabled`. Plugins activated after this ships (Task 3.28) default to `access_policy =
+disabled` instead — this is the "configurable default availability scope" requirement,
+  expressed as choosing a policy at activation time rather than a separate default-state flag.
 - Add a centralized `canOpenPlugin` resolver used by runtime routing, shell navigation,
-  Launcher, and authenticated plugin API delegation.
+  Launcher, and authenticated plugin API delegation. Reuse the existing `plugin_status`
+  enabled/disabled cache-invalidation mechanism (`runtime/src/plugin-status.ts`) for the new
+  `access_policy`/grant tables rather than introducing a second invalidation path.
 - Filter Launcher, sidebar, mobile navigation, `/api/plugins`, and related plugin discovery
   surfaces by effective access.
 - Return 404 for direct plugin app routes when the current user is not allowed to open the
@@ -619,9 +624,15 @@ openable only to users allowed by the configured access policy.
   admin/owner or have a direct/group grant.
 - Fall back from an inaccessible root plugin to Launcher, and show a platform-owned "No apps
   available" state when nothing is openable.
+- Support self-service grant/revoke: a user with the RFC 0070 `plugins:self-manage` capability
+  may add/remove their own `plugin_access_users` row for a plugin with `self_service = true`,
+  through the same resolver and grant tables an admin uses (see Task 15.3 for the user-facing
+  surface).
 
-**Dependencies:** Task 1.15 (user groups), Task 13.7 (Console plugin access management), Task
-15.1 (Launcher plugin), Task 2.13 (sidebar customization).
+**Dependencies:** Task 1.15 (user groups), Task 1.16 (per-user capability grants, RFC 0070),
+Task 15.1 (Launcher plugin), Task 2.13 (sidebar customization). This task's schema/migration
+(the `access_policy` column and the backfill of existing plugins to explicit rows) is itself a
+prerequisite for Task 3.28 and Task 13.7 — it ships first, they build on it.
 
 **SRS reference:** [RFC 0065](../rfcs/0065-user-groups-plugin-access.md)
 
@@ -633,6 +644,8 @@ openable only to users allowed by the configured access policy.
 - Admins/owners can manage an inaccessible plugin from Console without automatically opening
   it.
 - Root plugin fallback does not leak inaccessible plugin names.
+- A user with `plugins:self-manage` can self-grant/self-revoke a `self_service`-enabled plugin
+  they're otherwise eligible for; a user without the capability sees no such affordance.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
 ---
@@ -674,6 +687,38 @@ sidebar strip does not remove its Launcher tile — Launcher remains the "see ev
 - Hiding a plugin from the sidebar strip does not remove its Launcher tile.
 - A newly installed plugin not yet in the saved order appears at the end of both surfaces.
 - A non-admin user's Launcher request never receives an admin-only plugin, saved order or not.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
+#### 📋 2.23 — Plugin invite-scope grant resolution (RFC 0065)
+
+**Goal:** Apply an invite's plugin scope (Task 1.17) through the same `canOpenPlugin`
+resolver and grant tables Task 2.21 introduces, so invite-scoped access is indistinguishable
+from an admin-granted `plugin_access_users` row once the account exists.
+
+**Deliverables:**
+
+- On successful registration via an invite carrying a `plugins` scope, insert one
+  `plugin_access_users` row per listed plugin ID, with `granted_by_user_id` set to the
+  inviter (not the new user).
+- No-op silently for a scoped plugin ID whose current policy isn't `selected_users`/
+  `selected_groups` — the invite grants eligibility, never overrides the plugin's policy.
+- Audit the resulting grants identically to an admin-initiated grant, with provenance noting
+  they originated from an invite.
+
+**Dependencies:** Task 1.17 (invite-scoped plugin entitlement), Task 2.21 (plugin access policy
+enforcement — the grant tables and resolver this writes into).
+
+**SRS reference:** [RFC 0065](../rfcs/0065-user-groups-plugin-access.md)
+
+**Review checklist:**
+
+- Registering via a plugin-scoped invite grants exactly the scoped plugins, resolved through
+  the same `canOpenPlugin` path as an admin grant.
+- A scoped plugin not currently `selected_users`/`selected_groups` produces no grant and no
+  error.
+- Resulting grants are audited with invite provenance.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
 ## Related RFCs

@@ -10,6 +10,11 @@
 
 The Launcher (`fs.sovereign.launcher`) is a `type: platform`, `shell: default` plugin that renders a tile grid of all installed, enabled, non-chrome plugins. It is the default `root_plugin_id` — navigating to `/` loads it via the root-plugin rewrite in runtime middleware. Admin users see a separate "Admin" section for `adminOnly: true` plugins. Tiles show plugin icon, name, and description; clicking navigates to the plugin's `routePrefix`. The Launcher reads its plugin list from a session-gated runtime API (`/api/plugins`) rather than importing the registry directly — enforcing the SDK boundary.
 
+## Related RFCs
+
+- [RFC 0065 — User groups and plugin access policy](../rfcs/0065-user-groups-plugin-access.md)
+- [RFC 0070 — Per-user capability grants](../rfcs/0070-per-user-capability-grants.md)
+
 ## Related Docs
 
 - [docs/plugins/launcher.md](../plugins/) (plugin spec)
@@ -78,5 +83,42 @@ customization), Task 7.1 (plugin monetization).
 > sidebar order. `/api/plugins` (the Launcher's data source) now applies the user's saved sidebar
 > plugin order after its own role/admin filtering, so tile order matches the sidebar's custom
 > order; hiding a plugin from the sidebar strip does not remove its Launcher tile.
+
+---
+
+#### 📋 15.3 — Plugin directory browsing and self-service enable/disable (RFC 0065)
+
+**Goal:** Let a user with the `plugins:self-manage` capability (RFC 0070) browse plugins they're
+eligible for but haven't turned on, and self-service enable/disable a `self_service`-enabled
+`selected_users`/`selected_groups` plugin, without filing an admin request.
+
+**Deliverables:**
+
+- Add a plugin-directory view (Launcher or Account, TBD at implementation) listing plugins the
+  current user is eligible for under RFC 0065's access policy, distinguishing "already on" from
+  "eligible, not yet enabled."
+- Render an enable/disable affordance only for plugins with `self_service = true` on their
+  access policy, and only when the current user holds `plugins:self-manage` — the control does
+  not exist for users without the capability, not merely disabled.
+- Enabling/disabling calls the same resolver and `plugin_access_users` grant table an admin's
+  Console grant uses (Task 2.21), with `granted_by_user_id` set to the user themselves.
+- Self-service actions are audited identically to admin grants, attributed to the acting user.
+
+**Dependencies:** Task 15.1 (Launcher plugin), Task 2.21 (plugin access policy enforcement —
+self-service resolver and grant tables), Task 1.16 (per-user capability grants, RFC 0070).
+
+**SRS reference:** [RFC 0065](../rfcs/0065-user-groups-plugin-access.md)
+
+**Review checklist:**
+
+- A user with `plugins:self-manage` can enable a `self_service`-enabled plugin they're eligible
+  for and see it appear in their Launcher/sidebar immediately.
+- A user without `plugins:self-manage` sees no enable/disable control anywhere, even for
+  otherwise-eligible self-service plugins.
+- Self-service grants are indistinguishable in the resolver from admin grants, but
+  distinguishable in the audit log.
+- Disabling a self-granted plugin removes it from the user's Launcher/sidebar without affecting
+  other users' access.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
 ---

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   CapabilityError,
+  GRANTABLE_CAPABILITIES,
   PLATFORM_ROLES,
   ROLE_PRESETS,
   capabilitiesForRole,
   hasCapability,
+  isGrantableCapability,
   requireCapabilityOrForbidden,
 } from '../capabilities';
 
@@ -129,5 +131,27 @@ describe('requireCapabilityOrForbidden', () => {
     expect(err?.cap).toBe('console:access');
     expect(err?.role).toBe('platform:user');
     expect(err?.status).toBe(403);
+  });
+});
+
+describe('GRANTABLE_CAPABILITIES (RFC 0070)', () => {
+  it('never includes role:assign', () => {
+    expect(GRANTABLE_CAPABILITIES).not.toContain('role:assign');
+  });
+
+  it('includes plugins:self-manage', () => {
+    expect(GRANTABLE_CAPABILITIES).toContain('plugins:self-manage');
+  });
+});
+
+describe('isGrantableCapability', () => {
+  it('returns true for an allowlisted capability', () => {
+    expect(isGrantableCapability('plugins:self-manage')).toBe(true);
+  });
+
+  it('returns false for role:assign and other non-allowlisted capabilities', () => {
+    expect(isGrantableCapability('role:assign')).toBe(false);
+    expect(isGrantableCapability('user:manage')).toBe(false);
+    expect(isGrantableCapability('not-a-real-capability')).toBe(false);
   });
 });

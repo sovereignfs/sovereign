@@ -48,6 +48,32 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       sidebar_plugins TEXT,
       updated_at ${ts} NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS user_groups (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      slug TEXT NOT NULL,
+      description TEXT,
+      created_by_user_id TEXT NOT NULL,
+      created_at ${ts} NOT NULL,
+      updated_at ${ts} NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS user_group_members (
+      tenant_id TEXT NOT NULL,
+      group_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      added_by_user_id TEXT NOT NULL,
+      added_at ${ts} NOT NULL,
+      PRIMARY KEY (group_id, user_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS user_capability_grants (
+      tenant_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      capability TEXT NOT NULL,
+      granted_by_user_id TEXT NOT NULL,
+      granted_at ${ts} NOT NULL,
+      PRIMARY KEY (user_id, capability)
+    )`,
     `CREATE TABLE IF NOT EXISTS consent_grants (
       id TEXT PRIMARY KEY,
       tenant_id TEXT NOT NULL,

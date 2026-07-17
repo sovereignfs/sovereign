@@ -2,14 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Dialog } from '@sovereignfs/ui';
+import { GRANTABLE_CAPABILITIES, type GrantableCapability } from '@/src/capabilities';
+import styles from '../console.module.css';
 import {
-  GRANTABLE_CAPABILITIES,
-  type GrantableCapability,
   grantCapabilityAction,
   listUserCapabilitiesAction,
   revokeCapabilityAction,
 } from './actions';
-import styles from '../console.module.css';
 
 const LABELS: Record<GrantableCapability, string> = {
   'plugins:self-manage': 'Self-service plugin enable/disable',

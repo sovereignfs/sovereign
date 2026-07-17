@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { sdk } from '@sovereignfs/sdk';
 import { logActivity } from '@/src/activity';
-import { GRANTABLE_CAPABILITIES, type GrantableCapability } from '@/src/capabilities';
+import type { GrantableCapability } from '@/src/capabilities';
 import { deleteUser } from '@/src/user-deletion';
 
 const AUTH_URL =
@@ -27,7 +27,13 @@ async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
   });
 }
 
-/** Capability grants live in the platform DB (runtime), not the auth server. */
+/**
+ * Capability grants live in the platform DB (runtime), not the auth server.
+ * This is a fresh server-to-server request, not a passthrough of the
+ * browser's request — middleware never sees it, so `x-sovereign-user-id`
+ * must be forwarded explicitly or the target route's actor-attribution check
+ * 401s even though the caller is a fully authenticated admin.
+ */
 async function selfAdminFetch(path: string, init?: RequestInit): Promise<Response> {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   return fetch(`${SELF_URL}${path}`, {
@@ -35,6 +41,7 @@ async function selfAdminFetch(path: string, init?: RequestInit): Promise<Respons
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${adminKey}`,
+      'x-sovereign-user-id': (await actorId()) ?? '',
       ...(init?.headers as Record<string, string>),
     },
   });
@@ -310,8 +317,10 @@ export async function sendInviteAction(
 }
 
 // ─── Per-user capability grants (RFC 0070) ───────────────────────────────────
-
-export { GRANTABLE_CAPABILITIES, type GrantableCapability };
+// Note: GRANTABLE_CAPABILITIES/GrantableCapability are NOT re-exported from
+// here — a `'use server'` file may only export async functions; re-exporting
+// the plain array constant crashes the page at build/render time. Components
+// import them directly from `@/src/capabilities` instead.
 
 export async function listUserCapabilitiesAction(userId: string): Promise<GrantableCapability[]> {
   await sdk.auth.requireSession();

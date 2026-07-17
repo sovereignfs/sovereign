@@ -1,17 +1,27 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { sdk, type DirectoryUser } from '@sovereignfs/sdk';
 
 const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
+/**
+ * Server-to-server fetch to runtime's own admin API. This is a fresh outbound
+ * request, not a passthrough of the browser's request — middleware never sees
+ * it, so `x-sovereign-user-id` must be forwarded explicitly or the target
+ * route's actor-attribution check (e.g. POST /api/admin/groups) 401s even
+ * though the caller is a fully authenticated admin.
+ */
 async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
+  const actorId = (await headers()).get('x-sovereign-user-id') ?? '';
   return fetch(`${SELF_URL}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${adminKey}`,
+      'x-sovereign-user-id': actorId,
       ...(init?.headers as Record<string, string>),
     },
   });

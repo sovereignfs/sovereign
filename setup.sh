@@ -69,6 +69,8 @@ clone_repo() {
 repos=(
   "sovereign-plugin-proposals git@github.com:sovereignfs/sovereign-plugin-proposals.git"
   "sovereign-infra git@github.com:sovereignfs/sovereign-infra.git"
+  "sovereign-desktop git@github.com:sovereignfs/sovereign-desktop.git"
+  "sovereign-plugin-template git@github.com:sovereignfs/sovereign-plugin-template.git"
 )
 
 mkdir -p "$LOCAL_DIR"

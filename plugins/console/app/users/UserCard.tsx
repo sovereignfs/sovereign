@@ -9,6 +9,7 @@ import {
   resetMfaAction,
   toggleActiveAction,
 } from './actions';
+import { CapabilitiesButton } from './CapabilitiesButton';
 import styles from '../console.module.css';
 
 interface MemberRow {
@@ -148,6 +149,10 @@ export function UserCard({
           {member.isTestUser && <Badge variant="mono">Test</Badge>}
         </div>
       </div>
+
+      {showStatusActions && (
+        <CapabilitiesButton userId={userId} name={member.name ?? member.email} />
+      )}
 
       {/* ⋯ menu */}
       {hasMenu && (

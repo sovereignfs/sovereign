@@ -15,6 +15,11 @@ environment variable namespacing, per-plugin database isolation, compatibility
 versioning, the plugin registry, and the `sv` CLI. The remaining planned work
 mostly extends plugin runtime surfaces and hardens the generate/SDK boundaries.
 
+**Prioritized:** Task 3.28 (plugin catalog and install-time activation, RFC 0065) is a
+higher-priority near-term item, sequenced ahead of other non-prioritised tasks in this epic. It
+depends on Task 2.21's `access_policy` schema landing first (see Task 3.28's "Ordering note")
+and is in turn the foundation for Console's catalog browser (Task 13.8).
+
 ## Tasks
 
 #### ✅ 3.1 — `packages/manifest` — schema and validation
@@ -824,6 +829,66 @@ configuration gap.
 - Env-provided config remains supported for immutable/provisioned deployments.
 - Docs explain when to use env vars vs Console-managed provider config.
 
+---
+
+#### 📋 3.28 — Plugin catalog and install-time activation model (RFC 0065)
+
+**Goal:** Split "which plugins are bundled in the image" from "which plugins an admin has
+turned on for this instance," so an admin can activate any cataloged plugin at runtime without
+a rebuild or redeploy. This is the foundation for Console's catalog browser (Task 13.8); it
+itself builds on Task 2.21's schema, which must land first (see "Current state").
+
+**Current state:** `scripts/install-plugins.ts` clones every plugin declared in
+`sovereign.plugins.json` into `plugins/<id>/` at build/dev time; `scripts/generate-registry.ts`
+composes every directory under `plugins/` into `runtime/generated/registry.ts` and the route
+tree unconditionally — there is no `enabled` filter at generate time. "Installed" is purely
+build-time/filesystem; there is no runtime action that makes a new plugin available without
+someone running the install script and rebuilding. Enable/disable (`plugin_status`) already
+operates independently of what's bundled in the image — a disabled plugin ships fully traced
+into the standalone build today; this task extends that existing decoupling, it doesn't
+introduce a new category of risk. Per an image-size check against the current 14-plugin
+`plugins/` tree (3.4M total, 8K–570K per plugin `app/` dir), bundling the full catalog rather
+than only active plugins adds low-single-digit MB to the standalone trace, not hundreds — unique
+third-party npm dependencies per plugin are the larger variable, not plugin source size.
+
+**Ordering note:** today, an absent `plugin_status` row means "enabled by default"
+(`packages/db/src/platform-db.ts:160`) — the opposite of what this task needs ("absent row" =
+"cataloged but never activated"). That reinterpretation is only safe once Task 2.21's migration
+has backfilled an explicit `access_policy` row for every currently-shipped plugin, removing all
+cases of "enabled via absence." **Task 2.21 must ship first**; this task's activation flow reads
+as safe only after that backfill exists.
+
+**Deliverables:**
+
+- No change to the build pipeline: `sovereign.plugins.json` continues to declare the full
+  catalog, and every declared plugin is cloned and composed at build time exactly as today.
+- Add a runtime "activate" action (Console-triggered, Task 13.8) that, for a plugin already
+  bundled in the image but with no `plugin_status` row: runs the plugin's pending migrations
+  (the same runner `sv plugin migrate` uses today) and creates its `plugin_status` row with
+  `access_policy = disabled`. No filesystem write, no restart.
+- Add a runtime-queryable "catalog" list: every plugin present in the generated registry,
+  annotated with whether it currently has a `plugin_status` row (active) or not (cataloged but
+  inactive).
+- Ensure a failed migration during activation does not leave a partial `plugin_status` row —
+  activation is all-or-nothing.
+- Document that this deliberately does not support installing a plugin that isn't already
+  bundled in the image at build time — see RFC 0065's "Dynamic runtime install (deferred)" for
+  why, and for the future-work placeholder that direction is left as.
+
+**Dependencies:** Task 3.3 (install script), Task 3.4 (`sv` CLI, plugin migrate), Task 2.21
+(plugin access policy — the `access_policy` default this sets).
+
+**SRS reference:** [RFC 0065](../rfcs/0065-user-groups-plugin-access.md)
+
+**Review checklist:**
+
+- Activating a cataloged plugin creates its `plugin_status` row with `access_policy = disabled`
+  and runs its migrations, with no rebuild or restart.
+- A plugin already active is not re-migrated or reset by a repeated activation call.
+- A migration failure during activation leaves no partial `plugin_status` row.
+- The catalog list correctly distinguishes active from cataloged-but-inactive plugins.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
 ## Related RFCs
 
 - [RFC 0004 — Per-plugin database](../rfcs/0004-per-plugin-database.md)
@@ -843,6 +908,15 @@ configuration gap.
 - [RFC 0053 — Plugin flow handoffs](../rfcs/0053-plugin-flow-handoffs.md)
 - [RFC 0057 — Plugin external dependency resolution](../rfcs/0057-plugin-dep-hoisting.md)
 - [RFC 0062 — Email delivery coverage](../rfcs/0062-email-delivery-coverage.md)
+- [RFC 0065 — User groups and plugin access policy](../rfcs/0065-user-groups-plugin-access.md)
+  (Task 3.28 — plugin catalog and install-time activation)
+
+**Deferred future work (not yet an epic task):** true dynamic runtime installation of a plugin
+not already bundled in the image — fetching/cloning arbitrary plugin code into a running
+instance without a rebuild/redeploy. RFC 0065 documents why this is out of scope for the
+catalog/activation model in Task 3.28 (it's a build-pipeline and deployment-model change, not an
+access-control one) and records it as an explicit alternative to revisit as a future RFC once
+there's concrete demand.
 
 ## Related Docs
 

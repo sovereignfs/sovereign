@@ -336,6 +336,60 @@ export type AccountPrefs = typeof accountPrefs.$inferSelect;
 export type NewAccountPrefs = typeof accountPrefs.$inferInsert;
 
 /**
+ * Platform-managed user groups (RFC 0065) — reusable admin-defined audiences for
+ * plugin access policies and future operator workflows. Groups are platform
+ * audiences, not plugin-domain roles (RFC 0054) or plugin-scoped grants.
+ */
+export const userGroups = sqliteTable('user_groups', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+  description: text('description'),
+  createdByUserId: text('created_by_user_id').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+/** Membership rows for `user_groups`. Composite PK — a user belongs to a group at most once. */
+export const userGroupMembers = sqliteTable(
+  'user_group_members',
+  {
+    tenantId: text('tenant_id').notNull(),
+    groupId: text('group_id').notNull(),
+    userId: text('user_id').notNull(),
+    addedByUserId: text('added_by_user_id').notNull(),
+    addedAt: integer('added_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.groupId, table.userId] })],
+);
+
+export type UserGroup = typeof userGroups.$inferSelect;
+export type NewUserGroup = typeof userGroups.$inferInsert;
+export type UserGroupMember = typeof userGroupMembers.$inferSelect;
+export type NewUserGroupMember = typeof userGroupMembers.$inferInsert;
+
+/**
+ * Per-user capability grants (RFC 0070) — an allowlisted capability granted to
+ * one user on top of their role preset. Composite PK — a user holds a given
+ * grantable capability at most once.
+ */
+export const userCapabilityGrants = sqliteTable(
+  'user_capability_grants',
+  {
+    tenantId: text('tenant_id').notNull(),
+    userId: text('user_id').notNull(),
+    capability: text('capability').notNull(),
+    grantedByUserId: text('granted_by_user_id').notNull(),
+    grantedAt: integer('granted_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.capability] })],
+);
+
+export type UserCapabilityGrant = typeof userCapabilityGrants.$inferSelect;
+export type NewUserCapabilityGrant = typeof userCapabilityGrants.$inferInsert;
+
+/**
  * Per-user notification inbox (RFC 0015). Tenant-scoped; mutable lifecycle
  * (read / dismissed by the recipient). Distinct from `activity_log` which is
  * append-only audit trail.

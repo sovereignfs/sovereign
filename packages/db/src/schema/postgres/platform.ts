@@ -86,6 +86,52 @@ export const accountPrefs = pgTable('account_prefs', {
   updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
 });
 
+/**
+ * Platform-managed user groups (RFC 0065) — reusable admin-defined audiences for
+ * plugin access policies and future operator workflows. Groups are platform
+ * audiences, not plugin-domain roles (RFC 0054) or plugin-scoped grants.
+ */
+export const userGroups = pgTable('user_groups', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+  description: text('description'),
+  createdByUserId: text('created_by_user_id').notNull(),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+});
+
+/** Membership rows for `user_groups`. Composite PK — a user belongs to a group at most once. */
+export const userGroupMembers = pgTable(
+  'user_group_members',
+  {
+    tenantId: text('tenant_id').notNull(),
+    groupId: text('group_id').notNull(),
+    userId: text('user_id').notNull(),
+    addedByUserId: text('added_by_user_id').notNull(),
+    addedAt: bigint('added_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.groupId, table.userId] })],
+);
+
+/**
+ * Per-user capability grants (RFC 0070) — an allowlisted capability granted to
+ * one user on top of their role preset. Composite PK — a user holds a given
+ * grantable capability at most once.
+ */
+export const userCapabilityGrants = pgTable(
+  'user_capability_grants',
+  {
+    tenantId: text('tenant_id').notNull(),
+    userId: text('user_id').notNull(),
+    capability: text('capability').notNull(),
+    grantedByUserId: text('granted_by_user_id').notNull(),
+    grantedAt: bigint('granted_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.capability] })],
+);
+
 export const consentGrants = pgTable('consent_grants', {
   id: text('id').primaryKey(),
   tenantId: text('tenant_id').notNull(),

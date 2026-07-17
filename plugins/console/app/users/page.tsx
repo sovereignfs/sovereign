@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Badge } from '@sovereignfs/ui';
 import { sdk } from '@sovereignfs/sdk';
 import { toggleActiveAction } from './actions';
+import { CapabilitiesButton } from './CapabilitiesButton';
 import {
   CancelInviteButton,
   DeactivateButton,
@@ -203,6 +204,11 @@ export default async function UsersPage({
                             )}
 
                             <ResetMfaButton userId={member.id} name={member.name ?? member.email} />
+
+                            <CapabilitiesButton
+                              userId={member.id}
+                              name={member.name ?? member.email}
+                            />
 
                             <DeleteButton userId={member.id} name={member.name ?? member.email} />
                           </div>

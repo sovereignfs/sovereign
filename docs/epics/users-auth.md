@@ -560,7 +560,7 @@ with plain fallback first).
 
 ---
 
-#### 📋 1.15 — User groups foundation (RFC 0065)
+#### ✅ 1.15 — User groups foundation (RFC 0065)
 
 **Goal:** Add platform-managed user groups so admins can define reusable user audiences for
 plugin access policies and future operator workflows.
@@ -591,6 +591,81 @@ plugin access policies and future operator workflows.
 - Membership lookup is tenant-scoped and cannot cross tenants.
 - Group changes are audited.
 - In-use groups cannot be deleted silently.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
+#### ✅ 1.16 — Per-user capability grants (RFC 0070)
+
+**Goal:** Let an owner/admin grant one specific user a single allowlisted capability their role
+preset doesn't include — the "later phase" RFC 0021 explicitly deferred — starting with
+`plugins:self-manage` for RFC 0065's plugin self-service opt-in.
+
+**Deliverables:**
+
+- Add `user_capability_grants(tenant_id, user_id, capability, granted_by_user_id, granted_at)`.
+- Add a hardcoded grantable-capability allowlist (excludes `role:assign`), starting with the new
+  `plugins:self-manage` capability value.
+- Add a Node-runtime resolver (`hasUserCapability(user, cap)` in
+  `runtime/src/user-capabilities.ts`) for per-user checks; the existing Edge-safe
+  `hasCapability(role, cap)` in `runtime/src/capabilities.ts` is untouched.
+- Add Console grant/revoke UI (`CapabilitiesButton` on the user row — no per-user detail page
+  exists yet, so this is the pragmatic equivalent), restricted to the allowlist, audited.
+
+**Shipped scope note:** the "extend session-verify to fold grants into the signed `session_data`
+cookie cache" deliverable from the original RFC 0070 draft was **deferred**, not shipped. It
+requires extending better-auth's session cookie schema in `apps/auth` — a security-sensitive
+change to session internals — and isn't load-bearing for the `plugins:self-manage` use case,
+since that capability is only checked from Node-runtime server actions/API routes (which already
+have DB access), never from Edge `adminOnly`-style route gating. `runtime/src/user-capabilities.ts`
+documents this explicitly. Revisit as a follow-up if a future grantable capability needs
+Edge-level enforcement.
+
+**Dependencies:** Task 1.5 (platform roles/capabilities), Task 5.1 (activity logging).
+
+**SRS reference:** [RFC 0070](../rfcs/0070-per-user-capability-grants.md); extends RFC 0021's
+deferred per-user override phase.
+
+**Review checklist:**
+
+- An admin can grant `plugins:self-manage` to a specific user without changing their role.
+- A user without a grant and without a role preset including it cannot perform the gated action.
+- `role:assign` cannot be granted through this mechanism.
+- Grants are audited and visible in Console.
+- Edge middleware behavior for role-only capability checks is unchanged.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
+#### 📋 1.17 — Invite-scoped plugin entitlement (RFC 0065)
+
+**Goal:** Let an admin capture which plugins an invited user should be entitled to as part of
+the invite itself. This task owns capture only (schema, creation API, admin UI); resolving the
+captured scope into actual grants at registration is Task 2.23, which depends on this task.
+
+**Deliverables:**
+
+- Add a nullable `invites.plugins` column (JSON array of plugin IDs); absent/empty preserves
+  today's `{email}`-only invite behavior.
+- Extend `POST /api/admin/invites` (`apps/auth/app/api/admin/invites/route.ts`) to accept and
+  persist the `plugins` scope.
+- Add a plugin multi-select to the Console "invite user" flow.
+- Expose the invite's `plugins` scope on invite lookup so the register flow (Task 2.23) can read
+  it without a second query.
+
+**Dependencies:** Task 3.3 (install script/registry — provides the plugin list for the
+multi-select). No dependency on Task 2.21/2.23 — this task only captures and stores the scope.
+
+**SRS reference:** [RFC 0065](../rfcs/0065-user-groups-plugin-access.md)
+
+**Review checklist:**
+
+- An invite can be created with a plugin scope and the scope round-trips through the invite
+  lookup unchanged.
+- An invite with no plugin scope behaves identically to today.
+- A scoped plugin ID that isn't `selected_users`/`selected_groups` does not error and does not
+  grant unintended access.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
 ---

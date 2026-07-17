@@ -25,7 +25,29 @@ export type Capability =
   | 'instance:configure' // change instance settings + root plugin
   | 'health:view' // view system health report
   | 'activity:view' // view activity log (RFC 0005)
-  | 'role:assign'; // assign roles to other users (owner-only)
+  | 'role:assign' // assign roles to other users (owner-only)
+  | 'plugins:self-manage'; // self-service enable/disable of self_service-eligible plugins (RFC 0070)
+
+// ---------------------------------------------------------------------------
+// Per-user capability grants (RFC 0070)
+// ---------------------------------------------------------------------------
+
+/**
+ * Capabilities that may be granted to an individual user on top of their role
+ * preset, via `user_capability_grants`. Deliberately an explicit allowlist,
+ * not "any Capability" — `role:assign` in particular must never be grantable
+ * this way, or it would undermine the owner-protection guarantee RFC 0021
+ * established (role:assign stays owner-only, assigned only by changing role).
+ */
+export const GRANTABLE_CAPABILITIES = [
+  'plugins:self-manage',
+] as const satisfies readonly Capability[];
+
+export type GrantableCapability = (typeof GRANTABLE_CAPABILITIES)[number];
+
+export function isGrantableCapability(cap: string): cap is GrantableCapability {
+  return (GRANTABLE_CAPABILITIES as readonly string[]).includes(cap);
+}
 
 // ---------------------------------------------------------------------------
 // Role type

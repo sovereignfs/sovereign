@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { sdk } from '@sovereignfs/sdk';
 import { logActivity } from '@/src/activity';
+import { GRANTABLE_CAPABILITIES, type GrantableCapability } from '@/src/capabilities';
 import { deleteUser } from '@/src/user-deletion';
 
 const AUTH_URL =
@@ -17,6 +18,19 @@ async function actorId(): Promise<string | null> {
 async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   return fetch(`${AUTH_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminKey}`,
+      ...(init?.headers as Record<string, string>),
+    },
+  });
+}
+
+/** Capability grants live in the platform DB (runtime), not the auth server. */
+async function selfAdminFetch(path: string, init?: RequestInit): Promise<Response> {
+  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
+  return fetch(`${SELF_URL}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -293,4 +307,50 @@ export async function sendInviteAction(
     email,
     ...(emailResult.ok ? {} : { emailWarning: emailResult.error }),
   };
+}
+
+// ─── Per-user capability grants (RFC 0070) ───────────────────────────────────
+
+export { GRANTABLE_CAPABILITIES, type GrantableCapability };
+
+export async function listUserCapabilitiesAction(userId: string): Promise<GrantableCapability[]> {
+  await sdk.auth.requireSession();
+  const res = await selfAdminFetch(`/api/admin/users/${encodeURIComponent(userId)}/capabilities`);
+  if (!res.ok) return [];
+  const grants = (await res.json()) as { capability: GrantableCapability }[];
+  return grants.map((g) => g.capability);
+}
+
+export async function grantCapabilityAction(formData: FormData): Promise<void> {
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'user:manage')) {
+    throw new Error('Insufficient privileges to grant capabilities.');
+  }
+  const userId = formData.get('userId') as string;
+  const capability = formData.get('capability') as string;
+
+  const res = await selfAdminFetch(`/api/admin/users/${encodeURIComponent(userId)}/capabilities`, {
+    method: 'POST',
+    body: JSON.stringify({ capability }),
+  });
+  if (!res.ok) throw new Error(`Failed to grant capability: ${res.status}`);
+
+  revalidatePath('/console/users');
+}
+
+export async function revokeCapabilityAction(formData: FormData): Promise<void> {
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'user:manage')) {
+    throw new Error('Insufficient privileges to revoke capabilities.');
+  }
+  const userId = formData.get('userId') as string;
+  const capability = formData.get('capability') as string;
+
+  const res = await selfAdminFetch(
+    `/api/admin/users/${encodeURIComponent(userId)}/capabilities/${encodeURIComponent(capability)}`,
+    { method: 'DELETE' },
+  );
+  if (!res.ok) throw new Error(`Failed to revoke capability: ${res.status}`);
+
+  revalidatePath('/console/users');
 }

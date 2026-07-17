@@ -191,6 +191,8 @@ each installed plugin.
 - Add an Access section to Console plugin detail/management surfaces.
 - Support the policy choices from RFC 0065: Everyone, Admins and owners, Selected users,
   Selected groups, and Disabled.
+- Add a self-service toggle for Selected users/Selected groups policies, with copy explaining
+  it requires the acting user to hold `plugins:self-manage` (RFC 0070).
 - Add a user picker for `selected_users`, backed by user directory/member-selection
   primitives.
 - Add a group picker for `selected_groups`, backed by the user groups foundation.
@@ -199,12 +201,16 @@ each installed plugin.
   can manage a plugin without automatically being able to open it.
 - Align disabled plugin language with runtime enforcement: disabled plugins remain installed
   and manageable, but cannot be opened by anyone.
-- Emit activity events for policy changes and user/group grant changes.
+- When an admin/owner can manage but not open a plugin, show a disabled "Open" affordance with
+  the reason rather than hiding it — the admin already knows the plugin exists.
+- Emit activity events for policy changes and user/group grant changes, distinguishing
+  self-service grants from admin-initiated ones.
 - Update operator docs for common workflows: enable for everyone, limit to admins, grant a
-  user, grant a group, disable without uninstalling.
+  user, grant a group, disable without uninstalling, allow self-service opt-in.
 
-**Dependencies:** Task 1.15 (user groups), Task 2.21 (plugin access policy enforcement), Task
-13.3 (Console plugin management), Task 1.12 (user directory/member selection).
+**Dependencies:** Task 1.15 (user groups), Task 1.16 (per-user capability grants, RFC 0070),
+Task 2.21 (plugin access policy enforcement), Task 13.3 (Console plugin management), Task 1.12
+(user directory/member selection).
 
 **SRS reference:** [RFC 0065](../rfcs/0065-user-groups-plugin-access.md)
 
@@ -214,23 +220,69 @@ each installed plugin.
 - Empty selected-user/group policies show clear warnings before saving or after save.
 - Admins/owners are not silently granted app access for selected-user/group policies.
 - Disabled plugins cannot be opened from Console app-launch affordances.
-- Policy and grant changes are audited.
+- The disabled "Open" affordance shows the denial reason instead of being hidden.
+- Policy and grant changes are audited, with self-service grants distinguishable from
+  admin-initiated ones.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
+#### 📋 13.8 — Console plugin catalog browser and install-time activation (RFC 0065)
+
+**Goal:** Let admins browse every plugin declared in `sovereign.plugins.json` (bundled in the
+image at build time per Task 3.28) and activate one for the instance in one action, without a
+rebuild or redeploy.
+
+**Deliverables:**
+
+- Add a catalog view, separate from the existing per-plugin management list, listing every
+  cataloged plugin with its active/inactive state.
+- "Activate" runs the plugin's pending migrations and creates its `plugin_status` row via the
+  runtime activation endpoint from Task 3.28.
+- Immediately after activation, prompt the admin for an initial `access_policy` (selector
+  defaults to Disabled, matching the storage default) instead of leaving the plugin in an
+  unconfigured state.
+- Show plugins already active with a link into their existing management/Access surfaces
+  instead of a duplicate "Activate" control.
+- Surface a clear error if activation (migration run) fails, without leaving the plugin in a
+  half-activated state.
+
+**Dependencies:** Task 3.28 (plugin catalog and install-time activation model), Task 13.7
+(Console plugin access management — the policy step immediately after activation).
+
+**SRS reference:** [RFC 0065](../rfcs/0065-user-groups-plugin-access.md)
+
+**Review checklist:**
+
+- An admin can activate a cataloged-but-inactive plugin from Console without a redeploy.
+- A newly activated plugin defaults to `access_policy = disabled` and is not visible to any
+  non-admin user until explicitly configured.
+- A failed migration during activation leaves the plugin cleanly inactive, not partially
+  active.
+- Already-active plugins do not show a duplicate activation control.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
 Subsequent tasks added Console sections as part of other epics:
 
-| Task   | Feature added to Console                                                   | Primary epic                        |
-| ------ | -------------------------------------------------------------------------- | ----------------------------------- |
-| 0.5.11 | Data grants oversight (`/console/data-grants`)                             | [Platform Shell](platform-shell.md) |
-| 0.5.13 | Activity feed (`/console/activity`)                                        | [Activity Logs](activity-logs.md)   |
-| 0.6.0  | Role & capability assignment UI                                            | [Users & Auth](users-auth.md)       |
-| 0.8.0  | Entitlement oversight, manual payment confirmation, Ed25519 key management | [Monetization](monetization.md)     |
-| 0.8.3  | Richer `/api/admin/health` response                                        | [Platform Shell](platform-shell.md) |
-| 0.8.4  | Instance identity / branding section                                       | [Design System](design-system.md)   |
-| 9.9    | Email Templates section                                                    | [Design System](design-system.md)   |
-| 1.7    | Admin delete user action                                                   | [Users & Auth](users-auth.md)       |
-| 1.15   | User groups management                                                     | [Users & Auth](users-auth.md)       |
-| 2.21   | Plugin access policy management                                            | [Platform Shell](platform-shell.md) |
+| Task   | Feature added to Console                                                   | Primary epic                          |
+| ------ | -------------------------------------------------------------------------- | ------------------------------------- |
+| 0.5.11 | Data grants oversight (`/console/data-grants`)                             | [Platform Shell](platform-shell.md)   |
+| 0.5.13 | Activity feed (`/console/activity`)                                        | [Activity Logs](activity-logs.md)     |
+| 0.6.0  | Role & capability assignment UI                                            | [Users & Auth](users-auth.md)         |
+| 0.8.0  | Entitlement oversight, manual payment confirmation, Ed25519 key management | [Monetization](monetization.md)       |
+| 0.8.3  | Richer `/api/admin/health` response                                        | [Platform Shell](platform-shell.md)   |
+| 0.8.4  | Instance identity / branding section                                       | [Design System](design-system.md)     |
+| 9.9    | Email Templates section                                                    | [Design System](design-system.md)     |
+| 1.7    | Admin delete user action                                                   | [Users & Auth](users-auth.md)         |
+| 1.15   | User groups management                                                     | [Users & Auth](users-auth.md)         |
+| 1.16   | Per-user capability grant UI                                               | [Users & Auth](users-auth.md)         |
+| 2.21   | Plugin access policy management                                            | [Platform Shell](platform-shell.md)   |
+| 3.28   | Plugin catalog and install-time activation model                           | [Plugins Runtime](plugins-runtime.md) |
+
+## Related RFCs
+
+- [RFC 0065 — User groups and plugin access policy](../rfcs/0065-user-groups-plugin-access.md)
+- [RFC 0070 — Per-user capability grants](../rfcs/0070-per-user-capability-grants.md)
 
 ## Related Docs
 

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { ImportContext, PluginExportSection } from '@sovereignfs/sdk';
 import { type PlatformExportData, assembleExport } from '../assemble';
 import { PLATFORM_SECTION_ID, readZip, u8ToJson } from '../bundle';
+import { getPortabilityPluginContext } from '../plugin-context';
 import { clearPortabilityRegistry, registerExporter, registerImporter } from '../registry';
 import { type PlatformAccountSection, applyImport } from '../restore';
 
@@ -179,6 +180,32 @@ describe('assembleExport', () => {
     expect(manifest.failures).toEqual([{ pluginId: 'bad.plugin', error: 'boom' }]);
   });
 
+  it('runs a resolver with its own plugin id as the portability context', async () => {
+    // Regression test: /api/account/export has no x-sovereign-plugin-id header
+    // (it isn't a plugin route), so an isolated-database plugin's own
+    // sdk.db.getClient() can't derive its plugin id from headers() the way it
+    // would inside a normal plugin request. The assembler must set this
+    // context itself around each resolver call so getClient() can fall back
+    // to it — otherwise an isolated-db plugin's exporter would silently read
+    // the platform database instead of its own.
+    let seenDuringExport: string | undefined;
+    registerExporter('test.plugin', async () => {
+      seenDuringExport = getPortabilityPluginContext();
+      return { pluginId: 'test.plugin', schemaVersion: 1, data: {} };
+    });
+    await assembleExport({
+      userId: 'u1',
+      tenantId: 'default',
+      platform: PLATFORM,
+      platformVersion: '0.6.0',
+      sourceInstance: null,
+      exportPlugins: { 'test.plugin': '1.0.0' },
+    });
+    expect(seenDuringExport).toBe('test.plugin');
+    // The context doesn't leak past the resolver call.
+    expect(getPortabilityPluginContext()).toBeUndefined();
+  });
+
   it('carries cross-plugin references through as inert metadata (RFC 0051)', async () => {
     const reference = {
       providerId: 'io.example.crm',
@@ -265,6 +292,31 @@ describe('applyImport', () => {
     expect(ctx.userId).toBe('u2');
     expect(ctx.remapId('src-1')).toBe(ctx.remapId('src-1'));
     expect(ctx.remapId('src-1')).not.toBe(ctx.remapId('src-2'));
+  });
+
+  it('runs an importer with its own plugin id as the portability context', async () => {
+    registerExporter('test.plugin', async () => ({
+      pluginId: 'test.plugin',
+      schemaVersion: 1,
+      data: {},
+    }));
+    const bytes = await roundTripBundle({ 'test.plugin': '1.0.0' });
+
+    let seenDuringImport: string | undefined;
+    registerImporter('test.plugin', async () => {
+      seenDuringImport = getPortabilityPluginContext();
+    });
+
+    await applyImport({
+      bytes,
+      userId: 'u2',
+      tenantId: 'default',
+      importPlugins: new Set(['test.plugin']),
+      platformImporter: async () => undefined,
+    });
+
+    expect(seenDuringImport).toBe('test.plugin');
+    expect(getPortabilityPluginContext()).toBeUndefined();
   });
 
   it('skips a plugin section that is not in the import allow-list (with a warning)', async () => {

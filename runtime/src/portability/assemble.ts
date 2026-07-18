@@ -8,6 +8,7 @@ import {
   jsonToU8,
   sha256,
 } from './bundle';
+import { runWithPortabilityPlugin } from './plugin-context';
 import { getExporter } from './registry';
 
 /**
@@ -111,7 +112,9 @@ export async function assembleExport(args: AssembleArgs): Promise<Uint8Array> {
 
     let section: PluginExportSection;
     try {
-      section = await exporter({ userId: args.userId, tenantId: args.tenantId, options });
+      section = await runWithPortabilityPlugin(pluginId, () =>
+        exporter({ userId: args.userId, tenantId: args.tenantId, options }),
+      );
     } catch (e) {
       failures.push({ pluginId, error: e instanceof Error ? e.message : String(e) });
       continue;

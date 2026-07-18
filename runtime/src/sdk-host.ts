@@ -71,6 +71,7 @@ import type {
   StorageObject,
 } from '@sovereignfs/sdk';
 import { getDisabledPluginIds } from './plugin-status';
+import { getPortabilityPluginContext } from './portability/plugin-context';
 import { registerDeleter, registerExporter, registerImporter } from './portability/registry';
 import { fanOutPushToUser } from './push';
 import { getBroker } from './notification-broker';
@@ -244,13 +245,20 @@ async function fetchDirectoryUsers(body: Record<string, unknown>): Promise<Direc
 provideHost({
   db: {
     async getClient(pluginId: string | null) {
-      if (pluginId) {
-        const manifest = registry.find((m) => m.id === pluginId);
+      // Outside a plugin route (e.g. a portability export/import resolver
+      // invoked from the platform's own /api/account/export|import routes),
+      // there is no x-sovereign-plugin-id header to derive pluginId from.
+      // Fall back to whichever plugin the portability assembler/restorer is
+      // currently running a resolver for — otherwise an isolated-database
+      // plugin's own exporter/importer would silently read the platform DB.
+      const effectivePluginId = pluginId ?? getPortabilityPluginContext() ?? null;
+      if (effectivePluginId) {
+        const manifest = registry.find((m) => m.id === effectivePluginId);
         if (manifest && manifestDatabaseIsolation(manifest.database) === 'isolated') {
           const pluginDialect = manifestDatabaseDialect(manifest.database);
           // Provision on first use (idempotent), then return the dedicated client.
-          await provisionPluginDb(pluginId, pluginDialect);
-          return getPluginDb(pluginId, pluginDialect).db;
+          await provisionPluginDb(effectivePluginId, pluginDialect);
+          return getPluginDb(effectivePluginId, pluginDialect).db;
         }
       }
       return (await getPlatformDb()).db;

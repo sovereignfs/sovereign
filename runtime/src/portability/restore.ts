@@ -8,6 +8,7 @@ import {
   u8ToJson,
 } from './bundle';
 import type { PlatformE2eeExportData } from './assemble';
+import { runWithPortabilityPlugin } from './plugin-context';
 import { getImporter } from './registry';
 
 /** The platform-owned slice parsed from `platform/account.json`. */
@@ -114,7 +115,9 @@ export async function applyImport(args: ApplyImportArgs): Promise<ImportSummary>
       // may store them, but the platform never dereferences them here.
       references: meta.references,
     };
-    await importer(section, { userId: args.userId, tenantId: args.tenantId, remapId });
+    await runWithPortabilityPlugin(meta.pluginId, () =>
+      importer(section, { userId: args.userId, tenantId: args.tenantId, remapId }),
+    );
     results.push({ pluginId: meta.pluginId, status: 'imported' });
   }
 

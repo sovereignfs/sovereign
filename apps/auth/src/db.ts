@@ -104,6 +104,9 @@ export async function ensureAuthTables(): Promise<void> {
   if (dialect === 'postgres') {
     await authRun('ALTER TABLE invites ADD COLUMN IF NOT EXISTS invited_by_id TEXT');
     await authRun('ALTER TABLE invites ADD COLUMN IF NOT EXISTS invited_by_name TEXT');
+    // JSON-encoded array of plugin IDs (RFC 0065 Task 1.17); null/absent
+    // preserves the original {email}-only invite behavior.
+    await authRun('ALTER TABLE invites ADD COLUMN IF NOT EXISTS plugins TEXT');
   } else {
     const cols = await authAll<{ name: string }>('PRAGMA table_info(invites)', []);
     const names = new Set(cols.map((c) => c.name));
@@ -111,6 +114,7 @@ export async function ensureAuthTables(): Promise<void> {
       await authRun('ALTER TABLE invites ADD COLUMN invited_by_id TEXT');
     if (!names.has('invited_by_name'))
       await authRun('ALTER TABLE invites ADD COLUMN invited_by_name TEXT');
+    if (!names.has('plugins')) await authRun('ALTER TABLE invites ADD COLUMN plugins TEXT');
   }
   await authRun(
     `CREATE TABLE IF NOT EXISTS auth_settings (

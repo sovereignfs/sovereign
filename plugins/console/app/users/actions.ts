@@ -5,7 +5,22 @@ import { headers } from 'next/headers';
 import { sdk } from '@sovereignfs/sdk';
 import { logActivity } from '@/src/activity';
 import type { GrantableCapability } from '@/src/capabilities';
+import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
+import { getInstalledPlugins } from '@/src/registry';
 import { deleteUser } from '@/src/user-deletion';
+
+/** Plugin options for the invite multi-select (RFC 0065 Task 1.17), excluding chrome plugins that every user already has access to. */
+export interface InvitablePluginOption {
+  id: string;
+  name: string;
+}
+
+export async function listInvitablePluginOptions(): Promise<InvitablePluginOption[]> {
+  await sdk.auth.requireSession();
+  return getInstalledPlugins()
+    .filter((p) => !CHROME_PLUGIN_IDS.has(p.id))
+    .map((p) => ({ id: p.id, name: p.name }));
+}
 
 const AUTH_URL =
   process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
@@ -263,6 +278,7 @@ export async function sendInviteAction(
   const email = (formData.get('email') as string | null)?.trim();
   const expiresInDaysRaw = formData.get('expiresInDays') as string | null;
   const expiresInDays = expiresInDaysRaw ? Number(expiresInDaysRaw) : undefined;
+  const plugins = formData.getAll('plugins') as string[];
 
   if (!email) return { success: false, error: 'Email is required.' };
 
@@ -273,6 +289,7 @@ export async function sendInviteAction(
       expiresInDays,
       invited_by_id: session.user.id,
       invited_by_name: session.user.name ?? undefined,
+      plugins: plugins.length > 0 ? plugins : undefined,
     }),
   });
   if (!res.ok) return { success: false, error: `Failed to create invite: ${res.status}` };

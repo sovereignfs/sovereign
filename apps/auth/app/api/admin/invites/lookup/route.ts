@@ -11,6 +11,7 @@ interface InviteRow {
   invited_by_name: string | null;
   consumed_at: number | string | null;
   expires_at: number | string | null;
+  plugins: string | null;
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -23,7 +24,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const invite = await authGet<InviteRow>(
-    'SELECT email, invited_by_name, consumed_at, expires_at FROM invites WHERE token = ?',
+    'SELECT email, invited_by_name, consumed_at, expires_at, plugins FROM invites WHERE token = ?',
     [body.token],
   );
   const now = Math.floor(Date.now() / 1000);
@@ -35,9 +36,20 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ valid: false });
   }
 
+  let plugins: string[] = [];
+  if (invite.plugins) {
+    try {
+      const parsed: unknown = JSON.parse(invite.plugins);
+      if (Array.isArray(parsed)) plugins = parsed.filter((p): p is string => typeof p === 'string');
+    } catch {
+      plugins = [];
+    }
+  }
+
   return NextResponse.json({
     valid: true,
     email: invite.email,
     invitedBy: invite.invited_by_name,
+    plugins,
   });
 }

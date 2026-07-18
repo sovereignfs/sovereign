@@ -14,10 +14,15 @@ export async function POST(request: Request, { params }: RouteParams): Promise<R
   if (denied) return denied;
 
   const { id } = await params;
-  const body = (await request.json()) as { userId?: unknown };
+  const body = (await request.json()) as { userId?: unknown; source?: unknown };
   if (typeof body.userId !== 'string' || body.userId.trim() === '') {
     return NextResponse.json({ error: 'userId (non-empty string) is required' }, { status: 400 });
   }
+  // Provenance tag for the audit entry (RFC 0065 Task 2.23) — 'invite' marks a
+  // grant resolved automatically from an invite's plugin scope at
+  // registration, distinct from an admin manually granting access in Console.
+  // Never trusted for authorization, purely descriptive.
+  const source = body.source === 'invite' ? 'invite' : 'admin';
 
   const actorId = request.headers.get('x-sovereign-user-id');
   if (!actorId) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
@@ -31,8 +36,11 @@ export async function POST(request: Request, { params }: RouteParams): Promise<R
     targetType: 'plugin',
     targetId: id,
     visibility: 'admin',
-    summary: `Granted plugin ${id} access to a user`,
-    metadata: { pluginId: id, userId: body.userId },
+    summary:
+      source === 'invite'
+        ? `Granted plugin ${id} access to a user via invite`
+        : `Granted plugin ${id} access to a user`,
+    metadata: { pluginId: id, userId: body.userId, source },
   });
 
   return NextResponse.json({ pluginId: id, userId: body.userId });

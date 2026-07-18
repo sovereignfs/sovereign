@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkAdminKey } from '@/src/admin-guard';
 import { authGet } from '@/src/db';
+import { parseInvitePluginIds } from '@/src/invite-plugin-grants';
 
 interface InviteLookupBody {
   token?: string;
@@ -36,20 +37,10 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ valid: false });
   }
 
-  let plugins: string[] = [];
-  if (invite.plugins) {
-    try {
-      const parsed: unknown = JSON.parse(invite.plugins);
-      if (Array.isArray(parsed)) plugins = parsed.filter((p): p is string => typeof p === 'string');
-    } catch {
-      plugins = [];
-    }
-  }
-
   return NextResponse.json({
     valid: true,
     email: invite.email,
     invitedBy: invite.invited_by_name,
-    plugins,
+    plugins: parseInvitePluginIds(invite.plugins),
   });
 }

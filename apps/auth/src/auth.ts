@@ -5,6 +5,7 @@ import { twoFactor } from 'better-auth/plugins/two-factor';
 import { passkey } from '@better-auth/passkey';
 import { authGet, authRun, getAuthDatabase } from './db';
 import { getEnv } from './env';
+import { resolveInvitePluginGrants } from './invite-plugin-grants';
 import { sendAuthPlatformEmail } from './platform-email';
 import { readInviteOnlySetting, resolveInviteOnly } from './settings';
 
@@ -142,6 +143,11 @@ function buildOptions(): BetterAuthOptions {
               text: `Your Sovereign account was created successfully.\n\nIf you did not create this account, contact your instance operator.`,
               metadata: { role: typeof user.role === 'string' ? user.role : null },
             });
+
+            // Resolve an invite-scoped plugin entitlement (RFC 0065 Task
+            // 2.23), if this registration consumed one. No-op for a plain
+            // (non-invited) signup or an invite with no plugin scope.
+            await resolveInvitePluginGrants({ id: user.id, email: user.email });
           },
         },
       },

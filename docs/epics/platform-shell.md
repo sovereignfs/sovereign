@@ -699,7 +699,7 @@ sidebar strip does not remove its Launcher tile — Launcher remains the "see ev
 
 ---
 
-#### 📋 2.23 — Plugin invite-scope grant resolution (RFC 0065)
+#### ✅ 2.23 — Plugin invite-scope grant resolution (RFC 0065)
 
 **Goal:** Apply an invite's plugin scope (Task 1.17) through the same `canOpenPlugin`
 resolver and grant tables Task 2.21 introduces, so invite-scoped access is indistinguishable
@@ -709,11 +709,33 @@ from an admin-granted `plugin_access_users` row once the account exists.
 
 - On successful registration via an invite carrying a `plugins` scope, insert one
   `plugin_access_users` row per listed plugin ID, with `granted_by_user_id` set to the
-  inviter (not the new user).
+  inviter (not the new user). Implemented as `resolveInvitePluginGrants`
+  (`apps/auth/src/invite-plugin-grants.ts`), called from the better-auth `user.create.after`
+  hook (`apps/auth/src/auth.ts`). Since `apps/auth` has no direct access to `plugin_access_users`
+  (a platform-db table owned by `runtime`/`packages/db` — separate app, separate database), the
+  resolver crosses the process boundary over the existing admin-key-gated
+  `GET/POST /api/admin/plugins/[id]/access*` endpoints from Task 13.7, the same pattern
+  `platform-email.ts` already uses to report email-delivery outcomes to the activity log.
+  The resolver re-queries the invites table by email in the `after` hook (rather than threading
+  data through from `before`, which better-auth's hook signatures don't support) — safe because
+  email uniqueness means at most one registration can be consuming a given email's invite at a
+  time.
 - No-op silently for a scoped plugin ID whose current policy isn't `selected_users`/
   `selected_groups` — the invite grants eligibility, never overrides the plugin's policy.
+  Implemented by fetching the plugin's current policy via `GET /api/admin/plugins/[id]/access`
+  before granting; a plugin left at `everyone`/`admins` needs no grant, and one now `disabled`
+  must not silently reopen because of a stale invite.
 - Audit the resulting grants identically to an admin-initiated grant, with provenance noting
-  they originated from an invite.
+  they originated from an invite. Extended `POST /api/admin/plugins/[id]/access/users`
+  (Task 13.7) to accept an optional `source: 'invite'` field, included in the
+  `plugin.access_user_granted` activity metadata (`{ pluginId, userId, source }`) and reflected
+  in the summary text — purely descriptive, never trusted for authorization.
+- **Scope note:** the entire resolution path only runs when invite-only registration is
+  enabled — the pre-existing `before` hook only looks up/consumes an invite by email at all
+  under `if (!isFirst && inviteOnly)`. Outside invite-only mode, a matching-but-unconsumed
+  invite (and its plugin scope) is never touched by registration; this predates Task 2.23 and
+  is the existing invite-consumption behavior, not a gap this task introduces or is scoped to
+  fix.
 
 **Dependencies:** Task 1.17 (invite-scoped plugin entitlement), Task 2.21 (plugin access policy
 enforcement — the grant tables and resolver this writes into).
@@ -723,10 +745,16 @@ enforcement — the grant tables and resolver this writes into).
 **Review checklist:**
 
 - Registering via a plugin-scoped invite grants exactly the scoped plugins, resolved through
-  the same `canOpenPlugin` path as an admin grant.
+  the same `canOpenPlugin` path as an admin grant. ✅ verified live end-to-end: enabled
+  invite-only registration, set Wallet's policy to `selected_users` with no pre-existing grant,
+  created an invite scoped to Wallet through the Console UI, registered a new account via the
+  invite link, and confirmed `/wallet` opened immediately for the new user with no separate
+  admin action.
 - A scoped plugin not currently `selected_users`/`selected_groups` produces no grant and no
   error.
-- Resulting grants are audited with invite provenance.
+- Resulting grants are audited with invite provenance. ✅ verified: the resulting
+  `plugin.access_user_granted` activity entry shows `metadata.source: "invite"` and
+  `actorId` = the inviting admin (not the new user), summary text reading "... via invite".
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
 ## Related RFCs

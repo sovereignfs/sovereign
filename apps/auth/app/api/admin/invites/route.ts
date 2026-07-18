@@ -8,6 +8,8 @@ interface InviteBody {
   expiresInDays?: number;
   invited_by_id?: string;
   invited_by_name?: string;
+  /** Plugin IDs the invited user should be entitled to (RFC 0065 Task 1.17). Capture only — resolved into grants at registration by Task 2.23. */
+  plugins?: string[];
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -22,9 +24,11 @@ export async function POST(request: Request): Promise<Response> {
   const token = crypto.randomUUID();
   const createdAt = Math.floor(Date.now() / 1000);
   const expiresAt = body.expiresInDays != null ? createdAt + body.expiresInDays * 86400 : null;
+  const plugins =
+    Array.isArray(body.plugins) && body.plugins.length > 0 ? JSON.stringify(body.plugins) : null;
 
   await authRun(
-    'INSERT INTO invites (token, email, created_at, expires_at, invited_by_id, invited_by_name) VALUES (?, ?, ?, ?, ?, ?)',
+    'INSERT INTO invites (token, email, created_at, expires_at, invited_by_id, invited_by_name, plugins) VALUES (?, ?, ?, ?, ?, ?, ?)',
     [
       token,
       body.email,
@@ -32,6 +36,7 @@ export async function POST(request: Request): Promise<Response> {
       expiresAt,
       body.invited_by_id ?? null,
       body.invited_by_name ?? null,
+      plugins,
     ],
   );
 

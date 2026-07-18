@@ -638,7 +638,7 @@ deferred per-user override phase.
 
 ---
 
-#### 📋 1.17 — Invite-scoped plugin entitlement (RFC 0065)
+#### ✅ 1.17 — Invite-scoped plugin entitlement (RFC 0065)
 
 **Goal:** Let an admin capture which plugins an invited user should be entitled to as part of
 the invite itself. This task owns capture only (schema, creation API, admin UI); resolving the
@@ -647,12 +647,22 @@ captured scope into actual grants at registration is Task 2.23, which depends on
 **Deliverables:**
 
 - Add a nullable `invites.plugins` column (JSON array of plugin IDs); absent/empty preserves
-  today's `{email}`-only invite behavior.
+  today's `{email}`-only invite behavior. `apps/auth` has no Drizzle migrations for its own
+  tables (only better-auth's own tables go through a migrator) — added via the existing
+  idempotent `ALTER TABLE ADD COLUMN` pattern in `ensureAuthTables()`
+  (`apps/auth/src/db.ts`), matching how `invited_by_id`/`invited_by_name` were added previously.
 - Extend `POST /api/admin/invites` (`apps/auth/app/api/admin/invites/route.ts`) to accept and
-  persist the `plugins` scope.
-- Add a plugin multi-select to the Console "invite user" flow.
-- Expose the invite's `plugins` scope on invite lookup so the register flow (Task 2.23) can read
-  it without a second query.
+  persist the `plugins` scope as a JSON-encoded string (empty/absent array stored as `NULL`,
+  not `"[]"`, so existing rows and no-scope invites are indistinguishable in storage).
+- Add a plugin multi-select to the Console "invite user" flow
+  (`plugins/console/app/users/invite/invite-form.tsx`), fed by a new
+  `listInvitablePluginOptions` server action (`plugins/console/app/users/actions.ts`) that reads
+  `getInstalledPlugins()` and excludes chrome plugins (Account/Console/Launcher — every user
+  already reaches those regardless of this scope).
+- Expose the invite's `plugins` scope on invite lookup (`apps/auth/app/api/admin/invites/lookup/route.ts`)
+  so the register flow (Task 2.23) can read it without a second query — always returns an array
+  (`[]` when unset), parsed defensively (a malformed/legacy value degrades to `[]` rather than
+  erroring the whole lookup).
 
 **Dependencies:** Task 3.3 (install script/registry — provides the plugin list for the
 multi-select). No dependency on Task 2.21/2.23 — this task only captures and stores the scope.
@@ -662,10 +672,16 @@ multi-select). No dependency on Task 2.21/2.23 — this task only captures and s
 **Review checklist:**
 
 - An invite can be created with a plugin scope and the scope round-trips through the invite
-  lookup unchanged.
-- An invite with no plugin scope behaves identically to today.
+  lookup unchanged. ✅ verified live via `curl` against the auth server directly (create with
+  `plugins: ["fs.sovereign.wallet","fs.sovereign.tasks"]` → lookup returns the same array) and
+  end-to-end through the Console UI (checked "Tasks" in the invite form → lookup by the returned
+  token confirms `plugins: ["fs.sovereign.tasks"]`).
+- An invite with no plugin scope behaves identically to today. ✅ verified: `plugins` omitted
+  entirely from the request → lookup returns `plugins: []`, no error, existing fields unchanged.
 - A scoped plugin ID that isn't `selected_users`/`selected_groups` does not error and does not
-  grant unintended access.
+  grant unintended access. Satisfied by construction — this task only stores the scope; nothing
+  reads or acts on it yet (that's Task 2.23), so there is no resolution path that could grant
+  access from an inert stored value.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
 ---

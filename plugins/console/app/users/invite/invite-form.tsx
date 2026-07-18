@@ -1,14 +1,26 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { Button, FormField, Input } from '@sovereignfs/ui';
-import { sendInviteAction, type InviteState } from '../actions';
+import {
+  listInvitablePluginOptions,
+  sendInviteAction,
+  type InvitablePluginOption,
+  type InviteState,
+} from '../actions';
 import styles from '../../console.module.css';
 
 type State = InviteState | null;
 
 export function InviteForm({ onSuccess }: { onSuccess?: () => void }) {
   const [state, formAction, pending] = useActionState<State, FormData>(sendInviteAction, null);
+  const [pluginOptions, setPluginOptions] = useState<InvitablePluginOption[]>([]);
+
+  useEffect(() => {
+    listInvitablePluginOptions()
+      .then(setPluginOptions)
+      .catch(() => setPluginOptions([]));
+  }, []);
 
   if (state?.success) {
     return (
@@ -54,6 +66,24 @@ export function InviteForm({ onSuccess }: { onSuccess?: () => void }) {
           <Input {...field} type="number" name="expiresInDays" min="1" max="365" placeholder="7" />
         )}
       </FormField>
+
+      {pluginOptions.length > 0 && (
+        <FormField label="Grant access to (optional)" id="invite-plugins">
+          {() => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sv-space-1)' }}>
+              {pluginOptions.map((p) => (
+                <label
+                  key={p.id}
+                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--sv-space-2)' }}
+                >
+                  <input type="checkbox" name="plugins" value={p.id} />
+                  <span>{p.name}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </FormField>
+      )}
 
       <Button type="submit" disabled={pending}>
         {pending ? 'Sending…' : 'Send invitation'}

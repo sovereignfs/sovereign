@@ -6,6 +6,9 @@ settings:
 
 catalogs:
   default:
+    '@types/node':
+      specifier: ^22.10.2
+      version: 22.19.20
     '@types/react':
       specifier: ^19.0.0
       version: 19.2.17
@@ -72,7 +75,7 @@ importers:
         specifier: ^7.6.13
         version: 7.6.13
       '@types/node':
-        specifier: ^22.10.2
+        specifier: 'catalog:'
         version: 22.19.20
       better-auth:
         specifier: ^1.6.16

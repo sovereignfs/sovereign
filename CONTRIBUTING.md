@@ -24,12 +24,22 @@ git clone https://github.com/sovereignfs/sovereign.git
 cd Sovereign
 pnpm install
 cp .env.example .env   # fill in required values
-pnpm generate          # builds runtime/generated/ from plugin manifests
+pnpm generate          # builds runtime/generated/ from plugin manifests (gitignored — regenerate anytime, never commit)
 pnpm dev               # starts runtime + auth server
 ```
 
 Open `http://localhost:3000`. The first user to register is automatically
 assigned `platform:owner`.
+
+**After the first `pnpm install`, prefer `pnpm install --frozen-lockfile`**
+for routine installs (e.g. after `git pull`) — it installs exactly what
+`pnpm-lock.yaml` already specifies instead of re-resolving the whole
+dependency graph. A bare `pnpm install` can pick up a newer version of some
+unpinned transitive dependency and rewrite large parts of the lockfile,
+producing a diff unrelated to whatever you were actually working on. Only
+run a bare `pnpm install` when you're intentionally adding, removing, or
+bumping a dependency — the resulting lockfile diff should be scoped to
+that change and included in the same commit.
 
 **Environment variables:** `AUTH_SECRET`, `SOVEREIGN_ADMIN_KEY`, and
 `SOVEREIGN_AUTH_SECRET` have no defaults — the server will not start without

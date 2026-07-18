@@ -20,6 +20,7 @@ catalog:
   react-dom: ^19.0.0
   '@types/react': ^19.0.0
   '@types/react-dom': ^19.0.0
+  '@types/node': ^22.10.2
   next: ^15.0.0
   semver: ^7.7.2
   '@types/semver': ^7.7.0

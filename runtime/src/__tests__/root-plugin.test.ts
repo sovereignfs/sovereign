@@ -49,6 +49,21 @@ describe('validateRootPlugin', () => {
   it('allows a minimal plugin as root (kiosk use case, RFC 0014)', () => {
     expect(validateRootPlugin('fs.example.kiosk', plugins, none)).toEqual({ ok: true });
   });
+
+  it('rejects a plugin restricted for the current user by access policy (RFC 0065)', () => {
+    const restricted = new Set(['fs.example.tasks']);
+    expect(validateRootPlugin('fs.example.tasks', plugins, none, restricted)).toEqual({
+      ok: false,
+      reason: 'restricted',
+    });
+  });
+
+  it('a plugin not in the restricted set is unaffected', () => {
+    const restricted = new Set(['fs.example.kiosk']);
+    expect(validateRootPlugin('fs.example.tasks', plugins, none, restricted)).toEqual({
+      ok: true,
+    });
+  });
 });
 
 describe('resolveRootRoutePrefix', () => {
@@ -69,5 +84,10 @@ describe('resolveRootRoutePrefix', () => {
 
   it('returns null when the root plugin is admin-only', () => {
     expect(resolveRootRoutePrefix('fs.sovereign.console', plugins, none)).toBeNull();
+  });
+
+  it('returns null when the root plugin is restricted for the current user (RFC 0065)', () => {
+    const restricted = new Set(['fs.example.tasks']);
+    expect(resolveRootRoutePrefix('fs.example.tasks', plugins, none, restricted)).toBeNull();
   });
 });

@@ -21,6 +21,7 @@ import {
   getDefaultTenant,
   getE2eeProfile,
   getE2eeRecoveryWrapper,
+  getPluginAccessPolicy,
   getPluginConnection,
   getPluginProviderConfig,
   getPluginSecret,
@@ -30,7 +31,10 @@ import {
   getStorageObjectByKey,
   getUserGroupById,
   getUserGroupUsage,
+  grantPluginAccessGroup,
+  grantPluginAccessUser,
   grantUserCapability,
+  hasPluginAccessUserGrant,
   hasUserCapabilityGrant,
   hardDeleteUserE2eeData,
   hardDeleteUserStorageObjects,
@@ -51,15 +55,23 @@ import {
   markPluginSecretUsed,
   listAdminActivity,
   listDisabledPluginIds,
+  listPluginAccessGroups,
+  listPluginAccessPolicies,
+  listPluginAccessUsers,
+  listPluginIdsGrantedToUser,
+  listPluginIdsGrantedToUserGroups,
   listPluginStatus,
   listUserActivity,
   recordActivity,
   removeUserGroupMember,
   revokeE2eeDeviceEnrollment,
+  revokePluginAccessGroup,
+  revokePluginAccessUser,
   revokeUserCapability,
   setAccountPrefs,
   setInstanceConfig,
   setPlatformSetting,
+  setPluginAccessPolicy,
   setPluginEnabled,
   setTenantName,
   sumPluginStorageBytes,
@@ -1005,7 +1017,7 @@ describe('user group helpers (RFC 0065)', () => {
     expect(await listUserGroupMembers(db, 'grp_1')).toEqual([]);
   });
 
-  it('reports no usage today — plugin access policies do not exist yet (Task 2.21)', async () => {
+  it('reports no usage for a group with no plugin access grants', async () => {
     const db = await freshDb();
     await createUserGroup(db, 'grp_1', 'Finance', 'finance', null, 'admin_1');
     expect(await getUserGroupUsage(db, 'grp_1')).toEqual({
@@ -1058,5 +1070,122 @@ describe('user capability grant helpers (RFC 0070)', () => {
 
     expect(await listUserCapabilityGrants(db, 'user_1')).toHaveLength(1);
     expect(await listUserCapabilityGrants(db, 'user_2')).toEqual([]);
+  });
+});
+
+describe('plugin access policy helpers (RFC 0065)', () => {
+  it('returns undefined for a plugin with no explicit row', async () => {
+    const db = await freshDb();
+    expect(await getPluginAccessPolicy(db, 'fs.example.tasks')).toBeUndefined();
+  });
+
+  it('sets and reads back a policy, defaulting enabled to true on first insert', async () => {
+    const db = await freshDb();
+    await setPluginAccessPolicy(db, 'fs.example.tasks', 'selected_users', false);
+
+    const row = await getPluginAccessPolicy(db, 'fs.example.tasks');
+    expect(row).toEqual({
+      pluginId: 'fs.example.tasks',
+      accessPolicy: 'selected_users',
+      selfService: false,
+    });
+  });
+
+  it('updates an existing policy without touching the enabled column', async () => {
+    const db = await freshDb();
+    await setPluginEnabled(db, 'fs.example.tasks', false);
+    await setPluginAccessPolicy(db, 'fs.example.tasks', 'admins', true);
+
+    expect(await listDisabledPluginIds(db)).toEqual(['fs.example.tasks']);
+    expect(await getPluginAccessPolicy(db, 'fs.example.tasks')).toEqual({
+      pluginId: 'fs.example.tasks',
+      accessPolicy: 'admins',
+      selfService: true,
+    });
+  });
+
+  it('lists every explicit policy row in bulk', async () => {
+    const db = await freshDb();
+    await setPluginAccessPolicy(db, 'fs.example.a', 'admins', false);
+    await setPluginAccessPolicy(db, 'fs.example.b', 'disabled', false);
+
+    const rows = await listPluginAccessPolicies(db);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.pluginId).sort()).toEqual(['fs.example.a', 'fs.example.b']);
+  });
+});
+
+describe('plugin access grant helpers (RFC 0065)', () => {
+  it('grants and checks a direct user grant idempotently', async () => {
+    const db = await freshDb();
+    expect(await hasPluginAccessUserGrant(db, 'fs.example.tasks', 'user_1')).toBe(false);
+
+    await grantPluginAccessUser(db, 'fs.example.tasks', 'user_1', 'admin_1');
+    await grantPluginAccessUser(db, 'fs.example.tasks', 'user_1', 'admin_1'); // idempotent
+
+    expect(await hasPluginAccessUserGrant(db, 'fs.example.tasks', 'user_1')).toBe(true);
+    const rows = await listPluginAccessUsers(db, 'fs.example.tasks');
+    expect(rows).toEqual([
+      { userId: 'user_1', grantedByUserId: 'admin_1', grantedAt: expect.any(Number) },
+    ]);
+  });
+
+  it('revokes a direct user grant; revoking a non-grant is a no-op', async () => {
+    const db = await freshDb();
+    await grantPluginAccessUser(db, 'fs.example.tasks', 'user_1', 'admin_1');
+
+    await revokePluginAccessUser(db, 'fs.example.tasks', 'user_1');
+    expect(await hasPluginAccessUserGrant(db, 'fs.example.tasks', 'user_1')).toBe(false);
+
+    await expect(revokePluginAccessUser(db, 'fs.example.tasks', 'user_1')).resolves.toBeUndefined();
+  });
+
+  it('lists every plugin a user has a direct grant for', async () => {
+    const db = await freshDb();
+    await grantPluginAccessUser(db, 'fs.example.a', 'user_1', 'admin_1');
+    await grantPluginAccessUser(db, 'fs.example.b', 'user_1', 'admin_1');
+    await grantPluginAccessUser(db, 'fs.example.a', 'user_2', 'admin_1');
+
+    expect((await listPluginIdsGrantedToUser(db, 'user_1')).sort()).toEqual([
+      'fs.example.a',
+      'fs.example.b',
+    ]);
+    expect(await listPluginIdsGrantedToUser(db, 'user_2')).toEqual(['fs.example.a']);
+  });
+
+  it('grants and revokes a group access, idempotently', async () => {
+    const db = await freshDb();
+    await grantPluginAccessGroup(db, 'fs.example.tasks', 'grp_1', 'admin_1');
+    await grantPluginAccessGroup(db, 'fs.example.tasks', 'grp_1', 'admin_1'); // idempotent
+
+    expect(await listPluginAccessGroups(db, 'fs.example.tasks')).toEqual([
+      { groupId: 'grp_1', grantedByUserId: 'admin_1', grantedAt: expect.any(Number) },
+    ]);
+
+    await revokePluginAccessGroup(db, 'fs.example.tasks', 'grp_1');
+    expect(await listPluginAccessGroups(db, 'fs.example.tasks')).toEqual([]);
+  });
+
+  it('resolves plugin ids granted via any group the user belongs to', async () => {
+    const db = await freshDb();
+    await createUserGroup(db, 'grp_1', 'Finance', 'finance', null, 'admin_1');
+    await addUserGroupMember(db, 'grp_1', 'user_1', 'admin_1');
+    await grantPluginAccessGroup(db, 'fs.example.finance', 'grp_1', 'admin_1');
+
+    expect(await listPluginIdsGrantedToUserGroups(db, 'user_1')).toEqual(['fs.example.finance']);
+    expect(await listPluginIdsGrantedToUserGroups(db, 'user_2')).toEqual([]);
+  });
+
+  it('getUserGroupUsage reports a group referenced by a plugin access policy', async () => {
+    const db = await freshDb();
+    await createUserGroup(db, 'grp_1', 'Finance', 'finance', null, 'admin_1');
+    expect(await getUserGroupUsage(db, 'grp_1')).toEqual({
+      referencedByPluginAccessPolicies: false,
+    });
+
+    await grantPluginAccessGroup(db, 'fs.example.finance', 'grp_1', 'admin_1');
+    expect(await getUserGroupUsage(db, 'grp_1')).toEqual({
+      referencedByPluginAccessPolicies: true,
+    });
   });
 });

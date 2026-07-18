@@ -5,6 +5,7 @@ import { Icon } from '@sovereignfs/ui';
 import { getAccountPrefs } from '@sovereignfs/db';
 import { hasCapability } from '@/src/capabilities';
 import { getPlatformDb } from '@/src/db';
+import { getRestrictedPluginIds } from '@/src/plugin-access-server';
 import { getDisabledPluginIds } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
 import { applySidebarOrder, selectSidebarPlugins } from '@/src/launcher-plugins';
@@ -40,20 +41,31 @@ export default async function PlatformLayout({ children }: { children: ReactNode
     <span aria-hidden="true">{monogram(userLabel)}</span>
   );
 
-  // Non-chrome, enabled plugins for the sidebar middle section and the mobile
-  // Drawer. Disabled plugins (including example plugins hidden by the
-  // SOVEREIGN_EXAMPLES_ENABLED default) are excluded so the sidebar never shows
+  // Non-chrome, enabled, access-policy-allowed (RFC 0065) plugins for the
+  // sidebar middle section and the mobile Drawer. Disabled plugins (including
+  // example plugins hidden by the SOVEREIGN_EXAMPLES_ENABLED default) and
+  // access-policy-restricted plugins are excluded so the sidebar never shows
   // an icon whose route the middleware 404s.
   const pdb = await getPlatformDb();
-  const disabledIds = new Set(await getDisabledPluginIds(pdb));
+  const userId = h.get('x-sovereign-user-id');
   const allPlugins = getInstalledPlugins();
-  const rawPlugins = selectSidebarPlugins(allPlugins, disabledIds);
+  const disabledIds = new Set(await getDisabledPluginIds(pdb));
+  const restrictedIds = new Set(
+    userId
+      ? await getRestrictedPluginIds(
+          pdb,
+          userId,
+          role,
+          allPlugins.map((p) => p.id),
+        )
+      : [],
+  );
+  const rawPlugins = selectSidebarPlugins(allPlugins, disabledIds, restrictedIds);
   // The Launcher is a chrome plugin (hidden from its own tiles) but should
   // always appear as the first icon in the sidebar so users can return home.
   const launcher = allPlugins.find((plugin) => plugin.id === 'fs.sovereign.launcher');
 
   // Apply the authenticated user's saved sidebar ordering and visibility prefs.
-  const userId = h.get('x-sovereign-user-id');
   let plugins = rawPlugins;
   if (userId) {
     const prefs = await getAccountPrefs(pdb, userId);

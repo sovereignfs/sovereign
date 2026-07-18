@@ -84,16 +84,39 @@ async function fetchPaywalledPluginIds(userId: string): Promise<Set<string>> {
 }
 
 /**
- * The configured root plugin's `routePrefix`, fetched from the Node-runtime
- * route (Edge middleware cannot read the DB). Used to serve the root plugin in
- * place at `/` (PLT-14). Returns null on any failure, so `/` falls through to
- * the placeholder home page rather than erroring.
+ * Returns the set of plugin IDs the given user is denied by access policy
+ * (RFC 0065) — independent of the disabled-plugin set. Fails open — if the
+ * fetch errors, nothing is restricted (same conservative approach as disabled
+ * and paywall gating; access policy is an operator convenience layered on top
+ * of, not a replacement for, adminOnly/paywall enforcement).
  */
-async function fetchRootPluginPrefix(): Promise<string | null> {
+async function fetchRestrictedPluginIds(userId: string, role: string): Promise<Set<string>> {
   try {
-    const res = await fetch(`${SELF_URL}/api/admin/root-plugin`, {
-      headers: { authorization: `Bearer ${process.env.SOVEREIGN_ADMIN_KEY ?? ''}` },
-    });
+    const res = await fetch(
+      `${SELF_URL}/api/admin/plugins/access?userId=${encodeURIComponent(userId)}&role=${encodeURIComponent(role)}`,
+      { headers: { authorization: `Bearer ${process.env.SOVEREIGN_ADMIN_KEY ?? ''}` } },
+    );
+    if (!res.ok) return new Set();
+    const { restricted } = (await res.json()) as { restricted: string[] };
+    return new Set(restricted);
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * The `routePrefix` that should serve `/` in place (PLT-14) — the configured
+ * root plugin's prefix when valid for this user, else the Launcher fallback,
+ * else null (RFC 0065; resolved server-side by the Node-runtime route, which
+ * has DB access Edge middleware doesn't). Returns null on any failure, so `/`
+ * falls through to the placeholder home page rather than erroring.
+ */
+async function fetchRootPluginPrefix(userId: string, role: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `${SELF_URL}/api/admin/root-plugin?userId=${encodeURIComponent(userId)}&role=${encodeURIComponent(role)}`,
+      { headers: { authorization: `Bearer ${process.env.SOVEREIGN_ADMIN_KEY ?? ''}` } },
+    );
     if (!res.ok) return null;
     const { routePrefix } = (await res.json()) as { routePrefix: string | null };
     return routePrefix;
@@ -234,9 +257,10 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // Only consult plugin status when the path is actually under a plugin prefix.
   const underPlugin = installedPlugins.some((plugin) => underPrefix(pathname, plugin.routePrefix));
   if (underPlugin) {
-    const [disabledIds, paywallIds] = await Promise.all([
+    const [disabledIds, paywallIds, restrictedIds] = await Promise.all([
       fetchDisabledPluginIds(),
       fetchPaywalledPluginIds(user.id),
+      fetchRestrictedPluginIds(user.id, user.role),
     ]);
     const decision = decidePluginRoute(
       pathname,
@@ -244,6 +268,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       disabledIds,
       user.role,
       paywallIds,
+      restrictedIds,
     );
     if (decision === 'not-found') {
       return applyCsp(withCookies(new NextResponse('Not Found', { status: 404 })));
@@ -319,11 +344,14 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   // Serve the configured root plugin in place at `/` (PLT-14) — the URL stays
   // `/` while the plugin's route renders, and the plugin is still reachable at
-  // its own routePrefix. Falls through to the placeholder home page when no
-  // valid root plugin resolves. `(platform)/page.tsx` keeps a redirect as a
-  // belt-and-suspenders fallback for the rare case this fetch fails.
+  // its own routePrefix. The Node-runtime route already falls back to the
+  // Launcher when the configured root is inaccessible to this user (disabled
+  // or RFC 0065 policy-denied). Falls through to the placeholder home page
+  // (which renders its own "No apps available" state) when neither resolves.
+  // `(platform)/page.tsx` keeps a redirect as a belt-and-suspenders fallback
+  // for the rare case this fetch fails.
   if (pathname === '/') {
-    const rootPrefix = await fetchRootPluginPrefix();
+    const rootPrefix = await fetchRootPluginPrefix(user.id, user.role);
     if (rootPrefix && rootPrefix !== '/') {
       return applyCsp(
         withDevMode(

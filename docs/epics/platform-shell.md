@@ -597,7 +597,7 @@ polish), Task 9.1 (design tokens).
 
 ---
 
-#### 📋 2.21 — Plugin access policy enforcement (RFC 0065)
+#### ✅ 2.21 — Plugin access policy enforcement (RFC 0065)
 
 **Goal:** Enforce platform-level plugin availability so installed plugins are visible and
 openable only to users allowed by the configured access policy.
@@ -607,27 +607,33 @@ openable only to users allowed by the configured access policy.
 - Extend plugin status/configuration persistence with an `access_policy` value:
   `everyone`, `admins`, `selected_users`, `selected_groups`, or `disabled`, plus a
   `self_service` boolean (default `false`, meaningful only for the two `selected_*` policies).
-- Add direct user and group grant tables for plugin access, scoped by tenant and plugin.
-- Migrate existing enabled plugins to `everyone` and preserve disabled plugins as effective
-  `disabled`. Plugins activated after this ships (Task 3.28) default to `access_policy =
-disabled` instead — this is the "configurable default availability scope" requirement,
-  expressed as choosing a policy at activation time rather than a separate default-state flag.
-- Add a centralized `canOpenPlugin` resolver used by runtime routing, shell navigation,
-  Launcher, and authenticated plugin API delegation. Reuse the existing `plugin_status`
-  enabled/disabled cache-invalidation mechanism (`runtime/src/plugin-status.ts`) for the new
-  `access_policy`/grant tables rather than introducing a second invalidation path.
-- Filter Launcher, sidebar, mobile navigation, `/api/plugins`, and related plugin discovery
-  surfaces by effective access.
-- Return 404 for direct plugin app routes when the current user is not allowed to open the
-  plugin.
-- Treat `disabled` as the strongest state: no user can open the app even if they are an
-  admin/owner or have a direct/group grant.
-- Fall back from an inaccessible root plugin to Launcher, and show a platform-owned "No apps
-  available" state when nothing is openable.
-- Support self-service grant/revoke: a user with the RFC 0070 `plugins:self-manage` capability
-  may add/remove their own `plugin_access_users` row for a plugin with `self_service = true`,
-  through the same resolver and grant tables an admin uses (see Task 15.3 for the user-facing
-  surface).
+  Both columns default to `everyone`/`false` so every existing `plugin_status` row (and every
+  plugin with no row at all) is unaffected until an admin explicitly sets a policy.
+- Add `plugin_access_users`/`plugin_access_groups` grant tables, scoped by tenant and plugin.
+- A pure `canOpenPlugin` resolver (`runtime/src/plugin-access.ts`) plus a Node-runtime bulk
+  resolver (`runtime/src/plugin-access-server.ts`, `getRestrictedPluginIds`/`canUserOpenPlugin`)
+  used by runtime routing, shell navigation, Launcher, sidebar, and root-plugin selection. New
+  Node-runtime endpoint `GET /api/admin/plugins/access?userId=&role=` lets Edge middleware
+  consult it (mirrors `/api/admin/plugins/disabled` and `/api/admin/entitlements`) since Edge
+  cannot open the DB directly. Chrome plugins (Launcher/Account/Console) are exempt from access
+  policy entirely — always openable when installed and enabled.
+- Filter Launcher, sidebar, mobile navigation, and `/api/plugins` by effective access
+  (`restrictedIds`, independent of and unioned with the existing disabled-plugin set).
+- `decidePluginRoute` returns `'not-found'` (404) for a policy-denied plugin route — never
+  `'forbidden'` (403), so denial doesn't disclose the plugin's existence; this wins over the
+  adminOnly manifest-flag check, which is an independent, static gate.
+- `disabled` is the strongest state — denies even an admin/owner or a direct/group grant.
+- Root plugin fallback: `GET /api/admin/root-plugin` (and the Node-runtime `(platform)/page.tsx`
+  belt-and-suspenders fallback) resolve the configured root, fall back to the Launcher when it's
+  disabled or policy-denied for the current user, and render a "No apps available" state when
+  neither resolves.
+- Self-service grant/revoke mechanism: `POST`/`DELETE /api/plugins/[id]/self-service`, gated by
+  the RFC 0070 `plugins:self-manage` capability and the plugin's `self_service` flag, using the
+  same `plugin_access_users` grant table an admin uses. **Scope note:** only `selected_users`
+  self-service is implemented — `selected_groups` self-service would require a "self-joinable
+  group" concept RFC 0065 doesn't fully specify and this task doesn't add; a `selected_groups`
+  plugin's `self_service` flag has no effect until that concept lands. Task 15.3 builds the
+  Launcher-facing directory UI on top of this mechanism.
 
 **Dependencies:** Task 1.15 (user groups), Task 1.16 (per-user capability grants, RFC 0070),
 Task 15.1 (Launcher plugin), Task 2.13 (sidebar customization). This task's schema/migration
@@ -639,13 +645,15 @@ prerequisite for Task 3.28 and Task 13.7 — it ships first, they build on it.
 **Review checklist:**
 
 - Each policy grants and denies the expected users in resolver tests.
-- Unauthorized direct plugin app routes return 404.
+- Unauthorized direct plugin app routes return 404, never 403.
 - Launcher, sidebar, mobile navigation, and plugin discovery APIs hide inaccessible plugins.
-- Admins/owners can manage an inaccessible plugin from Console without automatically opening
-  it.
 - Root plugin fallback does not leak inaccessible plugin names.
-- A user with `plugins:self-manage` can self-grant/self-revoke a `self_service`-enabled plugin
-  they're otherwise eligible for; a user without the capability sees no such affordance.
+- A user with `plugins:self-manage` can self-grant/self-revoke a `selected_users` +
+  `self_service`-enabled plugin they're otherwise eligible for; a user without the capability
+  sees no such affordance and a direct API call is rejected with 403.
+- Verified end-to-end in a live browser: `selected_users` grant/revoke, `disabled` winning over
+  an existing grant, root-plugin fallback to Launcher, and the self-service grant/revoke/denied
+  round-trip, each producing the correct activity log entry.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
 ---

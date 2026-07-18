@@ -57,6 +57,18 @@ describe('selectLauncherPlugins', () => {
     const chromeOnly = plugins.filter((p) => p.id.startsWith('fs.sovereign.'));
     expect(selectLauncherPlugins(chromeOnly, none, 'platform:admin')).toEqual([]);
   });
+
+  it('excludes access-policy-restricted plugins (RFC 0065)', () => {
+    const restricted = new Set(['fs.example.tasks']);
+    const ids = selectLauncherPlugins(plugins, none, 'platform:admin', restricted).map((p) => p.id);
+    expect(ids).toEqual(['fs.example.audit']);
+  });
+
+  it('restriction applies even to an admin', () => {
+    const restricted = new Set(['fs.example.audit']);
+    const ids = selectLauncherPlugins(plugins, none, 'platform:admin', restricted).map((p) => p.id);
+    expect(ids).toEqual(['fs.example.tasks']);
+  });
 });
 
 describe('selectSidebarPlugins', () => {
@@ -74,6 +86,12 @@ describe('selectSidebarPlugins', () => {
     const reversed = [...plugins].reverse();
     const ids = selectSidebarPlugins(reversed, none).map((p) => p.id);
     expect(ids).toEqual(['fs.example.audit', 'fs.example.tasks']);
+  });
+
+  it('excludes access-policy-restricted plugins (RFC 0065)', () => {
+    const restricted = new Set(['fs.example.audit']);
+    const ids = selectSidebarPlugins(plugins, none, restricted).map((p) => p.id);
+    expect(ids).toEqual(['fs.example.tasks']);
   });
 });
 

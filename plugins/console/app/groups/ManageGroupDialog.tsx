@@ -184,7 +184,19 @@ export function ManageGroupDialog({ group }: { group: GroupSummary }) {
 
   return (
     <>
-      <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(true)}>
+      {/* alignSelf: this button is a direct child of the Groups list's
+          `.card` (a flex column with the shared default `align-items:
+          stretch`), which would otherwise stretch it to the card's full
+          width — `.card` is also used for plain text tiles elsewhere
+          (Console home, Health), so the fix is scoped to this button
+          rather than changing that shared class. */}
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={() => setOpen(true)}
+        style={{ alignSelf: 'flex-start', marginTop: 'auto' }}
+      >
         Manage
       </Button>
 
@@ -223,31 +235,33 @@ export function ManageGroupDialog({ group }: { group: GroupSummary }) {
             {!confirmingDelete ? (
               <Button
                 type="button"
-                variant="secondary"
+                variant="destructive"
                 size="sm"
                 onClick={() => setConfirmingDelete(true)}
               >
                 Delete group
               </Button>
             ) : (
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sv-space-3)' }}>
                 <p className={styles.errorText}>
                   Deleting removes the group and its membership. This cannot be undone. If the group
                   is used by a plugin access policy, deletion is blocked until you confirm again.
                 </p>
-                <form action={deleteGroupAction} style={{ display: 'inline' }}>
-                  <input type="hidden" name="id" value={group.id} />
-                  <Button type="submit" variant="secondary" size="sm">
-                    Confirm delete
-                  </Button>
-                </form>
-                <form action={deleteGroupAction} style={{ display: 'inline', marginLeft: 8 }}>
-                  <input type="hidden" name="id" value={group.id} />
-                  <input type="hidden" name="force" value="true" />
-                  <Button type="submit" variant="secondary" size="sm">
-                    Delete anyway (force)
-                  </Button>
-                </form>
+                <div style={{ display: 'flex', gap: 'var(--sv-space-2)' }}>
+                  <form action={deleteGroupAction}>
+                    <input type="hidden" name="id" value={group.id} />
+                    <Button type="submit" variant="destructive" size="sm">
+                      Confirm delete
+                    </Button>
+                  </form>
+                  <form action={deleteGroupAction}>
+                    <input type="hidden" name="id" value={group.id} />
+                    <input type="hidden" name="force" value="true" />
+                    <Button type="submit" variant="destructive" size="sm">
+                      Delete anyway (force)
+                    </Button>
+                  </form>
+                </div>
               </div>
             )}
           </section>

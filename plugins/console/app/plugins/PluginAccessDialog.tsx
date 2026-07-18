@@ -362,7 +362,12 @@ export function PluginAccessDialog({
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
-        size="md"
+        // Dialog panels are a fixed box regardless of content (by design —
+        // see Dialog.module.css), so "md" left most policies looking like a
+        // near-empty skeleton (just a policy select). "sm" fits the common
+        // case; the richer selected_users/selected_groups content scrolls
+        // internally rather than clipping, which Dialog already supports.
+        size="sm"
         title={`Access for "${pluginName}"`}
       >
         <div className={styles.settingsSections}>

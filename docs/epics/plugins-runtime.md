@@ -831,7 +831,7 @@ configuration gap.
 
 ---
 
-#### 📋 3.28 — Plugin catalog and install-time activation model (RFC 0065)
+#### ✅ 3.28 — Plugin catalog and install-time activation model (RFC 0065)
 
 **Goal:** Split "which plugins are bundled in the image" from "which plugins an admin has
 turned on for this instance," so an admin can activate any cataloged plugin at runtime without
@@ -862,18 +862,35 @@ as safe only after that backfill exists.
 
 - No change to the build pipeline: `sovereign.plugins.json` continues to declare the full
   catalog, and every declared plugin is cloned and composed at build time exactly as today.
-- Add a runtime "activate" action (Console-triggered, Task 13.8) that, for a plugin already
-  bundled in the image but with no `plugin_status` row: runs the plugin's pending migrations
-  (the same runner `sv plugin migrate` uses today) and creates its `plugin_status` row with
-  `access_policy = disabled`. No filesystem write, no restart.
-- Add a runtime-queryable "catalog" list: every plugin present in the generated registry,
-  annotated with whether it currently has a `plugin_status` row (active) or not (cataloged but
-  inactive).
-- Ensure a failed migration during activation does not leave a partial `plugin_status` row —
-  activation is all-or-nothing.
-- Document that this deliberately does not support installing a plugin that isn't already
-  bundled in the image at build time — see RFC 0065's "Dynamic runtime install (deferred)" for
-  why, and for the future-work placeholder that direction is left as.
+- **One-time boot backfill** (`runtime/src/plugin-catalog.ts`'s `backfillPluginCatalogOnce`,
+  called from `instrumentation.ts` after migrations/compat checks, gated by a
+  `plugin_catalog_backfilled` platform setting so it runs exactly once per instance): creates an
+  explicit `access_policy = 'everyone'` row for every plugin in the registry that had no row
+  yet. **This is the actual fix for the epic's own "ordering note"** — Task 2.21 added the
+  `access_policy` column but did not backfill data, so most already-shipped plugins still had no
+  row (relying on the pre-existing "absence = enabled" convention). Without this backfill, the
+  resolver default below would have made every existing plugin appear inactive/inaccessible.
+- **Resolver default flipped** (`runtime/src/plugin-access-server.ts`'s `resolveAccessPolicy`):
+  a genuinely absent `plugin_status` row now resolves to `disabled`, not `everyone`. This only
+  became safe once the backfill above guarantees "absent row" means "cataloged but never
+  activated" rather than "pre-existing plugin using the old default." Without this flip, a
+  brand-new never-activated plugin would be fully open to everyone before an admin decided
+  anything — exactly what activation exists to prevent. Verified live: deleting a plugin's
+  `plugin_status` row makes it immediately inaccessible (404) rather than open.
+- A runtime "activate" action (`activatePlugin`, `POST /api/admin/plugins/[id]/activate`,
+  Console-triggered — Task 13.8) that creates a `plugin_status` row with `access_policy =
+disabled` for a plugin with none yet. **Simplified from the original deliverable text**:
+  migrations are not re-run here — `runtime/src/plugin-migrations.ts`'s
+  `runAllPluginMigrations()` already runs unconditionally for every registry plugin at every
+  boot, independent of activation state, so a plugin's migrations are already current by the
+  time an admin can activate it. No filesystem write, no restart.
+- A runtime-queryable catalog list (`getPluginCatalog`, `GET /api/admin/plugins/catalog`):
+  every non-chrome plugin present in the registry, annotated active (has a row) or inactive.
+- Activation is naturally all-or-nothing and idempotent: `createPluginStatusRowIfAbsent` uses
+  `ON CONFLICT DO NOTHING`, so a repeated call is a silent no-op rather than a partial write —
+  there's no multi-step sequence (like a migration run) left to fail halfway through.
+- Documented (RFC 0065 "Dynamic runtime install (deferred)") that this does not support
+  installing a plugin not already bundled in the image at build time.
 
 **Dependencies:** Task 3.3 (install script), Task 3.4 (`sv` CLI, plugin migrate), Task 2.21
 (plugin access policy — the `access_policy` default this sets).
@@ -882,11 +899,17 @@ as safe only after that backfill exists.
 
 **Review checklist:**
 
-- Activating a cataloged plugin creates its `plugin_status` row with `access_policy = disabled`
-  and runs its migrations, with no rebuild or restart.
-- A plugin already active is not re-migrated or reset by a repeated activation call.
-- A migration failure during activation leaves no partial `plugin_status` row.
+- Activating a cataloged plugin creates its `plugin_status` row with `access_policy = disabled`,
+  with no rebuild or restart.
+- A plugin already active is not reset by a repeated activation call (`activated: false,
+reason: 'already-active'`).
+- The boot backfill runs exactly once per instance and never touches an existing row.
+- A plugin with no `plugin_status` row is inaccessible (404), not open — verified live by
+  deleting an existing plugin's row and confirming its route 404s until reactivated.
 - The catalog list correctly distinguishes active from cataloged-but-inactive plugins.
+- Verified end-to-end in a live browser: catalog listing, activating a deliberately-deactivated
+  plugin (still closed under the `disabled` default policy until an admin sets one), idempotent
+  re-activation, and the `plugin.activated` activity log entry.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
 ## Related RFCs

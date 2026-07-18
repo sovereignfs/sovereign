@@ -332,6 +332,35 @@ export async function setPluginAccessPolicy(
     });
 }
 
+/**
+ * Create a `plugin_status` row only if none exists yet — unlike
+ * `setPluginAccessPolicy`, never touches an already-existing row's values.
+ * Used for the one-time catalog backfill and plugin activation (RFC 0065
+ * Task 3.28), where "a row already exists" must be a silent no-op, not an
+ * overwrite. Returns whether a row was actually inserted.
+ */
+export async function createPluginStatusRowIfAbsent(
+  pdb: PlatformDb,
+  pluginId: string,
+  fields: { enabled: boolean; accessPolicy: PluginAccessPolicyValue; selfService: boolean },
+): Promise<boolean> {
+  const now = Math.floor(Date.now() / 1000);
+  if (pdb.dialect === 'sqlite') {
+    const result = pdb.db
+      .insert(sqlite.pluginStatus)
+      .values({ pluginId, tenantId: DEFAULT_TENANT_ID, ...fields, updatedAt: now })
+      .onConflictDoNothing({ target: sqlite.pluginStatus.pluginId })
+      .run();
+    return result.changes > 0;
+  }
+  const result = await pdb.db
+    .insert(pg.pluginStatus)
+    .values({ pluginId, tenantId: DEFAULT_TENANT_ID, ...fields, updatedAt: now })
+    .onConflictDoNothing({ target: pg.pluginStatus.pluginId })
+    .returning({ pluginId: pg.pluginStatus.pluginId });
+  return result.length > 0;
+}
+
 // ─── Plugin access grants (RFC 0065) ─────────────────────────────────────────
 
 export interface PluginAccessGrantRow {

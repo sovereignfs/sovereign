@@ -9,6 +9,7 @@ import {
   createE2eeProfile,
   createPluginConnection,
   createPluginSecret,
+  createPluginStatusRowIfAbsent,
   createStorageObject,
   createUserGroup,
   deletePluginSecret,
@@ -1112,6 +1113,61 @@ describe('plugin access policy helpers (RFC 0065)', () => {
     const rows = await listPluginAccessPolicies(db);
     expect(rows).toHaveLength(2);
     expect(rows.map((r) => r.pluginId).sort()).toEqual(['fs.example.a', 'fs.example.b']);
+  });
+});
+
+describe('createPluginStatusRowIfAbsent (RFC 0065 Task 3.28)', () => {
+  it('creates a row and returns true when none exists', async () => {
+    const db = await freshDb();
+    const inserted = await createPluginStatusRowIfAbsent(db, 'fs.example.tasks', {
+      enabled: true,
+      accessPolicy: 'disabled',
+      selfService: false,
+    });
+    expect(inserted).toBe(true);
+    expect(await getPluginAccessPolicy(db, 'fs.example.tasks')).toEqual({
+      pluginId: 'fs.example.tasks',
+      accessPolicy: 'disabled',
+      selfService: false,
+    });
+  });
+
+  it('returns false and never touches an existing row', async () => {
+    const db = await freshDb();
+    await setPluginAccessPolicy(db, 'fs.example.tasks', 'admins', true);
+
+    const inserted = await createPluginStatusRowIfAbsent(db, 'fs.example.tasks', {
+      enabled: true,
+      accessPolicy: 'disabled',
+      selfService: false,
+    });
+    expect(inserted).toBe(false);
+    // Existing row is untouched — still 'admins'/true, not overwritten to 'disabled'/false.
+    expect(await getPluginAccessPolicy(db, 'fs.example.tasks')).toEqual({
+      pluginId: 'fs.example.tasks',
+      accessPolicy: 'admins',
+      selfService: true,
+    });
+  });
+
+  it('is idempotent across repeated calls', async () => {
+    const db = await freshDb();
+    await createPluginStatusRowIfAbsent(db, 'fs.example.tasks', {
+      enabled: true,
+      accessPolicy: 'everyone',
+      selfService: false,
+    });
+    const second = await createPluginStatusRowIfAbsent(db, 'fs.example.tasks', {
+      enabled: false,
+      accessPolicy: 'disabled',
+      selfService: true,
+    });
+    expect(second).toBe(false);
+    expect(await getPluginAccessPolicy(db, 'fs.example.tasks')).toEqual({
+      pluginId: 'fs.example.tasks',
+      accessPolicy: 'everyone',
+      selfService: false,
+    });
   });
 });
 

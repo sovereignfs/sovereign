@@ -7,6 +7,7 @@ export {
   bootstrapPlatformDb,
   countUnreadNotifications,
   createConsentGrant,
+  createPluginStatusRowIfAbsent,
   createUserGroup,
   deleteUserGroup,
   dismissNotification,

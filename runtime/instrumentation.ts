@@ -26,6 +26,15 @@ export async function register(): Promise<void> {
     const { checkBootCompatibility } = await import('./src/boot-compat');
     await checkBootCompatibility();
 
+    // One-time catalog backfill (RFC 0065 Task 3.28) — must run after
+    // migrations/compat above and before any request is served, so every
+    // already-shipped plugin gets an explicit plugin_status row exactly once,
+    // never on later boots (see plugin-catalog.ts for why this matters).
+    const { getPlatformDb } = await import('@sovereignfs/db');
+    const { getInstalledPlugins } = await import('./src/registry');
+    const { backfillPluginCatalogOnce } = await import('./src/plugin-catalog');
+    await backfillPluginCatalogOnce(await getPlatformDb(), getInstalledPlugins());
+
     const transport = process.env.NOTIFICATION_TRANSPORT ?? 'polling';
     const redisUrl = process.env.REDIS_URL;
     const { initBroker, closeBroker } = await import('./src/notification-broker');

@@ -52,7 +52,14 @@ export default async function GroupsPage() {
       {groups.length === 0 ? (
         <p className={styles.emptyTableMsg}>No groups yet. Create one to get started.</p>
       ) : (
-        <ul className={styles.cards}>
+        <ul
+          className={styles.cards}
+          // A capped max track width (instead of the shared 1fr) so a
+          // handful of groups don't stretch to fill the entire row width —
+          // unlike Console home/Health's `.cards` usage, this list is
+          // typically short (a handful of groups per instance).
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 320px))' }}
+        >
           {groups.map((group) => (
             <li key={group.id} className={styles.card}>
               <span className={styles.cardTitle}>{group.name}</span>

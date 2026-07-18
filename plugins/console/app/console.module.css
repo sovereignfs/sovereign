@@ -461,9 +461,25 @@
 .inviteForm {
   display: flex;
   flex-direction: column;
+  /* flex-start, not the flex-column default (stretch) — otherwise the
+     submit button (a content-sized inline-flex control) stretches to the
+     form's full width. FormField sets its own explicit width: 100% (see its
+     module CSS) specifically so fields stay full-width regardless of this.
+     This form itself also declares an explicit width (rather than relying on
+     stretch) so it isn't shrunk to fit-content when nested inside another
+     flex-start container (e.g. .settingsSection). */
+  align-items: flex-start;
+  width: 100%;
   gap: var(--sv-space-5);
   max-width: 440px;
   margin-top: var(--sv-space-4);
+}
+
+/* The error banner is a direct child of .inviteForm — still needs the
+   form's full width, not its own shrink-to-content width, now that
+   align-items is flex-start. */
+.inviteForm > .errorText {
+  width: 100%;
 }
 
 .fieldGroup {
@@ -581,6 +597,13 @@
 .settingsSection {
   display: flex;
   flex-direction: column;
+  /* flex-start, not the flex-column default (stretch) — otherwise a direct
+     Button child (e.g. "Delete group") stretches to the section's full
+     width instead of sizing to its own content. Direct children that need
+     the section's full width (text blocks, the multi-button confirm row)
+     declare their own `width: 100%` inline rather than relying on stretch. */
+  align-items: flex-start;
+  width: 100%;
   gap: var(--sv-space-4);
   padding-bottom: var(--sv-space-6);
   border-bottom: 1px solid var(--sv-color-border);

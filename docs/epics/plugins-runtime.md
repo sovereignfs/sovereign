@@ -914,7 +914,7 @@ reason: 'already-active'`).
 
 ---
 
-#### 📋 3.29 — Private plugin repositories via access token
+#### ✅ 3.29 — Private plugin repositories via access token
 
 **Goal:** Let an operator declare a plugin hosted in a **private** git repository (their own
 custom/proprietary plugin, or a private fork of a community plugin) in `sovereign.plugins.json`,

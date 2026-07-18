@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.37.0 · **Last updated:** 2026-07-18
+**Version:** 0.38.0 · **Last updated:** 2026-07-19
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](epics/).
 
@@ -227,7 +227,7 @@ once prioritised.
 | —       | Plugin external dependency resolution (RFC 0057)                                                      | 📋     | [3.25](epics/plugins-runtime.md#-325--plugin-external-dependency-resolution-rfc-0057)                                       |
 | —       | Plugin mailer permission and SDK email surface (RFC 0062)                                             | 📋     | [3.26](epics/plugins-runtime.md#-326--plugin-mailer-permission-and-sdk-email-surface-rfc-0062)                              |
 | —       | Admin-managed external provider configuration                                                         | ✅     | [3.27](epics/plugins-runtime.md#-327--admin-managed-external-provider-configuration)                                        |
-| —       | Private plugin repositories via access token                                                          | 📋     | [3.29](epics/plugins-runtime.md#-329--private-plugin-repositories-via-access-token)                                         |
+| —       | Private plugin repositories via access token                                                          | ✅     | [3.29](epics/plugins-runtime.md#-329--private-plugin-repositories-via-access-token)                                         |
 | —       | Middleware internal fetch caching review                                                              | 📋     | [2.18](epics/platform-shell.md#-218--middleware-internal-fetch-caching-review)                                              |
 | —       | Typecheck performance and project references                                                          | 📋     | [0.14](epics/infrastructure.md#-014--typecheck-performance-and-project-references)                                          |
 | —       | Operational consistency checks                                                                        | 📋     | [0.15](epics/infrastructure.md#-015--operational-consistency-checks)                                                        |

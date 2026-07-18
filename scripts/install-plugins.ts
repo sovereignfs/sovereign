@@ -14,6 +14,13 @@
  *         "repository": "https://github.com/org/examples",
  *         "ref": "<commit-sha-or-tag>",
  *         "subdir": "examples/example-basic"
+ *       },
+ *       // private repo, authenticated via a personal access token held in an
+ *       // env var — the token name is committed, never the token itself:
+ *       {
+ *         "id": "com.acme.crm",
+ *         "repository": "https://github.com/acme/sovereign-crm",
+ *         "tokenEnv": "ACME_CRM_PLUGIN_TOKEN"
  *       }
  *     ]
  *   }
@@ -26,6 +33,13 @@
  *   - `ref` and/or `subdir` present → clone once per unique repo+ref into a temp
  *     dir at the pinned ref, then copy `subdir` (or the whole tree minus `.git`)
  *     into `plugins/<id>`. Entries sharing a repo+ref are cloned a single time.
+ *   - `tokenEnv` (either shape above) → the named env var's value authenticates
+ *     the clone via a short-lived git credential-store file (mode 0600, deleted
+ *     immediately after), never as an embedded URL passed on argv. Only needed
+ *     the first time a private plugin is cloned — once `plugins/<id>/` exists
+ *     on disk it's skipped on every later run, so ordinary version upgrades
+ *     (`git pull` in the same checkout, then rebuild) never need the token
+ *     again. Requires an `https://` repository URL.
  *
  * Platform plugins (console/launcher/account) live in this repo and are not
  * listed here; cloned plugins are gitignored (they have their own repositories).
@@ -33,7 +47,7 @@
  * See: docs/roadmap.md — Task 0.5.00 and Task 12.2 (example plugin extraction).
  */
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -45,6 +59,14 @@ export interface PluginEntry {
   ref?: string;
   /** Optional path within the repository to copy into `plugins/<id>` (monorepo sources). */
   subdir?: string;
+  /**
+   * Optional name of an environment variable holding a personal access token
+   * for cloning a private repository. The token itself never lives here —
+   * only the variable name — so this file stays safe to commit. Requires an
+   * `https://` `repository` URL; SSH URLs authenticate via the invoking
+   * shell's own SSH key/agent instead.
+   */
+  tokenEnv?: string;
 }
 
 export interface PluginsConfig {
@@ -77,7 +99,7 @@ export function parsePluginsConfig(raw: string): PluginsConfig {
       if (typeof entry !== 'object' || entry === null) {
         throw new Error(`plugins[${String(i)}] must be an object.`);
       }
-      const { id, repository, ref, subdir } = entry as Record<string, unknown>;
+      const { id, repository, ref, subdir, tokenEnv } = entry as Record<string, unknown>;
       if (typeof id !== 'string' || id.length === 0) {
         throw new Error(`plugins[${String(i)}].id must be a non-empty string.`);
       }
@@ -90,6 +112,14 @@ export function parsePluginsConfig(raw: string): PluginsConfig {
       if (subdir !== undefined && (typeof subdir !== 'string' || subdir.length === 0)) {
         throw new Error(`plugins[${String(i)}].subdir must be a non-empty string when present.`);
       }
+      if (tokenEnv !== undefined && (typeof tokenEnv !== 'string' || tokenEnv.length === 0)) {
+        throw new Error(`plugins[${String(i)}].tokenEnv must be a non-empty string when present.`);
+      }
+      if (typeof tokenEnv === 'string' && !repository.startsWith('https://')) {
+        throw new Error(
+          `plugins[${String(i)}].tokenEnv requires an "https://" repository URL (got "${repository}").`,
+        );
+      }
       if (seen.has(id)) {
         throw new Error(`Duplicate plugin id "${id}" in sovereign.plugins.json.`);
       }
@@ -97,6 +127,7 @@ export function parsePluginsConfig(raw: string): PluginsConfig {
       const parsed: PluginEntry = { id, repository };
       if (ref !== undefined) parsed.ref = ref;
       if (subdir !== undefined) parsed.subdir = subdir;
+      if (tokenEnv !== undefined) parsed.tokenEnv = tokenEnv as string;
       return parsed;
     }),
   };
@@ -121,6 +152,7 @@ export function planInstall(
 export interface CloneGroup {
   repository: string;
   ref?: string;
+  tokenEnv?: string;
   entries: PluginEntry[];
 }
 
@@ -135,8 +167,19 @@ export function groupClones(entries: PluginEntry[]): CloneGroup[] {
     const key = JSON.stringify([entry.repository, entry.ref ?? null]);
     let group = groups.get(key);
     if (!group) {
-      group = { repository: entry.repository, ref: entry.ref, entries: [] };
+      group = {
+        repository: entry.repository,
+        ref: entry.ref,
+        tokenEnv: entry.tokenEnv,
+        entries: [],
+      };
       groups.set(key, group);
+    } else if (entry.tokenEnv !== group.tokenEnv) {
+      throw new Error(
+        `plugins sharing repository "${entry.repository}"${entry.ref ? ` @ ${entry.ref}` : ''} ` +
+          `declare different "tokenEnv" values (${String(group.tokenEnv)} vs ${String(entry.tokenEnv)}) — ` +
+          'they are cloned once and must agree.',
+      );
     }
     group.entries.push(entry);
   }
@@ -148,18 +191,88 @@ function isLegacyWholeRepo(entry: PluginEntry): boolean {
   return entry.ref === undefined && entry.subdir === undefined;
 }
 
-/** Shallow-clone a repository at an optional ref into `dest`. */
-function cloneInto(repository: string, ref: string | undefined, dest: string): void {
-  if (ref === undefined) {
-    execFileSync('git', ['clone', '--depth', '1', repository, dest], { stdio: 'inherit' });
-    return;
+/**
+ * Read the token named by `tokenEnv` from `env`. Throws a clear error if the
+ * variable is unset or empty rather than letting git fail opaquely later.
+ * Returns `undefined` when `tokenEnv` itself is undefined (no auth needed).
+ */
+export function resolveToken(
+  tokenEnv: string | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+): string | undefined {
+  if (tokenEnv === undefined) return undefined;
+  const token = env[tokenEnv];
+  if (!token) {
+    throw new Error(
+      `Environment variable "${tokenEnv}" is not set (or empty) — required to clone this ` +
+        'private plugin repository. Set it to a personal access token before running install-plugins.',
+    );
   }
-  // Fetch exactly the pinned ref (works for a SHA, tag, or branch on GitHub)
-  // without downloading unrelated history.
-  execFileSync('git', ['init', '--quiet', dest], { stdio: 'inherit' });
-  execFileSync('git', ['-C', dest, 'remote', 'add', 'origin', repository], { stdio: 'inherit' });
-  execFileSync('git', ['-C', dest, 'fetch', '--depth', '1', 'origin', ref], { stdio: 'inherit' });
-  execFileSync('git', ['-C', dest, 'checkout', '--quiet', 'FETCH_HEAD'], { stdio: 'inherit' });
+  return token;
+}
+
+/**
+ * Write a short-lived git credential-store file (mode 0600) authenticating
+ * `repository` as `token`, run `fn` with the `-c` args that point git at it,
+ * then delete the file. Keeps the token out of process argv (visible via
+ * `ps`) and out of any logged URL — only ever written to a private temp file.
+ */
+export function withGitCredentials<T>(
+  repository: string,
+  token: string | undefined,
+  fn: (credArgs: string[]) => T,
+): T {
+  if (token === undefined) return fn([]);
+
+  const credDir = mkdtempSync(join(tmpdir(), 'sovereign-plugin-cred-'));
+  const credFile = join(credDir, 'credentials');
+  const credUrl = new URL(repository);
+  credUrl.username = 'x-access-token';
+  credUrl.password = token;
+  writeFileSync(credFile, `${credUrl.toString()}\n`, { mode: 0o600 });
+  try {
+    // Clear any ambient credential.helper first so only our scoped file is
+    // consulted, then point git at it.
+    return fn(['-c', 'credential.helper=', '-c', `credential.helper=store --file=${credFile}`]);
+  } finally {
+    rmSync(credDir, { recursive: true, force: true });
+  }
+}
+
+/** Shallow-clone a repository at an optional ref into `dest`. */
+function cloneInto(
+  repository: string,
+  ref: string | undefined,
+  dest: string,
+  token?: string,
+): void {
+  withGitCredentials(repository, token, (credArgs) => {
+    // Never let a failed/prompt-requiring auth hang the process waiting for
+    // interactive input.
+    const env = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
+    if (ref === undefined) {
+      execFileSync('git', [...credArgs, 'clone', '--depth', '1', repository, dest], {
+        stdio: 'inherit',
+        env,
+      });
+      return;
+    }
+    // Fetch exactly the pinned ref (works for a SHA, tag, or branch on GitHub)
+    // without downloading unrelated history.
+    execFileSync('git', ['init', '--quiet', dest], { stdio: 'inherit', env });
+    execFileSync('git', ['-C', dest, 'remote', 'add', 'origin', repository], {
+      stdio: 'inherit',
+      env,
+    });
+    execFileSync('git', [...credArgs, '-C', dest, 'fetch', '--depth', '1', 'origin', ref], {
+      stdio: 'inherit',
+      env,
+    });
+    execFileSync('git', ['-C', dest, 'checkout', '--quiet', 'FETCH_HEAD'], {
+      stdio: 'inherit',
+      env,
+    });
+  });
 }
 
 /** Copy a checked-out clone (optionally a subdir) into `dest`, dropping `.git`. */
@@ -221,11 +334,11 @@ function main(): void {
       const dest = join(PLUGINS_DIR, entry.id);
       console.log(`[install-plugins] cloning ${entry.id} from ${entry.repository} …`);
       try {
-        cloneInto(entry.repository, undefined, dest);
-      } catch {
+        const token = resolveToken(entry.tokenEnv);
+        cloneInto(entry.repository, undefined, dest, token);
+      } catch (error) {
         console.error(
-          `[install-plugins] Failed to clone ${entry.repository}. ` +
-            'Check the URL is reachable and you have access.',
+          `[install-plugins] Failed to clone ${entry.repository}: ${(error as Error).message}`,
         );
         process.exit(1);
       }
@@ -242,7 +355,8 @@ function main(): void {
     );
     const tmp = mkdtempSync(join(tmpdir(), 'sovereign-plugins-'));
     try {
-      cloneInto(group.repository, group.ref, tmp);
+      const token = resolveToken(group.tokenEnv);
+      cloneInto(group.repository, group.ref, tmp, token);
       for (const entry of group.entries) {
         copyCheckout(tmp, entry.subdir, join(PLUGINS_DIR, entry.id));
         cloned += 1;
@@ -250,7 +364,7 @@ function main(): void {
     } catch (error) {
       console.error(
         `[install-plugins] Failed to install from ${group.repository}: ${(error as Error).message}. ` +
-          'Check the URL, ref, and subdir are correct and reachable.',
+          'Check the URL, ref, subdir, and (if private) tokenEnv are correct.',
       );
       process.exit(1);
     } finally {

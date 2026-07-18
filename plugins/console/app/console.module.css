@@ -359,6 +359,62 @@
   white-space: nowrap;
 }
 
+/* ── Plugin filter bar (RFC 0065 Task 13.9) ────────────────────────────── */
+
+.pluginFilterBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sv-space-3);
+  margin-bottom: var(--sv-space-4);
+}
+
+.pluginFilterBar .activitySearchBar {
+  flex: 1;
+  min-width: 220px;
+  margin-bottom: 0;
+}
+
+.pluginStatusPills {
+  display: flex;
+  gap: var(--sv-space-1);
+  flex-wrap: wrap;
+}
+
+.pluginStatusPill,
+.pluginStatusPillActive {
+  padding: var(--sv-space-1) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-full);
+  background: transparent;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pluginStatusPill:hover {
+  background: var(--sv-color-surface-sunken);
+  color: var(--sv-color-text-primary);
+}
+
+.pluginStatusPillActive {
+  background: var(--sv-color-text-primary);
+  border-color: var(--sv-color-text-primary);
+  color: var(--sv-color-surface);
+}
+
+.pluginExampleToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
 .activityWhen {
   font-size: var(--sv-font-size-sm);
   color: var(--sv-color-text-primary);
@@ -1346,8 +1402,40 @@
     flex-direction: column;
     border: 1px solid var(--sv-color-border);
     border-radius: var(--sv-radius-md);
+    /* No overflow:hidden — it clips the absolute-positioned ⋯ menu.
+       Use first/last-child border-radius on cards instead (matches
+       .userCardList's identical fix). */
     background: var(--sv-color-surface-raised);
-    overflow: hidden;
+  }
+
+  .pluginCard:first-child {
+    border-radius: var(--sv-radius-md) var(--sv-radius-md) 0 0;
+  }
+
+  .pluginCard:last-child {
+    border-radius: 0 0 var(--sv-radius-md) var(--sv-radius-md);
+  }
+
+  .pluginCard:only-child {
+    border-radius: var(--sv-radius-md);
+  }
+
+  .pluginFilterBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pluginStatusPills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
+    overscroll-behavior-x: none;
+  }
+
+  .pluginStatusPills::-webkit-scrollbar {
+    display: none;
   }
 
   .activityCardList {

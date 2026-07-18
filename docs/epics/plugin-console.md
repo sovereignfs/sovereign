@@ -330,6 +330,90 @@ rebuild or redeploy.
   entries render only an "Active" badge, no Activate button.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
+---
+
+#### ✅ 13.9 — Console Plugins page: unified filterable table (RFC 0065 follow-up)
+
+**Goal:** Fix the duplication Task 13.8 introduced — every active plugin currently renders twice
+(once as an inert "Active" badge row in the Plugin catalog section, once again with full
+controls in Installed plugins) — by consolidating the Plugin catalog, Installed plugins, and
+Example plugins sections into a single table with keyword and status filtering, and making the
+result work equally well on desktop and mobile.
+
+**Deliverables:**
+
+- Merge the two existing data fetches (`GET /api/admin/plugins`, which already returns every
+  registry plugin — not just active ones — with version/type/route/adminOnly/example/compatibility;
+  and `getPluginCatalogAction()`, which adds the authoritative `active` flag) into one row per
+  cataloged plugin. No new backend endpoint needed.
+- Derive a single `status` per row: `incompatible` (has a `compatibilityError`, wins regardless
+  of active/enabled) → `inactive` (no `plugin_status` row) → `enabled`/`disabled` (active,
+  keyed off the enabled flag).
+- Delete the separate Plugin catalog, Installed plugins, and Example plugins sections; replace
+  with one `PluginTable` fed by the merged, filtered row list.
+- Add a filter bar above the table: keyword search (matches name/id/description, client-side —
+  plugin counts are small enough that a server round trip isn't warranted), a status filter
+  (All/Inactive/Enabled/Disabled/Incompatible), and an example-plugins toggle (default **on** —
+  Console is the admin's own management surface, unlike the Launcher's end-user-facing
+  hidden-by-default convention in Settings, which is unaffected by this task).
+- Row actions stay contextual by status: `inactive` gets `Activate` only, transitioning in place
+  to the existing inline "pick an initial policy" prompt (Task 13.8) on success; `enabled`/
+  `disabled` get the existing toggle/Access/Open/Remove; `incompatible` shows the reason, no
+  toggle.
+- While touching row actions: hide the `Access` button for chrome plugins (Account/Console/
+  Launcher) — access policy is a permanent no-op for them (Task 2.21 design), so the button
+  currently lets an admin configure a policy that can never take effect.
+- **Desktop (≥768px):** filter bar in one horizontal row above the table; table columns and
+  inline actions unchanged in shape from today.
+- **Mobile (<768px):** filter bar collapses — search full-width on its own row, status becomes a
+  horizontally-scrollable pill strip using the same `overflow-x: auto` + scroll-mask treatment
+  Console's nav strip already uses at this breakpoint (`.nav` in `console.module.css`), example
+  toggle folds in as one more pill. Card actions move behind a `⋯` `Menu` trigger (reusing the
+  exact component and pattern `UserCard.tsx` already uses for this), keeping only the primary
+  action (the enable/disable toggle, or Activate) inline; the inactive→policy-prompt transition
+  gets its own card layout state rather than being squeezed into the menu, since the policy
+  `Select` needs more horizontal room than the kebab menu affords.
+
+**Dependencies:** Task 13.7 (Console plugin access management), Task 13.8 (Console plugin
+catalog browser and install-time activation) — this task consolidates the UI both introduced.
+
+**Found during implementation, fixed here:** the just-activated policy prompt uses the same
+`justActivated` set-of-IDs pattern Task 13.8 established, but the unified table's status filter
+introduced a new way for it to disappear prematurely — activating a plugin while the "Inactive"
+filter is selected flips the row's real status away from `inactive` immediately
+(`revalidatePath()`), and the plain `r.status !== statusFilter` filter check then excluded the
+row entirely before the admin could see or dismiss the prompt. Fixed by checking
+`justActivated.has(r.id)` first in the filter predicate, unconditionally keeping a just-activated
+row visible regardless of the active status/example filters until the admin clicks "Done".
+
+**SRS reference:** [RFC 0065](../rfcs/0065-user-groups-plugin-access.md) (follow-up cleanup, not
+a new RFC requirement)
+
+**Review checklist:**
+
+- No plugin appears more than once on the page, in any status or filter combination. ✅ verified
+  live: searched "wallet" under "All" — exactly one row, with Access/Open/Disable all present.
+- Filtering by status and searching by keyword both narrow the table correctly and combine
+  (e.g. status=Inactive + a search term). ✅ verified live: the Inactive pill correctly isolated
+  a deactivated test plugin; search combined with it correctly (tested independently and
+  together).
+- The example toggle hides/shows example plugins without affecting their individually-set
+  enabled state (Task 12.3's per-example override still works). ✅ verified live: unchecking
+  "Show examples" dropped the count from 14 to 7 (all examples), non-example rows unaffected.
+- Activating an inactive plugin still shows the inline policy prompt in place (no regression of
+  the Task 13.8 race-condition fix). ✅ verified live on both desktop and mobile, including the
+  filter-interaction bug found and fixed above (activating under the "Inactive" filter no longer
+  makes the prompt vanish).
+- Chrome plugins no longer show an Access button. ✅ verified live: Account/Console rows show
+  only Disable/Open, no Access.
+- Mobile: filter bar and card actions render usably at 375px width; the kebab menu doesn't clip.
+  ✅ verified live at 375×812: search full-width, status pills horizontally scrollable, kebab
+  menu opens as a bottom drawer (Access reachable and functional) without any clipping against
+  the card list container.
+  (`overflow: hidden` avoided on the card list container, matching `UserCard`'s existing
+  precedent).
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
 Subsequent tasks added Console sections as part of other epics:
 
 | Task   | Feature added to Console                                                   | Primary epic                          |

@@ -149,8 +149,9 @@ Mirrors SRS §4.4. These are the acceptance surface for the plugin.
 | CON-09 | Display a system health summary: runtime version, DB type + connection status, auth status, disk usage.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | CON-10 | Toggle invite-only registration from Console without editing environment config.                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | CON-11 | View the current root plugin and change it to any installed, enabled, non-adminOnly plugin. Change takes effect immediately without restart. The root plugin serves the platform root `/`; the sidebar's first icon resolves to it.                                                                                                                                                                                                                                                                                                        |
-| CON-12 | Show or hide the bundled example plugins (manifest `example: true`) instance-wide from a Settings → Example plugins toggle, persisted in `platform_settings` and overriding the `SOVEREIGN_EXAMPLES_ENABLED` env default (no restart). Example plugins are also grouped in their own section on the Plugins page where each can be enabled/disabled individually (CON-07), overriding the instance default. Examples are hidden by default.                                                                                                |
+| CON-12 | Show or hide the bundled example plugins (manifest `example: true`) instance-wide from a Settings → Example plugins toggle, persisted in `platform_settings` and overriding the `SOVEREIGN_EXAMPLES_ENABLED` env default (no restart). Example plugins can also be filtered in/out of the Plugins page table (CON-14) and enabled/disabled individually (CON-07), overriding the instance default. Examples are hidden by default from the Launcher/sidebar.                                                                               |
 | CON-13 | Set a per-plugin access policy governing who may **open** the plugin's app — Everyone, Admins and owners, Selected users, Selected groups, or Disabled — from an Access dialog on the Plugins page, independent of CON-07's enable/disable state and of `console:access` (which governs who can manage plugins in Console, not who can open them). Selected-user/group policies support a self-service toggle (requires `plugins:self-manage`, RFC 0070) and warn when no user/group is yet granted. Policy and grant changes are audited. |
+| CON-14 | List every cataloged plugin — active or not — in a single table (no separate catalog/installed/examples sections), with keyword search (name/id/description) and a status filter (Inactive/Enabled/Disabled/Incompatible). Row actions are contextual to status: `Activate` for inactive, the existing toggle/Access/Open/Remove for active. Chrome plugins (Account/Console/Launcher) never show Access — access policy is a permanent no-op for them.                                                                                    |
 
 ## Directory structure
 
@@ -169,7 +170,7 @@ plugins/console/
 │   │   └── invite/
 │   │       └── page.tsx     # invite form (CON-03)
 │   ├── plugins/
-│   │   └── page.tsx         # installed plugins + enable/disable + example group (CON-06, CON-07)
+│   │   └── page.tsx         # unified filterable plugin table (CON-06, CON-07, CON-14)
 │   ├── settings/
 │   │   └── page.tsx         # tenant name, invite-only, example plugins, root plugin (CON-08, CON-10, CON-11, CON-12)
 │   └── health/
@@ -320,6 +321,36 @@ affordance being disabled with a reason, and a direct route hit 404ing); a
 grant made through the picker immediately allows that user/group to open the
 plugin.
 
+### Unified plugin table (RFC 0065 Task 13.9, CON-14)
+
+One row per cataloged plugin, whether active or not — replaces what were
+originally three separate sections (catalog, installed, examples) with a
+single filterable table/card list.
+
+- Row `status` is derived, not stored: `incompatible` (a `compatibilityError`
+  wins regardless of active/enabled) → `inactive` (no `plugin_status` row) →
+  `enabled`/`disabled` (active, keyed off the enabled flag).
+- Filter bar: keyword search (client-side — plugin counts are small enough
+  that a server round trip isn't warranted), a status pill row
+  (All/Inactive/Enabled/Disabled/Incompatible), and a "Show examples" toggle
+  (default on — Console is the admin's own management surface, unlike the
+  Launcher's end-user-facing hidden-by-default convention).
+- Row actions are contextual: `inactive` gets `Activate` (+ `Remove` if
+  removable), transitioning in place to the existing "pick an initial policy"
+  prompt (Task 13.8) on success; `enabled`/`disabled` get the existing
+  toggle/Access/Open/Remove, with Access hidden for chrome plugins; `incompatible`
+  shows the reason only.
+- Desktop keeps all actions inline; mobile moves Access and Remove behind a
+  `⋯` kebab menu (reusing `@sovereignfs/ui`'s `Menu`, the same component and
+  pattern the Users page's `UserCard` already uses), keeping only the primary
+  toggle/Activate and the Open link inline.
+
+**Done when:** no plugin appears more than once on the page in any filter
+combination; searching and status-filtering combine correctly; the
+just-activated policy prompt still appears in place (no regression of the
+Task 13.8 race-condition fix); chrome plugins show no Access control; the
+mobile kebab menu doesn't clip against its card list container.
+
 ### 4 — Tenant settings and system health
 
 Tenant name configuration, invite-only toggle, and the health dashboard
@@ -351,9 +382,6 @@ implementation:
 3. **Invite token lifecycle.** Token format, expiry, single-use vs reusable, and
    where it's stored (auth server vs platform table) — referenced by CON-03 but
    not specified. Likely belongs to the auth spec, cross-referenced from here.
-4. **Plugin "status" beyond enabled/disabled.** CON-06 lists "status"; v1 scope
-   is binary enabled/disabled. Confirm no installing/error/updating states are
-   expected before v1.
 
 ## Changelog
 

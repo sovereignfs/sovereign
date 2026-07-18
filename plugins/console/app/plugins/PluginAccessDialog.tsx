@@ -280,11 +280,24 @@ function GroupGrantList({
 export function PluginAccessDialog({
   pluginId,
   pluginName,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   pluginId: string;
   pluginName: string;
+  /**
+   * External control (e.g. a kebab `Menu` item on mobile plugin cards) —
+   * when provided, this component renders only the `Dialog`, not its own
+   * "Access" trigger button. Omit both for the default self-contained
+   * behavior (own button + own open state).
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = isControlled ? (onOpenChange ?? (() => {})) : setUncontrolledOpen;
   const [policy, setPolicy] = useState<PluginAccessPolicyValue>('everyone');
   const [selfService, setSelfService] = useState(false);
   const [users, setUsers] = useState<ResolvedPluginAccessUser[] | null>(null);
@@ -340,9 +353,11 @@ export function PluginAccessDialog({
 
   return (
     <>
-      <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(true)}>
-        Access
-      </Button>
+      {!isControlled && (
+        <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(true)}>
+          Access
+        </Button>
+      )}
 
       <Dialog
         open={open}

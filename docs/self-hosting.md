@@ -1178,6 +1178,57 @@ Track 1 operators keep upstream source untouched. Typical customisation lives in
 This track has no fork-specific git workflow. Upgrade by pulling the next image
 or upstream checkout, taking a backup, and following [upgrade.md](upgrade.md).
 
+### Private plugins on a hosted instance
+
+A private-repo plugin does **not** require forking (Track 2) — it stays on Track 1 as long
+as you're building from an upstream source checkout (`docker compose -f docker-compose.prod.yml
+up --build -d`, no `SOVEREIGN_VERSION` pin). Plugin loading is build-time-only in v1 (there is
+no hot-swap or install-without-rebuild — see [Plugin compatibility](#plugin-compatibility) and
+SRS §3.9), so "installing" a plugin always means: declare it → clone it → rebuild → redeploy.
+What follows makes the private-repo-auth part of that seamless.
+
+1. **Declare it** in `sovereign.plugins.json` with `tokenEnv` naming an environment variable —
+   never the token itself:
+
+   ```json
+   {
+     "plugins": [
+       {
+         "id": "com.acme.crm",
+         "repository": "https://github.com/acme/sovereign-crm",
+         "tokenEnv": "ACME_CRM_PLUGIN_TOKEN"
+       }
+     ]
+   }
+   ```
+
+2. **Set the token** in your deployment environment (`.env`, compose secrets, or however
+   `SOVEREIGN_ADMIN_KEY` and friends already reach the build): `ACME_CRM_PLUGIN_TOKEN=ghp_xxx`.
+   Requires an `https://` repository URL — an SSH URL authenticates via your shell's own SSH
+   key/agent and needs no `tokenEnv`.
+3. **Rebuild**: `docker compose -f docker-compose.prod.yml up --build -d` (or `pnpm
+install:plugins` for a non-Docker/PM2 deployment, see [Non-Docker deployment](#non-docker-deployment)).
+   `scripts/install-plugins.ts` clones the repo using the token, authenticated via a short-lived
+   git credential file — never logged, never embedded in a URL passed as a process argument.
+
+**The one requirement this depends on — a persistent checkout, not a fresh clone.** Cloned plugin
+source lands in `plugins/<id>/`, which is gitignored (it has its own repository). The standard
+upgrade procedure ([upgrade.md](upgrade.md)) is `git pull` **in the same checkout directory** —
+git pull never touches untracked/ignored paths, so `plugins/<id>/` survives every subsequent
+upgrade automatically, and `scripts/install-plugins.ts` skips re-cloning anything already present
+on disk. **The token is only needed the first time a private plugin is cloned** — not on every
+later rebuild.
+
+This breaks if your deployment does a **fresh `git clone` per deploy**, `git clean -fdx`, or runs
+on an ephemeral CI runner with no persistent filesystem between runs: `plugins/<id>/` would be
+lost and need re-cloning (token required again) on every deploy. If that's your setup, persist
+`plugins/<id>/` yourself between runs (e.g. a CI cache/artifact step or a build-host volume) the
+same way you'd cache any other build dependency.
+
+Use Track 2 (fork-and-track, below) instead if you'd rather vendor the plugin's source directly
+into your own fork's git history alongside upstream, rather than pulling it from a separate
+private repository at build time.
+
 ### Track 2: fork-and-track setup
 
 ```bash

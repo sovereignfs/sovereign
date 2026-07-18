@@ -38,6 +38,7 @@ import {
   resolvePluginIdFromManifest,
   scaffoldPlugin,
 } from './helpers';
+import { resolveToken, withGitCredentials } from '../scripts/install-plugins';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPTS_DIR = join(ROOT, 'scripts');
@@ -206,18 +207,40 @@ const pluginAdd = defineCommand({
   meta: { name: 'add', description: 'Clone a plugin from a git repository and compose it' },
   args: {
     repository: { type: 'positional', required: true, description: 'Git repository URL to clone' },
+    'token-env': {
+      type: 'string',
+      description:
+        'Name of an environment variable holding a personal access token, for cloning a ' +
+        'private repository (requires an https:// repository URL)',
+    },
   },
   run({ args }) {
     const { repository } = args;
+    const tokenEnv = args['token-env'];
+    let token: string | undefined;
+    try {
+      token = resolveToken(tokenEnv);
+    } catch (error) {
+      consola.error((error as Error).message);
+      process.exit(1);
+    }
+    if (tokenEnv !== undefined && !repository.startsWith('https://')) {
+      consola.error(`--token-env requires an "https://" repository URL (got "${repository}").`);
+      process.exit(1);
+    }
+
     // Clone into a temp dir inside plugins/ so the final move stays on one
     // filesystem (atomic rename), then key the destination off the manifest id.
     const tmp = mkdtempSync(join(PLUGINS_DIR, '.sv-add-'));
     const cleanup = (): void => rmSync(tmp, { recursive: true, force: true });
 
-    const clone = spawnSync('git', ['clone', '--depth', '1', repository, tmp], {
-      cwd: ROOT,
-      stdio: 'inherit',
-    });
+    const clone = withGitCredentials(repository, token, (credArgs) =>
+      spawnSync('git', [...credArgs, 'clone', '--depth', '1', repository, tmp], {
+        cwd: ROOT,
+        stdio: 'inherit',
+        env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+      }),
+    );
     if (clone.status !== 0) {
       cleanup();
       consola.error(

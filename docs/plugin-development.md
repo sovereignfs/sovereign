@@ -2050,6 +2050,41 @@ from `sovereign.plugins.json`:
 }
 ```
 
+### Private repositories
+
+A plugin's repository doesn't have to be public. Add an optional `tokenEnv` field naming an
+environment variable that holds a personal access token — the **variable name** is committed,
+never the token itself, so `sovereign.plugins.json` stays safe to check in:
+
+```json
+{
+  "plugins": [
+    {
+      "id": "com.acme.crm",
+      "repository": "https://github.com/acme/sovereign-crm",
+      "tokenEnv": "ACME_CRM_PLUGIN_TOKEN"
+    }
+  ]
+}
+```
+
+Set `ACME_CRM_PLUGIN_TOKEN` in the environment before running `pnpm install:plugins`. `tokenEnv`
+requires an `https://` `repository` URL (an SSH URL authenticates via your shell's own SSH
+key/agent instead, with no field needed). The one-off equivalent is `sv plugin add`'s
+`--token-env` flag:
+
+```sh
+pnpm sv plugin add https://github.com/acme/sovereign-crm --token-env ACME_CRM_PLUGIN_TOKEN
+```
+
+The token is only ever read at clone time — written to a short-lived, mode-`0600` git credential
+file for the duration of the `git clone`/`fetch` call, then deleted. It is never embedded in a
+logged URL or passed as a process argument. A subsequent `pnpm install:plugins` run skips a
+plugin already present under `plugins/<id>/`, so the token is only needed again if that directory
+is deleted and re-cloned — not on every rebuild. See "Maintaining a fork" and "Private plugins on
+a hosted instance" in [`docs/self-hosting.md`](self-hosting.md) for the full operator workflow,
+including what's required for a private plugin to survive version upgrades.
+
 ### Submitting to the registry
 
 The [`registry/plugins.json`](../registry/plugins.json) file is the public index

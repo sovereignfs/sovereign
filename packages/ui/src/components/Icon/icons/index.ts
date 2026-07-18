@@ -29,6 +29,8 @@ import { AlertTriangleIcon } from './alert-triangle';
 import { CalendarIcon } from './calendar';
 import { SlidersHorizontalIcon } from './sliders-horizontal';
 import { EllipsisVerticalIcon } from './ellipsis-vertical';
+import { FileIcon } from './file';
+import { UploadIcon } from './upload';
 import { BananaIcon } from './banana';
 import { AppleIcon } from './apple';
 import { CarrotIcon } from './carrot';
@@ -80,6 +82,8 @@ export type IconName =
   | 'calendar'
   | 'sliders-horizontal'
   | 'ellipsis-vertical'
+  | 'file'
+  | 'upload'
   | 'banana'
   | 'apple'
   | 'carrot'
@@ -133,6 +137,8 @@ export const ICONS: Record<IconName, IconComponent> = {
   calendar: CalendarIcon,
   'sliders-horizontal': SlidersHorizontalIcon,
   'ellipsis-vertical': EllipsisVerticalIcon,
+  file: FileIcon,
+  upload: UploadIcon,
   banana: BananaIcon,
   apple: AppleIcon,
   carrot: CarrotIcon,
@@ -184,6 +190,8 @@ export { AlertTriangleIcon } from './alert-triangle';
 export { CalendarIcon } from './calendar';
 export { SlidersHorizontalIcon } from './sliders-horizontal';
 export { EllipsisVerticalIcon } from './ellipsis-vertical';
+export { FileIcon } from './file';
+export { UploadIcon } from './upload';
 export { BananaIcon } from './banana';
 export { AppleIcon } from './apple';
 export { CarrotIcon } from './carrot';

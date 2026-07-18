@@ -34,6 +34,7 @@ import { Toggle } from '../components/Toggle/Toggle';
 import { Tooltip } from '../components/Tooltip/Tooltip';
 import { Checkbox } from '../components/Checkbox/Checkbox';
 import { DragHandleRow } from '../components/DragHandleRow/DragHandleRow';
+import { FileDropzone } from '../components/FileDropzone/FileDropzone';
 import { OverlayHeader } from '../components/OverlayHeader/OverlayHeader';
 import { Sheet } from '../components/Sheet/Sheet';
 import { ConfirmDialog } from '../components/ConfirmDialog/ConfirmDialog';
@@ -750,6 +751,21 @@ function CheckableListRowDemo() {
         label="Bananas"
         icon={<Icon name="banana" size="md" aria-hidden />}
         trailing={<span style={{ fontSize: 13, color: 'var(--sv-color-text-muted)' }}>6 pcs</span>}
+      />
+    </div>
+  );
+}
+
+function FileDropzoneDemo() {
+  const [file, setFile] = useState<File | null>(null);
+  return (
+    <div style={{ width: '100%' }}>
+      <FileDropzone
+        ariaLabel="Upload ZIP file"
+        accept=".zip,application/zip"
+        label={file ? file.name : 'Choose a ZIP file'}
+        hint={file ? `${(file.size / 1024).toFixed(0)} KB` : 'or drag and drop here'}
+        onFileSelect={setFile}
       />
     </div>
   );
@@ -1945,6 +1961,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   </DragHandleRow>
                 ))}
               </div>
+            </ComponentCard>
+
+            {/* FileDropzone */}
+            <ComponentCard
+              name="FileDropzone"
+              importLine="import { FileDropzone } from '@sovereignfs/ui';"
+              usage="Styled drag-and-drop file picker — a dashed-border dropzone wrapping a visually-hidden native file input. Caller owns selected-file state and passes label/hint accordingly."
+            >
+              <FileDropzoneDemo />
             </ComponentCard>
           </div>
         </section>

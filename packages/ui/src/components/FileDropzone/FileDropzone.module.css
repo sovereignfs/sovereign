@@ -1,0 +1,63 @@
+.dropzone {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-4);
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--sv-space-4) var(--sv-space-5);
+  border: 1.5px dashed var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-surface-raised);
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+@media (hover: hover) {
+  .dropzone:hover {
+    background-color: var(--sv-color-surface-sunken);
+    border-color: var(--sv-color-border-strong);
+  }
+}
+
+.dropzoneActive {
+  background-color: var(--sv-color-surface-sunken);
+  border-color: var(--sv-color-border-strong);
+}
+
+.dropzoneDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--sv-color-text-muted);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+}
+
+.hiddenInput {
+  display: none;
+}

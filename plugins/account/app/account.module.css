@@ -621,45 +621,6 @@
   background-color: var(--sv-red-800);
 }
 
-/* ── Import dropzone ─────────────────────────────────────────────────────── */
-
-.dropzone {
-  display: flex;
-  align-items: center;
-  gap: var(--sv-space-4);
-  padding: var(--sv-space-4) var(--sv-space-5);
-  border: 1.5px dashed var(--sv-color-border);
-  border-radius: var(--sv-radius-md);
-  background-color: var(--sv-color-surface-raised);
-  cursor: pointer;
-  width: 100%;
-  box-sizing: border-box;
-  transition: background-color 120ms ease;
-}
-
-.dropzone:hover,
-.dropzoneActive {
-  background-color: var(--sv-color-surface-sunken);
-  border-color: var(--sv-color-border-strong);
-}
-
-.dropzoneText {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dropzoneTitle {
-  font-size: var(--sv-font-size-sm);
-  font-weight: var(--sv-font-weight-medium);
-  color: var(--sv-color-text-primary);
-}
-
-.dropzoneHint {
-  font-size: var(--sv-font-size-xs);
-  color: var(--sv-color-text-muted);
-}
-
 /* ── Danger zone card ───────────────────────────────────────────────────── */
 
 .dangerCard {

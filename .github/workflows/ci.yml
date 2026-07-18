@@ -179,6 +179,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
+      # runtime/generated/*.ts is gitignored (session/plugin-dependent build
+      # output) — regenerate it before typechecking runtime/src, which imports
+      # from it directly.
+      - run: pnpm generate
       - run: pnpm typecheck
 
   design-tokens:
@@ -257,4 +261,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
+      # runtime/generated/*.ts is gitignored (session/plugin-dependent build
+      # output) — regenerate it before running runtime/src tests that import
+      # from it directly (registry.ts, scheduler.ts).
+      - run: pnpm generate
       - run: pnpm test

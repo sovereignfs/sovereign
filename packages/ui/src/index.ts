@@ -71,6 +71,8 @@ export { Checkbox } from './components/Checkbox/Checkbox';
 export type { CheckboxProps } from './components/Checkbox/Checkbox';
 export { DragHandleRow } from './components/DragHandleRow/DragHandleRow';
 export type { DragHandleRowProps } from './components/DragHandleRow/DragHandleRow';
+export { FileDropzone } from './components/FileDropzone/FileDropzone';
+export type { FileDropzoneProps } from './components/FileDropzone/FileDropzone';
 export { Calendar } from './components/Calendar/Calendar';
 export type { CalendarProps } from './components/Calendar/Calendar';
 export { DatePicker } from './components/DatePicker/DatePicker';

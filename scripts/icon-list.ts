@@ -41,6 +41,8 @@ export const ICON_LIST = [
   'calendar',
   'sliders-horizontal',
   'ellipsis-vertical',
+  'file',
+  'upload',
   // Grocery item / category (Sovereign Shopper, SHP-05) — a curated set
   // covering common items directly plus a representative icon per category
   // as the fallback when no item-level match exists. See

@@ -1,7 +1,7 @@
 'use client';
 
-import { type DragEvent, type FormEvent, useState } from 'react';
-import { Button, Checkbox } from '@sovereignfs/ui';
+import { type FormEvent, useState } from 'react';
+import { Button, Checkbox, FileDropzone } from '@sovereignfs/ui';
 import styles from '../account.module.css';
 
 interface ImportSummary {
@@ -19,7 +19,6 @@ export function PortabilityPanel() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [includeFiles, setIncludeFiles] = useState(true);
   const [file, setFile] = useState<File | null>(null);
-  const [dragging, setDragging] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
@@ -121,52 +120,13 @@ export function PortabilityPanel() {
           </p>
         </div>
         <form className={styles.form} onSubmit={(e) => void onImport(e)}>
-          <label
-            aria-label="Upload ZIP file"
-            className={`${styles.dropzone} ${dragging ? styles.dropzoneActive : ''}`}
-            onDragOver={(e: DragEvent) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e: DragEvent) => {
-              e.preventDefault();
-              setDragging(false);
-              const dropped = e.dataTransfer.files[0];
-              if (dropped) setFile(dropped);
-            }}
-          >
-            <svg
-              width="36"
-              height="36"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              style={{ color: 'var(--sv-color-text-muted)', flexShrink: 0 }}
-            >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <text x="6" y="19" fontSize="5" fontWeight="700" fill="currentColor" stroke="none">
-                ZIP
-              </text>
-            </svg>
-            <div className={styles.dropzoneText}>
-              <span className={styles.dropzoneTitle}>{file ? file.name : 'Choose a ZIP file'}</span>
-              <span className={styles.dropzoneHint}>
-                {file ? `${(file.size / 1024).toFixed(0)} KB` : 'or drag and drop here'}
-              </span>
-            </div>
-            <input
-              type="file"
-              accept=".zip,application/zip"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className={styles.hiddenInput}
-            />
-          </label>
+          <FileDropzone
+            ariaLabel="Upload ZIP file"
+            accept=".zip,application/zip"
+            label={file ? file.name : 'Choose a ZIP file'}
+            hint={file ? `${(file.size / 1024).toFixed(0)} KB` : 'or drag and drop here'}
+            onFileSelect={setFile}
+          />
           <div style={{ alignSelf: 'flex-start' }}>
             <button type="submit" className={styles.addPasskeyBtn} disabled={!file || importing}>
               <svg

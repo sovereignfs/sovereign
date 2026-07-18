@@ -1,5 +1,9 @@
+import { headers } from 'next/headers';
 import { Badge } from '@sovereignfs/ui';
+import { getPlatformDb } from '@/src/db';
+import { canUserOpenPlugin } from '@/src/plugin-access-server';
 import { togglePluginAction } from './actions';
+import { PluginAccessDialog } from './PluginAccessDialog';
 import { PluginInstallPanel, RemovePluginButton } from './PluginInstallPanel';
 import styles from '../console.module.css';
 
@@ -15,6 +19,8 @@ interface PluginRow {
   enabled: boolean;
   compatibilityError: string | null;
   compatibilityWarnings: string[];
+  /** Whether the viewing admin can open this plugin's app (RFC 0065) — Console management is separate from app access. */
+  openableByViewer: boolean;
 }
 
 function PluginCard({ plugin }: { plugin: PluginRow }) {
@@ -65,6 +71,20 @@ function PluginCard({ plugin }: { plugin: PluginRow }) {
               {plugin.enabled ? 'Disable' : 'Enable'}
             </button>
           </form>
+          <PluginAccessDialog pluginId={plugin.id} pluginName={plugin.name} />
+          {plugin.openableByViewer ? (
+            <a href={plugin.routePrefix} className={styles.pluginCardBtnToggle}>
+              Open
+            </a>
+          ) : (
+            <span
+              className={styles.pluginCardBtnToggle}
+              style={{ opacity: 0.5, cursor: 'not-allowed' }}
+              title="You are not currently allowed to open this plugin under its access policy."
+            >
+              Open
+            </span>
+          )}
           {!isPlatform && (
             <RemovePluginButton
               pluginId={plugin.id}
@@ -178,6 +198,21 @@ function PluginTableRow({ plugin }: { plugin: PluginRow }) {
             </form>
           )}
 
+          <PluginAccessDialog pluginId={plugin.id} pluginName={plugin.name} />
+
+          {plugin.openableByViewer ? (
+            <a href={plugin.routePrefix} className={styles.iconBtnReactivate} title="Open">
+              Open
+            </a>
+          ) : (
+            <span
+              className={styles.adminOnlyNote}
+              title="You are not currently allowed to open this plugin under its access policy."
+            >
+              Open (restricted)
+            </span>
+          )}
+
           {!isPlatform && <RemovePluginButton pluginId={plugin.id} pluginName={plugin.name} />}
         </div>
       </td>
@@ -211,7 +246,9 @@ function PluginTable({ plugins }: { plugins: PluginRow[] }) {
   );
 }
 
-async function getPlugins(): Promise<PluginRow[]> {
+type RawPluginRow = Omit<PluginRow, 'openableByViewer'>;
+
+async function getPlugins(): Promise<RawPluginRow[]> {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   const selfUrl = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
   try {
@@ -223,15 +260,34 @@ async function getPlugins(): Promise<PluginRow[]> {
       console.error(`[plugins] fetch failed: ${res.status}`);
       return [];
     }
-    return res.json() as Promise<PluginRow[]>;
+    return res.json() as Promise<RawPluginRow[]>;
   } catch (err) {
     console.error('[plugins] fetch error:', err instanceof Error ? err.message : err);
     return [];
   }
 }
 
+/**
+ * Whether the viewing admin can open each plugin's app (RFC 0065) — separate
+ * from Console management access. Computed server-side directly (not via the
+ * `/api/admin/plugins` admin-key route, which has no per-user identity) so
+ * the "Open" affordance can be disabled with a reason rather than hidden.
+ */
+async function withOpenability(plugins: RawPluginRow[]): Promise<PluginRow[]> {
+  const h = await headers();
+  const userId = h.get('x-sovereign-user-id');
+  const role = h.get('x-sovereign-user-role') ?? 'platform:user';
+  if (!userId) return plugins.map((p) => ({ ...p, openableByViewer: false }));
+
+  const pdb = await getPlatformDb();
+  const results = await Promise.all(
+    plugins.map((p) => canUserOpenPlugin(pdb, userId, role, p.id, true, p.enabled)),
+  );
+  return plugins.map((p, i) => ({ ...p, openableByViewer: results[i] ?? false }));
+}
+
 export default async function PluginsPage() {
-  const plugins = await getPlugins();
+  const plugins = await withOpenability(await getPlugins());
   const mainPlugins = plugins.filter((p) => !p.example);
   const examplePlugins = plugins.filter((p) => p.example);
 

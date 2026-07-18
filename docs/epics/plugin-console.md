@@ -181,32 +181,51 @@ change as the broader stabilization work.
 
 ---
 
-#### 📋 13.7 — Console plugin access management (RFC 0065)
+#### ✅ 13.7 — Console plugin access management (RFC 0065)
 
 **Goal:** Give admins/owners an explicit Console workflow for deciding which users can open
 each installed plugin.
 
 **Deliverables:**
 
-- Add an Access section to Console plugin detail/management surfaces.
+- Add an Access section to Console plugin detail/management surfaces. Shipped as a
+  `PluginAccessDialog` opened from an "Access" button on each plugin row/card
+  (`plugins/console/app/plugins/PluginAccessDialog.tsx`), alongside 5 new Node-runtime admin
+  API routes under `runtime/app/api/admin/plugins/[id]/access*` (`GET`/`PATCH` for the policy,
+  `POST`/`DELETE` for user and group grants).
 - Support the policy choices from RFC 0065: Everyone, Admins and owners, Selected users,
   Selected groups, and Disabled.
 - Add a self-service toggle for Selected users/Selected groups policies, with copy explaining
   it requires the acting user to hold `plugins:self-manage` (RFC 0070).
 - Add a user picker for `selected_users`, backed by user directory/member-selection
-  primitives.
-- Add a group picker for `selected_groups`, backed by the user groups foundation.
+  primitives (`sdk.directory.searchUsers`/`resolveUsers`, 250ms debounce, 2-char minimum).
+- Add a group picker for `selected_groups`, backed by the user groups foundation
+  (`/api/admin/groups`).
 - Show an effective-access summary and warnings for empty selected-user/group policies.
 - Make it clear that Console management access is separate from plugin app access; admins
-  can manage a plugin without automatically being able to open it.
+  can manage a plugin without automatically being able to open it. `plugins/console/app/plugins/page.tsx`
+  computes `openableByViewer` per plugin server-side (via `canUserOpenPlugin`) and shows a
+  disabled "Open" affordance with a `title` reason instead of hiding it.
 - Align disabled plugin language with runtime enforcement: disabled plugins remain installed
   and manageable, but cannot be opened by anyone.
 - When an admin/owner can manage but not open a plugin, show a disabled "Open" affordance with
   the reason rather than hiding it — the admin already knows the plugin exists.
-- Emit activity events for policy changes and user/group grant changes, distinguishing
-  self-service grants from admin-initiated ones.
-- Update operator docs for common workflows: enable for everyone, limit to admins, grant a
-  user, grant a group, disable without uninstalling, allow self-service opt-in.
+- Emit activity events for policy changes and user/group grant changes: `plugin.access_policy_changed`,
+  `plugin.access_user_granted`/`revoked`, `plugin.access_group_granted`/`revoked`.
+- Update operator docs for common workflows: added a "Plugin access policy" subsection and a
+  CON-13 requirement row to `docs/plugins/console.md`.
+
+**Scope note (found during implementation):** the "distinguishing self-service grants from
+admin-initiated ones" bullet is about the grant/revoke _action's_ audit trail, not the Access
+dialog built here — every grant/revoke reachable from this dialog is inherently admin-initiated
+(Console is `console:access`-gated). A self-service grant only exists once an eligible user
+opts in through their own end-user surface, which is Task 15.3 (plugin directory browsing and
+self-service enable/disable) — not yet built. That task's grant path must log a distinct actor
+type/action so the two remain distinguishable once it lands; this task's admin-initiated grants
+already always carry the acting admin's real `actorId` (fixed a pre-existing actor-id-forwarding
+gap in `plugins/console/app/plugins/actions.ts`'s `adminFetch`, the same pattern previously fixed
+in the groups and users `actions.ts` files — a fresh server-to-server `fetch()` from a server
+action never carries the browser's `x-sovereign-user-id` unless forwarded explicitly).
 
 **Dependencies:** Task 1.15 (user groups), Task 1.16 (per-user capability grants, RFC 0070),
 Task 2.21 (plugin access policy enforcement), Task 13.3 (Console plugin management), Task 1.12
@@ -216,13 +235,23 @@ Task 2.21 (plugin access policy enforcement), Task 13.3 (Console plugin manageme
 
 **Review checklist:**
 
-- Admins/owners can change plugin policy and grants from Console.
-- Empty selected-user/group policies show clear warnings before saving or after save.
-- Admins/owners are not silently granted app access for selected-user/group policies.
+- Admins/owners can change plugin policy and grants from Console. ✅ verified live: policy
+  selector auto-saves, user grant/revoke and group grant/revoke round-trip correctly.
+- Empty selected-user/group policies show clear warnings before saving or after save. ✅
+  verified live for both `selected_users` and `selected_groups`.
+- Admins/owners are not silently granted app access for selected-user/group policies. ✅
+  verified live: set a non-chrome plugin (Plainwrite) to `selected_users` with zero grants —
+  the owner's own "Open" affordance disabled with the correct reason, and a direct
+  `GET /plainwrite` 404'd via middleware even for the owner. Chrome plugins (Account, Console,
+  Launcher) are intentionally exempt from access policy (Task 2.21 design) — they always stay
+  reachable regardless of policy, which is correct, not a gap.
 - Disabled plugins cannot be opened from Console app-launch affordances.
-- The disabled "Open" affordance shows the denial reason instead of being hidden.
+- The disabled "Open" affordance shows the denial reason instead of being hidden. ✅ verified
+  live via the `title` attribute.
 - Policy and grant changes are audited, with self-service grants distinguishable from
-  admin-initiated ones.
+  admin-initiated ones. ✅ verified live in the Activity feed with correct actor attribution
+  for every event type; self-service-vs-admin distinction deferred to Task 15.3 per the scope
+  note above.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
 ---

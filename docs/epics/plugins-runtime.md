@@ -912,6 +912,73 @@ reason: 'already-active'`).
   re-activation, and the `plugin.activated` activity log entry.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
+---
+
+#### 📋 3.29 — Private plugin repositories via access token
+
+**Goal:** Let an operator declare a plugin hosted in a **private** git repository (their own
+custom/proprietary plugin, or a private fork of a community plugin) in `sovereign.plugins.json`,
+authenticated with a personal access token supplied via an environment variable — no manual git
+credential setup, no committed secrets. Combined with the existing build-time composition model
+(3.9 in the SRS — plugin loading stays build-time-only in v1, no change here), a private plugin
+cloned once by `sv plugin add` needs its token again only if re-cloned from scratch; ordinary
+version upgrades (`git pull` in the same checkout, then rebuild) never touch the already-cloned,
+gitignored `plugins/<id>/` directory, so no new persistence mechanism is required.
+
+**Current state:** `scripts/install-plugins.ts`'s `cloneInto` shells out to plain `git clone` /
+`git init` + `remote add` + `fetch` (`scripts/install-plugins.ts:153`) against `entry.repository`
+verbatim. There is no field for supplying credentials, so a private repository clone only
+succeeds if the invoking shell already has ambient git auth (SSH agent, credential helper) set up
+— undocumented and not something `sv plugin add`/`pnpm install:plugins` handle. `PluginEntry`
+(`scripts/install-plugins.ts:41`) has `id`, `repository`, `ref`, `subdir` — no token field.
+
+**Deliverables:**
+
+- `PluginEntry` gains an optional `tokenEnv: string` — the **name** of an environment variable
+  holding a PAT, never the token itself, so `sovereign.plugins.json` stays safe to commit.
+  `parsePluginsConfig` validates it the same way as `ref`/`subdir` (non-empty string when present).
+- `cloneInto` / `install-plugins.ts`: when `tokenEnv` is set, read `process.env[entry.tokenEnv]`
+  at clone time. Missing/empty → a clear error naming the entry and the expected env var, not a
+  silent git auth failure. Never log the token or an authenticated URL.
+- Token handling avoids argv/`ps` exposure: write a short-lived git credential file (mode `0600`)
+  in the same temp dir already used for pinned-ref clones, pass `-c
+credential.helper="store --file=<tmpfile>"`, and delete it in the existing `finally` cleanup —
+  not an embedded `https://<token>@...` URL passed as a process argument.
+- `bin/sv.ts`'s `plugin add` gets a matching `--token-env <NAME>` flag, writing the same field
+  into `sovereign.plugins.json`.
+- `docs/plugin-development.md` — document the `tokenEnv` field in the `sovereign.plugins.json`
+  reference and the `sv plugin add --token-env` flag.
+- `docs/self-hosting.md` — new section documenting the full private-plugin workflow end to end:
+  declaring a private repo with `tokenEnv`, setting the token env var, and the **one hard
+  requirement** this depends on — the operator's build must run from a persistent checkout that
+  is updated with `git pull` (the already-documented standard upgrade path, `docs/upgrade.md`),
+  never a fresh clone or `git clean -fdx`, or the gitignored `plugins/<id>/` directory (and the
+  token needed to reclone it) is lost. Cross-reference Task 3.14's "Maintaining a fork" section
+  since this is the same fork-and-track model, not a new one.
+
+**Dependencies:** Task 3.14 (operator fork model — this extends its documented workflow, doesn't
+replace it).
+
+**SRS reference:** SRS §3.9 Plugin Loading Model (build-time composition is unchanged), §2.7 Open
+Source Strategy.
+
+**Review checklist:**
+
+- A `sovereign.plugins.json` entry with `tokenEnv` pointing at an unset env var fails with a
+  clear error naming both the plugin id and the env var — not a raw git auth failure.
+- A private GitHub repo clones successfully via `sv plugin add <repo> --token-env <NAME>` with
+  the token only in `NAME`'s value, never in `sovereign.plugins.json`.
+- Cloning a private repo does not print the token or an authenticated URL to stdout/stderr, and
+  the token is not present as a process argument at any point (verify via `ps` during the clone).
+- A second `pnpm install:plugins` run (simulating a version-upgrade rebuild) skips the
+  already-cloned private plugin without needing the token env var set.
+- `docs/self-hosting.md`'s new section is self-contained: an operator can follow it from
+  declaring a private plugin through a subsequent version upgrade without consulting this epic
+  file.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0004 — Per-plugin database](../rfcs/0004-per-plugin-database.md)

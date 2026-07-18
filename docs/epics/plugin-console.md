@@ -256,7 +256,7 @@ Task 2.21 (plugin access policy enforcement), Task 13.3 (Console plugin manageme
 
 ---
 
-#### 📋 13.8 — Console plugin catalog browser and install-time activation (RFC 0065)
+#### ✅ 13.8 — Console plugin catalog browser and install-time activation (RFC 0065)
 
 **Goal:** Let admins browse every plugin declared in `sovereign.plugins.json` (bundled in the
 image at build time per Task 3.28) and activate one for the instance in one action, without a
@@ -265,16 +265,49 @@ rebuild or redeploy.
 **Deliverables:**
 
 - Add a catalog view, separate from the existing per-plugin management list, listing every
-  cataloged plugin with its active/inactive state.
-- "Activate" runs the plugin's pending migrations and creates its `plugin_status` row via the
-  runtime activation endpoint from Task 3.28.
+  cataloged plugin with its active/inactive state. Shipped as `PluginCatalogSection`
+  (`plugins/console/app/plugins/PluginCatalogSection.tsx`), rendered above the existing
+  Installed plugins table, consuming the Task 3.28 `GET /api/admin/plugins/catalog` endpoint via
+  a new `getPluginCatalogAction` server action.
+- "Activate" creates the plugin's `plugin_status` row via the Task 3.28
+  `POST /api/admin/plugins/[id]/activate` endpoint (`activatePluginAction`). No migration run
+  happens here — Task 3.28 already established that every registry plugin's migrations run
+  unconditionally at every boot (`runAllPluginMigrations`), independent of activation state, so
+  activation only needs to create the status row; the original "runs pending migrations" framing
+  in this deliverable predates that finding and is superseded by it.
 - Immediately after activation, prompt the admin for an initial `access_policy` (selector
   defaults to Disabled, matching the storage default) instead of leaving the plugin in an
-  unconfigured state.
+  unconfigured state. Implemented as `ActivatedPolicyPrompt`, shown in place of the row that was
+  just activated.
 - Show plugins already active with a link into their existing management/Access surfaces
-  instead of a duplicate "Activate" control.
-- Surface a clear error if activation (migration run) fails, without leaving the plugin in a
-  half-activated state.
+  instead of a duplicate "Activate" control — active catalog entries render as a plain "Active"
+  badge row in the catalog view; their real management surface is the existing Installed
+  plugins table below.
+- Surface a clear error if activation fails, without leaving the plugin in a half-activated
+  state — the runtime endpoint's `createPluginStatusRowIfAbsent` is a single insert-if-absent
+  write, and `activatePluginAction` surfaces a non-OK response as an inline error next to the
+  Activate button rather than swallowing it.
+- **Found during implementation, fixed here:** the pre-existing `/api/admin/plugins` route
+  (Task 13.3, predates 3.28/13.8) lists every plugin present in the registry regardless of
+  whether it has been activated — a cataloged-but-never-activated plugin showed as "ENABLED"
+  and fully manageable (Disable/Access/Open) in the old Installed plugins list, even though it
+  has no `plugin_status` row and its access policy correctly resolves to `disabled` at the
+  request layer. Using its Access dialog before activation would also silently create a
+  `plugin_status` row defaulting to `enabled: true` (`setPluginAccessPolicy`'s upsert), bypassing
+  the intended "activate first, defaults to disabled policy" flow. Fixed by filtering the
+  Installed plugins list in `plugins/console/app/plugins/page.tsx` to exclude any plugin present
+  in the catalog with `active: false` (chrome plugins are absent from the catalog entirely and
+  are unaffected by this filter).
+- **Found during implementation, fixed here:** the first implementation kept the "just
+  activated, pick a policy" prompt inside the same row component driven by
+  `useActionState`/`<form action>`, keyed on `entry.active`. In practice the prompt never
+  appeared — the server action's `revalidatePath()` refreshes the catalog prop with
+  `active: true` in the same reconciliation pass that the row's own local action-state update
+  needed to land in, and the prop update wins, so the row went straight from "Activate" button
+  to the terminal "Active" badge. Fixed by lifting "just activated" tracking to the parent
+  (`PluginCatalogSection`'s `justActivated` state, set via a plain awaited call to
+  `activatePluginAction` rather than the form/useActionState wiring) so the prompt's visibility
+  no longer depends on winning a race against the server-driven prop refresh.
 
 **Dependencies:** Task 3.28 (plugin catalog and install-time activation model), Task 13.7
 (Console plugin access management — the policy step immediately after activation).
@@ -283,12 +316,18 @@ rebuild or redeploy.
 
 **Review checklist:**
 
-- An admin can activate a cataloged-but-inactive plugin from Console without a redeploy.
+- An admin can activate a cataloged-but-inactive plugin from Console without a redeploy. ✅
+  verified live end-to-end (Wallet plugin: delete its `plugin_status` row to simulate
+  cataloged-but-inactive → Activate → inline policy prompt → set Everyone → plugin opens and
+  appears in the Installed plugins list).
 - A newly activated plugin defaults to `access_policy = disabled` and is not visible to any
-  non-admin user until explicitly configured.
+  non-admin user until explicitly configured. ✅ verified: the prompt shows "is now active but
+  disabled — nobody can open it yet" and the policy `Select` defaults to Disabled.
 - A failed migration during activation leaves the plugin cleanly inactive, not partially
-  active.
-- Already-active plugins do not show a duplicate activation control.
+  active. N/A per the migration-timing finding above — activation is a single insert-if-absent
+  write with no migration step to partially fail.
+- Already-active plugins do not show a duplicate activation control. ✅ verified: active catalog
+  entries render only an "Active" badge, no Activate button.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
 Subsequent tasks added Console sections as part of other epics:

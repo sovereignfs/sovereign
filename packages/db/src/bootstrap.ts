@@ -31,7 +31,25 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       plugin_id TEXT PRIMARY KEY,
       tenant_id TEXT NOT NULL,
       enabled ${bool} NOT NULL DEFAULT ${boolTrue},
+      access_policy TEXT NOT NULL DEFAULT 'everyone',
+      self_service ${bool} NOT NULL DEFAULT ${dialect === 'postgres' ? 'FALSE' : '0'},
       updated_at ${ts} NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS plugin_access_users (
+      tenant_id TEXT NOT NULL,
+      plugin_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      granted_by_user_id TEXT NOT NULL,
+      granted_at ${ts} NOT NULL,
+      PRIMARY KEY (plugin_id, user_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS plugin_access_groups (
+      tenant_id TEXT NOT NULL,
+      plugin_id TEXT NOT NULL,
+      group_id TEXT NOT NULL,
+      granted_by_user_id TEXT NOT NULL,
+      granted_at ${ts} NOT NULL,
+      PRIMARY KEY (plugin_id, group_id)
     )`,
     `CREATE TABLE IF NOT EXISTS platform_settings (
       key TEXT NOT NULL,

@@ -113,6 +113,13 @@
       "when": 1784299217249,
       "tag": "0015_user_capability_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1784332906034,
+      "tag": "0016_plugin_access_policy",
+      "breakpoints": true
     }
   ]
 }

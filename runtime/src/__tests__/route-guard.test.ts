@@ -70,4 +70,32 @@ describe('decidePluginRoute', () => {
   it('does not leak adminOnly gating onto sibling prefixes', () => {
     expect(decidePluginRoute('/console2/anything', plugins, none, 'platform:user')).toBe('ok');
   });
+
+  it('returns not-found for an access-policy-restricted plugin (RFC 0065)', () => {
+    const restricted = new Set(['fs.sovereign.launcher']);
+    expect(
+      decidePluginRoute('/launcher', plugins, none, 'platform:user', undefined, restricted),
+    ).toBe('not-found');
+  });
+
+  it('access-policy restriction wins over adminOnly — 404, not 403, even for a non-admin', () => {
+    const restricted = new Set(['fs.sovereign.console']);
+    expect(
+      decidePluginRoute('/console', plugins, none, 'platform:user', undefined, restricted),
+    ).toBe('not-found');
+  });
+
+  it('an admin denied by access policy still gets not-found, not the adminOnly ok path', () => {
+    const restricted = new Set(['fs.sovereign.console']);
+    expect(
+      decidePluginRoute('/console', plugins, none, 'platform:admin', undefined, restricted),
+    ).toBe('not-found');
+  });
+
+  it('restriction does not apply to a plugin not in the restricted set', () => {
+    const restricted = new Set(['fs.sovereign.console']);
+    expect(
+      decidePluginRoute('/launcher', plugins, none, 'platform:user', undefined, restricted),
+    ).toBe('ok');
+  });
 });

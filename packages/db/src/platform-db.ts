@@ -217,6 +217,264 @@ export async function setPluginEnabled(
     .onConflictDoUpdate({ target: pg.pluginStatus.pluginId, set: { enabled, updatedAt: now } });
 }
 
+// ─── Plugin access policy (RFC 0065) ─────────────────────────────────────────
+
+export type PluginAccessPolicyValue =
+  | 'everyone'
+  | 'admins'
+  | 'selected_users'
+  | 'selected_groups'
+  | 'disabled';
+
+export interface PluginAccessPolicyRow {
+  pluginId: string;
+  accessPolicy: string;
+  selfService: boolean;
+}
+
+/**
+ * The access policy for a single plugin — `undefined` when no explicit row
+ * exists yet, in which case callers must default to `everyone`/`false`
+ * (absence means "not yet configured", the same convention `plugin_status.enabled`
+ * already uses).
+ */
+export async function getPluginAccessPolicy(
+  pdb: PlatformDb,
+  pluginId: string,
+): Promise<PluginAccessPolicyRow | undefined> {
+  if (pdb.dialect === 'sqlite') {
+    return pdb.db
+      .select({
+        pluginId: sqlite.pluginStatus.pluginId,
+        accessPolicy: sqlite.pluginStatus.accessPolicy,
+        selfService: sqlite.pluginStatus.selfService,
+      })
+      .from(sqlite.pluginStatus)
+      .where(eq(sqlite.pluginStatus.pluginId, pluginId))
+      .get();
+  }
+  const rows = await pdb.db
+    .select({
+      pluginId: pg.pluginStatus.pluginId,
+      accessPolicy: pg.pluginStatus.accessPolicy,
+      selfService: pg.pluginStatus.selfService,
+    })
+    .from(pg.pluginStatus)
+    .where(eq(pg.pluginStatus.pluginId, pluginId));
+  return rows[0];
+}
+
+/** Every plugin's explicit access policy row — for bulk resolution (Launcher, sidebar). */
+export async function listPluginAccessPolicies(pdb: PlatformDb): Promise<PluginAccessPolicyRow[]> {
+  if (pdb.dialect === 'sqlite') {
+    return pdb.db
+      .select({
+        pluginId: sqlite.pluginStatus.pluginId,
+        accessPolicy: sqlite.pluginStatus.accessPolicy,
+        selfService: sqlite.pluginStatus.selfService,
+      })
+      .from(sqlite.pluginStatus)
+      .all();
+  }
+  return pdb.db
+    .select({
+      pluginId: pg.pluginStatus.pluginId,
+      accessPolicy: pg.pluginStatus.accessPolicy,
+      selfService: pg.pluginStatus.selfService,
+    })
+    .from(pg.pluginStatus);
+}
+
+/**
+ * Set a plugin's access policy (upsert on plugin_id). Does not touch the
+ * `enabled` column — the global enable/disable toggle (Console "Plugins" page)
+ * and the access policy are independent axes; a row created here for the first
+ * time defaults `enabled` to `true` (matching "absence means enabled").
+ */
+export async function setPluginAccessPolicy(
+  pdb: PlatformDb,
+  pluginId: string,
+  accessPolicy: PluginAccessPolicyValue,
+  selfService: boolean,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  if (pdb.dialect === 'sqlite') {
+    pdb.db
+      .insert(sqlite.pluginStatus)
+      .values({
+        pluginId,
+        tenantId: DEFAULT_TENANT_ID,
+        enabled: true,
+        accessPolicy,
+        selfService,
+        updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: sqlite.pluginStatus.pluginId,
+        set: { accessPolicy, selfService, updatedAt: now },
+      })
+      .run();
+    return;
+  }
+  await pdb.db
+    .insert(pg.pluginStatus)
+    .values({
+      pluginId,
+      tenantId: DEFAULT_TENANT_ID,
+      enabled: true,
+      accessPolicy,
+      selfService,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: pg.pluginStatus.pluginId,
+      set: { accessPolicy, selfService, updatedAt: now },
+    });
+}
+
+// ─── Plugin access grants (RFC 0065) ─────────────────────────────────────────
+
+export interface PluginAccessGrantRow {
+  userId: string;
+  grantedByUserId: string;
+  grantedAt: number;
+}
+
+export interface PluginAccessGroupGrantRow {
+  groupId: string;
+  grantedByUserId: string;
+  grantedAt: number;
+}
+
+/** Grant a user direct access to a plugin. Idempotent — no-op if already granted. */
+export async function grantPluginAccessUser(
+  pdb: PlatformDb,
+  pluginId: string,
+  userId: string,
+  grantedByUserId: string,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO plugin_access_users (tenant_id, plugin_id, user_id, granted_by_user_id, granted_at)
+        VALUES (${DEFAULT_TENANT_ID}, ${pluginId}, ${userId}, ${grantedByUserId}, ${now})
+        ON CONFLICT (plugin_id, user_id) DO NOTHING`,
+  );
+}
+
+/** Revoke a user's direct plugin access grant. No-op if not granted. */
+export async function revokePluginAccessUser(
+  pdb: PlatformDb,
+  pluginId: string,
+  userId: string,
+): Promise<void> {
+  await dbRun(
+    pdb,
+    sql`DELETE FROM plugin_access_users WHERE plugin_id = ${pluginId} AND user_id = ${userId}`,
+  );
+}
+
+/** Whether a user holds a direct access grant for a plugin. */
+export async function hasPluginAccessUserGrant(
+  pdb: PlatformDb,
+  pluginId: string,
+  userId: string,
+): Promise<boolean> {
+  const row = await dbGet<{ userId: string }>(
+    pdb,
+    sql`SELECT user_id AS "userId" FROM plugin_access_users
+        WHERE plugin_id = ${pluginId} AND user_id = ${userId}
+        LIMIT 1`,
+  );
+  return row !== undefined;
+}
+
+/** List the users directly granted access to a plugin. */
+export async function listPluginAccessUsers(
+  pdb: PlatformDb,
+  pluginId: string,
+): Promise<PluginAccessGrantRow[]> {
+  return dbAll<PluginAccessGrantRow>(
+    pdb,
+    sql`SELECT user_id AS "userId", granted_by_user_id AS "grantedByUserId", granted_at AS "grantedAt"
+        FROM plugin_access_users
+        WHERE plugin_id = ${pluginId}
+        ORDER BY granted_at ASC`,
+  );
+}
+
+/** Every plugin ID a user has a direct access grant for — for bulk resolution. */
+export async function listPluginIdsGrantedToUser(
+  pdb: PlatformDb,
+  userId: string,
+): Promise<string[]> {
+  const rows = await dbAll<{ pluginId: string }>(
+    pdb,
+    sql`SELECT plugin_id AS "pluginId" FROM plugin_access_users WHERE user_id = ${userId}`,
+  );
+  return rows.map((r) => r.pluginId);
+}
+
+/** Grant a group access to a plugin. Idempotent — no-op if already granted. */
+export async function grantPluginAccessGroup(
+  pdb: PlatformDb,
+  pluginId: string,
+  groupId: string,
+  grantedByUserId: string,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO plugin_access_groups (tenant_id, plugin_id, group_id, granted_by_user_id, granted_at)
+        VALUES (${DEFAULT_TENANT_ID}, ${pluginId}, ${groupId}, ${grantedByUserId}, ${now})
+        ON CONFLICT (plugin_id, group_id) DO NOTHING`,
+  );
+}
+
+/** Revoke a group's plugin access grant. No-op if not granted. */
+export async function revokePluginAccessGroup(
+  pdb: PlatformDb,
+  pluginId: string,
+  groupId: string,
+): Promise<void> {
+  await dbRun(
+    pdb,
+    sql`DELETE FROM plugin_access_groups WHERE plugin_id = ${pluginId} AND group_id = ${groupId}`,
+  );
+}
+
+/** List the groups granted access to a plugin. */
+export async function listPluginAccessGroups(
+  pdb: PlatformDb,
+  pluginId: string,
+): Promise<PluginAccessGroupGrantRow[]> {
+  return dbAll<PluginAccessGroupGrantRow>(
+    pdb,
+    sql`SELECT group_id AS "groupId", granted_by_user_id AS "grantedByUserId", granted_at AS "grantedAt"
+        FROM plugin_access_groups
+        WHERE plugin_id = ${pluginId}
+        ORDER BY granted_at ASC`,
+  );
+}
+
+/**
+ * Every plugin ID granted to any group the user currently belongs to — for
+ * bulk resolution. A single join across group membership and plugin grants.
+ */
+export async function listPluginIdsGrantedToUserGroups(
+  pdb: PlatformDb,
+  userId: string,
+): Promise<string[]> {
+  const rows = await dbAll<{ pluginId: string }>(
+    pdb,
+    sql`SELECT DISTINCT g.plugin_id AS "pluginId"
+        FROM plugin_access_groups g
+        INNER JOIN user_group_members m ON m.group_id = g.group_id
+        WHERE m.user_id = ${userId}`,
+  );
+  return rows.map((r) => r.pluginId);
+}
+
 // ─── User groups (RFC 0065) ──────────────────────────────────────────────────
 
 export interface UserGroupRow {
@@ -317,15 +575,17 @@ export async function listUserGroups(pdb: PlatformDb): Promise<UserGroupRow[]> {
 
 /**
  * Whether a group is currently referenced by anything that should block a
- * silent delete. Always false today — there is no plugin access policy
- * concept yet (Task 2.21 adds `plugin_access_groups`). Extend this to check
- * that table once it exists rather than adding a second usage-check path.
+ * silent delete — today, a `plugin_access_groups` grant (RFC 0065).
  */
 export async function getUserGroupUsage(
-  _pdb: PlatformDb,
-  _id: string,
+  pdb: PlatformDb,
+  id: string,
 ): Promise<{ referencedByPluginAccessPolicies: boolean }> {
-  return { referencedByPluginAccessPolicies: false };
+  const row = await dbGet<{ pluginId: string }>(
+    pdb,
+    sql`SELECT plugin_id AS "pluginId" FROM plugin_access_groups WHERE group_id = ${id} LIMIT 1`,
+  );
+  return { referencedByPluginAccessPolicies: row !== undefined };
 }
 
 /** Add a user to a group. Idempotent — no-op if already a member. */

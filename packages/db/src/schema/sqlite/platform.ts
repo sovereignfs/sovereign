@@ -58,8 +58,47 @@ export const pluginStatus = sqliteTable('plugin_status', {
   pluginId: text('plugin_id').primaryKey(),
   tenantId: text('tenant_id').notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  /** 'everyone' | 'admins' | 'selected_users' | 'selected_groups' | 'disabled' (RFC 0065). */
+  accessPolicy: text('access_policy').notNull().default('everyone'),
+  /** Only meaningful for selected_users/selected_groups — lets an eligible user self-grant (RFC 0065). */
+  selfService: integer('self_service', { mode: 'boolean' }).notNull().default(false),
   updatedAt: integer('updated_at').notNull(),
 });
+
+/**
+ * Direct per-user plugin access grants (RFC 0065) — used by the `selected_users`
+ * access policy and by self-service opt-in. Composite PK — a user holds a grant
+ * for a given plugin at most once.
+ */
+export const pluginAccessUsers = sqliteTable(
+  'plugin_access_users',
+  {
+    tenantId: text('tenant_id').notNull(),
+    pluginId: text('plugin_id').notNull(),
+    userId: text('user_id').notNull(),
+    /** The user themselves for a self-service grant. */
+    grantedByUserId: text('granted_by_user_id').notNull(),
+    grantedAt: integer('granted_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.pluginId, table.userId] })],
+);
+
+/**
+ * Group-based plugin access grants (RFC 0065) — used by the `selected_groups`
+ * access policy. Composite PK — a group holds a grant for a given plugin at
+ * most once.
+ */
+export const pluginAccessGroups = sqliteTable(
+  'plugin_access_groups',
+  {
+    tenantId: text('tenant_id').notNull(),
+    pluginId: text('plugin_id').notNull(),
+    groupId: text('group_id').notNull(),
+    grantedByUserId: text('granted_by_user_id').notNull(),
+    grantedAt: integer('granted_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.pluginId, table.groupId] })],
+);
 
 /**
  * Key-value platform configuration scoped by tenant (SRS PLT-15). Initial

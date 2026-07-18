@@ -77,6 +77,7 @@ type FetchState = {
   session: VerifiedSession | null;
   disabledIds: string[] | Error;
   paywalledIds: string[] | Error;
+  restrictedIds: string[] | Error;
   rootPrefix: string | null | Error;
   calls: string[];
 };
@@ -105,6 +106,11 @@ function installFetchMock(state: FetchState): void {
       if (url.includes('/api/admin/entitlements')) {
         if (state.paywalledIds instanceof Error) throw state.paywalledIds;
         return { ok: true, json: async () => ({ paywalled: state.paywalledIds }) };
+      }
+
+      if (url.includes('/api/admin/plugins/access')) {
+        if (state.restrictedIds instanceof Error) throw state.restrictedIds;
+        return { ok: true, json: async () => ({ restricted: state.restrictedIds }) };
       }
 
       if (url.includes('/api/admin/root-plugin')) {
@@ -143,6 +149,7 @@ describe('runtime middleware regressions', () => {
       session: session(),
       disabledIds: [],
       paywalledIds: [],
+      restrictedIds: [],
       rootPrefix: null,
       calls: [],
     };
@@ -179,6 +186,24 @@ describe('runtime middleware regressions', () => {
 
     expect(response.status).toBe(404);
     expect(await response.text()).toBe('Not Found');
+  });
+
+  it('returns 404 for access-policy-restricted plugin routes (RFC 0065)', async () => {
+    fetchState.restrictedIds = [launcherPlugin.id];
+
+    const response = await middleware(request('/launcher'));
+
+    expect(response.status).toBe(404);
+    expect(await response.text()).toBe('Not Found');
+  });
+
+  it('access-policy restriction returns 404, not 403, even for an adminOnly plugin', async () => {
+    fetchState.restrictedIds = [consolePlugin.id];
+    fetchState.session = session('platform:admin');
+
+    const response = await middleware(request('/console'));
+
+    expect(response.status).toBe(404);
   });
 
   it('redirects paywalled plugin page routes to the plugin paywall', async () => {
@@ -220,9 +245,10 @@ describe('runtime middleware regressions', () => {
     expect(fetchState.calls).toEqual(['http://localhost:3000/api/admin/plugins/disabled']);
   });
 
-  it('fails open when disabled-plugin and paywall status fetches fail', async () => {
+  it('fails open when disabled-plugin, paywall, and access-policy status fetches fail', async () => {
     fetchState.disabledIds = new Error('disabled fetch unavailable');
     fetchState.paywalledIds = new Error('paywall fetch unavailable');
+    fetchState.restrictedIds = new Error('access fetch unavailable');
 
     const response = await middleware(request('/launcher'));
 
@@ -238,5 +264,16 @@ describe('runtime middleware regressions', () => {
 
     expect(response.status).toBe(200);
     expect(middlewareRewrite(response)).toBeNull();
+  });
+
+  it('passes the user id and role through to the root-plugin lookup', async () => {
+    fetchState.rootPrefix = '/launcher';
+    fetchState.session = session('platform:admin');
+
+    await middleware(request('/'));
+
+    const rootCall = fetchState.calls.find((c) => c.includes('/api/admin/root-plugin'));
+    expect(rootCall).toContain('userId=user-1');
+    expect(rootCall).toContain('role=platform%3Aadmin');
   });
 });

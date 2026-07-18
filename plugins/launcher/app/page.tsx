@@ -1,6 +1,10 @@
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import { sdk } from '@sovereignfs/sdk';
+import { getPlatformDb } from '@/src/db';
+import { getSelfServiceDirectory } from '@/src/plugin-access-server';
+import { getInstalledPlugins } from '@/src/registry';
+import { PluginDirectorySection } from './_components/PluginDirectorySection';
 import { PluginGrid } from './_components/PluginGrid';
 import { SearchableGrid } from './_components/SearchableGrid';
 import type { PluginTileData } from './_components/PluginTile';
@@ -33,6 +37,18 @@ async function getPlugins(): Promise<LauncherPlugin[]> {
 export default async function LauncherPage() {
   const [plugins, session] = await Promise.all([getPlugins(), sdk.auth.getSession()]);
   const isAdmin = sdk.auth.hasCapability(session, 'console:access');
+  // `sdk.auth.hasCapability` only sees the static role/plugin-declared
+  // capabilities Edge middleware can compute without a DB round trip — RFC
+  // 0070 per-user capability grants (like `plugins:self-manage`) never
+  // appear in that header, so this needs the Node-runtime, DB-backed check.
+  const directory = session
+    ? await getSelfServiceDirectory(
+        await getPlatformDb(),
+        session.user.id,
+        session.user.role,
+        getInstalledPlugins(),
+      )
+    : null;
 
   const mainPlugins = plugins.filter((p) => !p.adminOnly);
   const adminPlugins = plugins.filter((p) => p.adminOnly);
@@ -60,6 +76,10 @@ export default async function LauncherPage() {
             </p>
           )}
         </div>
+
+        {directory && (
+          <PluginDirectorySection eligible={directory.eligible} enabled={directory.enabled} />
+        )}
       </div>
     );
   }
@@ -73,6 +93,10 @@ export default async function LauncherPage() {
           <h2 className={styles.sectionTitle}>Admin</h2>
           <PluginGrid plugins={adminPlugins} />
         </section>
+      )}
+
+      {directory && (
+        <PluginDirectorySection eligible={directory.eligible} enabled={directory.enabled} />
       )}
     </div>
   );

@@ -492,9 +492,9 @@ Create a writable data directory before starting:
 mkdir -p /opt/sovereign/data
 ```
 
-SQLite databases land in `data/` automatically (same behaviour as Docker). Set
-`SOVEREIGN_DATA_DIR` in `.env` if you want them elsewhere. Avatars are stored at
-`data/avatars/`.
+SQLite databases land in `data/` automatically (same behaviour as Docker) —
+resolved as `<workspace-root>/data`, with no env var to relocate it. Avatars
+are stored at `data/avatars/`.
 
 ### Upgrade procedure (non-Docker)
 

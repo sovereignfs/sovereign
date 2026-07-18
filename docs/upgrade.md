@@ -803,12 +803,24 @@ the release you are running.
 | 0.31.0          | Notification transport (RFC 0034)                                                                                    |
 | 0.32.0          | Sidebar customization (epic task 2.13)                                                                               |
 | 0.33.0          | Instance identity — `instanceId` field + terminology cleanup (RFC 0039)                                              |
+| 0.34.0          | Platform/runtime version reconciliation chore (RFC 0057 plan status fix)                                             |
+| 0.35.0          | iOS PWA launch screens (`apple-touch-startup-image`)                                                                 |
+| 0.36.0          | Admin disable surface for example plugins (epic task 12.3)                                                           |
+| 0.37.0          | Account and security email delivery coverage (RFC 0062, epic task 1.14)                                              |
 | 0.38.0          | Plugin background schedules — Phase 1 (RFC 0046)                                                                     |
 | 0.39.0          | Plugin file storage — `sdk.storage` (RFC 0044)                                                                       |
 | 0.40.0–0.40.1   | Client-side encryption core, steps 1–5 — `sdk.e2ee`, Account UX, object crypto, `sdk.storage` integration (RFC 0060) |
 | 0.41.0          | Client-side encryption core complete, step 6 — export/delete via `sdk.portability` (RFC 0060, epic task 8.9 done)    |
 | 0.42.0          | Plugin portability export metadata, partial (RFC 0052)                                                               |
 | 0.43.0          | Cross-plugin references and dependency discovery (RFC 0051); RFC 0052 complete                                       |
+| 0.44.0          | Launcher grid respects saved sidebar order (epic task 2.22)                                                          |
+| 0.45.0          | User groups foundation + per-user capability grants (RFC 0065/0070, epic tasks 1.15–1.16)                            |
+| 0.46.0          | Plugin access policy enforcement (RFC 0065, epic task 2.21)                                                          |
+| 0.47.0          | Plugin catalog and install-time activation model (RFC 0065, epic task 3.28)                                          |
+| 0.48.0          | Console plugin access management (RFC 0065, epic task 13.7)                                                          |
+| 0.49.0          | Console plugin catalog browser and install-time activation (RFC 0065, epic task 13.8)                                |
+| 0.50.0          | Plugin invite-scope grant resolution (RFC 0065, epic task 2.23)                                                      |
+| 0.51.0          | Plugin directory browsing and self-service enable/disable (RFC 0065, epic task 15.3)                                 |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

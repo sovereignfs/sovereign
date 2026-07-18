@@ -41,6 +41,46 @@ export async function togglePluginAction(formData: FormData): Promise<void> {
   revalidatePath('/console/plugins');
 }
 
+// ─── Plugin catalog and activation (RFC 0065 Task 13.8) ──────────────────────
+
+export interface PluginCatalogEntry {
+  id: string;
+  name: string;
+  description: string;
+  active: boolean;
+}
+
+export async function getPluginCatalogAction(): Promise<PluginCatalogEntry[]> {
+  await sdk.auth.requireSession();
+  const res = await adminFetch('/api/admin/plugins/catalog');
+  if (!res.ok) return [];
+  const body = (await res.json()) as { catalog: PluginCatalogEntry[] };
+  return body.catalog;
+}
+
+export type ActivatePluginActionState =
+  | { success: true; alreadyActive: boolean }
+  | { success: false; error: string };
+
+export async function activatePluginAction(
+  _prev: ActivatePluginActionState | null,
+  formData: FormData,
+): Promise<ActivatePluginActionState> {
+  await sdk.auth.requireSession();
+  const pluginId = formData.get('pluginId') as string;
+
+  const res = await adminFetch(`/api/admin/plugins/${encodeURIComponent(pluginId)}/activate`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    return { success: false, error: body?.error ?? `Failed to activate plugin: ${res.status}` };
+  }
+  const body = (await res.json()) as { activated: boolean };
+  revalidatePath('/console/plugins');
+  return { success: true, alreadyActive: !body.activated };
+}
+
 // ─── Plugin access policy (RFC 0065 Task 13.7) ───────────────────────────────
 
 export type PluginAccessPolicyValue =

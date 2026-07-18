@@ -2,8 +2,9 @@ import { headers } from 'next/headers';
 import { Badge } from '@sovereignfs/ui';
 import { getPlatformDb } from '@/src/db';
 import { canUserOpenPlugin } from '@/src/plugin-access-server';
-import { togglePluginAction } from './actions';
+import { getPluginCatalogAction, togglePluginAction } from './actions';
 import { PluginAccessDialog } from './PluginAccessDialog';
+import { PluginCatalogSection } from './PluginCatalogSection';
 import { PluginInstallPanel, RemovePluginButton } from './PluginInstallPanel';
 import styles from '../console.module.css';
 
@@ -287,13 +288,17 @@ async function withOpenability(plugins: RawPluginRow[]): Promise<PluginRow[]> {
 }
 
 export default async function PluginsPage() {
-  const plugins = await withOpenability(await getPlugins());
+  const [rawPlugins, catalog] = await Promise.all([getPlugins(), getPluginCatalogAction()]);
+  const inactiveCatalogIds = new Set(catalog.filter((e) => !e.active).map((e) => e.id));
+  const plugins = await withOpenability(rawPlugins.filter((p) => !inactiveCatalogIds.has(p.id)));
   const mainPlugins = plugins.filter((p) => !p.example);
   const examplePlugins = plugins.filter((p) => p.example);
 
   return (
     <div className={styles.sections}>
       <PluginInstallPanel />
+
+      <PluginCatalogSection catalog={catalog} />
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Installed plugins</h2>

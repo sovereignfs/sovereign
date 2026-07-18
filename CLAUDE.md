@@ -440,6 +440,7 @@ pnpm format:check       # check formatting without writing (CI)
 pnpm lint               # ESLint incl. SDK import-boundary rule
 pnpm lint:fix           # ESLint with auto-fix
 pnpm typecheck          # tsc --noEmit across packages
+pnpm design:tokens:check # verify --sv-* token refs resolve + no hardcoded colour literals in packages/ui, runtime/app, plugins/*/app
 pnpm test               # run Vitest across the repo
 pnpm test:watch         # Vitest in watch mode
 pnpm test:unit          # unit/component tests with verbose output

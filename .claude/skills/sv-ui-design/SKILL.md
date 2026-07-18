@@ -148,7 +148,19 @@ For a new screen, feature, or redesign, produce a spec before code:
 
 ## Pre-merge checklist
 
+Run this checklist on every task that touches anything a user sees —
+regardless of how small the change looks. A one-line copy edit and a new
+screen get the same list; "small" is not an exemption.
+
+- **Design System Gap Check:** did this task need a control, token, or
+  interaction pattern that doesn't exist in `@sovereignfs/ui` yet? If so, it
+  was added there (DS-first placement) and consumed from the task's own
+  screen — not hand-rolled locally "to promote later." State explicitly
+  which case applied: "no gap" or "added `<X>` to packages/ui."
 - No primitive/hardcoded colours; components from `@sovereignfs/ui`.
+  `pnpm design:tokens:check` enforces this mechanically across
+  `packages/ui/src/components`, `runtime/app`, and `plugins/*/app` — run it
+  and confirm it passes.
 - No internal vocabulary in any user-visible string (check against the
   feature's jargon table).
 - Every mutation: inline expected-error path + pending label; `error.tsx`

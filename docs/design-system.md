@@ -262,7 +262,10 @@ For a bare control outside `FormField` (e.g. `Input` used standalone), pair it w
 
    Anything else — a colour, a spacing gap, a border-radius — must be a
    token. `pnpm design:tokens:check` also fails on hardcoded hex/`rgb()`
-   colour literals in `packages/ui/src/components`.
+   colour literals in `packages/ui/src/components`, `runtime/app`, and
+   `plugins/*/app` — the check isn't limited to the design system package
+   itself, since a hardcoded literal in the shell or a first-party plugin is
+   the same drift with the same fix (add or reuse a token).
 
 4. **RSC-safe.** Keep components presentational and prop-forwarding. Add
    `'use client'` only when the component genuinely needs hooks or browser state.
@@ -284,10 +287,14 @@ For a bare control outside `FormField` (e.g. `Input` used standalone), pair it w
 layout namespace — `--sv-shell-*` / `--sv-dialog-inset-*` — defined in
 `runtime/app/globals.css` and `shell.module.css`; see
 [`--sv-dialog-inset-top`](#--sv-dialog-inset-top) below). It also fails on
-hardcoded hex/`rgb()`/`rgba()` colour literals inside
-`packages/ui/src/components`, since third-party plugins inherit whatever
-ships there. Runs in CI (`design-tokens` job) after typecheck, and as part of
-`pnpm verify:push` (the pre-push hook).
+hardcoded hex/`rgb()`/`rgba()` colour literals in `.module.css` files under
+`packages/ui/src/components`, `runtime/app`, and `plugins/*/app`.
+`packages/ui` is checked because third-party plugins inherit whatever ships
+there; the shell and first-party plugins are checked because a literal
+reached for under time pressure instead of a token is exactly how a screen
+ends up half-adhering to the design system, and it's cheaper to catch
+mechanically than in review. Runs in CI (`design-tokens` job) after
+typecheck, and as part of `pnpm verify:push` (the pre-push hook).
 
 ## Icon system (RFC 0011)
 

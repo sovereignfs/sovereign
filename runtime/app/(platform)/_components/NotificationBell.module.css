@@ -254,13 +254,13 @@
 }
 
 .iconGreen {
-  background: var(--sv-color-success-surface, #ecfdf3);
-  color: var(--sv-color-success-text, #167c4a);
+  background: var(--sv-color-success-surface);
+  color: var(--sv-color-success-text);
 }
 
 .iconAmber {
-  background: var(--sv-color-warning-surface, #fff7ed);
-  color: var(--sv-color-warning-text, #b45309);
+  background: var(--sv-color-warning-surface);
+  color: var(--sv-color-warning-text);
 }
 
 .iconNeutral {
@@ -326,7 +326,7 @@ button.itemTitle {
   width: 7px;
   height: 7px;
   border-radius: var(--sv-radius-full);
-  background: #3b82f6;
+  background: var(--sv-color-accent);
   flex: none;
 }
 

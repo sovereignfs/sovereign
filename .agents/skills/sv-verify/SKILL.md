@@ -22,9 +22,17 @@ Run the standard Sovereign quality checks and return a compact result summary.
    pnpm format:check
    pnpm lint
    pnpm typecheck
+   pnpm design:tokens:check
    pnpm test
    pnpm build
    ```
+
+   `design:tokens:check` is unconditional, not one of the conditional checks
+   below — it scans `packages/ui/src/components`, `runtime/app`, and
+   `plugins/*/app` for hardcoded colour literals and undefined `--sv-*` token
+   references on every task, whether or not `CURRENT_TASK.md` mentions UI
+   work. It's also part of the pre-push hook (`verify:push`); running it here
+   surfaces the same failure before push instead of after.
 
 3. Run conditional checks when relevant:
    - Manifest/SDK/env docs parity:
@@ -39,16 +47,17 @@ Run the standard Sovereign quality checks and return a compact result summary.
    ```markdown
    ## Verification Results
 
-   | Check          | Result  | Notes        |
-   | -------------- | ------- | ------------ |
-   | format:check   | ✅ PASS | —            |
-   | lint           | ✅ PASS | —            |
-   | typecheck      | ✅ PASS | —            |
-   | test           | ✅ PASS | —            |
-   | build          | ✅ PASS | —            |
-   | docs-parity    | skipped | Not relevant |
-   | ui typecheck   | skipped | Not relevant |
-   | registry:check | skipped | Not relevant |
+   | Check               | Result  | Notes        |
+   | ------------------- | ------- | ------------ |
+   | format:check        | ✅ PASS | —            |
+   | lint                | ✅ PASS | —            |
+   | typecheck           | ✅ PASS | —            |
+   | design:tokens:check | ✅ PASS | —            |
+   | test                | ✅ PASS | —            |
+   | build               | ✅ PASS | —            |
+   | docs-parity         | skipped | Not relevant |
+   | ui typecheck        | skipped | Not relevant |
+   | registry:check      | skipped | Not relevant |
 
    **Overall:** ✅ All checks pass
    ```

@@ -10,10 +10,13 @@
  *      a silent bug: it resolves to nothing in the browser (or the fallback, if
  *      one is given), so the drift is invisible until someone reads the
  *      rendered page pixel-by-pixel.
- *   2. Hardcoded colour literals — scans `packages/ui/src/components` recursively
- *      (the public contract) for hex/`rgb()`/`rgba()` literals outside `var(--sv-...)`.
- *      Scoped to `packages/ui` only: third-party plugins inherit whatever ships
- *      here, so this is the highest-risk surface for drift.
+ *   2. Hardcoded colour literals — scans `packages/ui/src/components` (the public
+ *      contract), `runtime/app`, and `plugins/<id>/app` for hex/`rgb()`/`rgba()`
+ *      literals outside `var(--sv-...)`. `packages/ui` is the highest-risk
+ *      surface (third-party plugins inherit whatever ships there), but the
+ *      shell and first-party plugins are exactly where a task under time
+ *      pressure reaches for a literal instead of adding the missing token or
+ *      component to the design system — so they're checked too.
  *
  * Only tracked files are scanned (`git ls-files`), so gitignored build
  * artifacts (the composed plugin copies under
@@ -38,8 +41,10 @@ const TOKEN_ALLOWLIST: ReadonlySet<string> = new Set([
   '--sv-vh',
 ]);
 
-// file:line entries permitted to hardcode a colour literal in packages/ui/src/components.
-// Keep empty unless there's a documented reason.
+// file:line entries permitted to hardcode a colour literal in the scanned dirs
+// (packages/ui/src/components, runtime/app, plugins/*/app). Keep empty unless
+// there's a documented reason (e.g. a third-party brand mark that must render
+// in its official colour regardless of theme).
 const LITERAL_ALLOWLIST: ReadonlySet<string> = new Set();
 
 const TOKEN_DEF_RE = /(--sv-[\w-]+)\s*:/g;
@@ -109,7 +114,11 @@ function checkUndefinedTokens(defined: Set<string>): Violation[] {
 
 function checkHardcodedLiterals(): Violation[] {
   const violations: Violation[] = [];
-  const files = gitFiles('packages/ui/src/components', ['.module.css']);
+  const files = [
+    ...gitFiles('packages/ui/src/components', ['.module.css']),
+    ...gitFiles('runtime/app', ['.module.css']),
+    ...gitFiles('plugins/*/app', ['.module.css']),
+  ];
   for (const file of files) {
     const content = readFileSync(join(ROOT, file), 'utf8');
     const lines = content.split('\n');

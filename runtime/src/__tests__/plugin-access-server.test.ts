@@ -10,6 +10,10 @@ vi.mock('@sovereignfs/db', () => ({
   listPluginIdsGrantedToUserGroups: vi.fn(),
 }));
 
+vi.mock('../user-capabilities', () => ({
+  hasUserCapability: vi.fn(),
+}));
+
 import {
   getPluginAccessPolicy,
   hasPluginAccessUserGrant,
@@ -17,7 +21,12 @@ import {
   listPluginIdsGrantedToUser,
   listPluginIdsGrantedToUserGroups,
 } from '@sovereignfs/db';
-import { canUserOpenPlugin, getRestrictedPluginIds } from '../plugin-access-server';
+import {
+  canUserOpenPlugin,
+  getRestrictedPluginIds,
+  getSelfServiceDirectory,
+} from '../plugin-access-server';
+import { hasUserCapability } from '../user-capabilities';
 
 const mockPdb = { dialect: 'sqlite' } as never;
 
@@ -219,5 +228,78 @@ describe('getRestrictedPluginIds', () => {
       'fs.example.untouched',
     ]);
     expect(result).toEqual(['fs.example.untouched']);
+  });
+});
+
+describe('getSelfServiceDirectory', () => {
+  function manifest(id: string, overrides: Record<string, unknown> = {}) {
+    return {
+      id,
+      name: id,
+      description: `${id} description`,
+      routePrefix: `/${id}`,
+      ...overrides,
+    } as never;
+  }
+
+  it("returns null when the user lacks plugins:self-manage — the control doesn't exist, not just hidden", async () => {
+    vi.mocked(hasUserCapability).mockResolvedValue(false);
+
+    const result = await getSelfServiceDirectory(mockPdb, 'u1', 'platform:user', [
+      manifest('fs.example.tasks'),
+    ]);
+
+    expect(result).toBeNull();
+    expect(listPluginAccessPolicies).not.toHaveBeenCalled();
+  });
+
+  it('splits self-service-eligible plugins into eligible (no grant) and enabled (has grant)', async () => {
+    vi.mocked(hasUserCapability).mockResolvedValue(true);
+    vi.mocked(listPluginAccessPolicies).mockResolvedValue([
+      { pluginId: 'fs.example.tasks', accessPolicy: 'selected_users', selfService: true },
+      { pluginId: 'fs.example.wallet', accessPolicy: 'selected_users', selfService: true },
+    ]);
+    vi.mocked(listPluginIdsGrantedToUser).mockResolvedValue(['fs.example.wallet']);
+
+    const result = await getSelfServiceDirectory(mockPdb, 'u1', 'platform:user', [
+      manifest('fs.example.tasks'),
+      manifest('fs.example.wallet'),
+    ]);
+
+    expect(result?.eligible.map((p) => p.id)).toEqual(['fs.example.tasks']);
+    expect(result?.enabled.map((p) => p.id)).toEqual(['fs.example.wallet']);
+  });
+
+  it('excludes plugins that are not selected_users, not self_service, or have no policy row at all', async () => {
+    vi.mocked(hasUserCapability).mockResolvedValue(true);
+    vi.mocked(listPluginAccessPolicies).mockResolvedValue([
+      { pluginId: 'fs.example.everyone', accessPolicy: 'everyone', selfService: true },
+      { pluginId: 'fs.example.notSelfService', accessPolicy: 'selected_users', selfService: false },
+      { pluginId: 'fs.example.groups', accessPolicy: 'selected_groups', selfService: true },
+    ]);
+    vi.mocked(listPluginIdsGrantedToUser).mockResolvedValue([]);
+
+    const result = await getSelfServiceDirectory(mockPdb, 'u1', 'platform:user', [
+      manifest('fs.example.everyone'),
+      manifest('fs.example.notSelfService'),
+      manifest('fs.example.groups'),
+      manifest('fs.example.noPolicyRow'),
+    ]);
+
+    expect(result).toBeNull();
+  });
+
+  it('excludes chrome plugins even if somehow policy-scoped', async () => {
+    vi.mocked(hasUserCapability).mockResolvedValue(true);
+    vi.mocked(listPluginAccessPolicies).mockResolvedValue([
+      { pluginId: 'fs.sovereign.launcher', accessPolicy: 'selected_users', selfService: true },
+    ]);
+    vi.mocked(listPluginIdsGrantedToUser).mockResolvedValue([]);
+
+    const result = await getSelfServiceDirectory(mockPdb, 'u1', 'platform:user', [
+      manifest('fs.sovereign.launcher'),
+    ]);
+
+    expect(result).toBeNull();
   });
 });

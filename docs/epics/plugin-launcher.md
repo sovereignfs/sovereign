@@ -86,7 +86,7 @@ customization), Task 7.1 (plugin monetization).
 
 ---
 
-#### 📋 15.3 — Plugin directory browsing and self-service enable/disable (RFC 0065)
+#### ✅ 15.3 — Plugin directory browsing and self-service enable/disable (RFC 0065)
 
 **Goal:** Let a user with the `plugins:self-manage` capability (RFC 0070) browse plugins they're
 eligible for but haven't turned on, and self-service enable/disable a `self_service`-enabled
@@ -96,13 +96,31 @@ eligible for but haven't turned on, and self-service enable/disable a `self_serv
 
 - Add a plugin-directory view (Launcher or Account, TBD at implementation) listing plugins the
   current user is eligible for under RFC 0065's access policy, distinguishing "already on" from
-  "eligible, not yet enabled."
+  "eligible, not yet enabled." Shipped as an "App directory" section
+  (`plugins/launcher/app/_components/PluginDirectorySection.tsx`) on the Launcher home page,
+  fed by a new `getSelfServiceDirectory` resolver (`runtime/src/plugin-access-server.ts`) that
+  bulk-computes the eligible/enabled split in two DB queries regardless of plugin count, mirroring
+  the existing `getRestrictedPluginIds` pattern.
 - Render an enable/disable affordance only for plugins with `self_service = true` on their
   access policy, and only when the current user holds `plugins:self-manage` — the control does
-  not exist for users without the capability, not merely disabled.
+  not exist for users without the capability, not merely disabled. `getSelfServiceDirectory`
+  returns `null` (not an empty list) when the user lacks the capability, so the Launcher page
+  renders no section at all rather than an empty or disabled one. Uses `hasUserCapability`
+  directly (Node-runtime, DB-backed) rather than `sdk.auth.hasCapability` — the latter only sees
+  the static role/plugin-declared capabilities Edge middleware can compute without a DB round
+  trip; RFC 0070 per-user capability grants never reach that header.
 - Enabling/disabling calls the same resolver and `plugin_access_users` grant table an admin's
-  Console grant uses (Task 2.21), with `granted_by_user_id` set to the user themselves.
+  Console grant uses (Task 2.21), with `granted_by_user_id` set to the user themselves. Reused
+  the pre-existing `POST`/`DELETE /api/plugins/[id]/self-service` route
+  (`runtime/app/api/plugins/[id]/self-service/route.ts`) — built during Task 2.21 as "the
+  mechanism layer" with an explicit docstring noting Task 15.3 would build the UI on top of it,
+  so no new grant/revoke plumbing was needed, only the directory UI to call it from.
 - Self-service actions are audited identically to admin grants, attributed to the acting user.
+  Already true from the pre-existing route: `plugin.self_service_granted`/`plugin.self_service_revoked`
+  action names, distinct from the admin-initiated `plugin.access_user_granted`/`revoked`.
+- **Scope confirmation:** self-service is `selected_users`-policy only, matching the pre-existing
+  route's explicit design — `selected_groups` self-service is deferred pending a "self-joinable
+  group" concept this task does not add. `getSelfServiceDirectory` follows the same restriction.
 
 **Dependencies:** Task 15.1 (Launcher plugin), Task 2.21 (plugin access policy enforcement —
 self-service resolver and grant tables), Task 1.16 (per-user capability grants, RFC 0070).
@@ -112,13 +130,21 @@ self-service resolver and grant tables), Task 1.16 (per-user capability grants, 
 **Review checklist:**
 
 - A user with `plugins:self-manage` can enable a `self_service`-enabled plugin they're eligible
-  for and see it appear in their Launcher/sidebar immediately.
+  for and see it appear in their Launcher/sidebar immediately. ✅ verified live: granted
+  `plugins:self-manage` to a `platform:user`, set a plugin's policy to `selected_users` +
+  `self_service = true`, logged in as that user, clicked Enable in the App directory, and
+  confirmed the plugin both opened and appeared in the main app grid on the next page load
+  (11 installed → up from 10).
 - A user without `plugins:self-manage` sees no enable/disable control anywhere, even for
-  otherwise-eligible self-service plugins.
+  otherwise-eligible self-service plugins. ✅ verified live: revoked the capability grant and
+  confirmed the "App directory" section disappeared entirely, not merely its buttons.
 - Self-service grants are indistinguishable in the resolver from admin grants, but
-  distinguishable in the audit log.
+  distinguishable in the audit log. ✅ verified: the plugin opened via the same `canOpenPlugin`
+  path as an admin grant; the activity feed shows `plugin.self_service_granted`/`revoked` with
+  the acting user as `actorId`, distinct from `plugin.access_user_granted`/`revoked`.
 - Disabling a self-granted plugin removes it from the user's Launcher/sidebar without affecting
-  other users' access.
+  other users' access. ✅ verified: after Disable, the plugin dropped out of the user's app grid
+  on reload (11 → 10 installed) and the App directory row reverted to "Enable".
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
 ---

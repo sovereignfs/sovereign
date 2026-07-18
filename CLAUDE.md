@@ -395,7 +395,7 @@ packages/
   sdk/              plugin↔platform contract (types + impls)
   create-plugin/    `npm create @sovereignfs/plugin` scaffolder — published
 runtime/            Sovereign Core (Next.js shell, middleware, registry, SDK bridge)
-  generated/        built from manifests — never hand-edit
+  generated/        built from manifests — never hand-edit, gitignored (run `pnpm generate`)
 plugins/console/    core admin plugin (platform type)
 plugins/launcher/   home screen plugin (platform type)
 plugins/account/    per-user profile plugin (platform type)
@@ -471,11 +471,26 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
   — required for their native bindings. `simple-git-hooks` is set to `false`
   there (the root `prepare` script installs the hooks instead).
 - **Shared dev tooling is pinned via the pnpm `catalog:`** in
-  `pnpm-workspace.yaml` (`typescript`, `tsup`). Every package references them as
-  `"typescript": "catalog:"` / `"tsup": "catalog:"` — never a literal version.
-  This stops `pnpm add` from floating one package onto a different major (it
-  once pulled TS 6 into a single package). When adding `typescript`/`tsup` to a
-  new package, use `catalog:`; to bump the version, edit the catalog once.
+  `pnpm-workspace.yaml` (`typescript`, `tsup`, `react`, `next`, `@types/node`,
+  …). Every package references them as `"typescript": "catalog:"` /
+  `"tsup": "catalog:"` — never a literal version. This stops `pnpm add` from
+  floating one package onto a different major (it once pulled TS 6 into a
+  single package, and separately let `@types/node` drift to a new major via
+  an unpinned transitive peer range, cascading into a 2000+ line
+  `pnpm-lock.yaml` diff for an unrelated change). When adding a dependency
+  that's already in the catalog, reference it with `catalog:`; when adding a
+  _new_ shared dep, add it to the catalog first rather than pinning a literal
+  version in just one package.
+- **Run `pnpm install --frozen-lockfile` for routine installs** (after a
+  `git pull`, before running tests/build) — reserve a bare `pnpm install` for
+  when you're intentionally adding, removing, or bumping a dependency. A
+  non-frozen install re-resolves the whole dependency graph, and if any
+  transitive package has a loose/unpinned peer range, it can silently pull
+  in a newer major and rewrite `pnpm-lock.yaml` far beyond what your actual
+  change touched — this is what caused the `@types/node` drift above. If
+  `pnpm-lock.yaml` shows unexpected changes after a routine install, treat it
+  as a signal something's unpinned that should be, not something to shrug
+  off and commit anyway.
 
 ## Status
 

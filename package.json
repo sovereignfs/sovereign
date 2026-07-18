@@ -59,7 +59,7 @@
     "@sovereignfs/manifest": "workspace:*",
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^22.10.2",
+    "@types/node": "catalog:",
     "better-auth": "^1.6.16",
     "better-sqlite3": "^12.10.0",
     "citty": "^0.1.6",

@@ -51,8 +51,25 @@ describe('canUserOpenPlugin', () => {
     expect(result).toBe(false);
   });
 
-  it('defaults to everyone when no policy row exists', async () => {
+  it('defaults to disabled when no policy row exists (RFC 0065 Task 3.28 — a genuinely absent row means never activated, not open to everyone)', async () => {
     vi.mocked(getPluginAccessPolicy).mockResolvedValue(undefined);
+    const result = await canUserOpenPlugin(
+      mockPdb,
+      'u1',
+      'platform:owner',
+      'fs.example.tasks',
+      true,
+      true,
+    );
+    expect(result).toBe(false);
+  });
+
+  it('an explicit everyone row is still open to everyone', async () => {
+    vi.mocked(getPluginAccessPolicy).mockResolvedValue({
+      pluginId: 'fs.example.tasks',
+      accessPolicy: 'everyone',
+      selfService: false,
+    });
     const result = await canUserOpenPlugin(
       mockPdb,
       'u1',
@@ -193,14 +210,14 @@ describe('getRestrictedPluginIds', () => {
     expect(result.sort()).toEqual(['fs.example.off', 'fs.example.theirs']);
   });
 
-  it('a plugin with no explicit policy row defaults to everyone (never restricted)', async () => {
+  it('a plugin with no explicit policy row defaults to disabled — restricted for everyone, including an admin (RFC 0065 Task 3.28)', async () => {
     vi.mocked(listPluginAccessPolicies).mockResolvedValue([]);
     vi.mocked(listPluginIdsGrantedToUser).mockResolvedValue([]);
     vi.mocked(listPluginIdsGrantedToUserGroups).mockResolvedValue([]);
 
-    const result = await getRestrictedPluginIds(mockPdb, 'u1', 'platform:user', [
+    const result = await getRestrictedPluginIds(mockPdb, 'u1', 'platform:admin', [
       'fs.example.untouched',
     ]);
-    expect(result).toEqual([]);
+    expect(result).toEqual(['fs.example.untouched']);
   });
 });

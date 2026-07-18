@@ -33,7 +33,29 @@ Run all quality checks for the current task and report a structured pass/fail su
    pnpm test -- --reporter=verbose runtime/src/docs-parity 2>&1
    ```
 
-4. **Report results in this exact format** — do not dump raw command output:
+4. **Run the version-doc sync check unconditionally** — this catches the class of
+   drift where a version bump lands without the docs that cite it being updated:
+
+   ```bash
+   grep -m1 '"version"' package.json
+   grep -m1 '"version"' runtime/package.json
+   grep -n '^  The current version is' CLAUDE.md
+   grep -n '^Current platform version:' CLAUDE.md
+   grep -n '^\*\*Version:\*\*' docs/roadmap.md
+   ```
+
+   Compare the results:
+   - Root `package.json`'s version must match **both** version mentions in
+     `CLAUDE.md` and the `**Version:**` line in `docs/roadmap.md`.
+   - If `runtime/package.json`'s version changed in this branch (check
+     `git diff main...HEAD -- runtime/package.json`), its new value must have a
+     matching row in the `## Runtime version map` table in `docs/upgrade.md`.
+
+   If any of these are out of sync, do **not** silently ignore it — call it a
+   **FAIL** in the report below (`/sv-update-task-docs` is what fixes it, so
+   flag it there rather than editing docs yourself mid-verify).
+
+5. **Report results in this exact format** — do not dump raw command output:
 
    ```
    ## Verification Results
@@ -47,6 +69,7 @@ Run all quality checks for the current task and report a structured pass/fail su
    | test | ✅ PASS | 47 tests passed |
    | build | ✅ PASS | — |
    | docs-parity | ✅ PASS | — |
+   | version-doc sync | ✅ PASS | — |
 
    **Overall: ✅ All checks pass**
    ```

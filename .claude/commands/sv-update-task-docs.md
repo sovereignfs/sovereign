@@ -19,13 +19,34 @@ Requires `CURRENT_TASK.md` to exist in the repo root.
 
 3. **Update the epic file** named by `**Epic file:**` — find the heading for the epic task ID and change its status marker to `✅`.
 
-4. **Delete `CURRENT_TASK.md`:**
+4. **Sync the version-bearing docs whenever this branch bumped a version** (root
+   `package.json` and/or `runtime/package.json` — check `git diff main...HEAD --
+package.json runtime/package.json`):
+
+   - **Root `package.json` version changed** → update it in lockstep in:
+     - `CLAUDE.md` — both `The current version is **`X`**` and
+       `Current platform version: **`X`**` mentions.
+     - `docs/roadmap.md` — the `**Version:**` line in the header, and bump
+       `**Last updated:**` to today's date.
+   - **`runtime/package.json` version changed** → append a new row to the
+     `## Runtime version map` table in `docs/upgrade.md`, keyed to the new
+     version, describing the task in one line (reuse the roadmap row title /
+     epic task ID from step 1–2). Keep the table in ascending version order —
+     do not leave a gap for a version that was actually shipped.
+
+   Skip whichever half didn't change — a task that only bumps `runtime` (most
+   feature work) doesn't need the `CLAUDE.md`/`roadmap.md` header touched, and
+   vice versa.
+
+5. **Delete `CURRENT_TASK.md`:**
 
    ```bash
    rm CURRENT_TASK.md
    ```
 
-5. **Report** in 2–3 lines: which roadmap row and epic heading were marked ✅, and that CURRENT_TASK.md was deleted.
+6. **Report** in 2–4 lines: which roadmap row and epic heading were marked ✅,
+   which version-doc(s) were synced (or "none needed"), and that
+   CURRENT_TASK.md was deleted.
 
 ## What not to do
 

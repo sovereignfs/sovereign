@@ -42,7 +42,23 @@ Run the standard Sovereign quality checks and return a compact result summary.
    - Registry changes:
      `pnpm registry:check`
 
-4. Report only the summary table and concise failure details:
+4. Run the version-doc sync check unconditionally:
+
+   ```bash
+   grep -m1 '"version"' package.json
+   grep -m1 '"version"' runtime/package.json
+   grep -n 'The current version is\|Current platform version:' CLAUDE.md
+   grep -n '^\*\*Version:\*\*' docs/roadmap.md
+   git diff main...HEAD -- runtime/package.json
+   ```
+
+   Root `package.json`'s version must match both mentions in `CLAUDE.md` and
+   the `**Version:**` line in `docs/roadmap.md`. If `runtime/package.json`'s
+   version changed on this branch, the new value must have a row in the
+   `## Runtime version map` table in `docs/upgrade.md`. Report a mismatch as a
+   **FAIL** — don't edit the docs here; `/sv-update-task-docs` does the fix.
+
+5. Report only the summary table and concise failure details:
 
    ```markdown
    ## Verification Results
@@ -58,11 +74,12 @@ Run the standard Sovereign quality checks and return a compact result summary.
    | docs-parity         | skipped | Not relevant |
    | ui typecheck        | skipped | Not relevant |
    | registry:check      | skipped | Not relevant |
+   | version-doc sync    | ✅ PASS | —            |
 
    **Overall:** ✅ All checks pass
    ```
 
-5. For failures, include a `Failures` section with the command, file/line if
+6. For failures, include a `Failures` section with the command, file/line if
    available, and the smallest useful error excerpt. Do not paste full compiler,
    test, or build logs.
 

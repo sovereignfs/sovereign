@@ -26,11 +26,24 @@ task context.
    - Find the task heading for the epic task ID.
    - Change its status marker to `✅`, preserving the rest of the heading.
 
-4. Delete `CURRENT_TASK.md`.
+4. Sync version-bearing docs if this branch bumped a version — check
+   `git diff main...HEAD -- package.json runtime/package.json`:
+   - Root `package.json` version changed → update it in `CLAUDE.md` (both
+     `The current version is **`X`**` and `Current platform version: **`X`**`)
+     and in `docs/roadmap.md`'s `**Version:**` header line (also bump
+     `**Last updated:**` to today's date).
+   - `runtime/package.json` version changed → append a row for the new version
+     to the `## Runtime version map` table in `docs/upgrade.md`, describing the
+     task in one line. Keep the table in ascending version order — no gaps for
+     versions that actually shipped.
+   - Skip whichever half didn't change.
 
-5. Report in 2-3 lines:
+5. Delete `CURRENT_TASK.md`.
+
+6. Report in 2-4 lines:
    - which roadmap row was marked complete,
    - which epic heading was marked complete,
+   - which version-doc(s) were synced (or "none needed"),
    - that `CURRENT_TASK.md` was deleted.
 
 ## What not to do

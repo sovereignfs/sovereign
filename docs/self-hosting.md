@@ -1221,14 +1221,27 @@ What follows makes the private-repo-auth part of that seamless.
    }
    ```
 
-2. **Set the token** in your deployment environment (`.env`, compose secrets, or however
-   `SOVEREIGN_ADMIN_KEY` and friends already reach the build): `ACME_CRM_PLUGIN_TOKEN=ghp_xxx`.
-   Requires an `https://` repository URL — an SSH URL authenticates via your shell's own SSH
-   key/agent and needs no `tokenEnv`.
-3. **Rebuild**: `docker compose -f docker-compose.prod.yml up --build -d` (or `pnpm
-install:plugins` for a non-Docker/PM2 deployment, see [Non-Docker deployment](#non-docker-deployment)).
-   `scripts/install-plugins.ts` clones the repo using the token, authenticated via a short-lived
-   git credential file — never logged, never embedded in a URL passed as a process argument.
+2. **Pass the token as a BuildKit build secret — not `.env`, not a plain `ARG`.** A Docker `RUN`
+   step never inherits the host or Compose `environment:` block (that only applies to the
+   _running container_, not the build), so `ACME_CRM_PLUGIN_TOKEN` has to be injected explicitly
+   at build time:
+   ```bash
+   ACME_CRM_PLUGIN_TOKEN=ghp_xxx docker buildx build \
+     --secret id=plugin_token,env=ACME_CRM_PLUGIN_TOKEN \
+     -f Dockerfile -t sovereign-runtime .
+   ```
+   `docker compose -f docker-compose.prod.yml up --build -d` alone does **not** pass this
+   through — Compose only forwards build secrets declared in the compose file's own
+   `build.secrets:`/top-level `secrets:` blocks, which `docker-compose.prod.yml` doesn't
+   currently define. Build with `docker buildx build` directly (as above), then run
+   `docker compose -f docker-compose.prod.yml up -d` against the image you just built (no
+   `SOVEREIGN_VERSION` pin, so Compose uses the locally-built `sovereign-runtime` image rather
+   than pulling from GHCR). Requires an `https://` repository URL — an SSH URL authenticates via
+   your shell's own SSH key/agent and needs no `tokenEnv`.
+3. **`scripts/install-plugins.ts` clones the repo using the token**, authenticated via a
+   short-lived git credential file — never logged, never embedded in a URL passed as a process
+   argument. The `--secret` itself is never written to any image layer or the build-cache
+   metadata (unlike an `ARG`, which is).
 
 **The one requirement this depends on — a persistent checkout, not a fresh clone.** Cloned plugin
 source lands in `plugins/<id>/`, which is gitignored (it has its own repository). The standard

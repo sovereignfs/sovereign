@@ -1,9 +1,13 @@
+# syntax=docker/dockerfile:1
 # Production image for the Sovereign runtime (Next.js standalone output).
 #
 # Build context is the monorepo root — required for pnpm workspace resolution:
 #   docker build -f Dockerfile -t sovereign-runtime .
 #
 # No secrets are baked in: all configuration is injected at runtime via env.
+# The one exception is a private plugin repository's clone credential — see
+# the builder stage below — which is a BuildKit secret mount, never an ARG,
+# so it never lands in an image layer or the build-cache metadata.
 
 # ---- deps: install workspace dependencies ---------------------------------
 FROM node:24-alpine AS deps
@@ -28,7 +32,19 @@ RUN apk add --no-cache git
 # plugin app/ tree into the route group — both must precede the build. The
 # explicit generate is a safety net for the empty-config case (install:plugins
 # only generates when it actually clones something).
-RUN pnpm install:plugins
+#
+# A plugin entry in sovereign.plugins.json can declare "tokenEnv": "<VAR>" to
+# clone from a private repository (scripts/install-plugins.ts reads
+# process.env[<VAR>]). Docker's plain RUN never inherits the host/Compose
+# environment, so that variable has to be injected explicitly as a build
+# secret — never a plain ARG, which bakes its value into the build-cache
+# metadata even though it's absent from the final image layers. Build with:
+#   docker buildx build --secret id=plugin_token,env=<VAR> ...
+# The secret is a no-op (and this RUN behaves exactly as before) when no
+# plugin declares a tokenEnv or the build omits --secret — process.env.<VAR>
+# is simply unset, same as today.
+RUN --mount=type=secret,id=plugin_token,env=SOVEREIGN_PLUGIN_TOKEN \
+    pnpm install:plugins
 # External plugin package manifests are intentionally absent from the committed
 # lockfile. Refresh the builder's workspace graph after cloning pinned plugins,
 # while keeping the initial source-tree install frozen.

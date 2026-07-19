@@ -53,7 +53,7 @@ The Notification Center gives plugins a single `sdk.notifications.send()` call t
 
 ---
 
-#### 📋 4.3 — Notification Center: pluggable pub/sub transport
+#### ✅ 4.3 — Notification Center: pluggable pub/sub transport
 
 **Goal:** Replace the Notification Center's DB-polling SSE backend with a real
 event-driven pub/sub broker. Polling stays the default (`NOTIFICATION_TRANSPORT=polling`);

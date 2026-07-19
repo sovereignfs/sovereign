@@ -1,6 +1,6 @@
 # RFC 0070 — Per-user capability grants
 
-**Status:** Draft\
+**Status:** Implemented\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** `runtime/src/capabilities.ts`, `packages/db`, `runtime/src/session-verify.ts`,

@@ -1,7 +1,7 @@
 ---
 rfc: 0049
 title: Plugin external connections
-status: Draft
+status: Implemented
 date: June 2026
 author: kasunben
 scope: packages/sdk, runtime, packages/db, packages/manifest, plugins/account, plugins/console, docs; builds on RFC 0043 and RFC 0047

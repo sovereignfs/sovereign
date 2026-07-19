@@ -65,6 +65,7 @@ Work is organized into domain epics. Each task has a **stable epic task ID** (`<
 | 21  | `sovereign-wallet.md`    | Encrypted wallet platform plugin                          |
 | 22  | `core-assistant.md`      | Runtime assistant and local inference                     |
 | 23  | `p2p-chat.md`            | Companion P2P chat, identity, transport, and E2EE         |
+| 24  | `plugin-guide.md`        | First-run orientation and operator guidance plugin        |
 
 The epic index is `docs/epics/README.md` in the repository planning docs.
 

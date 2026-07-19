@@ -1,7 +1,7 @@
 ---
 rfc: 0043
 title: Plugin secret vault
-status: Draft
+status: Implemented
 date: June 2026
 author: kasunben
 scope: >

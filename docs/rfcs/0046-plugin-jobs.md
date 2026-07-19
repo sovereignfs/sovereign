@@ -5,7 +5,7 @@ status: Partially implemented (Phase 1 subset)
 date: June 2026
 author: kasunben
 scope: packages/sdk, runtime, packages/db, packages/manifest, docs; builds on RFC 0005 and RFC 0015
-incorporated_into_plan: 'No — documentation-first. This RFC specifies a background execution surface for plugins; scheduling and task IDs are deferred.'
+incorporated_into_plan: 'Yes — epic task 3.16'
 ---
 
 # RFC 0046 — Plugin Background Jobs and Schedules

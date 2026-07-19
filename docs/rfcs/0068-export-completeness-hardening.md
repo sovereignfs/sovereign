@@ -1,6 +1,6 @@
 # RFC 0068 — Export completeness hardening
 
-**Status:** Accepted — implemented\
+**Status:** Implemented\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** runtime/src/portability, packages/sdk (portability types), plugins/\* (hook audit), docs; amends RFC 0052, builds on RFC 0007\

@@ -1,6 +1,6 @@
 # RFC 0065 — User groups and plugin access policy
 
-**Status:** Draft\
+**Status:** Implemented\
 **Date:** July 2026 (revised July 2026)\
 **Author:** kasunben\
 **Scope:** `packages/db`, `packages/manifest`, `apps/auth`, `runtime`, `plugins/console`,

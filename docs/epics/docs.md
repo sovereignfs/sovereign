@@ -140,9 +140,38 @@ organization).
 - Test commands and prerequisites are documented in one place.
 - `pnpm test` and `pnpm test:e2e` behavior is accurately described.
 
+---
+
+#### ✅ 16.4 — Product-led docs site and instance directory (RFC 0067)
+
+**Goal:** Reframe the public site around product education, hosted-instance
+discovery, and audience-oriented documentation while preserving the existing
+technical reference material and VitePress build.
+
+**Deliverables:**
+
+- Add product, instance-directory, role-based getting-started, public roadmap,
+  and audience-oriented guide pages under `docs/`.
+- Update VitePress navigation, sidebars, metadata, theme styles, and public
+  assets for the new information architecture.
+- Keep internal planning pages out of the public build and retain compatibility
+  paths for existing technical documentation.
+- Document the trust boundary for independently operated instances and use
+  availability labels for public product claims.
+
+**SRS reference:** [RFC 0067](../rfcs/0067-product-led-docs-site.md), §1.1, §1.2.
+
+**Review checklist:**
+
+- Product, Instances, Get Started, Roadmap, and Docs are reachable from global navigation.
+- Audience paths distinguish users, operators, app developers, architects, and contributors.
+- Instance listings disclose operator responsibility and verification state.
+- `pnpm --filter @sovereignfs/docs build` succeeds and internal planning pages remain excluded.
+
 ## Related RFCs
 
 - [RFC 0037 — VitePress public docs site and project landing page](../rfcs/0037-vitepress-docs-site.md)
+- [RFC 0067 — Product-led docs site and instance directory](../rfcs/0067-product-led-docs-site.md)
 
 ## Related Docs
 

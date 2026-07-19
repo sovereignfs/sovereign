@@ -5,7 +5,7 @@ status: Draft
 date: June 2026
 author: kasunben
 scope: packages/db, packages/sdk, packages/manifest, runtime, plugins/account, plugins/console, docs; builds on RFC 0005, RFC 0015, RFC 0016, RFC 0034, RFC 0041, RFC 0046
-incorporated_into_plan: 'No — documentation-first. This RFC specifies a durable message inbox and full notification detail model; scheduling and task IDs are deferred.'
+incorporated_into_plan: 'Yes — epic task 4.4'
 ---
 
 # RFC 0048 — Messages and Notification Detail

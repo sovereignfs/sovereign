@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.38.0 · **Last updated:** 2026-07-19
+**Version:** 0.39.0 · **Last updated:** 2026-07-19
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](epics/).
 
@@ -194,7 +194,7 @@ once prioritised.
 | —       | Plugin secret vault (RFC 0043)                                                                        | ✅     | [8.6](epics/data-sovereignty.md#-86--plugin-secret-vault-rfc-0043)                                                          |
 | —       | Plugin file storage (RFC 0044)                                                                        | ✅     | [8.7](epics/data-sovereignty.md#-87--plugin-file-storage-rfc-0044)                                                          |
 | —       | Plugin portability hooks (RFC 0052)                                                                   | ✅     | [8.8](epics/data-sovereignty.md#-88--plugin-portability-hooks-rfc-0052)                                                     |
-| —       | Export completeness hardening (RFC 0068)                                                              | 📋     | [8.13](epics/data-sovereignty.md#-813--export-completeness-hardening-rfc-0068)                                              |
+| —       | Export completeness hardening (RFC 0068)                                                              | ✅     | [8.13](epics/data-sovereignty.md#-813--export-completeness-hardening-rfc-0068)                                              |
 | —       | Client-side encryption core (RFC 0060)                                                                | ✅     | [8.9](epics/data-sovereignty.md#-89--client-side-encryption-core-rfc-0060)                                                  |
 | —       | Encrypted operator backup bundle (RFC 0064)                                                           | 📋     | [8.10](epics/data-sovereignty.md#-810--encrypted-operator-backup-bundle-rfc-0064)                                           |
 | —       | Git-backed backup remote (RFC 0064)                                                                   | 📋     | [8.11](epics/data-sovereignty.md#-811--git-backed-backup-remote-rfc-0064)                                                   |

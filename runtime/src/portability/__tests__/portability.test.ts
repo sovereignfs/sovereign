@@ -36,6 +36,7 @@ describe('assembleExport', () => {
       platformVersion: '0.6.0',
       sourceInstance: 'https://a.example.com',
       exportPlugins: {},
+      installedPlugins: [],
     });
     const files = readZip(zip);
     expect(Object.keys(files)).toContain('manifest.json');
@@ -52,7 +53,7 @@ describe('assembleExport', () => {
     const manifest = u8ToJson<{ formatVersion: number; sections: { pluginId: string }[] }>(
       getEntry(files, 'manifest.json'),
     );
-    expect(manifest.formatVersion).toBe(1);
+    expect(manifest.formatVersion).toBe(2);
     expect(manifest.sections.map((s) => s.pluginId)).toEqual([PLATFORM_SECTION_ID]);
   });
 
@@ -71,6 +72,7 @@ describe('assembleExport', () => {
       platformVersion: '0.6.0',
       sourceInstance: null,
       exportPlugins: { 'test.plugin': '1.2.0' },
+      installedPlugins: [],
     });
     const files = readZip(zip);
     expect(Object.keys(files)).toContain('plugins/test.plugin/data.json');
@@ -99,6 +101,7 @@ describe('assembleExport', () => {
       platformVersion: '0.6.0',
       sourceInstance: null,
       exportPlugins: {}, // not permitted/enabled
+      installedPlugins: [],
     });
     expect(called).toBe(false);
   });
@@ -117,6 +120,7 @@ describe('assembleExport', () => {
       platformVersion: '0.6.0',
       sourceInstance: null,
       exportPlugins: { 'test.plugin': '1.0.0' },
+      installedPlugins: [],
       options: { includeFiles: false },
     });
     const files = readZip(zip);
@@ -139,6 +143,7 @@ describe('assembleExport', () => {
       platformVersion: '0.6.0',
       sourceInstance: null,
       exportPlugins: { 'test.plugin': '1.0.0' },
+      installedPlugins: [],
     });
     const files = readZip(zip);
     const manifest = u8ToJson<{
@@ -167,6 +172,7 @@ describe('assembleExport', () => {
       platformVersion: '0.6.0',
       sourceInstance: null,
       exportPlugins: { 'bad.plugin': '1.0.0', 'good.plugin': '1.0.0' },
+      installedPlugins: [],
     });
     const files = readZip(zip);
     expect(Object.keys(files)).toContain('plugins/good.plugin/data.json');
@@ -200,6 +206,7 @@ describe('assembleExport', () => {
       platformVersion: '0.6.0',
       sourceInstance: null,
       exportPlugins: { 'test.plugin': '1.0.0' },
+      installedPlugins: [],
     });
     expect(seenDuringExport).toBe('test.plugin');
     // The context doesn't leak past the resolver call.
@@ -229,6 +236,7 @@ describe('assembleExport', () => {
       platformVersion: '0.6.0',
       sourceInstance: null,
       exportPlugins: { 'test.plugin': '1.0.0' },
+      installedPlugins: [],
     });
     const files = readZip(zip);
     const manifest = u8ToJson<{
@@ -236,6 +244,82 @@ describe('assembleExport', () => {
     }>(getEntry(files, 'manifest.json'));
     const section = manifest.sections.find((s) => s.pluginId === 'test.plugin');
     expect(section?.references).toEqual([reference]);
+  });
+
+  it('records every installed plugin in the manifest, regardless of export participation', async () => {
+    const zip = await assembleExport({
+      userId: 'u1',
+      tenantId: 'default',
+      platform: PLATFORM,
+      platformVersion: '0.6.0',
+      sourceInstance: null,
+      exportPlugins: {},
+      installedPlugins: [
+        {
+          pluginId: 'fs.sovereign.shopper',
+          pluginVersion: '1.0.0',
+          enabled: true,
+          participatesExport: false,
+          participatesImport: false,
+        },
+      ],
+    });
+    const files = readZip(zip);
+    const manifest = u8ToJson<{
+      installedPlugins: { pluginId: string; participatesExport: boolean }[];
+    }>(getEntry(files, 'manifest.json'));
+    expect(manifest.installedPlugins).toEqual([
+      {
+        pluginId: 'fs.sovereign.shopper',
+        pluginVersion: '1.0.0',
+        enabled: true,
+        participatesExport: false,
+        participatesImport: false,
+      },
+    ]);
+  });
+
+  it('records a plugin eligible to export but with no registered exporter in notExported', async () => {
+    // 'test.plugin' is eligible (in exportPlugins) but never called registerExporter.
+    const zip = await assembleExport({
+      userId: 'u1',
+      tenantId: 'default',
+      platform: PLATFORM,
+      platformVersion: '0.6.0',
+      sourceInstance: null,
+      exportPlugins: { 'test.plugin': '1.0.0' },
+      installedPlugins: [],
+    });
+    const files = readZip(zip);
+    const manifest = u8ToJson<{ notExported: { pluginId: string; reason: string }[] }>(
+      getEntry(files, 'manifest.json'),
+    );
+    expect(manifest.notExported).toEqual([{ pluginId: 'test.plugin', reason: 'no-export-hook' }]);
+  });
+
+  it('records a disabled, export-eligible-by-permission plugin in notExported as disabled', async () => {
+    const zip = await assembleExport({
+      userId: 'u1',
+      tenantId: 'default',
+      platform: PLATFORM,
+      platformVersion: '0.6.0',
+      sourceInstance: null,
+      exportPlugins: {}, // eligiblePluginIds already filtered this plugin out for being disabled
+      installedPlugins: [
+        {
+          pluginId: 'fs.sovereign.ledger',
+          pluginVersion: '1.0.0',
+          enabled: false,
+          participatesExport: true,
+          participatesImport: true,
+        },
+      ],
+    });
+    const files = readZip(zip);
+    const manifest = u8ToJson<{ notExported: { pluginId: string; reason: string }[] }>(
+      getEntry(files, 'manifest.json'),
+    );
+    expect(manifest.notExported).toEqual([{ pluginId: 'fs.sovereign.ledger', reason: 'disabled' }]);
   });
 });
 
@@ -248,6 +332,7 @@ describe('applyImport', () => {
       platformVersion: '0.6.0',
       sourceInstance: null,
       exportPlugins,
+      installedPlugins: [],
     });
   }
 

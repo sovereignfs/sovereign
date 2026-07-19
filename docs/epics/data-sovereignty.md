@@ -355,7 +355,7 @@ full-instance backup.
 
 ---
 
-#### 📋 8.13 — Export completeness hardening (RFC 0068)
+#### ✅ 8.13 — Export completeness hardening (RFC 0068)
 
 **Goal:** Close the silent-non-participation gap in the RFC 0052 portability
 system so a user-initiated export reliably reports on every plugin they use,

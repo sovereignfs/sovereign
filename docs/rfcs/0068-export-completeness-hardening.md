@@ -1,10 +1,30 @@
 # RFC 0068 — Export completeness hardening
 
-**Status:** Draft\
+**Status:** Accepted — implemented\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** runtime/src/portability, packages/sdk (portability types), plugins/\* (hook audit), docs; amends RFC 0052, builds on RFC 0007\
 **Incorporated into plan:** Yes — epic task 8.13
+
+## Implementation notes
+
+The two open questions below were resolved during implementation: `notExported`
+ships with a single `no-export-hook` reason (plus `disabled` for a plugin the
+export-eligibility filter excludes) — the only case this repo's plugins
+actually hit — and the size question was resolved as a documented,
+enforced ceiling (`MAX_EXPORT_BYTES`, 50 MB, matching the existing import
+cap) rather than a background job. `installedPlugins`/`notExported` land in
+`BundleManifest` (`runtime/src/portability/bundle.ts`), populated by
+`installedPluginsRoster()` (`runtime/src/portability/platform.ts`) and
+`assembleExport()` (`runtime/src/portability/assemble.ts`);
+`PortabilityPanel.tsx` unzips the downloaded bundle client-side to surface
+non-participating apps by name. The plugin hook audit found `sovereign-tasks`,
+`sovereign-wallet`, `sovereign-plainwrite`, and `sovereign-healthlog` already
+wired; `sovereign-shopper`, `sovereign-ledger`, `sovereign-docs`,
+`sovereign-tally`, and `sovereign-tritext` were closed by adding
+`app/_lib/portability.ts` + manifest permissions to each (`sovereign-ledger`
+and `sovereign-docs` had declared the permission without a hook — the exact
+mismatch this RFC set out to catch).
 
 ---
 

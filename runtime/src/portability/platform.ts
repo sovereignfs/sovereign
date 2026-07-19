@@ -19,6 +19,7 @@ import { getPlatformDb } from '@/src/db';
 import { getDisabledPluginIds } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
 import type { PlatformE2eeExportData, PlatformExportData } from './assemble';
+import type { InstalledPluginRosterEntry } from './bundle';
 import type { PlatformAccountSection } from './restore';
 import { toSecretRef } from '@/src/secrets';
 
@@ -54,6 +55,24 @@ export async function eligibleExportPlugins(): Promise<Record<string, string>> {
     }
   }
   return result;
+}
+
+/**
+ * Every plugin installed for the tenant, regardless of `data:export`/
+ * `data:import` participation (RFC 0068) — unlike `eligiblePluginIds`/
+ * `eligibleExportPlugins`, this is not filtered down to the allow-list, so
+ * the export bundle can record what's installed but non-participating
+ * instead of silently omitting it.
+ */
+export async function installedPluginsRoster(): Promise<InstalledPluginRosterEntry[]> {
+  const disabled = new Set(await getDisabledPluginIds(await getPlatformDb()));
+  return getInstalledPlugins().map((m) => ({
+    pluginId: m.id,
+    pluginVersion: m.version,
+    enabled: !disabled.has(m.id),
+    participatesExport: m.permissions.includes('data:export'),
+    participatesImport: m.permissions.includes('data:import'),
+  }));
 }
 
 /** Gather the platform-owned slice of a user's data for export. */

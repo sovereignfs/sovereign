@@ -1174,6 +1174,23 @@ remapId(originalId) }` — use `remapId` to translate stored IDs to fresh ones
   dereferences them on export or import, and importing a reference never
   grants access to the provider plugin.
 
+  **Export completeness (RFC 0068):** `manifest.json`'s `installedPlugins`
+  lists every plugin installed for the exporting user's tenant — regardless of
+  export participation — each flagged with `enabled`, `participatesExport`,
+  and `participatesImport`. A plugin that declares `data:export` and is
+  enabled but has no registered exporter (e.g. it declared the permission
+  without ever calling `provideExport`) is recorded in `notExported` with a
+  reason (`no-export-hook` or `disabled`) instead of being silently absent
+  from the bundle — the Account Data tab surfaces this list by name so a user
+  can tell "no data" from "this app doesn't support export yet." **Declare
+  `data:export`/`data:import` only once you've actually registered the
+  matching hook** — an unearned permission declaration is exactly the gap this
+  closes. Export is synchronous and capped at 50MB (`MAX_EXPORT_BYTES` in
+  `runtime/app/api/account/export/route.ts`) — a bundle that would exceed the
+  cap returns a clear error rather than a truncated or unimportable ZIP; keep
+  large attachments behind `options.includeFiles` so a user can retry with a
+  smaller export.
+
 - **`plugins`** — dependency discovery and cross-plugin references
   (RFC 0051). `sdk.plugins.get(id)` / `sdk.plugins.list(filter?)` return
   `PluginAvailability { id, name, routePrefix, icon?, installed, enabled,

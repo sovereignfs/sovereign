@@ -300,6 +300,31 @@
   background-color: var(--sv-color-error-surface);
 }
 
+/* A text-bearing action link styled to match Button's secondary/sm variant
+   (packages/ui/src/components/Button/Button.module.css) — for row actions
+   that must navigate via a plain <a> (e.g. "Open") rather than submit a
+   form, so they sit visually consistent next to the Button-rendered actions
+   (e.g. "Access") in the same row instead of looking like a bare text link. */
+.rowOpenLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  padding: var(--sv-space-1) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-surface);
+  color: var(--sv-color-text-primary);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rowOpenLink:hover {
+  background-color: var(--sv-color-surface-sunken);
+}
+
 /* ── Users pagination ───────────────────────────────────────────────────── */
 
 .usersPagination {
@@ -1115,6 +1140,7 @@
 .pluginCardBtnToggle {
   display: inline-flex;
   align-items: center;
+  gap: var(--sv-space-2);
   padding: var(--sv-space-1) var(--sv-space-3);
   border: 1px solid var(--sv-color-border-strong);
   border-radius: var(--sv-radius-md);

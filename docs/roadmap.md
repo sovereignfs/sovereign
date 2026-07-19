@@ -53,13 +53,13 @@ open architectural questions.
 | Version | Task                                                       | Status | Epic task                                                                            |
 | ------- | ---------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------ |
 | 0.5.0   | `scripts/install-plugins.ts` — plugin install script       | ✅     | [3.3](epics/plugins-runtime.md#-33--scriptsinstall-pluginsts--plugin-install-script) |
-| 0.5.1   | PWA configuration                                          | ✅     | [2.10](epics/platform-shell.md#-210--mobile-responsiveness--pwa-hardening)           |
+| 0.5.1   | PWA configuration                                          | ✅     | [2.24](epics/platform-shell.md#-224--pwa-configuration)                              |
 | 0.5.2   | Production Docker image                                    | ✅     | [0.7](epics/infrastructure.md#-07--production-docker-image)                          |
 | 0.5.3   | Postgres validation                                        | ✅     | [0.8](epics/infrastructure.md#-08--postgres-validation)                              |
 | 0.5.4   | `sv` CLI — core commands                                   | ✅     | [3.4](epics/plugins-runtime.md#-34--sv-cli--core-commands)                           |
 | 0.5.5   | SDK implementations (db and platform)                      | ✅     | [2.3](epics/platform-shell.md#-23--sdk-implementations-db-and-platform)              |
 | 0.5.6   | Local session verification in middleware (AUTH-05)         | ✅     | [1.2](epics/users-auth.md#-12--local-session-verification-in-middleware-auth-05)     |
-| 0.5.7   | Documentation                                              | ✅     | —                                                                                    |
+| 0.5.7   | Core technical documentation                               | ✅     | [16.5](epics/docs.md#-165--core-technical-documentation)                             |
 | 0.5.8   | CI pipeline                                                | ✅     | [0.9](epics/infrastructure.md#-09--ci-pipeline)                                      |
 | 0.5.9   | Public `/api` namespace delegation                         | ✅     | [2.4](epics/platform-shell.md#-24--public-api-namespace-delegation)                  |
 | 0.5.10  | Overlay shell mode                                         | ✅     | [2.5](epics/platform-shell.md#-25--overlay-shell-mode)                               |

@@ -398,7 +398,7 @@ Task 1.0.03 (`INSTANCE_NAME` / `InstanceProvider` for the page title)
 
 ---
 
-#### 📋 1.11 — Test-user flag on seeded accounts
+#### ✅ 1.11 — Test-user flag on seeded accounts
 
 **Goal:** Add an `isTestUser` boolean field to the user record, defaulting to `false` for all real
 users and set to `true` by the seed script. Lets the Console, admin APIs, and tooling distinguish

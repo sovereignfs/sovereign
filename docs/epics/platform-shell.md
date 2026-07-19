@@ -757,6 +757,31 @@ enforcement — the grant tables and resolver this writes into).
   `actorId` = the inviting admin (not the new user), summary text reading "... via invite".
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
+---
+
+#### ✅ 2.24 — PWA configuration
+
+**Goal:** Make the runtime installable as a Progressive Web App with a production-only service
+worker and a self-contained offline navigation fallback.
+
+**Deliverables:**
+
+- Add a standalone web app manifest with 192 px, 512 px, maskable, and Apple touch icons.
+- Link the manifest, theme colour, and Apple Web App metadata from the root layout.
+- Generate the service worker only for production builds so local HMR remains unaffected.
+- Add an unauthenticated, cacheable `/offline` fallback and exclude PWA assets from the session
+  middleware matcher.
+- Add manifest regression coverage and ignore generated service-worker output.
+
+**SRS reference:** §3.11, PLT-09.
+
+**Review checklist:**
+
+- A production build generates the service worker and prerenders `/offline`.
+- Browser installability checks recognize the manifest and required icons.
+- PWA assets and the offline route load without an authenticated session.
+- Development mode does not generate a service worker or interfere with HMR.
+
 ## Related RFCs
 
 - [RFC 0001 — Overlay shell variant](../rfcs/0001-overlay-shell-variant.md)

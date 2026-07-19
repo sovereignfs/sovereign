@@ -1,5 +1,5 @@
 import { type PlatformDb, getPlatformSetting, listPluginStatus } from '@sovereignfs/db';
-import { getExamplePluginIds } from './registry';
+import { getDevelopmentPluginIds, getExamplePluginIds } from './registry';
 
 /** Platform-settings key that persists the Console "Show example apps" toggle. */
 export const EXAMPLES_ENABLED_SETTING = 'examples_enabled';
@@ -12,6 +12,20 @@ export const EXAMPLES_ENABLED_SETTING = 'examples_enabled';
  */
 export function examplesEnabledByDefault(): boolean {
   const v = process.env.SOVEREIGN_EXAMPLES_ENABLED?.trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+}
+
+/**
+ * Whether `SOVEREIGN_HIDE_DEVELOPMENT_PLUGINS` is set — a hard, deploy-time
+ * gate for plugins flagged `development: true` in their manifest. Unlike the
+ * examples toggle, this has **no per-plugin override and no persisted Console
+ * setting**: it's meant to pin a deployment to "production-ready plugins
+ * only," so an explicit `plugin_status` enable row does not undo it. Read at
+ * request time (never `NEXT_PUBLIC`), so the container env is honoured and
+ * the value is not frozen at build.
+ */
+export function hideDevelopmentPluginsByEnv(): boolean {
+  const v = process.env.SOVEREIGN_HIDE_DEVELOPMENT_PLUGINS?.trim().toLowerCase();
   return v === '1' || v === 'true' || v === 'yes' || v === 'on';
 }
 
@@ -31,11 +45,18 @@ export function resolveExamplesEnabled(setting: string | null, envDefault: boole
  * an explicit `plugin_status` row set to `false`, OR it is an example plugin
  * with no explicit row while examples are off by default. An explicit row always
  * wins, so enabling an example in Console overrides the env default.
+ *
+ * `developmentIds`/`hideDevelopment` is a separate, unconditional rule: when
+ * `hideDevelopment` is true, every id in `developmentIds` is disabled
+ * regardless of any `plugin_status` row — see `hideDevelopmentPluginsByEnv`'s
+ * doc comment for why this one has no override.
  */
 export function computeDisabledPluginIds(
   statusRows: { pluginId: string; enabled: boolean }[],
   exampleIds: string[],
   examplesEnabled: boolean,
+  developmentIds: string[] = [],
+  hideDevelopment: boolean = false,
 ): string[] {
   const statusMap = new Map(statusRows.map((r) => [r.pluginId, r.enabled]));
   const disabled = new Set<string>();
@@ -46,6 +67,9 @@ export function computeDisabledPluginIds(
     for (const id of exampleIds) {
       if (!statusMap.has(id)) disabled.add(id);
     }
+  }
+  if (hideDevelopment) {
+    for (const id of developmentIds) disabled.add(id);
   }
   return [...disabled];
 }
@@ -66,12 +90,19 @@ export async function getExamplesEnabledFlag(pdb: PlatformDb): Promise<boolean> 
 /**
  * The effective set of disabled plugin IDs — the single source of truth for the
  * middleware route gate, the launcher, root-plugin selection, and portability.
- * Wraps the DB-level `plugin_status` rows with the example/env default rule.
+ * Wraps the DB-level `plugin_status` rows with the example/env default rule
+ * and the unconditional `SOVEREIGN_HIDE_DEVELOPMENT_PLUGINS` gate.
  */
 export async function getDisabledPluginIds(pdb: PlatformDb): Promise<string[]> {
   const [statusRows, examplesEnabled] = await Promise.all([
     listPluginStatus(pdb),
     getExamplesEnabledFlag(pdb),
   ]);
-  return computeDisabledPluginIds(statusRows, getExamplePluginIds(), examplesEnabled);
+  return computeDisabledPluginIds(
+    statusRows,
+    getExamplePluginIds(),
+    examplesEnabled,
+    getDevelopmentPluginIds(),
+    hideDevelopmentPluginsByEnv(),
+  );
 }

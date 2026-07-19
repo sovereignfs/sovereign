@@ -118,6 +118,14 @@ specified and deferred to Task 1.0.1.
   (`AUTH_REQUIRE_EMAIL_VERIFICATION=false`) for air-gapped/internal deployments.
   Accounts that existed before this shipped are grandfathered automatically —
   the requirement only applies to new registrations.
+- **Console-managed SMTP settings (platform:owner only)**: an owner can view
+  and change SMTP host/port/user/password/from-address from Console → Settings,
+  with changes taking effect immediately (no restart). The password is
+  encrypted at rest with the same AES-256-GCM scheme (`SOVEREIGN_VAULT_KEY`)
+  used by the plugin secret vault — never stored in plaintext, never logged,
+  never returned to the client after saving (the form shows only whether a
+  password is set, not its value). Non-owners see the current settings
+  read-only and cannot save or send a test email.
 - **Client-side encryption (RFC 0060) has no operator recovery path, by
   design.** A user unlocks their Client Master Key with a recorded recovery
   secret or an already-enrolled device — the server never holds a plaintext

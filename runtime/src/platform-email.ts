@@ -1,8 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { recordEmailDelivery, type EmailDeliveryClass } from '@sovereignfs/db';
-import { createMailer } from '@sovereignfs/mailer';
+import { createMailer, type Mailer } from '@sovereignfs/mailer';
 import { logActivity } from './activity';
 import { getPlatformDb } from './db';
+import { resolveEffectiveMailerConfig } from './smtp-settings';
 
 export type PlatformEmailSource = 'auth' | 'runtime' | 'console' | 'account' | 'plugin';
 
@@ -24,10 +25,22 @@ export interface PlatformEmailResult {
   errorCode?: string;
 }
 
-const mailer = createMailer();
+/**
+ * Resolve a mailer fresh from the current effective config (Console-stored
+ * settings override env vars, per-field) rather than memoizing one at
+ * module load — a Console SMTP change must take effect immediately, without
+ * a restart. `nodemailer.createTransport()` is cheap (no connection opens
+ * until `sendMail()`), so this isn't worth caching for a transactional-email
+ * volume path.
+ */
+async function getMailer(): Promise<Mailer> {
+  const pdb = await getPlatformDb();
+  const config = await resolveEffectiveMailerConfig(pdb);
+  return createMailer(config);
+}
 
-export function isSmtpConfigured(): boolean {
-  return mailer.configured;
+export async function isSmtpConfigured(): Promise<boolean> {
+  return (await getMailer()).configured;
 }
 
 function recipientHash(email: string): string {
@@ -70,6 +83,7 @@ async function logDeliveryOutcome(
 
 export async function sendPlatformEmail(input: PlatformEmailInput): Promise<PlatformEmailResult> {
   const pdb = await getPlatformDb();
+  const mailer = await getMailer();
   const baseLog = {
     id: randomUUID(),
     deliveryClass: input.deliveryClass,

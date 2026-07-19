@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.41.0 · **Last updated:** 2026-07-19
+**Version:** 0.42.0 · **Last updated:** 2026-07-19
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -169,7 +169,9 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.37.0  | Console Plugins page: unified filterable table (RFC 0065 follow-up)   | ✅     | [13.9](docs/epics/plugin-console.md#-139--console-plugins-page-unified-filterable-table-rfc-0065-follow-up)    |
 | 0.38.0  | Private plugin repositories via access token                          | ✅     | [3.29](docs/epics/plugins-runtime.md#-329--private-plugin-repositories-via-access-token)                       |
 | 0.39.0  | Export completeness hardening (RFC 0068)                              | ✅     | [8.13](docs/epics/data-sovereignty.md#-813--export-completeness-hardening-rfc-0068)                            |
+| —       | Require email verification at registration/login                      | ✅     | [RFC 0035](docs/rfcs/0035-progressive-user-verification.md) (scoped implementation — see "Current state")      |
 | 0.41.0  | Public plugin page routes (RFC 0042)                                  | ✅     | [2.14](docs/epics/platform-shell.md#-214--public-plugin-page-routes-rfc-0042)                                  |
+| 0.42.0  | Console-managed SMTP settings (platform:owner only)                   | ✅     | [3.30](docs/epics/plugins-runtime.md#-330--console-managed-smtp-settings-platformowner-only)                   |
 
 ---
 

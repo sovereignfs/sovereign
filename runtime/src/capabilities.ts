@@ -26,7 +26,8 @@ export type Capability =
   | 'health:view' // view system health report
   | 'activity:view' // view activity log (RFC 0005)
   | 'role:assign' // assign roles to other users (owner-only)
-  | 'plugins:self-manage'; // self-service enable/disable of self_service-eligible plugins (RFC 0070)
+  | 'plugins:self-manage' // self-service enable/disable of self_service-eligible plugins (RFC 0070)
+  | 'instance:configure-secrets'; // view/change instance-level secrets (SMTP credentials) (owner-only)
 
 // ---------------------------------------------------------------------------
 // Per-user capability grants (RFC 0070)
@@ -108,6 +109,7 @@ const OWNER_CAPS = new Set<Capability>([
   'health:view',
   'activity:view',
   'role:assign',
+  'instance:configure-secrets',
 ]);
 
 export const ROLE_PRESETS: Readonly<Record<PlatformRole, ReadonlySet<Capability>>> = {

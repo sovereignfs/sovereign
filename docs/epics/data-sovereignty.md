@@ -68,7 +68,7 @@
 
 ---
 
-#### 📋 8.4 — User data deletion
+#### ✅ 8.4 — User data deletion
 
 > Full entry: **[1.7]** in [users-auth.md](users-auth.md) — User data deletion.
 > This task gives users the right to permanently delete all their data, with plugin handlers called via `sdk.portability.provideDelete`.

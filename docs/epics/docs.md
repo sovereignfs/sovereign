@@ -168,6 +168,32 @@ technical reference material and VitePress build.
 - Instance listings disclose operator responsibility and verification state.
 - `pnpm --filter @sovereignfs/docs build` succeeds and internal planning pages remain excluded.
 
+---
+
+#### ✅ 16.5 — Core technical documentation
+
+**Goal:** Establish the repository's original user, operator, plugin-developer, and contributor
+documentation set, backed by automated parity checks for public platform contracts.
+
+**Deliverables:**
+
+- Add the plugin-development guide with the manifest, permission, SDK, database, local
+  development, and distribution contracts.
+- Add the contributor-facing architecture guide and expand the repository documentation index.
+- Complete self-hosting environment-variable coverage and add platform upgrade notes.
+- Add documentation-parity tests for manifest fields, permissions, SDK surfaces, and environment
+  variables.
+- Record the convention that public behavior and contracts require matching documentation.
+
+**SRS reference:** NFR-10, §3, §5.
+
+**Review checklist:**
+
+- Every public manifest field, permission, SDK surface, and supported environment variable is
+  covered by canonical documentation.
+- The README links users, operators, plugin developers, and contributors to the appropriate guide.
+- Documentation-parity tests fail when a tracked public contract is added without documentation.
+
 ## Related RFCs
 
 - [RFC 0037 — VitePress public docs site and project landing page](../rfcs/0037-vitepress-docs-site.md)

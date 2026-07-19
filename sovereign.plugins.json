@@ -21,6 +21,31 @@
       "ref": "v0.1.0"
     },
     {
+      "id": "sovereign-tritext",
+      "repository": "https://github.com/sovereignfs/sovereign-tritext.git",
+      "ref": "v0.10.1"
+    },
+    {
+      "id": "sovereign-healthlog",
+      "repository": "https://github.com/sovereignfs/sovereign-healthlog.git",
+      "ref": "v0.1.0"
+    },
+    {
+      "id": "sovereign-ledger",
+      "repository": "https://github.com/sovereignfs/sovereign-ledger.git",
+      "ref": "v0.7.0"
+    },
+    {
+      "id": "sovereign-tally",
+      "repository": "https://github.com/sovereignfs/sovereign-tally.git",
+      "ref": "v0.10.0"
+    },
+    {
+      "id": "sovereign-docs",
+      "repository": "https://github.com/sovereignfs/sovereign-docs.git",
+      "ref": "v0.1.0"
+    },
+    {
       "id": "example-basic",
       "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
       "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",

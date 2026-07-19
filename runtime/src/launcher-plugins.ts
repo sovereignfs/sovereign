@@ -21,6 +21,8 @@ export interface LauncherPlugin {
   routePrefix: string;
   adminOnly: boolean;
   type?: string;
+  /** Manifest `development: true` — still under active development, not production-ready. */
+  development?: boolean;
   /** Path-relative URL to the plugin's icon, e.g. `/plugin-icons/<id>.svg`. Absent when the plugin ships no icon. */
   iconUrl?: string;
 }
@@ -31,6 +33,7 @@ export interface LauncherPluginInput extends PluginRouteInfo {
   description?: string;
   icon?: string;
   type?: string;
+  development?: boolean;
 }
 
 /**
@@ -79,6 +82,7 @@ export function selectLauncherPlugins(
       routePrefix: p.routePrefix,
       adminOnly: p.adminOnly ?? false,
       ...(p.type ? { type: p.type } : {}),
+      ...(p.development ? { development: true } : {}),
       ...(p.icon ? { iconUrl: `/plugin-icons/${p.id}.svg` } : {}),
     }));
 }

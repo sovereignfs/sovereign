@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Dialog, FormField, Input, Select } from '@sovereignfs/ui';
+import { Button, Dialog, FormField, Icon, Input, Select } from '@sovereignfs/ui';
 import type { DirectoryUser } from '@sovereignfs/sdk';
 import {
   getPluginAccessState,
@@ -354,9 +354,14 @@ export function PluginAccessDialog({
   return (
     <>
       {!isControlled && (
-        <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(true)}>
-          Access
-        </Button>
+        <button
+          type="button"
+          className={styles.iconBtn}
+          onClick={() => setOpen(true)}
+          title={`Access for "${pluginName}"`}
+        >
+          <Icon name="shield" size="sm" aria-hidden />
+        </button>
       )}
 
       <Dialog

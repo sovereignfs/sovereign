@@ -103,13 +103,14 @@ or reuse an LCH-\* id.
 
 ### v0.1 — Core
 
-| ID     | Requirement                                                                                                                                                                                |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| LCH-01 | Display all installed, enabled, accessible plugins as tiles. Each tile shows the plugin's icon (from the `icon` manifest field, or a generated monogram if absent), name, and description. |
-| LCH-02 | Clicking a tile navigates to the plugin's `routePrefix`.                                                                                                                                   |
-| LCH-03 | Plugins with `adminOnly: true` are shown in a separate "Admin" section below the main grid. This section is hidden for `platform:user` role users.                                         |
-| LCH-04 | Platform chrome plugins (`fs.sovereign.launcher`, `fs.sovereign.account`, `fs.sovereign.console`) are excluded from all grid sections.                                                     |
-| LCH-05 | If no non-chrome plugins are installed, show an empty-state message with a pointer to the Console plugin to install plugins.                                                               |
+| ID     | Requirement                                                                                                                                                                                                                                                    |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LCH-01 | Display all installed, enabled, accessible plugins as tiles. Each tile shows the plugin's icon (from the `icon` manifest field, or a generated monogram if absent), name, and description.                                                                     |
+| LCH-02 | Clicking a tile navigates to the plugin's `routePrefix`.                                                                                                                                                                                                       |
+| LCH-03 | Plugins with `adminOnly: true` are shown in a separate "Admin" section below the main grid. This section is hidden for `platform:user` role users.                                                                                                             |
+| LCH-04 | Platform chrome plugins (`fs.sovereign.launcher`, `fs.sovereign.account`, `fs.sovereign.console`) are excluded from all grid sections.                                                                                                                         |
+| LCH-05 | If no non-chrome plugins are installed, show an empty-state message with a pointer to the Console plugin to install plugins.                                                                                                                                   |
+| LCH-09 | A plugin with manifest `development: true` shows an amber "In development" corner badge on its tile — purely informational, no effect on which tiles render or their order. Mirrors CON-15's Console Plugins page badge, sourced from the same manifest field. |
 
 ### v0.2 — Richer tiles (post-v1)
 

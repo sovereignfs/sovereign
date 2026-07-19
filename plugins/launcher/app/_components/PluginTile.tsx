@@ -8,6 +8,8 @@ export interface PluginTileData {
   description: string;
   routePrefix: string;
   type?: string;
+  /** Manifest `development: true` — still under active development, not production-ready. */
+  development?: boolean;
   /**
    * Path-relative URL to the plugin's icon (e.g. `/plugin-icons/<id>.svg`).
    * Absent when the plugin ships no icon — the monogram fallback is shown instead.
@@ -20,6 +22,11 @@ export interface PluginTileData {
 export function PluginTile({ plugin }: { plugin: PluginTileData }) {
   return (
     <Link href={plugin.routePrefix} className={styles.tile}>
+      {plugin.development && (
+        <span className={styles.tileDevBadge} title="Still in development — not production-ready">
+          In development
+        </span>
+      )}
       <span className={styles.tileIcon} aria-hidden="true">
         {plugin.iconUrl ? (
           <img src={plugin.iconUrl} alt="" className={styles.tileIconImg} />

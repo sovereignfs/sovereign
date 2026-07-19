@@ -104,6 +104,7 @@
 }
 
 .tile {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -173,6 +174,24 @@
   color: var(--sv-color-text-muted);
   background-color: var(--sv-color-surface-sunken);
   border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  padding: 2px 8px;
+}
+
+/* Corner flag for manifest `development: true` — informational only, matches
+   Console's "in development" status badge (amber/warning tokens), not a new
+   ad-hoc colour. Positioned over the tile rather than inline so it reads at a
+   glance without competing with the name/description for space. */
+.tileDevBadge {
+  position: absolute;
+  top: var(--sv-space-3);
+  right: var(--sv-space-3);
+  font-size: 11px;
+  font-weight: var(--sv-font-weight-medium);
+  letter-spacing: 0.02em;
+  color: var(--sv-color-warning-text);
+  background-color: var(--sv-color-warning-surface);
+  border: 1px solid var(--sv-color-warning-border);
   border-radius: var(--sv-radius-sm);
   padding: 2px 8px;
 }

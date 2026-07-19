@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // is never opened during unit tests.
 vi.mock('@sovereignfs/db', () => ({
   getPluginAccessPolicy: vi.fn(),
+  getPlatformSetting: vi.fn(),
   hasPluginAccessUserGrant: vi.fn(),
   listPluginAccessPolicies: vi.fn(),
   listPluginIdsGrantedToUser: vi.fn(),
@@ -14,7 +15,16 @@ vi.mock('../user-capabilities', () => ({
   hasUserCapability: vi.fn(),
 }));
 
+// Real registry ids never overlap with this file's fabricated `fs.example.*`
+// fixture ids, so defaulting to `[]` here preserves every existing test's
+// "not an example plugin" assumption; the example-awareness tests below
+// override this per-case.
+vi.mock('../registry', () => ({
+  getExamplePluginIds: vi.fn(() => []),
+}));
+
 import {
+  getPlatformSetting,
   getPluginAccessPolicy,
   hasPluginAccessUserGrant,
   listPluginAccessPolicies,
@@ -26,12 +36,14 @@ import {
   getRestrictedPluginIds,
   getSelfServiceDirectory,
 } from '../plugin-access-server';
+import { getExamplePluginIds } from '../registry';
 import { hasUserCapability } from '../user-capabilities';
 
 const mockPdb = { dialect: 'sqlite' } as never;
 
 afterEach(() => {
   vi.clearAllMocks();
+  vi.mocked(getExamplePluginIds).mockReturnValue([]);
 });
 
 describe('canUserOpenPlugin', () => {
@@ -62,6 +74,38 @@ describe('canUserOpenPlugin', () => {
 
   it('defaults to disabled when no policy row exists (RFC 0065 Task 3.28 — a genuinely absent row means never activated, not open to everyone)', async () => {
     vi.mocked(getPluginAccessPolicy).mockResolvedValue(undefined);
+    const result = await canUserOpenPlugin(
+      mockPdb,
+      'u1',
+      'platform:owner',
+      'fs.example.tasks',
+      true,
+      true,
+    );
+    expect(result).toBe(false);
+  });
+
+  it('a row-less example plugin resolves to everyone when the examples bulk toggle is on', async () => {
+    vi.mocked(getExamplePluginIds).mockReturnValue(['fs.example.tasks']);
+    vi.mocked(getPluginAccessPolicy).mockResolvedValue(undefined);
+    vi.mocked(getPlatformSetting).mockResolvedValue('true');
+
+    const result = await canUserOpenPlugin(
+      mockPdb,
+      'u1',
+      'platform:user',
+      'fs.example.tasks',
+      true,
+      true,
+    );
+    expect(result).toBe(true);
+  });
+
+  it('a row-less example plugin still resolves to disabled when the examples bulk toggle is off', async () => {
+    vi.mocked(getExamplePluginIds).mockReturnValue(['fs.example.tasks']);
+    vi.mocked(getPluginAccessPolicy).mockResolvedValue(undefined);
+    vi.mocked(getPlatformSetting).mockResolvedValue('false');
+
     const result = await canUserOpenPlugin(
       mockPdb,
       'u1',
@@ -228,6 +272,33 @@ describe('getRestrictedPluginIds', () => {
       'fs.example.untouched',
     ]);
     expect(result).toEqual(['fs.example.untouched']);
+  });
+
+  it('a row-less example plugin is not restricted when the examples bulk toggle is on, but a row-less regular plugin still is', async () => {
+    vi.mocked(getExamplePluginIds).mockReturnValue(['fs.example.demo']);
+    vi.mocked(getPlatformSetting).mockResolvedValue('true');
+    vi.mocked(listPluginAccessPolicies).mockResolvedValue([]);
+    vi.mocked(listPluginIdsGrantedToUser).mockResolvedValue([]);
+    vi.mocked(listPluginIdsGrantedToUserGroups).mockResolvedValue([]);
+
+    const result = await getRestrictedPluginIds(mockPdb, 'u1', 'platform:user', [
+      'fs.example.demo',
+      'fs.community.regular',
+    ]);
+    expect(result).toEqual(['fs.community.regular']);
+  });
+
+  it('a row-less example plugin stays restricted when the examples bulk toggle is off', async () => {
+    vi.mocked(getExamplePluginIds).mockReturnValue(['fs.example.demo']);
+    vi.mocked(getPlatformSetting).mockResolvedValue('false');
+    vi.mocked(listPluginAccessPolicies).mockResolvedValue([]);
+    vi.mocked(listPluginIdsGrantedToUser).mockResolvedValue([]);
+    vi.mocked(listPluginIdsGrantedToUserGroups).mockResolvedValue([]);
+
+    const result = await getRestrictedPluginIds(mockPdb, 'u1', 'platform:user', [
+      'fs.example.demo',
+    ]);
+    expect(result).toEqual(['fs.example.demo']);
   });
 });
 

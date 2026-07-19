@@ -11,6 +11,10 @@
  * 5. Initialise the notification broker (RFC 0034).
  * 6. Start the minimal plugin scheduler (RFC 0046 Phase 1).
  *
+ * (There used to be a step here that eagerly created a `plugin_status` row
+ * for every non-chrome plugin on first boot — removed 2026-07-19, see
+ * `./src/plugin-catalog.ts`'s file doc comment for why.)
+ *
  * The guard on NEXT_RUNTIME keeps everything out of the Edge runtime context,
  * where Node.js-native packages (better-sqlite3, node-postgres) cannot load.
  * Each import is a local module file (not a workspace package directly) so that
@@ -25,15 +29,6 @@ export async function register(): Promise<void> {
     await runAllPluginMigrations();
     const { checkBootCompatibility } = await import('./src/boot-compat');
     await checkBootCompatibility();
-
-    // One-time catalog backfill (RFC 0065 Task 3.28) — must run after
-    // migrations/compat above and before any request is served, so every
-    // already-shipped plugin gets an explicit plugin_status row exactly once,
-    // never on later boots (see plugin-catalog.ts for why this matters).
-    const { getPlatformDb } = await import('@sovereignfs/db');
-    const { getInstalledPlugins } = await import('./src/registry');
-    const { backfillPluginCatalogOnce } = await import('./src/plugin-catalog');
-    await backfillPluginCatalogOnce(await getPlatformDb(), getInstalledPlugins());
 
     const transport = process.env.NOTIFICATION_TRANSPORT ?? 'polling';
     const redisUrl = process.env.REDIS_URL;

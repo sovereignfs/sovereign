@@ -185,6 +185,19 @@ plugins and disabled plugins; hides `adminOnly` plugins from non-admins) and
 returns each plugin's `adminOnly` flag so the page can section the tiles. This
 fetch is replaced by `sdk.db` when 0.5.05 lands.
 
+**Sidebar order, and why hiding a sidebar icon doesn't hide the Launcher tile
+(Task 2.22):** `GET /api/plugins` also applies the user's saved sidebar order
+(Account → Preferences → Sidebar, Task 2.13) via `applySidebarOrder()`, so tile
+order in the grid matches icon order in the sidebar strip. But it calls that
+helper with `dropHidden: false` — unlike the sidebar chrome
+(`(platform)/layout.tsx`), which calls it with `dropHidden: true`. The
+Launcher is deliberately the "see everything" view: a plugin a user hid from
+their sidebar strip still gets a tile here, only reordered. Hiding from the
+sidebar and hiding from the Launcher are two different, independently-
+resolved concerns sharing one saved-order data structure
+(`account_prefs.sidebar_plugins`) — see `runtime/src/launcher-plugins.ts`'s
+`applySidebarOrder` doc comment for the full mechanism.
+
 ---
 
 ## SDK dependencies

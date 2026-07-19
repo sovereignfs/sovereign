@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import { getPlatformDb } from '@/src/db';
 import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
 import { canUserOpenPlugin } from '@/src/plugin-access-server';
+import { getExamplesEnabledFlag } from '@/src/plugin-status';
 import { getPluginCatalogAction } from './actions';
 import { PluginInstallPanel } from './PluginInstallPanel';
 import { PluginsTable, type PluginRow, type PluginStatus } from './PluginsTable';
@@ -48,14 +49,22 @@ async function getPlugins(): Promise<RawPluginRow[]> {
  * (Task 3.28); `active` from the catalog is the authoritative "has a
  * plugin_status row" signal, so it decides `inactive` before `enabled` is
  * ever consulted.
+ *
+ * A row-less example plugin is the one exception: it counts as active when
+ * the examples bulk toggle is on, even though it has no `plugin_status` row
+ * — it's genuinely visible in the sidebar/Launcher in that state (see
+ * `resolveAccessPolicy` in `@/src/plugin-access-server`), so Console must not
+ * show it as "Inactive".
  */
-async function buildPluginRows(): Promise<Omit<PluginRow, 'openableByViewer'>[]> {
+async function buildPluginRows(
+  examplesEnabled: boolean,
+): Promise<Omit<PluginRow, 'openableByViewer'>[]> {
   const [rawPlugins, catalog] = await Promise.all([getPlugins(), getPluginCatalogAction()]);
   const activeIds = new Set(catalog.filter((e) => e.active).map((e) => e.id));
 
   return rawPlugins.map((p) => {
     const isChrome = CHROME_PLUGIN_IDS.has(p.id);
-    const isActive = isChrome || activeIds.has(p.id);
+    const isActive = isChrome || activeIds.has(p.id) || (p.example && examplesEnabled);
     const status: PluginStatus = p.compatibilityError
       ? 'incompatible'
       : !isActive
@@ -87,12 +96,13 @@ async function withOpenability(rows: Omit<PluginRow, 'openableByViewer'>[]): Pro
 }
 
 export default async function PluginsPage() {
-  const rows = await withOpenability(await buildPluginRows());
+  const examplesEnabled = await getExamplesEnabledFlag(await getPlatformDb());
+  const rows = await withOpenability(await buildPluginRows(examplesEnabled));
 
   return (
     <div className={styles.sections}>
       <PluginInstallPanel />
-      <PluginsTable rows={rows} />
+      <PluginsTable rows={rows} defaultShowExamples={examplesEnabled} />
     </div>
   );
 }

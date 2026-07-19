@@ -112,6 +112,12 @@ specified and deferred to Task 1.0.1.
   with an `X-Retry-After` header. Rate limiting is stored in-memory per process
   (sufficient for single-instance deployments); a shared secondary storage (e.g.
   Redis) would be needed for multi-instance setups.
+- **Email verification is required by default** (`AUTH_REQUIRE_EMAIL_VERIFICATION=true`).
+  A new account must click an emailed link before it can sign in; registration
+  does not grant a session until then. Operators can disable this
+  (`AUTH_REQUIRE_EMAIL_VERIFICATION=false`) for air-gapped/internal deployments.
+  Accounts that existed before this shipped are grandfathered automatically —
+  the requirement only applies to new registrations.
 - **Client-side encryption (RFC 0060) has no operator recovery path, by
   design.** A user unlocks their Client Master Key with a recorded recovery
   secret or an already-enrolled device — the server never holds a plaintext
@@ -142,6 +148,9 @@ specified and deferred to Task 1.0.1.
       as a manual policy step.
 - [ ] **Restrict network exposure** — only the reverse proxy should be public;
       keep the auth server, database, and Mailpit on the internal network.
+- [ ] **Configure `SMTP_HOST`** if you keep `AUTH_REQUIRE_EMAIL_VERIFICATION` at
+      its default (`true`) — without SMTP, new registrations fail closed rather
+      than issuing an unverifiable account.
 - [ ] **Keep backups encrypted and off-host**, and test restores.
 - [ ] **Update regularly** and watch the repository's security advisories.
 

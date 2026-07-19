@@ -6,11 +6,25 @@ import { passkey } from '@better-auth/passkey';
 import { authGet, authRun, getAuthDatabase } from './db';
 import { getEnv } from './env';
 import { resolveInvitePluginGrants } from './invite-plugin-grants';
-import { sendAuthPlatformEmail } from './platform-email';
+import { isMailerConfigured, sendAuthPlatformEmail } from './platform-email';
 import { readInviteOnlySetting, resolveInviteOnly } from './settings';
 
 function buildOptions(): BetterAuthOptions {
   const env = getEnv();
+
+  if (env.requireEmailVerification && !isMailerConfigured()) {
+    // Not a hard throw — that would break an already-running instance's
+    // upgrade the moment this ships if the operator hasn't set SMTP_HOST.
+    // A loud boot-time warning is safer: registration will still fail per
+    // attempt (sendAuthPlatformEmail throws for deliveryClass:
+    // 'authentication' when unconfigured), but the operator finds out at
+    // startup instead of via a confused new user's bug report.
+    console.warn(
+      '[auth] AUTH_REQUIRE_EMAIL_VERIFICATION is enabled but no SMTP is configured — ' +
+        'new registrations will fail until SMTP_HOST is set, or set ' +
+        'AUTH_REQUIRE_EMAIL_VERIFICATION=false to disable the requirement.',
+    );
+  }
 
   return {
     secret: env.secret,
@@ -58,6 +72,32 @@ function buildOptions(): BetterAuthOptions {
       // Minimum password length (better-auth default is 8, but being explicit
       // here so it doesn't silently change with a library upgrade).
       minPasswordLength: 8,
+      // When true (default), blocks sign-in with EMAIL_NOT_VERIFIED until the
+      // account is verified, and sign-up returns { token: null } instead of
+      // creating a session. Requires emailVerification.sendVerificationEmail
+      // below, or unverified accounts would have no resend path at all.
+      requireEmailVerification: env.requireEmailVerification,
+    },
+    emailVerification: {
+      sendVerificationEmail: async ({ user, token }) => {
+        const verifyUrl = `${env.baseUrl}/verify-email?token=${token}`;
+        await sendAuthPlatformEmail({
+          templateId: 'auth.email_verification',
+          deliveryClass: 'authentication',
+          toUserId: user.id,
+          toEmail: user.email,
+          subject: 'Verify your Sovereign email address',
+          html: `<p>Confirm your email address to finish setting up your Sovereign account.</p>
+<p><a href="${verifyUrl}">${verifyUrl}</a></p>
+<p>This link expires in 1 hour. If you did not create this account, you can ignore this email.</p>`,
+          text: `Confirm your email address to finish setting up your Sovereign account.\n\nVerify: ${verifyUrl}\n\nThis link expires in 1 hour. If you did not create this account, ignore this email.`,
+          metadata: { flow: 'email_verification' },
+        });
+      },
+      // Clicking the verification link signs the user straight in, rather
+      // than making them return to /login after confirming — matches
+      // autoSignIn on emailAndPassword above for the no-verification path.
+      autoSignInAfterVerification: true,
     },
     // Brute-force / credential-stuffing protection. better-auth applies
     // per-path special rules on top of the global rate limit:

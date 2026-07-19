@@ -59,6 +59,16 @@ breaking schema change when that work begins.
 `verification` table (signed, time-limited tokens) and exposes
 `POST /api/auth/send-verification-email` — the plumbing already exists; it has never been called.
 
+**Update:** the `emailVerified` field on better-auth's own `user` table (a separate database from
+the one `platform.ts` describes — `apps/auth` intentionally does not depend on `packages/db`, see
+`apps/auth/src/db.ts`) is no longer dormant. A scoped-down implementation of this RFC's §5.3 (email
+verification flow only — no `verification_level`/MFA/admin-vouch machinery) shipped using
+better-auth's native `emailAndPassword.requireEmailVerification` +
+`emailVerification.sendVerificationEmail` support directly, gated by `AUTH_REQUIRE_EMAIL_VERIFICATION`
+(default `true`) — see `apps/auth/src/auth.ts` and `docs/security.md`. A future implementer of epic
+task 1.8 should build the `verification_level` ladder on top of this existing enforcement rather than
+duplicating the email-send/verify wiring.
+
 ### MFA state is readable but not propagated to session headers
 
 TOTP and passkeys are stored in better-auth's `twoFactor` and `passkey` tables.

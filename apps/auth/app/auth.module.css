@@ -317,3 +317,18 @@
 .link:hover {
   text-decoration-color: var(--sv-color-text-primary);
 }
+
+/* An inline text link rendered as a <button> (e.g. "Resend email" inside a
+   notice sentence) — same look as .link, with native button chrome reset. */
+.linkButton {
+  composes: link;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.linkButton:disabled {
+  cursor: default;
+  opacity: 0.6;
+}

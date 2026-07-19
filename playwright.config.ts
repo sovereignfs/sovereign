@@ -9,6 +9,13 @@ const e2eServerEnv = {
   AUTH_SECRET: e2eAuthSecret,
   SOVEREIGN_AUTH_SECRET: process.env.SOVEREIGN_AUTH_SECRET ?? e2eAuthSecret,
   SOVEREIGN_ADMIN_KEY: e2eAdminKey,
+  // The webServer env is fixed for the whole suite (one process, can't toggle
+  // per-spec) — most existing specs (password-reset, auth) register a fresh
+  // user and expect an immediate session, so verification stays off here.
+  // The default-on (required) path is covered by apps/auth's own unit tests
+  // (getAuthOptions() config assertions) and the manual verification
+  // checklist; email-verification.spec.ts covers the opt-out path itself.
+  AUTH_REQUIRE_EMAIL_VERIFICATION: 'false',
 };
 
 export default defineConfig({

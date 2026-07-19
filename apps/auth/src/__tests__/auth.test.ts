@@ -30,3 +30,22 @@ describe('password reset config', () => {
     expect(typeof getAuthOptions().emailAndPassword?.sendResetPassword).toBe('function');
   });
 });
+
+describe('email verification config', () => {
+  it('requireEmailVerification defaults to true (AUTH_REQUIRE_EMAIL_VERIFICATION unset)', async () => {
+    const { getAuthOptions } = await import('../auth');
+    expect(getAuthOptions().emailAndPassword?.requireEmailVerification).toBe(true);
+  });
+
+  it('sendVerificationEmail handler is configured', async () => {
+    // Regression guard: requireEmailVerification with no sendVerificationEmail
+    // permanently locks out unverified users with no resend path.
+    const { getAuthOptions } = await import('../auth');
+    expect(typeof getAuthOptions().emailVerification?.sendVerificationEmail).toBe('function');
+  });
+
+  it('auto signs in after verification', async () => {
+    const { getAuthOptions } = await import('../auth');
+    expect(getAuthOptions().emailVerification?.autoSignInAfterVerification).toBe(true);
+  });
+});

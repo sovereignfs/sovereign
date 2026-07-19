@@ -147,6 +147,13 @@ const manifestObjectSchema = z
      * enable/disable control for them. Has no effect on routing or permissions.
      */
     example: z.boolean().optional(),
+    /**
+     * Marks this plugin as still under active development — not yet ready for
+     * production use. Purely informational, like `example`: surfaced as a
+     * warning badge in Console's plugin catalog and on Launcher tiles. Has no
+     * effect on routing, access policy, or the enable/disable default.
+     */
+    development: z.boolean().optional(),
     icon: z.string().optional(),
     compatibility: z
       .object({

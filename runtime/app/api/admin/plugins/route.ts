@@ -23,6 +23,7 @@ export async function GET(request: Request): Promise<Response> {
     routePrefix: manifest.routePrefix,
     adminOnly: manifest.adminOnly ?? false,
     example: manifest.example ?? false,
+    development: manifest.development ?? false,
     shell: manifest.shell ?? 'default',
     enabled: !disabled.has(manifest.id),
     compatibilityError: getIncompatibilityReason(manifest.id),

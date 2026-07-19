@@ -23,6 +23,7 @@ export interface PluginRow {
   routePrefix: string;
   adminOnly: boolean;
   example: boolean;
+  development: boolean;
   compatibilityError: string | null;
   compatibilityWarnings: string[];
   status: PluginStatus;
@@ -179,6 +180,11 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated }: Row
           <Badge variant="mono">{row.type}</Badge>
           {row.adminOnly && <Badge variant="mono">admin-only</Badge>}
           {row.example && <Badge variant="mono">example</Badge>}
+          {row.development && (
+            <Badge variant="status" status="pending">
+              in development
+            </Badge>
+          )}
         </div>
       </td>
 
@@ -265,16 +271,16 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated }: Row
             {!row.isChrome && <PluginAccessDialog pluginId={row.id} pluginName={row.name} />}
 
             {row.openableByViewer ? (
-              <a href={row.routePrefix} className={styles.rowOpenLink} title="Open">
+              <a href={row.routePrefix} className={styles.iconBtn} title="Open">
                 <Icon name="external-link" size="sm" aria-hidden />
-                Open
               </a>
             ) : (
               <span
-                className={styles.adminOnlyNote}
-                title="You are not currently allowed to open this plugin under its access policy."
+                className={styles.iconBtn}
+                style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                title="Open — restricted by this plugin's access policy"
               >
-                Open (restricted)
+                <Icon name="external-link" size="sm" aria-hidden />
               </span>
             )}
 
@@ -321,6 +327,11 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
         <Badge variant="mono">{row.type}</Badge>
         {row.adminOnly && <Badge variant="mono">admin-only</Badge>}
         {row.example && <Badge variant="mono">example</Badge>}
+        {row.development && (
+          <Badge variant="status" status="pending">
+            in development
+          </Badge>
+        )}
         <code className={styles.pluginCardMetaCode}>{row.routePrefix}</code>
       </div>
 

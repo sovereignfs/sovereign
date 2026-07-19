@@ -26,14 +26,20 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    setNeedsVerification(false);
     const result = await authClient.signIn.email({ email, password });
     setLoading(false);
-    if (result?.error) {
+    if (result?.error?.code === 'EMAIL_NOT_VERIFIED') {
+      setNeedsVerification(true);
+    } else if (result?.error) {
       setError('The email or password you entered is incorrect. Please try again.');
     } else if ((result?.data as Record<string, unknown>)?.twoFactorRedirect) {
       // twoFactorClient has already navigated to /login/2fa — do NOT redirect
@@ -42,6 +48,13 @@ export function LoginForm({
     } else if (result?.data) {
       window.location.href = runtimeUrl;
     }
+  }
+
+  async function onResend() {
+    setResending(true);
+    await authClient.sendVerificationEmail({ email });
+    setResending(false);
+    setResent(true);
   }
 
   async function onPasskeySignIn() {
@@ -108,10 +121,25 @@ export function LoginForm({
             />
           </div>
           {error ? <p className={styles.error}>{error}</p> : null}
+          {needsVerification ? (
+            <div className={styles.notice} role="status">
+              <p className={styles.noticeText}>
+                Please verify your email before signing in.{' '}
+                <button
+                  type="button"
+                  className={styles.linkButton}
+                  onClick={() => void onResend()}
+                  disabled={resending}
+                >
+                  {resending ? 'Sending…' : resent ? 'Sent — resend again' : 'Resend email'}
+                </button>
+              </p>
+            </div>
+          ) : null}
           <Button
             type="submit"
             disabled={loading}
-            className={error ? styles.submitAfterError : styles.submitLg}
+            className={needsVerification || error ? styles.submitAfterError : styles.submitLg}
           >
             {loading ? 'Signing in…' : 'Sign in'}
           </Button>

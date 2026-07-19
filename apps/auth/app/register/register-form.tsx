@@ -24,6 +24,12 @@ export function RegisterForm({
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Set once sign-up succeeds without granting a session — happens when
+  // AUTH_REQUIRE_EMAIL_VERIFICATION is enabled (the default): the account is
+  // created but blocked from signing in until the emailed link is clicked.
+  const [checkEmail, setCheckEmail] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   const isInvite = !!invitedEmail;
 
@@ -37,7 +43,50 @@ export function RegisterForm({
       setError(result.error.message ?? 'Registration failed.');
       return;
     }
+    if (!result.data?.token) {
+      setCheckEmail(true);
+      return;
+    }
     window.location.href = runtimeUrl;
+  }
+
+  async function onResend() {
+    setResending(true);
+    await authClient.sendVerificationEmail({ email });
+    setResending(false);
+    setResent(true);
+  }
+
+  if (checkEmail) {
+    return (
+      <main className={styles.page}>
+        <div className={styles.card}>
+          <div className={styles.logo} aria-hidden="true">
+            {instanceInitial}
+          </div>
+          <h1 className={styles.title}>Check your email</h1>
+          <div className={styles.notice} role="status">
+            <p className={styles.noticeText}>
+              We sent a verification link to {email}. Click it to finish setting up your account.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            className={styles.submitLg}
+            onClick={() => void onResend()}
+            disabled={resending}
+          >
+            {resending ? 'Sending…' : resent ? 'Sent — resend again' : 'Resend email'}
+          </Button>
+          <p className={styles.footer}>
+            <Link className={styles.link} href="/login">
+              Back to sign in
+            </Link>
+          </p>
+        </div>
+      </main>
+    );
   }
 
   return (

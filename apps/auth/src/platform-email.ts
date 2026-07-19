@@ -19,6 +19,11 @@ interface AuthPlatformEmailInput {
 
 const mailer = createMailer();
 
+/** Whether SMTP is configured (directly, or the dev-only Mailpit fallback). */
+export function isMailerConfigured(): boolean {
+  return mailer.configured;
+}
+
 function recipientHash(email: string): string {
   return createHash('sha256').update(email.trim().toLowerCase()).digest('hex');
 }

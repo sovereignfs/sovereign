@@ -13,6 +13,12 @@ export interface AuthEnv {
   databaseUrl: string;
   /** When true, registration requires a valid invite (first user exempt). */
   inviteOnly: boolean;
+  /**
+   * When true (default), a new account must click an emailed verification
+   * link before signing in. Opt-out, not opt-in — `!== 'false'` so an unset
+   * var defaults to required.
+   */
+  requireEmailVerification: boolean;
   /** Public base URL of the auth server. */
   baseUrl: string;
   /** Shared secret for runtime→auth admin API calls. No default — must be set. */
@@ -96,6 +102,7 @@ export function getEnv(): AuthEnv {
     secret: required('AUTH_SECRET'),
     databaseUrl: process.env.AUTH_DATABASE_URL ?? 'file:./data/auth.db',
     inviteOnly: process.env.AUTH_INVITE_ONLY === 'true',
+    requireEmailVerification: process.env.AUTH_REQUIRE_EMAIL_VERIFICATION !== 'false',
     // `||` (not `??`): Docker Compose interpolates an unset `${AUTH_BASE_URL}`
     // to an empty string, which `??` would not catch — leaving better-auth with
     // an empty baseURL and failing the CSRF origin check on login. Treat empty

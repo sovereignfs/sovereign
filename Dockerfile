@@ -5,9 +5,9 @@
 #   docker build -f Dockerfile -t sovereign-runtime .
 #
 # No secrets are baked in: all configuration is injected at runtime via env.
-# The one exception is a private plugin repository's clone credential — see
-# the builder stage below — which is a BuildKit secret mount, never an ARG,
-# so it never lands in an image layer or the build-cache metadata.
+# The one exception is private plugin repositories' clone credentials — see
+# the builder stage below — which are a BuildKit secret file mount, never an
+# ARG, so they never land in an image layer or the build-cache metadata.
 
 # ---- deps: install workspace dependencies ---------------------------------
 FROM node:24-alpine AS deps
@@ -35,15 +35,26 @@ RUN apk add --no-cache git
 #
 # A plugin entry in sovereign.plugins.json can declare "tokenEnv": "<VAR>" to
 # clone from a private repository (scripts/install-plugins.ts reads
-# process.env[<VAR>]). Docker's plain RUN never inherits the host/Compose
-# environment, so that variable has to be injected explicitly as a build
-# secret — never a plain ARG, which bakes its value into the build-cache
-# metadata even though it's absent from the final image layers. Build with:
-#   docker buildx build --secret id=plugin_token,env=<VAR> ...
+# process.env[<VAR>]) — a distinct <VAR> per plugin repo is fully supported.
+# Docker's plain RUN never inherits the host/Compose environment, so these
+# variables have to be injected explicitly as a build secret — never a plain
+# ARG, which bakes its value into the build-cache metadata even though it's
+# absent from the final image layers.
+#
+# The mount is a FILE, not a single named var, so any number of distinct
+# tokenEnv names can be supplied without ever touching this Dockerfile again:
+# it holds ordinary `VAR=value` lines (one per private plugin repo, or fewer
+# if several share a token), sourced into this RUN's shell before the clone
+# runs. Build with:
+#   docker buildx build --secret id=plugin_tokens,src=<path-to-KEY=value-file> ...
 # The secret is a no-op (and this RUN behaves exactly as before) when no
-# plugin declares a tokenEnv or the build omits --secret — process.env.<VAR>
-# is simply unset, same as today.
-RUN --mount=type=secret,id=plugin_token,env=SOVEREIGN_PLUGIN_TOKEN \
+# plugin declares a tokenEnv or the build omits --secret — the mounted file
+# is simply absent, so nothing is sourced and every process.env.<VAR> lookup
+# stays unset, same as today.
+RUN --mount=type=secret,id=plugin_tokens,dst=/run/secrets/plugin_tokens \
+    if [ -f /run/secrets/plugin_tokens ]; then \
+      set -a; . /run/secrets/plugin_tokens; set +a; \
+    fi; \
     pnpm install:plugins
 # External plugin package manifests are intentionally absent from the committed
 # lockfile. Refresh the builder's workspace graph after cloning pinned plugins,

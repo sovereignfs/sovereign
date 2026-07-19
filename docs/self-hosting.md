@@ -1221,14 +1221,18 @@ What follows makes the private-repo-auth part of that seamless.
    }
    ```
 
-2. **Pass the token as a BuildKit build secret — not `.env`, not a plain `ARG`.** A Docker `RUN`
-   step never inherits the host or Compose `environment:` block (that only applies to the
-   _running container_, not the build), so `ACME_CRM_PLUGIN_TOKEN` has to be injected explicitly
-   at build time:
+2. **Pass the token as a BuildKit build secret — not a running container's `.env`, not a plain
+   `ARG`.** A Docker `RUN` step never inherits the host or Compose `environment:` block (that only
+   applies to the _running container_, not the build), so `ACME_CRM_PLUGIN_TOKEN` has to be
+   injected explicitly at build time. The secret is a **file** of plain `VAR=value` lines — one
+   per private plugin repo (or fewer if several share a `tokenEnv`) — not a single named
+   variable, so any number of private plugins works without ever touching the Dockerfile:
    ```bash
-   ACME_CRM_PLUGIN_TOKEN=ghp_xxx docker buildx build \
-     --secret id=plugin_token,env=ACME_CRM_PLUGIN_TOKEN \
+   printf 'ACME_CRM_PLUGIN_TOKEN=ghp_xxx\n' > /tmp/plugin-tokens.env
+   docker buildx build \
+     --secret id=plugin_tokens,src=/tmp/plugin-tokens.env \
      -f Dockerfile -t sovereign-runtime .
+   rm /tmp/plugin-tokens.env
    ```
    `docker compose -f docker-compose.prod.yml up --build -d` alone does **not** pass this
    through — Compose only forwards build secrets declared in the compose file's own

@@ -331,7 +331,7 @@ for real access control.
 
 ---
 
-#### 📋 1.10 — Email-bound invite flow
+#### ✅ 1.10 — Email-bound invite flow
 
 **Goal:** Bind every invite token to the invited email address and embed that token in the
 registration link so that clicking the email link pre-fills the email field as read-only and shows

@@ -1598,7 +1598,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="Icon"
               importLine="import { Icon } from '@sovereignfs/ui';"
-              usage="SVG icon primitive. 29 bundled icons. Decorative: aria-hidden. Meaningful: aria-label. Three sizes: sm, md, lg."
+              usage="SVG icon primitive. 52 bundled icons. Decorative: aria-hidden. Meaningful: aria-label. Three sizes: sm, md, lg."
             >
               {(
                 [
@@ -1611,6 +1611,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   'search',
                   'plus',
                   'trash-2',
+                  'external-link',
                 ] as const
               ).map((n) => (
                 <Icon key={n} name={n} size="md" aria-hidden />

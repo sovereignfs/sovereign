@@ -43,6 +43,7 @@ export const ICON_LIST = [
   'ellipsis-vertical',
   'file',
   'upload',
+  'external-link',
   // Grocery item / category (Sovereign Shopper, SHP-05) — a curated set
   // covering common items directly plus a representative icon per category
   // as the fallback when no item-level match exists. See

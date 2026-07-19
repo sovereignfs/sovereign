@@ -354,7 +354,9 @@ ecosystem actively uses.
 `x`, `check`, `plus`, `trash-2`, `pencil`, `rotate-ccw`, `search`, `user`,
 `shield`, `lock`, `eye`, `eye-off`, `mail`, `bell`, `activity`, `package`,
 `grid-2x2`, `info`, `alert-triangle`, `calendar`, `sliders-horizontal`,
-`ellipsis-vertical`.
+`ellipsis-vertical`, `external-link`, plus a `file`/`upload` pair and a curated
+grocery-item/category set (Sovereign Shopper, SHP-05) — see `scripts/icon-list.ts`
+for the full, authoritative list.
 
 ### Plugin-identity icons vs UI-affordance icons
 

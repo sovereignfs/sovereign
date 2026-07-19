@@ -1,6 +1,7 @@
 'use client';
 
 import { type FormEvent, useState } from 'react';
+import { strFromU8, unzipSync } from 'fflate';
 import { Button, Checkbox, FileDropzone } from '@sovereignfs/ui';
 import styles from '../account.module.css';
 
@@ -10,6 +11,24 @@ interface ImportSummary {
   sections: { pluginId: string; status: 'imported' | 'skipped'; warning?: string }[];
 }
 
+interface NotExportedEntry {
+  pluginId: string;
+  reason: 'no-export-hook' | 'disabled';
+}
+
+/** Read `manifest.json`'s `notExported` list straight out of the downloaded ZIP — no second request needed. */
+function readNotExported(zipBytes: Uint8Array): NotExportedEntry[] {
+  try {
+    const files = unzipSync(zipBytes);
+    const manifestBytes = files['manifest.json'];
+    if (!manifestBytes) return [];
+    const manifest = JSON.parse(strFromU8(manifestBytes)) as { notExported?: NotExportedEntry[] };
+    return manifest.notExported ?? [];
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Account → Data: self-service export (download a versioned ZIP) and
  * import/restore (upload a bundle, with a per-section result summary). RFC 0007.
@@ -17,19 +36,39 @@ interface ImportSummary {
 export function PortabilityPanel() {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [notExported, setNotExported] = useState<NotExportedEntry[] | null>(null);
+  const [pluginNames, setPluginNames] = useState<Record<string, string>>({});
   const [includeFiles, setIncludeFiles] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
 
+  async function loadPluginNames() {
+    try {
+      const res = await fetch('/api/plugins');
+      if (!res.ok) return;
+      const data = (await res.json()) as { plugins?: { id: string; name: string }[] };
+      const names: Record<string, string> = {};
+      for (const p of data.plugins ?? []) names[p.id] = p.name;
+      setPluginNames(names);
+    } catch {
+      // Best-effort — falls back to raw plugin ids below.
+    }
+  }
+
   async function onExport() {
     setExporting(true);
     setExportError(null);
+    setNotExported(null);
     try {
       const res = await fetch(`/api/account/export?includeFiles=${String(includeFiles)}`);
       if (!res.ok) throw new Error(`Export failed (${res.status})`);
       const blob = await res.blob();
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const skipped = readNotExported(bytes);
+      setNotExported(skipped);
+      if (skipped.length > 0) void loadPluginNames();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -109,6 +148,15 @@ export function PortabilityPanel() {
           </Button>
         </div>
         {exportError && <p className={styles.error}>{exportError}</p>}
+        {notExported && notExported.length > 0 && (
+          <p className={styles.notice}>
+            {notExported.length} installed app{notExported.length === 1 ? '' : 's'} didn&apos;t
+            export data: {notExported.map((n) => pluginNames[n.pluginId] ?? n.pluginId).join(', ')}
+            {notExported.some((n) => n.reason === 'disabled')
+              ? ' (some are disabled).'
+              : " (these apps don't support data export yet)."}
+          </p>
+        )}
       </section>
 
       <section className={styles.section}>

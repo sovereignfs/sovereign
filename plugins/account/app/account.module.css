@@ -186,6 +186,16 @@
   color: var(--sv-color-accent);
 }
 
+.notice {
+  margin: 0;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  background-color: var(--sv-color-surface-sunken);
+}
+
 .feedbackSuccess {
   margin: 0;
   font-size: var(--sv-font-size-sm);

@@ -13,8 +13,12 @@ import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
  *   plugins/<pluginId>/blobs/<path>    — a plugin's binary attachments
  */
 
-/** Bumped only on a breaking change to the bundle layout itself. */
-export const EXPORT_FORMAT_VERSION = 1;
+/**
+ * Bumped on a breaking change to the bundle layout itself, or (v2, RFC 0068)
+ * when a new top-level `BundleManifest` field is added that older readers
+ * should know to expect explicitly rather than infer forward-compatibility.
+ */
+export const EXPORT_FORMAT_VERSION = 2;
 
 /** Reserved section id for the platform-owned slice (profile/prefs/avatar). */
 export const PLATFORM_SECTION_ID = 'platform';
@@ -48,6 +52,30 @@ export interface BundleSectionMeta {
   }[];
 }
 
+/**
+ * Every plugin installed for the exporting user's tenant, regardless of
+ * whether it participated in this export (RFC 0068). Populated independently
+ * of `exportPlugins`/`sections` so a user can distinguish "no data" from
+ * "this plugin doesn't support export."
+ */
+export interface InstalledPluginRosterEntry {
+  pluginId: string;
+  pluginVersion: string;
+  enabled: boolean;
+  participatesExport: boolean;
+  participatesImport: boolean;
+}
+
+/**
+ * A plugin that was eligible to export (installed, enabled, declares
+ * `data:export`) but contributed nothing because no exporter is registered
+ * for it — recorded instead of silently omitted (RFC 0068).
+ */
+export interface NotExportedEntry {
+  pluginId: string;
+  reason: 'no-export-hook' | 'disabled';
+}
+
 export interface BundleManifest {
   formatVersion: number;
   /** ISO-8601 timestamp. */
@@ -67,6 +95,10 @@ export interface BundleManifest {
    * (RFC 0052 — one plugin's failure must not abort the whole export).
    */
   failures?: { pluginId: string; error: string }[];
+  /** RFC 0068 — every plugin installed for this tenant, participation flags included. */
+  installedPlugins: InstalledPluginRosterEntry[];
+  /** RFC 0068 — plugins eligible to export but with no registered exporter. */
+  notExported: NotExportedEntry[];
 }
 
 /** sha256 hex digest of bytes. */

@@ -3,6 +3,8 @@ import {
   type BundleManifest,
   type BundleSectionMeta,
   EXPORT_FORMAT_VERSION,
+  type InstalledPluginRosterEntry,
+  type NotExportedEntry,
   PLATFORM_SECTION_ID,
   buildZip,
   jsonToU8,
@@ -74,6 +76,12 @@ export interface AssembleArgs {
    * over anything a resolver returns.
    */
   exportPlugins: Record<string, string>;
+  /**
+   * Every plugin installed for the tenant, regardless of export
+   * participation (RFC 0068) — recorded verbatim into the manifest so a
+   * non-participating plugin is a visible fact, not a silent omission.
+   */
+  installedPlugins: InstalledPluginRosterEntry[];
   /** User-selected export scope (RFC 0052). Defaults to including files. */
   options?: ExportOptions;
 }
@@ -81,16 +89,19 @@ export interface AssembleArgs {
 /**
  * Assemble a user's export into a versioned ZIP (RFC 0007 / RFC 0052). Writes
  * the platform slice directly, then invokes each eligible plugin's registered
- * export resolver (scoped to the user). A plugin in `exportPlugins` with no
- * registered resolver is simply absent from the bundle. A resolver that throws
- * is recorded in the manifest's `failures` and excluded from the bundle —
- * one plugin's failure never aborts the whole export.
+ * export resolver (scoped to the user). A resolver that throws is recorded in
+ * the manifest's `failures` and excluded from the bundle — one plugin's
+ * failure never aborts the whole export. A plugin in `exportPlugins` with no
+ * registered resolver is recorded in `notExported` instead of silently
+ * omitted (RFC 0068) — `manifest.json` always reflects every plugin the user
+ * has installed, via `installedPlugins`.
  */
 export async function assembleExport(args: AssembleArgs): Promise<Uint8Array> {
   const options: ExportOptions = args.options ?? { includeFiles: true };
   const files: Record<string, Uint8Array> = {};
   const sections: BundleSectionMeta[] = [];
   const failures: { pluginId: string; error: string }[] = [];
+  const notExported: NotExportedEntry[] = [];
 
   // Platform section: profile + preferences (+ avatar blob).
   const accountJson = jsonToU8({
@@ -108,7 +119,10 @@ export async function assembleExport(args: AssembleArgs): Promise<Uint8Array> {
   // Plugin sections: each eligible, opted-in plugin contributes its own slice.
   for (const [pluginId, pluginVersion] of Object.entries(args.exportPlugins)) {
     const exporter = getExporter(pluginId);
-    if (!exporter) continue;
+    if (!exporter) {
+      notExported.push({ pluginId, reason: 'no-export-hook' });
+      continue;
+    }
 
     let section: PluginExportSection;
     try {
@@ -138,6 +152,15 @@ export async function assembleExport(args: AssembleArgs): Promise<Uint8Array> {
     }
   }
 
+  // A disabled plugin never reaches `exportPlugins` (eligiblePluginIds
+  // filters it out before this function runs), so it needs its own
+  // `notExported` entry here rather than falling out of the loop above.
+  for (const p of args.installedPlugins) {
+    if (p.participatesExport && !p.enabled) {
+      notExported.push({ pluginId: p.pluginId, reason: 'disabled' });
+    }
+  }
+
   const manifest: BundleManifest = {
     formatVersion: EXPORT_FORMAT_VERSION,
     exportedAt: new Date().toISOString(),
@@ -145,6 +168,8 @@ export async function assembleExport(args: AssembleArgs): Promise<Uint8Array> {
     subject: { userId: args.userId, email: args.platform.email },
     sections,
     failures: failures.length > 0 ? failures : undefined,
+    installedPlugins: args.installedPlugins,
+    notExported,
   };
   files['manifest.json'] = jsonToU8(manifest);
 

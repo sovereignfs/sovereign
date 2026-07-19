@@ -69,6 +69,22 @@ describe('selectLauncherPlugins', () => {
     const ids = selectLauncherPlugins(plugins, none, 'platform:admin', restricted).map((p) => p.id);
     expect(ids).toEqual(['fs.example.tasks']);
   });
+
+  it('sorts development plugins last, preserving relative order otherwise', () => {
+    const withDev: LauncherPluginInput[] = [
+      { id: 'fs.example.beta', name: 'Beta', routePrefix: '/beta', development: true },
+      { id: 'fs.example.tasks', name: 'Tasks', routePrefix: '/tasks' },
+      { id: 'fs.example.audit', name: 'Audit', routePrefix: '/audit', adminOnly: true },
+      { id: 'fs.example.alpha', name: 'Alpha', routePrefix: '/alpha', development: true },
+    ];
+    const ids = selectLauncherPlugins(withDev, none, 'platform:admin').map((p) => p.id);
+    expect(ids).toEqual([
+      'fs.example.tasks',
+      'fs.example.audit',
+      'fs.example.beta',
+      'fs.example.alpha',
+    ]);
+  });
 });
 
 describe('selectSidebarPlugins', () => {
@@ -92,6 +108,22 @@ describe('selectSidebarPlugins', () => {
     const restricted = new Set(['fs.example.audit']);
     const ids = selectSidebarPlugins(plugins, none, restricted).map((p) => p.id);
     expect(ids).toEqual(['fs.example.tasks']);
+  });
+
+  it('sorts development plugins last, preserving relative order otherwise', () => {
+    const withDev: LauncherPluginInput[] = [
+      { id: 'fs.example.beta', name: 'Beta', routePrefix: '/beta', development: true },
+      { id: 'fs.example.tasks', name: 'Tasks', routePrefix: '/tasks' },
+      { id: 'fs.example.audit', name: 'Audit', routePrefix: '/audit' },
+      { id: 'fs.example.alpha', name: 'Alpha', routePrefix: '/alpha', development: true },
+    ];
+    const ids = selectSidebarPlugins(withDev, none).map((p) => p.id);
+    expect(ids).toEqual([
+      'fs.example.tasks',
+      'fs.example.audit',
+      'fs.example.beta',
+      'fs.example.alpha',
+    ]);
   });
 });
 

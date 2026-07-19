@@ -37,22 +37,36 @@ export interface LauncherPluginInput extends PluginRouteInfo {
 }
 
 /**
- * The non-chrome, enabled plugins shown in the sidebar's middle icon section
- * (and the mobile Drawer), preserving input order. Disabled plugins — including
- * example plugins hidden by the `SOVEREIGN_EXAMPLES_ENABLED` default — are
- * excluded so no sidebar icon points at a route the middleware 404s.
- * `restrictedIds` (RFC 0065 access policy denial, resolved by the caller —
- * `./plugin-access-server.ts`) is excluded the same way. Generic so the shell
- * can pass full manifest objects through untouched.
+ * Stable sort that pushes `development: true` plugins to the end, preserving
+ * relative order within each group otherwise. This is the *default* order
+ * only — `applySidebarOrder` below still gives a user's own saved
+ * reordering full priority for any plugin id it already knows about; this
+ * only shapes the order a first-time viewer sees and the position a newly
+ * installed plugin is appended at.
  */
-export function selectSidebarPlugins<T extends { id: string }>(
+function sortDevelopmentLast<T extends { development?: boolean }>(plugins: readonly T[]): T[] {
+  return [...plugins].sort((a, b) => Number(!!a.development) - Number(!!b.development));
+}
+
+/**
+ * The non-chrome, enabled plugins shown in the sidebar's middle icon section
+ * (and the mobile Drawer), preserving input order except that `development:
+ * true` plugins sort last (see `sortDevelopmentLast`). Disabled plugins —
+ * including example plugins hidden by the `SOVEREIGN_EXAMPLES_ENABLED`
+ * default — are excluded so no sidebar icon points at a route the middleware
+ * 404s. `restrictedIds` (RFC 0065 access policy denial, resolved by the
+ * caller — `./plugin-access-server.ts`) is excluded the same way. Generic so
+ * the shell can pass full manifest objects through untouched.
+ */
+export function selectSidebarPlugins<T extends { id: string; development?: boolean }>(
   plugins: readonly T[],
   disabledIds: ReadonlySet<string>,
   restrictedIds?: ReadonlySet<string>,
 ): T[] {
-  return plugins.filter(
+  const visible = plugins.filter(
     (p) => !CHROME_PLUGIN_IDS.has(p.id) && !disabledIds.has(p.id) && !restrictedIds?.has(p.id),
   );
+  return sortDevelopmentLast(visible);
 }
 
 /**
@@ -61,7 +75,8 @@ export function selectSidebarPlugins<T extends { id: string }>(
  * `restrictedIds`, RFC 0065), and not platform chrome. Admin-only plugins are
  * included only for users with `console:access` — non-admins never receive
  * them. Each result carries `adminOnly` so the Launcher can render the admin
- * tiles in their own section.
+ * tiles in their own section. `development: true` plugins sort last within
+ * their section (main or admin), same rule as the sidebar.
  */
 export function selectLauncherPlugins(
   plugins: readonly LauncherPluginInput[],
@@ -70,21 +85,21 @@ export function selectLauncherPlugins(
   restrictedIds?: ReadonlySet<string>,
 ): LauncherPlugin[] {
   const isAdmin = hasCapability(role, 'console:access');
-  return plugins
+  const visible = plugins
     .filter((p) => !CHROME_PLUGIN_IDS.has(p.id))
     .filter((p) => !disabledIds.has(p.id))
     .filter((p) => !restrictedIds?.has(p.id))
-    .filter((p) => isAdmin || !p.adminOnly)
-    .map((p) => ({
-      id: p.id,
-      name: p.name,
-      description: p.description ?? '',
-      routePrefix: p.routePrefix,
-      adminOnly: p.adminOnly ?? false,
-      ...(p.type ? { type: p.type } : {}),
-      ...(p.development ? { development: true } : {}),
-      ...(p.icon ? { iconUrl: `/plugin-icons/${p.id}.svg` } : {}),
-    }));
+    .filter((p) => isAdmin || !p.adminOnly);
+  return sortDevelopmentLast(visible).map((p) => ({
+    id: p.id,
+    name: p.name,
+    description: p.description ?? '',
+    routePrefix: p.routePrefix,
+    adminOnly: p.adminOnly ?? false,
+    ...(p.type ? { type: p.type } : {}),
+    ...(p.development ? { development: true } : {}),
+    ...(p.icon ? { iconUrl: `/plugin-icons/${p.id}.svg` } : {}),
+  }));
 }
 
 /**

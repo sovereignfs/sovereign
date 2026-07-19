@@ -228,7 +228,7 @@ CTA should remain reachable without displacing core navigation.
 
 The exact physical file structure may differ where VitePress compatibility
 pages are required. `/product-roadmap` intentionally differs from the internal
-`docs/roadmap.md`, which remains an engineering task queue and is excluded from
+`ROADMAP.md`, which remains an engineering task queue and is excluded from
 the public build.
 
 ## Layer 1: Product Education
@@ -481,7 +481,7 @@ must include a status definition and a link to an RFC or GitHub source when more
 technical context is useful.
 
 The page must state that plans can change and that **Exploring** is not a delivery
-commitment. The internal `docs/roadmap.md` remains the authoritative engineering
+commitment. The internal `ROADMAP.md` remains the authoritative engineering
 sequence.
 
 ## Visual and Interaction Direction
@@ -725,6 +725,6 @@ Before implementation begins, maintainers should approve:
 - Public roadmap horizons and update ownership.
 - The proposed Epic 16 task breakdown and roadmap sequencing.
 
-Once approved, update `docs/epics/docs.md` and `docs/roadmap.md` in the first
+Once approved, update `docs/epics/docs.md` and `ROADMAP.md` in the first
 scheduled implementation PR or a dedicated planning PR. Until then, this plan
 is the proposal and the existing epic and roadmap remain authoritative.

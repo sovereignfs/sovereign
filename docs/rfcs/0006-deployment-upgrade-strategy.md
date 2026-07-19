@@ -210,7 +210,7 @@ net that turns rollback from "hope" into a procedure.
 | `bin/sv`                                  | `backup`, `restore`, and an `upgrade` helper.                                                              |
 | `docs/self-hosting.md`, `docs/upgrade.md` | Image-pull upgrade, tiered cutover + blue-green, backup/restore, rollback.                                 |
 | SRS §3.1 + NFRs                           | Promote to specified; new `DEP-xx` requirement IDs + decision-log entry.                                   |
-| `docs/roadmap.md`                         | Sequenced tasks (migrations foundation → graceful shutdown → backup/restore → image/CI → blue-green docs). |
+| `ROADMAP.md`                              | Sequenced tasks (migrations foundation → graceful shutdown → backup/restore → image/CI → blue-green docs). |
 
 ## Alternatives considered
 

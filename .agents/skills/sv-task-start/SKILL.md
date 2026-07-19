@@ -10,14 +10,14 @@ Prepare a Codex work session for one assigned Sovereign roadmap task.
 ## Workflow
 
 1. Identify the task from the user's assignment. Accept an epic task ID, roadmap
-   slot, title, or description. If no task is specified, read `docs/roadmap.md`,
+   slot, title, or description. If no task is specified, read `ROADMAP.md`,
    identify the first non-done row, and ask the user to confirm before
    continuing. Do not infer a task from a Next pointer.
 
 2. Read these files as needed:
    - `AGENTS.md`
    - `docs/multi-agent.md`
-   - `docs/roadmap.md`
+   - `ROADMAP.md`
    - `docs/epics/README.md`
    - the relevant `docs/epics/<epic>.md`
    - any RFC referenced by the task
@@ -31,7 +31,7 @@ Prepare a Codex work session for one assigned Sovereign roadmap task.
      `git pull`.
 
 4. Resolve task metadata:
-   - roadmap version from `docs/roadmap.md`
+   - roadmap version from `ROADMAP.md`
    - stable epic task ID
    - epic file path
    - task title

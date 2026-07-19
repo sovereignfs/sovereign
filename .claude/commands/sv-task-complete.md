@@ -73,7 +73,7 @@ Do not run this agent in parallel with version bumping.
 - [ ] Docs parity test passes (if manifest/SDK/env changed)
 - [ ] Security check passes (if auth/middleware/CSP touched)
 - [ ] Version bumped per semver policy
-- [ ] `docs/roadmap.md` row updated ✅
+- [ ] `ROADMAP.md` row updated ✅
 - [ ] Completed roadmap row moved out of Non-prioritised Tasks
 - [ ] Roadmap Version cell matches the final root version, or `—` when no root bump exists
 - [ ] Epic task heading updated ✅

@@ -211,7 +211,7 @@ doc-only draft.)
 | `.env.example`, `docs/self-hosting.md` | New encryption env vars + setup/rotation/recovery procedures.               |
 | `docs/security.md` (new)               | Threat model + hardening checklist.                                         |
 | SRS §3 / §4                            | New `SEC-xx` requirement IDs + decision-log entry.                          |
-| `docs/roadmap.md`                      | Sequenced tasks (Tier 0 → 1 → 2 → 3 → 4).                                   |
+| `ROADMAP.md`                           | Sequenced tasks (Tier 0 → 1 → 2 → 3 → 4).                                   |
 
 ## Alternatives considered
 

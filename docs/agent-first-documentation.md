@@ -18,7 +18,7 @@ This is a case study of restructuring the documentation for [Sovereign](https://
 Sovereign's working state was captured in two files:
 
 - **`CLAUDE.md`** (~400 lines) — conventions, architectural rules, active task pointer
-- **`docs/roadmap.md`** (~2,400 lines) — every task in the project, in chronological phase order, each with a full prose entry: Goal, Deliverables, SRS reference, Review checklist
+- **`ROADMAP.md`** (~2,400 lines) — every task in the project, in chronological phase order, each with a full prose entry: Goal, Deliverables, SRS reference, Review checklist
 
 The roadmap was the single source of truth. To start a task, an agent read it cover to cover. To check the review checklist mid-task, it read it again. To find related work in a domain, it scanned the full 2,400 lines looking for scattered mentions. The document was well-structured for a human reading it once — it was expensive for an agent reading it ten times a session.
 
@@ -47,7 +47,7 @@ The first structural change introduced a layer between the roadmap and the task 
 ```
 CLAUDE.md                  ← session entry point; conventions
     │
-    └─▶ docs/roadmap.md    ← 139-line chronological index
+    └─▶ ROADMAP.md    ← 139-line chronological index
             │
             └─▶ docs/epics/<epic>.md   ← full task detail, loaded on demand
 ```
@@ -211,7 +211,7 @@ More broadly, the exercise confirmed that documentation architecture matters for
 The full implementation lives in the Sovereign repository. The key files are:
 
 - [`docs/epics/`](https://github.com/sovereignfs/sovereign/tree/main/docs/epics) — 16 domain epic files with full task detail
-- [`docs/roadmap.md`](https://github.com/sovereignfs/sovereign/blob/main/docs/roadmap.md) — 139-line version-indexed table
+- [`ROADMAP.md`](https://github.com/sovereignfs/sovereign/blob/main/ROADMAP.md) — 139-line version-indexed table
 - [`docs/development-workflow.md`](development-workflow.md) — workflow reference for agents and contributors
 - [`.claude/commands/`](https://github.com/sovereignfs/sovereign/tree/main/.claude/commands) and [`.agents/skills/`](https://github.com/sovereignfs/sovereign/tree/main/.agents/skills) — task lifecycle commands and skills
 

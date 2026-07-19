@@ -4,12 +4,12 @@ Prepare to begin the next Sovereign task. Run this at the start of every work se
 
 ## Steps
 
-1. **Identify the task** — the developer specifies the task at session start (by name, epic task ID, or description). If no task is given, read `docs/roadmap.md` and find the first non-✅ row, then ask the developer to confirm before proceeding. There is no `⏳ Next:` pointer — see `docs/multi-agent.md`.
+1. **Identify the task** — the developer specifies the task at session start (by name, epic task ID, or description). If no task is given, read `ROADMAP.md` and find the first non-✅ row, then ask the developer to confirm before proceeding. There is no `⏳ Next:` pointer — see `docs/multi-agent.md`.
 
-   Once the task is identified, look up its **epic task ID** and **roadmap slot** in `docs/roadmap.md`:
+   Once the task is identified, look up its **epic task ID** and **roadmap slot** in `ROADMAP.md`:
 
    ```bash
-   grep "\[9\.9\]" docs/roadmap.md
+   grep "\[9\.9\]" ROADMAP.md
    # → | 0.9.2   | Email template system... | ⏳  | [9.9](...) |
    ```
 

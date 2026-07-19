@@ -187,7 +187,7 @@ epic task 8.13 tracks implementation once scheduled. Implementation order:
 4. Decide and implement the size/assembly-mode stance.
 5. Update RFC 0052 (`Incorporated into plan` note pointing here for the
    completeness addendum), `docs/epics/data-sovereignty.md` §8.8/§8.13, and
-   `docs/roadmap.md` in the same PR as the code, per this repo's doc-parity
+   `ROADMAP.md` in the same PR as the code, per this repo's doc-parity
    convention.
 
 No manifest schema field changes, no SDK hook signature changes — additive to

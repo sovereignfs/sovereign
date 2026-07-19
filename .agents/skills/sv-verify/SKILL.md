@@ -48,12 +48,12 @@ Run the standard Sovereign quality checks and return a compact result summary.
    grep -m1 '"version"' package.json
    grep -m1 '"version"' runtime/package.json
    grep -n 'The current version is\|Current platform version:' CLAUDE.md
-   grep -n '^\*\*Version:\*\*' docs/roadmap.md
+   grep -n '^\*\*Version:\*\*' ROADMAP.md
    git diff main...HEAD -- runtime/package.json
    ```
 
    Root `package.json`'s version must match both mentions in `CLAUDE.md` and
-   the `**Version:**` line in `docs/roadmap.md`. If `runtime/package.json`'s
+   the `**Version:**` line in `ROADMAP.md`. If `runtime/package.json`'s
    version changed on this branch, the new value must have a row in the
    `## Runtime version map` table in `docs/upgrade.md`. Report a mismatch as a
    **FAIL** — don't edit the docs here; `/sv-update-task-docs` does the fix.

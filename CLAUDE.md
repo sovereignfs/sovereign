@@ -16,7 +16,7 @@ they are authoritative over assumptions:
 
 - `docs/sovereign-proposal-plan-srs.md` — Concept, Plan, Architecture, SRS,
   manifest reference, decision log.
-- `docs/roadmap.md` — Chronological task index (version → epic task ID → status).
+- `ROADMAP.md` — Chronological task index (version → epic task ID → status).
   Full task detail lives in `docs/epics/`. Each task = one branch = one PR.
 
 **Task workflow** — how to start, implement, and complete a task (including the
@@ -49,7 +49,7 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   Use them in doc cross-references, RFC `incorporated_into_plan` fields, and task
   dependency lists. **Roadmap slot versions (e.g. `0.9.2`) are volatile** — they
   reflect current priority ordering and may shift when tasks are reprioritized.
-  Always look up the live slot from `docs/roadmap.md` rather than hard-coding it in
+  Always look up the live slot from `ROADMAP.md` rather than hard-coding it in
   docs; include slots only where shipping order matters (upgrade notes, version maps).
 - **Commits** end with the Claude Code attribution trailer (model-agnostic — do not use a specific model name):
   `Co-Authored-By: Claude Code <noreply@anthropic.com>`
@@ -62,7 +62,7 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
 - **Merge strategy: rebase and merge** (never squash, never create a merge
   commit). Keeps history linear — each task's commit lands on `main` verbatim.
 - **Fix commit messages BEFORE merging the PR.** Once a commit lands on `main`, correcting it means rewriting/force-pushing `main` — avoid that.
-- **When a task is done, update `docs/roadmap.md` and the matching
+- **When a task is done, update `ROADMAP.md` and the matching
   `docs/epics/<file>.md` task heading in the same PR.** Mark both ✅. Do not
   duplicate completion history in `CLAUDE.md`. The next task is assigned by the
   developer at session start, not inferred from a pointer in this file.
@@ -518,9 +518,9 @@ Current platform version: **`0.41.0`**. All roadmap tasks through slot `0.13.0` 
 
 For the full task history and current roadmap position, see:
 
-- `docs/roadmap.md` — canonical task queue and completion record
+- `ROADMAP.md` — canonical task queue and completion record
 - `docs/task-history.md` — detailed history for phases 0.3–0.7
 
-**The next task is assigned by the developer at session start.** Read `docs/roadmap.md` to find the next pending task, then ask the developer which one to pick up — do not assume.
+**The next task is assigned by the developer at session start.** Read `ROADMAP.md` to find the next pending task, then ask the developer which one to pick up — do not assume.
 
-Keep this file current: add any new load-bearing convention that future sessions must not violate. Do not add task completion entries here — that belongs in `docs/roadmap.md`.
+Keep this file current: add any new load-bearing convention that future sessions must not violate. Do not add task completion entries here — that belongs in `ROADMAP.md`.

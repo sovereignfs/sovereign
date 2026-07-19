@@ -35,7 +35,7 @@ topic has one canonical owner; other pages summarize it and link to that owner.
   RFCs and must not be presented as shipped functionality.
 - RFCs explain decisions and proposals. They do not replace current reference
   documentation after implementation.
-- The public product roadmap describes themes. `roadmap.md` and `epics/` remain
+- The public product roadmap describes themes. `ROADMAP.md` and `epics/` remain
   the private engineering queue and source of task status.
 
 ## Technical-reference metadata

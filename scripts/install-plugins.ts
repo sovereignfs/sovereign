@@ -44,7 +44,7 @@
  * Platform plugins (console/launcher/account) live in this repo and are not
  * listed here; cloned plugins are gitignored (they have their own repositories).
  *
- * See: docs/roadmap.md — Task 0.5.00 and Task 12.2 (example plugin extraction).
+ * See: ROADMAP.md — Task 0.5.00 and Task 12.2 (example plugin extraction).
  */
 import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';

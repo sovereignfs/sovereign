@@ -185,7 +185,7 @@ Reads env vars by name only — no code changes beyond the env var reads. The
 | `runtime`           | minor | current → next      | Route rename, provider rename, env var reads                               |
 | `apps/auth`         | patch | current → next      | Reads new env var names only                                               |
 | `plugins/console`   | patch | current → next      | UI labels + route name                                                     |
-| Root `package.json` | patch | —                   | One pre-v1 naming rectification task; slot in roadmap.md                   |
+| Root `package.json` | patch | —                   | One pre-v1 naming rectification task; slot in ROADMAP.md                   |
 
 ---
 

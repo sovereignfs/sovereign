@@ -221,7 +221,7 @@ plugins are not core — and avoids making the project a payment intermediary.
 | `packages/ui`                     | Paywall / pricing components; subscription-management UI.                                                    |
 | Console / Account                 | Subscription management (Account) and entitlement oversight + manual-payment confirmation (Console).         |
 | SRS §1.4 / §4.6 / §1.7            | Clarify that monetization (licensing plumbing, not a hosted marketplace) is in scope; reconcile wording.     |
-| `docs/roadmap.md`                 | A phased implementation task (manifest + entitlement gating first; providers; subscription UX).              |
+| `ROADMAP.md`                      | A phased implementation task (manifest + entitlement gating first; providers; subscription UX).              |
 
 ## Alternatives considered
 

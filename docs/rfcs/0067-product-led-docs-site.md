@@ -83,7 +83,7 @@ shipped, in-development, planned, and exploratory capabilities.
 - `apps/docs/.vitepress/theme/index.ts` extends the default VitePress theme and
   already provides a stable custom-theme boundary.
 - `docs/self-hosting.md` is the current general operator entry point.
-- `docs/roadmap.md` is an internal chronological task queue and is already
+- `ROADMAP.md` is an internal chronological task queue and is already
   excluded from the public VitePress build.
 - `https://sovereign.openfs.io/` is the first candidate hosted instance, but its
   operator, intended audience, registration policy, support path, and policy
@@ -150,7 +150,7 @@ The public route model is:
 ```
 
 `/product-roadmap` is deliberately separate from the excluded internal
-`docs/roadmap.md` route.
+`ROADMAP.md` route.
 
 ### Product education layer
 
@@ -394,7 +394,7 @@ unknown rather than being inferred.
    before publishing the revamp.
 
 This change affects only the docs site and prose. It does not require a root,
-SDK, or UI package version bump. Epics and `docs/roadmap.md` remain unchanged.
+SDK, or UI package version bump. Epics and `ROADMAP.md` remain unchanged.
 
 ## Changelog
 

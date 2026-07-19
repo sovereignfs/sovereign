@@ -25,7 +25,7 @@ task context.
      otherwise keep `—`. Never substitute a package or runtime version for the
      root platform version.
 
-3. Update `docs/roadmap.md` by epic task ID, not title or version alone:
+3. Update `ROADMAP.md` by epic task ID, not title or version alone:
    - Find the row whose Epic task link text matches the epic task ID.
    - Change its Status cell to `✅` and set its Version cell to the final value
      resolved in step 2.
@@ -47,7 +47,7 @@ task context.
    `git diff main...HEAD -- package.json runtime/package.json`:
    - Root `package.json` version changed → update it in `CLAUDE.md` (both
      `The current version is **`X`**` and `Current platform version: **`X`**`)
-     and in `docs/roadmap.md`'s `**Version:**` header line (also bump
+     and in `ROADMAP.md`'s `**Version:**` header line (also bump
      `**Last updated:**` to today's date).
    - `runtime/package.json` version changed → append a row for the new version
      to the `## Runtime version map` table in `docs/upgrade.md`, describing the

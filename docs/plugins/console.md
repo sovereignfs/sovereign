@@ -16,7 +16,7 @@ ships in the monorepo (`plugins/console/`) and is the canonical reference for a
 This document is the **single source of truth for the Console plugin's spec**.
 It consolidates and refines what the proposal/SRS
 (`docs/sovereign-proposal-plan-srs.md`) and the implementation tasks
-(`docs/roadmap.md`) define, and resolves the gaps those
+(`ROADMAP.md`) define, and resolves the gaps those
 documents leave open. Where this doc and the SRS disagree on Console-specific
 detail, this doc wins; the SRS remains authoritative for platform-wide concerns
 (roles, capabilities, manifest schema).

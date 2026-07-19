@@ -18,15 +18,10 @@ export interface PluginTileData {
   iconUrl?: string;
 }
 
-/** A single plugin tile: icon, name, description, type badge; links to the plugin. */
+/** A single plugin tile: icon, name, description, type/development badges; links to the plugin. */
 export function PluginTile({ plugin }: { plugin: PluginTileData }) {
   return (
     <Link href={plugin.routePrefix} className={styles.tile}>
-      {plugin.development && (
-        <span className={styles.tileDevBadge} title="Still in development — not production-ready">
-          In development
-        </span>
-      )}
       <span className={styles.tileIcon} aria-hidden="true">
         {plugin.iconUrl ? (
           <img src={plugin.iconUrl} alt="" className={styles.tileIconImg} />
@@ -36,10 +31,20 @@ export function PluginTile({ plugin }: { plugin: PluginTileData }) {
       </span>
       <span className={styles.tileName}>{plugin.name}</span>
       {plugin.description && <span className={styles.tileDesc}>{plugin.description}</span>}
-      {plugin.type && (
+      {(plugin.type || plugin.development) && (
         <>
           <span className={styles.tileSep} aria-hidden="true" />
-          <span className={styles.tileBadge}>{plugin.type}</span>
+          <span className={styles.tileBadgeRow}>
+            {plugin.type && <span className={styles.tileBadge}>{plugin.type}</span>}
+            {plugin.development && (
+              <span
+                className={styles.tileDevBadge}
+                title="Still in development — not production-ready"
+              >
+                in development
+              </span>
+            )}
+          </span>
         </>
       )}
     </Link>

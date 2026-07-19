@@ -104,7 +104,6 @@
 }
 
 .tile {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -167,6 +166,15 @@
   margin-top: auto;
 }
 
+/* Wraps the type badge and (when present) the development badge so multiple
+   badges sit in one row, same pattern as Console's Plugins table typeBadges
+   row (plugins/console/app/console.module.css). */
+.tileBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+}
+
 .tileBadge {
   font-family: var(--sv-font-family-mono);
   font-size: 11px;
@@ -178,14 +186,11 @@
   padding: 2px 8px;
 }
 
-/* Corner flag for manifest `development: true` — informational only, matches
-   Console's "in development" status badge (amber/warning tokens), not a new
-   ad-hoc colour. Positioned over the tile rather than inline so it reads at a
-   glance without competing with the name/description for space. */
+/* Manifest `development: true` flag — informational only, matches Console's
+   "in development" status badge (amber/warning tokens). Sits alongside the
+   type badge in the same bottom row rather than as a corner overlay, so it
+   doesn't compete visually with the icon/name for attention. */
 .tileDevBadge {
-  position: absolute;
-  top: var(--sv-space-3);
-  right: var(--sv-space-3);
   font-size: 11px;
   font-weight: var(--sv-font-weight-medium);
   letter-spacing: 0.02em;

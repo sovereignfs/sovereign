@@ -211,7 +211,7 @@ Calls `DELETE /api/admin/users/[id]?deleteData=true`.
 | `apps/auth`         | patch | current → next | `verify-credentials` server-to-server helper (or reuse existing auth flow)                                            |
 | `plugins/account`   | minor | current → next | New UI section in Data tab                                                                                            |
 | `plugins/console`   | patch | current → next | Delete action added to Users table                                                                                    |
-| Root `package.json` | patch | —              | One pre-v1 hardening task; slot in roadmap.md                                                                         |
+| Root `package.json` | patch | —              | One pre-v1 hardening task; slot in ROADMAP.md                                                                         |
 
 ---
 

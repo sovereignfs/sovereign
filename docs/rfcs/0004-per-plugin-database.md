@@ -150,7 +150,7 @@ CASCADE`) — a single, total deletion.
 | Runtime SDK bridge                       | `sdk.db.getClient()` returns the shared or dedicated client per the plugin's `database` setting.                 |
 | Plugin lifecycle (Console / install)     | Provision on first use; drop store on uninstall/purge; per-plugin backup/export hooks.                           |
 | SRS §3.7 / §4.6 / §5 / decision log      | Update "no per-plugin DBs" / "not implemented" wording; record the opt-in isolated model and its default-shared. |
-| `docs/roadmap.md`                        | A phased implementation task (SQLite file isolation first; Postgres schema; lifecycle/backup).                   |
+| `ROADMAP.md`                             | A phased implementation task (SQLite file isolation first; Postgres schema; lifecycle/backup).                   |
 
 ## Alternatives considered
 

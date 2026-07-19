@@ -9,7 +9,7 @@ aside: false
 This page describes product direction, not a delivery guarantee. Horizons can
 change as designs are reviewed and implementation constraints become clearer.
 For technical proposals, use the [RFC index](/rfcs/README). Contributors can use
-the source repository's `roadmap.md` and `epics/` for canonical engineering task
+the source repository's `ROADMAP.md` and `epics/` for canonical engineering task
 status. This page intentionally summarizes outcomes instead of duplicating that
 queue.
 

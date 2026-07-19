@@ -1,6 +1,6 @@
 # Sovereign — Epics Overview
 
-A domain-first map of all Sovereign work streams, cross-cutting the phase-sequenced [roadmap](../roadmap.md). Each epic collects related tasks regardless of when they shipped or are planned. Tasks within each epic carry a stable ID (`<epic>.<seq>`) that can be cited in PRs, RFCs, and commits.
+A domain-first map of all Sovereign work streams, cross-cutting the phase-sequenced [roadmap](../../ROADMAP.md). Each epic collects related tasks regardless of when they shipped or are planned. Tasks within each epic carry a stable ID (`<epic>.<seq>`) that can be cited in PRs, RFCs, and commits.
 
 Full architecture and requirements: [sovereign-proposal-plan-srs.md](../sovereign-proposal-plan-srs.md). Task lifecycle and workflow: [development-workflow.md](../development-workflow.md).
 

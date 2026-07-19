@@ -41,12 +41,12 @@ Run all quality checks for the current task and report a structured pass/fail su
    grep -m1 '"version"' runtime/package.json
    grep -n '^  The current version is' CLAUDE.md
    grep -n '^Current platform version:' CLAUDE.md
-   grep -n '^\*\*Version:\*\*' docs/roadmap.md
+   grep -n '^\*\*Version:\*\*' ROADMAP.md
    ```
 
    Compare the results:
    - Root `package.json`'s version must match **both** version mentions in
-     `CLAUDE.md` and the `**Version:**` line in `docs/roadmap.md`.
+     `CLAUDE.md` and the `**Version:**` line in `ROADMAP.md`.
    - If `runtime/package.json`'s version changed in this branch (check
      `git diff main...HEAD -- runtime/package.json`), its new value must have a
      matching row in the `## Runtime version map` table in `docs/upgrade.md`.

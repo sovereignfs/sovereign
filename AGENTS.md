@@ -15,7 +15,7 @@ Read the relevant shared docs before starting implementation:
 
 - `docs/sovereign-proposal-plan-srs.md` — concept, plan, architecture, SRS,
   manifest reference, and decision log.
-- `docs/roadmap.md` — canonical chronological task queue and task status.
+- `ROADMAP.md` — canonical chronological task queue and task status.
 - `docs/epics/` — canonical full task detail by stable epic task ID.
 - `docs/development-workflow.md` — task lifecycle, roadmap/epic structure, and
   `CURRENT_TASK.md` mechanics.
@@ -33,7 +33,7 @@ prefer moving future shared guidance into `docs/`.
 ## Task assignment
 
 - The human assigns tasks explicitly. Do not auto-pick the next roadmap task.
-- `docs/roadmap.md` is the queue; `docs/epics/<file>.md` holds the full task
+- `ROADMAP.md` is the queue; `docs/epics/<file>.md` holds the full task
   spec.
 - Tasks are sequenced. Each task depends on the previous task unless tagged
   `[parallel]`; do not skip ahead without explicit instruction.
@@ -70,7 +70,7 @@ prefer moving future shared guidance into `docs/`.
   served assets, or standalone build output.
 - Verify before claiming done. Run the assigned task's review checklist and
   report the commands/results.
-- When a roadmap task is done, update `docs/roadmap.md` in the same PR. Mark
+- When a roadmap task is done, update `ROADMAP.md` in the same PR. Mark
   the task done there; do not add completion history to `AGENTS.md`.
 - Version bumps are part of the PR when required. Follow semver by change type:
   `fix/` is patch, `feat/` is minor, breaking changes are major and require an

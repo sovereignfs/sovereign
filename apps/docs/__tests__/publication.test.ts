@@ -22,7 +22,6 @@ describe('docs publication policy', () => {
   });
 
   it.each([
-    'roadmap.md',
     'task-history.md',
     'sovereign-proposal-plan-srs.md',
     'epics/infrastructure.md',
@@ -38,7 +37,6 @@ describe('docs publication policy', () => {
     const exclusions = new Set(getPrivateDocumentPaths());
 
     expect(exclusions.size).toBeGreaterThan(0);
-    expect(exclusions.has('roadmap.md')).toBe(true);
     expect(exclusions.has('epics/infrastructure.md')).toBe(true);
     expect(exclusions.has('adhoc/ios-pwa-inspection-findings.md')).toBe(true);
   });

@@ -225,7 +225,7 @@ A future `sdk.activity.list(query)` (plugins reading their own emitted events) i
 | Console             | `/console/activity` admin view (filters, pagination).                                      |
 | Account             | `/activity` personal-feed tab.                                                             |
 | SRS §3 / §4         | Promote to specified; new `ALG-xx` functional requirements + decision-log entry.           |
-| `docs/roadmap.md`   | The implementation task entry (sequenced).                                                 |
+| `ROADMAP.md`        | The implementation task entry (sequenced).                                                 |
 
 ## Alternatives considered
 

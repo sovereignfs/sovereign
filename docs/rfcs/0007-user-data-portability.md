@@ -196,7 +196,7 @@ skipped / warnings).
 | Account             | "Data" tab + actions/routes.                                                                              |
 | Reference plugins   | Implement export/import resolvers (Tasks, Splitify, …).                                                   |
 | SRS §3 / §5         | Promote to specified; new `POR-xx` requirement IDs + decision-log entry; manifest reference for `data:*`. |
-| `docs/roadmap.md`   | The sequenced implementation task.                                                                        |
+| `ROADMAP.md`        | The sequenced implementation task.                                                                        |
 
 ## Alternatives considered
 

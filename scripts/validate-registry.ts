@@ -19,7 +19,7 @@
  * Path sources can only be validated where the path exists (local dev); in
  * `--check` with a missing path the entry is reported as unverifiable.
  *
- * See: docs/roadmap.md — Task 0.5.18; registry/CONTRIBUTING.md.
+ * See: ROADMAP.md — Task 0.5.18; registry/CONTRIBUTING.md.
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';

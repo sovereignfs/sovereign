@@ -111,7 +111,7 @@ bin/sv            the sv CLI
 - [RFCs](docs/rfcs/README.md) — design proposals with a status-at-a-glance
   index; the individual files hold motivation, design, and impact.
 - [Concept · Plan · SRS](docs/sovereign-proposal-plan-srs.md) and the
-  [roadmap](docs/roadmap.md) — product specification, scope, and the milestone
+  [roadmap](ROADMAP.md) — product specification, scope, and the milestone
   (Pre-v1 / v1) build plan.
 
 ## License

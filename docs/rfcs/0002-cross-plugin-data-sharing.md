@@ -153,7 +153,7 @@ plugin may be a provider, a consumer, or both.
 | `packages/ui`       | Consent-prompt dialog primitive.                                                            |
 | Console / Account   | Manage/revoke grants (Account: own grants; Console: audit/oversight).                       |
 | SRS §3 / §5         | Promote the mechanism from "post-v1 plan" to specified; manifest reference for `data.*`.    |
-| `docs/roadmap.md`   | The implementation task (already stubbed as a future task entry).                           |
+| `ROADMAP.md`        | The implementation task (already stubbed as a future task entry).                           |
 
 ## Alternatives considered
 

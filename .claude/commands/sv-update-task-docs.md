@@ -21,7 +21,7 @@ Requires `CURRENT_TASK.md` to exist in the repo root.
    - Otherwise retain the row's existing non-`—` version, or use `—` when no
      root version was recorded. Never use a package/runtime version here.
 
-3. **Update `docs/roadmap.md` by epic task ID:**
+3. **Update `ROADMAP.md` by epic task ID:**
    - Find the row whose Epic task link text matches the epic task ID.
    - Mark it `✅` and set its Version cell to the value resolved above.
    - If it is under `Non-prioritised tasks`, move the entire row at sign-off:
@@ -43,7 +43,7 @@ package.json runtime/package.json`):
    - **Root `package.json` version changed** → update it in lockstep in:
      - `CLAUDE.md` — both `The current version is **`X`**` and
        `Current platform version: **`X`**` mentions.
-     - `docs/roadmap.md` — the `**Version:**` line in the header, and bump
+     - `ROADMAP.md` — the `**Version:**` line in the header, and bump
        `**Last updated:**` to today's date.
    - **`runtime/package.json` version changed** → append a new row to the
      `## Runtime version map` table in `docs/upgrade.md`, keyed to the new
@@ -52,7 +52,7 @@ package.json runtime/package.json`):
      do not leave a gap for a version that was actually shipped.
 
    Skip whichever half didn't change — a task that only bumps `runtime` (most
-   feature work) doesn't need the `CLAUDE.md`/`roadmap.md` header touched, and
+   feature work) doesn't need the `CLAUDE.md`/`ROADMAP.md` header touched, and
    vice versa.
 
 6. **Validate the planning update:** the epic task link occurs exactly once in
@@ -72,6 +72,6 @@ package.json runtime/package.json`):
 
 ## What not to do
 
-- Do **not** append a completion entry to `CLAUDE.md` — `docs/roadmap.md` and the task's epic heading are the canonical completion markers.
+- Do **not** append a completion entry to `CLAUDE.md` — `ROADMAP.md` and the task's epic heading are the canonical completion markers.
 - Do **not** write a `⏳ Next:` pointer anywhere — the developer assigns the next task at session start. See `docs/multi-agent.md`.
 - Do **not** invent a platform version from a package-only bump, commit date, or nearby tag. Use `—` when the root version is not explicit.

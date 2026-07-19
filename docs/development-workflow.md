@@ -16,7 +16,7 @@ How tasks are planned, started, implemented, and closed out. Designed for agenti
 ```
 CLAUDE.md / AGENTS.md      ← agent-specific adapter; conventions only (no task pointer)
     │
-    └─▶ docs/roadmap.md    ← chronological index; one row per PR; canonical status
+    └─▶ ROADMAP.md    ← chronological index; one row per PR; canonical status
             │
             └─▶ docs/epics/<epic>.md   ← full task detail: Goal, Deliverables,
                                            SRS reference, Review checklist
@@ -27,7 +27,7 @@ Each layer has a single job:
 | File                      | Job                             | What agents read it for                                         |
 | ------------------------- | ------------------------------- | --------------------------------------------------------------- |
 | `CLAUDE.md` / `AGENTS.md` | Agent-specific conventions      | How to work; architectural rules; commit/PR conventions         |
-| `docs/roadmap.md`         | Version-ordered task index      | Which tasks exist, their status, which epic file has the detail |
+| `ROADMAP.md`              | Version-ordered task index      | Which tasks exist, their status, which epic file has the detail |
 | `docs/epics/<file>.md`    | Full task spec                  | Goal, deliverables, checklist for the active task               |
 | `CURRENT_TASK.md`         | Active task scratch (transient) | Everything needed mid-task without re-navigating                |
 
@@ -77,7 +77,7 @@ cross-references, RFC `incorporated_into_plan` fields, and task dependency lists
 
 **Roadmap slot versions are volatile.** A slot like `0.9.2` reflects current priority
 ordering and may shift when tasks are reprioritized (e.g. `0.9.5 → 0.9.1`). Always
-look up the live slot from `docs/roadmap.md` rather than copying it from another doc;
+look up the live slot from `ROADMAP.md` rather than copying it from another doc;
 include roadmap slots only where the shipping order matters (upgrade notes, version
 maps).
 
@@ -122,7 +122,7 @@ main agent          — prepares PR description
 final root platform version when one was bumped, moves completed rows out of
 Non-prioritised Tasks into the correct client phase, marks the roadmap row and
 matching epic heading ✅, and deletes `CURRENT_TASK.md`. It does not append
-completion entries to `CLAUDE.md` or `AGENTS.md` — `docs/roadmap.md` and the
+completion entries to `CLAUDE.md` or `AGENTS.md` — `ROADMAP.md` and the
 task's epic heading are the canonical completion markers.
 
 **`/sv-security-check`** (conditional) reviews the diff against the hard architectural rules in `CLAUDE.md` — redirect codes, CSP construction, cookie clearing, session config, `NEXT_PUBLIC_*` usage. Violations block the PR draft.
@@ -138,10 +138,10 @@ explicit human instruction.
 
 Status lives in exactly two places:
 
-| Location                          | What it tracks                               |
-| --------------------------------- | -------------------------------------------- |
-| `docs/roadmap.md` row Status cell | ✅ / ⏳ / 📋 per task — the canonical record |
-| Open PRs                          | Which tasks are currently in flight          |
+| Location                     | What it tracks                               |
+| ---------------------------- | -------------------------------------------- |
+| `ROADMAP.md` row Status cell | ✅ / ⏳ / 📋 per task — the canonical record |
+| Open PRs                     | Which tasks are currently in flight          |
 
 **Epic file headings (`#### ✅ X.Y — …`) are updated when a task completes.** To close a task, mark both the roadmap row and the matching `docs/epics/<file>.md` task heading ✅ in the same PR.
 
@@ -231,14 +231,14 @@ Each agent is briefed with `CURRENT_TASK.md` (~50 lines) rather than the full pr
 
 ## Quick reference for agents
 
-| I need to know…                      | Read…                                                        |
-| ------------------------------------ | ------------------------------------------------------------ |
-| What task is next                    | Ask the developer; check `docs/roadmap.md` for pending tasks |
-| Full spec for the current task       | `CURRENT_TASK.md`                                            |
-| Full spec for any task by epic ID    | `docs/epics/<file>.md` — grep for `^#### .*<id>`             |
-| All tasks in a domain                | `docs/epics/<file>.md`                                       |
-| Roadmap version number for a task    | `docs/roadmap.md`                                            |
-| Which epic a roadmap task belongs to | `docs/roadmap.md` → Epic task column                         |
-| Epic file for a given epic ID        | `docs/epics/README.md`                                       |
-| Project conventions and hard rules   | `CLAUDE.md`                                                  |
-| Security rules to check against      | `CLAUDE.md` → "Hard architectural rules" section             |
+| I need to know…                      | Read…                                                   |
+| ------------------------------------ | ------------------------------------------------------- |
+| What task is next                    | Ask the developer; check `ROADMAP.md` for pending tasks |
+| Full spec for the current task       | `CURRENT_TASK.md`                                       |
+| Full spec for any task by epic ID    | `docs/epics/<file>.md` — grep for `^#### .*<id>`        |
+| All tasks in a domain                | `docs/epics/<file>.md`                                  |
+| Roadmap version number for a task    | `ROADMAP.md`                                            |
+| Which epic a roadmap task belongs to | `ROADMAP.md` → Epic task column                         |
+| Epic file for a given epic ID        | `docs/epics/README.md`                                  |
+| Project conventions and hard rules   | `CLAUDE.md`                                             |
+| Security rules to check against      | `CLAUDE.md` → "Hard architectural rules" section        |

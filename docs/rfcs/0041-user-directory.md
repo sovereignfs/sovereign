@@ -1,7 +1,7 @@
 ---
 rfc: 0041
 title: User directory and member selection SDK
-status: Draft
+status: Implemented
 date: June 2026
 author: kasunben
 scope: >

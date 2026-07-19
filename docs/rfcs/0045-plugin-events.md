@@ -5,7 +5,7 @@ status: Draft
 date: June 2026
 author: kasunben
 scope: packages/sdk, runtime, packages/manifest, docs; builds on RFC 0015 and RFC 0034
-incorporated_into_plan: 'No — documentation-first. This RFC specifies the realtime event surface reserved as sdk.events; scheduling and task IDs are deferred.'
+incorporated_into_plan: 'Yes — epic task 3.17'
 ---
 
 # RFC 0045 — Plugin Events and Realtime Channels

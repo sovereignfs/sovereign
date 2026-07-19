@@ -7,7 +7,7 @@ author: kasunben
 scope: >
   plugins/guide (new), runtime launcher visibility, packages/db, packages/sdk,
   packages/manifest, docs; builds on RFC 0021, RFC 0022, RFC 0039
-incorporated_into_plan: 'No — documentation-first. This RFC defines the product and implementation direction for a platform guide plugin; scheduling and task IDs are deferred.'
+incorporated_into_plan: 'Yes — epic tasks 24.1–24.4; roadmap slots deferred'
 ---
 
 # RFC 0056 — Sovereign Guide

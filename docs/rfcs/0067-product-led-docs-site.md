@@ -4,7 +4,7 @@
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** `apps/docs`, public content under `docs/`; builds on RFC 0037\
-**Incorporated into plan:** No — implementation can proceed without changing epics or the engineering roadmap.
+**Incorporated into plan:** Yes — epic task 16.4 (completed).
 
 ---
 
@@ -68,7 +68,7 @@ shipped, in-development, planned, and exploratory capabilities.
   service in the first release.
 - Publishing internal task IDs or speculative dates as product commitments.
 - Adding third-party analytics by default.
-- Updating epics or `docs/roadmap.md` as part of this RFC.
+- Changing the internal engineering roadmap beyond recording this completed documentation task.
 
 ## Current state (what this builds on)
 

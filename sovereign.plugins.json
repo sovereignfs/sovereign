@@ -23,7 +23,7 @@
     {
       "id": "sovereign-tritext",
       "repository": "https://github.com/sovereignfs/sovereign-tritext.git",
-      "ref": "v0.10.1"
+      "ref": "v0.10.3"
     },
     {
       "id": "sovereign-healthlog",

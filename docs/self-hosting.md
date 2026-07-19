@@ -140,6 +140,25 @@ To drop the examples from the image entirely (rather than just hiding them),
 remove their entries from `sovereign.plugins.json` before building — nothing will
 be cloned or composed.
 
+### Hiding in-development plugins
+
+A plugin can flag itself `development: true` in its manifest to mark it as
+not yet production-ready. By default this plugin is still shown everywhere,
+just sorted last in the sidebar and Launcher with an "in development" badge —
+no routes are blocked. Set `SOVEREIGN_HIDE_DEVELOPMENT_PLUGINS` to hide such
+plugins completely instead: their routes 404 and they never appear in the
+sidebar or Launcher.
+
+| Variable                             | Required | Default | Description                                                                                                  |
+| ------------------------------------ | -------- | ------- | ------------------------------------------------------------------------------------------------------------ |
+| `SOVEREIGN_HIDE_DEVELOPMENT_PLUGINS` | no       | off     | Hides every `development: true` plugin (`1`/`true`/`yes`/`on` = hidden). Unset = shown, badged, sorted last. |
+
+Unlike `SOVEREIGN_EXAMPLES_ENABLED`, this variable has **no per-plugin
+override and no Console setting** — an explicit enable on Console → Plugins
+does not undo it. It's a hard, deploy-time gate: pin a production instance to
+production-ready plugins only, without needing to remove the plugin from
+`sovereign.plugins.json` (which would drop it from the image entirely).
+
 ## Bundled default plugins
 
 **Sovereign Tasks** ships with every default install the same way the example

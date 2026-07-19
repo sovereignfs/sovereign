@@ -62,4 +62,37 @@ describe('computeDisabledPluginIds', () => {
     expect(new Set(disabled)).toEqual(new Set(['ex-a', 'ex-b']));
     expect(disabled.filter((id) => id === 'ex-a')).toHaveLength(1);
   });
+
+  const DEV = ['dev-a', 'dev-b'];
+
+  it('leaves development plugins enabled when hideDevelopment is false (default)', () => {
+    expect(computeDisabledPluginIds([], [], true, DEV, false)).toEqual([]);
+  });
+
+  it('disables every development plugin when hideDevelopment is true', () => {
+    const disabled = computeDisabledPluginIds([], [], true, DEV, true);
+    expect(new Set(disabled)).toEqual(new Set(['dev-a', 'dev-b']));
+  });
+
+  it('an explicit enable row does NOT override hideDevelopment — no per-plugin exception', () => {
+    const disabled = computeDisabledPluginIds(
+      [{ pluginId: 'dev-a', enabled: true }],
+      [],
+      true,
+      DEV,
+      true,
+    );
+    expect(new Set(disabled)).toEqual(new Set(['dev-a', 'dev-b']));
+  });
+
+  it('does not double-count a development plugin that is also explicitly disabled', () => {
+    const disabled = computeDisabledPluginIds(
+      [{ pluginId: 'dev-a', enabled: false }],
+      [],
+      true,
+      DEV,
+      true,
+    );
+    expect(disabled.filter((id) => id === 'dev-a')).toHaveLength(1);
+  });
 });

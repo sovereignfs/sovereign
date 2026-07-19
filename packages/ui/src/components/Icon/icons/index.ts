@@ -31,6 +31,7 @@ import { SlidersHorizontalIcon } from './sliders-horizontal';
 import { EllipsisVerticalIcon } from './ellipsis-vertical';
 import { FileIcon } from './file';
 import { UploadIcon } from './upload';
+import { ExternalLinkIcon } from './external-link';
 import { BananaIcon } from './banana';
 import { AppleIcon } from './apple';
 import { CarrotIcon } from './carrot';
@@ -84,6 +85,7 @@ export type IconName =
   | 'ellipsis-vertical'
   | 'file'
   | 'upload'
+  | 'external-link'
   | 'banana'
   | 'apple'
   | 'carrot'
@@ -139,6 +141,7 @@ export const ICONS: Record<IconName, IconComponent> = {
   'ellipsis-vertical': EllipsisVerticalIcon,
   file: FileIcon,
   upload: UploadIcon,
+  'external-link': ExternalLinkIcon,
   banana: BananaIcon,
   apple: AppleIcon,
   carrot: CarrotIcon,
@@ -192,6 +195,7 @@ export { SlidersHorizontalIcon } from './sliders-horizontal';
 export { EllipsisVerticalIcon } from './ellipsis-vertical';
 export { FileIcon } from './file';
 export { UploadIcon } from './upload';
+export { ExternalLinkIcon } from './external-link';
 export { BananaIcon } from './banana';
 export { AppleIcon } from './apple';
 export { CarrotIcon } from './carrot';

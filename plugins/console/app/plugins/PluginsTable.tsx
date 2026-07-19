@@ -265,7 +265,8 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated }: Row
             {!row.isChrome && <PluginAccessDialog pluginId={row.id} pluginName={row.name} />}
 
             {row.openableByViewer ? (
-              <a href={row.routePrefix} className={styles.iconBtnReactivate} title="Open">
+              <a href={row.routePrefix} className={styles.rowOpenLink} title="Open">
+                <Icon name="external-link" size="sm" aria-hidden />
                 Open
               </a>
             ) : (
@@ -364,6 +365,7 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
 
           {row.openableByViewer ? (
             <a href={row.routePrefix} className={styles.pluginCardBtnToggle}>
+              <Icon name="external-link" size="sm" aria-hidden />
               Open
             </a>
           ) : (
@@ -372,6 +374,7 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
               style={{ opacity: 0.5, cursor: 'not-allowed' }}
               title="You are not currently allowed to open this plugin under its access policy."
             >
+              <Icon name="external-link" size="sm" aria-hidden />
               Open
             </span>
           )}

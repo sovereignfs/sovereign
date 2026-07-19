@@ -1,6 +1,8 @@
+import { sdk } from '@sovereignfs/sdk';
 import styles from '../console.module.css';
 import { ProviderConfigsSection, type ProviderConfigRow } from './ProviderConfigForms';
 import { TenantForm, InviteOnlyForm, ExampleAppsForm, RootPluginForm } from './SettingsForms';
+import { SmtpSettingsForm, type SmtpSettingsView } from './SmtpSettingsForm';
 
 const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
@@ -9,6 +11,7 @@ interface Settings {
   inviteOnly: boolean;
   examplesEnabled: boolean;
   rootPluginId: string;
+  smtp: SmtpSettingsView;
 }
 
 interface PluginRow {
@@ -47,6 +50,7 @@ const DEFAULT_SETTINGS: Settings = {
   inviteOnly: false,
   examplesEnabled: false,
   rootPluginId: '',
+  smtp: { host: null, port: null, user: null, from: null, hasPassword: false, source: 'env' },
 };
 
 function settled<T>(result: PromiseSettledResult<T>, fallback: T): T {
@@ -58,6 +62,8 @@ export default async function SettingsPage() {
     adminGet<Settings>('/api/admin/settings'),
     adminGet<PluginRow[]>('/api/admin/plugins'),
   ]);
+  const session = await sdk.auth.getSession();
+  const canConfigureSecrets = sdk.auth.hasCapability(session, 'instance:configure-secrets');
   const connectionsResult = await adminGet<{ connections: ExternalConnection[] }>(
     '/api/admin/connections',
   ).catch(() => ({ connections: [] }));
@@ -145,6 +151,11 @@ export default async function SettingsPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>External provider configuration</h2>
         <ProviderConfigsSection providers={providerConfigs} />
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Email delivery (SMTP)</h2>
+        <SmtpSettingsForm smtp={settings.smtp} canEdit={canConfigureSecrets} />
       </section>
     </div>
   );

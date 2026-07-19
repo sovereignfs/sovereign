@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { createMailer } from '@sovereignfs/mailer';
+import { createMailer, type Mailer, type MailerConfig } from '@sovereignfs/mailer';
 import { authRun } from './db';
 import { getEnv } from './env';
+import { readSmtpSettings } from './settings';
 
 type EmailDeliveryClass = 'authentication' | 'security' | 'administrative' | 'communication';
 
@@ -17,11 +18,35 @@ interface AuthPlatformEmailInput {
   metadata?: Record<string, string | number | boolean | null>;
 }
 
-const mailer = createMailer();
-
-/** Whether SMTP is configured (directly, or the dev-only Mailpit fallback). */
+/**
+ * Boot-time-only, env-only signal used by `auth.ts`'s startup warning
+ * (fired once, before any request — Console-managed settings aren't a
+ * meaningful signal at that point, since configuring them via Console
+ * requires the app already running and an admin already able to sign in).
+ * Actual sends resolve the effective config fresh via `getMailer()` below.
+ */
 export function isMailerConfigured(): boolean {
-  return mailer.configured;
+  return createMailer().configured;
+}
+
+/**
+ * Resolve a mailer fresh from the current effective config (Console-stored
+ * settings, decrypted locally, override env vars per-field) rather than
+ * memoizing one at module load — a Console SMTP change must take effect
+ * immediately, without a restart. `nodemailer.createTransport()` is cheap
+ * (no connection opens until `sendMail()`), so this isn't worth caching for
+ * a transactional-email volume path.
+ */
+async function getMailer(): Promise<Mailer> {
+  const stored = await readSmtpSettings();
+  const config: MailerConfig = {
+    host: stored.host ?? undefined,
+    port: stored.port ?? undefined,
+    user: stored.user ?? undefined,
+    from: stored.from ?? undefined,
+    pass: stored.pass ?? undefined,
+  };
+  return createMailer(config);
 }
 
 function recipientHash(email: string): string {
@@ -102,6 +127,7 @@ function reportDeliveryOutcomeToActivityLog(
 }
 
 export async function sendAuthPlatformEmail(input: AuthPlatformEmailInput): Promise<void> {
+  const mailer = await getMailer();
   if (!mailer.configured) {
     await recordAuthEmailDelivery(input, 'skipped', 'SMTP_NOT_CONFIGURED');
     reportDeliveryOutcomeToActivityLog(input, 'skipped', 'SMTP_NOT_CONFIGURED');

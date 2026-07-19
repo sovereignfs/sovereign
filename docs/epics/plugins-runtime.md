@@ -1018,6 +1018,58 @@ Source Strategy.
 
 ---
 
+#### ✅ 3.30 — Console-managed SMTP settings (platform:owner only)
+
+**Goal:** Let an instance owner view and change SMTP delivery settings (host, port, user,
+password, from-address) through Console, instead of only `.env` + a restart — closing the gap
+that mattered more once email verification (Task 1.8-adjacent, `AUTH_REQUIRE_EMAIL_VERIFICATION`)
+made SMTP load-bearing for registration itself, not just password reset.
+
+Combines two existing patterns rather than inventing a new one: Task 3.27's encrypted-secret
+Console form shape (host/port/user/from as plaintext, password through the same AES-256-GCM
+envelope as the plugin secret vault) and the invite-only Console toggle's dual-write-across-
+services shape (`apps/auth/src/settings.ts`) — a setting the auth server's own mailer must read
+authoritatively and locally, without a live dependency on the runtime being reachable.
+
+**Deliverables:**
+
+- New owner-only capability `instance:configure-secrets` (`OWNER_CAPS` only — never
+  `ADMIN_CAPS`, never individually grantable — stricter than Task 3.27's own `console:access`-only
+  gating, matching `role:assign`'s precedent instead).
+- `runtime/app/api/admin/settings/route.ts` extended with a `smtp` field group: encrypts the
+  password (`runtime/src/secrets.ts`, sentinel platform context), writes non-secret fields to
+  `platform_settings`, and forwards the same payload to a new admin endpoint on the auth server
+  so its own mailer never depends on a live call to runtime.
+- `apps/auth/src/crypto-envelope.ts` — a small, self-contained AES-256-GCM envelope (same
+  algorithm/format/key as `runtime/src/secrets.ts`) so the auth server can decrypt its own local
+  copy without depending on `runtime` or `packages/db`.
+- Both `platform-email.ts` files (`runtime/src/`, `apps/auth/src/`) stop memoizing their mailer at
+  module load and instead resolve the effective config fresh before each send — a Console change
+  takes effect immediately, no restart.
+- Console → Settings → "Email delivery (SMTP)" section: editable for owners, read-only for
+  everyone else, with a "Send test email" action.
+- `docs/self-hosting.md` / `docs/security.md` updated; `SOVEREIGN_VAULT_KEY` documented as
+  required on both the `runtime` and `auth` services once a password is Console-managed.
+
+**Dependencies:** Task 3.27 (Console form/secret-storage pattern), Task 1.8-adjacent email
+verification work (`AUTH_REQUIRE_EMAIL_VERIFICATION`, made SMTP registration-critical).
+
+**SRS reference:** none directly — closest sibling is Task 3.27 (RFC 0018, RFC 0043, RFC 0049).
+
+**Review checklist:**
+
+- Only `platform:owner` can save SMTP settings or send a test email; other roles see the current
+  values read-only.
+- A Console-saved SMTP change takes effect immediately for both the runtime and the auth server's
+  own mailer, without a restart.
+- The password is never stored in plaintext, never logged, never returned to the client after
+  saving — only whether one is set.
+- Restarting either process does not lose Console-saved settings (dual-write actually persisted,
+  not just in-memory).
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0004 — Per-plugin database](../rfcs/0004-per-plugin-database.md)

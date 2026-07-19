@@ -206,6 +206,54 @@ export async function testProviderConfigAction(
   return { ok: true, message: 'Provider config test passed.' };
 }
 
+export async function updateSmtpSettingsAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'instance:configure-secrets')) {
+    return { ok: false, error: 'Only the instance owner can change SMTP settings.' };
+  }
+
+  const host = (formData.get('host') as string | null)?.trim() || undefined;
+  const portRaw = (formData.get('port') as string | null)?.trim();
+  const port = portRaw ? Number(portRaw) : undefined;
+  if (portRaw && (!Number.isInteger(port) || (port as number) < 1 || (port as number) > 65535)) {
+    return { ok: false, error: 'Port must be an integer between 1 and 65535.' };
+  }
+  const user = (formData.get('user') as string | null)?.trim() || undefined;
+  const pass = (formData.get('pass') as string | null)?.trim() || undefined;
+  const from = (formData.get('from') as string | null)?.trim() || undefined;
+
+  return patchSettings({ smtp: { host, port, user, pass, from } });
+}
+
+export async function testSmtpSettingsAction(
+  _prev: ActionResult | null,
+  _formData: FormData,
+): Promise<ActionResult> {
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'instance:configure-secrets')) {
+    return { ok: false, error: 'Only the instance owner can send a test email.' };
+  }
+  const to = session.user.email;
+  if (!to) {
+    return { ok: false, error: 'Your account has no email address to send a test to.' };
+  }
+
+  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
+  const res = await fetch(`${SELF_URL}/api/admin/settings/smtp-test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminKey}` },
+    body: JSON.stringify({ to }),
+  });
+  const body = (await res.json().catch(() => null)) as { error?: string } | null;
+  if (!res.ok || body?.error) {
+    return { ok: false, error: body?.error ?? `Test email failed: ${res.status}` };
+  }
+  return { ok: true, message: `Test email sent to ${to}.` };
+}
+
 export async function deleteProviderConfigAction(
   _prev: ActionResult | null,
   formData: FormData,

@@ -110,7 +110,7 @@ export async function GET(request: Request): Promise<Response> {
       : null;
 
   const installedPlugins = getInstalledPlugins();
-  const emailDiagnostics = await getEmailDeliveryDiagnostics(pdb, isSmtpConfigured());
+  const emailDiagnostics = await getEmailDeliveryDiagnostics(pdb, await isSmtpConfigured());
 
   const rawTransport = process.env.NOTIFICATION_TRANSPORT ?? 'polling';
   const notifTransport: 'polling' | 'sse' | 'redis' =

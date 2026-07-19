@@ -36,6 +36,7 @@ services:
       AUTH_SECRET: '${AUTH_SECRET}'
       AUTH_DATABASE_URL: '${AUTH_DATABASE_URL:-file:./data/auth.db}'
       AUTH_INVITE_ONLY: '${AUTH_INVITE_ONLY:-false}'
+      AUTH_REQUIRE_EMAIL_VERIFICATION: '${AUTH_REQUIRE_EMAIL_VERIFICATION:-true}'
       # Public URL where browsers reach the auth server — better-auth uses it for
       # callbacks, cookie domain, and the CSRF origin check on login. Set this to
       # your public domain in a real deployment, e.g. https://auth.example.com
@@ -53,6 +54,10 @@ services:
       # (not the dev :3000 left in .env).
       NEXT_PUBLIC_RUNTIME_URL: '${NEXT_PUBLIC_RUNTIME_URL:-http://localhost:${RUNTIME_PORT:-4000}}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
+      # Only needed once SMTP is configured via Console with a password
+      # (Email delivery settings) — the auth server decrypts its own local
+      # copy independently of the runtime. Same key as the runtime's vault.
+      SOVEREIGN_VAULT_KEY: '${SOVEREIGN_VAULT_KEY}'
       # Internal Docker service address for auth→runtime server-to-server calls
       # (e.g. recording email-delivery-failure activity log entries). Always
       # the internal container port (3000), not the host-mapped RUNTIME_PORT.

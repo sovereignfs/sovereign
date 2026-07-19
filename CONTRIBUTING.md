@@ -41,6 +41,15 @@ run a bare `pnpm install` when you're intentionally adding, removing, or
 bumping a dependency — the resulting lockfile diff should be scoped to
 that change and included in the same commit.
 
+**Exception — `.local` plugins:** after cloning one (via `pnpm install:plugins`,
+`./setup.sh`, or a manual clone into `plugins/<name>.local`), `--frozen-lockfile`
+will always fail: the plugin becomes a new workspace project with dependencies
+the committed lockfile has never resolved, and since `.local` plugins are
+gitignored by design they never enter the committed lockfile. This is expected,
+not drift. Run a bare `pnpm install` once to pick up its deps locally, and don't
+commit the resulting `pnpm-lock.yaml` diff for the `.local` plugin's entries —
+check `git diff pnpm-lock.yaml` before committing anything else.
+
 **Environment variables:** `AUTH_SECRET`, `SOVEREIGN_ADMIN_KEY`, and
 `SOVEREIGN_AUTH_SECRET` have no defaults — the server will not start without
 them. See `.env.example` for all required variables.

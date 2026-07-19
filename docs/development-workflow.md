@@ -102,21 +102,28 @@ Read `CURRENT_TASK.md` for task context at any point. It contains everything: go
 
 ### Completing a task
 
-Run `/sv-task-complete`. The skill orchestrates three role agents, two of which run in parallel:
+Run `/sv-task-complete`. Verification runs first, followed by any security review
+and required version bumps; task-document updates run only after the final root
+version is known:
 
 ```
-[parallel]
-  /sv-verify       — runs all checks, returns structured pass/fail summary
-  /sv-update-task-docs— updates roadmap row + epic heading, deletes CURRENT_TASK.md
-[sequential, after both complete]
-  /sv-security-check— only if diff touches auth/middleware/CSP/SDK paths
-  main agent       — version bumps + PR description
-  /sv-create-pr    — creates the GitHub PR as a draft when requested
+/sv-verify          — runs all checks, returns structured pass/fail summary
+/sv-security-check  — only if diff touches auth/middleware/CSP/SDK paths
+main agent          — applies required version bumps
+/sv-update-task-docs— records version, relocates/completes roadmap row,
+                      updates epic heading, deletes CURRENT_TASK.md
+main agent          — prepares PR description
+/sv-create-pr       — creates the GitHub PR as a draft when requested
 ```
 
 **`/sv-verify`** reads `CURRENT_TASK.md`, runs `format:check`, `lint`, `typecheck`, `test` (and docs-parity if relevant), and returns a summary table — not raw output. Failures block the PR draft.
 
-**`/sv-update-task-docs`** reads `CURRENT_TASK.md` for metadata, marks the roadmap row ✅, updates the matching epic task heading to ✅, and deletes `CURRENT_TASK.md`. It does not append completion entries to `CLAUDE.md` or `AGENTS.md` — `docs/roadmap.md` and the task's epic heading are the canonical completion markers.
+**`/sv-update-task-docs`** reads `CURRENT_TASK.md` for metadata, records the
+final root platform version when one was bumped, moves completed rows out of
+Non-prioritised Tasks into the correct client phase, marks the roadmap row and
+matching epic heading ✅, and deletes `CURRENT_TASK.md`. It does not append
+completion entries to `CLAUDE.md` or `AGENTS.md` — `docs/roadmap.md` and the
+task's epic heading are the canonical completion markers.
 
 **`/sv-security-check`** (conditional) reviews the diff against the hard architectural rules in `CLAUDE.md` — redirect codes, CSP construction, cookie clearing, session config, `NEXT_PUBLIC_*` usage. Violations block the PR draft.
 

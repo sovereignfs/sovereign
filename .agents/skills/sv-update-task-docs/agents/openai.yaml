@@ -1,4 +1,4 @@
 interface:
   display_name: 'Sovereign Update Task Docs'
-  short_description: 'Mark a Sovereign task complete in docs.'
+  short_description: 'Finalize task status, version, and roadmap placement.'
   default_prompt: 'Use sv-update-task-docs to mark the current Sovereign task complete.'

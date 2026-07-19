@@ -90,6 +90,8 @@ services:
       DB_DIALECT: '${DB_DIALECT:-sqlite}'
       # Show the bundled example/demo apps (hidden by default). See .env.example.
       SOVEREIGN_EXAMPLES_ENABLED: '${SOVEREIGN_EXAMPLES_ENABLED:-}'
+      # Hide plugins flagged development: true (shown by default). See .env.example.
+      SOVEREIGN_HIDE_DEVELOPMENT_PLUGINS: '${SOVEREIGN_HIDE_DEVELOPMENT_PLUGINS:-}'
       # Email routes to the Mailpit service on the internal network.
       SMTP_HOST: mailpit
       SMTP_PORT: '${MAILPIT_SMTP_PORT:-1025}'

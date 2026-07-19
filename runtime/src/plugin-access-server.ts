@@ -19,6 +19,8 @@ import type { SovereignManifest } from '@sovereignfs/manifest';
 import { hasCapability } from './capabilities';
 import { CHROME_PLUGIN_IDS } from './launcher-plugins';
 import { canOpenPlugin, type PluginAccessPolicy } from './plugin-access';
+import { getExamplesEnabledFlag } from './plugin-status';
+import { getExamplePluginIds } from './registry';
 import { hasUserCapability } from './user-capabilities';
 
 /** Normalize a stored policy string, defensively falling back to `everyone` for a corrupt/unexpected value. */
@@ -38,17 +40,27 @@ function normalizeAccessPolicy(value: string): PluginAccessPolicy {
 /**
  * Resolve a plugin's effective access policy from its (possibly absent)
  * `plugin_status` row. **A genuinely absent row resolves to `disabled`, not
- * `everyone`** (RFC 0065 Task 3.28) — the boot-time catalog backfill
- * (`./plugin-catalog.ts`) guarantees every plugin that existed before 3.28
- * shipped already has an explicit row, so "no row" now unambiguously means
- * "cataloged but never activated" and must default closed. Defaulting an
- * absent row to `everyone` would make a brand-new, not-yet-activated plugin
- * fully open to every user before an admin has decided anything — exactly
- * what activation exists to prevent.
+ * `everyone`** (RFC 0065 Task 3.28) — a row-less plugin is "cataloged but
+ * never activated" and must default closed, so a brand-new plugin isn't
+ * fully open to every user before an admin has decided anything.
+ *
+ * **Exception: a row-less example plugin resolves to `everyone` when the
+ * examples bulk toggle is on, `disabled` otherwise.** Example visibility is
+ * governed by the `examples_enabled` platform setting (mirrored by
+ * `computeDisabledPluginIds` in `./plugin-status.ts`) rather than by manual
+ * per-plugin activation — without this exception, a row-less example would
+ * stay access-restricted (and thus 404 / hidden from sidebar+launcher) even
+ * after an admin turns the bulk toggle on, since this function has no other
+ * way to learn the plugin is an example that's supposed to follow it.
  */
-function resolveAccessPolicy(row: { accessPolicy: string } | undefined): PluginAccessPolicy {
-  if (!row) return 'disabled';
-  return normalizeAccessPolicy(row.accessPolicy);
+function resolveAccessPolicy(
+  row: { accessPolicy: string } | undefined,
+  isExample: boolean,
+  examplesEnabled: boolean,
+): PluginAccessPolicy {
+  if (row) return normalizeAccessPolicy(row.accessPolicy);
+  if (isExample && examplesEnabled) return 'everyone';
+  return 'disabled';
 }
 
 /**
@@ -67,8 +79,12 @@ export async function canUserOpenPlugin(
 ): Promise<boolean> {
   if (CHROME_PLUGIN_IDS.has(pluginId)) return installed && enabled;
 
-  const policyRow = await getPluginAccessPolicy(pdb, pluginId);
-  const accessPolicy = resolveAccessPolicy(policyRow);
+  const [policyRow, examplesEnabled] = await Promise.all([
+    getPluginAccessPolicy(pdb, pluginId),
+    getExamplesEnabledFlag(pdb),
+  ]);
+  const isExample = getExamplePluginIds().includes(pluginId);
+  const accessPolicy = resolveAccessPolicy(policyRow, isExample, examplesEnabled);
   const isAdmin = hasCapability(role, 'console:access');
 
   const [hasDirectGrant, hasGroupGrant] = await Promise.all([
@@ -96,8 +112,9 @@ export async function canUserOpenPlugin(
  * guard, Launcher/sidebar filtering, `/api/plugins`) — both map to the same
  * "not-found" outcome, but are resolved separately so this function's result
  * doesn't depend on a disabled-set snapshot the caller may compute
- * differently. Bulk-resolves every plugin's policy and the user's grants in
- * three queries total, regardless of plugin count.
+ * differently. Bulk-resolves every plugin's policy, the user's grants, and
+ * the examples bulk-toggle setting in four queries total, regardless of
+ * plugin count.
  */
 export async function getRestrictedPluginIds(
   pdb: PlatformDb,
@@ -109,10 +126,12 @@ export async function getRestrictedPluginIds(
   if (candidates.length === 0) return [];
 
   const isAdmin = hasCapability(role, 'console:access');
-  const [policyRows, directGrantIds, groupGrantIds] = await Promise.all([
+  const exampleIds = new Set(getExamplePluginIds());
+  const [policyRows, directGrantIds, groupGrantIds, examplesEnabled] = await Promise.all([
     listPluginAccessPolicies(pdb),
     listPluginIdsGrantedToUser(pdb, userId),
     listPluginIdsGrantedToUserGroups(pdb, userId),
+    getExamplesEnabledFlag(pdb),
   ]);
   const policyById = new Map(policyRows.map((r) => [r.pluginId, r]));
   const directGrantSet = new Set(directGrantIds);
@@ -121,7 +140,7 @@ export async function getRestrictedPluginIds(
   const restricted: string[] = [];
   for (const pluginId of candidates) {
     const row = policyById.get(pluginId);
-    const accessPolicy = resolveAccessPolicy(row);
+    const accessPolicy = resolveAccessPolicy(row, exampleIds.has(pluginId), examplesEnabled);
     const allowed = canOpenPlugin({
       installed: true,
       enabled: true,

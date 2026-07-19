@@ -3,16 +3,10 @@ import type { SovereignManifest } from '@sovereignfs/manifest';
 
 vi.mock('@sovereignfs/db', () => ({
   createPluginStatusRowIfAbsent: vi.fn(),
-  getPlatformSetting: vi.fn(),
-  setPlatformSetting: vi.fn(),
 }));
 
-import {
-  createPluginStatusRowIfAbsent,
-  getPlatformSetting,
-  setPlatformSetting,
-} from '@sovereignfs/db';
-import { activatePlugin, backfillPluginCatalogOnce, getPluginCatalog } from '../plugin-catalog';
+import { createPluginStatusRowIfAbsent } from '@sovereignfs/db';
+import { activatePlugin, getPluginCatalog } from '../plugin-catalog';
 
 const mockPdb = { dialect: 'sqlite' } as never;
 
@@ -22,46 +16,6 @@ const shopper = { id: 'fs.example.shopper', name: 'Shopper' } as SovereignManife
 
 afterEach(() => {
   vi.clearAllMocks();
-});
-
-describe('backfillPluginCatalogOnce', () => {
-  it('does nothing when the backfill has already run', async () => {
-    vi.mocked(getPlatformSetting).mockResolvedValue('true');
-
-    await backfillPluginCatalogOnce(mockPdb, [tasks, shopper]);
-
-    expect(createPluginStatusRowIfAbsent).not.toHaveBeenCalled();
-    expect(setPlatformSetting).not.toHaveBeenCalled();
-  });
-
-  it('backfills every non-chrome plugin as everyone/enabled and sets the flag', async () => {
-    vi.mocked(getPlatformSetting).mockResolvedValue(null);
-    vi.mocked(createPluginStatusRowIfAbsent).mockResolvedValue(true);
-
-    await backfillPluginCatalogOnce(mockPdb, [launcher, tasks, shopper]);
-
-    expect(createPluginStatusRowIfAbsent).toHaveBeenCalledTimes(2);
-    expect(createPluginStatusRowIfAbsent).toHaveBeenCalledWith(mockPdb, 'fs.example.tasks', {
-      enabled: true,
-      accessPolicy: 'everyone',
-      selfService: false,
-    });
-    expect(createPluginStatusRowIfAbsent).toHaveBeenCalledWith(mockPdb, 'fs.example.shopper', {
-      enabled: true,
-      accessPolicy: 'everyone',
-      selfService: false,
-    });
-    expect(setPlatformSetting).toHaveBeenCalledWith(mockPdb, 'plugin_catalog_backfilled', 'true');
-  });
-
-  it('excludes chrome plugins from the backfill', async () => {
-    vi.mocked(getPlatformSetting).mockResolvedValue(null);
-
-    await backfillPluginCatalogOnce(mockPdb, [launcher]);
-
-    expect(createPluginStatusRowIfAbsent).not.toHaveBeenCalled();
-    expect(setPlatformSetting).toHaveBeenCalled();
-  });
 });
 
 describe('getPluginCatalog', () => {

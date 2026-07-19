@@ -120,6 +120,16 @@ already-`enabled` plugins migrate to `access_policy = everyone` (unchanged behav
 already-`disabled` plugins migrate to `access_policy = disabled`. Only plugins activated after
 this ships get the disabled-by-default posture.
 
+> **Scope note (added 2026-07-19):** "existing plugins... as of this RFC" means plugins that
+> already had an explicit `plugin_status` row, or were accessible via the pre-existing
+> "absence of row = enabled" convention, on an instance that was **already running** before this
+> RFC's schema shipped. It does not mean "every plugin gets activated on an instance's first
+> boot" — a genuinely new instance booting for the first time after this RFC ships has no
+> existing state to grandfather, so it should land in the disabled-by-default posture described
+> above for every non-chrome, non-example plugin (and the hidden-by-default posture from Task
+> 12.3/RFC's own example-plugins model for examples). The implementation initially conflated
+> these two cases — see the changelog entry below.
+
 **Deferred:** installing a plugin _not_ already bundled in the image — i.e., fetching arbitrary
 plugin code into a running instance without a rebuild — is a materially larger change (build
 pipeline, route composition, dependency installation, and deployment-model implications) and is
@@ -465,3 +475,27 @@ change.
   selected_users/selected_groups gated by the new RFC 0070 capability-grant mechanism; added
   invite-scoped plugin entitlement; resolved three of the four open questions; documented dynamic
   runtime install as an explicitly deferred future RFC.
+- 2026-07-19 (correction) — The initial implementation (epic task 3.28) read the "existing
+  plugins... keep their current effective state" grandfathering language above as license to
+  eagerly create an explicit `enabled: true, accessPolicy: 'everyone'` `plugin_status` row for
+  **every** non-chrome plugin — including example plugins — on an instance's first-ever boot,
+  via a `backfillPluginCatalogOnce()` function gated only by a one-time flag, with no way to
+  distinguish "an instance that predates this RFC" from "a brand-new instance booting for the
+  first time after this RFC shipped." Two consequences, both bugs relative to this RFC's and Task
+  12.3's actual intent: (1) ordinary plugins were active by default on every fresh instance
+  instead of requiring explicit admin activation; (2) because "an explicit row always wins" over
+  the Settings → Example plugins bulk toggle, every example plugin became permanently immune to
+  that toggle the moment the backfill touched it. Separately, `resolveAccessPolicy`
+  (`runtime/src/plugin-access-server.ts`) defaulted a row-less plugin to `accessPolicy: 'disabled'`
+  with no awareness of the examples bulk toggle at all, so even a correctly-row-less example
+  would have stayed access-restricted after turning the bulk toggle on. Fixed by: removing
+  `backfillPluginCatalogOnce` entirely (safe — see the scope note above the "Existing plugins..."
+  paragraph, and the fact that any instance which had already booted past 3.28's landing commit
+  had already run the backfill and set its one-time flag, so removing the function has no effect
+  on it); and making `resolveAccessPolicy` example-aware, so a row-less example plugin resolves to
+  `everyone` when the bulk toggle is on and `disabled` otherwise, matching the resolution already
+  used by `runtime/src/plugin-status.ts`'s `computeDisabledPluginIds`. Also fixed a related gap:
+  `runtime/app/api/account/sidebar-plugins/route.ts` (Account → Preferences → Sidebar) was
+  computing its plugin list without this RFC's `restrictedIds` gate at all, unlike every other
+  consumer (`(platform)/layout.tsx`, `/api/plugins`) — a user could reorder or "show" a plugin
+  there that access policy actually denied them everywhere else.

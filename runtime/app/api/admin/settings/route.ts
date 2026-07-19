@@ -11,9 +11,8 @@ import { logActivity } from '@/src/activity';
 import { getPlatformDb } from '@/src/db';
 import {
   EXAMPLES_ENABLED_SETTING,
-  examplesEnabledByDefault,
   getDisabledPluginIds,
-  resolveExamplesEnabled,
+  getExamplesEnabledFlag,
 } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
 import { validateRootPlugin } from '@/src/root-plugin';
@@ -23,17 +22,17 @@ const AUTH_URL =
 
 async function readSettings() {
   const db = await getPlatformDb();
-  const [tenant, inviteOnly, rootPluginId, examplesSetting] = await Promise.all([
+  const [tenant, inviteOnly, rootPluginId, examplesEnabled] = await Promise.all([
     getDefaultTenant(db),
     getPlatformSetting(db, 'invite_only'),
     getPlatformSetting(db, 'root_plugin_id'),
-    getPlatformSetting(db, EXAMPLES_ENABLED_SETTING),
+    getExamplesEnabledFlag(db),
   ]);
   return {
     tenantName: tenant.name,
     inviteOnly: inviteOnly === 'true',
     rootPluginId: rootPluginId ?? DEFAULT_ROOT_PLUGIN_ID,
-    examplesEnabled: resolveExamplesEnabled(examplesSetting, examplesEnabledByDefault()),
+    examplesEnabled,
   };
 }
 

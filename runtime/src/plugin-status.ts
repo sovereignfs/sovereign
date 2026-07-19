@@ -51,15 +51,27 @@ export function computeDisabledPluginIds(
 }
 
 /**
+ * Resolve the effective "are example apps shown" flag from the DB — the
+ * persisted Console setting when set, else the `SOVEREIGN_EXAMPLES_ENABLED`
+ * env default. Shared by every caller that needs this single boolean
+ * (the disabled-set resolver below, the access-policy resolver for row-less
+ * example plugins, and the Console Plugins table's default filter state) so
+ * the precedence logic lives in exactly one place.
+ */
+export async function getExamplesEnabledFlag(pdb: PlatformDb): Promise<boolean> {
+  const setting = await getPlatformSetting(pdb, EXAMPLES_ENABLED_SETTING);
+  return resolveExamplesEnabled(setting, examplesEnabledByDefault());
+}
+
+/**
  * The effective set of disabled plugin IDs — the single source of truth for the
  * middleware route gate, the launcher, root-plugin selection, and portability.
  * Wraps the DB-level `plugin_status` rows with the example/env default rule.
  */
 export async function getDisabledPluginIds(pdb: PlatformDb): Promise<string[]> {
-  const [statusRows, setting] = await Promise.all([
+  const [statusRows, examplesEnabled] = await Promise.all([
     listPluginStatus(pdb),
-    getPlatformSetting(pdb, EXAMPLES_ENABLED_SETTING),
+    getExamplesEnabledFlag(pdb),
   ]);
-  const examplesEnabled = resolveExamplesEnabled(setting, examplesEnabledByDefault());
   return computeDisabledPluginIds(statusRows, getExamplePluginIds(), examplesEnabled);
 }

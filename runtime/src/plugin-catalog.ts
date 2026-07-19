@@ -8,18 +8,27 @@
  * `runAllPluginMigrations`), independent of activation state — so activating
  * a plugin here only needs to create its `plugin_status` row; migrations are
  * already current by the time an admin can reach this action.
+ *
+ * There used to be a `backfillPluginCatalogOnce()` here that eagerly created
+ * an `enabled: true, accessPolicy: 'everyone'` row for every non-chrome
+ * plugin on an instance's first boot — including example plugins. It was
+ * removed (2026-07-19) because it made every plugin, examples included,
+ * active from the very first boot regardless of the "examples ship hidden by
+ * default" setting and the "regular plugins start disabled until an admin
+ * activates them" catalog model — an explicit row always wins over both, so
+ * the backfill permanently defeated them. It also wasn't needed for its
+ * stated purpose: the `access_policy`/`self_service` columns were added by a
+ * migration (`0016_plugin_access_policy.sql`) with a SQL-level
+ * `DEFAULT ... NOT NULL`, which already backfills every *existing*
+ * `plugin_status` row at ALTER time — so a genuinely row-less plugin has
+ * always meant "cataloged but never activated," with no app-level bootstrap
+ * required. See RFC 0065's changelog for the full writeup and the one
+ * narrow compatibility case this trades away.
  */
-import {
-  createPluginStatusRowIfAbsent,
-  getPlatformSetting,
-  setPlatformSetting,
-  type PlatformDb,
-} from '@sovereignfs/db';
+import type { PlatformDb } from '@sovereignfs/db';
+import { createPluginStatusRowIfAbsent } from '@sovereignfs/db';
 import type { SovereignManifest } from '@sovereignfs/manifest';
 import { CHROME_PLUGIN_IDS } from './launcher-plugins';
-
-/** Platform-settings key marking the one-time catalog backfill as complete. */
-const CATALOG_BACKFILL_SETTING = 'plugin_catalog_backfilled';
 
 export interface PluginCatalogEntry {
   id: string;
@@ -27,33 +36,6 @@ export interface PluginCatalogEntry {
   description: string;
   /** Has an explicit `plugin_status` row — i.e. an admin has activated it. */
   active: boolean;
-}
-
-/**
- * One-time backfill: create an explicit `access_policy = 'everyone'` row for
- * every plugin currently in the registry that has no row yet, so "absent row"
- * unambiguously means "cataloged but never activated" from this point
- * forward. Gated by a platform setting so it runs exactly once per instance —
- * a plugin added to the catalog *after* this has already run legitimately
- * starts uncataloged/inactive, requiring explicit activation. Idempotent and
- * safe to call on every boot; the flag check makes repeat calls a no-op.
- */
-export async function backfillPluginCatalogOnce(
-  pdb: PlatformDb,
-  installedPlugins: readonly SovereignManifest[],
-): Promise<void> {
-  const done = await getPlatformSetting(pdb, CATALOG_BACKFILL_SETTING);
-  if (done === 'true') return;
-
-  for (const manifest of installedPlugins) {
-    if (CHROME_PLUGIN_IDS.has(manifest.id)) continue;
-    await createPluginStatusRowIfAbsent(pdb, manifest.id, {
-      enabled: true,
-      accessPolicy: 'everyone',
-      selfService: false,
-    });
-  }
-  await setPlatformSetting(pdb, CATALOG_BACKFILL_SETTING, 'true');
 }
 
 /**

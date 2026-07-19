@@ -479,10 +479,24 @@ function FilterBar({
   );
 }
 
-export function PluginsTable({ rows }: { rows: PluginRow[] }) {
+export function PluginsTable({
+  rows,
+  defaultShowExamples,
+}: {
+  rows: PluginRow[];
+  /**
+   * Initial state for the "Show examples" filter — mirrors the platform's
+   * Console → Settings → Example apps bulk toggle, so a bulk-disabled example
+   * (with no individual per-plugin override) stays hidden here by default,
+   * matching its absence from the sidebar and Launcher. The checkbox stays
+   * locally overridable so an admin can still reveal and manage a specific
+   * example (e.g. to enable it individually) while the bulk toggle is off.
+   */
+  defaultShowExamples: boolean;
+}) {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | PluginStatus>('all');
-  const [showExamples, setShowExamples] = useState(true);
+  const [showExamples, setShowExamples] = useState(defaultShowExamples);
   // Tracked separately from the row's own `status` so the just-activated
   // policy prompt survives the revalidatePath()-driven prop refresh that
   // flips an inactive row to `enabled` before the admin has picked a policy

@@ -149,4 +149,28 @@ marker is set).
 - A non-example platform plugin (console/launcher/account) is never affected.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
+**Post-completion corrections:**
+
+- **(RFC 0065 Task 13.9, superseding the "Console controls" deliverable above)**
+  The Plugins page does **not** group examples into their own section — Task
+  13.9 replaced the original catalog/installed/examples sections with a single
+  unified, filterable table (see `docs/plugins/console.md` CON-14). Examples
+  are distinguished there by a "Show examples" filter checkbox, not a separate
+  section.
+- **(2026-07-19 fix)** The "Hiding examples... 404s their routes" checklist
+  item above was not actually true on a fresh instance between RFC 0065's
+  catalog/activation model landing and this fix: a boot-time backfill
+  (`backfillPluginCatalogOnce`) eagerly created an explicit, `enabled: true`
+  `plugin_status` row for every example plugin on first boot, which — per this
+  task's own "an explicit row always wins" precedence — made the bulk toggle
+  permanently inert for every example on that instance from the very first
+  boot. Fixed by removing the backfill's eager row creation for non-chrome
+  plugins entirely (see RFC 0065's changelog) and by making the access-policy
+  resolver in `runtime/src/plugin-access-server.ts` example-aware, so a
+  row-less example plugin now correctly follows the bulk toggle on both the
+  enabled/disabled axis (`plugin-status.ts`, already correct) and the
+  access-policy axis (previously not, since it defaulted every row-less
+  plugin — examples included — to `accessPolicy: 'disabled'` regardless of the
+  bulk setting).
+
 ---

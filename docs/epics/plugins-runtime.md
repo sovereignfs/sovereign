@@ -912,6 +912,45 @@ reason: 'already-active'`).
   re-activation, and the `plugin.activated` activity log entry.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
+**Post-completion correction (2026-07-19):** `backfillPluginCatalogOnce` was
+removed. It turned out to be both unneeded for its stated purpose and actively
+wrong for a genuinely fresh instance:
+
+- **Unneeded:** the "ordering note" above assumed the app-level backfill was
+  the only thing that could give "most already-shipped plugins" an explicit
+  row. It wasn't — Task 2.21's own migration (`0016_plugin_access_policy.sql`)
+  adds `access_policy`/`self_service` as `DEFAULT ... NOT NULL` columns, which
+  in both Postgres and SQLite backfills every **already-existing**
+  `plugin_status` row at `ALTER TABLE` time. The only case the app-level
+  backfill genuinely covered was a plugin with **zero** `plugin_status` row at
+  all (accessible purely via the pre-Task-2.21 "absence = enabled"
+  convention) — a narrowing legacy case, not "most" plugins.
+- **Actively wrong:** because it ran unconditionally for every non-chrome
+  plugin — examples included — on an instance's first-ever boot, it made
+  every plugin active with `accessPolicy: 'everyone'` before an admin had
+  touched anything, on **any** instance whose first boot happened after this
+  task shipped, not just ones upgrading from before it. That directly
+  contradicted both this task's own "cataloged but inactive by default" model
+  for ordinary plugins and Task 12.3's "examples ship hidden by default"
+  model — and because "an explicit row always wins" (`plugin-status.ts`), the
+  Settings → Example plugins bulk toggle became permanently inert for any
+  example the backfill had already touched.
+- **Why removal was safe:** `backfillPluginCatalogOnce` was gated by a
+  one-time-per-instance flag (`plugin_catalog_backfilled`) — any instance that
+  had already booted past this task's landing commit had already run it and
+  set the flag, so it would never run again regardless of this change; only
+  instances performing their first-ever backfill run _after_ this fix ships
+  are affected, and for those the corrected (no eager activation) behavior is
+  what both this task and Task 12.3 always intended.
+- The "resolver default flipped" deliverable and the "no `plugin_status` row
+  is inaccessible" review-checklist item both still hold — see
+  `runtime/src/plugin-access-server.ts`'s `resolveAccessPolicy`, which now
+  also carries a narrow exception: a row-less **example** plugin resolves to
+  `everyone` (not `disabled`) when the Settings → Example plugins bulk toggle
+  is on, so that toggle actually reaches the access-policy axis and not just
+  the `plugin-status.ts` enabled/disabled axis. Regular (non-example) row-less
+  plugins are unaffected and still resolve to `disabled`.
+
 ---
 
 #### ✅ 3.29 — Private plugin repositories via access token

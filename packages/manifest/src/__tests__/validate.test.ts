@@ -94,6 +94,54 @@ describe('validateManifest', () => {
     expect(res.valid).toBe(true);
   });
 
+  it('accepts a manifest that declares publicRoutes (RFC 0042)', () => {
+    const res = validateManifest({
+      ...base,
+      publicRoutes: [{ prefix: '/p', description: 'Token-protected public read-only pages.' }],
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('accepts a publicRoutes entry without a description', () => {
+    expect(validateManifest({ ...base, publicRoutes: [{ prefix: '/p' }] }).valid).toBe(true);
+  });
+
+  it('rejects a publicRoutes prefix that does not start with "/"', () => {
+    const res = validateManifest({ ...base, publicRoutes: [{ prefix: 'p' }] });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('publicRoutes');
+  });
+
+  it('rejects a publicRoutes prefix of "/"', () => {
+    const res = validateManifest({ ...base, publicRoutes: [{ prefix: '/' }] });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('publicRoutes');
+  });
+
+  it('rejects a publicRoutes prefix containing ".." segments', () => {
+    const res = validateManifest({ ...base, publicRoutes: [{ prefix: '/p/../../etc' }] });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('publicRoutes');
+  });
+
+  it('rejects a publicRoutes prefix containing route group / interception markers', () => {
+    expect(validateManifest({ ...base, publicRoutes: [{ prefix: '/(group)' }] }).valid).toBe(false);
+    expect(validateManifest({ ...base, publicRoutes: [{ prefix: '/(.)p' }] }).valid).toBe(false);
+  });
+
+  it('rejects an empty publicRoutes array', () => {
+    expect(validateManifest({ ...base, publicRoutes: [] }).valid).toBe(false);
+  });
+
+  it('rejects duplicate publicRoutes prefixes within a plugin', () => {
+    const res = validateManifest({
+      ...base,
+      publicRoutes: [{ prefix: '/p' }, { prefix: '/p' }],
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
+  });
+
   it('accepts a manifest that declares the example marker', () => {
     expect(validateManifest({ ...base, example: true }).valid).toBe(true);
   });

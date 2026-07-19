@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { decidePluginRoute, underPrefix, type PluginRouteInfo } from '../route-guard';
+import {
+  decidePluginRoute,
+  matchedPublicPluginRouteId,
+  underPrefix,
+  type PluginRouteInfo,
+} from '../route-guard';
 
 const console: PluginRouteInfo = {
   id: 'fs.sovereign.console',
@@ -97,5 +102,40 @@ describe('decidePluginRoute', () => {
     expect(
       decidePluginRoute('/launcher', plugins, none, 'platform:user', undefined, restricted),
     ).toBe('ok');
+  });
+});
+
+describe('matchedPublicPluginRouteId', () => {
+  const blog: PluginRouteInfo = {
+    id: 'com.example.blog',
+    routePrefix: '/blog',
+    publicRoutes: [{ prefix: '/p' }],
+  };
+  const withPublicRoutes = [console, launcher, blog];
+
+  it('matches a path under a declared public route prefix', () => {
+    expect(matchedPublicPluginRouteId('/blog/p/some-slug', withPublicRoutes)).toBe(
+      'com.example.blog',
+    );
+    expect(matchedPublicPluginRouteId('/blog/p', withPublicRoutes)).toBe('com.example.blog');
+  });
+
+  it('does not match the plugin prefix outside the declared public sub-prefix', () => {
+    expect(matchedPublicPluginRouteId('/blog/drafts', withPublicRoutes)).toBeNull();
+    expect(matchedPublicPluginRouteId('/blog', withPublicRoutes)).toBeNull();
+  });
+
+  it('does not match a partial segment of the public prefix', () => {
+    expect(matchedPublicPluginRouteId('/blog/p2/x', withPublicRoutes)).toBeNull();
+  });
+
+  it('returns null for plugins with no publicRoutes declared', () => {
+    expect(matchedPublicPluginRouteId('/launcher', withPublicRoutes)).toBeNull();
+    expect(matchedPublicPluginRouteId('/console', withPublicRoutes)).toBeNull();
+  });
+
+  it('returns null for unrelated paths', () => {
+    expect(matchedPublicPluginRouteId('/', withPublicRoutes)).toBeNull();
+    expect(matchedPublicPluginRouteId('/other', withPublicRoutes)).toBeNull();
   });
 });

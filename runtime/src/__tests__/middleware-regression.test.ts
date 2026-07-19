@@ -60,6 +60,19 @@ const apiShapedPlugin = {
   routePrefix: '/api/plugins/example',
 } as SovereignManifest;
 
+const publicRoutePlugin = {
+  id: 'com.example.blog',
+  routePrefix: '/blog',
+  publicRoutes: [{ prefix: '/p' }],
+} as SovereignManifest;
+
+const paidPublicRoutePlugin = {
+  id: 'com.example.paid-blog',
+  routePrefix: '/paid-blog',
+  publicRoutes: [{ prefix: '/p' }],
+  monetization: { model: 'one_time' },
+} as SovereignManifest;
+
 function session(role: string = 'platform:owner'): VerifiedSession {
   return {
     user: {
@@ -144,6 +157,8 @@ describe('runtime middleware regressions', () => {
       paidPlugin,
       apiProviderPlugin,
       apiShapedPlugin,
+      publicRoutePlugin,
+      paidPublicRoutePlugin,
     ];
     fetchState = {
       session: session(),
@@ -275,5 +290,81 @@ describe('runtime middleware regressions', () => {
     const rootCall = fetchState.calls.find((c) => c.includes('/api/admin/root-plugin'));
     expect(rootCall).toContain('userId=user-1');
     expect(rootCall).toContain('role=platform%3Aadmin');
+  });
+
+  describe('public plugin page routes (RFC 0042)', () => {
+    it('allows unauthenticated access to a manifest-declared public route', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/blog/p/some-slug'));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('location')).toBeNull();
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-id')).toBeNull();
+    });
+
+    it('still redirects to /login for an undeclared page under the same plugin', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/blog/drafts'));
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe('http://runtime.test/login');
+    });
+
+    it('returns 404 for a disabled plugin’s public route', async () => {
+      fetchState.session = null;
+      fetchState.disabledIds = [publicRoutePlugin.id];
+
+      const response = await middleware(request('/blog/p/some-slug'));
+
+      expect(response.status).toBe(404);
+      expect(await response.text()).toBe('Not Found');
+    });
+
+    it('injects session headers when a valid session exists for a public route', async () => {
+      fetchState.session = session('platform:user');
+
+      const response = await middleware(request('/blog/p/some-slug'));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-id')).toBe('user-1');
+      expect(response.headers.get('x-middleware-request-x-sovereign-plugin-id')).toBe(
+        publicRoutePlugin.id,
+      );
+    });
+
+    it('blocks anonymous access to a monetized plugin’s public route by default', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/paid-blog/p/some-slug'));
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe(
+        'http://runtime.test/paywall/com.example.paid-blog',
+      );
+    });
+
+    it('redirects an authenticated, non-entitled user to the paywall for a monetized public route', async () => {
+      fetchState.session = session();
+      fetchState.paywalledIds = [paidPublicRoutePlugin.id];
+
+      const response = await middleware(request('/paid-blog/p/some-slug'));
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe(
+        'http://runtime.test/paywall/com.example.paid-blog',
+      );
+    });
+
+    it('allows an authenticated, entitled user through to a monetized public route', async () => {
+      fetchState.session = session();
+      fetchState.paywalledIds = [];
+
+      const response = await middleware(request('/paid-blog/p/some-slug'));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('location')).toBeNull();
+    });
   });
 });

@@ -1,13 +1,13 @@
 ---
 rfc: 0042
 title: Public plugin page routes
-status: Draft
+status: Implemented
 date: June 2026
 author: kasunben
 scope: >
   packages/manifest, runtime middleware, runtime route guard, docs; builds on
   PLT-16 public API delegation and RFC 0024
-incorporated_into_plan: 'No — documentation-first. This RFC specifies a manifest-declared public page route primitive for plugins; scheduling and task IDs are deferred.'
+incorporated_into_plan: 'Yes — epic task 2.14'
 ---
 
 # RFC 0042 — Public Plugin Page Routes

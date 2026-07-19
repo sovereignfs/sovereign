@@ -142,6 +142,44 @@ const manifestObjectSchema = z
     adminOnly: z.boolean().optional(),
     apiProvider: z.boolean().optional(),
     /**
+     * Manifest-declared public page routes (RFC 0042). Each entry exempts a
+     * path prefix — relative to this plugin's own `routePrefix` — from the
+     * platform's session-redirect gate. The plugin itself is responsible for
+     * authorizing every request under a public route (a token, a public
+     * identifier, or an optional session fallback) and must fail closed (404)
+     * for anything invalid, expired, revoked, or unknown. Disabled-plugin and
+     * paywall gates still apply: a monetized plugin's public routes block
+     * anonymous access by default — there is no `paywallExempt` escape hatch
+     * yet (an explicit open question in the RFC).
+     */
+    publicRoutes: z
+      .array(
+        z
+          .object({
+            /** Relative to routePrefix; must start with "/" and must not be "/". */
+            prefix: z
+              .string()
+              .min(1)
+              .startsWith('/', 'publicRoutes prefix must start with "/"')
+              .refine((p) => p !== '/', { message: 'publicRoutes prefix must not be "/"' })
+              .refine((p) => !p.split('/').includes('..'), {
+                message: 'publicRoutes prefix must not contain ".." segments',
+              })
+              .refine((p) => !/[()]/.test(p), {
+                message:
+                  'publicRoutes prefix must not contain route groups or interception markers ("(", ")")',
+              }),
+            /** Human-readable description shown in docs/Console. */
+            description: z.string().min(1).optional(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .refine((arr) => new Set(arr.map((r) => r.prefix)).size === arr.length, {
+        message: 'publicRoutes prefixes must be unique within the plugin',
+      })
+      .optional(),
+    /**
      * Marks this plugin as a bundled reference/example. Purely a classification
      * flag: the platform groups example plugins in Console and offers a bulk
      * enable/disable control for them. Has no effect on routing or permissions.

@@ -119,6 +119,20 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.53 → v0.54
+
+- **Public plugin page routes (RFC 0042) — epic task 2.14 done.** New optional
+  manifest `publicRoutes` field lets a plugin exempt a path prefix (relative
+  to its own `routePrefix`) from the platform's session-redirect gate — for
+  shared documents, published read-only views, or token-protected previews.
+  The plugin itself is responsible for authorizing every request under a
+  public route and must fail closed (404) for anything invalid, expired, or
+  unknown. Disabled-plugin and paywall gates still apply: a monetized
+  plugin's public routes block anonymous access by default (there is no
+  `paywallExempt` escape hatch). **No action required** — purely additive;
+  plugins that don't declare `publicRoutes` are unaffected.
+- **`runtime` → 0.54.0**, **`@sovereignfs/manifest` → 0.22.0**.
+
 ### v0.42 → v0.43
 
 - **Cross-plugin references and dependency discovery (RFC 0051) — epic task
@@ -821,6 +835,7 @@ the release you are running.
 | 0.49.0          | Console plugin catalog browser and install-time activation (RFC 0065, epic task 13.8)                                |
 | 0.50.0          | Plugin invite-scope grant resolution (RFC 0065, epic task 2.23)                                                      |
 | 0.51.0          | Plugin directory browsing and self-service enable/disable (RFC 0065, epic task 15.3)                                 |
+| 0.54.0          | Public plugin page routes — `publicRoutes` manifest field (RFC 0042, epic task 2.14)                                 |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

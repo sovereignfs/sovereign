@@ -361,7 +361,7 @@ The Platform Shell is the runtime that composes plugins into a coherent experien
 
 ---
 
-#### 📋 2.14 — Public plugin page routes (RFC 0042)
+#### ✅ 2.14 — Public plugin page routes (RFC 0042)
 
 **Goal:** Add a manifest-declared way for plugins to expose narrowly scoped public page routes without the global session redirect, while keeping the plugin responsible for route-level authorization.
 

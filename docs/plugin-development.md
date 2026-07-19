@@ -165,6 +165,7 @@ serves at `/tasks/lists`.
 | `shellConfig`   | object (see below)                       | no                                   | Per-shell tuning. Holds `overlaySize` (`sm` \| `md` \| `lg`, default `lg`) for `shell: overlay` plugins. Only valid when `shell` is `overlay`.                                                                                                                                                     |
 | `adminOnly`     | boolean                                  | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                                                                            |
 | `apiProvider`   | boolean                                  | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                                                                                      |
+| `publicRoutes`  | array (see below)                        | no                                   | Manifest-declared public page routes (RFC 0042). Each entry exempts a path prefix — relative to `routePrefix` — from the session-redirect gate; the plugin owns authorization for the exempted paths.                                                                                              |
 | `example`       | boolean                                  | no (default `false`)                 | Marks the plugin as a bundled reference/example. Classification only — no effect on routing or permissions. Example plugins are hidden by default and shown via the Console → Settings → Example plugins toggle; each can also be toggled individually on the Plugins page.                        |
 | `development`   | boolean                                  | no (default `false`)                 | Marks the plugin as still under active development — not yet ready for production use. Classification only, like `example`: no effect on routing, access policy, or the enable/disable default. Surfaced as a warning badge on the Console Plugins page and on the plugin's Launcher tile.         |
 | `icon`          | string                                   | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                                                                                                                                                                                                               |
@@ -243,6 +244,95 @@ APIs. A plugin that sets `apiProvider: true` becomes the instance's API provider
 - The segments the runtime serves itself — `account`, `admin`, `health`,
   `plugins` — are reserved and never delegated; a provider must reject them (and
   any future runtime segment) as slugs.
+
+### `publicRoutes` — public plugin page routes (RFC 0042)
+
+`apiProvider` exempts machine-readable `/api/*` endpoints from the session
+gate; `publicRoutes` does the same for **page** routes — a shared document, a
+public board, a published read-only view, or a token-protected preview.
+Unlike `apiProvider`, any number of plugins may declare `publicRoutes`; each
+one only exempts paths under its own `routePrefix`.
+
+```json
+{
+  "routePrefix": "/notes",
+  "publicRoutes": [{ "prefix": "/p", "description": "Token-protected public read-only pages." }]
+}
+```
+
+**Sub-fields** (each entry):
+
+| Field         | Type   | Required | Description                                                                                                                                                      |
+| ------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prefix`      | string | yes      | Path prefix, **relative to `routePrefix`**. Must start with `/`, must not be `/`, must not contain `..` segments or route-group/interception markers (`(`, `)`). |
+| `description` | string | no       | Human-readable note (docs/Console).                                                                                                                              |
+
+Given the example above, `/notes/p/*` is exempt; `/notes/<anything else>`
+keeps the normal session gate. Prefixes must be unique within a plugin.
+
+**What the platform does:**
+
+- CSP and security headers still apply.
+- The request is **not** redirected to `/login` when unauthenticated.
+- If a valid session exists, the platform still injects the usual
+  `x-sovereign-user-*` request headers (so a public route can render
+  differently for a logged-in owner vs. an anonymous visitor); if not, those
+  headers are simply absent.
+- A **disabled** plugin's public routes still 404, same as its normal routes.
+- A plugin with a paid `monetization` model blocks anonymous requests to its
+  public routes by default (redirects to `/paywall/<id>`) — there is no
+  `paywallExempt` escape hatch yet. An authenticated request still goes
+  through the normal entitlement check, so an entitled user reaches the page.
+
+**What your plugin must do** — the platform only decides whether its own
+gates apply; every public route is otherwise unauthenticated, so the plugin
+must:
+
+- Validate its own token, public identifier, or share ID **server-side** on
+  every request.
+- Return **404** (not 401/403) for anything invalid, expired, revoked, or
+  unknown — a public link must not leak whether the underlying resource
+  exists.
+- Render **read-only** by default; never expose mutation controls to an
+  unauthenticated visitor.
+- Only fall back to the session (when present) when that user already has
+  normal access to the underlying resource — the session is a convenience for
+  the owner viewing their own share, not a replacement for the token check.
+
+**Example — a token-protected public note preview:**
+
+```json
+// manifest.json
+{
+  "routePrefix": "/notes",
+  "publicRoutes": [{ "prefix": "/p", "description": "Public read-only note previews." }]
+}
+```
+
+```ts
+// app/p/[token]/page.tsx
+export default async function PublicNotePage({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  const { token } = await params;
+  const share = await lookupShareByTokenHash(hashToken(token));
+
+  if (!share || share.revokedAt || (share.expiresAt && share.expiresAt < Date.now())) {
+    notFound(); // 404 — never distinguish "expired" from "never existed"
+  }
+
+  const note = await getNoteById(share.noteId);
+  return <ReadOnlyNoteView note={note} />;
+}
+```
+
+Recommended fields for a plugin's own share table (this RFC does not define a
+shared token schema — each plugin owns its model): a **hash** of the token
+(never the plaintext), the resource ID, who created it, `createdAt`,
+`expiresAt`, `revokedAt`, and a mode (`expiring`, `permanent`, or a
+plugin-specific enum).
 
 ### `shell: overlay` (RFC 0001)
 

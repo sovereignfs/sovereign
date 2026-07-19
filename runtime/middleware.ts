@@ -10,7 +10,12 @@ import {
 } from '@/src/dev-mode';
 import { ALL_GRANTED_PLUGIN_CAPS } from '@/generated/plugin-capabilities';
 import { getInstalledPlugins } from '@/src/registry';
-import { decidePluginRoute, matchedPluginId, underPrefix } from '@/src/route-guard';
+import {
+  decidePluginRoute,
+  matchedPluginId,
+  matchedPublicPluginRouteId,
+  underPrefix,
+} from '@/src/route-guard';
 import { buildContentSecurityPolicy, generateNonce } from '@/src/security';
 import {
   type CachedSessionData,
@@ -220,6 +225,82 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  const installedPlugins = getInstalledPlugins();
+
+  // Manifest-declared public plugin page routes (RFC 0042): resolved before the
+  // login-redirect gate, since an anonymous request must be able to reach them.
+  // The plugin itself owns authorization for these paths (token/public-ID/
+  // session-fallback) and must fail closed — this middleware only decides
+  // whether the *platform* gates apply, not whether the page's content is safe
+  // to serve. Disabled-plugin and paywall gates still apply here (RFC 0042
+  // "Middleware behavior"); there is no `paywallExempt` yet, so a monetized
+  // plugin's public routes block anonymous access by default.
+  const publicRoutePluginId = matchedPublicPluginRouteId(pathname, installedPlugins);
+  if (publicRoutePluginId) {
+    const disabledIds = await fetchDisabledPluginIds();
+    if (disabledIds.has(publicRoutePluginId)) {
+      return applyCsp(new NextResponse('Not Found', { status: 404 }));
+    }
+
+    let publicSession = await verifyFromCookieCache(request);
+    let publicSetCookies: string[] = [];
+    if (!publicSession) {
+      const fallback = await verifyViaAuthServer(request);
+      if (fallback) {
+        publicSession = fallback.session;
+        publicSetCookies = fallback.setCookies;
+      }
+      // Unlike the normal gate below, a failed verification does not redirect
+      // to /login — the request proceeds anonymously and the plugin decides.
+    }
+
+    // With a session, defer to the entitlements API exactly like the normal
+    // paywall gate below. Without one, we cannot ask the entitlements API (it
+    // requires a user id) — fall back to the manifest's own monetization flag
+    // and block by default, since there is no `paywallExempt` yet.
+    const plugin = installedPlugins.find((p) => p.id === publicRoutePluginId);
+    const requiresPaywallCheck = publicSession
+      ? true
+      : plugin?.monetization != null && plugin.monetization.model !== 'free';
+    if (requiresPaywallCheck) {
+      const isPaywalled = publicSession
+        ? (await fetchPaywalledPluginIds(publicSession.user.id)).has(publicRoutePluginId)
+        : true;
+      if (isPaywalled) {
+        return applyCsp(
+          NextResponse.redirect(
+            new URL(`/paywall/${encodeURIComponent(publicRoutePluginId)}`, request.url),
+            { status: 303 },
+          ),
+        );
+      }
+    }
+
+    const headers = new Headers(request.headers);
+    headers.set('x-nonce', nonce);
+    headers.set('content-security-policy', csp);
+    headers.set('x-sovereign-plugin-id', publicRoutePluginId);
+    if (publicSession) {
+      const { user, expiresAt } = publicSession;
+      headers.set('x-sovereign-user-id', user.id);
+      headers.set('x-sovereign-user-email', user.email);
+      headers.set('x-sovereign-user-role', user.role);
+      const platformCaps = capabilitiesForRole(user.role);
+      const allCaps =
+        ALL_GRANTED_PLUGIN_CAPS.length > 0
+          ? [...platformCaps, ...ALL_GRANTED_PLUGIN_CAPS]
+          : platformCaps;
+      headers.set('x-sovereign-user-capabilities', JSON.stringify(allCaps));
+      headers.set('x-sovereign-session-expires-at', String(expiresAt));
+      if (user.name != null) headers.set('x-sovereign-user-name', user.name);
+      if (user.image != null) headers.set('x-sovereign-user-image', user.image);
+    }
+
+    const response = NextResponse.next({ request: { headers } });
+    for (const cookie of publicSetCookies) response.headers.append('set-cookie', cookie);
+    return applyCsp(response);
+  }
+
   let session = await verifyFromCookieCache(request);
   let setCookies: string[] = [];
   if (!session) {
@@ -251,8 +332,6 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     if (devModeActive) response.headers.set('x-sovereign-dev-mode', 'active');
     return response;
   };
-
-  const installedPlugins = getInstalledPlugins();
 
   // Only consult plugin status when the path is actually under a plugin prefix.
   const underPlugin = installedPlugins.some((plugin) => underPrefix(pathname, plugin.routePrefix));

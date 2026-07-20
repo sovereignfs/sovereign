@@ -1,9 +1,23 @@
 import type { SovereignManifest } from '@sovereignfs/manifest';
 import { describe, expect, it } from 'vitest';
-import { getDevelopmentPluginIds, getExamplePluginIds } from '../registry';
+import { getDevelopmentPluginIds, getExamplePluginIds, getOfflineRoutePrefixes } from '../registry';
 
 function manifest(id: string, example?: boolean, development?: boolean): SovereignManifest {
   return { id, example, development } as unknown as SovereignManifest;
+}
+
+function manifestWithOffline(
+  id: string,
+  routePrefix: string,
+  offlineRoutePrefixes?: string[],
+): SovereignManifest {
+  return {
+    id,
+    routePrefix,
+    offline: offlineRoutePrefixes
+      ? { routes: offlineRoutePrefixes.map((prefix) => ({ prefix })) }
+      : undefined,
+  } as unknown as SovereignManifest;
 }
 
 describe('getExamplePluginIds', () => {
@@ -41,5 +55,26 @@ describe('getDevelopmentPluginIds', () => {
 
   it('returns an empty array when no plugin is flagged development', () => {
     expect(getDevelopmentPluginIds([manifest('a'), manifest('b', false, false)])).toEqual([]);
+  });
+});
+
+describe('getOfflineRoutePrefixes', () => {
+  it('resolves each offline route relative to its plugin routePrefix', () => {
+    const plugins = [
+      manifestWithOffline('fs.sovereign.wallet', '/wallet', ['/cards']),
+      manifestWithOffline('fs.sovereign.tasks', '/tasks', ['/today', '/inbox']),
+      manifestWithOffline('fs.sovereign.console', '/console'),
+    ];
+    expect(getOfflineRoutePrefixes(plugins)).toEqual([
+      '/wallet/cards',
+      '/tasks/today',
+      '/tasks/inbox',
+    ]);
+  });
+
+  it('returns an empty array when no plugin declares offline routes', () => {
+    expect(
+      getOfflineRoutePrefixes([manifestWithOffline('a', '/a'), manifestWithOffline('b', '/b')]),
+    ).toEqual([]);
   });
 });

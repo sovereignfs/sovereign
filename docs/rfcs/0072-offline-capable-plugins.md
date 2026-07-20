@@ -1,6 +1,7 @@
 # RFC 0072 — Offline-capable plugin routes
 
-**Status:** Draft\
+**Status:** Partially implemented — platform plumbing (manifest field, SDK
+surface, SW precaching, logout purge) is in place; no plugin has adopted it yet\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** `packages/manifest` (new `offline` manifest field), `packages/sdk`
@@ -9,10 +10,13 @@ worker generation in `next.config.ts` / `scripts/`, logout purge), Console
 (offline-plugin surfacing), `docs/plugin-development.md`; builds on RFC 0013
 (mobile responsiveness & PWA), RFC 0042 (public plugin routes — manifest
 route-list precedent), and the per-user SSR caching rule in CLAUDE.md\
-**Incorporated into plan:** No — documentation-first. This RFC commits to the
-_design_ of read-only offline access for opt-in plugin routes. Roadmap slot and
-epic task IDs are deferred; offline **writes** (outbox + sync) are explicitly out
-of scope and left to a future RFC.
+**Incorporated into plan:** No roadmap slot or epic task ID assigned. Platform
+plumbing shipped directly on `feat/offline-capable-plugins` (manifest field, SDK
+surface, SW precaching, logout purge — §§1–4 of Proposed design, all landed).
+No installed plugin declares `offline` yet, so this is a no-op in production
+until a plugin opts in; adopting a route (e.g. Wallet's Cards) is separate,
+plugin-repo work. Offline **writes** (outbox + sync) remain explicitly out of
+scope, left to a future RFC.
 
 ---
 
@@ -83,8 +87,10 @@ public routes.
   `/`, must not be `/`, no `..`, no route-group/interception markers, unique). The
   `offline` field mirrors this shape and validation.
 - **Client IndexedDB precedent.** The e2ee SDK already uses IndexedDB from the
-  client (`packages/sdk/src/e2ee-device.ts`), establishing the pattern and the
-  device-id/per-user keying approach an offline data store needs.
+  client (`packages/sdk/src/e2ee-device.ts`), exposed via a dedicated
+  `@sovereignfs/sdk/e2ee-device` subpath (not the main barrel) because the
+  barrel also reaches server-only modules — `sdk.offline` follows the same
+  subpath pattern.
 - **The parity test.** `runtime/src/docs-parity.test.ts` requires every new
   manifest field and SDK key to appear in its doc; a new `offline` field and
   `sdk.offline.*` surface must be documented in `docs/plugin-development.md` in
@@ -158,30 +164,52 @@ plugin's job.
 
 ### 3. Client data surface — `sdk.offline.*`
 
-Add a **client-side** SDK surface (new file `packages/sdk/src/offline.ts`) backed
-by IndexedDB, scoped per plugin **and per user**. Unlike `sdk.db`/`sdk.storage`
-(server-only, `next/headers`-based), this runs in the browser:
+Add a **client-side** SDK surface (`packages/sdk/src/offline.ts`) backed by
+IndexedDB, exposed via the dedicated `@sovereignfs/sdk/offline` subpath — not
+the main barrel, for the same reason as the existing `e2ee-*` modules: the
+barrel also reaches server-only code (e.g. `activity.ts`'s `next/headers`
+import), and Next's client/server boundary check flags the whole reachable
+module graph, so a `'use client'` component importing from the barrel would
+fail to build.
 
 ```ts
 // Client component on an offline-enabled route.
-import { offline } from '@sovereignfs/sdk';
+import { offline } from '@sovereignfs/sdk/offline';
+
+const PLUGIN_ID = 'fs.sovereign.wallet'; // your own manifest id, known statically
 
 // Read cached data (works with no network).
-const cards = await offline.get<Card[]>('cards');
+const cards = await offline.get<Card[]>(PLUGIN_ID, 'cards');
 
 // After a successful online fetch, mirror it for offline use.
-await offline.set('cards', cards);
+await offline.set(PLUGIN_ID, 'cards', cards);
 ```
 
 Shape (v1, read/write to the _local_ store only — no server sync):
 
-- `offline.get<T>(key): Promise<T | null>` — read the current user's cached value.
-- `offline.set<T>(key, value): Promise<void>` — write/replace it.
-- `offline.remove(key): Promise<void>` / `offline.keys(): Promise<string[]>`.
-- Namespaced internally by `(pluginId, userId)`; a plugin cannot read another
-  plugin's or another user's store. `pluginId` is known at bundle/compose time;
-  `userId` comes from a small client-readable session hint (non-sensitive stable
-  id), consistent with how the e2ee device layer keys per-user state.
+- `offline.get<T>(pluginId, key): Promise<T | null>` — read this plugin's cached value.
+- `offline.set<T>(pluginId, key, value): Promise<void>` — write/replace it.
+- `offline.remove(pluginId, key): Promise<void>` / `offline.keys(pluginId): Promise<string[]>`.
+- `offline.clear(pluginId): Promise<void>` — wipe one plugin's cache.
+- `offline.clearAll(): Promise<void>` — wipe every plugin's cache (used by the
+  runtime's logout purge, §5).
+
+**Isolation is scoped by plugin id only — deliberately not by user id**, which
+revises this RFC's original design (see Changelog 0.2). The original draft
+called for `(pluginId, userId)` keying via a client-readable session hint
+(Open question 2, below). Implementation surfaced a sharper argument against
+it: an offline route's own SSR output must never carry per-user data in the
+first place (§2) — that's what makes it safe to precache and replay on a
+shared device. But that means there is no safe place left to _read_ a
+client-side user id from either: embedding it anywhere in the offline route's
+own document reintroduces exactly the leak §2 exists to prevent, and any
+mechanism that fetches it out-of-band (a session-hint endpoint, a global
+inline script on the shared layout) adds real complexity for a signal this
+design doesn't actually need. Plugin-only scoping plus an unconditional wipe
+on every logout/user-switch (§5) achieves the identical safety property —
+nothing cached ever survives past the session that wrote it — without
+inventing a new way to move user identity into client JS. Open question 2 is
+resolved by this: no `sdk.session` client getter, no session-hint plumbing.
 
 This is a **published-package (`@sovereignfs/sdk`) addition ⇒ minor bump**, and per
 NFR-04 it must be additive (it is). It must be documented in
@@ -189,36 +217,62 @@ NFR-04 it must be additive (it is). It must be documented in
 
 Rationale for putting **data in IndexedDB rather than SW-caching API responses:**
 SW response caches are origin-global and would re-introduce the exact per-user
-leak the `pages` rule guards against. A client-owned, per-user-keyed IndexedDB
-store that logout wipes keeps user data isolation explicit and auditable. The SW
-therefore caches only **user-neutral assets** (§4), never per-user API responses.
+leak the `pages` rule guards against. A client-owned IndexedDB store that logout
+wipes keeps user data isolation explicit and auditable. The SW therefore caches
+only **user-neutral assets** (§4), never per-user API responses.
 
 ### 4. Service-worker precaching — scoped allowlist
 
-The compose/generate step already enumerates plugins. Extend it to emit the set of
-offline-declared route prefixes and feed the SW config:
+`runtime/src/registry.ts`'s `getOfflineRoutePrefixes()` resolves every
+manifest-declared offline route to its full path
+(`<routePrefix><offline.routes[].prefix>`) from the generated plugin registry —
+`runtime/generated/registry.ts` already serializes the entire manifest
+(including `offline`) via `JSON.stringify`, so no change to the generate script
+itself was needed; the registry was already the single source of truth. Fed
+into `next.config.ts`'s Workbox `runtimeCaching`:
 
-- **Precache the user-neutral shell + assets** for each offline route so the
-  document and its JS/CSS load with no network. These entries are safe to
-  cache-first because they contain no per-user content (§2).
-- **Everything else stays `NetworkFirst` → `/offline`.** Non-offline routes are
-  unchanged; offline, they hit the existing fallback ("no internet connection").
+- A dedicated `offline-shells` matcher, listed **before** the general `pages`
+  matcher (Workbox picks the first match), catches same-origin requests under
+  any declared offline prefix and caches them `CacheFirst` — safe here, and
+  only here, because these documents are declared user-neutral shells (§2):
+  populated on first online visit, then served with no network indefinitely.
+- **Everything else stays `NetworkFirst` → `/offline`.** The general `pages`
+  matcher gained one exclusion (skip paths already claimed by the offline
+  matcher) but is otherwise unchanged.
 - **No per-user API GET is added to the SW runtime cache.** Data comes from
   IndexedDB (§3), not a replayed API response.
-- Generation is build-time and deterministic; the offline route list becomes part
-  of the generated SW manifest, so the allowlist is auditable in the build output.
+- With zero plugins currently declaring `offline`, this is a verified no-op:
+  a production build was run to confirm `next.config.ts` loads correctly and
+  the generated service worker includes the `offline-shells` cache entry
+  (currently matching nothing).
+
+This does **not** precache the route's HTML at build time the way static
+assets are precached — dynamic SSR documents aren't statically known to
+Workbox's precache manifest. In practice this means the _first_ visit to an
+offline route must happen online (populating the runtime cache); every visit
+after that — online or offline — is served `CacheFirst`. The RFC's "precache"
+language is satisfied by this runtime-populated cache, not a build-time one;
+this is a scope narrowing from the original draft, not a behavior gap (a
+route can't render meaningful cached data before it's ever been fetched once
+anyway — see the UI flows below).
 
 ### 5. Logout purge — the shared-device safeguard
 
-On logout (and on user switch), the runtime must:
-
-1. Clear the per-user IndexedDB offline stores for the outgoing user.
-2. Leave the user-neutral shell/asset precache intact (it is not per-user).
+`runtime/app/(platform)/_components/AccountMenu.tsx`'s sign-out form (the sole
+UI entry point to `/api/account/logout` — confirmed by a repo-wide search) now
+runs an `onSubmit` handler that awaits `offline.clearAll()` before letting the
+native submission proceed (`form.submit()` runs in a `finally`, so sign-out
+still completes normally if IndexedDB is unavailable or clearing errors). This
+wipes every plugin's offline cache, not just the outgoing user's — the
+mechanism that makes §3's plugin-only (not per-user) key scoping safe on a
+shared device: nothing cached survives past the session that wrote it, so the
+next login starts from an empty cache regardless of who logs in.
 
 This mirrors the existing discipline of clearing both `session_data` cookie
 variants on profile self-mutation (CLAUDE.md) — offline data gets the same
-"nothing per-user survives a session boundary" treatment. Without this, a shared
-device is exactly the leak the per-user-SSR rule was written to prevent.
+"nothing survives a session boundary" treatment. Without it, a shared device
+is exactly the leak the per-user-SSR rule (and, now, plugin-only cache
+scoping) was written to prevent.
 
 ### Docker / config impact
 
@@ -260,13 +314,25 @@ offline → shell renders → offline.get returns null
 
 **Cache the per-user SSR HTML and partition the SW cache by user.** Rejected. It
 fights the hard per-user-SSR rule directly, and correct cache partitioning +
-eviction on logout across the SW is far more error-prone than a per-user IndexedDB
-store the client owns and clears. One mistake leaks another user's shell.
+eviction on logout across the SW is far more error-prone than an IndexedDB store
+the client owns and unconditionally clears on every logout. One mistake leaks
+another user's shell.
 
 **SW-cache the plugins' read API GET responses.** Rejected for the same reason —
 SW response caches are origin-global; a cached `/api/wallet/cards` response would
-be replayable for the wrong user. Keeping data in a per-user IndexedDB store makes
-isolation explicit.
+be replayable for the wrong user. Keeping data in a client-owned IndexedDB store
+that's wiped on every logout makes isolation explicit and auditable.
+
+**Key `sdk.offline` by `(pluginId, userId)`, resolving `userId` via a
+client-readable session hint.** This was the original design (see Changelog
+0.1). Rejected during implementation: there is no place to source a
+client-readable `userId` that doesn't either (a) get embedded in an offline
+route's own precached, replayable document — the exact leak §2 exists to
+prevent — or (b) require new out-of-band plumbing (a session-hint endpoint, a
+global inline script) for a signal the design turns out not to need. Plugin-
+only scoping plus an unconditional `clearAll()` on every logout achieves the
+same safety property with less mechanism: nothing survives past the session
+that wrote it, so there's nothing to key by user identity in the first place.
 
 **A generic platform "offline everything" toggle.** Rejected. Plugins have very
 different data models and freshness needs; a blanket cache bloats storage and
@@ -283,46 +349,64 @@ shippable. Writes get their own RFC building on this one.
 1. Should opting into `offline` require an explicit `offline` **permission** in
    `permissions[]` (for install-review visibility), or is the manifest field alone
    enough? `publicRoutes` chose field-only; offline exposes cached data on-device,
-   which may warrant the extra signal.
-2. How is the client-readable `userId` for store keying exposed without leaking
-   anything sensitive? Reuse the e2ee device/session-hint pattern, or add a minimal
-   `sdk.session` client getter?
+   which may warrant the extra signal. **Still open** — implementation shipped
+   field-only, matching `publicRoutes`; revisit if reviewers want the extra signal.
+2. ~~How is the client-readable `userId` for store keying exposed without leaking
+   anything sensitive?~~ **Resolved** — it isn't. `sdk.offline` scopes by plugin id
+   only; safety comes from an unconditional `clearAll()` on every logout (§3, §5).
+   No `sdk.session` client getter was added.
 3. Should the runtime **enforce** the user-neutral-shell rule (e.g. a dev-time
    check that an offline route's SSR output carries no session headers / no
-   per-user markers), or is it documentation + review only?
+   per-user markers), or is it documentation + review only? **Still open** —
+   shipped as documentation + review only (`docs/plugin-development.md`'s
+   `offline` section); no automated enforcement exists yet.
 4. Eviction policy and quota: per-plugin IndexedDB size caps? LRU across offline
-   plugins when the browser signals storage pressure?
+   plugins when the browser signals storage pressure? **Still open** — not
+   addressed; `offline-shells` SW cache has an `expiration` bound
+   (`maxEntries: 64, maxAgeSeconds: 30 days`), but `sdk.offline`'s IndexedDB store
+   has no cap of its own yet.
 5. Should Console show which plugins declare offline routes and let an operator
    **disable** offline for a plugin instance-wide (parallel to plugin enable/disable)?
+   **Still open** — not built (adoption path step 6, below).
 6. Does the paywall gate interact with offline routes — can a cached offline route
-   render after an entitlement lapses? (Default: treat like disabled — stop serving
-   offline once access is revoked, purge on next online check.)
+   render after an entitlement lapses? **Still open** — not addressed; no installed
+   plugin combines `monetization` and `offline` yet, so this hasn't been forced.
 
 ## Adoption path
 
-Documentation-first now. When scheduled, phase as:
+Platform plumbing (steps 1–4) shipped directly on `feat/offline-capable-plugins`,
+without a roadmap slot — the developer chose to build ahead of scheduling. Status
+per step:
 
-1. **Manifest + validation.** Add `offline` to `packages/manifest` (reuse the
-   `publicRoutes` prefix refinement); update `docs/plugin-development.md`; parity
-   test passes.
-2. **Client SDK surface.** Add `packages/sdk/src/offline.ts` (`get`/`set`/`remove`/
-   `keys`), per-`(pluginId, userId)` IndexedDB store; document it; **minor** bump of
-   `@sovereignfs/sdk`.
-3. **SW generation + precache.** Extend the compose/generate step to emit offline
-   route prefixes; precache user-neutral shells/assets; keep everything else
-   `NetworkFirst → /offline`.
-4. **Logout purge.** Clear per-user offline stores on logout/user-switch.
-5. **First adopters.** Convert one route each in Wallet (Cards), Tasks (current
-   list), and Shopper (current list) to the app-shell + `sdk.offline` pattern as
-   reference implementations. (These are community plugins; adoption is opt-in and
-   lands in their own repos.)
-6. **Console surfacing** (optional, per open question 5).
+1. **Manifest + validation.** ✅ `offline` added to `packages/manifest` (reused
+   the `publicRoutes` prefix refinement); documented in
+   `docs/plugin-development.md`; parity test passes; `@sovereignfs/manifest`
+   minor-bumped.
+2. **Client SDK surface.** ✅ `packages/sdk/src/offline.ts`
+   (`get`/`set`/`remove`/`keys`/`clear`/`clearAll`), plugin-id-scoped IndexedDB
+   store (not per-user — see §3's revised design), exposed via the
+   `@sovereignfs/sdk/offline` subpath; documented; `@sovereignfs/sdk`
+   minor-bumped.
+3. **SW generation + precache.** ✅ `runtime/src/registry.ts`'s
+   `getOfflineRoutePrefixes()` feeds a dedicated `offline-shells` `CacheFirst`
+   matcher in `next.config.ts`, ahead of the general `pages` matcher; verified
+   with a full production build. Runtime-populated (first online visit
+   populates the cache), not build-time precached — see §4's narrowed scope.
+4. **Logout purge.** ✅ `AccountMenu.tsx`'s sign-out form awaits
+   `offline.clearAll()` before submitting.
+5. **First adopters.** ⬜ Not started. Converting a route in Wallet (Cards),
+   Tasks (current list), or Shopper (current list) to the app-shell +
+   `sdk.offline` pattern is separate, plugin-repo work (these are community
+   plugins, cloned as gitignored `.local` directories in this workspace but
+   living in their own repositories) — out of scope for this branch.
+6. **Console surfacing.** ⬜ Not started (optional, per open question 5).
 
 Offline **writes** (outbox, background sync, conflict resolution) are a separate
 future RFC that builds on the `sdk.offline` store defined here.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | July 2026 | Initial draft |
+| Version | Date      | Change                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | July 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 0.2     | July 2026 | Steps 1–4 implemented on `feat/offline-capable-plugins`. Revised `sdk.offline` from `(pluginId, userId)` keying to plugin-id-only keying with an unconditional `clearAll()` on logout (open question 2 resolved); narrowed SW precaching from build-time to runtime-populated `CacheFirst` (§4); added `@sovereignfs/sdk/offline` as the import subpath (matching the `e2ee-*` pattern, not the main barrel as originally sketched). |

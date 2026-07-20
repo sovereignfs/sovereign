@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import withPWAInit from '@ducanh2912/next-pwa';
 import { loadEnvConfig } from '@next/env';
 import type { NextConfig } from 'next';
+import { getOfflineRoutePrefixes } from './src/registry';
 
 // Load the single monorepo-root .env (mirrors apps/auth). No per-app .env files.
 loadEnvConfig(resolve(process.cwd(), '..'), process.env.NODE_ENV !== 'production');
@@ -45,6 +46,19 @@ const nextConfig: NextConfig = {
   },
 };
 
+// Manifest-declared offline-capable route prefixes (RFC 0072), e.g.
+// "/wallet/cards". A plugin route under one of these renders a user-neutral
+// shell and hydrates its data client-side via sdk.offline (see
+// docs/plugin-development.md's "offline" section) — that's what makes it
+// safe to cache-first, unlike the per-user SSR "pages" entry below.
+const offlineRoutePrefixes = getOfflineRoutePrefixes();
+
+function underOfflineRoutePrefix(pathname: string): boolean {
+  return offlineRoutePrefixes.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
 // Installable PWA (SRS §3.11, PLT-09). The service worker is generated into
 // `public/` at build time and is disabled in development so it never
 // interferes with HMR. A failed navigation falls back to the cached `/offline`
@@ -68,11 +82,25 @@ const withPWA = withPWAInit({
   extendDefaultRuntimeCaching: true,
   workboxOptions: {
     runtimeCaching: [
+      // Offline-capable routes (RFC 0072) — must be listed before the
+      // general "pages" matcher below so it wins for these specific paths.
+      // CacheFirst is safe here (and only here) because these documents are
+      // declared user-neutral shells, not per-user SSR: populated on first
+      // online visit, then served with no network indefinitely after.
+      {
+        urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
+          sameOrigin && underOfflineRoutePrefix(url.pathname),
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'offline-shells',
+          expiration: { maxEntries: 64, maxAgeSeconds: 30 * 86400 },
+        },
+      },
       {
         // Same matcher as the library's default "pages" entry (same-origin,
         // non-API GET) — this only adds networkTimeoutSeconds to it.
         urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
-          sameOrigin && !url.pathname.startsWith('/api/'),
+          sameOrigin && !url.pathname.startsWith('/api/') && !underOfflineRoutePrefix(url.pathname),
         handler: 'NetworkFirst',
         options: {
           cacheName: 'pages',

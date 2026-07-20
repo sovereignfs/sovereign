@@ -83,3 +83,4 @@ for the full process.
 | [0069](0069-bring-your-own-database.md)          | Bring-your-own database (per-user external Postgres)     | Withdrawn (evaluated, not recommended for v1) | No                                                                   |
 | [0070](0070-per-user-capability-grants.md)       | Per-user capability grants                               | Implemented                                   | Yes — epic task 1.16                                                 |
 | [0071](0071-sqlite-at-rest-encryption.md)        | SQLite at-rest encryption (opt-in, single-key)           | Draft                                         | Documentation-first — epic task 8.14                                 |
+| [0072](0072-offline-capable-plugins.md)          | Offline-capable plugin routes                            | Draft                                         | No — documentation-first (read-only offline; writes deferred)        |

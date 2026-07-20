@@ -1,8 +1,9 @@
 'use client';
 
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@sovereignfs/ui';
+import { offline } from '@sovereignfs/sdk/offline';
 import styles from './AccountMenu.module.css';
 
 function monogram(name: string): string {
@@ -54,6 +55,24 @@ export function AccountMenu({
   }, [open]);
 
   const displayName = userName || userEmail || '';
+
+  // Purge every plugin's offline cache (RFC 0072) before the session actually
+  // ends — the sole safeguard that makes sdk.offline's plugin-only (not
+  // per-user) key scoping safe on a shared device. Best-effort: form.submit()
+  // always runs in `finally`, so a browser with IndexedDB disabled (or an
+  // error clearing it) still signs out normally; it just leaves stale cached
+  // values for the next mount of offline.clearAll() to catch up on. Uses the
+  // native, non-React form.submit() (not requestSubmit) so it bypasses the
+  // React onSubmit handler entirely instead of re-entering it.
+  async function handleSignOut(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    try {
+      await offline.clearAll();
+    } finally {
+      form.submit();
+    }
+  }
 
   return (
     <div ref={wrapRef} className={styles.wrap}>
@@ -119,7 +138,7 @@ export function AccountMenu({
             </Link>
           )}
           <hr className={styles.divider} />
-          <form action="/api/account/logout" method="post">
+          <form action="/api/account/logout" method="post" onSubmit={handleSignOut}>
             <button
               type="submit"
               role="menuitem"

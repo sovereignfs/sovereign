@@ -166,6 +166,7 @@ serves at `/tasks/lists`.
 | `adminOnly`     | boolean                                  | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                                                                                                                                             |
 | `apiProvider`   | boolean                                  | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                                                                                                                                                       |
 | `publicRoutes`  | array (see below)                        | no                                   | Manifest-declared public page routes (RFC 0042). Each entry exempts a path prefix — relative to `routePrefix` — from the session-redirect gate; the plugin owns authorization for the exempted paths.                                                                                                                                                               |
+| `offline`       | object (see below)                       | no                                   | Offline-capable page routes (RFC 0072). Declares path prefixes — relative to `routePrefix` — that must render with no network. Grants no auth exemption; the route must render a user-neutral shell and hydrate data client-side via `sdk.offline`.                                                                                                                |
 | `example`       | boolean                                  | no (default `false`)                 | Marks the plugin as a bundled reference/example. Classification only — no effect on routing or permissions. Example plugins are hidden by default and shown via the Console → Settings → Example plugins toggle; each can also be toggled individually on the Plugins page.                                                                                         |
 | `development`   | boolean                                  | no (default `false`)                 | Marks the plugin as still under active development — not yet ready for production use. Classification only, like `example`: no effect on routing, access policy, or the enable/disable default. Surfaced as a warning badge on the Console Plugins page and on the plugin's Launcher tile.                                                                          |
 | `icon`          | string                                   | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                                                                                                                                                                                                                                                                                |
@@ -392,6 +393,71 @@ shared token schema — each plugin owns its model): a **hash** of the token
 (never the plaintext), the resource ID, who created it, `createdAt`,
 `expiresAt`, `revokedAt`, and a mode (`expiring`, `permanent`, or a
 plugin-specific enum).
+
+### `offline` — offline-capable page routes (RFC 0071)
+
+Sovereign is installable as a PWA, but every page is per-user server-rendered
+and fetched `NetworkFirst` — with no network, everything but the static
+`/offline` fallback is unreachable. `offline` lets a plugin nominate a small,
+mission-critical set of routes that keep working with no connection (e.g. a
+saved card, today's task list, the current shopping list).
+
+```json
+{
+  "routePrefix": "/wallet",
+  "offline": {
+    "routes": [{ "prefix": "/cards", "description": "View saved cards without a connection." }]
+  }
+}
+```
+
+**Sub-fields** (`offline.routes`, each entry):
+
+| Field         | Type   | Required | Description                                                                                                                                                      |
+| ------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prefix`      | string | yes      | Path prefix, **relative to `routePrefix`**. Must start with `/`, must not be `/`, must not contain `..` segments or route-group/interception markers (`(`, `)`). |
+| `description` | string | no       | Human-readable note (docs/Console).                                                                                                                              |
+
+Given the example above, `/wallet/cards/*` is offline-capable. Prefixes must
+be unique within a plugin. `offline` requires no permission and grants
+**no auth exemption** — it is purely a caching/rendering declaration, unlike
+`publicRoutes`.
+
+**What the platform does:**
+
+- Precaches the route's shell (document, JS, CSS) at build time so it loads
+  with no network.
+- Every other route stays `NetworkFirst`; offline, it falls back to the
+  `/offline` "no internet connection" page as usual.
+- Never caches or replays per-user API responses — the SW cache holds only
+  user-neutral assets.
+
+**What your plugin must do** — offline routes are still per-user pages, but
+their SSR output must contain **no per-user data**, or a cached copy could be
+replayed for the wrong user on a shared device:
+
+- Render a **user-neutral shell** server-side (layout, chrome, empty states,
+  skeletons only — no data fetched during SSR).
+- Hydrate the real data **client-side** from `sdk.offline` (an IndexedDB-backed
+  store scoped per plugin and per user):
+
+  ```ts
+  'use client';
+  import { offline } from '@sovereignfs/sdk';
+
+  // On mount: render whatever is cached immediately (works offline).
+  const cards = await offline.get<Card[]>('cards');
+
+  // When online, fetch fresh data and mirror it for next time offline.
+  const fresh = await fetchCards();
+  await offline.set('cards', fresh);
+  ```
+
+- Show a plugin-owned empty state ("Not available offline yet — open once
+  online") when the store has nothing cached, rather than a blank page.
+- Treat `sdk.offline` as **read-only caching**, not sync: v1 offline routes are
+  read-only. Writes made while offline are not queued or synced — that is
+  deferred to a future RFC.
 
 ### `shell: overlay` (RFC 0001)
 

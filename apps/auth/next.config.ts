@@ -31,6 +31,8 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: resolve(process.cwd(), '../..'),
   // Compile the design system from source (no watch build needed in dev).
   transpilePackages: ['@sovereignfs/mailer', '@sovereignfs/ui'],
+  // Native bindings must be loaded by Node.js directly rather than bundled by Webpack.
+  serverExternalPackages: ['better-sqlite3-multiple-ciphers'],
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

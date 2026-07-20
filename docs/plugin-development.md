@@ -439,25 +439,38 @@ replayed for the wrong user on a shared device:
 - Render a **user-neutral shell** server-side (layout, chrome, empty states,
   skeletons only — no data fetched during SSR).
 - Hydrate the real data **client-side** from `sdk.offline` (an IndexedDB-backed
-  store scoped per plugin and per user):
+  cache, imported from the dedicated `@sovereignfs/sdk/offline` subpath —
+  browser-only modules can't go through the main barrel, same as the E2EE
+  helpers). Pass your plugin's own manifest `id` as the first argument; you
+  already know it statically, the same way you know your own `routePrefix`:
 
   ```ts
   'use client';
-  import { offline } from '@sovereignfs/sdk';
+  import { offline } from '@sovereignfs/sdk/offline';
+
+  const PLUGIN_ID = 'fs.sovereign.wallet';
 
   // On mount: render whatever is cached immediately (works offline).
-  const cards = await offline.get<Card[]>('cards');
+  const cards = await offline.get<Card[]>(PLUGIN_ID, 'cards');
 
   // When online, fetch fresh data and mirror it for next time offline.
   const fresh = await fetchCards();
-  await offline.set('cards', fresh);
+  await offline.set(PLUGIN_ID, 'cards', fresh);
   ```
 
 - Show a plugin-owned empty state ("Not available offline yet — open once
-  online") when the store has nothing cached, rather than a blank page.
+  online") when the cache has nothing stored, rather than a blank page.
 - Treat `sdk.offline` as **read-only caching**, not sync: v1 offline routes are
   read-only. Writes made while offline are not queued or synced — that is
   deferred to a future RFC.
+
+**Isolation note:** `sdk.offline` scopes entries by plugin id only, not by
+user id — an offline route's own SSR output must never carry per-user data
+(that's the whole point of the user-neutral-shell rule above), so there's no
+safe client-side signal to key by user identity. Isolation across a login
+boundary instead comes from the runtime calling `offline.clearAll()` on every
+logout/user-switch: nothing cached ever survives past the session that wrote
+it, which is what makes plugin-only scoping safe on a shared device.
 
 ### `shell: overlay` (RFC 0001)
 

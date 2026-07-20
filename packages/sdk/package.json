@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/sdk",
-  "version": "1.26.0",
+  "version": "1.27.0",
   "type": "module",
   "description": "Sovereign SDK — the plugin↔platform contract (types and interfaces).",
   "license": "AGPL-3.0-or-later",
@@ -27,6 +27,10 @@
       "./e2ee-state": {
         "types": "./dist/e2ee-state.d.ts",
         "default": "./dist/e2ee-state.js"
+      },
+      "./offline": {
+        "types": "./dist/offline.d.ts",
+        "default": "./dist/offline.js"
       }
     }
   },
@@ -35,7 +39,8 @@
     "./e2ee-crypto": "./src/e2ee-crypto.ts",
     "./e2ee-device": "./src/e2ee-device.ts",
     "./e2ee-object": "./src/e2ee-object.ts",
-    "./e2ee-state": "./src/e2ee-state.ts"
+    "./e2ee-state": "./src/e2ee-state.ts",
+    "./offline": "./src/offline.ts"
   },
   "files": [
     "dist",

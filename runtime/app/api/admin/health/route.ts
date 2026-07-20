@@ -112,9 +112,9 @@ export async function GET(request: Request): Promise<Response> {
   const installedPlugins = getInstalledPlugins();
   const emailDiagnostics = await getEmailDeliveryDiagnostics(pdb, await isSmtpConfigured());
 
-  const rawTransport = process.env.NOTIFICATION_TRANSPORT ?? 'polling';
+  const rawTransport = process.env.NOTIFICATION_TRANSPORT ?? 'sse';
   const notifTransport: 'polling' | 'sse' | 'redis' =
-    rawTransport === 'sse' || rawTransport === 'redis' ? rawTransport : 'polling';
+    rawTransport === 'polling' || rawTransport === 'redis' ? rawTransport : 'sse';
   const broker = getBroker();
   // RedisBroker exposes a `connected` getter; InProcessBroker is always connected.
   const brokerConnected = broker

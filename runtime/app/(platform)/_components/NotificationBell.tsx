@@ -1,14 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useToast } from '@sovereignfs/ui';
 import styles from './NotificationBell.module.css';
-
-// Module-level singletons shared across all NotificationBell instances (sidebar + header are
-// both mounted in the same page). This ensures exactly one toast fires per new notification
-// regardless of how many bell components are polling concurrently.
-const seenIds = new Set<string>();
-let initialFetchDone = false;
 
 interface NotificationItem {
   id: string;
@@ -38,6 +32,213 @@ interface SsePayload {
 
 const POLL_INTERVAL_MS = 10_000;
 const SSE_ERROR_FALLBACK_THRESHOLD = 3;
+
+// ---------------------------------------------------------------------------
+// Shared store — NotificationBell is mounted twice at once (sidebar + mobile
+// header; visibility between them is CSS-only, both exist in the DOM). Without
+// this, each instance ran its own fetch, its own 10s poll loop, and its own
+// EventSource, doubling DB/connection load for no benefit since only one bell
+// is ever visible. Everything below is module-level state shared by every
+// mounted instance, following React's external-store pattern so components
+// just subscribe via `useSyncExternalStore`.
+// ---------------------------------------------------------------------------
+
+interface NotificationStore {
+  items: NotificationItem[];
+  unreadCount: number;
+  transport: 'polling' | 'sse';
+}
+
+let store: NotificationStore = { items: [], unreadCount: 0, transport: 'polling' };
+const listeners = new Set<() => void>();
+const seenIds = new Set<string>();
+let initialFetchDone = false;
+let subscriberCount = 0;
+let pollHandle: ReturnType<typeof setInterval> | null = null;
+let sseConnection: EventSource | null = null;
+let sseErrorCount = 0;
+// Set by whichever mounted instance last rendered — all instances share the
+// same ToastProvider context, so any one of them can show a toast.
+let showToast: ((opts: { title: string; message?: string; category: string }) => void) | null =
+  null;
+
+function getSnapshot(): NotificationStore {
+  return store;
+}
+
+function setStore(patch: Partial<NotificationStore>): void {
+  const transportChanged = patch.transport !== undefined && patch.transport !== store.transport;
+  store = { ...store, ...patch };
+  if (transportChanged && subscriberCount > 0) {
+    startTransportLoop();
+  }
+  for (const listener of listeners) listener();
+}
+
+function stopTransportLoop(): void {
+  if (pollHandle) {
+    clearInterval(pollHandle);
+    pollHandle = null;
+  }
+  if (sseConnection) {
+    sseConnection.close();
+    sseConnection = null;
+  }
+}
+
+function startTransportLoop(): void {
+  stopTransportLoop();
+  if (store.transport === 'sse') {
+    sseErrorCount = 0;
+    const es = new EventSource('/api/account/notifications/stream');
+    sseConnection = es;
+
+    es.onmessage = (event: MessageEvent<string>) => {
+      sseErrorCount = 0;
+      try {
+        const payload = JSON.parse(event.data) as SsePayload;
+        const newItem: NotificationItem = {
+          id: payload.notificationId,
+          title: payload.title,
+          body: payload.body ?? null,
+          url: payload.url ?? null,
+          category: payload.category,
+          readAt: null,
+          createdAt: Math.floor(Date.now() / 1000),
+        };
+
+        if (!seenIds.has(newItem.id)) {
+          seenIds.add(newItem.id);
+          showToast?.({
+            title: newItem.title,
+            message: newItem.body ?? undefined,
+            category: newItem.category,
+          });
+          setStore({ items: [newItem, ...store.items], unreadCount: store.unreadCount + 1 });
+        }
+      } catch {
+        // Malformed payload — ignore.
+      }
+    };
+
+    es.onerror = () => {
+      sseErrorCount += 1;
+      if (sseErrorCount >= SSE_ERROR_FALLBACK_THRESHOLD) {
+        setStore({ transport: 'polling' });
+      }
+    };
+  } else {
+    pollHandle = setInterval(() => void fetchNotifications(), POLL_INTERVAL_MS);
+  }
+}
+
+async function fetchNotifications(opts?: { silent?: boolean }): Promise<void> {
+  try {
+    const res = await fetch('/api/account/notifications', { credentials: 'same-origin' });
+    if (!res.ok) return;
+    const data = (await res.json()) as NotificationResponse;
+
+    const isFirstFetch = !initialFetchDone;
+
+    for (const item of data.notifications) {
+      if (!seenIds.has(item.id)) {
+        seenIds.add(item.id);
+        if (!isFirstFetch && !opts?.silent && item.readAt == null) {
+          showToast?.({
+            title: item.title,
+            message: item.body ?? undefined,
+            category: item.category,
+          });
+        }
+      }
+    }
+
+    initialFetchDone = true;
+
+    setStore({
+      items: data.notifications,
+      unreadCount: data.unreadCount,
+      transport: data.transport ?? store.transport,
+    });
+  } catch {
+    // Silently ignore transient fetch failures.
+  }
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  subscriberCount += 1;
+  if (subscriberCount === 1) {
+    startTransportLoop();
+    void fetchNotifications({ silent: true });
+  }
+  return () => {
+    listeners.delete(listener);
+    subscriberCount -= 1;
+    if (subscriberCount === 0) {
+      stopTransportLoop();
+    }
+  };
+}
+
+async function markAllReadShared(): Promise<void> {
+  await fetch('/api/account/notifications', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'read-all' }),
+  });
+  setStore({
+    items: store.items.map((n) => ({ ...n, readAt: Math.floor(Date.now() / 1000) })),
+    unreadCount: 0,
+  });
+}
+
+async function markReadShared(id: string): Promise<void> {
+  const item = store.items.find((n) => n.id === id);
+  if (!item || item.readAt != null) return;
+  setStore({
+    items: store.items.map((n) =>
+      n.id === id ? { ...n, readAt: Math.floor(Date.now() / 1000) } : n,
+    ),
+    unreadCount: Math.max(0, store.unreadCount - 1),
+  });
+  await fetch('/api/account/notifications', {
+    method: 'POST',
+    credentials: 'same-origin',
+    keepalive: true,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'read', id }),
+  });
+}
+
+async function dismissShared(id: string): Promise<void> {
+  await fetch('/api/account/notifications', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'dismiss', id }),
+  });
+  const item = store.items.find((n) => n.id === id);
+  setStore({
+    items: store.items.filter((n) => n.id !== id),
+    unreadCount: item?.readAt == null ? Math.max(0, store.unreadCount - 1) : store.unreadCount,
+  });
+}
+
+async function clearAllShared(): Promise<void> {
+  await Promise.all(
+    store.items.map((item) =>
+      fetch('/api/account/notifications', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'dismiss', id: item.id }),
+      }),
+    ),
+  );
+  setStore({ items: [], unreadCount: 0 });
+}
 
 function timeAgo(ts: number): string {
   const diff = Math.floor(Date.now() / 1000) - ts;
@@ -125,108 +326,18 @@ function CategoryIcon({ category }: { category: string }) {
 export function NotificationBell({ placement = 'header' }: { placement?: 'sidebar' | 'header' }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [transport, setTransport] = useState<'polling' | 'sse'>('polling');
   const [sidebarPanelBottom, setSidebarPanelBottom] = useState<number>(16);
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const fetchNotifications = useCallback(
-    async (opts?: { silent?: boolean }) => {
-      try {
-        const res = await fetch('/api/account/notifications', { credentials: 'same-origin' });
-        if (!res.ok) return;
-        const data = (await res.json()) as NotificationResponse;
+  const { items, unreadCount } = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
-        if (data.transport && data.transport !== transport) {
-          setTransport(data.transport);
-        }
-
-        const isFirstFetch = !initialFetchDone;
-
-        for (const item of data.notifications) {
-          if (!seenIds.has(item.id)) {
-            seenIds.add(item.id);
-            if (!isFirstFetch && !opts?.silent && item.readAt == null) {
-              toast.show({
-                title: item.title,
-                message: item.body ?? undefined,
-                category: item.category,
-              });
-            }
-          }
-        }
-
-        initialFetchDone = true;
-
-        setItems(data.notifications);
-        setUnreadCount(data.unreadCount);
-      } catch {
-        // Silently ignore transient fetch failures.
-      }
-    },
-    [toast, transport],
-  );
-
-  // Initial fetch — runs once on mount to get transport mode and seed seen-ids.
+  // Whichever instance rendered most recently "owns" the toast callback used by
+  // the shared fetch/SSE loop — all instances share the same ToastProvider
+  // context, so it doesn't matter which one's `toast.show` gets called.
   useEffect(() => {
-    void fetchNotifications({ silent: true });
-  }, []); // intentional empty deps: seed is a one-time operation
-
-  // Polling mode: interval fetch. Skipped once SSE takes over.
-  useEffect(() => {
-    if (transport !== 'polling') return;
-    const interval = setInterval(() => void fetchNotifications(), POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [transport, fetchNotifications]);
-
-  // SSE mode: open an EventSource; fall back to polling after 3 consecutive errors.
-  useEffect(() => {
-    if (transport !== 'sse') return;
-
-    let errorCount = 0;
-    const es = new EventSource('/api/account/notifications/stream');
-
-    es.onmessage = (event: MessageEvent<string>) => {
-      errorCount = 0;
-      try {
-        const payload = JSON.parse(event.data) as SsePayload;
-        const newItem: NotificationItem = {
-          id: payload.notificationId,
-          title: payload.title,
-          body: payload.body ?? null,
-          url: payload.url ?? null,
-          category: payload.category,
-          readAt: null,
-          createdAt: Math.floor(Date.now() / 1000),
-        };
-
-        if (!seenIds.has(newItem.id)) {
-          seenIds.add(newItem.id);
-          toast.show({
-            title: newItem.title,
-            message: newItem.body ?? undefined,
-            category: newItem.category,
-          });
-          setItems((prev) => [newItem, ...prev]);
-          setUnreadCount((c) => c + 1);
-        }
-      } catch {
-        // Malformed payload — ignore.
-      }
-    };
-
-    es.onerror = () => {
-      errorCount += 1;
-      if (errorCount >= SSE_ERROR_FALLBACK_THRESHOLD) {
-        es.close();
-        setTransport('polling');
-      }
-    };
-
-    return () => es.close();
-  }, [transport, toast]);
+    showToast = toast.show;
+  }, [toast]);
 
   // Close on outside click / Escape.
   useEffect(() => {
@@ -253,60 +364,6 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
       document.removeEventListener('mousedown', onClick);
     };
   }, [open]);
-
-  const markAllRead = async () => {
-    await fetch('/api/account/notifications', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'read-all' }),
-    });
-    setItems((prev) => prev.map((n) => ({ ...n, readAt: Math.floor(Date.now() / 1000) })));
-    setUnreadCount(0);
-  };
-
-  const markRead = async (id: string) => {
-    const item = items.find((n) => n.id === id);
-    if (!item || item.readAt != null) return;
-    setItems((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, readAt: Math.floor(Date.now() / 1000) } : n)),
-    );
-    setUnreadCount((c) => Math.max(0, c - 1));
-    await fetch('/api/account/notifications', {
-      method: 'POST',
-      credentials: 'same-origin',
-      keepalive: true,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'read', id }),
-    });
-  };
-
-  const dismiss = async (id: string) => {
-    await fetch('/api/account/notifications', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'dismiss', id }),
-    });
-    const item = items.find((n) => n.id === id);
-    setItems((prev) => prev.filter((n) => n.id !== id));
-    if (item?.readAt == null) setUnreadCount((c) => Math.max(0, c - 1));
-  };
-
-  const clearAll = async () => {
-    await Promise.all(
-      items.map((item) =>
-        fetch('/api/account/notifications', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'dismiss', id: item.id }),
-        }),
-      ),
-    );
-    setItems([]);
-    setUnreadCount(0);
-  };
 
   return (
     <div className={styles.wrapper}>
@@ -370,7 +427,7 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
                     <button
                       type="button"
                       className={styles.actionBtn}
-                      onClick={() => void markAllRead()}
+                      onClick={() => void markAllReadShared()}
                     >
                       Mark all read
                     </button>
@@ -378,7 +435,7 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
                   <button
                     type="button"
                     className={styles.actionBtn}
-                    onClick={() => void clearAll()}
+                    onClick={() => void clearAllShared()}
                   >
                     Clear all
                   </button>
@@ -442,7 +499,7 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
                       href={item.url}
                       className={styles.itemTitle}
                       onClick={() => {
-                        void markRead(item.id);
+                        void markReadShared(item.id);
                         setOpen(false);
                       }}
                     >
@@ -453,7 +510,7 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
                       type="button"
                       className={styles.itemTitle}
                       aria-label={`Mark as read: ${item.title}`}
-                      onClick={() => void markRead(item.id)}
+                      onClick={() => void markReadShared(item.id)}
                     >
                       {item.title}
                     </button>
@@ -468,7 +525,7 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
                     type="button"
                     className={styles.dismissBtn}
                     aria-label={`Dismiss: ${item.title}`}
-                    onClick={() => void dismiss(item.id)}
+                    onClick={() => void dismissShared(item.id)}
                   >
                     <svg
                       viewBox="0 0 24 24"

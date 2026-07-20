@@ -119,6 +119,39 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.55 → v0.56
+
+- **Notification transport default changed from `polling` to `sse` (RFC 0034).**
+  Newly-provisioned instances now get instant in-process push delivery for
+  free (no extra infra) instead of a 10s polling loop. **Action required for
+  multi-container/multi-process deployments only**: `sse` uses an in-process
+  `EventEmitter`, which cannot see notifications published on a different
+  runtime container — if you scale to more than one runtime replica, set
+  `NOTIFICATION_TRANSPORT=redis` (with `REDIS_URL`) explicitly, or it will
+  silently degrade to per-user missed real-time updates (nothing is lost —
+  the next explicit fetch always catches up — it just stops being instant).
+  Single-container deployments (this repo's default `docker-compose.prod.yml`
+  topology) are unaffected and need no action.
+- **Fixed: the notification broker singleton was never actually visible to API
+  routes.** `runtime/src/notification-broker.ts` stored its broker instance in
+  a module-level variable, but Next.js compiles `instrumentation.ts` (where
+  `initBroker()` runs) into a separate module graph from route handlers (where
+  `getBroker()` is read) — even in the standalone server this app ships in
+  Docker. In practice this meant `sse` and `redis` transport modes silently
+  no-op'd back to polling for every request, regardless of configuration,
+  since RFC 0034 shipped. The broker is now stored on `globalThis`, which is
+  shared across all of Next.js's separately-bundled chunks within a process.
+  **If you already had `NOTIFICATION_TRANSPORT=sse` or `=redis` set**, this
+  fix is what actually makes it take effect for the first time — expect the
+  bell to switch from polling to push delivery after this upgrade.
+- **Fixed: `NotificationBell` fetched, polled, and (once the bug above is
+  fixed) opened an `EventSource` twice per page** — the sidebar and mobile
+  header both always mount the bell (visibility is CSS-only), and each ran
+  its own independent fetch/poll/SSE loop. It now shares one connection
+  across both mounted instances via a module-level store. Internal-only, no
+  operator action.
+- **`runtime` → 0.56.0**.
+
 ### v0.54 → v0.55
 
 - **Plugin mailer permission and SDK email surface (RFC 0062) — epic task 3.26

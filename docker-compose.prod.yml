@@ -144,11 +144,16 @@ services:
       VAPID_PUBLIC_KEY: '${VAPID_PUBLIC_KEY:-}'
       VAPID_PRIVATE_KEY: '${VAPID_PRIVATE_KEY:-}'
       VAPID_CONTACT: '${VAPID_CONTACT:-}'
-      # Notification transport (RFC 0034). Default is polling (no extra infra).
-      # Set to 'sse' for in-process SSE, or 'redis' for multi-process Redis pub/sub.
+      # Notification transport (RFC 0034). Default is 'sse' (in-process EventEmitter
+      # push, no extra infra) — correct for a single runtime container, which is
+      # this compose file's topology. If you scale to multiple runtime containers
+      # or processes, set this to 'redis' (and REDIS_URL) instead: an in-process
+      # 'sse' broker cannot see notifications published on a different container,
+      # so cross-container real-time delivery would silently stop working. Set to
+      # 'polling' to disable push entirely and fall back to client polling.
       # When using 'redis', also uncomment the redis service block below and add it
       # to depends_on. REDIS_URL is required when NOTIFICATION_TRANSPORT=redis.
-      NOTIFICATION_TRANSPORT: '${NOTIFICATION_TRANSPORT:-polling}'
+      NOTIFICATION_TRANSPORT: '${NOTIFICATION_TRANSPORT:-sse}'
       REDIS_URL: '${REDIS_URL:-}'
       # Cookie domain for cross-subdomain session invalidation. Must match the
       # value set in the auth service — used to clear the session-cache cookie

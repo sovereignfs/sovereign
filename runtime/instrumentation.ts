@@ -30,7 +30,7 @@ export async function register(): Promise<void> {
     const { checkBootCompatibility } = await import('./src/boot-compat');
     await checkBootCompatibility();
 
-    const transport = process.env.NOTIFICATION_TRANSPORT ?? 'polling';
+    const transport = process.env.NOTIFICATION_TRANSPORT ?? 'sse';
     const redisUrl = process.env.REDIS_URL;
     const { initBroker, closeBroker } = await import('./src/notification-broker');
     const { logger } = await import('./src/logger');

@@ -5,12 +5,14 @@ import type {
   ActivityLogEntry,
   DirectoryUser,
   DrizzleClient,
+  EmailSendResult,
   MailOptions,
   PlatformConfig,
   ProviderConfig,
   ResolveUsersInput,
   SearchUsersInput,
   SendNotificationInput,
+  SendToUserEmailInput,
   CreateSecretInput,
   ConnectionContext,
   ConnectionListFilter,
@@ -50,7 +52,24 @@ export interface SdkHost {
     getClient(pluginId: string | null): Promise<DrizzleClient>;
   };
   mailer: {
-    send(options: MailOptions): Promise<void>;
+    /**
+     * Low-level, direct-recipient email send (RFC 0062). `pluginId` is
+     * resolved by the SDK from an explicitly passed request `Headers` object
+     * — `null` means the call happened outside a plugin route context and
+     * must be rejected. Requires the `mailer:send` manifest permission, plus
+     * `mailer:sendExternal` since the recipient is a raw address rather than
+     * a platform-resolved user.
+     */
+    send(options: MailOptions, pluginId: string | null): Promise<void>;
+  };
+  email: {
+    /**
+     * User-scoped email send (RFC 0062) — the safer alternative to
+     * `mailer.send`. `pluginId` is resolved the same way as `mailer.send`.
+     * Requires the `mailer:send` manifest permission; the recipient's email
+     * address is resolved server-side from `recipientUserId`.
+     */
+    sendToUser(input: SendToUserEmailInput, pluginId: string | null): Promise<EmailSendResult>;
   };
   platform: {
     getConfig(): Promise<PlatformConfig>;

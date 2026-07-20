@@ -5,6 +5,7 @@ import { data } from './data';
 import { directory } from './directory';
 import * as db from './db';
 import { e2ee } from './e2ee';
+import { email } from './email';
 import { env } from './env';
 import * as mailer from './mailer';
 import { notifications } from './notifications';
@@ -34,11 +35,12 @@ import { billing, events } from './unimplemented';
  * `e2ee-crypto`/`e2ee-device`/`e2ee-object`/`e2ee-state` for the browser-only
  * crypto and state helpers that produce the ciphertext these methods store),
  * `plugins` (dependency discovery and cross-plugin references, RFC 0051),
- * `billing` (plugin monetization / entitlement gating, RFC 0003), `events`.
+ * `email` (user-scoped `sendToUser` email surface, RFC 0062), `billing`
+ * (plugin monetization / entitlement gating, RFC 0003), `events`.
  * `data`, `activity`, `portability`, `env`, `notifications`, `directory`,
- * `secrets`, `storage`, `connections`, `e2ee`, and `plugins` are implemented;
- * `billing` and `events` throw `NotImplementedError` until their backing
- * mechanisms ship. Their shape may change before they stabilise.
+ * `secrets`, `storage`, `connections`, `e2ee`, `plugins`, and `email` are
+ * implemented; `billing` and `events` throw `NotImplementedError` until their
+ * backing mechanisms ship. Their shape may change before they stabilise.
  */
 export const sdk = {
   // Stable (v1.0.0).
@@ -59,6 +61,7 @@ export const sdk = {
   portability,
   plugins,
   env,
+  email,
   billing,
 };
 
@@ -118,6 +121,8 @@ export type {
   ActiveSession,
   ChangePasswordInput,
   DirectoryUser,
+  EmailDeliveryStatus,
+  EmailSendResult,
   MailOptions,
   PlatformConfig,
   ProviderConfig,
@@ -127,6 +132,7 @@ export type {
   ActivityLogEntry,
   DrizzleClient,
   SendNotificationInput,
+  SendToUserEmailInput,
   ConnectionContext,
   ConnectionListFilter,
   ConnectionOAuthState,

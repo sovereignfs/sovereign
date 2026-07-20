@@ -21,6 +21,7 @@ export const permissionSchema = z.enum([
   'db:readWrite',
   'db:readOnly',
   'mailer:send',
+  'mailer:sendExternal',
   'storage:readWrite',
   'notifications:send',
   'events:publish',

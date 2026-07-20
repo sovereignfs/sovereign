@@ -57,6 +57,7 @@ import type {
   DirectoryUser,
   DeletionHandler,
   E2eeProfile,
+  EmailSendResult,
   ExportResolver,
   ImportHandler,
   PluginAvailability,
@@ -67,6 +68,7 @@ import type {
   SecretRef,
   SecretScope,
   SendNotificationInput,
+  SendToUserEmailInput,
   ProviderConfig,
   StorageObject,
 } from '@sovereignfs/sdk';
@@ -112,6 +114,8 @@ import {
   writeObjectBytes,
 } from './storage';
 import { resolveProviderConfig } from './provider-configs';
+import { checkPluginMailerRateLimit, requireMailerPluginContext } from './plugin-mailer';
+import { sendPlatformEmail } from './platform-email';
 
 let _version: string | undefined;
 const AUTH_URL =
@@ -265,8 +269,46 @@ provideHost({
     },
   },
   mailer: {
-    async send(options) {
+    async send(options, pluginIdInput) {
+      const manifest = registry.find((m) => m.id === pluginIdInput);
+      const { pluginId } = requireMailerPluginContext(pluginIdInput, manifest, 'mailer:send');
+      requireMailerPluginContext(pluginId, manifest, 'mailer:sendExternal');
+      const limited = checkPluginMailerRateLimit(pluginId, 'external');
+      if (!limited.allowed) {
+        throw new Error(
+          `Plugin email rate limit exceeded (${String(limited.scope)}). ` +
+            `Retry after ${String(limited.retryAfterSeconds ?? 60)} seconds.`,
+        );
+      }
       return _mailer.send(options);
+    },
+  },
+  email: {
+    async sendToUser(input: SendToUserEmailInput, pluginIdInput): Promise<EmailSendResult> {
+      const manifest = registry.find((m) => m.id === pluginIdInput);
+      const { pluginId } = requireMailerPluginContext(pluginIdInput, manifest, 'mailer:send');
+      const limited = checkPluginMailerRateLimit(pluginId, input.recipientUserId);
+      if (!limited.allowed) {
+        throw new Error(
+          `Plugin email rate limit exceeded (${String(limited.scope)}). ` +
+            `Retry after ${String(limited.retryAfterSeconds ?? 60)} seconds.`,
+        );
+      }
+      const [user] = await fetchDirectoryUsers({ mode: 'resolve', ids: [input.recipientUserId] });
+      if (!user) {
+        return { status: 'skipped', errorCode: 'RECIPIENT_NOT_FOUND' };
+      }
+      return sendPlatformEmail({
+        templateId: input.templateId,
+        deliveryClass: 'communication',
+        toUserId: input.recipientUserId,
+        toEmail: user.email,
+        source: 'plugin',
+        subject: input.subject,
+        html: input.html,
+        text: input.text,
+        metadata: { pluginId, ...(input.data ?? {}) },
+      });
     },
   },
   platform: {

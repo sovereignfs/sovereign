@@ -119,6 +119,30 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.54 → v0.55
+
+- **Plugin mailer permission and SDK email surface (RFC 0062) — epic task 3.26
+  done.** `sdk.mailer.send()` now resolves the calling plugin's ID from an
+  explicitly passed request `Headers` object (pass `await headers()` as the
+  second argument, same convention as `sdk.notifications.send()`) and rejects
+  the call unless the plugin declares `mailer:send` — a plugin without it
+  gets a clear permission error instead of a silent send. A raw `to:` address
+  is treated as an external recipient regardless of whether it happens to
+  match a platform user's email, and additionally requires the new
+  `mailer:sendExternal` permission. Both plugin email surfaces are now
+  rate-limited per plugin and per recipient. New additive
+  `sdk.email.sendToUser({ recipientUserId, templateId, subject, html?, text?, data? })`
+  is the recommended default: the platform resolves the recipient's email
+  server-side and only requires `mailer:send`, so there is no
+  external-recipient escape hatch to reason about. **Action required for any
+  plugin already calling `sdk.mailer.send()`:** declare `mailer:send` (and
+  `mailer:sendExternal` if the recipient isn't a platform user resolved by
+  ID) in `manifest.json`, and pass `await headers()` as the second argument —
+  no plugin in this monorepo currently calls `sdk.mailer.send()`, so this has
+  no first-party impact.
+- **`runtime` → 0.55.0**, **`@sovereignfs/manifest` → 0.23.0**,
+  **`@sovereignfs/sdk` → 1.26.0**.
+
 ### v0.53 → v0.54
 
 - **Public plugin page routes (RFC 0042) — epic task 2.14 done.** New optional
@@ -836,6 +860,7 @@ the release you are running.
 | 0.50.0          | Plugin invite-scope grant resolution (RFC 0065, epic task 2.23)                                                      |
 | 0.51.0          | Plugin directory browsing and self-service enable/disable (RFC 0065, epic task 15.3)                                 |
 | 0.54.0          | Public plugin page routes — `publicRoutes` manifest field (RFC 0042, epic task 2.14)                                 |
+| 0.55.0          | Plugin mailer permission and SDK email surface — `sdk.email.sendToUser()` (RFC 0062, epic task 3.26)                 |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

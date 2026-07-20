@@ -27,6 +27,11 @@ beforeAll(() => {
         /* no-op */
       },
     },
+    email: {
+      async sendToUser() {
+        return { status: 'sent' };
+      },
+    },
     platform: {
       async getConfig() {
         return mockConfig;
@@ -355,6 +360,7 @@ describe('sdk surface', () => {
     expect(typeof sdk.e2ee.enrollDevice).toBe('function');
     expect(typeof sdk.e2ee.listDevices).toBe('function');
     expect(typeof sdk.e2ee.revokeDevice).toBe('function');
+    expect(typeof sdk.email.sendToUser).toBe('function');
   });
 });
 

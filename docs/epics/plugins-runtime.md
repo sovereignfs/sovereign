@@ -739,7 +739,7 @@ database — establishes the `sv plugin add/remove` lifecycle).
 
 ---
 
-#### 📋 3.26 — Plugin mailer permission and SDK email surface (RFC 0062)
+#### ✅ 3.26 — Plugin mailer permission and SDK email surface (RFC 0062)
 
 **Goal:** Make plugin-triggered email safe by enforcing `mailer:send` at the runtime host
 boundary and defining a user-scoped email API that does not let plugins freely email arbitrary

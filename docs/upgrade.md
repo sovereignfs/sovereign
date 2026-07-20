@@ -119,6 +119,31 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.56 → v0.57
+
+- **Opt-in single-key SQLite at-rest encryption (RFC 0071) — epic task 8.14
+  done.** `SOVEREIGN_DB_ENCRYPTION_KEY` (presence is the toggle, off by
+  default) encrypts `sovereign.db`, `auth.db`, and every isolated plugin
+  database via SQLCipher (`better-sqlite3-multiple-ciphers`). **No action
+  required** for instances that don't set this variable — behavior is
+  byte-for-byte unchanged. To adopt it on an existing plaintext instance, stop
+  the server and run `sv db encrypt` (see `docs/self-hosting.md`'s "SQLite
+  at-rest encryption" section for the full procedure, including the
+  named-volume production path via the new `tools` Docker Compose
+  service/profile — `docker compose -f docker-compose.prod.yml --profile
+tools run --rm tools pnpm sv db encrypt --dataDir /app/data`). Protects a
+  stolen disk, leaked volume snapshot, or copied `.db` file — it does not
+  protect against a live compromised process or an operator who holds the
+  key (see RFC 0060's client-side encryption for that tier).
+- **New manifest field `database.requireEncryption`** — raise-only: a plugin
+  can force its own isolated SQLite database to be encrypted, but can never
+  opt out of encryption the operator has enabled instance-wide. Enforced both
+  at manifest-validation time and at runtime plugin startup (fails naming the
+  plugin for SQLite, warns for Postgres, which has no SQLCipher equivalent).
+- **`runtime` → 0.57.0**, **`@sovereignfs/db` → 1.14.0**,
+  **`@sovereignfs/manifest` → 0.23.0** (this release also carries RFC 0062's
+  `mailer:sendExternal` permission from the same manifest version).
+
 ### v0.55 → v0.56
 
 - **Notification transport default changed from `polling` to `sse` (RFC 0034).**
@@ -894,6 +919,7 @@ the release you are running.
 | 0.51.0          | Plugin directory browsing and self-service enable/disable (RFC 0065, epic task 15.3)                                 |
 | 0.54.0          | Public plugin page routes — `publicRoutes` manifest field (RFC 0042, epic task 2.14)                                 |
 | 0.55.0          | Plugin mailer permission and SDK email surface — `sdk.email.sendToUser()` (RFC 0062, epic task 3.26)                 |
+| 0.57.0          | Opt-in single-key SQLite at-rest encryption (RFC 0071, epic task 8.14)                                               |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

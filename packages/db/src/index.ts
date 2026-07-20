@@ -171,6 +171,21 @@ export {
   type PluginAccessGroupGrantRow,
 } from './platform-db';
 export { resolveDialect, type Dialect, type ResolvedDialect } from './dialect';
+export {
+  DbEncryptionConfigError,
+  checkEncryptionMarker,
+  clearEncryptionMarker,
+  dbEncryptionKeyFromEnv,
+  defaultDataDir,
+  isEncryptionMarked,
+  openKeyedSqlite,
+  writeEncryptionMarker,
+} from './sqlite-encryption';
+export {
+  decryptSqliteFileInPlace,
+  encryptSqliteFileInPlace,
+  listInstanceSqliteFiles,
+} from './sqlite-migration';
 export { runMigrations, runPluginMigrations, type MigrationResult } from './migrate';
 export {
   dropPluginDb,

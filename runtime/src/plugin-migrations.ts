@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  dbEncryptionKeyFromEnv,
   findWorkspaceRoot,
   getPluginDb,
   getPlatformDb,
@@ -11,8 +12,48 @@ import {
   runPluginMigrations,
   type PluginDb,
 } from '@sovereignfs/db';
-import { manifestDatabaseDialect, manifestDatabaseIsolation } from '@sovereignfs/manifest';
+import {
+  manifestDatabaseDialect,
+  manifestDatabaseIsolation,
+  manifestRequiresEncryption,
+} from '@sovereignfs/manifest';
 import { registry } from '../generated/registry';
+
+/**
+ * Enforce a plugin's `database.requireEncryption` (RFC 0071) before its
+ * migrations run. **Raise-only and never silent**:
+ *
+ * - SQLite + no instance key configured → throws, aborting startup. This is
+ *   deliberately not caught by the per-plugin try/catch below (a migration
+ *   failure logs and continues; a broken security promise must not).
+ * - Postgres → warns (there is no SQLCipher equivalent for Postgres; at-rest
+ *   protection falls back to disk encryption + `sslmode`), does not throw.
+ * - Not required, or `shared` isolation → no-op (manifest validation already
+ *   rejects `requireEncryption` on a `shared` plugin).
+ */
+export function assertPluginEncryptionRequirement(
+  pluginId: string,
+  database: unknown,
+  pluginDialect: 'sqlite' | 'postgres',
+): void {
+  if (!manifestRequiresEncryption(database)) return;
+
+  if (pluginDialect === 'postgres') {
+    console.warn(
+      `[sovereign] Plugin "${pluginId}" requires database encryption, but its isolated ` +
+        'database resolved to Postgres — there is no SQLCipher equivalent there. At-rest ' +
+        'protection falls back to disk/volume encryption + `sslmode` for this plugin.',
+    );
+    return;
+  }
+
+  if (dbEncryptionKeyFromEnv() === undefined) {
+    throw new Error(
+      `Plugin "${pluginId}" requires database encryption — set SOVEREIGN_DB_ENCRYPTION_KEY ` +
+        'to enable it, or remove the plugin.',
+    );
+  }
+}
 
 /**
  * Run pending schema migrations for all installed plugins (RFC 0004).
@@ -50,6 +91,11 @@ export async function runAllPluginMigrations(): Promise<void> {
     const pluginDialect = isIsolated
       ? (manifestDatabaseDialect(manifest.database) ?? platformDialect)
       : platformDialect;
+
+    if (isIsolated) {
+      assertPluginEncryptionRequirement(manifest.id, manifest.database, pluginDialect);
+    }
+
     const folder = pluginMigrationsFolder(pluginDir, pluginDialect);
     if (!existsSync(folder)) continue;
 

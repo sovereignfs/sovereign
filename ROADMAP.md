@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.43.0 · **Last updated:** 2026-07-20
+**Version:** 0.44.0 · **Last updated:** 2026-07-20
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -173,6 +173,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.41.0  | Public plugin page routes (RFC 0042)                                  | ✅     | [2.14](docs/epics/platform-shell.md#-214--public-plugin-page-routes-rfc-0042)                                  |
 | 0.42.0  | Console-managed SMTP settings (platform:owner only)                   | ✅     | [3.30](docs/epics/plugins-runtime.md#-330--console-managed-smtp-settings-platformowner-only)                   |
 | 0.43.0  | Plugin mailer permission and SDK email surface (RFC 0062)             | ✅     | [3.26](docs/epics/plugins-runtime.md#-326--plugin-mailer-permission-and-sdk-email-surface-rfc-0062)            |
+| 0.44.0  | SQLite at-rest encryption (opt-in, single-key) (RFC 0071)             | ✅     | [8.14](docs/epics/data-sovereignty.md#-814--sqlite-at-rest-encryption-opt-in-single-key-rfc-0071)              |
 
 ---
 

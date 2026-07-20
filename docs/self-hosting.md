@@ -192,6 +192,7 @@ to get started — every variable is documented there.
 | `AUTH_SECRET`                        | **yes**  | —                                                   | Signing secret for the auth server. The runtime also reads it to verify the session cookie locally (AUTH-05). Generate with `openssl rand -base64 32`. Never share or commit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `SOVEREIGN_ADMIN_KEY`                | **yes**  | —                                                   | Shared secret for runtime↔auth internal admin API calls (Console user/plugin management). Generate with `openssl rand -base64 32`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `SOVEREIGN_VAULT_KEY`                | no\*     | —                                                   | 32-byte key for the plugin secret vault (`sdk.secrets`) and for Console-managed SMTP password storage. No default; generate with `openssl rand -base64 32`. Losing or rotating it without re-encrypting vault rows makes existing vault values (and any Console-saved SMTP password) unreadable. **Set it identically on both the `runtime` and `auth` services** — each decrypts its own local copy independently; a mismatch means the auth server silently fails to decrypt a Console-saved SMTP password even though the runtime can. **\*Required in practice**: the bundled Plainwrite plugin stores GitHub PATs through this vault, so connecting a site fails with `SOVEREIGN_VAULT_KEY is required before sdk.secrets can store or read secret values.` until this is set. The platform boots fine without it — the error only surfaces the first time a plugin actually calls `sdk.secrets` or an owner saves an SMTP password via Console, not at startup, which makes it easy to miss until someone hits it live. |
+| `SOVEREIGN_DB_ENCRYPTION_KEY`        | no       | —                                                   | Opt-in SQLite at-rest encryption (RFC 0071) — see [SQLite at-rest encryption](#sqlite-at-rest-encryption-rfc-0071) below. Presence is the toggle: unset, nothing changes; set, every SQLite file the instance owns must already be encrypted with it or the instance refuses to start. Generate with `openssl rand -base64 32`. Existing plaintext instances must run `sv db encrypt` before setting this — it is not a switch that encrypts data on next boot. **Set it identically on both the `runtime` and `auth` services.** SQLite only; no effect on Postgres deployments.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `NEXT_PUBLIC_RUNTIME_URL`            | no       | per env (dev :3000/prod :4000)                      | Browser-facing public URL of the runtime. Auth emails and auth compatibility pages use it when sending users back to the runtime-hosted auth UI. The Compose files default it per environment (dev → `http://localhost:3000`, prod → `http://localhost:4000`); leave it unset locally. **Set it to your public domain (e.g. `https://example.com`) in a real deployment.** Read server-side at request time, so the container env is honoured (not baked at build).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `SOVEREIGN_AUTH_URL`                 | no       | `http://localhost:3001`                             | Where the runtime reaches the auth server for server-side API calls. Docker Compose sets it to the internal service name (`http://auth:3001`) automatically — only set it for non-Docker/native runs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `SOVEREIGN_AUTH_PUBLIC_URL`          | no       | `SOVEREIGN_AUTH_URL`                                | Browser-facing base URL for the auth server compatibility routes. Needed when `SOVEREIGN_AUTH_URL` is an internal hostname the browser can't resolve (e.g. Docker's `http://auth:3001`). Set to the host-reachable URL such as `http://localhost:3001` or your public domain.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -273,6 +274,125 @@ How that directory is persisted depends on the compose file:
   docker run --rm -v sovereign_data:/data -v "$PWD":/backup alpine \
     tar czf /backup/sovereign-data.tgz -C /data .
   ```
+
+---
+
+## SQLite at-rest encryption (RFC 0071)
+
+Opt-in, off by default. A stolen disk, leaked volume snapshot, or copied
+`.db` file yields ciphertext instead of plaintext. This protects the SQLite
+files at rest — it does **not** protect against a curious operator or an
+attacker with code execution on the running server (see
+[docs/security.md](security.md) for that distinction and RFC 0060's
+client-side encryption for the tier that does).
+
+**Scope:** SQLite only. Postgres deployments have no equivalent mechanism —
+see [PostgreSQL](#postgresql) below; rely on host-level disk encryption there.
+
+### Enabling on a fresh instance
+
+1. Generate a key: `openssl rand -base64 32`.
+2. Set `SOVEREIGN_DB_ENCRYPTION_KEY` to it, identically on both the `runtime`
+   and `auth` services, **before the instance is ever started**.
+3. Start the instance normally — `sovereign.db`, `auth.db`, and every isolated
+   plugin database are created encrypted from the first write.
+
+### Converting an existing plaintext instance
+
+Setting the key on an instance that already has plaintext databases is a
+**configuration error, not a trigger** — the instance refuses to start rather
+than silently mixing plaintext and encrypted data. Convert first.
+
+**Dev / bind-mounted `./data` deployments** (`docker-compose.yml`, or running
+`pnpm dev`/`pnpm sv serve` directly on the host) — the host already has direct
+access to the same files the containers use:
+
+```bash
+# 1. Stop the server first.
+pnpm sv db encrypt
+```
+
+**Production named-volume deployments** (`docker-compose.prod.yml`'s
+`sovereign_data` volume) — there is no host path to point the CLI at, and the
+`sv` command doesn't exist inside the minimal `runtime`/`auth` images by
+design. Use the profile-gated `tools` service instead, which has the full CLI
+and mounts the same volume:
+
+```bash
+# 1. Stop auth/runtime first — encrypt/decrypt assume nothing else has the
+#    SQLite files open.
+docker compose -f docker-compose.prod.yml stop auth runtime
+
+# 2. Run the migration through the tools service (same volume, same key).
+docker compose -f docker-compose.prod.yml --profile tools run --rm \
+  tools pnpm sv db encrypt --dataDir /app/data
+
+# 3. Restart with the key set on both services.
+docker compose -f docker-compose.prod.yml up -d
+```
+
+The `tools` container runs as root (simplest way to guarantee volume access
+regardless of which UID created it) but restores the data directory's
+original ownership afterward, so the non-root `runtime`/`auth` containers can
+still read everything on restart. It never starts on a plain `up` — the
+`tools` profile keeps it out of the default service set.
+
+The automatic pre-migration backup lands in `./backups` **next to your
+compose file on the host** (bind-mounted, not the named data volume) — it
+would otherwise be deleted with the container (`--rm`) the moment the command
+finishes. Keep it somewhere safe if you want it to outlive routine cleanup.
+
+`sv db encrypt` (either path):
+
+- requires `SOVEREIGN_DB_ENCRYPTION_KEY` to already be set to the key you want
+  to encrypt with;
+- takes an automatic backup before touching anything (same archive format as
+  `sv backup`) — pass `--skip-backup` only if you have your own fresh backup
+  and understand the risk;
+- converts `sovereign.db`, `auth.db`, and every file under `data/plugins/` in
+  place, via a temp-file-then-atomic-rename per file, so a mid-run failure
+  leaves the original untouched;
+- writes a marker (`data/.db-encrypted`) once every file has converted —
+  only then does the instance accept the key at startup.
+
+Restart the server afterward with the same key still set.
+
+### Rotating or removing the key
+
+`sv db decrypt` reverses the process — decrypts every SQLite file back to
+plaintext (same automatic-backup, atomic-swap safety) and removes the marker.
+To rotate to a new key: `sv db decrypt` with the old key set, then
+`SOVEREIGN_DB_ENCRYPTION_KEY=<new key> pnpm sv db encrypt`. On a named-volume
+production deployment, run both through the `tools` service the same way as
+above, substituting `db decrypt` / `db encrypt` for the command.
+
+### The key is yours to keep
+
+**Losing `SOVEREIGN_DB_ENCRYPTION_KEY` means losing the data** — there is no
+recovery path, by design (NFR-02: no external dependency, operator owns the
+key). Back the key up **separately** from the data directory itself; a backup
+archive encrypted under a key stored only inside that same archive is
+worthless. This is the same posture as `AUTH_SECRET` and `SOVEREIGN_VAULT_KEY`,
+just with higher stakes — the blast radius of losing this one is the entire
+database, not one feature.
+
+### Interaction with SQLite → PostgreSQL migration
+
+The pgloader-based migration described later in this document (see "Switching
+SQLite → PostgreSQL" under [PostgreSQL](#postgresql)) reads the SQLite files
+directly; `pgloader` has no SQLCipher support. If `SOVEREIGN_DB_ENCRYPTION_KEY`
+is set, run `sv db decrypt` first, point `pgloader` at the resulting plaintext
+files, then securely delete them once the migration succeeds.
+
+### Break-glass CLI and dev scripts
+
+`sv user reset-mfa` and `pnpm sv seed` both read `SOVEREIGN_DB_ENCRYPTION_KEY`
+from their own environment the same way the server does — they need it set to
+operate on an encrypted `auth.db`, and fail with the same clear
+"is the key wrong or is the server still running?" message as `sv db
+encrypt`/`decrypt` if something's inconsistent. On a named-volume production
+deployment, run them through the `tools` service too:
+`docker compose -f docker-compose.prod.yml --profile tools run --rm tools pnpm sv user reset-mfa <email>`.
 
 ---
 
@@ -799,9 +919,22 @@ locked out), the `sv` CLI provides a direct database reset:
 pnpm sv user reset-mfa admin@example.com
 ```
 
-This uses better-sqlite3 directly on the auth database and does not require a
-running server. Only available for SQLite deployments; Postgres instances must
-use the Console or a direct SQL query.
+This opens the auth database directly and does not require a running server.
+Only available for SQLite deployments; Postgres instances must use the
+Console or a direct SQL query.
+
+**Named-volume production deployments** (`docker-compose.prod.yml`) have no
+host path to run this against directly — the command needs the full monorepo
+checkout, which isn't inside the minimal `auth`/`runtime` images. Use the
+profile-gated `tools` service instead, which mounts the same volume:
+
+```bash
+docker compose -f docker-compose.prod.yml --profile tools run --rm \
+  tools pnpm sv user reset-mfa admin@example.com
+```
+
+See [SQLite at-rest encryption](#sqlite-at-rest-encryption-rfc-0071) above for
+more on the `tools` service.
 
 ---
 

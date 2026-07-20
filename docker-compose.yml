@@ -58,6 +58,10 @@ services:
       # (Email delivery settings) — the auth server decrypts its own local
       # copy independently of the runtime. Same key as the runtime's vault.
       SOVEREIGN_VAULT_KEY: '${SOVEREIGN_VAULT_KEY}'
+      # Opt-in SQLite at-rest encryption (RFC 0071). Empty/unset = plaintext,
+      # unchanged from today. Must match the runtime service's value exactly —
+      # see docs/self-hosting.md's "SQLite at-rest encryption" section.
+      SOVEREIGN_DB_ENCRYPTION_KEY: '${SOVEREIGN_DB_ENCRYPTION_KEY:-}'
       # Internal Docker service address for auth→runtime server-to-server calls
       # (e.g. recording email-delivery-failure activity log entries). Mirrors
       # SOVEREIGN_AUTH_URL on the runtime service below, reversed.
@@ -87,6 +91,11 @@ services:
       # domain in production when compatibility routes need to be reachable.
       SOVEREIGN_AUTH_PUBLIC_URL: '${SOVEREIGN_AUTH_PUBLIC_URL:-http://localhost:3001}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
+      # Opt-in SQLite at-rest encryption (RFC 0071). Empty/unset = plaintext,
+      # unchanged from today. Must match the auth service's value exactly — see
+      # docs/self-hosting.md's "SQLite at-rest encryption" section. Existing
+      # plaintext instances must run `sv db encrypt` before setting this.
+      SOVEREIGN_DB_ENCRYPTION_KEY: '${SOVEREIGN_DB_ENCRYPTION_KEY:-}'
       # Shared signing secret — the runtime verifies the auth server's session
       # cookie locally with it (SRS AUTH-05); must match the auth service.
       AUTH_SECRET: '${AUTH_SECRET}'

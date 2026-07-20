@@ -38,8 +38,8 @@ const nextConfig: NextConfig = {
     '@sovereignfs/manifest',
     '@sovereignfs/mailer',
   ],
-  // better-sqlite3 uses native bindings — Webpack cannot bundle it.
-  serverExternalPackages: ['better-sqlite3'],
+  // better-sqlite3-multiple-ciphers (RFC 0071) uses native bindings — Webpack cannot bundle it.
+  serverExternalPackages: ['better-sqlite3-multiple-ciphers'],
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

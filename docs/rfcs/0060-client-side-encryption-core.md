@@ -73,10 +73,18 @@ enrolled device and their recovery secret, encrypted data is unrecoverable.
 
 Sovereign should keep two distinct concepts:
 
-| Capability               | Runtime can decrypt? | Primary purpose                               |
-| ------------------------ | -------------------- | --------------------------------------------- |
-| Server-side field crypto | Yes                  | Protect disk/backups; runtime-mediated fields |
-| Client-side encryption   | No                   | Protect data from operator/server compromise  |
+| Capability                         | Runtime can decrypt? | Primary purpose                               |
+| ---------------------------------- | -------------------- | --------------------------------------------- |
+| Server-side at-rest / field crypto | Yes                  | Protect disk/backups; runtime-mediated fields |
+| Client-side encryption             | No                   | Protect data from operator/server compromise  |
+
+The server-side, runtime-can-decrypt row spans two distinct mechanisms, both
+orthogonal to this RFC: whole-file SQLite at-rest encryption
+([RFC 0071](0071-sqlite-at-rest-encryption.md), opt-in) and field-level
+`sdk.crypto` ([RFC 0008](0008-security-encryption-architecture.md) Tier 3). This
+RFC's client-side encryption is the only tier the runtime **cannot** decrypt; a
+plugin may use both (e.g. Wallet stores ID images client-encrypted while the
+instance also runs SQLite at-rest), and they do not overlap or conflict.
 
 The SDK names must make this distinction obvious. The exact final shape is an
 implementation decision, but this RFC assumes a separate client-side namespace

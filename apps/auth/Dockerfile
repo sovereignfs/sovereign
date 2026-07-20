@@ -7,7 +7,8 @@
 
 # ---- deps: install workspace dependencies ---------------------------------
 FROM node:24-alpine AS deps
-# Native toolchain for better-sqlite3's musl build (no prebuilt for Alpine).
+# Native toolchain for better-sqlite3-multiple-ciphers' musl build (RFC 0071
+# SQLCipher support; no prebuilt for Alpine).
 RUN apk add --no-cache python3 make g++
 RUN corepack enable && corepack prepare pnpm@11.5.2 --activate
 WORKDIR /app

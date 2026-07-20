@@ -16,7 +16,7 @@
  * `./src/plugin-catalog.ts`'s file doc comment for why.)
  *
  * The guard on NEXT_RUNTIME keeps everything out of the Edge runtime context,
- * where Node.js-native packages (better-sqlite3, node-postgres) cannot load.
+ * where Node.js-native packages (better-sqlite3-multiple-ciphers, node-postgres) cannot load.
  * Each import is a local module file (not a workspace package directly) so that
  * webpack does not try to bundle native deps for the Edge bundle.
  */

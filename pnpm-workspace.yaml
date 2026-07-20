@@ -24,10 +24,18 @@ catalog:
   next: ^15.0.0
   semver: ^7.7.2
   '@types/semver': ^7.7.0
+  # SQLCipher-capable fork of better-sqlite3 (RFC 0071) — API-compatible
+  # drop-in, same major/version line as better-sqlite3. Used by packages/db,
+  # apps/auth, and scripts/ wherever a SQLite file is opened directly.
+  better-sqlite3-multiple-ciphers: ^12.11.1
 
 # Transitive deps allowed to run install scripts (pnpm blocks them by default).
 # esbuild (via tsx) needs its postinstall to link the platform binary.
-# better-sqlite3 needs its postinstall to fetch/compile the native binding.
+# better-sqlite3-multiple-ciphers needs its postinstall to fetch/compile the
+# native binding (RFC 0071). Plain better-sqlite3 still resolves as an optional
+# peer of drizzle-orm's better-sqlite3 adapter and better-auth's drizzle
+# adapter (type-only reference) but nothing in this repo constructs an
+# instance from it anymore — its native build is declined.
 # simple-git-hooks: declined — the root `prepare` script installs the git hooks
 # explicitly, so the dependency's own postinstall is redundant.
 catalogs:
@@ -43,7 +51,8 @@ catalogs:
     # @storybook/test was similarly absorbed; import from 'storybook/test' instead.
 
 allowBuilds:
-  better-sqlite3: true
+  better-sqlite3: false
+  better-sqlite3-multiple-ciphers: true
   esbuild: true
   sharp: false
   simple-git-hooks: false

@@ -1,11 +1,16 @@
 import { dirname, join } from 'node:path';
 import { mkdirSync, readFileSync, unlinkSync } from 'node:fs';
-import Database from 'better-sqlite3';
 import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { findWorkspaceRoot, pgSslMode, resolveSqlitePath } from './client';
 import { resolveDialect, type Dialect, type ResolvedDialect } from './dialect';
+import {
+  checkEncryptionMarker,
+  dbEncryptionKeyFromEnv,
+  defaultDataDir,
+  openKeyedSqlite,
+} from './sqlite-encryption';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnySqliteDb = ReturnType<typeof drizzleSqlite<any>>;
@@ -95,9 +100,9 @@ export function getPluginDb(pluginId: string, dialect?: Dialect): PluginDb {
   if (resolved.dialect === 'sqlite') {
     const path = resolveSqlitePath(pluginSqliteUrl(pluginId));
     mkdirSync(dirname(path), { recursive: true });
-    const sqlite = new Database(path);
-    sqlite.pragma('journal_mode = WAL');
-    sqlite.pragma('foreign_keys = ON');
+    const key = dbEncryptionKeyFromEnv();
+    checkEncryptionMarker(defaultDataDir(), key !== undefined);
+    const sqlite = openKeyedSqlite(path, key);
     const pdb: PluginDb = { dialect: 'sqlite', db: drizzleSqlite(sqlite) };
     _registry.set(cacheKey, pdb);
     return pdb;

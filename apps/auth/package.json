@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/auth",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -15,7 +15,7 @@
     "@sovereignfs/mailer": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
     "better-auth": "^1.6.16",
-    "better-sqlite3": "^12.10.0",
+    "better-sqlite3-multiple-ciphers": "catalog:",
     "next": "catalog:",
     "pg": "^8.21.0",
     "react": "catalog:",

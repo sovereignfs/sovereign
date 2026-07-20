@@ -58,6 +58,10 @@ services:
       # (Email delivery settings) — the auth server decrypts its own local
       # copy independently of the runtime. Same key as the runtime's vault.
       SOVEREIGN_VAULT_KEY: '${SOVEREIGN_VAULT_KEY}'
+      # Opt-in SQLite at-rest encryption (RFC 0071). Empty/unset = plaintext,
+      # unchanged from today. Must match the runtime service's value exactly —
+      # see docs/self-hosting.md's "SQLite at-rest encryption" section.
+      SOVEREIGN_DB_ENCRYPTION_KEY: '${SOVEREIGN_DB_ENCRYPTION_KEY:-}'
       # Internal Docker service address for auth→runtime server-to-server calls
       # (e.g. recording email-delivery-failure activity log entries). Always
       # the internal container port (3000), not the host-mapped RUNTIME_PORT.
@@ -122,6 +126,11 @@ services:
       # ("SOVEREIGN_VAULT_KEY is required...") the first time a user tries to
       # save a PAT, not at container startup.
       SOVEREIGN_VAULT_KEY: '${SOVEREIGN_VAULT_KEY}'
+      # Opt-in SQLite at-rest encryption (RFC 0071). Empty/unset = plaintext,
+      # unchanged from today. Must match the auth service's value exactly — see
+      # docs/self-hosting.md's "SQLite at-rest encryption" section. Existing
+      # plaintext instances must run `sv db encrypt` before setting this.
+      SOVEREIGN_DB_ENCRYPTION_KEY: '${SOVEREIGN_DB_ENCRYPTION_KEY:-}'
       # Shared signing secret — the runtime verifies the auth server's session
       # cookie locally with it (SRS AUTH-05); must match the auth service.
       AUTH_SECRET: '${AUTH_SECRET}'
@@ -179,6 +188,34 @@ services:
         condition: service_healthy
     networks:
       - sovereign_net
+
+  # ── On-demand admin CLI (RFC 0071) ──────────────────────────────────────────
+  # Never starts with a plain `up` — the `tools` profile keeps it out of the
+  # default service set. Gives the `sv` CLI (sv db encrypt/decrypt, sv user
+  # reset-mfa, …) direct access to the same named volume the services above
+  # use, without a separate host checkout. Invoke explicitly, e.g.:
+  #   docker compose -f docker-compose.prod.yml --profile tools run --rm \
+  #     tools pnpm sv db encrypt --dataDir /app/data
+  # Stop auth/runtime first — these commands assume nothing else has the
+  # SQLite files open.
+  tools:
+    profiles: ['tools']
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: tools
+    container_name: sovereign-tools
+    environment:
+      SOVEREIGN_DB_ENCRYPTION_KEY: '${SOVEREIGN_DB_ENCRYPTION_KEY:-}'
+      DATABASE_URL: '${DATABASE_URL:-file:./data/sovereign.db}'
+      AUTH_DATABASE_URL: '${AUTH_DATABASE_URL:-file:./data/auth.db}'
+    volumes:
+      - sovereign_data:/app/data
+      # `sv db encrypt`/`decrypt` write their automatic pre-migration backup to
+      # <workspace root>/backups — bind-mounted to the host (not the named
+      # data volume) so it survives this container exiting (`--rm`). Lands in
+      # ./backups next to this compose file.
+      - ./backups:/app/backups
 
   # ── Optional: Redis for instant cross-process notification delivery ─────────
   # Uncomment this block and set NOTIFICATION_TRANSPORT=redis + REDIS_URL in the

@@ -143,6 +143,18 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   `INTEGER`/`BOOLEAN` per dialect); the DDL must stay in sync with the Drizzle
   schemas (`schema/sqlite` + `schema/postgres`, guarded by a parity test).
   drizzle-kit migrations replace this later (0.5.05+).
+- **A row-less plugin (no `plugin_status` row) defaults to disabled and
+  access-restricted — except automatically in local dev.** `getDisabledPluginIds`
+  and `canUserOpenPlugin`/`getRestrictedPluginIds` (`runtime/src/plugin-status.ts`,
+  `runtime/src/plugin-access-server.ts`) both short-circuit to "fully visible,
+  open to everyone" whenever `bypassPluginVisibilityInDev()` is true, which is
+  an equality check on `NODE_ENV === 'development'` (never `!== 'production'`,
+  since Vitest sets `NODE_ENV=test` and must keep exercising the real gating
+  logic). This exists because a freshly scaffolded plugin used to stay hidden
+  from its own author until an admin visited Console > Plugins — a DX
+  regression, not intended production behavior. Never applies outside
+  `next dev`; a production or staging deployment still defaults new plugins
+  closed.
 - **Chrome plugins** (`fs.sovereign.launcher`, `fs.sovereign.account`,
   `fs.sovereign.console`) are reached through the sidebar chrome (home `/`,
   Console ⚙, Account avatar), never via the Launcher grid or the sidebar's

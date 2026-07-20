@@ -16,6 +16,22 @@ export function examplesEnabledByDefault(): boolean {
 }
 
 /**
+ * Whether plugin visibility/access gates are bypassed entirely — every
+ * installed plugin behaves as enabled, non-example-gated, and open to
+ * everyone. Automatic whenever `NODE_ENV === 'development'` (what `next dev`
+ * sets for `pnpm dev`): a row-less plugin normally defaults to
+ * disabled/access-restricted until an admin visits Console > Plugins, which
+ * meant a freshly scaffolded plugin never appeared for its own author in
+ * local dev. Deliberately an equality check, not `!== 'production'` — Vitest
+ * sets `NODE_ENV=test`, which must keep exercising the real gating logic.
+ * Never applies in production, so this never weakens a real deployment's
+ * access control.
+ */
+export function bypassPluginVisibilityInDev(): boolean {
+  return process.env.NODE_ENV === 'development';
+}
+
+/**
  * Whether `SOVEREIGN_HIDE_DEVELOPMENT_PLUGINS` is set — a hard, deploy-time
  * gate for plugins flagged `development: true` in their manifest. Unlike the
  * examples toggle, this has **no per-plugin override and no persisted Console
@@ -94,6 +110,7 @@ export async function getExamplesEnabledFlag(pdb: PlatformDb): Promise<boolean> 
  * and the unconditional `SOVEREIGN_HIDE_DEVELOPMENT_PLUGINS` gate.
  */
 export async function getDisabledPluginIds(pdb: PlatformDb): Promise<string[]> {
+  if (bypassPluginVisibilityInDev()) return [];
   const [statusRows, examplesEnabled] = await Promise.all([
     listPluginStatus(pdb),
     getExamplesEnabledFlag(pdb),

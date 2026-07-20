@@ -1,5 +1,30 @@
-import { describe, expect, it } from 'vitest';
-import { computeDisabledPluginIds, resolveExamplesEnabled } from '../plugin-status';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  bypassPluginVisibilityInDev,
+  computeDisabledPluginIds,
+  resolveExamplesEnabled,
+} from '../plugin-status';
+
+describe('bypassPluginVisibilityInDev', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('is false under NODE_ENV=test, so the vitest run keeps exercising real gating', () => {
+    expect(process.env.NODE_ENV).toBe('test');
+    expect(bypassPluginVisibilityInDev()).toBe(false);
+  });
+
+  it('is true only when NODE_ENV=development', () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    expect(bypassPluginVisibilityInDev()).toBe(true);
+  });
+
+  it('is false in production', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    expect(bypassPluginVisibilityInDev()).toBe(false);
+  });
+});
 
 describe('resolveExamplesEnabled', () => {
   it('uses the persisted setting when present, ignoring the env default', () => {

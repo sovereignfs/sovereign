@@ -19,7 +19,7 @@ import type { SovereignManifest } from '@sovereignfs/manifest';
 import { hasCapability } from './capabilities';
 import { CHROME_PLUGIN_IDS } from './launcher-plugins';
 import { canOpenPlugin, type PluginAccessPolicy } from './plugin-access';
-import { getExamplesEnabledFlag } from './plugin-status';
+import { bypassPluginVisibilityInDev, getExamplesEnabledFlag } from './plugin-status';
 import { getExamplePluginIds } from './registry';
 import { hasUserCapability } from './user-capabilities';
 
@@ -78,6 +78,7 @@ export async function canUserOpenPlugin(
   enabled: boolean,
 ): Promise<boolean> {
   if (CHROME_PLUGIN_IDS.has(pluginId)) return installed && enabled;
+  if (bypassPluginVisibilityInDev()) return installed;
 
   const [policyRow, examplesEnabled] = await Promise.all([
     getPluginAccessPolicy(pdb, pluginId),
@@ -124,6 +125,7 @@ export async function getRestrictedPluginIds(
 ): Promise<string[]> {
   const candidates = installedPluginIds.filter((id) => !CHROME_PLUGIN_IDS.has(id));
   if (candidates.length === 0) return [];
+  if (bypassPluginVisibilityInDev()) return [];
 
   const isAdmin = hasCapability(role, 'console:access');
   const exampleIds = new Set(getExamplePluginIds());

@@ -146,6 +146,63 @@ describe('validateManifest', () => {
     if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
   });
 
+  it('accepts a manifest that declares offline routes (RFC 0072)', () => {
+    const res = validateManifest({
+      ...base,
+      offline: { routes: [{ prefix: '/cards', description: 'View saved cards offline.' }] },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('accepts an offline route entry without a description', () => {
+    expect(validateManifest({ ...base, offline: { routes: [{ prefix: '/cards' }] } }).valid).toBe(
+      true,
+    );
+  });
+
+  it('rejects an offline route prefix that does not start with "/"', () => {
+    const res = validateManifest({ ...base, offline: { routes: [{ prefix: 'cards' }] } });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('offline');
+  });
+
+  it('rejects an offline route prefix of "/"', () => {
+    const res = validateManifest({ ...base, offline: { routes: [{ prefix: '/' }] } });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('offline');
+  });
+
+  it('rejects an offline route prefix containing ".." segments', () => {
+    const res = validateManifest({
+      ...base,
+      offline: { routes: [{ prefix: '/cards/../../etc' }] },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('offline');
+  });
+
+  it('rejects an offline route prefix containing route group / interception markers', () => {
+    expect(validateManifest({ ...base, offline: { routes: [{ prefix: '/(group)' }] } }).valid).toBe(
+      false,
+    );
+    expect(
+      validateManifest({ ...base, offline: { routes: [{ prefix: '/(.)cards' }] } }).valid,
+    ).toBe(false);
+  });
+
+  it('rejects an empty offline.routes array', () => {
+    expect(validateManifest({ ...base, offline: { routes: [] } }).valid).toBe(false);
+  });
+
+  it('rejects duplicate offline route prefixes within a plugin', () => {
+    const res = validateManifest({
+      ...base,
+      offline: { routes: [{ prefix: '/cards' }, { prefix: '/cards' }] },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
+  });
+
   it('accepts a manifest that declares the example marker', () => {
     expect(validateManifest({ ...base, example: true }).valid).toBe(true);
   });

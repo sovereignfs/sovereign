@@ -60,6 +60,31 @@ export interface MailOptions {
   from?: string;
 }
 
+export type EmailDeliveryStatus = 'skipped' | 'sent' | 'failed';
+
+/** Result of `sdk.email.sendToUser()` (RFC 0062). */
+export interface EmailSendResult {
+  status: EmailDeliveryStatus;
+  errorCode?: string;
+}
+
+/**
+ * Input to `sdk.email.sendToUser()` (RFC 0062) — the safer, user-scoped
+ * alternative to `sdk.mailer.send()`. The platform resolves `recipientUserId`
+ * to an email address server-side; plugins never see or supply a raw
+ * recipient address through this API.
+ */
+export interface SendToUserEmailInput {
+  recipientUserId: string;
+  /** Caller-defined identifier recorded for audit/diagnostics. Not yet used for template rendering (RFC 0031). */
+  templateId: string;
+  subject: string;
+  html?: string;
+  text?: string;
+  /** Structured data recorded alongside the delivery-log entry. */
+  data?: Record<string, string | number | boolean | null>;
+}
+
 export interface PlatformConfig {
   /**
    * Name of the default tenant row — set in Console › Settings › Instance name.

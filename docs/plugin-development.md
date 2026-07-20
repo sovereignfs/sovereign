@@ -197,17 +197,18 @@ manifest validation until the corresponding runtime support ships.
 
 Declared SDK capabilities. The v1-functional ones:
 
-| Permission     | Declares                                                                                   |
-| -------------- | ------------------------------------------------------------------------------------------ |
-| `auth:session` | Read the current session via `sdk.auth`.                                                   |
-| `db:readWrite` | Read/write access to the platform DB via `sdk.db`.                                         |
-| `db:readOnly`  | Read-only DB access.                                                                       |
-| `mailer:send`  | Send email via `sdk.mailer`.                                                               |
-| `data:provide` | Expose read-only data contracts for other plugins to query (RFC 0002, `sdk.data`).         |
-| `data:consume` | Read data from another plugin's contracts, subject to user consent (RFC 0002, `sdk.data`). |
-| `data:export`  | Participate in a user's data export bundle — `sdk.portability.provideExport()` (RFC 0007). |
-| `data:import`  | Participate in a data import/restore — `sdk.portability.provideImport()` (RFC 0007).       |
-| `admin:*`      | Administrative capabilities (platform plugins).                                            |
+| Permission            | Declares                                                                                       |
+| --------------------- | ---------------------------------------------------------------------------------------------- |
+| `auth:session`        | Read the current session via `sdk.auth`.                                                       |
+| `db:readWrite`        | Read/write access to the platform DB via `sdk.db`.                                             |
+| `db:readOnly`         | Read-only DB access.                                                                           |
+| `mailer:send`         | Send email via `sdk.mailer.send()` or `sdk.email.sendToUser()` (RFC 0062).                     |
+| `mailer:sendExternal` | Send email to a raw address (not a platform-resolved user) via `sdk.mailer.send()` (RFC 0062). |
+| `data:provide`        | Expose read-only data contracts for other plugins to query (RFC 0002, `sdk.data`).             |
+| `data:consume`        | Read data from another plugin's contracts, subject to user consent (RFC 0002, `sdk.data`).     |
+| `data:export`         | Participate in a user's data export bundle — `sdk.portability.provideExport()` (RFC 0007).     |
+| `data:import`         | Participate in a data import/restore — `sdk.portability.provideImport()` (RFC 0007).           |
+| `admin:*`             | Administrative capabilities (platform plugins).                                                |
 
 | `activity:write` | Record activity-log events via `sdk.activity.log()` (RFC 0005). |
 
@@ -221,11 +222,69 @@ implemented): `events:publish`, `events:subscribe`, `e2ee:use` (client-side encr
 field crypto, which the runtime _can_ decrypt).
 
 Permission declarations are part of the manifest contract and are used by
-platform flows such as portability (`data:export` / `data:import`). Other SDK
-host surfaces currently rely on the declaration as compatibility metadata rather
-than a complete runtime authorization boundary; plugins should still declare the
-permissions they use so future host-side gates can be enforced without changing
-the manifest.
+platform flows such as portability (`data:export` / `data:import`) and by the
+`mailer:send` / `mailer:sendExternal` host-side enforcement described below
+(RFC 0062). Other SDK host surfaces currently rely on the declaration as
+compatibility metadata rather than a complete runtime authorization boundary;
+plugins should still declare the permissions they use so future host-side
+gates can be enforced without changing the manifest.
+
+### Plugin email (`sdk.mailer` / `sdk.email`, RFC 0062)
+
+The runtime enforces `mailer:send` at the SDK host boundary: a call to
+`sdk.mailer.send()` or `sdk.email.sendToUser()` from a plugin without that
+permission throws before any send is attempted. Both methods also require a
+plugin route context — pass `await headers()` from `next/headers` as the
+second argument, the same convention `sdk.notifications.send()` uses (unlike
+`sdk.auth`/`sdk.storage`, which read request headers internally). The calling
+plugin ID is derived from the `x-sovereign-plugin-id` header on the server
+side, never from anything in the call's input, so a plugin cannot forge which
+plugin a send is attributed to.
+
+There are two methods with different recipient models:
+
+- **`sdk.email.sendToUser({ recipientUserId, templateId, subject, html?, text?, data? })`**
+  — the recommended default. You supply a user ID; the platform resolves the
+  recipient's email address server-side (through the same directory
+  resolution `sdk.directory.resolveUsers()` uses), applies delivery policy,
+  records an audit entry in the platform's email delivery log, and returns
+  `{ status: 'sent' | 'skipped' | 'failed', errorCode? }`. Requires only
+  `mailer:send`. `templateId` is recorded for audit/diagnostics; there is no
+  plugin-facing template renderer yet (RFC 0031), so you still supply the
+  final `subject`/`html`/`text` yourself.
+- **`sdk.mailer.send({ to, subject, html?, text?, from? })`** — a low-level
+  escape hatch for a raw recipient address. Because the address doesn't come
+  from the platform's own user resolution, it's treated as an **external**
+  recipient regardless of whether it happens to match a user's email, and
+  additionally requires the `mailer:sendExternal` permission. Prefer
+  `sdk.email.sendToUser()` unless you have a genuine reason to email an
+  address the platform doesn't know as a user (e.g. inviting someone who
+  doesn't have an account yet).
+
+Both methods are rate-limited per plugin and per recipient (a fixed
+per-process sliding window — a burst of automated or malicious sends from one
+plugin, or targeting one recipient, is rejected with a "rate limit exceeded"
+error rather than exhausting SMTP or spamming a user) and go through the same
+delivery machinery as first-party account/security email — no separate
+plugin-only mailer path exists. This is distinct from
+`sdk.notifications.send()` (RFC 0015): notifications are in-app/push and
+high-volume by design, while email is comparatively rare, explicitly
+permissioned, and audited.
+
+```ts
+import { headers } from 'next/headers';
+import { sdk } from '@sovereignfs/sdk';
+
+await sdk.email.sendToUser(
+  {
+    recipientUserId,
+    templateId: 'export-ready',
+    subject: 'Your export is ready',
+    text: 'Your data export has finished. Open the app to download it.',
+  },
+  await headers(),
+);
+```
 
 ### `apiProvider` and the public `/api/*` namespace (PLT-16)
 
@@ -1156,8 +1215,13 @@ The SDK surface (`sdk.*`):
   ```ts
   const db = await sdk.db.getClient();
   ```
-- **`mailer`** — `send({ to, subject, text, html })`. No-ops when SMTP is
+- **`mailer`** — `send({ to, subject, text, html }, requestHeaders?)`. Requires
+  `mailer:send` and `mailer:sendExternal` (RFC 0062 — see "Plugin email"
+  above); pass `await headers()` as `requestHeaders`. No-ops when SMTP is
   unconfigured.
+- **`email`** — `sendToUser({ recipientUserId, templateId, subject, html?, text?, data? }, requestHeaders?)`
+  (RFC 0062). The recommended default over `mailer.send` — see "Plugin email"
+  above. Requires `mailer:send`; pass `await headers()` as `requestHeaders`.
 - **`platform`** — `getConfig()` → `{ tenantName, inviteOnly, version, instanceName, instancePrimaryColor? }`
   (await it). `instanceName` falls back to `tenantName` when no instance name is
   configured; `instancePrimaryColor` is a validated 6-digit hex string or

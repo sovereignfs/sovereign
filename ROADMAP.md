@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.42.0 · **Last updated:** 2026-07-19
+**Version:** 0.43.0 · **Last updated:** 2026-07-20
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -172,6 +172,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | —       | Require email verification at registration/login                      | ✅     | [RFC 0035](docs/rfcs/0035-progressive-user-verification.md) (scoped implementation — see "Current state")      |
 | 0.41.0  | Public plugin page routes (RFC 0042)                                  | ✅     | [2.14](docs/epics/platform-shell.md#-214--public-plugin-page-routes-rfc-0042)                                  |
 | 0.42.0  | Console-managed SMTP settings (platform:owner only)                   | ✅     | [3.30](docs/epics/plugins-runtime.md#-330--console-managed-smtp-settings-platformowner-only)                   |
+| 0.43.0  | Plugin mailer permission and SDK email surface (RFC 0062)             | ✅     | [3.26](docs/epics/plugins-runtime.md#-326--plugin-mailer-permission-and-sdk-email-surface-rfc-0062)            |
 
 ---
 
@@ -237,7 +238,6 @@ once prioritised.
 | —       | Launcher plugin workflow coverage                                         | 📋     | [15.2](docs/epics/plugin-launcher.md#-152--launcher-plugin-workflow-coverage)                                                    |
 | —       | SDK boundary and runtime contract tests                                   | 📋     | [3.24](docs/epics/plugins-runtime.md#-324--sdk-boundary-and-runtime-contract-tests)                                              |
 | —       | Plugin external dependency resolution (RFC 0057)                          | 📋     | [3.25](docs/epics/plugins-runtime.md#-325--plugin-external-dependency-resolution-rfc-0057)                                       |
-| —       | Plugin mailer permission and SDK email surface (RFC 0062)                 | 📋     | [3.26](docs/epics/plugins-runtime.md#-326--plugin-mailer-permission-and-sdk-email-surface-rfc-0062)                              |
 | —       | Middleware internal fetch caching review                                  | 📋     | [2.18](docs/epics/platform-shell.md#-218--middleware-internal-fetch-caching-review)                                              |
 | —       | Typecheck performance and project references                              | 📋     | [0.14](docs/epics/infrastructure.md#-014--typecheck-performance-and-project-references)                                          |
 | —       | Operational consistency checks                                            | 📋     | [0.15](docs/epics/infrastructure.md#-015--operational-consistency-checks)                                                        |

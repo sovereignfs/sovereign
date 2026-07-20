@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { manifestDatabaseDialect, manifestDatabaseIsolation } from '../schema';
+import {
+  manifestDatabaseDialect,
+  manifestDatabaseIsolation,
+  manifestRequiresEncryption,
+} from '../schema';
 import { validateManifest } from '../validate';
 
 const base = {
@@ -183,6 +187,48 @@ describe('validateManifest', () => {
     expect(manifestDatabaseIsolation({ dialect: 'sqlite' })).toBe('shared');
     expect(manifestDatabaseDialect({ isolation: 'isolated', dialect: 'sqlite' })).toBe('sqlite');
     expect(manifestDatabaseDialect({ isolation: 'isolated', dialect: 'postgres' })).toBeUndefined();
+  });
+
+  it('accepts database.requireEncryption alongside isolation: "isolated" (RFC 0071)', () => {
+    const res = validateManifest({
+      ...base,
+      database: { isolation: 'isolated', requireEncryption: true },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects database.requireEncryption on a "shared" plugin — raise-only, implies isolated', () => {
+    const res = validateManifest({
+      ...base,
+      database: { isolation: 'shared', requireEncryption: true },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('requireEncryption');
+    }
+  });
+
+  it('rejects database.requireEncryption when isolation is left unspecified (defaults to shared)', () => {
+    const res = validateManifest({
+      ...base,
+      database: { requireEncryption: true },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('requireEncryption');
+    }
+  });
+
+  it('normalizes manifestRequiresEncryption', () => {
+    expect(manifestRequiresEncryption(undefined)).toBe(false);
+    expect(manifestRequiresEncryption('isolated')).toBe(false);
+    expect(manifestRequiresEncryption({ isolation: 'isolated' })).toBe(false);
+    expect(manifestRequiresEncryption({ isolation: 'isolated', requireEncryption: true })).toBe(
+      true,
+    );
+    expect(manifestRequiresEncryption({ isolation: 'isolated', requireEncryption: false })).toBe(
+      false,
+    );
   });
 
   it('accepts shell: "overlay" (RFC 0001)', () => {

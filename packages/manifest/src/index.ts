@@ -3,6 +3,7 @@ export {
   manifestDatabaseDialect,
   manifestDatabaseIsolation,
   manifestDatabaseSchema,
+  manifestRequiresEncryption,
   permissionSchema,
   manifestFieldNames,
   registryEntrySchema,

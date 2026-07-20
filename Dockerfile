@@ -11,7 +11,8 @@
 
 # ---- deps: install workspace dependencies ---------------------------------
 FROM node:24-alpine AS deps
-# Native toolchain for better-sqlite3's musl build (no prebuilt for Alpine).
+# Native toolchain for better-sqlite3-multiple-ciphers' musl build (RFC 0071
+# SQLCipher support; no prebuilt for Alpine).
 RUN apk add --no-cache python3 make g++
 RUN corepack enable && corepack prepare pnpm@11.5.2 --activate
 WORKDIR /app
@@ -82,6 +83,23 @@ RUN mkdir -p /app/.deploy/plugins && \
     [ -f "$dir/manifest.json" ] && cp "$dir/manifest.json" "$dest/"; \
     [ -d "$dir/migrations" ] && cp -r "$dir/migrations" "$dest/migrations"; \
   done
+
+# ---- tools: on-demand admin CLI against a running deployment's volume -----
+# Never started by `docker compose up` (compose service is profile-gated).
+# Invoked explicitly for one-off admin tasks that need the `sv` CLI against
+# the same data volume the runner/auth containers use — e.g.
+# `sv db encrypt`/`decrypt` (RFC 0071) and the `sv user reset-mfa` break-glass
+# tool — neither of which exist in the minimal runner image below (no bin/,
+# scripts/, or dev tooling there by design, to keep the served image small).
+# Built FROM builder because that stage already has the full monorepo, every
+# devDependency (tsx, citty, consola), and the composed plugins — nothing
+# extra to copy, and its layers are already cached from the runner build.
+FROM builder AS tools
+ENV NODE_ENV=production
+COPY docker/tools-entrypoint.sh /usr/local/bin/tools-entrypoint.sh
+RUN chmod +x /usr/local/bin/tools-entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/tools-entrypoint.sh"]
+CMD ["sh", "-c", "echo 'Usage: docker compose --profile tools run --rm tools pnpm sv <command>' && pnpm sv --help"]
 
 # ---- runner: minimal non-root production image ----------------------------
 FROM node:24-alpine AS runner

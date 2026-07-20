@@ -6,9 +6,15 @@
  * in with their password alone and re-enroll MFA. Requires direct database
  * access (use the admin Console UI for a softer approach).
  */
-import { findWorkspaceRoot } from '@sovereignfs/db';
+import {
+  checkEncryptionMarker,
+  dbEncryptionKeyFromEnv,
+  DbEncryptionConfigError,
+  defaultDataDir,
+  findWorkspaceRoot,
+  openKeyedSqlite,
+} from '@sovereignfs/db';
 import { resolve } from 'node:path';
-import Database from 'better-sqlite3';
 import { consola } from 'consola';
 
 const email = process.argv[2];
@@ -17,15 +23,21 @@ if (!email) {
   process.exit(1);
 }
 
-const root = findWorkspaceRoot(process.cwd());
+const root = findWorkspaceRoot();
 const authDbPath = resolve(root, 'data', 'auth.db');
 
-let db: InstanceType<typeof Database>;
+let db: ReturnType<typeof openKeyedSqlite>;
 try {
-  db = new Database(authDbPath);
-} catch {
-  consola.error(`Could not open auth database at ${authDbPath}`);
-  consola.info('Make sure the instance has been started at least once.');
+  const key = dbEncryptionKeyFromEnv();
+  checkEncryptionMarker(defaultDataDir(), key !== undefined);
+  db = openKeyedSqlite(authDbPath, key);
+} catch (err) {
+  if (err instanceof DbEncryptionConfigError) {
+    consola.error(err.message);
+  } else {
+    consola.error(`Could not open auth database at ${authDbPath}`);
+    consola.info('Make sure the instance has been started at least once.');
+  }
   process.exit(1);
 }
 

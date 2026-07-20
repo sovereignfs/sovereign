@@ -1,12 +1,17 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
-import Database from 'better-sqlite3';
 import { type BetterSQLite3Database, drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
 import { type NodePgDatabase, drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { type Dialect, resolveDialect } from './dialect';
 import * as pgSchema from './schema/postgres';
 import * as sqliteSchema from './schema/sqlite';
+import {
+  checkEncryptionMarker,
+  dbEncryptionKeyFromEnv,
+  defaultDataDir,
+  openKeyedSqlite,
+} from './sqlite-encryption';
 
 export interface DbConfig {
   /** Override the resolved dialect. Defaults to the environment resolution. */
@@ -43,9 +48,9 @@ export function createClient(config: DbConfig = {}): PlatformDb {
     if (path !== ':memory:') {
       mkdirSync(dirname(path), { recursive: true });
     }
-    const sqlite = new Database(path);
-    sqlite.pragma('journal_mode = WAL');
-    sqlite.pragma('foreign_keys = ON');
+    const key = dbEncryptionKeyFromEnv();
+    if (path !== ':memory:') checkEncryptionMarker(defaultDataDir(), key !== undefined);
+    const sqlite = openKeyedSqlite(path, key);
     return { dialect: 'sqlite', db: drizzleSqlite(sqlite, { schema: sqliteSchema }) };
   }
 

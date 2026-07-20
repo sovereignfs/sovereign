@@ -50,6 +50,16 @@ export const manifestDatabaseSchema = z.union([
     .object({
       isolation: z.enum(['shared', 'isolated']).optional(),
       dialect: z.enum(['sqlite']).optional(),
+      /**
+       * RFC 0071 — force SQLite at-rest encryption on for this plugin's own
+       * isolated database, regardless of the instance-wide
+       * `SOVEREIGN_DB_ENCRYPTION_KEY` default. **Raise-only**: a plugin can
+       * demand encryption, it can never opt out of encryption the operator
+       * has enabled. Requires `isolation: "isolated"` — whole-file encryption
+       * has no per-table granularity, so a `shared` plugin's tables (living
+       * inside the platform database) cannot independently demand it.
+       */
+      requireEncryption: z.boolean().optional(),
     })
     .strict(),
 ]);
@@ -103,6 +113,20 @@ export function manifestDatabaseDialect(database: unknown): ManifestDatabaseDial
     return 'sqlite';
   }
   return undefined;
+}
+
+/**
+ * Whether a plugin's manifest declares `database.requireEncryption` (RFC
+ * 0071). Only meaningful on an isolated SQLite plugin database — enforced by
+ * `manifestSchema`'s refinement, not repeated here.
+ */
+export function manifestRequiresEncryption(database: unknown): boolean {
+  return (
+    typeof database === 'object' &&
+    database !== null &&
+    'requireEncryption' in database &&
+    database.requireEncryption === true
+  );
 }
 
 /**
@@ -538,7 +562,22 @@ export const manifestSchema = manifestObjectSchema
   .refine((m) => m.type !== 'platform' || m.monetization === undefined, {
     message: 'platform plugins cannot declare monetization — they are always free',
     path: ['monetization'],
-  });
+  })
+  .refine(
+    (m) => {
+      const db = m.database;
+      if (typeof db !== 'object' || db === null) return true;
+      if (db.requireEncryption !== true) return true;
+      return db.isolation === 'isolated';
+    },
+    {
+      message:
+        'database.requireEncryption requires database.isolation to be "isolated" — a ' +
+        '"shared" plugin\'s tables live inside the platform database and cannot ' +
+        'independently demand at-rest encryption (RFC 0071)',
+      path: ['database', 'requireEncryption'],
+    },
+  );
 
 /**
  * Manifest field names, sourced from the schema so docs and tooling share one

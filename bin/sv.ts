@@ -59,6 +59,20 @@ function run(command: string, args: string[]): void {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+/**
+ * Archive `dataDir` to `archivePath` (SQLite path only — see the `backup`
+ * command for the Postgres branch, not needed by `sv db encrypt`/`decrypt`,
+ * which are SQLite-only per RFC 0071). Paths inside the archive are relative
+ * to `dataDir` — see `backup`'s own comment for why. Returns whether it
+ * succeeded rather than exiting, so callers (both `backup` and `db
+ * encrypt`/`decrypt`) can decide what "backup failed" means for them.
+ */
+function runSqliteBackup(dataDir: string, archivePath: string): boolean {
+  mkdirSync(dirname(archivePath), { recursive: true });
+  const result = spawnSync('tar', ['-czf', archivePath, '-C', dataDir, '.'], { stdio: 'inherit' });
+  return result.status === 0;
+}
+
 const install = defineCommand({
   meta: { name: 'install', description: 'Clone the plugins declared in sovereign.plugins.json' },
   run() {
@@ -561,10 +575,7 @@ const backup = defineCommand({
       //     up the `.db` alone would silently drop them. SQLite recovers from
       //     the trio on next open.
       consola.start(`Creating SQLite backup → ${archivePath}`);
-      const tarResult = spawnSync('tar', ['-czf', archivePath, '-C', dataDir, '.'], {
-        stdio: 'inherit',
-      });
-      if (tarResult.status !== 0) {
+      if (!runSqliteBackup(dataDir, archivePath)) {
         consola.error('tar failed creating archive.');
         process.exit(1);
       }
@@ -678,6 +689,207 @@ const restore = defineCommand({
   },
 });
 
+const dbEncrypt = defineCommand({
+  meta: {
+    name: 'encrypt',
+    description:
+      'Encrypt every SQLite database in place with SOVEREIGN_DB_ENCRYPTION_KEY (RFC 0071)',
+  },
+  args: {
+    dataDir: {
+      type: 'string',
+      description: 'Path to the data directory (default: ./data)',
+      default: join(ROOT, 'data'),
+    },
+    'skip-backup': {
+      type: 'boolean',
+      default: false,
+      description: 'Skip the automatic pre-encryption backup (not recommended)',
+    },
+  },
+  async run({ args }) {
+    const {
+      dbEncryptionKeyFromEnv,
+      isEncryptionMarked,
+      listInstanceSqliteFiles,
+      encryptSqliteFileInPlace,
+      writeEncryptionMarker,
+    } = await import('@sovereignfs/db');
+
+    const dataDir = resolve(args.dataDir);
+
+    let key: Buffer | undefined;
+    try {
+      key = dbEncryptionKeyFromEnv();
+    } catch (err) {
+      consola.error((err as Error).message);
+      process.exit(1);
+    }
+    if (!key) {
+      consola.error(
+        'SOVEREIGN_DB_ENCRYPTION_KEY is not set. Set it to the key you want to encrypt with, then re-run.',
+      );
+      process.exit(1);
+    }
+
+    if (isEncryptionMarked(dataDir)) {
+      consola.error(
+        `${dataDir} is already marked as encrypted (.db-encrypted present). Nothing to do.`,
+      );
+      process.exit(1);
+    }
+
+    const files = listInstanceSqliteFiles(dataDir);
+    if (files.length === 0) {
+      consola.warn(`No SQLite files found under ${dataDir}. Nothing to encrypt.`);
+      return;
+    }
+
+    consola.info(`Found ${files.length} SQLite file(s) to encrypt:`);
+    for (const f of files) consola.info(`  - ${f}`);
+
+    if (args['skip-backup']) {
+      consola.warn('Skipping the pre-encryption backup (--skip-backup). This is not recommended.');
+    } else {
+      const version = readPlatformVersion(ROOT);
+      const archivePath = defaultArchivePath(ROOT, version);
+      consola.start(`Creating a safety backup before encrypting → ${archivePath}`);
+      if (!runSqliteBackup(dataDir, archivePath)) {
+        consola.error('Backup failed — aborting before touching any database.');
+        process.exit(1);
+      }
+      consola.success(`Backup saved → ${archivePath}`);
+    }
+
+    consola.warn('Make sure the server is stopped before continuing.');
+
+    let failed = 0;
+    for (const file of files) {
+      consola.start(`Encrypting ${file}…`);
+      try {
+        encryptSqliteFileInPlace(file, key);
+        consola.success(`${file}: encrypted.`);
+      } catch (err) {
+        consola.error(`${file}: ${(err as Error).message}`);
+        failed++;
+      }
+    }
+
+    if (failed > 0) {
+      consola.error(
+        `${failed} of ${files.length} file(s) failed to encrypt — the data directory is now in ` +
+          'a mixed plaintext/encrypted state and the encryption marker was NOT written. Restore ' +
+          'from the backup taken above, fix the issue (see errors above — commonly the server ' +
+          'was still running), and re-run `sv db encrypt` from a clean plaintext state.',
+      );
+      process.exit(1);
+    }
+
+    writeEncryptionMarker(dataDir);
+    consola.success(`All ${files.length} file(s) encrypted.`);
+    consola.info('Restart the server with SOVEREIGN_DB_ENCRYPTION_KEY set to this same key.');
+  },
+});
+
+const dbDecrypt = defineCommand({
+  meta: {
+    name: 'decrypt',
+    description: 'Decrypt every SQLite database in place, removing at-rest encryption (RFC 0071)',
+  },
+  args: {
+    dataDir: {
+      type: 'string',
+      description: 'Path to the data directory (default: ./data)',
+      default: join(ROOT, 'data'),
+    },
+    'skip-backup': {
+      type: 'boolean',
+      default: false,
+      description: 'Skip the automatic pre-decryption backup (not recommended)',
+    },
+  },
+  async run({ args }) {
+    const {
+      dbEncryptionKeyFromEnv,
+      isEncryptionMarked,
+      listInstanceSqliteFiles,
+      decryptSqliteFileInPlace,
+      clearEncryptionMarker,
+    } = await import('@sovereignfs/db');
+
+    const dataDir = resolve(args.dataDir);
+
+    let key: Buffer | undefined;
+    try {
+      key = dbEncryptionKeyFromEnv();
+    } catch (err) {
+      consola.error((err as Error).message);
+      process.exit(1);
+    }
+    if (!key) {
+      consola.error(
+        'SOVEREIGN_DB_ENCRYPTION_KEY is not set. Set it to the CURRENT encryption key, then re-run.',
+      );
+      process.exit(1);
+    }
+
+    if (!isEncryptionMarked(dataDir)) {
+      consola.error(`${dataDir} is not marked as encrypted. Nothing to do.`);
+      process.exit(1);
+    }
+
+    const files = listInstanceSqliteFiles(dataDir);
+    consola.info(`Found ${files.length} SQLite file(s) to decrypt:`);
+    for (const f of files) consola.info(`  - ${f}`);
+
+    if (args['skip-backup']) {
+      consola.warn('Skipping the pre-decryption backup (--skip-backup). This is not recommended.');
+    } else {
+      const version = readPlatformVersion(ROOT);
+      const archivePath = defaultArchivePath(ROOT, version);
+      consola.start(`Creating a safety backup before decrypting → ${archivePath}`);
+      if (!runSqliteBackup(dataDir, archivePath)) {
+        consola.error('Backup failed — aborting before touching any database.');
+        process.exit(1);
+      }
+      consola.success(`Backup saved → ${archivePath}`);
+    }
+
+    consola.warn('Make sure the server is stopped before continuing.');
+
+    let failed = 0;
+    for (const file of files) {
+      consola.start(`Decrypting ${file}…`);
+      try {
+        decryptSqliteFileInPlace(file, key);
+        consola.success(`${file}: decrypted.`);
+      } catch (err) {
+        consola.error(`${file}: ${(err as Error).message}`);
+        failed++;
+      }
+    }
+
+    if (failed > 0) {
+      consola.error(
+        `${failed} of ${files.length} file(s) failed to decrypt. Marker left in place — ` +
+          'fix the issue (see errors above), or restore from the backup taken above, before retrying.',
+      );
+      process.exit(1);
+    }
+
+    clearEncryptionMarker(dataDir);
+    consola.success(`All ${files.length} file(s) decrypted.`);
+    consola.info(
+      'Restart the server with SOVEREIGN_DB_ENCRYPTION_KEY unset, or run `sv db encrypt` again with a new key.',
+    );
+  },
+});
+
+const db = defineCommand({
+  meta: { name: 'db', description: 'SQLite at-rest encryption migration tools (RFC 0071)' },
+  subCommands: { encrypt: dbEncrypt, decrypt: dbDecrypt },
+});
+
 const seed = defineCommand({
   meta: {
     name: 'seed',
@@ -749,7 +961,20 @@ const setup = defineCommand({
 
 const main = defineCommand({
   meta: { name: 'sv', description: 'Sovereign deployment CLI' },
-  subCommands: { install, generate, build, dev, serve, seed, backup, restore, plugin, user, setup },
+  subCommands: {
+    install,
+    generate,
+    build,
+    dev,
+    serve,
+    seed,
+    backup,
+    restore,
+    db,
+    plugin,
+    user,
+    setup,
+  },
 });
 
 void runMain(main);

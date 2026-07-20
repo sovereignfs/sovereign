@@ -110,6 +110,14 @@ require it); add Postgres `sslmode=require` + certificate handling in
 `packages/db/src/client.ts`; optionally authenticate/encrypt the internal
 runtime↔auth channel (shared secret or mTLS). Mostly configuration + docs.
 
+> **Scoped carve-out (RFC 0071).** The SQLite-only, whole-file slice of Tier 2b
+> — opt-in, keyed by a single instance-wide env var, with an optional manifest
+> `requireEncryption` control — is specified separately in
+> [RFC 0071](0071-sqlite-at-rest-encryption.md) (epic task 8.14) as a small,
+> shippable feature. It deliberately drops the KEK→DEK envelope, Postgres, and
+> avatar/blob pieces below to stay minimal. Those, plus field-level Tier 3,
+> remain the broader Task 8.5 described here.
+
 ### Tier 2 — At-rest encryption (server-held key — the main deliverable)
 
 **Key hierarchy (envelope).** A single **master key-encryption key (KEK)** is
@@ -268,9 +276,10 @@ doc-only draft.)
 
 ## Changelog
 
-| Version | Date     | Change                                                                                                                                                                                                       |
-| ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0.1     | Jun 2026 | Initial draft; threat model + tiered encryption roadmap; proposes reserved `sdk.crypto` + `crypto:use`.                                                                                                      |
-| 1.0     | Jun 2026 | Accepted (phased); incorporated into SRS §3.17, §5 (`crypto:use`); Tier 0/1 → Task 0.5.16 (v1), Tiers 2–4 → Task 1.0.1 (post-v1).                                                                            |
-| 1.1     | Jun 2026 | **Tier 0/1 implemented** (Task 0.5.16): static security headers + HSTS (prod) and a strict nonce-based CSP on both apps; Postgres TLS via `sslmode`; new `docs/security.md`. Tiers 2–4 remain in Task 1.0.1. |
-| 1.2     | Jul 2026 | Tier 4 client-side encryption made concrete in RFC 0060; Sovereign Wallet identified as first planned consumer.                                                                                              |
+| Version | Date     | Change                                                                                                                                                                                                                                               |
+| ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Jun 2026 | Initial draft; threat model + tiered encryption roadmap; proposes reserved `sdk.crypto` + `crypto:use`.                                                                                                                                              |
+| 1.0     | Jun 2026 | Accepted (phased); incorporated into SRS §3.17, §5 (`crypto:use`); Tier 0/1 → Task 0.5.16 (v1), Tiers 2–4 → Task 1.0.1 (post-v1).                                                                                                                    |
+| 1.1     | Jun 2026 | **Tier 0/1 implemented** (Task 0.5.16): static security headers + HSTS (prod) and a strict nonce-based CSP on both apps; Postgres TLS via `sslmode`; new `docs/security.md`. Tiers 2–4 remain in Task 1.0.1.                                         |
+| 1.2     | Jul 2026 | Tier 4 client-side encryption made concrete in RFC 0060; Sovereign Wallet identified as first planned consumer.                                                                                                                                      |
+| 1.3     | Jul 2026 | SQLite-only whole-file slice of Tier 2b carved out into RFC 0071 (opt-in, single instance key, manifest `requireEncryption`, migration tooling) as epic task 8.14; the remaining Tier 2 (envelope, Postgres, avatar/blob) + Tier 3 stay in Task 8.5. |

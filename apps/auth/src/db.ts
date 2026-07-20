@@ -1,8 +1,13 @@
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
-import Database from 'better-sqlite3';
+import Database from 'better-sqlite3-multiple-ciphers';
 import { Pool } from 'pg';
 import { getEnv } from './env';
+import {
+  checkEncryptionMarker,
+  dbEncryptionKeyFromEnv,
+  openKeyedSqlite,
+} from './sqlite-encryption';
 
 /**
  * The auth server's database, dialect-agnostic like the platform DB (NFR-03).
@@ -65,9 +70,11 @@ function getAuthDb(): AuthDb {
   if (path !== ':memory:') {
     mkdirSync(dirname(path), { recursive: true });
   }
-  const sqlite = new Database(path);
-  sqlite.pragma('journal_mode = WAL');
-  sqlite.pragma('foreign_keys = ON');
+  const key = dbEncryptionKeyFromEnv();
+  if (path !== ':memory:') {
+    checkEncryptionMarker(join(findWorkspaceRoot(), 'data'), key !== undefined);
+  }
+  const sqlite = openKeyedSqlite(path, key);
   _db = { dialect: 'sqlite', sqlite };
   return _db;
 }

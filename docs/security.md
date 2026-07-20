@@ -65,27 +65,38 @@ Security controls are only meaningful against a stated adversary. **Assets:** th
 identity database (`auth.db`), the platform database (`sovereign.db`), plugin
 data, avatars/blobs, backups, secrets, and live sessions.
 
-| Threat                                     | Addressed by                                                                             | Ships in                                | Residual risk                                                                                                           |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Network sniffing / MITM                    | Transport: TLS/HSTS at the edge, Postgres SSL                                            | **v1**                                  | Endpoint compromise.                                                                                                    |
-| XSS / injected scripts                     | Strict nonce-based CSP + security headers                                                | **v1**                                  | A bug that echoes a valid nonce.                                                                                        |
-| Clickjacking                               | `X-Frame-Options: DENY` + `frame-ancestors 'none'`                                       | **v1**                                  | —                                                                                                                       |
-| Stolen or guessed password                 | TOTP / passkey second factor (opt-in per user)                                           | **v1**                                  | Users who haven't enrolled MFA have password-only auth.                                                                 |
-| Forged session cookie                      | HMAC-signed cookie cache; Argon2id passwords (better-auth)                               | **v1**                                  | Stolen live cookie from a compromised device.                                                                           |
-| Compromised / curious plugin               | SDK boundary (plugins can't import runtime internals)                                    | **v1**                                  | A plugin still sees its own users' data.                                                                                |
-| Stolen disk / leaked backup / VPS snapshot | At-rest encryption (DB / backup / blob)                                                  | post-v1 (Task 1.0.1)                    | Until then, rely on host-level disk encryption.                                                                         |
-| Curious/malicious host or hosting provider | Field-level encryption; opt-in client-side encryption (RFC 0060) for plugins that use it | **v1 (opt-in)** / post-v1 (field-level) | Only data a plugin explicitly encrypts client-side is protected; most data still relies on host-level protection in v1. |
-| RCE / compromised server process           | Client-side encryption (RFC 0060) for the specific objects a plugin protects this way    | **v1 (opt-in, partial)**                | Data not passed through client-side encryption is still readable by an attacker with code execution.                    |
+| Threat                                     | Addressed by                                                                                                                                                                                                                                                    | Ships in                                           | Residual risk                                                                                                                                                                                    |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Network sniffing / MITM                    | Transport: TLS/HSTS at the edge, Postgres SSL                                                                                                                                                                                                                   | **v1**                                             | Endpoint compromise.                                                                                                                                                                             |
+| XSS / injected scripts                     | Strict nonce-based CSP + security headers                                                                                                                                                                                                                       | **v1**                                             | A bug that echoes a valid nonce.                                                                                                                                                                 |
+| Clickjacking                               | `X-Frame-Options: DENY` + `frame-ancestors 'none'`                                                                                                                                                                                                              | **v1**                                             | —                                                                                                                                                                                                |
+| Stolen or guessed password                 | TOTP / passkey second factor (opt-in per user)                                                                                                                                                                                                                  | **v1**                                             | Users who haven't enrolled MFA have password-only auth.                                                                                                                                          |
+| Forged session cookie                      | HMAC-signed cookie cache; Argon2id passwords (better-auth)                                                                                                                                                                                                      | **v1**                                             | Stolen live cookie from a compromised device.                                                                                                                                                    |
+| Compromised / curious plugin               | SDK boundary (plugins can't import runtime internals)                                                                                                                                                                                                           | **v1**                                             | A plugin still sees its own users' data.                                                                                                                                                         |
+| Stolen disk / leaked backup / VPS snapshot | **Opt-in SQLite at-rest encryption** (RFC 0071, `SOVEREIGN_DB_ENCRYPTION_KEY`) for `sovereign.db`/`auth.db`/isolated plugin DBs; host-level disk encryption for everything else (Postgres, avatars/blobs); full envelope/field-level at-rest post-v1 (Task 8.5) | **v1 (opt-in, SQLite)** / post-v1 (rest)           | Off by default — without it enabled, rely on host-level disk encryption. Even enabled, server-held keys never defend against a curious operator or RCE (see the client-side row below for that). |
+| Curious/malicious host or hosting provider | Field-level encryption; opt-in client-side encryption (RFC 0060), adopted today by **Account** (the encryption profile itself) and **Sovereign Wallet** (card/document contents) only                                                                           | **v1 (opt-in, 2 plugins)** / post-v1 (field-level) | Everything outside those two plugins' encrypted fields — which is the large majority of platform and plugin data — still relies on host-level protection in v1.                                  |
+| RCE / compromised server process           | Client-side encryption (RFC 0060) for the specific objects Account/Wallet protect this way                                                                                                                                                                      | **v1 (opt-in, 2 plugins)**                         | Data not passed through client-side encryption — i.e. nearly everything except Wallet's card/document fields — is still readable by an attacker with code execution.                             |
 
 **Honest framing.** v1 ships Tiers 0–1 of RFC 0008 (hardening + transport) plus
 Tier 4 (client-side/zero-knowledge encryption, RFC 0060) as an **opt-in
-capability** — the runtime and server-side plugin code can never decrypt an
-object a plugin chose to protect this way, even with full server access. It is
-not a blanket guarantee: most platform and plugin data is **not** encrypted at
-rest by default, so anyone who can read the server's disk or a raw backup can
-still read the bulk of it. Protect the host accordingly (see the checklist).
+capability** the SDK makes available to any plugin — but only two plugins have
+actually adopted it so far: **Account** (its own encryption-profile setup/
+recovery UX) and **Sovereign Wallet** (card metadata and ID/document images).
+For the fields those two plugins chose to encrypt, the runtime and server-side
+plugin code can never decrypt them, even with full server access. This is
+**not a blanket guarantee** and should not be read as "Sovereign has
+client-side encryption" in the general sense: every other plugin (Tasks,
+Ledger, Docs, PlainWrite, HealthLog, Shopper, Tally, TriText) currently stores
+its data with no client-side or at-rest protection, and most platform data
+overall is **not** encrypted at rest by default — anyone who can read the
+server's disk or a raw backup can still read the bulk of it, including all
+non-Wallet plugin data. Protect the host accordingly (see the checklist).
 At-rest and field-level encryption for the rest of the data model are
-specified and deferred to Task 1.0.1.
+specified and deferred to Task 1.0.1. Extending Tier 4 to another plugin is a
+per-plugin engineering decision — most plugins' core functionality depends on
+server-side search, aggregation, or cross-user sharing that ciphertext-only
+storage would break (see the per-plugin sensitivity assessment referenced in
+the RFC 0060 adoption notes) — not something that broadens automatically.
 
 ## What v1 enforces
 
@@ -146,8 +157,14 @@ specified and deferred to Task 1.0.1.
       emitted automatically by the apps in production.
 - [ ] **Generate strong secrets** (`openssl rand -base64 32`) for `AUTH_SECRET`
       and `SOVEREIGN_ADMIN_KEY`; never reuse or commit them.
-- [ ] **Encrypt the host disk / volume** — v1 does not encrypt data at rest, so
-      this is your protection for a stolen disk or snapshot.
+- [ ] **Encrypt the host disk / volume** — nothing is encrypted at rest by
+      default, so this is your baseline protection for a stolen disk or
+      snapshot. For SQLite deployments, an opt-in, single-key at-rest option
+      is available — see
+      [SQLite at-rest encryption](self-hosting.md#sqlite-at-rest-encryption-rfc-0071)
+      (RFC 0071, `SOVEREIGN_DB_ENCRYPTION_KEY`). Postgres has no equivalent; host-level
+      encryption remains the only protection there. Either way, back up the
+      encryption key separately from the data.
 - [ ] **Use Postgres over TLS** for non-local databases: add `?sslmode=require`
       (or `verify-full` with a CA) to `DATABASE_URL` / `AUTH_DATABASE_URL`.
 - [ ] **Enable MFA for all admin accounts** — enroll TOTP or a passkey from

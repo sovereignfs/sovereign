@@ -79,6 +79,8 @@
 
 **Goal:** The deferred, crypto-heavy tiers of RFC 0008 / SRS §3.17 — shipped **after v1**. Tier 2 (at-rest encryption + key management), Tier 3 (field-level via `sdk.crypto`), and the handoff to Tier 4 client-side encryption in RFC 0060. The reserved `sdk.crypto` surface + `crypto:use` permission land as `NotImplementedError` stubs first (after RFC 0005's stubs).
 
+> **Scope note:** the SQLite-only, whole-file, opt-in slice of Tier 2b is carved out into **Task 8.14 (RFC 0071)** as a small, independently shippable feature. This task retains the parts 8.14 deliberately drops: the KEK→DEK envelope hierarchy, Postgres at-rest posture, avatar/blob encryption, and field-level Tier 3.
+
 **Deliverables:**
 
 - Tier 2: local-keyfile envelope key management (master KEK → wrapped DEKs; fail-fast when enabled); SQLCipher DB encryption (`better-sqlite3-multiple-ciphers`); encrypted backups (amends Task 0.5.13) + encrypted export bundles (amends Task 0.5.14); avatar/blob encryption
@@ -396,6 +398,34 @@ portability hooks).
 
 ---
 
+#### ✅ 8.14 — SQLite at-rest encryption (opt-in, single-key) (RFC 0071)
+
+**Goal:** Give the zero-config SQLite deployments — the majority of self-hosted instances — a verifiable "stolen disk yields ciphertext" guarantee, as a small opt-in feature carved out of Task 8.5's Tier 2. Off by default; when the operator sets one instance-wide key, every SQLite database the instance owns (`sovereign.db`, `auth.db`, and every isolated plugin DB) is transparently encrypted with SQLCipher. Deliberately drops the KEK→DEK envelope, Postgres, avatar/blob, and field-level pieces (those stay in Task 8.5).
+
+**Deliverables:**
+
+- `SOVEREIGN_DB_ENCRYPTION_KEY` env var (no default; presence is the toggle; same encoding + fail-fast loader as `SOVEREIGN_VAULT_KEY`); a single shared keyed opener in `packages/db` (plus the self-contained `apps/auth` twin) replacing `better-sqlite3` with `better-sqlite3-multiple-ciphers` at all five `new Database(` call sites (`client.ts`, `apps/auth/src/db.ts`, `plugin-client.ts`, `scripts/reset-mfa.ts`, `scripts/seed.ts`)
+- State-marker mismatch guard (fail-fast both directions: encrypted-but-no-key, and plaintext-but-key-set)
+- Manifest `database.requireEncryption` — **raise-only** (a plugin can force encryption on for its own isolated DB, never off), implies `isolation: "isolated"`, and fails startup naming the plugin if the key is unset; `docs/plugin-development.md` + docs-parity update
+- Postgres: documented no-op with a startup **warning** when a `requireEncryption` plugin resolves to Postgres (no SQLCipher equivalent — falls back to disk + `sslmode`)
+- `sv db encrypt` / `sv db decrypt` migration tooling (offline, backup-first, crash-tolerant atomic swap, covers all SQLite files); documented replacement for the pgloader-based SQLite→Postgres path
+- Docker/native-dep: `allowBuilds` entry for `better-sqlite3-multiple-ciphers` + dependency swap in both Dockerfiles (toolchain already present); `.env.example` + `docs/self-hosting.md` + `docs/security.md` updates
+
+**Dependencies:** Task 8.3 (per-plugin database — the isolated-DB call site), Task 8.1 (`sv backup` baseline — backups inherit encryption for free). Does **not** depend on the full Task 8.5 envelope work.
+
+**SRS reference:** [RFC 0071](../rfcs/0071-sqlite-at-rest-encryption.md), amends RFC 0008 Tier 2b; NFR-02/07/08.
+
+**Review checklist:**
+
+- With no key set, behaviour is byte-for-byte unchanged (plaintext, no new runtime cost).
+- With the key set, a raw copy of any `.db` file is ciphertext; sign-in, MFA, and better-auth migrations work against an encrypted `auth.db`.
+- Key/state mismatch fails fast with an actionable message, never a generic "file is not a database" or silent plaintext write.
+- A plugin's `requireEncryption` can only raise protection; a `shared` plugin declaring it is a manifest error; an unset key names the requiring plugin at startup.
+- The migration tool refuses to run live, requires a backup, and leaves the plaintext original intact on failure.
+- Docs state plainly that this protects a stolen disk/backup only — not a curious operator or RCE (use RFC 0060 for those) — and that losing the key loses the data.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)
@@ -407,6 +437,7 @@ portability hooks).
 - [RFC 0044 — Plugin file storage](../rfcs/0044-plugin-storage.md)
 - [RFC 0052 — Plugin portability hooks](../rfcs/0052-plugin-portability-hooks.md)
 - [RFC 0060 — Client-side encryption core](../rfcs/0060-client-side-encryption-core.md)
+- [RFC 0071 — SQLite at-rest encryption (opt-in, single-key)](../rfcs/0071-sqlite-at-rest-encryption.md)
 - [RFC 0064 — Git-backed operator backups](../rfcs/0064-git-backed-operator-backups.md)
 - [RFC 0068 — Export completeness hardening](../rfcs/0068-export-completeness-hardening.md)
 

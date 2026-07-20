@@ -15,7 +15,13 @@ import { randomUUID } from 'node:crypto';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hashPassword } from 'better-auth/crypto';
-import { getPlatformDb } from '@sovereignfs/db';
+import {
+  checkEncryptionMarker,
+  dbEncryptionKeyFromEnv,
+  defaultDataDir,
+  getPlatformDb,
+  openKeyedSqlite,
+} from '@sovereignfs/db';
 import consola from 'consola';
 
 // ---------------------------------------------------------------------------
@@ -79,11 +85,10 @@ function resolveDbPath(url: string, wsRoot: string): string {
 // ---------------------------------------------------------------------------
 
 async function seedSqlite(dbPath: string): Promise<void> {
-  const Database = (await import('better-sqlite3')).default;
   mkdirSync(dirname(dbPath), { recursive: true });
-  const db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
+  const key = dbEncryptionKeyFromEnv();
+  checkEncryptionMarker(defaultDataDir(), key !== undefined);
+  const db = openKeyedSqlite(dbPath, key);
 
   const now = new Date().toISOString();
   for (const u of SEED_USERS) {

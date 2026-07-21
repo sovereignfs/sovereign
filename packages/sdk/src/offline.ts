@@ -1,6 +1,6 @@
 /**
  * Browser-only, plugin-scoped key/value cache backing offline-capable page
- * routes (RFC 0071, manifest `offline.routes`). Lets a client component
+ * routes (RFC 0072, manifest `offline.routes`). Lets a client component
  * render immediately from the last-cached value with no network, then mirror
  * a fresh read back in for next time.
  *
@@ -10,7 +10,7 @@
  * `routePrefix`). There is deliberately no per-user keying inside this
  * module: an offline route's own SSR output must never carry per-user data
  * (it is precached and could be replayed to a different user on a shared
- * device — see RFC 0071 "user-neutral shell"), so there is no safe
+ * device — see RFC 0072 "user-neutral shell"), so there is no safe
  * client-side signal to key by user identity in the first place. Isolation
  * across a login boundary is instead the caller's responsibility: the
  * runtime clears this store on every logout/user-switch (`clearAll`), so no
@@ -50,7 +50,7 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
-/** Plugin-scoped offline cache (RFC 0071). Browser-only — import from `@sovereignfs/sdk/offline`. */
+/** Plugin-scoped offline cache (RFC 0072). Browser-only — import from `@sovereignfs/sdk/offline`. */
 export const offline = {
   /** Read this plugin's cached value for `key`, or `null` if never written (or offline-cleared). */
   async get<T>(pluginId: string, key: string): Promise<T | null> {

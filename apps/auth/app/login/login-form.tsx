@@ -98,6 +98,7 @@ export function LoginForm({
               type="email"
               autoComplete="email"
               required
+              disabled={loading}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -116,6 +117,7 @@ export function LoginForm({
               type="password"
               autoComplete="current-password"
               required
+              disabled={loading}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />

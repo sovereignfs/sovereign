@@ -68,6 +68,7 @@ export function RegisterForm({
               id="register-name"
               autoComplete="name"
               required
+              disabled={loading}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -84,6 +85,7 @@ export function RegisterForm({
               type="email"
               autoComplete="email"
               required
+              disabled={loading}
               value={email}
               readOnly={isInvite}
               onChange={isInvite ? undefined : (e) => setEmail(e.target.value)}
@@ -99,6 +101,7 @@ export function RegisterForm({
               autoComplete="new-password"
               required
               minLength={8}
+              disabled={loading}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />

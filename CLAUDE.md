@@ -107,7 +107,7 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.44.0`**
+  to `1.0.0` marks the public release.** The current version is **`0.44.1`**
   (all pre-v1 roadmap tasks through slot `0.13.0` complete; subsequent minor
   bumps track post-slot tasks such as the admin-managed external provider config,
   the RFC 0065 plugin catalog/access-policy work, private plugin repositories
@@ -124,11 +124,16 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   `SOVEREIGN_DB_ENCRYPTION_KEY`, `sv db encrypt`/`decrypt`, and the manifest
   `database.requireEncryption` field, carved out of RFC 0008's deferred
   Tier 2), and patch versions cover UI additions and production hotfixes —
-  most recently the 2026-07-20 fix bypassing the row-less-plugin
-  disabled/access-restricted default in local dev (`NODE_ENV ===
-'development'`), so a freshly scaffolded plugin appears for its own author
-  without an admin visiting Console > Plugins first; before that the same-day
-  notification hardening pass (RFC 0034): fixed the notification broker's
+  most recently the 2026-07-21 fix disabling the login/register email,
+  password, and name inputs while their submit is pending (`disabled={loading}`
+  on each `Input` in `apps/auth/app/{login,register}/*-form.tsx` and the
+  near-duplicate `runtime/app/{login,register}/*-form.tsx`) — previously only
+  the submit button reflected the pending state, so the fields stayed
+  editable while a request was in flight; before that the 2026-07-20 fix
+  bypassing the row-less-plugin disabled/access-restricted default in local
+  dev (`NODE_ENV === 'development'`), so a freshly scaffolded plugin appears
+  for its own author without an admin visiting Console > Plugins first;
+  before that the same-day notification hardening pass (RFC 0034): fixed the notification broker's
   module-level singleton never actually being visible to API routes across
   Next.js's separate instrumentation/route module graphs (silently no-op'd
   `sse`/`redis` transport back to polling since RFC 0034 shipped — see

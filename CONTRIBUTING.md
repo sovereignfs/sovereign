@@ -317,18 +317,24 @@ Run workflow** without needing to push a tag.
 
 ## Proposing a feature (RFCs)
 
-Have a feature request or an idea to improve Sovereign? Two paths, depending on how
+Have a feature request or an idea to improve Sovereign? Three paths, depending on how
 fleshed-out it is:
 
 - **Just an idea or a request?** Open a GitHub **issue / feature request**. That's
   the right place to float something, gather interest, and discuss whether it fits.
+- **An open-ended question with no concrete proposal yet?** Write a **research doc**
+  in [`docs/research/`](docs/research/) — findings, options, and a recommendation,
+  without committing to a design. Useful for strategic or technical questions where
+  the shape of the answer isn't known going in (e.g. "how should this scale
+  horizontally?"). Not every research doc graduates to an RFC — a documented
+  "not now" is a fine outcome.
 - **Want to spell it out properly?** Write an **RFC** and open a pull request adding
   it to [`docs/rfcs/`](docs/rfcs/). This path is for proposals that need a detailed
   plan — a design, motivation, alternatives, and tradeoffs worth reviewing as a
   document. An accepted RFC becomes the reference the implementation follows.
 
-The two aren't exclusive: many RFCs start life as an issue and graduate to a written
-proposal once the idea is worth detailing.
+These aren't exclusive: many RFCs start life as an issue or a research doc and
+graduate to a written proposal once the idea is worth detailing.
 
 **Writing an RFC:**
 

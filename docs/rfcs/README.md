@@ -4,6 +4,10 @@ Status at a glance for all Sovereign RFCs. Open the individual file for the full
 proposal, motivation, and impact. Keep this table in sync when an RFC's status
 changes or a new one lands.
 
+Still an open-ended question with no concrete design yet? Start in
+[`docs/research/`](../research/README.md) instead — RFCs are for proposals
+ready to commit to a design.
+
 Proposing one? Copy
 [`TEMPLATE.md`](https://github.com/sovereignfs/sovereign/blob/main/docs/rfcs/TEMPLATE.md)
 to `NNNN-short-slug.md`, fill it in, and add a row below. See

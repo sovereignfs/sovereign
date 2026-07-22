@@ -19,6 +19,14 @@ they are authoritative over assumptions:
 - `ROADMAP.md` — Chronological task index (version → epic task ID → status).
   Full task detail lives in `docs/epics/`. Each task = one branch = one PR.
 
+**Research precedes RFCs.** For an open-ended architectural or strategic
+question with no concrete design yet, write a research doc in
+`docs/research/` (findings, options, a recommendation — not a committed
+design) before writing an RFC. Not every research doc graduates to an RFC;
+a documented "not now" is a valid outcome. See `docs/research/README.md` for
+the template and lifecycle, and `docs/documentation-structure.md` for how it
+fits alongside `docs/rfcs/` and `docs/epics/`.
+
 **Task workflow** — how to start, implement, and complete a task (including the
 `CURRENT_TASK.md` mechanism and epic task IDs): `docs/development-workflow.md`.
 

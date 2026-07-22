@@ -21,6 +21,7 @@ topic has one canonical owner; other pages summarize it and link to that owner.
 | Get started         | Short, sequential paths for users, operators, and app developers | `get-started/`                                   | Yes              |
 | Audience hubs       | Route each audience to canonical guides and references           | `guides/`                                        | Yes              |
 | Technical reference | Describe current behavior, configuration, APIs, and architecture | Named root references and `plugins/`             | Yes              |
+| Research            | Explore open-ended questions before a design is proposed         | `research/`                                      | No               |
 | Decisions           | Record accepted and proposed cross-cutting designs               | `rfcs/`                                          | Yes, with status |
 | Project operations  | Track tasks, plans, findings, and internal coordination          | `epics/`, `adhoc/`, roadmap and planning files   | No               |
 
@@ -35,6 +36,11 @@ topic has one canonical owner; other pages summarize it and link to that owner.
   RFCs and must not be presented as shipped functionality.
 - RFCs explain decisions and proposals. They do not replace current reference
   documentation after implementation.
+- Research docs explore a question before it has a concrete design — findings,
+  options, and a recommendation, not a commitment. A research doc precedes an
+  RFC for open-ended topics; it is not deleted once an RFC lands, and not
+  every research doc graduates to one (a documented "not now" is a valid
+  outcome). See [`research/README.md`](research/README.md).
 - The public product roadmap describes themes. `ROADMAP.md` and `epics/` remain
   the private engineering queue and source of task status.
 

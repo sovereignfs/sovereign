@@ -88,6 +88,20 @@ export { QuantityStepper } from './components/QuantityStepper/QuantityStepper';
 export type { QuantityStepperProps } from './components/QuantityStepper/QuantityStepper';
 export { CheckableListRow } from './components/CheckableListRow/CheckableListRow';
 export type { CheckableListRowProps } from './components/CheckableListRow/CheckableListRow';
+export { CurrencyInput } from './components/CurrencyInput/CurrencyInput';
+export type { CurrencyInputProps } from './components/CurrencyInput/CurrencyInput';
+export { BalanceChip } from './components/BalanceChip/BalanceChip';
+export type { BalanceChipProps } from './components/BalanceChip/BalanceChip';
+export { SplitMethodSelector } from './components/SplitMethodSelector/SplitMethodSelector';
+export type {
+  SplitMethodSelectorProps,
+  SplitMethod,
+} from './components/SplitMethodSelector/SplitMethodSelector';
+export { MemberMultiSelect } from './components/MemberMultiSelect/MemberMultiSelect';
+export type {
+  MemberMultiSelectProps,
+  MemberMultiSelectOption,
+} from './components/MemberMultiSelect/MemberMultiSelect';
 export {
   useLongPress,
   useDoubleTapHandler,

@@ -41,6 +41,16 @@ import { ConfirmDialog } from '../components/ConfirmDialog/ConfirmDialog';
 import { Menu } from '../components/Menu/Menu';
 import { Calendar } from '../components/Calendar/Calendar';
 import { DatePicker } from '../components/DatePicker/DatePicker';
+import { CurrencyInput } from '../components/CurrencyInput/CurrencyInput';
+import { BalanceChip } from '../components/BalanceChip/BalanceChip';
+import {
+  SplitMethodSelector,
+  type SplitMethod,
+} from '../components/SplitMethodSelector/SplitMethodSelector';
+import {
+  MemberMultiSelect,
+  type MemberMultiSelectOption,
+} from '../components/MemberMultiSelect/MemberMultiSelect';
 
 // ---------------------------------------------------------------------------
 // Shared primitives
@@ -751,6 +761,50 @@ function CheckableListRowDemo() {
         label="Bananas"
         icon={<Icon name="banana" size="md" aria-hidden />}
         trailing={<span style={{ fontSize: 13, color: 'var(--sv-color-text-muted)' }}>6 pcs</span>}
+      />
+    </div>
+  );
+}
+
+function CurrencyInputDemo() {
+  const [cents, setCents] = useState<number | null>(4250);
+  return (
+    <CurrencyInput
+      valueCents={cents}
+      onValueChange={setCents}
+      placeholder="0.00"
+      aria-label="Amount"
+    />
+  );
+}
+
+function SplitMethodSelectorDemo() {
+  const [value, setValue] = useState<SplitMethod>('equal');
+  return <SplitMethodSelector value={value} onChange={setValue} />;
+}
+
+const MEMBER_MULTI_SELECT_OPTIONS: MemberMultiSelectOption[] = [
+  { id: '1', label: 'Priya' },
+  { id: '2', label: 'Jamie (guest)' },
+  { id: '3', label: 'Sam' },
+];
+
+function MemberMultiSelectDemo() {
+  const [selected, setSelected] = useState<Set<string>>(new Set(['1', '3']));
+  return (
+    <div style={{ width: '100%' }}>
+      <MemberMultiSelect
+        options={MEMBER_MULTI_SELECT_OPTIONS}
+        selectedIds={selected}
+        onToggle={(id, checked) => {
+          setSelected((prev) => {
+            const next = new Set(prev);
+            if (checked) next.add(id);
+            else next.delete(id);
+            return next;
+          });
+        }}
+        label="Split between"
       />
     </div>
   );
@@ -1493,6 +1547,17 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               <StatusBadge status="pending-delete" />
             </ComponentCard>
 
+            {/* BalanceChip */}
+            <ComponentCard
+              name="BalanceChip"
+              importLine="import { BalanceChip } from '@sovereignfs/ui';"
+              usage="Inline net-balance indicator — green when owed to them, red when they owe, neutral when settled. Not tied to expense-splitting specifically."
+            >
+              <BalanceChip amountCents={2500} currency="USD" />
+              <BalanceChip amountCents={-1350} currency="USD" />
+              <BalanceChip amountCents={0} currency="USD" />
+            </ComponentCard>
+
             {/* Input */}
             <ComponentCard
               name="Input"
@@ -1503,6 +1568,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                 <Input placeholder="Email address" type="email" style={{ width: '100%' }} />
                 <Input placeholder="Disabled" disabled style={{ width: '100%' }} />
               </div>
+            </ComponentCard>
+
+            {/* CurrencyInput */}
+            <ComponentCard
+              name="CurrencyInput"
+              importLine="import { CurrencyInput } from '@sovereignfs/ui';"
+              usage="Decimal amount entry that reports its value as integer cents. Preserves in-progress typing instead of reformatting on every keystroke."
+            >
+              <CurrencyInputDemo />
             </ComponentCard>
 
             {/* TagInput */}
@@ -1583,6 +1657,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Pill-based 2–3 option picker for inline use (role selector, theme switcher). Renders as role='radiogroup'."
             >
               <SegmentedDemo />
+            </ComponentCard>
+
+            {/* SplitMethodSelector */}
+            <ComponentCard
+              name="SplitMethodSelector"
+              importLine="import { SplitMethodSelector } from '@sovereignfs/ui';"
+              usage="The four-way Equal/Amount/Percentage/Shares picker shared by any cost-splitting plugin. A thin SegmentedControl preset."
+            >
+              <SplitMethodSelectorDemo />
             </ComponentCard>
 
             {/* Tabs */}
@@ -1920,6 +2003,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Whole-row tap target that toggles a checked state, with strike-through on the label — for 'tap the row to mark it done' lists (not a form checkbox)."
             >
               <CheckableListRowDemo />
+            </ComponentCard>
+
+            {/* MemberMultiSelect */}
+            <ComponentCard
+              name="MemberMultiSelect"
+              importLine="import { MemberMultiSelect } from '@sovereignfs/ui';"
+              usage="Checkbox list for picking any number of people from an already-resolved option set. Domain-agnostic about guest vs. instance-user options; pair with SuggestionInput for search + add."
+            >
+              <MemberMultiSelectDemo />
             </ComponentCard>
 
             {/* Checkbox */}

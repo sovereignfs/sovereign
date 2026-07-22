@@ -1,0 +1,27 @@
+.group {
+  display: grid;
+  gap: var(--sv-space-2);
+}
+
+.label {
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-muted);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-2);
+}
+
+.trailing {
+  flex-shrink: 0;
+  max-width: 8rem;
+}
+
+.hint {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+}

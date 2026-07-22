@@ -1,0 +1,32 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 2px var(--sv-space-2);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-full);
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-semibold);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.owed {
+  color: var(--sv-color-success-text);
+  background: var(--sv-color-success-surface);
+  border-color: var(--sv-color-success-border);
+}
+
+.owes {
+  color: var(--sv-color-error-text);
+  background: var(--sv-color-error-surface);
+  border-color: var(--sv-color-error-border);
+}
+
+.settled {
+  color: var(--sv-color-text-muted);
+  background: var(--sv-color-surface-sunken);
+  border-color: var(--sv-color-border);
+}

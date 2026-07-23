@@ -69,6 +69,20 @@ export function assertPluginEncryptionRequirement(
  * A failed plugin migration is logged but does not abort startup — the
  * compatibility check that follows will gate access to the broken plugin.
  *
+ * `registry` iterates in a fixed (alphabetical, by manifest id) order, not
+ * dependency or install order. A plugin's unmet `database.requireEncryption`
+ * (RFC 0071) is still fatal — that promise must not be silently downgraded —
+ * but it must not take every *other* plugin down with it just because they
+ * happen to sort after it. So each plugin's encryption check is isolated in
+ * its own try/catch: on failure, skip only that plugin's own provisioning and
+ * keep going, collecting the violation. Only after every other plugin has had
+ * its migrations attempted does this function throw — once — naming every
+ * plugin that violated its requirement. (Previously this check was made
+ * outside the per-plugin try/catch specifically so it *would* throw and abort
+ * the loop — but an uncaught throw here aborts the whole `for` loop, not just
+ * this plugin's iteration, so every alphabetically-later plugin silently
+ * never got migrated: a real incident, not a hypothetical.)
+ *
  * Called from `instrumentation.ts` register() at Node.js server startup.
  */
 export async function runAllPluginMigrations(): Promise<void> {
@@ -79,6 +93,7 @@ export async function runAllPluginMigrations(): Promise<void> {
   // development dirs may use a different name (e.g. plugins/sovereign-tasks.local/).
   // Scanning lets both cases resolve correctly without assuming dir === id.
   const idToDir = buildIdToDirMap();
+  const encryptionViolations: string[] = [];
 
   for (const manifest of registry) {
     const isolation = manifestDatabaseIsolation(manifest.database);
@@ -93,7 +108,15 @@ export async function runAllPluginMigrations(): Promise<void> {
       : platformDialect;
 
     if (isIsolated) {
-      assertPluginEncryptionRequirement(manifest.id, manifest.database, pluginDialect);
+      try {
+        assertPluginEncryptionRequirement(manifest.id, manifest.database, pluginDialect);
+      } catch (err) {
+        // Don't provision/migrate this plugin's (would-be-unencrypted)
+        // isolated database — that's exactly the outcome the requirement
+        // exists to prevent — but every other plugin still gets its turn.
+        encryptionViolations.push((err as Error).message);
+        continue;
+      }
     }
 
     const folder = pluginMigrationsFolder(pluginDir, pluginDialect);
@@ -118,6 +141,13 @@ export async function runAllPluginMigrations(): Promise<void> {
     } catch (err) {
       console.error(`[sovereign] Failed to run migrations for plugin "${manifest.id}":`, err);
     }
+  }
+
+  if (encryptionViolations.length > 0) {
+    throw new Error(
+      `${encryptionViolations.length} plugin(s) require database encryption but it is not ` +
+        `enabled:\n${encryptionViolations.map((message) => `  - ${message}`).join('\n')}`,
+    );
   }
 }
 

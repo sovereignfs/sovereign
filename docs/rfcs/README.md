@@ -5,8 +5,8 @@ proposal, motivation, and impact. Keep this table in sync when an RFC's status
 changes or a new one lands.
 
 Still an open-ended question with no concrete design yet? Start in
-[`docs/research/`](../research/README.md) instead — RFCs are for proposals
-ready to commit to a design.
+`docs/research/` instead — RFCs are for proposals ready to commit to a
+design.
 
 Proposing one? Copy
 [`TEMPLATE.md`](https://github.com/sovereignfs/sovereign/blob/main/docs/rfcs/TEMPLATE.md)

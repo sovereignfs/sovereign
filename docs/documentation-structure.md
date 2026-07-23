@@ -40,7 +40,7 @@ topic has one canonical owner; other pages summarize it and link to that owner.
   options, and a recommendation, not a commitment. A research doc precedes an
   RFC for open-ended topics; it is not deleted once an RFC lands, and not
   every research doc graduates to one (a documented "not now" is a valid
-  outcome). See [`research/README.md`](research/README.md).
+  outcome). See `docs/research/README.md`.
 - The public product roadmap describes themes. `ROADMAP.md` and `epics/` remain
   the private engineering queue and source of task status.
 

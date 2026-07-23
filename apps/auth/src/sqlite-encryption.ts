@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import Database from 'better-sqlite3-multiple-ciphers';
 
@@ -47,7 +47,21 @@ function markerPath(dataDir: string): string {
   return join(dataDir, MARKER_FILENAME);
 }
 
-/** Same fail-fast guard as `packages/db/src/sqlite-encryption.ts` — see there for the four cases. */
+/** Same "does anything already exist" check as `packages/db/src/sqlite-encryption.ts` — see there. */
+function hasExistingSqliteFiles(dataDir: string): boolean {
+  for (const name of ['sovereign.db', 'auth.db']) {
+    if (existsSync(join(dataDir, name))) return true;
+  }
+  const pluginsDir = join(dataDir, 'plugins');
+  if (existsSync(pluginsDir)) {
+    for (const entry of readdirSync(pluginsDir, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.endsWith('.db')) return true;
+    }
+  }
+  return false;
+}
+
+/** Same fail-fast guard as `packages/db/src/sqlite-encryption.ts` — see there for the five cases. */
 export function checkEncryptionMarker(dataDir: string, keyPresent: boolean): void {
   const marker = markerPath(dataDir);
   const markerPresent = existsSync(marker);
@@ -60,11 +74,14 @@ export function checkEncryptionMarker(dataDir: string, keyPresent: boolean): voi
     );
   }
   if (!markerPresent && keyPresent) {
-    throw new DbEncryptionConfigError(
-      `${KEY_ENV} is set, but the data directory at ${dataDir} has not been ` +
-        'encrypted yet. Run `sv db encrypt` first to convert existing plaintext ' +
-        'databases, or unset the key to keep running in plaintext.',
-    );
+    if (hasExistingSqliteFiles(dataDir)) {
+      throw new DbEncryptionConfigError(
+        `${KEY_ENV} is set, but the data directory at ${dataDir} has not been ` +
+          'encrypted yet. Run `sv db encrypt` first to convert existing plaintext ' +
+          'databases, or unset the key to keep running in plaintext.',
+      );
+    }
+    writeEncryptionMarker(dataDir);
   }
 }
 

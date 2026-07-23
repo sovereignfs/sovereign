@@ -115,7 +115,7 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.44.1`**
+  to `1.0.0` marks the public release.** The current version is **`0.44.2`**
   (all pre-v1 roadmap tasks through slot `0.13.0` complete; subsequent minor
   bumps track post-slot tasks such as the admin-managed external provider config,
   the RFC 0065 plugin catalog/access-policy work, private plugin repositories
@@ -132,7 +132,19 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   `SOVEREIGN_DB_ENCRYPTION_KEY`, `sv db encrypt`/`decrypt`, and the manifest
   `database.requireEncryption` field, carved out of RFC 0008's deferred
   Tier 2), and patch versions cover UI additions and production hotfixes —
-  most recently the 2026-07-21 fix disabling the login/register email,
+  most recently the 2026-07-23 fix to RFC 0071's marker guard
+  (`checkEncryptionMarker` in `packages/db/src/sqlite-encryption.ts` and its
+  `apps/auth` twin): a genuinely fresh instance that sets
+  `SOVEREIGN_DB_ENCRYPTION_KEY` before ever starting — the documented
+  "Enabling on a fresh instance" flow in `docs/self-hosting.md` — could never
+  actually boot, because the guard treated "marker absent, key present" as
+  always meaning pre-existing plaintext data to convert, with no exception
+  for an empty data directory; worse, `sv db encrypt` also declined to write
+  the marker when it found zero files, so following the guard's own error
+  message led to a dead end. The guard now only demands the migration tool
+  when a pre-existing `sovereign.db`/`auth.db`/isolated plugin `.db` file is
+  actually found; otherwise it writes the marker itself and proceeds; before
+  that the 2026-07-21 fix disabling the login/register email,
   password, and name inputs while their submit is pending (`disabled={loading}`
   on each `Input` in `apps/auth/app/{login,register}/*-form.tsx` and the
   near-duplicate `runtime/app/{login,register}/*-form.tsx`) — previously only

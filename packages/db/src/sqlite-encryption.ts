@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import Database from 'better-sqlite3-multiple-ciphers';
 import { findWorkspaceRoot } from './client';
@@ -70,6 +70,26 @@ export function isEncryptionMarked(dataDir: string): boolean {
 }
 
 /**
+ * True if `dataDir` already contains at least one plaintext SQLite file this
+ * instance would own (`sovereign.db`, `auth.db`, or anything under
+ * `plugins/*.db`). Distinguishes "existing plaintext data the operator must
+ * run `sv db encrypt` on first" from a genuinely fresh instance with nothing
+ * to protect yet — see `checkEncryptionMarker`.
+ */
+function hasExistingSqliteFiles(dataDir: string): boolean {
+  for (const name of ['sovereign.db', 'auth.db']) {
+    if (existsSync(join(dataDir, name))) return true;
+  }
+  const pluginsDir = join(dataDir, 'plugins');
+  if (existsSync(pluginsDir)) {
+    for (const entry of readdirSync(pluginsDir, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.endsWith('.db')) return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Fail-fast guard against a key/on-disk-state mismatch (RFC 0071 §3). Call
  * once per process, before opening any SQLite file in `dataDir`:
  *
@@ -79,10 +99,15 @@ export function isEncryptionMarked(dataDir: string): boolean {
  *   missing. Fail loudly here rather than let every subsequent `Database`
  *   open fail with SQLCipher's generic, indistinguishable "file is not a
  *   database" error.
- * - marker absent,  key present → this data directory still has pre-existing
- *   plaintext databases. Refuse to start rather than silently begin writing
- *   plaintext pages into files the operator now believes are encrypted;
- *   point at the migration tool instead.
+ * - marker absent,  key present, pre-existing plaintext files → refuse to
+ *   start rather than silently begin writing plaintext pages into files the
+ *   operator now believes are encrypted; point at the migration tool instead.
+ * - marker absent,  key present, no pre-existing files → a fresh instance
+ *   enabling encryption from day one (docs/self-hosting.md "Enabling on a
+ *   fresh instance"). Nothing plaintext exists to protect, so write the
+ *   marker now rather than fail — every file this and any sibling process
+ *   (e.g. the auth server, sharing this data dir) creates from here on is
+ *   opened with the key already applied.
  */
 export function checkEncryptionMarker(dataDir: string, keyPresent: boolean): void {
   const marker = markerPath(dataDir);
@@ -96,11 +121,14 @@ export function checkEncryptionMarker(dataDir: string, keyPresent: boolean): voi
     );
   }
   if (!markerPresent && keyPresent) {
-    throw new DbEncryptionConfigError(
-      `${KEY_ENV} is set, but the data directory at ${dataDir} has not been ` +
-        'encrypted yet. Run `sv db encrypt` first to convert existing plaintext ' +
-        'databases, or unset the key to keep running in plaintext.',
-    );
+    if (hasExistingSqliteFiles(dataDir)) {
+      throw new DbEncryptionConfigError(
+        `${KEY_ENV} is set, but the data directory at ${dataDir} has not been ` +
+          'encrypted yet. Run `sv db encrypt` first to convert existing plaintext ' +
+          'databases, or unset the key to keep running in plaintext.',
+      );
+    }
+    writeEncryptionMarker(dataDir);
   }
 }
 

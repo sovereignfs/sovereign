@@ -115,7 +115,7 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.44.2`**
+  to `1.0.0` marks the public release.** The current version is **`0.44.3`**
   (all pre-v1 roadmap tasks through slot `0.13.0` complete; subsequent minor
   bumps track post-slot tasks such as the admin-managed external provider config,
   the RFC 0065 plugin catalog/access-policy work, private plugin repositories
@@ -132,7 +132,23 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   `SOVEREIGN_DB_ENCRYPTION_KEY`, `sv db encrypt`/`decrypt`, and the manifest
   `database.requireEncryption` field, carved out of RFC 0008's deferred
   Tier 2), and patch versions cover UI additions and production hotfixes —
-  most recently the 2026-07-23 fix to RFC 0071's marker guard
+  most recently the 2026-07-24 fix to `runAllPluginMigrations`
+  (`runtime/src/plugin-migrations.ts`): a plugin's unmet
+  `database.requireEncryption` (RFC 0071) threw uncaught inside the plugin
+  loop, which iterates `registry` in a fixed alphabetical order — the throw
+  aborted the whole `for` loop, not just that plugin's iteration, so every
+  plugin sorting alphabetically after the offending one silently never got
+  its migrations run (a real production incident: upgrading an instance with
+  `sovereign-healthlog` installed, whose manifest requires encryption, broke
+  every plugin after "healthlog" alphabetically — `plainwrite`, `shopper`,
+  etc. — with "no such table" 500s, while the platform itself kept running).
+  Each plugin's encryption-requirement check is now isolated in its own
+  try/catch inside the loop; a violation skips only that plugin's own
+  provisioning, and every other plugin still gets migrated. The function
+  still throws — once, naming every violating plugin — only after the loop
+  completes, preserving the original "this must be loud, not silent" intent
+  without the collateral damage; before that the 2026-07-23 fix to RFC 0071's
+  marker guard
   (`checkEncryptionMarker` in `packages/db/src/sqlite-encryption.ts` and its
   `apps/auth` twin): a genuinely fresh instance that sets
   `SOVEREIGN_DB_ENCRYPTION_KEY` before ever starting — the documented

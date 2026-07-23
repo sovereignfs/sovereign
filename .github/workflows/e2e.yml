@@ -47,12 +47,22 @@ jobs:
       # Settings → Secrets and variables → Actions.
       # E2E_AUTH_SECRET: any stable base64 string (openssl rand -base64 32)
       # E2E_ADMIN_KEY: any string used as the sovereign admin key
+      #
+      # SOVEREIGN_DB_ENCRYPTION_KEY is generated fresh per run, not a stored
+      # secret — the checkout (and its data/ dir) is ephemeral per job, so
+      # there's nothing to decrypt across runs and no key to persist. Required
+      # since sovereign-healthlog (RFC 0071 `database.requireEncryption: true`,
+      # pinned in sovereign.plugins.json) makes the whole platform refuse to
+      # boot without this set. The webServer starts against a brand-new,
+      # empty data/ dir, so the key-set-before-first-boot path applies (no
+      # `sv db encrypt` migration step needed).
       - name: Write .env
         run: |
           {
             echo "AUTH_SECRET=${{ secrets.E2E_AUTH_SECRET }}"
             echo "SOVEREIGN_AUTH_SECRET=${{ secrets.E2E_AUTH_SECRET }}"
             echo "SOVEREIGN_ADMIN_KEY=${{ secrets.E2E_ADMIN_KEY }}"
+            echo "SOVEREIGN_DB_ENCRYPTION_KEY=$(openssl rand -base64 32)"
             echo "SOVEREIGN_AUTH_URL=http://localhost:3001"
             echo "SOVEREIGN_AUTH_PUBLIC_URL=http://localhost:3001"
             echo "NEXT_PUBLIC_RUNTIME_URL=http://localhost:3000"

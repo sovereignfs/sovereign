@@ -81,6 +81,7 @@ export type { SdkHost } from './host';
  * import { getOrCreateDeviceId, storeDeviceKey } from '@sovereignfs/sdk/e2ee-device';
  * import { encryptBlob, encryptJson } from '@sovereignfs/sdk/e2ee-object';
  * import { getE2eeLocalState } from '@sovereignfs/sdk/e2ee-state';
+ * import { offline } from '@sovereignfs/sdk/offline';
  * ```
  *
  * Types are erased at compile time (no runtime module graph), so they stay

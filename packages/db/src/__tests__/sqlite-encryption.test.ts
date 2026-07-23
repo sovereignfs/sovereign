@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -76,8 +76,27 @@ describe('encryption marker', () => {
     expect(() => checkEncryptionMarker(dataDir, false)).toThrow(DbEncryptionConfigError);
   });
 
-  it('fails fast when the key is present but the data dir was never encrypted', () => {
+  it('fails fast when the key is present and pre-existing plaintext files exist', () => {
+    writeFileSync(join(dataDir, 'sovereign.db'), '');
     expect(() => checkEncryptionMarker(dataDir, true)).toThrow(DbEncryptionConfigError);
+  });
+
+  it('fails fast when the key is present and an isolated plugin db pre-exists', () => {
+    mkdirSync(join(dataDir, 'plugins'));
+    writeFileSync(join(dataDir, 'plugins', 'fs.example.one.db'), '');
+    expect(() => checkEncryptionMarker(dataDir, true)).toThrow(DbEncryptionConfigError);
+  });
+
+  it('writes the marker instead of throwing on a genuinely fresh, empty data dir', () => {
+    // "Enabling on a fresh instance" (docs/self-hosting.md): the key is set
+    // before the instance is ever started, so there is nothing plaintext to
+    // protect — the guard should let the boot proceed by marking the dir as
+    // encrypted, not fail with "run `sv db encrypt` first".
+    expect(() => checkEncryptionMarker(dataDir, true)).not.toThrow();
+    expect(isEncryptionMarked(dataDir)).toBe(true);
+    // A second call (e.g. the sibling auth process, or the next SQLite file
+    // this same process opens) now sees the marker and is a normal no-op.
+    expect(() => checkEncryptionMarker(dataDir, true)).not.toThrow();
   });
 
   it('isEncryptionMarked reflects marker presence', () => {

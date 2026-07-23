@@ -366,6 +366,18 @@ To rotate to a new key: `sv db decrypt` with the old key set, then
 production deployment, run both through the `tools` service the same way as
 above, substituting `db decrypt` / `db encrypt` for the command.
 
+**Rotation is not atomic.** Between the `db decrypt` and `db encrypt` steps,
+every SQLite file is genuinely plaintext on disk — there is no single-pass
+re-key across a whole file. Keep that window as short as possible (script the
+two commands back to back) and make sure the automatic pre-step backups from
+both commands don't linger anywhere reachable once rotation succeeds.
+
+Both commands are safe to run more than once: `sv db encrypt` refuses with
+"already marked as encrypted — nothing to do" if the marker is already
+present, and `sv db decrypt` refuses with "not marked as encrypted — nothing
+to do" if it isn't. Neither will double-encrypt a file or silently no-op in a
+way that leaves you unsure what state the data is in.
+
 ### The key is yours to keep
 
 **Losing `SOVEREIGN_DB_ENCRYPTION_KEY` means losing the data** — there is no
@@ -375,6 +387,25 @@ archive encrypted under a key stored only inside that same archive is
 worthless. This is the same posture as `AUTH_SECRET` and `SOVEREIGN_VAULT_KEY`,
 just with higher stakes — the blast radius of losing this one is the entire
 database, not one feature.
+
+### Troubleshooting
+
+The instance fails fast on any key/on-disk-state mismatch rather than risk
+silently mixing plaintext and encrypted data. Each case below has one cause
+and one fix:
+
+| Error you see (at startup, or from `sv db encrypt`/`decrypt`)                                                                                  | What it means                                                                                       | Fix                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `This instance's databases are encrypted (…/.db-encrypted is present) but SOVEREIGN_DB_ENCRYPTION_KEY is not set.`                             | The data directory was converted, but this process doesn't have the key.                            | Set `SOVEREIGN_DB_ENCRYPTION_KEY` to the key used to encrypt it, identically on both `runtime` and `auth`.                                |
+| `SOVEREIGN_DB_ENCRYPTION_KEY is set, but the data directory at … has not been encrypted yet.`                                                  | The key is set, and this directory already has plaintext `sovereign.db`/`auth.db`/plugin databases. | Run `sv db encrypt` first (see "Converting an existing plaintext instance" above).                                                        |
+| `Could not open … with the configured SOVEREIGN_DB_ENCRYPTION_KEY — the key is likely wrong, or this file was encrypted with a different one.` | The marker says encrypted, a key is present, but it doesn't open this specific file.                | Double-check the key value (and that it's identical across `runtime`/`auth`) — a typo here reads the same as data loss.                   |
+| `Could not get exclusive access to … Either the key is wrong, the file is not a valid SQLite database, or the server is still running.`        | `sv db encrypt`/`decrypt` couldn't get an exclusive lock on the file.                               | Stop `runtime` and `auth` first — this guard can't tell a live server apart from a wrong key, so it refuses either way rather than guess. |
+| `SOVEREIGN_DB_ENCRYPTION_KEY must be a 32-byte key encoded as base64, base64url, or 64-character hex.`                                         | The value doesn't decode to exactly 32 bytes.                                                       | Regenerate with `openssl rand -base64 32` and paste it verbatim — no surrounding quotes or trailing newline.                              |
+
+None of these leave data in a partially-converted state: `sv db encrypt`/
+`decrypt` only write the marker after every file has converted, and a mid-run
+failure leaves the original files untouched (restore from the automatic
+backup if in doubt).
 
 ### Interaction with SQLite → PostgreSQL migration
 

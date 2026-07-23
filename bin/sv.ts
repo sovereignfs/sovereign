@@ -39,12 +39,25 @@ import {
   scaffoldPlugin,
 } from './helpers';
 import { resolveToken, withGitCredentials } from '../scripts/install-plugins';
+import { loadRootEnv } from '../scripts/load-root-env';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPTS_DIR = join(ROOT, 'scripts');
 const PLUGINS_DIR = join(ROOT, 'plugins');
 const GENERATE = join(SCRIPTS_DIR, 'generate-registry.ts');
 const INSTALL = join(SCRIPTS_DIR, 'install-plugins.ts');
+
+// Load the root `.env` before any command runs — mirrors `scripts/dev.ts`.
+// `sv` commands (seed, db encrypt/decrypt, user reset-mfa, …) previously read
+// only `process.env`, so a value set in `.env` but not exported in the shell
+// (or in a spawned child process, e.g. Playwright's `global-setup.ts` running
+// `sv seed` via `execSync`) was silently invisible to them — surfacing as
+// confusing key/marker-mismatch errors from `SOVEREIGN_DB_ENCRYPTION_KEY`
+// despite the value being right there in `.env`. `loadRootEnv` never
+// overrides a value already present in `process.env` (e.g. real env vars
+// injected by Docker Compose or CI), so this is a no-op wherever `.env`
+// doesn't exist or its values are already set some other way.
+loadRootEnv(ROOT);
 
 /**
  * Run a command to completion, inheriting stdio. Returns its exit code; exits

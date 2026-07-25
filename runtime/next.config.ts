@@ -53,6 +53,24 @@ const nextConfig: NextConfig = {
 // safe to cache-first, unlike the per-user SSR "pages" entry below.
 const offlineRoutePrefixes = getOfflineRoutePrefixes();
 
+// Bare `/` deliberately has no entry here — `@ducanh2912/next-pwa`'s
+// `dynamicStartUrl`/`cacheStartUrl` options (both default `true`) already
+// `unshift` an automatic `NetworkFirst` route for `/` ("start-url" cache)
+// ahead of this file's entire `runtimeCaching` array, so a custom match for
+// `/` here would never actually be reached by Workbox regardless of array
+// order. That built-in route already does what's needed — serve the network
+// response, fall back to the cached one when offline — so `/` gets working
+// offline access "for free". What makes it *safe* is entirely on the
+// content side: `middleware.ts` flags `/` with `x-sovereign-offline-route`
+// unconditionally (alongside this file's manifest-driven list), so
+// `(platform)/layout.tsx` renders the same neutral shell for it as for any
+// other offline route, and Launcher (the default platform root,
+// `offline.root: true` in its manifest) renders a neutral page too — so the
+// response next-pwa caches for `/` is neutral by construction, for the
+// *default* configuration. An admin-configured, non-offline-aware root
+// plugin could still leave a stale/per-user document cached at `/` from
+// whenever it was last visited — a narrow, accepted edge case, not solved
+// here.
 function underOfflineRoutePrefix(pathname: string): boolean {
   return offlineRoutePrefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),

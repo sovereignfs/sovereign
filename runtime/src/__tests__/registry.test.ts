@@ -10,13 +10,13 @@ function manifestWithOffline(
   id: string,
   routePrefix: string,
   offlineRoutePrefixes?: string[],
+  root?: boolean,
 ): SovereignManifest {
+  const routes = offlineRoutePrefixes?.map((prefix) => ({ prefix }));
   return {
     id,
     routePrefix,
-    offline: offlineRoutePrefixes
-      ? { routes: offlineRoutePrefixes.map((prefix) => ({ prefix })) }
-      : undefined,
+    offline: root || routes ? { routes, root } : undefined,
   } as unknown as SovereignManifest;
 }
 
@@ -76,5 +76,15 @@ describe('getOfflineRoutePrefixes', () => {
     expect(
       getOfflineRoutePrefixes([manifestWithOffline('a', '/a'), manifestWithOffline('b', '/b')]),
     ).toEqual([]);
+  });
+
+  it('includes the bare routePrefix for a plugin declaring offline.root', () => {
+    const plugins = [manifestWithOffline('fs.sovereign.launcher', '/launcher', undefined, true)];
+    expect(getOfflineRoutePrefixes(plugins)).toEqual(['/launcher']);
+  });
+
+  it('includes both the bare routePrefix and sub-route prefixes when a plugin declares both', () => {
+    const plugins = [manifestWithOffline('fs.sovereign.wallet', '/wallet', ['/cards'], true)];
+    expect(getOfflineRoutePrefixes(plugins)).toEqual(['/wallet/cards', '/wallet']);
   });
 });

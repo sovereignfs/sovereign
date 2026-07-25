@@ -411,7 +411,16 @@ saved card, today's task list, the current shopping list).
 }
 ```
 
-**Sub-fields** (`offline.routes`, each entry):
+**Sub-fields**:
+
+| Field      | Type    | Required | Description                                                                                                                                                  |
+| ---------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `routes[]` | array   | no\*     | Sub-path entries, each relative to `routePrefix` (see below).                                                                                                |
+| `root`     | boolean | no\*     | Marks this plugin's own bare `routePrefix` page (not a sub-path) as offline-capable — e.g. a single-page plugin whose whole UI lives at its top-level route. |
+
+\* At least one of `root` or `routes` must be present.
+
+**`routes[]` entry fields**:
 
 | Field         | Type   | Required | Description                                                                                                                                                      |
 | ------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -422,6 +431,20 @@ Given the example above, `/wallet/cards/*` is offline-capable. Prefixes must
 be unique within a plugin. `offline` requires no permission and grants
 **no auth exemption** — it is purely a caching/rendering declaration, unlike
 `publicRoutes`.
+
+`root: true` is kept as a separate flag rather than allowing `routes[].prefix`
+to be `/` — that restriction on sub-path entries stays in place (it forces
+explicit enumeration of a plugin's offline-capable paths), while `root` is an
+orthogonal, explicit opt-in for a plugin's own top-level page:
+
+```json
+{
+  "routePrefix": "/launcher",
+  "offline": { "root": true }
+}
+```
+
+A plugin may declare `root`, `routes`, or both.
 
 **What the platform does:**
 

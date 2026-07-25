@@ -1,7 +1,10 @@
 # RFC 0074 — Offline-capable plugin routes
 
-**Status:** Partially implemented — platform plumbing (manifest field, SDK
-surface, SW precaching, logout purge) is in place; no plugin has adopted it yet\
+**Status:** Implemented — platform plumbing (manifest fields `offline.routes`/
+`offline.root`, SDK surface, SW precaching, logout+login purge, shared-shell
+neutrality, Launcher as the PWA cold-start entry point) is in place; Shopper
+and Wallet have adopted `offline.routes` in their own repositories, Launcher
+adopts `offline.root`\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** `packages/manifest` (new `offline` manifest field), `packages/sdk`
@@ -11,12 +14,12 @@ worker generation in `next.config.ts` / `scripts/`, logout purge), Console
 (mobile responsiveness & PWA), RFC 0042 (public plugin routes — manifest
 route-list precedent), and the per-user SSR caching rule in CLAUDE.md\
 **Incorporated into plan:** No roadmap slot or epic task ID assigned. Platform
-plumbing shipped directly on `feat/offline-capable-plugins` (manifest field, SDK
-surface, SW precaching, logout purge — §§1–4 of Proposed design, all landed).
-No installed plugin declares `offline` yet, so this is a no-op in production
-until a plugin opts in; adopting a route (e.g. Wallet's Cards) is separate,
-plugin-repo work. Offline **writes** (outbox + sync) remain explicitly out of
-scope, left to a future RFC.
+plumbing shipped directly on `feat/offline-capable-plugins` (manifest fields,
+SDK surface, SW precaching, logout+login purge, shared-shell neutrality,
+Launcher's `offline.root` adoption — §§1–6 of Proposed design, all landed).
+Console surfacing (open question 5) remains optional, not built. Offline
+**writes** (outbox + sync) remain explicitly out of scope, left to a future
+RFC.
 
 ---
 
@@ -349,6 +352,54 @@ never-reconnected device between one user's session ending and the next
 sign-in, and only reaches data the offline route itself already puts in a
 user-neutral, precache-safe shell.
 
+### 6. Launcher — the PWA cold-start entry point (`offline.root`, Changelog 0.5)
+
+The PWA's `start_url` is `/`, not any plugin's own `routePrefix` — a fully
+cold relaunch (process killed, zero connectivity for the whole session) hits
+`/` before the user ever sees anything to navigate from. Until this addition,
+`/` was ordinary per-user SSR (middleware rewrites it server-side to whichever
+plugin is configured as the platform root — Launcher by default, RFC PLT-14),
+so a cold offline relaunch dead-ended at the generic `/offline` fallback with
+no way to reach an already-cached offline route like Shopper's list.
+
+**New manifest field `offline.root: boolean`** — orthogonal to `routes[]`,
+which keeps its existing restriction that a sub-path entry can't be `/` (that
+restriction forces explicit enumeration of sub-paths; `root` is a separate,
+explicit opt-in for a single-page plugin's own top-level route, generalizing
+beyond Launcher to any plugin whose whole UI lives at its bare `routePrefix`).
+`getOfflineRoutePrefixes()` includes the bare `routePrefix` for any manifest
+declaring it.
+
+**Launcher (`plugins/launcher/`) adopted it**: `manifest.json` now declares
+`offline: { root: true }`; `app/page.tsx` was rewritten to the same
+neutral-shell + client-hydration pattern as Shopper/Wallet — all data
+(installed-plugin tiles, the self-service directory) now fetched client-side
+in a new `LauncherOfflineView.tsx` via `/api/plugins` (already
+server-filtered per user/role) and a new `GET /api/plugins/directory` route
+(added so the self-service directory section — previously only computed
+server-side via `getSelfServiceDirectory` — survives the move to client
+fetching, preserving full feature parity rather than dropping it).
+
+**`/` itself needed no new service-worker cache entry.** `@ducanh2912/next-pwa`'s
+`dynamicStartUrl`/`cacheStartUrl` options (both default `true`) already
+`unshift` an automatic `NetworkFirst` route for `/` ("start-url" cache) ahead
+of `next.config.ts`'s entire `runtimeCaching` array — a custom match for `/`
+in the `offline-shells` matcher would never actually be reached by Workbox
+regardless of array order, so `underOfflineRoutePrefix()` deliberately has no
+special case for it. That built-in route already does what's needed (serve
+network, fall back to cache when offline); what was missing was making the
+_content_ it caches for `/` safe. `middleware.ts` now flags `/` with
+`x-sovereign-offline-route` unconditionally, alongside the manifest-driven
+list, so `PlatformLayout` (§2's "shared platform shell" fix) renders the same
+neutral shell for it as for any other offline route — and since Launcher's
+own page is now neutral too, the response next-pwa's built-in caching
+captures for `/` is neutral by construction, **for the default
+configuration**. An admin who configures a _different_, non-offline-aware
+plugin as the platform root could still leave a stale/per-user document
+cached at `/` from whenever it was last visited — a narrow, accepted edge
+case (non-default config + that plugin not adopting offline), not solved
+here, same category of trade-off as the Known Limitation above.
+
 ### Docker / config impact
 
 None expected: no new env var, port, on-disk path, or native dep. The SW is still
@@ -477,12 +528,14 @@ per step:
    populates the cache), not build-time precached — see §4's narrowed scope.
 4. **Logout purge.** ✅ `AccountMenu.tsx`'s sign-out form awaits
    `offline.clearAll()` before submitting.
-5. **First adopters.** ⬜ Not started. Converting a route in Wallet (Cards),
-   Tasks (current list), or Shopper (current list) to the app-shell +
-   `sdk.offline` pattern is separate, plugin-repo work (these are community
-   plugins, cloned as gitignored `.local` directories in this workspace but
-   living in their own repositories) — out of scope for this branch.
+5. **First adopters.** ✅ Shopper (`/lists/[listId]`) and Wallet (`/cards`,
+   `/cards/[cardId]`) have both adopted the app-shell + `sdk.offline` pattern
+   in their own repositories (community plugins, cloned as gitignored
+   `.local` directories in this workspace) — found during Changelog 0.4's
+   investigation. Tasks has not yet.
 6. **Console surfacing.** ⬜ Not started (optional, per open question 5).
+7. **Launcher — PWA cold-start entry point.** ✅ `offline.root: true`
+   (Changelog 0.5) — see §6.
 
 Offline **writes** (outbox, background sync, conflict resolution) are a separate
 future RFC that builds on the `sdk.offline` store defined here.
@@ -495,3 +548,4 @@ future RFC that builds on the `sdk.offline` store defined here.
 | 0.2     | July 2026 | Steps 1–4 implemented on `feat/offline-capable-plugins`. Revised `sdk.offline` from `(pluginId, userId)` keying to plugin-id-only keying with an unconditional `clearAll()` on logout (open question 2 resolved); narrowed SW precaching from build-time to runtime-populated `CacheFirst` (§4); added `@sovereignfs/sdk/offline` as the import subpath (matching the `e2ee-*` pattern, not the main barrel as originally sketched).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 0.3     | July 2026 | Three hardening passes on the same branch, ahead of merge. **Purge coverage:** added `completeSignIn()` to purge on every sign-in, not just sign-out (§5); closed a cross-tab write/clear race with `BroadcastChannel`; `clearAll()` now also purges the SW's `offline-shells` Cache Storage entries; added a `ClientShell` mount-time check that re-purges on a user-id mismatch. Documented the remaining structural gap as a known limitation (new §5 subsection) rather than a bug — a fully offline, never-reconnected device between one session ending and the next login cannot be purged by any code path, by construction. **SW caching:** `offline-shells` switched `CacheFirst` → `StaleWhileRevalidate` (§4) so a deployed shell change isn't invisible to an online user for up to 30 days. **Enforcement:** open question 3 resolved — `offline-route-neutrality.test.ts` statically scans declared offline routes' SSR source for identity-reading APIs, CI-enforced. **Quota:** open question 4 partially resolved — `offline.set()` gained a 5 MB soft cap and a typed `OfflineQuotaExceededError`; LRU eviction remains open, deferred with offline writes. |
 | 0.4     | July 2026 | Found and fixed a leak the §2 neutrality rule (and its CI scanner) never covered: `runtime/app/(platform)/layout.tsx`, the shared Server Component every default-shell plugin route composes under — including Shopper's and Wallet's now-real offline routes — embeds the authenticated user's name/email/avatar and a personalized, access-policy-filtered, reordered sidebar plugin list directly into SSR output. A full-document response for an offline route bundles this non-neutral shell with the plugin's own (correctly neutral) page into one precached document. Fixed with a `middleware.ts` flag (`x-sovereign-offline-route`, set from `getOfflineRoutePrefixes()`) that `PlatformLayout` reads to render a fixed, identical-for-everyone shell for these routes only — see §2's "shared platform shell" subsection. Every non-offline route is unaffected.                                                                                                                                                                                                                                                                                                   |
+| 0.5     | July 2026 | Made the Launcher itself offline-capable, so a cold PWA relaunch (`start_url: "/"`, zero connectivity for the whole session) lands somewhere useful instead of the generic `/offline` fallback. Added manifest field `offline.root: boolean` (packages/manifest, orthogonal to `routes[]`) — Launcher declares it, and its `page.tsx` was rewritten to the neutral-shell + client-hydration pattern (new `LauncherOfflineView.tsx`, new `GET /api/plugins/directory` route so the self-service directory section keeps working). `/` needed no new service-worker entry — `@ducanh2912/next-pwa`'s built-in `dynamicStartUrl` `NetworkFirst` route for `/` already wins ahead of any custom match — but `middleware.ts` now flags `/` with `x-sovereign-offline-route` unconditionally so the _content_ cached there is neutral (§6, §2). `offline-route-neutrality.test.ts` extended to scan `offline.root` declarations (a plugin's top-level route files, not just `routes[]` sub-paths). Accepted limitation: only guaranteed neutral for the _default_ root-plugin configuration (Launcher); see §6.                                                                      |

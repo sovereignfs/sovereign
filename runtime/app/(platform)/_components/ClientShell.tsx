@@ -3,7 +3,35 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { ToastProvider } from '@sovereignfs/ui';
+import { offline } from '@sovereignfs/sdk/offline';
 import { computeViewportHeight } from '@/src/viewport-height';
+
+/** localStorage marker for the last authenticated user id this device purged
+ *  the offline cache for. `runtime/src/complete-sign-in.ts` already purges
+ *  unconditionally on every fresh login, closing most of the "previous
+ *  session ended without signing out" gap — this catches the remaining
+ *  case where the *same* browser session simply persists across a device
+ *  handoff (a still-valid cookie, no fresh login) as a different account
+ *  than last observed mounting the shell. */
+const LAST_USER_KEY = 'sovereign:offline-last-user';
+
+function purgeIfUserChanged(userId: string | null): void {
+  if (!userId) return;
+  let lastUserId: string | null = null;
+  try {
+    lastUserId = localStorage.getItem(LAST_USER_KEY);
+  } catch {
+    return; // localStorage unavailable — nothing to compare against, skip.
+  }
+  if (lastUserId === userId) return;
+  void offline.clearAll().finally(() => {
+    try {
+      localStorage.setItem(LAST_USER_KEY, userId);
+    } catch {
+      // best-effort — a missed write just means we re-purge next mount.
+    }
+  });
+}
 
 /** Read the current visual viewport height and the rendered mobile header height,
  *  then push both as CSS custom properties onto :root so iOS-PWA-specific stale
@@ -26,8 +54,20 @@ function syncViewport() {
 }
 
 /** Wraps the shell in client providers and installs viewport-sync hooks. */
-export function ClientShell({ children }: { children: React.ReactNode }) {
+export function ClientShell({
+  children,
+  userId,
+}: {
+  children: React.ReactNode;
+  userId: string | null;
+}) {
   const pathname = usePathname();
+
+  // Mount-only: catches a persisted session belonging to a different user
+  // than this device last purged for (see purgeIfUserChanged above).
+  useEffect(() => {
+    purgeIfUserChanged(userId);
+  }, []);
 
   useEffect(() => {
     syncViewport();

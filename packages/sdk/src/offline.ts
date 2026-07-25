@@ -49,6 +49,7 @@ function pluginKeyRange(pluginId: string): IDBKeyRange {
 }
 
 function openDb(): Promise<IDBDatabase> {
+  ensureTabState();
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
@@ -66,11 +67,102 @@ function openDb(): Promise<IDBDatabase> {
  * and re-checks it just before committing; if a logout's `clearAll` ran in
  * between, the write is dropped instead of silently resurrecting the
  * outgoing session's data right after the purge that was supposed to remove
- * it. Doesn't close every possible ordering (two independent IndexedDB
- * connections have no cross-transaction ordering guarantee), but covers the
- * realistic case — a write already in flight when the user clicks sign out.
+ * it. Covers same-tab races outright; cross-tab races are covered by
+ * `clearChannel` below, which bumps this same counter when another tab
+ * broadcasts a clear.
  */
 let epoch = 0;
+
+/**
+ * The epoch guard above only protects a write against a `clearAll` in its
+ * *own* tab — a second tab has its own JS runtime and never sees the first
+ * tab's in-memory `epoch` increment. `BroadcastChannel` closes that gap:
+ * every tab that has touched this module subscribes, and `clearAll` posts
+ * to every other subscriber so their local `epoch` bumps within the same
+ * task turn a write would next check it. Falls back to same-tab-only
+ * protection in environments without `BroadcastChannel`.
+ */
+const CLEAR_CHANNEL_NAME = 'sovereign-offline-clear';
+let clearChannel: BroadcastChannel | null = null;
+
+/**
+ * localStorage flag marking a `clearAll` that started but did not finish
+ * (thrown IndexedDB error, tab closed mid-purge). Retried the next time any
+ * tab touches this module, so a purge failure during sign-in doesn't
+ * silently leave a previous session's data behind indefinitely — see
+ * `runtime/src/complete-sign-in.ts`, which purges best-effort and must not
+ * block navigation on failure.
+ */
+const PENDING_PURGE_KEY = 'sovereign:offline-purge-pending';
+
+function markPurgePending(): void {
+  try {
+    localStorage.setItem(PENDING_PURGE_KEY, '1');
+  } catch {
+    // best-effort — e.g. localStorage disabled/full; nothing further to do.
+  }
+}
+
+function clearPurgePending(): void {
+  try {
+    localStorage.removeItem(PENDING_PURGE_KEY);
+  } catch {
+    // best-effort, see markPurgePending.
+  }
+}
+
+function hasPurgePending(): boolean {
+  try {
+    return localStorage.getItem(PENDING_PURGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Purge the service worker's precached offline-shell documents alongside
+ * the IndexedDB store. Belt-and-braces: an offline route's SSR output is
+ * expected to carry no per-user data (that's what makes precaching it
+ * safe), but `clearAll` is the one enforcement point that actually runs on
+ * every login boundary, so it also drops any precached shell rather than
+ * relying solely on that expectation holding for every plugin. Matches by
+ * substring because workbox may prefix/suffix the configured `cacheName`
+ * (`offline-shells` in `runtime/next.config.ts`) with its own scheme.
+ */
+async function purgeShellCaches(): Promise<void> {
+  if (typeof caches === 'undefined') return;
+  try {
+    const names = await caches.keys();
+    await Promise.all(
+      names.filter((name) => name.includes('offline-shells')).map((name) => caches.delete(name)),
+    );
+  } catch {
+    // best-effort — do not let a Cache Storage failure block the IndexedDB purge.
+  }
+}
+
+let pendingPurgeChecked = false;
+
+/**
+ * Runs once per tab on first use of this module: subscribes to cross-tab
+ * clear notifications and, if a previous `clearAll` in this tab failed
+ * partway, retries it now. Idempotent — safe to call from every public
+ * method via `openDb`.
+ */
+function ensureTabState(): void {
+  if (typeof BroadcastChannel !== 'undefined' && !clearChannel) {
+    clearChannel = new BroadcastChannel(CLEAR_CHANNEL_NAME);
+    clearChannel.onmessage = () => {
+      epoch++;
+    };
+  }
+  if (!pendingPurgeChecked) {
+    pendingPurgeChecked = true;
+    if (hasPurgePending()) {
+      void offline.clearAll();
+    }
+  }
+}
 
 /** Plugin-scoped offline cache (RFC 0074). Browser-only — import from `@sovereignfs/sdk/offline`. */
 export const offline = {
@@ -145,14 +237,25 @@ export const offline = {
   },
 
   /**
-   * Remove every cached value for every plugin. Called on every logout/user-
-   * switch — the safeguard that makes per-plugin-only (not per-user) key
-   * scoping safe on a shared device: nothing survives past the session that
-   * wrote it. Also bumps the write epoch so any `set` already in flight when
-   * this runs is dropped rather than resurrecting stale data right after.
+   * Remove every cached value for every plugin, in this tab, every other open
+   * tab (via `BroadcastChannel`), and the service worker's precached
+   * offline-shell documents. Called on every logout/user-switch — the
+   * safeguard that makes per-plugin-only (not per-user) key scoping safe on
+   * a shared device: nothing survives past the session that wrote it. Also
+   * bumps the write epoch (locally and, via the broadcast, in every other
+   * tab) so any `set` already in flight anywhere is dropped rather than
+   * resurrecting stale data right after. If this throws partway through, a
+   * localStorage marker is left behind so the next tab to touch this module
+   * retries the purge automatically.
    */
   async clearAll(): Promise<void> {
+    // Run first so the channel exists to post on and any *previous* pending
+    // purge from an earlier failed attempt is retried before this one marks
+    // its own — otherwise this call would immediately retry itself.
+    ensureTabState();
     epoch++;
+    clearChannel?.postMessage('clear');
+    markPurgePending();
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -161,5 +264,7 @@ export const offline = {
       tx.onerror = () => reject(tx.error ?? new Error('Failed to clear offline cache.'));
     });
     db.close();
+    await purgeShellCaches();
+    clearPurgePending();
   },
 };

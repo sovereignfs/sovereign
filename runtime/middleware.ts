@@ -421,8 +421,16 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // service-worker-precached document for an offline route bakes in whatever
   // shell HTML was rendered alongside it. Without this flag, a plugin's own
   // offline route could correctly render nothing per-user while still shipping
-  // inside a per-user-personalized shell document.
-  if (getOfflineRoutePrefixes(installedPlugins).some((prefix) => underPrefix(pathname, prefix))) {
+  // inside a per-user-personalized shell document. `/` is flagged
+  // unconditionally alongside the manifest-driven list: it's the PWA
+  // start_url, rewritten server-side below to whichever plugin is configured
+  // as the platform root (Launcher by default), and must render the same
+  // neutral shell so a cold, offline relaunch doesn't replay one user's
+  // chrome to the next (see `next.config.ts`'s matching `underOfflineRoutePrefix`).
+  if (
+    pathname === '/' ||
+    getOfflineRoutePrefixes(installedPlugins).some((prefix) => underPrefix(pathname, prefix))
+  ) {
     headers.set('x-sovereign-offline-route', '1');
   }
 

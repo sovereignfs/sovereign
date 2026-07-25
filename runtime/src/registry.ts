@@ -27,13 +27,17 @@ export function getDevelopmentPluginIds(plugins: SovereignManifest[] = registry)
 /**
  * Full, absolute path prefixes for every manifest-declared offline-capable
  * route (RFC 0072) — `<routePrefix><offline.routes[].prefix>` for each
- * plugin. Consumed at build time by `next.config.ts` to scope the service
- * worker's precache to just these routes; every other route stays
- * `NetworkFirst` and falls back to `/offline` as usual.
+ * plugin, plus bare `<routePrefix>` for any plugin declaring `offline.root:
+ * true` (its own top-level page, not a sub-route). Consumed at build time by
+ * `next.config.ts` to scope the service worker's precache to just these
+ * routes; every other route stays `NetworkFirst` and falls back to
+ * `/offline` as usual.
  */
 export function getOfflineRoutePrefixes(plugins: SovereignManifest[] = registry): string[] {
-  return plugins.flatMap(
-    (manifest) =>
-      manifest.offline?.routes.map((route) => `${manifest.routePrefix}${route.prefix}`) ?? [],
-  );
+  return plugins.flatMap((manifest) => {
+    const prefixes =
+      manifest.offline?.routes?.map((route) => `${manifest.routePrefix}${route.prefix}`) ?? [];
+    if (manifest.offline?.root) prefixes.push(manifest.routePrefix);
+    return prefixes;
+  });
 }

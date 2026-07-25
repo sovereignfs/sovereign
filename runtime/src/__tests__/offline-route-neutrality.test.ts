@@ -8,8 +8,8 @@
  * common, direct ones (reading the session header, cookies, or a session
  * helper) before a plugin's offline route ever ships.
  *
- * Currently a no-op: no installed plugin declares `offline.routes` yet (see
- * this PR's description). It runs for real the moment one does.
+ * Covers both `offline.routes[]` (a declared sub-path) and `offline.root`
+ * (the plugin's own bare `routePrefix` page, e.g. Launcher).
  */
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -49,6 +49,21 @@ function collectSourceFiles(dir: string): string[] {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) return collectSourceFiles(full);
     return /\.(tsx?|jsx?)$/.test(entry) ? [full] : [];
+  });
+}
+
+/** For an `offline.root` declaration: the plugin's own top-level route
+ *  segment, not its other sub-routes. Recurses into `_`-prefixed
+ *  directories (Next.js excludes these from routing — co-located helpers
+ *  like `_components`/`_lib` that the root page imports), but not into a
+ *  plain-named subdirectory, since that's a separate route segment out of
+ *  scope for a bare `root` declaration. */
+function collectRootSourceFiles(appDir: string): string[] {
+  if (!existsSync(appDir)) return [];
+  return readdirSync(appDir, { withFileTypes: true }).flatMap((entry) => {
+    const full = join(appDir, entry.name);
+    if (entry.isDirectory()) return entry.name.startsWith('_') ? collectSourceFiles(full) : [];
+    return /\.(tsx?|jsx?)$/.test(entry.name) ? [full] : [];
   });
 }
 
@@ -105,7 +120,8 @@ describe('offline route SSR neutrality (RFC 0072)', () => {
 
     for (const manifest of getInstalledPlugins()) {
       const routes = manifest.offline?.routes ?? [];
-      if (routes.length === 0) continue;
+      const hasRoot = manifest.offline?.root === true;
+      if (routes.length === 0 && !hasRoot) continue;
 
       const pluginDir = findPluginDir(manifest.id);
       // Registry entry with no matching source directory in this checkout
@@ -113,9 +129,20 @@ describe('offline route SSR neutrality (RFC 0072)', () => {
       // nothing to scan; that plugin's own repo/CI owns this check.
       if (!pluginDir) continue;
 
-      for (const route of routes) {
-        const routeDir = join(PLUGINS_ROOT, pluginDir, 'app', route.prefix);
+      const scanTargets: string[] = routes.map((route) =>
+        join(PLUGINS_ROOT, pluginDir, 'app', route.prefix),
+      );
+
+      for (const routeDir of scanTargets) {
         for (const file of collectSourceFiles(routeDir)) {
+          const hits = findForbiddenIdentityAccess(readFileSync(file, 'utf-8'));
+          if (hits.length > 0) violations.push(`${file}: ${hits.join(', ')}`);
+        }
+      }
+
+      if (hasRoot) {
+        const appDir = join(PLUGINS_ROOT, pluginDir, 'app');
+        for (const file of collectRootSourceFiles(appDir)) {
           const hits = findForbiddenIdentityAccess(readFileSync(file, 'utf-8'));
           if (hits.length > 0) violations.push(`${file}: ${hits.join(', ')}`);
         }

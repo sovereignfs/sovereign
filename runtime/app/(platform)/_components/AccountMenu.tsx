@@ -16,76 +16,24 @@ function monogram(name: string): string {
 
 export function AccountMenu({
   avatar,
-  avatarImageClassName,
   triggerClassName,
   placement,
   showConsole,
   userName,
   userEmail,
   userImage,
-  hydrateUser,
 }: {
   avatar: ReactNode;
-  avatarImageClassName?: string;
   triggerClassName?: string;
   placement: 'sidebar' | 'header';
   showConsole?: boolean;
   userName?: string;
   userEmail?: string;
   userImage?: string;
-  // The offline-route neutral shell (see runtime/app/(platform)/layout.tsx)
-  // renders no per-user name/image server-side so a service-worker-cached
-  // document never bakes in one user's identity for another. That's a
-  // property of the *cached document*, not of a live, online tab — so once
-  // mounted, fetch the real session client-side (never cached, always a live
-  // network round-trip) to restore the avatar/name for the user actually
-  // looking at the screen right now.
-  hydrateUser?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [hydrated, setHydrated] = useState<{
-    name: string;
-    email: string;
-    image?: string;
-  } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!hydrateUser) return;
-    let cancelled = false;
-    fetch('/api/auth/get-session?disableCookieCache=true')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (cancelled || !data?.user) return;
-        setHydrated({
-          name: data.user.name ?? '',
-          email: data.user.email ?? '',
-          image: data.user.image ?? undefined,
-        });
-      })
-      .catch(() => {
-        // Best-effort — leave the neutral trigger if the fetch fails.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [hydrateUser]);
-
-  const effectiveName = hydrated?.name || userName;
-  const effectiveEmail = hydrated?.email || userEmail;
-  const effectiveImage = hydrated?.image ?? userImage;
-  const triggerAvatar = hydrated ? (
-    <span className={styles.avatarReveal}>
-      {effectiveImage ? (
-        <img src={effectiveImage} alt="" className={avatarImageClassName} />
-      ) : (
-        <span aria-hidden="true">{monogram(effectiveName || effectiveEmail || '')}</span>
-      )}
-    </span>
-  ) : (
-    avatar
-  );
 
   useEffect(() => {
     if (!open) return;
@@ -106,7 +54,7 @@ export function AccountMenu({
     };
   }, [open]);
 
-  const displayName = effectiveName || effectiveEmail || '';
+  const displayName = userName || userEmail || '';
 
   // Purge every plugin's offline cache (RFC 0072) before the session actually
   // ends — the sole safeguard that makes sdk.offline's plugin-only (not
@@ -138,7 +86,7 @@ export function AccountMenu({
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        {triggerAvatar}
+        {avatar}
       </button>
       {open ? (
         <div className={[styles.menu, styles[placement]].join(' ')} role="menu">
@@ -146,15 +94,15 @@ export function AccountMenu({
             <>
               <div className={styles.userHeader}>
                 <div className={styles.menuAvatar} aria-hidden="true">
-                  {effectiveImage ? (
-                    <img src={effectiveImage} alt="" className={styles.menuAvatarImg} />
+                  {userImage ? (
+                    <img src={userImage} alt="" className={styles.menuAvatarImg} />
                   ) : (
                     monogram(displayName)
                   )}
                 </div>
                 <div className={styles.userInfo}>
-                  {effectiveName && <p className={styles.userName}>{effectiveName}</p>}
-                  {effectiveEmail && <p className={styles.userEmail}>{effectiveEmail}</p>}
+                  {userName && <p className={styles.userName}>{userName}</p>}
+                  {userEmail && <p className={styles.userEmail}>{userEmail}</p>}
                 </div>
               </div>
               <hr className={styles.divider} />

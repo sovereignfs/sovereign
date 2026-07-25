@@ -154,13 +154,11 @@ export default async function PlatformLayout({ children }: { children: ReactNode
                 ) : null}
                 <AccountMenu
                   avatar={accountAvatar}
-                  avatarImageClassName={styles.avatarImage}
                   triggerClassName={styles.avatar}
                   placement="sidebar"
                   userName={userName}
                   userEmail={userEmail}
                   userImage={userImage}
-                  hydrateUser={isOfflineRoute}
                 />
               </div>
             </aside>
@@ -182,14 +180,12 @@ export default async function PlatformLayout({ children }: { children: ReactNode
                 <NotificationBell />
                 <AccountMenu
                   avatar={accountAvatar}
-                  avatarImageClassName={styles.avatarImage}
                   triggerClassName={styles.avatar}
                   placement="header"
                   showConsole={isAdmin}
                   userName={userName}
                   userEmail={userEmail}
                   userImage={userImage}
-                  hydrateUser={isOfflineRoute}
                 />
               </div>
             </header>

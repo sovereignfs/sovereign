@@ -43,10 +43,6 @@ runtime/generated/
 !/plugins/console/
 !/plugins/launcher/
 
-# Personal list of plugin repos to clone as plugins/<name>.local (read by
-# setup.sh). Developer-specific and never committed — see setup.sh header.
-/sovereign.plugins.local
-
 # PWA service worker + Workbox bundles, generated into runtime/public by
 # @ducanh2912/next-pwa at build time. Never committed (the manifest + icons are).
 runtime/public/sw.js
@@ -55,11 +51,6 @@ runtime/public/workbox-*.js
 runtime/public/workbox-*.js.map
 runtime/public/fallback-*.js
 runtime/public/worker-*.js
-
-# Local / private working area. Not part of the open-source monorepo — may hold
-# proprietary plugin specs and notes, typically backed by a separate private
-# repository initialised inside it. Never committed here.
-/local/
 
 # Environment / secrets
 .env

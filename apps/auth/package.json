@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/auth",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,11 +10,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@better-auth/oauth-provider": "^1.6.25",
     "@better-auth/passkey": "^1.6.19",
     "@next/env": "^16.2.9",
     "@sovereignfs/mailer": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
-    "better-auth": "^1.6.16",
+    "better-auth": "^1.6.25",
     "better-sqlite3-multiple-ciphers": "catalog:",
     "next": "catalog:",
     "pg": "^8.21.0",

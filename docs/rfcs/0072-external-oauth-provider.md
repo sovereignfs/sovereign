@@ -1,10 +1,10 @@
 # RFC 0072 — External OAuth/OIDC provider for non-plugin apps
 
-**Status:** Draft\
+**Status:** Implemented\
 **Date:** July 2026\
-**Author:** External contributor (submitted for consideration; adapted to repository conventions)\
-**Scope:** `apps/auth`, `docs/self-hosting.md`, `docs/security.md`, `docs/upgrade.md`. Builds on RFC 0021 (platform roles & capabilities) and RFC 0043 (plugin secret vault, for the client-secret storage pattern).\
-**Incorporated into plan:** No — documentation-first. Design only; scheduling deferred to a roadmap slot.
+**Author:** External contributor (submitted for consideration; adapted to repository conventions and revised during implementation against the actual `@better-auth/oauth-provider` API)\
+**Scope:** `apps/auth`, `runtime` (better-auth client version only), `plugins/console`, `docs/self-hosting.md`, `docs/security.md`, `docs/upgrade.md`. Builds on RFC 0021 (platform roles & capabilities).\
+**Incorporated into plan:** Yes — epic task [1.18](../epics/users-auth.md#-118--external-oauthoidc-provider-for-non-plugin-apps-rfc-0072).
 
 ---
 
@@ -30,31 +30,57 @@ standalone app under active development, wants exactly this — sign-in backed
 by an operator's Sovereign instance, with its own independent authorization
 model (a curator allowlist) layered on top of verified identity.
 
-better-auth already ships plugins for this (`oidcProvider`, and an OAuth 2.1
-provider) — authorization code flow, client registration, and a JWKS endpoint
-for offline token verification. The gap is not cryptographic or
-architectural; `apps/auth` simply doesn't enable, document, or expose an
-operator-facing registration flow for it today.
+better-auth ships provider support for exactly this. **Important correction
+found during implementation:** the originally-drafted target, the bundled
+`oidc-provider` plugin (`better-auth/plugins/oidc-provider`), is marked
+`@deprecated` as of the better-auth version this repo already pinned
+(1.6.16) — "Use `@better-auth/oauth-provider` instead. This plugin will be
+removed in the next major version." better-auth split OAuth/OIDC provider
+support into a separate, actively-maintained package,
+[`@better-auth/oauth-provider`](https://www.better-auth.com/docs/plugins/oauth-provider).
+This RFC and its implementation build on that package instead — the gap is
+still "not enabled, documented, or given a registration flow," not
+cryptographic or architectural.
 
 ## Current state (what this builds on)
 
-- `apps/auth/src/auth.ts:195-207` (`buildOptions()`) configures exactly three
-  better-auth plugins today: `twoFactor`, `passkey`, and `nextCookies`. No
-  OIDC/OAuth provider plugin is enabled — this is new surface, not a
-  bug/gap in an existing one.
-- `apps/auth` has no Drizzle migration path for its own tables; new tables
-  (e.g. client registrations) go through the same idempotent
-  `ensureAuthTables()` / `ALTER TABLE ADD COLUMN` pattern used for invite
-  columns (`apps/auth/src/db.ts`, see epic task 1.17).
-- RFC 0043 (plugin secret vault) already establishes the "generate once,
-  store hashed, never re-display" pattern for credential material within
-  this codebase — client secrets here should follow the same discipline
-  rather than inventing a new one.
-- RFC 0021 establishes platform roles/capabilities; client registration
-  should be gated the same way (see Open questions).
-- `docs/self-hosting.md` and `docs/security.md` currently have no section
-  on external OAuth/OIDC — this RFC is additive documentation and
-  configuration, not a change to an existing documented contract.
+- `apps/auth/src/auth.ts:195-208` (`buildOptions()`, before this RFC)
+  configured exactly three better-auth plugins: `twoFactor`, `passkey`, and
+  `nextCookies`. No OIDC/OAuth provider plugin was enabled.
+- `@better-auth/oauth-provider` manages its **own** schema
+  (`oauthClient`, `oauthAccessToken`, `oauthRefreshToken`, `oauthConsent`)
+  through better-auth's own adapter — unlike the hand-rolled `invites` table
+  (`apps/auth/src/db.ts`'s `ensureAuthTables()`), this schema is
+  **auto-discovered by better-auth's own migrator**
+  (`getMigrations()`/`runMigrations()` in `apps/auth/src/migrate.ts`, which
+  RFC 0012 already documented as auto-discovering plugin tables for
+  `twoFactor`/`passkey`). **No custom table or migration code was needed** —
+  this corrects the original draft's assumption of a custom
+  `ensureAuthTables()`-based client table.
+- The package exposes full client CRUD over HTTP, session-gated via its own
+  `clientPrivileges` hook (`create`/`read`/`update`/`delete`/`list`/`rotate`
+  actions) — `POST /oauth2/create-client`, `GET /oauth2/get-clients`,
+  `POST /oauth2/client/rotate-secret`, `POST /oauth2/delete-client`. (Its
+  `adminCreateOAuthClient`/`adminUpdateOAuthClient` variants are
+  `SERVER_ONLY` — not HTTP-reachable at all — so the session-gated
+  non-admin-prefixed endpoints are what a browser-facing Console UI must
+  use, with `clientPrivileges` doing the actual authorization.)
+- `storeClientSecret: 'hashed'` is a first-class plugin option — no need to
+  reinvent RFC 0043's "generate once, store hashed" discipline; the plugin
+  already does it when configured this way.
+- The existing generic proxy `runtime/app/api/auth/[...path]/route.ts`
+  (forwards `/api/auth/*` from the runtime's origin to the auth server with
+  cookies + `Origin` header) already covers every path this plugin mounts —
+  **no runtime proxy changes were needed** for the Console UI to reach these
+  endpoints with the calling admin's real session.
+- RFC 0021 establishes platform roles/capabilities; `runtime/src/capabilities.ts`'s
+  `instance:configure` capability (granted to `platform:admin` and
+  `platform:owner`) is reused for the Console page gate; `apps/auth` itself
+  doesn't import runtime code, so its `clientPrivileges` role check
+  (`platform:owner`/`platform:admin`) is a small, intentional duplication of
+  the same role set.
+- `docs/self-hosting.md` and `docs/security.md` had no section on external
+  OAuth/OIDC before this RFC.
 
 ## Non-goals
 
@@ -67,92 +93,115 @@ operator-facing registration flow for it today.
 
 ## Proposed design
 
-### 1. Enable and document the provider plugin
+### 1. Enable the provider plugin
 
-Add better-auth's OIDC (or OAuth 2.1) provider plugin to the `plugins` array
-in `buildOptions()` (`apps/auth/src/auth.ts`), and document it in
-`docs/self-hosting.md` and `docs/security.md` as a supported, stable surface
-— not an internal implementation detail.
+Add `oauthProvider(...)` from `@better-auth/oauth-provider` to the `plugins`
+array in `buildOptions()` (`apps/auth/src/auth.ts`):
 
-### 2. Client registration
+- `loginPage: '/login'`, `consentPage: '/oauth2/consent'` (new page, §2b).
+- `storeClientSecret: 'hashed'` — secrets are never reversibly stored.
+- `allowDynamicClientRegistration: false` (explicit — matches the plugin's
+  own default; no self-service registration in v1).
+- `clientPrivileges`: authorizes every client mutation
+  (create/read/update/delete/list/rotate) only when the session user's
+  `role` is `platform:owner` or `platform:admin`.
 
-Add an operator-facing way to register an external client, parallel in
-spirit to how plugin manifests are validated today:
+### 2. Client registration and management
 
-- **Console UI**: an "External clients" section (e.g. under Console → Auth,
-  or a new top-level page) where an operator enters a display name, one or
-  more allowed redirect URIs, and requested scopes (start with `openid`,
-  `email`, `profile`). On save, the platform generates and displays a client
-  ID and client secret exactly once (never shown again, only regenerable).
-- **Storage**: client records live in the auth server's own store (not
-  plugin-scoped), keyed by client ID, with `redirectUris`, `createdAt`,
-  `createdBy` (admin user), and a revocation flag — added via the same
-  `ensureAuthTables()` pattern as Task 1.17's invite columns.
-- **API surface (optional, follow-up)**: an `sv` CLI or admin API
-  equivalent for scripted registration, mirroring `sv plugin add`'s
-  ergonomics.
+**a. Console UI** — a new "External clients" section
+(`plugins/console/app/oauth-clients/`), gated to `instance:configure`
+(granted to `platform:admin`/`platform:owner`), where an admin enters a
+display name and one or more exact redirect URIs. On submit the platform
+generates and displays a client ID and client secret exactly once (never
+shown again — only rotatable). The page calls the plugin's own
+non-admin-prefixed HTTP endpoints directly from the browser
+(`/api/auth/oauth2/create-client`, `/get-clients`, `/client/rotate-secret`,
+`/delete-client`) via the runtime's existing generic auth proxy — no new
+runtime or apps/auth routes were needed; `clientPrivileges` is the actual
+security boundary, re-checked by the plugin on every request regardless of
+what the Console page itself gates.
+
+**b. Consent page** — a new page at `apps/auth/app/oauth2/consent/`. The
+plugin's `/oauth2/authorize` redirects an already-authenticated user here
+with a signed query string; the page displays the requesting client's name
+and requested scopes (fetched from the plugin's public `/oauth2/public-client`
+endpoint) and, on Allow/Deny, POSTs to `/api/auth/oauth2/consent` with the
+signed query forwarded verbatim — the page never re-derives or trusts it,
+only displays and echoes it back for the plugin's own re-verification.
+
+**c. Storage**: entirely the plugin's own schema
+(`oauthClient`/`oauthAccessToken`/`oauthRefreshToken`/`oauthConsent`),
+auto-migrated — no custom table.
 
 ### 3. Discovery and verification endpoints
 
-Expose the standard OIDC surface publicly at `auth.<instance>`:
+Exposed automatically by the plugin at the auth server's public URL:
 
-- `/.well-known/openid-configuration`
-- `/oauth2/authorize`, `/oauth2/token`
+- `/.well-known/openid-configuration`, `/.well-known/oauth-authorization-server`
+- `/oauth2/authorize`, `/oauth2/token`, `/oauth2/userinfo`
 - `/.well-known/jwks.json` for offline signature verification
 
-These come from the better-auth plugin itself; the work here is confirming
-they're reachable, documented, and stable across upgrades (add to
-`docs/upgrade.md`'s breaking-change tracking, alongside the existing
-downgrade-guard/compatibility-gate entries).
+Documented in `docs/self-hosting.md`'s "External OAuth/OIDC provider"
+section and tracked in `docs/upgrade.md`.
 
 ### 4. Claims contract
 
-Document a stable minimal claim set external consumers can rely on:
+| Claim   | Type   | Notes                                      |
+| ------- | ------ | ------------------------------------------ |
+| `sub`   | string | Stable user ID, same value across sessions |
+| `email` | string | Verified email                             |
+| `name`  | string | Display name                               |
 
-| Claim    | Type   | Notes                                            |
-| -------- | ------ | ------------------------------------------------ |
-| `sub`    | string | Stable user ID, same value across sessions       |
-| `email`  | string | Verified email                                   |
-| `name`   | string | Display name                                     |
-| `tenant` | string | Tenant/instance identifier, for multi-tenant ops |
+(The original draft proposed a `tenant` claim for multi-tenant operators;
+dropped — Sovereign is single-tenant per instance, so there is no tenant
+identifier to carry, and the plugin's `sub` is already scoped to this
+instance's own user table.)
 
 Explicitly out of scope for v1: plugin capabilities, roles, or any
 Sovereign-internal authorization data. An external app treats this purely as
 "who is this" and manages its own authorization afterward (e.g.
-FindMyModel's own curator allowlist) — state this explicitly in the docs so
-consumers don't conflate "has a Sovereign account" with "authorized in my
-app."
+FindMyModel's own curator allowlist) — stated explicitly in
+`docs/self-hosting.md` so consumers don't conflate "has a Sovereign account"
+with "authorized in my app."
 
 ### 5. Trusted origins / redirect URI allowlisting
 
-Redirect URIs are allowlisted per-client at registration (§2), doubling as
-the trusted-origin mechanism — no separate global config needed. Reject any
-authorization request whose `redirect_uri` isn't an exact match against a
-registered client's allowlist (never prefix or wildcard matching).
+Redirect URIs are matched **exact-string only** against the client's
+registered `redirect_uris` — the plugin's own behavior, no separate global
+config needed.
 
 ### 6. Token lifetime and refresh
 
-Follow better-auth's defaults unless there's a reason to diverge; document
-whatever is chosen (access token TTL, refresh token issuance/rotation
-policy) in `docs/security.md` so external operators can build correct
-session-refresh logic.
+Left at the plugin's defaults (`accessTokenExpiresIn`, `refreshTokenExpiresIn`,
+`idTokenExpiresIn`, `codeExpiresIn`) — no reason found during implementation
+to diverge from them for v1.
 
 ## Security considerations
 
-- Client secrets are shown exactly once and stored hashed server-side,
-  consistent with RFC 0043's existing vault pattern.
+- Client secrets are shown exactly once and stored **hashed**
+  (`storeClientSecret: 'hashed'`) — never reversibly encrypted, never
+  re-displayed after creation.
 - Redirect URI matching is exact-string only, to prevent open-redirect
   abuse.
-- Revoking a client immediately invalidates its ability to mint new tokens;
-  existing access tokens may be left to expire naturally unless a stronger
-  requirement (immediate revocation list) is wanted.
+- Revoking a client (delete) immediately stops new token issuance for it;
+  already-issued access tokens are left to expire naturally.
+- Registration/rotation/revocation is restricted to `platform:owner`/
+  `platform:admin` via `clientPrivileges` — there is no dynamic or
+  self-service registration path to worry about in v1.
 - This surface increases the auth server's attack surface — it's now
   reachable by arbitrary external redirect targets, not just same-origin
-  plugin routes. Needs an explicit pass in `docs/security.md`'s threat
-  model section before this ships.
+  plugin routes. Reflected in `docs/security.md`'s threat model table.
 
 ## Alternatives considered
 
+- **The bundled `oidc-provider` plugin** (`better-auth/plugins/oidc-provider`),
+  the original draft's target: rejected once implementation began — it is
+  `@deprecated` as of better-auth 1.6.16 (the version already pinned in this
+  repo) in favor of `@better-auth/oauth-provider`, and "will be removed in
+  the next major version." Building new functionality on a plugin already
+  flagged for removal would create near-term migration debt for no benefit;
+  the replacement package required only a non-breaking `better-auth`
+  dependency bump (`^1.6.16` → `^1.6.25`).
 - **Cross-subdomain cookie sharing** (better-auth's `crossSubDomainCookies`):
   simpler to wire up, but couples the external app into the same auth
   realm/secret as the platform itself — a much larger trust and operational
@@ -163,24 +212,29 @@ session-refresh logic.
 
 ## Open questions
 
-- Should external client registration be admin-only, or delegable via the
-  per-user capability grant mechanism (RFC 0070)? Recommend starting
-  admin-only for v1, consistent with the platform's operator-controlled
-  trust model.
+- ~~Should external client registration be admin-only, or delegable via the
+  per-user capability grant mechanism (RFC 0070)?~~ **Resolved:** admin-only
+  for v1 (`platform:owner`/`platform:admin` via `clientPrivileges`),
+  consistent with the platform's operator-controlled trust model. Delegable
+  via a grantable capability remains an option for a future task if needed.
 - Is per-client rate limiting needed on the token endpoint, separate from
-  whatever protects plugin-internal auth today?
-- Dynamic client registration (RFC-style, self-service) vs. admin-registered
-  only — recommend admin-registered only for v1.
+  whatever protects plugin-internal auth today? Not addressed in v1 —
+  left as a follow-up if abuse is observed.
+- ~~Dynamic client registration vs. admin-registered only?~~ **Resolved:**
+  admin-registered only for v1 (`allowDynamicClientRegistration: false`).
 
 ## Adoption path
 
-Documentation-first: this RFC does not commit to a roadmap slot. If
-accepted, implementation is a single epic task (provider plugin + Console
-registration UI + docs) since it's additive and does not touch existing
-auth flows. See epic task [1.18](../epics/users-auth.md#-118--external-oauthoidc-provider-for-non-plugin-apps-rfc-0072).
+Implemented in epic task
+[1.18](../epics/users-auth.md#-118--external-oauthoidc-provider-for-non-plugin-apps-rfc-0072)
+as a single PR (provider plugin + consent page + Console registration UI +
+docs) — additive, no changes to existing auth flows. `better-auth` bumped
+`^1.6.16` → `^1.6.25` (non-breaking, same major) to meet
+`@better-auth/oauth-provider`'s peer requirement.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | July 2026 | Initial draft |
+| Version | Date      | Change                                                                                                                                                                                                                                                                                            |
+| ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | July 2026 | Initial draft                                                                                                                                                                                                                                                                                     |
+| 0.2     | July 2026 | Implemented. Switched from the deprecated bundled `oidc-provider` to `@better-auth/oauth-provider`; corrected the custom-table assumption (plugin auto-manages its own schema); dropped the `tenant` claim (no multi-tenant concept in this platform); resolved both admin-gating open questions. |

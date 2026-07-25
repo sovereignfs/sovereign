@@ -2,7 +2,9 @@ import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { APIError } from 'better-auth/api';
 import { nextCookies } from 'better-auth/next-js';
 import { twoFactor } from 'better-auth/plugins/two-factor';
+import { jwt } from 'better-auth/plugins/jwt';
 import { passkey } from '@better-auth/passkey';
+import { oauthProvider } from '@better-auth/oauth-provider';
 import { authGet, authRun, getAuthDatabase } from './db';
 import { getEnv } from './env';
 import { resolveInvitePluginGrants } from './invite-plugin-grants';
@@ -203,6 +205,38 @@ function buildOptions(): BetterAuthOptions {
         rpID: env.webAuthnRpId,
         rpName: env.webAuthnRpName,
         origin: env.webAuthnOrigin.length === 1 ? env.webAuthnOrigin[0] : env.webAuthnOrigin,
+      }),
+      // Required by oauthProvider below for ID token signing/verification
+      // (JWKS) — the oauth-provider plugin throws `jwt_config` at request
+      // time without it. No config needed: auto-generates and stores its
+      // own keypair via better-auth's own schema.
+      jwt(),
+      // External OAuth 2.0 / OIDC provider for non-plugin apps (RFC 0072).
+      // Lets a standalone app on its own domain (e.g. FindMyModel) offer
+      // "log in with Sovereign" without joining the plugin system. Schema
+      // (oauthClient/oauthAccessToken/oauthRefreshToken/oauthConsent) is
+      // auto-discovered by better-auth's own migrator (apps/auth/src/migrate.ts)
+      // — no custom table needed, unlike the invites table.
+      oauthProvider({
+        loginPage: '/login',
+        consentPage: '/oauth2/consent',
+        // Client secrets are stored hashed, never reversibly encrypted — they
+        // only ever need to be verified at token-exchange time, never re-shown.
+        storeClientSecret: 'hashed',
+        // No self-service registration: clients are admin-registered only
+        // (RFC 0072's v1 recommendation, consistent with the platform's
+        // operator-controlled trust model). This is better-auth's own
+        // default (false); set explicitly so it doesn't silently change on
+        // a library upgrade.
+        allowDynamicClientRegistration: false,
+        // Registering/revoking/rotating a client is restricted to platform
+        // admins and the owner — the same role set as `instance:configure`
+        // in runtime/src/capabilities.ts. apps/auth doesn't import runtime
+        // code, so the role check is duplicated here rather than shared.
+        clientPrivileges: ({ user }) => {
+          const role = typeof user?.role === 'string' ? user.role : undefined;
+          return role === 'platform:owner' || role === 'platform:admin';
+        },
       }),
       nextCookies(),
     ],

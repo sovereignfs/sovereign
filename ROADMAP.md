@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.44.0 · **Last updated:** 2026-07-20
+**Version:** 0.45.0 · **Last updated:** 2026-07-25
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -174,6 +174,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.42.0  | Console-managed SMTP settings (platform:owner only)                   | ✅     | [3.30](docs/epics/plugins-runtime.md#-330--console-managed-smtp-settings-platformowner-only)                   |
 | 0.43.0  | Plugin mailer permission and SDK email surface (RFC 0062)             | ✅     | [3.26](docs/epics/plugins-runtime.md#-326--plugin-mailer-permission-and-sdk-email-surface-rfc-0062)            |
 | 0.44.0  | SQLite at-rest encryption (opt-in, single-key) (RFC 0071)             | ✅     | [8.14](docs/epics/data-sovereignty.md#-814--sqlite-at-rest-encryption-opt-in-single-key-rfc-0071)              |
+| 0.45.0  | External OAuth/OIDC provider for non-plugin apps (RFC 0072)           | ✅     | [1.18](docs/epics/users-auth.md#-118--external-oauthoidc-provider-for-non-plugin-apps-rfc-0072)                |
 
 ---
 
@@ -259,7 +260,6 @@ once prioritised.
 | —       | Chat cross-instance federation and trust policy (RFC 0066)                  | 📋     | [23.10](docs/epics/p2p-chat.md#-2310--cross-instance-federation-and-trust-policy)                                                |
 | —       | Chat group messaging and membership security (RFC 0066)                     | 📋     | [23.11](docs/epics/p2p-chat.md#-2311--group-messaging-and-membership-security)                                                   |
 | —       | Chat native transport and background delivery adapters (RFC 0066)           | 📋     | [23.12](docs/epics/p2p-chat.md#-2312--native-transport-and-background-delivery-adapters)                                         |
-| —       | External OAuth/OIDC provider for non-plugin apps (RFC 0072)                 | 📋     | [1.18](docs/epics/users-auth.md#-118--external-oauthoidc-provider-for-non-plugin-apps-rfc-0072)                                  |
 | —       | Standalone usage of `@sovereignfs/ui` outside the plugin runtime (RFC 0073) | 📋     | [9.17](docs/epics/design-system.md#-917--standalone-usage-of-sovereignfsui-outside-the-plugin-runtime-rfc-0073)                  |
 
 ---

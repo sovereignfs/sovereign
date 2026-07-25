@@ -998,6 +998,58 @@ more on the `tools` service.
 
 ---
 
+## External OAuth/OIDC provider (RFC 0072)
+
+The auth server can act as an OAuth 2.0 / OIDC identity provider for
+standalone external apps — apps on their own domain that are **not**
+Sovereign plugins, don't share this instance's database, and aren't composed
+into the platform build — so they can offer "log in with Sovereign" against
+this instance. Motivating use case: a companion app that wants to
+authenticate against an operator's Sovereign users without joining the
+plugin system.
+
+### Registering a client
+
+An admin or the owner registers a client from **Console → External
+clients**: a display name and one or more exact redirect URIs. On save, a
+client ID and client secret are generated and the secret is shown **exactly
+once** — it is stored hashed, never re-displayed. If it's lost, rotate it
+(also from Console) rather than trying to recover it.
+
+There is no self-service or dynamic client registration in v1 — only an
+admin/owner can register, rotate, or revoke a client, consistent with the
+platform's operator-controlled trust model ([RFC 0072](rfcs/0072-external-oauth-provider.md)).
+
+### Discovery and token endpoints
+
+Standard OIDC surface, reachable at the auth server's public URL
+(`SOVEREIGN_AUTH_PUBLIC_URL`):
+
+- `/.well-known/openid-configuration` and `/.well-known/oauth-authorization-server`
+- `/oauth2/authorize`, `/oauth2/token`
+- `/oauth2/userinfo`
+- `/.well-known/jwks.json` for offline access-token/ID-token signature verification
+
+### Claims contract
+
+| Claim   | Type   | Notes                                      |
+| ------- | ------ | ------------------------------------------ |
+| `sub`   | string | Stable user ID, same value across sessions |
+| `email` | string | Verified email                             |
+| `name`  | string | Display name                               |
+
+An external app should treat this purely as "who is this" — it manages its
+own authorization afterward (e.g. an allowlist of its own). A Sovereign
+account is not itself authorization in the external app.
+
+### Redirect URI matching
+
+Redirect URIs are matched **exact-string only** — no prefix or wildcard
+matching — against the client's registered list. An authorization request
+with any other `redirect_uri` is rejected.
+
+---
+
 ## Web Push notifications (RFC 0016)
 
 Background push notifications let the platform deliver alerts to users' devices

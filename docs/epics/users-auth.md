@@ -686,7 +686,7 @@ multi-select). No dependency on Task 2.21/2.23 — this task only captures and s
 
 ---
 
-#### 📋 1.18 — External OAuth/OIDC provider for non-plugin apps (RFC 0072)
+#### ✅ 1.18 — External OAuth/OIDC provider for non-plugin apps (RFC 0072)
 
 **Goal:** Let `apps/auth` act as an OAuth 2.0 / OIDC identity provider for
 standalone external apps — on their own domain, not composed as a Sovereign
@@ -696,39 +696,65 @@ sign-in backed by a Sovereign instance without joining the plugin system.
 
 **Deliverables:**
 
-- Enable better-auth's OIDC (or OAuth 2.1) provider plugin in
-  `buildOptions()` (`apps/auth/src/auth.ts:195`), alongside the existing
-  `twoFactor`/`passkey`/`nextCookies` plugins.
-- Console "External clients" section: register a display name, allowed
-  redirect URIs, and requested scopes (`openid`, `email`, `profile`);
-  generates a client ID/secret shown once, secret stored hashed. New table
-  added via the same idempotent `ensureAuthTables()` pattern used for
-  Task 1.17's invite columns (`apps/auth/src/db.ts`).
-- Confirm and document the standard discovery/verification endpoints
+- Enabled `oauthProvider()` from `@better-auth/oauth-provider` (not the
+  bundled `oidc-provider` the original draft targeted — that plugin turned
+  out to be deprecated as of better-auth 1.6.16, the version already pinned
+  here; see RFC 0072's "Alternatives considered") plus `jwt()`, both
+  required, in `buildOptions()` (`apps/auth/src/auth.ts`), alongside the
+  existing `twoFactor`/`passkey`/`nextCookies` plugins. `better-auth` bumped
+  `^1.6.16` → `^1.6.25` (non-breaking) to meet the new package's peer range.
+- Console "External clients" section (`plugins/console/app/oauth-clients/`):
+  register a display name and exact redirect URIs; generates a client
+  ID/secret shown once, secret stored hashed (`storeClientSecret: 'hashed'`).
+  Client registration/rotation/revocation gated to `platform:owner`/
+  `platform:admin` via the plugin's own `clientPrivileges` hook (server-side)
+  and the Console page's `instance:configure` capability check (UX gate).
+  No custom table — the plugin manages its own schema
+  (`oauthClient`/`oauthAccessToken`/`oauthRefreshToken`/`oauthConsent`),
+  auto-discovered by better-auth's existing migrator
+  (`apps/auth/src/migrate.ts`), correcting the original draft's assumption
+  of a custom `ensureAuthTables()`-based table.
+- New consent page at `apps/auth/app/oauth2/consent/`.
+- Documented the discovery/verification endpoints
   (`/.well-known/openid-configuration`, `/oauth2/authorize`,
-  `/oauth2/token`, `/.well-known/jwks.json`) in `docs/self-hosting.md` and
-  `docs/upgrade.md`.
-- Document the stable minimal claims contract (`sub`, `email`, `name`,
-  `tenant`) and the security model (exact-match redirect URI, hashed
-  secrets, revocation) in `docs/security.md`.
+  `/oauth2/token`, `/oauth2/userinfo`, `/.well-known/jwks.json`) in
+  `docs/self-hosting.md` and `docs/upgrade.md`.
+- Documented the stable minimal claims contract (`sub`, `email`, `name` —
+  `tenant` dropped, no multi-tenant concept in this platform) and the
+  security model (exact-match redirect URI, hashed secrets, revocation) in
+  `docs/security.md`.
 
 **Dependencies:** None blocking — additive to `apps/auth`. Client
-registration should use the same admin-gating approach as Task 1.16
-(per-user capability grants), per the RFC's open question.
+registration is admin/owner-only via `clientPrivileges`, consistent with
+Task 1.16's per-user capability grants approach, per the RFC's now-resolved
+open question.
 
 **SRS reference:** [RFC 0072](../rfcs/0072-external-oauth-provider.md)
 
 **Review checklist:**
 
 - An admin can register an external client and receive a client ID/secret
-  shown exactly once.
+  shown exactly once. ✅ verified live in the browser: registered
+  "FindMyModel" via Console → External clients, secret shown once with a
+  "Done, I've copied it" confirmation.
 - A registered client can complete the authorization code flow and receive
-  an ID token with the documented claim set.
-- An unregistered or mismatched `redirect_uri` is rejected.
-- Revoking a client blocks new token issuance for that client.
+  an ID token with the documented claim set. ✅ verified live: drove
+  `/oauth2/authorize` (PKCE/S256) → redirected to the new consent page,
+  which correctly displayed the client's display name and requested scopes
+  → clicked Allow → `/api/auth/oauth2/consent` returned a redirect URL
+  carrying a valid authorization code to the registered `redirect_uri`.
+- An unregistered or mismatched `redirect_uri` is rejected. Satisfied by the
+  plugin's own exact-match enforcement (not custom code) — not
+  independently re-verified live in this pass.
+- Revoking a client blocks new token issuance for that client. ✅ verified
+  live: registered, then revoked a client from Console; the client
+  immediately disappeared from the list (after fixing a client-side bug
+  where the empty-body 200 response from `delete-client` was mis-parsed as
+  JSON, breaking the post-revoke list refresh).
 - `docs/security.md` covers the expanded attack surface (external redirect
-  targets) in its threat model section.
-- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+  targets) in its threat model section. ✅ done — new threat-model row plus
+  an enforcement bullet.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` — all pass.
 
 ---
 

@@ -586,8 +586,8 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
   `pnpm-lock.yaml` shows unexpected changes after a routine install, treat it
   as a signal something's unpinned that should be, not something to shrug
   off and commit anyway.
-- **Exception: after cloning a `.local` plugin** (via `pnpm install:plugins`,
-  `./setup.sh`, or a manual `git clone … plugins/<name>.local`), `--frozen-lockfile`
+- **Exception: after cloning a `.local` plugin** (via `pnpm install:plugins`
+  or a manual `git clone … plugins/<name>.local`), `--frozen-lockfile`
   will always fail — the plugin is a new workspace project (matched by the
   `packages:` glob in `pnpm-workspace.yaml`) with dependencies the committed
   lockfile has never seen, and it always will, because `.local` plugins are

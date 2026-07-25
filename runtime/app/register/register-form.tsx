@@ -4,6 +4,7 @@ import { type FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
+import { completeSignIn } from '@/src/complete-sign-in';
 import { ViewportHeightSync } from '../login/ViewportHeightSync';
 import registerStyles from './register.module.css';
 import styles from '../auth-page.module.css';
@@ -37,7 +38,7 @@ export function RegisterForm({
       setError(result.error.message ?? 'Registration failed.');
       return;
     }
-    window.location.href = '/';
+    await completeSignIn();
   }
 
   return (

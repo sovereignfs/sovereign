@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
+import { completeSignIn } from '@/src/complete-sign-in';
 import { ViewportHeightSync } from './ViewportHeightSync';
 import styles from '../auth-page.module.css';
 
@@ -34,7 +35,7 @@ export function LoginForm({
     } else if ((result?.data as Record<string, unknown>)?.twoFactorRedirect) {
       // twoFactorClient navigates to /login/2fa automatically — do not override.
     } else if (result?.data) {
-      window.location.href = '/';
+      await completeSignIn();
     }
   }
 
@@ -50,7 +51,7 @@ export function LoginForm({
         msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('abort');
       setError(isCancelled ? 'Passkey sign-in was cancelled.' : msg || 'Passkey sign-in failed.');
     } else if (result?.data) {
-      window.location.href = '/';
+      await completeSignIn();
     }
   }
 

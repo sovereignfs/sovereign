@@ -3,6 +3,7 @@
 import { type FormEvent, useRef, useState } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
+import { completeSignIn } from '@/src/complete-sign-in';
 import { ViewportHeightSync } from '../ViewportHeightSync';
 import styles from '../../auth-page.module.css';
 
@@ -38,7 +39,7 @@ export function ChallengeForm({ instanceInitial = 'S' }: { instanceInitial?: str
       setError('Invalid code. Please try again or use a backup code.');
       return;
     }
-    window.location.href = '/';
+    await completeSignIn();
   }
 
   async function onPasskeySignIn() {
@@ -52,7 +53,7 @@ export function ChallengeForm({ instanceInitial = 'S' }: { instanceInitial?: str
       return;
     }
     if (result?.data) {
-      window.location.href = '/';
+      await completeSignIn();
     }
   }
 

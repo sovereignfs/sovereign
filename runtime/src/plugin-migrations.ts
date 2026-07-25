@@ -77,17 +77,25 @@ export function assertPluginEncryptionRequirement(
  *
  * `registry` iterates in a fixed (alphabetical, by manifest id) order, not
  * dependency or install order. A plugin's unmet `database.requireEncryption`
- * (RFC 0071) is still fatal — that promise must not be silently downgraded —
- * but it must not take every *other* plugin down with it just because they
- * happen to sort after it. So each plugin's encryption check is isolated in
- * its own try/catch: on failure, skip only that plugin's own provisioning and
- * keep going, collecting the violation. Only after every other plugin has had
- * its migrations attempted does this function throw — once — naming every
- * plugin that violated its requirement. (Previously this check was made
- * outside the per-plugin try/catch specifically so it *would* throw and abort
- * the loop — but an uncaught throw here aborts the whole `for` loop, not just
- * this plugin's iteration, so every alphabetically-later plugin silently
- * never got migrated: a real incident, not a hypothetical.)
+ * (RFC 0071) is fatal in production — that promise must not be silently
+ * downgraded — but it must not take every *other* plugin down with it just
+ * because they happen to sort after it. So each plugin's encryption check is
+ * isolated in its own try/catch: on failure, skip only that plugin's own
+ * provisioning and keep going, collecting the violation. Only after every
+ * other plugin has had its migrations attempted does this function throw —
+ * once — naming every plugin that violated its requirement. (Previously this
+ * check was made outside the per-plugin try/catch specifically so it *would*
+ * throw and abort the loop — but an uncaught throw here aborts the whole
+ * `for` loop, not just this plugin's iteration, so every alphabetically-later
+ * plugin silently never got migrated: a real incident, not a hypothetical.)
+ *
+ * In development (`NODE_ENV === 'development'` exactly — never bypassed
+ * under Vitest, which sets `NODE_ENV=test`) an unmet requirement warns
+ * instead of throwing, so `next dev` isn't blocked on a missing
+ * `SOVEREIGN_DB_ENCRYPTION_KEY` while iterating locally. The violating
+ * plugin(s) still get no provisioning/migrations either way — only the hard
+ * crash is skipped. The warning is recorded per-plugin via `recordWarnings`
+ * so it's visible in Console, not just a boot-time console line.
  *
  * Called from `instrumentation.ts` register() at Node.js server startup.
  */
@@ -99,7 +107,7 @@ export async function runAllPluginMigrations(): Promise<void> {
   // development dirs may use a different name (e.g. plugins/sovereign-tasks.local/).
   // Scanning lets both cases resolve correctly without assuming dir === id.
   const idToDir = buildIdToDirMap();
-  const encryptionViolations: string[] = [];
+  const encryptionViolations: { pluginId: string; message: string }[] = [];
 
   for (const manifest of registry) {
     const isolation = manifestDatabaseIsolation(manifest.database);
@@ -120,7 +128,7 @@ export async function runAllPluginMigrations(): Promise<void> {
         // Don't provision/migrate this plugin's (would-be-unencrypted)
         // isolated database — that's exactly the outcome the requirement
         // exists to prevent — but every other plugin still gets its turn.
-        encryptionViolations.push((err as Error).message);
+        encryptionViolations.push({ pluginId: manifest.id, message: (err as Error).message });
         continue;
       }
     }
@@ -150,10 +158,27 @@ export async function runAllPluginMigrations(): Promise<void> {
   }
 
   if (encryptionViolations.length > 0) {
-    throw new Error(
+    const summary =
       `${encryptionViolations.length} plugin(s) require database encryption but it is not ` +
-        `enabled:\n${encryptionViolations.map((message) => `  - ${message}`).join('\n')}`,
-    );
+      `enabled:\n${encryptionViolations.map((v) => `  - ${v.message}`).join('\n')}`;
+
+    // Dev-only escape hatch: don't block `next dev` startup over a missing
+    // SOVEREIGN_DB_ENCRYPTION_KEY. The violating plugin(s) were already
+    // skipped above (no provisioning, no migrations) — that security promise
+    // still holds — this only avoids a hard crash so the rest of the app is
+    // usable while iterating locally. Exact match on 'development', not
+    // `!== 'production'`: Vitest sets NODE_ENV=test and must keep exercising
+    // the real throw path (see plugin-status.ts's bypassPluginVisibilityInDev
+    // for the same convention).
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`[sovereign] ${summary}`);
+      for (const { pluginId, message } of encryptionViolations) {
+        recordWarnings(pluginId, [message]);
+      }
+      return;
+    }
+
+    throw new Error(summary);
   }
 }
 

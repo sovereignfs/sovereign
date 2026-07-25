@@ -205,7 +205,7 @@ const manifestObjectSchema = z
       })
       .optional(),
     /**
-     * Manifest-declared offline-capable page routes (RFC 0072). `routes[]`
+     * Manifest-declared offline-capable page routes (RFC 0074). `routes[]`
      * entries name a path prefix — relative to this plugin's own
      * `routePrefix` — that must keep rendering with no network; `root: true`
      * additionally (or instead) marks the plugin's own bare `routePrefix`

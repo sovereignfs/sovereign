@@ -300,7 +300,7 @@ describe('runtime middleware regressions', () => {
     expect(rootCall).toContain('role=platform%3Aadmin');
   });
 
-  describe('offline route flag (RFC 0072)', () => {
+  describe('offline route flag (RFC 0074)', () => {
     it('flags a request under a manifest-declared offline route prefix', async () => {
       const response = await middleware(request('/shopper/lists/abc'));
 

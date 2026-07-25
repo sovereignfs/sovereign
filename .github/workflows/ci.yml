@@ -2,7 +2,8 @@ name: CI
 
 # Validation runs only on pull requests targeting `main`. Documentation-only PRs
 # still start the workflow, but a cheap changes job skips the expensive code
-# jobs while the Docs workflow handles docs validation. There is no push trigger:
+# jobs — the docs site itself is now built and deployed from the
+# sovereignfs/sovereignfs workbench repo, not here. There is no push trigger:
 # `main` is gated pre-merge by the PR, and rebase-merge lands each reviewed
 # commit verbatim. `workflow_call` lets publish.yml reuse this as a pre-publish
 # gate on tagged commits and always runs the full validation suite.
@@ -84,10 +85,10 @@ jobs:
           run_generate_validate=false
 
           while IFS= read -r path; do
-            # Docs-only paths are handled by the Docs workflow, so they do not
-            # need the main CI jobs.
+            # Docs-only paths don't need the main code-validation jobs — the
+            # docs site itself is built elsewhere (see comment at top of file).
             case "$path" in
-              docs/*|apps/docs/*|*.md|.github/PULL_REQUEST_TEMPLATE.md|.github/PULL_REQUEST_TEMPLATE/*)
+              docs/*|*.md|.github/PULL_REQUEST_TEMPLATE.md|.github/PULL_REQUEST_TEMPLATE/*)
                 continue
                 ;;
             esac

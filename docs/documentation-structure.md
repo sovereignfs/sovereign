@@ -85,14 +85,16 @@ changing their public and GitHub URLs.
 
 ## Publication boundary
 
-The docs site uses the explicit policy in
-`apps/docs/.vitepress/publication.ts`. Public directories and canonical root
-references are opted in there. Every other Markdown file is excluded from page
-generation and local search automatically.
+The docs site (built from the `sovereignfs/sovereignfs` workbench repo, not
+this one) uses the explicit allowlist policy in that repo's
+`docs/docs-sync.manifest.json`. Public directories and canonical root
+references are opted in there via a build-time sparse-checkout of this repo;
+every other Markdown file here is never fetched, so it can't appear on the
+site.
 
 Adding a link to navigation does not make a document public. A new public
-content class or root reference requires a deliberate publication-policy
-change, which keeps internal notes from becoming public merely because they
+content class or root reference requires a deliberate change to that
+manifest, which keeps internal notes from becoming public merely because they
 live under `docs/`.
 
 ## Compatibility

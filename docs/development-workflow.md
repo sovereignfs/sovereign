@@ -205,7 +205,6 @@ commit subject and as the release tag:
 | -------------------------------- | -------------------- |
 | Root `package.json`              | `vX.Y.Z`             |
 | `packages/ui`                    | `ui-vX.Y.Z`          |
-| `apps/docs`                      | `docs-vX.Y.Z`        |
 | `packages/sdk`                   | `sdk-vX.Y.Z`         |
 | Any other package/app/plugin tag | `<slug>-vX.Y.Z`      |
 

@@ -167,8 +167,7 @@ here.
 Documentation-first: this RFC does not commit to a roadmap slot. Given how
 much of the underlying capability already exists (per Current state), the
 implementation is primarily a documentation and verification task, not new
-code — a single epic task. See epic task
-[9.17](../epics/design-system.md#-917--standalone-usage-of-sovereignfsui-outside-the-plugin-runtime-rfc-0073).
+code — a single epic task (9.17).
 No `@sovereignfs/ui` API surface changes are anticipated; if the icon-path
 or provider audits (Open questions) surface a gap, any resulting change
 follows NFR-04 (minor bump minimum, migration note in `docs/upgrade.md`).

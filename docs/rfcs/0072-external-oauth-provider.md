@@ -4,7 +4,7 @@
 **Date:** July 2026\
 **Author:** External contributor (submitted for consideration; adapted to repository conventions and revised during implementation against the actual `@better-auth/oauth-provider` API)\
 **Scope:** `apps/auth`, `runtime` (better-auth client version only), `plugins/console`, `docs/self-hosting.md`, `docs/security.md`, `docs/upgrade.md`. Builds on RFC 0021 (platform roles & capabilities).\
-**Incorporated into plan:** Yes — epic task [1.18](../epics/users-auth.md#-118--external-oauthoidc-provider-for-non-plugin-apps-rfc-0072).
+**Incorporated into plan:** Yes — epic task 1.18.
 
 ---
 
@@ -225,9 +225,7 @@ to diverge from them for v1.
 
 ## Adoption path
 
-Implemented in epic task
-[1.18](../epics/users-auth.md#-118--external-oauthoidc-provider-for-non-plugin-apps-rfc-0072)
-as a single PR (provider plugin + consent page + Console registration UI +
+Implemented in epic task 1.18 as a single PR (provider plugin + consent page + Console registration UI +
 docs) — additive, no changes to existing auth flows. `better-auth` bumped
 `^1.6.16` → `^1.6.25` (non-breaking, same major) to meet
 `@better-auth/oauth-provider`'s peer requirement.

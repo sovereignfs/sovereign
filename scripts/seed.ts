@@ -23,6 +23,14 @@ import {
   openKeyedSqlite,
 } from '@sovereignfs/db';
 import consola from 'consola';
+import { loadRootEnv } from './load-root-env';
+
+// Normally invoked via `sv seed`, which already loads .env before spawning
+// this as a child process — but load it here too (idempotent, never
+// overrides an already-set var) so the documented direct
+// `pnpm tsx scripts/seed.ts` invocation doesn't silently miss
+// SOVEREIGN_DB_ENCRYPTION_KEY on an encrypted instance.
+loadRootEnv(resolve(dirname(fileURLToPath(import.meta.url)), '..'));
 
 // ---------------------------------------------------------------------------
 // Prod guard — must run before any imports that touch the DB

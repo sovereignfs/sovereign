@@ -16,6 +16,13 @@ import {
 } from '@sovereignfs/db';
 import { resolve } from 'node:path';
 import { consola } from 'consola';
+import { loadRootEnv } from './load-root-env';
+
+// Normally invoked via `sv user reset-mfa`, which already loads .env before
+// spawning this as a child process — but load it here too (idempotent, never
+// overrides an already-set var) so a direct `pnpm tsx scripts/reset-mfa.ts`
+// doesn't silently miss SOVEREIGN_DB_ENCRYPTION_KEY on an encrypted instance.
+loadRootEnv(findWorkspaceRoot());
 
 const email = process.argv[2];
 if (!email) {

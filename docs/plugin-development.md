@@ -1592,6 +1592,7 @@ An isolated plugin can additionally require SQLite at-rest encryption
 {
   "database": {
     "isolation": "isolated",
+    "dialect": "sqlite",
     "requireEncryption": true
   }
 }
@@ -1603,12 +1604,16 @@ plugin's isolated database regardless of the instance-wide
 _out_ of encryption the operator has enabled. It requires
 `isolation: "isolated"` — whole-file encryption has no per-table granularity,
 so a `shared` plugin (whose tables live inside the platform database) cannot
-independently demand it; the manifest fails validation otherwise. If the
-platform resolves this plugin to Postgres, there is no SQLCipher equivalent —
-the runtime logs a startup warning and falls back to disk-level encryption for
-that plugin's store. If the instance has no `SOVEREIGN_DB_ENCRYPTION_KEY` set
-at all, the runtime refuses to start rather than silently install the plugin
-without the encryption it declares — see
+independently demand it; the manifest fails validation otherwise. It also
+**requires an explicit `dialect: "sqlite"`** alongside it — omitting `dialect`
+would let the platform's own dialect choice silently decide whether this is
+actually enforced, since there is no SQLCipher equivalent for Postgres: a
+plugin resolved to Postgres only gets a startup warning and a fallback to
+disk-level encryption for its store, not a real guarantee. Pinning
+`dialect: "sqlite"` explicitly means the manifest alone determines the
+outcome — the runtime refuses to start rather than silently install the
+plugin without the encryption it declares, instead of that guarantee quietly
+depending on what the operator chose for the platform database — see
 [docs/self-hosting.md's SQLite at-rest encryption section](self-hosting.md#sqlite-at-rest-encryption-rfc-0071).
 
 ```ts

@@ -125,7 +125,11 @@ export function checkEncryptionMarker(dataDir: string, keyPresent: boolean): voi
       throw new DbEncryptionConfigError(
         `${KEY_ENV} is set, but the data directory at ${dataDir} has not been ` +
           'encrypted yet. Run `sv db encrypt` first to convert existing plaintext ' +
-          'databases, or unset the key to keep running in plaintext.',
+          'databases, or unset the key to keep running in plaintext. (This check only ' +
+          'looks at file names ending in .db, not their contents — if this is a ' +
+          "genuinely fresh instance and you're seeing this unexpectedly, check for a " +
+          'stray or corrupt .db file left over from an unrelated failure under ' +
+          `${dataDir}/plugins/ and move it out.)`,
       );
     }
     writeEncryptionMarker(dataDir);

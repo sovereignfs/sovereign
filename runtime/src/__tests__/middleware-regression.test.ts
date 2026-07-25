@@ -319,10 +319,10 @@ describe('runtime middleware regressions', () => {
       expect(response.headers.get('x-middleware-request-x-sovereign-offline-route')).toBeNull();
     });
 
-    it('does not flag bare "/" — it renders the normal per-user SSR shell', async () => {
+    it('flags bare "/" unconditionally, regardless of the manifest-driven list', async () => {
       const response = await middleware(request('/'));
 
-      expect(response.headers.get('x-middleware-request-x-sovereign-offline-route')).toBeNull();
+      expect(response.headers.get('x-middleware-request-x-sovereign-offline-route')).toBe('1');
     });
   });
 

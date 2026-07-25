@@ -203,6 +203,22 @@ describe('validateManifest', () => {
     if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
   });
 
+  it('accepts a manifest declaring offline.root alone, with no routes', () => {
+    expect(validateManifest({ ...base, offline: { root: true } }).valid).toBe(true);
+  });
+
+  it('accepts a manifest declaring both offline.root and offline.routes', () => {
+    expect(
+      validateManifest({ ...base, offline: { root: true, routes: [{ prefix: '/cards' }] } }).valid,
+    ).toBe(true);
+  });
+
+  it('rejects an offline object with neither root nor routes', () => {
+    const res = validateManifest({ ...base, offline: {} });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('root');
+  });
+
   it('accepts a manifest that declares the example marker', () => {
     expect(validateManifest({ ...base, example: true }).valid).toBe(true);
   });

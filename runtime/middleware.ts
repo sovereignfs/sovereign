@@ -421,16 +421,21 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // service-worker-precached document for an offline route bakes in whatever
   // shell HTML was rendered alongside it. Without this flag, a plugin's own
   // offline route could correctly render nothing per-user while still shipping
-  // inside a per-user-personalized shell document. `/` is flagged
-  // unconditionally alongside the manifest-driven list: it's the PWA
-  // start_url, rewritten server-side below to whichever plugin is configured
-  // as the platform root (Launcher by default), and must render the same
-  // neutral shell so a cold, offline relaunch doesn't replay one user's
-  // chrome to the next (see `next.config.ts`'s matching `underOfflineRoutePrefix`).
-  if (
-    pathname === '/' ||
-    getOfflineRoutePrefixes(installedPlugins).some((prefix) => underPrefix(pathname, prefix))
-  ) {
+  // inside a per-user-personalized shell document.
+  //
+  // `/` is deliberately *not* included here, even though `next-pwa` also
+  // caches it (the PWA start_url, rewritten server-side below to whichever
+  // plugin is configured as the platform root). That cache entry is
+  // `NetworkFirst` (see `next.config.ts`), the same strategy already used for
+  // every other per-user SSR page and already accepted there as safe: a live,
+  // online request always gets a fresh per-user response, and the cached
+  // fallback is only ever served while genuinely offline. Blanking `/`
+  // unconditionally previously forced every live visit through an extra
+  // client-side re-fetch just to show the avatar/name, for a leak window
+  // (a stale cached shell replayed to a different user while offline on a
+  // shared device) no narrower than what's already tolerated for any other
+  // authenticated page.
+  if (getOfflineRoutePrefixes(installedPlugins).some((prefix) => underPrefix(pathname, prefix))) {
     headers.set('x-sovereign-offline-route', '1');
   }
 

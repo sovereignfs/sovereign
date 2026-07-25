@@ -212,8 +212,8 @@ function buildOptions(): BetterAuthOptions {
       // own keypair via better-auth's own schema.
       jwt(),
       // External OAuth 2.0 / OIDC provider for non-plugin apps (RFC 0072).
-      // Lets a standalone app on its own domain (e.g. FindMyModel) offer
-      // "log in with Sovereign" without joining the plugin system. Schema
+      // Lets a standalone app on its own domain offer "log in with
+      // Sovereign" without joining the plugin system. Schema
       // (oauthClient/oauthAccessToken/oauthRefreshToken/oauthConsent) is
       // auto-discovered by better-auth's own migrator (apps/auth/src/migrate.ts)
       // — no custom table needed, unlike the invites table.

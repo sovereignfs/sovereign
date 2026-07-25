@@ -30,10 +30,9 @@ guarantee for a standalone consumer, and no explicit confirmation that
 components/hooks (e.g. `useIsMobile`, `useLongPress`) have no hidden
 dependency on runtime-provided context.
 
-This matters directly for **FindMyModel**, a separate standalone app under
-active development that wants visual consistency with the Sovereign
-ecosystem for its curator-facing interface, without becoming a plugin
-itself.
+This matters directly for a separate standalone app under active
+development that wants visual consistency with the Sovereign ecosystem for
+its own admin/curator-facing interface, without becoming a plugin itself.
 
 ## Current state (what this builds on)
 

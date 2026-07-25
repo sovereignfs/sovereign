@@ -691,8 +691,8 @@ multi-select). No dependency on Task 2.21/2.23 — this task only captures and s
 **Goal:** Let `apps/auth` act as an OAuth 2.0 / OIDC identity provider for
 standalone external apps — on their own domain, not composed as a Sovereign
 plugin — so they can offer "log in with Sovereign" against an operator's
-instance. Motivated by FindMyModel, a separate standalone app that wants
-sign-in backed by a Sovereign instance without joining the plugin system.
+instance. Motivated by a separate standalone app that wants sign-in backed
+by a Sovereign instance without joining the plugin system.
 
 **Deliverables:**
 
@@ -734,8 +734,8 @@ open question.
 **Review checklist:**
 
 - An admin can register an external client and receive a client ID/secret
-  shown exactly once. ✅ verified live in the browser: registered
-  "FindMyModel" via Console → External clients, secret shown once with a
+  shown exactly once. ✅ verified live in the browser: registered a test
+  client via Console → External clients, secret shown once with a
   "Done, I've copied it" confirmation.
 - A registered client can complete the authorization code flow and receive
   an ID token with the documented claim set. ✅ verified live: drove

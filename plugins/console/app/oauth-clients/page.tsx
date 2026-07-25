@@ -5,8 +5,8 @@ import { OAuthClientsClient } from './OAuthClientsClient';
 /**
  * Console "External clients" section (RFC 0072, epic task 1.18) — lets a
  * platform admin/owner register, revoke, and rotate secrets for external
- * OAuth 2.0 clients (standalone apps like FindMyModel that want "log in with
- * Sovereign" without joining the plugin system).
+ * OAuth 2.0 clients (standalone apps that want "log in with Sovereign"
+ * without joining the plugin system).
  *
  * All CRUD happens client-side against `/api/auth/oauth2/*` — those routes
  * are mounted by `@better-auth/oauth-provider` on the auth server and

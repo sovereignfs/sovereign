@@ -178,7 +178,7 @@ export function OAuthClientsClient() {
               {...field}
               value={redirectUris}
               onChange={setRedirectUris}
-              placeholder="https://findmymodel.example/auth/callback"
+              placeholder="https://your-app.example/auth/callback"
             />
           )}
         </FormField>

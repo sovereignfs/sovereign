@@ -662,9 +662,9 @@ screens.
 **Goal:** State and document a standalone-consumption guarantee for
 `@sovereignfs/ui` so it can be used as an ordinary npm dependency in an
 external app that isn't a Sovereign plugin and doesn't run inside the
-runtime shell. Motivated by FindMyModel, a separate standalone app that
-wants visual consistency with the Sovereign ecosystem without becoming a
-plugin. Most of the underlying capability already exists (zero SDK
+runtime shell. Motivated by a separate standalone app that wants visual
+consistency with the Sovereign ecosystem without becoming a plugin. Most
+of the underlying capability already exists (zero SDK
 coupling, a working `tokens.css` export, context-free hooks) — this task is
 primarily verification and documentation, not new component code.
 

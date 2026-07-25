@@ -25,10 +25,10 @@ Sovereign workspace, but not an adjacent, increasingly common case: an
 independent site on its own domain that simply wants to let a known set of
 people (already Sovereign users) sign in, without becoming a plugin.
 
-This gap is concrete, not hypothetical: **FindMyModel**, a separate
-standalone app under active development, wants exactly this — sign-in backed
-by an operator's Sovereign instance, with its own independent authorization
-model (a curator allowlist) layered on top of verified identity.
+This gap is concrete, not hypothetical: a separate standalone app under
+active development wants exactly this — sign-in backed by an operator's
+Sovereign instance, with its own independent authorization model (e.g. a
+curator allowlist) layered on top of verified identity.
 
 better-auth ships provider support for exactly this. **Important correction
 found during implementation:** the originally-drafted target, the bundled
@@ -159,8 +159,8 @@ instance's own user table.)
 
 Explicitly out of scope for v1: plugin capabilities, roles, or any
 Sovereign-internal authorization data. An external app treats this purely as
-"who is this" and manages its own authorization afterward (e.g.
-FindMyModel's own curator allowlist) — stated explicitly in
+"who is this" and manages its own authorization afterward (e.g. its own
+allowlist) — stated explicitly in
 `docs/self-hosting.md` so consumers don't conflate "has a Sovereign account"
 with "authorized in my app."
 

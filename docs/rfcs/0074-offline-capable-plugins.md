@@ -233,9 +233,15 @@ into `next.config.ts`'s Workbox `runtimeCaching`:
 
 - A dedicated `offline-shells` matcher, listed **before** the general `pages`
   matcher (Workbox picks the first match), catches same-origin requests under
-  any declared offline prefix and caches them `CacheFirst` — safe here, and
-  only here, because these documents are declared user-neutral shells (§2):
-  populated on first online visit, then served with no network indefinitely.
+  any declared offline prefix and caches them `StaleWhileRevalidate` — safe
+  here, and only here, because these documents are declared user-neutral
+  shells (§2): the cached response serves instantly (works with no network),
+  while a background fetch refreshes the cache for next time. (Originally
+  `CacheFirst`; revised during hardening — see Changelog 0.3. `CacheFirst`
+  never revalidates against network while an entry is within
+  `maxAgeSeconds`, so a deployed shell change, including a content-hashed JS
+  chunk the stale HTML still references, would stay invisible to a returning
+  _online_ user for up to 30 days.)
 - **Everything else stays `NetworkFirst` → `/offline`.** The general `pages`
   matcher gained one exclusion (skip paths already claimed by the offline
   matcher) but is otherwise unchanged.
@@ -273,6 +279,47 @@ variants on profile self-mutation (CLAUDE.md) — offline data gets the same
 "nothing survives a session boundary" treatment. Without it, a shared device
 is exactly the leak the per-user-SSR rule (and, now, plugin-only cache
 scoping) was written to prevent.
+
+`runtime/src/complete-sign-in.ts`'s `completeSignIn()` extends this to the
+**sign-in** side too — called by every successful auth path (password,
+passkey, 2FA challenge, registration), purging unconditionally before
+navigating into the app. Sign-out-only purging couldn't catch a prior
+session that ended by expiry or tab-close rather than an explicit sign-out;
+purging again on the _next_ login closes that gap regardless of how the
+previous session ended (see Changelog 0.3).
+
+Two further gaps in the purge mechanism itself, found during hardening and
+fixed on this branch (Changelog 0.3): the write-epoch race guard between a
+`set()` and a `clearAll()` was originally a same-tab-only in-memory
+variable, invisible to a second open tab — now propagated cross-tab via
+`BroadcastChannel`. And `clearAll()` originally cleared only the IndexedDB
+store, leaving the service worker's precached `offline-shells` documents
+(a separate Cache Storage bucket) untouched — now purged too, as defense in
+depth against §2's user-neutral-shell rule not holding for some plugin.
+
+### Known limitation — the purge-timing gap cannot be fully closed
+
+The purge mechanism above (`clearAll()` on both sign-out and sign-in, plus
+a mount-time user-id mismatch check in `ClientShell.tsx` that re-purges if
+a persisted session belongs to a different user than this device last
+purged for) narrows, but cannot fully close, the window between one
+session ending and the next login.
+
+Concretely: if a tab is closed (or the session simply expires) without an
+explicit sign-out, and the device goes offline _before_ anyone opens the
+app again while online, the previous user's cached data sits in IndexedDB
+with nothing able to purge it — because the offline routes' entire premise
+is that they render with **zero network**, there is no point in that
+window where any code can run a session check at all. This is not a gap in
+implementation; it is the structural cost of "works with no connection."
+Fully closing it would require per-user, device-bound encryption of the
+offline cache (so a different user's session literally cannot decrypt
+leftover ciphertext) — a materially larger feature than this RFC's scope,
+and a candidate for a future RFC alongside offline writes. Accepted as a
+residual risk for v1: the exposure is bounded to a shared, unattended,
+never-reconnected device between one user's session ending and the next
+sign-in, and only reaches data the offline route itself already puts in a
+user-neutral, precache-safe shell.
 
 ### Docker / config impact
 
@@ -357,14 +404,22 @@ shippable. Writes get their own RFC building on this one.
    No `sdk.session` client getter was added.
 3. Should the runtime **enforce** the user-neutral-shell rule (e.g. a dev-time
    check that an offline route's SSR output carries no session headers / no
-   per-user markers), or is it documentation + review only? **Still open** —
-   shipped as documentation + review only (`docs/plugin-development.md`'s
-   `offline` section); no automated enforcement exists yet.
+   per-user markers), or is it documentation + review only? **Resolved** —
+   `runtime/src/__tests__/offline-route-neutrality.test.ts` (Changelog 0.3)
+   statically scans every manifest-declared offline route's server-component
+   source for identity-reading APIs (`headers()`, `cookies()`, a session
+   helper, the `x-sovereign-user-id` header) and fails CI if any are found.
+   A source scan, not a rendered-output diff — it can't catch every possible
+   per-user leak, only the direct ones, so documentation + review remain the
+   primary line of defense; this is a backstop, not a replacement.
 4. Eviction policy and quota: per-plugin IndexedDB size caps? LRU across offline
-   plugins when the browser signals storage pressure? **Still open** — not
-   addressed; `offline-shells` SW cache has an `expiration` bound
-   (`maxEntries: 64, maxAgeSeconds: 30 days`), but `sdk.offline`'s IndexedDB store
-   has no cap of its own yet.
+   plugins when the browser signals storage pressure? **Partially resolved** —
+   `sdk.offline.set()` now enforces a 5 MB soft per-entry cap and throws a
+   typed `OfflineQuotaExceededError` on both that cap and a real IndexedDB
+   `QuotaExceededError` (Changelog 0.3), so a caller gets an actionable
+   failure instead of an opaque `DOMException`. No LRU/automatic eviction —
+   that needs a metadata envelope around stored values and a changed `get()`
+   contract, deferred alongside offline writes/outbox.
 5. Should Console show which plugins declare offline routes and let an operator
    **disable** offline for a plugin instance-wide (parallel to plugin enable/disable)?
    **Still open** — not built (adoption path step 6, below).
@@ -406,7 +461,8 @@ future RFC that builds on the `sdk.offline` store defined here.
 
 ## Changelog
 
-| Version | Date      | Change                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0.1     | July 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| 0.2     | July 2026 | Steps 1–4 implemented on `feat/offline-capable-plugins`. Revised `sdk.offline` from `(pluginId, userId)` keying to plugin-id-only keying with an unconditional `clearAll()` on logout (open question 2 resolved); narrowed SW precaching from build-time to runtime-populated `CacheFirst` (§4); added `@sovereignfs/sdk/offline` as the import subpath (matching the `e2ee-*` pattern, not the main barrel as originally sketched). |
+| Version | Date      | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | July 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 0.2     | July 2026 | Steps 1–4 implemented on `feat/offline-capable-plugins`. Revised `sdk.offline` from `(pluginId, userId)` keying to plugin-id-only keying with an unconditional `clearAll()` on logout (open question 2 resolved); narrowed SW precaching from build-time to runtime-populated `CacheFirst` (§4); added `@sovereignfs/sdk/offline` as the import subpath (matching the `e2ee-*` pattern, not the main barrel as originally sketched).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 0.3     | July 2026 | Three hardening passes on the same branch, ahead of merge. **Purge coverage:** added `completeSignIn()` to purge on every sign-in, not just sign-out (§5); closed a cross-tab write/clear race with `BroadcastChannel`; `clearAll()` now also purges the SW's `offline-shells` Cache Storage entries; added a `ClientShell` mount-time check that re-purges on a user-id mismatch. Documented the remaining structural gap as a known limitation (new §5 subsection) rather than a bug — a fully offline, never-reconnected device between one session ending and the next login cannot be purged by any code path, by construction. **SW caching:** `offline-shells` switched `CacheFirst` → `StaleWhileRevalidate` (§4) so a deployed shell change isn't invisible to an online user for up to 30 days. **Enforcement:** open question 3 resolved — `offline-route-neutrality.test.ts` statically scans declared offline routes' SSR source for identity-reading APIs, CI-enforced. **Quota:** open question 4 partially resolved — `offline.set()` gained a 5 MB soft cap and a typed `OfflineQuotaExceededError`; LRU eviction remains open, deferred with offline writes. |

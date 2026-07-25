@@ -8,6 +8,14 @@ scope: apps/docs, docs/index.md, pnpm-workspace.yaml, turbo.json, .github/workfl
 incorporated_into_plan: 'Yes — epic tasks 16.1, 16.2'
 ---
 
+> **Update (July 2026):** `apps/docs/` described below was later retired and
+> deleted from this repository. The docs site is now built and deployed from
+> the `sovereignfs/sovereignfs` workbench repo, which fetches an allowlisted
+> subset of this repo's `docs/` at build time via its own
+> `docs/docs-sync.manifest.json` — see `docs/repositories.md` and
+> `docs/documentation-structure.md`. This RFC is kept for historical context on
+> the original design; treat `apps/docs` mentions below as no longer live.
+
 ## Summary
 
 Add `apps/docs/` — a VitePress 1.x workspace app whose `srcDir` points at the

@@ -8,6 +8,13 @@
 
 ---
 
+> **Update (July 2026):** `apps/docs/` referenced below was later retired and
+> deleted from this repository. The docs site is now built and deployed from
+> the `sovereignfs/sovereignfs` workbench repo instead — see
+> `docs/repositories.md` and `docs/documentation-structure.md`. This RFC is
+> kept for historical context on the site's product/content design; treat
+> `apps/docs` mentions below as no longer live.
+
 ## Summary
 
 Evolve the Sovereign VitePress site from a technical landing page into one

@@ -14,6 +14,46 @@ function monogram(name: string): string {
   return initials.toUpperCase();
 }
 
+type HydratedUser = { name: string; email: string; image?: string };
+
+// Deliberately *without* `disableCookieCache=true`: that flag forces
+// better-auth to bypass the signed session_data cookie and hit the DB via
+// findSession() on every single call. Traced with Playwright network capture
+// against a live repro: under the concurrent multi-process DB load a real
+// page load produces (this route, the runtime, and the auth server all
+// sharing one SQLite file), that DB lookup intermittently returned nothing
+// for a perfectly valid, unexpired token — better-auth then treats that as
+// "no session" and responds with Set-Cookie clearing every session cookie,
+// silently signing the user out. The account/profile and account/security
+// pages need disableCookieCache because they must reflect a self-edit
+// immediately; this hydration is just filling in the avatar/name the neutral
+// SSR shell couldn't render, so the up-to-300s-stale cached snapshot is fine
+// — the same staleness the rest of the shell already accepts from the
+// middleware's own cookie-cache-derived headers. Reading via the cache also
+// means no DB round trip at all, not just a safer one.
+//
+// Module-scoped and shared by every AccountMenu instance (the sidebar and
+// mobile header both mount unconditionally, so both would otherwise fire
+// this on mount at the same time) so only one request is ever made per page
+// load, regardless of how many instances ask.
+let sessionHydrationPromise: Promise<HydratedUser | null> | null = null;
+
+function hydrateSessionOnce(): Promise<HydratedUser | null> {
+  sessionHydrationPromise ??= fetch('/api/auth/get-session')
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data) =>
+      data?.user
+        ? {
+            name: data.user.name ?? '',
+            email: data.user.email ?? '',
+            image: data.user.image ?? undefined,
+          }
+        : null,
+    )
+    .catch(() => null);
+  return sessionHydrationPromise;
+}
+
 export function AccountMenu({
   avatar,
   avatarImageClassName,
@@ -54,19 +94,11 @@ export function AccountMenu({
   useEffect(() => {
     if (!hydrateUser) return;
     let cancelled = false;
-    fetch('/api/auth/get-session?disableCookieCache=true')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (cancelled || !data?.user) return;
-        setHydrated({
-          name: data.user.name ?? '',
-          email: data.user.email ?? '',
-          image: data.user.image ?? undefined,
-        });
-      })
-      .catch(() => {
-        // Best-effort — leave the neutral trigger if the fetch fails.
-      });
+    hydrateSessionOnce().then((result) => {
+      // Best-effort — leave the neutral trigger if the fetch failed or
+      // returned no session.
+      if (!cancelled && result) setHydrated(result);
+    });
     return () => {
       cancelled = true;
     };

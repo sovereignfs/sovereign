@@ -84,13 +84,23 @@ const withPWA = withPWAInit({
     runtimeCaching: [
       // Offline-capable routes (RFC 0072) — must be listed before the
       // general "pages" matcher below so it wins for these specific paths.
-      // CacheFirst is safe here (and only here) because these documents are
-      // declared user-neutral shells, not per-user SSR: populated on first
-      // online visit, then served with no network indefinitely after.
+      // StaleWhileRevalidate is safe here (and only here) because these
+      // documents are declared user-neutral shells, not per-user SSR: the
+      // cached response serves instantly (works with no network) while a
+      // background fetch refreshes the cache for next time. This matters
+      // for staying current, not just for offline: CacheFirst (the original
+      // choice) never revalidates against network while an entry is still
+      // within maxAgeSeconds, so a deployed change to an offline route's
+      // shell — including a content-hashed JS chunk the stale HTML still
+      // references, no longer served after the deploy — would stay
+      // invisible to a returning user for up to 30 days even though they're
+      // fully online. SWR still serves the fast cached response immediately,
+      // but the background revalidation means the *next* visit already has
+      // the update, deploy or not.
       {
         urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
           sameOrigin && underOfflineRoutePrefix(url.pathname),
-        handler: 'CacheFirst',
+        handler: 'StaleWhileRevalidate',
         options: {
           cacheName: 'offline-shells',
           expiration: { maxEntries: 64, maxAgeSeconds: 30 * 86400 },

@@ -25,6 +25,7 @@ and tokens inside a plugin) lives in `docs/plugin-development.md` (from v0.5).
 - [Token reference](#token-reference)
 - [Building a component](#building-a-component)
 - [Theming](#theming)
+- [Standalone usage (outside the plugin runtime)](#standalone-usage-outside-the-plugin-runtime)
 - [Responsive & mobile](#responsive--mobile)
 
 ---
@@ -400,6 +401,111 @@ tokens at `:root` (for example, giving Sovereign a brand colour by setting
 `--sv-color-accent`). Primitives stay fixed; only the semantic layer is
 overridden. Because every component references the semantic layer, a theme is
 purely a set of CSS variable values — no component or build changes required.
+
+---
+
+## Standalone usage (outside the plugin runtime)
+
+`@sovereignfs/ui` works as an ordinary npm dependency in an app that is
+**not** a Sovereign plugin and does not run inside the Sovereign runtime
+shell — no plugin manifest, no runtime composition, no session access, and
+no dependency on `@sovereignfs/sdk` (RFC 0073). It's published to the npm
+registry today; check `npm view @sovereignfs/ui` for the current version.
+
+### Installation
+
+```bash
+npm install @sovereignfs/ui
+```
+
+### Importing tokens
+
+The package exports a standalone tokens stylesheet — import it once, at
+your app's root:
+
+```ts
+import '@sovereignfs/ui/tokens.css';
+```
+
+This pulls in both tiers (primitives then semantic). If you only need one
+tier directly, `@sovereignfs/ui/tokens/primitives.css` and
+`@sovereignfs/ui/tokens/semantic.css` are separately importable too.
+
+### No root provider required
+
+Every component in `@sovereignfs/ui` is a pure CSS-variable/props consumer —
+there is no `SovereignUIRoot`-style wrapper to mount and none is required to
+use components outside the runtime shell. The package has zero
+`@sovereignfs/sdk` coupling and no `createContext`/`useContext` usage that
+crosses component boundaries (`Toast` and `Dialog` manage their own local
+state internally, not a shared runtime-injected global). If a future
+component needs shared context (theme, density, locale), introducing one
+would be a breaking change subject to the semver policy below — not
+something to assume silently.
+
+### Hooks are runtime-independent
+
+`useIsMobile`, `useLongPress`, `useDoubleTapHandler`, and
+`useCommitOnEnterOrBlur` have no dependency on the Sovereign runtime or any
+other package in this monorepo — they're safe to use in any React 18+ app,
+standalone or otherwise.
+
+### Dark mode outside the runtime shell
+
+Inside the runtime shell, dark mode is driven by a `[data-theme='dark']`
+attribute the shell sets for you (see [Theming](#theming) above). A
+standalone consumer sets the same attribute itself, on its own root:
+
+```ts
+document.documentElement.dataset.theme = 'dark'; // or 'light'
+```
+
+There's no built-in `prefers-color-scheme` auto-detection — that choice
+(system preference vs. explicit toggle vs. always-light) is left to the
+consuming app.
+
+### No same-origin or runtime-relative asset dependencies
+
+Verified for this task: `@sovereignfs/ui` has no `fetch()`, `new URL()`,
+or `src="/…"`-style runtime-relative asset reference anywhere in its
+source. Icons in particular ([Icon system](#icon-system-rfc-0011)) are
+bundled as inline SVG React components at build time — no icon font, sprite
+sheet, or CDN request, and no dependency on being served from the same
+origin as any Sovereign instance.
+
+### Minimal example
+
+```tsx
+import '@sovereignfs/ui/tokens.css';
+import { FormField, Input, Button } from '@sovereignfs/ui';
+
+function ExampleForm() {
+  return (
+    <form>
+      <FormField label="Email" id="email">
+        {(field) => <Input {...field} type="email" name="email" />}
+      </FormField>
+      <Button type="submit">Submit</Button>
+    </form>
+  );
+}
+```
+
+### Standalone-surface stability
+
+`@sovereignfs/ui` follows the same strict semver discipline as
+`@sovereignfs/sdk` (NFR-04 — see [`docs/sdk-stability.md`](sdk-stability.md)):
+patch releases never break, minor releases are additive-only, and breaking
+changes require a major bump plus a migration note in `docs/upgrade.md`.
+For the specific case of standalone (non-plugin) consumption:
+
+- **Stable** — token names (both tiers), and the core primitives
+  (`Button`, `FormField`, `Input`, `Card`, `StatusBadge`, `Icon`, and the
+  four hooks listed above). Safe to build against today.
+- **Experimental for standalone use** — editor-workflow primitives added
+  for plugin-internal use (e.g. `SplitPane`, epic task 9.16) have not been
+  independently audited for standalone (non-runtime) behavior. They likely
+  work, but carry a smaller compatibility guarantee until audited.
 
 ---
 

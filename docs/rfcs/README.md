@@ -88,4 +88,4 @@ for the full process.
 | [0070](0070-per-user-capability-grants.md)       | Per-user capability grants                               | Implemented                                   | Yes — epic task 1.16                                                 |
 | [0071](0071-sqlite-at-rest-encryption.md)        | SQLite at-rest encryption (opt-in, single-key)           | Draft                                         | Documentation-first — epic task 8.14                                 |
 | [0072](0072-external-oauth-provider.md)          | External OAuth/OIDC provider for non-plugin apps         | Implemented                                   | Yes — epic task 1.18                                                 |
-| [0073](0073-standalone-ui-package.md)            | Standalone usage of `@sovereignfs/ui` outside plugins    | Draft                                         | Documentation-first — epic task 9.17                                 |
+| [0073](0073-standalone-ui-package.md)            | Standalone usage of `@sovereignfs/ui` outside plugins    | Implemented                                   | Yes — epic task 9.17                                                 |

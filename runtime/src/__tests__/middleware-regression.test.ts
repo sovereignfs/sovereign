@@ -21,9 +21,10 @@ vi.mock('@/src/capabilities', async () => import('../capabilities'));
 
 vi.mock('@/src/dev-mode', async () => import('../dev-mode'));
 
-vi.mock('@/src/registry', () => ({
-  getInstalledPlugins: () => mockState.installedPlugins,
-}));
+vi.mock('@/src/registry', async () => {
+  const actual = await import('../registry');
+  return { ...actual, getInstalledPlugins: () => mockState.installedPlugins };
+});
 
 vi.mock('@/src/route-guard', async () => import('../route-guard'));
 
@@ -64,6 +65,12 @@ const publicRoutePlugin = {
   id: 'com.example.blog',
   routePrefix: '/blog',
   publicRoutes: [{ prefix: '/p' }],
+} as SovereignManifest;
+
+const offlineRoutePlugin = {
+  id: 'com.example.shopper',
+  routePrefix: '/shopper',
+  offline: { routes: [{ prefix: '/lists' }] },
 } as SovereignManifest;
 
 const paidPublicRoutePlugin = {
@@ -159,6 +166,7 @@ describe('runtime middleware regressions', () => {
       apiShapedPlugin,
       publicRoutePlugin,
       paidPublicRoutePlugin,
+      offlineRoutePlugin,
     ];
     fetchState = {
       session: session(),
@@ -290,6 +298,26 @@ describe('runtime middleware regressions', () => {
     const rootCall = fetchState.calls.find((c) => c.includes('/api/admin/root-plugin'));
     expect(rootCall).toContain('userId=user-1');
     expect(rootCall).toContain('role=platform%3Aadmin');
+  });
+
+  describe('offline route flag (RFC 0072)', () => {
+    it('flags a request under a manifest-declared offline route prefix', async () => {
+      const response = await middleware(request('/shopper/lists/abc'));
+
+      expect(response.headers.get('x-middleware-request-x-sovereign-offline-route')).toBe('1');
+    });
+
+    it('does not flag a request outside the declared prefix on the same plugin', async () => {
+      const response = await middleware(request('/shopper/combined'));
+
+      expect(response.headers.get('x-middleware-request-x-sovereign-offline-route')).toBeNull();
+    });
+
+    it('does not flag a request to a plugin with no offline routes', async () => {
+      const response = await middleware(request('/paid'));
+
+      expect(response.headers.get('x-middleware-request-x-sovereign-offline-route')).toBeNull();
+    });
   });
 
   describe('public plugin page routes (RFC 0042)', () => {

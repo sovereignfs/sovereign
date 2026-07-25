@@ -162,6 +162,34 @@ The runtime enforces the shell rule at build/validation time as far as it can
 `docs/plugin-development.md`, exactly as `publicRoutes` makes token validation the
 plugin's job.
 
+**The shared platform shell had to become neutral too (Changelog 0.4).** A
+plugin's own offline-route page can be perfectly neutral and still ship
+inside a document that isn't: every default-shell plugin (Shopper and Wallet
+included) composes under `runtime/app/(platform)/layout.tsx`, one shared
+Server Component every route renders through — and that layout reads the
+authenticated user's name, email, and avatar image straight into its SSR
+output, plus a personalized, access-policy-filtered, user-reordered sidebar
+plugin list. A full-document navigation to an offline route returns _one_
+HTML response containing both the plugin's neutral page and this decidedly
+non-neutral shell, and that whole response is what the service worker
+precaches. Found after the fact, not by design — the neutrality rule above
+was written (and reviewed, and CI-scanned by
+`offline-route-neutrality.test.ts`) with only a plugin's own route files in
+view, never the shell wrapping them.
+
+Fixed by flagging the request in `middleware.ts` — `getOfflineRoutePrefixes()`
+against the request path sets `x-sovereign-offline-route: '1'` — which
+`PlatformLayout` reads to render a single, fixed, identical-for-every-user
+shell for these routes: no name/email/avatar, no admin Console icon, no
+personalized/restricted/reordered plugin list (only the Launcher icon, which
+was already unfiltered by any of that), and no user id threaded to
+`ClientShell` (a value frozen into a precached document reflects whoever's
+visit populated the cache, not whoever it's later replayed to — passing it
+through at all would make `ClientShell`'s own mismatch-purge check, added in
+Changelog 0.3, compare against a stale identity instead of skipping safely).
+Every other route is completely unaffected — this only branches for paths
+under a manifest-declared `offline.routes` prefix.
+
 ### 3. Client data surface — `sdk.offline.*`
 
 Add a **client-side** SDK surface (`packages/sdk/src/offline.ts`) backed by
@@ -466,3 +494,4 @@ future RFC that builds on the `sdk.offline` store defined here.
 | 0.1     | July 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 0.2     | July 2026 | Steps 1–4 implemented on `feat/offline-capable-plugins`. Revised `sdk.offline` from `(pluginId, userId)` keying to plugin-id-only keying with an unconditional `clearAll()` on logout (open question 2 resolved); narrowed SW precaching from build-time to runtime-populated `CacheFirst` (§4); added `@sovereignfs/sdk/offline` as the import subpath (matching the `e2ee-*` pattern, not the main barrel as originally sketched).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 0.3     | July 2026 | Three hardening passes on the same branch, ahead of merge. **Purge coverage:** added `completeSignIn()` to purge on every sign-in, not just sign-out (§5); closed a cross-tab write/clear race with `BroadcastChannel`; `clearAll()` now also purges the SW's `offline-shells` Cache Storage entries; added a `ClientShell` mount-time check that re-purges on a user-id mismatch. Documented the remaining structural gap as a known limitation (new §5 subsection) rather than a bug — a fully offline, never-reconnected device between one session ending and the next login cannot be purged by any code path, by construction. **SW caching:** `offline-shells` switched `CacheFirst` → `StaleWhileRevalidate` (§4) so a deployed shell change isn't invisible to an online user for up to 30 days. **Enforcement:** open question 3 resolved — `offline-route-neutrality.test.ts` statically scans declared offline routes' SSR source for identity-reading APIs, CI-enforced. **Quota:** open question 4 partially resolved — `offline.set()` gained a 5 MB soft cap and a typed `OfflineQuotaExceededError`; LRU eviction remains open, deferred with offline writes. |
+| 0.4     | July 2026 | Found and fixed a leak the §2 neutrality rule (and its CI scanner) never covered: `runtime/app/(platform)/layout.tsx`, the shared Server Component every default-shell plugin route composes under — including Shopper's and Wallet's now-real offline routes — embeds the authenticated user's name/email/avatar and a personalized, access-policy-filtered, reordered sidebar plugin list directly into SSR output. A full-document response for an offline route bundles this non-neutral shell with the plugin's own (correctly neutral) page into one precached document. Fixed with a `middleware.ts` flag (`x-sovereign-offline-route`, set from `getOfflineRoutePrefixes()`) that `PlatformLayout` reads to render a fixed, identical-for-everyone shell for these routes only — see §2's "shared platform shell" subsection. Every non-offline route is unaffected.                                                                                                                                                                                                                                                                                                   |

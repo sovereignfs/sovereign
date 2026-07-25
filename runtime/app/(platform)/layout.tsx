@@ -108,7 +108,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   return (
     <InstanceProvider>
       {({ instanceName, instanceLogoUrl }) => (
-        <ClientShell>
+        <ClientShell userId={userId}>
           <div className={styles.shell}>
             <OfflineBanner />
             <aside className={styles.sidebar} aria-label="Primary navigation">

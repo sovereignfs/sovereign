@@ -1,4 +1,0 @@
-{
-  "extends": "@sovereignfs/tsconfig/base.json",
-  "include": [".vitepress/**/*.ts"]
-}

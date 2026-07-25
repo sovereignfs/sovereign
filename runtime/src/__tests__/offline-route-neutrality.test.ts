@@ -2,7 +2,7 @@
  * Enforces the "user-neutral shell" rule that `docs/plugin-development.md`'s
  * `offline` section documents but nothing previously checked: an offline
  * route's own SSR output must carry no per-user data, since a precached copy
- * could be replayed to a different user on a shared device (RFC 0072). This
+ * could be replayed to a different user on a shared device (RFC 0074). This
  * is a static source scan, not a rendered-output diff — it cannot catch
  * every way a server component could leak per-user state, but it catches the
  * common, direct ones (reading the session header, cookies, or a session
@@ -85,7 +85,7 @@ function findPluginDir(pluginId: string): string | undefined {
     });
 }
 
-describe('offline route SSR neutrality (RFC 0072)', () => {
+describe('offline route SSR neutrality (RFC 0074)', () => {
   it('flags a server component that reads per-user identity', () => {
     const violation = `
       import { headers } from 'next/headers';
@@ -153,7 +153,7 @@ describe('offline route SSR neutrality (RFC 0072)', () => {
       violations,
       `Offline-capable route(s) read per-user identity during SSR — a precached ` +
         `copy could be replayed to a different user on a shared device ` +
-        `(RFC 0072 "user-neutral shell"):\n${violations.join('\n')}`,
+        `(RFC 0074 "user-neutral shell"):\n${violations.join('\n')}`,
     ).toHaveLength(0);
   });
 });

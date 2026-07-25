@@ -41,8 +41,8 @@ run a bare `pnpm install` when you're intentionally adding, removing, or
 bumping a dependency — the resulting lockfile diff should be scoped to
 that change and included in the same commit.
 
-**Exception — `.local` plugins:** after cloning one (via `pnpm install:plugins`,
-`./setup.sh`, or a manual clone into `plugins/<name>.local`), `--frozen-lockfile`
+**Exception — `.local` plugins:** after cloning one (via `pnpm install:plugins`
+or a manual clone into `plugins/<name>.local`), `--frozen-lockfile`
 will always fail: the plugin becomes a new workspace project with dependencies
 the committed lockfile has never resolved, and since `.local` plugins are
 gitignored by design they never enter the committed lockfile. This is expected,
@@ -405,40 +405,25 @@ gitignored — they are not committed to this repo. The shipped config has an
 empty `plugins` list; add entries to install. An unreachable repository URL
 fails the script with a clear error.
 
-### Cloning your own plugins with `setup.sh`
+### Cloning your own plugins
 
 `sovereign.plugins.json` is committed and shared. If instead you want to clone
 plugin repositories **you** are developing against this checkout — without
-declaring them anywhere in the codebase — use `./setup.sh`. It reads a personal,
-**git-ignored** list at the repo root, `sovereign.plugins.local`, and clones
-each entry into `plugins/<name>.local` (the project's `.local` convention;
-see `docs/plugin-development.md`).
-
-Create `sovereign.plugins.local` (it does not exist by default) with one git URL
-per line:
-
-```text
-# Plugins I'm actively developing
-git@github.com:me/sovereign-tasks.git      # → plugins/sovereign-tasks.local
-notes git@github.com:me/plugin-notes.git   # explicit name → plugins/notes.local
-```
-
-- Blank lines and `#` comments (whole-line or trailing) are ignored.
-- `<git-url>` clones to `plugins/<repo-name>.local`; prefix `<name> <git-url>`
-  to choose the directory name explicitly.
-
-Then:
+declaring them anywhere in the codebase — clone directly into
+`plugins/<name>.local` (the project's `.local` convention; see
+`docs/plugin-development.md`):
 
 ```bash
-./setup.sh     # clones each entry into plugins/<name>.local (skips existing)
+git clone git@github.com:me/sovereign-tasks.git plugins/sovereign-tasks.local
 pnpm install   # links the newly cloned workspace deps
 pnpm dev       # composes them into the runtime
 ```
 
-If `sovereign.plugins.local` is absent, `setup.sh` skips this step with a
-one-line note. Unlike `sovereign.plugins.json`, this file is yours alone: it is
-never committed and no code references it, so the specific plugins you clone stay
-private to your machine.
+This directory is yours alone: it is never committed and no code references
+it, so the specific plugins you clone stay private to your machine. Managing a
+personal list of repos to clone this way across checkouts is handled by the
+`sovereignfs/sovereignfs` workbench's `workbench plugins pull` command, not by
+this repo.
 
 ### Developing a plugin against a local Sovereign
 

@@ -148,7 +148,7 @@ export function OAuthClientsClient() {
   }
 
   return (
-    <div className={styles.providerConfigCard}>
+    <div className={styles.providerConfigStack}>
       {revealed && (
         <div role="alert" className={styles.providerConfigCard}>
           <p className={styles.helpText}>
@@ -156,7 +156,7 @@ export function OAuthClientsClient() {
             cannot be displayed again; if it&rsquo;s lost, rotate the secret instead.
           </p>
           <code className={styles.codeInline}>{revealed.clientSecret}</code>
-          <div>
+          <div className={styles.providerConfigActions}>
             <Button variant="secondary" size="sm" onClick={() => setRevealed(null)}>
               Done, I&rsquo;ve copied it
             </Button>
@@ -203,7 +203,7 @@ export function OAuthClientsClient() {
               </p>
               <p className={styles.helpText}>Client ID: {client.client_id}</p>
               <p className={styles.helpText}>Redirect URIs: {client.redirect_uris.join(', ')}</p>
-              <div>
+              <div className={styles.providerConfigActions}>
                 <Button
                   variant="secondary"
                   size="sm"

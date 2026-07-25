@@ -217,6 +217,16 @@ function buildOptions(): BetterAuthOptions {
       // (oauthClient/oauthAccessToken/oauthRefreshToken/oauthConsent) is
       // auto-discovered by better-auth's own migrator (apps/auth/src/migrate.ts)
       // — no custom table needed, unlike the invites table.
+      //
+      // Expect benign "Field ... has a different type in the database"
+      // warnings on every startup for this plugin's string[] fields (scopes,
+      // redirectUris, etc.) on SQLite: better-auth's own schema checker wants
+      // the column's declared type name to contain "json", but SQLite has no
+      // native array/JSON column type, so the migrator creates them as TEXT
+      // (values are JSON-encoded on write, decoded on read — this works
+      // correctly, verified end-to-end). Cosmetic upstream gap in
+      // better-auth's SQLite type-checker, not something to silence via a
+      // schema override.
       oauthProvider({
         loginPage: '/login',
         consentPage: '/oauth2/consent',

@@ -721,6 +721,16 @@
   gap: var(--sv-space-3);
 }
 
+/* Constrains a stack of provider-config cards to the same reading width as
+   the other Console tabs' forms (e.g. Identity's .settingsForm), instead of
+   stretching full-bleed across the content area. */
+.providerConfigStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+  max-width: 560px;
+}
+
 .providerConfigActions {
   display: flex;
   align-items: center;

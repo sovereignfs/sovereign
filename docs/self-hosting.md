@@ -1048,6 +1048,20 @@ Redirect URIs are matched **exact-string only** — no prefix or wildcard
 matching — against the client's registered list. An authorization request
 with any other `redirect_uri` is rejected.
 
+### Known benign startup warning
+
+On every startup you'll see log lines like:
+
+```
+[Better Auth]: Field scopes in table oauthClient has a different type in the
+database. Expected string[] but got TEXT.
+```
+
+This is a cosmetic gap in better-auth's own SQLite schema checker — SQLite
+has no native array/JSON column type, so array-typed fields (`scopes`,
+`redirectUris`, etc.) are stored as `TEXT` with JSON-encoded values, which
+works correctly. Safe to ignore.
+
 ---
 
 ## Web Push notifications (RFC 0016)

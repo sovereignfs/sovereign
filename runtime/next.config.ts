@@ -60,17 +60,14 @@ const offlineRoutePrefixes = getOfflineRoutePrefixes();
 // `/` here would never actually be reached by Workbox regardless of array
 // order. That built-in route already does what's needed — serve the network
 // response, fall back to the cached one when offline — so `/` gets working
-// offline access "for free". What makes it *safe* is entirely on the
-// content side: `middleware.ts` flags `/` with `x-sovereign-offline-route`
-// unconditionally (alongside this file's manifest-driven list), so
-// `(platform)/layout.tsx` renders the same neutral shell for it as for any
-// other offline route, and Launcher (the default platform root,
-// `offline.root: true` in its manifest) renders a neutral page too — so the
-// response next-pwa caches for `/` is neutral by construction, for the
-// *default* configuration. An admin-configured, non-offline-aware root
-// plugin could still leave a stale/per-user document cached at `/` from
-// whenever it was last visited — a narrow, accepted edge case, not solved
-// here.
+// offline access "for free", on the same terms as the "pages" entry below:
+// `middleware.ts` deliberately does *not* flag `/` as an offline route, so
+// it renders the normal per-user SSR shell (avatar, name, sidebar order) on
+// every live request, exactly like any other authenticated page. The
+// tradeoff is identical to the one already accepted for "pages": a device
+// used genuinely offline can replay whichever user's shell was cached from
+// their last online visit, until the next successful online request
+// refreshes it.
 function underOfflineRoutePrefix(pathname: string): boolean {
   return offlineRoutePrefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),

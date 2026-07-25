@@ -23,18 +23,29 @@
 const DB_NAME = 'sovereign-offline';
 const DB_VERSION = 1;
 const STORE_NAME = 'kv';
-const KEY_SEPARATOR = '::';
 
-function compositeKey(pluginId: string, key: string): string {
-  return `${pluginId}${KEY_SEPARATOR}${key}`;
+/**
+ * Composite key as a native IndexedDB array key — `[pluginId, key]` — rather
+ * than a delimiter-joined string. Array keys compare element-by-element, so
+ * there is no delimiter for a plugin id or cache key to collide with (the
+ * manifest schema places no format restriction on plugin `id` beyond
+ * non-empty, so a delimiter-based scheme could not actually guarantee
+ * isolation between plugins).
+ */
+function compositeKey(pluginId: string, key: string): [string, string] {
+  return [pluginId, key];
 }
 
+/**
+ * Range covering every `[pluginId, *]` entry. Per IndexedDB's key-type
+ * ordering, Array sorts after String, and a shorter array sorts before a
+ * longer array sharing the same prefix — so `[pluginId]` is less than every
+ * `[pluginId, <any string>]`, and `[pluginId, []]` (array in the second
+ * position) is greater than every `[pluginId, <any string>]`, regardless of
+ * the string's content. That gives an exact, delimiter-free prefix range.
+ */
 function pluginKeyRange(pluginId: string): IDBKeyRange {
-  const prefix = `${pluginId}${KEY_SEPARATOR}`;
-  // Upper bound is exclusive and must sort after every string starting with
-  // `prefix` — '￿' is the highest BMP code point, which suffices for
-  // plugin ids (lowercase, dot-separated reverse-domain style).
-  return IDBKeyRange.bound(prefix, `${prefix}￿`, false, false);
+  return IDBKeyRange.bound([pluginId], [pluginId, []], false, true);
 }
 
 function openDb(): Promise<IDBDatabase> {
@@ -49,6 +60,17 @@ function openDb(): Promise<IDBDatabase> {
     request.onerror = () => reject(request.error ?? new Error('Failed to open IndexedDB.'));
   });
 }
+
+/**
+ * Bumped by `clearAll`. `set` captures the epoch before it starts writing
+ * and re-checks it just before committing; if a logout's `clearAll` ran in
+ * between, the write is dropped instead of silently resurrecting the
+ * outgoing session's data right after the purge that was supposed to remove
+ * it. Doesn't close every possible ordering (two independent IndexedDB
+ * connections have no cross-transaction ordering guarantee), but covers the
+ * realistic case — a write already in flight when the user clicks sign out.
+ */
+let epoch = 0;
 
 /** Plugin-scoped offline cache (RFC 0074). Browser-only — import from `@sovereignfs/sdk/offline`. */
 export const offline = {
@@ -67,8 +89,15 @@ export const offline = {
 
   /** Write/replace this plugin's cached value for `key`. */
   async set<T>(pluginId: string, key: string, value: T): Promise<void> {
+    const writeEpoch = epoch;
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {
+      if (writeEpoch !== epoch) {
+        // A clearAll() ran while this write was in flight — the session that
+        // requested it is gone; don't let its data reappear after the purge.
+        resolve();
+        return;
+      }
       const tx = db.transaction(STORE_NAME, 'readwrite');
       tx.objectStore(STORE_NAME).put(value, compositeKey(pluginId, key));
       tx.oncomplete = () => resolve();
@@ -92,12 +121,11 @@ export const offline = {
   /** List every key this plugin has cached (unprefixed — as passed to `set`). */
   async keys(pluginId: string): Promise<string[]> {
     const db = await openDb();
-    const prefix = `${pluginId}${KEY_SEPARATOR}`;
     const result = await new Promise<string[]>((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readonly');
       const request = tx.objectStore(STORE_NAME).getAllKeys(pluginKeyRange(pluginId));
       request.onsuccess = () =>
-        resolve((request.result as IDBValidKey[]).map((k) => String(k).slice(prefix.length)));
+        resolve((request.result as [string, string][]).map(([, key]) => key));
       request.onerror = () => reject(request.error ?? new Error('Failed to list offline keys.'));
     });
     db.close();
@@ -117,12 +145,14 @@ export const offline = {
   },
 
   /**
-   * Remove every cached value for every plugin. Called by the runtime shell
-   * on logout/user-switch — the safeguard that makes per-plugin-only (not
-   * per-user) keying safe on a shared device: nothing survives past the
-   * session that wrote it.
+   * Remove every cached value for every plugin. Called on every logout/user-
+   * switch — the safeguard that makes per-plugin-only (not per-user) key
+   * scoping safe on a shared device: nothing survives past the session that
+   * wrote it. Also bumps the write epoch so any `set` already in flight when
+   * this runs is dropped rather than resurrecting stale data right after.
    */
   async clearAll(): Promise<void> {
+    epoch++;
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');

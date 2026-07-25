@@ -9,7 +9,7 @@ import {
   validateDevModeSecret,
 } from '@/src/dev-mode';
 import { ALL_GRANTED_PLUGIN_CAPS } from '@/generated/plugin-capabilities';
-import { getInstalledPlugins } from '@/src/registry';
+import { getInstalledPlugins, getOfflineRoutePrefixes } from '@/src/registry';
 import {
   decidePluginRoute,
   matchedPluginId,
@@ -414,6 +414,17 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     underPrefix(pathname, plugin.routePrefix),
   );
   if (currentPlugin) headers.set('x-sovereign-plugin-id', currentPlugin.id);
+
+  // Flag a manifest-declared offline route (RFC 0072) so `(platform)/layout.tsx`
+  // can render a user-neutral shell for it — the platform shell chrome (name,
+  // avatar, personalized sidebar order) is otherwise per-user SSR, and a
+  // service-worker-precached document for an offline route bakes in whatever
+  // shell HTML was rendered alongside it. Without this flag, a plugin's own
+  // offline route could correctly render nothing per-user while still shipping
+  // inside a per-user-personalized shell document.
+  if (getOfflineRoutePrefixes(installedPlugins).some((prefix) => underPrefix(pathname, prefix))) {
+    headers.set('x-sovereign-offline-route', '1');
+  }
 
   // Forward the dev-mode flag to Node runtime handlers (RFC 0020). The marker
   // header is safe to inject here — it was validated above; stripping the

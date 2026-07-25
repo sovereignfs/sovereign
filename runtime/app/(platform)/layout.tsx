@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { headers } from 'next/headers';
 import Link from 'next/link';
+import type { SovereignManifest } from '@sovereignfs/manifest';
 import { Icon } from '@sovereignfs/ui';
 import { getAccountPrefs } from '@sovereignfs/db';
 import { hasCapability } from '@/src/capabilities';
@@ -28,48 +29,69 @@ function monogram(name: string): string {
 
 export default async function PlatformLayout({ children }: { children: ReactNode }) {
   const h = await headers();
-  const role = h.get('x-sovereign-user-role') ?? 'platform:user';
-  const isAdmin = hasCapability(role, 'console:access');
 
-  const userImage = h.get('x-sovereign-user-image') ?? undefined;
-  const userName = h.get('x-sovereign-user-name') ?? '';
-  const userEmail = h.get('x-sovereign-user-email') ?? '';
+  // Manifest-declared offline routes (RFC 0072) are precached by the service
+  // worker and later replayed with *no server round-trip at all* — whatever
+  // this layout renders alongside them is frozen into that cached document
+  // and can be shown to a different user than whoever's visit happened to
+  // populate the cache. Every per-user value below (name, avatar, admin
+  // status, the personalized/restricted/reordered plugin list, even the user
+  // id threaded to `ClientShell`) is a real per-user SSR leak into a
+  // document meant to be a "user-neutral shell" — the offline route's own
+  // page can correctly render nothing per-user while still shipping inside a
+  // shell that isn't. So this flag suppresses all of it in favor of one
+  // fixed, identical-for-everyone shell (only the Launcher icon, already
+  // unfiltered by restriction/order today, is kept).
+  const isOfflineRoute = h.get('x-sovereign-offline-route') === '1';
+
+  const role = h.get('x-sovereign-user-role') ?? 'platform:user';
+  const isAdmin = !isOfflineRoute && hasCapability(role, 'console:access');
+  const userId = h.get('x-sovereign-user-id');
+
+  const userImage = isOfflineRoute ? undefined : (h.get('x-sovereign-user-image') ?? undefined);
+  const userName = isOfflineRoute ? '' : (h.get('x-sovereign-user-name') ?? '');
+  const userEmail = isOfflineRoute ? '' : (h.get('x-sovereign-user-email') ?? '');
   const userLabel = userName || userEmail || '?';
   const accountAvatar = userImage ? (
     <img src={userImage} alt="" className={styles.avatarImage} />
   ) : (
-    <span aria-hidden="true">{monogram(userLabel)}</span>
+    <span aria-hidden="true">{isOfflineRoute ? '' : monogram(userLabel)}</span>
   );
+
+  const allPlugins = getInstalledPlugins();
+  // The Launcher is a chrome plugin (hidden from its own tiles) but should
+  // always appear as the first icon in the sidebar so users can return home.
+  // It's already unfiltered by per-user restriction/order, so it's the one
+  // plugin icon safe to keep for an offline route's neutral shell.
+  const launcher = allPlugins.find((plugin) => plugin.id === 'fs.sovereign.launcher');
 
   // Non-chrome, enabled, access-policy-allowed (RFC 0065) plugins for the
   // sidebar middle section and the mobile Drawer. Disabled plugins (including
   // example plugins hidden by the SOVEREIGN_EXAMPLES_ENABLED default) and
   // access-policy-restricted plugins are excluded so the sidebar never shows
-  // an icon whose route the middleware 404s.
-  const pdb = await getPlatformDb();
-  const userId = h.get('x-sovereign-user-id');
-  const allPlugins = getInstalledPlugins();
-  const disabledIds = new Set(await getDisabledPluginIds(pdb));
-  const restrictedIds = new Set(
-    userId
-      ? await getRestrictedPluginIds(
-          pdb,
-          userId,
-          role,
-          allPlugins.map((p) => p.id),
-        )
-      : [],
-  );
-  const rawPlugins = selectSidebarPlugins(allPlugins, disabledIds, restrictedIds);
-  // The Launcher is a chrome plugin (hidden from its own tiles) but should
-  // always appear as the first icon in the sidebar so users can return home.
-  const launcher = allPlugins.find((plugin) => plugin.id === 'fs.sovereign.launcher');
-
-  // Apply the authenticated user's saved sidebar ordering and visibility prefs.
-  let plugins = rawPlugins;
-  if (userId) {
-    const prefs = await getAccountPrefs(pdb, userId);
-    plugins = applySidebarOrder(rawPlugins, prefs.sidebarPlugins, { dropHidden: true });
+  // an icon whose route the middleware 404s. Skipped entirely for an offline
+  // route — see the neutral-shell comment above.
+  let plugins: SovereignManifest[] = [];
+  if (!isOfflineRoute) {
+    const pdb = await getPlatformDb();
+    const disabledIds = new Set(await getDisabledPluginIds(pdb));
+    const restrictedIds = new Set(
+      userId
+        ? await getRestrictedPluginIds(
+            pdb,
+            userId,
+            role,
+            allPlugins.map((p) => p.id),
+          )
+        : [],
+    );
+    const rawPlugins = selectSidebarPlugins(allPlugins, disabledIds, restrictedIds);
+    // Apply the authenticated user's saved sidebar ordering and visibility prefs.
+    plugins = rawPlugins;
+    if (userId) {
+      const prefs = await getAccountPrefs(pdb, userId);
+      plugins = applySidebarOrder(rawPlugins, prefs.sidebarPlugins, { dropHidden: true });
+    }
   }
 
   const pluginIcons = [...(launcher ? [launcher] : []), ...plugins].map((plugin) => {
@@ -108,7 +130,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   return (
     <InstanceProvider>
       {({ instanceName, instanceLogoUrl }) => (
-        <ClientShell userId={userId}>
+        <ClientShell userId={isOfflineRoute ? null : userId}>
           <div className={styles.shell}>
             <OfflineBanner />
             <aside className={styles.sidebar} aria-label="Primary navigation">

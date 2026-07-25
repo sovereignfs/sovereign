@@ -19,6 +19,7 @@ const sections = [
   { href: '/console/groups', label: 'Groups' },
   { href: '/console/plugins', label: 'Plugins' },
   { href: '/console/entitlements', label: 'Entitlements' },
+  { href: '/console/oauth-clients', label: 'External clients' },
   { href: '/console/settings', label: 'Settings' },
   { href: '/console/identity', label: 'Identity' },
   { href: '/console/health', label: 'Health' },

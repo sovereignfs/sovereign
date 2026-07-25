@@ -1,6 +1,6 @@
 {
   "name": "sovereign",
-  "version": "0.44.4",
+  "version": "0.45.0",
   "private": true,
   "type": "module",
   "description": "Sovereign — a modular, self-hostable workspace runtime.",
@@ -60,7 +60,7 @@
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",
-    "better-auth": "^1.6.16",
+    "better-auth": "^1.6.25",
     "better-sqlite3-multiple-ciphers": "catalog:",
     "citty": "^0.1.6",
     "consola": "^3.4.2",

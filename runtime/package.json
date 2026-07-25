@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/runtime",
-  "version": "0.57.1",
+  "version": "0.58.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -19,7 +19,7 @@
     "@sovereignfs/manifest": "workspace:*",
     "@sovereignfs/sdk": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
-    "better-auth": "^1.6.16",
+    "better-auth": "^1.6.25",
     "better-sqlite3-multiple-ciphers": "catalog:",
     "drizzle-orm": "^0.45.2",
     "fflate": "^0.8.3",

@@ -119,6 +119,34 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.57 → v0.58
+
+- **External OAuth 2.0 / OIDC provider for non-plugin apps (RFC 0072) —
+  epic task 1.18 done.** `apps/auth` can now act as an identity provider for
+  standalone external apps that are not Sovereign plugins (e.g. a companion
+  app on its own domain wanting "log in with Sovereign"), via
+  `@better-auth/oauth-provider`. **No action required** for existing
+  instances — the feature is inert until an admin registers a client.
+  - New Console section **External clients** (Console → External clients,
+    gated to `platform:admin`/`platform:owner`) to register, rotate, and
+    revoke clients. No dynamic/self-service client registration in v1.
+  - New discovery/token endpoints reachable at the auth server's public URL:
+    `/.well-known/openid-configuration`, `/oauth2/authorize`,
+    `/oauth2/token`, `/oauth2/userinfo`, `/.well-known/jwks.json`. See
+    `docs/self-hosting.md`'s "External OAuth/OIDC provider" section.
+  - New consent page at `/oauth2/consent` on the auth server.
+  - The plugin's own schema (`oauthClient`, `oauthAccessToken`,
+    `oauthRefreshToken`, `oauthConsent`) is auto-discovered and created by
+    better-auth's existing migrator (`apps/auth/src/migrate.ts`) on next
+    startup — no manual migration step.
+  - `better-auth` bumped `^1.6.16` → `^1.6.25` (non-breaking, same major) —
+    required by `@better-auth/oauth-provider`'s peer range. The bundled
+    `oidc-provider` plugin this repo previously considered is deprecated as
+    of this better-auth version in favor of the new dedicated package; RFC
+    0072 was updated to build on the latter instead.
+- **`runtime` → 0.58.0**, **`@sovereignfs/auth` → 0.14.0**,
+  **`@sovereignfs/plugin-console` → 0.25.0**.
+
 ### v0.56 → v0.57
 
 - **Opt-in single-key SQLite at-rest encryption (RFC 0071) — epic task 8.14
@@ -920,6 +948,7 @@ the release you are running.
 | 0.54.0          | Public plugin page routes — `publicRoutes` manifest field (RFC 0042, epic task 2.14)                                 |
 | 0.55.0          | Plugin mailer permission and SDK email surface — `sdk.email.sendToUser()` (RFC 0062, epic task 3.26)                 |
 | 0.57.0          | Opt-in single-key SQLite at-rest encryption (RFC 0071, epic task 8.14)                                               |
+| 0.58.0          | External OAuth 2.0 / OIDC provider for non-plugin apps (RFC 0072, epic task 1.18)                                    |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

@@ -3,6 +3,33 @@
   display: inline-flex;
 }
 
+/* Softens the swap from the neutral trigger to the client-hydrated
+   avatar/initials (see AccountMenu.tsx's hydrateUser effect) so it reads as
+   a materialize rather than a jarring pop-in. */
+.avatarReveal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  animation: avatarFadeIn var(--sv-motion-duration-fast) var(--sv-motion-ease-out);
+}
+
+@keyframes avatarFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatarReveal {
+    animation: none;
+  }
+}
+
 .menu {
   position: absolute;
   z-index: 50;

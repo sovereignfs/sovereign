@@ -48,6 +48,51 @@ function pluginKeyRange(pluginId: string): IDBKeyRange {
   return IDBKeyRange.bound([pluginId], [pluginId, []], false, true);
 }
 
+/**
+ * Thrown by `set` when a value is rejected for size, either by the soft cap
+ * below (checked before the write is attempted) or by the browser's own
+ * origin storage quota (surfaced from IndexedDB's `QuotaExceededError`,
+ * which — since every plugin shares one IndexedDB database on one origin —
+ * could otherwise be exhausted by any other plugin's writes, not just this
+ * one's). Named so callers can `instanceof`-check it instead of parsing an
+ * opaque `DOMException` message.
+ */
+export class OfflineQuotaExceededError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'OfflineQuotaExceededError';
+  }
+}
+
+/**
+ * Soft per-entry cap, checked before attempting the write. Not a real
+ * platform limit (IndexedDB's actual quota is browser- and disk-dependent),
+ * but this cache has no eviction policy — `set` never expires or LRU-evicts
+ * old entries — so an unbounded write is a slow path to exhausting the
+ * shared-with-every-plugin origin quota with no warning until some later,
+ * unrelated write fails. Failing fast here gives an immediate, actionable
+ * error instead. Estimated via `JSON.stringify`, which is accurate for the
+ * JSON-like values this cache is designed for (cards, lists, tasks); a value
+ * containing non-JSON-serializable structured-clone data (e.g. a `Blob` or
+ * `Map`) can't be measured this way and skips the check, falling through to
+ * IndexedDB's own limits instead.
+ */
+const MAX_ENTRY_BYTES = 5 * 1024 * 1024;
+
+function checkEntrySize(value: unknown): void {
+  let json: string | undefined;
+  try {
+    json = JSON.stringify(value);
+  } catch {
+    return; // not JSON-serializable — can't estimate, skip the soft cap.
+  }
+  if (json !== undefined && json.length > MAX_ENTRY_BYTES) {
+    throw new OfflineQuotaExceededError(
+      `offline.set: value exceeds the ${MAX_ENTRY_BYTES}-byte soft cap (~${json.length} bytes). Store a smaller slice of data, or split it across multiple keys.`,
+    );
+  }
+}
+
 function openDb(): Promise<IDBDatabase> {
   ensureTabState();
   return new Promise((resolve, reject) => {
@@ -179,8 +224,14 @@ export const offline = {
     return result;
   },
 
-  /** Write/replace this plugin's cached value for `key`. */
+  /**
+   * Write/replace this plugin's cached value for `key`.
+   * @throws {OfflineQuotaExceededError} if `value` exceeds the per-entry soft
+   * cap, or if the browser's origin storage quota is exhausted (shared by
+   * every plugin's offline cache).
+   */
   async set<T>(pluginId: string, key: string, value: T): Promise<void> {
+    checkEntrySize(value);
     const writeEpoch = epoch;
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {
@@ -193,7 +244,17 @@ export const offline = {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       tx.objectStore(STORE_NAME).put(value, compositeKey(pluginId, key));
       tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error ?? new Error('Failed to write offline value.'));
+      tx.onerror = () => {
+        if (tx.error?.name === 'QuotaExceededError') {
+          reject(
+            new OfflineQuotaExceededError(
+              'offline.set: browser storage quota exceeded for this origin — the offline cache is shared across every installed plugin. Remove old entries (offline.remove/clear) before writing more.',
+            ),
+          );
+          return;
+        }
+        reject(tx.error ?? new Error('Failed to write offline value.'));
+      };
     });
     db.close();
   },

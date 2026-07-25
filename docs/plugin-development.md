@@ -463,6 +463,19 @@ replayed for the wrong user on a shared device:
 - Treat `sdk.offline` as **read-only caching**, not sync: v1 offline routes are
   read-only. Writes made while offline are not queued or synced — that is
   deferred to a future RFC.
+- Keep each cached value reasonably sized: `offline.set` enforces a 5 MB
+  soft cap per entry and throws `OfflineQuotaExceededError` (also thrown if
+  the browser's origin storage quota — shared across every installed
+  plugin's offline cache — is exhausted). Split large data across multiple
+  keys rather than one large entry.
+
+**CI-enforced:** `runtime/src/__tests__/offline-route-neutrality.test.ts`
+statically scans every manifest-declared offline route's server-component
+source files for identity-reading APIs (`headers()`, `cookies()`, a session
+helper, the `x-sovereign-user-id` header) and fails the build if any are
+found — it is a source scan, not a rendered-output diff, so it cannot catch
+every possible per-user leak, but it catches the direct ones before your
+route ships.
 
 **Isolation note:** `sdk.offline` scopes entries by plugin id only, not by
 user id — an offline route's own SSR output must never carry per-user data

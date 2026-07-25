@@ -205,14 +205,20 @@ const manifestObjectSchema = z
       })
       .optional(),
     /**
-     * Manifest-declared offline-capable page routes (RFC 0072). Each entry
-     * names a path prefix — relative to this plugin's own `routePrefix` — that
-     * must keep rendering with no network. Unlike `publicRoutes`, this grants
-     * no auth exemption: it is purely a caching/rendering declaration. A route
-     * listed here must render a user-neutral shell and hydrate its data
-     * client-side (via `sdk.offline`) rather than through per-user SSR, so the
-     * platform can safely precache it without risking a stale/different user's
-     * content being replayed on a shared device.
+     * Manifest-declared offline-capable page routes (RFC 0072). `routes[]`
+     * entries name a path prefix — relative to this plugin's own
+     * `routePrefix` — that must keep rendering with no network; `root: true`
+     * additionally (or instead) marks the plugin's own bare `routePrefix`
+     * page itself as offline-capable (kept as a separate, explicit flag
+     * rather than allowing `routes[].prefix` to be `/`, which stays
+     * disallowed — that restriction exists to force explicit sub-path
+     * enumeration, a different concern from a single-page plugin opting its
+     * own root in). Unlike `publicRoutes`, this grants no auth exemption: it
+     * is purely a caching/rendering declaration. Any offline-declared page —
+     * root or sub-route — must render a user-neutral shell and hydrate its
+     * data client-side (via `sdk.offline`) rather than through per-user SSR,
+     * so the platform can safely precache it without risking a stale/
+     * different user's content being replayed on a shared device.
      */
     offline: z
       .object({
@@ -241,9 +247,15 @@ const manifestObjectSchema = z
           .min(1)
           .refine((arr) => new Set(arr.map((r) => r.prefix)).size === arr.length, {
             message: 'offline route prefixes must be unique within the plugin',
-          }),
+          })
+          .optional(),
+        /** Marks this plugin's own bare `routePrefix` page as offline-capable. */
+        root: z.boolean().optional(),
       })
       .strict()
+      .refine((o) => o.root === true || (o.routes?.length ?? 0) > 0, {
+        message: 'offline must declare at least one of "root" or "routes"',
+      })
       .optional(),
     /**
      * Marks this plugin as a bundled reference/example. Purely a classification

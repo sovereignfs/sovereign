@@ -1,6 +1,5 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { getDocsRouteRewrites } from '../apps/docs/.vitepress/publication';
 
 type Finding = {
   file: string;
@@ -50,7 +49,29 @@ const ignoredDirectories = new Set([
   'test-results',
 ]);
 
-const docsRouteRewrites = getDocsRouteRewrites();
+// The docs site (built from the sovereignfs/sovereignfs workbench, not this
+// repo) reads these guide pages through a route rewrite rather than their
+// direct docs/<path> location. Kept in sync by hand with that repo's fetch
+// of docs/guides/* — see docs/docs-sync.manifest.json there.
+const publicGuideRewrites = {
+  'guides/index.md': 'docs/index.md',
+  'guides/users.md': 'docs/users.md',
+  'guides/pwa.md': 'docs/pwa.md',
+  'guides/operators.md': 'docs/operators.md',
+  'guides/developers.md': 'docs/developers.md',
+  'guides/architecture.md': 'docs/architecture.md',
+  'guides/contributing.md': 'docs/contributing.md',
+} as const;
+
+const docsRouteRewrites: Record<string, string> = Object.fromEntries(
+  Object.entries(publicGuideRewrites).map(([source, destination]) => {
+    const destinationWithoutExt = destination.replace(/\.md$/, '');
+    const route = destinationWithoutExt.endsWith('/index')
+      ? `/${destinationWithoutExt.slice(0, -'index'.length)}`
+      : `/${destinationWithoutExt}`;
+    return [route, `docs/${source}`];
+  }),
+);
 
 function walk(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

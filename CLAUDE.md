@@ -479,7 +479,6 @@ Docker Compose.
 ```
 apps/
   auth/             better-auth wrapper (the only separate Next.js app)
-  docs/             VitePress documentation site (@sovereignfs/docs, private)
 packages/
   tsconfig/         shared TS configs (base/nextjs/library) — extend these
   db/               Drizzle client factory + schema + migration runner

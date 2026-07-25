@@ -577,6 +577,24 @@ export const manifestSchema = manifestObjectSchema
         'independently demand at-rest encryption (RFC 0071)',
       path: ['database', 'requireEncryption'],
     },
+  )
+  .refine(
+    (m) => {
+      const db = m.database;
+      if (typeof db !== 'object' || db === null) return true;
+      if (db.requireEncryption !== true) return true;
+      return db.dialect === 'sqlite';
+    },
+    {
+      message:
+        'database.requireEncryption requires database.dialect to be "sqlite" — ' +
+        "omitting `dialect` lets the platform's own dialect choice silently decide " +
+        'whether this is enforced (throws if the key is missing) or merely advisory ' +
+        '(warns, on Postgres — there is no SQLCipher equivalent there). Pin the ' +
+        'dialect explicitly so the manifest alone guarantees which one applies ' +
+        '(RFC 0071).',
+      path: ['database', 'dialect'],
+    },
   );
 
 /**

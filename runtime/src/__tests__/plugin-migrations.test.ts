@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { assertPluginEncryptionRequirement } from '../plugin-migrations';
+import { getCompatibilityWarnings } from '../plugin-compat';
 
 const KEY_ENV = 'SOVEREIGN_DB_ENCRYPTION_KEY';
 
@@ -42,13 +43,26 @@ describe('assertPluginEncryptionRequirement (RFC 0071)', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect(() =>
       assertPluginEncryptionRequirement(
-        'fs.example.healthlog',
+        'fs.example.healthlog-pg-warn',
         { isolation: 'isolated', requireEncryption: true },
         'postgres',
       ),
     ).not.toThrow();
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]?.[0]).toContain('fs.example.healthlog');
+    expect(warn.mock.calls[0]?.[0]).toContain('fs.example.healthlog-pg-warn');
+  });
+
+  it('records the Postgres-fallback warning persistently, not just to console — a bare console.warn vanishes after boot', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    assertPluginEncryptionRequirement(
+      'fs.example.healthlog-persistent',
+      { isolation: 'isolated', requireEncryption: true },
+      'postgres',
+    );
+    const warnings = getCompatibilityWarnings('fs.example.healthlog-persistent');
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('requires database encryption');
+    expect(warnings[0]).toContain('Postgres');
   });
 });
 

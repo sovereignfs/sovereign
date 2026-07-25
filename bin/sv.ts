@@ -689,12 +689,54 @@ const restore = defineCommand({
       }
     } else {
       // SQLite: extract the archive (relative paths) into the data directory.
+      //
+      // tar extracts on top of the existing directory — it overwrites files
+      // present in the archive but never deletes files that are merely
+      // absent from it. That's a problem specifically for the RFC 0071
+      // encryption marker (`data/.db-encrypted`): restoring an OLD backup
+      // taken before this instance was ever encrypted (so its archive has no
+      // marker) onto a CURRENTLY encrypted instance would leave the existing
+      // marker in place, now pointing at freshly-restored plaintext files.
+      // The next boot's `checkEncryptionMarker` would see "marker present,
+      // key present" and consider that normal, then fail with a *misleading*
+      // "the key is likely wrong" error when SQLCipher can't decrypt what is
+      // actually just plaintext — instead of the correct, actionable
+      // "convert existing plaintext instance" message. Reconcile the marker
+      // against what the archive itself contains, not what's already in the
+      // destination, before treating the restore as done.
+      const markerPath = join(dataDir, '.db-encrypted');
+      const hadMarkerBefore = existsSync(markerPath);
+
       const extractResult = spawnSync('tar', ['-xzf', archivePath, '-C', dataDir], {
         stdio: 'inherit',
       });
       if (extractResult.status !== 0) {
         consola.error('tar extraction failed.');
         process.exit(1);
+      }
+
+      const listing = spawnSync('tar', ['-tzf', archivePath]);
+      const archiveHasMarker =
+        listing.status === 0 && /(^|\/)\.db-encrypted$/m.test(listing.stdout.toString());
+
+      if (hadMarkerBefore && !archiveHasMarker) {
+        try {
+          rmSync(markerPath);
+        } catch {
+          // Already gone — fine, that's the state we want anyway.
+        }
+        consola.warn(
+          `This backup predates encryption (no ${markerPath} in the archive), but ` +
+            `${dataDir} was previously marked as encrypted. Removed the stale marker so the ` +
+            'restored plaintext data matches it — the instance will boot in plaintext. Run ' +
+            '`sv db encrypt` again if you want encryption back on this restored data.',
+        );
+      } else if (!hadMarkerBefore && archiveHasMarker) {
+        consola.info(
+          'This backup was taken from an encrypted instance — the encryption marker was ' +
+            'restored along with it. Make sure SOVEREIGN_DB_ENCRYPTION_KEY is set to the same ' +
+            'key that backup was encrypted with before restarting.',
+        );
       }
     }
 
@@ -793,7 +835,12 @@ const dbEncrypt = defineCommand({
         `${failed} of ${files.length} file(s) failed to encrypt — the data directory is now in ` +
           'a mixed plaintext/encrypted state and the encryption marker was NOT written. Restore ' +
           'from the backup taken above, fix the issue (see errors above — commonly the server ' +
-          'was still running), and re-run `sv db encrypt` from a clean plaintext state.',
+          'was still running), and re-run `sv db encrypt` from a clean plaintext state. If a ' +
+          'failing file is not actually a Sovereign database (e.g. a stray or corrupt leftover ' +
+          'under data/plugins/ from an unrelated failure), it is safe to move it out of the ' +
+          'data directory and re-run — `sv db encrypt`/checkEncryptionMarker only look at ' +
+          'file names ending in .db, not their contents, so an unrelated .db-suffixed file will ' +
+          'otherwise block every future encryption attempt indefinitely.',
       );
       process.exit(1);
     }

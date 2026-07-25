@@ -21,7 +21,7 @@ WORKDIR /app
 COPY . .
 RUN pnpm install --frozen-lockfile
 
-# ---- builder: compose plugins + build the standalone server ---------------
+# ---- builder: compose plugins into the monorepo (no app build yet) --------
 FROM deps AS builder
 ENV NODE_ENV=production
 # git is needed to clone the example plugins (and any external plugins declared
@@ -62,6 +62,38 @@ RUN --mount=type=secret,id=plugin_tokens,dst=/run/secrets/plugin_tokens \
 # while keeping the initial source-tree install frozen.
 RUN pnpm install --no-frozen-lockfile
 RUN pnpm run generate
+
+# ---- tools: on-demand admin CLI against a running deployment's volume -----
+# Never started by `docker compose up` (compose service is profile-gated).
+# Invoked explicitly for one-off admin tasks that need the `sv` CLI against
+# the same data volume the runner/auth containers use — e.g.
+# `sv db encrypt`/`decrypt` (RFC 0071) and the `sv user reset-mfa` break-glass
+# tool — neither of which exist in the minimal runner image below (no bin/,
+# scripts/, or dev tooling there by design, to keep the served image small).
+#
+# Branches off `builder` here — before the app-builder stage below compiles
+# the Next.js app — deliberately. Every `packages/*` import `bin/sv.ts` uses
+# (`@sovereignfs/db`, `@sovereignfs/manifest`) resolves straight to
+# `src/index.ts` via each package's own `exports` map (they're workspace-only,
+# never published, so there's no `dist/` build step in their path at all —
+# only the externally-published `sdk`/`ui`/`create-plugin` packages go through
+# `tsup`). So the CLI needs nothing from the slow `next build` that follows:
+# building it anyway turned a one-off admin command into a multi-minute wait
+# on every machine without a warm layer cache — most exposed on the
+# published-image deployment path (`SOVEREIGN_VERSION=...`), which has no
+# local Dockerfile at all and must build `tools` from a fresh clone with zero
+# cache. Nothing here needs to change if the app build ever gets slower still.
+FROM builder AS tools
+ENV NODE_ENV=production
+COPY docker/tools-entrypoint.sh /usr/local/bin/tools-entrypoint.sh
+RUN chmod +x /usr/local/bin/tools-entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/tools-entrypoint.sh"]
+CMD ["sh", "-c", "echo 'Usage: docker compose --profile tools run --rm tools pnpm sv <command>' && pnpm sv --help"]
+
+# ---- app-builder: compile the Next.js app for the runner ------------------
+# Split from `builder` above so `tools` (which only needs the composed
+# monorepo, not the compiled app) never pays for this step.
+FROM builder AS app-builder
 # tsup packages → next build → runtime/.next/standalone
 RUN pnpm --filter @sovereignfs/runtime build
 
@@ -84,23 +116,6 @@ RUN mkdir -p /app/.deploy/plugins && \
     [ -d "$dir/migrations" ] && cp -r "$dir/migrations" "$dest/migrations"; \
   done
 
-# ---- tools: on-demand admin CLI against a running deployment's volume -----
-# Never started by `docker compose up` (compose service is profile-gated).
-# Invoked explicitly for one-off admin tasks that need the `sv` CLI against
-# the same data volume the runner/auth containers use — e.g.
-# `sv db encrypt`/`decrypt` (RFC 0071) and the `sv user reset-mfa` break-glass
-# tool — neither of which exist in the minimal runner image below (no bin/,
-# scripts/, or dev tooling there by design, to keep the served image small).
-# Built FROM builder because that stage already has the full monorepo, every
-# devDependency (tsx, citty, consola), and the composed plugins — nothing
-# extra to copy, and its layers are already cached from the runner build.
-FROM builder AS tools
-ENV NODE_ENV=production
-COPY docker/tools-entrypoint.sh /usr/local/bin/tools-entrypoint.sh
-RUN chmod +x /usr/local/bin/tools-entrypoint.sh
-ENTRYPOINT ["/usr/local/bin/tools-entrypoint.sh"]
-CMD ["sh", "-c", "echo 'Usage: docker compose --profile tools run --rm tools pnpm sv <command>' && pnpm sv --help"]
-
 # ---- runner: minimal non-root production image ----------------------------
 FROM node:24-alpine AS runner
 ENV NODE_ENV=production
@@ -114,27 +129,27 @@ RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
 
 # Standalone output (tracing rooted at the monorepo root) replicates the repo
 # layout: server.js lives under runtime/, with traced node_modules + packages.
-COPY --from=builder --chown=nextjs:nodejs /app/runtime/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/runtime/.next/static ./runtime/.next/static
+COPY --from=app-builder --chown=nextjs:nodejs /app/runtime/.next/standalone ./
+COPY --from=app-builder --chown=nextjs:nodejs /app/runtime/.next/static ./runtime/.next/static
 # public/ holds the PWA assets generated at build (sw.js, workbox-*, fallback-*,
 # manifest.json, icons).
-COPY --from=builder --chown=nextjs:nodejs /app/runtime/public ./runtime/public
+COPY --from=app-builder --chown=nextjs:nodejs /app/runtime/public ./runtime/public
 # Platform DB migrations — not traced by Next.js (runtime data, not imports).
-COPY --from=builder --chown=nextjs:nodejs /app/packages/db/migrations ./packages/db/migrations
-# Per-plugin manifest.json + migrations/ (curated staging, see builder stage) —
+COPY --from=app-builder --chown=nextjs:nodejs /app/packages/db/migrations ./packages/db/migrations
+# Per-plugin manifest.json + migrations/ (curated staging, see app-builder stage) —
 # read at startup by runAllPluginMigrations() to apply shared/isolated-mode
 # plugin migrations against the platform (or a dedicated plugin) database.
-COPY --from=builder --chown=nextjs:nodejs /app/.deploy/plugins ./plugins
+COPY --from=app-builder --chown=nextjs:nodejs /app/.deploy/plugins ./plugins
 # Workspace root marker: the standalone server.js calls process.chdir(__dirname)
 # which moves cwd from /app to /app/runtime. findWorkspaceRoot() then walks up
 # and stops here (/app/pnpm-workspace.yaml), returning /app — so migration
 # folder paths and SQLite file paths resolve correctly against /app rather than
 # falling back to the post-chdir /app/runtime.
-COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=app-builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 # Root package.json — read by getPlatformVersion() at runtime for the boot
 # compatibility check. Without it the check falls back to '0.0.0' and disables
 # every plugin that declares a minPlatformVersion.
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=app-builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 # SQLite + avatars persist here (mounted as a volume). The relative DB path
 # resolves against the cwd (/app) at runtime, so it must be writable by the

@@ -88,7 +88,9 @@ function pgSsl(url: string): false | { rejectUnauthorized: boolean; ca?: string 
  *
  * - **SQLite:** opens `data/plugins/<pluginId>.db` in WAL mode.
  * - **Postgres:** opens a new Pool targeting the same server as the platform
- *   DB, but with `search_path` set to `plugin_<slug>` on every new connection.
+ *   DB, but with `search_path` pinned to `plugin_<slug>` via the connection's
+ *   startup options (not a `SET` issued after connecting — see the comment
+ *   at the Pool construction below for why that distinction matters).
  *   The schema must already exist (call `provisionPluginDb` first).
  */
 export function getPluginDb(pluginId: string, dialect?: Dialect): PluginDb {
@@ -109,10 +111,27 @@ export function getPluginDb(pluginId: string, dialect?: Dialect): PluginDb {
   }
 
   // Postgres: dedicated pool with search_path scoped to the plugin's schema.
+  //
+  // Pinned via the connection's startup options (`-c search_path=...`), not a
+  // `SET` issued from a `pool.on('connect', ...)` handler — that handler
+  // fires when the socket connects, but the pool does not wait for its
+  // (possibly async) body to finish before handing the same client to
+  // whichever query is waiting on it. A `void`-ed, unawaited `client.query()`
+  // there races the caller's own first query on that connection.
+  // node-postgres's Client currently queues an overlapping call rather than
+  // interleaving it (verified: 0/30 wrong-schema reads under concurrent load
+  // in testing), so this hasn't been an active data-isolation bug — but it
+  // surfaces as "Calling client.query() when the client is already executing
+  // a query", a deprecation warning explicitly flagged for removal in pg@9.0,
+  // at which point the same pattern becomes a hard failure instead of a
+  // log-noise nuisance. Startup options sidestep the whole pattern: they're
+  // part of the connection handshake itself, applied before Postgres accepts
+  // any query on the connection, so there's nothing to race or queue behind.
   const schema = pluginSchemaName(pluginId);
-  const pool = new Pool({ connectionString: resolved.url, ssl: pgSsl(resolved.url) });
-  pool.on('connect', (client) => {
-    void client.query(`SET search_path TO "${schema}"`);
+  const pool = new Pool({
+    connectionString: resolved.url,
+    ssl: pgSsl(resolved.url),
+    options: `-c search_path="${schema}"`,
   });
   const pdb: PluginDb = { dialect: 'postgres', db: drizzlePg(pool) };
   _registry.set(cacheKey, pdb);
@@ -147,9 +166,15 @@ export async function provisionPluginDb(pluginId: string, dialect?: Dialect): Pr
  *
  * Evicts the client from the in-process registry so any subsequent call to
  * `getPluginDb` would open a fresh connection (which would fail — store gone).
+ * If this plugin's Postgres pool was ever actually opened in this process
+ * (via a prior `getPluginDb` call), it's ended here too — otherwise its
+ * connections leak (evicting the registry entry only drops the reference;
+ * node-postgres doesn't close sockets on GC), accumulating toward the
+ * server's connection limit across repeated install/uninstall cycles.
  */
 export async function dropPluginDb(pluginId: string, dialect?: Dialect): Promise<void> {
   const resolved = resolvePluginDialect(dialect);
+  const cachedPostgres = _registry.get(registryKey(pluginId, 'postgres'));
   _registry.delete(registryKey(pluginId, 'sqlite'));
   _registry.delete(registryKey(pluginId, 'postgres'));
 
@@ -163,6 +188,13 @@ export async function dropPluginDb(pluginId: string, dialect?: Dialect): Promise
       }
     }
     return;
+  }
+
+  if (cachedPostgres?.dialect === 'postgres') {
+    await cachedPostgres.db.$client.end().catch(() => {
+      // Best-effort — the pool may already be unusable (e.g. the connection
+      // was already lost); the schema drop below is what actually matters.
+    });
   }
 
   const schema = pluginSchemaName(pluginId);

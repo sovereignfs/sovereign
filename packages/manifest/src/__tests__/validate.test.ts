@@ -189,12 +189,23 @@ describe('validateManifest', () => {
     expect(manifestDatabaseDialect({ isolation: 'isolated', dialect: 'postgres' })).toBeUndefined();
   });
 
-  it('accepts database.requireEncryption alongside isolation: "isolated" (RFC 0071)', () => {
+  it('accepts database.requireEncryption alongside isolation: "isolated" and dialect: "sqlite" (RFC 0071)', () => {
+    const res = validateManifest({
+      ...base,
+      database: { isolation: 'isolated', dialect: 'sqlite', requireEncryption: true },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects database.requireEncryption without an explicit dialect: "sqlite" — omitting it would let the platform\'s own dialect choice silently decide enforcement', () => {
     const res = validateManifest({
       ...base,
       database: { isolation: 'isolated', requireEncryption: true },
     });
-    expect(res.valid).toBe(true);
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('dialect');
+    }
   });
 
   it('rejects database.requireEncryption on a "shared" plugin — raise-only, implies isolated', () => {

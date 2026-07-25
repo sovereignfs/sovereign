@@ -18,6 +18,7 @@ import {
   manifestRequiresEncryption,
 } from '@sovereignfs/manifest';
 import { registry } from '../generated/registry';
+import { recordWarnings } from './plugin-compat';
 
 /**
  * Enforce a plugin's `database.requireEncryption` (RFC 0071) before its
@@ -28,6 +29,10 @@ import { registry } from '../generated/registry';
  *   failure logs and continues; a broken security promise must not).
  * - Postgres → warns (there is no SQLCipher equivalent for Postgres; at-rest
  *   protection falls back to disk encryption + `sslmode`), does not throw.
+ *   Also recorded via `recordWarnings` (not just `console.warn`) so it shows
+ *   up persistently in Console's plugin list — a bare console line vanishes
+ *   from anywhere an operator would look after boot, which made this
+ *   security-downgrade effectively invisible.
  * - Not required, or `shared` isolation → no-op (manifest validation already
  *   rejects `requireEncryption` on a `shared` plugin).
  */
@@ -39,11 +44,12 @@ export function assertPluginEncryptionRequirement(
   if (!manifestRequiresEncryption(database)) return;
 
   if (pluginDialect === 'postgres') {
-    console.warn(
-      `[sovereign] Plugin "${pluginId}" requires database encryption, but its isolated ` +
-        'database resolved to Postgres — there is no SQLCipher equivalent there. At-rest ' +
-        'protection falls back to disk/volume encryption + `sslmode` for this plugin.',
-    );
+    const message =
+      `Plugin "${pluginId}" requires database encryption, but its isolated database ` +
+      'resolved to Postgres — there is no SQLCipher equivalent there. At-rest protection ' +
+      'falls back to disk/volume encryption + `sslmode` for this plugin.';
+    console.warn(`[sovereign] ${message}`);
+    recordWarnings(pluginId, [message]);
     return;
   }
 

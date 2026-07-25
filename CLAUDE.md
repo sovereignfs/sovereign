@@ -115,7 +115,7 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.44.3`**
+  to `1.0.0` marks the public release.** The current version is **`0.44.4`**
   (all pre-v1 roadmap tasks through slot `0.13.0` complete; subsequent minor
   bumps track post-slot tasks such as the admin-managed external provider config,
   the RFC 0065 plugin catalog/access-policy work, private plugin repositories
@@ -132,7 +132,28 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   `SOVEREIGN_DB_ENCRYPTION_KEY`, `sv db encrypt`/`decrypt`, and the manifest
   `database.requireEncryption` field, carved out of RFC 0008's deferred
   Tier 2), and patch versions cover UI additions and production hotfixes —
-  most recently the 2026-07-24 fix to `runAllPluginMigrations`
+  most recently the 2026-07-25 fix to the `tools` Docker stage
+  (`Dockerfile`): it built `FROM builder`, which already depended on the
+  slow `next build` app-builder stage below it in the file, so `docker compose
+--profile tools run --rm tools pnpm sv <command>` paid for a full Next.js
+  build it never used — worst on the published-image deployment path
+  (`SOVEREIGN_VERSION=...`), which has no local Dockerfile and must build
+  `tools` from a fresh clone with zero cache (see
+  `docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`). `tools` now
+  branches off `builder` before the app build stage, alongside a follow-up
+  pass on the RFC 0071 encryption surface fixing 7 more findings: a
+  `dropPluginDb` Postgres connection-pool leak, a `pool.on('connect', ...)`
+  search_path race resolved by pinning `search_path` via connection startup
+  options instead, an invisible-after-boot Postgres fallback warning now
+  recorded via `recordWarnings` so it surfaces in Console, a manifest
+  ambiguity where `database.requireEncryption` without an explicit
+  `dialect: "sqlite"` let the platform's own dialect choice silently decide
+  enforcement (now rejected at manifest-validation time), a `sv restore`
+  gap where restoring an old pre-encryption backup left a stale encryption
+  marker pointing at freshly-restored plaintext, and `scripts/reset-mfa.ts`
+  /`scripts/seed.ts` not loading the root `.env` when invoked directly
+  (only their `sv` wrapper commands did), so a direct invocation could
+  silently miss `SOVEREIGN_DB_ENCRYPTION_KEY`; before that the 2026-07-24 fix to `runAllPluginMigrations`
   (`runtime/src/plugin-migrations.ts`): a plugin's unmet
   `database.requireEncryption` (RFC 0071) threw uncaught inside the plugin
   loop, which iterates `registry` in a fixed alphabetical order — the throw
@@ -280,6 +301,7 @@ The most likely rules to be accidentally broken. Full reference with context: `d
 - **`touch-action`'s effective value is the intersection of an element's own value and every ancestor's**, not independently scoped. Declaring narrower values (e.g. `pan-y`) on nested perpendicular scroll containers (e.g. inside a `pan-x` carousel) can cancel both axes instead of routing between them — fix nested-scroller conflicts without touching `touch-action` on the nested pair.
 - **A row-less plugin defaults closed in production but is fully visible/open in local dev** — `bypassPluginVisibilityInDev()` (`runtime/src/plugin-status.ts`) checks `NODE_ENV === 'development'` exactly, never `!== 'production'` (Vitest sets `NODE_ENV=test` and must keep exercising real gating). Don't widen this check — it would silently disable access control under test or in a misconfigured deployment. Full detail: `docs/architecture-rules.md`.
 - **Never make the service worker's `pages`/`pages-rsc`/`pages-rsc-prefetch` cache entries stale-serving** (`StaleWhileRevalidate`/`CacheFirst`) — Sovereign's pages are per-user SSR, so replaying a cached document risks showing a stale/different user's shell after logout/login. Keep them `NetworkFirst`; bound worst-case latency with `networkTimeoutSeconds` + `fallbacks.document` instead (`runtime/next.config.ts`). Full detail: `docs/architecture-rules.md`.
+- **SQLite/Postgres at-rest encryption (RFC 0071) has an above-average bug surface — treat it as still-settling, not hardened.** Bugs have been found in three separate passes so far: the initial implementation (a fresh-instance boot bug, caught in review before any deployment), a real production incident (a migrations-loop bug that silently skipped every plugin alphabetically after the one that triggered it, plus a `tools` Docker image that turned out to be unusable on published-image deployments — see `docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`), and a follow-up deep-review pass (7 more findings: a `dropPluginDb` Postgres connection-pool leak, an invisible-after-boot Postgres fallback warning, an ambiguous manifest field combination, a `sv restore` marker-reconciliation gap, and others — all fixed with regression tests, none yet exercised in production). Before touching `packages/db/src/sqlite-encryption.ts` (+ its `apps/auth` twin), `packages/db/src/plugin-client.ts`'s Postgres path, `runtime/src/plugin-migrations.ts`, or `bin/sv.ts`'s `db encrypt`/`decrypt`/`restore`/`backup` commands, read the incident doc first and re-run the full test suite plus a live round-trip (encrypt → verify → decrypt → verify) against real data before considering a change done — this area has repeatedly looked more finished than it was.
 
 ## Design system (`packages/ui`)
 

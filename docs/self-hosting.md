@@ -378,6 +378,15 @@ present, and `sv db decrypt` refuses with "not marked as encrypted — nothing
 to do" if it isn't. Neither will double-encrypt a file or silently no-op in a
 way that leaves you unsure what state the data is in.
 
+**If something interrupts rotation between the two steps** (the process is
+killed, the machine reboots, you close the terminal), you'll be left with a
+genuinely plaintext data directory and no marker. On next boot with the _new_
+key set, you'll see the same "`SOVEREIGN_DB_ENCRYPTION_KEY` is set, but the
+data directory has not been encrypted yet" message documented above under
+[Troubleshooting](#troubleshooting) — that's expected here, not a new
+problem. It means rotation didn't finish: run `sv db encrypt` with that same
+new key to complete it.
+
 ### The key is yours to keep
 
 **Losing `SOVEREIGN_DB_ENCRYPTION_KEY` means losing the data** — there is no
@@ -406,6 +415,26 @@ None of these leave data in a partially-converted state: `sv db encrypt`/
 `decrypt` only write the marker after every file has converted, and a mid-run
 failure leaves the original files untouched (restore from the automatic
 backup if in doubt).
+
+**A fresh instance hitting "has not been encrypted yet" unexpectedly:** the
+pre-existing-data check only looks at file names ending in `.db` under
+`data/plugins/`, not their contents. A stray or corrupt `.db`-suffixed file
+left over from an unrelated failure will trip this the same way real
+plaintext data would, and will keep tripping it indefinitely since it isn't
+something `sv db encrypt` can successfully convert either — the error message
+in this situation names the actual failing file; if it isn't a genuine
+Sovereign database, move it out of `data/plugins/` and retry.
+
+**`sv restore` and the encryption marker:** restoring a backup extracts on
+top of the existing data directory rather than replacing it, and reconciles
+`data/.db-encrypted` against what the _archive_ actually contains — not what
+was already in the destination. Restoring an old, pre-encryption backup onto
+a currently-encrypted instance removes the stale marker so the result
+correctly reads as plaintext (rather than leaving a marker that no longer
+matches the restored files, which would otherwise surface as the confusing
+"key is likely wrong" error above instead of the correct "run `sv db encrypt`"
+one). Restoring an encrypted backup adds the marker back automatically, same
+as any other file in the archive.
 
 ### Interaction with SQLite → PostgreSQL migration
 

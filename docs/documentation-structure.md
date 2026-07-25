@@ -15,15 +15,16 @@ topic has one canonical owner; other pages summarize it and link to that owner.
 
 ## Content classes
 
-| Class               | Purpose                                                          | Canonical location                               | Published        |
-| ------------------- | ---------------------------------------------------------------- | ------------------------------------------------ | ---------------- |
-| Product             | Explain Sovereign's value, capabilities, apps, and direction     | `product/`, `product-roadmap.md`, `instances.md` | Yes              |
-| Get started         | Short, sequential paths for users, operators, and app developers | `get-started/`                                   | Yes              |
-| Audience hubs       | Route each audience to canonical guides and references           | `guides/`                                        | Yes              |
-| Technical reference | Describe current behavior, configuration, APIs, and architecture | Named root references and `plugins/`             | Yes              |
-| Research            | Explore open-ended questions before a design is proposed         | `research/`                                      | No               |
-| Decisions           | Record accepted and proposed cross-cutting designs               | `rfcs/`                                          | Yes, with status |
-| Project operations  | Track tasks, plans, findings, and internal coordination          | `epics/`, `adhoc/`, roadmap and planning files   | No               |
+| Class               | Purpose                                                                       | Canonical location                                                            | Published        |
+| ------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ---------------- |
+| Product             | Explain Sovereign's value, capabilities, apps, and direction                  | `product/`, `product-roadmap.md`, `instances.md`                              | Yes              |
+| Get started         | Short, sequential paths for users, operators, and app developers              | `get-started/`                                                                | Yes              |
+| Audience hubs       | Route each audience to canonical guides and references                        | `guides/`                                                                     | Yes              |
+| Technical reference | Describe current behavior, configuration, APIs, and architecture              | Named root references and `plugins/`                                          | Yes              |
+| Research            | Explore open-ended questions before a design is proposed                      | `research/`                                                                   | No               |
+| Decisions           | Record accepted and proposed cross-cutting designs                            | `rfcs/`                                                                       | Yes, with status |
+| Incidents           | Record production incidents — timeline, root cause(s), resolution, follow-ups | `incidents/`                                                                  | No               |
+| Project operations  | Track tasks, plans, findings, and internal coordination                       | `epics/`, `adhoc/` (being phased out — see below), roadmap and planning files | No               |
 
 ## Ownership rules
 
@@ -43,6 +44,21 @@ topic has one canonical owner; other pages summarize it and link to that owner.
   outcome). See `docs/research/README.md`.
 - The public product roadmap describes themes. `ROADMAP.md` and `epics/` remain
   the private engineering queue and source of task status.
+- Incident docs are a factual record of what happened during a specific
+  production incident — timeline, root cause(s), the exact remediation run
+  against production, and follow-up actions with status. One file per
+  incident, named `docs/incidents/YYYY-MM-DD-short-slug.md`. They are not the
+  place to propose new designs (that's an RFC or research doc, linked from the
+  incident's follow-ups) and are never edited to reflect later changes — if a
+  follow-up itself needs documenting, it gets its own entry in whatever
+  reference doc it changes, cross-linked back to the incident, not folded into
+  the incident file after the fact.
+- `docs/adhoc/` predates the `incidents/` and `research/` classes and mixed
+  both purposes (bug write-ups, findings, plans) without a clear boundary. It
+  is being phased out: new incident write-ups go in `incidents/`, new
+  open-ended findings/plans go in `research/` or a package/app-local doc as
+  appropriate, and existing `adhoc/` content stays where it is until someone
+  deliberately migrates or retires it — don't add new files there.
 
 ## Technical-reference metadata
 

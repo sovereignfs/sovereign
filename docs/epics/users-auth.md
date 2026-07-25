@@ -686,6 +686,52 @@ multi-select). No dependency on Task 2.21/2.23 — this task only captures and s
 
 ---
 
+#### 📋 1.18 — External OAuth/OIDC provider for non-plugin apps (RFC 0072)
+
+**Goal:** Let `apps/auth` act as an OAuth 2.0 / OIDC identity provider for
+standalone external apps — on their own domain, not composed as a Sovereign
+plugin — so they can offer "log in with Sovereign" against an operator's
+instance. Motivated by FindMyModel, a separate standalone app that wants
+sign-in backed by a Sovereign instance without joining the plugin system.
+
+**Deliverables:**
+
+- Enable better-auth's OIDC (or OAuth 2.1) provider plugin in
+  `buildOptions()` (`apps/auth/src/auth.ts:195`), alongside the existing
+  `twoFactor`/`passkey`/`nextCookies` plugins.
+- Console "External clients" section: register a display name, allowed
+  redirect URIs, and requested scopes (`openid`, `email`, `profile`);
+  generates a client ID/secret shown once, secret stored hashed. New table
+  added via the same idempotent `ensureAuthTables()` pattern used for
+  Task 1.17's invite columns (`apps/auth/src/db.ts`).
+- Confirm and document the standard discovery/verification endpoints
+  (`/.well-known/openid-configuration`, `/oauth2/authorize`,
+  `/oauth2/token`, `/.well-known/jwks.json`) in `docs/self-hosting.md` and
+  `docs/upgrade.md`.
+- Document the stable minimal claims contract (`sub`, `email`, `name`,
+  `tenant`) and the security model (exact-match redirect URI, hashed
+  secrets, revocation) in `docs/security.md`.
+
+**Dependencies:** None blocking — additive to `apps/auth`. Client
+registration should use the same admin-gating approach as Task 1.16
+(per-user capability grants), per the RFC's open question.
+
+**SRS reference:** [RFC 0072](../rfcs/0072-external-oauth-provider.md)
+
+**Review checklist:**
+
+- An admin can register an external client and receive a client ID/secret
+  shown exactly once.
+- A registered client can complete the authorization code flow and receive
+  an ID token with the documented claim set.
+- An unregistered or mismatched `redirect_uri` is rejected.
+- Revoking a client blocks new token issuance for that client.
+- `docs/security.md` covers the expanded attack surface (external redirect
+  targets) in its threat model section.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0012 — Passkeys & TOTP MFA](../rfcs/0012-passkeys-and-mfa.md)
@@ -697,6 +743,7 @@ multi-select). No dependency on Task 2.21/2.23 — this task only captures and s
 - [RFC 0065 — User groups and plugin access policy](../rfcs/0065-user-groups-plugin-access.md)
 - [RFC 0054 — Plugin-scoped roles and grants](../rfcs/0054-plugin-scoped-roles-and-grants.md)
 - [RFC 0062 — Email delivery coverage](../rfcs/0062-email-delivery-coverage.md)
+- [RFC 0072 — External OAuth/OIDC provider for non-plugin apps](../rfcs/0072-external-oauth-provider.md)
 
 ## Related Docs
 

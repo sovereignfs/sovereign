@@ -15,6 +15,7 @@ This epic covers two closely related areas: the `@sovereignfs/ui` design system 
 - [RFC 0027 — White-labeling](../rfcs/0027-white-labeling.md)
 - [RFC 0031 — Email templates](../rfcs/0031-email-templates.md)
 - [RFC 0032 — Instance identity rename](../rfcs/0032-instance-identity-rename.md)
+- [RFC 0073 — Standalone usage of `@sovereignfs/ui` outside the plugin runtime](../rfcs/0073-standalone-ui-package.md)
 
 ## Related Docs
 
@@ -653,4 +654,54 @@ screens.
 - Components use only `--sv-*` tokens and keep stable dimensions across content
   and viewport changes.
 - Keyboard and screen-reader interactions are documented and covered in stories.
+
+---
+
+#### 📋 9.17 — Standalone usage of `@sovereignfs/ui` outside the plugin runtime (RFC 0073)
+
+**Goal:** State and document a standalone-consumption guarantee for
+`@sovereignfs/ui` so it can be used as an ordinary npm dependency in an
+external app that isn't a Sovereign plugin and doesn't run inside the
+runtime shell. Motivated by FindMyModel, a separate standalone app that
+wants visual consistency with the Sovereign ecosystem without becoming a
+plugin. Most of the underlying capability already exists (zero SDK
+coupling, a working `tokens.css` export, context-free hooks) — this task is
+primarily verification and documentation, not new component code.
+
+**Deliverables:**
+
+- Confirm actual npm publication status of `@sovereignfs/ui` (distinct from
+  being publish-configured) and state it in `docs/design-system.md`.
+- Add a "Standalone usage" section to `docs/design-system.md`: install,
+  import tokens (`@sovereignfs/ui/tokens.css`), the "no root provider
+  required" guarantee, dark mode via `data-theme="dark"` on the consumer's
+  own root (matching `packages/ui/src/tokens/semantic.css:91`), and a
+  minimal `FormField` + `Input` example.
+- State an explicit runtime-independence guarantee for `useIsMobile`,
+  `useLongPress`, `useDoubleTapHandler`, `useCommitOnEnterOrBlur`.
+- Audit the `Icon` component and any other asset-loading path for a
+  same-origin/runtime-relative assumption that wouldn't resolve for an
+  external domain; fix or document any finding.
+- Add a tiered stability statement for the standalone surface (stable core
+  primitives/tokens vs. experimental editor-workflow primitives like
+  `SplitPane`), mirroring `docs/sdk-stability.md`'s structure.
+
+**Dependencies:** None blocking — `packages/ui` already has zero
+`@sovereignfs/sdk` coupling (verified: no matches for
+`@sovereignfs/sdk` under `packages/ui/src`).
+
+**SRS reference:** [RFC 0073](../rfcs/0073-standalone-ui-package.md)
+
+**Review checklist:**
+
+- A fresh external app can `npm install @sovereignfs/ui`, import tokens,
+  and render `Button`/`FormField`/`Input` with correct styling and no
+  runtime-shell dependency.
+- Dark mode toggles correctly via `data-theme` alone, outside the runtime
+  shell.
+- `useIsMobile`/`useLongPress`/`useDoubleTapHandler`/`useCommitOnEnterOrBlur`
+  work correctly when imported into a plain React 18+ app.
+- No icon or asset request 404s when the component tree is rendered from a
+  different origin than any Sovereign instance.
+- `pnpm --filter @sovereignfs/ui typecheck` passes.
 - `pnpm --filter @sovereignfs/ui typecheck` passes.

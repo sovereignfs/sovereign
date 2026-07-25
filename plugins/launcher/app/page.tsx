@@ -1,103 +1,15 @@
-import { headers } from 'next/headers';
-import Link from 'next/link';
-import { sdk } from '@sovereignfs/sdk';
-import { getPlatformDb } from '@/src/db';
-import { getSelfServiceDirectory } from '@/src/plugin-access-server';
-import { getInstalledPlugins } from '@/src/registry';
-import { PluginDirectorySection } from './_components/PluginDirectorySection';
-import { PluginGrid } from './_components/PluginGrid';
-import { SearchableGrid } from './_components/SearchableGrid';
-import type { PluginTileData } from './_components/PluginTile';
-import styles from './launcher.module.css';
+import { LauncherOfflineView } from './_components/LauncherOfflineView';
 
-// Always reflect the current registry + enabled state on each visit.
-export const dynamic = 'force-dynamic';
-
-// Self-fetch the runtime API. Native dev may run on RUNTIME_PORT; otherwise the
-// runtime defaults to localhost:3000.
-const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
-
-interface LauncherPlugin extends PluginTileData {
-  adminOnly: boolean;
-}
-
-async function getPlugins(): Promise<LauncherPlugin[]> {
-  // Forward the caller's session cookie so the gated /api/plugins route resolves
-  // the same user (and role) the Launcher page was rendered for.
-  const cookie = (await headers()).get('cookie') ?? '';
-  const res = await fetch(`${SELF_URL}/api/plugins`, {
-    headers: { cookie },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`Failed to fetch plugins: ${res.status}`);
-  const data = (await res.json()) as { plugins: LauncherPlugin[] };
-  return data.plugins;
-}
-
-export default async function LauncherPage() {
-  const [plugins, session] = await Promise.all([getPlugins(), sdk.auth.getSession()]);
-  const isAdmin = sdk.auth.hasCapability(session, 'console:access');
-  // `sdk.auth.hasCapability` only sees the static role/plugin-declared
-  // capabilities Edge middleware can compute without a DB round trip — RFC
-  // 0070 per-user capability grants (like `plugins:self-manage`) never
-  // appear in that header, so this needs the Node-runtime, DB-backed check.
-  const directory = session
-    ? await getSelfServiceDirectory(
-        await getPlatformDb(),
-        session.user.id,
-        session.user.role,
-        getInstalledPlugins(),
-      )
-    : null;
-
-  const mainPlugins = plugins.filter((p) => !p.adminOnly);
-  const adminPlugins = plugins.filter((p) => p.adminOnly);
-
-  if (plugins.length === 0) {
-    return (
-      <div className={styles.launcher}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>Home</h1>
-          <p className={styles.subtitle}>Your installed apps and tools.</p>
-        </div>
-        <div className={styles.empty}>
-          <p className={styles.emptyTitle}>No apps installed yet</p>
-          {isAdmin ? (
-            <p className={styles.emptyText}>
-              Install and enable apps from the{' '}
-              <Link href="/console/plugins" className={styles.emptyLink}>
-                Console
-              </Link>
-              .
-            </p>
-          ) : (
-            <p className={styles.emptyText}>
-              Ask your administrator to install apps for this workspace.
-            </p>
-          )}
-        </div>
-
-        {directory && (
-          <PluginDirectorySection eligible={directory.eligible} enabled={directory.enabled} />
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.launcher}>
-      <SearchableGrid plugins={mainPlugins} total={plugins.length} />
-
-      {isAdmin && adminPlugins.length > 0 && (
-        <section className={styles.adminSection}>
-          <h2 className={styles.sectionTitle}>Admin</h2>
-          <PluginGrid plugins={adminPlugins} />
-        </section>
-      )}
-
-      {directory && (
-        <PluginDirectorySection eligible={directory.eligible} enabled={directory.enabled} />
-      )}
-    </div>
-  );
+/**
+ * Home — offline-capable (RFC 0072; `manifest.json` declares `offline.root:
+ * true`). This shell renders nothing per-user: no plugin list, no session,
+ * no self-service directory. All of that is fetched client-side in
+ * `LauncherOfflineView`, which also mirrors cached data back in when offline
+ * — that's what makes this route's own server-rendered HTML safe to
+ * precache at both `/launcher` and `/` (the PWA start_url, rewritten here by
+ * the platform's middleware when this plugin is configured as the platform
+ * root — the default) and replay with no network on a shared device.
+ */
+export default function LauncherPage() {
+  return <LauncherOfflineView />;
 }

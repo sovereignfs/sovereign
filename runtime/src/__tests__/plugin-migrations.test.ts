@@ -151,4 +151,28 @@ describe('runAllPluginMigrations (RFC 0071 — isolation from a single plugin fa
     const migratedIds = provisionPluginDb.mock.calls.map((call) => call[0]);
     expect(migratedIds).toEqual(['fs.example.aaa', 'fs.example.healthlog', 'fs.example.zzz']);
   });
+
+  it('warns and continues instead of throwing when NODE_ENV=development', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { runAllPluginMigrations } = await import('../plugin-migrations');
+      const { getCompatibilityWarnings } = await import('../plugin-compat');
+
+      await expect(runAllPluginMigrations()).resolves.toBeUndefined();
+
+      expect(warn).toHaveBeenCalled();
+      const warnings = getCompatibilityWarnings('fs.example.healthlog');
+      expect(warnings.some((w) => w.includes('requires database encryption'))).toBe(true);
+
+      // Still no provisioning for the violating plugin — only the hard
+      // crash is skipped, not the security requirement itself.
+      const migratedIds = provisionPluginDb.mock.calls.map((call) => call[0]);
+      expect(migratedIds).toContain('fs.example.aaa');
+      expect(migratedIds).toContain('fs.example.zzz');
+      expect(migratedIds).not.toContain('fs.example.healthlog');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });

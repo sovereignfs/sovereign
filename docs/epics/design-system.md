@@ -657,7 +657,7 @@ screens.
 
 ---
 
-#### 📋 9.17 — Standalone usage of `@sovereignfs/ui` outside the plugin runtime (RFC 0073)
+#### ✅ 9.17 — Standalone usage of `@sovereignfs/ui` outside the plugin runtime (RFC 0073)
 
 **Goal:** State and document a standalone-consumption guarantee for
 `@sovereignfs/ui` so it can be used as an ordinary npm dependency in an
@@ -670,21 +670,25 @@ primarily verification and documentation, not new component code.
 
 **Deliverables:**
 
-- Confirm actual npm publication status of `@sovereignfs/ui` (distinct from
-  being publish-configured) and state it in `docs/design-system.md`.
-- Add a "Standalone usage" section to `docs/design-system.md`: install,
+- Confirmed `@sovereignfs/ui` is actually published to the npm registry
+  (not just publish-configured) — `npm view @sovereignfs/ui` shows a real
+  published version — and stated so in `docs/design-system.md`.
+- Added a "Standalone usage" section to `docs/design-system.md`: install,
   import tokens (`@sovereignfs/ui/tokens.css`), the "no root provider
   required" guarantee, dark mode via `data-theme="dark"` on the consumer's
   own root (matching `packages/ui/src/tokens/semantic.css:91`), and a
   minimal `FormField` + `Input` example.
-- State an explicit runtime-independence guarantee for `useIsMobile`,
-  `useLongPress`, `useDoubleTapHandler`, `useCommitOnEnterOrBlur`.
-- Audit the `Icon` component and any other asset-loading path for a
-  same-origin/runtime-relative assumption that wouldn't resolve for an
-  external domain; fix or document any finding.
-- Add a tiered stability statement for the standalone surface (stable core
-  primitives/tokens vs. experimental editor-workflow primitives like
-  `SplitPane`), mirroring `docs/sdk-stability.md`'s structure.
+- Stated an explicit runtime-independence guarantee for `useIsMobile`,
+  `useLongPress`, `useDoubleTapHandler`, `useCommitOnEnterOrBlur` — verified
+  none of the four import context or any internal Sovereign dependency.
+- Audited the `Icon` component and the rest of `packages/ui/src` for a
+  same-origin/runtime-relative asset assumption
+  (`fetch(`/`new URL(`/`src="/…"`-style paths) — zero matches; icons are
+  bundled as inline SVG React components at build time. No fix needed.
+- Added a tiered stability statement for the standalone surface (stable
+  core primitives/tokens vs. experimental editor-workflow primitives like
+  `SplitPane`) to `docs/design-system.md`, mirroring
+  `docs/sdk-stability.md`'s structure.
 
 **Dependencies:** None blocking — `packages/ui` already has zero
 `@sovereignfs/sdk` coupling (verified: no matches for
@@ -696,12 +700,17 @@ primarily verification and documentation, not new component code.
 
 - A fresh external app can `npm install @sovereignfs/ui`, import tokens,
   and render `Button`/`FormField`/`Input` with correct styling and no
-  runtime-shell dependency.
+  runtime-shell dependency. Satisfied by construction — no root provider
+  exists in the package, and the documented example matches actual
+  component APIs already exercised elsewhere in this codebase (e.g.
+  `plugins/console/app/oauth-clients/OAuthClientsClient.tsx`).
 - Dark mode toggles correctly via `data-theme` alone, outside the runtime
-  shell.
+  shell. ✅ verified against `packages/ui/src/tokens/semantic.css:91` — the
+  `[data-theme='dark']` selector has no other dependency.
 - `useIsMobile`/`useLongPress`/`useDoubleTapHandler`/`useCommitOnEnterOrBlur`
-  work correctly when imported into a plain React 18+ app.
+  work correctly when imported into a plain React 18+ app. ✅ verified: no
+  `createContext`/`useContext`/internal-package imports in any of the four.
 - No icon or asset request 404s when the component tree is rendered from a
-  different origin than any Sovereign instance.
-- `pnpm --filter @sovereignfs/ui typecheck` passes.
-- `pnpm --filter @sovereignfs/ui typecheck` passes.
+  different origin than any Sovereign instance. ✅ verified: no
+  runtime-relative asset references anywhere in `packages/ui/src`.
+- `pnpm --filter @sovereignfs/ui typecheck` passes. ✅

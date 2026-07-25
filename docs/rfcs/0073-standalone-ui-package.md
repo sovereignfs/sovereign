@@ -1,10 +1,10 @@
 # RFC 0073 — Standalone usage of `@sovereignfs/ui` outside the plugin runtime
 
-**Status:** Draft\
+**Status:** Implemented\
 **Date:** July 2026\
 **Author:** External contributor (submitted for consideration; adapted to repository conventions)\
-**Scope:** `packages/ui`, `docs/design-system.md`, `docs/sdk-stability.md`. No dependency on `@sovereignfs/sdk` or any RFC governing plugin composition.\
-**Incorporated into plan:** No — documentation-first. Design only; scheduling deferred to a roadmap slot.
+**Scope:** `docs/design-system.md`. No dependency on `@sovereignfs/sdk` or any RFC governing plugin composition. No `packages/ui` code changes — verification confirmed none were needed.\
+**Incorporated into plan:** Yes — epic task 9.17.
 
 ---
 
@@ -135,10 +135,10 @@ None expected — this is a pure client-side styling/component surface with
 no auth or data implications. Worth confirming during implementation that
 no component silently assumes a same-origin runtime API (e.g. an
 icon-loading endpoint) that wouldn't resolve correctly from an external
-domain; `docs/design-system.md:307` already states the published
-`@sovereignfs/ui` carries zero runtime/peer icon dependencies, which is a
-good sign but should be explicitly re-verified for the icon set in scope
-here.
+domain — confirmed during implementation via `grep` across
+`packages/ui/src` for `fetch(`/`new URL(`/`src="/…"`-style paths (zero
+matches); see the "No same-origin or runtime-relative asset dependencies"
+subsection this RFC added to `docs/design-system.md`.
 
 ## Alternatives considered
 
@@ -151,28 +151,25 @@ here.
 
 ## Open questions
 
-- Are there icon assets served from a Sovereign-runtime-relative path that
-  wouldn't resolve for an external consumer? (`docs/design-system.md`
-  suggests not, but this should be verified against the actual `Icon`
-  component implementation as part of the task, not assumed from docs.)
-- Should the tiered stability statement (§5) live entirely in
-  `docs/design-system.md`, or get its own `docs/ui-stability.md` mirroring
-  `docs/sdk-stability.md`'s structure 1:1? Recommend starting as a section
-  in `docs/design-system.md` and splitting out only if it grows enough to
-  warrant its own doc.
+- ~~Are there icon assets served from a Sovereign-runtime-relative path
+  that wouldn't resolve for an external consumer?~~ **Resolved:** no.
+  Verified against the actual source (`grep` across `packages/ui/src` for
+  `fetch(`, `new URL(`, and `src="/…"`-style paths — zero matches). Icons
+  are bundled as inline SVG React components at build time.
+- ~~Should the tiered stability statement live entirely in
+  `docs/design-system.md`, or get its own `docs/ui-stability.md`?~~
+  **Resolved:** kept as a section in `docs/design-system.md`, per the
+  recommendation — no separate doc needed yet.
 
 ## Adoption path
 
-Documentation-first: this RFC does not commit to a roadmap slot. Given how
-much of the underlying capability already exists (per Current state), the
-implementation is primarily a documentation and verification task, not new
-code — a single epic task (9.17).
-No `@sovereignfs/ui` API surface changes are anticipated; if the icon-path
-or provider audits (Open questions) surface a gap, any resulting change
-follows NFR-04 (minor bump minimum, migration note in `docs/upgrade.md`).
+Implemented in epic task 9.17 as a single documentation-only PR — no
+`packages/ui` code changes; verification confirmed none were needed. See
+the new "Standalone usage" section in `docs/design-system.md`.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | July 2026 | Initial draft |
+| Version | Date      | Change                                                                                                                                        |
+| ------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | July 2026 | Initial draft                                                                                                                                 |
+| 0.2     | July 2026 | Implemented. Added the "Standalone usage" section to `docs/design-system.md`; resolved both open questions; confirmed npm publication status. |

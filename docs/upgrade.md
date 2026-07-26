@@ -119,6 +119,37 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### Root `package.json` 0.47.0 → 0.48.0 (no `runtime` version bump)
+
+- **Default plugin bundle reduced to Sovereign Tasks only — epic task 3.31
+  done.** Previously, `sovereign.plugins.json` was committed at the repo root
+  with 16 entries (every first-party plugin plus all 7 example plugins), so a
+  fresh checkout, `pnpm dev`, and every CI-published image shipped all of them
+  baked in. `sovereign.plugins.json` is now a **local, gitignored** file — a
+  fresh checkout has none, and `scripts/install-plugins.ts` falls back to the
+  newly-committed `sovereign.plugins.default.json`, which declares only
+  **Sovereign Tasks**. The platform plugins (console/launcher/account) are
+  unaffected — they ship in this repository regardless.
+  - **Action required if you rely on a previously-bundled plugin** (Plainwrite,
+    Shopper, Wallet, Tritext, Healthlog, Ledger, Tally, Docs, or any example
+    plugin): before your next rebuild, create your own `sovereign.plugins.json`
+    at the repo root (copy `sovereign.plugins.default.json` as a starting
+    template) declaring every plugin you want, then rebuild. See
+    `docs/self-hosting.md`'s "Bundled default plugins" section for the two
+    supported ways to carry a custom `sovereign.plugins.json` into a
+    production build.
+  - **No data is affected either way.** Dropping a plugin from the image never
+    touches its database tables — disabling or losing a plugin's code just
+    means its data sits untouched until the plugin is re-declared and the
+    image rebuilt.
+  - **The official, CI-published images** (`SOVEREIGN_VERSION=...`, no local
+    Dockerfile) always use the new Tasks-only default from this version
+    forward — they build from a clean checkout with no local
+    `sovereign.plugins.json` to pick up.
+  - This is a build-tooling/CI change with no `runtime`, `@sovereignfs/db`, or
+    `@sovereignfs/auth` code touched — only the root `package.json` (roadmap
+    milestone) bumps.
+
 ### v0.57 → v0.58
 
 - **External OAuth 2.0 / OIDC provider for non-plugin apps (RFC 0072) —

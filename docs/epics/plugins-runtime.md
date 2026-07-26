@@ -1070,7 +1070,7 @@ verification work (`AUTH_REQUIRE_EMAIL_VERIFICATION`, made SMTP registration-cri
 
 ---
 
-#### 📋 3.31 — Default plugin bundle reduced to Tasks-only
+#### ✅ 3.31 — Default plugin bundle reduced to Tasks-only
 
 **Goal:** Stop shipping every first-party plugin (Plainwrite, Shopper, Wallet, Tritext,
 Healthlog, Ledger, Tally, Docs) and all 7 example plugins baked into the default/official

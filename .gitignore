@@ -43,6 +43,12 @@ runtime/generated/
 !/plugins/console/
 !/plugins/launcher/
 
+# sovereign.plugins.json declares which non-platform plugins get installed
+# (epic task 3.31) — a local, per-checkout file, never committed or shared.
+# scripts/install-plugins.ts falls back to the committed
+# sovereign.plugins.default.json (Tasks-only) when this file doesn't exist.
+/sovereign.plugins.json
+
 # PWA service worker + Workbox bundles, generated into runtime/public by
 # @ducanh2912/next-pwa at build time. Never committed (the manifest + icons are).
 runtime/public/sw.js

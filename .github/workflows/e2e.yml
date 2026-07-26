@@ -31,13 +31,42 @@ jobs:
       - name: Build workspace packages
         run: pnpm turbo build --filter='./packages/*'
 
-      # Clone the example plugins at their pinned ref, then compose all plugin
-      # routes so `next dev` starts cleanly. The paywall golden path exercises
-      # the example-monetized plugin, so the examples must be present.
-      # install:plugins runs generate itself once it clones. The cloned plugins
-      # are intentionally absent from the committed lockfile, so refresh the CI
-      # workspace graph after materializing them instead of disabling pnpm's
-      # dependency verification for the test command.
+      # sovereign.plugins.json is a local, gitignored file (epic task 3.31) —
+      # the checkout has none, so install:plugins would otherwise fall back to
+      # sovereign.plugins.default.json (Sovereign Tasks only). Declare exactly
+      # what this job needs instead:
+      #   - example-monetized: the paywall golden path exercises this plugin
+      #     directly (see __tests__/e2e/paywall.spec.ts, global-setup.ts).
+      #   - sovereign-healthlog: not exercised by any spec's UI flow, but kept
+      #     deliberately for its `database.requireEncryption: true` manifest —
+      #     boot-time regression coverage for the exact per-plugin encryption
+      #     enforcement epic task 8.15 fixed (RFC 0071).
+      - name: Declare plugins for e2e
+        run: |
+          cat > sovereign.plugins.json <<'EOF'
+          {
+            "plugins": [
+              {
+                "id": "example-monetized",
+                "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
+                "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",
+                "subdir": "example-monetized"
+              },
+              {
+                "id": "sovereign-healthlog",
+                "repository": "https://github.com/sovereignfs/sovereign-healthlog.git",
+                "ref": "v0.2.0"
+              }
+            ]
+          }
+          EOF
+
+      # Clone the declared plugins at their pinned ref, then compose all
+      # plugin routes so `next dev` starts cleanly. install:plugins runs
+      # generate itself once it clones. The cloned plugins are intentionally
+      # absent from the committed lockfile, so refresh the CI workspace graph
+      # after materializing them instead of disabling pnpm's dependency
+      # verification for the test command.
       - name: Install and compose plugins
         run: |
           pnpm install:plugins
@@ -50,12 +79,13 @@ jobs:
       #
       # SOVEREIGN_DB_ENCRYPTION_KEY is generated fresh per run, not a stored
       # secret — the checkout (and its data/ dir) is ephemeral per job, so
-      # there's nothing to decrypt across runs and no key to persist. Required
-      # since sovereign-healthlog (RFC 0071 `database.requireEncryption: true`,
-      # pinned in sovereign.plugins.json) makes the whole platform refuse to
-      # boot without this set. The webServer starts against a brand-new,
-      # empty data/ dir, so the key-set-before-first-boot path applies (no
-      # `sv db encrypt` migration step needed).
+      # there's nothing to decrypt across runs and no key to persist. Set here
+      # so sovereign-healthlog (declared above, `database.requireEncryption:
+      # true`, RFC 0071) actually gets encrypted rather than just warning
+      # (epic task 8.15 — a missing key no longer blocks the whole platform's
+      # boot, only that one plugin runs unencrypted). The webServer starts
+      # against a brand-new, empty data/ dir, so the key-set-before-first-boot
+      # path applies (no `sv db encrypt` migration step needed).
       - name: Write .env
         run: |
           {

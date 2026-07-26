@@ -103,25 +103,75 @@ as `example.com` and `auth.example.com`. Override `AUTH_PORT` and
 
 ---
 
-## Bundled example plugins
+## Bundled default plugins
 
-The platform ships a set of reference **example plugins** (basic, API provider,
-minimal/overlay shells, monetization demo). They do not live in the platform
-repository — they are maintained in
-[`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples)
-and declared in `sovereign.plugins.json`, each pinned to a commit. The Docker
-build (and `pnpm install:plugins` locally) clones them into `plugins/<slug>/`
-before composing routes, so a default install ships with them.
+`sovereign.plugins.json` at the repo root declares which non-platform plugins
+`pnpm install:plugins` clones and composes into the runtime — the **platform
+plugins** (`console`, `launcher`, `account`) always ship regardless, since they
+live in this repository. `sovereign.plugins.json` is a **local, gitignored
+file**, never committed: a fresh checkout, `pnpm dev`, and the CI-published
+image all fall back to the committed `sovereign.plugins.default.json` when it
+doesn't exist, which declares exactly one plugin — **Sovereign Tasks**. That's
+the entire default bundle: platform plugins plus Tasks, nothing else baked in.
 
-Because they are cloned during the build, **the build needs network access to
-GitHub.** The pinned commit refs keep the result reproducible.
+Tasks is maintained in its own repository
+([`sovereignfs/sovereign-tasks`](https://github.com/sovereignfs/sovereign-tasks))
+and released independently of the platform, but bundling it by default means
+operators get a working task list out of the box without a manual
+`sv plugin add`. It's visible and enabled from first boot — no hidden-by-default
+toggle. If you don't want it, disable or uninstall it from **Console →
+Plugins** like any other plugin, or drop it from the image entirely by
+declaring an empty `sovereign.plugins.json` (`{"plugins": []}`) before
+building.
 
-### Showing/hiding the examples
+### Running a larger plugin set in production
 
-The examples are **hidden by default**: even though they are baked into the
-image, their routes return 404 and they never appear in the launcher or sidebar
-until you opt in. The easiest way to show them is the **Console → Settings →
-Example plugins** toggle — no env editing, no restart. Prefer this in day-to-day use.
+Sovereign's community and first-party plugins (Plainwrite, Shopper, Wallet,
+Tritext, Healthlog, Ledger, Tally, Docs) and the reference **example plugins**
+(basic, API provider, minimal/overlay shells, monetization demo — maintained
+in [`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples))
+are **not** part of the default bundle. To ship any of them, declare them in
+your own `sovereign.plugins.json` — copy `sovereign.plugins.default.json` as a
+starting template and add entries:
+
+```json
+{
+  "plugins": [
+    { "id": "sovereign-tasks", "repository": "...", "ref": "v0.15.1" },
+    { "id": "sovereign-healthlog", "repository": "...", "ref": "v0.2.0" }
+  ]
+}
+```
+
+Because plugin loading is build-time-only in v1 (no hot-swap — see
+[Plugin compatibility](#plugin-compatibility)), getting a custom set into
+production means one of two paths:
+
+- **Self-build from a checkout.** Keep `sovereign.plugins.json` in your
+  deployment checkout (it's gitignored, so it survives `git pull` but never
+  gets committed) and run `docker compose -f docker-compose.prod.yml up
+--build -d` — the file is present in the local build context and used as-is,
+  same as any local `docker build`.
+- **A separate deployment/infra workflow.** Maintain `sovereign.plugins.json`
+  outside this repository entirely — e.g. copied into place by your own
+  provisioning script or infra repo before the build runs. Nothing in the
+  platform's own build process needs to know about it beyond the file's
+  presence at build time.
+
+The official, CI-published images (`SOVEREIGN_VERSION=...`, no local
+Dockerfile) always use the default-only bundle — they're built from a clean
+checkout with no local `sovereign.plugins.json` to pick up.
+
+Because non-default plugins are cloned during the build, **that build needs
+network access to GitHub.** Pin refs (tags or commit SHAs) for reproducibility.
+
+### Showing/hiding the examples once declared
+
+If you declare the example plugins in your own `sovereign.plugins.json`,
+they're **hidden by default even once baked in**: their routes 404 and they
+never appear in the launcher or sidebar until you opt in. The easiest way to
+show them is the **Console → Settings → Example plugins** toggle — no env
+editing, no restart. Prefer this in day-to-day use.
 
 For provisioning (e.g. a demo image), the `SOVEREIGN_EXAMPLES_ENABLED` runtime
 env var sets the initial default. It is a plain runtime variable — set it in
@@ -135,10 +185,6 @@ Precedence, highest first: (1) an explicit per-plugin enable/disable on
 **Console → Plugins** (persisted per plugin); (2) the **Console → Settings →
 Example plugins** instance toggle (persisted in `platform_settings`); (3) the
 `SOVEREIGN_EXAMPLES_ENABLED` env default; (4) off.
-
-To drop the examples from the image entirely (rather than just hiding them),
-remove their entries from `sovereign.plugins.json` before building — nothing will
-be cloned or composed.
 
 ### Hiding in-development plugins
 
@@ -158,24 +204,6 @@ override and no Console setting** — an explicit enable on Console → Plugins
 does not undo it. It's a hard, deploy-time gate: pin a production instance to
 production-ready plugins only, without needing to remove the plugin from
 `sovereign.plugins.json` (which would drop it from the image entirely).
-
-## Bundled default plugins
-
-**Sovereign Tasks** ships with every default install the same way the example
-plugins do — declared in `sovereign.plugins.json`, pinned to a commit, cloned
-into `plugins/sovereign-tasks/` during the Docker build (or `pnpm
-install:plugins` locally). Unlike the examples, Tasks is a real feature and is
-**visible and enabled from first boot** — there's no hidden-by-default toggle
-for it.
-
-Tasks is maintained in its own repository
-([`sovereignfs/sovereign-tasks`](https://github.com/sovereignfs/sovereign-tasks))
-and released independently of the platform, but bundling it here means
-operators get it out of the box without a manual `sv plugin add`. If you don't
-want it, disable or uninstall it from **Console → Plugins** like any other
-plugin — the same lifecycle covers every plugin regardless of how its code got
-onto disk. To drop it from the image entirely, remove its entry from
-`sovereign.plugins.json` before building, same as the examples above.
 
 See [Sovereign repositories](repositories.md) for the full map of platform,
 plugin, documentation, and deployment-support repositories.

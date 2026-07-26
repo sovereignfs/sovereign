@@ -58,14 +58,15 @@ workflow. Edit the manifest, implement your `app/page.tsx`, then install with
 
 ### Example plugins
 
-Reference plugins ship with the platform and serve as both documentation and
-runtime test fixtures. They live in their own repository —
+Reference plugins serve as both documentation and runtime test fixtures. They
+live in their own repository —
 [`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples)
-— and the platform bundles them at build time: `scripts/install-plugins.ts`
-clones them (pinned to a commit in `sovereign.plugins.json`) into
-`plugins/<slug>/`, and the generate step composes them like any other plugin.
-They are enabled by default; an operator can disable them per-instance from the
-Console:
+— and are **not** part of the default bundle (epic task 3.31): declare the
+ones you want in your own local, gitignored `sovereign.plugins.json` and
+`scripts/install-plugins.ts` clones them (pinned to a commit) into
+`plugins/<slug>/`, same as any other plugin. Once declared and cloned, they're
+hidden by default per-instance until shown from the Console — see
+[Showing/hiding the examples once declared](self-hosting.md#showinghiding-the-examples-once-declared):
 
 | Plugin ID                             | Route                     | What it shows                                                                |
 | ------------------------------------- | ------------------------- | ---------------------------------------------------------------------------- |
@@ -78,10 +79,11 @@ Console:
 | `fs.sovereign.example-monetized`      | `/example-monetized`      | Monetization manifest field, Ed25519 license gating, paywall flow (RFC 0003) |
 
 Browse the [`sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples)
-repository for fully-working code to adapt. After a build (or a local
-`pnpm install:plugins`) the cloned copies are also under `plugins/example-*/`,
-but those are git-ignored working copies — the repository is the source of truth.
-See [Sovereign repositories](repositories.md) for the full first-party repository
+repository for fully-working code to adapt. Once declared in
+`sovereign.plugins.json` and installed (`pnpm install:plugins`), the cloned
+copies are under `plugins/example-*/`, but those are git-ignored working
+copies — the repository is the source of truth. See
+[Sovereign repositories](repositories.md) for the full first-party repository
 map.
 
 The `example-monetized` plugin ships with a committed demo keypair and a
@@ -2356,7 +2358,9 @@ Still your responsibility per component:
 
 To distribute a plugin, set `type` to `sovereign` or `community` and point
 `repository` at its public git URL. Today, instances install declared plugins
-from `sovereign.plugins.json`:
+from `sovereign.plugins.json` — a local, gitignored file each operator
+maintains (see [self-hosting.md](self-hosting.md#bundled-default-plugins));
+it's not part of the committed repository:
 
 ```json
 {
@@ -2369,8 +2373,9 @@ from `sovereign.plugins.json`:
 ### Private repositories
 
 A plugin's repository doesn't have to be public. Add an optional `tokenEnv` field naming an
-environment variable that holds a personal access token — the **variable name** is committed,
-never the token itself, so `sovereign.plugins.json` stays safe to check in:
+environment variable that holds a personal access token — the **variable name** is what you
+write, never the token itself, so it's safe even though `sovereign.plugins.json` is a local,
+gitignored file (epic task 3.31) rather than something meant to be shared or committed:
 
 ```json
 {

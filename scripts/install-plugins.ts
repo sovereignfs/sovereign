@@ -2,7 +2,15 @@
  * install-plugins — clones the declared plugins into `plugins/<id>/` and wires
  * them into the runtime.
  *
- * Reads `sovereign.plugins.json` at the repo root:
+ * Reads `sovereign.plugins.json` at the repo root — a local, gitignored file
+ * (epic task 3.31). If it doesn't exist, falls back to the committed
+ * `sovereign.plugins.default.json` (Sovereign Tasks only), which is also the
+ * template an operator copies to `sovereign.plugins.json` to declare a larger
+ * set. This is what makes a fresh clone, `pnpm dev`, and the CI-published
+ * image all ship the same small default without any Dockerfile/CI-specific
+ * logic — see `main()` below.
+ *
+ * Shape (identical for either file):
  *
  *   {
  *     "plugins": [
@@ -75,6 +83,7 @@ export interface PluginsConfig {
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIG_PATH = join(ROOT, 'sovereign.plugins.json');
+const DEFAULT_CONFIG_PATH = join(ROOT, 'sovereign.plugins.default.json');
 const PLUGINS_DIR = join(ROOT, 'plugins');
 
 /** Parse and validate `sovereign.plugins.json` content. Throws on malformed input. */
@@ -306,16 +315,30 @@ export function isPluginInstalled(id: string, pluginsDir: string = PLUGINS_DIR):
 }
 
 function main(): void {
-  if (!existsSync(CONFIG_PATH)) {
-    console.log(
-      '[install-plugins] No sovereign.plugins.json at the repo root — nothing to install.',
-    );
+  // `sovereign.plugins.json` is a local, gitignored file — declaring plugins
+  // there is how a developer or operator opts into a larger set (community
+  // plugins, a private fork, etc). When it doesn't exist on disk at all, fall
+  // back to the committed `sovereign.plugins.default.json` (Sovereign Tasks
+  // only) rather than installing nothing — this is what makes a fresh clone,
+  // `pnpm dev`, and the CI-published image all ship the same small default
+  // set without any Dockerfile- or CI-specific logic. An explicit
+  // `sovereign.plugins.json` — even `{"plugins": []}` — always wins and is
+  // never merged with the default; that's how an operator opts out of even
+  // Tasks deliberately.
+  const usingDefault = !existsSync(CONFIG_PATH);
+  const configPath = usingDefault ? DEFAULT_CONFIG_PATH : CONFIG_PATH;
+  const configLabel = usingDefault
+    ? 'sovereign.plugins.default.json (no local sovereign.plugins.json found)'
+    : 'sovereign.plugins.json';
+
+  if (!existsSync(configPath)) {
+    console.log(`[install-plugins] No ${configLabel} at the repo root — nothing to install.`);
     return;
   }
 
-  const config = parsePluginsConfig(readFileSync(CONFIG_PATH, 'utf8'));
+  const config = parsePluginsConfig(readFileSync(configPath, 'utf8'));
   if (config.plugins.length === 0) {
-    console.log('[install-plugins] No plugins declared in sovereign.plugins.json.');
+    console.log(`[install-plugins] No plugins declared in ${configLabel}.`);
     return;
   }
 

@@ -386,7 +386,7 @@ submitted to the official registry.
 The platform plugins (`console`, `launcher`, `account`) ship in this repo.
 Sovereign/community plugins live in their own repositories and are pulled in
 with `pnpm install:plugins`, which reads `sovereign.plugins.json` at the repo
-root:
+root — a **local, gitignored file**, never committed:
 
 ```json
 {
@@ -401,16 +401,22 @@ root:
 
 Each entry is shallow-cloned into `plugins/<id>/` (skipped if already present),
 then `pnpm generate` composes it into the runtime. Cloned plugins are
-gitignored — they are not committed to this repo. The shipped config has an
-empty `plugins` list; add entries to install. An unreachable repository URL
-fails the script with a clear error.
+gitignored — they are not committed to this repo. An unreachable repository
+URL fails the script with a clear error.
+
+If `sovereign.plugins.json` doesn't exist at all, `pnpm install:plugins` falls
+back to the committed `sovereign.plugins.default.json` — the small set that
+ships by default (currently just Sovereign Tasks). Copy it to
+`sovereign.plugins.json` and add entries to install more; an explicit
+`{"plugins": []}` opts out of even the default set. See
+[self-hosting.md](docs/self-hosting.md#bundled-default-plugins) for the full
+default-vs-custom-bundle model.
 
 ### Cloning your own plugins
 
-`sovereign.plugins.json` is committed and shared. If instead you want to clone
-plugin repositories **you** are developing against this checkout — without
-declaring them anywhere in the codebase — clone directly into
-`plugins/<name>.local` (the project's `.local` convention; see
+If you want to clone plugin repositories **you** are developing against this
+checkout — without declaring them in `sovereign.plugins.json` at all — clone
+directly into `plugins/<name>.local` (the project's `.local` convention; see
 `docs/plugin-development.md`):
 
 ```bash

@@ -6,10 +6,10 @@ import { Pool } from 'pg';
 import { findWorkspaceRoot, pgSslMode, resolveSqlitePath } from './client';
 import { resolveDialect, type Dialect, type ResolvedDialect } from './dialect';
 import {
-  checkEncryptionMarker,
   dbEncryptionKeyFromEnv,
   defaultDataDir,
   openKeyedSqlite,
+  resolvePluginEncryptionKey,
 } from './sqlite-encryption';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -86,14 +86,23 @@ function pgSsl(url: string): false | { rejectUnauthorized: boolean; ca?: string 
 /**
  * Get (or lazily create and cache) the Drizzle client for an isolated plugin.
  *
- * - **SQLite:** opens `data/plugins/<pluginId>.db` in WAL mode.
+ * - **SQLite:** opens `data/plugins/<pluginId>.db` in WAL mode. Encrypted only
+ *   if `requiresEncryption` is true (the plugin's own manifest
+ *   `database.requireEncryption`, per task 8.15) — the instance-wide
+ *   `SOVEREIGN_DB_ENCRYPTION_KEY` is never applied to a plugin that never
+ *   asked for it, regardless of whether the key is configured. See
+ *   `resolvePluginEncryptionKey` for the full per-database decision.
  * - **Postgres:** opens a new Pool targeting the same server as the platform
  *   DB, but with `search_path` pinned to `plugin_<slug>` via the connection's
  *   startup options (not a `SET` issued after connecting — see the comment
  *   at the Pool construction below for why that distinction matters).
  *   The schema must already exist (call `provisionPluginDb` first).
  */
-export function getPluginDb(pluginId: string, dialect?: Dialect): PluginDb {
+export function getPluginDb(
+  pluginId: string,
+  dialect?: Dialect,
+  requiresEncryption = false,
+): PluginDb {
   const resolved = resolvePluginDialect(dialect);
   const cacheKey = registryKey(pluginId, resolved.dialect);
   const cached = _registry.get(cacheKey);
@@ -102,8 +111,14 @@ export function getPluginDb(pluginId: string, dialect?: Dialect): PluginDb {
   if (resolved.dialect === 'sqlite') {
     const path = resolveSqlitePath(pluginSqliteUrl(pluginId));
     mkdirSync(dirname(path), { recursive: true });
-    const key = dbEncryptionKeyFromEnv();
-    checkEncryptionMarker(defaultDataDir(), key !== undefined);
+    const envKey = dbEncryptionKeyFromEnv();
+    const key = resolvePluginEncryptionKey(
+      defaultDataDir(),
+      pluginId,
+      path,
+      envKey,
+      requiresEncryption,
+    );
     const sqlite = openKeyedSqlite(path, key);
     const pdb: PluginDb = { dialect: 'sqlite', db: drizzleSqlite(sqlite) };
     _registry.set(cacheKey, pdb);

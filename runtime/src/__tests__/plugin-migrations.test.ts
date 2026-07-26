@@ -5,7 +5,7 @@ import { getCompatibilityWarnings } from '../plugin-compat';
 
 const KEY_ENV = 'SOVEREIGN_DB_ENCRYPTION_KEY';
 
-describe('assertPluginEncryptionRequirement (RFC 0071)', () => {
+describe('assertPluginEncryptionRequirement (RFC 0071, softened by task 8.15)', () => {
   afterEach(() => {
     Reflect.deleteProperty(process.env, KEY_ENV);
     vi.restoreAllMocks();
@@ -17,19 +17,9 @@ describe('assertPluginEncryptionRequirement (RFC 0071)', () => {
     ).not.toThrow();
   });
 
-  it('throws, naming the plugin, when SQLite is required but no key is configured', () => {
+  it('warns (never throws) naming the plugin, when SQLite is required but no key is configured', () => {
     Reflect.deleteProperty(process.env, KEY_ENV);
-    expect(() =>
-      assertPluginEncryptionRequirement(
-        'fs.example.healthlog',
-        { isolation: 'isolated', requireEncryption: true },
-        'sqlite',
-      ),
-    ).toThrow(/fs\.example\.healthlog/);
-  });
-
-  it('does not throw when SQLite is required and a key is configured', () => {
-    process.env[KEY_ENV] = randomBytes(32).toString('base64');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect(() =>
       assertPluginEncryptionRequirement(
         'fs.example.healthlog',
@@ -37,6 +27,34 @@ describe('assertPluginEncryptionRequirement (RFC 0071)', () => {
         'sqlite',
       ),
     ).not.toThrow();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain('fs.example.healthlog');
+  });
+
+  it('records the no-key warning persistently via recordWarnings, not just console', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    assertPluginEncryptionRequirement(
+      'fs.example.healthlog-persistent',
+      { isolation: 'isolated', requireEncryption: true },
+      'sqlite',
+    );
+    const warnings = getCompatibilityWarnings('fs.example.healthlog-persistent');
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('requires database encryption');
+    expect(warnings[0]).toContain('SOVEREIGN_DB_ENCRYPTION_KEY');
+  });
+
+  it("does not warn when SQLite is required and a key is configured — per-file conversion is getPluginDb's job", () => {
+    process.env[KEY_ENV] = randomBytes(32).toString('base64');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(() =>
+      assertPluginEncryptionRequirement(
+        'fs.example.healthlog',
+        { isolation: 'isolated', requireEncryption: true },
+        'sqlite',
+      ),
+    ).not.toThrow();
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('warns instead of throwing when Postgres is required — no SQLCipher equivalent there', () => {
@@ -55,11 +73,11 @@ describe('assertPluginEncryptionRequirement (RFC 0071)', () => {
   it('records the Postgres-fallback warning persistently, not just to console — a bare console.warn vanishes after boot', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     assertPluginEncryptionRequirement(
-      'fs.example.healthlog-persistent',
+      'fs.example.healthlog-persistent-pg',
       { isolation: 'isolated', requireEncryption: true },
       'postgres',
     );
-    const warnings = getCompatibilityWarnings('fs.example.healthlog-persistent');
+    const warnings = getCompatibilityWarnings('fs.example.healthlog-persistent-pg');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('requires database encryption');
     expect(warnings[0]).toContain('Postgres');
@@ -71,16 +89,27 @@ describe('assertPluginEncryptionRequirement (RFC 0071)', () => {
 // '@sovereignfs/db' transitively) — vi.hoisted() is the sanctioned way to
 // share `vi.fn()`s between a factory and the assertions below without a
 // "Cannot access before initialization" error.
-const { runPluginMigrations, provisionPluginDb, getPluginDb } = vi.hoisted(() => ({
-  runPluginMigrations: vi.fn(async (_pluginDb: unknown, _folder: string) => {}),
-  provisionPluginDb: vi.fn(async (_pluginId: string, _dialect: string) => {}),
-  getPluginDb: vi.fn((pluginId: string) => ({ dialect: 'sqlite' as const, db: { pluginId } })),
-}));
+const { runPluginMigrations, provisionPluginDb, getPluginDb, DbEncryptionConfigError } = vi.hoisted(
+  () => {
+    class DbEncryptionConfigError extends Error {
+      constructor(message: string) {
+        super(message);
+        this.name = 'DbEncryptionConfigError';
+      }
+    }
+    return {
+      runPluginMigrations: vi.fn(async (_pluginDb: unknown, _folder: string) => {}),
+      provisionPluginDb: vi.fn(async (_pluginId: string, _dialect: string) => {}),
+      getPluginDb: vi.fn((pluginId: string) => ({ dialect: 'sqlite' as const, db: { pluginId } })),
+      DbEncryptionConfigError,
+    };
+  },
+);
 
-// registry is deliberately out of alphabetical order here — the bug this
-// suite guards against only shows up when the offending plugin does NOT sort
-// last, since the old code aborted the whole loop rather than just its own
-// iteration.
+// registry is deliberately out of alphabetical order here — the loop-isolation
+// bug this suite guards against only shows up when the offending plugin does
+// NOT sort last, since the old code aborted the whole loop rather than just
+// its own iteration.
 vi.mock('../../generated/registry', () => ({
   registry: [
     { id: 'fs.example.aaa', database: { isolation: 'isolated', dialect: 'sqlite' } },
@@ -93,6 +122,7 @@ vi.mock('../../generated/registry', () => ({
 }));
 
 vi.mock('@sovereignfs/db', () => ({
+  DbEncryptionConfigError,
   dbEncryptionKeyFromEnv: () => {
     const raw = process.env[KEY_ENV];
     return raw ? Buffer.from(raw, 'base64') : undefined;
@@ -119,27 +149,30 @@ vi.mock('node:fs', () => ({
   readFileSync: () => '{}',
 }));
 
-describe('runAllPluginMigrations (RFC 0071 — isolation from a single plugin failure)', () => {
+describe('runAllPluginMigrations (task 8.15 — per-database, not startup-wide, enforcement)', () => {
   beforeEach(() => {
     runPluginMigrations.mockClear();
     provisionPluginDb.mockClear();
     getPluginDb.mockClear();
+    getPluginDb.mockImplementation((pluginId: string) => ({
+      dialect: 'sqlite' as const,
+      db: { pluginId },
+    }));
     Reflect.deleteProperty(process.env, KEY_ENV);
   });
 
-  it('still migrates every other plugin when one plugin violates requireEncryption, then throws once naming it', async () => {
+  it('migrates every plugin, including the one requiring encryption, when no key is configured — no longer a violation', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const { runAllPluginMigrations } = await import('../plugin-migrations');
 
-    await expect(runAllPluginMigrations()).rejects.toThrow(/fs\.example\.healthlog/);
+    await expect(runAllPluginMigrations()).resolves.toBeUndefined();
 
-    // The plugin sorted before the violator, and the one sorted after it,
-    // both still got migrated — this is the actual regression this test
-    // guards: previously the uncaught throw for healthlog aborted the whole
-    // loop, so "zzz" (alphabetically after it) never got its migrations run.
+    // The whole point of task 8.15: a missing key no longer blocks
+    // provisioning for the plugin that wants encryption — it just runs
+    // unencrypted, loudly warned.
     const migratedIds = provisionPluginDb.mock.calls.map((call) => call[0]);
-    expect(migratedIds).toContain('fs.example.aaa');
-    expect(migratedIds).toContain('fs.example.zzz');
-    expect(migratedIds).not.toContain('fs.example.healthlog');
+    expect(migratedIds).toEqual(['fs.example.aaa', 'fs.example.healthlog', 'fs.example.zzz']);
+    expect(warn).toHaveBeenCalled();
   });
 
   it('migrates every plugin and does not throw once the key is configured', async () => {
@@ -152,7 +185,49 @@ describe('runAllPluginMigrations (RFC 0071 — isolation from a single plugin fa
     expect(migratedIds).toEqual(['fs.example.aaa', 'fs.example.healthlog', 'fs.example.zzz']);
   });
 
-  it('warns and continues instead of throwing when NODE_ENV=development', async () => {
+  it('still migrates every other plugin when getPluginDb throws DbEncryptionConfigError for one (unconverted existing file), then throws once naming it', async () => {
+    // This is the case that's still genuinely fatal in production under task
+    // 8.15: the key IS configured, the plugin DOES require encryption, but
+    // its existing file hasn't been converted (`sv db encrypt` needed) —
+    // surfaced by getPluginDb/resolvePluginEncryptionKey, not by
+    // assertPluginEncryptionRequirement.
+    process.env[KEY_ENV] = randomBytes(32).toString('base64');
+    getPluginDb.mockImplementation((pluginId: string) => {
+      if (pluginId === 'fs.example.healthlog') {
+        throw new DbEncryptionConfigError(
+          `Plugin "${pluginId}" requires database encryption and the key is set, but its ` +
+            'existing database has not been encrypted yet.',
+        );
+      }
+      return { dialect: 'sqlite' as const, db: { pluginId } };
+    });
+    const { runAllPluginMigrations } = await import('../plugin-migrations');
+
+    await expect(runAllPluginMigrations()).rejects.toThrow(/fs\.example\.healthlog/);
+
+    // The plugin sorted before the violator, and the one sorted after it,
+    // both still got migrated — this is the actual regression this test
+    // guards: an uncaught throw for healthlog must never abort the whole
+    // loop, so "zzz" (alphabetically after it) still gets its migrations run.
+    const migratedIds = provisionPluginDb.mock.calls.map((call) => call[0]);
+    expect(migratedIds).toContain('fs.example.aaa');
+    expect(migratedIds).toContain('fs.example.zzz');
+    // provisionPluginDb IS called for healthlog too (it runs before the
+    // getPluginDb throw); runPluginMigrations is what never happens for it.
+    const migratedViaRunPluginMigrations = runPluginMigrations.mock.calls.map(
+      (call) => (call[0] as { db: { pluginId: string } }).db.pluginId,
+    );
+    expect(migratedViaRunPluginMigrations).not.toContain('fs.example.healthlog');
+  });
+
+  it('warns and continues instead of throwing when NODE_ENV=development, for the unconverted-file case', async () => {
+    process.env[KEY_ENV] = randomBytes(32).toString('base64');
+    getPluginDb.mockImplementation((pluginId: string) => {
+      if (pluginId === 'fs.example.healthlog') {
+        throw new DbEncryptionConfigError(`Plugin "${pluginId}" requires database encryption.`);
+      }
+      return { dialect: 'sqlite' as const, db: { pluginId } };
+    });
     vi.stubEnv('NODE_ENV', 'development');
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
@@ -165,12 +240,9 @@ describe('runAllPluginMigrations (RFC 0071 — isolation from a single plugin fa
       const warnings = getCompatibilityWarnings('fs.example.healthlog');
       expect(warnings.some((w) => w.includes('requires database encryption'))).toBe(true);
 
-      // Still no provisioning for the violating plugin — only the hard
-      // crash is skipped, not the security requirement itself.
       const migratedIds = provisionPluginDb.mock.calls.map((call) => call[0]);
       expect(migratedIds).toContain('fs.example.aaa');
       expect(migratedIds).toContain('fs.example.zzz');
-      expect(migratedIds).not.toContain('fs.example.healthlog');
     } finally {
       vi.unstubAllEnvs();
     }

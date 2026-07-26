@@ -179,11 +179,15 @@ export {
   DbEncryptionConfigError,
   checkEncryptionMarker,
   clearEncryptionMarker,
+  clearPluginEncryptionMarker,
   dbEncryptionKeyFromEnv,
   defaultDataDir,
   isEncryptionMarked,
+  isPluginEncryptionMarked,
   openKeyedSqlite,
+  resolvePluginEncryptionKey,
   writeEncryptionMarker,
+  writePluginEncryptionMarker,
 } from './sqlite-encryption';
 export {
   decryptSqliteFileInPlace,

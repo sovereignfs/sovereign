@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  DbEncryptionConfigError,
   dbEncryptionKeyFromEnv,
   findWorkspaceRoot,
   getPluginDb,
@@ -21,20 +22,30 @@ import { registry } from '../generated/registry';
 import { recordWarnings } from './plugin-compat';
 
 /**
- * Enforce a plugin's `database.requireEncryption` (RFC 0071) before its
- * migrations run. **Raise-only and never silent**:
+ * Warn (never block startup) about a plugin's `database.requireEncryption`
+ * (RFC 0071) not currently being honored. Task 8.15 softened this from a
+ * startup-aborting throw to a warning: the platform supports unencrypted
+ * plugins as the default, and a plugin that wants encryption but can't get it
+ * still runs — just unencrypted, loudly logged so an operator can act on it.
  *
- * - SQLite + no instance key configured → throws, aborting startup. This is
- *   deliberately not caught by the per-plugin try/catch below (a migration
- *   failure logs and continues; a broken security promise must not).
  * - Postgres → warns (there is no SQLCipher equivalent for Postgres; at-rest
- *   protection falls back to disk encryption + `sslmode`), does not throw.
- *   Also recorded via `recordWarnings` (not just `console.warn`) so it shows
- *   up persistently in Console's plugin list — a bare console line vanishes
- *   from anywhere an operator would look after boot, which made this
- *   security-downgrade effectively invisible.
+ *   protection falls back to disk encryption + `sslmode`).
+ * - SQLite + no instance key configured → warns (this plugin's database will
+ *   open in plaintext; see `getPluginDb`/`resolvePluginEncryptionKey`, which
+ *   makes the same "no key → open plain" decision for real when the plugin's
+ *   store is actually opened).
+ * - SQLite + key configured → no-op here. Whether this plugin's *existing*
+ *   file still needs a one-time `sv db encrypt` conversion is checked later,
+ *   when its database is actually opened (`getPluginDb`) — that's a per-file
+ *   fail-fast, not a startup-wide one, and is handled by the migration loop's
+ *   own try/catch around that call, not by this function.
  * - Not required, or `shared` isolation → no-op (manifest validation already
  *   rejects `requireEncryption` on a `shared` plugin).
+ *
+ * Both warning paths use `recordWarnings` (not just `console.warn`) so they
+ * show up persistently in Console's plugin list — a bare console line
+ * vanishes from anywhere an operator would look after boot, which made this
+ * kind of downgrade effectively invisible before RFC 0071 shipped.
  */
 export function assertPluginEncryptionRequirement(
   pluginId: string,
@@ -54,10 +65,12 @@ export function assertPluginEncryptionRequirement(
   }
 
   if (dbEncryptionKeyFromEnv() === undefined) {
-    throw new Error(
-      `Plugin "${pluginId}" requires database encryption — set SOVEREIGN_DB_ENCRYPTION_KEY ` +
-        'to enable it, or remove the plugin.',
-    );
+    const message =
+      `Plugin "${pluginId}" requires database encryption, but SOVEREIGN_DB_ENCRYPTION_KEY is ` +
+      'not set on this instance — its database will run unencrypted. Set the key to enable ' +
+      'encryption for this plugin.';
+    console.warn(`[sovereign] ${message}`);
+    recordWarnings(pluginId, [message]);
   }
 }
 
@@ -76,26 +89,33 @@ export function assertPluginEncryptionRequirement(
  * compatibility check that follows will gate access to the broken plugin.
  *
  * `registry` iterates in a fixed (alphabetical, by manifest id) order, not
- * dependency or install order. A plugin's unmet `database.requireEncryption`
- * (RFC 0071) is fatal in production — that promise must not be silently
- * downgraded — but it must not take every *other* plugin down with it just
- * because they happen to sort after it. So each plugin's encryption check is
- * isolated in its own try/catch: on failure, skip only that plugin's own
- * provisioning and keep going, collecting the violation. Only after every
- * other plugin has had its migrations attempted does this function throw —
- * once — naming every plugin that violated its requirement. (Previously this
- * check was made outside the per-plugin try/catch specifically so it *would*
- * throw and abort the loop — but an uncaught throw here aborts the whole
- * `for` loop, not just this plugin's iteration, so every alphabetically-later
- * plugin silently never got migrated: a real incident, not a hypothetical.)
+ * dependency or install order. Task 8.15 changed what's fatal here: a
+ * plugin's unmet `database.requireEncryption` (RFC 0071) with **no key
+ * configured** is no longer fatal at all — the platform supports unencrypted
+ * plugins by default, so that state only warns (`assertPluginEncryptionRequirement`)
+ * and the plugin runs normally, unencrypted. What *is* still fatal in
+ * production is a **key configured, this plugin requires encryption, and its
+ * existing file hasn't been converted yet** (`sv db encrypt` needed) — a real,
+ * actionable per-plugin problem surfaced as `DbEncryptionConfigError` from
+ * `getPluginDb`. Either way, one plugin's problem must not take every *other*
+ * plugin down with it just because they happen to sort after it — both checks
+ * are isolated in their own try/catch, collecting violations rather than
+ * throwing inline. Only after every other plugin has had its migrations
+ * attempted does this function throw — once — naming every plugin that
+ * violated its requirement. (An earlier version of this function threw inline
+ * outside the per-plugin try/catch specifically so it *would* abort — but an
+ * uncaught throw inside a `for` loop aborts the whole loop, not just that
+ * plugin's iteration, so every alphabetically-later plugin silently never got
+ * migrated: a real incident, not a hypothetical — see
+ * `docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`.)
  *
  * In development (`NODE_ENV === 'development'` exactly — never bypassed
- * under Vitest, which sets `NODE_ENV=test`) an unmet requirement warns
- * instead of throwing, so `next dev` isn't blocked on a missing
- * `SOVEREIGN_DB_ENCRYPTION_KEY` while iterating locally. The violating
- * plugin(s) still get no provisioning/migrations either way — only the hard
- * crash is skipped. The warning is recorded per-plugin via `recordWarnings`
- * so it's visible in Console, not just a boot-time console line.
+ * under Vitest, which sets `NODE_ENV=test`) an unresolved requirement warns
+ * instead of throwing, so `next dev` isn't blocked on it while iterating
+ * locally. The violating plugin(s) still get no provisioning/migrations
+ * either way — only the hard crash is skipped. The warning is recorded
+ * per-plugin via `recordWarnings` so it's visible in Console, not just a
+ * boot-time console line.
  *
  * Called from `instrumentation.ts` register() at Node.js server startup.
  */
@@ -125,11 +145,16 @@ export async function runAllPluginMigrations(): Promise<void> {
       try {
         assertPluginEncryptionRequirement(manifest.id, manifest.database, pluginDialect);
       } catch (err) {
-        // Don't provision/migrate this plugin's (would-be-unencrypted)
-        // isolated database — that's exactly the outcome the requirement
-        // exists to prevent — but every other plugin still gets its turn.
-        encryptionViolations.push({ pluginId: manifest.id, message: (err as Error).message });
-        continue;
+        // assertPluginEncryptionRequirement no longer throws for "key not
+        // configured" (task 8.15 softened that to a warning — the plugin now
+        // runs unencrypted instead). An error here is unexpected; log it but
+        // still let this plugin's migrations proceed below, rather than
+        // repeat the original incident's mistake of one plugin's problem
+        // blocking every other plugin's turn.
+        console.error(
+          `[sovereign] Unexpected error checking encryption requirement for plugin "${manifest.id}":`,
+          err,
+        );
       }
     }
 
@@ -139,7 +164,11 @@ export async function runAllPluginMigrations(): Promise<void> {
     try {
       if (isIsolated) {
         await provisionPluginDb(manifest.id, pluginDialect);
-        const pluginDb = getPluginDb(manifest.id, pluginDialect);
+        const pluginDb = getPluginDb(
+          manifest.id,
+          pluginDialect,
+          manifestRequiresEncryption(manifest.database),
+        );
         await runPluginMigrations(pluginDb, folder);
       } else {
         // PlatformDb is structurally identical to PluginDb ({ dialect, db }
@@ -153,14 +182,24 @@ export async function runAllPluginMigrations(): Promise<void> {
         );
       }
     } catch (err) {
-      console.error(`[sovereign] Failed to run migrations for plugin "${manifest.id}":`, err);
+      if (err instanceof DbEncryptionConfigError) {
+        // The key is configured and this plugin requires encryption, but its
+        // existing file hasn't been converted yet (`resolvePluginEncryptionKey`
+        // inside getPluginDb) — a real, actionable per-plugin problem, not an
+        // ordinary migration bug. Collect it into the same loud summary the
+        // "key not configured" case used to use, scoped to this plugin only —
+        // every other plugin still gets its own turn either way.
+        encryptionViolations.push({ pluginId: manifest.id, message: err.message });
+      } else {
+        console.error(`[sovereign] Failed to run migrations for plugin "${manifest.id}":`, err);
+      }
     }
   }
 
   if (encryptionViolations.length > 0) {
     const summary =
-      `${encryptionViolations.length} plugin(s) require database encryption but it is not ` +
-      `enabled:\n${encryptionViolations.map((v) => `  - ${v.message}`).join('\n')}`;
+      `${encryptionViolations.length} plugin(s) have an unresolved database encryption ` +
+      `requirement:\n${encryptionViolations.map((v) => `  - ${v.message}`).join('\n')}`;
 
     // Dev-only escape hatch: don't block `next dev` startup over a missing
     // SOVEREIGN_DB_ENCRYPTION_KEY. The violating plugin(s) were already

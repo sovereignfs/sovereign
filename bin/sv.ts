@@ -25,7 +25,11 @@ import { fileURLToPath } from 'node:url';
 
 import { defineCommand, runMain } from 'citty';
 import { consola } from 'consola';
-import { manifestDatabaseDialect, manifestDatabaseIsolation } from '@sovereignfs/manifest';
+import {
+  manifestDatabaseDialect,
+  manifestDatabaseIsolation,
+  manifestRequiresEncryption,
+} from '@sovereignfs/manifest';
 
 import {
   assertRemovablePlugin,
@@ -411,6 +415,7 @@ const pluginMigrate = defineCommand({
       id: string;
       database: 'isolated' | 'shared';
       dialect: 'sqlite' | 'postgres';
+      requiresEncryption: boolean;
     };
     const pluginsWithMigrations: PluginEntry[] = [];
 
@@ -433,6 +438,7 @@ const pluginMigrate = defineCommand({
             id: m.id,
             database,
             dialect: pluginDialect,
+            requiresEncryption: manifestRequiresEncryption(m.database),
           });
         } catch {
           // ignore unreadable manifests
@@ -457,7 +463,7 @@ const pluginMigrate = defineCommand({
     let migrated = 0;
     let failed = 0;
 
-    for (const { dir, id, database, dialect: pluginDialect } of targets) {
+    for (const { dir, id, database, dialect: pluginDialect, requiresEncryption } of targets) {
       const pluginDir = `plugins/${dir}`;
       const folder = pluginMigrationsFolder(pluginDir, pluginDialect);
       if (!existsSync(folder)) continue;
@@ -466,7 +472,7 @@ const pluginMigrate = defineCommand({
       try {
         if (database === 'isolated') {
           await provisionPluginDb(id, pluginDialect);
-          const pluginDb = getPluginDb(id, pluginDialect);
+          const pluginDb = getPluginDb(id, pluginDialect, requiresEncryption);
           await runPluginMigrations(pluginDb, folder);
         } else {
           // PlatformDb is structurally identical to PluginDb ({ dialect, db }).
@@ -744,11 +750,68 @@ const restore = defineCommand({
   },
 });
 
+/** A file `sv db encrypt`/`decrypt` may act on — the platform core (as a pair) or one plugin. */
+type DbCryptTarget =
+  | { path: string; kind: 'core' }
+  | { path: string; kind: 'plugin'; pluginId: string };
+
+/** Scan each `plugins/<dir>/manifest.json` for plugins declaring `database.requireEncryption`. */
+function findEncryptionRequiringPlugins(): { id: string }[] {
+  const pluginsRoot = join(ROOT, 'plugins');
+  const results: { id: string }[] = [];
+  if (!existsSync(pluginsRoot)) return results;
+  for (const entry of readdirSync(pluginsRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const manifestPath = join(pluginsRoot, entry.name, 'manifest.json');
+    if (!existsSync(manifestPath)) continue;
+    try {
+      const m = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+        id?: string;
+        database?: unknown;
+      };
+      if (typeof m.id === 'string' && manifestRequiresEncryption(m.database)) {
+        results.push({ id: m.id });
+      }
+    } catch {
+      // ignore unreadable manifests
+    }
+  }
+  return results;
+}
+
+/**
+ * Every plugin `.db` file under `dataDir/plugins/` that currently has its own
+ * encryption marker — including one belonging to a plugin no longer
+ * installed or no longer requesting encryption (RFC 0071 open question 3:
+ * data-dir scanning catches orphaned plugin databases the registry doesn't
+ * list). `sv db decrypt` uses this so an orphaned encrypted file isn't stuck.
+ */
+function findMarkedPluginFiles(
+  dataDir: string,
+  isPluginEncryptionMarked: (dataDir: string, pluginId: string) => boolean,
+): { id: string; path: string }[] {
+  const pluginsDir = join(dataDir, 'plugins');
+  const results: { id: string; path: string }[] = [];
+  if (!existsSync(pluginsDir)) return results;
+  for (const entry of readdirSync(pluginsDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.db')) continue;
+    const id = entry.name.slice(0, -'.db'.length);
+    if (isPluginEncryptionMarked(dataDir, id)) {
+      results.push({ id, path: join(pluginsDir, entry.name) });
+    }
+  }
+  return results;
+}
+
+function describeCryptTarget(t: DbCryptTarget): string {
+  return t.kind === 'plugin' ? `${t.path} (plugin: ${t.pluginId})` : `${t.path} (platform core)`;
+}
+
 const dbEncrypt = defineCommand({
   meta: {
     name: 'encrypt',
     description:
-      'Encrypt every SQLite database in place with SOVEREIGN_DB_ENCRYPTION_KEY (RFC 0071)',
+      'Encrypt the platform core, plus any plugin database that requests it via its manifest (RFC 0071, task 8.15)',
   },
   args: {
     dataDir: {
@@ -766,9 +829,10 @@ const dbEncrypt = defineCommand({
     const {
       dbEncryptionKeyFromEnv,
       isEncryptionMarked,
-      listInstanceSqliteFiles,
+      isPluginEncryptionMarked,
       encryptSqliteFileInPlace,
       writeEncryptionMarker,
+      writePluginEncryptionMarker,
     } = await import('@sovereignfs/db');
 
     const dataDir = resolve(args.dataDir);
@@ -787,21 +851,37 @@ const dbEncrypt = defineCommand({
       process.exit(1);
     }
 
-    if (isEncryptionMarked(dataDir)) {
-      consola.error(
-        `${dataDir} is already marked as encrypted (.db-encrypted present). Nothing to do.`,
-      );
-      process.exit(1);
-    }
+    // Core: always the goal once a key is present — only skip a file that's
+    // already marked, or a pair member that doesn't exist (Postgres auth.db
+    // deployments etc).
+    const coreNeedsEncryption = !isEncryptionMarked(dataDir);
+    const coreFiles = coreNeedsEncryption
+      ? ['sovereign.db', 'auth.db'].map((name) => join(dataDir, name)).filter((p) => existsSync(p))
+      : [];
 
-    const files = listInstanceSqliteFiles(dataDir);
-    if (files.length === 0) {
-      consola.warn(`No SQLite files found under ${dataDir}. Nothing to encrypt.`);
+    // Plugins: only ones that explicitly request it via manifest, and whose
+    // file exists and isn't already marked.
+    const pluginTargets = findEncryptionRequiringPlugins()
+      .map(({ id }) => ({ id, path: join(dataDir, 'plugins', `${id}.db`) }))
+      .filter((p) => existsSync(p.path) && !isPluginEncryptionMarked(dataDir, p.id));
+
+    const targets: DbCryptTarget[] = [
+      ...coreFiles.map((path): DbCryptTarget => ({ path, kind: 'core' })),
+      ...pluginTargets.map(
+        (p): DbCryptTarget => ({ path: p.path, kind: 'plugin', pluginId: p.id }),
+      ),
+    ];
+
+    if (targets.length === 0) {
+      consola.info(
+        'Nothing to encrypt — the platform core is already encrypted (or has no files yet), ' +
+          'and no plugin that requests encryption has an unconverted database.',
+      );
       return;
     }
 
-    consola.info(`Found ${files.length} SQLite file(s) to encrypt:`);
-    for (const f of files) consola.info(`  - ${f}`);
+    consola.info(`Found ${targets.length} SQLite file(s) to encrypt:`);
+    for (const t of targets) consola.info(`  - ${describeCryptTarget(t)}`);
 
     if (args['skip-backup']) {
       consola.warn('Skipping the pre-encryption backup (--skip-backup). This is not recommended.');
@@ -819,34 +899,40 @@ const dbEncrypt = defineCommand({
     consola.warn('Make sure the server is stopped before continuing.');
 
     let failed = 0;
-    for (const file of files) {
-      consola.start(`Encrypting ${file}…`);
+    let coreSucceeded = true;
+    for (const t of targets) {
+      consola.start(`Encrypting ${t.path}…`);
       try {
-        encryptSqliteFileInPlace(file, key);
-        consola.success(`${file}: encrypted.`);
+        encryptSqliteFileInPlace(t.path, key);
+        // Mark immediately, per file — a plugin's success doesn't depend on
+        // any other target in this batch, core or sibling plugin.
+        if (t.kind === 'plugin') writePluginEncryptionMarker(dataDir, t.pluginId);
+        consola.success(`${t.path}: encrypted.`);
       } catch (err) {
-        consola.error(`${file}: ${(err as Error).message}`);
+        consola.error(`${t.path}: ${(err as Error).message}`);
         failed++;
+        if (t.kind === 'core') coreSucceeded = false;
       }
+    }
+
+    // Core is all-or-nothing (sovereign.db and auth.db share one marker) —
+    // only write it if every core file in this run actually succeeded.
+    if (coreNeedsEncryption && coreFiles.length > 0 && coreSucceeded) {
+      writeEncryptionMarker(dataDir);
     }
 
     if (failed > 0) {
       consola.error(
-        `${failed} of ${files.length} file(s) failed to encrypt — the data directory is now in ` +
-          'a mixed plaintext/encrypted state and the encryption marker was NOT written. Restore ' +
-          'from the backup taken above, fix the issue (see errors above — commonly the server ' +
-          'was still running), and re-run `sv db encrypt` from a clean plaintext state. If a ' +
-          'failing file is not actually a Sovereign database (e.g. a stray or corrupt leftover ' +
-          'under data/plugins/ from an unrelated failure), it is safe to move it out of the ' +
-          'data directory and re-run — `sv db encrypt`/checkEncryptionMarker only look at ' +
-          'file names ending in .db, not their contents, so an unrelated .db-suffixed file will ' +
-          'otherwise block every future encryption attempt indefinitely.',
+        `${failed} of ${targets.length} file(s) failed to encrypt. Files that succeeded were ` +
+          'marked as encrypted individually — re-run `sv db encrypt` after fixing the issue (see ' +
+          'errors above — commonly the server was still running); it will only retry what ' +
+          'remains unconverted, not what already succeeded. Restore from the backup taken above ' +
+          'if anything looks inconsistent.',
       );
       process.exit(1);
     }
 
-    writeEncryptionMarker(dataDir);
-    consola.success(`All ${files.length} file(s) encrypted.`);
+    consola.success(`All ${targets.length} file(s) encrypted.`);
     consola.info('Restart the server with SOVEREIGN_DB_ENCRYPTION_KEY set to this same key.');
   },
 });
@@ -854,7 +940,8 @@ const dbEncrypt = defineCommand({
 const dbDecrypt = defineCommand({
   meta: {
     name: 'decrypt',
-    description: 'Decrypt every SQLite database in place, removing at-rest encryption (RFC 0071)',
+    description:
+      'Decrypt the platform core and any encrypted plugin database, removing at-rest encryption (RFC 0071)',
   },
   args: {
     dataDir: {
@@ -872,9 +959,10 @@ const dbDecrypt = defineCommand({
     const {
       dbEncryptionKeyFromEnv,
       isEncryptionMarked,
-      listInstanceSqliteFiles,
+      isPluginEncryptionMarked,
       decryptSqliteFileInPlace,
       clearEncryptionMarker,
+      clearPluginEncryptionMarker,
     } = await import('@sovereignfs/db');
 
     const dataDir = resolve(args.dataDir);
@@ -893,14 +981,30 @@ const dbDecrypt = defineCommand({
       process.exit(1);
     }
 
-    if (!isEncryptionMarked(dataDir)) {
-      consola.error(`${dataDir} is not marked as encrypted. Nothing to do.`);
+    const coreMarked = isEncryptionMarked(dataDir);
+    const coreFiles = coreMarked
+      ? ['sovereign.db', 'auth.db'].map((name) => join(dataDir, name)).filter((p) => existsSync(p))
+      : [];
+
+    // Every plugin file with its own marker — including an orphaned one no
+    // longer requesting encryption or no longer installed, so decrypt can
+    // always reverse whatever encrypt actually did.
+    const pluginTargets = findMarkedPluginFiles(dataDir, isPluginEncryptionMarked);
+
+    const targets: DbCryptTarget[] = [
+      ...coreFiles.map((path): DbCryptTarget => ({ path, kind: 'core' })),
+      ...pluginTargets.map(
+        (p): DbCryptTarget => ({ path: p.path, kind: 'plugin', pluginId: p.id }),
+      ),
+    ];
+
+    if (targets.length === 0) {
+      consola.error(`${dataDir} has nothing marked as encrypted. Nothing to do.`);
       process.exit(1);
     }
 
-    const files = listInstanceSqliteFiles(dataDir);
-    consola.info(`Found ${files.length} SQLite file(s) to decrypt:`);
-    for (const f of files) consola.info(`  - ${f}`);
+    consola.info(`Found ${targets.length} SQLite file(s) to decrypt:`);
+    for (const t of targets) consola.info(`  - ${describeCryptTarget(t)}`);
 
     if (args['skip-backup']) {
       consola.warn('Skipping the pre-decryption backup (--skip-backup). This is not recommended.');
@@ -918,27 +1022,32 @@ const dbDecrypt = defineCommand({
     consola.warn('Make sure the server is stopped before continuing.');
 
     let failed = 0;
-    for (const file of files) {
-      consola.start(`Decrypting ${file}…`);
+    let coreSucceeded = true;
+    for (const t of targets) {
+      consola.start(`Decrypting ${t.path}…`);
       try {
-        decryptSqliteFileInPlace(file, key);
-        consola.success(`${file}: decrypted.`);
+        decryptSqliteFileInPlace(t.path, key);
+        if (t.kind === 'plugin') clearPluginEncryptionMarker(dataDir, t.pluginId);
+        consola.success(`${t.path}: decrypted.`);
       } catch (err) {
-        consola.error(`${file}: ${(err as Error).message}`);
+        consola.error(`${t.path}: ${(err as Error).message}`);
         failed++;
+        if (t.kind === 'core') coreSucceeded = false;
       }
     }
 
+    if (coreMarked && coreSucceeded) clearEncryptionMarker(dataDir);
+
     if (failed > 0) {
       consola.error(
-        `${failed} of ${files.length} file(s) failed to decrypt. Marker left in place — ` +
-          'fix the issue (see errors above), or restore from the backup taken above, before retrying.',
+        `${failed} of ${targets.length} file(s) failed to decrypt. Markers for files that ` +
+          'succeeded were already cleared — fix the issue (see errors above), or restore from ' +
+          'the backup taken above, before retrying.',
       );
       process.exit(1);
     }
 
-    clearEncryptionMarker(dataDir);
-    consola.success(`All ${files.length} file(s) decrypted.`);
+    consola.success(`All ${targets.length} file(s) decrypted.`);
     consola.info(
       'Restart the server with SOVEREIGN_DB_ENCRYPTION_KEY unset, or run `sv db encrypt` again with a new key.',
     );

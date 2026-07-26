@@ -192,7 +192,7 @@ to get started — every variable is documented there.
 | `AUTH_SECRET`                        | **yes**  | —                                                   | Signing secret for the auth server. The runtime also reads it to verify the session cookie locally (AUTH-05). Generate with `openssl rand -base64 32`. Never share or commit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `SOVEREIGN_ADMIN_KEY`                | **yes**  | —                                                   | Shared secret for runtime↔auth internal admin API calls (Console user/plugin management). Generate with `openssl rand -base64 32`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `SOVEREIGN_VAULT_KEY`                | no\*     | —                                                   | 32-byte key for the plugin secret vault (`sdk.secrets`) and for Console-managed SMTP password storage. No default; generate with `openssl rand -base64 32`. Losing or rotating it without re-encrypting vault rows makes existing vault values (and any Console-saved SMTP password) unreadable. **Set it identically on both the `runtime` and `auth` services** — each decrypts its own local copy independently; a mismatch means the auth server silently fails to decrypt a Console-saved SMTP password even though the runtime can. **\*Required in practice**: the bundled Plainwrite plugin stores GitHub PATs through this vault, so connecting a site fails with `SOVEREIGN_VAULT_KEY is required before sdk.secrets can store or read secret values.` until this is set. The platform boots fine without it — the error only surfaces the first time a plugin actually calls `sdk.secrets` or an owner saves an SMTP password via Console, not at startup, which makes it easy to miss until someone hits it live. |
-| `SOVEREIGN_DB_ENCRYPTION_KEY`        | no       | —                                                   | Opt-in SQLite at-rest encryption (RFC 0071) — see [SQLite at-rest encryption](#sqlite-at-rest-encryption-rfc-0071) below. Presence is the toggle: unset, nothing changes; set, every SQLite file the instance owns must already be encrypted with it or the instance refuses to start. Generate with `openssl rand -base64 32`. Existing plaintext instances must run `sv db encrypt` before setting this — it is not a switch that encrypts data on next boot. **Set it identically on both the `runtime` and `auth` services.** SQLite only; no effect on Postgres deployments.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `SOVEREIGN_DB_ENCRYPTION_KEY`        | no       | —                                                   | Opt-in SQLite at-rest encryption (RFC 0071) — see [SQLite at-rest encryption](#sqlite-at-rest-encryption-rfc-0071) below. Presence is the toggle, but enforcement is **per-database**, not directory-wide: when set, the platform core (`sovereign.db` + `auth.db`) must already be encrypted with it or the instance refuses to start; a plugin's isolated database is only held to that same standard if the plugin's own manifest declares `database.requireEncryption: true` — a plugin that doesn't request it stays plaintext, untouched, key or no key. Generate with `openssl rand -base64 32`. Existing plaintext core data must run `sv db encrypt` before setting this — it is not a switch that encrypts data on next boot. **Set it identically on both the `runtime` and `auth` services.** SQLite only; no effect on Postgres deployments.                                                                                                                                                                     |
 | `NEXT_PUBLIC_RUNTIME_URL`            | no       | per env (dev :3000/prod :4000)                      | Browser-facing public URL of the runtime. Auth emails and auth compatibility pages use it when sending users back to the runtime-hosted auth UI. The Compose files default it per environment (dev → `http://localhost:3000`, prod → `http://localhost:4000`); leave it unset locally. **Set it to your public domain (e.g. `https://example.com`) in a real deployment.** Read server-side at request time, so the container env is honoured (not baked at build).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `SOVEREIGN_AUTH_URL`                 | no       | `http://localhost:3001`                             | Where the runtime reaches the auth server for server-side API calls. Docker Compose sets it to the internal service name (`http://auth:3001`) automatically — only set it for non-Docker/native runs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `SOVEREIGN_AUTH_PUBLIC_URL`          | no       | `SOVEREIGN_AUTH_URL`                                | Browser-facing base URL for the auth server compatibility routes. Needed when `SOVEREIGN_AUTH_URL` is an internal hostname the browser can't resolve (e.g. Docker's `http://auth:3001`). Set to the host-reachable URL such as `http://localhost:3001` or your public domain.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -289,19 +289,37 @@ client-side encryption for the tier that does).
 **Scope:** SQLite only. Postgres deployments have no equivalent mechanism —
 see [PostgreSQL](#postgresql) below; rely on host-level disk encryption there.
 
+**Enforcement is per-database (task 8.15), not directory-wide.** Setting
+`SOVEREIGN_DB_ENCRYPTION_KEY` always applies to the platform core
+(`sovereign.db` + `auth.db`, treated as one pair) — that's non-negotiable once
+the key is present. A plugin's isolated database is a separate decision:
+it's only encrypted if the plugin's own manifest declares
+`database.requireEncryption: true`. A plugin that doesn't request it stays
+plaintext, untouched by the key, so setting the key to satisfy one
+encryption-requiring plugin never affects any other plugin's database. If a
+plugin requests encryption but no key is configured, the platform doesn't
+refuse to boot — it logs a warning and runs that plugin unencrypted instead
+(visible in Console's plugin list), consistent with encryption being
+opt-in end to end rather than something a single plugin can force on the
+whole instance.
+
 ### Enabling on a fresh instance
 
 1. Generate a key: `openssl rand -base64 32`.
 2. Set `SOVEREIGN_DB_ENCRYPTION_KEY` to it, identically on both the `runtime`
    and `auth` services, **before the instance is ever started**.
-3. Start the instance normally — `sovereign.db`, `auth.db`, and every isolated
-   plugin database are created encrypted from the first write.
+3. Start the instance normally — `sovereign.db` and `auth.db` are created
+   encrypted from the first write. An isolated plugin database is also
+   created encrypted from birth only if that plugin's manifest declares
+   `database.requireEncryption: true`; every other plugin's database is
+   created as ordinary plaintext regardless of the key being set.
 
 ### Converting an existing plaintext instance
 
-Setting the key on an instance that already has plaintext databases is a
-**configuration error, not a trigger** — the instance refuses to start rather
-than silently mixing plaintext and encrypted data. Convert first.
+Setting the key when the platform core (or an encryption-requiring plugin's
+database) already has plaintext data is a **configuration error, not a
+trigger** — the instance refuses to start rather than silently mixing
+plaintext and encrypted data for that specific database. Convert first.
 
 **Dev / bind-mounted `./data` deployments** (`docker-compose.yml`, or running
 `pnpm dev`/`pnpm sv serve` directly on the host) — the host already has direct
@@ -349,34 +367,44 @@ finishes. Keep it somewhere safe if you want it to outlive routine cleanup.
 - takes an automatic backup before touching anything (same archive format as
   `sv backup`) — pass `--skip-backup` only if you have your own fresh backup
   and understand the risk;
-- converts `sovereign.db`, `auth.db`, and every file under `data/plugins/` in
-  place, via a temp-file-then-atomic-rename per file, so a mid-run failure
-  leaves the original untouched;
-- writes a marker (`data/.db-encrypted`) once every file has converted —
-  only then does the instance accept the key at startup.
+- converts `sovereign.db` and `auth.db` (if not already encrypted), plus any
+  plugin database under `data/plugins/` whose plugin manifest declares
+  `database.requireEncryption: true` (if not already encrypted) — everything
+  else is left alone. Each file is converted in place via a
+  temp-file-then-atomic-rename, so a mid-run failure leaves that file's
+  original untouched;
+- writes each converted file's own marker as it succeeds — the platform core
+  gets one shared marker (`data/.db-encrypted`), each converted plugin gets
+  its own (`data/plugins/<id>.db-encrypted`) — so a later run only retries
+  whatever didn't succeed, never what already did.
 
 Restart the server afterward with the same key still set.
 
 ### Rotating or removing the key
 
-`sv db decrypt` reverses the process — decrypts every SQLite file back to
-plaintext (same automatic-backup, atomic-swap safety) and removes the marker.
-To rotate to a new key: `sv db decrypt` with the old key set, then
-`SOVEREIGN_DB_ENCRYPTION_KEY=<new key> pnpm sv db encrypt`. On a named-volume
-production deployment, run both through the `tools` service the same way as
-above, substituting `db decrypt` / `db encrypt` for the command.
+`sv db decrypt` reverses the process for everything currently marked as
+encrypted — the platform core (if marked) plus every plugin database with its
+own marker, including one belonging to a plugin that's since been uninstalled
+or no longer requests encryption (same automatic-backup, atomic-swap safety),
+clearing each file's marker as it succeeds. To rotate to a new key: `sv db
+decrypt` with the old key set, then `SOVEREIGN_DB_ENCRYPTION_KEY=<new key>
+pnpm sv db encrypt`. On a named-volume production deployment, run both
+through the `tools` service the same way as above, substituting `db decrypt`
+/ `db encrypt` for the command.
 
 **Rotation is not atomic.** Between the `db decrypt` and `db encrypt` steps,
-every SQLite file is genuinely plaintext on disk — there is no single-pass
-re-key across a whole file. Keep that window as short as possible (script the
-two commands back to back) and make sure the automatic pre-step backups from
-both commands don't linger anywhere reachable once rotation succeeds.
+every affected SQLite file is genuinely plaintext on disk — there is no
+single-pass re-key across a whole file. Keep that window as short as possible
+(script the two commands back to back) and make sure the automatic pre-step
+backups from both commands don't linger anywhere reachable once rotation
+succeeds.
 
-Both commands are safe to run more than once: `sv db encrypt` refuses with
-"already marked as encrypted — nothing to do" if the marker is already
-present, and `sv db decrypt` refuses with "not marked as encrypted — nothing
-to do" if it isn't. Neither will double-encrypt a file or silently no-op in a
-way that leaves you unsure what state the data is in.
+Both commands are safe to run more than once: `sv db encrypt` reports
+"nothing to encrypt" if the core is already encrypted and no
+encryption-requiring plugin has an unconverted database, and `sv db decrypt`
+refuses with "nothing marked as encrypted — nothing to do" if nothing is
+currently marked. Neither will double-encrypt a file or silently no-op in a
+way that leaves you unsure what state any given file is in.
 
 **If something interrupts rotation between the two steps** (the process is
 killed, the machine reboots, you close the terminal), you'll be left with a
@@ -403,38 +431,52 @@ The instance fails fast on any key/on-disk-state mismatch rather than risk
 silently mixing plaintext and encrypted data. Each case below has one cause
 and one fix:
 
-| Error you see (at startup, or from `sv db encrypt`/`decrypt`)                                                                                  | What it means                                                                                       | Fix                                                                                                                                       |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `This instance's databases are encrypted (…/.db-encrypted is present) but SOVEREIGN_DB_ENCRYPTION_KEY is not set.`                             | The data directory was converted, but this process doesn't have the key.                            | Set `SOVEREIGN_DB_ENCRYPTION_KEY` to the key used to encrypt it, identically on both `runtime` and `auth`.                                |
-| `SOVEREIGN_DB_ENCRYPTION_KEY is set, but the data directory at … has not been encrypted yet.`                                                  | The key is set, and this directory already has plaintext `sovereign.db`/`auth.db`/plugin databases. | Run `sv db encrypt` first (see "Converting an existing plaintext instance" above).                                                        |
-| `Could not open … with the configured SOVEREIGN_DB_ENCRYPTION_KEY — the key is likely wrong, or this file was encrypted with a different one.` | The marker says encrypted, a key is present, but it doesn't open this specific file.                | Double-check the key value (and that it's identical across `runtime`/`auth`) — a typo here reads the same as data loss.                   |
-| `Could not get exclusive access to … Either the key is wrong, the file is not a valid SQLite database, or the server is still running.`        | `sv db encrypt`/`decrypt` couldn't get an exclusive lock on the file.                               | Stop `runtime` and `auth` first — this guard can't tell a live server apart from a wrong key, so it refuses either way rather than guess. |
-| `SOVEREIGN_DB_ENCRYPTION_KEY must be a 32-byte key encoded as base64, base64url, or 64-character hex.`                                         | The value doesn't decode to exactly 32 bytes.                                                       | Regenerate with `openssl rand -base64 32` and paste it verbatim — no surrounding quotes or trailing newline.                              |
+| Error you see (at startup, or from `sv db encrypt`/`decrypt`)                                                                                  | What it means                                                                                         | Fix                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `This instance's databases are encrypted (…/.db-encrypted is present) but SOVEREIGN_DB_ENCRYPTION_KEY is not set.`                             | The platform core was converted, but this process doesn't have the key.                               | Set `SOVEREIGN_DB_ENCRYPTION_KEY` to the key used to encrypt it, identically on both `runtime` and `auth`.                                |
+| `SOVEREIGN_DB_ENCRYPTION_KEY is set, but the data directory at … has not been encrypted yet.`                                                  | The key is set, and the platform core (`sovereign.db`/`auth.db`) already has plaintext data.          | Run `sv db encrypt` first (see "Converting an existing plaintext instance" above).                                                        |
+| `Plugin "<id>"'s database is encrypted (…/<id>.db-encrypted is present) but SOVEREIGN_DB_ENCRYPTION_KEY is not set.`                           | That specific plugin's database was converted, but this process doesn't have the key.                 | Set `SOVEREIGN_DB_ENCRYPTION_KEY` to the key it was encrypted with.                                                                       |
+| `Plugin "<id>" requires database encryption and SOVEREIGN_DB_ENCRYPTION_KEY is set, but its existing database … has not been encrypted yet.`   | The key is set, this plugin's manifest requests encryption, and its existing file is still plaintext. | Run `sv db encrypt` (it only converts what actually needs it — see above).                                                                |
+| `Could not open … with the configured SOVEREIGN_DB_ENCRYPTION_KEY — the key is likely wrong, or this file was encrypted with a different one.` | The marker says encrypted, a key is present, but it doesn't open this specific file.                  | Double-check the key value (and that it's identical across `runtime`/`auth`) — a typo here reads the same as data loss.                   |
+| `Could not get exclusive access to … Either the key is wrong, the file is not a valid SQLite database, or the server is still running.`        | `sv db encrypt`/`decrypt` couldn't get an exclusive lock on the file.                                 | Stop `runtime` and `auth` first — this guard can't tell a live server apart from a wrong key, so it refuses either way rather than guess. |
+| `SOVEREIGN_DB_ENCRYPTION_KEY must be a 32-byte key encoded as base64, base64url, or 64-character hex.`                                         | The value doesn't decode to exactly 32 bytes.                                                         | Regenerate with `openssl rand -base64 32` and paste it verbatim — no surrounding quotes or trailing newline.                              |
 
 None of these leave data in a partially-converted state: `sv db encrypt`/
-`decrypt` only write the marker after every file has converted, and a mid-run
-failure leaves the original files untouched (restore from the automatic
-backup if in doubt).
+`decrypt` write or clear each file's own marker only as that specific file
+succeeds, and a mid-run failure leaves that file's original untouched
+(restore from the automatic backup if in doubt).
+
+**Plugin requesting encryption without a key configured is not an error
+anymore (task 8.15):** if a plugin's manifest declares
+`database.requireEncryption: true` and `SOVEREIGN_DB_ENCRYPTION_KEY` isn't
+set, the instance boots normally and that plugin's database runs unencrypted
+— a warning is logged and shown in Console's plugin list, but nothing fails.
+Set the key (and run `sv db encrypt`, if the file already exists as
+plaintext) whenever you're ready to satisfy that plugin's request.
 
 **A fresh instance hitting "has not been encrypted yet" unexpectedly:** the
-pre-existing-data check only looks at file names ending in `.db` under
-`data/plugins/`, not their contents. A stray or corrupt `.db`-suffixed file
-left over from an unrelated failure will trip this the same way real
-plaintext data would, and will keep tripping it indefinitely since it isn't
-something `sv db encrypt` can successfully convert either — the error message
-in this situation names the actual failing file; if it isn't a genuine
-Sovereign database, move it out of `data/plugins/` and retry.
+pre-existing-data check for the platform core only looks at whether
+`sovereign.db`/`auth.db` already exist, not their contents. For a plugin's
+own database, the same principle applies to that plugin's own file. A stray
+or corrupt `.db`-suffixed file left over from an unrelated failure will trip
+this the same way real plaintext data would — the error message names the
+actual failing file; if it isn't a genuine Sovereign database, move it out
+and retry.
 
 **`sv restore` and the encryption marker:** restoring a backup extracts on
 top of the existing data directory rather than replacing it, and reconciles
-`data/.db-encrypted` against what the _archive_ actually contains — not what
-was already in the destination. Restoring an old, pre-encryption backup onto
-a currently-encrypted instance removes the stale marker so the result
-correctly reads as plaintext (rather than leaving a marker that no longer
-matches the restored files, which would otherwise surface as the confusing
-"key is likely wrong" error above instead of the correct "run `sv db encrypt`"
-one). Restoring an encrypted backup adds the marker back automatically, same
-as any other file in the archive.
+`data/.db-encrypted` (the platform core's marker) against what the _archive_
+actually contains — not what was already in the destination. Restoring an
+old, pre-encryption backup onto a currently-encrypted instance removes the
+stale core marker so the result correctly reads as plaintext (rather than
+leaving a marker that no longer matches the restored files, which would
+otherwise surface as the confusing "key is likely wrong" error above instead
+of the correct "run `sv db encrypt`" one). Restoring an encrypted backup adds
+the marker back automatically, same as any other file in the archive. A
+plugin's own marker (`data/plugins/<id>.db-encrypted`) has no special
+reconciliation like this — it's an ordinary file that travels with the backup
+archive and gets restored (or not) exactly like the `.db` file it describes,
+so the two never drift apart from a restore.
 
 ### Interaction with SQLite → PostgreSQL migration
 

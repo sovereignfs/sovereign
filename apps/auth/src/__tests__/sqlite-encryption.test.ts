@@ -43,10 +43,14 @@ describe('checkEncryptionMarker (apps/auth twin)', () => {
     expect(() => checkEncryptionMarker(dataDir, true)).toThrow(DbEncryptionConfigError);
   });
 
-  it('fails fast when the key is present and an isolated plugin db pre-exists', () => {
+  it('is core-only (task 8.15) — a pre-existing plugin db does not block the core marker', () => {
+    // auth.db never touches plugin files, but this twin's checkEncryptionMarker
+    // shares the same core-only semantics as packages/db's — a plugin file's
+    // existence must never gate the platform core's own encryption decision.
     mkdirSync(join(dataDir, 'plugins'));
     writeFileSync(join(dataDir, 'plugins', 'fs.example.one.db'), '');
-    expect(() => checkEncryptionMarker(dataDir, true)).toThrow(DbEncryptionConfigError);
+    expect(() => checkEncryptionMarker(dataDir, true)).not.toThrow();
+    expect(existsSync(join(dataDir, '.db-encrypted'))).toBe(true);
   });
 
   it('writes the marker instead of throwing on a genuinely fresh, empty data dir', () => {

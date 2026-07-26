@@ -14,14 +14,20 @@ Add an **opt-in, operator-owned, whole-file encryption** option for Sovereign's
 SQLite databases, using SQLCipher (via `better-sqlite3-multiple-ciphers`) keyed
 by a single instance-wide key supplied as an environment variable. When the key
 is absent — the **default** — nothing changes: databases stay plaintext exactly
-as today. When the key is set, every SQLite database the instance owns
-(`sovereign.db`, `auth.db`, and every `database: "isolated"` plugin's file) is
+as today. When the key is set, the platform core (`sovereign.db`, `auth.db`) is
 encrypted at rest, transparently to all query code above the driver.
+_(Amended by changelog 1.2 / epic task 8.15: an isolated plugin database is
+only encrypted if that plugin's own manifest requests it — see below — not
+merely because the instance-wide key is present. The original text here said
+"every... isolated plugin's file"; a production incident showed that breaking
+unrelated plugins.)_
 
-A plugin may additionally declare `requireEncryption: true` in its manifest to
-**force encryption on for its own isolated database** regardless of the
-instance-wide default — a raise-only control (a plugin can demand encryption, it
-can never opt out of encryption the operator has enabled).
+A plugin declares `requireEncryption: true` in its manifest to **turn
+encryption on for its own isolated database** — this is how a plugin opts in;
+there is no instance-wide default that encrypts a plugin's database without
+the plugin asking for it. It remains a raise-only control (a plugin can demand
+encryption, it can never opt out of the platform core's own encryption once
+the operator has enabled it).
 
 This is deliberately the **narrow, honest slice** of RFC 0008's Tier 2: it
 protects a stolen disk, a leaked volume snapshot, or a copied database file. It
@@ -110,14 +116,22 @@ logic as `SOVEREIGN_VAULT_KEY`).
 
 - **Absent (default):** SQLite databases open in plaintext exactly as today. No
   behaviour change, no new dependency cost at runtime.
-- **Present:** every SQLite database the instance owns is opened with the cipher
-  key applied (SQLCipher `PRAGMA key`), before any query or migration runs.
+- **Present:** the platform core (`sovereign.db` + `auth.db`) is opened with the
+  cipher key applied (SQLCipher `PRAGMA key`), before any query or migration
+  runs. A plugin's isolated database is opened with the key applied only if
+  that plugin's own manifest declares `database.requireEncryption: true` —
+  see changelog 1.2 / epic task 8.15, which amended this section's original
+  "every SQLite database the instance owns" enforcement to be per-database
+  after a production incident (`docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`)
+  showed the directory-wide version breaking unrelated plugins.
 
 Presence of the key **is** the toggle — no separate boolean flag, matching the
 project's existing "a feature that needs a secret fails closed without it, works
-with it" convention. The same key encrypts all SQLite databases (platform, auth,
-and every isolated plugin DB), by explicit design choice for operational
-simplicity (see Alternatives for the per-DB-key option and its rejection).
+with it" convention. The same key is shared by every SQLite database that ends
+up encrypted (platform, auth, and any isolated plugin DB that opts in), by
+explicit design choice for operational simplicity (see Alternatives for the
+per-DB-key option and its rejection) — task 8.15 changed _which_ databases get
+encrypted, not the single-shared-key choice itself.
 
 ### 2. SQLCipher via `better-sqlite3-multiple-ciphers`
 
@@ -192,11 +206,18 @@ Semantics:
   `requireEncryption: true` — a `shared` plugin declaring it is a manifest
   error (a `shared` plugin's tables live inside `sovereign.db` and inherit
   whatever state the platform DB is in; it cannot independently demand more).
-- **Forces the operator's hand, loudly.** If a plugin requires encryption and
-  `SOVEREIGN_DB_ENCRYPTION_KEY` is not set, plugin provisioning / startup fails
-  with a message that **names the plugin**: "Plugin `<id>` requires database
-  encryption — set `SOVEREIGN_DB_ENCRYPTION_KEY` to enable it, or remove the
-  plugin." Never a generic crash.
+- **Loud, never silent — amended by task 8.15 to warn rather than block
+  startup.** If a plugin requires encryption and `SOVEREIGN_DB_ENCRYPTION_KEY`
+  is not set, the instance no longer refuses to start: it logs a warning that
+  **names the plugin** ("Plugin `<id>` requires database encryption, but
+  `SOVEREIGN_DB_ENCRYPTION_KEY` is not set...") and runs that plugin's
+  database unencrypted, visible in Console's plugin list. (The original
+  design here made this fatal; task 8.15 softened it once the platform's
+  posture became "unencrypted plugins are supported by default," matching how
+  the Postgres branch just below always warned rather than blocked.) If the
+  key **is** set but the plugin's existing file hasn't been converted yet,
+  that specific case still fails fast, naming the plugin and pointing at
+  `sv db encrypt` — see changelog 1.2.
 
 This is a new field in `packages/manifest` (a public contract). Per repo
 conventions it ships with a `docs/plugin-development.md` update in the same PR
@@ -399,8 +420,9 @@ platform version minor-bumped per the roadmap-milestone convention.
 
 ## Changelog
 
-| Version | Date      | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| ------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | July 2026 | Initial draft — opt-in, single-key SQLite whole-file at-rest encryption carved out of RFC 0008 Tier 2b; manifest `requireEncryption` (raise-only); migration tooling; explicit Postgres no-op-with-warning.                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| 1.0     | July 2026 | Implemented (epic task 8.14), all six adoption phases. Notably corrected the cipher selection mid-implementation — the driver's default is not SQLCipher, `cipher='sqlcipher'` must be set explicitly (open question 2). Migration tooling uses in-place `.rekey()`, not `sqlcipher_export()` (that function doesn't exist in this driver fork). better-auth migration compatibility confirmed empirically.                                                                                                                                                                                                                   |
-| 1.1     | July 2026 | Fixed the §3 marker guard: "marker absent, key present" was treated as always meaning pre-existing plaintext data, with no exception for a genuinely empty data directory — silently breaking the "Enabling on a fresh instance" onboarding path this RFC documents (`sv db encrypt` also found zero files there and skipped writing the marker, so following the guard's own error led to a dead end). Added the fifth table row above; verified via a full local stress test covering fresh-instance boot, existing-instance encrypt/decrypt round-trip, wrong-key rejection, key rotation, and the CLI idempotency guards. |
+| Version | Date      | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | July 2026 | Initial draft — opt-in, single-key SQLite whole-file at-rest encryption carved out of RFC 0008 Tier 2b; manifest `requireEncryption` (raise-only); migration tooling; explicit Postgres no-op-with-warning.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 1.0     | July 2026 | Implemented (epic task 8.14), all six adoption phases. Notably corrected the cipher selection mid-implementation — the driver's default is not SQLCipher, `cipher='sqlcipher'` must be set explicitly (open question 2). Migration tooling uses in-place `.rekey()`, not `sqlcipher_export()` (that function doesn't exist in this driver fork). better-auth migration compatibility confirmed empirically.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 1.1     | July 2026 | Fixed the §3 marker guard: "marker absent, key present" was treated as always meaning pre-existing plaintext data, with no exception for a genuinely empty data directory — silently breaking the "Enabling on a fresh instance" onboarding path this RFC documents (`sv db encrypt` also found zero files there and skipped writing the marker, so following the guard's own error led to a dead end). Added the fifth table row above; verified via a full local stress test covering fresh-instance boot, existing-instance encrypt/decrypt round-trip, wrong-key rejection, key rotation, and the CLI idempotency guards.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 1.2     | July 2026 | **Amended §1's enforcement model** (epic task 8.15), following a real production incident (`docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`): the single directory-wide marker meant `SOVEREIGN_DB_ENCRYPTION_KEY`'s presence gated _every_ SQLite file regardless of which plugin owned it — setting the key because one plugin (`sovereign-healthlog`) declared `database.requireEncryption: true` broke four unrelated plugins whose plaintext files had nothing to do with that requirement. Enforcement is now per-database: the platform core (`sovereign.db` + `auth.db`, one shared marker) is always expected to be encrypted once the key is present; a plugin's isolated database is encrypted only if its own manifest requests it (its own marker, independent of every other plugin's). A plugin requesting encryption with no key configured no longer aborts startup — it warns and runs unencrypted, consistent with the platform supporting unencrypted plugins by default. `sv db encrypt`/`decrypt` became selective (core + only requesting/marked plugins) instead of blanket-processing every `.db` file; a one-time, idempotent backfill covers instances upgrading from the old directory-wide marker. Alternative 1 (single shared key) is unchanged — only _which_ files that key applies to changed. |

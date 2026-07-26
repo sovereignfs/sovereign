@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import type { SovereignManifest } from '@sovereignfs/manifest';
-import { Icon } from '@sovereignfs/ui';
 import { getAccountPrefs } from '@sovereignfs/db';
 import { hasCapability } from '@/src/capabilities';
 import { getPlatformDb } from '@/src/db';
@@ -12,11 +11,13 @@ import { getInstalledPlugins, getOfflineRoutePrefixes } from '@/src/registry';
 import { applySidebarOrder, selectSidebarPlugins } from '@/src/launcher-plugins';
 import { InstanceProvider } from '@/src/instance-provider';
 import { AccountMenu } from './_components/AccountMenu';
+import { AdminConsoleIcon } from './_components/AdminConsoleIcon';
 import { ClientShell } from './_components/ClientShell';
 import { NavIcon } from './_components/NavIcon';
 import { MobileNav } from './_components/MobileNav';
 import { NotificationBell } from './_components/NotificationBell';
 import { OfflineBanner } from './_components/OfflineBanner';
+import { SidebarPluginIcons } from './_components/SidebarPluginIcons';
 import styles from './shell.module.css';
 
 function monogram(name: string): string {
@@ -99,16 +100,43 @@ export default async function PlatformLayout({ children }: { children: ReactNode
     }
   }
 
-  const pluginIcons = [...(launcher ? [launcher] : []), ...plugins].map((plugin) => {
-    const extraPaths: string[] = [];
-    if (plugin.id === 'fs.sovereign.launcher') extraPaths.push('/');
-    if (plugin.monetization) extraPaths.push(`/paywall/${encodeURIComponent(plugin.id)}`);
+  // The Launcher icon itself, rendered unconditionally — see the comment on
+  // `launcher` above for why it's exempt from the offline-route neutral shell.
+  const launcherIcon = launcher ? (
+    <NavIcon
+      key={launcher.id}
+      href={launcher.routePrefix}
+      title={launcher.name}
+      alsoActiveOn={['/']}
+    >
+      {launcher.icon ? (
+        <img
+          src={`/plugin-icons/${launcher.id}.svg`}
+          alt=""
+          aria-hidden
+          className={styles.pluginIconImg}
+        />
+      ) : (
+        <span aria-hidden="true">{monogram(launcher.name)}</span>
+      )}
+    </NavIcon>
+  ) : null;
+
+  // The rest of the sidebar's plugin icons — real and complete on a normal
+  // route, empty on an offline route's SSR (see the neutral-shell comment
+  // above). `SidebarPluginIcons` restores the real list client-side for a
+  // live tab on an offline route; on every other route it just renders this
+  // list as-is, unchanged from before.
+  const middlePluginIcons = plugins.map((plugin) => {
+    const extraPaths = plugin.monetization
+      ? [`/paywall/${encodeURIComponent(plugin.id)}`]
+      : undefined;
     return (
       <NavIcon
         key={plugin.id}
         href={plugin.routePrefix}
         title={plugin.name}
-        alsoActiveOn={extraPaths.length > 0 ? extraPaths : undefined}
+        alsoActiveOn={extraPaths}
       >
         {plugin.icon ? (
           <img
@@ -151,15 +179,12 @@ export default async function PlatformLayout({ children }: { children: ReactNode
               </Link>
               <hr className={styles.sidebarDivider} />
               <nav className={styles.plugins} aria-label="Plugins">
-                {pluginIcons}
+                {launcherIcon}
+                <SidebarPluginIcons hydrate={isOfflineRoute} neutralChildren={middlePluginIcons} />
               </nav>
               <div className={styles.chrome}>
                 <NotificationBell placement="sidebar" />
-                {isAdmin ? (
-                  <NavIcon href="/console" title="Console">
-                    <Icon name="settings" size="lg" aria-hidden />
-                  </NavIcon>
-                ) : null}
+                <AdminConsoleIcon hydrate={isOfflineRoute} neutralRender={isAdmin} />
                 <AccountMenu
                   avatar={accountAvatar}
                   avatarImageClassName={styles.avatarImage}

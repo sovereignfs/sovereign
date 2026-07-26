@@ -251,6 +251,18 @@ export const emailDeliveryLog = pgTable('email_delivery_log', {
   metadata: text('metadata'),
 });
 
+export const pushDeliveryLog = pgTable('push_delivery_log', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  userId: text('user_id').notNull(),
+  pushService: text('push_service'),
+  status: text('status').notNull(),
+  errorCode: text('error_code'),
+  category: text('category'),
+  source: text('source'),
+});
+
 /**
  * Plugin-scoped file storage metadata (RFC 0044). Bytes live on disk under
  * `data/plugins/<pluginId>/storage/<id>` (opaque physical filename — the

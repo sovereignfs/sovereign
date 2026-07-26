@@ -223,6 +223,26 @@ export const emailDeliveryLog = sqliteTable('email_delivery_log', {
 });
 
 /**
+ * Web Push delivery diagnostics (RFC 0016, epic task 4.6) — mirrors
+ * `emailDeliveryLog`'s shape. One row per send attempt (per subscribed
+ * device once subscriptions are known; one row for the whole user when a
+ * send never reaches a device, e.g. no subscriptions or a muted category).
+ * `pushService` stores only the push endpoint's host, never the full
+ * per-device capability URL.
+ */
+export const pushDeliveryLog = sqliteTable('push_delivery_log', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  createdAt: integer('created_at').notNull(),
+  userId: text('user_id').notNull(),
+  pushService: text('push_service'),
+  status: text('status').notNull(), // 'skipped' | 'sent' | 'failed' | 'pruned'
+  errorCode: text('error_code'),
+  category: text('category'),
+  source: text('source'),
+});
+
+/**
  * Plugin-scoped file storage metadata (RFC 0044). Bytes live on disk under
  * `data/plugins/<pluginId>/storage/<id>` (opaque physical filename — the
  * plugin-facing `key` never touches the filesystem, so there is no path
@@ -562,6 +582,8 @@ export type ActivityLog = typeof activityLog.$inferSelect;
 export type NewActivityLog = typeof activityLog.$inferInsert;
 export type EmailDeliveryLog = typeof emailDeliveryLog.$inferSelect;
 export type NewEmailDeliveryLog = typeof emailDeliveryLog.$inferInsert;
+export type PushDeliveryLog = typeof pushDeliveryLog.$inferSelect;
+export type NewPushDeliveryLog = typeof pushDeliveryLog.$inferInsert;
 export type PluginStorageObject = typeof pluginStorageObjects.$inferSelect;
 export type NewPluginStorageObject = typeof pluginStorageObjects.$inferInsert;
 export type E2eeProfile = typeof e2eeProfiles.$inferSelect;

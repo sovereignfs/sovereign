@@ -190,6 +190,47 @@ message-email branch), Task 1.14 (shared email delivery wrapper and delivery log
 
 ---
 
+#### ✅ 4.6 — Web push delivery status logging
+
+**Goal:** Make Web Push delivery outcomes (skipped/failed) observable in Console and
+Account Activities, mirroring the delivery-log pattern RFC 0062 established for email,
+instead of the current logger-only trail.
+
+**Deliverables:**
+
+- `push_delivery_log` table (`packages/db`) — one row per send attempt: id, userId,
+  endpoint host (never the full per-device capability URL), status
+  (`skipped | sent | failed | pruned`), errorCode, category, source, createdAt. Mirrors
+  the shape of `email_delivery_log` (`packages/db/src/platform-db.ts:2190-2290`,
+  `recordEmailDelivery`).
+- `runtime/src/push.ts` — `fanOutPushToUser` / `fanOutPushToUsers` / `sendOne` call a new
+  `recordPushDelivery` helper alongside every existing `logger.info`/`logger.warn` call
+  (VAPID unset, category muted, no subscriptions, pruned, send failed), so nothing is
+  logger-only.
+- Non-`sent` outcomes also call `logActivity` (`runtime/src/activity.ts`), matching
+  `logDeliveryOutcome` in `runtime/src/platform-email.ts:64-82` — `action:
+'push.delivery_failed'`, `subjectUserId`, `visibility: 'user'` when a recipient is
+  known, summary without the raw endpoint.
+- Surfaces in the existing Console (`plugins/console/app/activity/page.tsx`) and Account
+  (`plugins/account/app/activity/page.tsx`) Activities feeds — no new page.
+
+**Dependencies:** Task 4.2 (Web Push notifications)
+
+**SRS reference:** RFC 0016 (extends); delivery-log shape follows RFC 0062's precedent
+
+**Review checklist:**
+
+- A push skipped for "no subscriptions", "category muted", or "VAPID unset" appears in
+  the recipient's Account Activities feed (and Console's admin feed) with no raw endpoint
+  or subscription secret in the summary/metadata.
+- A real send failure (e.g. non-410/404 error from the push service) is recorded the same
+  way; a `410`/`404` prune is recorded as `pruned`, not `failed`.
+- A successful send is recorded in `push_delivery_log` but does not spam Activities (only
+  non-`sent` outcomes call `logActivity`, matching the email pattern).
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0015 — Notification Center](../rfcs/0015-notification-center.md)

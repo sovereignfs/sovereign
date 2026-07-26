@@ -176,6 +176,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.44.0  | SQLite at-rest encryption (opt-in, single-key) (RFC 0071)                   | ✅     | [8.14](docs/epics/data-sovereignty.md#-814--sqlite-at-rest-encryption-opt-in-single-key-rfc-0071)               |
 | 0.45.0  | External OAuth/OIDC provider for non-plugin apps (RFC 0072)                 | ✅     | [1.18](docs/epics/users-auth.md#-118--external-oauthoidc-provider-for-non-plugin-apps-rfc-0072)                 |
 | —       | Standalone usage of `@sovereignfs/ui` outside the plugin runtime (RFC 0073) | ✅     | [9.17](docs/epics/design-system.md#-917--standalone-usage-of-sovereignfsui-outside-the-plugin-runtime-rfc-0073) |
+| 0.46.0  | Web push delivery status logging (RFC 0016)                                 | ✅     | [4.6](docs/epics/notification-center.md#-46--web-push-delivery-status-logging)                                  |
 
 ---
 

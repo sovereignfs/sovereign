@@ -154,6 +154,21 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
        ON email_delivery_log (tenant_id, created_at DESC)`,
     `CREATE INDEX IF NOT EXISTS email_delivery_log_status_created
        ON email_delivery_log (status, created_at DESC)`,
+    `CREATE TABLE IF NOT EXISTS push_delivery_log (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      created_at ${ts} NOT NULL,
+      user_id TEXT NOT NULL,
+      push_service TEXT,
+      status TEXT NOT NULL,
+      error_code TEXT,
+      category TEXT,
+      source TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS push_delivery_log_tenant_created
+       ON push_delivery_log (tenant_id, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS push_delivery_log_status_created
+       ON push_delivery_log (status, created_at DESC)`,
     // RFC 0044 — Plugin file storage. Bytes live on disk under
     // data/plugins/<pluginId>/storage/<id>; this table is metadata only.
     `CREATE TABLE IF NOT EXISTS plugin_storage_objects (

@@ -2241,6 +2241,48 @@ export async function recordEmailDelivery(
   );
 }
 
+export type PushDeliveryStatus = 'skipped' | 'sent' | 'failed' | 'pruned';
+
+export interface PushDeliveryLogRow {
+  id: string;
+  tenantId: string;
+  createdAt: number;
+  userId: string;
+  pushService: string | null;
+  status: PushDeliveryStatus;
+  errorCode: string | null;
+  category: string | null;
+  source: string | null;
+}
+
+export interface RecordPushDeliveryInput {
+  id: string;
+  userId: string;
+  pushService?: string | null;
+  status: PushDeliveryStatus;
+  errorCode?: string | null;
+  category?: string | null;
+  source?: string | null;
+}
+
+/** Append one push delivery diagnostic row (RFC 0016, epic task 4.6). Never
+ *  stores the full per-device push endpoint — `pushService` is a host only. */
+export async function recordPushDelivery(
+  pdb: PlatformDb,
+  input: RecordPushDeliveryInput,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO push_delivery_log
+          (id, tenant_id, created_at, user_id, push_service, status, error_code, category, source)
+        VALUES
+          (${input.id}, ${DEFAULT_TENANT_ID}, ${now}, ${input.userId},
+           ${input.pushService ?? null}, ${input.status}, ${input.errorCode ?? null},
+           ${input.category ?? null}, ${input.source ?? null})`,
+  );
+}
+
 export interface EmailDeliveryDiagnostics {
   smtpConfigured: boolean;
   lastSendStatus: EmailDeliveryStatus | null;

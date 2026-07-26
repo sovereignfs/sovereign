@@ -10,31 +10,45 @@ vi.mock('web-push', () => ({
   },
 }));
 
-const { deletePushSubscription, getNotificationPrefs, getPushSubscriptionsForUser, warn, info } =
-  vi.hoisted(() => ({
-    deletePushSubscription: vi.fn(async () => undefined),
-    getNotificationPrefs: vi.fn(
-      async (): Promise<{ mutedCategories: string[]; pollIntervalSecs: number }> => ({
-        mutedCategories: [],
-        pollIntervalSecs: 30,
-      }),
-    ),
-    getPushSubscriptionsForUser: vi.fn(async () => [
-      { endpoint: 'https://web.push.apple.com/QOnjBEyWiC6H', p256dh: 'k', auth: 'a' },
-    ]),
-    warn: vi.fn<(msg: string, meta?: Record<string, unknown>) => void>(),
-    info: vi.fn<(msg: string, meta?: Record<string, unknown>) => void>(),
-  }));
+const {
+  deletePushSubscription,
+  getNotificationPrefs,
+  getPushSubscriptionsForUser,
+  recordPushDelivery,
+  logActivity,
+  warn,
+  info,
+} = vi.hoisted(() => ({
+  deletePushSubscription: vi.fn(async () => undefined),
+  getNotificationPrefs: vi.fn(
+    async (): Promise<{ mutedCategories: string[]; pollIntervalSecs: number }> => ({
+      mutedCategories: [],
+      pollIntervalSecs: 30,
+    }),
+  ),
+  getPushSubscriptionsForUser: vi.fn(async () => [
+    { userId: 'u1', endpoint: 'https://web.push.apple.com/QOnjBEyWiC6H', p256dh: 'k', auth: 'a' },
+  ]),
+  recordPushDelivery: vi.fn(async () => undefined),
+  logActivity: vi.fn(async () => undefined),
+  warn: vi.fn<(msg: string, meta?: Record<string, unknown>) => void>(),
+  info: vi.fn<(msg: string, meta?: Record<string, unknown>) => void>(),
+}));
 
 vi.mock('@sovereignfs/db', () => ({
   deletePushSubscription,
   getNotificationPrefs,
   getPushSubscriptionsForUser,
   getPushSubscriptionsByUsers: vi.fn(async () => []),
+  recordPushDelivery,
 }));
 
 vi.mock('../db', () => ({
   getPlatformDb: vi.fn(async () => ({})),
+}));
+
+vi.mock('../activity', () => ({
+  logActivity,
 }));
 
 vi.mock('../logger', () => ({
@@ -190,6 +204,85 @@ describe('fanOutPushToUser', () => {
     expect(prune).toBeDefined();
     expect(prune?.[1]?.pushService).toBe('web.push.apple.com');
     expect(JSON.stringify(prune?.[1])).not.toContain('QOnjBEyWiC6H');
+  });
+
+  describe('push delivery logging (epic task 4.6)', () => {
+    it('records a sent row without touching the activity log', async () => {
+      sendNotification.mockResolvedValueOnce({} as never);
+      await fanOutPushToUser('u1', { title: 'T', category: 'reminders' });
+      expect(recordPushDelivery).toHaveBeenCalledTimes(1);
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ userId: 'u1', status: 'sent', category: 'reminders' }),
+      );
+      expect(logActivity).not.toHaveBeenCalled();
+    });
+
+    it('records skipped + logs activity when VAPID is unconfigured', async () => {
+      delete process.env.VAPID_PUBLIC_KEY;
+      await fanOutPushToUser('u1', { title: 'T' });
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          userId: 'u1',
+          status: 'skipped',
+          errorCode: 'VAPID_NOT_CONFIGURED',
+        }),
+      );
+      expect(logActivity).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'push.delivery_failed',
+          subjectUserId: 'u1',
+          visibility: 'user',
+        }),
+      );
+    });
+
+    it('records skipped + logs activity when the category is muted', async () => {
+      getNotificationPrefs.mockResolvedValueOnce({
+        mutedCategories: ['info'],
+        pollIntervalSecs: 30,
+      });
+      await fanOutPushToUser('u1', { title: 'T', category: 'info' });
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: 'skipped', errorCode: 'CATEGORY_MUTED' }),
+      );
+      expect(logActivity).toHaveBeenCalledTimes(1);
+    });
+
+    it('records skipped + logs activity when the user has no subscriptions', async () => {
+      getPushSubscriptionsForUser.mockResolvedValueOnce([]);
+      await fanOutPushToUser('u1', { title: 'T' });
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: 'skipped', errorCode: 'NO_SUBSCRIPTIONS' }),
+      );
+      expect(logActivity).toHaveBeenCalledTimes(1);
+    });
+
+    it('records pruned (not failed) on 410 and still logs activity, without leaking the endpoint', async () => {
+      sendNotification.mockRejectedValueOnce(webPushError(410));
+      await fanOutPushToUser('u1', { title: 'T' });
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: 'pruned', pushService: 'web.push.apple.com' }),
+      );
+      const [call] = logActivity.mock.calls;
+      expect(JSON.stringify(call)).not.toContain('QOnjBEyWiC6H');
+    });
+
+    it('records failed + logs activity on a real delivery error', async () => {
+      sendNotification.mockRejectedValueOnce(webPushError(403, 'BadJwtToken'));
+      await fanOutPushToUser('u1', { title: 'T' });
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: 'failed', errorCode: '403' }),
+      );
+      expect(logActivity).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'push.delivery_failed', subjectUserId: 'u1' }),
+      );
+    });
   });
 
   describe('per-plugin icon default', () => {

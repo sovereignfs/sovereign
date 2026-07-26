@@ -7,13 +7,17 @@
  *
  * Stale subscriptions (HTTP 410 Gone) are pruned automatically.
  */
+import { randomUUID } from 'node:crypto';
 import webpush from 'web-push';
 import {
   deletePushSubscription,
   getNotificationPrefs,
   getPushSubscriptionsByUsers,
   getPushSubscriptionsForUser,
+  recordPushDelivery,
+  type PushDeliveryStatus,
 } from '@sovereignfs/db';
+import { logActivity } from './activity';
 import { getPlatformDb } from './db';
 import { logger } from './logger';
 
@@ -83,16 +87,25 @@ function applyVapid() {
  * Respects the user's muted-category preference.
  */
 export async function fanOutPushToUser(userId: string, payload: PushPayload): Promise<void> {
-  // Every early exit below logs at info level. Push delivery is fire-and-forget
-  // with no user-visible error surface, so when an operator asks "why did no
-  // push arrive?" the answer must be reconstructable from LOG_LEVEL=info logs
-  // alone — a silent return here is indistinguishable from a delivery failure.
+  // Every early exit below logs at info level and records a push_delivery_log
+  // row (+ activity log entry). Push delivery is fire-and-forget with no
+  // user-visible error surface, so when someone asks "why did no push
+  // arrive?" the answer must be reconstructable from Account/Console
+  // Activities or LOG_LEVEL=info logs alone — a silent return here is
+  // indistinguishable from a delivery failure.
+  const pdb = await getPlatformDb();
+
   if (!pushEnabled()) {
     logger.info('push: skipped — VAPID keys not configured', { userId });
+    await recordDelivery(pdb, {
+      userId,
+      status: 'skipped',
+      errorCode: 'VAPID_NOT_CONFIGURED',
+      category: payload.category ?? null,
+      source: payload.source ?? null,
+    });
     return;
   }
-
-  const pdb = await getPlatformDb();
 
   // Skip if the user muted this category.
   const prefs = await getNotificationPrefs(pdb, userId);
@@ -100,6 +113,13 @@ export async function fanOutPushToUser(userId: string, payload: PushPayload): Pr
     logger.info('push: skipped — category muted by user', {
       userId,
       category: payload.category,
+    });
+    await recordDelivery(pdb, {
+      userId,
+      status: 'skipped',
+      errorCode: 'CATEGORY_MUTED',
+      category: payload.category,
+      source: payload.source ?? null,
     });
     return;
   }
@@ -109,13 +129,30 @@ export async function fanOutPushToUser(userId: string, payload: PushPayload): Pr
     logger.info('push: skipped — user has no push subscriptions (no device ever enabled push)', {
       userId,
     });
+    await recordDelivery(pdb, {
+      userId,
+      status: 'skipped',
+      errorCode: 'NO_SUBSCRIPTIONS',
+      category: payload.category ?? null,
+      source: payload.source ?? null,
+    });
     return;
   }
 
   applyVapid();
   const resolved = resolvePayload(payload);
   const results = await Promise.allSettled(
-    subs.map((sub) => sendOne(pdb, sub.endpoint, { p256dh: sub.p256dh, auth: sub.auth }, resolved)),
+    subs.map((sub) =>
+      sendOne(
+        pdb,
+        sub.userId,
+        sub.endpoint,
+        { p256dh: sub.p256dh, auth: sub.auth },
+        resolved,
+        payload.category,
+        payload.source,
+      ),
+    ),
   );
   logger.info('push: fan-out complete', {
     userId,
@@ -149,7 +186,17 @@ export async function fanOutPushToUsers(userIds: string[], payload: PushPayload)
   applyVapid();
   const resolved = resolvePayload(payload);
   const results = await Promise.allSettled(
-    subs.map((sub) => sendOne(pdb, sub.endpoint, { p256dh: sub.p256dh, auth: sub.auth }, resolved)),
+    subs.map((sub) =>
+      sendOne(
+        pdb,
+        sub.userId,
+        sub.endpoint,
+        { p256dh: sub.p256dh, auth: sub.auth },
+        resolved,
+        payload.category,
+        payload.source,
+      ),
+    ),
   );
   logger.info('push: broadcast fan-out complete', {
     recipients: userIds.length,
@@ -160,12 +207,22 @@ export async function fanOutPushToUsers(userIds: string[], payload: PushPayload)
 
 async function sendOne(
   pdb: Awaited<ReturnType<typeof getPlatformDb>>,
+  userId: string,
   endpoint: string,
   keys: { p256dh: string; auth: string },
   payload: Omit<PushPayload, 'source'>,
+  category?: string,
+  source?: string,
 ): Promise<'sent' | 'pruned' | 'failed'> {
   try {
     await webpush.sendNotification({ endpoint, keys }, JSON.stringify(payload));
+    await recordDelivery(pdb, {
+      userId,
+      status: 'sent',
+      category: category ?? null,
+      source: source ?? null,
+      pushService: safeHost(endpoint),
+    });
     return 'sent';
   } catch (err: unknown) {
     // Prune a subscription the push service reports as gone (device
@@ -177,6 +234,14 @@ async function sendOne(
       await deletePushSubscription(pdb, endpoint).catch(() => undefined);
       logger.info('push: pruned dead subscription', {
         statusCode: err.statusCode,
+        pushService: safeHost(endpoint),
+      });
+      await recordDelivery(pdb, {
+        userId,
+        status: 'pruned',
+        errorCode: String(err.statusCode),
+        category: category ?? null,
+        source: source ?? null,
         pushService: safeHost(endpoint),
       });
       return 'pruned';
@@ -192,8 +257,76 @@ async function sendOne(
       body: isWebPushError(err) ? err.body : undefined,
       err: err instanceof Error ? err.message : String(err),
     });
+    await recordDelivery(pdb, {
+      userId,
+      status: 'failed',
+      errorCode: isWebPushError(err) ? String(err.statusCode) : errorMessage(err),
+      category: category ?? null,
+      source: source ?? null,
+      pushService: safeHost(endpoint),
+    });
     return 'failed';
   }
+}
+
+function errorMessage(err: unknown): string {
+  return (err instanceof Error ? err.message : String(err)).slice(0, 120);
+}
+
+function describeOutcome(status: PushDeliveryStatus, errorCode: string | null): string {
+  switch (status) {
+    case 'skipped':
+      switch (errorCode) {
+        case 'VAPID_NOT_CONFIGURED':
+          return 'Push notification skipped — push is not configured on this instance';
+        case 'CATEGORY_MUTED':
+          return 'Push notification skipped — category muted';
+        case 'NO_SUBSCRIPTIONS':
+          return 'Push notification skipped — no device is subscribed to push';
+        default:
+          return 'Push notification skipped';
+      }
+    case 'pruned':
+      return 'Push subscription removed — the device unsubscribed or the browser revoked it';
+    case 'failed':
+    default:
+      return 'Push notification failed to deliver';
+  }
+}
+
+/**
+ * Records one push delivery outcome to `push_delivery_log` (RFC 0016, epic
+ * task 4.6), and — for every non-`sent` outcome — mirrors it into the
+ * activity log via `logActivity`, matching `logDeliveryOutcome` in
+ * `./platform-email.ts`. This is what makes "why didn't I get a push?"
+ * answerable from Account/Console Activities instead of only server logs.
+ */
+async function recordDelivery(
+  pdb: Awaited<ReturnType<typeof getPlatformDb>>,
+  input: {
+    userId: string;
+    status: PushDeliveryStatus;
+    errorCode?: string | null;
+    category?: string | null;
+    source?: string | null;
+    pushService?: string | null;
+  },
+): Promise<void> {
+  await recordPushDelivery(pdb, { id: randomUUID(), ...input });
+  if (input.status === 'sent') return;
+  await logActivity({
+    actorType: 'system',
+    action: 'push.delivery_failed',
+    subjectUserId: input.userId,
+    visibility: 'user',
+    summary: describeOutcome(input.status, input.errorCode ?? null),
+    metadata: {
+      status: input.status,
+      errorCode: input.errorCode ?? null,
+      category: input.category ?? null,
+      pushService: input.pushService ?? null,
+    },
+  });
 }
 
 function safeHost(endpoint: string): string {

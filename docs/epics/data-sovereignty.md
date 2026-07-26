@@ -426,6 +426,103 @@ portability hooks).
 
 ---
 
+#### ✅ 8.15 — Per-database SQLite encryption enforcement (RFC 0071 follow-up)
+
+**Goal:** Fix the root cause of the 2026-07-24 production incident
+(`docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`): Task 8.14 made
+`SOVEREIGN_DB_ENCRYPTION_KEY`'s presence a **directory-wide** toggle — one
+marker file at `<dataDir>/.db-encrypted` meant "every SQLite file this
+instance owns must already be encrypted or the instance refuses to boot,"
+with no per-plugin distinction. Setting the key because one plugin
+(`sovereign-healthlog`) declared `database.requireEncryption: true` broke
+four unrelated plugins whose plaintext files had nothing to do with that
+requirement. Replace the directory-wide marker with per-database state so
+the key can be present without forcing every plugin's database to be
+encrypted.
+
+**Target behaviour:**
+
+- **Key unset:** nothing is ever encrypted — platform core or plugin. A
+  plugin manifest declaring `database.requireEncryption: true` no longer
+  fails startup; it logs a warning ("platform-wide encryption isn't
+  configured — running unencrypted") and boots normally, same posture the
+  Postgres branch of `assertPluginEncryptionRequirement` already has today.
+- **Key set:** the platform core (`sovereign.db` + `auth.db`, tied together —
+  no separate flag) is always expected to be encrypted. A plugin's isolated
+  SQLite file is encrypted **only if its own manifest requests it** via
+  `database.requireEncryption`; a plugin that doesn't request it stays
+  plaintext, untouched by the key, exactly the case the incident broke.
+- **Key set + an existing plaintext file that should be encrypted** (core, or
+  a plugin that requests it): still fails fast for that specific file only,
+  prompting `sv db encrypt` — same fail-fast spirit as Task 8.14, correctly
+  scoped instead of directory-wide.
+
+**Deliverables:**
+
+- Replace the single directory-wide marker (`packages/db/src/sqlite-encryption.ts`
+  `checkEncryptionMarker`, and its `apps/auth` twin) with **per-file state**: a
+  core marker (redefine the existing `.db-encrypted` file's meaning to cover
+  only `sovereign.db`/`auth.db`) plus a new per-plugin marker per isolated
+  `.db` file (e.g. `<dataDir>/plugins/<id>.db-encrypted`).
+- `packages/db/src/plugin-client.ts`'s `getPluginDb` reads the plugin's own
+  `database.requireEncryption` (currently never consulted at this call site —
+  root cause of the incident) and only applies the key / checks that plugin's
+  own marker when the plugin requests it; otherwise opens the file plain
+  regardless of key presence.
+- `runtime/src/plugin-migrations.ts`'s `assertPluginEncryptionRequirement`:
+  SQLite branch changes from throw-on-no-key to warn-on-no-key (mirroring its
+  existing Postgres branch); a separate check (key present, plugin requires
+  it, plugin's own marker absent, plugin's file already exists as plaintext)
+  still fails fast for that plugin only — already isolated per-plugin by the
+  incident's first fix, just re-pointed at the new per-plugin marker instead
+  of the removed directory-wide one.
+- Same treatment for `apps/auth/src/sqlite-encryption.ts` (self-contained
+  twin, per its own header comment) for `auth.db`'s tie to the core marker.
+- `bin/sv.ts`'s `sv db encrypt`/`decrypt` (`dbEncrypt`/`dbDecrypt`,
+  currently blanket over every file from `listInstanceSqliteFiles`) become
+  selective: encrypt/decrypt the core files plus only the plugin files whose
+  manifest requests it, writing/clearing each file's own marker as it goes.
+  A plugin file that never requested encryption is left untouched entirely.
+- **Backward-compat migration:** on first boot under this change, if the
+  legacy directory-wide marker is present (an existing instance that already
+  ran the old blanket `sv db encrypt`), backfill per-plugin markers for every
+  plugin `.db` file that already exists on disk — the old system encrypted
+  everything blanket-style, so their current on-disk state genuinely is
+  already-encrypted; this avoids incorrectly flagging them as needing
+  conversion. One-time, idempotent, logged.
+- `docs/self-hosting.md` / `.env.example` / `docs/security.md` updated to
+  describe the new per-database semantics; note this is a **behaviour
+  change**, not a data migration — no operator action required unless a
+  plugin's own encryption requirement changes.
+
+**Dependencies:** Task 8.14 (this directly amends its enforcement model, not
+its key/opener mechanics, which are unchanged).
+
+**SRS reference:** [RFC 0071](../rfcs/0071-sqlite-at-rest-encryption.md)
+(amendment); incident doc above.
+
+**Review checklist:**
+
+- Setting the key with only one plugin requesting encryption leaves every
+  other plugin's plaintext file untouched and bootable — the exact incident
+  scenario, verified end to end.
+- No key set + a plugin requesting encryption: boots successfully with a
+  logged warning, not a startup failure.
+- Key set + platform core already plaintext: fails fast, names `sv db
+encrypt`, same as today.
+- Key set + a requesting plugin's file already plaintext: fails fast for
+  that plugin only; every other plugin still boots (regression test for the
+  incident's original migrations-loop bug).
+- An instance upgrading from the old directory-wide-marker model boots
+  cleanly with no spurious "needs encryption" errors for already-encrypted
+  plugin files.
+- `sv db encrypt`/`decrypt` skip plugins that never requested encryption.
+- Full test suite plus a live encrypt → verify → decrypt → verify round-trip
+  against real data (per this subsystem's standing CLAUDE.md requirement).
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)

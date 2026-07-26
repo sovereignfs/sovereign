@@ -1,14 +1,17 @@
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import Database from 'better-sqlite3-multiple-ciphers';
 
 /**
- * Opt-in, single-key SQLite at-rest encryption (RFC 0071) — the auth server's
- * own copy. Deliberately self-contained rather than imported from
- * `@sovereignfs/db` (see `apps/auth/src/db.ts`'s header comment; the auth
- * server does not depend on `packages/db`), mirroring
- * `packages/db/src/sqlite-encryption.ts` field-for-field so the two stay
- * conceptually interchangeable. Keep both in sync intentionally.
+ * Opt-in, single-key SQLite at-rest encryption (RFC 0071, amended by epic task
+ * 8.15) — the auth server's own copy, covering only `auth.db`. Deliberately
+ * self-contained rather than imported from `@sovereignfs/db` (see
+ * `apps/auth/src/db.ts`'s header comment; the auth server does not depend on
+ * `packages/db`), mirroring `packages/db/src/sqlite-encryption.ts`'s core-only
+ * marker logic field-for-field so the two stay conceptually interchangeable.
+ * Keep both in sync intentionally. `packages/db`'s twin additionally has a
+ * per-plugin marker mechanism this file has no need for — `auth.db` is always
+ * a core file, never a plugin's.
  */
 const KEY_ENV = 'SOVEREIGN_DB_ENCRYPTION_KEY';
 const MARKER_FILENAME = '.db-encrypted';
@@ -47,16 +50,15 @@ function markerPath(dataDir: string): string {
   return join(dataDir, MARKER_FILENAME);
 }
 
-/** Same "does anything already exist" check as `packages/db/src/sqlite-encryption.ts` — see there. */
+/**
+ * Same core-only check as `packages/db/src/sqlite-encryption.ts` — see there.
+ * `auth.db` never touches plugin files, so this twin has no per-plugin
+ * marker concept at all (that only exists in `packages/db`, alongside
+ * `plugin-client.ts`).
+ */
 function hasExistingSqliteFiles(dataDir: string): boolean {
   for (const name of ['sovereign.db', 'auth.db']) {
     if (existsSync(join(dataDir, name))) return true;
-  }
-  const pluginsDir = join(dataDir, 'plugins');
-  if (existsSync(pluginsDir)) {
-    for (const entry of readdirSync(pluginsDir, { withFileTypes: true })) {
-      if (entry.isFile() && entry.name.endsWith('.db')) return true;
-    }
   }
   return false;
 }

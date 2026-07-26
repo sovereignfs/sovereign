@@ -177,6 +177,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.45.0  | External OAuth/OIDC provider for non-plugin apps (RFC 0072)                 | ✅     | [1.18](docs/epics/users-auth.md#-118--external-oauthoidc-provider-for-non-plugin-apps-rfc-0072)                 |
 | —       | Standalone usage of `@sovereignfs/ui` outside the plugin runtime (RFC 0073) | ✅     | [9.17](docs/epics/design-system.md#-917--standalone-usage-of-sovereignfsui-outside-the-plugin-runtime-rfc-0073) |
 | 0.46.0  | Web push delivery status logging (RFC 0016)                                 | ✅     | [4.6](docs/epics/notification-center.md#-46--web-push-delivery-status-logging)                                  |
+| 0.47.0  | Per-database SQLite encryption enforcement (RFC 0071 follow-up)             | ✅     | [8.15](docs/epics/data-sovereignty.md#-815--per-database-sqlite-encryption-enforcement-rfc-0071-follow-up)      |
 
 ---
 
@@ -238,6 +239,7 @@ once prioritised.
 | —       | Generate script decomposition                                             | 📋     | [3.23](docs/epics/plugins-runtime.md#-323--generate-script-decomposition)                                                        |
 | —       | Account plugin workflow coverage                                          | 📋     | [14.2](docs/epics/plugin-accounts.md#-142--account-plugin-workflow-coverage)                                                     |
 | —       | Console plugin workflow coverage                                          | 📋     | [13.5](docs/epics/plugin-console.md#-135--console-plugin-workflow-coverage)                                                      |
+| —       | Default plugin bundle reduced to Tasks-only (depends on 8.15)             | 📋     | [3.31](docs/epics/plugins-runtime.md#-331--default-plugin-bundle-reduced-to-tasks-only)                                          |
 | —       | Console primitive migration, Phase 2                                      | 📋     | [13.6](docs/epics/plugin-console.md#-136--console-primitive-migration-phase-2)                                                   |
 | —       | Launcher plugin workflow coverage                                         | 📋     | [15.2](docs/epics/plugin-launcher.md#-152--launcher-plugin-workflow-coverage)                                                    |
 | —       | SDK boundary and runtime contract tests                                   | 📋     | [3.24](docs/epics/plugins-runtime.md#-324--sdk-boundary-and-runtime-contract-tests)                                              |

@@ -1070,6 +1070,90 @@ verification work (`AUTH_REQUIRE_EMAIL_VERIFICATION`, made SMTP registration-cri
 
 ---
 
+#### 📋 3.31 — Default plugin bundle reduced to Tasks-only
+
+**Goal:** Stop shipping every first-party plugin (Plainwrite, Shopper, Wallet, Tritext,
+Healthlog, Ledger, Tally, Docs) and all 7 example plugins baked into the default/official
+image. A fresh checkout or the CI-published image should ship only the platform plugins
+(console/launcher/account) plus **Sovereign Tasks** — matching what `CONTRIBUTING.md`
+already documented as the intended default ("the shipped config has an empty plugins
+list") before `sovereign.plugins.json` drifted to its current 16-entry bundle without a
+matching doc update.
+
+**Current state:** `sovereign.plugins.json` is committed at the repo root with 16 entries
+and is read directly by `scripts/install-plugins.ts` (`CONFIG_PATH`) at dev time
+(`pnpm dev`), Docker build time (`Dockerfile`'s `builder` stage), and in CI
+(`publish-images.yml`, `.github/workflows/e2e.yml`). There is no per-environment
+distinction — whatever is committed ships everywhere.
+
+**Deliverables:**
+
+- New committed `sovereign.plugins.default.json` at the repo root, containing only the
+  `sovereign-tasks` entry (same repository/ref as today's `sovereign.plugins.json` entry).
+  Serves two purposes: (1) it's the fallback set used whenever no local config exists, and
+  (2) it's the template an operator copies to `sovereign.plugins.json` to declare their own
+  set.
+- `sovereign.plugins.json` removed from git tracking (`git rm --cached`) and added to
+  `.gitignore` — it becomes a local, per-checkout file, never committed or shared.
+- `scripts/install-plugins.ts`: when `sovereign.plugins.json` does not exist on disk, fall
+  back to reading `sovereign.plugins.default.json` instead of the current "nothing to
+  install" no-op (`scripts/install-plugins.ts:309-311`). A `sovereign.plugins.json` that
+  exists — including an explicit `{"plugins": []}` — is used as-is and never falls back,
+  so an operator can opt out of even Tasks deliberately. This single change is sufficient
+  for all three build contexts without any Dockerfile- or CI-specific logic:
+  - Fresh clone / `pnpm dev` → no local file → falls back to Tasks-only.
+  - `publish-images.yml` (clean checkout) → same fallback → deterministic official images.
+  - An operator's local `docker compose -f docker-compose.prod.yml up --build` → their own
+    gitignored `sovereign.plugins.json` (already flows into the build context today —
+    `.dockerignore` excludes cloned `plugins/*/` dirs but not the config file itself) is
+    used as-is, shipping their custom set.
+- `.github/workflows/e2e.yml`: add a step that writes a local `sovereign.plugins.json`
+  (at minimum `sovereign-healthlog`, for the RFC 0071 `database.requireEncryption`
+  coverage — audit the e2e specs for any other plugin routes exercised and include those
+  too) before the existing `pnpm install:plugins` step, so CI coverage doesn't regress.
+  With Task 8.15 landed first, adding `sovereign-healthlog` here no longer risks breaking
+  any other plugin's boot — its encryption requirement stays scoped to its own database.
+- `CONTRIBUTING.md` — "Installing external plugins" / "Cloning your own plugins" sections:
+  describe the `sovereign.plugins.default.json` template + gitignored
+  `sovereign.plugins.json` split; fix the now-accurate-again "shipped config has an empty
+  plugins list" framing.
+- `docs/self-hosting.md` — rewrite "Bundled example plugins" and "Bundled default plugins"
+  sections: only Tasks ships by default now; document the two supported paths for running a
+  larger plugin set in production — self-building the image from a checkout with a custom
+  `sovereign.plugins.json`, or maintaining that file in a separate deployment/infra
+  workflow.
+- `docs/plugin-development.md` — update the `sovereign.plugins.json` reference sections to
+  note the default-file fallback and the file's gitignored status.
+- `docs/upgrade.md` — a migration note: from this version, only Tasks ships by default;
+  anyone relying on a previously-bundled plugin must declare it in their own
+  `sovereign.plugins.json` (using `sovereign.plugins.default.json` as a starting template)
+  before their next rebuild, or its code drops out of the image. Its database tables and
+  data are untouched either way and it reappears the moment the plugin is re-declared and
+  the image is rebuilt.
+
+**Dependencies:** Task 3.29 (private plugin repositories — defines the `PluginEntry`/
+`tokenEnv` shape this task's fallback logic builds on, unchanged here). Task 8.15
+(per-database SQLite encryption enforcement) must land first — this task's e2e
+deliverable re-adds `sovereign-healthlog` to CI's plugin set, which is only safe once
+8.15 fixes encryption enforcement to be scoped per-plugin instead of directory-wide.
+
+**SRS reference:** SRS §3.9 Plugin Loading Model (build-time composition is unchanged —
+only which plugins are declared by default).
+
+**Review checklist:**
+
+- A fresh clone with no local `sovereign.plugins.json`, running `pnpm dev`, shows only
+  platform plugins (console/launcher/account) plus Tasks — no Plainwrite/Shopper/Wallet/
+  Tritext/Healthlog/Ledger/Tally/Docs/examples.
+- A local `sovereign.plugins.json` with a custom plugin list, present at Docker build time,
+  ships exactly that set — the default file is not consulted when the local one exists.
+- An explicit `{"plugins": []}` local file installs nothing, not even Tasks.
+- `publish-images.yml`'s image (built from a clean checkout) matches the fresh-clone case.
+- `.github/workflows/e2e.yml` still passes with its required plugins present.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0004 — Per-plugin database](../rfcs/0004-per-plugin-database.md)

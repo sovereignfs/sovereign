@@ -4,7 +4,11 @@ import {
   hardDeleteUserE2eeData,
   hardDeleteUserStorageObjects,
 } from '@sovereignfs/db';
-import { manifestDatabaseDialect, manifestDatabaseIsolation } from '@sovereignfs/manifest';
+import {
+  manifestDatabaseDialect,
+  manifestDatabaseIsolation,
+  manifestRequiresEncryption,
+} from '@sovereignfs/manifest';
 import type { DeletionResult } from '@sovereignfs/sdk';
 import { getPlatformDb } from './db';
 import { findAvatarFile } from './avatars';
@@ -69,7 +73,11 @@ export async function deleteUser(userId: string, tenantId: string): Promise<Dele
       let db: unknown;
       try {
         if (manifest && manifestDatabaseIsolation(manifest.database) === 'isolated') {
-          db = getPluginDb(pluginId, manifestDatabaseDialect(manifest.database)).db;
+          db = getPluginDb(
+            pluginId,
+            manifestDatabaseDialect(manifest.database),
+            manifestRequiresEncryption(manifest.database),
+          ).db;
         } else {
           db = (await getPlatformDb()).db;
         }

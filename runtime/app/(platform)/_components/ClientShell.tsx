@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { ToastProvider } from '@sovereignfs/ui';
 import { offline } from '@sovereignfs/sdk/offline';
+import { underPrefix } from '@/src/route-guard';
 import { computeViewportHeight } from '@/src/viewport-height';
 
 /** localStorage marker for the last authenticated user id this device purged
@@ -53,21 +54,54 @@ function syncViewport() {
   }
 }
 
-/** Wraps the shell in client providers and installs viewport-sync hooks. */
+/**
+ * Wraps the shell in client providers and installs viewport-sync hooks.
+ *
+ * Also works around a Next.js App Router caching gap: `(platform)/layout.tsx`
+ * renders a degraded, user-neutral shell (no personalized sidebar plugin
+ * icons) for manifest-declared offline routes (RFC 0072) — required so a
+ * service-worker-precached document never bakes in one user's personalized
+ * chrome. But that layout is shared across every platform route, and
+ * Next.js only re-fetches/re-executes a shared layout when the navigation
+ * actually changes that segment — client-side navigation between sibling
+ * routes reuses its already-rendered output instead of re-reading request
+ * headers. So once a live tab soft-navigates into an offline route (e.g.
+ * `/launcher`), the degraded shell keeps rendering for every subsequent
+ * client-side navigation, even to routes that aren't offline routes at all,
+ * until a hard reload. `offlineRoutePrefixes` (computed server-side from the
+ * manifest registry, not per-request state) lets this component detect
+ * exactly the two pathnames where offline-ness actually flips and force a
+ * `router.refresh()` only there — everywhere else keeps the normal,
+ * unrefreshed client navigation.
+ */
 export function ClientShell({
   children,
   userId,
+  offlineRoutePrefixes,
 }: {
   children: React.ReactNode;
   userId: string | null;
+  offlineRoutePrefixes: string[];
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const previousPathnameRef = useRef(pathname);
 
   // Mount-only: catches a persisted session belonging to a different user
   // than this device last purged for (see purgeIfUserChanged above).
   useEffect(() => {
     purgeIfUserChanged(userId);
   }, []);
+
+  useEffect(() => {
+    const previousPathname = previousPathnameRef.current;
+    previousPathnameRef.current = pathname;
+    if (previousPathname === pathname) return;
+    const isOffline = (p: string) => offlineRoutePrefixes.some((prefix) => underPrefix(p, prefix));
+    if (isOffline(previousPathname) !== isOffline(pathname)) {
+      router.refresh();
+    }
+  }, [pathname, router, offlineRoutePrefixes]);
 
   useEffect(() => {
     syncViewport();

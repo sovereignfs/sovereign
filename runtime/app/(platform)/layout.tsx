@@ -8,7 +8,7 @@ import { hasCapability } from '@/src/capabilities';
 import { getPlatformDb } from '@/src/db';
 import { getRestrictedPluginIds } from '@/src/plugin-access-server';
 import { getDisabledPluginIds } from '@/src/plugin-status';
-import { getInstalledPlugins } from '@/src/registry';
+import { getInstalledPlugins, getOfflineRoutePrefixes } from '@/src/registry';
 import { applySidebarOrder, selectSidebarPlugins } from '@/src/launcher-plugins';
 import { InstanceProvider } from '@/src/instance-provider';
 import { AccountMenu } from './_components/AccountMenu';
@@ -59,6 +59,11 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   );
 
   const allPlugins = getInstalledPlugins();
+  // Passed to ClientShell so it can force a refresh when a client-side
+  // navigation crosses into or out of an offline route — see that
+  // component's docblock for why this shared layout otherwise leaks the
+  // degraded offline shell into unrelated subsequent navigations.
+  const offlineRoutePrefixes = getOfflineRoutePrefixes(allPlugins);
   // The Launcher is a chrome plugin (hidden from its own tiles) but should
   // always appear as the first icon in the sidebar so users can return home.
   // It's already unfiltered by per-user restriction/order, so it's the one
@@ -130,7 +135,10 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   return (
     <InstanceProvider>
       {({ instanceName, instanceLogoUrl }) => (
-        <ClientShell userId={isOfflineRoute ? null : userId}>
+        <ClientShell
+          userId={isOfflineRoute ? null : userId}
+          offlineRoutePrefixes={offlineRoutePrefixes}
+        >
           <div className={styles.shell}>
             <OfflineBanner />
             <aside className={styles.sidebar} aria-label="Primary navigation">

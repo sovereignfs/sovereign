@@ -35,6 +35,15 @@ jobs:
       # the checkout has none, so install:plugins would otherwise fall back to
       # sovereign.plugins.default.json (Sovereign Tasks only). Declare exactly
       # what this job needs instead:
+      #   - example-basic: no spec exercises it directly, but it's required to
+      #     keep launcher.spec.ts's generic "click the first tile" test
+      #     passing. The launcher grid sorts installed plugins alphabetically
+      #     by manifest id (scripts/generate-registry.ts); without a plugin
+      #     that sorts before "fs.sovereign.example-monetized", that paywalled
+      #     plugin becomes the first tile and the test's plain-navigation
+      #     assertion fails on the paywall redirect instead. example-basic
+      #     ("...example-basic" < "...example-monetized") is a free,
+      #     ungated plugin, so it restores the original assumption cheaply.
       #   - example-monetized: the paywall golden path exercises this plugin
       #     directly (see __tests__/e2e/paywall.spec.ts, global-setup.ts).
       #   - sovereign-healthlog: not exercised by any spec's UI flow, but kept
@@ -46,6 +55,12 @@ jobs:
           cat > sovereign.plugins.json <<'EOF'
           {
             "plugins": [
+              {
+                "id": "example-basic",
+                "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
+                "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",
+                "subdir": "example-basic"
+              },
               {
                 "id": "example-monetized",
                 "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",

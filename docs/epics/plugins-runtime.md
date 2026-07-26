@@ -1113,6 +1113,13 @@ distinction — whatever is committed ships everywhere.
   too) before the existing `pnpm install:plugins` step, so CI coverage doesn't regress.
   With Task 8.15 landed first, adding `sovereign-healthlog` here no longer risks breaking
   any other plugin's boot — its encryption requirement stays scoped to its own database.
+  Trimming the declared set also has an indirect effect worth knowing about: the launcher
+  grid sorts installed plugins alphabetically by manifest id
+  (`scripts/generate-registry.ts`), so `launcher.spec.ts`'s generic "click the first tile"
+  test implicitly depends on whichever plugin sorts first _not_ requiring a paywall
+  redirect or other special-cased navigation. `example-basic` is declared alongside
+  `example-monetized` specifically to keep that assumption true — dropping it reintroduces
+  the failure.
 - `CONTRIBUTING.md` — "Installing external plugins" / "Cloning your own plugins" sections:
   describe the `sovereign.plugins.default.json` template + gitignored
   `sovereign.plugins.json` split; fix the now-accurate-again "shipped config has an empty

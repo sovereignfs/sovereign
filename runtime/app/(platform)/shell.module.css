@@ -245,11 +245,33 @@
     );
   }
 
+  /* A plugin hiding its mobile header/footer (shellConfig.mobileHeader/
+     mobileFooter, RFC 0075) collapses the corresponding height variable to 0 —
+     every consumer (.content's footer-clearance padding, --sv-dialog-inset-top,
+     MobileSearch's top/bottom clearance, NotificationBell's popover offset)
+     references these variables and inherits the fix automatically through the
+     cascade; nothing else needs to change per-consumer. The attribute selector
+     out-specificities the plain .shell rule above regardless of source order,
+     since both target the same element. */
+  .shell[data-mobile-header-hidden] {
+    --sv-shell-header-height: 0px;
+  }
+
+  .shell[data-mobile-footer-hidden] {
+    --sv-shell-footer-height: 0px;
+  }
+
   .sidebar {
     display: none;
   }
 
   .content {
+    /* Explicit row (not implicit DOM-order placement) so a plugin hiding its
+       mobile header and/or footer (shellConfig.mobileHeader/mobileFooter,
+       RFC 0075) doesn't shift .content into the wrong grid row — omitting a
+       sibling would otherwise re-number the remaining rows via CSS Grid's
+       default row-major auto-placement. */
+    grid-row: 2;
     padding: var(--sv-space-4);
     padding-bottom: calc(var(--sv-shell-footer-height, 60px) + var(--sv-space-4));
     /* Content cell scrolls within the fixed-height shell grid. */
@@ -281,6 +303,8 @@
   }
 
   .mobileHeader {
+    /* Explicit row — see the .content comment above (RFC 0075). */
+    grid-row: 1;
     display: flex;
     align-items: center;
     justify-content: space-between;

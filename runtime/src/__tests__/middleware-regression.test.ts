@@ -73,6 +73,12 @@ const offlineRoutePlugin = {
   offline: { routes: [{ prefix: '/lists' }] },
 } as SovereignManifest;
 
+const mobileChromePlugin = {
+  id: 'com.example.canvas',
+  routePrefix: '/canvas',
+  shellConfig: { mobileHeader: false, mobileFooter: false },
+} as SovereignManifest;
+
 const paidPublicRoutePlugin = {
   id: 'com.example.paid-blog',
   routePrefix: '/paid-blog',
@@ -167,6 +173,7 @@ describe('runtime middleware regressions', () => {
       publicRoutePlugin,
       paidPublicRoutePlugin,
       offlineRoutePlugin,
+      mobileChromePlugin,
     ];
     fetchState = {
       session: session(),
@@ -323,6 +330,36 @@ describe('runtime middleware regressions', () => {
       const response = await middleware(request('/'));
 
       expect(response.headers.get('x-middleware-request-x-sovereign-offline-route')).toBeNull();
+    });
+  });
+
+  describe('mobile chrome flags (RFC 0075)', () => {
+    it('flags both header and footer hidden for a plugin declaring both false', async () => {
+      const response = await middleware(request('/canvas'));
+
+      expect(response.headers.get('x-middleware-request-x-sovereign-mobile-header')).toBe('0');
+      expect(response.headers.get('x-middleware-request-x-sovereign-mobile-footer')).toBe('0');
+    });
+
+    it('flags a nested route under the plugin prefix the same way', async () => {
+      const response = await middleware(request('/canvas/doc/1'));
+
+      expect(response.headers.get('x-middleware-request-x-sovereign-mobile-header')).toBe('0');
+      expect(response.headers.get('x-middleware-request-x-sovereign-mobile-footer')).toBe('0');
+    });
+
+    it('does not flag a plugin with no shellConfig override', async () => {
+      const response = await middleware(request('/launcher'));
+
+      expect(response.headers.get('x-middleware-request-x-sovereign-mobile-header')).toBeNull();
+      expect(response.headers.get('x-middleware-request-x-sovereign-mobile-footer')).toBeNull();
+    });
+
+    it('does not flag bare "/" ', async () => {
+      const response = await middleware(request('/'));
+
+      expect(response.headers.get('x-middleware-request-x-sovereign-mobile-header')).toBeNull();
+      expect(response.headers.get('x-middleware-request-x-sovereign-mobile-footer')).toBeNull();
     });
   });
 

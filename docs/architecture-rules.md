@@ -117,6 +117,43 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   platform nav, so the plugin must provide its own navigation back to `/launcher` or other
   routes if needed. Never reintroduce `process.exit(1)` for the minimal case in
   `generate-registry.ts` — it is wired.
+- **`shell: default` plugins can independently hide the mobile header and/or
+  footer via `shellConfig.mobileHeader`/`shellConfig.mobileFooter` (RFC 0075,
+  both boolean, default `true`) — this is a per-request runtime branch inside
+  `(platform)/layout.tsx`, not build-time route-group composition** (unlike
+  `overlay`/`minimal` above). It has to be: the desktop sidebar must render
+  identically regardless of the toggle, and there's no route-group split that
+  varies just the two mobile-only elements without duplicating the sidebar
+  markup across every combination. `getMobileChromeConfig()`
+  (`runtime/src/registry.ts`) resolves the per-plugin override; the middleware
+  sets `x-sovereign-mobile-header`/`x-sovereign-mobile-footer` (mirroring the
+  offline-route flag below) only when a value deviates from the default;
+  `(platform)/layout.tsx` omits the `<header data-mobile-header>` block and/or
+  `<MobileNav>` **server-side** (not CSS-hidden) based on those headers.
+  **Load-bearing details, easy to regress:**
+  (1) `shell.module.css`'s mobile grid (`grid-template-rows: auto 1fr auto`)
+  relied on implicit DOM-order placement before this — `.mobileHeader`,
+  `.content`, and `MobileNav.module.css`'s `.footer` now each declare an
+  explicit `grid-row` so omitting a sibling can't renumber the others (a
+  stretched footer over the content row is the failure mode if this is ever
+  removed). (2) `--sv-shell-header-height`/`--sv-shell-footer-height` collapse
+  to `0px` via `.shell[data-mobile-header-hidden]`/`[data-mobile-footer-hidden]`
+  attribute selectors (higher specificity than the base `.shell` rule, same
+  element) — every downstream consumer (`.content`'s footer-clearance padding,
+  `--sv-dialog-inset-top`, `MobileSearch`'s top/bottom clearance,
+  `NotificationBell`'s popover offset) inherits the fix through the CSS
+  custom-property cascade; don't re-derive per-consumer overrides. (3)
+  `ClientShell`'s offline-route refresh-diffing (see below) is generalized —
+  not duplicated — to also force `router.refresh()` when a client-side
+  navigation crosses a mobile-chrome visibility boundary, using the shared
+  `mobileHeaderVisible`/`mobileFooterVisible` helpers in
+  `runtime/src/mobile-chrome.ts`; without it a soft nav into/out of a
+  reduced-chrome plugin would keep rendering the previous route's header/
+  footer state. That same effect also directly sets/clears the
+  `--sv-dialog-inset-top` inline style on transition, since
+  `syncViewport()`'s `[data-mobile-header]` measurement only runs on mount and
+  specific resize/visibility events — never on a plain pathname change — so it
+  can't be relied on to correct a stale inline value across navigations.
 - **`adminOnly` routes are gated in the runtime middleware.** A request under an
   admin-only plugin's `routePrefix` from a non-`platform:admin` user returns 403
   (SRS §3.4, PLT-03).

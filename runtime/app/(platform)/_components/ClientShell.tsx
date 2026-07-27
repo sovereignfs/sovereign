@@ -6,6 +6,8 @@ import { ToastProvider } from '@sovereignfs/ui';
 import { offline } from '@sovereignfs/sdk/offline';
 import { underPrefix } from '@/src/route-guard';
 import { computeViewportHeight } from '@/src/viewport-height';
+import type { MobileChromeOverride } from '@/src/registry';
+import { mobileFooterVisible, mobileHeaderVisible } from '@/src/mobile-chrome';
 
 /** localStorage marker for the last authenticated user id this device purged
  *  the offline cache for. `runtime/src/complete-sign-in.ts` already purges
@@ -59,18 +61,21 @@ function syncViewport() {
  *
  * Also works around a Next.js App Router caching gap: `(platform)/layout.tsx`
  * renders a degraded, user-neutral shell (no personalized sidebar plugin
- * icons) for manifest-declared offline routes (RFC 0072) — required so a
+ * icons) for manifest-declared offline routes (RFC 0074), and independently
+ * renders a per-plugin reduced mobile chrome (RFC 0075) — both required so a
  * service-worker-precached document never bakes in one user's personalized
- * chrome. But that layout is shared across every platform route, and
- * Next.js only re-fetches/re-executes a shared layout when the navigation
- * actually changes that segment — client-side navigation between sibling
- * routes reuses its already-rendered output instead of re-reading request
- * headers. So once a live tab soft-navigates into an offline route (e.g.
- * `/launcher`), the degraded shell keeps rendering for every subsequent
- * client-side navigation, even to routes that aren't offline routes at all,
- * until a hard reload. `offlineRoutePrefixes` (computed server-side from the
- * manifest registry, not per-request state) lets this component detect
- * exactly the two pathnames where offline-ness actually flips and force a
+ * chrome, and so a plugin's `shellConfig.mobileHeader`/`mobileFooter` choice
+ * actually takes effect. But that layout is shared across every platform
+ * route, and Next.js only re-fetches/re-executes a shared layout when the
+ * navigation actually changes that segment — client-side navigation between
+ * sibling routes reuses its already-rendered output instead of re-reading
+ * request headers. So once a live tab soft-navigates into an offline route
+ * (e.g. `/launcher`) or into/out of a plugin with reduced mobile chrome, the
+ * previous route's shell state keeps rendering for every subsequent
+ * client-side navigation, even to routes that don't share it, until a hard
+ * reload. `offlineRoutePrefixes` and `mobileChromeConfig` (both computed
+ * server-side from the manifest registry, not per-request state) let this
+ * component detect exactly the pathnames where either flips and force a
  * `router.refresh()` only there — everywhere else keeps the normal,
  * unrefreshed client navigation.
  */
@@ -78,10 +83,12 @@ export function ClientShell({
   children,
   userId,
   offlineRoutePrefixes,
+  mobileChromeConfig,
 }: {
   children: React.ReactNode;
   userId: string | null;
   offlineRoutePrefixes: string[];
+  mobileChromeConfig: MobileChromeOverride[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -98,10 +105,31 @@ export function ClientShell({
     previousPathnameRef.current = pathname;
     if (previousPathname === pathname) return;
     const isOffline = (p: string) => offlineRoutePrefixes.some((prefix) => underPrefix(p, prefix));
-    if (isOffline(previousPathname) !== isOffline(pathname)) {
+    const headerVisible = mobileHeaderVisible(pathname, mobileChromeConfig);
+    const footerVisible = mobileFooterVisible(pathname, mobileChromeConfig);
+    if (
+      isOffline(previousPathname) !== isOffline(pathname) ||
+      headerVisible !== mobileHeaderVisible(previousPathname, mobileChromeConfig) ||
+      footerVisible !== mobileFooterVisible(previousPathname, mobileChromeConfig)
+    ) {
       router.refresh();
     }
-  }, [pathname, router, offlineRoutePrefixes]);
+    // The mobile header's rendered height only varies (today) by whether it's
+    // present at all — every default-shell plugin shares identical header
+    // markup otherwise — so this doesn't need a re-measurement, just an
+    // immediate, DOM-independent correction: syncViewport()'s mount-time
+    // measurement never re-runs on a plain pathname change (its effect has an
+    // empty dependency array), so without this, --sv-dialog-inset-top would
+    // keep the previous route's stale px value across a header-visibility
+    // transition instead of picking up the CSS-cascaded 0px (header hidden)
+    // or the standard formula (header shown) that shell.module.css now
+    // derives from data-mobile-header-hidden.
+    if (!headerVisible) {
+      document.documentElement.style.setProperty('--sv-dialog-inset-top', '0px');
+    } else {
+      document.documentElement.style.removeProperty('--sv-dialog-inset-top');
+    }
+  }, [pathname, router, offlineRoutePrefixes, mobileChromeConfig]);
 
   useEffect(() => {
     syncViewport();

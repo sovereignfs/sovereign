@@ -7,7 +7,11 @@ import { hasCapability } from '@/src/capabilities';
 import { getPlatformDb } from '@/src/db';
 import { getRestrictedPluginIds } from '@/src/plugin-access-server';
 import { getDisabledPluginIds } from '@/src/plugin-status';
-import { getInstalledPlugins, getOfflineRoutePrefixes } from '@/src/registry';
+import {
+  getInstalledPlugins,
+  getMobileChromeConfig,
+  getOfflineRoutePrefixes,
+} from '@/src/registry';
 import { applySidebarOrder, selectSidebarPlugins } from '@/src/launcher-plugins';
 import { InstanceProvider } from '@/src/instance-provider';
 import { AccountMenu } from './_components/AccountMenu';
@@ -45,6 +49,14 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   // unfiltered by restriction/order today, is kept).
   const isOfflineRoute = h.get('x-sovereign-offline-route') === '1';
 
+  // Per-plugin mobile header/footer visibility (shellConfig.mobileHeader /
+  // shellConfig.mobileFooter, RFC 0075). The desktop sidebar is never
+  // affected — these two flags only ever gate the two mobile-only elements
+  // below. Omitted server-side (not CSS-hidden) so a plugin that hides one
+  // never pays for its hydration/DOM cost.
+  const showMobileHeader = h.get('x-sovereign-mobile-header') !== '0';
+  const showMobileFooter = h.get('x-sovereign-mobile-footer') !== '0';
+
   const role = h.get('x-sovereign-user-role') ?? 'platform:user';
   const isAdmin = !isOfflineRoute && hasCapability(role, 'console:access');
   const userId = h.get('x-sovereign-user-id');
@@ -65,6 +77,12 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   // component's docblock for why this shared layout otherwise leaks the
   // degraded offline shell into unrelated subsequent navigations.
   const offlineRoutePrefixes = getOfflineRoutePrefixes(allPlugins);
+  // Passed to ClientShell for the same reason — a client-side navigation
+  // between two plugins with different shellConfig.mobileHeader/mobileFooter
+  // needs to force a refresh so this shared layout re-reads the per-route
+  // headers above instead of reusing the previous route's rendered chrome
+  // (RFC 0075).
+  const mobileChromeConfig = getMobileChromeConfig(allPlugins);
   // The Launcher is a chrome plugin (hidden from its own tiles) but should
   // always appear as the first icon in the sidebar so users can return home.
   // It's already unfiltered by per-user restriction/order, so it's the one
@@ -166,8 +184,13 @@ export default async function PlatformLayout({ children }: { children: ReactNode
         <ClientShell
           userId={isOfflineRoute ? null : userId}
           offlineRoutePrefixes={offlineRoutePrefixes}
+          mobileChromeConfig={mobileChromeConfig}
         >
-          <div className={styles.shell}>
+          <div
+            className={styles.shell}
+            data-mobile-header-hidden={showMobileHeader ? undefined : ''}
+            data-mobile-footer-hidden={showMobileFooter ? undefined : ''}
+          >
             <OfflineBanner />
             <aside className={styles.sidebar} aria-label="Primary navigation">
               <Link href="/" className={styles.brand} aria-label={`${instanceName} home`}>
@@ -199,44 +222,52 @@ export default async function PlatformLayout({ children }: { children: ReactNode
             </aside>
 
             {/* Mobile header: brand · active-plugin title · bell · avatar menu (RFC 0013).
-                Console is added to the avatar menu for admins (no sidebar on mobile). */}
-            <header className={styles.mobileHeader} data-mobile-header>
-              <Link href="/" className={styles.mobileBrand} aria-label={`${instanceName} home`}>
-                <span className={styles.mobileBrandIcon} aria-hidden="true">
-                  {instanceLogoUrl ? (
-                    <img src={instanceLogoUrl} alt="" className={styles.brandLogoImg} />
-                  ) : (
-                    instanceName.charAt(0).toUpperCase()
-                  )}
-                </span>
-                <span className={styles.mobileBrandName}>{instanceName}</span>
-              </Link>
-              <div className={styles.mobileHeaderRight}>
-                <NotificationBell />
-                <AccountMenu
-                  avatar={accountAvatar}
-                  avatarImageClassName={styles.avatarImage}
-                  triggerClassName={styles.avatar}
-                  placement="header"
-                  showConsole={isAdmin}
-                  userName={userName}
-                  userEmail={userEmail}
-                  userImage={userImage}
-                  hydrateUser={isOfflineRoute}
-                />
-              </div>
-            </header>
+                Console is added to the avatar menu for admins (no sidebar on mobile).
+                Omitted entirely (not CSS-hidden) when the current plugin's
+                shellConfig.mobileHeader is false (RFC 0075). */}
+            {showMobileHeader && (
+              <header className={styles.mobileHeader} data-mobile-header>
+                <Link href="/" className={styles.mobileBrand} aria-label={`${instanceName} home`}>
+                  <span className={styles.mobileBrandIcon} aria-hidden="true">
+                    {instanceLogoUrl ? (
+                      <img src={instanceLogoUrl} alt="" className={styles.brandLogoImg} />
+                    ) : (
+                      instanceName.charAt(0).toUpperCase()
+                    )}
+                  </span>
+                  <span className={styles.mobileBrandName}>{instanceName}</span>
+                </Link>
+                <div className={styles.mobileHeaderRight}>
+                  <NotificationBell />
+                  <AccountMenu
+                    avatar={accountAvatar}
+                    avatarImageClassName={styles.avatarImage}
+                    triggerClassName={styles.avatar}
+                    placement="header"
+                    showConsole={isAdmin}
+                    userName={userName}
+                    userEmail={userEmail}
+                    userImage={userImage}
+                    hydrateUser={isOfflineRoute}
+                  />
+                </div>
+              </header>
+            )}
 
             <main id="main-scroll" className={styles.content}>
               {children}
             </main>
 
             {/* Mobile footer: single "Apps" button opens a Drawer (RFC 0013).
-                Replaces the persistent icon strip which clutters small viewports. */}
-            <MobileNav
-              plugins={pluginList}
-              launcherIconUrl={launcher?.icon ? `/plugin-icons/${launcher.id}.svg` : undefined}
-            />
+                Replaces the persistent icon strip which clutters small viewports.
+                Omitted entirely (not CSS-hidden) when the current plugin's
+                shellConfig.mobileFooter is false (RFC 0075). */}
+            {showMobileFooter && (
+              <MobileNav
+                plugins={pluginList}
+                launcherIconUrl={launcher?.icon ? `/plugin-icons/${launcher.id}.svg` : undefined}
+              />
+            )}
           </div>
         </ClientShell>
       )}

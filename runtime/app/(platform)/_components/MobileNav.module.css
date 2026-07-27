@@ -5,6 +5,11 @@
 
 @media (max-width: 768px) {
   .footer {
+    /* Explicit row (not implicit DOM-order placement) so a plugin hiding its
+       mobile header (shellConfig.mobileHeader, RFC 0075) doesn't shift this
+       footer into .shell's content row — see shell.module.css's .content
+       comment for the full explanation. */
+    grid-row: 3;
     display: flex;
     align-items: center;
     padding: 0 var(--sv-space-4);

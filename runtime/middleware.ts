@@ -415,6 +415,17 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   );
   if (currentPlugin) headers.set('x-sovereign-plugin-id', currentPlugin.id);
 
+  // Flag a per-plugin mobile chrome override (`shellConfig.mobileHeader` /
+  // `shellConfig.mobileFooter`, RFC 0075) so `(platform)/layout.tsx` can skip
+  // rendering the mobile header/footer for this route. Absent header = shown
+  // (current behavior); '0' = hidden. Desktop sidebar is never affected.
+  if (currentPlugin?.shellConfig?.mobileHeader === false) {
+    headers.set('x-sovereign-mobile-header', '0');
+  }
+  if (currentPlugin?.shellConfig?.mobileFooter === false) {
+    headers.set('x-sovereign-mobile-footer', '0');
+  }
+
   // Flag a manifest-declared offline route (RFC 0072) so `(platform)/layout.tsx`
   // can render a user-neutral shell for it — the platform shell chrome (name,
   // avatar, personalized sidebar order) is otherwise per-user SSR, and a

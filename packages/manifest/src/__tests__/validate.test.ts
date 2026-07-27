@@ -337,6 +337,47 @@ describe('validateManifest', () => {
     }
   });
 
+  it('accepts shellConfig.mobileHeader/mobileFooter with no shell set (RFC 0075)', () => {
+    const res = validateManifest({
+      ...base,
+      shellConfig: { mobileHeader: false, mobileFooter: false },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('accepts shellConfig.mobileHeader/mobileFooter when shell is "default" (RFC 0075)', () => {
+    const res = validateManifest({
+      ...base,
+      shell: 'default',
+      shellConfig: { mobileFooter: false },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects shellConfig.mobileHeader when shell is "minimal" (RFC 0075)', () => {
+    const res = validateManifest({
+      ...base,
+      shell: 'minimal',
+      shellConfig: { mobileHeader: false },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('mobileHeader');
+    }
+  });
+
+  it('rejects shellConfig.mobileFooter when shell is "overlay" (RFC 0075)', () => {
+    const res = validateManifest({
+      ...base,
+      shell: 'overlay',
+      shellConfig: { mobileFooter: false },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('mobileFooter');
+    }
+  });
+
   it('accepts the reserved cross-plugin data-sharing permissions (RFC 0002)', () => {
     const res = validateManifest({
       ...base,

@@ -20,6 +20,16 @@ describe('Button', () => {
     expect(button.className).toContain('sm');
   });
 
+  it('applies the lg size class', () => {
+    render(<Button size="lg">Upgrade</Button>);
+    expect(screen.getByRole('button', { name: 'Upgrade' }).className).toContain('lg');
+  });
+
+  it('defaults to the md size class', () => {
+    render(<Button>Confirm</Button>);
+    expect(screen.getByRole('button', { name: 'Confirm' }).className).toContain('md');
+  });
+
   it('defaults to type="button"', () => {
     render(<Button>Save</Button>);
     expect(screen.getByRole('button', { name: 'Save' }).getAttribute('type')).toBe('button');

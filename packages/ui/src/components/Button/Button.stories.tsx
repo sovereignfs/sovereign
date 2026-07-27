@@ -16,7 +16,7 @@ const meta = {
   },
   argTypes: {
     variant: { control: 'select', options: ['primary', 'secondary', 'ghost', 'destructive'] },
-    size: { control: 'select', options: ['sm', 'md'] },
+    size: { control: 'select', options: ['sm', 'md', 'lg'] },
     disabled: { control: 'boolean' },
     loading: { control: 'boolean' },
     children: { control: 'text' },
@@ -38,6 +38,7 @@ export const Destructive: Story = { args: { variant: 'destructive', children: 'D
 
 export const Small: Story = { args: { size: 'sm' } };
 export const Medium: Story = { args: { size: 'md' } };
+export const Large: Story = { args: { size: 'lg' } };
 
 export const Disabled: Story = { args: { disabled: true } };
 export const DisabledSecondary: Story = { args: { variant: 'secondary', disabled: true } };
@@ -71,7 +72,7 @@ export const AllVariants: Story = {
   render: (_args) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'flex-start' }}>
       {(['primary', 'secondary', 'ghost', 'destructive'] as const).map((v) =>
-        (['md', 'sm'] as const).map((s) => (
+        (['lg', 'md', 'sm'] as const).map((s) => (
           <Button key={`${v}-${s}`} variant={v} size={s}>
             {v} / {s}
           </Button>

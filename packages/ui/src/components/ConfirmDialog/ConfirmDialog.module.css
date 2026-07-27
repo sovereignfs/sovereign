@@ -65,7 +65,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--sv-space-2);
-  padding: 13px var(--sv-space-4);
+  padding: 7px var(--sv-space-4);
   border: 1px solid transparent;
   border-radius: var(--sv-radius-md);
   font-family: var(--sv-font-family);

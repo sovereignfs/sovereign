@@ -1508,7 +1508,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="Button"
               importLine="import { Button } from '@sovereignfs/ui';"
-              usage="Primary interactive control. Four variants: primary, secondary, ghost, destructive. Two sizes: md (default), sm. loading disables the button, sets aria-busy, and shows a spinner. 44px min-height under (pointer: coarse); hover behind (hover: hover)."
+              usage="Primary interactive control. Four variants: primary, secondary, ghost, destructive. Three sizes: lg, md (default), sm. loading disables the button, sets aria-busy, and shows a spinner. 44px min-height under (pointer: coarse); hover behind (hover: hover)."
             >
               <Button>Primary</Button>
               <Button variant="secondary">Secondary</Button>
@@ -1516,6 +1516,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               <Button variant="destructive" size="sm">
                 Delete
               </Button>
+              <Button size="lg">Large</Button>
               <Button loading>Saving…</Button>
             </ComponentCard>
 

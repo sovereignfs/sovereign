@@ -282,7 +282,15 @@
        constrains the cell to its 1fr allocation so overflow-x on inner elements
        clips correctly instead of escaping to the viewport. */
     min-width: 0;
-    overflow-x: hidden;
+    /* clip, not hidden: `overflow: hidden` still creates a scroll container
+       that the browser will programmatically scroll (e.g. native
+       scroll-into-view on focus) even though nothing is user-scrollable —
+       an off-screen absolutely-positioned descendant (a Tooltip's `.tip`
+       centered on a trigger near the viewport edge, for one) becoming
+       visible on focus is enough to shift this entire cell sideways with no
+       way back short of a reload. `clip` disables scrolling outright, so
+       that off-screen box is clipped instead of scrolled to. */
+    overflow-x: clip;
     /* Disable iOS rubber-band bounce on the main content scroll surface — the
        same reason it's disabled in Dialog .content. Without this, over-scrolling
        reveals the white shell background above/below the content area. */

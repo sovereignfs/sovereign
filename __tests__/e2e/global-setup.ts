@@ -17,9 +17,10 @@ async function loginAndSave(
 ): Promise<void> {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
-  // Unauthenticated visits redirect to the runtime's same-origin login page.
+  // Unauthenticated GET / is rewritten (not redirected) to the login document
+  // so the URL stays "/" — see runtime/middleware.ts's iOS PWA splash rewrite.
   await page.goto(`${RUNTIME}/`);
-  await page.waitForURL(`${RUNTIME}/login**`);
+  await page.waitForSelector('#login-email');
   await page.fill('#login-email', email);
   await page.fill('#login-password', password);
   await page.click('button[type="submit"]');

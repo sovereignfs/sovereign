@@ -1,0 +1,95 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+}
+
+.label {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+}
+
+.slider {
+  appearance: none;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Expand the vertical hit area for touch dragging without thickening the
+   visible track — same rationale as Button/Checkbox's touch-target
+   expansion, gated to the primary pointer. */
+@media (pointer: coarse) {
+  .slider {
+    height: var(--sv-touch-target-min, 44px);
+  }
+}
+
+.slider:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slider:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Track — WebKit/Blink. The filled portion is a gradient computed from the
+   --slider-fill custom property the component sets inline; no JS-measured
+   pixel math, just a CSS variable driving a hard color stop. */
+.slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: var(--sv-radius-full);
+  background: linear-gradient(
+    to right,
+    var(--sv-color-accent) var(--slider-fill),
+    var(--sv-color-border-strong) var(--slider-fill)
+  );
+}
+
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-accent);
+  box-shadow: var(--sv-shadow-control);
+  cursor: pointer;
+}
+
+.slider:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+}
+
+/* Track — Firefox. Separate track/progress pseudo-elements instead of a
+   gradient — Firefox renders the filled portion natively via
+   ::-moz-range-progress. */
+.slider::-moz-range-track {
+  height: 4px;
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-border-strong);
+}
+
+.slider::-moz-range-progress {
+  height: 4px;
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-accent);
+}
+
+.slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-accent);
+  box-shadow: var(--sv-shadow-control);
+  cursor: pointer;
+}
+
+.slider:disabled::-moz-range-thumb {
+  cursor: not-allowed;
+}

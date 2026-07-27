@@ -69,6 +69,8 @@ export { Tooltip } from './components/Tooltip/Tooltip';
 export type { TooltipProps } from './components/Tooltip/Tooltip';
 export { Checkbox } from './components/Checkbox/Checkbox';
 export type { CheckboxProps } from './components/Checkbox/Checkbox';
+export { RadioGroup } from './components/RadioGroup/RadioGroup';
+export type { RadioGroupProps, RadioGroupItem } from './components/RadioGroup/RadioGroup';
 export { DragHandleRow } from './components/DragHandleRow/DragHandleRow';
 export type { DragHandleRowProps } from './components/DragHandleRow/DragHandleRow';
 export { FileDropzone } from './components/FileDropzone/FileDropzone';

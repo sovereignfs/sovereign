@@ -33,6 +33,7 @@ import { ToastProvider, useToast } from '../components/Toast/Toast';
 import { Toggle } from '../components/Toggle/Toggle';
 import { Tooltip } from '../components/Tooltip/Tooltip';
 import { Checkbox } from '../components/Checkbox/Checkbox';
+import { RadioGroup } from '../components/RadioGroup/RadioGroup';
 import { DragHandleRow } from '../components/DragHandleRow/DragHandleRow';
 import { FileDropzone } from '../components/FileDropzone/FileDropzone';
 import { OverlayHeader } from '../components/OverlayHeader/OverlayHeader';
@@ -2029,6 +2030,29 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                     <Checkbox checked={a} onChange={setA} label="Unchecked task" strikeThrough />
                     <Checkbox checked={b} onChange={setB} label="Completed task" strikeThrough />
                   </div>
+                );
+              })()}
+            </ComponentCard>
+
+            {/* RadioGroup */}
+            <ComponentCard
+              name="RadioGroup"
+              importLine="import { RadioGroup } from '@sovereignfs/ui';"
+              usage="Single-select list of options. Renders real <input type=radio> elements sharing one name, so arrow-key navigation between options is native browser behavior, not hand-rolled."
+            >
+              {(() => {
+                const [size, setSize] = useState('md');
+                return (
+                  <RadioGroup
+                    items={[
+                      { label: 'Small', value: 'sm' },
+                      { label: 'Medium', value: 'md' },
+                      { label: 'Large', value: 'lg' },
+                    ]}
+                    value={size}
+                    onChange={setSize}
+                    aria-label="Size"
+                  />
                 );
               })()}
             </ComponentCard>

@@ -1,0 +1,88 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  cursor: pointer;
+}
+
+/* The visual circle — same 18px size and touch-target-expansion technique
+   as Checkbox's box, radius-full instead of radius-sm. */
+.circle {
+  --radio-circle-size: 18px;
+  position: relative;
+  flex-shrink: 0;
+  width: var(--radio-circle-size);
+  height: var(--radio-circle-size);
+  border-radius: var(--sv-radius-full);
+  border: 1.5px solid var(--sv-color-border-strong);
+  background: var(--sv-color-surface);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checked {
+  border-color: var(--sv-color-accent);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-accent);
+  pointer-events: none;
+}
+
+/* Hide the native input visually but keep it accessible */
+.input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.input:disabled {
+  cursor: not-allowed;
+}
+
+/* Expand the tappable region to the platform's minimum touch target without
+   growing the visible circle. Gated to (pointer: coarse), the *primary*
+   pointer, so a touchscreen laptop with mouse/trackpad as primary keeps
+   desktop density — same reasoning as Checkbox. */
+@media (pointer: coarse) {
+  .input {
+    inset: calc((var(--radio-circle-size) - var(--sv-touch-target-min, 44px)) / 2);
+  }
+}
+
+.input:focus-visible {
+  outline: none;
+}
+
+.circle:has(.input:focus-visible) {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.optionLabel {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+  user-select: none;
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

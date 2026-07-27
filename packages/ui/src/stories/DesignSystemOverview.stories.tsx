@@ -34,6 +34,8 @@ import { Toggle } from '../components/Toggle/Toggle';
 import { Tooltip } from '../components/Tooltip/Tooltip';
 import { Checkbox } from '../components/Checkbox/Checkbox';
 import { RadioGroup } from '../components/RadioGroup/RadioGroup';
+import { Slider } from '../components/Slider/Slider';
+import { Progress } from '../components/Progress/Progress';
 import { DragHandleRow } from '../components/DragHandleRow/DragHandleRow';
 import { FileDropzone } from '../components/FileDropzone/FileDropzone';
 import { OverlayHeader } from '../components/OverlayHeader/OverlayHeader';
@@ -2055,6 +2057,33 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   />
                 );
               })()}
+            </ComponentCard>
+
+            {/* Slider */}
+            <ComponentCard
+              name="Slider"
+              importLine="import { Slider } from '@sovereignfs/ui';"
+              usage="Single-thumb range input. A native <input type=range> under custom styling — arrow keys, Home/End, and touch-drag all come from the browser."
+            >
+              {(() => {
+                const [value, setValue] = useState(50);
+                return (
+                  <div style={{ width: 240 }}>
+                    <Slider value={value} onChange={setValue} min={0} max={100} label="Volume" />
+                  </div>
+                );
+              })()}
+            </ComponentCard>
+
+            {/* Progress */}
+            <ComponentCard
+              name="Progress"
+              importLine="import { Progress } from '@sovereignfs/ui';"
+              usage="Determinate progress bar. role=progressbar with aria-valuenow/min/max so screen readers announce the current value."
+            >
+              <div style={{ width: 240 }}>
+                <Progress value={65} label="Upload progress" />
+              </div>
             </ComponentCard>
 
             {/* DragHandleRow */}

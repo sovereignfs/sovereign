@@ -1,9 +1,22 @@
 import type { SovereignManifest } from '@sovereignfs/manifest';
 import { describe, expect, it } from 'vitest';
-import { getDevelopmentPluginIds, getExamplePluginIds, getOfflineRoutePrefixes } from '../registry';
+import {
+  getDevelopmentPluginIds,
+  getExamplePluginIds,
+  getMobileChromeConfig,
+  getOfflineRoutePrefixes,
+} from '../registry';
 
 function manifest(id: string, example?: boolean, development?: boolean): SovereignManifest {
   return { id, example, development } as unknown as SovereignManifest;
+}
+
+function manifestWithShellConfig(
+  id: string,
+  routePrefix: string,
+  shellConfig?: { mobileHeader?: boolean; mobileFooter?: boolean },
+): SovereignManifest {
+  return { id, routePrefix, shellConfig } as unknown as SovereignManifest;
 }
 
 function manifestWithOffline(
@@ -86,5 +99,48 @@ describe('getOfflineRoutePrefixes', () => {
   it('includes both the bare routePrefix and sub-route prefixes when a plugin declares both', () => {
     const plugins = [manifestWithOffline('fs.sovereign.wallet', '/wallet', ['/cards'], true)];
     expect(getOfflineRoutePrefixes(plugins)).toEqual(['/wallet/cards', '/wallet']);
+  });
+});
+
+describe('getMobileChromeConfig', () => {
+  it('omits plugins with no shellConfig or defaults-only shellConfig', () => {
+    const plugins = [
+      manifestWithShellConfig('fs.sovereign.tasks', '/tasks'),
+      manifestWithShellConfig('fs.sovereign.wallet', '/wallet', {
+        mobileHeader: true,
+        mobileFooter: true,
+      }),
+    ];
+    expect(getMobileChromeConfig(plugins)).toEqual([]);
+  });
+
+  it('includes a plugin that hides only its mobile footer, defaulting header to true', () => {
+    const plugins = [
+      manifestWithShellConfig('fs.sovereign.chat', '/chat', { mobileFooter: false }),
+    ];
+    expect(getMobileChromeConfig(plugins)).toEqual([
+      { routePrefix: '/chat', mobileHeader: true, mobileFooter: false },
+    ]);
+  });
+
+  it('includes a plugin that hides only its mobile header, defaulting footer to true', () => {
+    const plugins = [
+      manifestWithShellConfig('fs.sovereign.canvas', '/canvas', { mobileHeader: false }),
+    ];
+    expect(getMobileChromeConfig(plugins)).toEqual([
+      { routePrefix: '/canvas', mobileHeader: false, mobileFooter: true },
+    ]);
+  });
+
+  it('includes a plugin that hides both', () => {
+    const plugins = [
+      manifestWithShellConfig('fs.sovereign.viewer', '/viewer', {
+        mobileHeader: false,
+        mobileFooter: false,
+      }),
+    ];
+    expect(getMobileChromeConfig(plugins)).toEqual([
+      { routePrefix: '/viewer', mobileHeader: false, mobileFooter: false },
+    ]);
   });
 });

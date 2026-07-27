@@ -161,6 +161,10 @@ const manifestObjectSchema = z
       .object({
         /** Dialog size for `shell: overlay` plugins (default `lg`). */
         overlaySize: z.enum(['sm', 'md', 'lg']).optional(),
+        /** Show the mobile header for `shell: default` plugins (default `true`). */
+        mobileHeader: z.boolean().optional(),
+        /** Show the mobile footer for `shell: default` plugins (default `true`). */
+        mobileFooter: z.boolean().optional(),
       })
       .strict()
       .optional(),
@@ -612,6 +616,22 @@ export const manifestSchema = manifestObjectSchema
     message: 'shellConfig.overlaySize is only valid when shell is "overlay"',
     path: ['shellConfig', 'overlaySize'],
   })
+  .refine(
+    (m) =>
+      m.shellConfig?.mobileHeader === undefined || m.shell === undefined || m.shell === 'default',
+    {
+      message: 'shellConfig.mobileHeader is only valid when shell is "default"',
+      path: ['shellConfig', 'mobileHeader'],
+    },
+  )
+  .refine(
+    (m) =>
+      m.shellConfig?.mobileFooter === undefined || m.shell === undefined || m.shell === 'default',
+    {
+      message: 'shellConfig.mobileFooter is only valid when shell is "default"',
+      path: ['shellConfig', 'mobileFooter'],
+    },
+  )
   .refine((m) => m.type !== 'platform' || m.monetization === undefined, {
     message: 'platform plugins cannot declare monetization — they are always free',
     path: ['monetization'],

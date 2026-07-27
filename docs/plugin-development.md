@@ -164,7 +164,7 @@ serves at `/tasks/lists`.
 | `routePrefix`   | string starting with `/`                 | yes                                  | URL prefix the plugin serves under, e.g. `/tasks`. The single source of truth for the plugin's URL.                                                                                                                                                                                                                                                                 |
 | `permissions`   | array of permission strings              | yes (may be `[]`)                    | SDK capabilities the plugin declares (see below).                                                                                                                                                                                                                                                                                                                   |
 | `shell`         | `default` \| `minimal` \| `overlay`      | no                                   | Presentation mode. `default` = full page under the platform sidebar; `overlay` = dialog over the current page (see below); `minimal` = chrome-free, full-bleed (see below).                                                                                                                                                                                         |
-| `shellConfig`   | object (see below)                       | no                                   | Per-shell tuning. Holds `overlaySize` (`sm` \| `md` \| `lg`, default `lg`) for `shell: overlay` plugins. Only valid when `shell` is `overlay`.                                                                                                                                                                                                                      |
+| `shellConfig`   | object (see below)                       | no                                   | Per-shell tuning. Holds `overlaySize` (`sm` \| `md` \| `lg`, default `lg`) for `shell: overlay` plugins, and `mobileHeader`/`mobileFooter` (booleans, default `true`) for `shell: default` plugins (RFC 0075). Each field is only valid for its own `shell` value.                                                                                                  |
 | `adminOnly`     | boolean                                  | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                                                                                                                                             |
 | `apiProvider`   | boolean                                  | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                                                                                                                                                       |
 | `publicRoutes`  | array (see below)                        | no                                   | Manifest-declared public page routes (RFC 0042). Each entry exempts a path prefix — relative to `routePrefix` — from the session-redirect gate; the plugin owns authorization for the exempted paths.                                                                                                                                                               |
@@ -564,6 +564,38 @@ platform shell would be intrusive.
 other plugins are installed, provide your own navigation (a menu, a link to
 `/launcher`, etc.). The platform shell is absent, so users have no other way to
 reach the Launcher or Console.
+
+### Mobile header/footer toggle (RFC 0075)
+
+A `shell: default` plugin can independently hide its **mobile header** and/or
+**mobile footer** via `shellConfig`, both defaulting to `true` (today's
+behavior). Useful for a mobile-first view — a chat thread, a canvas, a media
+viewer — that wants more of the viewport without giving up the sidebar (or the
+rest of the default shell) the way `shell: minimal` does.
+
+```json
+{
+  "shell": "default",
+  "shellConfig": { "mobileHeader": true, "mobileFooter": false }
+}
+```
+
+- **Desktop is never affected.** The sidebar always renders regardless of
+  these fields — this is a mobile-only, per-piece toggle.
+- Only valid when `shell` is `default` (or omitted, since `default` is the
+  implicit value) — setting either field under `minimal` or `overlay` fails
+  manifest validation.
+- The omitted element is removed from the page entirely, not CSS-hidden — no
+  flash of chrome-then-removal, no wasted hydration.
+- **If you hide both**, your plugin loses the platform's mobile nav (Home /
+  Apps / Search) for that screen — the same navigation contract as `shell:
+minimal`: your plugin is responsible for providing its own way back (e.g. a
+  header affordance if you keep the header, or an in-page one if you hide
+  both). The platform does not inject an escape hatch.
+- This is a **per-plugin** setting, not per-route — every page under the
+  plugin's `routePrefix` gets the same header/footer visibility. A plugin that
+  needs per-screen variation (e.g. list view keeps the footer, detail view
+  doesn't) is a `shell: minimal` candidate instead.
 
 ### `compatibility` (RFC 0024)
 

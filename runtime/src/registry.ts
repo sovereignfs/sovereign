@@ -41,3 +41,33 @@ export function getOfflineRoutePrefixes(plugins: SovereignManifest[] = registry)
     return prefixes;
   });
 }
+
+/** A `shell: default` plugin's resolved mobile chrome visibility (RFC 0075). */
+export interface MobileChromeOverride {
+  routePrefix: string;
+  mobileHeader: boolean;
+  mobileFooter: boolean;
+}
+
+/**
+ * Mobile header/footer visibility overrides (`shellConfig.mobileHeader` /
+ * `shellConfig.mobileFooter`, RFC 0075) for every plugin that deviates from
+ * the default (both `true`). Only deviating plugins are included so callers
+ * can treat "not present" as "show both" without a lookup miss vs. an
+ * explicit `true` needing to be distinguished.
+ */
+export function getMobileChromeConfig(
+  plugins: SovereignManifest[] = registry,
+): MobileChromeOverride[] {
+  return plugins
+    .filter(
+      (manifest) =>
+        manifest.shellConfig?.mobileHeader === false ||
+        manifest.shellConfig?.mobileFooter === false,
+    )
+    .map((manifest) => ({
+      routePrefix: manifest.routePrefix,
+      mobileHeader: manifest.shellConfig?.mobileHeader ?? true,
+      mobileFooter: manifest.shellConfig?.mobileFooter ?? true,
+    }));
+}

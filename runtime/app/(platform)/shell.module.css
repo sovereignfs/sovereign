@@ -87,6 +87,8 @@
   justify-content: center;
   width: 40px;
   height: 40px;
+  flex-shrink: 0;
+  min-height: 40px;
   border-radius: var(--sv-radius-md);
   color: var(--sv-color-text-primary);
   background-color: var(--sv-color-surface-sunken);

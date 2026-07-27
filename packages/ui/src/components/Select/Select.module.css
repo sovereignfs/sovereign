@@ -8,8 +8,11 @@
 .select {
   display: block;
   width: 100%;
-  /* Right-pad to clear the custom chevron */
-  padding: var(--sv-space-2) var(--sv-space-8) var(--sv-space-2) var(--sv-space-3);
+  /* 36px rendered height. Explicit height + border-box, same technique as
+     Input. Right-pad to clear the custom chevron. */
+  height: 36px;
+  box-sizing: border-box;
+  padding: 4px var(--sv-space-8) 4px var(--sv-space-3);
   font-family: var(--sv-font-family);
   font-size: var(--sv-font-size-sm);
   line-height: 1.5;
@@ -25,8 +28,9 @@
     box-shadow 0.15s ease;
 }
 
-/* sm — compact for table cells and inline controls */
+/* sm — compact for table cells and inline controls. 32px height. */
 .sm .select {
+  height: 32px;
   padding: 2px var(--sv-space-6) 2px var(--sv-space-2);
   font-size: var(--sv-font-size-sm);
   line-height: 1.4;

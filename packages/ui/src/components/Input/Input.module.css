@@ -1,7 +1,12 @@
 .input {
   display: block;
   width: 100%;
-  padding: var(--sv-space-2) var(--sv-space-3);
+  /* 36px rendered height. Explicit height + border-box (rather than
+     deriving height from padding and line-height) gives an exact,
+     browser-independent target instead of an approximation. */
+  height: 36px;
+  box-sizing: border-box;
+  padding: 4px var(--sv-space-3);
   font-family: var(--sv-font-family);
   font-size: var(--sv-font-size-sm);
   line-height: 1.5;

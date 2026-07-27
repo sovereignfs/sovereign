@@ -65,7 +65,11 @@
   align-items: center;
   justify-content: center;
   gap: var(--sv-space-2);
-  padding: 7px var(--sv-space-4);
+  /* Kept in sync with Button's .md rule by hand (see design-system.md
+     "Button and Checkbox touch ergonomics" — not a literal reuse of
+     Button). Matches Button's md padding, updated alongside it (10px,
+     36px rendered height). */
+  padding: 10px var(--sv-space-4);
   border: 1px solid transparent;
   border-radius: var(--sv-radius-md);
   font-family: var(--sv-font-family);

@@ -1,5 +1,7 @@
 /* DatePicker — trigger styled to match Input's height/border/radius/focus
- * ring for visual consistency as a form field. */
+ * ring for visual consistency as a form field. Kept in sync with Input's
+ * own sizing by hand (36px rendered height via explicit height +
+ * border-box, not a literal reuse of Input). */
 
 .trigger {
   display: flex;
@@ -7,7 +9,9 @@
   justify-content: space-between;
   gap: var(--sv-space-2);
   width: 100%;
-  padding: var(--sv-space-2) var(--sv-space-3);
+  height: 36px;
+  box-sizing: border-box;
+  padding: 4px var(--sv-space-3);
   font-family: var(--sv-font-family);
   font-size: var(--sv-font-size-sm);
   line-height: 1.5;

@@ -79,6 +79,9 @@
   }
 }
 
+/* Sizing audit: reviewed padding/radius against this scale's other
+   surfaces. --sv-radius-lg (shared with Card via .panel below) left
+   unchanged for the same blast-radius reason as Card.module.css. */
 .content {
   flex: 1 1 auto;
   overflow-y: auto;

@@ -5,7 +5,9 @@
   cursor: pointer;
 }
 
-/* The visual box */
+/* The visual box. Sizing audit: reviewed against the rest of this scale's
+   compact controls. Kept the 18px box unchanged — deliberately on the
+   larger side for touch-friendliness, not a gap to close. */
 .box {
   --checkbox-box-size: 18px;
   position: relative;

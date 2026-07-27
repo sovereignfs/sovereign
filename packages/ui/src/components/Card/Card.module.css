@@ -1,3 +1,9 @@
+/* Sizing audit: reviewed padding/radius against this scale's other
+   surfaces. Left unchanged rather than edited: Card is consumed across
+   most first-party plugin screens, and changing its padding/radius
+   site-wide has a blast radius no visual regression tooling exists yet to
+   verify (see epic task 9.14, not landed). Revisit once that tooling
+   exists. */
 .card {
   background: var(--sv-color-surface-raised);
   border: 1px solid var(--sv-color-border);

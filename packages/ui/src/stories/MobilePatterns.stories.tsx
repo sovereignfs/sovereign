@@ -1077,8 +1077,14 @@ function MobilePatternsDoc() {
             label="Button (sm) — 32 px visual, but padded to 44 px tap area via inline-flex"
             size={44}
           />
-          <TouchTargetDemo label="Button (md) — 44 px height" size={44} />
-          <TouchTargetDemo label="Button (lg) — 52 px height" size={52} />
+          <TouchTargetDemo
+            label="Button (md) — 36 px visual, but padded to 44 px tap area via inline-flex"
+            size={44}
+          />
+          <TouchTargetDemo
+            label="Button (lg) — 40 px visual, but padded to 44 px tap area via inline-flex"
+            size={44}
+          />
           <TouchTargetDemo
             label="Avoid — 28 px tap area is too small for confident tapping"
             size={28}

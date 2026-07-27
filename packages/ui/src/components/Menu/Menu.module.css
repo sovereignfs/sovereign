@@ -1,6 +1,13 @@
 /* Menu — the item list shared by both presentations (Popover panel on
  * desktop, Drawer panel on mobile); the presentational chrome around it is
- * entirely owned by those two components, not duplicated here. */
+ * entirely owned by those two components, not duplicated here.
+ *
+ * Sizing audit: reviewed against this scale's other compact controls —
+ * --sv-radius-sm (6px) and --sv-font-size-sm (14px) already fit. The 44px
+ * min-height is a deliberate design choice, kept unconditional (not gated
+ * to pointer:coarse like Button/Checkbox) because this menu doubles as a
+ * full Drawer sheet on mobile, where every item must stay comfortably
+ * tappable. */
 
 .list {
   list-style: none;

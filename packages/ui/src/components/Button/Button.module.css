@@ -37,23 +37,23 @@
   }
 }
 
-/* Sizes — 24px / 30px / 36px rendered height (font-size + padding*2 + border*2).
+/* Sizes — 32px / 36px / 40px rendered height (font-size + padding*2 + border*2).
    Vertical padding is hardcoded where the --sv-space-* scale can't hit the
-   exact target height (same reasoning as the pre-existing hardcoded 13px this
-   replaced); horizontal padding stays token-based. */
+   exact target height; horizontal padding stays token-based, growing with
+   size for visual rhythm with the rest of this scale. */
 .sm {
-  padding: var(--sv-space-1) var(--sv-space-3);
+  padding: var(--sv-space-2) var(--sv-space-3);
   font-size: var(--sv-font-size-sm);
 }
 
 .md {
-  padding: 7px var(--sv-space-4);
+  padding: 10px var(--sv-space-4);
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-semibold);
 }
 
 .lg {
-  padding: 10px var(--sv-space-5);
+  padding: var(--sv-space-3) var(--sv-space-5);
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-semibold);
 }

@@ -1,5 +1,10 @@
 .track {
-  /* 38×22px pill — spec dimensions */
+  /* 38×22px pill — spec dimensions. Sizing audit: despite the component
+     name, this renders as a binary pill switch (role="switch"), not a
+     pressable toggle button — reviewed against this scale's other compact
+     controls with that in mind. Kept dimensions unchanged, generously
+     sized for touch-friendliness. (The name vs. actual behavior mismatch
+     is a separate, pre-existing naming note, not addressed here.) */
   display: inline-flex;
   align-items: center;
   width: 38px;

@@ -12,7 +12,12 @@
 
 .tab {
   flex-shrink: 0;
-  padding: var(--sv-space-2) var(--sv-space-4);
+  /* 36px rendered height, matching this scale's other 36px controls (Input,
+     Select). Vertical padding hardcoded to hit the exact height, same
+     reasoning as Button — accounting for the 2px border-bottom below,
+     which (content-box) adds to the rendered height on top of font-size +
+     padding. */
+  padding: 10px var(--sv-space-4);
   border: none;
   border-bottom: 2px solid transparent;
   /* Negative margin pulls the 2px border flush with the tablist border-bottom */

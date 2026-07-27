@@ -254,6 +254,25 @@ describe('runtime middleware regressions', () => {
     expect(await response.text()).toBe('Payment Required');
   });
 
+  it('rewrites unauthenticated GET / to /login instead of redirecting (iOS PWA splash)', async () => {
+    fetchState.session = null;
+
+    const response = await middleware(request('/'));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
+    expect(middlewareRewrite(response)).toBe('http://runtime.test/login');
+  });
+
+  it('still redirects unauthenticated non-GET / with 303, not a method-preserving rewrite', async () => {
+    fetchState.session = null;
+
+    const response = await middleware(request('/', { method: 'POST' }));
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe('http://runtime.test/login');
+  });
+
   it('rewrites / to the configured root plugin after authentication', async () => {
     fetchState.rootPrefix = '/launcher';
 

@@ -306,6 +306,20 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (!session) {
     const fallback = await verifyViaAuthServer(request);
     if (!fallback) {
+      // `/` is the PWA manifest's start_url (RFC 0013). iOS resolves an
+      // installed app's launch/splash image from the *direct* response to
+      // start_url and does not follow an HTTP redirect to find one. A 303
+      // redirect has no body/head at all, so a cold launch with no session
+      // yet (fresh "Add to Home Screen", or right after Safari site data is
+      // cleared) shows a blank white screen instead of the splash — even
+      // though /login itself carries every apple-touch-startup-image link
+      // correctly. Rewrite instead of redirecting so `/` returns the real
+      // /login document (200, full <head>) at the same URL, same as the
+      // authenticated root-plugin rewrite below. GET only: a rewrite
+      // preserves the request method, and /login only handles GET.
+      if (pathname === '/' && request.method === 'GET') {
+        return applyCsp(NextResponse.rewrite(new URL('/login', request.url)));
+      }
       // 303 (See Other), not the NextResponse.redirect default of 307. A 307
       // preserves the request method, so an unauthenticated POST to a gated
       // route (e.g. the logout form once the session has lapsed, or any plugin

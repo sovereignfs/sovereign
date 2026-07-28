@@ -24,8 +24,14 @@ async function loginAndSave(
   await page.fill('#login-email', email);
   await page.fill('#login-password', password);
   await page.click('button[type="submit"]');
-  // On success the runtime login flow returns to the authenticated runtime.
-  await page.waitForURL(`${RUNTIME}/`, { timeout: 15_000 });
+  // Can't wait for a URL change on success either: unauthenticated GET / is
+  // rewritten (not redirected) to the login document, so the browser is
+  // already sitting on RUNTIME/ before submitting — waitForURL(RUNTIME/) would
+  // resolve instantly against the page we started on, racing ahead of the
+  // sign-in request and its Set-Cookie, and storageState below would capture
+  // an unauthenticated (cookie-less) context. Wait for the authenticated
+  // shell to actually render instead.
+  await page.getByRole('button', { name: 'Account' }).first().waitFor({ timeout: 15_000 });
   // storageState captures runtime cookies after the proxied login flow. Tests
   // pre-injecting this state are fully authenticated.
   await ctx.storageState({ path: outPath });

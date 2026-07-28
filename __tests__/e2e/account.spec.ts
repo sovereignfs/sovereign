@@ -15,17 +15,23 @@ test.describe('Account plugin — golden paths', () => {
     const input = page.locator('#name');
     const original = await input.inputValue();
     const updated = `Test Name ${Date.now()}`;
+    const saveButton = page.locator('button[type="submit"]');
 
+    // `waitForLoadState('networkidle')` never resolves here — the shell's
+    // NotificationBell keeps an SSE connection open for the whole session, so
+    // the network is never idle. `useActionState`'s pending flag (DisplayNameForm)
+    // gives a direct, deterministic completion signal via the button's own label.
     await input.fill(updated);
-    await page.click('button[type="submit"]');
-    // Wait for the server action to complete.
-    await page.waitForLoadState('networkidle');
+    await saveButton.click();
+    await expect(saveButton).toHaveText('Saving…');
+    await expect(saveButton).toHaveText('Save name', { timeout: 15_000 });
     await expect(input).toHaveValue(updated);
 
     // Restore original name so subsequent runs start from a clean state.
     await input.fill(original);
-    await page.click('button[type="submit"]');
-    await page.waitForLoadState('networkidle');
+    await saveButton.click();
+    await expect(saveButton).toHaveText('Saving…');
+    await expect(saveButton).toHaveText('Save name', { timeout: 15_000 });
   });
 
   test('theme can be toggled to Dark and applies to the document', async ({ adminPage: page }) => {

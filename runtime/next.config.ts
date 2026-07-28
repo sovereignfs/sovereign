@@ -31,6 +31,12 @@ const nextConfig: NextConfig = {
   // traced output misses workspace package files.
   output: 'standalone',
   outputFileTracingRoot: resolve(process.cwd(), '..'),
+  // Next's own dev-mode indicator badge overlaps the shell sidebar's brand
+  // logo/link in the same corner, silently swallowing clicks meant for it
+  // (reproduced manually and in __tests__/e2e/navigation.spec.ts's "brand
+  // link returns to /" test). Dev-only chrome has no business intercepting
+  // the app's own UI, so it's off rather than repositioned.
+  devIndicators: false,
   // Compile all workspace packages from source — package edits trigger HMR.
   transpilePackages: [
     '@sovereignfs/sdk',

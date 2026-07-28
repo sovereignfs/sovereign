@@ -7,19 +7,26 @@ const RUNTIME = 'http://localhost:3000';
 const ADMIN_STATE = path.join(__dirname, '../../.auth/admin.json');
 
 test.describe('Auth — golden paths', () => {
-  test('unauthenticated visit redirects to runtime login page', async ({ page }) => {
+  test('unauthenticated visit shows the login page at /', async ({ page }) => {
+    // Unauthenticated GET / is rewritten (not redirected) to the login
+    // document — the URL stays "/" (see runtime/middleware.ts's iOS PWA
+    // splash rewrite; also covered directly by a middleware unit test).
     await page.goto(`${RUNTIME}/`);
-    await page.waitForURL(`${RUNTIME}/login**`);
-    await expect(page).toHaveURL(`${RUNTIME}/login`);
+    await page.waitForSelector('#login-email');
+    await expect(page).toHaveURL(`${RUNTIME}/`);
   });
 
   test('login with valid credentials lands on the runtime', async ({ page }) => {
     await page.goto(`${RUNTIME}/`);
-    await page.waitForURL(`${RUNTIME}/login**`);
+    await page.waitForSelector('#login-email');
     await page.fill('#login-email', 'admin@sovereign.local');
     await page.fill('#login-password', 'admin-dev-password');
     await page.click('button[type="submit"]');
-    await page.waitForURL(`${RUNTIME}/`, { timeout: 15_000 });
+    // Can't wait for a URL change: the page is already at RUNTIME/ before
+    // submitting (see above), so waitForURL(RUNTIME/) would resolve instantly
+    // without confirming sign-in actually completed. Wait for the
+    // authenticated shell to render instead.
+    await page.getByRole('button', { name: 'Account' }).first().waitFor({ timeout: 15_000 });
     await expect(page).toHaveURL(`${RUNTIME}/`);
   });
 

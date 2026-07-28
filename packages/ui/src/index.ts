@@ -41,7 +41,7 @@ export { Sheet } from './components/Sheet/Sheet';
 export type { SheetProps } from './components/Sheet/Sheet';
 export { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog';
 export type { ConfirmDialogProps } from './components/ConfirmDialog/ConfirmDialog';
-export { Menu } from './components/Menu/Menu';
+export { Menu, MenuEntries } from './components/Menu/Menu';
 export type {
   MenuProps,
   MenuItem,
@@ -75,6 +75,77 @@ export { Slider } from './components/Slider/Slider';
 export type { SliderProps } from './components/Slider/Slider';
 export { Progress } from './components/Progress/Progress';
 export type { ProgressProps } from './components/Progress/Progress';
+export {
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableHeaderCell,
+  TableCell,
+} from './components/Table/Table';
+export type { TableProps } from './components/Table/Table';
+export { Alert } from './components/Alert/Alert';
+export type { AlertProps, AlertVariant } from './components/Alert/Alert';
+export { Breadcrumb } from './components/Breadcrumb/Breadcrumb';
+export type { BreadcrumbProps, BreadcrumbItem } from './components/Breadcrumb/Breadcrumb';
+export { Pagination } from './components/Pagination/Pagination';
+export type { PaginationProps } from './components/Pagination/Pagination';
+export { Kbd } from './components/Kbd/Kbd';
+export type { KbdProps } from './components/Kbd/Kbd';
+export { Collapsible } from './components/Collapsible/Collapsible';
+export type { CollapsibleProps } from './components/Collapsible/Collapsible';
+export { Accordion } from './components/Accordion/Accordion';
+export type { AccordionProps, AccordionItem } from './components/Accordion/Accordion';
+export { AspectRatio } from './components/AspectRatio/AspectRatio';
+export type { AspectRatioProps } from './components/AspectRatio/AspectRatio';
+export { ButtonGroup } from './components/ButtonGroup/ButtonGroup';
+export type { ButtonGroupProps } from './components/ButtonGroup/ButtonGroup';
+export { Item } from './components/Item/Item';
+export type { ItemProps } from './components/Item/Item';
+export { Label } from './components/Label/Label';
+export type { LabelProps } from './components/Label/Label';
+export { ScrollArea } from './components/ScrollArea/ScrollArea';
+export type { ScrollAreaProps } from './components/ScrollArea/ScrollArea';
+export { Typography } from './components/Typography/Typography';
+export type { TypographyProps, TypographyVariant } from './components/Typography/Typography';
+export { Marker } from './components/Marker/Marker';
+export type { MarkerProps } from './components/Marker/Marker';
+export { Message } from './components/Message/Message';
+export type { MessageProps, MessageSender } from './components/Message/Message';
+export { MessageScroller } from './components/MessageScroller/MessageScroller';
+export type { MessageScrollerProps } from './components/MessageScroller/MessageScroller';
+export { HoverCard } from './components/HoverCard/HoverCard';
+export type { HoverCardProps } from './components/HoverCard/HoverCard';
+export { ContextMenu } from './components/ContextMenu/ContextMenu';
+export type { ContextMenuProps } from './components/ContextMenu/ContextMenu';
+export { NavigationMenu } from './components/NavigationMenu/NavigationMenu';
+export type {
+  NavigationMenuProps,
+  NavigationMenuItem,
+} from './components/NavigationMenu/NavigationMenu';
+export { Menubar } from './components/Menubar/Menubar';
+export type { MenubarProps, MenubarMenu } from './components/Menubar/Menubar';
+export { Command } from './components/Command/Command';
+export type { CommandProps, CommandItem } from './components/Command/Command';
+export {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from './components/Resizable/Resizable';
+export type {
+  ResizablePanelGroupProps,
+  ResizablePanelProps,
+  ResizableHandleProps,
+  ResizableDirection,
+} from './components/Resizable/Resizable';
+export { DataTable } from './components/DataTable/DataTable';
+export type {
+  DataTableProps,
+  DataTableColumn,
+  SortDirection,
+} from './components/DataTable/DataTable';
+export { Combobox } from './components/Combobox/Combobox';
+export type { ComboboxProps, ComboboxOption } from './components/Combobox/Combobox';
 export { DragHandleRow } from './components/DragHandleRow/DragHandleRow';
 export type { DragHandleRowProps } from './components/DragHandleRow/DragHandleRow';
 export { FileDropzone } from './components/FileDropzone/FileDropzone';

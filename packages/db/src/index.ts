@@ -134,6 +134,7 @@ export {
   type PushDeliveryStatus,
   type EntitlementRow,
   type InstanceConfig,
+  type RadiusPreset,
   type NotificationPrefsValue,
   type NotificationRow,
   type PlatformDb,

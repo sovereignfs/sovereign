@@ -14,6 +14,7 @@ const DEFAULT_INSTANCE: InstanceValues = {
   instanceLogoDark: null,
   instanceFavicon: null,
   instancePrimary: null,
+  instanceRadius: null,
   emailFromName: null,
   emailLogo: null,
 };
@@ -40,7 +41,7 @@ export default async function IdentityPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Instance identity</h2>
         <p className={styles.help}>
-          Customise the name, logo, and accent colour shown across the platform.
+          Customise the name, logo, accent colour, and corner radius shown across the platform.
         </p>
         <InstanceForm initialValues={instance} />
       </section>

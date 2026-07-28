@@ -1,0 +1,53 @@
+.nav {
+  min-width: 0;
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link,
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 var(--sv-space-3);
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  color: var(--sv-color-text-primary);
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .link:hover,
+  .trigger:hover {
+    background: var(--sv-color-surface-sunken);
+  }
+}
+
+.link:focus-visible,
+.trigger:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.triggerOpen {
+  background: var(--sv-color-surface-sunken);
+}
+
+@media (pointer: coarse) {
+  .link,
+  .trigger {
+    min-height: var(--sv-touch-target-min, 44px);
+  }
+}

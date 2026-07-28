@@ -1,0 +1,70 @@
+.group {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+  overflow: hidden;
+  background: var(--sv-color-surface);
+}
+
+.groupVertical {
+  flex-direction: column;
+}
+
+.panel {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: var(--sv-color-surface);
+}
+
+.handle {
+  position: relative;
+  flex-shrink: 0;
+  width: 12px;
+  padding: 0;
+  border: 0;
+  border-inline: 1px solid var(--sv-color-border);
+  cursor: col-resize;
+  background: var(--sv-color-surface-sunken);
+}
+
+.handleVertical {
+  width: 100%;
+  height: 12px;
+  border-inline: 0;
+  border-block: 1px solid var(--sv-color-border);
+  cursor: row-resize;
+}
+
+.handle::before {
+  position: absolute;
+  inset-block: 50%;
+  inset-inline: 50%;
+  width: 2px;
+  height: 40px;
+  content: '';
+  background: var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-full);
+  transform: translate(-50%, -50%);
+}
+
+.handleVertical::before {
+  width: 40px;
+  height: 2px;
+}
+
+@media (hover: hover) {
+  .handle:hover {
+    background: var(--sv-color-accent-subtle);
+  }
+}
+
+.handle:focus-visible {
+  background: var(--sv-color-accent-subtle);
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: -2px;
+}

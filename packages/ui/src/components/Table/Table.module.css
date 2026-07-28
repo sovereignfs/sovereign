@@ -1,0 +1,45 @@
+/* Horizontal scroll container — masked-edge fade + hidden scrollbar, same
+   technique as NavTabs. Always active (not gated to a narrow viewport):
+   unlike NavTabs' item count, a table's column count is content-driven and
+   can overflow at any screen size. */
+.scrollContainer {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
+}
+
+.scrollContainer::-webkit-scrollbar {
+  display: none;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--sv-font-size-sm);
+}
+
+.head .row {
+  border-bottom: 1px solid var(--sv-color-border-strong);
+}
+
+.body .row {
+  border-bottom: 1px solid var(--sv-color-border);
+}
+
+.body .row:last-child {
+  border-bottom: none;
+}
+
+.th {
+  padding: var(--sv-space-2) var(--sv-space-3);
+  text-align: left;
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-muted);
+  white-space: nowrap;
+}
+
+.td {
+  padding: var(--sv-space-2) var(--sv-space-3);
+  color: var(--sv-color-text-primary);
+}

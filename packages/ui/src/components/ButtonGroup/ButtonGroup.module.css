@@ -1,0 +1,29 @@
+.root {
+  display: inline-flex;
+}
+
+.root > :global(button),
+.root > :global(a) {
+  border-radius: 0;
+  margin-left: -1px;
+}
+
+.root > :global(button):first-child,
+.root > :global(a):first-child {
+  margin-left: 0;
+  border-top-left-radius: var(--sv-radius-md);
+  border-bottom-left-radius: var(--sv-radius-md);
+}
+
+.root > :global(button):last-child,
+.root > :global(a):last-child {
+  border-top-right-radius: var(--sv-radius-md);
+  border-bottom-right-radius: var(--sv-radius-md);
+}
+
+/* Keep the focus ring above sibling borders instead of being clipped by them. */
+.root > :global(button):focus-visible,
+.root > :global(a):focus-visible {
+  position: relative;
+  z-index: 1;
+}

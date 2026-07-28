@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import { Badge } from '../Badge';
+
+afterEach(cleanup);
 
 describe('Badge', () => {
   it('renders its children', () => {
@@ -60,5 +62,27 @@ describe('Badge', () => {
   it('does not render a dot for role variant', () => {
     const { container } = render(<Badge variant="role">Owner</Badge>);
     expect(container.querySelectorAll('[aria-hidden]').length).toBe(0);
+  });
+
+  it('defaults to md size', () => {
+    render(<Badge>Admin</Badge>);
+    expect(screen.getByText('Admin').closest('span')?.className).toContain('md');
+  });
+
+  it('applies sm and lg size classes', () => {
+    const { rerender } = render(<Badge size="sm">Admin</Badge>);
+    expect(screen.getByText('Admin').closest('span')?.className).toContain('sm');
+    rerender(<Badge size="lg">Admin</Badge>);
+    expect(screen.getByText('Admin').closest('span')?.className).toContain('lg');
+  });
+
+  it('defaults to uppercase display', () => {
+    render(<Badge>Owner</Badge>);
+    expect(screen.getByText('Owner').closest('span')?.className).toContain('uppercase');
+  });
+
+  it('omits the uppercase class when uppercase is false', () => {
+    render(<Badge uppercase={false}>Owner</Badge>);
+    expect(screen.getByText('Owner').closest('span')?.className).not.toContain('uppercase');
   });
 });

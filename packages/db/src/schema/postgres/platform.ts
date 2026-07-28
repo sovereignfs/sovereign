@@ -436,6 +436,7 @@ export const instanceConfig = pgTable('instance_config', {
   instanceLogoDark: text('brand_logo_dark'),
   instanceFavicon: text('brand_favicon'),
   instancePrimary: text('brand_primary'),
+  instanceRadius: text('brand_radius'),
   emailFromName: text('email_from_name'),
   emailLogo: text('email_logo'),
   updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),

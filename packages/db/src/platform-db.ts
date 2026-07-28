@@ -2892,12 +2892,21 @@ export async function cancelEntitlement(pdb: PlatformDb, id: string): Promise<vo
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 const DEFAULT_INSTANCE_NAME = 'Sovereign';
 
+/** Corner-radius intensity presets (RFC 0077). 'm' is the default (today's look). */
+export type RadiusPreset = 'none' | 'xs' | 's' | 'm' | 'l';
+const RADIUS_PRESETS: readonly RadiusPreset[] = ['none', 'xs', 's', 'm', 'l'];
+
+function isRadiusPreset(value: string): value is RadiusPreset {
+  return (RADIUS_PRESETS as readonly string[]).includes(value);
+}
+
 export interface InstanceConfig {
   instanceName: string;
   instanceLogo: string | null;
   instanceLogoDark: string | null;
   instanceFavicon: string | null;
   instancePrimary: string | null;
+  instanceRadius: RadiusPreset | null;
   emailFromName: string | null;
   emailLogo: string | null;
 }
@@ -2927,6 +2936,7 @@ export async function getInstanceConfig(
     instanceLogoDark: string | null;
     instanceFavicon: string | null;
     instancePrimary: string | null;
+    instanceRadius: string | null;
     emailFromName: string | null;
     emailLogo: string | null;
   }>(
@@ -2936,10 +2946,12 @@ export async function getInstanceConfig(
                brand_logo_dark AS "instanceLogoDark",
                brand_favicon AS "instanceFavicon",
                brand_primary AS "instancePrimary",
+               brand_radius AS "instanceRadius",
                email_from_name AS "emailFromName",
                email_logo AS "emailLogo"
         FROM instance_config WHERE tenant_id = ${tenantId}`,
   );
+  const radiusCandidate = row?.instanceRadius ?? process.env.INSTANCE_RADIUS ?? '';
   return {
     instanceName: resolveConfiguredInstanceName(row?.instanceName, process.env.INSTANCE_NAME),
     instanceLogo: row?.instanceLogo ?? process.env.INSTANCE_LOGO ?? null,
@@ -2950,6 +2962,7 @@ export async function getInstanceConfig(
       HEX_COLOR_RE.test(row?.instancePrimary ?? process.env.INSTANCE_PRIMARY_COLOR ?? '')
         ? (row?.instancePrimary ?? process.env.INSTANCE_PRIMARY_COLOR ?? null)
         : null,
+    instanceRadius: isRadiusPreset(radiusCandidate) ? radiusCandidate : null,
     emailFromName: row?.emailFromName ?? process.env.INSTANCE_EMAIL_FROM_NAME ?? null,
     emailLogo: row?.emailLogo ?? process.env.INSTANCE_EMAIL_LOGO ?? null,
   };
@@ -2958,8 +2971,9 @@ export async function getInstanceConfig(
 /**
  * Upsert instance config. Callers read the current state via getInstanceConfig,
  * mutate fields, then write the full merged value back.
- * instancePrimary is validated as a 6-digit hex colour before persisting —
- * raw user input must never reach a <style> block unchecked (CSS injection).
+ * instancePrimary is validated as a 6-digit hex colour and instanceRadius
+ * against the fixed preset list before persisting — raw user input must
+ * never reach a <style> block unchecked (CSS injection).
  */
 export async function setInstanceConfig(
   pdb: PlatformDb,
@@ -2973,22 +2987,28 @@ export async function setInstanceConfig(
       );
     }
   }
+  if (values.instanceRadius !== null && !isRadiusPreset(values.instanceRadius)) {
+    throw new Error(
+      `Invalid instanceRadius: "${values.instanceRadius}". Must be one of ${RADIUS_PRESETS.join(', ')}.`,
+    );
+  }
   const now = Math.floor(Date.now() / 1000);
   await dbRun(
     pdb,
     sql`INSERT INTO instance_config
           (tenant_id, brand_name, brand_logo, brand_logo_dark, brand_favicon,
-           brand_primary, email_from_name, email_logo, updated_at)
+           brand_primary, brand_radius, email_from_name, email_logo, updated_at)
         VALUES
           (${tenantId}, ${values.instanceName}, ${values.instanceLogo}, ${values.instanceLogoDark},
-           ${values.instanceFavicon}, ${values.instancePrimary}, ${values.emailFromName},
-           ${values.emailLogo}, ${now})
+           ${values.instanceFavicon}, ${values.instancePrimary}, ${values.instanceRadius},
+           ${values.emailFromName}, ${values.emailLogo}, ${now})
         ON CONFLICT (tenant_id) DO UPDATE SET
           brand_name      = excluded.brand_name,
           brand_logo      = excluded.brand_logo,
           brand_logo_dark = excluded.brand_logo_dark,
           brand_favicon   = excluded.brand_favicon,
           brand_primary   = excluded.brand_primary,
+          brand_radius    = excluded.brand_radius,
           email_from_name = excluded.email_from_name,
           email_logo      = excluded.email_logo,
           updated_at      = excluded.updated_at`,

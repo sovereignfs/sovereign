@@ -361,6 +361,7 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       brand_logo_dark TEXT,
       brand_favicon TEXT,
       brand_primary TEXT,
+      brand_radius TEXT,
       email_from_name TEXT,
       email_logo TEXT,
       updated_at ${ts} NOT NULL

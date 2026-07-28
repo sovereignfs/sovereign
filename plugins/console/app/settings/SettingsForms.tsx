@@ -233,9 +233,19 @@ export interface InstanceValues {
   instanceLogoDark: string | null;
   instanceFavicon: string | null;
   instancePrimary: string | null;
+  instanceRadius: string | null;
   emailFromName: string | null;
   emailLogo: string | null;
 }
+
+const RADIUS_OPTIONS = [
+  { value: '', label: 'Default (M)' },
+  { value: 'none', label: 'None — square corners' },
+  { value: 'xs', label: 'XS' },
+  { value: 's', label: 'S' },
+  { value: 'm', label: 'M — today’s look' },
+  { value: 'l', label: 'L — full curvy UI' },
+];
 
 export function InstanceForm({ initialValues }: { initialValues: InstanceValues }) {
   const [state, action, pending] = useActionState(updateInstanceAction, null);
@@ -289,6 +299,26 @@ export function InstanceForm({ initialValues }: { initialValues: InstanceValues 
               onChange={(e) => setPrimaryColor(e.target.value)}
             />
           </div>
+        )}
+      </FormField>
+
+      <FormField
+        label="Corner radius"
+        id="instanceRadius"
+        hint="Scales every rounded corner across the design system. L is large enough that buttons and badges render as full pills."
+      >
+        {(field) => (
+          <Select
+            {...field}
+            name="instanceRadius"
+            defaultValue={initialValues.instanceRadius ?? ''}
+          >
+            {RADIUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
         )}
       </FormField>
 

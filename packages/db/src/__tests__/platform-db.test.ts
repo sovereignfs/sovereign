@@ -172,6 +172,7 @@ describe('instance config helpers', () => {
         instanceLogoDark: null,
         instanceFavicon: null,
         instancePrimary: null,
+        instanceRadius: null,
         emailFromName: null,
         emailLogo: null,
       });
@@ -179,6 +180,61 @@ describe('instance config helpers', () => {
       expect(config.instanceName).toBe('Acme Workspace');
     } finally {
       restoreEnv('INSTANCE_NAME', previous);
+    }
+  });
+
+  it('round-trips a valid instanceRadius preset', async () => {
+    const db = await freshDb();
+    await setInstanceConfig(db, DEFAULT_TENANT_ID, {
+      instanceName: null,
+      instanceLogo: null,
+      instanceLogoDark: null,
+      instanceFavicon: null,
+      instancePrimary: null,
+      instanceRadius: 'l',
+      emailFromName: null,
+      emailLogo: null,
+    });
+    const config = await getInstanceConfig(db, DEFAULT_TENANT_ID);
+    expect(config.instanceRadius).toBe('l');
+  });
+
+  it('rejects an invalid instanceRadius before it can persist', async () => {
+    const db = await freshDb();
+    await expect(
+      setInstanceConfig(db, DEFAULT_TENANT_ID, {
+        instanceName: null,
+        instanceLogo: null,
+        instanceLogoDark: null,
+        instanceFavicon: null,
+        instancePrimary: null,
+        // @ts-expect-error — deliberately invalid to verify the runtime guard
+        instanceRadius: 'xxl',
+        emailFromName: null,
+        emailLogo: null,
+      }),
+    ).rejects.toThrow(/Invalid instanceRadius/);
+  });
+
+  it('falls back to INSTANCE_RADIUS env when no DB value is set', async () => {
+    const previous = process.env.INSTANCE_RADIUS;
+    process.env.INSTANCE_RADIUS = 'xs';
+    try {
+      const config = await getInstanceConfig(await freshDb(), DEFAULT_TENANT_ID);
+      expect(config.instanceRadius).toBe('xs');
+    } finally {
+      restoreEnv('INSTANCE_RADIUS', previous);
+    }
+  });
+
+  it('ignores a garbage INSTANCE_RADIUS env value rather than persisting it', async () => {
+    const previous = process.env.INSTANCE_RADIUS;
+    process.env.INSTANCE_RADIUS = 'not-a-preset';
+    try {
+      const config = await getInstanceConfig(await freshDb(), DEFAULT_TENANT_ID);
+      expect(config.instanceRadius).toBeNull();
+    } finally {
+      restoreEnv('INSTANCE_RADIUS', previous);
     }
   });
 });

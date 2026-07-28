@@ -1,0 +1,122 @@
+/* Trigger styled to match Input/DatePicker's height/border/radius/focus ring
+ * for visual consistency as a form field. */
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-2);
+  width: 100%;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 4px var(--sv-space-3);
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-sm);
+  line-height: 1.5;
+  color: var(--sv-color-text-primary);
+  background-color: var(--sv-color-surface);
+  border: 1px solid var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-md);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+@media (pointer: coarse) {
+  .trigger {
+    font-size: var(--sv-font-size-md);
+  }
+}
+
+.trigger:focus-visible {
+  outline: none;
+  border-color: var(--sv-color-accent);
+  box-shadow: 0 0 0 2px var(--sv-color-focus-ring);
+}
+
+.trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.triggerValue {
+  overflow: hidden;
+  color: var(--sv-color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.triggerPlaceholder {
+  color: var(--sv-color-text-muted);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  max-height: min(60vh, 360px);
+}
+
+.search {
+  flex-shrink: 0;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--sv-color-border);
+  background: transparent;
+  color: var(--sv-color-text-primary);
+  font: inherit;
+  font-size: var(--sv-font-size-md);
+  padding: var(--sv-space-3);
+}
+
+.search:focus {
+  outline: none;
+}
+
+.search::placeholder {
+  color: var(--sv-color-text-muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: var(--sv-space-1);
+  overflow-y: auto;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  width: 100%;
+  min-height: var(--sv-touch-target-min, 44px);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border: none;
+  border-radius: var(--sv-radius-sm);
+  background: transparent;
+  color: var(--sv-color-text-primary);
+  font: inherit;
+  font-size: var(--sv-font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.optionHighlighted {
+  background: var(--sv-color-surface-sunken);
+}
+
+.check {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: var(--sv-icon-size-sm);
+  height: var(--sv-icon-size-sm);
+  align-items: center;
+  justify-content: center;
+}
+
+.empty {
+  padding: var(--sv-space-4) var(--sv-space-3);
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+  text-align: center;
+}

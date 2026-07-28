@@ -1,0 +1,80 @@
+/* Command — rendered inside Dialog's own panel/scroll chrome; this file only
+ * owns the search input and the filtered result list beneath it. */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  /* Panel content area is otherwise unbounded; cap so a long result list
+     scrolls internally instead of growing the dialog indefinitely. */
+  max-height: min(60vh, 420px);
+}
+
+.input {
+  flex-shrink: 0;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--sv-color-border);
+  background: transparent;
+  color: var(--sv-color-text-primary);
+  font: inherit;
+  font-size: var(--sv-font-size-md);
+  padding: var(--sv-space-3);
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--sv-color-text-muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: var(--sv-space-1);
+  overflow-y: auto;
+}
+
+.groupList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.groupLabel {
+  padding: var(--sv-space-2) var(--sv-space-3) var(--sv-space-1);
+  font-size: var(--sv-font-size-label);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  width: 100%;
+  min-height: var(--sv-touch-target-min, 44px);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border: none;
+  border-radius: var(--sv-radius-sm);
+  background: transparent;
+  color: var(--sv-color-text-primary);
+  font: inherit;
+  font-size: var(--sv-font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.itemHighlighted {
+  background: var(--sv-color-surface-sunken);
+}
+
+.empty {
+  padding: var(--sv-space-4) var(--sv-space-3);
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+  text-align: center;
+}

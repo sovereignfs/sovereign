@@ -1,0 +1,28 @@
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+
+.sortButton:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--sv-radius-sm);
+}
+
+.sortIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: var(--sv-icon-size-sm);
+  height: var(--sv-icon-size-sm);
+  align-items: center;
+  justify-content: center;
+}

@@ -1,0 +1,54 @@
+.root {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+}
+
+.scrollContainer {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-3);
+  scrollbar-width: thin;
+  scrollbar-color: var(--sv-color-border-strong) transparent;
+}
+
+.scrollContainer::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollContainer::-webkit-scrollbar-thumb {
+  background: var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-full);
+}
+
+.jumpButton {
+  position: absolute;
+  bottom: var(--sv-space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--sv-space-1) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-surface-raised);
+  box-shadow: var(--sv-shadow-popover);
+  color: var(--sv-color-text-primary);
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-caption);
+  font-weight: var(--sv-font-weight-medium);
+  cursor: pointer;
+}
+
+.jumpButton:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .jumpButton:hover {
+    background: var(--sv-color-surface-sunken);
+  }
+}

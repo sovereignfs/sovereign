@@ -1,0 +1,33 @@
+.marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  margin: 0 1px;
+  border: none;
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-accent-subtle);
+  color: var(--sv-color-accent);
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-label);
+  font-weight: var(--sv-font-weight-semibold);
+  line-height: 1;
+  vertical-align: super;
+}
+
+button.marker {
+  cursor: pointer;
+}
+
+button.marker:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 1px;
+}
+
+@media (hover: hover) {
+  button.marker:hover {
+    background: color-mix(in srgb, var(--sv-color-accent-subtle) 70%, var(--sv-color-accent) 30%);
+  }
+}

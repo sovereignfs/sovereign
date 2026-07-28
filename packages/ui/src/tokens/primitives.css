@@ -83,14 +83,28 @@
   --sv-icon-size-md: 1.25rem; /* 20px — standard affordance */
   --sv-icon-size-lg: 1.5rem; /* 24px — prominent / standalone */
 
-  /* Border radii (v3.1 spec values) */
-  --sv-radius-sm: 0.375rem; /* 6px — badge, tag */
-  --sv-radius-md: 0.5rem; /* 8px — button, input */
-  --sv-radius-lg: 0.6875rem; /* 11px — sidebar icon, card */
-  --sv-radius-xl: 0.75rem; /* 12px — card, panel */
-  --sv-radius-2xl: 0.875rem; /* 14px — popover */
-  --sv-radius-3xl: 1.25rem; /* 20px — bottom sheet (Drawer top corners) */
-  --sv-radius-full: 9999px; /* pill / avatar */
+  /* Border radii (v3.1 spec values). --sv-radius-scale is the one
+     instance-controllable exception to "scale tokens are theme-stable"
+     (RFC 0077) — an operator's corner-radius preset (None/XS/S/M/L)
+     overrides it at :root via the InstanceProvider style injection
+     (runtime/src/instance-provider.tsx), same pipeline as --sv-color-accent.
+     Every corner token below is proportional to it, so a plugin author never
+     references --sv-radius-scale directly — they keep using --sv-radius-sm
+     etc. exactly as before. --sv-radius-full is deliberately NOT derived
+     from the scale: it's a shape token (circle/pill), not a corner-rounding
+     one, and stays fixed regardless of the instance preset. */
+  --sv-radius-scale: 1;
+  --sv-radius-sm: calc(var(--sv-radius-scale) * 0.375rem); /* 6px @ scale 1 — badge, tag */
+  --sv-radius-md: calc(var(--sv-radius-scale) * 0.5rem); /* 8px @ scale 1 — button, input */
+  --sv-radius-lg: calc(
+    var(--sv-radius-scale) * 0.6875rem
+  ); /* 11px @ scale 1 — sidebar icon, card */
+  --sv-radius-xl: calc(var(--sv-radius-scale) * 0.75rem); /* 12px @ scale 1 — card, panel */
+  --sv-radius-2xl: calc(var(--sv-radius-scale) * 0.875rem); /* 14px @ scale 1 — popover */
+  --sv-radius-3xl: calc(
+    var(--sv-radius-scale) * 1.25rem
+  ); /* 20px @ scale 1 — bottom sheet (Drawer top corners) */
+  --sv-radius-full: 9999px; /* pill / avatar — unaffected by --sv-radius-scale */
 
   /* Touch targets — minimum hit-area dimension for interactive controls.
      44px follows the WCAG 2.5.5 / Apple HIG / Material guideline for reliable

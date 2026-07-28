@@ -26,6 +26,8 @@ import { PackageIcon } from './package';
 import { Grid2x2Icon } from './grid-2x2';
 import { InfoIcon } from './info';
 import { AlertTriangleIcon } from './alert-triangle';
+import { CircleCheckIcon } from './circle-check';
+import { CircleXIcon } from './circle-x';
 import { CalendarIcon } from './calendar';
 import { SlidersHorizontalIcon } from './sliders-horizontal';
 import { EllipsisVerticalIcon } from './ellipsis-vertical';
@@ -80,6 +82,8 @@ export type IconName =
   | 'grid-2x2'
   | 'info'
   | 'alert-triangle'
+  | 'circle-check'
+  | 'circle-x'
   | 'calendar'
   | 'sliders-horizontal'
   | 'ellipsis-vertical'
@@ -136,6 +140,8 @@ export const ICONS: Record<IconName, IconComponent> = {
   'grid-2x2': Grid2x2Icon,
   info: InfoIcon,
   'alert-triangle': AlertTriangleIcon,
+  'circle-check': CircleCheckIcon,
+  'circle-x': CircleXIcon,
   calendar: CalendarIcon,
   'sliders-horizontal': SlidersHorizontalIcon,
   'ellipsis-vertical': EllipsisVerticalIcon,
@@ -190,6 +196,8 @@ export { PackageIcon } from './package';
 export { Grid2x2Icon } from './grid-2x2';
 export { InfoIcon } from './info';
 export { AlertTriangleIcon } from './alert-triangle';
+export { CircleCheckIcon } from './circle-check';
+export { CircleXIcon } from './circle-x';
 export { CalendarIcon } from './calendar';
 export { SlidersHorizontalIcon } from './sliders-horizontal';
 export { EllipsisVerticalIcon } from './ellipsis-vertical';

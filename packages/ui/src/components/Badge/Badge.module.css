@@ -4,27 +4,28 @@
   gap: var(--sv-space-1);
   border-radius: var(--sv-radius-sm);
   font-family: var(--sv-font-family);
-  font-size: var(--sv-font-size-xs);
   line-height: 1;
   white-space: nowrap;
   user-select: none;
+}
+
+/* Applied by default (uppercase=true) — opt out for a title-case badge that
+   renders children exactly as passed in. */
+.uppercase {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-/* role — neutral fill, border, title case */
+/* role — neutral fill, border */
 .role {
-  padding: 2px var(--sv-space-2);
   background: var(--sv-color-surface-sunken);
   border: 1px solid var(--sv-color-border);
   color: var(--sv-color-text-primary);
-  font-size: var(--sv-font-size-label);
   font-weight: var(--sv-font-weight-semibold);
 }
 
 /* status — tinted chip with leading colour dot; colour set by chip* classes below */
 .status {
-  padding: 2px var(--sv-space-2) 2px var(--sv-space-1);
   font-weight: var(--sv-font-weight-medium);
 }
 
@@ -54,21 +55,86 @@
 
 /* mono — monospace font, neutral surface, for type tags / versions */
 .mono {
-  padding: 2px var(--sv-space-2);
   background: var(--sv-color-surface-sunken);
   border: 1px solid var(--sv-color-border);
   color: var(--sv-color-text-muted);
   font-family: var(--sv-font-family-mono);
+}
+
+/* Size × variant — font-size and padding are the two axes that change
+   together, so each combination is one compound rule rather than two
+   composed partials fighting over the same properties. `.role.md`,
+   `.status.md`, and `.mono.md` reproduce the badge's original (and, until
+   now, only) sizing exactly, so the default (no `size` prop) renders
+   pixel-identical to before this scale existed. */
+.role.sm {
+  padding: 1px var(--sv-space-1);
+  font-size: var(--sv-font-size-label);
+}
+
+.role.md {
+  padding: 2px var(--sv-space-2);
+  font-size: var(--sv-font-size-label);
+}
+
+.role.lg {
+  padding: 3px var(--sv-space-3);
+  font-size: var(--sv-font-size-sm);
+}
+
+.mono.sm {
+  padding: 1px var(--sv-space-1);
+  font-size: var(--sv-font-size-label);
+}
+
+.mono.md {
+  padding: 2px var(--sv-space-2);
   font-size: var(--sv-font-size-xs);
 }
 
-/* Status dot */
+.mono.lg {
+  padding: 3px var(--sv-space-3);
+  font-size: var(--sv-font-size-sm);
+}
+
+/* status keeps a tighter left edge than right at every size — the dot +
+   gap already read as space before the text, so a full padding-inline-start
+   would double it up. */
+.status.sm {
+  padding: 1px var(--sv-space-1) 1px 3px;
+  font-size: var(--sv-font-size-label);
+}
+
+.status.md {
+  padding: 2px var(--sv-space-2) 2px var(--sv-space-1);
+  font-size: var(--sv-font-size-xs);
+}
+
+.status.lg {
+  padding: 3px var(--sv-space-3) 3px var(--sv-space-2);
+  font-size: var(--sv-font-size-sm);
+}
+
+/* Status dot — scales with size */
 .dot {
   display: inline-block;
-  width: 6px;
-  height: 6px;
   border-radius: var(--sv-radius-full);
   flex-shrink: 0;
+}
+
+.sm .dot {
+  width: 5px;
+  height: 5px;
+}
+
+.md .dot {
+  width: 6px;
+  height: 6px;
+}
+
+.lg .dot {
+  width: 8px;
+  height: 8px;
 }
 
 .dotGreen {

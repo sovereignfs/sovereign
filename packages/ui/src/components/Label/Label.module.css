@@ -1,0 +1,11 @@
+.label {
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+  cursor: default;
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

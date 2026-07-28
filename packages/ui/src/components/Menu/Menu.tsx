@@ -70,10 +70,21 @@ export interface MenuProps {
  * Selecting an item both closes the menu and calls its `onSelect` — a
  * consumer's `onSelect` never needs to call `onClose` itself.
  */
-export function Menu({ trigger, open, onClose, items, 'aria-label': ariaLabel, align }: MenuProps) {
-  const isMobile = useIsMobile();
-
-  const list = (
+/**
+ * MenuEntries — the `<ul role="menu">` item list itself, factored out of
+ * `Menu` so other adaptive-surface components (e.g. `ContextMenu`) can
+ * render the exact same items/destructive/checked/icon markup inside their
+ * own positioning shell, instead of re-deriving it and risking drift.
+ */
+export function MenuEntries({
+  items,
+  onSelect,
+}: {
+  items: MenuEntry[];
+  /** Called after an item's own onSelect — typically the surface's onClose. */
+  onSelect: (entry: MenuItem) => void;
+}) {
+  return (
     <ul className={styles.list} role="menu">
       {items.map((entry, index) => {
         // Entries are a static, order-stable list per render — nothing
@@ -99,10 +110,7 @@ export function Menu({ trigger, open, onClose, items, 'aria-label': ariaLabel, a
                 .filter(Boolean)
                 .join(' ')}
               disabled={entry.disabled}
-              onClick={() => {
-                onClose();
-                entry.onSelect();
-              }}
+              onClick={() => onSelect(entry)}
             >
               {isCheckable && (
                 <span className={styles.check} aria-hidden>
@@ -116,6 +124,20 @@ export function Menu({ trigger, open, onClose, items, 'aria-label': ariaLabel, a
         );
       })}
     </ul>
+  );
+}
+
+export function Menu({ trigger, open, onClose, items, 'aria-label': ariaLabel, align }: MenuProps) {
+  const isMobile = useIsMobile();
+
+  const list = (
+    <MenuEntries
+      items={items}
+      onSelect={(entry) => {
+        onClose();
+        entry.onSelect();
+      }}
+    />
   );
 
   if (isMobile) {

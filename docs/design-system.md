@@ -79,6 +79,14 @@ semantic.css     contextual roles — what components and plugins reference
   plugin CSS. The scale tokens (`--sv-space-*`, `--sv-radius-*`,
   `--sv-font-size-*`) are theme-stable and used directly — they have no separate
   semantic layer because they don't change per theme.
+  - **Exception:** `--sv-radius-sm` through `--sv-radius-3xl` are proportional
+    to `--sv-radius-scale` (default `1`, today's values), which an instance's
+    corner-radius preset (None/XS/S/M/L, Console → Instance identity) can
+    override at `:root` — the same `InstanceProvider` injection mechanism as
+    `--sv-color-accent` (RFC 0077). Component and plugin code is unaffected:
+    keep referencing `--sv-radius-sm` etc. by name, never `--sv-radius-scale`
+    directly. `--sv-radius-full` (avatars, pills) is not part of the scale and
+    stays fixed regardless of the preset.
 
 The tokens ship as plain `.css` files. The runtime shell loads them once
 (`@sovereignfs/ui/tokens.css`, which imports primitives then semantic) so the

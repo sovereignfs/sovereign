@@ -36,6 +36,41 @@ import { Checkbox } from '../components/Checkbox/Checkbox';
 import { RadioGroup } from '../components/RadioGroup/RadioGroup';
 import { Slider } from '../components/Slider/Slider';
 import { Progress } from '../components/Progress/Progress';
+import {
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableHeaderCell,
+  TableCell,
+} from '../components/Table/Table';
+import { Alert } from '../components/Alert/Alert';
+import { Breadcrumb } from '../components/Breadcrumb/Breadcrumb';
+import { Pagination } from '../components/Pagination/Pagination';
+import { Kbd } from '../components/Kbd/Kbd';
+import { Accordion } from '../components/Accordion/Accordion';
+import { AspectRatio } from '../components/AspectRatio/AspectRatio';
+import { ButtonGroup } from '../components/ButtonGroup/ButtonGroup';
+import { Item } from '../components/Item/Item';
+import { Label } from '../components/Label/Label';
+import { ScrollArea } from '../components/ScrollArea/ScrollArea';
+import { Typography } from '../components/Typography/Typography';
+import { Marker } from '../components/Marker/Marker';
+import { Message } from '../components/Message/Message';
+import { MessageScroller } from '../components/MessageScroller/MessageScroller';
+import { HoverCard } from '../components/HoverCard/HoverCard';
+import { ContextMenu } from '../components/ContextMenu/ContextMenu';
+import { Command } from '../components/Command/Command';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '../components/Resizable/Resizable';
+import { DataTable } from '../components/DataTable/DataTable';
+import { Combobox } from '../components/Combobox/Combobox';
+import { NavigationMenu } from '../components/NavigationMenu/NavigationMenu';
+import { Menubar } from '../components/Menubar/Menubar';
+import { Collapsible } from '../components/Collapsible/Collapsible';
 import { DragHandleRow } from '../components/DragHandleRow/DragHandleRow';
 import { FileDropzone } from '../components/FileDropzone/FileDropzone';
 import { OverlayHeader } from '../components/OverlayHeader/OverlayHeader';
@@ -464,6 +499,64 @@ function TabsDemo() {
         value={tab}
         onChange={setTab}
         aria-label="Account"
+      />
+    </div>
+  );
+}
+
+function CommandDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button size="sm" onClick={() => setOpen(true)}>
+        Open command palette
+      </Button>
+      <Command
+        open={open}
+        onClose={() => setOpen(false)}
+        aria-label="Command palette"
+        items={[
+          {
+            id: 'new',
+            label: 'New conversation',
+            group: 'Actions',
+            icon: 'plus',
+            onSelect: () => {},
+          },
+          {
+            id: 'export',
+            label: 'Export chat',
+            group: 'Actions',
+            icon: 'upload',
+            onSelect: () => {},
+          },
+          {
+            id: 'profile',
+            label: 'Go to profile',
+            group: 'Navigation',
+            icon: 'user',
+            onSelect: () => {},
+          },
+        ]}
+      />
+    </>
+  );
+}
+
+function ComboboxDemo() {
+  const [value, setValue] = useState<string | null>(null);
+  return (
+    <div style={{ width: 240 }}>
+      <Combobox
+        options={[
+          { value: 'tasks', label: 'sovereign-tasks' },
+          { value: 'ledger', label: 'sovereign-ledger' },
+          { value: 'shopper', label: 'sovereign-shopper' },
+        ]}
+        value={value}
+        onChange={setValue}
+        placeholder="Select a plugin"
+        aria-label="Plugin"
       />
     </div>
   );
@@ -1527,7 +1620,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="Badge"
               importLine="import { Badge } from '@sovereignfs/ui';"
-              usage="Compact label for roles (role), lifecycle states (status), and type/version tags (mono). RSC-safe."
+              usage="Compact label for roles (role), lifecycle states (status), and type/version tags (mono). sm/md/lg sizes; ALL CAPS by default, or uppercase={false} for title case. RSC-safe."
             >
               <Badge variant="role">Admin</Badge>
               <Badge variant="status" status="active">
@@ -1537,6 +1630,9 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                 Invited
               </Badge>
               <Badge variant="mono">v1.2.0</Badge>
+              <Badge variant="role" size="lg" uppercase={false}>
+                Owner
+              </Badge>
             </ComponentCard>
 
             {/* StatusBadge */}
@@ -2084,6 +2180,468 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               <div style={{ width: 240 }}>
                 <Progress value={65} label="Upload progress" />
               </div>
+            </ComponentCard>
+
+            {/* Table */}
+            <ComponentCard
+              name="Table"
+              importLine="import { Table, TableHead, TableBody, TableRow, TableHeaderCell, TableCell } from '@sovereignfs/ui';"
+              usage="Thin, styled wrappers around the native table elements. Not a data grid — no sort/filter/virtualization. Scrolls horizontally (masked-edge fade) at any viewport size."
+            >
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>Plugin</TableHeaderCell>
+                    <TableHeaderCell>Status</TableHeaderCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>sovereign-tasks</TableCell>
+                    <TableCell>Active</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>sovereign-shopper</TableCell>
+                    <TableCell>Disabled</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </ComponentCard>
+
+            {/* Alert */}
+            <ComponentCard
+              name="Alert"
+              importLine="import { Alert } from '@sovereignfs/ui';"
+              usage="Inline, non-dismissible banner. Distinct from Toast (transient) and SystemBanner (instance-wide) — for form-level errors or explaining an empty/blocked state. Leading icon defaults per variant; pass icon to override or icon={false} to suppress."
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Alert variant="error" heading="Something went wrong">
+                  We couldn’t save your changes. Check your connection and try again.
+                </Alert>
+                <Alert variant="success">Invite sent.</Alert>
+                <Alert variant="neutral">This project has no members yet.</Alert>
+              </div>
+            </ComponentCard>
+
+            {/* Breadcrumb */}
+            <ComponentCard
+              name="Breadcrumb"
+              importLine="import { Breadcrumb } from '@sovereignfs/ui';"
+              usage="Link trail. The last item (no href) renders as plain text with aria-current=page. Pass renderLink to keep navigation client-side inside overlay-shell plugins."
+            >
+              <Breadcrumb
+                items={[
+                  { label: 'Console', href: '/console' },
+                  { label: 'Plugins', href: '/console/plugins' },
+                  { label: 'sovereign-tasks' },
+                ]}
+              />
+            </ComponentCard>
+
+            {/* Pagination */}
+            <ComponentCard
+              name="Pagination"
+              importLine="import { Pagination } from '@sovereignfs/ui';"
+              usage="Page-number / prev-next control. Shows first, last, and pages near the current one, with an ellipsis for gaps once the page count grows."
+            >
+              {(() => {
+                const [page, setPage] = useState(4);
+                return <Pagination page={page} totalPages={12} onChange={setPage} />;
+              })()}
+            </ComponentCard>
+
+            {/* Kbd */}
+            <ComponentCard
+              name="Kbd"
+              importLine="import { Kbd } from '@sovereignfs/ui';"
+              usage="Inline keyboard-key styling. Renders a real <kbd> element."
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Kbd>Ctrl</Kbd>
+                <span>+</span>
+                <Kbd>K</Kbd>
+              </span>
+            </ComponentCard>
+
+            {/* Collapsible */}
+            <ComponentCard
+              name="Collapsible"
+              importLine="import { Collapsible } from '@sovereignfs/ui';"
+              usage="Single expand/collapse primitive. Independently useful (e.g. a 'show more' toggle), and composed internally by Accordion."
+            >
+              {(() => {
+                const [open, setOpen] = useState(false);
+                return (
+                  <Collapsible open={open} onOpenChange={setOpen} trigger="Advanced settings">
+                    These settings are rarely needed — change them only if you know what you're
+                    doing.
+                  </Collapsible>
+                );
+              })()}
+            </ComponentCard>
+
+            {/* Accordion */}
+            <ComponentCard
+              name="Accordion"
+              importLine="import { Accordion } from '@sovereignfs/ui';"
+              usage="One or more Collapsible sections. type=single closes other sections when one opens; type=multiple allows any number open at once."
+            >
+              {(() => {
+                const [openIds, setOpenIds] = useState<string[]>(['plugins']);
+                return (
+                  <Accordion
+                    items={[
+                      {
+                        id: 'plugins',
+                        trigger: 'What plugins ship by default?',
+                        content:
+                          'Only the platform plugins (Console, Launcher, Account) plus Sovereign Tasks.',
+                      },
+                      {
+                        id: 'hosting',
+                        trigger: 'Can I self-host this?',
+                        content:
+                          'Yes — Sovereign is designed to be self-hosted via Docker Compose.',
+                      },
+                    ]}
+                    type="single"
+                    openIds={openIds}
+                    onOpenIdsChange={setOpenIds}
+                  />
+                );
+              })()}
+            </ComponentCard>
+
+            {/* AspectRatio */}
+            <ComponentCard
+              name="AspectRatio"
+              importLine="import { AspectRatio } from '@sovereignfs/ui';"
+              usage="Constrains content (image, video, embed) to a fixed ratio."
+            >
+              <div style={{ width: 200 }}>
+                <AspectRatio ratio={16 / 9}>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      background: 'var(--sv-color-surface-sunken)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--sv-color-text-muted)',
+                      fontSize: 'var(--sv-font-size-xs)',
+                    }}
+                  >
+                    16:9
+                  </div>
+                </AspectRatio>
+              </div>
+            </ComponentCard>
+
+            {/* ButtonGroup */}
+            <ComponentCard
+              name="ButtonGroup"
+              importLine="import { ButtonGroup } from '@sovereignfs/ui';"
+              usage="Visually joins adjacent Buttons into one control (shared border, connected corners)."
+            >
+              <ButtonGroup aria-label="View">
+                <Button variant="secondary" size="sm">
+                  Day
+                </Button>
+                <Button variant="secondary" size="sm">
+                  Week
+                </Button>
+                <Button variant="secondary" size="sm">
+                  Month
+                </Button>
+              </ButtonGroup>
+            </ComponentCard>
+
+            {/* Item */}
+            <ComponentCard
+              name="Item"
+              importLine="import { Item } from '@sovereignfs/ui';"
+              usage="Generic row primitive: leading slot, title + optional description, trailing slot. For settings rows and list rows that don't fit Menu's own item shape."
+            >
+              <Item
+                title="Notifications"
+                description="Manage email and push alerts"
+                leading={<Icon name="bell" aria-hidden />}
+                trailing={<Icon name="chevron-right" size="sm" aria-hidden />}
+                onClick={() => {}}
+              />
+            </ComponentCard>
+
+            {/* Label */}
+            <ComponentCard
+              name="Label"
+              importLine="import { Label } from '@sovereignfs/ui';"
+              usage="Standalone accessible form label, independent of FormField. Use FormField when a control needs hint/error text too."
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <Label htmlFor="label-demo-input">Email address</Label>
+                <input
+                  id="label-demo-input"
+                  type="email"
+                  placeholder="you@example.com"
+                  style={{
+                    padding: 'var(--sv-space-2) var(--sv-space-3)',
+                    border: '1px solid var(--sv-color-border-strong)',
+                    borderRadius: 'var(--sv-radius-md)',
+                    fontFamily: 'var(--sv-font-family)',
+                    fontSize: 'var(--sv-font-size-sm)',
+                  }}
+                />
+              </div>
+            </ComponentCard>
+
+            {/* ScrollArea */}
+            <ComponentCard
+              name="ScrollArea"
+              importLine="import { ScrollArea } from '@sovereignfs/ui';"
+              usage="Styled scrollable container — thin, token-colored scrollbar instead of the OS default. Native overflow scrolling underneath."
+            >
+              <ScrollArea maxHeight={120}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 4 }}>
+                  {Array.from({ length: 10 }, (_, i) => (
+                    <div key={i} style={{ fontSize: 13 }}>
+                      Row {i + 1}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </ComponentCard>
+
+            {/* Typography */}
+            <ComponentCard
+              name="Typography"
+              importLine="import { Typography } from '@sovereignfs/ui';"
+              usage="Text bound to the design system's font-size/weight scale. Pass `as` to override the rendered tag while keeping the variant's visual style."
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Typography variant="h3">Heading 3</Typography>
+                <Typography variant="body">Body copy for descriptions.</Typography>
+                <Typography variant="caption">Caption — secondary text.</Typography>
+              </div>
+            </ComponentCard>
+
+            {/* Marker */}
+            <ComponentCard
+              name="Marker"
+              importLine="import { Marker } from '@sovereignfs/ui';"
+              usage="Inline citation/reference marker — attributes part of an assistant answer to a source (Sovereign Harness 'source trace', RFC 0040)."
+            >
+              <p style={{ fontSize: 14, margin: 0 }}>
+                Your next task is due Thursday
+                <Marker index={1} label="Source: Tasks" onClick={() => {}} />.
+              </p>
+            </ComponentCard>
+
+            {/* Message */}
+            <ComponentCard
+              name="Message"
+              importLine="import { Message } from '@sovereignfs/ui';"
+              usage="A single chat turn for the Sovereign Harness assistant. role is user/assistant/tool, matching harness_messages (RFC 0040). Content is caller-controlled ReactNode."
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Message sender="user">What's on my plate this week?</Message>
+                <Message sender="assistant">You have 3 tasks due this week.</Message>
+              </div>
+            </ComponentCard>
+
+            {/* MessageScroller */}
+            <ComponentCard
+              name="MessageScroller"
+              importLine="import { MessageScroller } from '@sovereignfs/ui';"
+              usage="Auto-scrolling chat container. Scrolls to the newest message while the user is near the bottom; shows a 'New messages' button instead of yanking them down if they've scrolled up."
+            >
+              <div style={{ height: 160, border: '1px solid var(--sv-color-border)' }}>
+                <MessageScroller>
+                  <Message sender="user">Hi there</Message>
+                  <Message sender="assistant">How can I help?</Message>
+                </MessageScroller>
+              </div>
+            </ComponentCard>
+
+            {/* HoverCard */}
+            <ComponentCard
+              name="HoverCard"
+              importLine="import { HoverCard } from '@sovereignfs/ui';"
+              usage="Hover-triggered popover on desktop, tap-to-toggle on touch. Built on Popover for positioning — adds hover-intent timing and the touch fallback. Opens on keyboard focus too."
+            >
+              <HoverCard
+                aria-label="User preview"
+                trigger={
+                  <button
+                    type="button"
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                  >
+                    <Avatar name="Jane Smith" size="sm" />
+                  </button>
+                }
+              >
+                <div style={{ padding: 'var(--sv-space-3)', fontSize: 14 }}>
+                  <div style={{ fontWeight: 600 }}>Jane Smith</div>
+                  <div style={{ color: 'var(--sv-color-text-muted)' }}>jane@example.com</div>
+                </div>
+              </HoverCard>
+            </ComponentCard>
+
+            {/* ContextMenu */}
+            <ComponentCard
+              name="ContextMenu"
+              importLine="import { ContextMenu } from '@sovereignfs/ui';"
+              usage="Right-click menu on desktop, long-press on touch. Desktop positioning reuses Popover's collision detection anchored to the click point; touch opens the same items in a Drawer."
+            >
+              <ContextMenu
+                aria-label="Row actions"
+                items={[
+                  { label: 'Rename', onSelect: () => {} },
+                  { label: 'Duplicate', onSelect: () => {} },
+                  { type: 'separator' },
+                  { label: 'Delete', destructive: true, onSelect: () => {} },
+                ]}
+              >
+                <div
+                  style={{
+                    padding: 'var(--sv-space-4)',
+                    border: '1px dashed var(--sv-color-border-strong)',
+                    borderRadius: 'var(--sv-radius-md)',
+                    textAlign: 'center',
+                    fontSize: 14,
+                    color: 'var(--sv-color-text-muted)',
+                  }}
+                >
+                  Right-click here
+                </div>
+              </ContextMenu>
+            </ComponentCard>
+
+            {/* NavigationMenu */}
+            <ComponentCard
+              name="NavigationMenu"
+              importLine="import { NavigationMenu } from '@sovereignfs/ui';"
+              usage="Top-level nav bar where some items open a flyout panel. Desktop-oriented — a hover-triggered flyout bar has no mobile equivalent."
+            >
+              <NavigationMenu
+                aria-label="Main"
+                items={[
+                  { label: 'Home', href: '/home' },
+                  {
+                    label: 'Products',
+                    content: (
+                      <div style={{ padding: 'var(--sv-space-3)', fontSize: 14 }}>
+                        Tasks · Ledger · Shopper
+                      </div>
+                    ),
+                  },
+                ]}
+              />
+            </ComponentCard>
+
+            {/* Menubar */}
+            <ComponentCard
+              name="Menubar"
+              importLine="import { Menubar } from '@sovereignfs/ui';"
+              usage="Desktop app-style menu bar (File/Edit/View...). A thin composition of NavigationMenu with MenuEntries as each item's flyout content."
+            >
+              <Menubar
+                menus={[
+                  {
+                    label: 'File',
+                    items: [
+                      { label: 'New conversation', onSelect: () => {} },
+                      { label: 'Export', onSelect: () => {} },
+                    ],
+                  },
+                  {
+                    label: 'Edit',
+                    items: [
+                      { label: 'Undo', onSelect: () => {} },
+                      { label: 'Redo', onSelect: () => {} },
+                    ],
+                  },
+                ]}
+              />
+            </ComponentCard>
+
+            {/* Command */}
+            <ComponentCard
+              name="Command"
+              importLine="import { Command } from '@sovereignfs/ui';"
+              usage="⌘K-style command palette. Opened via Dialog for the modal shell — adds the search input, substring filtering, and arrow-key/Enter selection. Controlled: consumer owns the open state."
+            >
+              <CommandDemo />
+            </ComponentCard>
+
+            {/* Resizable */}
+            <ComponentCard
+              name="Resizable"
+              importLine="import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@sovereignfs/ui';"
+              usage="A row or column of resizable panes. Each handle resizes only its two immediate neighbor panels. Desktop-oriented — panels render at their default sizes on touch."
+            >
+              <div style={{ width: '100%', height: 160 }}>
+                <ResizablePanelGroup direction="horizontal">
+                  <ResizablePanel defaultSize={30} minSize={15} maxSize={50}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        fontSize: 14,
+                        color: 'var(--sv-color-text-muted)',
+                      }}
+                    >
+                      Sidebar
+                    </div>
+                  </ResizablePanel>
+                  <ResizableHandle aria-label="Resize sidebar" />
+                  <ResizablePanel defaultSize={70}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        fontSize: 14,
+                        color: 'var(--sv-color-text-muted)',
+                      }}
+                    >
+                      Content
+                    </div>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+              </div>
+            </ComponentCard>
+
+            {/* DataTable */}
+            <ComponentCard
+              name="DataTable"
+              importLine="import { DataTable } from '@sovereignfs/ui';"
+              usage="Sortable table built on Table. Column-driven: pass columns + data instead of composing TableRow/TableCell by hand. Clicking a sortable header cycles ascending → descending → unsorted."
+            >
+              <DataTable
+                columns={[
+                  { key: 'name', header: 'Plugin', sortable: true },
+                  { key: 'installs', header: 'Installs', sortable: true, align: 'end' },
+                ]}
+                data={[
+                  { id: 'tasks', name: 'sovereign-tasks', installs: 482 },
+                  { id: 'ledger', name: 'sovereign-ledger', installs: 219 },
+                  { id: 'shopper', name: 'sovereign-shopper', installs: 37 },
+                ]}
+                getRowKey={(row) => row.id}
+              />
+            </ComponentCard>
+
+            {/* Combobox */}
+            <ComponentCard
+              name="Combobox"
+              importLine="import { Combobox } from '@sovereignfs/ui';"
+              usage="A searchable single-select: Popover on desktop, a bottom-sheet Drawer on mobile. For a short fixed list where search adds no value, use Select's native <select> instead."
+            >
+              <ComboboxDemo />
             </ComponentCard>
 
             {/* DragHandleRow */}

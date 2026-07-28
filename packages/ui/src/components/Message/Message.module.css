@@ -1,0 +1,99 @@
+.row {
+  display: flex;
+  flex-direction: column;
+  max-width: 80%;
+}
+
+.user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.assistant,
+.tool {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.bubble {
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border-radius: var(--sv-radius-xl);
+  font-size: var(--sv-font-size-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.user .bubble {
+  background: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+  border-bottom-right-radius: var(--sv-radius-sm);
+}
+
+.assistant .bubble {
+  background: var(--sv-color-surface-raised);
+  border: 1px solid var(--sv-color-border);
+  color: var(--sv-color-text-primary);
+  border-bottom-left-radius: var(--sv-radius-sm);
+}
+
+.tool .bubble {
+  background: var(--sv-color-surface-sunken);
+  color: var(--sv-color-text-muted);
+  font-family: var(--sv-font-family-mono);
+  font-size: var(--sv-font-size-xs);
+  border-bottom-left-radius: var(--sv-radius-sm);
+}
+
+.actions {
+  display: flex;
+  gap: var(--sv-space-2);
+  margin-top: var(--sv-space-1);
+  font-size: var(--sv-font-size-caption);
+  color: var(--sv-color-text-muted);
+}
+
+/* Typing indicator — three dots, staggered pulse. */
+.typingDots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: var(--sv-space-1) 0;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--sv-radius-full);
+  background: currentColor;
+  opacity: 0.4;
+  animation: typing-pulse 1.2s ease-in-out infinite;
+}
+
+.dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+    opacity: 0.7;
+  }
+}

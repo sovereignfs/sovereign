@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { sdk } from '@sovereignfs/sdk';
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+const RADIUS_PRESETS = new Set(['none', 'xs', 's', 'm', 'l']);
 
 const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
@@ -72,6 +73,7 @@ export async function updateInstanceAction(
 
   const instanceName = (formData.get('instanceName') as string | null)?.trim() || null;
   const instancePrimary = (formData.get('instancePrimary') as string | null)?.trim() || null;
+  const instanceRadius = (formData.get('instanceRadius') as string | null)?.trim() || null;
   const instanceLogo = (formData.get('instanceLogo') as string | null)?.trim() || null;
   const instanceLogoDark = (formData.get('instanceLogoDark') as string | null)?.trim() || null;
   const instanceFavicon = (formData.get('instanceFavicon') as string | null)?.trim() || null;
@@ -81,10 +83,14 @@ export async function updateInstanceAction(
   if (instancePrimary && !HEX_COLOR_RE.test(instancePrimary)) {
     return { ok: false, error: 'Primary colour must be a 6-digit hex value, e.g. #3b82f6.' };
   }
+  if (instanceRadius && !RADIUS_PRESETS.has(instanceRadius)) {
+    return { ok: false, error: 'Corner radius must be one of none, xs, s, m, l.' };
+  }
 
   const body = {
     instanceName,
     instancePrimary,
+    instanceRadius,
     instanceLogo,
     instanceLogoDark,
     instanceFavicon,

@@ -38,6 +38,8 @@ export const ICON_LIST = [
   'grid-2x2',
   'info',
   'alert-triangle',
+  'circle-check',
+  'circle-x',
   'calendar',
   'sliders-horizontal',
   'ellipsis-vertical',

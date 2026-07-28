@@ -10,16 +10,18 @@ const meta = {
     docs: {
       description: {
         component:
-          'Compact label for roles (`role`), lifecycle states (`status`), and type/version tags (`mono`). RSC-safe — no state.',
+          'Compact label for roles (`role`), lifecycle states (`status`), and type/version tags (`mono`). Three sizes (`sm`/`md`/`lg`); ALL CAPS by default, or set `uppercase={false}` for title case. RSC-safe — no state.',
       },
     },
   },
   argTypes: {
     variant: { control: 'select', options: ['role', 'status', 'mono'] },
+    size: { control: 'select', options: ['sm', 'md', 'lg'] },
     status: {
       control: 'select',
       options: ['active', 'enabled', 'deactivated', 'failed', 'invited', 'pending', 'neutral'],
     },
+    uppercase: { control: 'boolean' },
   },
   args: { children: 'Badge' },
 } satisfies Meta<typeof Badge>;
@@ -53,6 +55,84 @@ export const StatusPending: Story = {
 export const MonoPlatform: Story = { args: { variant: 'mono', children: 'platform' } };
 export const MonoCommunity: Story = { args: { variant: 'mono', children: 'community' } };
 export const MonoVersion: Story = { args: { variant: 'mono', children: 'v0.1.0' } };
+
+/** sm / md (default) / lg side by side, across all three variants. */
+export const Sizes: Story = {
+  render: () => {
+    const rowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8 };
+    const sectionStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 8 };
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={sectionStyle}>
+          <div style={rowStyle}>
+            <Badge variant="role" size="sm">
+              Owner
+            </Badge>
+            <Badge variant="role" size="md">
+              Owner
+            </Badge>
+            <Badge variant="role" size="lg">
+              Owner
+            </Badge>
+          </div>
+          <div style={rowStyle}>
+            <Badge variant="status" status="active" size="sm">
+              Active
+            </Badge>
+            <Badge variant="status" status="active" size="md">
+              Active
+            </Badge>
+            <Badge variant="status" status="active" size="lg">
+              Active
+            </Badge>
+          </div>
+          <div style={rowStyle}>
+            <Badge variant="mono" size="sm">
+              v0.1.0
+            </Badge>
+            <Badge variant="mono" size="md">
+              v0.1.0
+            </Badge>
+            <Badge variant="mono" size="lg">
+              v0.1.0
+            </Badge>
+          </div>
+        </div>
+      </div>
+    );
+  },
+};
+
+/** uppercase (default) vs. title case — same text, `uppercase={false}` on the right. */
+export const TitleCase: Story = {
+  render: () => {
+    const rowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8 };
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={rowStyle}>
+          <Badge variant="role">Owner</Badge>
+          <Badge variant="role" uppercase={false}>
+            Owner
+          </Badge>
+        </div>
+        <div style={rowStyle}>
+          <Badge variant="status" status="active">
+            Active
+          </Badge>
+          <Badge variant="status" status="active" uppercase={false}>
+            Active
+          </Badge>
+        </div>
+        <div style={rowStyle}>
+          <Badge variant="mono">Serve Route</Badge>
+          <Badge variant="mono" uppercase={false}>
+            Serve Route
+          </Badge>
+        </div>
+      </div>
+    );
+  },
+};
 
 /** All variants and statuses at a glance. */
 export const AllVariants: Story = {
@@ -110,6 +190,34 @@ export const AllVariants: Story = {
                 {l}
               </Badge>
             ))}
+          </div>
+        </div>
+        <div style={sectionStyle}>
+          <span style={headingStyle}>Sizes (sm / md / lg)</span>
+          <div style={{ ...groupStyle, alignItems: 'center' }}>
+            <Badge variant="role" size="sm">
+              Owner
+            </Badge>
+            <Badge variant="role" size="md">
+              Owner
+            </Badge>
+            <Badge variant="role" size="lg">
+              Owner
+            </Badge>
+          </div>
+        </div>
+        <div style={sectionStyle}>
+          <span style={headingStyle}>Title case (uppercase=false)</span>
+          <div style={{ ...groupStyle, alignItems: 'center' }}>
+            <Badge variant="role" uppercase={false}>
+              Owner
+            </Badge>
+            <Badge variant="status" status="active" uppercase={false}>
+              Active
+            </Badge>
+            <Badge variant="mono" uppercase={false}>
+              Serve Route
+            </Badge>
           </div>
         </div>
       </div>

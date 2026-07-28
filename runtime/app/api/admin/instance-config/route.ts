@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { DEFAULT_TENANT_ID, getInstanceConfig, setInstanceConfig } from '@sovereignfs/db';
+import {
+  DEFAULT_TENANT_ID,
+  getInstanceConfig,
+  setInstanceConfig,
+  type RadiusPreset,
+} from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
 import { logActivity } from '@/src/activity';
 import { getPlatformDb } from '@/src/db';
@@ -23,7 +28,8 @@ export async function GET(request: Request): Promise<Response> {
  * PATCH /api/admin/instance-config
  *
  * Update instance config fields. Admin-key authenticated.
- * instancePrimary is validated as a 6-digit hex colour server-side.
+ * instancePrimary is validated as a 6-digit hex colour server-side;
+ * instanceRadius is validated against the fixed preset list (RFC 0077).
  */
 export async function PATCH(request: Request): Promise<Response> {
   const denied = checkAdminKey(request);
@@ -35,6 +41,7 @@ export async function PATCH(request: Request): Promise<Response> {
     instanceLogoDark: string | null;
     instanceFavicon: string | null;
     instancePrimary: string | null;
+    instanceRadius: RadiusPreset | null;
     emailFromName: string | null;
     emailLogo: string | null;
   }>;
@@ -52,6 +59,8 @@ export async function PATCH(request: Request): Promise<Response> {
         'instanceFavicon' in body ? (body.instanceFavicon ?? null) : current.instanceFavicon,
       instancePrimary:
         'instancePrimary' in body ? (body.instancePrimary ?? null) : current.instancePrimary,
+      instanceRadius:
+        'instanceRadius' in body ? (body.instanceRadius ?? null) : current.instanceRadius,
       emailFromName: 'emailFromName' in body ? (body.emailFromName ?? null) : current.emailFromName,
       emailLogo: 'emailLogo' in body ? (body.emailLogo ?? null) : current.emailLogo,
     });

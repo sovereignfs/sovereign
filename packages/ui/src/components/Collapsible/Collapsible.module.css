@@ -1,0 +1,70 @@
+.root {
+  border-bottom: 1px solid var(--sv-color-border);
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-2);
+  width: 100%;
+  padding: var(--sv-space-3) 0;
+  border: none;
+  background: transparent;
+  color: var(--sv-color-text-primary);
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  text-align: left;
+  cursor: pointer;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--sv-radius-sm);
+}
+
+.triggerLabel {
+  min-width: 0;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--sv-color-text-muted);
+  transition: transform 0.2s ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+/* Expand/collapse via grid-template-rows (0fr closed, 1fr open) instead of
+   animating height, which can't transition to/from auto in CSS. The inner
+   wrapper clips content during the transition. */
+.contentWrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.2s ease;
+}
+
+.contentWrapper[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+
+.contentInner {
+  overflow: hidden;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+}
+
+.contentWrapper[data-open='true'] .contentInner {
+  padding-bottom: var(--sv-space-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contentWrapper,
+  .chevron {
+    transition: none;
+  }
+}

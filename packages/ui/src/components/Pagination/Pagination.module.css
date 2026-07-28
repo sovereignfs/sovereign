@@ -1,0 +1,98 @@
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Icon-only nav buttons — same footprint as Dialog's close button. */
+.navButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sv-space-8);
+  height: var(--sv-space-8);
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  color: var(--sv-color-text-primary);
+  cursor: pointer;
+}
+
+.navButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) {
+  .navButton:not(:disabled):hover {
+    background: var(--sv-color-surface-sunken);
+  }
+}
+
+.navButton:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .navButton {
+    width: var(--sv-touch-target-min, 44px);
+    height: var(--sv-touch-target-min, 44px);
+  }
+}
+
+.pageButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--sv-space-8);
+  height: var(--sv-space-8);
+  padding: 0 var(--sv-space-2);
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  color: var(--sv-color-text-primary);
+  font-size: var(--sv-font-size-sm);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .pageButton:not(.active):hover {
+    background: var(--sv-color-surface-sunken);
+  }
+}
+
+.pageButton:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.active {
+  background: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+}
+
+@media (pointer: coarse) {
+  .pageButton {
+    min-width: var(--sv-touch-target-min, 44px);
+    height: var(--sv-touch-target-min, 44px);
+  }
+}
+
+.ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--sv-space-8);
+  height: var(--sv-space-8);
+  color: var(--sv-color-text-muted);
+}

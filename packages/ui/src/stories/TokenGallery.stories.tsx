@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
 // ---------------------------------------------------------------------------
@@ -63,6 +63,34 @@ const RADIUS_TOKENS = [
   '--sv-radius-3xl',
   '--sv-radius-full',
 ];
+// RFC 0077 — instance corner-radius presets. Base px values mirror
+// primitives.css's own comments (sm 6px, md 8px, xl 12px at scale 1).
+//
+// Each swatch's radius is computed here in JS rather than by overriding
+// --sv-radius-scale on a local wrapper and letting --sv-radius-md etc.
+// recompute from it. That would be the more elegant approach, but CSS custom
+// properties don't support it: a custom property that references another
+// custom property inside calc() (--sv-radius-md: calc(var(--sv-radius-scale)
+// * 0.5rem)) has that inner reference resolved once, at the element where
+// --sv-radius-md itself is *declared* (:root in primitives.css) — not at
+// wherever it's later consumed via var(). A descendant overriding
+// --sv-radius-scale doesn't reach back and change --sv-radius-md's
+// already-fixed value (confirmed empirically — this isn't a guess). The
+// production mechanism (instance-provider.tsx) still works fine: its
+// override is injected as another :root { } rule, the *same* cascade node
+// primitives.css declares --sv-radius-md at, not a descendant — but a
+// side-by-side, multi-preset comparison on one page has no such single
+// :root to share, so the swatches below compute the resulting px directly.
+const RADIUS_PRESETS = [
+  { preset: 'none', scale: 0 },
+  { preset: 'xs', scale: 0.35 },
+  { preset: 's', scale: 0.65 },
+  { preset: 'm', scale: 1 },
+  { preset: 'l', scale: 2.75 },
+] as const;
+
+const RADIUS_BASE_PX = { sm: 6, md: 8, xl: 12 };
+
 const ICON_SIZE_TOKENS = [
   '--sv-icon-size-xs',
   '--sv-icon-size-sm',
@@ -185,6 +213,75 @@ function ScaleRow({
       {renderPreview(computed)}
       <span style={label}>{token}</span>
       <span style={value}>{computed}</span>
+    </div>
+  );
+}
+
+// Radius tokens are calc() expressions since RFC 0077 (proportional to
+// --sv-radius-scale) — reading the raw custom property text now shows the
+// unresolved formula (e.g. "calc(1 * 0.375rem)"), not a pixel value. Render
+// the swatch, then read the browser's own computed border-radius off it
+// (a real CSS property, so calc() is fully resolved) instead of ScaleRow's
+// getPropertyValue text read.
+function RadiusScaleRow({ token }: { token: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [resolved, setResolved] = useState('');
+  useEffect(() => {
+    if (ref.current) setResolved(getComputedStyle(ref.current).borderRadius);
+  }, []);
+  return (
+    <div style={row}>
+      <div
+        ref={ref}
+        style={{
+          width: 40,
+          height: 24,
+          background: 'var(--sv-color-accent)',
+          borderRadius: `var(${token})`,
+          flexShrink: 0,
+        }}
+      />
+      <span style={label}>{token}</span>
+      <span style={value}>{resolved}</span>
+    </div>
+  );
+}
+
+function RadiusPresetRow({ preset, scale }: { preset: string; scale: number }) {
+  return (
+    <div style={row}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexShrink: 0 }}>
+        <div
+          style={{
+            width: 56,
+            height: 40,
+            background: 'var(--sv-color-surface-sunken)',
+            border: '1px solid var(--sv-color-border)',
+            borderRadius: `${scale * RADIUS_BASE_PX.xl}px`,
+          }}
+          title="card (--sv-radius-xl)"
+        />
+        <div
+          style={{
+            width: 64,
+            height: 36,
+            background: 'var(--sv-color-accent)',
+            borderRadius: `${scale * RADIUS_BASE_PX.md}px`,
+          }}
+          title="button, 36px tall (--sv-radius-md)"
+        />
+        <div
+          style={{
+            width: 48,
+            height: 18,
+            background: 'var(--sv-color-accent-subtle)',
+            borderRadius: `${scale * RADIUS_BASE_PX.sm}px`,
+          }}
+          title="badge, 18px tall (--sv-radius-sm)"
+        />
+      </div>
+      <span style={label}>{preset}</span>
+      <span style={value}>scale {scale}</span>
     </div>
   );
 }
@@ -351,21 +448,20 @@ function TokenGalleryComponent() {
 
       <Section title="Radius scale">
         {RADIUS_TOKENS.map((t) => (
-          <ScaleRow
-            key={t}
-            token={t}
-            renderPreview={(_v) => (
-              <div
-                style={{
-                  width: 40,
-                  height: 24,
-                  background: 'var(--sv-color-accent)',
-                  borderRadius: `var(${t})`,
-                  flexShrink: 0,
-                }}
-              />
-            )}
-          />
+          <RadiusScaleRow key={t} token={t} />
+        ))}
+      </Section>
+
+      <Section title="Radius presets (RFC 0077)">
+        <p style={{ color: 'var(--sv-color-text-muted)', fontSize: 13, marginBottom: 12 }}>
+          Instance-level corner-radius intensity — Console → Instance identity, or{' '}
+          <code>INSTANCE_RADIUS</code>. Overrides <code>--sv-radius-scale</code>; every{' '}
+          <code>--sv-radius-*</code> token above stays proportional to it. Note how the button
+          swatch clips to a full pill by L — <code>border-radius</code>&apos;s own half-height
+          clamp, not a separate mechanism.
+        </p>
+        {RADIUS_PRESETS.map((p) => (
+          <RadiusPresetRow key={p.preset} preset={p.preset} scale={p.scale} />
         ))}
       </Section>
 

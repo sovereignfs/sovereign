@@ -561,6 +561,8 @@ export const instanceConfig = sqliteTable('instance_config', {
   instanceFavicon: text('brand_favicon'),
   /** Validated hex colour overriding --sv-color-accent, e.g. "#3b82f6". */
   instancePrimary: text('brand_primary'),
+  /** Corner-radius intensity preset overriding --sv-radius-scale (RFC 0077). One of 'none' | 'xs' | 's' | 'm' | 'l'. */
+  instanceRadius: text('brand_radius'),
   /** Sender display name for outbound email, e.g. "Acme Support". */
   emailFromName: text('email_from_name'),
   /** Publicly reachable URL for the instance logo used in HTML email bodies. */

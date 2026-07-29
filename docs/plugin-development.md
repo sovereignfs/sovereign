@@ -425,11 +425,10 @@ offline is entirely your own client-side decision, invisible to the manifest
 
 `offline` requires no permission and grants **no auth exemption** — it is
 purely a caching/rendering declaration, unlike `publicRoutes`. A separate
-`offline:write` permission is reserved for offline write/sync capability
-(queued mutations applied while offline, synced back once connectivity
-returns) — declaring it requires `offline: true` — but as of this writing
-there is no backing SDK surface yet; `sdk.offline` below remains read-only.
-The write-capable SDK module (`@sovereignfs/sdk/offline-queue`, per RFC 0078) lands in a follow-up change.
+`offline:write` permission gates offline write/sync capability (queued
+mutations applied while offline, synced back once connectivity returns) —
+declaring it requires `offline: true`. See "Offline writes
+(`sdk.offline-queue`, RFC 0078)" below.
 
 **What the platform does:**
 
@@ -497,6 +496,95 @@ safe client-side signal to key by user identity. Isolation across a login
 boundary instead comes from the runtime calling `offline.clearAll()` on every
 logout/user-switch: nothing cached ever survives past the session that wrote
 it, which is what makes plugin-only scoping safe on a shared device.
+
+### Offline writes (`sdk.offline-queue`, RFC 0078)
+
+`sdk.offline` above is a **read-only** cache. `@sovereignfs/sdk/offline-queue`
+adds a client-side mutation queue on top of it, so a plugin declaring
+`offline: true` plus the `offline:write` permission can also let a user add,
+edit, or delete data while offline — queuing each write and syncing it back
+once connectivity returns.
+
+```json
+{
+  "routePrefix": "/shopper",
+  "offline": true,
+  "permissions": ["auth:session", "db:readWrite", "offline:write"]
+}
+```
+
+Like `sdk.offline`, this is a **generic, plugin-agnostic capability** — it
+takes a `pluginId` and plugin-chosen operation names/payloads, and knows
+nothing about any particular plugin's data model. It is a separate
+IndexedDB-backed module from `sdk.offline` (its own database, its own
+`clearAll()` purge), imported from its own subpath for the same
+client/server-boundary reason as every other browser-only SDK module:
+
+```ts
+'use client';
+import { offlineQueue, drainQueue } from '@sovereignfs/sdk/offline-queue';
+
+const PLUGIN_ID = 'fs.sovereign.shopper';
+
+// While offline (or optimistically, even online): apply the change to your
+// own local view immediately, then queue it.
+await offlineQueue.enqueue(PLUGIN_ID, 'setBought', { itemId, bought: true, at: Date.now() / 1000 });
+
+// Later — on mount, or a `window` 'online' handler — drain the queue against
+// your own sync endpoint.
+await drainQueue(PLUGIN_ID, async (batch) => {
+  const res = await fetch('/shopper/api/sync', {
+    method: 'POST',
+    body: JSON.stringify({ mutations: batch }),
+  });
+  const { outcomes } = await res.json();
+  return outcomes; // [{ id, status: 'applied' | 'skipped' | 'failed', error? }]
+});
+```
+
+**The apply contract your sync endpoint must implement** (this is the part
+that makes retries and last-write-wins safe, not `sdk.offline-queue` itself
+— the queue only stores and drains; your endpoint decides what each
+operation means):
+
+- **Every operation must be idempotent and absolute, never a delta or a
+  toggle.** A create should carry a client-minted permanent id (so a retried
+  `INSERT ... ON CONFLICT DO NOTHING` is safe and there's no temp-id
+  reconciliation step). An update should carry the full new field values,
+  not a diff. A boolean flip (e.g. "mark bought") must carry the **intended
+  end state**, not "toggle it" — a lost response followed by a client retry
+  would otherwise flip a real toggle twice.
+- **Last-write-wins via a server-side timestamp comparison, checked on every
+  apply attempt** — compare the mutation's `clientTimestamp` (epoch seconds)
+  against the target row's own last-modified timestamp; apply only if the
+  mutation is newer. Every _online_ write path that touches the same rows
+  must also maintain that timestamp column, or an online edit's stale value
+  will wrongly lose to a later-synced offline mutation.
+- **Apply sequentially and halt at the first failure** within a batch, so a
+  dependent later mutation (e.g. editing an item some earlier queued
+  mutation in the same batch was meant to create) is never attempted out of
+  order. Mutations your endpoint never reaches this round simply stay
+  queued for the next drain.
+- Return `'skipped'` (not `'failed'`) when a mutation's target was already
+  removed by someone else — there's nothing to reconcile, and the client's
+  next full re-fetch will drop it from view. Return `'failed'` with a clear
+  `error` when the mutation genuinely couldn't be applied (e.g. its parent
+  list was deleted) — silently dropping a user's change is worse than
+  surfacing it.
+
+`offlineQueue.enqueue()` throws `OfflineQueueFullError` past a 500-entry
+soft cap per plugin — there's no eviction, since silently dropping a queued
+write is data loss. `offlineQueue.clearAll()` is purged on every logout/login
+boundary alongside `offline.clearAll()`, the same shared-device safeguard —
+a plugin adopting offline writes should attempt a best-effort `drainQueue()`
+before sign-out completes when online, since the purge is destructive to
+anything not yet synced.
+
+**Known limitation, stated plainly:** sync only ever runs while a plugin's
+own client code is mounted and calls `drainQueue()` — there is no
+platform-orchestrated background sync (the Background Sync API has no iOS
+Safari support). If the app isn't open when connectivity returns, queued
+writes wait until it is.
 
 ### `shell: overlay` (RFC 0001)
 

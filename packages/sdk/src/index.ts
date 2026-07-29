@@ -82,6 +82,7 @@ export type { SdkHost } from './host';
  * import { encryptBlob, encryptJson } from '@sovereignfs/sdk/e2ee-object';
  * import { getE2eeLocalState } from '@sovereignfs/sdk/e2ee-state';
  * import { offline } from '@sovereignfs/sdk/offline';
+ * import { offlineQueue, drainQueue } from '@sovereignfs/sdk/offline-queue';
  * ```
  *
  * Types are erased at compile time (no runtime module graph), so they stay

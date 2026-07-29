@@ -538,7 +538,10 @@ per step:
    (Changelog 0.5) — see §6.
 
 Offline **writes** (outbox, background sync, conflict resolution) are a separate
-future RFC that builds on the `sdk.offline` store defined here.
+future RFC that builds on the `sdk.offline` store defined here — see RFC 0078,
+which also removes this RFC's `offline.routes[]` array in favor of a single
+plugin-level `offline` boolean, generalizing the `offline.root: true` shape
+Launcher already uses (§6) into the only model.
 
 ## Changelog
 

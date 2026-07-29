@@ -9,7 +9,7 @@
   "routePrefix": "/launcher",
   "shell": "default",
   "icon": "icon.svg",
-  "offline": { "root": true },
+  "offline": true,
   "permissions": ["auth:session", "db:readOnly"],
   "compatibility": {
     "minPlatformVersion": "0.4.0"

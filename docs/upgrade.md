@@ -734,6 +734,49 @@ See [`docs/plugin-database.md`](plugin-database.md) for the full reference.
 
 ## Published package migrations
 
+### `@sovereignfs/manifest` 0.26.0 → 1.0.0 (breaking — RFC 0078)
+
+**The `offline` manifest field is now a plain boolean, replacing the
+`offline.routes[]`/`offline.root` object shape (RFC 0074).** RFC 0078
+generalizes Launcher's original `offline.root: true` pattern — one
+bare-`routePrefix` entry page, entirely client-rendered past that — into the
+only offline model, removing the per-route `routes[]` array. `@sovereignfs/manifest`
+isn't published to npm, but this is still a breaking change to the
+`manifest.json` contract every plugin author writes against.
+
+**Before:**
+
+```json
+{ "offline": { "routes": [{ "prefix": "/cards", "description": "…" }] } }
+```
+
+or
+
+```json
+{ "offline": { "root": true } }
+```
+
+**After:**
+
+```json
+{ "offline": true }
+```
+
+There is no field-for-field migration for a `routes[]` entry — the old model
+let a plugin cache several distinct sub-paths independently; the new model
+gives every offline-enabled plugin exactly one entry point (its bare
+`routePrefix`), and the plugin's own client-side code decides which screens
+or data to render past that. Restructure your offline experience as one
+client-rendered shell at your bare `routePrefix`, following
+`plugins/launcher/app/_components/LauncherOfflineView.tsx` as the reference
+pattern.
+
+A manifest still using the old object shape now fails validation — this is
+intentional; there is no deprecation period. A new `offline:write` permission
+is also added (`permissions: ["offline:write"]`, requires `offline: true`) —
+reserved for a forthcoming offline write/sync capability
+(`@sovereignfs/sdk/offline-queue`), not yet implemented as of this version.
+
 ### `@sovereignfs/sdk` 1.22.0 → 1.23.0
 
 **`StorageObject` gains a `metadata` field** (RFC 0044/0060). `sdk.storage.put()`

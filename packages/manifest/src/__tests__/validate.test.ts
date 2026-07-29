@@ -146,77 +146,50 @@ describe('validateManifest', () => {
     if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
   });
 
-  it('accepts a manifest that declares offline routes (RFC 0072)', () => {
-    const res = validateManifest({
-      ...base,
-      offline: { routes: [{ prefix: '/cards', description: 'View saved cards offline.' }] },
-    });
-    expect(res.valid).toBe(true);
+  it('accepts a manifest declaring offline: true (RFC 0078)', () => {
+    expect(validateManifest({ ...base, offline: true }).valid).toBe(true);
   });
 
-  it('accepts an offline route entry without a description', () => {
+  it('accepts a manifest declaring offline: false', () => {
+    expect(validateManifest({ ...base, offline: false }).valid).toBe(true);
+  });
+
+  it('accepts a manifest with no offline field at all', () => {
+    expect(validateManifest({ ...base }).valid).toBe(true);
+  });
+
+  it('rejects the old offline.routes[]/offline.root object shape (RFC 0074, removed by RFC 0078)', () => {
     expect(validateManifest({ ...base, offline: { routes: [{ prefix: '/cards' }] } }).valid).toBe(
-      true,
-    );
-  });
-
-  it('rejects an offline route prefix that does not start with "/"', () => {
-    const res = validateManifest({ ...base, offline: { routes: [{ prefix: 'cards' }] } });
-    expect(res.valid).toBe(false);
-    if (!res.valid) expect(res.errors.join(' ')).toContain('offline');
-  });
-
-  it('rejects an offline route prefix of "/"', () => {
-    const res = validateManifest({ ...base, offline: { routes: [{ prefix: '/' }] } });
-    expect(res.valid).toBe(false);
-    if (!res.valid) expect(res.errors.join(' ')).toContain('offline');
-  });
-
-  it('rejects an offline route prefix containing ".." segments', () => {
-    const res = validateManifest({
-      ...base,
-      offline: { routes: [{ prefix: '/cards/../../etc' }] },
-    });
-    expect(res.valid).toBe(false);
-    if (!res.valid) expect(res.errors.join(' ')).toContain('offline');
-  });
-
-  it('rejects an offline route prefix containing route group / interception markers', () => {
-    expect(validateManifest({ ...base, offline: { routes: [{ prefix: '/(group)' }] } }).valid).toBe(
       false,
     );
-    expect(
-      validateManifest({ ...base, offline: { routes: [{ prefix: '/(.)cards' }] } }).valid,
-    ).toBe(false);
+    expect(validateManifest({ ...base, offline: { root: true } }).valid).toBe(false);
   });
 
-  it('rejects an empty offline.routes array', () => {
-    expect(validateManifest({ ...base, offline: { routes: [] } }).valid).toBe(false);
-  });
-
-  it('rejects duplicate offline route prefixes within a plugin', () => {
+  it('rejects the "offline:write" permission without offline: true', () => {
     const res = validateManifest({
       ...base,
-      offline: { routes: [{ prefix: '/cards' }, { prefix: '/cards' }] },
+      permissions: ['offline:write'],
     });
     expect(res.valid).toBe(false);
-    if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
+    if (!res.valid) expect(res.errors.join(' ')).toContain('offline:write');
   });
 
-  it('accepts a manifest declaring offline.root alone, with no routes', () => {
-    expect(validateManifest({ ...base, offline: { root: true } }).valid).toBe(true);
-  });
-
-  it('accepts a manifest declaring both offline.root and offline.routes', () => {
-    expect(
-      validateManifest({ ...base, offline: { root: true, routes: [{ prefix: '/cards' }] } }).valid,
-    ).toBe(true);
-  });
-
-  it('rejects an offline object with neither root nor routes', () => {
-    const res = validateManifest({ ...base, offline: {} });
+  it('rejects the "offline:write" permission when offline is false', () => {
+    const res = validateManifest({
+      ...base,
+      offline: false,
+      permissions: ['offline:write'],
+    });
     expect(res.valid).toBe(false);
-    if (!res.valid) expect(res.errors.join(' ')).toContain('root');
+  });
+
+  it('accepts the "offline:write" permission paired with offline: true', () => {
+    const res = validateManifest({
+      ...base,
+      offline: true,
+      permissions: ['offline:write'],
+    });
+    expect(res.valid).toBe(true);
   });
 
   it('accepts a manifest that declares the example marker', () => {

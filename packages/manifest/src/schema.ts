@@ -33,6 +33,7 @@ export const permissionSchema = z.enum([
   'activity:write',
   'e2ee:use',
   'admin:*',
+  'offline:write',
 ]);
 
 /** Validate that a string is a valid semver string (e.g. "0.6.0"). */
@@ -209,58 +210,20 @@ const manifestObjectSchema = z
       })
       .optional(),
     /**
-     * Manifest-declared offline-capable page routes (RFC 0074). `routes[]`
-     * entries name a path prefix — relative to this plugin's own
-     * `routePrefix` — that must keep rendering with no network; `root: true`
-     * additionally (or instead) marks the plugin's own bare `routePrefix`
-     * page itself as offline-capable (kept as a separate, explicit flag
-     * rather than allowing `routes[].prefix` to be `/`, which stays
-     * disallowed — that restriction exists to force explicit sub-path
-     * enumeration, a different concern from a single-page plugin opting its
-     * own root in). Unlike `publicRoutes`, this grants no auth exemption: it
-     * is purely a caching/rendering declaration. Any offline-declared page —
-     * root or sub-route — must render a user-neutral shell and hydrate its
-     * data client-side (via `sdk.offline`) rather than through per-user SSR,
-     * so the platform can safely precache it without risking a stale/
-     * different user's content being replayed on a shared device.
+     * Marks this plugin's bare `routePrefix` page as its one offline-capable
+     * entry point (RFC 0078, generalizing Launcher's original `offline.root`
+     * flag from RFC 0074 into the only offline model). Grants no auth
+     * exemption — it is purely a caching/rendering declaration. This page
+     * must render a user-neutral shell and hydrate everything else
+     * (screens, data, records) client-side via `sdk.offline`/
+     * `sdk.offline-queue` rather than through per-user SSR, so the platform
+     * can safely precache it without risking a stale/different user's
+     * content being replayed on a shared device. Which screens or data a
+     * plugin actually supports offline is entirely its own client-side
+     * decision — invisible to this schema. Pair with the `offline:write`
+     * permission to also enable the mutation-queue/sync capability.
      */
-    offline: z
-      .object({
-        routes: z
-          .array(
-            z
-              .object({
-                /** Relative to routePrefix; must start with "/" and must not be "/". */
-                prefix: z
-                  .string()
-                  .min(1)
-                  .startsWith('/', 'offline route prefix must start with "/"')
-                  .refine((p) => p !== '/', { message: 'offline route prefix must not be "/"' })
-                  .refine((p) => !p.split('/').includes('..'), {
-                    message: 'offline route prefix must not contain ".." segments',
-                  })
-                  .refine((p) => !/[()]/.test(p), {
-                    message:
-                      'offline route prefix must not contain route groups or interception markers ("(", ")")',
-                  }),
-                /** Human-readable description shown in docs/Console. */
-                description: z.string().min(1).optional(),
-              })
-              .strict(),
-          )
-          .min(1)
-          .refine((arr) => new Set(arr.map((r) => r.prefix)).size === arr.length, {
-            message: 'offline route prefixes must be unique within the plugin',
-          })
-          .optional(),
-        /** Marks this plugin's own bare `routePrefix` page as offline-capable. */
-        root: z.boolean().optional(),
-      })
-      .strict()
-      .refine((o) => o.root === true || (o.routes?.length ?? 0) > 0, {
-        message: 'offline must declare at least one of "root" or "routes"',
-      })
-      .optional(),
+    offline: z.boolean().optional(),
     /**
      * Marks this plugin as a bundled reference/example. Purely a classification
      * flag: the platform groups example plugins in Console and offers a bulk
@@ -668,7 +631,13 @@ export const manifestSchema = manifestObjectSchema
         '(RFC 0071).',
       path: ['database', 'dialect'],
     },
-  );
+  )
+  .refine((m) => !m.permissions.includes('offline:write') || m.offline === true, {
+    message:
+      'the "offline:write" permission requires offline: true — write/sync capability ' +
+      'only exists on top of the offline-capable single-shell model (RFC 0078)',
+    path: ['permissions'],
+  });
 
 /**
  * Manifest field names, sourced from the schema so docs and tooling share one

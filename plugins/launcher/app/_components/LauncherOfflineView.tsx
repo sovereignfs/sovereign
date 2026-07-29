@@ -31,8 +31,8 @@ type State =
   | { status: 'loaded'; plugins: LauncherPlugin[] };
 
 /**
- * Offline-capable Launcher home (RFC 0072 — `manifest.json` declares
- * `offline.root: true`). `page.tsx` renders the user-neutral shell; all
+ * Offline-capable Launcher home (RFC 0078 — `manifest.json` declares
+ * `offline: true`). `page.tsx` renders the user-neutral shell; all
  * data-fetching happens here, client-side, mirroring Shopper's
  * `OfflineListView` pattern: render whatever `sdk.offline` has cached
  * immediately (works with no network), then always attempt a fresh fetch —

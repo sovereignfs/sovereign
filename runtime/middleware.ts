@@ -440,13 +440,23 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     headers.set('x-sovereign-mobile-footer', '0');
   }
 
-  // Flag a manifest-declared offline route (RFC 0072) so `(platform)/layout.tsx`
-  // can render a user-neutral shell for it — the platform shell chrome (name,
-  // avatar, personalized sidebar order) is otherwise per-user SSR, and a
-  // service-worker-precached document for an offline route bakes in whatever
-  // shell HTML was rendered alongside it. Without this flag, a plugin's own
-  // offline route could correctly render nothing per-user while still shipping
-  // inside a per-user-personalized shell document.
+  // Flag a manifest-declared offline-enabled plugin's bare routePrefix (RFC
+  // 0078) so `(platform)/layout.tsx` can render a user-neutral shell for it —
+  // the platform shell chrome (name, avatar, personalized sidebar order) is
+  // otherwise per-user SSR, and a service-worker-precached document for an
+  // offline route bakes in whatever shell HTML was rendered alongside it.
+  // Without this flag, a plugin's own offline route could correctly render
+  // nothing per-user while still shipping inside a per-user-personalized
+  // shell document.
+  //
+  // Deliberately an **exact** match, not `underPrefix()`'s broader "this
+  // path or anything under it" — RFC 0078's single-entry-point model only
+  // guarantees neutrality (and CI-scans) a plugin's bare routePrefix page
+  // itself; a nested route like `/shopper/lists/abc` is an ordinary per-user
+  // SSR page with no such guarantee. Broadly matching every sub-path here
+  // would make the service worker precache-and-replay a per-user page as if
+  // it were a safe neutral shell — exactly the leak this mechanism exists to
+  // prevent.
   //
   // `/` is deliberately *not* included here, even though `next-pwa` also
   // caches it (the PWA start_url, rewritten server-side below to whichever
@@ -460,7 +470,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // (a stale cached shell replayed to a different user while offline on a
   // shared device) no narrower than what's already tolerated for any other
   // authenticated page.
-  if (getOfflineRoutePrefixes(installedPlugins).some((prefix) => underPrefix(pathname, prefix))) {
+  if (getOfflineRoutePrefixes(installedPlugins).includes(pathname)) {
     headers.set('x-sovereign-offline-route', '1');
   }
 

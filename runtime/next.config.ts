@@ -52,8 +52,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Manifest-declared offline-capable route prefixes (RFC 0072), e.g.
-// "/wallet/cards". A plugin route under one of these renders a user-neutral
+// Manifest-declared offline-capable route prefixes (RFC 0078), e.g.
+// "/shopper" — a plugin's bare routePrefix. That route renders a user-neutral
 // shell and hydrates its data client-side via sdk.offline (see
 // docs/plugin-development.md's "offline" section) — that's what makes it
 // safe to cache-first, unlike the per-user SSR "pages" entry below.
@@ -74,10 +74,13 @@ const offlineRoutePrefixes = getOfflineRoutePrefixes();
 // used genuinely offline can replay whichever user's shell was cached from
 // their last online visit, until the next successful online request
 // refreshes it.
+// Exact match only, not "this path or anything under it" — RFC 0078's
+// single-entry-point model guarantees a user-neutral shell (and CI-scans)
+// only for a plugin's bare routePrefix page itself. A nested route is an
+// ordinary per-user SSR page; matching it here would let the service worker
+// precache-and-replay it as if it were safe to share across users.
 function underOfflineRoutePrefix(pathname: string): boolean {
-  return offlineRoutePrefixes.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
+  return offlineRoutePrefixes.includes(pathname);
 }
 
 // Installable PWA (SRS §3.11, PLT-09). The service worker is generated into
@@ -103,7 +106,7 @@ const withPWA = withPWAInit({
   extendDefaultRuntimeCaching: true,
   workboxOptions: {
     runtimeCaching: [
-      // Offline-capable routes (RFC 0072) — must be listed before the
+      // Offline-capable routes (RFC 0078) — must be listed before the
       // general "pages" matcher below so it wins for these specific paths.
       // StaleWhileRevalidate is safe here (and only here) because these
       // documents are declared user-neutral shells, not per-user SSR: the

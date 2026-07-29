@@ -224,6 +224,11 @@ implemented): `events:publish`, `events:subscribe`, `e2ee:use` (client-side encr
 `sdk.e2ee` — RFC 0060; distinct from any future server-side `sdk.crypto.encryptField()`
 field crypto, which the runtime _can_ decrypt).
 
+`offline:write` (RFC 0078) is validated at the manifest level (requires
+`offline: true` on the same manifest) but has no backing SDK surface yet —
+reserved for the forthcoming offline write/sync capability, see `offline`
+below.
+
 Permission declarations are part of the manifest contract and are used by
 platform flows such as portability (`data:export` / `data:import`) and by the
 `mailer:send` / `mailer:sendExternal` host-side enforcement described below
@@ -396,73 +401,54 @@ shared token schema — each plugin owns its model): a **hash** of the token
 `expiresAt`, `revokedAt`, and a mode (`expiring`, `permanent`, or a
 plugin-specific enum).
 
-### `offline` — offline-capable page routes (RFC 0074)
+### `offline` — offline-capable plugins (RFC 0074, RFC 0078)
 
 Sovereign is installable as a PWA, but every page is per-user server-rendered
 and fetched `NetworkFirst` — with no network, everything but the static
-`/offline` fallback is unreachable. `offline` lets a plugin nominate a small,
-mission-critical set of routes that keep working with no connection (e.g. a
-saved card, today's task list, the current shopping list).
-
-```json
-{
-  "routePrefix": "/wallet",
-  "offline": {
-    "routes": [{ "prefix": "/cards", "description": "View saved cards without a connection." }]
-  }
-}
-```
-
-**Sub-fields**:
-
-| Field      | Type    | Required | Description                                                                                                                                                  |
-| ---------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `routes[]` | array   | no\*     | Sub-path entries, each relative to `routePrefix` (see below).                                                                                                |
-| `root`     | boolean | no\*     | Marks this plugin's own bare `routePrefix` page (not a sub-path) as offline-capable — e.g. a single-page plugin whose whole UI lives at its top-level route. |
-
-\* At least one of `root` or `routes` must be present.
-
-**`routes[]` entry fields**:
-
-| Field         | Type   | Required | Description                                                                                                                                                      |
-| ------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `prefix`      | string | yes      | Path prefix, **relative to `routePrefix`**. Must start with `/`, must not be `/`, must not contain `..` segments or route-group/interception markers (`(`, `)`). |
-| `description` | string | no       | Human-readable note (docs/Console).                                                                                                                              |
-
-Given the example above, `/wallet/cards/*` is offline-capable. Prefixes must
-be unique within a plugin. `offline` requires no permission and grants
-**no auth exemption** — it is purely a caching/rendering declaration, unlike
-`publicRoutes`.
-
-`root: true` is kept as a separate flag rather than allowing `routes[].prefix`
-to be `/` — that restriction on sub-path entries stays in place (it forces
-explicit enumeration of a plugin's offline-capable paths), while `root` is an
-orthogonal, explicit opt-in for a plugin's own top-level page:
+`/offline` fallback is unreachable. `offline: true` marks your plugin's bare
+`routePrefix` page as its one offline-capable entry point — the shell that
+loads with no connection, from which your own client-side code takes over.
 
 ```json
 {
   "routePrefix": "/launcher",
-  "offline": { "root": true }
+  "offline": true
 }
 ```
 
-A plugin may declare `root`, `routes`, or both.
+There is no per-route declaration — `offline` is a single boolean at the
+plugin level (RFC 0078 replaced RFC 0074's original `offline.routes[]`/
+`offline.root` object shape with this flat field; that old shape is no longer
+accepted). Which screens, lists, or records your plugin actually supports
+offline is entirely your own client-side decision, invisible to the manifest
+— the platform only needs to know there's a neutral shell to precache.
+
+`offline` requires no permission and grants **no auth exemption** — it is
+purely a caching/rendering declaration, unlike `publicRoutes`. A separate
+`offline:write` permission is reserved for offline write/sync capability
+(queued mutations applied while offline, synced back once connectivity
+returns) — declaring it requires `offline: true` — but as of this writing
+there is no backing SDK surface yet; `sdk.offline` below remains read-only.
+The write-capable SDK module (`@sovereignfs/sdk/offline-queue`, per RFC 0078) lands in a follow-up change.
 
 **What the platform does:**
 
-- Precaches the route's shell (document, JS, CSS) at build time so it loads
-  with no network.
+- Precaches your plugin's bare-`routePrefix` document (shell HTML, JS, CSS)
+  the first time it's visited online, so it loads with no network from then
+  on.
 - Every other route stays `NetworkFirst`; offline, it falls back to the
-  `/offline` "no internet connection" page as usual.
+  `/offline` "no internet connection" page as usual — only your plugin's one
+  declared entry point is reachable with no connection.
 - Never caches or replays per-user API responses — the SW cache holds only
-  user-neutral assets.
+  the user-neutral shell document.
 
-**What your plugin must do** — offline routes are still per-user pages, but
-their SSR output must contain **no per-user data**, or a cached copy could be
-replayed for the wrong user on a shared device:
+**What your plugin must do** — the offline-capable route is still a per-user
+page, but its SSR output must contain **no per-user data**, or a cached copy
+could be replayed for the wrong user on a shared device:
 
-- Render a **user-neutral shell** server-side (layout, chrome, empty states,
-  skeletons only — no data fetched during SSR).
+- Render a **user-neutral shell** server-side, in both `page.tsx` and any
+  wrapping `layout.tsx` (layout, chrome, empty states, skeletons only — no
+  data fetched during SSR).
 - Hydrate the real data **client-side** from `sdk.offline` (an IndexedDB-backed
   cache, imported from the dedicated `@sovereignfs/sdk/offline` subpath —
   browser-only modules can't go through the main barrel, same as the E2EE
@@ -485,22 +471,24 @@ replayed for the wrong user on a shared device:
 
 - Show a plugin-owned empty state ("Not available offline yet — open once
   online") when the cache has nothing stored, rather than a blank page.
-- Treat `sdk.offline` as **read-only caching**, not sync: v1 offline routes are
-  read-only. Writes made while offline are not queued or synced — that is
-  deferred to a future RFC.
 - Keep each cached value reasonably sized: `offline.set` enforces a 5 MB
   soft cap per entry and throws `OfflineQuotaExceededError` (also thrown if
   the browser's origin storage quota — shared across every installed
   plugin's offline cache — is exhausted). Split large data across multiple
   keys rather than one large entry.
+- Everything past the one entry point — which screens or records to show,
+  how to route between them — is your own client-side code. There is no
+  platform mechanism for a second offline-reachable route; a bookmark or
+  link to anything other than your plugin's bare `routePrefix` is not
+  SW-served offline and falls through to the generic `/offline` fallback.
 
 **CI-enforced:** `runtime/src/__tests__/offline-route-neutrality.test.ts`
-statically scans every manifest-declared offline route's server-component
-source files for identity-reading APIs (`headers()`, `cookies()`, a session
-helper, the `x-sovereign-user-id` header) and fails the build if any are
-found — it is a source scan, not a rendered-output diff, so it cannot catch
-every possible per-user leak, but it catches the direct ones before your
-route ships.
+statically scans every offline-enabled plugin's root `page.tsx`/`layout.tsx`
+(and any co-located `_`-prefixed helper files they import) for
+identity-reading APIs (`headers()`, `cookies()`, a session helper, the
+`x-sovereign-user-id` header) and fails the build if any are found — it is a
+source scan, not a rendered-output diff, so it cannot catch every possible
+per-user leak, but it catches the direct ones before your route ships.
 
 **Isolation note:** `sdk.offline` scopes entries by plugin id only, not by
 user id — an offline route's own SSR output must never carry per-user data

@@ -1,6 +1,6 @@
 /**
- * Browser-only, plugin-scoped key/value cache backing offline-capable page
- * routes (RFC 0074, manifest `offline.routes`). Lets a client component
+ * Browser-only, plugin-scoped key/value cache backing offline-capable plugins
+ * (RFC 0074, manifest `offline: true` per RFC 0078). Lets a client component
  * render immediately from the last-cached value with no network, then mirror
  * a fresh read back in for next time.
  *

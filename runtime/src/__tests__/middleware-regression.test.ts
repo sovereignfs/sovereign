@@ -70,7 +70,7 @@ const publicRoutePlugin = {
 const offlineRoutePlugin = {
   id: 'com.example.shopper',
   routePrefix: '/shopper',
-  offline: { routes: [{ prefix: '/lists' }] },
+  offline: true,
 } as SovereignManifest;
 
 const mobileChromePlugin = {
@@ -326,20 +326,20 @@ describe('runtime middleware regressions', () => {
     expect(rootCall).toContain('role=platform%3Aadmin');
   });
 
-  describe('offline route flag (RFC 0074)', () => {
-    it('flags a request under a manifest-declared offline route prefix', async () => {
-      const response = await middleware(request('/shopper/lists/abc'));
+  describe('offline route flag (RFC 0074, RFC 0078)', () => {
+    it("flags a request to an offline-enabled plugin's bare routePrefix", async () => {
+      const response = await middleware(request('/shopper'));
 
       expect(response.headers.get('x-middleware-request-x-sovereign-offline-route')).toBe('1');
     });
 
-    it('does not flag a request outside the declared prefix on the same plugin', async () => {
-      const response = await middleware(request('/shopper/combined'));
+    it('does not flag a sub-route on the same plugin — only the bare routePrefix is offline-capable', async () => {
+      const response = await middleware(request('/shopper/lists/abc'));
 
       expect(response.headers.get('x-middleware-request-x-sovereign-offline-route')).toBeNull();
     });
 
-    it('does not flag a request to a plugin with no offline routes', async () => {
+    it('does not flag a request to a plugin with offline not declared', async () => {
       const response = await middleware(request('/paid'));
 
       expect(response.headers.get('x-middleware-request-x-sovereign-offline-route')).toBeNull();

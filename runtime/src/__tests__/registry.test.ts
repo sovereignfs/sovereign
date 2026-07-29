@@ -22,15 +22,9 @@ function manifestWithShellConfig(
 function manifestWithOffline(
   id: string,
   routePrefix: string,
-  offlineRoutePrefixes?: string[],
-  root?: boolean,
+  offline?: boolean,
 ): SovereignManifest {
-  const routes = offlineRoutePrefixes?.map((prefix) => ({ prefix }));
-  return {
-    id,
-    routePrefix,
-    offline: root || routes ? { routes, root } : undefined,
-  } as unknown as SovereignManifest;
+  return { id, routePrefix, offline } as unknown as SovereignManifest;
 }
 
 describe('getExamplePluginIds', () => {
@@ -72,33 +66,26 @@ describe('getDevelopmentPluginIds', () => {
 });
 
 describe('getOfflineRoutePrefixes', () => {
-  it('resolves each offline route relative to its plugin routePrefix', () => {
-    const plugins = [
-      manifestWithOffline('fs.sovereign.wallet', '/wallet', ['/cards']),
-      manifestWithOffline('fs.sovereign.tasks', '/tasks', ['/today', '/inbox']),
-      manifestWithOffline('fs.sovereign.console', '/console'),
-    ];
-    expect(getOfflineRoutePrefixes(plugins)).toEqual([
-      '/wallet/cards',
-      '/tasks/today',
-      '/tasks/inbox',
-    ]);
-  });
-
-  it('returns an empty array when no plugin declares offline routes', () => {
-    expect(
-      getOfflineRoutePrefixes([manifestWithOffline('a', '/a'), manifestWithOffline('b', '/b')]),
-    ).toEqual([]);
-  });
-
-  it('includes the bare routePrefix for a plugin declaring offline.root', () => {
-    const plugins = [manifestWithOffline('fs.sovereign.launcher', '/launcher', undefined, true)];
+  it('includes the bare routePrefix for a plugin declaring offline: true', () => {
+    const plugins = [manifestWithOffline('fs.sovereign.launcher', '/launcher', true)];
     expect(getOfflineRoutePrefixes(plugins)).toEqual(['/launcher']);
   });
 
-  it('includes both the bare routePrefix and sub-route prefixes when a plugin declares both', () => {
-    const plugins = [manifestWithOffline('fs.sovereign.wallet', '/wallet', ['/cards'], true)];
-    expect(getOfflineRoutePrefixes(plugins)).toEqual(['/wallet/cards', '/wallet']);
+  it('resolves multiple offline-enabled plugins to their own bare routePrefix', () => {
+    const plugins = [
+      manifestWithOffline('fs.sovereign.launcher', '/launcher', true),
+      manifestWithOffline('fs.sovereign.shopper', '/shopper', true),
+    ];
+    expect(getOfflineRoutePrefixes(plugins)).toEqual(['/launcher', '/shopper']);
+  });
+
+  it('returns an empty array when no plugin declares offline: true', () => {
+    expect(
+      getOfflineRoutePrefixes([
+        manifestWithOffline('a', '/a'),
+        manifestWithOffline('b', '/b', false),
+      ]),
+    ).toEqual([]);
   });
 });
 

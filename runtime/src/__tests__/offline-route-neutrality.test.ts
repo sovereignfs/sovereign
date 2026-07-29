@@ -2,14 +2,15 @@
  * Enforces the "user-neutral shell" rule that `docs/plugin-development.md`'s
  * `offline` section documents but nothing previously checked: an offline
  * route's own SSR output must carry no per-user data, since a precached copy
- * could be replayed to a different user on a shared device (RFC 0074). This
- * is a static source scan, not a rendered-output diff — it cannot catch
- * every way a server component could leak per-user state, but it catches the
- * common, direct ones (reading the session header, cookies, or a session
- * helper) before a plugin's offline route ever ships.
+ * could be replayed to a different user on a shared device (RFC 0074, RFC
+ * 0078). This is a static source scan, not a rendered-output diff — it
+ * cannot catch every way a server component could leak per-user state, but
+ * it catches the common, direct ones (reading the session header, cookies,
+ * or a session helper) before a plugin's offline route ever ships.
  *
- * Covers both `offline.routes[]` (a declared sub-path) and `offline.root`
- * (the plugin's own bare `routePrefix` page, e.g. Launcher).
+ * Scans a plugin's bare `routePrefix` page — `offline: true`'s one
+ * offline-capable entry point (RFC 0078; formerly `offline.root`, before RFC
+ * 0078 removed the separate `offline.routes[]` sub-path array).
  */
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -115,13 +116,11 @@ describe('offline route SSR neutrality (RFC 0074)', () => {
     expect(findForbiddenIdentityAccess(clientCode)).toHaveLength(0);
   });
 
-  it("every plugin-declared offline route's SSR files are user-neutral", () => {
+  it("every offline-enabled plugin's root SSR files are user-neutral", () => {
     const violations: string[] = [];
 
     for (const manifest of getInstalledPlugins()) {
-      const routes = manifest.offline?.routes ?? [];
-      const hasRoot = manifest.offline?.root === true;
-      if (routes.length === 0 && !hasRoot) continue;
+      if (manifest.offline !== true) continue;
 
       const pluginDir = findPluginDir(manifest.id);
       // Registry entry with no matching source directory in this checkout
@@ -129,31 +128,18 @@ describe('offline route SSR neutrality (RFC 0074)', () => {
       // nothing to scan; that plugin's own repo/CI owns this check.
       if (!pluginDir) continue;
 
-      const scanTargets: string[] = routes.map((route) =>
-        join(PLUGINS_ROOT, pluginDir, 'app', route.prefix),
-      );
-
-      for (const routeDir of scanTargets) {
-        for (const file of collectSourceFiles(routeDir)) {
-          const hits = findForbiddenIdentityAccess(readFileSync(file, 'utf-8'));
-          if (hits.length > 0) violations.push(`${file}: ${hits.join(', ')}`);
-        }
-      }
-
-      if (hasRoot) {
-        const appDir = join(PLUGINS_ROOT, pluginDir, 'app');
-        for (const file of collectRootSourceFiles(appDir)) {
-          const hits = findForbiddenIdentityAccess(readFileSync(file, 'utf-8'));
-          if (hits.length > 0) violations.push(`${file}: ${hits.join(', ')}`);
-        }
+      const appDir = join(PLUGINS_ROOT, pluginDir, 'app');
+      for (const file of collectRootSourceFiles(appDir)) {
+        const hits = findForbiddenIdentityAccess(readFileSync(file, 'utf-8'));
+        if (hits.length > 0) violations.push(`${file}: ${hits.join(', ')}`);
       }
     }
 
     expect(
       violations,
-      `Offline-capable route(s) read per-user identity during SSR — a precached ` +
+      `Offline-capable plugin(s) read per-user identity during SSR — a precached ` +
         `copy could be replayed to a different user on a shared device ` +
-        `(RFC 0074 "user-neutral shell"):\n${violations.join('\n')}`,
+        `(RFC 0074/0078 "user-neutral shell"):\n${violations.join('\n')}`,
     ).toHaveLength(0);
   });
 });

@@ -16,6 +16,7 @@ This epic covers two closely related areas: the `@sovereignfs/ui` design system 
 - [RFC 0031 — Email templates](../rfcs/0031-email-templates.md)
 - [RFC 0032 — Instance identity rename](../rfcs/0032-instance-identity-rename.md)
 - [RFC 0073 — Standalone usage of `@sovereignfs/ui` outside the plugin runtime](../rfcs/0073-standalone-ui-package.md)
+- [RFC 0078 — Mobile PWA layout, overlay, and gesture consistency](../rfcs/0078-mobile-pwa-layout-overlay-gesture-consistency.md)
 
 ## Related Docs
 
@@ -714,3 +715,161 @@ primarily verification and documentation, not new component code.
   different origin than any Sovereign instance. ✅ verified: no
   runtime-relative asset references anywhere in `packages/ui/src`.
 - `pnpm --filter @sovereignfs/ui typecheck` passes. ✅
+
+---
+
+#### 📋 9.18 — Shared page layout container (`PageContainer`) and plugin layout convention
+
+**Goal:** Give first-party plugins one documented way to constrain and
+center their own main content, so plugin main-layout padding/margin/max-width
+stops being ad hoc per plugin. A consistency review found five different
+max-width values (960px, 1040px, 640px, 680px, none) and four different
+padding combinations across plugin layouts, with no shared component and no
+documented convention for what a plugin should add on top of the shell's own
+auto-padding (`runtime/app/(platform)/shell.module.css:144-154`) — one plugin
+(`sovereign-plainwrite`) ends up double-padded as a result.
+
+**Deliverables:**
+
+- New `PageContainer` component in `packages/ui`: `maxWidth` prop
+  (`'sm' | 'md' | 'lg' | 'full'`, default `'md'`), centers via
+  `margin-inline: auto` and constrains width — does not add its own padding,
+  since the shell already pads every non-fullbleed plugin.
+- Reconciled the observed max-width values (960px, 1040px, 640px, 680px)
+  into the `sm`/`md`/`lg` scale rather than inventing new numbers.
+- Storybook story covering all four `maxWidth` values plus a mobile
+  viewport pass.
+- `docs/design-system.md` and `docs/plugin-development.md` gain a "Page
+  layout" section: the shell already pads plugin content
+  (`--sv-space-8`/`--sv-space-4`); use `PageContainer` only to additionally
+  constrain width; do not add local `padding`/`max-width` in plugin layout
+  CSS. Documents `data-plugin-fullbleed` as the existing opt-out for plugins
+  that manage their own full-bleed layout (`sovereign-tasks`,
+  `sovereign-shopper`), which `PageContainer` does not apply to.
+- Migrated `sovereign-ledger`, `sovereign-wallet`, `sovereign-healthlog`,
+  `sovereign-tritext`, `sovereign-plainwrite`, `sovereign-docs`,
+  `sovereign-account`, `sovereign-console`, and `sovereign-tally` onto
+  `PageContainer`, removing their local container CSS (padding/margin/
+  max-width rules in each plugin's layout or page-level CSS module).
+  `sovereign-plainwrite`'s double-padding (shell padding + its own
+  `layout.module.css` padding + a page-level max-width) is fixed by this
+  migration. `sovereign-tasks`/`sovereign-shopper` (fullbleed) are
+  unaffected.
+
+**Dependencies:** None — additive `packages/ui` component; does not change
+`runtime/app/(platform)/shell.module.css` behavior.
+
+**SRS reference:** [RFC 0078](../rfcs/0078-mobile-pwa-layout-overlay-gesture-consistency.md)
+
+**Review checklist:**
+
+- Every migrated plugin renders at the same or a more consistent content
+  width as before, with no double-padding regression (verify visually at
+  desktop and the 768px mobile breakpoint).
+- `PageContainer` adds zero padding of its own — confirm via computed
+  styles that padding still comes only from the shell.
+- Fullbleed plugins (`sovereign-tasks`, `sovereign-shopper`) are visually
+  unchanged.
+- `pnpm --filter @sovereignfs/ui typecheck` and `pnpm design:tokens:check`
+  pass; Storybook builds.
+
+---
+
+#### 📋 9.19 — Overlay primitive consolidation and Plainwrite ConfirmDialog migration
+
+**Goal:** `Dialog`, `Drawer`, and `Sheet` each independently implement the
+same scrim, focus-trap, Escape-key, and scroll-lock logic, with source
+comments acknowledging the duplication. Consolidate that shared logic onto
+one internal helper with no public API change, and migrate
+`sovereign-plainwrite`'s local hand-rolled `ConfirmDialog` (a pre-Task-9.12
+stopgap that its own doc comment says should be replaced) onto the shared
+`@sovereignfs/ui` `ConfirmDialog`.
+
+**Deliverables:**
+
+- Internal (non-exported) `useOverlayShell`-style helper in
+  `packages/ui/src/components` factoring out the focus-trap cycling,
+  Escape handling, and `lockBodyScroll`/`unlockBodyScroll`
+  (`packages/ui/src/scroll-lock.ts`) `useEffect` currently duplicated in
+  `Dialog.tsx`, `Drawer.tsx`, and `Sheet.tsx`.
+- `Dialog`, `Drawer`, and `Sheet` call the shared helper internally; all
+  existing public props (`open`, `onClose`, `size`, `snapHeight`,
+  `slideFrom`, `title`, `aria-label`, etc.) are unchanged.
+- `ConfirmDialog` is explicitly not migrated onto this helper — it stays on
+  native `<dialog>`, which already provides equivalent behavior more
+  reliably for its use case.
+- `sovereign-plainwrite`'s local
+  `app/_components/ConfirmDialog.tsx` and its three call sites
+  (`MarkdownEditor.tsx`, `NewPostDialog.tsx`, `NewProjectDialog.tsx`)
+  migrated onto `@sovereignfs/ui`'s `ConfirmDialog` (`onClose` instead of
+  `onCancel`, `destructive`/`pending`/`error` props as needed); local
+  component deleted.
+
+**Dependencies:** None — internal refactor of existing components; no
+public API or manifest change.
+
+**SRS reference:** [RFC 0078](../rfcs/0078-mobile-pwa-layout-overlay-gesture-consistency.md)
+
+**Review checklist:**
+
+- `Dialog`/`Drawer`/`Sheet` existing Storybook stories and component tests
+  pass unchanged (focus trap, Escape-to-close, scroll-lock ref-counting for
+  nested overlays all still work).
+- No prop, export, or behavior change visible to any consumer of `Dialog`,
+  `Drawer`, or `Sheet`.
+- `sovereign-plainwrite`'s three confirm-dialog call sites render and behave
+  identically to before (title, message, destructive styling, pending
+  state), now via the shared component; local `ConfirmDialog.tsx` removed.
+- `pnpm --filter @sovereignfs/ui test` and `pnpm --filter @sovereignfs/ui typecheck` pass.
+
+---
+
+#### 📋 9.20 — Shared swipe gesture hooks and carousel migration (Tasks, Shopper)
+
+**Goal:** `sovereign-tasks` has two separate hand-rolled swipe-to-reveal
+implementations in the same plugin (`TaskItem.tsx`, `ListSidebar.tsx`), and
+`sovereign-tasks`/`sovereign-shopper` each independently reimplement the same
+scroll-snap carousel settle-detection (`MobileTasksCarousel.tsx`,
+`MobileShopperCarousel.tsx`). No shared swipe hook exists in `packages/ui`
+today — this is the direct current-code instance of the DS-first rule in
+`docs/architecture-rules.md` ("interaction hooks... belong in `packages/ui`...
+never a plugin-local implementation 'to be promoted later'"), which
+`sovereign-tasks/CLAUDE.md` records was already enforced once before for a
+different primitive.
+
+**Deliverables:**
+
+- **`useSwipeReveal({ revealWidth, onReveal?, disabled? })`** in
+  `packages/ui/src/hooks`, extracted from the existing pointer-swipe logic in
+  `TaskItem.tsx` (`SWIPE_REVEAL_WIDTH=128px`) and `ListSidebar.tsx`
+  (`SWIPE_REVEAL_WIDTH=72px`) — same axis-lock tolerance and
+  open/close-at-half-width behavior, parameterized by `revealWidth` per
+  call site.
+- **`useSnapCarousel({ itemCount, onSettle? })`** in
+  `packages/ui/src/hooks`, extracted from the existing debounced-scroll
+  settle-detection in `MobileTasksCarousel.tsx` and
+  `MobileShopperCarousel.tsx`.
+- Both plugins migrated onto the new hooks with no user-visible behavior
+  change (same thresholds, same timing) — this is deduplication, not a UX
+  change.
+- Existing `touch-action` declarations in `ListSidebar.module.css`,
+  `TaskItem.module.css`, and `ItemRow.module.css` left as-is (unaffected by
+  moving the JS into a shared hook); `docs/architecture-rules.md`'s
+  nested-`pan-x`/`pan-y` guidance still applies.
+- Storybook stories for both hooks under the mobile-patterns section.
+
+**Dependencies:** None — additive `packages/ui` hooks; existing plugin
+behavior is preserved, not changed.
+
+**SRS reference:** [RFC 0078](../rfcs/0078-mobile-pwa-layout-overlay-gesture-consistency.md)
+
+**Review checklist:**
+
+- Swipe-to-reveal on task rows and list rows in `sovereign-tasks`, and
+  carousel swipe navigation in both `sovereign-tasks` and
+  `sovereign-shopper`, behave identically to before the migration (same
+  reveal widths, same settle timing) on a touch device or touch emulation.
+- No plugin-local swipe/carousel implementation remains in either plugin —
+  both consume the new `packages/ui` hooks exclusively.
+- `pnpm --filter @sovereignfs/ui typecheck` passes; existing
+  `sovereign-tasks`/`sovereign-shopper` test suites pass unchanged.

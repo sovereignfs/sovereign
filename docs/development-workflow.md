@@ -24,12 +24,13 @@ CLAUDE.md / AGENTS.md      ← agent-specific adapter; conventions only (no task
 
 Each layer has a single job:
 
-| File                      | Job                             | What agents read it for                                         |
-| ------------------------- | ------------------------------- | --------------------------------------------------------------- |
-| `CLAUDE.md` / `AGENTS.md` | Agent-specific conventions      | How to work; architectural rules; commit/PR conventions         |
-| `ROADMAP.md`              | Version-ordered task index      | Which tasks exist, their status, which epic file has the detail |
-| `docs/epics/<file>.md`    | Full task spec                  | Goal, deliverables, checklist for the active task               |
-| `CURRENT_TASK.md`         | Active task scratch (transient) | Everything needed mid-task without re-navigating                |
+| File                         | Job                             | What agents read it for                                         |
+| ---------------------------- | ------------------------------- | --------------------------------------------------------------- |
+| `CLAUDE.md` / `AGENTS.md`    | Agent-specific conventions      | How to work; architectural rules; commit/PR conventions         |
+| `ROADMAP.md`                 | Version-ordered task index      | Which tasks exist, their status, which epic file has the detail |
+| `docs/epics/<file>.md`       | Full task spec                  | Goal, deliverables, checklist for the active task               |
+| `CURRENT_TASK.md`            | Active task scratch (transient) | Everything needed mid-task without re-navigating                |
+| `docs/workstreams/<file>.md` | Goal-ordered task sequence      | Dependency order across epics, decisions already locked, gates  |
 
 > **Multi-agent note:** The `⏳ Next` pointer previously in `CLAUDE.md` has been removed. The developer assigns the next task explicitly at session start. See `docs/multi-agent.md` for the full model.
 
@@ -80,6 +81,55 @@ ordering and may shift when tasks are reprioritized (e.g. `0.9.5 → 0.9.1`). Al
 look up the live slot from `ROADMAP.md` rather than copying it from another doc;
 include roadmap slots only where the shipping order matters (upgrade notes, version
 maps).
+
+---
+
+## Workstreams and the leg contract
+
+Epics group tasks by **domain**; a **workstream**
+(`docs/workstreams/`) groups them by **goal** and orders them across epics. A
+workstream exists so the developer can point at a feature and have it executed
+end to end without re-briefing at every step.
+
+A workstream is divided into **legs**, and the leg is what makes that compatible
+with one-task-at-a-time review:
+
+```
+leg = one branch = one PR = one review gate
+```
+
+- **Within a leg**, the agent implements every task in order, committing per
+  task, without stopping for review between them.
+- **At the end of a leg**, it verifies, opens a **draft** PR, and stops. It does
+  not merge and does not start the next leg.
+- **Across legs**, the existing rule is unchanged: the previous leg's PR must be
+  merged before the next leg's branch is cut.
+
+So "do not start a task on an unmerged PR" is scoped to **leg** boundaries
+rather than task boundaries. That is the only workflow rule a workstream changes.
+**Never merge a PR automatically** is unaffected and not negotiable by a
+workstream.
+
+Consequences:
+
+- **One version bump per leg**, not per task, since a leg is one PR. Semver
+  follows the largest change in the leg.
+- **Branch name follows the leg**, e.g. `feat/<workstream-slug>-leg-<n>`.
+- **A leg must be independently reviewable.** If its PR is too large to review
+  honestly, the leg was drawn too wide — split it. Legs are a reviewability unit
+  first and an autonomy unit second.
+- A leg marked a **gate** determines whether later legs proceed at all; a
+  negative result stops the workstream rather than being worked around.
+
+> **Not yet wired into the skills.** `/sv-task-start`, `/sv-task-complete`, and
+> `/sv-update-task-docs` are still per-task — `CURRENT_TASK.md` describes one
+> task, not a leg. Until that changes, running a workstream means starting the
+> leg's first task normally and treating the workstream document as the authority
+> on what else belongs in the leg and when to stop. Making the skills leg-aware
+> is a follow-up.
+
+Full definition, required sections, and the authoring template:
+[`docs/workstreams/README.md`](workstreams/README.md).
 
 ---
 

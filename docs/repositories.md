@@ -20,6 +20,21 @@ and which docs should point to it.
 | [`sovereignfs/sovereign`](https://github.com/sovereignfs/sovereign)               | Active   | Primary platform repository: runtime, auth app, packages, built-in platform plugins, docs, RFCs, and roadmap.                       |
 | [`sovereignfs/sovereign-legacy`](https://github.com/sovereignfs/sovereign-legacy) | Archived | Previous Sovereign codebase. Kept for historical reference and migration context only; new work happens in `sovereignfs/sovereign`. |
 
+## Client shell repositories
+
+Native client shells that load a user's self-hosted instance in a WebView. They
+own only shell concerns — instance-URL onboarding, persistent instance storage,
+WebView lifecycle, native permission declarations, store metadata. Auth, plugins,
+shell layout, and CSP always come from the user's own instance. See
+[CLAUDE.md](../CLAUDE.md) ("Native mobile app" / "Desktop app"),
+[RFC 0058](rfcs/0058-native-mobile-app-shell.md), and
+[RFC 0038](rfcs/0038-desktop-app-shell.md).
+
+| Repository                                                                          | Status          | Purpose                                                                                                                                                                                 |
+| ----------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`sovereignfs/sovereign-desktop`](https://github.com/sovereignfs/sovereign-desktop) | Active          | Tauri 2.x desktop shell — macOS first, Windows and Linux from the same codebase. Distributed via GitHub Releases (`.dmg`, `.exe`/`.msi`, `.AppImage`/`.deb`). Epic 17.                  |
+| [`sovereignfs/sovereign-mobile`](https://github.com/sovereignfs/sovereign-mobile)   | Not yet created | Capacitor shell for iOS and Android, published to the App Store and Play Store. Created by epic task 20.1; tracked as [workstream 0002](workstreams/0002-native-mobile-app-release.md). |
+
 ## Plugin repositories
 
 | Repository                                                                                            | Status          | Purpose                                                                                                                                                                                        |

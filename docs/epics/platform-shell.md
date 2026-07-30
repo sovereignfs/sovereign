@@ -782,6 +782,115 @@ worker and a self-contained offline navigation fallback.
 - PWA assets and the offline route load without an authenticated session.
 - Development mode does not generate a service worker or interfere with HMR.
 
+#### 📋 2.25 — Per-plugin installable PWA manifest (RFC 0080)
+
+**Goal:** Let a plugin declaring `installable: true` be installed from a browser as
+its own home-screen app, scoped to its `routePrefix`, with its own name, icons, and
+launch behavior — without leaving its scope to sign in.
+
+**Deliverables:**
+
+- `packages/manifest`: new optional `installable` boolean, deliberately separate
+  from `offline` (minor bump).
+- `runtime/app/api/manifest/[pluginId]/route.ts` — extends the existing dynamic
+  manifest route rather than duplicating it; reuses its instance-config lookup and
+  degrade-on-DB-failure behavior. 404 for unknown, uninstalled, disabled, or
+  non-`installable` plugins.
+- `start_url`, `scope`, and `id` all set to the plugin's `routePrefix`; plugin name
+  and description used verbatim (instance name not prepended); `theme_color` and
+  `background_color` inherited from instance config.
+- `generateMetadata` in `runtime/app/(platform)/layout.tsx` overriding `manifest`
+  per plugin from the injected `x-sovereign-plugin-id`, **including per-plugin
+  `apple-touch-icon` and `apple-touch-startup-image` tags** — iOS resolves both from
+  document head tags, not the manifest.
+- Unauthenticated GET to an `installable` plugin's bare `routePrefix` **rewrites**
+  to the login document (generalizing the existing `/` case at
+  `runtime/middleware.ts:320`) so the response is a 200 with a full `<head>` at an
+  in-scope URL; post-login returns to the plugin route, not `/`.
+- Doc comment justifying why the route is session-exempt, and
+  `docs/plugin-development.md` coverage of `installable`.
+
+**Dependencies:** RFC 0080. No dependency on RFC 0079.
+
+**SRS reference:** §3.11, PLT-09.
+
+**Review checklist:**
+
+- A browser offers to install an `installable` plugin as its own app, with the
+  plugin's name and icon.
+- The installed app cold-launches to the plugin, not to `/`.
+- Signing in from a cold launch with no session stays inside the app's scope and
+  shows no blank-white flash on iOS.
+- `/api/manifest/<id>` returns 404 for a disabled or non-`installable` plugin, and
+  is reachable without a session.
+- No second service worker is registered and the existing one's scope is unchanged.
+- Existing instance-level PWA install behavior is unchanged.
+
+#### 📋 2.26 — Plugin PWA icon generation (RFC 0080)
+
+**Goal:** Produce the raster icon sets a per-plugin install requires, from the
+single SVG plugins declare today.
+
+**Deliverables:**
+
+- Build-step rasterization of a plugin's `icon` into 192×192, 512×512, and a
+  maskable 512×512, following `scripts/generate-splash.ts`'s pattern; output
+  treated as generated content.
+- Support for an author-supplied raster set, for plugins whose glyph rasterizes
+  poorly.
+- Manifest validation rejecting `installable: true` without a usable icon set, so
+  the failure is a build error rather than a broken install prompt.
+- Resolve whether generated maskable icons get a background plate from the
+  instance's `background_color` (RFC 0080 open question 1).
+- Docker: new served-asset path wired into the image, `.dockerignore`, and the
+  `generate` step.
+
+**Dependencies:** Task 2.25, RFC 0080.
+
+**SRS reference:** §3.11.
+
+**Review checklist:**
+
+- A plugin with only `icon.svg` yields a complete, valid icon set.
+- The maskable icon renders correctly on Android — no floating glyph on a
+  platform-chosen background.
+- `installable: true` without a usable icon fails manifest validation.
+- Generated icons are served correctly from a production Docker image.
+
+#### 📋 2.27 — Focused plugin app context and route lock (RFC 0081)
+
+**Goal:** When a native shell identifies itself as focused on one plugin, serve only
+what that app needs — as a product-scoping mechanism, never a security boundary.
+
+**Deliverables:**
+
+- `runtime/middleware.ts` parses the focus component of the shell User-Agent token
+  and injects `x-sovereign-focus-plugin`, stripping any inbound value first.
+- Route lock: out-of-focus paths redirect to the focused plugin's `routePrefix`
+  (**not** 404 — the content exists and the user is entitled to it).
+- Allowlist per RFC 0081 §3, with each entry justified in a comment: auth routes,
+  `/account` and subroutes (password change, session revocation, **and
+  `data:provide` consent**), `/paywall/*`, `/offline`, `/api/*`, PWA and static
+  assets.
+- Deep links within the focused plugin's prefix continue to work.
+- Code comments and a `docs/architecture-rules.md` cross-reference restating that
+  the focus signal is spoofable and must never gate authorization, entitlement, or
+  data access.
+
+**Dependencies:** Task 3.32 (supplies the surface signal), RFC 0079, RFC 0081.
+
+**SRS reference:** §3.12, PLT-03.
+
+**Review checklist:**
+
+- With the focus header present, an out-of-focus route redirects to the focused
+  plugin root.
+- Every allowlisted path remains reachable, verified individually — including
+  Account → Data consent.
+- A forged focus header grants no access the caller's role does not already have.
+- With no focus header, routing is byte-for-byte unchanged.
+- Session, capability, and plugin-permission gates are untouched.
+
 ## Related RFCs
 
 - [RFC 0001 — Overlay shell variant](../rfcs/0001-overlay-shell-variant.md)
@@ -794,6 +903,10 @@ worker and a self-contained offline navigation fallback.
 - [RFC 0042 — Public plugin page routes](../rfcs/0042-public-plugin-routes.md)
 - [RFC 0050 — Public plugin webhooks](../rfcs/0050-public-plugin-webhooks.md)
 - [RFC 0065 — User groups and plugin access policy](../rfcs/0065-user-groups-plugin-access.md)
+- [RFC 0080 — Per-plugin installable PWA](../rfcs/0080-per-plugin-installable-pwa.md)
+  (Tasks 2.25–2.26)
+- [RFC 0081 — Focused plugin app shell](../rfcs/0081-focused-plugin-app-shell.md)
+  (Task 2.27)
 
 ## Related Docs
 

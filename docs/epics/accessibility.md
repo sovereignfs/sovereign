@@ -4,7 +4,7 @@
 
 ## Status
 
-✅ Complete
+⏳ In Progress
 
 ## Overview
 
@@ -59,5 +59,61 @@ and deliver the plugin developer a11y contract per RFC 0025.
 - Every semantic color pair documented in `docs/design-system.md` meets 4.5:1 text
   contrast and 3:1 UI-component contrast
 - Plugin dev guide "Accessibility" section covers all items from RFC 0025
+
+---
+
+#### 📋 10.2 — In-app text-size control (pinch-zoom compensation)
+
+**Goal:** Give users a way to enlarge text without pinch-zoom, discharging the
+accessibility debt incurred when pinch-zoom was disabled app-wide. Required before
+the first native app store submission, where a disabled-zoom-with-no-alternative
+state is an accessibility-guideline risk rather than merely known debt.
+
+**Background:** `runtime/app/layout.tsx`'s `viewport` export sets
+`maximumScale: 1, userScalable: false`. `docs/adhoc/ios-pwa-inspection-findings.md`
+records this as a deliberate tradeoff **explicitly conditioned** on "shipping a
+compensating in-app text-size control (tracked as a follow-up)" — that follow-up is
+this task. The original finding also warns against suppressing zoom as a fix for
+input focus-zoom, precisely because it removes a low-vision affordance.
+
+**Deliverables:**
+
+- A per-user text-size preference (at minimum three steps, e.g. default / large /
+  larger), persisted server-side with the other account preferences.
+- `packages/ui`: root-level type scaling. Every `--sv-font-size-*` token in
+  `packages/ui/src/tokens/primitives.css` is already `rem`-based, so scaling the
+  root font size scales the whole type system without per-component changes —
+  prefer that over touching individual tokens or components.
+- Applied **pre-paint**, following the theme precedent, so there is no
+  flash-then-reflow on load; updated live from the control, the way
+  `plugins/account`'s `ThemeControl` updates the theme.
+- Control surfaced in the Account plugin alongside the existing theme control.
+- Storybook coverage for the scaled type scale; `@sovereignfs/ui` version bump per
+  NFR-04 (no breaking change in a patch).
+- Re-evaluate whether `userScalable: false` is still warranted now that a control
+  exists, and record the decision either way.
+- `docs/design-system.md` documents the scaling mechanism so plugin authors know
+  their `rem`-based type inherits it and hardcoded `px` type does not.
+
+**Load-bearing constraint:** if the pre-paint inline script changes,
+**`THEME_SCRIPT_CSP_HASH` in `runtime/src/security.ts` must be recomputed** — the
+CSP is nonce-based with a hash for that one inline script, and this exact trap is
+recorded as having been hit before in the iOS findings doc.
+
+**Dependencies:** Task 10.1. Blocks workstream 0002 leg 5 (store submission).
+
+**SRS reference:** NFR-11, RFC 0025
+
+**Review checklist:**
+
+- Changing the text-size preference visibly scales type across the shell, Console,
+  Launcher, Account, and at least one product plugin.
+- The preference survives a reload and applies before first paint — no flash at the
+  previous size, no reflow.
+- Live change from the control takes effect without a reload.
+- CSP is intact after any pre-paint script change; `THEME_SCRIPT_CSP_HASH` matches.
+- Text remains legible and layout un-broken at the largest step at 390px width.
+- `pnpm --filter @sovereignfs/ui typecheck` passes; Storybook builds.
+- The `userScalable` decision is recorded, not left implicit.
 
 ---

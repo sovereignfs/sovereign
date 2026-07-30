@@ -1635,7 +1635,7 @@ rendering matter.
 
 Use a `@sovereignfs/ui` primitive (`Button`, `Input`, `Select`, `Textarea`,
 `CodeTextarea`, `TagInput`, `Checkbox`, `FormField`, `Card`, `Badge`,
-`StatusBadge`, `SplitPane`, `PageHeader`, `SystemBanner`, …) for any generic
+`StatusBadge`, `SplitPane`, `PageHeader`, `PageContainer`, `SystemBanner`, …) for any generic
 control or page-structure pattern — anything another plugin, or the platform
 shell, would plausibly need too. Keep CSS local for layout that is genuinely
 specific to your plugin's domain (a custom data table, a graph, a canvas) — the
@@ -1654,6 +1654,25 @@ A short "do not" list:
   group.
 - Don't ship an icon-only control without an accessible name (`aria-label`
   on the control, or a visually-hidden label).
+
+#### Page layout
+
+The runtime shell already pads your plugin's main content (32px desktop /
+16px mobile) — don't add your own outer `padding` or `max-width` in your
+`app/layout.tsx` or page CSS. If you want to additionally constrain content to
+a readable width, wrap it in `PageContainer` instead of local container CSS:
+
+```tsx
+import { PageContainer } from '@sovereignfs/ui';
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return <PageContainer maxWidth="md">{children}</PageContainer>;
+}
+```
+
+See `docs/design-system.md`'s ["Page layout"](./design-system.md#page-layout--pagecontainer)
+section for the full `maxWidth` scale and the `data-plugin-fullbleed` opt-out
+for plugins that manage their own full-bleed layout.
 
 #### Using icons
 

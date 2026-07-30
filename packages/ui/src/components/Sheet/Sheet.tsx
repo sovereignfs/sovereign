@@ -1,8 +1,12 @@
 'use client';
 
-import { type ReactNode, useEffect, useRef } from 'react';
-import { lockBodyScroll, unlockBodyScroll } from '../../scroll-lock';
+import { type ReactNode, useRef } from 'react';
 import { useMountTransition, usePrefersReducedMotion } from '../../motion';
+import {
+  useOverlayFocusCapture,
+  useOverlayKeyboardTrap,
+  useOverlayScrollLock,
+} from '../../overlay-shell';
 import { OverlayHeader } from '../OverlayHeader/OverlayHeader';
 import styles from './Sheet.module.css';
 
@@ -36,9 +40,6 @@ export interface SheetProps {
   children: ReactNode;
 }
 
-const FOCUSABLE =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 // Matches --sv-motion-duration-base (Sheet.module.css) — see Dialog.tsx's
 // identical constant for why this stays a plain JS number.
 const MOTION_DURATION_MS = 250;
@@ -71,55 +72,12 @@ export function Sheet({
   children,
 }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const previouslyFocused = useRef<HTMLElement | null>(null);
   const reducedMotion = usePrefersReducedMotion();
   const { mounted, phase } = useMountTransition(open, reducedMotion ? 0 : MOTION_DURATION_MS);
 
-  useEffect(() => {
-    if (!mounted) return;
-    lockBodyScroll();
-    return unlockBodyScroll;
-  }, [mounted]);
-
-  useEffect(() => {
-    if (!mounted) return;
-    previouslyFocused.current = document.activeElement as HTMLElement | null;
-    const panel = panelRef.current;
-    const first = panel?.querySelector<HTMLElement>(FOCUSABLE);
-    (first ?? panel)?.focus();
-    return () => previouslyFocused.current?.focus();
-  }, [mounted]);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-      const panel = panelRef.current;
-      if (!panel) return;
-      const focusable = [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)];
-      const first = focusable[0];
-      const last = focusable.at(-1);
-      if (!first || !last) {
-        e.preventDefault();
-        return;
-      }
-      const active = document.activeElement;
-      if (e.shiftKey && active === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [open, onClose]);
+  useOverlayScrollLock(mounted);
+  useOverlayFocusCapture(panelRef, mounted);
+  useOverlayKeyboardTrap(panelRef, open, onClose);
 
   if (!mounted) return null;
 

@@ -3,7 +3,8 @@
 **Status:** Draft\
 **Date:** July 2026\
 **Author:** Claude Code\
-**Scope:** `packages/ui` (new `PageContainer` component, internal refactor of `Dialog`/`Drawer`/`Sheet`/`ConfirmDialog`, new `useSwipeReveal`/`useSnapCarousel` hooks), `runtime/app` (shell padding docs only, no behavior change), `plugins/sovereign-tasks`, `plugins/sovereign-shopper`, `plugins/sovereign-plainwrite`, `docs/design-system.md`, `docs/plugin-development.md`, `docs/architecture-rules.md`. Builds on RFC 0013 (mobile responsiveness & PWA), RFC 0075 (mobile chrome toggle), RFC 0076 (DS sizing alignment), and the `docs/design-system-stabilization-proposal.md` review.\
+**Scope:** `packages/ui` (new `PageContainer` component, internal refactor of `Dialog`/`Drawer`/`Sheet`/`ConfirmDialog`, new `useSwipeReveal`/`useSnapCarousel` hooks), `plugins/account`, `plugins/console` (the only plugins that live in this monorepo), `docs/design-system.md`, `docs/plugin-development.md`, `docs/architecture-rules.md`. Builds on RFC 0013 (mobile responsiveness & PWA), RFC 0075 (mobile chrome toggle), RFC 0076 (DS sizing alignment), and the `docs/design-system-stabilization-proposal.md` review.\
+**Cross-repo note:** `sovereign-tasks`, `sovereign-shopper`, and `sovereign-plainwrite` are externally-maintained plugins, each in its own repository and excluded from this monorepo by `.gitignore` (only `account/`, `console/`, `launcher/` are tracked here). This RFC's `packages/ui` deliverables (the hooks and the ConfirmDialog consolidation) are fully in scope and shippable from here; the plugin-side migrations onto them are out of scope for any branch in this repo and require separate PRs in each plugin's own repository once a new `@sovereignfs/ui` version ships.\
 **Incorporated into plan:** Yes — epic tasks 9.18, 9.19, 9.20.
 
 ---

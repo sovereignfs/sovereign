@@ -1,8 +1,12 @@
 'use client';
 
-import { type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useRef } from 'react';
-import { lockBodyScroll, unlockBodyScroll } from '../../scroll-lock';
+import { type PointerEvent as ReactPointerEvent, type ReactNode, useRef } from 'react';
 import { useMountTransition, usePrefersReducedMotion } from '../../motion';
+import {
+  useOverlayFocusCapture,
+  useOverlayKeyboardTrap,
+  useOverlayScrollLock,
+} from '../../overlay-shell';
 import styles from './Drawer.module.css';
 
 // Matches --sv-motion-duration-base (Drawer.module.css) — see Dialog.tsx's
@@ -24,9 +28,6 @@ export interface DrawerProps {
   snapHeight?: 'content' | 'half';
   children: ReactNode;
 }
-
-const FOCUSABLE =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // Downward drag distance (px) past which releasing dismisses the drawer
 // instead of snapping back open. Distance-only, no velocity tracking — matches
@@ -64,7 +65,6 @@ export function Drawer({
   children,
 }: DrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const previouslyFocused = useRef<HTMLElement | null>(null);
   const reducedMotion = usePrefersReducedMotion();
   const { mounted, phase } = useMountTransition(open, reducedMotion ? 0 : MOTION_DURATION_MS);
   // Tracks an in-progress handle drag. Kept in a ref (not state) so pointermove
@@ -72,56 +72,9 @@ export function Drawer({
   // same technique as the tasks plugin's swipe-to-reveal rows.
   const dragStartY = useRef<number | null>(null);
 
-  // Locked for the whole mounted lifetime (including the exit animation), not
-  // just while `open` — see Dialog.tsx's identical comment for why.
-  useEffect(() => {
-    if (!mounted) return;
-    lockBodyScroll();
-    return unlockBodyScroll;
-  }, [mounted]);
-
-  useEffect(() => {
-    if (!open) return;
-    previouslyFocused.current = document.activeElement as HTMLElement | null;
-    const panel = panelRef.current;
-    const first = panel?.querySelector<HTMLElement>(FOCUSABLE);
-    (first ?? panel)?.focus();
-    return () => previouslyFocused.current?.focus();
-  }, [open]);
-
-  // Keyboard handling: Escape closes, Tab cycles within the panel (focus trap).
-  // Attached at document level so no keyboard listener is needed on the dialog
-  // div itself (which would trigger jsx-a11y/no-noninteractive-element-interactions).
-  useEffect(() => {
-    if (!open) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-      const panel = panelRef.current;
-      if (!panel) return;
-      const focusable = [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)];
-      const first = focusable[0];
-      const last = focusable.at(-1);
-      if (!first || !last) {
-        e.preventDefault();
-        return;
-      }
-      const active = document.activeElement;
-      if (e.shiftKey && active === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [open, onClose]);
+  useOverlayScrollLock(mounted);
+  useOverlayFocusCapture(panelRef, open);
+  useOverlayKeyboardTrap(panelRef, open, onClose);
 
   // Swipe-down-to-dismiss, initiated only from the grab handle (see the
   // component doc comment for why not the whole panel). Drags the panel

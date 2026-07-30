@@ -7,6 +7,8 @@ import {
   useIsMobile,
   useLongPress,
   useSingleOrDoubleTap,
+  useSnapCarousel,
+  useSwipeReveal,
 } from '../hooks';
 
 // ---------------------------------------------------------------------------
@@ -331,6 +333,167 @@ function IsMobileDemo() {
   );
 }
 
+function SwipeRevealDemo() {
+  const [open, setOpen] = useState(false);
+  const [events, setEvents] = useState<string[]>([]);
+  const log = (msg: string) =>
+    setEvents((e) => [...e, `${new Date().toLocaleTimeString()} — ${msg}`]);
+  const { rowRef, handlers } = useSwipeReveal({
+    revealWidth: 88,
+    open,
+    onOpen: () => {
+      setOpen(true);
+      log('opened');
+    },
+    onClose: () => {
+      setOpen(false);
+      log('closed');
+    },
+  });
+
+  return (
+    <div>
+      <div
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: 'var(--sv-radius-md)',
+          border: '1px solid var(--sv-color-border)',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            justifyContent: 'flex-end',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              log('Delete tapped');
+            }}
+            style={{
+              width: 88,
+              border: 'none',
+              background: 'var(--sv-color-error-surface)',
+              color: 'var(--sv-color-error-text)',
+              fontFamily: ff,
+              fontSize: 'var(--sv-font-size-sm)',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Delete
+          </button>
+        </div>
+        <div
+          ref={rowRef}
+          {...handlers}
+          style={{
+            position: 'relative',
+            padding: 'var(--sv-space-4)',
+            background: 'var(--sv-color-surface)',
+            fontFamily: ff,
+            fontSize: 'var(--sv-font-size-sm)',
+            color: 'var(--sv-color-text-primary)',
+            touchAction: 'pan-y',
+            transform: open ? 'translateX(-88px)' : undefined,
+            transition: 'transform 150ms ease-out',
+          }}
+        >
+          Drag me left to reveal Delete
+        </div>
+      </div>
+      <EventLog events={events} />
+      <Callout type="info">
+        Drag with a mouse in this preview, or touch on a real device/device toolbar. The hook only
+        writes an imperative transform during the drag itself — the CSS transition above only takes
+        over once the gesture resolves to open or closed on release.
+      </Callout>
+    </div>
+  );
+}
+
+function SnapCarouselDemo() {
+  const slides = ['Lists', 'Groceries', 'Errands'];
+  const [index, setIndex] = useState(0);
+  const [events, setEvents] = useState<string[]>([]);
+  const log = (msg: string) =>
+    setEvents((e) => [...e, `${new Date().toLocaleTimeString()} — ${msg}`]);
+  const { scrollRef, scrollToIndex } = useSnapCarousel({
+    itemCount: slides.length,
+    onSettle: (i) => {
+      setIndex(i);
+      log(`settled on slide ${i}`);
+    },
+  });
+
+  return (
+    <div>
+      <div
+        ref={scrollRef}
+        style={{
+          display: 'flex',
+          overflowX: 'auto',
+          scrollSnapType: 'x mandatory',
+          borderRadius: 'var(--sv-radius-md)',
+          border: '1px solid var(--sv-color-border)',
+        }}
+      >
+        {slides.map((label, i) => (
+          <div
+            key={label}
+            style={{
+              flex: '0 0 100%',
+              scrollSnapAlign: 'start',
+              padding: 'var(--sv-space-6)',
+              textAlign: 'center',
+              fontFamily: ff,
+              fontSize: 'var(--sv-font-size-sm)',
+              color: 'var(--sv-color-text-primary)',
+              background:
+                i === index ? 'var(--sv-color-surface-sunken)' : 'var(--sv-color-surface)',
+            }}
+          >
+            {label}
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 'var(--sv-space-2)', marginTop: 'var(--sv-space-3)' }}>
+        {slides.map((label, i) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => scrollToIndex(i)}
+            style={{
+              padding: 'var(--sv-space-1) var(--sv-space-3)',
+              borderRadius: 'var(--sv-radius-md)',
+              border: '1px solid var(--sv-color-border)',
+              background: i === index ? 'var(--sv-color-accent)' : 'var(--sv-color-surface)',
+              color:
+                i === index ? 'var(--sv-color-text-on-accent)' : 'var(--sv-color-text-primary)',
+              fontFamily: ff,
+              fontSize: '0.75rem',
+              cursor: 'pointer',
+            }}
+          >
+            Slide {i}
+          </button>
+        ))}
+      </div>
+      <EventLog events={events} />
+      <Callout type="info">
+        Swipe or scroll the strip above horizontally, or use the buttons. Settle detection is
+        debounced (120ms default) rather than tied to the <code>scrollend</code> event, which
+        pre-17.4 iOS Safari/WKWebView doesn&apos;t support.
+      </Callout>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main story component
 // ---------------------------------------------------------------------------
@@ -411,6 +574,42 @@ function InteractionHooksDoc() {
         <CodeBlock>{`import { useIsMobile, MOBILE_BREAKPOINT_PX } from '@sovereignfs/ui';
 
 const isMobile = useIsMobile(); // defaults to MOBILE_BREAKPOINT_PX (768)`}</CodeBlock>
+      </section>
+
+      <section style={{ marginBottom: 'var(--sv-space-10)' }}>
+        <SectionHeader
+          title="useSwipeReveal"
+          subtitle="Horizontal swipe-to-reveal for a row's Done/Delete actions — extracted from sovereign-tasks' two independent hand-rolled implementations (RFC 0078)."
+        />
+        <Card padding="md">
+          <SwipeRevealDemo />
+        </Card>
+        <CodeBlock>{`const { rowRef, handlers } = useSwipeReveal({
+  revealWidth: 88,
+  open,
+  onOpen: () => setOpen(true),
+  onClose: () => setOpen(false),
+});
+<div ref={rowRef} {...handlers} style={{ transform: open ? 'translateX(-88px)' : undefined }}>
+  Row content
+</div>`}</CodeBlock>
+      </section>
+
+      <section style={{ marginBottom: 'var(--sv-space-10)' }}>
+        <SectionHeader
+          title="useSnapCarousel"
+          subtitle="Debounced settled-slide detection over a native scroll-snap container — extracted from sovereign-tasks and sovereign-shopper's independently duplicated carousels (RFC 0078)."
+        />
+        <Card padding="md">
+          <SnapCarouselDemo />
+        </Card>
+        <CodeBlock>{`const { scrollRef, scrollToIndex } = useSnapCarousel({
+  itemCount: slides.length,
+  onSettle: (index) => setActiveIndex(index),
+});
+<div ref={scrollRef} style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory' }}>
+  {slides.map((slide) => <div style={{ scrollSnapAlign: 'start' }}>{slide}</div>)}
+</div>`}</CodeBlock>
       </section>
     </div>
   );

@@ -746,15 +746,21 @@ auto-padding (`runtime/app/(platform)/shell.module.css:144-154`) — one plugin
   CSS. Documents `data-plugin-fullbleed` as the existing opt-out for plugins
   that manage their own full-bleed layout (`sovereign-tasks`,
   `sovereign-shopper`), which `PageContainer` does not apply to.
-- Migrated `sovereign-ledger`, `sovereign-wallet`, `sovereign-healthlog`,
-  `sovereign-tritext`, `sovereign-plainwrite`, `sovereign-docs`,
-  `sovereign-account`, `sovereign-console`, and `sovereign-tally` onto
-  `PageContainer`, removing their local container CSS (padding/margin/
-  max-width rules in each plugin's layout or page-level CSS module).
-  `sovereign-plainwrite`'s double-padding (shell padding + its own
-  `layout.module.css` padding + a page-level max-width) is fixed by this
-  migration. `sovereign-tasks`/`sovereign-shopper` (fullbleed) are
-  unaffected.
+- Migrated `plugins/account` and `plugins/console` — the only plugins that
+  actually live in this monorepo (`.gitignore` excludes every other plugin
+  directory except `account/`, `console/`, `launcher/`; `sovereign-ledger`,
+  `sovereign-wallet`, `sovereign-healthlog`, `sovereign-tritext`,
+  `sovereign-plainwrite`, `sovereign-docs`, and `sovereign-tally` are each
+  externally-maintained in their own repository and installed via
+  `scripts/install-plugins.ts` — they are **not** editable from a task branch
+  here) — onto `PageContainer`, removing their local container CSS.
+- **Follow-up, out of this task's scope:** each externally-maintained plugin
+  above needs its own PR in its own repository to adopt `PageContainer` once
+  a new `@sovereignfs/ui` version ships it — including `sovereign-plainwrite`,
+  whose double-padding (shell padding + its own `layout.module.css` padding +
+  a page-level max-width) stays unfixed until that plugin's own maintainers
+  (or a follow-up task scoped to that repo) pick it up. `sovereign-tasks`/
+  `sovereign-shopper` (fullbleed) don't need this migration at all.
 
 **Dependencies:** None — additive `packages/ui` component; does not change
 `runtime/app/(platform)/shell.module.css` behavior.
@@ -798,12 +804,15 @@ stopgap that its own doc comment says should be replaced) onto the shared
 - `ConfirmDialog` is explicitly not migrated onto this helper — it stays on
   native `<dialog>`, which already provides equivalent behavior more
   reliably for its use case.
-- `sovereign-plainwrite`'s local
-  `app/_components/ConfirmDialog.tsx` and its three call sites
-  (`MarkdownEditor.tsx`, `NewPostDialog.tsx`, `NewProjectDialog.tsx`)
-  migrated onto `@sovereignfs/ui`'s `ConfirmDialog` (`onClose` instead of
-  `onCancel`, `destructive`/`pending`/`error` props as needed); local
-  component deleted.
+- **Follow-up, out of this task's scope:** `sovereign-plainwrite` is an
+  externally-maintained plugin in its own repository (excluded from this
+  monorepo by `.gitignore` — only `account/`, `console/`, `launcher/` are
+  tracked here), so its local `app/_components/ConfirmDialog.tsx` and three
+  call sites (`MarkdownEditor.tsx`, `NewPostDialog.tsx`,
+  `NewProjectDialog.tsx`) cannot be migrated from a branch in this repo. That
+  migration (`onClose` instead of `onCancel`, `destructive`/`pending`/`error`
+  props as needed, local component deleted) needs its own PR in Plainwrite's
+  repository once this task's `@sovereignfs/ui` release ships.
 
 **Dependencies:** None — internal refactor of existing components; no
 public API or manifest change.
@@ -817,9 +826,10 @@ public API or manifest change.
   nested overlays all still work).
 - No prop, export, or behavior change visible to any consumer of `Dialog`,
   `Drawer`, or `Sheet`.
-- `sovereign-plainwrite`'s three confirm-dialog call sites render and behave
-  identically to before (title, message, destructive styling, pending
-  state), now via the shared component; local `ConfirmDialog.tsx` removed.
+- (Verified in Plainwrite's own follow-up PR, not this task) its three
+  confirm-dialog call sites render and behave identically to before (title,
+  message, destructive styling, pending state), now via the shared
+  component; local `ConfirmDialog.tsx` removed.
 - `pnpm --filter @sovereignfs/ui test` and `pnpm --filter @sovereignfs/ui typecheck` pass.
 
 ---
@@ -849,9 +859,14 @@ different primitive.
   `packages/ui/src/hooks`, extracted from the existing debounced-scroll
   settle-detection in `MobileTasksCarousel.tsx` and
   `MobileShopperCarousel.tsx`.
-- Both plugins migrated onto the new hooks with no user-visible behavior
-  change (same thresholds, same timing) — this is deduplication, not a UX
-  change.
+- **Follow-up, out of this task's scope:** `sovereign-tasks` and
+  `sovereign-shopper` are externally-maintained plugins in their own
+  repositories (excluded from this monorepo by `.gitignore` — only
+  `account/`, `console/`, `launcher/` are tracked here), so migrating their
+  existing swipe/carousel call sites onto the new hooks needs its own PR in
+  each plugin's repository once this task's `@sovereignfs/ui` release ships.
+  No user-visible behavior change is expected (same thresholds, same
+  timing) — this is deduplication, not a UX change.
 - Existing `touch-action` declarations in `ListSidebar.module.css`,
   `TaskItem.module.css`, and `ItemRow.module.css` left as-is (unaffected by
   moving the JS into a shared hook); `docs/architecture-rules.md`'s
@@ -865,11 +880,13 @@ behavior is preserved, not changed.
 
 **Review checklist:**
 
-- Swipe-to-reveal on task rows and list rows in `sovereign-tasks`, and
-  carousel swipe navigation in both `sovereign-tasks` and
-  `sovereign-shopper`, behave identically to before the migration (same
-  reveal widths, same settle timing) on a touch device or touch emulation.
-- No plugin-local swipe/carousel implementation remains in either plugin —
-  both consume the new `packages/ui` hooks exclusively.
+- (Verified in each plugin's own follow-up PR, not this task) swipe-to-reveal
+  on task rows and list rows in `sovereign-tasks`, and carousel swipe
+  navigation in both `sovereign-tasks` and `sovereign-shopper`, behave
+  identically to before the migration (same reveal widths, same settle
+  timing) on a touch device or touch emulation, with no plugin-local
+  swipe/carousel implementation remaining in either plugin.
+- `useSwipeReveal` and `useSnapCarousel` are covered by Storybook stories and
+  behave correctly in isolation (this task's actual verification surface).
 - `pnpm --filter @sovereignfs/ui typecheck` passes; existing
   `sovereign-tasks`/`sovereign-shopper` test suites pass unchanged.

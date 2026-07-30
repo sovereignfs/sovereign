@@ -37,6 +37,12 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
 
 - **One task at a time.** Implement a single task, verify its review checklist,
   then stop for human review. Do not start a task on an unmerged PR.
+  _Exception — workstream legs:_ when executing a **workstream**
+  (`docs/workstreams/`), the unit is a **leg**, not a task: one leg = one branch =
+  one PR = one review gate. The agent runs every task in a leg uninterrupted, then
+  verifies, opens a draft PR, and stops. The "no unmerged PR" rule applies at leg
+  boundaries. One version bump per leg (semver follows the largest change in it).
+  **Never merge automatically** still applies. See `docs/development-workflow.md`.
 - **Tasks are sequenced** — each depends on the previous unless tagged
   `[parallel]`. Don't skip ahead.
 - **Branch per task**, always cut from an **up-to-date `main`** — run

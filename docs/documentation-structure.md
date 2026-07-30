@@ -24,6 +24,7 @@ topic has one canonical owner; other pages summarize it and link to that owner.
 | Research            | Explore open-ended questions before a design is proposed                      | `research/`                                                                   | No               |
 | Decisions           | Record accepted and proposed cross-cutting designs                            | `rfcs/`                                                                       | Yes, with status |
 | Incidents           | Record production incidents — timeline, root cause(s), resolution, follow-ups | `incidents/`                                                                  | No               |
+| Workstreams         | Sequence an accepted design's tasks across epics in dependency order          | `workstreams/`                                                                | No               |
 | Project operations  | Track tasks, plans, findings, and internal coordination                       | `epics/`, `adhoc/` (being phased out — see below), roadmap and planning files | No               |
 
 ## Ownership rules
@@ -42,6 +43,14 @@ topic has one canonical owner; other pages summarize it and link to that owner.
   RFC for open-ended topics; it is not deleted once an RFC lands, and not
   every research doc graduates to one (a documented "not now" is a valid
   outcome). See `docs/research/README.md`.
+- Workstream docs sequence work; they do not design it or track its status.
+  Design stays in `rfcs/`, full task specs stay in `epics/`, and status stays in
+  `ROADMAP.md` rows and epic headings. A workstream adds dependency order across
+  epics, the decisions already locked (so they are not reopened mid-execution),
+  and the gates that determine whether later work proceeds. It is normally
+  written after its governing RFCs — if a design is not settled enough to
+  sequence, the missing step is an RFC or research doc. See
+  `docs/workstreams/README.md`.
 - The public product roadmap describes themes. `ROADMAP.md` and `epics/` remain
   the private engineering queue and source of task status.
 - Incident docs are a factual record of what happened during a specific

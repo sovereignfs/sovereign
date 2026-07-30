@@ -1161,6 +1161,201 @@ only which plugins are declared by default).
 
 ---
 
+#### 📋 3.32 — Plugin surface model and SDK device environment (RFC 0079)
+
+**Goal:** Give the platform one way to answer "what surface am I running on?" and
+expose it to plugins as `sdk.device.*` — the abstraction RFC 0058 and RFC 0038 both
+promised and neither shipped. Server-side for layout and routing decisions
+(no hydration flash), client-side for what the server cannot know.
+
+**Deliverables:**
+
+- `runtime/middleware.ts` normalizes the shell User-Agent token into
+  `x-sovereign-surface` (`browser` | `mobile` | `desktop`) plus an optional
+  `x-sovereign-shell-version`, **stripping any inbound value first** as the
+  `x-sovereign-user-*` family already requires. Unrecognized or absent → `browser`.
+- `packages/sdk/src/device.ts` — server tier: `getSurface()`, `getShellVersion()`,
+  `isNativeShell()`. Returns the safe default rather than throwing, following
+  `env.ts`'s discipline (minor bump).
+- `packages/sdk/src/device-client.ts` on the dedicated `@sovereignfs/sdk/device-client`
+  subpath — client tier: `readEnvironment()` and `useDeviceEnvironment()`, reporting
+  `installed` (`display-mode: standalone`), which is irreducibly client-side. The hook
+  returns `null` before mount **by design**, so callers must handle "not known yet"
+  instead of flashing a default.
+- **New hard rule in `docs/architecture-rules.md`:** the surface signal derives from a
+  client-controlled User-Agent and is trivially spoofable — it must never be an input
+  to authorization, entitlement, paywall, or data-access decisions.
+- `docs/plugin-development.md` documents `sdk.device.*` as a generic capability,
+  stating plainly which tier answers which question.
+- Extension seams left obvious for epic tasks 17.7 and 20.3, which extend this base
+  rather than inventing parallel environment models.
+
+**Dependencies:** RFC 0079. Prerequisite for Task 2.27.
+
+**SRS reference:** §3.12, §3.19.
+
+**Review checklist:**
+
+- A request with a native shell User-Agent resolves the correct surface server-side;
+  an ordinary browser resolves `browser`.
+- A forged inbound `x-sovereign-surface` header is stripped and ignored.
+- `getSurface()` returns `browser` outside a plugin route context and never throws.
+- A `'use client'` component importing `@sovereignfs/sdk/device-client` builds — no
+  server-only module leaks into the client graph.
+- `useDeviceEnvironment()` causes no hydration mismatch.
+- `useIsMobile` in `packages/ui` is unchanged.
+- The architecture-rules entry is present and explicit.
+
+#### 📋 3.33 — Manifest surfaces availability declaration (RFC 0079)
+
+**Goal:** Let a plugin declare which surfaces it is available on, so the platform can
+filter presentation instead of showing a mobile-only app on desktop.
+
+**Deliverables:**
+
+- `packages/manifest`: optional `surfaces` array of `browser` | `mobile` | `desktop`,
+  unique and non-empty when present. **Absent means available everywhere** — today's
+  behavior for every existing plugin, so purely additive (minor bump).
+- Launcher grid, sidebar, and mobile-drawer entries filtered by the current surface.
+- Navigating directly to an unavailable plugin renders a clear "not available on this
+  surface" state, **not** a 404 — the plugin is installed, it just does not belong here.
+- `docs/plugin-development.md` coverage, including the deliberate asymmetry with the
+  RFC 0081 route lock: `surfaces` filters presentation and is bypassable, which is fine
+  because nothing behind it is a secret.
+
+**Dependencies:** Task 3.32, RFC 0079.
+
+**SRS reference:** §3.12, §3.19.
+
+**Review checklist:**
+
+- A plugin declaring `surfaces: ["mobile"]` is absent from Launcher, sidebar, and
+  drawer on desktop, and present on mobile.
+- Direct navigation to it on desktop shows the unavailable state, not a 404.
+- Every existing plugin (no `surfaces` field) behaves exactly as before.
+- Manifest validation rejects an empty or duplicated `surfaces` array.
+
+#### 📋 3.34 — Device bridge protocol package (RFC 0082)
+
+**Goal:** Establish the device-capability contract and its first implementation:
+the contract in `@sovereignfs/sdk/device-client`, the transports in a new published
+`@sovereignfs/bridge`. One protocol owned here and consumed by both external shell
+repositories, so the Capacitor and Tauri shells cannot drift. Web transport only;
+no plugin-facing capability calls yet.
+
+**Deliverables:**
+
+- `packages/sdk`: new `device-client` subpath (joining the five that already exist)
+  holding the **contract** — capability registry, handshake shape, typed
+  `DeviceResult`, the `BridgeImpl` interface, and `provideBridge()`.
+  **`packages/sdk` keeps zero runtime dependencies** — it has no `dependencies`
+  field today and must not gain one.
+- **`provideBridge()` stores the implementation on a `Symbol.for`-keyed global**,
+  never a module-level variable, following `packages/sdk/src/host.ts`'s documented
+  reasoning (Next compiles separate bundles per entry; dev HMR resets module
+  state) plus a second reason specific to this case: a plugin could install a
+  different major of `@sovereignfs/bridge` than the platform ships, producing two
+  copies with two independent handshake states, one of which never resolves.
+- New `packages/bridge` → `@sovereignfs/bridge`, **published**, holding the
+  **implementation**: the `web` transport, protocol/handshake mechanics, and the
+  shell-side helper. Two entry points — `@sovereignfs/bridge` (page side, consumed
+  by `runtime`) and `@sovereignfs/bridge/shell` (shell side) — so neither side
+  pulls the other's code.
+- `@sovereignfs/bridge` depends on `@sovereignfs/sdk` as a **`devDependency` only**
+  (types erase at build), so its published output has no runtime dependency while
+  the contract keeps one source of truth. Zero runtime deps otherwise — no React,
+  no Next, no Node built-ins; never imports `next/headers`, `@sovereignfs/db`, or
+  anything reachable from `SdkHost`. Verified by a standalone type-check.
+- `runtime`: a client bootstrap that calls `provideBridge()` — the client-side
+  analogue of `instrumentation.ts` calling `provideHost()`. Resolve RFC 0082 open
+  question 7 (where it lives, and how it is guaranteed to run before a plugin's
+  first `supports()` call).
+- Capability negotiation: the shell advertises `{ name, version }` descriptors at
+  handshake. **Nothing compares shell versions** — `shell.version` is diagnostic
+  only, and branching on it is a review-blocking mistake.
+- `DeviceResult` with distinct `ok` / `unavailable` / `denied` / `dismissed` /
+  `failed` states. Exceptions reserved for programmer error, never for user or
+  environment outcomes.
+- Build wiring: `tsup`, `turbo.json` pipeline entry, `transpilePackages` in **both**
+  `next.config.ts` files, catalog-pinned dev deps per the pnpm `catalog:` convention.
+- Resolve RFC 0082 open question 2 (protocol-version mismatch: fatal vs. degrade to
+  `web` — recommended degrade with a recorded warning).
+- `docs/sdk-stability.md` and `CLAUDE.md` updated: a fourth published package now
+  exists.
+
+**Dependencies:** RFC 0082.
+
+**SRS reference:** §3.12, §3.19
+
+**Review checklist:**
+
+- `packages/sdk/package.json` still has **no `dependencies` field**.
+- `packages/bridge` type-checks standalone; its published `dependencies` are empty
+  and `@sovereignfs/sdk` appears only under `devDependencies`.
+- Neither package imports `next/headers`, `@sovereignfs/db`, or anything reachable
+  from `SdkHost`.
+- `provideBridge()` uses a `Symbol.for` global; two module instances of
+  `device-client` resolve to the same registration.
+- An older shell advertising fewer capabilities, and a newer shell advertising an
+  unknown one, both resolve correctly against an unchanged platform.
+- A capability absent from the handshake yields `unavailable`, not a throw.
+- The web transport works in a plain browser tab with no shell present.
+- `pnpm build` produces both packages; both Next apps transpile them.
+- No shell version comparison exists anywhere in either package.
+
+#### 📋 3.35 — Plugin device surface, permissions, and consent (RFC 0082)
+
+**Goal:** Give plugins `sdk.device.*` capability calls with manifest-declared
+`device:*` permissions and per-user consent, working end to end on the web tier
+before either native shell implements a transport.
+
+**Deliverables:**
+
+- `@sovereignfs/sdk/device-client` gains `supports()`, `getTransport()`,
+  `getShellInfo()`, `haptics.impact()`, and `nativeNotifications.*`. Browser-only
+  subpath, for the reason `@sovereignfs/sdk/offline` already documents — the main
+  barrel transitively reaches server-only `next/headers`.
+- `supports()` returns `false` before the handshake resolves, **deliberately** —
+  capabilities are progressive enhancement and a component must render a working
+  state without them. Do not soften this into a render-blocking promise.
+- `device:haptics` and `device:notifications` added to `permissionSchema` (additive;
+  `@sovereignfs/manifest` minor bump). One permission per capability — never a broad
+  `device:*` grant.
+- Per-user, per-plugin, per-capability consent grants, managed in the Account plugin
+  alongside the existing data-consent surface. Resolves RFC 0082 open question 1
+  (reuse the consent pattern; decide on tables).
+- `notifications.native`'s web tier routes into the shipped Notification Center /
+  web push path (RFC 0015/0016, broker per RFC 0034) — not a second notification
+  mechanism.
+- **`docs/plugin-development.md` states the enforcement limits in plain words:**
+  client-side plugin identity is self-declared and unverifiable on a shared origin,
+  so `device:*` is install/review-time metadata and a consent-prompt input, and
+  provides **no** isolation between plugins. Same posture as `offline:write`
+  (RFC 0078 §6) and the surface signal (RFC 0079 §2).
+- `secureStorage` remains platform-internal — **not** exposed to plugins in v1, for
+  exactly the identity reason above.
+
+**Dependencies:** Task 3.34, Task 3.32 (supplies the `device-client` subpath),
+RFC 0082.
+
+**SRS reference:** §3.12, §3.19
+
+**Review checklist:**
+
+- A plugin declaring `device:haptics` can call `haptics.impact()`; one that does not
+  gets `unavailable` on a native transport.
+- `nativeNotifications.show()` delivers via the existing web push path in a browser.
+- Consent can be granted, denied, and revoked from Account, and a denied grant
+  short-circuits without reaching the OS.
+- `supports()` causes no hydration mismatch and no flash of a capability-dependent
+  affordance.
+- A `'use client'` component importing `@sovereignfs/sdk/device-client` builds.
+- The plugin-development doc states the non-isolation limit explicitly, not as a
+  footnote.
+- No plugin-facing `secureStorage` surface ships.
+
+---
+
 ## Related RFCs
 
 - [RFC 0004 — Per-plugin database](../rfcs/0004-per-plugin-database.md)
@@ -1182,6 +1377,10 @@ only which plugins are declared by default).
 - [RFC 0062 — Email delivery coverage](../rfcs/0062-email-delivery-coverage.md)
 - [RFC 0065 — User groups and plugin access policy](../rfcs/0065-user-groups-plugin-access.md)
   (Task 3.28 — plugin catalog and install-time activation)
+- [RFC 0079 — Plugin surface model](../rfcs/0079-plugin-surface-model.md)
+  (Tasks 3.32–3.33 — `sdk.device.*`, `x-sovereign-surface`, manifest `surfaces`)
+- [RFC 0082 — Device bridge and capability contract](../rfcs/0082-device-bridge-capability-contract.md)
+  (Tasks 3.34–3.35 — `@sovereignfs/bridge`, `device:*` permissions, consent)
 
 **Deferred future work (not yet an epic task):** true dynamic runtime installation of a plugin
 not already bundled in the image — fetching/cloning arbitrary plugin code into a running

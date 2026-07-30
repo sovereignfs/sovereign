@@ -89,6 +89,16 @@ compatibility metadata.
 
 #### 📋 20.3 — Mobile SDK native environment and bridge adapter
 
+> **Rescoped by [RFC 0082](../rfcs/0082-device-bridge-capability-contract.md).** Do
+> not implement as originally written. The environment-detection half is covered by
+> Task 3.32 (RFC 0079); what remains is **the Capacitor transport of
+> `@sovereignfs/bridge`** — the protocol is owned in the platform repo so the mobile
+> and desktop shells cannot drift. Tracked as leg 4 of
+> [workstream 0003](../workstreams/0003-device-bridge-across-surfaces.md). Two
+> requirements carry over from that RFC: the shell must expose **only** the narrow
+> bridge object (never raw `window.Capacitor` to page JS), and its advertised
+> `capabilities` list must reflect what the build actually implements.
+
 **Goal:** Add the SDK-side native-mobile environment routing needed for
 `sdk.device.*` so plugins can call one portable API across browser, PWA, and the
 Capacitor shell.
@@ -275,9 +285,122 @@ the mobile shell.
 - Plugin-facing API shape is explicit or intentionally deferred.
 - Store-review risk is documented before implementation.
 
+#### 📋 20.10 — WKWebView service-worker and offline spike (RFC 0058, RFC 0081)
+
+**Goal:** Establish, against a real Capacitor build, whether Sovereign's offline stack
+works inside the mobile WebView. This is the least-verified assumption behind every
+native shell plan.
+
+**Shared by two workstreams — run it once, let both consume the finding:**
+
+- [Workstream 0002](../workstreams/0002-native-mobile-app-release.md) (whole-instance
+  native app) uses it to decide **scope**: whether offline is a feature of the first
+  store release or a documented follow-up. A negative result narrows Task 20.1; it
+  does not stop the release.
+- [Workstream 0001](../workstreams/0001-standalone-plugin-apps.md) (standalone plugin
+  apps) uses it as a **gate** on Tasks 20.11–20.12: a negative result sends RFC 0081
+  §4 back to design, because a focused plugin app whose whole value is offline access
+  cannot ship without it.
+
+**Deliverables:**
+
+- A disposable Capacitor build pointing `server.url` at a real instance over `https`.
+- Verified findings for each layer separately: service-worker registration, the
+  `offline-shells` document cache, `sdk.offline` IndexedDB persistence across app
+  restart, and survival of a background/foreground cycle.
+- Confirmation (not assumption) that the `capacitor://` custom scheme yields **no**
+  service worker, since the whole offline story rests on avoiding it.
+- Measured behavior of `WKWebsiteDataStore` eviction under simulated storage pressure
+  and prolonged non-use — this determines how loudly a pending-sync indicator must
+  surface unsynced writes.
+- Equivalent verification on Android System WebView.
+- A written finding appended to `docs/research/0005-standalone-plugin-apps.md` or as its
+  own research doc. **The deliverable is the finding, not code.**
+
+**Dependencies:** RFC 0081. Requires Task 20.1's shell only insofar as a throwaway
+Capacitor project is needed.
+
+**SRS reference:** §3.12
+
+**Review checklist:**
+
+- Each of the four offline layers is reported as working or not working, individually.
+- The `capacitor://` no-service-worker claim is tested, not assumed.
+- Eviction behavior is characterized on iOS.
+- Android is covered.
+- If the result is negative, the finding says so plainly and RFC 0081 §4 is reopened
+  rather than the workstream proceeding.
+
+#### 📋 20.11 — Focused plugin app build targets (RFC 0081)
+
+**Goal:** Publish an individual plugin as its own native app from the same
+`sovereign-mobile` codebase that builds the whole-instance app — one shell,
+parameterized, not a second project.
+
+**Deliverables:**
+
+- A declarative build-target config per app: `appId`, `displayName`,
+  `defaultInstanceUrl`, `focusPlugin`, icon set. The whole-instance app becomes the
+  target with **no** `focusPlugin`.
+- Shell sends the RFC 0079 User-Agent token extended with `focus=<pluginId>`.
+- `server.url` loads the remote instance over `https` — never bundled assets behind
+  `capacitor://`, per Task 20.10's finding.
+- Instance onboarding extended to validate that the **target plugin** is installed,
+  enabled, and surface-compatible, not merely that the URL is a Sovereign instance.
+- Instance switcher re-validates the target plugin on switch.
+- Sign-out drives the platform's own flow so `offline.clearAll()` and the offline-queue
+  purge still fire — a native-only sign-out would leak the previous user's cached data
+  and unsynced writes on a shared device.
+- One published focused target, with the whole-instance app still building.
+
+**Dependencies:** Task 20.10 (gate), Task 20.1, Task 20.2, Task 2.27, RFC 0081.
+
+**SRS reference:** §3.12
+
+**Review checklist:**
+
+- Both the whole-instance app and one focused app build from the same codebase.
+- The focused app loads only its plugin; out-of-focus navigation redirects to the
+  plugin root.
+- Onboarding rejects an instance that lacks the target plugin, with a clear message.
+- Offline cold launch renders cached data.
+- Sign-out clears the offline cache and queue.
+- No auth, role, or plugin-permission logic is duplicated in native code.
+
+#### 📋 20.12 — Plugin app store release process and rationing policy (RFC 0081)
+
+**Goal:** Make publishing a focused plugin app a repeatable process with a written
+policy on when it is justified — the ongoing cost is per-app and permanent.
+
+**Deliverables:**
+
+- Store metadata, privacy labels, and data-safety declarations per focused target,
+  making clear the app connects to a user-provided instance and that Sovereign hosts
+  nothing by default.
+- Signing identity, app identifier, and release-ownership model for multiple apps.
+- **Written rationing policy** (RFC 0081 §7): the installable PWA (Task 2.25) is the
+  default answer for any plugin wanting an app-like presence; a store-published focused
+  app is reserved for flagship plugins where distribution or a native capability
+  justifies N listings, N review cycles, N privacy declarations, and 1–2 weeks of review
+  latency on every shell fix.
+- No telemetry by default.
+
+**Dependencies:** Task 20.11, RFC 0081.
+
+**SRS reference:** §3.12
+
+**Review checklist:**
+
+- One focused app passes store review on both platforms.
+- The rationing policy is written and referenced from the epic.
+- Store metadata does not imply Sovereign hosts user data.
+- No analytics or crash reporting is enabled by default.
+
 ## Related RFCs
 
 - [RFC 0058 — Native mobile app shell (Capacitor)](../rfcs/0058-native-mobile-app-shell.md)
+- [RFC 0081 — Focused plugin app shell](../rfcs/0081-focused-plugin-app-shell.md)
+  (Tasks 20.10–20.12)
 - [RFC 0013 — Mobile responsiveness & PWA hardening](../rfcs/0013-mobile-responsiveness-pwa.md)
 - [RFC 0015 — Notification Center](../rfcs/0015-notification-center.md)
 - [RFC 0016 — Web Push notifications](../rfcs/0016-web-push.md)

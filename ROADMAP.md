@@ -216,6 +216,14 @@ once prioritised.
 | —       | Local visual regression testing (RFC 0059)                                | 📋     | [9.14](docs/epics/design-system.md#-914--local-visual-regression-testing-rfc-0059)                                               |
 | —       | NavTabs Link support + PageHeader heading level                           | 📋     | [9.15](docs/epics/design-system.md#-915--navtabs-link-support--pageheader-heading-level)                                         |
 | —       | Static Sovereign Guide and per-user progress (RFC 0056)                   | 📋     | [24.1](docs/epics/plugin-guide.md#-241--static-sovereign-guide-and-per-user-progress-rfc-0056)                                   |
+| —       | Plugin surface model and SDK device environment (RFC 0079)                | 📋     | [3.32](docs/epics/plugins-runtime.md#-332--plugin-surface-model-and-sdk-device-environment-rfc-0079)                             |
+| —       | Manifest surfaces availability declaration (RFC 0079)                     | 📋     | [3.33](docs/epics/plugins-runtime.md#-333--manifest-surfaces-availability-declaration-rfc-0079)                                  |
+| —       | Per-plugin installable PWA manifest (RFC 0080)                            | 📋     | [2.25](docs/epics/platform-shell.md#-225--per-plugin-installable-pwa-manifest-rfc-0080)                                          |
+| —       | Plugin PWA icon generation (RFC 0080)                                     | 📋     | [2.26](docs/epics/platform-shell.md#-226--plugin-pwa-icon-generation-rfc-0080)                                                   |
+| —       | Focused plugin app context and route lock (RFC 0081)                      | 📋     | [2.27](docs/epics/platform-shell.md#-227--focused-plugin-app-context-and-route-lock-rfc-0081)                                    |
+| —       | In-app text-size control (pinch-zoom compensation)                        | 📋     | [10.2](docs/epics/accessibility.md#-102--in-app-text-size-control-pinch-zoom-compensation)                                       |
+| —       | Device bridge protocol package (RFC 0082)                                 | 📋     | [3.34](docs/epics/plugins-runtime.md#-334--device-bridge-protocol-package-rfc-0082)                                              |
+| —       | Plugin device surface, permissions, and consent (RFC 0082)                | 📋     | [3.35](docs/epics/plugins-runtime.md#-335--plugin-device-surface-permissions-and-consent-rfc-0082)                               |
 | —       | Role-aware and instance-aware Guide content (RFC 0056)                    | 📋     | [24.2](docs/epics/plugin-guide.md#-242--role-aware-and-instance-aware-guide-content)                                             |
 | —       | Operator-managed Guide content (RFC 0056)                                 | 📋     | [24.3](docs/epics/plugin-guide.md#-243--operator-managed-guide-content)                                                          |
 | —       | Persistent help entry and Guide update affordance (RFC 0056)              | 📋     | [24.4](docs/epics/plugin-guide.md#-244--persistent-help-entry-and-guide-update-affordance)                                       |
@@ -307,14 +315,17 @@ mobile app (post-v1 plan)" and SRS §3.12) and lives in a separate
 
 ### Non-prioritised tasks
 
-| Version | Task                                                             | Status | Epic task                                                                                |
-| ------- | ---------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------- |
-| —       | Mobile app shell, iOS and Android (RFC 0058)                     | 📋     | [20.1](docs/epics/mobile.md#-201--sovereign-mobile--capacitor-shell-scaffold)            |
-| —       | Mobile instance validation and compatibility endpoint (RFC 0058) | 📋     | [20.2](docs/epics/mobile.md#-202--mobile-instance-validation-and-compatibility-endpoint) |
-| —       | Mobile SDK native environment and bridge adapter (RFC 0058)      | 📋     | [20.3](docs/epics/mobile.md#-203--mobile-sdk-native-environment-and-bridge-adapter)      |
-| —       | Mobile store release setup and privacy declarations (RFC 0058)   | 📋     | [20.4](docs/epics/mobile.md#-204--mobile-store-release-setup-and-privacy-declarations)   |
-| —       | Mobile native push notifications (RFC 0058)                      | 📋     | [20.5](docs/epics/mobile.md#-205--native-push-notifications-apnsfcm)                     |
-| —       | Mobile native photo picker and camera capture (RFC 0058)         | 📋     | [20.6](docs/epics/mobile.md#-206--native-photo-picker-and-camera-capture)                |
-| —       | Mobile biometric auth capability (RFC 0058)                      | 📋     | [20.7](docs/epics/mobile.md#-207--biometric-auth-capability)                             |
-| —       | Mobile haptics capability (RFC 0058)                             | 📋     | [20.8](docs/epics/mobile.md#-208--haptics-capability)                                    |
-| —       | Mobile background capability planning (RFC 0058)                 | 📋     | [20.9](docs/epics/mobile.md#-209--background-capability-planning)                        |
+| Version | Task                                                             | Status | Epic task                                                                                           |
+| ------- | ---------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------- |
+| —       | Mobile app shell, iOS and Android (RFC 0058)                     | 📋     | [20.1](docs/epics/mobile.md#-201--sovereign-mobile--capacitor-shell-scaffold)                       |
+| —       | Mobile instance validation and compatibility endpoint (RFC 0058) | 📋     | [20.2](docs/epics/mobile.md#-202--mobile-instance-validation-and-compatibility-endpoint)            |
+| —       | Mobile SDK native environment and bridge adapter (RFC 0058)      | 📋     | [20.3](docs/epics/mobile.md#-203--mobile-sdk-native-environment-and-bridge-adapter)                 |
+| —       | Mobile store release setup and privacy declarations (RFC 0058)   | 📋     | [20.4](docs/epics/mobile.md#-204--mobile-store-release-setup-and-privacy-declarations)              |
+| —       | Mobile native push notifications (RFC 0058)                      | 📋     | [20.5](docs/epics/mobile.md#-205--native-push-notifications-apnsfcm)                                |
+| —       | Mobile native photo picker and camera capture (RFC 0058)         | 📋     | [20.6](docs/epics/mobile.md#-206--native-photo-picker-and-camera-capture)                           |
+| —       | Mobile biometric auth capability (RFC 0058)                      | 📋     | [20.7](docs/epics/mobile.md#-207--biometric-auth-capability)                                        |
+| —       | Mobile haptics capability (RFC 0058)                             | 📋     | [20.8](docs/epics/mobile.md#-208--haptics-capability)                                               |
+| —       | Mobile background capability planning (RFC 0058)                 | 📋     | [20.9](docs/epics/mobile.md#-209--background-capability-planning)                                   |
+| —       | WKWebView service-worker and offline spike (RFC 0058, RFC 0081)  | 📋     | [20.10](docs/epics/mobile.md#-2010--wkwebview-service-worker-and-offline-spike-rfc-0058-rfc-0081)   |
+| —       | Focused plugin app build targets (RFC 0081)                      | 📋     | [20.11](docs/epics/mobile.md#-2011--focused-plugin-app-build-targets-rfc-0081)                      |
+| —       | Plugin app store release process and rationing policy (RFC 0081) | 📋     | [20.12](docs/epics/mobile.md#-2012--plugin-app-store-release-process-and-rationing-policy-rfc-0081) |

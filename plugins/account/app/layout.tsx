@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useOverlaySecondRow } from '@sovereignfs/ui';
+import { PageContainer, useOverlaySecondRow } from '@sovereignfs/ui';
 import styles from './account.module.css';
 import { ActiveNavLink } from './_components/ActiveNavLink';
 
@@ -47,7 +47,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
         <h1 className={styles.title}>Account</h1>
         {tabStrip}
       </header>
-      <div className={styles.body}>{children}</div>
+      <PageContainer maxWidth="full">{children}</PageContainer>
     </div>
   );
 }

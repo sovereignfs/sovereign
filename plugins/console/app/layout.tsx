@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useOverlaySecondRow } from '@sovereignfs/ui';
+import { PageContainer, useOverlaySecondRow } from '@sovereignfs/ui';
 import styles from './console.module.css';
 import { ConsoleNavLink } from './_components/ConsoleNavLink';
 
@@ -59,7 +59,9 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
         <h1 className={styles.title}>Console</h1>
         {navStrip}
       </header>
-      <div className={styles.body}>{children}</div>
+      <PageContainer maxWidth="full" className={styles.body}>
+        {children}
+      </PageContainer>
     </div>
   );
 }

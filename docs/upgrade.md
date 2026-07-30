@@ -119,6 +119,26 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### Root `package.json` 0.50.1 → 0.51.0 (no `runtime` version bump)
+
+- **Console's "Add a plugin" panel is removed.** Console → Plugins no longer
+  has the two-step install form (paste a Git repository URL → **Check** a
+  fetched `manifest.json` → **Install**). Installing a plugin is now an
+  operator action performed outside the web UI.
+  - **Action required if you installed plugins through Console:** use the CLI
+    instead — `pnpm sv plugin add <repo-url>` (add `--token-env <VAR>` for a
+    private repository), or declare the plugin in `sovereign.plugins.json` and
+    rebuild. Both paths already existed and are unchanged; see
+    `docs/self-hosting.md` and `docs/plugin-development.md`.
+  - **Removing** a plugin from Console is unchanged — the per-row Remove
+    action and its confirm dialog stay exactly as they were.
+  - **No data or plugin is affected by upgrading.** Plugins installed via the
+    old panel were cloned into `plugins/<id>/` by the same `sv plugin add` the
+    CLI runs, so they remain installed, enabled, and untouched.
+  - Only `@sovereignfs/plugin-console` code changed (**→ 0.26.0**); no
+    `runtime`, `@sovereignfs/db`, or `@sovereignfs/auth` code is touched, and
+    no schema or configuration change is involved.
+
 ### Root `package.json` 0.47.0 → 0.48.0 (no `runtime` version bump)
 
 - **Default plugin bundle reduced to Sovereign Tasks only — epic task 3.31

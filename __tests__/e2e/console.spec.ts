@@ -14,8 +14,7 @@ test.describe('Console plugin — golden paths', () => {
 
   test('plugin list page shows installed plugins', async ({ adminPage: page }) => {
     await page.goto('/console/plugins');
-    // The plugins page has no dedicated heading; the install panel and table identify it.
-    await expect(page.getByText('Add a plugin')).toBeVisible();
+    // The plugins page has no dedicated heading; the plugin table identifies it.
     await expect(page.locator('tbody tr').first()).toBeVisible();
   });
 

@@ -4,6 +4,7 @@ import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'rea
 import Link from 'next/link';
 import { Icon } from '@sovereignfs/ui';
 import { offline } from '@sovereignfs/sdk/offline';
+import { offlineQueue } from '@sovereignfs/sdk/offline-queue';
 import styles from './AccountMenu.module.css';
 
 function monogram(name: string): string {
@@ -140,19 +141,31 @@ export function AccountMenu({
 
   const displayName = effectiveName || effectiveEmail || '';
 
-  // Purge every plugin's offline cache (RFC 0072) before the session actually
-  // ends — the sole safeguard that makes sdk.offline's plugin-only (not
-  // per-user) key scoping safe on a shared device. Best-effort: form.submit()
-  // always runs in `finally`, so a browser with IndexedDB disabled (or an
-  // error clearing it) still signs out normally; it just leaves stale cached
-  // values for the next mount of offline.clearAll() to catch up on. Uses the
-  // native, non-React form.submit() (not requestSubmit) so it bypasses the
-  // React onSubmit handler entirely instead of re-entering it.
+  // Purge every plugin's offline read cache (RFC 0074) and mutation queue
+  // (RFC 0078) before the session actually ends — the sole safeguard that
+  // makes sdk.offline/sdk.offline-queue's plugin-only (not per-user) key
+  // scoping safe on a shared device. Best-effort: form.submit() always runs
+  // in `finally`, so a browser with IndexedDB disabled (or an error clearing
+  // it) still signs out normally; it just leaves stale cached values for the
+  // next mount of offline.clearAll() to catch up on. Uses the native,
+  // non-React form.submit() (not requestSubmit) so it bypasses the React
+  // onSubmit handler entirely instead of re-entering it.
+  //
+  // Unlike the read cache, purging the mutation queue discards any offline
+  // edit the user made and hasn't yet gotten back online to sync (RFC 0078
+  // §7's "riskier than RFC 0074's read purge" — worth naming, not silently
+  // accepting). The RFC's recommended mitigation — a best-effort drain
+  // attempt before purging when online — isn't implemented here: draining
+  // needs a plugin-specific sync endpoint + request shape this platform-level
+  // component has no way to know, and no plugin-registered sync callback
+  // mechanism (the `sdk.offline-queue` analogue of `sdk.portability`'s
+  // `provideExport()`) exists yet to make that generic. Flagged as a real,
+  // deliberate gap for a future pass, not an oversight.
   async function handleSignOut(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     try {
-      await offline.clearAll();
+      await Promise.all([offline.clearAll(), offlineQueue.clearAll()]);
     } finally {
       form.submit();
     }

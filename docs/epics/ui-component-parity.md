@@ -1,8 +1,8 @@
-# Epic: shadcn Component Parity
+# Epic: UI Component Parity
 
-> Sizing/rhythm alignment of `@sovereignfs/ui` with shadcn/ui's spec, plus the
-> curated set of generic primitive components shadcn has that Sovereign
-> doesn't yet.
+> Sizing/rhythm alignment of `@sovereignfs/ui` toward a denser, more
+> conventional scale, plus the curated set of generic primitive components
+> Sovereign doesn't yet have.
 
 ## Status
 
@@ -11,8 +11,8 @@
 ## Overview
 
 This epic tracks the concrete build-out of [RFC 0076](../rfcs/0076-ds-sizing-alignment-and-new-primitives.md),
-the first of several RFCs expected from [Research 0004](../research/0004-shadcn-spec-component-expansion.md)
-("Reworking `packages/ui` to match shadcn/ui's component spec"). It is
+the first of several RFCs expected from [Research 0004](../research/0004-ui-component-sizing-and-catalog-expansion.md)
+("Expanding `packages/ui`'s sizing scale and component catalog"). It is
 deliberately scoped to RFC 0076's phases 1–2 only — additive, non-breaking
 work: a sizing/rhythm audit across existing components, and six batches of
 net-new primitive components. It does **not** cover the compound-API rework
@@ -26,13 +26,23 @@ epic (9), at the developer's explicit direction — it is not yet scheduled
 into `ROADMAP.md`; tasks here are ready to pick up whenever a roadmap slot is
 assigned.
 
+**Note (this session):** several of the components listed as net-new below —
+`RadioGroup`, `Slider`, `Progress`, `Table`, `Alert`, `Breadcrumb`,
+`Pagination`, `Kbd`, `Accordion`, `Collapsible` — already exist in
+`packages/ui/src/components` as of recent commits (`feat(ui): expand
+component library and instance styling`, `feat(ui): add Slider and Progress
+primitives`, `feat(ui): add RadioGroup primitive`). This epic's task
+breakdown has not been re-audited against that shipped work; treat the tasks
+below as needing a completion-status pass (which components are actually
+done vs. still gap) before picking any of them up.
+
 ## Related RFCs
 
 - [RFC 0076 — Design system sizing alignment and new primitive components](../rfcs/0076-ds-sizing-alignment-and-new-primitives.md)
 
 ## Related Research
 
-- [Research 0004 — Reworking `packages/ui` to match shadcn/ui's component spec](../research/0004-shadcn-spec-component-expansion.md)
+- [Research 0004 — Expanding `packages/ui`'s sizing scale and component catalog](../research/0004-ui-component-sizing-and-catalog-expansion.md)
 
 ## Related Docs
 
@@ -44,21 +54,22 @@ assigned.
 #### 📋 25.1 — Sizing/rhythm alignment audit on existing components
 
 **Goal:** Bring every existing interactive `@sovereignfs/ui` component's
-visual sizing in line with shadcn's spec, using `Button` as the reference
-implementation of the target pattern rather than inventing a new one.
+visual sizing in line with the target scale decided in Research 0004, using
+`Button` as the reference implementation of the target pattern rather than
+inventing a new one.
 
 **Deliverables:**
 
 - Audit `Input`, `Select`, `Checkbox`, `Toggle`, `SegmentedControl`, `Tabs`,
   `Menu` items, `Dialog` padding/radius, and `Card` padding/radius against
-  shadcn's published default sizing for the equivalent control. Adjust CSS
-  Module values (height, padding, font-size, radius) to match, sourcing all
-  values from existing `--sv-space-*`/`--sv-font-size-*`/`--sv-radius-*`
-  primitives — no new primitive tokens, no hardcoded literals.
+  the decided target sizing for the equivalent control. Adjust CSS Module
+  values (height, padding, font-size, radius) to match, sourcing all values
+  from existing `--sv-space-*`/`--sv-font-size-*`/`--sv-radius-*` primitives
+  — no new primitive tokens, no hardcoded literals.
 - For every interactive control touched, apply the same hit-area pattern
-  `Button.module.css` already uses: visual rendered height matches shadcn,
-  `min-height: var(--sv-touch-target-min, 44px)` guarantees the actual tap
-  target regardless of visual size.
+  `Button.module.css` already uses: visual rendered height matches the
+  target scale, `min-height: var(--sv-touch-target-min, 44px)` guarantees
+  the actual tap target regardless of visual size.
 - Do **not** add new size variants (sm/md/lg) to a component that doesn't
   already expose them — this task aligns sizing within existing variants
   only; adding new variants is a separate, explicitly out-of-scope decision
@@ -78,8 +89,8 @@ NFR-04's spirit).
 
 **Review checklist:**
 
-- Every audited component's rendered height/padding/font-size matches
-  shadcn's documented default for the equivalent control (or a documented,
+- Every audited component's rendered height/padding/font-size matches the
+  decided target sizing for the equivalent control (or a documented,
   deliberate deviation).
 - Every interactive control keeps a ≥44px tap target on a 375px viewport,
   verified in Storybook's viewport addon, even where the visual size is
@@ -93,6 +104,11 @@ NFR-04's spirit).
 #### 📋 25.2 — `Switch` + `RadioGroup` primitives
 
 **Goal:** Add the two most common missing form-control primitives.
+
+**Note:** `RadioGroup` already exists in `packages/ui/src/components` as of
+recent commits — verify whether it already satisfies this task's deliverables
+before doing new work; `Switch` should be checked for similarly before
+assuming it's still a gap.
 
 **Deliverables:**
 
@@ -132,6 +148,10 @@ NFR-04's spirit).
 
 **Goal:** Add range-input and determinate-progress primitives.
 
+**Note:** Both `Slider` and `Progress` already exist in
+`packages/ui/src/components` as of recent commits — verify against this
+task's deliverables before assuming any work remains.
+
 **Deliverables:**
 
 - **`Slider`** (`packages/ui/src/components/Slider/`) — single-thumb range
@@ -168,15 +188,19 @@ NFR-04's spirit).
 two most-requested-by-implication gaps (every list-heavy plugin screen and
 every form validation summary currently hand-rolls one of these).
 
+**Note:** Both `Table` and `Alert` already exist in
+`packages/ui/src/components` as of recent commits — verify against this
+task's deliverables before assuming any work remains.
+
 **Deliverables:**
 
 - **`Table`** (`packages/ui/src/components/Table/`) — thin, styled wrappers
   around native `<table>`/`<thead>`/`<tbody>`/`<tr>`/`<th>`/`<td>`, token-driven
-  borders/padding/typography. Explicitly **not** shadcn's Data Table (no
-  sort/filter/virtualization/column-definition machinery) — see Research
-  0004's "full Data Table — Out" decision. A responsive/mobile fallback
-  (horizontal scroll container, matching the existing `NavTabs` masked-overflow
-  pattern) for narrow viewports.
+  borders/padding/typography. Explicitly **not** a full sortable/filterable/
+  virtualized Data Table (no sort/filter/virtualization/column-definition
+  machinery) — see Research 0004's "full Data Table — Out" decision. A
+  responsive/mobile fallback (horizontal scroll container, matching the
+  existing `NavTabs` masked-overflow pattern) for narrow viewports.
 - **`Alert`** (`packages/ui/src/components/Alert/`) — inline, non-dismissible
   banner. Props: `variant: 'info' | 'success' | 'warning' | 'error'`,
   `heading?`, `children` (body). Distinct from `Toast` (transient,
@@ -210,6 +234,10 @@ every form validation summary currently hand-rolls one of these).
 
 **Goal:** Add the remaining navigation/display primitives from RFC 0076's
 curated list.
+
+**Note:** `Breadcrumb`, `Pagination`, and `Kbd` already exist in
+`packages/ui/src/components` as of recent commits — verify against this
+task's deliverables before assuming any work remains.
 
 **Deliverables:**
 
@@ -251,6 +279,10 @@ pattern established by Task 9.15 (`NavTabs` `Link` support).
 
 **Goal:** Add expand/collapse primitives, closing out RFC 0076's curated
 component list.
+
+**Note:** Both `Accordion` and `Collapsible` already exist in
+`packages/ui/src/components` as of recent commits — verify against this
+task's deliverables before assuming any work remains.
 
 **Deliverables:**
 

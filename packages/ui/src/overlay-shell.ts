@@ -6,7 +6,7 @@ import { lockBodyScroll, unlockBodyScroll } from './scroll-lock';
 // Internal to the design system — not exported from `index.ts`. Shared by
 // Dialog, Drawer, and Sheet, which independently implemented identical
 // scrim/focus-trap/Escape/scroll-lock logic before this consolidation
-// (RFC 0078, epic task 9.19). ConfirmDialog is deliberately not migrated
+// (RFC 0079, epic task 9.19). ConfirmDialog is deliberately not migrated
 // here — it stays on the native `<dialog>` element, which already provides
 // equivalent focus-trap/backdrop semantics more reliably for its use case.
 

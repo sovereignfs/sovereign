@@ -179,9 +179,9 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.46.0  | Web push delivery status logging (RFC 0016)                                     | ✅     | [4.6](docs/epics/notification-center.md#-46--web-push-delivery-status-logging)                                    |
 | 0.47.0  | Per-database SQLite encryption enforcement (RFC 0071 follow-up)                 | ✅     | [8.15](docs/epics/data-sovereignty.md#-815--per-database-sqlite-encryption-enforcement-rfc-0071-follow-up)        |
 | 0.48.0  | Default plugin bundle reduced to Tasks-only                                     | ✅     | [3.31](docs/epics/plugins-runtime.md#-331--default-plugin-bundle-reduced-to-tasks-only)                           |
-| 0.49.0  | Shared page layout container (`PageContainer`) (RFC 0078)                       | 📋     | [9.18](docs/epics/design-system.md#-918--shared-page-layout-container-pagecontainer-and-plugin-layout-convention) |
-| 0.50.0  | Overlay primitive consolidation + Plainwrite ConfirmDialog migration (RFC 0078) | 📋     | [9.19](docs/epics/design-system.md#-919--overlay-primitive-consolidation-and-plainwrite-confirmdialog-migration)  |
-| 0.51.0  | Shared swipe gesture hooks + Tasks/Shopper carousel migration (RFC 0078)        | 📋     | [9.20](docs/epics/design-system.md#-920--shared-swipe-gesture-hooks-and-carousel-migration-tasks-shopper)         |
+| 0.49.0  | Shared page layout container (`PageContainer`) (RFC 0079)                       | 📋     | [9.18](docs/epics/design-system.md#-918--shared-page-layout-container-pagecontainer-and-plugin-layout-convention) |
+| 0.50.0  | Overlay primitive consolidation + Plainwrite ConfirmDialog migration (RFC 0079) | 📋     | [9.19](docs/epics/design-system.md#-919--overlay-primitive-consolidation-and-plainwrite-confirmdialog-migration)  |
+| 0.51.0  | Shared swipe gesture hooks + Tasks/Shopper carousel migration (RFC 0079)        | 📋     | [9.20](docs/epics/design-system.md#-920--shared-swipe-gesture-hooks-and-carousel-migration-tasks-shopper)         |
 
 ---
 

@@ -16,7 +16,7 @@ This epic covers two closely related areas: the `@sovereignfs/ui` design system 
 - [RFC 0031 — Email templates](../rfcs/0031-email-templates.md)
 - [RFC 0032 — Instance identity rename](../rfcs/0032-instance-identity-rename.md)
 - [RFC 0073 — Standalone usage of `@sovereignfs/ui` outside the plugin runtime](../rfcs/0073-standalone-ui-package.md)
-- [RFC 0078 — Mobile PWA layout, overlay, and gesture consistency](../rfcs/0078-mobile-pwa-layout-overlay-gesture-consistency.md)
+- [RFC 0079 — Mobile PWA layout, overlay, and gesture consistency](../rfcs/0079-mobile-pwa-layout-overlay-gesture-consistency.md)
 
 ## Related Docs
 
@@ -765,7 +765,7 @@ auto-padding (`runtime/app/(platform)/shell.module.css:144-154`) — one plugin
 **Dependencies:** None — additive `packages/ui` component; does not change
 `runtime/app/(platform)/shell.module.css` behavior.
 
-**SRS reference:** [RFC 0078](../rfcs/0078-mobile-pwa-layout-overlay-gesture-consistency.md)
+**SRS reference:** [RFC 0079](../rfcs/0079-mobile-pwa-layout-overlay-gesture-consistency.md)
 
 **Review checklist:**
 
@@ -817,7 +817,7 @@ stopgap that its own doc comment says should be replaced) onto the shared
 **Dependencies:** None — internal refactor of existing components; no
 public API or manifest change.
 
-**SRS reference:** [RFC 0078](../rfcs/0078-mobile-pwa-layout-overlay-gesture-consistency.md)
+**SRS reference:** [RFC 0079](../rfcs/0079-mobile-pwa-layout-overlay-gesture-consistency.md)
 
 **Review checklist:**
 
@@ -876,7 +876,7 @@ different primitive.
 **Dependencies:** None — additive `packages/ui` hooks; existing plugin
 behavior is preserved, not changed.
 
-**SRS reference:** [RFC 0078](../rfcs/0078-mobile-pwa-layout-overlay-gesture-consistency.md)
+**SRS reference:** [RFC 0079](../rfcs/0079-mobile-pwa-layout-overlay-gesture-consistency.md)
 
 **Review checklist:**
 

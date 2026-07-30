@@ -40,7 +40,7 @@ export interface UseSwipeRevealResult {
  * useSwipeReveal — horizontal swipe-to-reveal (e.g. Done/Delete actions
  * behind a list row), extracted from `sovereign-tasks`'s `TaskItem`/
  * `ListSidebar`, which independently hand-rolled the identical gesture twice
- * with only `revealWidth` differing (RFC 0078, epic task 9.20).
+ * with only `revealWidth` differing (RFC 0079, epic task 9.20).
  *
  * Axis-locks on the first 8px of movement (so a vertical scroll or the
  * carousel's own horizontal swipe-between-slides gesture isn't hijacked by a

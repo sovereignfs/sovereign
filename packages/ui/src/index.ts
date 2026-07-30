@@ -57,6 +57,8 @@ export { FormField } from './components/FormField/FormField';
 export type { FormFieldProps, FormFieldRenderProps } from './components/FormField/FormField';
 export { PageHeader } from './components/PageHeader/PageHeader';
 export type { PageHeaderProps } from './components/PageHeader/PageHeader';
+export { PageContainer } from './components/PageContainer/PageContainer';
+export type { PageContainerProps } from './components/PageContainer/PageContainer';
 export { EmptyState } from './components/EmptyState/EmptyState';
 export type { EmptyStateProps } from './components/EmptyState/EmptyState';
 export { Spinner } from './components/Spinner/Spinner';
@@ -185,6 +187,17 @@ export {
   useSingleOrDoubleTap,
   useIsMobile,
   useCommitOnEnterOrBlur,
+  useSwipeReveal,
+  useSnapCarousel,
 } from './hooks';
 export { MOBILE_BREAKPOINT_PX } from './hooks';
-export type { UseLongPressOptions, LongPressHandlers, CommitOnEnterOrBlurHandlers } from './hooks';
+export type {
+  UseLongPressOptions,
+  LongPressHandlers,
+  CommitOnEnterOrBlurHandlers,
+  UseSwipeRevealOptions,
+  UseSwipeRevealHandlers,
+  UseSwipeRevealResult,
+  UseSnapCarouselOptions,
+  UseSnapCarouselResult,
+} from './hooks';

@@ -884,6 +884,43 @@ CSS rule collapsing the same transition to near-instant — the JS unmount timer
 and the CSS transition duration must agree, or the component stays mounted
 (invisibly) for the normal duration even though it already looks closed.
 
+### Page layout — `PageContainer`
+
+The runtime shell already pads every plugin's main content —
+`var(--sv-space-8)` (32px) on desktop, `var(--sv-space-4)` (16px) on mobile —
+applied in `runtime/app/(platform)/shell.module.css` to the `#main-scroll`
+content region, unless the plugin's root element carries
+`data-plugin-fullbleed` (`sovereign-tasks`, `sovereign-shopper` — plugins that
+manage their own full-bleed shell/sidebar/content grid).
+
+**Do not add your own outer `padding` or `max-width` in a plugin's
+`app/layout.tsx` or page-level CSS module.** That duplicates the shell's job
+and, worse, stacks on top of it (a real bug this fixed: a plugin ended up
+padded by both the shell and its own layout CSS). Use `PageContainer` instead,
+only when you want to additionally constrain content to a readable width:
+
+```tsx
+import { PageContainer } from '@sovereignfs/ui';
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return <PageContainer maxWidth="md">{children}</PageContainer>;
+}
+```
+
+`PageContainer` centers (`margin-inline: auto`) and constrains width — it adds
+**no padding of its own**, since the shell already provides it.
+
+| `maxWidth` | Pixel value | Use when                                                     |
+| ---------- | ----------- | ------------------------------------------------------------ |
+| `sm`       | 640px       | A narrow single-column form or document (e.g. a text editor) |
+| `md`       | 960px       | The common case — most plugin pages (default)                |
+| `lg`       | 1200px      | Wide list/table-heavy screens                                |
+| `full`     | none        | No width constraint — content fills the shell's padded area  |
+
+Plugins that opt out of shell padding via `data-plugin-fullbleed`
+(`sovereign-tasks`, `sovereign-shopper`) manage their own layout entirely and
+should not use `PageContainer`.
+
 ### Overlay surfaces — which component for which job
 
 One API per surface; presentation adapts per platform. On mobile the shell

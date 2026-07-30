@@ -23,6 +23,7 @@ import { TagInput } from '../components/TagInput/TagInput';
 import { SuggestionInput } from '../components/SuggestionInput/SuggestionInput';
 import { NavTabs } from '../components/NavTabs/NavTabs';
 import { PageHeader } from '../components/PageHeader/PageHeader';
+import { PageContainer } from '../components/PageContainer/PageContainer';
 import { Popover } from '../components/Popover/Popover';
 import { SegmentedControl } from '../components/SegmentedControl/SegmentedControl';
 import { Select } from '../components/Select/Select';
@@ -2010,6 +2011,28 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   description="Manage who has access to this instance."
                   action={<Button size="sm">Invite user</Button>}
                 />
+              </div>
+            </ComponentCard>
+
+            {/* PageContainer */}
+            <ComponentCard
+              name="PageContainer"
+              importLine="import { PageContainer } from '@sovereignfs/ui';"
+              usage="Constrains and centers a plugin's main content width (sm/md/lg/full). Adds no padding of its own — the runtime shell already pads plugin content. Use instead of local container CSS in a plugin's layout."
+            >
+              <div style={{ width: '100%', background: 'var(--sv-color-surface-sunken)' }}>
+                <PageContainer maxWidth="sm">
+                  <div
+                    style={{
+                      background: 'var(--sv-color-surface-raised)',
+                      border: '1px dashed var(--sv-color-border)',
+                      borderRadius: 'var(--sv-radius-md)',
+                      padding: 'var(--sv-space-4)',
+                    }}
+                  >
+                    maxWidth=&quot;sm&quot;
+                  </div>
+                </PageContainer>
               </div>
             </ComponentCard>
 

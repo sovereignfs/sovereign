@@ -25,8 +25,10 @@ Not every research doc produces an RFC. Some conclude "not now" or "rejected"
 Proposing one? Copy [`TEMPLATE.md`](TEMPLATE.md) to `NNNN-short-slug.md`, fill
 it in, and add a row below.
 
-| Doc                                                   | Title                                                    | Status      | Graduated to                                          |
-| ----------------------------------------------------- | -------------------------------------------------------- | ----------- | ----------------------------------------------------- |
-| [0001](0001-enterprise-architecture-assessment.md)    | Enterprise-grade architecture feasibility                | Exploratory | Superseded in part by 0002                            |
-| [0002](0002-multi-tenancy-vs-federation-direction.md) | Multi-tenancy vs. multi-instance federation              | Decided     | Direction confirmed — no RFC yet                      |
-| [0003](0003-horizontal-scaling-strategy.md)           | Horizontal scaling strategy (DB, storage, orchestration) | Exploratory | Pending RFCs for libSQL dialect + shared file storage |
+| Doc                                                       | Title                                                        | Status         | Graduated to                                                                                                                                |
+| --------------------------------------------------------- | ------------------------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| [0001](0001-enterprise-architecture-assessment.md)        | Enterprise-grade architecture feasibility                    | Exploratory    | Superseded in part by 0002                                                                                                                  |
+| [0002](0002-multi-tenancy-vs-federation-direction.md)     | Multi-tenancy vs. multi-instance federation                  | Decided        | Direction confirmed — no RFC yet                                                                                                            |
+| [0003](0003-horizontal-scaling-strategy.md)               | Horizontal scaling strategy (DB, storage, orchestration)     | Exploratory    | Pending RFCs for libSQL dialect + shared file storage                                                                                       |
+| [0004](0004-ui-component-sizing-and-catalog-expansion.md) | Expanding `packages/ui`'s sizing scale and component catalog | Decided        | [RFC 0076](../rfcs/0076-ds-sizing-alignment-and-new-primitives.md); further RFCs pending for Combobox/Input OTP and the compound-API rework |
+| [0005](0005-trip-planning-and-place-checkin-plugin.md)    | Trip planning + place check-in plugin                        | Partly decided | Pending RFCs A (data model + check-in), B (place provider + map), C (trips + day navigation)                                                |

@@ -4,7 +4,6 @@ import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
 import { canUserOpenPlugin } from '@/src/plugin-access-server';
 import { getExamplesEnabledFlag } from '@/src/plugin-status';
 import { getPluginCatalogAction } from './actions';
-import { PluginInstallPanel } from './PluginInstallPanel';
 import { PluginsTable, type PluginRow, type PluginStatus } from './PluginsTable';
 import styles from '../console.module.css';
 
@@ -102,7 +101,6 @@ export default async function PluginsPage() {
 
   return (
     <div className={styles.sections}>
-      <PluginInstallPanel />
       <PluginsTable rows={rows} defaultShowExamples={examplesEnabled} />
     </div>
   );

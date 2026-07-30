@@ -8,7 +8,7 @@
 
 ## Overview
 
-Console is a `type: platform`, `adminOnly` plugin that ships with Sovereign. It gives `platform:admin` and `platform:owner` users a unified control surface: manage users and invites, enable/disable plugins, configure tenant settings and root plugin, inspect system health, manage instance identity/branding, manage entitlements, and view the platform-wide activity feed. Console also renders install/remove UX for community plugins (two-step server-side flow: manifest preview → confirm).
+Console is a `type: platform`, `adminOnly` plugin that ships with Sovereign. It gives `platform:admin` and `platform:owner` users a unified control surface: manage users and invites, enable/disable plugins, configure tenant settings and root plugin, inspect system health, manage instance identity/branding, manage entitlements, and view the platform-wide activity feed. Console also renders remove UX for community plugins; installation itself is an operator action performed with the `sv plugin add` CLI (or `sovereign.plugins.json`), not from Console.
 
 ## Tasks
 

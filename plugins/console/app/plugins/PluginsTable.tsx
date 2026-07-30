@@ -9,7 +9,7 @@ import {
   type PluginAccessPolicyValue,
 } from './actions';
 import { PluginAccessDialog } from './PluginAccessDialog';
-import { RemovePluginButton } from './PluginInstallPanel';
+import { RemovePluginButton } from './RemovePluginButton';
 import styles from '../console.module.css';
 
 export type PluginStatus = 'incompatible' | 'inactive' | 'enabled' | 'disabled';

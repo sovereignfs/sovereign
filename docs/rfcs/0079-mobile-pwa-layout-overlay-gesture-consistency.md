@@ -1,4 +1,4 @@
-# RFC 0078 — Mobile PWA layout, overlay, and gesture consistency
+# RFC 0079 — Mobile PWA layout, overlay, and gesture consistency
 
 **Status:** Draft\
 **Date:** July 2026\

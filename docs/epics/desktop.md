@@ -176,14 +176,14 @@ direct download, reaching users who prefer sandboxed App Store apps.
 
 #### 📋 17.7 — SDK `"desktop"` environment for `sdk.device.*`
 
-> **Subsumed by [RFC 0079](../rfcs/0079-plugin-surface-model.md) and
-> [RFC 0082](../rfcs/0082-device-bridge-capability-contract.md).** This task
+> **Subsumed by [RFC 0080](../rfcs/0080-plugin-surface-model.md) and
+> [RFC 0083](../rfcs/0083-device-bridge-capability-contract.md).** This task
 > predates both and assumed it would patch an existing `sdk.device.*` routing that
 > never got built. Environment detection now lands in Task 3.32 (which creates the
 > surface, including the `desktop` value); transport detection lands in Task 3.34.
 > Nothing separate remains here — close it against those tasks rather than
 > implementing it. Tasks 17.2's notification half and 17.4 are **rescoped** to the
-> Tauri transport of `@sovereignfs/bridge`; see RFC 0082 §8 and leg 3 of
+> Tauri transport of `@sovereignfs/bridge`; see RFC 0083 §8 and leg 3 of
 > [workstream 0003](../workstreams/0003-device-bridge-across-surfaces.md).
 
 **Goal:** Add the `"desktop"` environment to `sdk.device.*` routing so plugins
@@ -211,9 +211,9 @@ shipped.
 ## Related RFCs
 
 - [RFC 0038 — Desktop app shell (Tauri, macOS-first)](../rfcs/0038-desktop-app-shell.md)
-- [RFC 0079 — Plugin surface model](../rfcs/0079-plugin-surface-model.md)
+- [RFC 0080 — Plugin surface model](../rfcs/0080-plugin-surface-model.md)
   (supplies the `desktop` surface value; subsumes Task 17.7)
-- [RFC 0082 — Device bridge and capability contract](../rfcs/0082-device-bridge-capability-contract.md)
+- [RFC 0083 — Device bridge and capability contract](../rfcs/0083-device-bridge-capability-contract.md)
   (rescopes Task 17.2's notification half and Task 17.4 to the Tauri transport)
 
 ## Related Docs

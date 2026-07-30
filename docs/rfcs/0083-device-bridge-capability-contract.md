@@ -1,4 +1,4 @@
-# RFC 0082 — Device bridge and capability contract
+# RFC 0083 — Device bridge and capability contract
 
 **Status:** Draft\
 **Date:** July 2026\
@@ -11,12 +11,12 @@ transports, protocol, and the shell-side helper consumed by `sovereign-mobile` a
 `packages/manifest` (new `device:*` permissions), `runtime` (per-user device
 consent grants), `plugins/account` (consent management UI),
 `docs/plugin-development.md`, `docs/architecture-rules.md`,
-`docs/sdk-stability.md`. Builds on RFC 0079 (surface model — supplies transport
+`docs/sdk-stability.md`. Builds on RFC 0080 (surface model — supplies transport
 detection); implements the "SDK abstraction" tier that RFC 0058 §"Device API
 strategy" and RFC 0038 §"Device API tier" both specify but neither designs;
 supersedes the `sdk.device.notify()` / `sdk.device.secureStore.*` sketches in
 RFC 0038's epic tasks. Related research:
-[0005](../research/0005-standalone-plugin-apps.md).\
+[0006](../research/0006-standalone-plugin-apps.md).\
 **Incorporated into plan:** Yes — epic tasks 3.34–3.35.
 
 ---
@@ -73,7 +73,7 @@ surfaces" is an aspiration rather than a contract.
   `"desktop"` environment to `sdk.device.*` routing — **deferred to task 17.7**:
   `sdk.device.*` does not exist in `packages/sdk` yet". Task 17.7 then says that
   if the surface still hasn't landed, "ship the desktop check as part of its first
-  implementation instead". That first implementation is RFC 0079's task 3.32; this
+  implementation instead". That first implementation is RFC 0080's task 3.32; this
   RFC is the capability layer on top.
 - **The entire `SdkHost` is server-side — and this is the load-bearing constraint
   for this RFC.** Every namespace in `packages/sdk/src/host.ts` (`db`, `mailer`,
@@ -91,7 +91,7 @@ surfaces" is an aspiration rather than a contract.
   has no `SdkHost` entry and no `provideHost()` wiring at all — architecturally
   unlike every other namespace. The device bridge is the second member of that
   family. The `e2ee-crypto` / `e2ee-device` modules are the third.
-- **RFC 0079 supplies transport detection, not invocation.** Its server tier
+- **RFC 0080 supplies transport detection, not invocation.** Its server tier
   (`getSurface()` from the injected `x-sovereign-surface` header) and its client
   tier (`useDeviceEnvironment()`, `installed`) answer _where am I_. This RFC
   answers _what can I do here, and how do I ask_.
@@ -319,7 +319,7 @@ so any client code can claim any plugin id when calling the bridge. Consequently
 So `device:*` permissions are install-time and review-time metadata plus the
 input to an honest consent prompt ("_Tally_ wants to use haptics"), **not** a
 security boundary between plugins. This is the same conclusion RFC 0078 §6 reached
-for `offline:write` and the same posture RFC 0079 §2 takes on the surface signal.
+for `offline:write` and the same posture RFC 0080 §2 takes on the surface signal.
 `docs/plugin-development.md` must say so in those words.
 
 **The one structural lever, and it is a shell requirement:**
@@ -347,7 +347,7 @@ enforcement claim for mobile** — workstream 0003 leg 4.
 
 ### 6. Plugin-facing surface
 
-On the existing browser-only subpath from RFC 0079:
+On the existing browser-only subpath from RFC 0080:
 
 ```ts
 // @sovereignfs/sdk/device-client
@@ -395,7 +395,7 @@ tier" promise made real on shipped code.
 direct consequence of §5. Since client-side plugin identity is self-declared, a
 plugin-facing keychain would let any plugin's client code read any other's
 entries. Scoping it to the shell and platform (its actual first consumer is
-RFC 0081 §5's durable-session sequel — storing an OAuth refresh token in the OS
+RFC 0082 §5's durable-session sequel — storing an OAuth refresh token in the OS
 keychain) sidesteps that entirely. Exposing it to plugins requires a verifiable
 client-side identity mechanism, which does not exist and is out of scope here.
 
@@ -406,7 +406,7 @@ implementation of it rather than a parallel invention:
 
 | Task               | Was                                                | Becomes                                                       |
 | ------------------ | -------------------------------------------------- | ------------------------------------------------------------- |
-| 17.7               | "SDK `desktop` environment"                        | Subsumed: RFC 0079 task 3.32 + this RFC's transport detection |
+| 17.7               | "SDK `desktop` environment"                        | Subsumed: RFC 0080 task 3.32 + this RFC's transport detection |
 | 20.3               | "Mobile SDK native environment and bridge adapter" | The Capacitor transport of `@sovereignfs/bridge`              |
 | 17.2 (notify half) | `sdk.device.notify()` sketch                       | The Tauri transport of `notifications.native`                 |
 | 17.4               | `sdk.device.secureStore.*` sketch                  | The Tauri transport of `secureStorage`                        |
@@ -477,7 +477,7 @@ plugin calls haptics.impact() without device:haptics in its manifest
   would strand working combinations and require coordinated releases across three
   repositories. Capability negotiation removes the need entirely.
 - **Duplicate protocol types in each shell repository, spec-only here.**
-  Rejected — this is exactly the divergence RFC 0081 rejected separate shell
+  Rejected — this is exactly the divergence RFC 0082 rejected separate shell
   repositories over, and protocol drift between two shells is far more expensive
   to discover than a shared dependency is to maintain.
 - **Throwing on unavailable/denied.** Rejected — collapses four distinct product

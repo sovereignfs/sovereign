@@ -1,4 +1,4 @@
-# RFC 0080 — Per-plugin installable PWA
+# RFC 0081 — Per-plugin installable PWA
 
 **Status:** Draft\
 **Date:** July 2026\
@@ -11,8 +11,8 @@ rewrite), `packages/manifest` (new optional `installable` field), `scripts/`
 `docs/architecture-rules.md`. Builds on RFC 0013 (mobile responsiveness & PWA),
 RFC 0027 Phase 3 (dynamic PWA manifest — epic task 9.10), RFC 0074/0078
 (offline-capable plugins), RFC 0075 (mobile chrome toggle). Prerequisite-adjacent
-to RFC 0081 (focused plugin app shell); ships independently of it. Builds on
-research [0005](../research/0005-standalone-plugin-apps.md).\
+to RFC 0082 (focused plugin app shell); ships independently of it. Builds on
+research [0006](../research/0006-standalone-plugin-apps.md).\
 **Incorporated into plan:** Yes — epic tasks 2.25–2.26.
 
 ---
@@ -228,7 +228,7 @@ replay a cached document to the wrong user.
 
 The hard rule that `pages`/`pages-rsc`/`pages-rsc-prefetch` stay `NetworkFirst`
 (never stale-serving, because pages are per-user SSR) therefore applies
-unchanged. This RFC introduces no surface-varying SSR, so RFC 0079 §5's
+unchanged. This RFC introduces no surface-varying SSR, so RFC 0080 §5's
 cache-keying question does not arise here.
 
 ### Docker / config impact
@@ -314,7 +314,7 @@ GET /api/manifest/<id> for a non-installable/disabled plugin → 404
    `installable: true` has a usable icon set, Docker asset-path wiring.
 3. First adopters: two plugins, per research 0005's de-risking
    recommendation — one platform plugin and one real app (Tally) — before any
-   of this is generalized further or RFC 0081 begins.
+   of this is generalized further or RFC 0082 begins.
 
 ## Changelog
 

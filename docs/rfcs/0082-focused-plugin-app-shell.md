@@ -1,4 +1,4 @@
-# RFC 0081 — Focused plugin app shell (single-plugin native apps)
+# RFC 0082 — Focused plugin app shell (single-plugin native apps)
 
 **Status:** Draft\
 **Date:** July 2026\
@@ -6,11 +6,11 @@
 **Scope:** `sovereign-mobile` (config-driven build targets in the repo RFC 0058
 establishes — **not** a new repository), `runtime/middleware.ts` (focused-app
 route lock), `runtime/app/(platform)/layout.tsx`, `docs/plugin-development.md`,
-`docs/architecture-rules.md`, `docs/self-hosting.md`. Depends on RFC 0079
-(surface model — supplies the signal) and RFC 0080 (per-plugin installable PWA —
+`docs/architecture-rules.md`, `docs/self-hosting.md`. Depends on RFC 0080
+(surface model — supplies the signal) and RFC 0081 (per-plugin installable PWA —
 validates the UX and supplies the icon/manifest work). Extends RFC 0058 (native
 mobile app shell) and mirrors RFC 0038 (desktop shell). Builds on research
-[0005](../research/0005-standalone-plugin-apps.md).\
+[0006](../research/0006-standalone-plugin-apps.md).\
 **Incorporated into plan:** Yes — epic tasks 2.27, 20.10–20.12.
 
 ---
@@ -60,12 +60,12 @@ made and validated.
 - **RFC 0038's desktop equivalent has shipped** (epic 17.1 ✅) — the same
   client model in Tauri, in the field today. Whatever this RFC establishes for
   focused apps should be portable to `sovereign-desktop` without redesign.
-- **RFC 0079 supplies the signal.** Native shells identify themselves in the
+- **RFC 0080 supplies the signal.** Native shells identify themselves in the
   User-Agent; middleware normalizes it into `x-sovereign-surface`. This RFC
   extends that token with a focus component rather than inventing a parallel
   mechanism — the two are the same signal at the same injection point, which is
   why research 0005 required they be designed together.
-- **RFC 0080 supplies the per-plugin app identity** — manifest, icons, scope,
+- **RFC 0081 supplies the per-plugin app identity** — manifest, icons, scope,
   the login-containment rewrite. A focused native app and an installed
   per-plugin PWA want the same things; the native shell should not re-solve
   them.
@@ -118,7 +118,7 @@ runtime, which is where the project already iterates.
 
 ### 2. Focus signal
 
-The shell extends RFC 0079's User-Agent token:
+The shell extends RFC 0080's User-Agent token:
 
 ```
 Sovereign-Shell/mobile-ios 1.0.0 (focus=fs.sovereign.tally)
@@ -146,7 +146,7 @@ to it, it simply is not part of _this_ app, and a 404 would misdescribe that.
 | `/api/*`                                                     | Route handlers, sync endpoints, auth proxy                                           |
 | PWA/static assets                                            | Manifest, SW, Workbox, icons, `_next/static`                                         |
 
-> **Hard rule (per RFC 0079 §2):** the focus signal derives from a
+> **Hard rule (per RFC 0080 §2):** the focus signal derives from a
 > client-controlled User-Agent and is trivially spoofable. The route lock is a
 > **product-scoping and UX mechanism, never a security boundary.** Nothing
 > behind it may rely on the lock for confidentiality — session, capability, and
@@ -236,7 +236,7 @@ the app only does one thing — a Tally app pointed at an instance without Tally
 should say so during onboarding, not after a confusing empty screen.
 
 The validation response therefore needs to expose, for a requested plugin id:
-installed, enabled, `surfaces` compatibility (RFC 0079), and version. Epic 20.2
+installed, enabled, `surfaces` compatibility (RFC 0080), and version. Epic 20.2
 should design the endpoint with this consumer in mind rather than being retrofitted.
 
 ### 7. Store distribution — deliberately rationed
@@ -246,7 +246,7 @@ not. N published apps means N listings, N review cycles, N privacy
 declarations, N signing identities, and 1–2 weeks of review latency on every
 shell fix.
 
-**This is handled as policy, not design:** RFC 0080's installable PWA is the
+**This is handled as policy, not design:** RFC 0081's installable PWA is the
 default answer for any plugin that wants an app-like presence; a focused native
 app is reserved for flagship plugins where store distribution or a native
 capability genuinely justifies the ongoing cost. The decision is deliberate and
@@ -258,7 +258,7 @@ already states. No telemetry by default.
 
 ### Docker / config impact
 
-None in this repository beyond RFC 0080's icon assets. The shell lives in
+None in this repository beyond RFC 0081's icon assets. The shell lives in
 `sovereign-mobile`.
 
 ## UI flows

@@ -70,9 +70,17 @@ generalize to "every plugin exposes its own API."
 - `plugins/launcher/app/_components/LauncherOfflineView.tsx` is the reference
   pattern: render cached data immediately, always fire a live fetch in
   parallel, update view and cache on success.
-- **Writes do not exist.** `packages/sdk/src/offline-queue.ts` is absent;
-  RFC 0078 §3 is still Draft. As of this doc, the ladder below yields
-  _read-only_ offline plugins.
+- **Writes now exist** — `packages/sdk/src/offline-queue.ts` shipped while this
+  research was being written, exposing `offlineQueue`, `drainQueue`,
+  `categorizeOutcomes`, `QueuedMutation`, and `OfflineQueueFullError` on the
+  dedicated `@sovereignfs/sdk/offline-queue` subpath. RFC 0078 §7's logout/login
+  purge is wired at both sites (`runtime/src/complete-sign-in.ts:32` and
+  `runtime/app/(platform)/_components/AccountMenu.tsx:168`), resolving that RFC's
+  open question. **This removes the blocking prerequisite the ladder below
+  originally carried**, but it does not change this doc's recommendation about
+  _which_ writes Tally should adopt — see "Tally is a poor first adopter of
+  RFC 0078's LWW writes" below, which is about conflict semantics, not
+  availability.
 - The flat `offline: boolean` landed in commit `4d9ab5a` — one commit before
   this research. Its current form has effectively no mileage, and Launcher is
   its only adopter.
@@ -290,7 +298,7 @@ sequence accordingly.
    edit/delete get revisited once the queue is hardened elsewhere? Recommended
    position: decide on the merits later, do not inherit RFC 0078's LWW default.
 2. Does the focused-app lock need a manifest opt-in per plugin, or is it purely
-   a property of how a shell is built? Deferred to RFC 0081.
+   a property of how a shell is built? Deferred to RFC 0082.
 3. Whether an operator-facing feature-flag surface is ever needed. Left out
    until a concrete case appears.
 4. How the OAuth-based durable session interacts with a published app's fixed

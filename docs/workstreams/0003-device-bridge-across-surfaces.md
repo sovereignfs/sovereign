@@ -4,16 +4,16 @@
 **Date:** July 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
-**RFCs:** [0082](../rfcs/0082-device-bridge-capability-contract.md) (device
+**RFCs:** [0083](../rfcs/0083-device-bridge-capability-contract.md) (device
 bridge and capability contract — the governing design),
-[0079](../rfcs/0079-plugin-surface-model.md) (surface model — supplies the
+[0080](../rfcs/0080-plugin-surface-model.md) (surface model — supplies the
 `device-client` module and transport detection),
 [0058](../rfcs/0058-native-mobile-app-shell.md) /
 [0038](../rfcs/0038-desktop-app-shell.md) (the three-tier device strategy this
 finally implements)\
 **Epics touched:** 3 (Plugins Runtime), 17 (Desktop), 20 (Mobile), plus the
 `sovereign-desktop` and `sovereign-mobile` repositories\
-**Research:** [0005](../research/0005-standalone-plugin-apps.md)
+**Research:** [0006](../research/0006-standalone-plugin-apps.md)
 
 ---
 
@@ -55,7 +55,7 @@ one protocol rather than converging by accident.
 ## Decisions locked
 
 Settled in a design session with kasunben, July 2026. Full reasoning in
-[RFC 0082](../rfcs/0082-device-bridge-capability-contract.md).
+[RFC 0083](../rfcs/0083-device-bridge-capability-contract.md).
 
 | Decision                      | Choice                                                                                                                                           | Rejected alternative, and why                                                                                                                                                                                        |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -69,19 +69,19 @@ Settled in a design session with kasunben, July 2026. Full reasoning in
 | Shell exposure                | Narrow bridge object only                                                                                                                        | Exposing raw Capacitor/Tauri to page JS — would make native gating aspirational rather than real                                                                                                                     |
 | v1 capability set             | `haptics.impact`, `notifications.native`, platform-only `secureStorage`                                                                          | Full RFC 0058+0038 list — each capability carries its own permission, privacy, and store-review surface                                                                                                              |
 | Plugin-facing `secureStorage` | **Not in v1**                                                                                                                                    | Exposing it now — client-side plugin identity is self-declared, so any plugin's client code could read another's entries                                                                                             |
-| Plugin identity client-side   | Documented as **self-declared and unverifiable**                                                                                                 | Implying enforcement — same honesty posture as RFC 0078 §6 and RFC 0079 §2                                                                                                                                           |
+| Plugin identity client-side   | Documented as **self-declared and unverifiable**                                                                                                 | Implying enforcement — same honesty posture as RFC 0078 §6 and RFC 0080 §2                                                                                                                                           |
 
 ## Prerequisites
 
 | Prerequisite                                          | Owner           | Status                 |
 | ----------------------------------------------------- | --------------- | ---------------------- |
-| Task 3.32 — `device-client` subpath exists (RFC 0079) | epic 3          | 📋 — **blocks leg 2**  |
+| Task 3.32 — `device-client` subpath exists (RFC 0080) | epic 3          | 📋 — **blocks leg 2**  |
 | `sovereign-desktop` repo (shipped, epic 17.1)         | external        | ✅ — leg 3 can proceed |
 | `sovereign-mobile` repo (epic 20.1)                   | workstream 0002 | 📋 — **blocks leg 4**  |
 
 Leg 1 depends on none of these.
 
-> Task 3.32 creates the `device-client` subpath as part of RFC 0079's surface
+> Task 3.32 creates the `device-client` subpath as part of RFC 0080's surface
 > model; leg 1 extends that same subpath with the capability contract. If leg 1
 > starts first, it creates the subpath and 3.32 adds to it — either order works,
 > but they must not both create it.
@@ -138,7 +138,7 @@ one capability's convenience.
   per the pnpm `catalog:` convention.
 - Capability versions are integers incremented on a breaking payload change; a
   shell may advertise two versions of one capability during a migration.
-- Resolve RFC 0082 open question 7 — where the runtime's client bootstrap calls
+- Resolve RFC 0083 open question 7 — where the runtime's client bootstrap calls
   `provideBridge()`, and how it is guaranteed to run before a plugin's first
   `supports()` call. `provideHost()` has `instrumentation.ts` as an unambiguous
   once-before-any-request hook; the client side has no exact equivalent, so this
@@ -149,7 +149,7 @@ one capability's convenience.
 
 **Do not proceed if:** `packages/sdk` would need a `dependencies` entry to make
 this work. That is the signal the contract/implementation split has been drawn in
-the wrong place — reopen RFC 0082 §1 rather than taking the dependency.
+the wrong place — reopen RFC 0083 §1 rather than taking the dependency.
 
 ### Leg 2 — Plugin surface, permissions, and consent
 
@@ -188,7 +188,7 @@ the prompt is instance-scoped rather than plugin-scoped.
 ### Leg 3 — Tauri transport (`sovereign-desktop`)
 
 **Epic tasks:** 17.2 (notification half) and 17.4, both **rescoped** — see
-RFC 0082 §8. Do not implement them as currently written; their inline
+RFC 0083 §8. Do not implement them as currently written; their inline
 `sdk.device.notify()` / `sdk.device.secureStore.*` sketches are superseded.
 
 **Technical notes:**
@@ -197,7 +197,7 @@ RFC 0082 §8. Do not implement them as currently written; their inline
   `secureStorage` via the keychain plugin, both behind the bridge.
 - **Expose only the narrow bridge object.** No raw `window.__TAURI__` reaching
   page JavaScript — this is what makes native capability gating real.
-- `secureStorage` is platform-internal in v1; its first consumer is RFC 0081 §5's
+- `secureStorage` is platform-internal in v1; its first consumer is RFC 0082 §5's
   durable-session sequel, not plugins.
 - The shell's `capabilities` list must reflect what this build actually supports —
   advertising a capability the transport does not implement is worse than omitting
@@ -211,13 +211,13 @@ cannot honor to make a test pass.
 
 **Epic task:** 20.3, rescoped from "Mobile SDK native environment and bridge
 adapter" to "the Capacitor transport of `@sovereignfs/bridge`". The
-environment-detection half of that task is already covered by RFC 0079's 3.32.
+environment-detection half of that task is already covered by RFC 0080's 3.32.
 
 **Depends on:** `sovereign-mobile` existing — workstream 0002 leg 4 (task 20.1).
 
 **Technical notes:**
 
-- **Answer RFC 0082 open question 6 here, before relying on the enforcement
+- **Answer RFC 0083 open question 6 here, before relying on the enforcement
   claim.** Capacitor injects its own runtime into the WebView by design, and page
   JavaScript is the intended caller of `Capacitor.Plugins.*` — so "expose only the
   narrow bridge" may be materially harder than on Tauri, whose command surface is
@@ -241,7 +241,7 @@ in a later, dedicated task.
 
 - **Client-side plugin identity is unverifiable**, and it constrains the design
   permanently, not just in v1. Any future capability where cross-plugin isolation
-  matters is blocked on solving it (RFC 0082 open question 5). The mitigation for
+  matters is blocked on solving it (RFC 0083 open question 5). The mitigation for
   now is scope: keep such capabilities platform-internal.
 - **Advertising drift** — a shell that claims a capability it cannot honor turns a
   handled `unavailable` path into a runtime failure. Both shell legs carry a
@@ -262,12 +262,12 @@ in a later, dedicated task.
 
 **If the contract/implementation split cannot hold** — i.e. `packages/sdk` would
 need a runtime dependency to make `provideBridge()` work: stop before leg 1 and
-revisit the boundary in RFC 0082 §1. Duplicated protocol types across three
+revisit the boundary in RFC 0083 §1. Duplicated protocol types across three
 repositories is not an acceptable fallback; a types-only package is the next option
 to evaluate, and taking the SDK dependency is the last.
 
 **If negotiation proves insufficient in practice** (e.g. a capability needs
-coordinated release anyway): stop after leg 2 and reopen RFC 0082's compatibility
+coordinated release anyway): stop after leg 2 and reopen RFC 0083's compatibility
 section before either shell implements a transport. The web tier alone still
 delivers a working `sdk.device.*` for browser and PWA surfaces.
 
@@ -276,7 +276,7 @@ Capacitor, which injects its runtime into the WebView by design and expects page
 JS to call `Capacitor.Plugins.*`: ship the contract with native permissions
 documented as **advisory on that transport** rather than enforced, and say so per
 transport rather than in general. Portability, negotiation, and typed results are
-unaffected; only the enforcement claim weakens, and RFC 0082 §5 already states it
+unaffected; only the enforcement claim weakens, and RFC 0083 §5 already states it
 carefully enough to amend without rewriting the design.
 
 ## Relationship to other workstreams

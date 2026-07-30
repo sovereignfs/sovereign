@@ -579,7 +579,7 @@ const isMobile = useIsMobile(); // defaults to MOBILE_BREAKPOINT_PX (768)`}</Cod
       <section style={{ marginBottom: 'var(--sv-space-10)' }}>
         <SectionHeader
           title="useSwipeReveal"
-          subtitle="Horizontal swipe-to-reveal for a row's Done/Delete actions — extracted from sovereign-tasks' two independent hand-rolled implementations (RFC 0078)."
+          subtitle="Horizontal swipe-to-reveal for a row's Done/Delete actions — extracted from sovereign-tasks' two independent hand-rolled implementations (RFC 0079)."
         />
         <Card padding="md">
           <SwipeRevealDemo />
@@ -598,7 +598,7 @@ const isMobile = useIsMobile(); // defaults to MOBILE_BREAKPOINT_PX (768)`}</Cod
       <section style={{ marginBottom: 'var(--sv-space-10)' }}>
         <SectionHeader
           title="useSnapCarousel"
-          subtitle="Debounced settled-slide detection over a native scroll-snap container — extracted from sovereign-tasks and sovereign-shopper's independently duplicated carousels (RFC 0078)."
+          subtitle="Debounced settled-slide detection over a native scroll-snap container — extracted from sovereign-tasks and sovereign-shopper's independently duplicated carousels (RFC 0079)."
         />
         <Card padding="md">
           <SnapCarouselDemo />

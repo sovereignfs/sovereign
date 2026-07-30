@@ -27,7 +27,7 @@ export interface UseSnapCarouselResult {
  * useSnapCarousel — debounced "settled slide" detection over a native
  * `scroll-snap-type: x` container, extracted from `sovereign-tasks`'s
  * `MobileTasksCarousel` and independently reimplemented in
- * `sovereign-shopper`'s `MobileShopperCarousel` (RFC 0078, epic task 9.20).
+ * `sovereign-shopper`'s `MobileShopperCarousel` (RFC 0079, epic task 9.20).
  * Gives swipe-between-slides physics for free via native scroll-snap, with
  * this hook only handling "which slide did we land on."
  */

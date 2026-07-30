@@ -1,4 +1,4 @@
-# RFC 0079 — Plugin surface model (`sdk.device.*` and `x-sovereign-surface`)
+# RFC 0080 — Plugin surface model (`sdk.device.*` and `x-sovereign-surface`)
 
 **Status:** Draft\
 **Date:** July 2026\
@@ -10,8 +10,8 @@ subpath — the first implementation of the long-promised `sdk.device.*`),
 (availability filtering), `docs/plugin-development.md`,
 `docs/architecture-rules.md`. Implements the SDK abstraction tier promised by
 RFC 0058 (native mobile shell) and RFC 0038 (desktop shell); prerequisite for
-RFC 0081 (focused plugin app shell). Builds on research
-[0005](../research/0005-standalone-plugin-apps.md).\
+RFC 0082 (focused plugin app shell). Builds on research
+[0006](../research/0006-standalone-plugin-apps.md).\
 **Incorporated into plan:** Yes — epic tasks 3.32–3.33.
 
 ---
@@ -150,7 +150,7 @@ forge the value directly.
 > User-Agent and is trivially spoofable. It must never be an input to
 > authorization, entitlement, paywall, or data-access decisions. Anything that
 > must not be reachable is gated by session, capability, or plugin permission —
-> never by surface. RFC 0081's route lock is a UX and product-scoping
+> never by surface. RFC 0082's route lock is a UX and product-scoping
 > mechanism, not a security boundary, and says so.
 
 ### 3. SDK surface — `sdk.device.*`
@@ -206,12 +206,12 @@ render impossible to violate by accident.
 
 Capability probes and invocation (`camera`, `biometrics`, `haptics`, …) are
 **not** in this RFC. They are designed in
-[RFC 0082](0082-device-bridge-capability-contract.md), which adds a third
+[RFC 0083](0083-device-bridge-capability-contract.md), which adds a third
 architectural piece on top of this one: a browser-only bridge with
 Capacitor/Tauri/Web transports, capability negotiation at handshake, and typed
-results. This RFC answers _where am I_; RFC 0082 answers _what can I do here,
+results. This RFC answers _where am I_; RFC 0083 answers _what can I do here,
 and how do I ask_. Epic tasks 17.7 and 20.3 are subsumed/rescoped by it — see
-RFC 0082 §8.
+RFC 0083 §8.
 
 ### 4. Manifest — optional `surfaces` declaration
 
@@ -235,7 +235,7 @@ bump.
   "not available on this surface" state rather than a 404 — the plugin _is_
   installed, it just does not belong here, and a 404 would misdescribe that.
 
-Note the deliberate asymmetry with the route lock in RFC 0081: `surfaces`
+Note the deliberate asymmetry with the route lock in RFC 0082: `surfaces`
 filters _presentation_ and can be bypassed by anyone who edits their
 User-Agent, which is fine because nothing behind it is a secret.
 
@@ -342,7 +342,7 @@ installed PWA → after mount: { installed: true } → hint stays hidden
    "installed PWA only". Leaning no — it would make a server-filtered field
    depend on a client-only fact.
 4. Whether the per-cache surface-keying decision (§5) belongs in this RFC or in
-   RFC 0081, where the first genuinely surface-varying document appears.
+   RFC 0082, where the first genuinely surface-varying document appears.
 
 ## Adoption path
 

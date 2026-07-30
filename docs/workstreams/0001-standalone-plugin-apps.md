@@ -4,12 +4,12 @@
 **Date:** July 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
-**RFCs:** [0079](../rfcs/0079-plugin-surface-model.md) (surface model),
-[0080](../rfcs/0080-per-plugin-installable-pwa.md) (per-plugin installable PWA),
-[0081](../rfcs/0081-focused-plugin-app-shell.md) (focused plugin app shell)\
+**RFCs:** [0080](../rfcs/0080-plugin-surface-model.md) (surface model),
+[0081](../rfcs/0081-per-plugin-installable-pwa.md) (per-plugin installable PWA),
+[0082](../rfcs/0082-focused-plugin-app-shell.md) (focused plugin app shell)\
 **Epics touched:** 2 (Platform Shell), 3 (Plugins Runtime), 20 (Mobile), plus
 the `sovereign-tally` plugin repository\
-**Research:** [0005](../research/0005-standalone-plugin-apps.md)
+**Research:** [0006](../research/0006-standalone-plugin-apps.md)
 
 ---
 
@@ -43,13 +43,13 @@ plugin-specific REST API, no second implementation.
 - [ ] `docs/plugin-development.md` documents `installable`, `surfaces`, and
       `sdk.device.*` as generic platform capabilities.
 - [ ] The written rationing policy for store-published plugin apps exists
-      (RFC 0081 §7).
+      (RFC 0082 §7).
 
 ## Decisions locked
 
 Settled in a design session with kasunben, July 2026. Recorded so they are not
 reopened mid-execution — full reasoning in research
-[0005](../research/0005-standalone-plugin-apps.md).
+[0006](../research/0006-standalone-plugin-apps.md).
 
 | Decision                     | Choice                                                                | Rejected alternative, and why                                                                                            |
 | ---------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
@@ -72,14 +72,15 @@ reopened mid-execution — full reasoning in research
 
 ## Prerequisites
 
-| Prerequisite                                                      | Owner         | Status                                 |
-| ----------------------------------------------------------------- | ------------- | -------------------------------------- |
-| RFC 0078 offline write queue (`@sovereignfs/sdk/offline-queue`)   | separate task | In development — **blocks leg 4 only** |
-| RFC 0078 §6/§7 open questions resolved (permission, logout purge) | separate task | Must ship resolved with the queue      |
-| `sovereign-mobile` repo exists with RFC 0058's shell (epic 20.1)  | epic 20       | 📋 — **blocks leg 5**                  |
-| Instance validation endpoint (epic 20.2)                          | epic 20       | 📋 — **blocks leg 5**                  |
+| Prerequisite                                                     | Owner         | Status                              |
+| ---------------------------------------------------------------- | ------------- | ----------------------------------- |
+| RFC 0078 offline write queue (`@sovereignfs/sdk/offline-queue`)  | separate task | ✅ Shipped — no longer blocks leg 4 |
+| RFC 0078 §7 logout/login purge wired                             | separate task | ✅ Shipped — both call sites        |
+| `sovereign-mobile` repo exists with RFC 0058's shell (epic 20.1) | epic 20       | 📋 — **blocks leg 5**               |
+| Instance validation endpoint (epic 20.2)                         | epic 20       | 📋 — **blocks leg 5**               |
 
-Legs 1–3 depend on none of these and can start immediately.
+Legs 1–4 depend on none of these and can start immediately — the offline write
+queue shipped, so only leg 5 still has an unmet prerequisite.
 
 ## Legs
 
@@ -121,7 +122,7 @@ result reshapes the workstream before anything is invested in it.
 short research doc — not code. The spike branch is disposable.
 
 **Do not proceed if:** service workers are unavailable or unreliable in the
-Capacitor WebView. In that case stop, record the finding, and re-open RFC 0081
+Capacitor WebView. In that case stop, record the finding, and re-open RFC 0082
 §4 rather than proceeding to leg 5. Legs 2–4 are unaffected and still ship.
 
 ### Leg 2 — Surface model
@@ -153,7 +154,7 @@ Capacitor WebView. In that case stop, record the finding, and re-open RFC 0081
 
 **Do not proceed if:** surface-varying SSR turns out to be needed in this leg.
 It is not (nothing here branches SSR on surface), but if a task drifts into it,
-RFC 0079 §5's per-cache service-worker keying decision must be made and recorded
+RFC 0080 §5's per-cache service-worker keying decision must be made and recorded
 first — a surface-varying document served from a surface-agnostic cache is a
 replay bug.
 
@@ -192,7 +193,7 @@ recommendation. One platform plugin (Launcher is already offline-capable) and on
 real app.
 
 **Do not proceed if:** a generated maskable icon looks broken on Android. Resolve
-the background-plate question (RFC 0080 open question 1) before declaring the leg
+the background-plate question (RFC 0081 open question 1) before declaring the leg
 done, rather than shipping an install prompt that produces an ugly springboard
 icon.
 
@@ -230,10 +231,13 @@ definition of done depends on it.
   tradeoff), so nested group views become client-side view switching inside one
   shell.
 
-**Do not proceed if:** the offline queue's logout-purge behavior (RFC 0078 §7)
-is still unresolved upstream. Purging un-synced expense additions silently is
-data loss in a financial ledger, and Tally should not be the plugin that
-discovers this.
+**Do not proceed if:** the shipped purge turns out to discard un-synced additions
+without warning the user. RFC 0078 §7 left open whether a confirmation prompt
+should precede the destructive purge, calling it "a product decision, not an
+engineering one"; the queue shipped with the purge wired at both sign-out and
+sign-in. Verify what it actually does before Tally relies on it — silently
+dropping a queued expense is data loss in a financial ledger, and Tally should
+not be the plugin that discovers it.
 
 ### Leg 5 — Focused native app
 
@@ -244,7 +248,7 @@ discovers this.
 **Technical notes:**
 
 - The route lock is the highest-churn surface in this workstream. Start from
-  RFC 0081 §3's allowlist and expect to extend it. Known entries that are easy
+  RFC 0082 §3's allowlist and expect to extend it. Known entries that are easy
   to forget: `/account` — needed for password change, session revocation, **and
   `data:provide` consent**, which Tally requires and which lives in Account →
   Data; and `/paywall/*`, which middleware already redirects to.
@@ -261,7 +265,7 @@ discovers this.
   queue purge still fire. A native sign-out that only clears native storage
   leaks the previous user's cached data and un-synced writes on a shared device.
 
-**Do not proceed if:** the store rationing policy (RFC 0081 §7) has not been
+**Do not proceed if:** the store rationing policy (RFC 0082 §7) has not been
 written. Publishing the first focused app without a stated policy is how N
 unmaintained store listings happen.
 
@@ -296,7 +300,7 @@ unmaintained store listings happen.
 before leg 5. Legs 2–4 are unaffected and deliver real value on their own — an
 installable, offline, focused per-plugin app experience on every platform that
 supports PWAs, plus a surface model the desktop shell can use immediately.
-RFC 0081 returns to design; RFCs 0079 and 0080 stand.
+RFC 0082 returns to design; RFCs 0079 and 0080 stand.
 
 **If the store rationing policy cannot be agreed:** stop after leg 4. The PWA
 rung is the product; native distribution is an amplifier, not a prerequisite.

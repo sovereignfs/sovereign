@@ -782,7 +782,7 @@ worker and a self-contained offline navigation fallback.
 - PWA assets and the offline route load without an authenticated session.
 - Development mode does not generate a service worker or interfere with HMR.
 
-#### 📋 2.25 — Per-plugin installable PWA manifest (RFC 0080)
+#### 📋 2.25 — Per-plugin installable PWA manifest (RFC 0081)
 
 **Goal:** Let a plugin declaring `installable: true` be installed from a browser as
 its own home-screen app, scoped to its `routePrefix`, with its own name, icons, and
@@ -810,7 +810,7 @@ launch behavior — without leaving its scope to sign in.
 - Doc comment justifying why the route is session-exempt, and
   `docs/plugin-development.md` coverage of `installable`.
 
-**Dependencies:** RFC 0080. No dependency on RFC 0079.
+**Dependencies:** RFC 0081. No dependency on RFC 0080.
 
 **SRS reference:** §3.11, PLT-09.
 
@@ -826,7 +826,7 @@ launch behavior — without leaving its scope to sign in.
 - No second service worker is registered and the existing one's scope is unchanged.
 - Existing instance-level PWA install behavior is unchanged.
 
-#### 📋 2.26 — Plugin PWA icon generation (RFC 0080)
+#### 📋 2.26 — Plugin PWA icon generation (RFC 0081)
 
 **Goal:** Produce the raster icon sets a per-plugin install requires, from the
 single SVG plugins declare today.
@@ -841,11 +841,11 @@ single SVG plugins declare today.
 - Manifest validation rejecting `installable: true` without a usable icon set, so
   the failure is a build error rather than a broken install prompt.
 - Resolve whether generated maskable icons get a background plate from the
-  instance's `background_color` (RFC 0080 open question 1).
+  instance's `background_color` (RFC 0081 open question 1).
 - Docker: new served-asset path wired into the image, `.dockerignore`, and the
   `generate` step.
 
-**Dependencies:** Task 2.25, RFC 0080.
+**Dependencies:** Task 2.25, RFC 0081.
 
 **SRS reference:** §3.11.
 
@@ -857,7 +857,7 @@ single SVG plugins declare today.
 - `installable: true` without a usable icon fails manifest validation.
 - Generated icons are served correctly from a production Docker image.
 
-#### 📋 2.27 — Focused plugin app context and route lock (RFC 0081)
+#### 📋 2.27 — Focused plugin app context and route lock (RFC 0082)
 
 **Goal:** When a native shell identifies itself as focused on one plugin, serve only
 what that app needs — as a product-scoping mechanism, never a security boundary.
@@ -868,7 +868,7 @@ what that app needs — as a product-scoping mechanism, never a security boundar
   and injects `x-sovereign-focus-plugin`, stripping any inbound value first.
 - Route lock: out-of-focus paths redirect to the focused plugin's `routePrefix`
   (**not** 404 — the content exists and the user is entitled to it).
-- Allowlist per RFC 0081 §3, with each entry justified in a comment: auth routes,
+- Allowlist per RFC 0082 §3, with each entry justified in a comment: auth routes,
   `/account` and subroutes (password change, session revocation, **and
   `data:provide` consent**), `/paywall/*`, `/offline`, `/api/*`, PWA and static
   assets.
@@ -877,7 +877,7 @@ what that app needs — as a product-scoping mechanism, never a security boundar
   the focus signal is spoofable and must never gate authorization, entitlement, or
   data access.
 
-**Dependencies:** Task 3.32 (supplies the surface signal), RFC 0079, RFC 0081.
+**Dependencies:** Task 3.32 (supplies the surface signal), RFC 0080, RFC 0082.
 
 **SRS reference:** §3.12, PLT-03.
 
@@ -903,9 +903,9 @@ what that app needs — as a product-scoping mechanism, never a security boundar
 - [RFC 0042 — Public plugin page routes](../rfcs/0042-public-plugin-routes.md)
 - [RFC 0050 — Public plugin webhooks](../rfcs/0050-public-plugin-webhooks.md)
 - [RFC 0065 — User groups and plugin access policy](../rfcs/0065-user-groups-plugin-access.md)
-- [RFC 0080 — Per-plugin installable PWA](../rfcs/0080-per-plugin-installable-pwa.md)
+- [RFC 0081 — Per-plugin installable PWA](../rfcs/0081-per-plugin-installable-pwa.md)
   (Tasks 2.25–2.26)
-- [RFC 0081 — Focused plugin app shell](../rfcs/0081-focused-plugin-app-shell.md)
+- [RFC 0082 — Focused plugin app shell](../rfcs/0082-focused-plugin-app-shell.md)
   (Task 2.27)
 
 ## Related Docs

@@ -11,7 +11,7 @@ shell — the governing design), [0013](../rfcs/0013-mobile-responsiveness-pwa.m
 shipped — the template)\
 **Epics touched:** 20 (Mobile), 2 (Platform Shell — validation endpoint),
 10 (Accessibility), plus the `sovereign-mobile` repository\
-**Research:** [0005](../research/0005-standalone-plugin-apps.md) (shares the
+**Research:** [0006](../research/0006-standalone-plugin-apps.md) (shares the
 WKWebView spike and the WebView constraints)
 
 ---
@@ -77,8 +77,8 @@ open question — this table records what that means concretely.
 | A physical iPhone and Android device (or device cloud) | kasunben | Required for legs 4–5 verification — see Risks         |
 | Xcode, Android Studio, CocoaPods, Capacitor CLI        | dev env  | Required for leg 4                                     |
 
-Nothing in this workstream is blocked by workstream 0001, RFC 0079, RFC 0080, or
-RFC 0081.
+Nothing in this workstream is blocked by workstream 0001, RFC 0080, RFC 0081, or
+RFC 0082.
 
 ## Legs
 
@@ -148,7 +148,7 @@ later). There is no instance-metadata route today — `/api/instance` contains o
 - Response should carry instance identity, platform version, and a
   machine-readable status. Design it with workstream 0001's consumer in mind
   (per-plugin presence, enablement, and surface compatibility) so it is extended
-  later rather than replaced — RFC 0081 §6 states this requirement.
+  later rather than replaced — RFC 0082 §6 states this requirement.
 - **Privacy is the constraint that shapes the payload.** This is an
   unauthenticated endpoint on a self-hosted personal instance. It must not leak
   user counts, admin identities, plugin lists that reveal personal usage, or
@@ -303,7 +303,7 @@ on simulator-only verification.
 |                | 0002 (this)                                        | 0001 (standalone plugin apps)                                    |
 | -------------- | -------------------------------------------------- | ---------------------------------------------------------------- |
 | Ships          | Whole-instance app                                 | Per-plugin PWA + focused native apps                             |
-| Governing RFCs | 0058, 0013, 0038                                   | 0079, 0080, 0081                                                 |
+| Governing RFCs | 0058, 0013, 0038                                   | 0080, 0081, 0082                                                 |
 | Shared         | Task 20.10 spike; WebView constraints; cookie auth | —                                                                |
 | Dependency     | None on 0001                                       | Needs this workstream's leg 4 shell (0001's own legs 1–4 do not) |
 

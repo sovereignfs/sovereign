@@ -121,9 +121,9 @@ Workstreams are internal planning documents and are not published (see
 
 | Workstream                                    | Goal                                                                  | Status     | RFCs             |
 | --------------------------------------------- | --------------------------------------------------------------------- | ---------- | ---------------- |
-| [0001](0001-standalone-plugin-apps.md)        | A single plugin installable as its own PWA and native mobile app      | 📋 Planned | 0079, 0080, 0081 |
+| [0001](0001-standalone-plugin-apps.md)        | A single plugin installable as its own PWA and native mobile app      | 📋 Planned | 0080, 0081, 0082 |
 | [0002](0002-native-mobile-app-release.md)     | The whole-instance Sovereign app published to the App and Play Stores | 📋 Planned | 0058, 0013, 0038 |
-| [0003](0003-device-bridge-across-surfaces.md) | One device-capability contract serving web, Tauri, and Capacitor      | 📋 Planned | 0082, 0079       |
+| [0003](0003-device-bridge-across-surfaces.md) | One device-capability contract serving web, Tauri, and Capacitor      | 📋 Planned | 0083, 0080       |
 
 Workstreams 0001 and 0002 share epic task 20.10 (the WKWebView offline spike) —
 run it once and let both consume the finding. Otherwise they are independent, and

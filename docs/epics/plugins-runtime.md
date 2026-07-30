@@ -1161,7 +1161,7 @@ only which plugins are declared by default).
 
 ---
 
-#### 📋 3.32 — Plugin surface model and SDK device environment (RFC 0079)
+#### 📋 3.32 — Plugin surface model and SDK device environment (RFC 0080)
 
 **Goal:** Give the platform one way to answer "what surface am I running on?" and
 expose it to plugins as `sdk.device.*` — the abstraction RFC 0058 and RFC 0038 both
@@ -1190,7 +1190,7 @@ promised and neither shipped. Server-side for layout and routing decisions
 - Extension seams left obvious for epic tasks 17.7 and 20.3, which extend this base
   rather than inventing parallel environment models.
 
-**Dependencies:** RFC 0079. Prerequisite for Task 2.27.
+**Dependencies:** RFC 0080. Prerequisite for Task 2.27.
 
 **SRS reference:** §3.12, §3.19.
 
@@ -1206,7 +1206,7 @@ promised and neither shipped. Server-side for layout and routing decisions
 - `useIsMobile` in `packages/ui` is unchanged.
 - The architecture-rules entry is present and explicit.
 
-#### 📋 3.33 — Manifest surfaces availability declaration (RFC 0079)
+#### 📋 3.33 — Manifest surfaces availability declaration (RFC 0080)
 
 **Goal:** Let a plugin declare which surfaces it is available on, so the platform can
 filter presentation instead of showing a mobile-only app on desktop.
@@ -1220,10 +1220,10 @@ filter presentation instead of showing a mobile-only app on desktop.
 - Navigating directly to an unavailable plugin renders a clear "not available on this
   surface" state, **not** a 404 — the plugin is installed, it just does not belong here.
 - `docs/plugin-development.md` coverage, including the deliberate asymmetry with the
-  RFC 0081 route lock: `surfaces` filters presentation and is bypassable, which is fine
+  RFC 0082 route lock: `surfaces` filters presentation and is bypassable, which is fine
   because nothing behind it is a secret.
 
-**Dependencies:** Task 3.32, RFC 0079.
+**Dependencies:** Task 3.32, RFC 0080.
 
 **SRS reference:** §3.12, §3.19.
 
@@ -1235,7 +1235,7 @@ filter presentation instead of showing a mobile-only app on desktop.
 - Every existing plugin (no `surfaces` field) behaves exactly as before.
 - Manifest validation rejects an empty or duplicated `surfaces` array.
 
-#### 📋 3.34 — Device bridge protocol package (RFC 0082)
+#### 📋 3.34 — Device bridge protocol package (RFC 0083)
 
 **Goal:** Establish the device-capability contract and its first implementation:
 the contract in `@sovereignfs/sdk/device-client`, the transports in a new published
@@ -1267,7 +1267,7 @@ no plugin-facing capability calls yet.
   no Next, no Node built-ins; never imports `next/headers`, `@sovereignfs/db`, or
   anything reachable from `SdkHost`. Verified by a standalone type-check.
 - `runtime`: a client bootstrap that calls `provideBridge()` — the client-side
-  analogue of `instrumentation.ts` calling `provideHost()`. Resolve RFC 0082 open
+  analogue of `instrumentation.ts` calling `provideHost()`. Resolve RFC 0083 open
   question 7 (where it lives, and how it is guaranteed to run before a plugin's
   first `supports()` call).
 - Capability negotiation: the shell advertises `{ name, version }` descriptors at
@@ -1278,12 +1278,12 @@ no plugin-facing capability calls yet.
   environment outcomes.
 - Build wiring: `tsup`, `turbo.json` pipeline entry, `transpilePackages` in **both**
   `next.config.ts` files, catalog-pinned dev deps per the pnpm `catalog:` convention.
-- Resolve RFC 0082 open question 2 (protocol-version mismatch: fatal vs. degrade to
+- Resolve RFC 0083 open question 2 (protocol-version mismatch: fatal vs. degrade to
   `web` — recommended degrade with a recorded warning).
 - `docs/sdk-stability.md` and `CLAUDE.md` updated: a fourth published package now
   exists.
 
-**Dependencies:** RFC 0082.
+**Dependencies:** RFC 0083.
 
 **SRS reference:** §3.12, §3.19
 
@@ -1303,7 +1303,7 @@ no plugin-facing capability calls yet.
 - `pnpm build` produces both packages; both Next apps transpile them.
 - No shell version comparison exists anywhere in either package.
 
-#### 📋 3.35 — Plugin device surface, permissions, and consent (RFC 0082)
+#### 📋 3.35 — Plugin device surface, permissions, and consent (RFC 0083)
 
 **Goal:** Give plugins `sdk.device.*` capability calls with manifest-declared
 `device:*` permissions and per-user consent, working end to end on the web tier
@@ -1322,7 +1322,7 @@ before either native shell implements a transport.
   `@sovereignfs/manifest` minor bump). One permission per capability — never a broad
   `device:*` grant.
 - Per-user, per-plugin, per-capability consent grants, managed in the Account plugin
-  alongside the existing data-consent surface. Resolves RFC 0082 open question 1
+  alongside the existing data-consent surface. Resolves RFC 0083 open question 1
   (reuse the consent pattern; decide on tables).
 - `notifications.native`'s web tier routes into the shipped Notification Center /
   web push path (RFC 0015/0016, broker per RFC 0034) — not a second notification
@@ -1331,12 +1331,12 @@ before either native shell implements a transport.
   client-side plugin identity is self-declared and unverifiable on a shared origin,
   so `device:*` is install/review-time metadata and a consent-prompt input, and
   provides **no** isolation between plugins. Same posture as `offline:write`
-  (RFC 0078 §6) and the surface signal (RFC 0079 §2).
+  (RFC 0078 §6) and the surface signal (RFC 0080 §2).
 - `secureStorage` remains platform-internal — **not** exposed to plugins in v1, for
   exactly the identity reason above.
 
 **Dependencies:** Task 3.34, Task 3.32 (supplies the `device-client` subpath),
-RFC 0082.
+RFC 0083.
 
 **SRS reference:** §3.12, §3.19
 
@@ -1377,9 +1377,9 @@ RFC 0082.
 - [RFC 0062 — Email delivery coverage](../rfcs/0062-email-delivery-coverage.md)
 - [RFC 0065 — User groups and plugin access policy](../rfcs/0065-user-groups-plugin-access.md)
   (Task 3.28 — plugin catalog and install-time activation)
-- [RFC 0079 — Plugin surface model](../rfcs/0079-plugin-surface-model.md)
+- [RFC 0080 — Plugin surface model](../rfcs/0080-plugin-surface-model.md)
   (Tasks 3.32–3.33 — `sdk.device.*`, `x-sovereign-surface`, manifest `surfaces`)
-- [RFC 0082 — Device bridge and capability contract](../rfcs/0082-device-bridge-capability-contract.md)
+- [RFC 0083 — Device bridge and capability contract](../rfcs/0083-device-bridge-capability-contract.md)
   (Tasks 3.34–3.35 — `@sovereignfs/bridge`, `device:*` permissions, consent)
 
 **Deferred future work (not yet an epic task):** true dynamic runtime installation of a plugin

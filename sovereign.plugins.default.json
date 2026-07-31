@@ -1,9 +1,3 @@
 {
-  "plugins": [
-    {
-      "id": "sovereign-tasks",
-      "repository": "https://github.com/sovereignfs/sovereign-tasks.git",
-      "ref": "v0.15.1"
-    }
-  ]
+  "plugins": []
 }

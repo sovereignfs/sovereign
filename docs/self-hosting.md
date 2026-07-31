@@ -111,25 +111,15 @@ plugins** (`console`, `launcher`, `account`) always ship regardless, since they
 live in this repository. `sovereign.plugins.json` is a **local, gitignored
 file**, never committed: a fresh checkout, `pnpm dev`, and the CI-published
 image all fall back to the committed `sovereign.plugins.default.json` when it
-doesn't exist, which declares exactly one plugin — **Sovereign Tasks**. That's
-the entire default bundle: platform plugins plus Tasks, nothing else baked in.
-
-Tasks is maintained in its own repository
-([`sovereignfs/sovereign-tasks`](https://github.com/sovereignfs/sovereign-tasks))
-and released independently of the platform, but bundling it by default means
-operators get a working task list out of the box without a manual
-`sv plugin add`. It's visible and enabled from first boot — no hidden-by-default
-toggle. If you don't want it, disable or uninstall it from **Console →
-Plugins** like any other plugin, or drop it from the image entirely by
-declaring an empty `sovereign.plugins.json` (`{"plugins": []}`) before
-building.
+doesn't exist, which declares **no plugins** (`{"plugins": []}`). The default
+bundle is platform plugins only — nothing else baked in.
 
 ### Running a larger plugin set in production
 
-Sovereign's community and first-party plugins (Plainwrite, Shopper, Wallet,
-Tritext, Healthlog, Ledger, Tally, Docs) and the reference **example plugins**
-(basic, API provider, minimal/overlay shells, monetization demo — maintained
-in [`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples))
+Sovereign's community and first-party plugins (Tasks, Plainwrite, Shopper,
+Wallet, Tritext, Healthlog, Ledger, Tally, Docs) and the reference **example
+plugins** (basic, API provider, minimal/overlay shells, monetization demo —
+maintained in [`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples))
 are **not** part of the default bundle. To ship any of them, declare them in
 your own `sovereign.plugins.json` — copy `sovereign.plugins.default.json` as a
 starting template and add entries:

@@ -33,8 +33,8 @@ jobs:
 
       # sovereign.plugins.json is a local, gitignored file (epic task 3.31) —
       # the checkout has none, so install:plugins would otherwise fall back to
-      # sovereign.plugins.default.json (Sovereign Tasks only). Declare exactly
-      # what this job needs instead:
+      # sovereign.plugins.default.json (empty — platform plugins only). Declare
+      # exactly what this job needs instead:
       #   - example-basic: no spec exercises it directly, but it's required to
       #     keep launcher.spec.ts's generic "click the first tile" test
       #     passing. The launcher grid sorts installed plugins alphabetically

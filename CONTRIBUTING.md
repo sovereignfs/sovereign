@@ -405,10 +405,9 @@ gitignored — they are not committed to this repo. An unreachable repository
 URL fails the script with a clear error.
 
 If `sovereign.plugins.json` doesn't exist at all, `pnpm install:plugins` falls
-back to the committed `sovereign.plugins.default.json` — the small set that
-ships by default (currently just Sovereign Tasks). Copy it to
-`sovereign.plugins.json` and add entries to install more; an explicit
-`{"plugins": []}` opts out of even the default set. See
+back to the committed `sovereign.plugins.default.json` — currently empty, so
+the default set is platform plugins only. Copy it to `sovereign.plugins.json`
+and add entries to install more. See
 [self-hosting.md](docs/self-hosting.md#bundled-default-plugins) for the full
 default-vs-custom-bundle model.
 

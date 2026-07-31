@@ -4,11 +4,11 @@
  *
  * Reads `sovereign.plugins.json` at the repo root — a local, gitignored file
  * (epic task 3.31). If it doesn't exist, falls back to the committed
- * `sovereign.plugins.default.json` (Sovereign Tasks only), which is also the
- * template an operator copies to `sovereign.plugins.json` to declare a larger
- * set. This is what makes a fresh clone, `pnpm dev`, and the CI-published
- * image all ship the same small default without any Dockerfile/CI-specific
- * logic — see `main()` below.
+ * `sovereign.plugins.default.json` (empty — platform plugins only), which is
+ * also the template an operator copies to `sovereign.plugins.json` to declare
+ * a larger set. This is what makes a fresh clone, `pnpm dev`, and the
+ * CI-published image all ship the same small default without any
+ * Dockerfile/CI-specific logic — see `main()` below.
  *
  * Shape (identical for either file):
  *
@@ -318,13 +318,12 @@ function main(): void {
   // `sovereign.plugins.json` is a local, gitignored file — declaring plugins
   // there is how a developer or operator opts into a larger set (community
   // plugins, a private fork, etc). When it doesn't exist on disk at all, fall
-  // back to the committed `sovereign.plugins.default.json` (Sovereign Tasks
-  // only) rather than installing nothing — this is what makes a fresh clone,
-  // `pnpm dev`, and the CI-published image all ship the same small default
-  // set without any Dockerfile- or CI-specific logic. An explicit
-  // `sovereign.plugins.json` — even `{"plugins": []}` — always wins and is
-  // never merged with the default; that's how an operator opts out of even
-  // Tasks deliberately.
+  // back to the committed `sovereign.plugins.default.json` (empty — platform
+  // plugins only) rather than installing nothing — this is what makes a
+  // fresh clone, `pnpm dev`, and the CI-published image all ship the same
+  // small default set without any Dockerfile- or CI-specific logic. An
+  // explicit `sovereign.plugins.json` — even `{"plugins": []}` — always wins
+  // and is never merged with the default.
   const usingDefault = !existsSync(CONFIG_PATH);
   const configPath = usingDefault ? DEFAULT_CONFIG_PATH : CONFIG_PATH;
   const configLabel = usingDefault

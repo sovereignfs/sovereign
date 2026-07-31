@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { EmptyState } from '@sovereignfs/ui';
+import { EmptyState, Spinner } from '@sovereignfs/ui';
 import { offline } from '@sovereignfs/sdk/offline';
 import { PluginDirectorySection, type DirectoryPlugin } from './PluginDirectorySection';
 import { PluginGrid } from './PluginGrid';
@@ -108,6 +108,9 @@ export function LauncherOfflineView() {
         <div className={styles.header}>
           <h1 className={styles.title}>Home</h1>
           <p className={styles.subtitle}>Your installed apps and tools.</p>
+        </div>
+        <div className={styles.loadingWrap}>
+          <Spinner size="lg" label="Loading apps…" />
         </div>
       </div>
     );

@@ -1,14 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { EmptyState } from '@sovereignfs/ui';
 import { PluginGrid } from './PluginGrid';
 import type { PluginTileData } from './PluginTile';
 import styles from '../launcher.module.css';
 
 export function SearchableGrid({ plugins, total }: { plugins: PluginTileData[]; total: number }) {
   const [query, setQuery] = useState('');
+  const trimmedQuery = query.trim();
 
-  const filtered = query.trim()
+  const filtered = trimmedQuery
     ? plugins.filter(
         (p) =>
           p.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -41,7 +43,15 @@ export function SearchableGrid({ plugins, total }: { plugins: PluginTileData[]; 
         <span className={styles.sectionCount}>{total} installed</span>
       </div>
 
-      <PluginGrid plugins={filtered} />
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon="search"
+          heading={`No apps match "${trimmedQuery}"`}
+          description="Try a different keyword."
+        />
+      ) : (
+        <PluginGrid plugins={filtered} />
+      )}
     </>
   );
 }

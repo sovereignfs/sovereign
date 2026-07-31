@@ -850,6 +850,176 @@ system. Defaults to the platform's single documented breakpoint (768px, see
 above); pass a different value only when a layout genuinely needs its own
 threshold.
 
+**`useSwipeReveal({ revealWidth, open, onOpen, onClose, disabled? })`**
+Horizontal swipe-to-reveal for a row's trailing actions (e.g. Done/Delete on a
+task or list row) — extracted from `sovereign-tasks`' two independent
+hand-rolled implementations (RFC 0079). Returns `{ rowRef, handlers }` to
+spread onto the row. Axis-locks after 8px of movement (horizontal vs.
+vertical) so a vertical list scroll and this gesture never fight each other;
+while locked horizontal, it writes the row's `transform` directly to the DOM
+node during the drag (bypassing React re-renders, for 60fps tracking with no
+per-pointermove render), and resolves open/closed only on release, past the
+reveal's halfway point. `open` is fully controlled — this hook has no
+internal open state — so a caller can close any other open row the moment a
+different one opens (only one row's actions revealed at a time).
+
+```tsx
+const { rowRef, handlers } = useSwipeReveal({
+  revealWidth: 88,
+  open,
+  onOpen: () => setOpen(true),
+  onClose: () => setOpen(false),
+});
+<div ref={rowRef} {...handlers} style={{ transform: open ? 'translateX(-88px)' : undefined }}>
+  Row content
+</div>;
+```
+
+**`useSnapCarousel({ itemCount, onSettle?, debounceMs? })`**
+Debounced "settled slide" detection over a native `scroll-snap-type: x`
+container — extracted from `sovereign-tasks` and `sovereign-shopper`'s
+independently duplicated carousels (RFC 0079). Momentum and rubber-banding
+come entirely from the browser's own scroll physics; this hook only handles
+"which slide did the user land on," via a passive `scroll` listener debounced
+120ms by default (not the `scrollend` event, which pre-17.4 iOS
+Safari/WKWebView doesn't support), deduped so a settle on the same index
+isn't reported twice. Returns `{ scrollRef, scrollToIndex }` — attach
+`scrollRef` to the scroll container; call `scrollToIndex` to jump
+programmatically (e.g. from a dot indicator). This is the low-level primitive
+`SwipableMobileCarousel` (below) wraps — reach for that compound component
+directly for a route-driven carousel; use this hook directly only for a
+simpler, non-route-synced swipeable strip.
+
+```tsx
+const { scrollRef, scrollToIndex } = useSnapCarousel({
+  itemCount: slides.length,
+  onSettle: (index) => setActiveIndex(index),
+});
+<div ref={scrollRef} style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory' }}>
+  {slides.map((slide) => (
+    <div style={{ scrollSnapAlign: 'start' }}>{slide}</div>
+  ))}
+</div>;
+```
+
+### Mobile carousel & responsive fork
+
+Some views are route-based on web but want a genuinely different mobile UX —
+a swipeable filmstrip of the same sibling routes, not a squeeze of a
+multi-column layout. This is a recurring pattern, not a one-off: it shows up
+wherever a plugin has a set of sibling list/detail routes (a task list app, a
+shopping-list app). Build it with these shared primitives, not a hand-rolled
+scroller — every hand-rolled version of this so far has independently
+duplicated the same scroll-snap CSS and pathname-sync logic.
+
+```tsx
+import {
+  SwipableMobileCarousel,
+  SwipableMobileCarouselSlide,
+  SwipableMobileCarouselSlideHeader,
+  SwipableMobileCarouselSlideBody,
+  SwipableMobileCarouselSlideFooter,
+  SwipableMobileCarouselDots,
+  useCarouselRouteSync,
+  ResponsiveSurface,
+  useResponsiveLayout,
+} from '@sovereignfs/ui';
+```
+
+**`ResponsiveSurface({ web, mobile, breakpointPx? })`** and
+**`useResponsiveLayout({ web, mobile, breakpointPx? })`**
+Formalize the "render an entirely different component tree below a
+breakpoint, not a CSS squeeze of the same one" fork — only the active side is
+ever mounted. Built on `useIsMobile` (same breakpoint/SSR-safe-default
+behavior, not reimplemented). Use the component form for the common two-tree
+JSX case; use the hook form when picking between two non-JSX values, or when
+more than a simple tree-swap is needed.
+
+```tsx
+<ResponsiveSurface web={<ThreeColumnLayout />} mobile={<MobileCarousel />} />
+```
+
+**`SwipableMobileCarousel`** + **`SwipableMobileCarouselSlide`** (with
+`SwipableMobileCarouselSlideHeader`/`Body`/`Footer`)
+This library's first compound component — every other component here is
+flat/prop-based, but slide content is large, arbitrary, per-plugin subtrees
+that need a header-known/body-loading split an array-of-objects prop would
+only express with worse JSX ergonomics. Wraps `useSnapCarousel` internally:
+native `scroll-snap-type: x` supplies the actual swipe physics, this
+component only handles mount-window lazy rendering, a dev-mode guard against
+non-`Slide` children, and re-snapping when the active slide's position
+changes (e.g. a caller re-sorts their slide array while mounted).
+
+```tsx
+const { activeIndex, onSettle } = useCarouselRouteSync({
+  indexForPathname: (p) => indexForPathname(p, lists), // your plugin's own logic, unchanged
+  pathForIndex: (i) => pathForIndex(i, lists),
+  pathname: usePathname(),
+  onNavigate: (path) => router.replace(path, { scroll: false }),
+});
+
+<SwipableMobileCarousel activeIndex={activeIndex} onSettle={onSettle} aria-label="Task lists">
+  {lists.map((list) => (
+    <SwipableMobileCarouselSlide key={list.id} slideKey={list.id} label={list.title}>
+      <SwipableMobileCarouselSlideHeader>{list.title}</SwipableMobileCarouselSlideHeader>
+      <SwipableMobileCarouselSlideBody loading={!listState[list.id]}>
+        <TasksPane list={list} tasks={listState[list.id]?.tasks ?? []} />
+      </SwipableMobileCarouselSlideBody>
+    </SwipableMobileCarouselSlide>
+  ))}
+</SwipableMobileCarousel>;
+```
+
+`SwipableMobileCarouselSlideHeader`/`Footer` always render their children —
+no loading concept. `SwipableMobileCarouselSlideBody`'s `loading` prop scopes
+the loading-placeholder swap to just that region. This split matters: a
+caller renders the header from data it already has synchronously (a list's
+title) unconditionally, and gates only the body on its own slower fetch — the
+natural way to compose these three as siblings already produces a title that
+shows immediately while only the body shows a brief loading state, instead of
+blanking the whole slide (title included) behind one boolean until the fetch
+resolves.
+
+**`SwipableMobileCarouselDots({ count, activeIndex, onJump, labels?, 'aria-label' })`**
+A real, tappable, labeled slide indicator (`role="tablist"`/`role="tab"`,
+keyboard-focusable) — standalone and reusable outside a carousel too (e.g. an
+image gallery), and also `SwipableMobileCarousel`'s default `renderIndicator`.
+Pass `renderIndicator={null}` to render no indicator, or a render function to
+substitute a custom one.
+
+**`useCarouselRouteSync({ indexForPathname, pathForIndex, pathname, onNavigate })`**
+Router-agnostic pathname↔slide-index sync — this package has zero runtime
+dependencies and never imports a router; the caller supplies `pathname` (e.g.
+via `next/navigation`'s `usePathname()`) and an `onNavigate` callback (e.g.
+`(path) => router.replace(path, { scroll: false })`). Centralizes the
+"was this pathname change our own swipe-settle, or an external navigation (a
+tapped `<Link>`, browser back/forward)" distinction — getting this wrong
+produces a visible double-flicker, re-snapping the scroller right after the
+user's own gesture already landed correctly.
+
+**Ownership boundary — read this before building a slide.** `SwipableMobileCarousel`
+and its `Slide`/`Header`/`Body`/`Footer` own rendering and mount-window
+mechanics only. They have no opinion on where slide data lives, and nothing
+here stops you from doing the wrong thing — this is a rule to follow, not a
+type-level constraint:
+
+- **Do not aggregate cross-slide data inside a `SlideBody`.** A rollup that
+  reads across every slide's data (e.g. a "starred across all lists" view)
+  recomputes on every slide's own render regardless of which slide is
+  active — it belongs in the parent component, which already knows every
+  slide exists, not inside one slide's body.
+- **Do not mount a detail/edit overlay (`Sheet`, `Dialog`) inside a `Slide`'s
+  children.** Mount it as a sibling of `SwipableMobileCarousel` instead,
+  controlled by the same state that would otherwise drive a routed page's
+  overlay. An overlay nested inside a slide recomputes its own
+  optimistic/authoritative merge logic on every render of that slide, and
+  gets torn down by the mount-window whenever its owning slide scrolls out
+  of the prefetch window.
+
+This isn't a hypothetical: a real hand-rolled carousel in this codebase does
+both of the above, and is measurably laggier than a sibling implementation
+that keeps its overlay in the routed pane instead. Keep the split.
+
 ### Motion
 
 Primitive tokens for overlay enter/exit transitions, theme-stable like the

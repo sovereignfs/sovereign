@@ -319,7 +319,10 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   gestures at once. Fix nested-scroller touch/scroll conflicts with
   behavioural CSS that doesn't touch `touch-action` (e.g. `overflow-anchor`)
   or JS-level gesture arbitration, not by declaring narrower `touch-action`
-  values on nested perpendicular scroll containers.
+  values on nested perpendicular scroll containers. `@sovereignfs/ui`'s
+  `SwipableMobileCarousel`/`SwipableMobileCarouselSlideBody` already account
+  for this (see that component's CSS) — a new vertically-scrolling slide body
+  should not need to touch `touch-action` at all.
 - **The runtime is an installable PWA** (`@ducanh2912/next-pwa`, PLT-09). The
   web manifest (`runtime/public/manifest.json`) and PNG icons
   (`runtime/public/icons/`) are committed **source**; the service worker

@@ -5,6 +5,11 @@ node_modules/
 dist/
 .next/
 .turbo/
+# TypeScript incremental build cache (packages/tsconfig/nextjs.json sets
+# "incremental": true) — a regenerated artifact, never source. Previously
+# only ever produced under gitignored plugins/*/ dirs; example-plugins/ is
+# the first non-ignored location that also extends this tsconfig.
+*.tsbuildinfo
 
 # Generated plugin route segments are composed under each shell route group
 # (e.g. runtime/app/(platform)/(plugins)/) — symlinks in dev, copies in prod.

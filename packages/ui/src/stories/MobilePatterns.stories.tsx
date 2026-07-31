@@ -1205,6 +1205,40 @@ function MobilePatternsDoc() {
         </Callout>
       </section>
 
+      {/* ── Layout: swipeable route views ── */}
+      <section style={{ marginBottom: 'var(--sv-space-10)' }}>
+        <SectionHeader
+          title="Layout: swipeable route views"
+          subtitle="Some views are route-based on web but want a different mobile UX — a swipeable filmstrip of the same sibling routes, not a squeeze of a multi-column layout. This is a recurring pattern (sovereign-tasks, sovereign-shopper) — build it with the shared primitives, not a hand-rolled scroller."
+        />
+        <p
+          style={{
+            fontFamily: ff,
+            fontSize: 'var(--sv-font-size-sm)',
+            color: 'var(--sv-color-text-muted)',
+            lineHeight: 1.6,
+          }}
+        >
+          <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+            SwipableMobileCarousel
+          </code>{' '}
+          renders full-width slides over a native <code>scroll-snap-type: x</code> container — no
+          hand-rolled pointer/touch dragging. Pair it with <code>useCarouselRouteSync</code> to keep
+          the active slide synced to the URL, and <code>ResponsiveSurface</code>/
+          <code>useResponsiveLayout</code> for the breakpoint fork itself. See the{' '}
+          <em>Interaction Hooks</em> story for the full API and live demos of both hooks.
+        </p>
+        <Callout type="warn">
+          <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+            SwipableMobileCarousel
+          </code>{' '}
+          owns rendering and mount-window mechanics only — it has no opinion on where slide data
+          lives. Don&apos;t aggregate cross-slide data or mount a detail overlay (Sheet, Dialog)
+          inside a Slide&apos;s children; mount overlays as a sibling of the carousel instead. See
+          docs/design-system.md&apos;s carousel section for the full rationale.
+        </Callout>
+      </section>
+
       {/* ── Checklist ── */}
       <section style={{ marginBottom: 'var(--sv-space-10)' }}>
         <SectionHeader title="Mobile readiness checklist" />

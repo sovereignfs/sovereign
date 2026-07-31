@@ -718,7 +718,7 @@ primarily verification and documentation, not new component code.
 
 ---
 
-#### 📋 9.18 — Shared page layout container (`PageContainer`) and plugin layout convention
+#### ✅ 9.18 — Shared page layout container (`PageContainer`) and plugin layout convention
 
 **Goal:** Give first-party plugins one documented way to constrain and
 center their own main content, so plugin main-layout padding/margin/max-width
@@ -781,7 +781,7 @@ auto-padding (`runtime/app/(platform)/shell.module.css:144-154`) — one plugin
 
 ---
 
-#### 📋 9.19 — Overlay primitive consolidation and Plainwrite ConfirmDialog migration
+#### ✅ 9.19 — Overlay primitive consolidation and Plainwrite ConfirmDialog migration
 
 **Goal:** `Dialog`, `Drawer`, and `Sheet` each independently implement the
 same scrim, focus-trap, Escape-key, and scroll-lock logic, with source
@@ -834,7 +834,7 @@ public API or manifest change.
 
 ---
 
-#### 📋 9.20 — Shared swipe gesture hooks and carousel migration (Tasks, Shopper)
+#### ✅ 9.20 — Shared swipe gesture hooks and carousel migration (Tasks, Shopper)
 
 **Goal:** `sovereign-tasks` has two separate hand-rolled swipe-to-reveal
 implementations in the same plugin (`TaskItem.tsx`, `ListSidebar.tsx`), and
@@ -890,3 +890,102 @@ behavior is preserved, not changed.
   behave correctly in isolation (this task's actual verification surface).
 - `pnpm --filter @sovereignfs/ui typecheck` passes; existing
   `sovereign-tasks`/`sovereign-shopper` test suites pass unchanged.
+
+#### 📋 9.21 — Swipeable mobile carousel primitive and responsive-layout hooks
+
+**Goal:** `sovereign-tasks` and `sovereign-shopper` each hand-roll an
+almost-identical "mobile carousel" pattern on top of task 9.20's
+`useSnapCarousel` extraction — the `.wrap`/`.scroller`/`.slide`/`.dots` CSS
+and the pathname↔index sync logic (`indexForPathname`, the `isInternalNav`
+ref-flag dance distinguishing the carousel's own settle-triggered navigation
+from an external one) is duplicated near-verbatim between
+`MobileTasksCarousel.tsx` and `MobileShopperCarousel.tsx`, and both plugins'
+dot indicator is `aria-hidden` and non-interactive — a real accessibility
+gap. Separately, `sovereign-tasks`' carousel is measurably laggier than
+`sovereign-shopper`'s equivalent, not because of the carousel mechanism
+itself (identical between both) but because it nests cross-slide data
+aggregation (a "Starred" rollup refetched on every mutation anywhere in the
+plugin) and a detail-overlay `Sheet`'s optimistic/authoritative merge logic
+directly inside the carousel component. This task ships a shared,
+`packages/ui`-owned primitive that generalizes the proven mechanics, closes
+the accessibility gap, and makes the better pattern (render already-known
+metadata immediately; keep aggregation/overlays out of the carousel) the
+natural way to build a slide — without migrating either plugin in this task.
+
+**Deliverables:**
+
+- **`SwipableMobileCarousel`** + **`SwipableMobileCarouselSlide`** (with
+  `SwipableMobileCarouselSlideHeader`/`Body`/`Footer` sub-components) in
+  `packages/ui/src/components/SwipableMobileCarousel/` — a compound
+  component (this library's first; every existing component is flat/
+  prop-based) wrapping `useSnapCarousel` internally. Owns mount-window lazy
+  rendering (active slide ± a caller-configurable `prefetchDistance`,
+  default 1), a dev-mode-only guard against non-`Slide` children (warns via
+  `console.error`, never throws), and a fix for a latent reorder-while-mounted
+  bug present in both existing plugins today (scroll position tracks DOM
+  position, not slide identity — re-snaps and re-reports `onSettle` when the
+  active slide's key moves). `SlideBody`'s `loading` prop scopes the
+  loading-placeholder swap to just that region, so a caller can render
+  `<Header>` from already-known metadata unconditionally while only `<Body>`
+  waits on its own fetch — the fix for `sovereign-tasks`' current
+  whole-slide-blanks-until-loaded behavior, expressed as an API shape rather
+  than a one-off patch.
+- **`SwipableMobileCarouselDots`** in
+  `packages/ui/src/components/SwipableMobileCarouselDots/` — a standalone,
+  independently-reusable, real `role="tablist"`/`role="tab"` component
+  (tappable, labeled, roving `tabIndex`, `:focus-visible` ring) replacing the
+  `aria-hidden`, non-interactive dots pattern both plugins currently
+  hand-roll. Serves as `SwipableMobileCarousel`'s default indicator via a
+  `renderIndicator` prop (nullable to opt out or substitute a custom one).
+- **`useResponsiveLayout`** (hook) + **`ResponsiveSurface`** (thin JSX
+  wrapper) in `packages/ui/src/hooks` /
+  `packages/ui/src/components/ResponsiveSurface/` — formalizes the
+  `if (isMobile) return <mobile/>; return <web/>;` fork both plugins'
+  `MobileAwareShell.tsx` hand-roll unexported, built on the existing
+  `useIsMobile` (no duplicated breakpoint/SSR-safe-default logic).
+- **`useCarouselRouteSync`** in `packages/ui/src/hooks` — a router-agnostic
+  hook (no `next/navigation` import; `packages/ui` stays framework-generic)
+  centralizing the pathname↔index mapping and `isInternalNav` dance both
+  plugins duplicate today. Takes the caller's existing `indexForPathname`/
+  `pathForIndex` functions and an `onNavigate(path)` callback the caller
+  wires to their own router; does not own neighbor-prefetch or scroll
+  mechanics, keeping routing glue decoupled from data-fetching.
+- Storybook stories for every new export (`SwipableMobileCarousel.stories.tsx`
+  including a `Dots` section, two new `InteractionHooks.stories.tsx`
+  Sections, new `DesignSystemOverview.stories.tsx` gallery entries, a new
+  `MobilePatterns.stories.tsx` section), plus Vitest coverage following
+  `useSnapCarousel.test.ts`'s established jsdom scroll-polyfill/fake-timer
+  pattern.
+- One added sentence in `docs/architecture-rules.md`'s existing
+  `touch-action` intersection rule pointing at this component, and a new
+  "Mobile carousel & responsive fork" section in `docs/design-system.md`
+  documenting the aggregation/overlay-placement guidance (not type-enforced,
+  since nothing stops importing `Sheet` inside a `Body` — this is why it's
+  written down explicitly).
+
+**Follow-up, out of this task's scope:** migrating `sovereign-tasks` and
+`sovereign-shopper` (externally-maintained, separate repositories) onto this
+primitive is a later task in each plugin's own repo, same as task 9.20's
+own follow-up note. No user-visible behavior change to either plugin
+happens in this task.
+
+**Dependencies:** Builds on task 9.20's `useSnapCarousel`/`useSwipeReveal`
+(already shipped). No new runtime dependency — `packages/ui` stays at zero
+deps beyond React/React-DOM peers.
+
+**SRS reference:** [RFC 0079](../rfcs/0079-mobile-pwa-layout-overlay-gesture-consistency.md)
+
+**Review checklist:**
+
+- `pnpm --filter @sovereignfs/ui typecheck`, `test`, and `lint` all pass.
+- Every new component/hook has a Storybook story and renders without console
+  errors at a mobile viewport (`pnpm storybook` or the `storybook-build` CI
+  job); `SwipableMobileCarouselDots` is keyboard-focusable and each dot has a
+  distinct accessible name.
+- `SwipableMobileCarousel`'s mount-window, settle, dev-guard, and
+  reorder-jump behavior are covered by unit tests; `useCarouselRouteSync`'s
+  external-nav-vs-own-settle distinction is covered (this is the trickiest
+  logic being centralized — both plugins' existing code comments describe a
+  real double-flicker bug a wrong reimplementation could reintroduce).
+- No plugin migration in this task — `sovereign-tasks`/`sovereign-shopper`
+  are unaffected.

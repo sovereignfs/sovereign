@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "fs.sovereign.example-mobile",
+  "name": "Example: Mobile Layout",
+  "version": "0.1.0",
+  "description": "Reference plugin demonstrating @sovereignfs/ui's PWA/mobile layout capabilities — the responsive breakpoint fork and the swipeable carousel with Header/Body/Footer slide composition.",
+  "type": "platform",
+  "runtime": "native",
+  "routePrefix": "/example-mobile",
+  "shell": "default",
+  "icon": "icon.svg",
+  "example": true,
+  "permissions": [],
+  "compatibility": {
+    "minPlatformVersion": "0.47.0"
+  }
+}

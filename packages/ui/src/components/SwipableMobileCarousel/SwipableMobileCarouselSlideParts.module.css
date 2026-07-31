@@ -1,0 +1,29 @@
+.header,
+.footer {
+  flex: 0 0 auto;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0; /* allow shrinking inside the slide's flex column, so it can scroll instead of overflowing */
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Deliberately does NOT set touch-action: pan-y here. touch-action's
+     effective value is the INTERSECTION of this element's and every
+     ancestor's value (docs/architecture-rules.md) — the ancestor .scroller
+     (SwipableMobileCarousel.module.css) needs the horizontal swipe gesture,
+     so pan-y here ∩ that horizontal handling would resolve to neither axis
+     working natively. Relying on the browser's default touch-action (auto)
+     here lets native gesture arbitration between the two nested scrollers
+     sort out which axis wins per-gesture — don't "fix" perceived nested-
+     scroll jank by adding pan-y; it silently breaks horizontal swipe instead. */
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--sv-color-text-subtle);
+  font-size: var(--sv-font-size-sm);
+}

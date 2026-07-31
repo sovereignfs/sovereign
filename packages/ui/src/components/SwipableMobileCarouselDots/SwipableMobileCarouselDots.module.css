@@ -1,0 +1,49 @@
+.dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sv-space-2);
+}
+
+.dot {
+  /* A 6px visible dot is too small a hit target on its own — the button's
+     real box is larger (20px) with the dot itself painted by ::before and
+     centered inside, so tap area grows without changing the visible dot
+     size or the row's gap-based spacing math. */
+  position: relative;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dot::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sv-color-border-strong);
+  transform: translate(-50%, -50%);
+  transition: background 0.15s ease;
+}
+
+.dot:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
+.dotActive::before {
+  background: var(--sv-color-text-primary);
+}
+
+@media (hover: hover) {
+  .dot:not(.dotActive):hover::before {
+    background: var(--sv-color-text-muted);
+  }
+}

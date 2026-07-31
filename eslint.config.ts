@@ -73,8 +73,10 @@ export default tseslint.config(
   // SDK boundary rule (NFR-06): plugins may only use @sovereignfs/sdk and
   // @sovereignfs/ui. They must never reach into runtime internals or the
   // workspace-internal packages. This is load-bearing — never disable it.
+  // Covers example-plugins/ too — a reference plugin demonstrating the wrong
+  // boundary would be actively misleading.
   {
-    files: ['plugins/**/*.{ts,tsx}'],
+    files: ['plugins/**/*.{ts,tsx}', 'example-plugins/**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'error',

@@ -79,10 +79,27 @@ const preview: Preview = {
       element: '#storybook-root',
     },
     options: {
-      storySort: {
-        // Overview first, then token reference, then components alphabetically.
-        order: ['Overview', 'Design Tokens', 'Components'],
-      },
+      // The object form ({ order: [...] }) only orders the named top-level
+      // groups themselves — it does NOT alphabetize what's inside them, so
+      // entries within e.g. "Components" fell back to file-registration
+      // order (roughly "whenever that story file was added"), not
+      // alphabetical, despite what that shorthand's own docs example implies.
+      // A comparator function is required to get both: explicit group order
+      // first, alphabetical by title within each group.
+      // Storybook extracts this function via a naive source-text/eval
+      // mechanism (getStorySortParameter), not a real parser, and evals it in
+      // total isolation — no access to any outer scope at all (confirmed: a
+      // module-level const reference threw "is not defined" here). It also
+      // rejects a multi-statement block body ("Unexpected token" SyntaxError)
+      // — Storybook's own docs example is a single self-contained expression,
+      // so the group-order list has to be inlined into the expression itself
+      // rather than pulled from a shared constant, however repetitive.
+      storySort: (a, b) =>
+        ['Overview', 'Design Tokens', 'Components'].indexOf(a.title.split('/')[0]) !==
+        ['Overview', 'Design Tokens', 'Components'].indexOf(b.title.split('/')[0])
+          ? ['Overview', 'Design Tokens', 'Components'].indexOf(a.title.split('/')[0]) -
+            ['Overview', 'Design Tokens', 'Components'].indexOf(b.title.split('/')[0])
+          : a.title.localeCompare(b.title, undefined, { numeric: true }),
     },
   },
 };

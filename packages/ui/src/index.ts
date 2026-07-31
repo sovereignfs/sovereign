@@ -189,6 +189,8 @@ export {
   useCommitOnEnterOrBlur,
   useSwipeReveal,
   useSnapCarousel,
+  useResponsiveLayout,
+  useCarouselRouteSync,
 } from './hooks';
 export { MOBILE_BREAKPOINT_PX } from './hooks';
 export type {
@@ -200,4 +202,25 @@ export type {
   UseSwipeRevealResult,
   UseSnapCarouselOptions,
   UseSnapCarouselResult,
+  UseResponsiveLayoutOptions,
+  UseResponsiveLayoutResult,
+  UseCarouselRouteSyncOptions,
+  UseCarouselRouteSyncResult,
 } from './hooks';
+export { ResponsiveSurface } from './components/ResponsiveSurface/ResponsiveSurface';
+export type { ResponsiveSurfaceProps } from './components/ResponsiveSurface/ResponsiveSurface';
+export { SwipableMobileCarouselDots } from './components/SwipableMobileCarouselDots/SwipableMobileCarouselDots';
+export type { SwipableMobileCarouselDotsProps } from './components/SwipableMobileCarouselDots/SwipableMobileCarouselDots';
+export { SwipableMobileCarousel } from './components/SwipableMobileCarousel/SwipableMobileCarousel';
+export type {
+  SwipableMobileCarouselProps,
+  SwipableMobileCarouselIndicatorProps,
+} from './components/SwipableMobileCarousel/SwipableMobileCarousel';
+export { SwipableMobileCarouselSlide } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlide';
+export type { SwipableMobileCarouselSlideProps } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlide';
+export { SwipableMobileCarouselSlideHeader } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlideHeader';
+export type { SwipableMobileCarouselSlideHeaderProps } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlideHeader';
+export { SwipableMobileCarouselSlideBody } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlideBody';
+export type { SwipableMobileCarouselSlideBodyProps } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlideBody';
+export { SwipableMobileCarouselSlideFooter } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlideFooter';
+export type { SwipableMobileCarouselSlideFooterProps } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlideFooter';

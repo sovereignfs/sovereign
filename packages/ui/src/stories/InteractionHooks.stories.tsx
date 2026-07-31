@@ -2,10 +2,12 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Card } from '../components/Card/Card';
 import {
+  useCarouselRouteSync,
   useCommitOnEnterOrBlur,
   useDoubleTapHandler,
   useIsMobile,
   useLongPress,
+  useResponsiveLayout,
   useSingleOrDoubleTap,
   useSnapCarousel,
   useSwipeReveal,
@@ -494,6 +496,135 @@ function SnapCarouselDemo() {
   );
 }
 
+function ResponsiveLayoutDemo() {
+  const { isMobile, value } = useResponsiveLayout({
+    web: (
+      <div
+        style={{
+          padding: 'var(--sv-space-6)',
+          textAlign: 'center',
+          fontFamily: ff,
+          fontSize: 'var(--sv-font-size-sm)',
+          color: 'var(--sv-color-text-primary)',
+        }}
+      >
+        Web tree — a three-column layout, for example.
+      </div>
+    ),
+    mobile: (
+      <div
+        style={{
+          padding: 'var(--sv-space-6)',
+          textAlign: 'center',
+          fontFamily: ff,
+          fontSize: 'var(--sv-font-size-sm)',
+          color: 'var(--sv-color-text-primary)',
+        }}
+      >
+        Mobile tree — an entirely different component, not a CSS squeeze.
+      </div>
+    ),
+  });
+
+  return (
+    <div>
+      <div
+        style={{
+          borderRadius: 'var(--sv-radius-md)',
+          border: '1px solid var(--sv-color-border)',
+          background: 'var(--sv-color-surface)',
+        }}
+      >
+        {value}
+      </div>
+      <Callout type="info">
+        Currently showing the <strong>{isMobile ? 'mobile' : 'web'}</strong> tree. Resize the
+        Storybook viewport (or the toolbar&apos;s viewport picker) below 768px to see it swap — only
+        the active side is ever mounted, the other tree doesn&apos;t exist in the DOM at all.
+      </Callout>
+    </div>
+  );
+}
+
+function CarouselRouteSyncDemo() {
+  const PATHS = ['/tasks', '/tasks/starred', '/tasks/groceries'];
+  const LABELS = ['Lists', 'Starred', 'Groceries'];
+  const [pathname, setPathname] = useState(PATHS[0] as string);
+  const [events, setEvents] = useState<string[]>([]);
+  const log = (msg: string) =>
+    setEvents((e) => [...e, `${new Date().toLocaleTimeString()} — ${msg}`]);
+
+  const { activeIndex, onSettle } = useCarouselRouteSync({
+    indexForPathname: (p) => Math.max(0, PATHS.indexOf(p)),
+    pathForIndex: (i) => PATHS[i] ?? '/tasks',
+    pathname,
+    onNavigate: (path) => {
+      log(`onNavigate("${path}") — simulating router.replace`);
+      setPathname(path);
+    },
+  });
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 'var(--sv-space-2)', marginBottom: 'var(--sv-space-3)' }}>
+        {LABELS.map((label, i) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => {
+              log(`swipe settled on "${label}" (index ${i})`);
+              onSettle(i);
+            }}
+            style={{
+              padding: 'var(--sv-space-2) var(--sv-space-3)',
+              borderRadius: 'var(--sv-radius-md)',
+              border: '1px solid var(--sv-color-border)',
+              background: i === activeIndex ? 'var(--sv-color-accent)' : 'var(--sv-color-surface)',
+              color:
+                i === activeIndex
+                  ? 'var(--sv-color-text-on-accent)'
+                  : 'var(--sv-color-text-primary)',
+              fontFamily: ff,
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => {
+            const other = PATHS[(activeIndex + 1) % PATHS.length] as string;
+            log(`external nav to "${other}" (e.g. a tapped <Link>, browser back/forward)`);
+            setPathname(other);
+          }}
+          style={{
+            padding: 'var(--sv-space-2) var(--sv-space-3)',
+            borderRadius: 'var(--sv-radius-md)',
+            border: '1px dashed var(--sv-color-border)',
+            background: 'var(--sv-color-surface)',
+            color: 'var(--sv-color-text-primary)',
+            fontFamily: ff,
+            fontSize: '0.8rem',
+            cursor: 'pointer',
+          }}
+        >
+          Simulate external nav
+        </button>
+      </div>
+      <EventLog events={events} />
+      <Callout type="info">
+        This demo fakes a router with local <code>useState</code> — in a real app, pass{' '}
+        <code>next/navigation</code>&apos;s <code>usePathname()</code> as <code>pathname</code> and{' '}
+        <code>router.replace</code> as <code>onNavigate</code>. Note the &quot;swipe settled&quot;
+        buttons never log a redundant external-nav resync afterwards — that&apos;s the isInternalNav
+        dance being handled internally.
+      </Callout>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main story component
 // ---------------------------------------------------------------------------
@@ -610,6 +741,38 @@ const isMobile = useIsMobile(); // defaults to MOBILE_BREAKPOINT_PX (768)`}</Cod
 <div ref={scrollRef} style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory' }}>
   {slides.map((slide) => <div style={{ scrollSnapAlign: 'start' }}>{slide}</div>)}
 </div>`}</CodeBlock>
+      </section>
+
+      <section style={{ marginBottom: 'var(--sv-space-10)' }}>
+        <SectionHeader
+          title="useResponsiveLayout"
+          subtitle="Picks between a web and mobile value for the current viewport — formalizes the 'render an entirely different tree below a breakpoint' fork plugins have hand-rolled per plugin. See also the ResponsiveSurface component for the equivalent as plain JSX."
+        />
+        <Card padding="md">
+          <ResponsiveLayoutDemo />
+        </Card>
+        <CodeBlock>{`const { isMobile, value } = useResponsiveLayout({ web: <WebShell />, mobile: <MobileShell /> });
+// or, as a component:
+<ResponsiveSurface web={<WebShell />} mobile={<MobileShell />} />`}</CodeBlock>
+      </section>
+
+      <section style={{ marginBottom: 'var(--sv-space-10)' }}>
+        <SectionHeader
+          title="useCarouselRouteSync"
+          subtitle="Router-agnostic pathname↔slide-index sync for SwipableMobileCarousel — centralizes the isInternalNav dance both sovereign-tasks and sovereign-shopper hand-roll identically today."
+        />
+        <Card padding="md">
+          <CarouselRouteSyncDemo />
+        </Card>
+        <CodeBlock>{`const { activeIndex, onSettle } = useCarouselRouteSync({
+  indexForPathname: (p) => indexForPathname(p, lists), // your plugin's own logic, unchanged
+  pathForIndex: (i) => pathForIndex(i, lists),
+  pathname: usePathname(),
+  onNavigate: (path) => router.replace(path, { scroll: false }),
+});
+<SwipableMobileCarousel activeIndex={activeIndex} onSettle={onSettle} aria-label="Task lists">
+  ...
+</SwipableMobileCarousel>`}</CodeBlock>
       </section>
     </div>
   );

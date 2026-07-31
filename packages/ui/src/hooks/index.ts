@@ -12,3 +12,10 @@ export type {
 } from './useSwipeReveal';
 export { useSnapCarousel } from './useSnapCarousel';
 export type { UseSnapCarouselOptions, UseSnapCarouselResult } from './useSnapCarousel';
+export { useResponsiveLayout } from './useResponsiveLayout';
+export type { UseResponsiveLayoutOptions, UseResponsiveLayoutResult } from './useResponsiveLayout';
+export { useCarouselRouteSync } from './useCarouselRouteSync';
+export type {
+  UseCarouselRouteSyncOptions,
+  UseCarouselRouteSyncResult,
+} from './useCarouselRouteSync';

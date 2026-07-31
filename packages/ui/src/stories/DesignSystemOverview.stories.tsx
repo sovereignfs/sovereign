@@ -25,6 +25,12 @@ import { NavTabs } from '../components/NavTabs/NavTabs';
 import { PageHeader } from '../components/PageHeader/PageHeader';
 import { PageContainer } from '../components/PageContainer/PageContainer';
 import { Popover } from '../components/Popover/Popover';
+import { ResponsiveSurface } from '../components/ResponsiveSurface/ResponsiveSurface';
+import { SwipableMobileCarousel } from '../components/SwipableMobileCarousel/SwipableMobileCarousel';
+import { SwipableMobileCarouselSlide } from '../components/SwipableMobileCarousel/SwipableMobileCarouselSlide';
+import { SwipableMobileCarouselSlideHeader } from '../components/SwipableMobileCarousel/SwipableMobileCarouselSlideHeader';
+import { SwipableMobileCarouselSlideBody } from '../components/SwipableMobileCarousel/SwipableMobileCarouselSlideBody';
+import { SwipableMobileCarouselDots } from '../components/SwipableMobileCarouselDots/SwipableMobileCarouselDots';
 import { SegmentedControl } from '../components/SegmentedControl/SegmentedControl';
 import { Select } from '../components/Select/Select';
 import { Spinner } from '../components/Spinner/Spinner';
@@ -922,6 +928,100 @@ function FileDropzoneDemo() {
   );
 }
 
+function ResponsiveSurfaceDemo() {
+  return (
+    <div
+      style={{
+        border: '1px dashed var(--sv-color-border)',
+        borderRadius: 'var(--sv-radius-md)',
+        padding: 'var(--sv-space-4)',
+        fontFamily: ff,
+        fontSize: 'var(--sv-font-size-sm)',
+        color: 'var(--sv-color-text-muted)',
+      }}
+    >
+      <ResponsiveSurface
+        web={
+          <span style={{ color: 'var(--sv-color-text-primary)' }}>
+            Web tree (resize below 768px)
+          </span>
+        }
+        mobile={<span style={{ color: 'var(--sv-color-text-primary)' }}>Mobile tree</span>}
+      />
+    </div>
+  );
+}
+
+const SWIPABLE_CAROUSEL_DEMO_SLIDES = [
+  { key: 'lists', label: 'Lists' },
+  { key: 'groceries', label: 'Groceries' },
+  { key: 'errands', label: 'Errands' },
+];
+
+function SwipableMobileCarouselDemo() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  return (
+    <div
+      style={{
+        height: 220,
+        border: '1px solid var(--sv-color-border)',
+        borderRadius: 'var(--sv-radius-md)',
+        overflow: 'hidden',
+      }}
+    >
+      <SwipableMobileCarousel
+        activeIndex={activeIndex}
+        onSettle={setActiveIndex}
+        aria-label="Task lists"
+      >
+        {SWIPABLE_CAROUSEL_DEMO_SLIDES.map((slide) => (
+          <SwipableMobileCarouselSlide key={slide.key} slideKey={slide.key} label={slide.label}>
+            <SwipableMobileCarouselSlideHeader>
+              <div
+                style={{
+                  padding: 'var(--sv-space-3)',
+                  fontFamily: ff,
+                  fontWeight: 'var(--sv-font-weight-semibold)',
+                  color: 'var(--sv-color-text-primary)',
+                }}
+              >
+                {slide.label}
+              </div>
+            </SwipableMobileCarouselSlideHeader>
+            <SwipableMobileCarouselSlideBody>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
+                  fontFamily: ff,
+                  color: 'var(--sv-color-text-muted)',
+                }}
+              >
+                {slide.label} content
+              </div>
+            </SwipableMobileCarouselSlideBody>
+          </SwipableMobileCarouselSlide>
+        ))}
+      </SwipableMobileCarousel>
+    </div>
+  );
+}
+
+function SwipableMobileCarouselDotsDemo() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  return (
+    <SwipableMobileCarouselDots
+      count={3}
+      activeIndex={activeIndex}
+      onJump={setActiveIndex}
+      labels={['Lists', 'Groceries', 'Errands']}
+      aria-label="Task lists"
+    />
+  );
+}
+
 function IconPickerDemo() {
   const [value, setValue] = useState<IconName | null>('banana');
   const options: IconName[] = [
@@ -1583,7 +1683,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
         <section style={{ marginBottom: 'var(--sv-space-12)' }}>
           <SectionHeader
             title="Component gallery"
-            subtitle="All 22 components — click each story in the sidebar for the full API, variants, and controls."
+            subtitle="All 74 components — click each story in the sidebar for the full API, variants, and controls."
           />
 
           <div style={{ marginBottom: 'var(--sv-space-6)' }}>
@@ -2698,6 +2798,33 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Styled drag-and-drop file picker — a dashed-border dropzone wrapping a visually-hidden native file input. Caller owns selected-file state and passes label/hint accordingly."
             >
               <FileDropzoneDemo />
+            </ComponentCard>
+
+            {/* ResponsiveSurface */}
+            <ComponentCard
+              name="ResponsiveSurface"
+              importLine="import { ResponsiveSurface } from '@sovereignfs/ui';"
+              usage="Renders an entirely different component tree below a breakpoint, not a CSS squeeze of the same one — only the active side is ever mounted. See also the useResponsiveLayout hook for non-JSX values."
+            >
+              <ResponsiveSurfaceDemo />
+            </ComponentCard>
+
+            {/* SwipableMobileCarousel */}
+            <ComponentCard
+              name="SwipableMobileCarousel"
+              importLine="import { SwipableMobileCarousel, SwipableMobileCarouselSlide, SwipableMobileCarouselSlideHeader, SwipableMobileCarouselSlideBody } from '@sovereignfs/ui';"
+              usage="Compound component for swiping between full-width slides. A Slide's Header/Footer always render; only Body's own loading prop gates its content, so a title can show immediately while the body's own fetch is still in flight. Owns mount-window/reorder mechanics only — never put cross-slide aggregation or a detail overlay inside a Slide."
+            >
+              <SwipableMobileCarouselDemo />
+            </ComponentCard>
+
+            {/* SwipableMobileCarouselDots */}
+            <ComponentCard
+              name="SwipableMobileCarouselDots"
+              importLine="import { SwipableMobileCarouselDots } from '@sovereignfs/ui';"
+              usage="A real, tappable, labeled slide indicator (role=tablist/tab) — standalone and reusable outside SwipableMobileCarousel too, and its default renderIndicator."
+            >
+              <SwipableMobileCarouselDotsDemo />
             </ComponentCard>
           </div>
         </section>

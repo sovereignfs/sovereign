@@ -1,0 +1,55 @@
+.wrap {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+.scroller {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  /* Momentum + rubber-banding come from the browser's native scroll physics —
+     no hand-rolled pointer/touch dragging. Deliberately NOT
+     -webkit-overflow-scrolling: touch: that legacy iOS <13 hint promotes its
+     element to its own compositing layer for GPU-accelerated momentum
+     scroll, and that layer's paint order relative to siblings/fixed
+     descendants elsewhere in the tree isn't always reliable on real iOS
+     Safari (confirmed via sovereign-tasks' and sovereign-shopper's own
+     carousels, which hit and fixed this exact bug — a position:fixed
+     overlay opened above the scroller painted BEHIND it instead of above).
+     Removing it doesn't disable momentum scrolling on any iOS version this
+     platform realistically targets. */
+}
+
+.slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  /* Slide content is a flex column so Header/Footer stay their natural size
+     and Body (flex: 1 1 auto, min-height: 0) fills and scrolls the rest —
+     see SwipableMobileCarouselSlideParts.module.css. */
+  display: flex;
+  flex-direction: column;
+}
+
+.dots {
+  /* Overlays the bottom of .wrap rather than taking its own layout row —
+     matches both sovereign-tasks' and sovereign-shopper's existing dots
+     placement. */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--sv-space-3);
+  pointer-events: none;
+}
+
+.dots > * {
+  pointer-events: auto;
+}

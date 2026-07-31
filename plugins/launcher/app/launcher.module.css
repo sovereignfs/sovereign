@@ -71,6 +71,15 @@
   color: var(--sv-color-text-muted);
 }
 
+/* ── Loading ────────────────────────────────────────────────────────────── */
+
+.loadingWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sv-space-16) var(--sv-space-6);
+}
+
 /* ── Section header ─────────────────────────────────────────────────────── */
 
 .sectionRow {

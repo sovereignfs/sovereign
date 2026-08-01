@@ -134,6 +134,7 @@ RUN mkdir -p /app/.deploy/plugins && \
     mkdir -p "$dest"; \
     [ -f "$1/manifest.json" ] && cp "$1/manifest.json" "$dest/"; \
     [ -d "$1/migrations" ] && cp -r "$1/migrations" "$dest/migrations"; \
+    true; \
   }; \
   for dir in plugins/*/; do stage_plugin_dir "$dir"; done && \
   case "$(printf '%s' "$SOVEREIGN_EXAMPLES_ENABLED" | tr '[:upper:]' '[:lower:]')" in \

@@ -128,7 +128,10 @@ export function MobileNav({
                   className={styles.drawerGridItem}
                   onClick={() => setOpen(false)}
                 >
-                  <span className={styles.drawerGridIcon} aria-hidden="true">
+                  <span
+                    className={`${styles.drawerGridIcon} ${styles.drawerGridIconSettings}`}
+                    aria-hidden="true"
+                  >
                     <Icon name="settings" size="md" aria-hidden />
                   </span>
                   <span className={styles.drawerGridName}>Console</span>

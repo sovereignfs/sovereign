@@ -111,6 +111,11 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
     `docs/upgrade.md`
   - `chore/` / `docs/` → no version bump unless a public API changed
 
+  **Plugins are the exception:** a plugin's version lives in its own
+  `manifest.json`, never its `package.json` — see "Plugins version only their
+  `manifest.json`" below. Never bump a plugin's `package.json` version; it
+  stays pinned at `0.0.0`.
+
   The **SDK** (`packages/sdk`) and **UI** (`packages/ui`) are under an
   additional constraint per NFR-04: patch releases must never contain breaking
   changes; breaking changes require at minimum a minor bump and a migration
@@ -213,13 +218,25 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   v1.0.0 release checklist.
 
   **Per-package versions are independent of the platform version.** Internal,
-  private packages (`@sovereignfs/db`, `runtime`, `auth`, `manifest`, `mailer`,
-  plugins) follow normal semver tied to the change type above and **may cross
+  private packages (`@sovereignfs/db`, `runtime`, `auth`, `manifest`, `mailer`)
+  follow normal semver tied to the change type above and **may cross
   `1.0.0`** on a breaking change — their versions are internal, not the
   user-facing product version (e.g. `@sovereignfs/db` is `1.0.0`). The published
   packages **`@sovereignfs/sdk`** (already `1.x`, the stable contract) and
   **`@sovereignfs/ui`** follow their own public semver per NFR-04 and are
   **exempt** from the platform's "stay under v1" rule.
+
+  **Plugins version only their `manifest.json`.** A plugin's `package.json`
+  exists for pnpm workspace tooling (deps, scripts) — its `version` field is
+  not read anywhere in the platform and stays pinned at `0.0.0` forever, never
+  bumped. The manifest's `version` field is the sole source of truth for a
+  plugin's version: it's what the runtime, registry, and export/portability
+  code all read (`docs/plugin-development.md`'s manifest reference). This
+  applies to every plugin — platform plugins (`plugins/console`,
+  `plugins/launcher`, `plugins/account`), example plugins
+  (`example-plugins/*`), and everything the `sv plugin new` / `npm create
+  @sovereignfs/plugin` / `sovereignfs/sovereign-plugin-template` scaffolds
+  produce.
 
   **Version-bump commit subjects and release tags use the same identifier.**
   Root `package.json` releases use `vX.Y.Z`. Package releases use the package

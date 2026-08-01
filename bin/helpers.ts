@@ -262,7 +262,7 @@ export function scaffoldPlugin(opts: PluginScaffoldOptions): string {
     JSON.stringify(
       {
         name: `sovereign-plugin-${slug}`,
-        version: '0.1.0',
+        version: '0.0.0',
         private: true,
         type: 'module',
         dependencies: {

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
+import { resolveRuntimeRedirect } from '@/src/post-login-redirect';
 import styles from '../auth.module.css';
 
 /**
@@ -19,8 +20,10 @@ export function LoginForm({
   runtimeUrl: string;
   instanceInitial: string;
 }) {
-  const signedOut = useSearchParams().get('signedout') === '1';
-  const accountDeleted = useSearchParams().get('accountDeleted') === '1';
+  const searchParams = useSearchParams();
+  const signedOut = searchParams.get('signedout') === '1';
+  const accountDeleted = searchParams.get('accountDeleted') === '1';
+  const returnUrl = searchParams.get('returnUrl');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +49,7 @@ export function LoginForm({
       // to runtimeUrl here or it overrides the 2FA page navigation, sending
       // the user to the runtime without a session and looping back to /login.
     } else if (result?.data) {
-      window.location.href = runtimeUrl;
+      window.location.href = resolveRuntimeRedirect(runtimeUrl, returnUrl);
     }
   }
 
@@ -69,7 +72,7 @@ export function LoginForm({
         msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('abort');
       setError(isCancelled ? 'Passkey sign-in was cancelled.' : msg || 'Passkey sign-in failed.');
     } else if (result?.data) {
-      window.location.href = runtimeUrl;
+      window.location.href = resolveRuntimeRedirect(runtimeUrl, returnUrl);
     }
   }
 

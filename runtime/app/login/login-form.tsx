@@ -16,8 +16,10 @@ export function LoginForm({
   instanceName: string;
   instanceInitial: string;
 }) {
-  const signedOut = useSearchParams().get('signedout') === '1';
-  const accountDeleted = useSearchParams().get('accountDeleted') === '1';
+  const searchParams = useSearchParams();
+  const signedOut = searchParams.get('signedout') === '1';
+  const accountDeleted = searchParams.get('accountDeleted') === '1';
+  const returnUrl = searchParams.get('returnUrl');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export function LoginForm({
     } else if ((result?.data as Record<string, unknown>)?.twoFactorRedirect) {
       // twoFactorClient navigates to /login/2fa automatically — do not override.
     } else if (result?.data) {
-      await completeSignIn();
+      await completeSignIn(returnUrl);
     }
   }
 
@@ -51,7 +53,7 @@ export function LoginForm({
         msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('abort');
       setError(isCancelled ? 'Passkey sign-in was cancelled.' : msg || 'Passkey sign-in failed.');
     } else if (result?.data) {
-      await completeSignIn();
+      await completeSignIn(returnUrl);
     }
   }
 

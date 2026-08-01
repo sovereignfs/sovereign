@@ -1,5 +1,6 @@
 import { offline } from '@sovereignfs/sdk/offline';
 import { offlineQueue } from '@sovereignfs/sdk/offline-queue';
+import { sanitizeRedirectPath } from './post-login-redirect';
 
 /**
  * Call after any successful authentication (password, passkey, 2FA
@@ -27,10 +28,10 @@ import { offlineQueue } from '@sovereignfs/sdk/offline-queue';
  * (IndexedDB unavailable, etc.) — a stale cache is not worth blocking sign-in
  * over.
  */
-export async function completeSignIn(): Promise<void> {
+export async function completeSignIn(returnUrl?: string | null): Promise<void> {
   try {
     await Promise.all([offline.clearAll(), offlineQueue.clearAll()]);
   } finally {
-    window.location.href = '/';
+    window.location.href = sanitizeRedirectPath(returnUrl ?? null) ?? '/';
   }
 }

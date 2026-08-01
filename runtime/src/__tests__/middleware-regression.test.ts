@@ -196,8 +196,21 @@ describe('runtime middleware regressions', () => {
     const response = await middleware(request('/launcher/settings', { method: 'POST' }));
 
     expect(response.status).toBe(303);
-    expect(response.headers.get('location')).toBe('http://runtime.test/login');
+    expect(response.headers.get('location')).toBe(
+      'http://runtime.test/login?returnUrl=%2Flauncher%2Fsettings',
+    );
     expect(fetchState.calls).toContain('http://localhost:3001/api/verify');
+  });
+
+  it('carries the original path as returnUrl on the /login redirect', async () => {
+    fetchState.session = null;
+
+    const response = await middleware(request('/launcher/settings?tab=general'));
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe(
+      'http://runtime.test/login?returnUrl=%2Flauncher%2Fsettings%3Ftab%3Dgeneral',
+    );
   });
 
   it('returns 403 for non-admin Console access', async () => {
@@ -399,7 +412,9 @@ describe('runtime middleware regressions', () => {
       const response = await middleware(request('/blog/drafts'));
 
       expect(response.status).toBe(303);
-      expect(response.headers.get('location')).toBe('http://runtime.test/login');
+      expect(response.headers.get('location')).toBe(
+        'http://runtime.test/login?returnUrl=%2Fblog%2Fdrafts',
+      );
     });
 
     it('returns 404 for a disabled plugin’s public route', async () => {

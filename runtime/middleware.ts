@@ -325,7 +325,11 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       // route (e.g. the logout form once the session has lapsed, or any plugin
       // form submit) would redirect as POST /login — and /login only handles
       // GET, returning 405. 303 forces the browser to GET /login instead.
-      return applyCsp(NextResponse.redirect(new URL('/login', request.url), 303));
+      const loginUrl = new URL('/login', request.url);
+      if (pathname !== '/') {
+        loginUrl.searchParams.set('returnUrl', pathname + request.nextUrl.search);
+      }
+      return applyCsp(NextResponse.redirect(loginUrl, 303));
     }
     session = fallback.session;
     setCookies = fallback.setCookies;

@@ -1,6 +1,7 @@
 'use client';
 
 import { type FormEvent, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
 import { completeSignIn } from '@/src/complete-sign-in';
@@ -12,6 +13,7 @@ type Mode = 'totp' | 'backup';
 const OTP_LENGTH = 6;
 
 export function ChallengeForm({ instanceInitial = 'S' }: { instanceInitial?: string }) {
+  const returnUrl = useSearchParams().get('returnUrl');
   const [mode, setMode] = useState<Mode>('totp');
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [backupCode, setBackupCode] = useState('');
@@ -39,7 +41,7 @@ export function ChallengeForm({ instanceInitial = 'S' }: { instanceInitial?: str
       setError('Invalid code. Please try again or use a backup code.');
       return;
     }
-    await completeSignIn();
+    await completeSignIn(returnUrl);
   }
 
   async function onPasskeySignIn() {
@@ -53,7 +55,7 @@ export function ChallengeForm({ instanceInitial = 'S' }: { instanceInitial?: str
       return;
     }
     if (result?.data) {
-      await completeSignIn();
+      await completeSignIn(returnUrl);
     }
   }
 

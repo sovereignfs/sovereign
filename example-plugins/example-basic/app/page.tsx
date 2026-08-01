@@ -21,7 +21,8 @@ export default async function ExampleBasicPage() {
         <h1 className={styles.title}>Example Plugin</h1>
         <p className={styles.lead}>
           A minimal Sovereign plugin. Edit{' '}
-          <code className={styles.code}>plugins/example-basic/app/page.tsx</code> to get started.
+          <code className={styles.code}>example-plugins/example-basic/app/page.tsx</code> to get
+          started.
         </p>
       </header>
 

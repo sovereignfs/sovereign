@@ -1256,10 +1256,12 @@ in-plugin checks.
 
 #### Testing monetization locally
 
-The `plugins/example-monetized` plugin ships with a committed demo keypair and a
-pre-signed token so you can walk through the full flow without any billing setup.
-Start the dev server and go to `/example-monetized` — on first visit you will be
-redirected to the paywall page because you have no entitlement yet.
+The `example-plugins/example-monetized` plugin ships with a committed demo
+keypair and a pre-signed token so you can walk through the full flow without
+any billing setup. Set `SOVEREIGN_EXAMPLES_ENABLED=1` in your `.env` (see
+[Example plugins](#example-plugins) above), start the dev server, and go to
+`/example-monetized` — on first visit you will be redirected to the paywall
+page because you have no entitlement yet.
 
 **Step 1 — Generate a keypair** (once per plugin; keep the private key secret):
 

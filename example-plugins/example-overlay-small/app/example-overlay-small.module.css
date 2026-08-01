@@ -92,7 +92,7 @@
 }
 
 /* Label sits close to its value (gap, not justify-content: space-between) —
-   matching plugins/example-basic's .row. space-between stretches a short
+   matching example-plugins/example-basic's .row. space-between stretches a short
    label/value pair to the panel's full width, leaving a large empty gap in
    the middle for no reason. */
 .row {

@@ -16,6 +16,13 @@ const e2eServerEnv = {
   // (getAuthOptions() config assertions) and the manual verification
   // checklist; email-verification.spec.ts covers the opt-out path itself.
   AUTH_REQUIRE_EMAIL_VERIFICATION: 'false',
+  // paywall.spec.ts exercises the example-monetized plugin directly
+  // (/example-monetized) — without this, example-plugins/ never composes and
+  // that route 404s (SOVEREIGN_EXAMPLES_ENABLED is off by default; see
+  // scripts/generate-registry.ts and docs/self-hosting.md's "Reference
+  // example plugins"). Runtime-visibility default too, so the plugin also
+  // isn't hidden by Console's example toggle.
+  SOVEREIGN_EXAMPLES_ENABLED: '1',
 };
 
 export default defineConfig({

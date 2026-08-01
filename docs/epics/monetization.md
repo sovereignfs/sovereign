@@ -52,7 +52,7 @@ manual. Three sub-tracks, independently deliverable:
 
 - No platform adapter code — integration lives in the plugin.
 - `sdk.billing.grantEntitlement({ userId, pluginId, tierId, expiresAt })` (new) lets a plugin's webhook handler write an entitlement server-side without a signed token.
-- Example Stripe webhook handler in `plugins/example-monetized/` or docs.
+- Example Stripe webhook handler in `example-plugins/example-monetized/` or docs.
 
 **Sub-track C — PayPal webhook**
 

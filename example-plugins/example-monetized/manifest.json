@@ -30,7 +30,7 @@
       "publicKey": "OQETbqoRboorjWYxjfpWCx4780PQ2MWbJDxW-rOxDdQ"
     }
   },
-  "repository": "https://github.com/sovereignfs/sovereign-plugin-examples",
+  "repository": "https://github.com/sovereignfs/sovereign/tree/main/example-plugins/example-monetized",
   "compatibility": {
     "minPlatformVersion": "0.6.0"
   }

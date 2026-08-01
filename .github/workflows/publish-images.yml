@@ -46,7 +46,7 @@ jobs:
             dockerfile: apps/auth/Dockerfile
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Log in to GHCR
         uses: docker/login-action@v3

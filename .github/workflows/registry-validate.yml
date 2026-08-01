@@ -32,7 +32,7 @@ jobs:
       github.event.pull_request.draft == false &&
       !contains(github.event.pull_request.labels.*.name, 'skip-ci')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       # Verify-only: fails if any entry is invalid, its source/manifest/LICENSE
       # is missing, or its committed provenance hash is stale.

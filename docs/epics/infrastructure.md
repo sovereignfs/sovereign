@@ -523,6 +523,121 @@ script decomposition), Task 16.3 (current-state testing documentation cleanup).
 - Feature work that changes load-bearing architecture has test requirements
   attached up front.
 
+#### ✅ 0.17 — CI dependency-vulnerability scanning
+
+**Goal:** Close a real gap — this repository had no automated dependency-
+vulnerability or static-analysis scanning anywhere in CI before this task.
+`pnpm audit` was never run, no Dependabot config existed, and no CodeQL/SAST
+workflow was wired up.
+
+**Deliverables:**
+
+- `.github/dependabot.yml` — weekly update PRs for the `npm` (pnpm workspace,
+  root directory) and `github-actions` ecosystems.
+- `.github/workflows/codeql.yml` — CodeQL analysis for `javascript-typescript`,
+  triggered on push to `main`, on pull requests, and on a weekly schedule (so
+  newly-disclosed advisories against unchanged code are still caught, not just
+  vulnerabilities introduced by new code).
+- A new `audit` job in `.github/workflows/ci.yml`, gated by the existing
+  `changes` classification job (path-triggered on `package.json`,
+  `pnpm-lock.yaml`, and any workspace package's `package.json`) — runs
+  `pnpm audit --prod --audit-level=high`. `--prod` scopes the gate to
+  production-shipped dependencies rather than build/dev tooling, and
+  `--audit-level=high` fails only on high/critical findings, matching the
+  severity threshold most CI dependency gates use to stay actionable rather
+  than noisy.
+- `pnpm-workspace.yaml`'s new `auditConfig.ignoreGhsas` list — the documented,
+  reviewed exception list for pre-existing advisories that could not be
+  resolved by an in-range dependency bump in this task (see Task 0.18, which
+  tracks resolving them). Every entry is a specific GHSA ID with a reason, not
+  a blanket severity suppression.
+- A one-time `pnpm update -r` across the whole workspace (safe — respects
+  existing semver ranges in `package.json`/the pnpm catalog, no forced major
+  bumps) as the natural first step before turning the gate on, since it would
+  be counterproductive to ship a new vulnerability gate immediately failing
+  on debt that a routine update already clears. Reduced findings from 43 to
+  19 (9 in the `--prod` scope this gate actually checks); the remainder is
+  Task 0.18's scope.
+- A separate scheduled `.github/workflows/dependency-audit.yml` (weekly,
+  `workflow_dispatch` also enabled for manual runs) running the same
+  `pnpm audit --prod --audit-level=high` against `main` — catches newly
+  disclosed CVEs in dependencies that didn't change, which the PR-gated
+  `audit` job in `ci.yml` cannot (it only runs when a PR touches a manifest
+  or lockfile).
+
+**Dependencies:** None.
+
+**SRS reference:** NFR-06 (dependency and supply-chain hygiene).
+
+**Review checklist:**
+
+- `pnpm audit --prod --audit-level=high` exits 0 on a clean checkout — the
+  `auditConfig.ignoreGhsas` exceptions are respected automatically, with no
+  CLI flags required.
+- A PR that introduces a new high/critical production-dependency
+  vulnerability fails the `audit` job; a PR that only touches unrelated code
+  does not trigger the job at all (path-gated, same pattern as the existing
+  `design-tokens`/`generate-validate` jobs).
+- CodeQL runs on PRs and on a weekly schedule, and surfaces findings in the
+  PR's Security tab.
+- Dependabot opens PRs on its own schedule without any manual trigger.
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`, and
+  `pnpm test` all still pass after the workspace-wide dependency refresh.
+
+---
+
+#### 📋 0.18 — Remediate known dependency vulnerabilities
+
+**Goal:** Resolve the advisories Task 0.17 could not close with an in-range
+update and had to record in `pnpm-workspace.yaml`'s `auditConfig.ignoreGhsas`
+as a reviewed, temporary exception — so that list shrinks over time instead
+of becoming a permanent blanket suppression nobody revisits.
+
+**Deliverables, one per currently-ignored GHSA ID:**
+
+- `GHSA-p6gq-j5cr-w38f` (nodemailer, high — arbitrary file read / SSRF via
+  the message-level `raw` option): fix requires bumping `nodemailer` from the
+  `^8.0.11` range to `>=9.0.1`, a major version — review `packages/mailer`
+  against nodemailer 9's changelog for breaking API changes before bumping.
+- `GHSA-p2fr-6hmx-4528` (`@better-auth/oauth-provider`, moderate — may issue
+  access tokens for unauthorized audiences via unbound resource indicators):
+  the only patched release is `1.7.0-beta.4`, a prerelease; evaluate whether
+  to adopt the beta ahead of a stable release given RFC 0072's external
+  OAuth/OIDC provider surface is real, externally-reachable attack surface.
+- `GHSA-f88m-g3jw-g9cj` (sharp, high — inherited libvips CVEs), and
+  `GHSA-6g55-p6wh-862q` / `GHSA-r28c-9q8g-f849` (postcss, high — arbitrary
+  file read / path traversal via `sourceMappingURL`): both are transitive
+  dependencies pinned inside Next.js's own dependency tree
+  (`better-auth > next > sharp` / `> postcss`), not directly controllable via
+  this repo's own `package.json`/catalog; resolve by tracking whether a newer
+  Next.js patch release bumps its own internal pins, or evaluate a `pnpm`
+  override if the gap persists.
+- `GHSA-5c6j-r48x-rmvq` (serialize-javascript, high — RCE via `RegExp.flags`
+  and `Date.prototype.toISOString()`): transitive via
+  `@ducanh2912/next-pwa > workbox-build > @rollup/plugin-terser` — build-time
+  only (used to minify the generated service worker, never executed against
+  runtime/attacker-controlled input), already on `next-pwa`'s latest release;
+  same tracking approach as the postcss/sharp entries above.
+
+Each fix removes its GHSA ID from `auditConfig.ignoreGhsas` in the same PR
+that resolves it — don't batch removals separately from the fix.
+
+**Dependencies:** Task 0.17 (the scanning + exception-list mechanism this
+task's deliverables assume already exists).
+
+**SRS reference:** NFR-06.
+
+**Review checklist:**
+
+- Each resolved advisory's GHSA ID is removed from `auditConfig.ignoreGhsas`
+  in the same PR that fixes it, not left behind.
+- `pnpm audit --prod --audit-level=high` still exits 0 after each fix (no
+  regression from the dependency bump reintroducing a different advisory).
+- A major-version bump (nodemailer) includes a review of breaking changes
+  against `packages/mailer`'s actual usage, not just a version-string edit.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)

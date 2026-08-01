@@ -48,9 +48,7 @@ export function isPublicApiPath(pathname: string): boolean {
 }
 
 export type ApiNamespaceDecision =
-  | { kind: 'pass' }
-  | { kind: 'not-found' }
-  | { kind: 'rewrite'; target: string };
+  { kind: 'pass' } | { kind: 'not-found' } | { kind: 'rewrite'; target: string };
 
 /**
  * Decide how a public `/api/*` request is delegated:

@@ -14,11 +14,11 @@
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",
-    "@types/nodemailer": "^8.0.0",
+    "@types/nodemailer": "^8.0.1",
     "tsup": "catalog:",
     "typescript": "catalog:"
   },
   "dependencies": {
-    "nodemailer": "^8.0.10"
+    "nodemailer": "^8.0.11"
   }
 }

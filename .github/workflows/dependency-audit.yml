@@ -1,0 +1,34 @@
+name: Dependency audit (scheduled)
+
+# The `audit` job in ci.yml only runs when a PR touches a manifest or the
+# lockfile — it catches a vulnerability a PR is about to introduce, but not
+# one newly disclosed against dependencies that haven't changed. This
+# workflow re-runs the same check against `main` on a schedule so that case
+# doesn't go unnoticed indefinitely.
+on:
+  schedule:
+    # Mondays 07:00 UTC — after CodeQL's 06:00 run, so the two don't contend
+    # for the same runner pool at the same minute.
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  audit:
+    name: pnpm audit (main)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # --prod scopes this to production-shipped dependencies, not build/dev
+      # tooling; --audit-level=high keeps the signal actionable. Pre-existing,
+      # reviewed exceptions live in pnpm-workspace.yaml's
+      # auditConfig.ignoreGhsas (see docs/epics/infrastructure.md task 0.18)
+      # and are picked up automatically — no flags needed here.
+      - run: pnpm audit --prod --audit-level=high

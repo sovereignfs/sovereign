@@ -55,10 +55,7 @@ export function isGrantableCapability(cap: string): cap is GrantableCapability {
 // ---------------------------------------------------------------------------
 
 export type PlatformRole =
-  | 'platform:owner'
-  | 'platform:admin'
-  | 'platform:auditor'
-  | 'platform:user';
+  'platform:owner' | 'platform:admin' | 'platform:auditor' | 'platform:user';
 
 /** All recognized platform roles, in descending privilege order. */
 export const PLATFORM_ROLES = [

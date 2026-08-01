@@ -60,8 +60,7 @@ export function getPluginCatalog(
 }
 
 export type ActivatePluginResult =
-  | { activated: true }
-  | { activated: false; reason: 'already-active' };
+  { activated: true } | { activated: false; reason: 'already-active' };
 
 /**
  * Activate a cataloged-but-inactive plugin: create its `plugin_status` row

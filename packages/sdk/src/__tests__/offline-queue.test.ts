@@ -72,13 +72,11 @@ describe('drainQueue', () => {
     const removeSpy = vi.spyOn(offlineQueue, 'remove').mockResolvedValue();
     const markFailedSpy = vi.spyOn(offlineQueue, 'markFailed').mockResolvedValue();
 
-    const applyBatch = vi.fn(
-      async (): Promise<SyncOutcome[]> => [
-        { id: 'a', status: 'applied' },
-        { id: 'b', status: 'skipped' },
-        { id: 'c', status: 'failed', error: 'stale write' },
-      ],
-    );
+    const applyBatch = vi.fn(async (): Promise<SyncOutcome[]> => [
+      { id: 'a', status: 'applied' },
+      { id: 'b', status: 'skipped' },
+      { id: 'c', status: 'failed', error: 'stale write' },
+    ]);
 
     const result = await drainQueue(PLUGIN_ID, applyBatch);
 
@@ -102,11 +100,9 @@ describe('drainQueue', () => {
 
     // The server halted after "a" (RFC 0078 §4's sequential-apply-halt-on-first-failure) —
     // "b" was never attempted this round and shouldn't be touched.
-    const applyBatch = vi.fn(
-      async (): Promise<SyncOutcome[]> => [
-        { id: 'a', status: 'failed', error: 'validation error' },
-      ],
-    );
+    const applyBatch = vi.fn(async (): Promise<SyncOutcome[]> => [
+      { id: 'a', status: 'failed', error: 'validation error' },
+    ]);
 
     await drainQueue(PLUGIN_ID, applyBatch);
 

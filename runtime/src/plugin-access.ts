@@ -9,11 +9,7 @@
  */
 
 export type PluginAccessPolicy =
-  | 'everyone'
-  | 'admins'
-  | 'selected_users'
-  | 'selected_groups'
-  | 'disabled';
+  'everyone' | 'admins' | 'selected_users' | 'selected_groups' | 'disabled';
 
 export interface PluginAccessInput {
   /** The plugin is present in the composed registry. */

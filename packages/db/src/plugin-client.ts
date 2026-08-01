@@ -23,8 +23,7 @@ type AnyPgDb = ReturnType<typeof drizzlePg<any>>;
  * instance the plugin passes its own table declarations to.
  */
 export type PluginDb =
-  | { dialect: 'sqlite'; db: AnySqliteDb }
-  | { dialect: 'postgres'; db: AnyPgDb };
+  { dialect: 'sqlite'; db: AnySqliteDb } | { dialect: 'postgres'; db: AnyPgDb };
 
 /** In-process lazy registry: pluginId → PluginDb */
 const _registry = new Map<string, PluginDb>();

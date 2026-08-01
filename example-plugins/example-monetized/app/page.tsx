@@ -53,8 +53,7 @@ async function getActiveTier(userId: string): Promise<string | null> {
       rows = (db['all'] as (q: unknown) => EntRow[])(query);
     } else if (typeof db['execute'] === 'function') {
       const res = (await (db['execute'] as (q: unknown) => Promise<unknown>)(query)) as
-        | EntRow[]
-        | { rows?: EntRow[] };
+        EntRow[] | { rows?: EntRow[] };
       rows = Array.isArray(res) ? res : (res.rows ?? []);
     }
     return rows[0]?.tier_id ?? null;

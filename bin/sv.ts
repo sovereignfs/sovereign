@@ -752,8 +752,7 @@ const restore = defineCommand({
 
 /** A file `sv db encrypt`/`decrypt` may act on — the platform core (as a pair) or one plugin. */
 type DbCryptTarget =
-  | { path: string; kind: 'core' }
-  | { path: string; kind: 'plugin'; pluginId: string };
+  { path: string; kind: 'core' } | { path: string; kind: 'plugin'; pluginId: string };
 
 /** Scan each `plugins/<dir>/manifest.json` for plugins declaring `database.requireEncryption`. */
 function findEncryptionRequiringPlugins(): { id: string }[] {
@@ -867,9 +866,11 @@ const dbEncrypt = defineCommand({
 
     const targets: DbCryptTarget[] = [
       ...coreFiles.map((path): DbCryptTarget => ({ path, kind: 'core' })),
-      ...pluginTargets.map(
-        (p): DbCryptTarget => ({ path: p.path, kind: 'plugin', pluginId: p.id }),
-      ),
+      ...pluginTargets.map((p): DbCryptTarget => ({
+        path: p.path,
+        kind: 'plugin',
+        pluginId: p.id,
+      })),
     ];
 
     if (targets.length === 0) {
@@ -993,9 +994,11 @@ const dbDecrypt = defineCommand({
 
     const targets: DbCryptTarget[] = [
       ...coreFiles.map((path): DbCryptTarget => ({ path, kind: 'core' })),
-      ...pluginTargets.map(
-        (p): DbCryptTarget => ({ path: p.path, kind: 'plugin', pluginId: p.id }),
-      ),
+      ...pluginTargets.map((p): DbCryptTarget => ({
+        path: p.path,
+        kind: 'plugin',
+        pluginId: p.id,
+      })),
     ];
 
     if (targets.length === 0) {

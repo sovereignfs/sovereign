@@ -1,0 +1,35 @@
+version: 2
+
+updates:
+  # pnpm workspace — Dependabot resolves the whole monorepo (including the
+  # pnpm-workspace.yaml catalog:/catalogs: entries) from the root directory;
+  # no per-package directory entries are needed.
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+    # Plugin package.json "version" fields stay pinned at 0.0.0 (CLAUDE.md,
+    # "Plugins version only their manifest.json") — Dependabot only ever
+    # touches dependency ranges, never that field, so no extra config is
+    # needed to protect it.
+    groups:
+      # Batch routine patch/minor bumps into fewer PRs; a major bump always
+      # gets its own PR regardless of grouping, since it may be breaking.
+      minor-and-patch:
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  # Workflow action versions (actions/checkout@vN, etc.) — separate ecosystem,
+  # same weekly cadence.
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+      - 'ci'

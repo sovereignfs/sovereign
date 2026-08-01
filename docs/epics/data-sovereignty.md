@@ -523,6 +523,149 @@ encrypt`, same as today.
 
 ---
 
+#### 📋 8.16 — Backup job infrastructure & signed download delivery (RFC 0084)
+
+**Goal:** Give both the operator (instance) and user (self-service) backup flows a
+shared, minimal async-job primitive and a delivery mechanism that fits an archive
+too large or slow to hand back in one HTTP request — neither exists today. This is
+pure platform primitive; nothing user-facing ships in this task.
+
+**Deliverables:**
+
+- `backup_jobs` Drizzle schema (both dialects) in `packages/db`: `id`, `scope`
+  (`'instance' | 'user'`), `requestedByUserId`, `tenantId`, `status`
+  (`queued|running|complete|failed`), `optionsJson`, `archivePath`, `sizeBytes`,
+  `errorMessage`, `createdAt`, `startedAt`, `completedAt`, `expiresAt`.
+- `runtime/src/backup-worker.ts` — a new sibling module to `runtime/src/scheduler.ts`
+  (not a repurposing of it — `scheduler.ts`'s own doc comment states it is
+  deliberately not a job queue), using the same interval-tick +
+  conditional-`UPDATE`-claim idempotency pattern. Claims one queued job per tick,
+  runs it, marks `complete`/`failed`, and sweeps expired archive files.
+- Passphrase-derived (`scrypt`) AES-256-GCM archive encryption/decryption helper
+  using Node's built-in `crypto` — no new dependency.
+- `runtime/app/api/backup-jobs/[jobId]/download/[token]/route.ts` — HMAC-signed
+  opaque token in the same construction style as
+  `runtime/app/api/storage/[token]/route.ts`, but a configurable TTL (default 48h,
+  not the storage route's 1h ceiling) and streaming from disk (`createReadStream`),
+  never buffering the whole archive in memory.
+- Notification-on-completion wiring — confirm and implement the platform-level
+  (non-plugin) integration point into the existing notification broker that
+  `NotificationBell`/`sdk.notifications` already surface through.
+
+**Dependencies:** None new — a self-contained platform primitive.
+
+**SRS reference:** [RFC 0084](../rfcs/0084-ui-driven-backup-restore.md)
+
+**Review checklist:**
+
+- A job survives a mid-job process restart by being swept from `running` back to
+  `failed` on next boot, rather than staying stuck `running` forever.
+- The encryption helper round-trips: encrypt → decrypt with the correct
+  passphrase succeeds; the wrong passphrase fails cleanly, not silently.
+- The download route streams rather than buffers — verified against an archive
+  larger than `sdk.storage`'s object caps.
+- A signed download token cannot decrypt the archive on its own; the passphrase
+  is required separately.
+- Expired jobs' archive files are actually removed from disk by the sweep.
+
+---
+
+#### 📋 8.17 — Console: instance backup & restore UI (owner/admin) (RFC 0084)
+
+**Goal:** Give owners and admins a Console page to back up and restore the whole
+instance without touching a CLI — wrapping the existing `sv backup`/`sv restore`
+(epic task 8.1) rather than reimplementing their archive logic.
+
+**Deliverables:**
+
+- `plugins/console/app/backups/page.tsx` — `adminOnly`-gated, same
+  `hasCapability`/Server-Action/`ActionResult` conventions as the rest of Console.
+- Backup trigger: plugin-exclusion checkboxes, required passphrase field, optional
+  "also push to a Git remote" checkbox (shown only when
+  `SV_BACKUP_GIT_REPOSITORY`/`SV_BACKUP_GIT_TOKEN`-shaped credentials are
+  configured — reusing RFC 0064's env var naming for forward compatibility). Job
+  list with status and download links.
+- `sv backup --exclude-plugin <id>` (repeatable) CLI flag — the one change to the
+  existing backup command this task needs; the worker (8.16) spawns `sv backup` as
+  a subprocess with this flag set from the job's options.
+- Optional Git-remote push after a successful backup: orphan commit tagged
+  `sv-backup/<timestamp>/v<platform>` (same shape RFC 0064 proposes). No
+  retention/listing/pruning UI — that stays epic task 8.12, deferred. Git token
+  stored via the same encrypted-secret pattern
+  `plugins/console/app/settings/SmtpSettingsForm.tsx` already establishes for
+  admin-managed external provider config.
+- Guarded restore flow: pick a previous backup or upload an archive → validation/
+  compatibility preview (platform version, DB dialect, plugin manifest
+  compatibility — pulls forward RFC 0064's "Restore guards" list) → maintenance-
+  mode toggle → automatic pre-restore safety snapshot (mirrors `sv db encrypt`'s
+  existing auto-backup-before-convert precedent) → typed confirmation (type the
+  instance name) → in-process execution using `sv restore`'s existing logic.
+
+**Dependencies:** 8.16, 8.1 (`sv backup`/`restore` baseline). Coordinate with
+future epic tasks 8.10–8.12 (RFC 0064) — when they land, reconcile this task's
+local backup manifest and Git-push code into RFC 0064's format rather than
+maintaining two formats permanently; do not block this task on 8.10–8.12.
+
+**SRS reference:** [RFC 0084](../rfcs/0084-ui-driven-backup-restore.md), RFC 0006,
+RFC 0064 (partial — Git push only, not retention/scoped restore).
+
+**Review checklist:**
+
+- A non-admin cannot reach `/console/backups` (403, same as every other
+  `adminOnly` Console route).
+- Excluding a plugin from a backup produces an archive that genuinely omits that
+  plugin's data, verified against a real generated archive.
+- Restore refuses to proceed past the compatibility preview on a platform-version
+  or dialect mismatch without an explicit override.
+- The automatic pre-restore safety snapshot exists on disk before the restore
+  writes anything.
+- A restore cannot be triggered without both the maintenance-mode toggle and the
+  typed instance-name confirmation.
+- Git push (when configured) produces a resolvable tag; when not configured, the
+  checkbox is absent, not merely disabled.
+
+---
+
+#### 📋 8.18 — Account: async selective data backup UI (regular users) (RFC 0084)
+
+**Goal:** Let any user trigger an asynchronous, selective backup of their own
+data, resolving RFC 0007's long-open "sync vs async export" and "selective
+export" questions — without touching the existing synchronous quick-export
+endpoint or the existing import/restore flow.
+
+**Deliverables:**
+
+- A new "Full backup" action in `plugins/account/app/data/page.tsx` /
+  `PortabilityPanel.tsx`, alongside (not replacing) the existing synchronous
+  export button: per-plugin inclusion checkboxes, required passphrase field, job
+  status, signed download link once ready.
+- `ExportOptions` (`packages/sdk/src/portability.ts`) extended with a per-plugin
+  inclusion list alongside the existing `includeFiles` toggle.
+- The async path has no `MAX_EXPORT_BYTES` ceiling — the existing synchronous
+  `GET /api/account/export` keeps its ceiling unchanged for quick small exports.
+- Restore is explicitly **not** changed — it stays the existing
+  `POST /api/account/import` additive-merge flow; importing an already-downloaded
+  file is fast and bounded and doesn't need the job/async treatment.
+
+**Dependencies:** 8.16, 8.2 (user data portability), 8.8 (plugin portability
+hooks), 8.13 (export completeness hardening).
+
+**SRS reference:** [RFC 0084](../rfcs/0084-ui-driven-backup-restore.md), RFC 0007
+(resolves Open Questions #2 and #7), RFC 0068.
+
+**Review checklist:**
+
+- A selective backup excluding a plugin produces a bundle whose manifest reflects
+  that exclusion (not silently included, not silently missing without a reason).
+- An async backup larger than `MAX_EXPORT_BYTES` completes successfully, proving
+  the async path is genuinely uncapped by the old ceiling.
+- The existing synchronous quick-export button and the existing import flow are
+  both unchanged and still pass their existing tests.
+- The archive requires the passphrase to decrypt; a wrong passphrase fails
+  cleanly.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)
@@ -537,6 +680,7 @@ encrypt`, same as today.
 - [RFC 0071 — SQLite at-rest encryption (opt-in, single-key)](../rfcs/0071-sqlite-at-rest-encryption.md)
 - [RFC 0064 — Git-backed operator backups](../rfcs/0064-git-backed-operator-backups.md)
 - [RFC 0068 — Export completeness hardening](../rfcs/0068-export-completeness-hardening.md)
+- [RFC 0084 — UI-driven backup & restore](../rfcs/0084-ui-driven-backup-restore.md)
 
 ## Related Docs
 

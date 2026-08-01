@@ -184,6 +184,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.51.0  | Shared swipe gesture hooks + Tasks/Shopper carousel migration (RFC 0079)        | ✅     | [9.20](docs/epics/design-system.md#-920--shared-swipe-gesture-hooks-and-carousel-migration-tasks-shopper)         |
 | 0.52.0  | Swipeable mobile carousel primitive and responsive-layout hooks (RFC 0079)      | 📋     | [9.21](docs/epics/design-system.md#-921--swipeable-mobile-carousel-primitive-and-responsive-layout-hooks)         |
 | 0.55.0  | CI dependency-vulnerability scanning                                            | ✅     | [0.17](docs/epics/infrastructure.md#-017--ci-dependency-vulnerability-scanning)                                   |
+| 0.56.0  | General per-IP rate limiting in runtime/middleware.ts                           | ✅     | [2.28](docs/epics/platform-shell.md#-228--general-per-ip-rate-limiting-in-runtimemiddlewarets)                    |
 
 ---
 

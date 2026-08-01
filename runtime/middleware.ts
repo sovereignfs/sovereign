@@ -16,6 +16,7 @@ import {
   matchedPublicPluginRouteId,
   underPrefix,
 } from '@/src/route-guard';
+import { checkGlobalRateLimit, clientIp, isGlobalRateLimitDisabled } from '@/src/rate-limit';
 import { buildContentSecurityPolicy, generateNonce } from '@/src/security';
 import {
   type CachedSessionData,
@@ -206,6 +207,23 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     response.headers.set('content-security-policy', csp);
     return response;
   };
+
+  // General per-IP request-flood protection (runtime/src/rate-limit.ts) —
+  // deliberately the very first check, before the public-API-namespace branch
+  // below does its own fetch. Every path this middleware matches was
+  // previously unprotected; only apps/auth's better-auth server had any rate
+  // limiting, and only for its own routes.
+  if (!isGlobalRateLimitDisabled()) {
+    const limited = checkGlobalRateLimit(clientIp(request));
+    if (!limited.allowed) {
+      return applyCsp(
+        new NextResponse('Too Many Requests', {
+          status: 429,
+          headers: { 'Retry-After': String(limited.retryAfterSeconds ?? 60) },
+        }),
+      );
+    }
+  }
 
   // Public `/api/*` namespace (PLT-16): handled before the session gate — these
   // routes are unauthenticated (the provider plugin owns auth, e.g. API keys).

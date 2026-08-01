@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Drawer, Icon } from '@sovereignfs/ui';
 import styles from './MobileNav.module.css';
 import { MobileSearch } from './MobileSearch';
+import { useSidebarHydration } from './sidebar-hydration';
 
 interface PluginEntry {
   id: string;
@@ -25,15 +26,25 @@ function monogram(name: string): string {
 export function MobileNav({
   plugins,
   launcherIconUrl,
+  isAdmin,
+  hydrate,
 }: {
   plugins: PluginEntry[];
   launcherIconUrl?: string;
+  /** Server-rendered admin status — see `AdminConsoleIcon`'s doc comment for
+   *  why this must be `false` on an offline route's neutral shell. */
+  isAdmin: boolean;
+  /** Restores real admin status client-side for a live tab on an offline
+   *  route — see `useSidebarHydration`'s doc comment. */
+  hydrate: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
   const isHome = pathname === '/';
   const footerRef = useRef<HTMLElement>(null);
+  const hydrated = useSidebarHydration(hydrate);
+  const showConsole = hydrated ? hydrated.isAdmin : isAdmin;
 
   return (
     <>
@@ -110,6 +121,20 @@ export function MobileNav({
                 </Link>
               </li>
             ))}
+            {showConsole && (
+              <li>
+                <Link
+                  href="/console"
+                  className={styles.drawerGridItem}
+                  onClick={() => setOpen(false)}
+                >
+                  <span className={styles.drawerGridIcon} aria-hidden="true">
+                    <Icon name="settings" size="md" aria-hidden />
+                  </span>
+                  <span className={styles.drawerGridName}>Console</span>
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
       </Drawer>

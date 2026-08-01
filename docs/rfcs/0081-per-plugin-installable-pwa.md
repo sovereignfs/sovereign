@@ -135,9 +135,7 @@ reusing its instance-config lookup and graceful-degradation behavior:
   "id": "/tally",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "icons": [
-    /* from the plugin's generated raster set */
-  ],
+  "icons": [/* from the plugin's generated raster set */],
   "theme_color": "…",
   "background_color": "…",
 }

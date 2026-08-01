@@ -16,7 +16,7 @@
   "dependencies": {
     "better-sqlite3-multiple-ciphers": "catalog:",
     "drizzle-orm": "^0.45.2",
-    "pg": "^8.21.0"
+    "pg": "^8.22.0"
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",

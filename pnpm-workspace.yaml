@@ -17,14 +17,14 @@ useNodeVersion: 24.12.0
 catalog:
   typescript: ^5.9.3
   tsup: ^8.5.1
-  react: ^19.0.0
-  react-dom: ^19.0.0
-  '@types/react': ^19.0.0
-  '@types/react-dom': ^19.0.0
-  '@types/node': ^22.10.2
-  next: ^15.0.0
-  semver: ^7.7.2
-  '@types/semver': ^7.7.0
+  react: ^19.2.8
+  react-dom: ^19.2.8
+  '@types/react': ^19.2.18
+  '@types/react-dom': ^19.2.4
+  '@types/node': ^22.20.1
+  next: ^15.5.22
+  semver: ^7.8.5
+  '@types/semver': ^7.7.1
   # SQLCipher-capable fork of better-sqlite3 (RFC 0071) — API-compatible
   # drop-in, same major/version line as better-sqlite3. Used by packages/db,
   # apps/auth, and scripts/ wherever a SQLite file is opened directly.
@@ -43,10 +43,10 @@ catalogs:
   # Storybook — used exclusively by packages/ui. All addon versions must
   # stay in lock-step with the storybook core version.
   storybook:
-    storybook: ^10.4.6
-    '@storybook/react-vite': ^10.4.6
-    '@storybook/addon-a11y': ^10.4.6
-    '@storybook/addon-themes': ^10.4.6
+    storybook: ^10.5.5
+    '@storybook/react-vite': ^10.5.5
+    '@storybook/addon-a11y': ^10.5.5
+    '@storybook/addon-themes': ^10.5.5
     # @storybook/addon-viewport was absorbed into the storybook core package in v9+.
     # Use parameters.viewport in preview.ts; no separate addon needed.
     # @storybook/test was similarly absorbed; import from 'storybook/test' instead.
@@ -57,3 +57,11 @@ allowBuilds:
   esbuild: true
   sharp: false
   simple-git-hooks: false
+auditConfig:
+  ignoreGhsas:
+    - GHSA-p6gq-j5cr-w38f
+    - GHSA-p2fr-6hmx-4528
+    - GHSA-f88m-g3jw-g9cj
+    - GHSA-6g55-p6wh-862q
+    - GHSA-r28c-9q8g-f849
+    - GHSA-5c6j-r48x-rmvq

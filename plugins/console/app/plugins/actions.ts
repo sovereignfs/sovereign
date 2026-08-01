@@ -59,8 +59,7 @@ export async function getPluginCatalogAction(): Promise<PluginCatalogEntry[]> {
 }
 
 export type ActivatePluginActionState =
-  | { success: true; alreadyActive: boolean }
-  | { success: false; error: string };
+  { success: true; alreadyActive: boolean } | { success: false; error: string };
 
 export async function activatePluginAction(
   _prev: ActivatePluginActionState | null,
@@ -84,11 +83,7 @@ export async function activatePluginAction(
 // ─── Plugin access policy (RFC 0065 Task 13.7) ───────────────────────────────
 
 export type PluginAccessPolicyValue =
-  | 'everyone'
-  | 'admins'
-  | 'selected_users'
-  | 'selected_groups'
-  | 'disabled';
+  'everyone' | 'admins' | 'selected_users' | 'selected_groups' | 'disabled';
 
 export interface PluginAccessGrantRow {
   userId: string;

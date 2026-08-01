@@ -4,13 +4,7 @@ import styles from './Badge.module.css';
 export type BadgeVariant = 'role' | 'status' | 'mono';
 export type BadgeSize = 'sm' | 'md' | 'lg';
 export type BadgeStatus =
-  | 'active'
-  | 'enabled'
-  | 'deactivated'
-  | 'failed'
-  | 'invited'
-  | 'pending'
-  | 'neutral';
+  'active' | 'enabled' | 'deactivated' | 'failed' | 'invited' | 'pending' | 'neutral';
 
 export interface BadgeProps {
   variant?: BadgeVariant;

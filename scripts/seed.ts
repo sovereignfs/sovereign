@@ -147,8 +147,7 @@ async function seedSqlite(dbPath: string): Promise<void> {
   let realUserCount = 0;
   try {
     const row = db.prepare('SELECT COUNT(*) AS c FROM "user" WHERE "isTestUser" != 1').get() as
-      | { c: number }
-      | undefined;
+      { c: number } | undefined;
     realUserCount = row?.c ?? 0;
   } catch {
     try {
@@ -166,8 +165,7 @@ async function seedSqlite(dbPath: string): Promise<void> {
   const now = new Date().toISOString();
   for (const u of SEED_USERS) {
     const existing = db.prepare('SELECT id FROM "user" WHERE email = ?').get(u.email) as
-      | { id: string }
-      | undefined;
+      { id: string } | undefined;
     if (existing) {
       try {
         db.prepare(`UPDATE "user" SET "isTestUser" = 1 WHERE id = ?`).run(existing.id);

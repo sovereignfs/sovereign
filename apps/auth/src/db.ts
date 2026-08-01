@@ -24,8 +24,7 @@ import {
  */
 
 type AuthDb =
-  | { dialect: 'sqlite'; sqlite: Database.Database }
-  | { dialect: 'postgres'; pool: Pool };
+  { dialect: 'sqlite'; sqlite: Database.Database } | { dialect: 'postgres'; pool: Pool };
 
 function isPostgresUrl(url: string): boolean {
   return url.startsWith('postgres://') || url.startsWith('postgresql://');

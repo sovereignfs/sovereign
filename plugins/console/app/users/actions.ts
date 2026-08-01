@@ -101,10 +101,7 @@ export async function changeRoleAction(formData: FormData): Promise<void> {
   }
   const userId = formData.get('userId') as string;
   const role = formData.get('role') as
-    | 'platform:owner'
-    | 'platform:admin'
-    | 'platform:auditor'
-    | 'platform:user';
+    'platform:owner' | 'platform:admin' | 'platform:auditor' | 'platform:user';
   const res = await adminFetch(`/api/admin/users/${userId}`, {
     method: 'PATCH',
     body: JSON.stringify({ role }),

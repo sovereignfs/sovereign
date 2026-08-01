@@ -49,8 +49,7 @@ try {
 }
 
 const user = db.prepare('SELECT id, email FROM "user" WHERE email = ?').get(email) as
-  | { id: string; email: string }
-  | undefined;
+  { id: string; email: string } | undefined;
 
 if (!user) {
   consola.error(`No user found with email: ${email}`);

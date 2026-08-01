@@ -1498,7 +1498,7 @@ resolver)` registers a resolver; `sdk.data.query(ref, params)` reads from
   `ExportContext { userId, tenantId, options: { includeFiles } }` — respect
   `options.includeFiles` when deciding whether to attach large blobs — and must
   return a `PluginExportSection { pluginId, pluginVersion?, schemaVersion, data,
-  blobs?, secretMetadata?, warnings? }`. `pluginVersion` is optional; the runtime
+blobs?, secretMetadata?, warnings? }`. `pluginVersion` is optional; the runtime
   always overwrites it with your plugin's installed manifest version, so you
   can't misreport it. `secretMetadata` lists metadata for secrets your plugin
   owns (`{ label, provider, exists }`) — **never** include plaintext secret

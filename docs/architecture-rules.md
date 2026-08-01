@@ -62,7 +62,7 @@ Full reference for load-bearing constraints enforced by ESLint, CI, or runtime b
   serves at `/console`. The composed segments are **copies in dev, symlinks in
   production** (`NODE_ENV`) — dev must copy because Next's dev route watcher
   does not follow symlinked route dirs (a symlinked plugin 404s under `next
-  dev`); production uses a real symlink instead so a plugin's imports resolve
+dev`); production uses a real symlink instead so a plugin's imports resolve
   through _its own_ `node_modules` rather than requiring every dependency it
   uses to also be declared in `runtime/package.json`. Composed segments are
   gitignored by a `.gitignore` inside each route group — never edit or commit

@@ -183,6 +183,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.50.0  | Overlay primitive consolidation + Plainwrite ConfirmDialog migration (RFC 0079) | ✅     | [9.19](docs/epics/design-system.md#-919--overlay-primitive-consolidation-and-plainwrite-confirmdialog-migration)  |
 | 0.51.0  | Shared swipe gesture hooks + Tasks/Shopper carousel migration (RFC 0079)        | ✅     | [9.20](docs/epics/design-system.md#-920--shared-swipe-gesture-hooks-and-carousel-migration-tasks-shopper)         |
 | 0.52.0  | Swipeable mobile carousel primitive and responsive-layout hooks (RFC 0079)      | 📋     | [9.21](docs/epics/design-system.md#-921--swipeable-mobile-carousel-primitive-and-responsive-layout-hooks)         |
+| 0.55.0  | CI dependency-vulnerability scanning                                            | ✅     | [0.17](docs/epics/infrastructure.md#-017--ci-dependency-vulnerability-scanning)                                   |
 
 ---
 
@@ -211,6 +212,7 @@ once prioritised.
 | —       | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](docs/epics/design-system.md#-99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
 | —       | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](docs/epics/design-system.md#-910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
 | —       | Non-Docker production deployment, Phase 2 — systemd (RFC 0026)            | 📋     | [0.13](docs/epics/infrastructure.md#-013--non-docker-production-deployment-phase-2--systemd)                                     |
+| —       | Remediate known dependency vulnerabilities                                | 📋     | [0.18](docs/epics/infrastructure.md#-018--remediate-known-dependency-vulnerabilities)                                            |
 | —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035)        | 📋     | [1.8](docs/epics/users-auth.md#-18--progressive-user-verification-phase-1--infrastructure-rfc-0035)                              |
 | —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035)     | 📋     | [1.9](docs/epics/users-auth.md#-19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035)                           |
 | —       | Subtle Sovereign attribution (RFC 0027)                                   | 📋     | [9.13](docs/epics/design-system.md#-913--subtle-sovereign-attribution-rfc-0027)                                                  |

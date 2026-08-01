@@ -220,11 +220,7 @@ export async function setPluginEnabled(
 // ─── Plugin access policy (RFC 0065) ─────────────────────────────────────────
 
 export type PluginAccessPolicyValue =
-  | 'everyone'
-  | 'admins'
-  | 'selected_users'
-  | 'selected_groups'
-  | 'disabled';
+  'everyone' | 'admins' | 'selected_users' | 'selected_groups' | 'disabled';
 
 export interface PluginAccessPolicyRow {
   pluginId: string;
@@ -1593,11 +1589,7 @@ export async function hardDeleteUserPluginSecrets(
 
 export type PluginConnectionScope = 'user' | 'plugin' | 'instance';
 export type PluginConnectionStatus =
-  | 'connected'
-  | 'needs_reauth'
-  | 'paused'
-  | 'disconnected'
-  | 'error';
+  'connected' | 'needs_reauth' | 'paused' | 'disconnected' | 'error';
 
 export interface PluginConnectionAccessContext {
   tenantId: string;

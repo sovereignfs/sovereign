@@ -235,7 +235,7 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   applies to every plugin — platform plugins (`plugins/console`,
   `plugins/launcher`, `plugins/account`), example plugins
   (`example-plugins/*`), and everything the `sv plugin new` / `npm create
-  @sovereignfs/plugin` / `sovereignfs/sovereign-plugin-template` scaffolds
+@sovereignfs/plugin` / `sovereignfs/sovereign-plugin-template` scaffolds
   produce.
 
   **Version-bump commit subjects and release tags use the same identifier.**

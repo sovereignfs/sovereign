@@ -9,10 +9,7 @@ type Finding = {
 };
 
 type TechnicalDocSection =
-  | 'operators'
-  | 'app-developers'
-  | 'architecture-security'
-  | 'contributors';
+  'operators' | 'app-developers' | 'architecture-security' | 'contributors';
 
 const technicalDocumentSections: Record<string, TechnicalDocSection> = {
   'docs/self-hosting.md': 'operators',

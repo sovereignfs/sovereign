@@ -11,9 +11,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@better-auth/passkey": "^1.6.19",
+    "@better-auth/passkey": "^1.6.25",
     "@ducanh2912/next-pwa": "^10.2.9",
-    "@next/env": "^16.2.9",
+    "@next/env": "^16.2.12",
     "@sovereignfs/db": "workspace:*",
     "@sovereignfs/mailer": "workspace:*",
     "@sovereignfs/manifest": "workspace:*",
@@ -30,7 +30,7 @@
     "web-push": "^3.6.7"
   },
   "optionalDependencies": {
-    "ioredis": "^5.3.2"
+    "ioredis": "^5.11.1"
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",

@@ -2,8 +2,7 @@ import { manifestSchema, registryEntrySchema } from './schema';
 import type { RegistryEntry, SovereignManifest } from './types';
 
 export type ValidationResult =
-  | { valid: true; manifest: SovereignManifest }
-  | { valid: false; errors: string[] };
+  { valid: true; manifest: SovereignManifest } | { valid: false; errors: string[] };
 
 /** Flatten a Zod error into human-readable `path: message` strings. */
 function flattenIssues(error: { issues: { path: PropertyKey[]; message: string }[] }): string[] {
@@ -27,8 +26,7 @@ export function validateManifest(input: unknown): ValidationResult {
 }
 
 export type RegistryValidationResult =
-  | { valid: true; entry: RegistryEntry }
-  | { valid: false; errors: string[] };
+  { valid: true; entry: RegistryEntry } | { valid: false; errors: string[] };
 
 /**
  * Validate an unknown value against the registry-entry schema (a thin pointer

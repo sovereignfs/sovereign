@@ -37,12 +37,18 @@ shell layout, and CSP always come from the user's own instance. See
 
 ## Plugin repositories
 
-| Repository                                                                                            | Status          | Purpose                                                                                                                                                                                                                                                                                                      |
-| ----------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`sovereignfs/sovereign-plugin-template`](https://github.com/sovereignfs/sovereign-plugin-template)   | Active template | Canonical standalone plugin starter repository. Use this when creating a plugin outside the monorepo.                                                                                                                                                                                                        |
-| [`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples) | Superseded      | Previously hosted the example plugins (basic, API provider, minimal shell, monetized, overlay). Reversed on 2026-08-01 — the examples now live in-repo under `example-plugins/` (`docs/adhoc/example-plugins-plan.md`, `docs/epics/example-plugins.md` correction note). Kept for historical reference only. |
-| [`sovereignfs/sovereign-tasks`](https://github.com/sovereignfs/sovereign-tasks)                       | Active          | Tasks plugin. A real product plugin, versioned independently of the platform; not part of the default bundle (opt in via `sovereign.plugins.json`).                                                                                                                                                          |
-| [`sovereignfs/sovereign-plainwrite`](https://github.com/sovereignfs/sovereign-plainwrite)             | Active          | Default bundled Plainwrite plugin — a git-backed content editor for static site generators. It is a real product plugin, visible from first boot, and versioned independently of the platform.                                                                                                               |
+Individual product plugin repositories (Tasks, Plainwrite, and any other
+first-party or community plugin) are tracked in the plugin registry
+(`registry/plugins.json`), not in a table on this page — see
+[`registry/CONTRIBUTING.md`](../registry/CONTRIBUTING.md) for the submission
+process. The one exception is
+[`sovereignfs/sovereign-plugin-template`](https://github.com/sovereignfs/sovereign-plugin-template),
+the canonical standalone plugin starter repository — it isn't itself an
+installable plugin, so it has no registry entry.
+
+`sovereignfs/sovereign-plugins-examples` has been retired: the example
+plugins it previously hosted now live in-repo under `example-plugins/` (see
+`docs/adhoc/example-plugins-plan.md`).
 
 ## Documentation and deployment support
 
@@ -55,8 +61,11 @@ shell layout, and CSP always come from the user's own instance. See
 
 ## Naming notes
 
-- Use `sovereignfs/sovereign-tasks`, not `sovereign-plugin-tasks`.
-- Use `sovereignfs/sovereign-plainwrite`, not `sovereign-plugin-plainwrite`.
+- Product plugin repositories follow `sovereignfs/sovereign-plugin-<name>`
+  (e.g. `sovereign-plugin-tasks`, `sovereign-plugin-plainwrite`) — the
+  `plugin-` segment distinguishes an installable plugin repo from platform and
+  client-shell repos at a glance. This does not affect a plugin's own
+  `package.json` name or manifest `id`, which are unrelated to its repo name.
 - `sovereignfs/storybook` and `sovereignfs/sovereignfs.github.io` are deployment
   targets. Edit source stories and docs in `sovereignfs/sovereign`.
 - `sovereignfs/sovereign-infra` is a template that operators fork or use as a

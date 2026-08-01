@@ -108,8 +108,8 @@ change; `runtime`/`bin` patch only if discovery or install code changes.
   ever actually shipping the examples by default, while keeping them in-repo
   also makes them directly browsable as reference code for plugin developers.
   See `docs/adhoc/example-plugins-plan.md`'s matching 2026-08-01 log entry.
-  `sovereignfs/sovereign-plugins-examples` (`docs/repositories.md`) is kept for
-  historical reference only.
+  `sovereignfs/sovereign-plugins-examples` has since been retired outright
+  (2026-08-01) now that nothing references it — see `docs/repositories.md`.
 
 ---
 

@@ -3,6 +3,13 @@
 All notable changes to `@sovereignfs/create-plugin` are documented here.
 The package follows [Semantic Versioning](https://semver.org).
 
+## 0.1.2
+
+- Scaffolded `package.json` now pins `"version": "0.0.0"` instead of `"0.1.0"`.
+  The platform reads a plugin's version exclusively from `manifest.json`;
+  `package.json`'s version field is unused tooling metadata and is never
+  meant to be bumped.
+
 ## 0.1.0
 
 **Initial release** (Task 0.5.27, RFC 0017).

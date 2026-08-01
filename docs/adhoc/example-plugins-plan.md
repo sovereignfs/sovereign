@@ -16,6 +16,43 @@ lightweight logs of scope, decisions, and follow-up work.
 
 ## Implementation log
 
+### 2026-08-01
+
+- **Reversed Phase 4 (externalize shippable example sources).** The seven
+  example plugins (plus a new `Example: Mobile Layout` demoing
+  `@sovereignfs/ui`'s PWA/mobile layout work) moved back in-repo, tracked in
+  git under `example-plugins/` — a sibling of `plugins/`, not a subdirectory
+  of it, and not gitignored. `sovereign.plugins.json`/`scripts/install-plugins.ts`
+  no longer clone them from `sovereignfs/sovereign-plugins-examples` at all.
+  In practice the clone-at-build path never actually shipped any examples by
+  default (`sovereign.plugins.default.json` stayed `{"plugins": []}` the whole
+  time this was "done"), so this closes a gap between documented and actual
+  behavior rather than removing working functionality.
+- **Why:** the clone-based model added build-time network dependence
+  (`git clone` inside the Docker `builder` stage) and cross-repo friction for
+  no realized benefit — nothing was actually shipping through it. Keeping the
+  examples in-repo also makes them directly browsable/copyable for plugin
+  developers, which was an explicit goal of revisiting this.
+- **New mechanism:** `scripts/generate-registry.ts` scans `example-plugins/`
+  alongside `plugins/`, gated by `SOVEREIGN_EXAMPLES_ENABLED` (off by
+  default) — the same env var CON-12 already used for the runtime
+  show/hide toggle now has two layers: build-time composition (this) and
+  runtime visibility (unchanged). Cross-directory duplicate manifest IDs
+  (e.g. a manual copy into `plugins/<id>` alongside `example-plugins/<id>`)
+  fail loudly via the existing `duplicatePluginIds` check, extended to scan
+  both directories. Docker: `ARG SOVEREIGN_EXAMPLES_ENABLED=0` in the
+  `builder` stage (forwarded from `docker-compose*.yml`'s build args); the
+  published GHCR image always uses this default since it has no build step to
+  pass an override to. See `docs/epics/example-plugins.md`'s matching
+  correction notes on 12.2/12.3, and `docs/self-hosting.md`'s "Reference
+  example plugins" section for the operator-facing explanation.
+- **Follow-up closed in the same pass:** the app-builder Docker stage's
+  plugin-manifest/migrations staging loop (feeds `runAllPluginMigrations()`'s
+  `buildIdToDirMap()`) previously only scanned `plugins/*/`. Extended to also
+  stage `example-plugins/*/` when composed, so a future database-backed
+  example doesn't silently skip its migrations at startup (no current example
+  declares a database, so this was latent, not yet observed in practice).
+
 ### 2026-07-02
 
 - Tightened the manifest schema so code accepts only `runtime: "native"`;
@@ -249,6 +286,13 @@ Implementation notes:
 - Include copy-pasteable local test steps in docs, not just in source comments.
 
 ## Repository and default-install model
+
+> **Superseded by the 2026-08-01 implementation-log entry above.** This
+> section is kept verbatim as the original plan/decision record; the
+> externalize-then-clone-at-build model it describes was implemented, then
+> reversed. The examples now live in-repo under `example-plugins/`, composed
+> directly by `scripts/generate-registry.ts` when `SOVEREIGN_EXAMPLES_ENABLED`
+> is set — not installed via `sovereign.plugins.json`.
 
 The shippable examples should move out of the main platform repository, but they
 should still be installed by default for local development and fresh

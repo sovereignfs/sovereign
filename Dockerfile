@@ -24,15 +24,27 @@ RUN pnpm install --frozen-lockfile
 # ---- builder: compose plugins into the monorepo (no app build yet) --------
 FROM deps AS builder
 ENV NODE_ENV=production
-# git is needed to clone the example plugins (and any external plugins declared
-# in sovereign.plugins.json) at their pinned refs. This step requires network
-# access during the build; the refs are pinned so the result is reproducible.
+# Whether to compose example-plugins/ (docs/adhoc/example-plugins-plan.md) into
+# this build. Off by default — a plain `docker build` never ships example
+# routes/code unless explicitly opted in. This is a *build-time* decision
+# distinct from (though it shares an env var with) the *runtime* Console
+# "Show example apps" toggle (RFC 0021/epic 12.3, runtime/src/plugin-status.ts):
+# an example excluded here has no composed route at all, so the runtime
+# toggle has nothing to show regardless of its own setting. The published
+# GHCR image (see .github/workflows/publish-images.yml) passes no build-args,
+# so it always uses this default — only a locally-built image can override it
+# with `--build-arg SOVEREIGN_EXAMPLES_ENABLED=1`.
+ARG SOVEREIGN_EXAMPLES_ENABLED=0
+ENV SOVEREIGN_EXAMPLES_ENABLED=${SOVEREIGN_EXAMPLES_ENABLED}
+# git is needed to clone any external plugins declared in sovereign.plugins.json
+# at their pinned refs. This step requires network access during the build;
+# the refs are pinned so the result is reproducible.
 RUN apk add --no-cache git
-# Clone the declared plugins into plugins/<id>/ at their pinned refs (the example
-# plugins live in sovereignfs/sovereign-plugins-examples), then compose every
-# plugin app/ tree into the route group — both must precede the build. The
-# explicit generate is a safety net for the empty-config case (install:plugins
-# only generates when it actually clones something).
+# Clone the declared external plugins into plugins/<id>/ at their pinned refs,
+# then compose every plugin app/ tree (plugins/ plus example-plugins/ when
+# SOVEREIGN_EXAMPLES_ENABLED is set) into the route group — both must precede
+# the build. The explicit generate is a safety net for the empty-config case
+# (install:plugins only generates when it actually clones something).
 #
 # A plugin entry in sovereign.plugins.json can declare "tokenEnv": "<VAR>" to
 # clone from a private repository (scripts/install-plugins.ts reads
@@ -107,14 +119,28 @@ RUN pnpm --filter @sovereignfs/runtime build
 # relative to the workspace root at server startup — previously absent from
 # the runner image entirely, so every shared/isolated plugin's migrations
 # were silently skipped (existsSync check) with no error logged.
+#
+# example-plugins/*/ is staged into this SAME /app/.deploy/plugins/<dir>
+# namespace (when SOVEREIGN_EXAMPLES_ENABLED composed them above) — the
+# runner-image staging tree makes no distinction by source directory, and
+# buildIdToDirMap() resolves purely by reading each staged manifest.json's
+# `id` field, not by directory naming convention. No current example declares
+# a database (so this is currently a no-op in practice), but a future one that
+# does would otherwise have its migrations silently skipped at startup.
 RUN mkdir -p /app/.deploy/plugins && \
-  for dir in plugins/*/; do \
-    id="$(basename "$dir")"; \
+  stage_plugin_dir() { \
+    id="$(basename "$1")"; \
     dest="/app/.deploy/plugins/$id"; \
     mkdir -p "$dest"; \
-    [ -f "$dir/manifest.json" ] && cp "$dir/manifest.json" "$dest/"; \
-    [ -d "$dir/migrations" ] && cp -r "$dir/migrations" "$dest/migrations"; \
-  done
+    [ -f "$1/manifest.json" ] && cp "$1/manifest.json" "$dest/"; \
+    [ -d "$1/migrations" ] && cp -r "$1/migrations" "$dest/migrations"; \
+  }; \
+  for dir in plugins/*/; do stage_plugin_dir "$dir"; done && \
+  case "$(printf '%s' "$SOVEREIGN_EXAMPLES_ENABLED" | tr '[:upper:]' '[:lower:]')" in \
+    1|true|yes|on) \
+      for dir in example-plugins/*/; do [ -d "$dir" ] && stage_plugin_dir "$dir"; done \
+      ;; \
+  esac
 
 # ---- runner: minimal non-root production image ----------------------------
 FROM node:24-alpine AS runner

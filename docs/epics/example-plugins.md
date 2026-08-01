@@ -91,6 +91,26 @@ change; `runtime`/`bin` patch only if discovery or install code changes.
   layout.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
+**Post-completion corrections:**
+
+- **(2026-08-01 reversal)** The externalization this task shipped has been
+  reversed — the example plugins moved back in-repo, tracked in git under
+  `example-plugins/` (not `plugins/`, and not gitignored). `sovereign.plugins.json`
+  / `scripts/install-plugins.ts` no longer clone them at all; they were never
+  actually populated into the default `sovereign.plugins.default.json` in
+  practice, so this closes a gap where the documented clone-at-build path
+  existed but shipped no examples by default. Composition is now gated
+  directly by `SOVEREIGN_EXAMPLES_ENABLED` in `scripts/generate-registry.ts`
+  (off by default) — a second, build-time meaning for the same env var CON-12
+  already used for runtime visibility (`docs/self-hosting.md`'s "Reference
+  example plugins" section has the full two-layer model). Motivation: the
+  clone-based model added build-time network dependence and friction without
+  ever actually shipping the examples by default, while keeping them in-repo
+  also makes them directly browsable as reference code for plugin developers.
+  See `docs/adhoc/example-plugins-plan.md`'s matching 2026-08-01 log entry.
+  `sovereignfs/sovereign-plugins-examples` (`docs/repositories.md`) is kept for
+  historical reference only.
+
 ---
 
 #### ✅ 12.3 — Admin disable surface for example plugins
@@ -172,5 +192,11 @@ marker is set).
   access-policy axis (previously not, since it defaulted every row-less
   plugin — examples included — to `accessPolicy: 'disabled'` regardless of the
   bulk setting).
+- **(2026-08-01 reversal)** Task 12.2's externalization (this task's
+  dependency) was reversed — see that task's own correction note. The
+  `example: true` manifest marker and everything else this task shipped
+  (Console toggle, `plugin_status` precedence, access-policy resolution) are
+  unaffected; only _where the example plugins' source lives_ and _whether
+  they're composed into a given build_ changed.
 
 ---

@@ -6,7 +6,8 @@
  * uses symlinks): Next's dev route watcher does not follow symlinked route
  * directories, so a symlinked plugin route 404s under `next dev`. To preserve
  * live-edit DX, this script runs the generate watcher — which re-copies on any
- * change under `plugins/` — alongside the Next dev server.
+ * change under `plugins/` (and `example-plugins/`, when
+ * `SOVEREIGN_EXAMPLES_ENABLED` is set) — alongside the Next dev server.
  *
  * Order matters: compose once synchronously so the routes exist before Next's
  * first scan, then start the watcher and the dev server. Ctrl+C — or any child
@@ -55,14 +56,17 @@ process.on('SIGTERM', () => {
   shutdown(0);
 });
 
-// 0. Best-effort: clone any declared plugins (the example plugins, plus any
-// external plugins in sovereign.plugins.json) at their pinned refs. Non-fatal —
-// if it fails (e.g. offline) dev still starts with whatever is already present,
-// you just develop without the freshly-declared plugins until the next run.
+// 0. Best-effort: clone any externally-hosted plugins declared in
+// sovereign.plugins.json at their pinned refs. Example plugins are no longer
+// cloned — they live in-repo under example-plugins/ (docs/adhoc/example-plugins-plan.md,
+// 2026-08-01 correction) and are composed directly by generate-registry.ts
+// when SOVEREIGN_EXAMPLES_ENABLED is set. Non-fatal — if this fails (e.g.
+// offline) dev still starts with whatever is already present, you just
+// develop without the freshly-declared external plugins until the next run.
 const install = spawnSync('tsx', [INSTALL_PLUGINS], { cwd: ROOT, stdio: 'inherit' });
 if (install.status !== 0) {
   console.warn(
-    '[dev] install-plugins did not complete — continuing without the declared external/example plugins.',
+    '[dev] install-plugins did not complete — continuing without the declared external plugins.',
   );
 }
 

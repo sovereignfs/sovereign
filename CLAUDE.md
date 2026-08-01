@@ -498,6 +498,8 @@ runtime/            Sovereign Core (Next.js shell, middleware, registry, SDK bri
 plugins/console/    core admin plugin (platform type)
 plugins/launcher/   home screen plugin (platform type)
 plugins/account/    per-user profile plugin (platform type)
+example-plugins/    in-repo reference/teaching plugins — composed only when
+                    SOVEREIGN_EXAMPLES_ENABLED is set (docs/adhoc/example-plugins-plan.md)
 registry/           public plugin index (plugins.json) + submission process
 scripts/            install-plugins.ts, generate-registry.ts, dev.ts
 bin/sv              CLI (v0.5)

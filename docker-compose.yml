@@ -75,6 +75,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      # Build-time inclusion of example-plugins/ (docs/adhoc/example-plugins-plan.md) —
+      # distinct from the SOVEREIGN_EXAMPLES_ENABLED runtime env var below,
+      # which only controls visibility of whatever this build actually
+      # composed. Off by default; reuses the same var name deliberately (see
+      # the Dockerfile's builder stage comment) so setting it once in .env
+      # both builds the examples in and shows them.
+      args:
+        SOVEREIGN_EXAMPLES_ENABLED: '${SOVEREIGN_EXAMPLES_ENABLED:-0}'
     container_name: sovereign-runtime
     # See the auth service: root override so the host `./data` bind mount is
     # writable. Prod (docker-compose.prod.yml) keeps the image's non-root user.

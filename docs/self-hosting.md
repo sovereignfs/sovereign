@@ -117,12 +117,10 @@ bundle is platform plugins only — nothing else baked in.
 ### Running a larger plugin set in production
 
 Sovereign's community and first-party plugins (Tasks, Plainwrite, Shopper,
-Wallet, Tritext, Healthlog, Ledger, Tally, Docs) and the reference **example
-plugins** (basic, API provider, minimal/overlay shells, monetization demo —
-maintained in [`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples))
-are **not** part of the default bundle. To ship any of them, declare them in
-your own `sovereign.plugins.json` — copy `sovereign.plugins.default.json` as a
-starting template and add entries:
+Wallet, Tritext, Healthlog, Ledger, Tally, Docs) are **not** part of the
+default bundle. To ship any of them, declare them in your own
+`sovereign.plugins.json` — copy `sovereign.plugins.default.json` as a starting
+template and add entries:
 
 ```json
 {
@@ -155,26 +153,40 @@ checkout with no local `sovereign.plugins.json` to pick up.
 Because non-default plugins are cloned during the build, **that build needs
 network access to GitHub.** Pin refs (tags or commit SHAs) for reproducibility.
 
-### Showing/hiding the examples once declared
+### Reference example plugins
 
-If you declare the example plugins in your own `sovereign.plugins.json`,
-they're **hidden by default even once baked in**: their routes 404 and they
-never appear in the launcher or sidebar until you opt in. The easiest way to
-show them is the **Console → Settings → Example plugins** toggle — no env
-editing, no restart. Prefer this in day-to-day use.
+The reference **example plugins** (basic, API provider, minimal/overlay
+shells, monetization demo, mobile layout — teaching artifacts and runtime test
+fixtures, `docs/adhoc/example-plugins-plan.md`) live in-repo under
+`example-plugins/`, tracked in git — they are **not** cloned via
+`sovereign.plugins.json` (an earlier plan moved them to a separate
+`sovereign-plugins-examples` repository; that was reversed on 2026-08-01, see
+`docs/epics/example-plugins.md`'s correction note). A single env var,
+`SOVEREIGN_EXAMPLES_ENABLED`, controls two independent layers:
 
-For provisioning (e.g. a demo image), the `SOVEREIGN_EXAMPLES_ENABLED` runtime
-env var sets the initial default. It is a plain runtime variable — set it in
-`.env` or the container's `environment:`.
+1. **Build time** — whether `example-plugins/` is composed into the build at
+   all. Off by default: a plain `pnpm build` or `docker build` never ships
+   example routes/code. For Docker, this must be passed as a **build ARG**,
+   not just a runtime env — `docker-compose.yml` and `docker-compose.prod.yml`
+   already forward `${SOVEREIGN_EXAMPLES_ENABLED}` from your `.env` as both the
+   build arg and the runtime env, so setting it once does both. **The official
+   CI-published images (`SOVEREIGN_VERSION=...`) always use the Dockerfile's
+   own default (off) — build-time inclusion only applies to an image you build
+   yourself**, since there's no build step at all when pulling a published tag.
+2. **Runtime** — for whatever was actually composed at build time, whether
+   it's shown by default: hidden means routes 404 and it never appears in the
+   launcher or sidebar. The easiest way to show them day-to-day is the
+   **Console → Settings → Example plugins** toggle — no env editing, no
+   restart — but it only has anything to show if the build included them.
 
-| Variable                     | Required | Default | Description                                                                                                                                                                     |
-| ---------------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SOVEREIGN_EXAMPLES_ENABLED` | no       | off     | Seeds whether the bundled example plugins are shown (`1`/`true`/`yes`/`on` = shown). The Console → Settings toggle, once used, is persisted and overrides this. Unset = hidden. |
+| Variable                     | Required | Default | Description                                                                                                                                                                                      |
+| ---------------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SOVEREIGN_EXAMPLES_ENABLED` | no       | off     | Build time: composes `example-plugins/` into the build (`1`/`true`/`yes`/`on`). Runtime: seeds whether they're shown; the Console → Settings toggle, once used, is persisted and overrides this. |
 
-Precedence, highest first: (1) an explicit per-plugin enable/disable on
-**Console → Plugins** (persisted per plugin); (2) the **Console → Settings →
-Example plugins** instance toggle (persisted in `platform_settings`); (3) the
-`SOVEREIGN_EXAMPLES_ENABLED` env default; (4) off.
+Runtime visibility precedence, highest first: (1) an explicit per-plugin
+enable/disable on **Console → Plugins** (persisted per plugin); (2) the
+**Console → Settings → Example plugins** instance toggle (persisted in
+`platform_settings`); (3) the `SOVEREIGN_EXAMPLES_ENABLED` env default; (4) off.
 
 ### Hiding in-development plugins
 

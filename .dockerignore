@@ -9,7 +9,7 @@ node_modules
 # Generated plugin directory — recreated by the generate script
 runtime/app/plugins
 
-# Non-platform plugins (example + external) are cloned fresh at their pinned refs
+# Non-platform, non-example plugins are cloned fresh at their pinned refs
 # inside the builder (see `pnpm install:plugins`). Never copy a local working-tree
 # clone into the context: it is absent from the frozen lockfile and would fail
 # `pnpm install --frozen-lockfile` in the deps stage.
@@ -17,6 +17,12 @@ plugins/*/
 !plugins/account/
 !plugins/console/
 !plugins/launcher/
+
+# example-plugins/ is intentionally NOT ignored here — it's tracked in git and
+# part of the frozen lockfile (unlike plugins/*/ above), so it's copied into
+# the build context like any other workspace package. Whether it's actually
+# composed into the runtime is gated at build time by SOVEREIGN_EXAMPLES_ENABLED
+# (see scripts/generate-registry.ts and the Dockerfile builder stage).
 
 # SQLite databases — mounted as a volume so data persists across rebuilds
 data/*.db

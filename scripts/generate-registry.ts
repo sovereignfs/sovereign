@@ -43,6 +43,14 @@
  * Run via `pnpm generate`; the runtime dev script runs it before `next dev`.
  * Pass `--watch` to re-run when plugin directories are added or removed.
  *
+ * `example-plugins/` (the in-repo teaching/fixture set, `docs/adhoc/example-plugins-plan.md`)
+ * is scanned alongside `plugins/` only when `SOVEREIGN_EXAMPLES_ENABLED` is
+ * truthy — off by default, so a plain build never ships or composes example
+ * routes unless explicitly opted in. This is distinct from (but shares the
+ * env var with) `runtime/src/plugin-status.ts`'s `examplesEnabledByDefault()`,
+ * which gates *visibility* of whatever this step already composed — see that
+ * module's doc comment and `docs/self-hosting.md` for the two-layer model.
+ *
  * See: SRS §3.9 Plugin Loading Model.
  */
 import {
@@ -77,6 +85,7 @@ const isProd = process.env.NODE_ENV === 'production';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PLUGINS_DIR = join(ROOT, 'plugins');
+const EXAMPLE_PLUGINS_DIR = join(ROOT, 'example-plugins');
 const PLUGIN_ICONS_DIR = join(ROOT, 'runtime', 'public', 'plugin-icons');
 const PLUGIN_ENV_FILE = join(ROOT, 'runtime', 'generated', 'plugin-env.ts');
 const PLUGIN_CAPABILITIES_FILE = join(ROOT, 'runtime', 'generated', 'plugin-capabilities.ts');
@@ -115,6 +124,30 @@ const REGISTRY_FILE = join(ROOT, 'runtime', 'generated', 'registry.ts');
 export interface PluginEntry {
   dir: string;
   manifest: SovereignManifest;
+  /**
+   * Absolute path to the directory containing `dir`. Defaults to `PLUGINS_DIR`
+   * when omitted — set explicitly for plugins discovered from a source other
+   * than `plugins/` (currently only `example-plugins/`).
+   */
+  baseDir?: string;
+}
+
+/**
+ * Whether `SOVEREIGN_EXAMPLES_ENABLED` opts this build into scanning and
+ * composing `example-plugins/` alongside `plugins/`. Off by default.
+ *
+ * Mirrors the exact truthy-string parsing in
+ * `runtime/src/plugin-status.ts`'s `examplesEnabledByDefault()` — duplicated
+ * rather than imported, since this script must run standalone (e.g. as the
+ * first step of a Docker build stage, before the runtime package's own
+ * dependency graph — `@sovereignfs/db`, etc. — is available or even built).
+ * That function gates *visibility* of whatever this step already composed;
+ * this one gates whether it gets composed at all. See this file's module doc
+ * comment for the two-layer model.
+ */
+export function examplesEnabledForBuild(): boolean {
+  const v = process.env.SOVEREIGN_EXAMPLES_ENABLED?.trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
 }
 
 export interface ComposeTargetDirs {
@@ -167,13 +200,19 @@ export function duplicatePluginIds(plugins: PluginEntry[]): Map<string, string[]
   return duplicates;
 }
 
-function readPlugins(): PluginEntry[] {
-  if (!existsSync(PLUGINS_DIR)) return [];
+/**
+ * Scan one directory of `<dir>/manifest.json` plugin sources. `baseDir` is
+ * stamped onto each entry when it differs from `PLUGINS_DIR` so downstream
+ * composition steps (which otherwise assume `PLUGINS_DIR`) resolve the
+ * correct source path regardless of which directory a plugin came from.
+ */
+function readPluginsFrom(dir: string): PluginEntry[] {
+  if (!existsSync(dir)) return [];
   const plugins: PluginEntry[] = [];
 
-  for (const entry of readdirSync(PLUGINS_DIR, { withFileTypes: true })) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    const manifestPath = join(PLUGINS_DIR, entry.name, 'manifest.json');
+    const manifestPath = join(dir, entry.name, 'manifest.json');
     if (!existsSync(manifestPath)) continue;
 
     let json: unknown;
@@ -203,15 +242,30 @@ function readPlugins(): PluginEntry[] {
     }
     for (const w of compat.warnings) console.warn(`[generate] warning: ${w}`);
 
-    plugins.push({ dir: entry.name, manifest: result.manifest });
+    plugins.push({
+      dir: entry.name,
+      manifest: result.manifest,
+      ...(dir === PLUGINS_DIR ? {} : { baseDir: dir }),
+    });
+  }
+
+  return plugins;
+}
+
+function readPlugins(): PluginEntry[] {
+  const plugins = readPluginsFrom(PLUGINS_DIR);
+  if (examplesEnabledForBuild()) {
+    plugins.push(...readPluginsFrom(EXAMPLE_PLUGINS_DIR));
   }
 
   const sortedPlugins = sortPluginEntries(plugins);
 
   // Two directories declaring the same manifest id — most commonly a real
-  // clone at plugins/<id> alongside a plugins/<id>.local dev override. Fail
-  // loudly rather than composing both to the same routePrefix and letting the
-  // nav rail render a broken duplicate React key at request time.
+  // clone at plugins/<id> alongside a plugins/<id>.local dev override, or (now
+  // that example-plugins/ can also be composed) an example manually copied
+  // into plugins/<id> as well. Fail loudly rather than composing both to the
+  // same routePrefix and letting the nav rail render a broken duplicate React
+  // key at request time.
   const idDuplicates = duplicatePluginIds(sortedPlugins);
   if (idDuplicates.size > 0) {
     console.error('[generate] more than one plugin directory declares the same manifest id:');
@@ -221,7 +275,9 @@ function readPlugins(): PluginEntry[] {
     console.error(
       '  Remove one of the directories (a plugins/<id>.local dev override should ' +
         'make install-plugins.ts skip cloning the real plugins/<id> — see its ' +
-        '"already installed" check).',
+        '"already installed" check; a plugins/<id> that duplicates an ' +
+        'example-plugins/<id> should be removed in favor of the example, or the ' +
+        'example left disabled via SOVEREIGN_EXAMPLES_ENABLED).',
     );
     process.exit(1);
   }
@@ -409,8 +465,8 @@ function composePlugins(plugins: PluginEntry[]): void {
   const activeModal = new Set<string>();
   const activeMinimal = new Set<string>();
 
-  for (const { dir, manifest } of plugins) {
-    const srcApp = join(PLUGINS_DIR, dir, 'app');
+  for (const { dir, manifest, baseDir } of plugins) {
+    const srcApp = join(baseDir ?? PLUGINS_DIR, dir, 'app');
     if (!existsSync(srcApp)) continue;
     // The public path is the manifest routePrefix, not the source dir name.
     for (const dest of composeTargets(manifest)) {
@@ -447,8 +503,8 @@ function composePlugins(plugins: PluginEntry[]): void {
 function copyPluginIcons(plugins: PluginEntry[]): void {
   mkdirSync(PLUGIN_ICONS_DIR, { recursive: true });
   pruneStalePluginIcons(PLUGIN_ICONS_DIR, new Set(plugins.map((plugin) => plugin.manifest.id)));
-  for (const { dir, manifest } of plugins) {
-    const src = join(PLUGINS_DIR, dir, 'icon.svg');
+  for (const { dir, manifest, baseDir } of plugins) {
+    const src = join(baseDir ?? PLUGINS_DIR, dir, 'icon.svg');
     if (existsSync(src)) {
       cpSync(src, join(PLUGIN_ICONS_DIR, `${manifest.id}.svg`));
     }
@@ -509,11 +565,11 @@ export function collectPluginEnv(
   const decls: EnvDecl[] = [];
   const namespacedKeys = new Map<string, string>(); // namespacedKey → pluginId
 
-  for (const { dir, manifest } of plugins) {
+  for (const { dir, manifest, baseDir } of plugins) {
     if (!manifest.env) continue;
 
     // Read the plugin's optional .env file for dev defaults.
-    const envFilePath = join(pluginsDir, dir, '.env');
+    const envFilePath = join(baseDir ?? pluginsDir, dir, '.env');
     let pluginDotEnv: Record<string, string> = {};
     if (existsSync(envFilePath)) {
       pluginDotEnv = parseEnvFile(readFileSync(envFilePath, 'utf8'));
@@ -524,12 +580,13 @@ export function collectPluginEnv(
       // though .env is gitignored, secrets in a plain file can be unintentionally
       // shared (sent as attachments, checked into a fork, etc.).
       if (decl.secret === true && key in pluginDotEnv) {
+        const dirLabel = baseDir === EXAMPLE_PLUGINS_DIR ? 'example-plugins' : 'plugins';
         return {
           ok: false,
           decls: [],
           error:
             `[generate] plugin ${manifest.id}: env key "${key}" is marked secret but ` +
-            `has a value in plugins/${dir}/.env. ` +
+            `has a value in ${dirLabel}/${dir}/.env. ` +
             'Set secret vars in the process environment — never in a .env file.',
         };
       }
@@ -754,7 +811,7 @@ export function collectPluginSchedules(
   const generatedDir = opts.generatedDir ?? GENERATED_DIR;
   const decls: ScheduleDecl[] = [];
 
-  for (const { dir, manifest } of plugins) {
+  for (const { dir, manifest, baseDir } of plugins) {
     if (!manifest.schedules) continue;
     const targets = resolveComposeTargets(manifest);
     if (!targets.ok) return { decls: [], error: targets.error };
@@ -762,13 +819,14 @@ export function collectPluginSchedules(
     // (default/overlay → the (plugins) group; minimal → the (minimal) group).
     const baseTarget = targets.targets[0];
     for (const sched of manifest.schedules) {
-      const srcFile = join(pluginsDir, dir, sched.entry);
+      const srcFile = join(baseDir ?? pluginsDir, dir, sched.entry);
       if (!existsSync(srcFile)) {
+        const dirLabel = baseDir === EXAMPLE_PLUGINS_DIR ? 'example-plugins' : 'plugins';
         return {
           decls: [],
           error:
             `[generate] plugin ${manifest.id} schedule "${sched.id}" declares entry ` +
-            `"${sched.entry}" but that file does not exist in plugins/${dir}/.`,
+            `"${sched.entry}" but that file does not exist in ${dirLabel}/${dir}/.`,
         };
       }
       const composedFile = join(baseTarget, sched.entry.replace(/^app\//, ''));
@@ -849,7 +907,8 @@ export function generate(): void {
   writePluginCapabilities(plugins);
   writePluginSchedules(plugins);
   console.log(
-    `[generate] ${String(plugins.length)} plugin(s) composed (${isProd ? 'symlink' : 'copy'}).`,
+    `[generate] ${String(plugins.length)} plugin(s) composed (${isProd ? 'symlink' : 'copy'}` +
+      `${examplesEnabledForBuild() ? ', examples included' : ''}).`,
   );
 }
 
@@ -862,10 +921,19 @@ if (isCliEntrypoint()) {
 }
 
 if (isCliEntrypoint() && process.argv.includes('--watch')) {
-  console.log('[generate] watching plugins/ for changes…');
+  const watchExamples = examplesEnabledForBuild();
+  console.log(
+    `[generate] watching plugins/${watchExamples ? ' and example-plugins/' : ''} for changes…`,
+  );
   let timer: NodeJS.Timeout | undefined;
   watch(PLUGINS_DIR, { recursive: true }, () => {
     clearTimeout(timer);
     timer = setTimeout(generate, 150);
   });
+  if (watchExamples && existsSync(EXAMPLE_PLUGINS_DIR)) {
+    watch(EXAMPLE_PLUGINS_DIR, { recursive: true }, () => {
+      clearTimeout(timer);
+      timer = setTimeout(generate, 150);
+    });
+  }
 }

@@ -99,6 +99,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      # Build-time inclusion of example-plugins/ (docs/adhoc/example-plugins-plan.md) —
+      # only applies when actually building locally (no SOVEREIGN_VERSION set
+      # above); the published GHCR image bakes in the Dockerfile's own default
+      # and ignores this. Distinct from the SOVEREIGN_EXAMPLES_ENABLED runtime
+      # env var below, which only controls visibility of whatever the build
+      # actually composed — see the Dockerfile's builder stage comment.
+      args:
+        SOVEREIGN_EXAMPLES_ENABLED: '${SOVEREIGN_EXAMPLES_ENABLED:-0}'
     container_name: sovereign-runtime
     ports:
       - '${RUNTIME_PORT:-4000}:3000'
@@ -204,6 +212,10 @@ services:
       context: .
       dockerfile: Dockerfile
       target: tools
+      # Kept in sync with the runtime service's build arg above so `sv`
+      # commands run against the same composed monorepo runtime was built with.
+      args:
+        SOVEREIGN_EXAMPLES_ENABLED: '${SOVEREIGN_EXAMPLES_ENABLED:-0}'
     container_name: sovereign-tools
     environment:
       SOVEREIGN_DB_ENCRYPTION_KEY: '${SOVEREIGN_DB_ENCRYPTION_KEY:-}'

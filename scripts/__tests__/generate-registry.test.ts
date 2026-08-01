@@ -16,6 +16,7 @@ import {
   collectPluginSchedules,
   duplicateApiProviders,
   duplicatePluginIds,
+  examplesEnabledForBuild,
   linkOrCopyTarget,
   pruneGeneratedEntries,
   pruneStalePluginIcons,
@@ -44,8 +45,12 @@ function manifest(overrides: Partial<SovereignManifest> = {}): SovereignManifest
   };
 }
 
-function entry(dir: string, overrides: Partial<SovereignManifest> = {}): PluginEntry {
-  return { dir, manifest: manifest(overrides) };
+function entry(
+  dir: string,
+  overrides: Partial<SovereignManifest> = {},
+  baseDir?: string,
+): PluginEntry {
+  return { dir, manifest: manifest(overrides), ...(baseDir ? { baseDir } : {}) };
 }
 
 describe('resolveComposeTargets', () => {
@@ -133,6 +138,45 @@ describe('plugin generation guards', () => {
     ]);
 
     expect(duplicates.size).toBe(0);
+  });
+
+  // A manually-copied example (e.g. plugins/example-basic) coexisting with
+  // the real source under example-plugins/example-basic — same manifest id,
+  // different baseDir. The duplicate-id check is keyed on manifest id only,
+  // so this must fail loudly exactly like the plugins/<id>.local case.
+  it('detects a duplicate id across plugins/ and example-plugins/', () => {
+    const duplicates = duplicatePluginIds([
+      entry('example-basic', { id: 'fs.sovereign.example-basic' }),
+      entry('example-basic', { id: 'fs.sovereign.example-basic' }, '/repo/example-plugins'),
+    ]);
+
+    expect(Object.fromEntries(duplicates)).toEqual({
+      'fs.sovereign.example-basic': ['example-basic', 'example-basic'],
+    });
+  });
+});
+
+describe('examplesEnabledForBuild', () => {
+  const ORIGINAL = process.env.SOVEREIGN_EXAMPLES_ENABLED;
+
+  afterEach(() => {
+    if (ORIGINAL === undefined) delete process.env.SOVEREIGN_EXAMPLES_ENABLED;
+    else process.env.SOVEREIGN_EXAMPLES_ENABLED = ORIGINAL;
+  });
+
+  it('is off by default (unset)', () => {
+    delete process.env.SOVEREIGN_EXAMPLES_ENABLED;
+    expect(examplesEnabledForBuild()).toBe(false);
+  });
+
+  it.each(['1', 'true', 'yes', 'on', 'TRUE', ' on '])('treats %j as enabled', (value) => {
+    process.env.SOVEREIGN_EXAMPLES_ENABLED = value;
+    expect(examplesEnabledForBuild()).toBe(true);
+  });
+
+  it.each(['0', 'false', 'no', 'off', ''])('treats %j as disabled', (value) => {
+    process.env.SOVEREIGN_EXAMPLES_ENABLED = value;
+    expect(examplesEnabledForBuild()).toBe(false);
   });
 });
 
@@ -249,6 +293,38 @@ describe('plugin env generation', () => {
     expect(rejected.ok).toBe(false);
     expect(rejected.error).toContain('marked secret');
     expect(rejected.error).toContain('plugins/notes/.env');
+  });
+
+  it("reads a plugin's .env from its own baseDir, not the shared pluginsDir fallback", () => {
+    const examplesRoot = mkdtempSync(join(tmpdir(), 'generate-registry-examples-'));
+    try {
+      mkdirSync(join(examplesRoot, 'example-basic'));
+      writeFileSync(
+        join(examplesRoot, 'example-basic', '.env'),
+        'PUBLIC_LABEL=From example-plugins\n',
+      );
+
+      const result = collectPluginEnv(
+        [
+          entry(
+            'example-basic',
+            {
+              id: 'fs.sovereign.example-basic',
+              env: { PUBLIC_LABEL: { description: 'Label', scope: 'runtime' } },
+            },
+            examplesRoot,
+          ),
+        ],
+        root, // pluginsDir fallback — must NOT be where this entry's .env is read from
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.decls).toMatchObject([
+        { pluginId: 'fs.sovereign.example-basic', defaultValue: 'From example-plugins' },
+      ]);
+    } finally {
+      rmSync(examplesRoot, { recursive: true, force: true });
+    }
   });
 });
 
@@ -422,6 +498,36 @@ describe('plugin schedules generation', () => {
     });
     expect(result.error).toBeUndefined();
     expect(result.decls).toHaveLength(0);
+  });
+
+  it('resolves a schedule entry from its own baseDir, not the shared pluginsDir fallback', () => {
+    const examplesRoot = mkdtempSync(join(tmpdir(), 'generate-registry-schedules-examples-'));
+    try {
+      mkdirSync(join(examplesRoot, 'example-basic', 'app', '_jobs'), { recursive: true });
+      writeFileSync(
+        join(examplesRoot, 'example-basic', 'app', '_jobs', 'sync.ts'),
+        'export default async () => {};',
+      );
+      const exampleEntry = entry(
+        'example-basic',
+        {
+          id: 'fs.sovereign.example-basic',
+          schedules: [{ id: 'sync', intervalMinutes: 5, entry: 'app/_jobs/sync.ts' }],
+        },
+        examplesRoot,
+      );
+
+      const result = collectPluginSchedules([exampleEntry], {
+        pluginsDir: root, // must NOT be where this entry's schedule file is read from
+        generatedDir: join(root, 'runtime', 'generated'),
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(result.decls).toHaveLength(1);
+      expect(result.decls[0]?.pluginId).toBe('fs.sovereign.example-basic');
+    } finally {
+      rmSync(examplesRoot, { recursive: true, force: true });
+    }
   });
 
   it('renders an importing module for declared schedules', () => {

@@ -59,32 +59,31 @@ workflow. Edit the manifest, implement your `app/page.tsx`, then install with
 ### Example plugins
 
 Reference plugins serve as both documentation and runtime test fixtures. They
-live in their own repository —
-[`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples)
-— and are **not** part of the default bundle (epic task 3.31): declare the
-ones you want in your own local, gitignored `sovereign.plugins.json` and
-`scripts/install-plugins.ts` clones them (pinned to a commit) into
-`plugins/<slug>/`, same as any other plugin. Once declared and cloned, they're
+live in-repo under [`example-plugins/`](../example-plugins/README.md), tracked
+in git — browse that directory for fully-working code to adapt. (An earlier
+plan moved them to a separate `sovereign-plugins-examples` repository; that was
+reversed on 2026-08-01 — see `docs/epics/example-plugins.md`'s correction
+note.) They're **not** part of the default bundle: `example-plugins/` is only
+composed into the build when `SOVEREIGN_EXAMPLES_ENABLED` is set, and even then
 hidden by default per-instance until shown from the Console — see
-[Showing/hiding the examples once declared](self-hosting.md#showinghiding-the-examples-once-declared):
+[Reference example plugins](self-hosting.md#reference-example-plugins):
 
-| Plugin ID                             | Route                     | What it shows                                                                |
-| ------------------------------------- | ------------------------- | ---------------------------------------------------------------------------- |
-| `fs.sovereign.example-basic`          | `/example-basic`          | Session reading, `@sovereignfs/ui`, CSS tokens, plugin-declared capabilities |
-| `fs.sovereign.example-overlay-small`  | `/example-overlay-small`  | `shell: "overlay"` with `overlaySize: "sm"`                                  |
-| `fs.sovereign.example-overlay-medium` | `/example-overlay-medium` | `shell: "overlay"` with `overlaySize: "md"`                                  |
-| `fs.sovereign.example-overlay-large`  | `/example-overlay-large`  | `shell: "overlay"` with `overlaySize: "lg"`                                  |
-| `fs.sovereign.example-minimal`        | `/example-minimal`        | `shell: "minimal"` chrome-free/fullscreen composition                        |
-| `fs.sovereign.example-api`            | `/example-api`            | API provider serve-route pattern (PLT-16)                                    |
-| `fs.sovereign.example-monetized`      | `/example-monetized`      | Monetization manifest field, Ed25519 license gating, paywall flow (RFC 0003) |
+| Plugin ID                             | Route                     | What it shows                                                                         |
+| ------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------- |
+| `fs.sovereign.example-basic`          | `/example-basic`          | Session reading, `@sovereignfs/ui`, CSS tokens, plugin-declared capabilities          |
+| `fs.sovereign.example-overlay-small`  | `/example-overlay-small`  | `shell: "overlay"` with `overlaySize: "sm"`                                           |
+| `fs.sovereign.example-overlay-medium` | `/example-overlay-medium` | `shell: "overlay"` with `overlaySize: "md"`                                           |
+| `fs.sovereign.example-overlay-large`  | `/example-overlay-large`  | `shell: "overlay"` with `overlaySize: "lg"`                                           |
+| `fs.sovereign.example-minimal`        | `/example-minimal`        | `shell: "minimal"` chrome-free/fullscreen composition                                 |
+| `fs.sovereign.example-api`            | `/example-api`            | API provider serve-route pattern (PLT-16)                                             |
+| `fs.sovereign.example-monetized`      | `/example-monetized`      | Monetization manifest field, Ed25519 license gating, paywall flow (RFC 0003)          |
+| `fs.sovereign.example-mobile`         | `/example-mobile`         | `@sovereignfs/ui`'s PWA/mobile layout: responsive breakpoint fork, swipeable carousel |
 
-Browse the [`sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples)
-repository for fully-working code to adapt. Once declared in
-`sovereign.plugins.json` and installed (`pnpm install:plugins`), the cloned
-copies are under `plugins/example-*/`, but those are git-ignored working
-copies — the repository is the source of truth. See
-[Sovereign repositories](repositories.md) for the full first-party repository
-map.
+To develop against them locally, set `SOVEREIGN_EXAMPLES_ENABLED=1` in your
+`.env` before `pnpm dev` — `scripts/generate-registry.ts` then composes
+`example-plugins/` alongside `plugins/`, with the same copy-on-change dev
+watcher as any other plugin. See [Sovereign repositories](repositories.md) for
+the full first-party repository map.
 
 The `example-monetized` plugin ships with a committed demo keypair and a
 pre-signed token, so you can test the paywall → import → access flow immediately

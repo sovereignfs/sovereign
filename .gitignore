@@ -39,10 +39,14 @@ runtime/generated/
 
 # Externally-installed plugins (cloned by scripts/install-plugins.ts) are not
 # committed here — they live in their own repositories. Ignore every plugin
-# directory except the platform plugins that ship in this monorepo. The example
-# plugins live in sovereignfs/sovereign-plugins-examples and are cloned in by
-# scripts/install-plugins.ts (see sovereign.plugins.json), so they are ignored
-# here too.
+# directory except the platform plugins that ship in this monorepo.
+#
+# Example plugins are NOT covered by this rule — they live in-repo, tracked in
+# git, under example-plugins/ (not plugins/), and are composed into the build
+# by scripts/generate-registry.ts when SOVEREIGN_EXAMPLES_ENABLED is set. See
+# docs/adhoc/example-plugins-plan.md's 2026-08-01 correction: this supersedes
+# an earlier attempt (Task 12.2) to clone them at build time from a dedicated
+# sovereign-plugins-examples repository.
 /plugins/*/
 !/plugins/account/
 !/plugins/console/

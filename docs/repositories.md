@@ -37,12 +37,12 @@ shell layout, and CSP always come from the user's own instance. See
 
 ## Plugin repositories
 
-| Repository                                                                                            | Status          | Purpose                                                                                                                                                                                        |
-| ----------------------------------------------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`sovereignfs/sovereign-plugin-template`](https://github.com/sovereignfs/sovereign-plugin-template)   | Active template | Canonical standalone plugin starter repository. Use this when creating a plugin outside the monorepo.                                                                                          |
-| [`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples) | Active          | Example plugins demonstrating basic, API provider, minimal shell, monetized, and overlay app patterns. The platform bundles these at build/install time as hidden-by-default examples.         |
-| [`sovereignfs/sovereign-tasks`](https://github.com/sovereignfs/sovereign-tasks)                       | Active          | Tasks plugin. A real product plugin, versioned independently of the platform; not part of the default bundle (opt in via `sovereign.plugins.json`).                                            |
-| [`sovereignfs/sovereign-plainwrite`](https://github.com/sovereignfs/sovereign-plainwrite)             | Active          | Default bundled Plainwrite plugin — a git-backed content editor for static site generators. It is a real product plugin, visible from first boot, and versioned independently of the platform. |
+| Repository                                                                                            | Status          | Purpose                                                                                                                                                                                                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`sovereignfs/sovereign-plugin-template`](https://github.com/sovereignfs/sovereign-plugin-template)   | Active template | Canonical standalone plugin starter repository. Use this when creating a plugin outside the monorepo.                                                                                                                                                                                                        |
+| [`sovereignfs/sovereign-plugins-examples`](https://github.com/sovereignfs/sovereign-plugins-examples) | Superseded      | Previously hosted the example plugins (basic, API provider, minimal shell, monetized, overlay). Reversed on 2026-08-01 — the examples now live in-repo under `example-plugins/` (`docs/adhoc/example-plugins-plan.md`, `docs/epics/example-plugins.md` correction note). Kept for historical reference only. |
+| [`sovereignfs/sovereign-tasks`](https://github.com/sovereignfs/sovereign-tasks)                       | Active          | Tasks plugin. A real product plugin, versioned independently of the platform; not part of the default bundle (opt in via `sovereign.plugins.json`).                                                                                                                                                          |
+| [`sovereignfs/sovereign-plainwrite`](https://github.com/sovereignfs/sovereign-plainwrite)             | Active          | Default bundled Plainwrite plugin — a git-backed content editor for static site generators. It is a real product plugin, visible from first boot, and versioned independently of the platform.                                                                                                               |
 
 ## Documentation and deployment support
 
@@ -55,7 +55,6 @@ shell layout, and CSP always come from the user's own instance. See
 
 ## Naming notes
 
-- Use `sovereignfs/sovereign-plugins-examples`, not `sovereign-examples`.
 - Use `sovereignfs/sovereign-tasks`, not `sovereign-plugin-tasks`.
 - Use `sovereignfs/sovereign-plainwrite`, not `sovereign-plugin-plainwrite`.
 - `sovereignfs/storybook` and `sovereignfs/sovereignfs.github.io` are deployment

@@ -11,7 +11,7 @@
       "description": "A privacy-first document workspace.",
       "author": {
         "name": "kasunben",
-        "email": "kasunben@proton.me"
+        "email": "sv-docs@rohr.openfs.io"
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
@@ -30,7 +30,7 @@
       "description": "A private personal health profile, measurements, labs, medications, and notes tracker.",
       "author": {
         "name": "kasunben",
-        "email": "kasunben@proton.me"
+        "email": "sv-healthlog@rohr.openfs.io"
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
@@ -49,7 +49,7 @@
       "description": "Budget-first personal finance tracker with savings jars and multi-currency, plus a net-worth asset overview.",
       "author": {
         "name": "kasunben",
-        "email": "kasunben@proton.me"
+        "email": "sv-ledger@rohr.openfs.io"
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
@@ -65,10 +65,10 @@
         "url": "https://github.com/kasunben/sovereign-plugin-papertrail"
       },
       "name": "PaperTrail",
-      "description": "Evidence-mapping canvas — map your evidence, follow the story.",
+      "description": "Evidence-mapping canvas \u2014 map your evidence, follow the story.",
       "author": {
         "name": "kasunben",
-        "email": "kasunben@proton.me"
+        "email": "sv-papertrail@rohr.openfs.io"
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
@@ -87,7 +87,7 @@
       "description": "A git-backed content editor for static site generators.",
       "author": {
         "name": "kasunben",
-        "email": "kasunben@proton.me"
+        "email": "sv-plainwrite@rohr.openfs.io"
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
@@ -106,7 +106,7 @@
       "description": "A lightweight spreadsheet with formulas and a built-in currency conversion function.",
       "author": {
         "name": "kasunben",
-        "email": "kasunben@proton.me"
+        "email": "sv-sheets@rohr.openfs.io"
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
@@ -125,7 +125,7 @@
       "description": "A shared grocery list.",
       "author": {
         "name": "kasunben",
-        "email": "kasunben@proton.me"
+        "email": "sv-shopper@rohr.openfs.io"
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
@@ -144,7 +144,7 @@
       "description": "Shared expense tracking and debt settlement.",
       "author": {
         "name": "kasunben",
-        "email": "kasunben@proton.me"
+        "email": "sv-tally@rohr.openfs.io"
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
@@ -163,7 +163,7 @@
       "description": "A minimal, privacy-first task manager.",
       "author": {
         "name": "kasunben",
-        "email": "kasunben@proton.me"
+        "email": "sv-tasks@rohr.openfs.io"
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
@@ -182,7 +182,7 @@
       "description": "Trilingual content and translation management.",
       "author": {
         "name": "kasunben",
-        "email": "kasunben@proton.me"
+        "email": "sv-tritext@rohr.openfs.io"
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
@@ -201,7 +201,7 @@
       "description": "A private wallet for loyalty cards, encrypted documents, and personal financial records.",
       "author": {
         "name": "kasunben",
-        "email": "kasunben@proton.me"
+        "email": "sv-wallet@rohr.openfs.io"
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {

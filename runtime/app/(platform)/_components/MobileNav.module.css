@@ -190,6 +190,15 @@
   transition: background 0.1s;
 }
 
+/* Console's tile uses an inline @sovereignfs/ui Icon (currentColor stroke)
+   rather than an <img>-sourced plugin SVG — .drawerGridIcon's `color` is
+   the monogram-fallback text color (muted), too light for a stroke icon.
+   Matches the sidebar's Console icon (.icon in shell.module.css), which
+   uses --sv-color-text-primary for the same reason. */
+.drawerGridIconSettings {
+  color: var(--sv-color-text-primary);
+}
+
 .drawerGridIconImg {
   width: 26px;
   height: 26px;

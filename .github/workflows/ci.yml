@@ -45,7 +45,7 @@ jobs:
       test: ${{ steps.classify.outputs.test }}
       audit: ${{ steps.classify.outputs.audit }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -166,7 +166,7 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
       needs.changes.outputs.format == 'true')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: pnpm format:check
 
@@ -180,7 +180,7 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
       needs.changes.outputs.lint == 'true')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: pnpm lint
 
@@ -194,7 +194,7 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
       needs.changes.outputs.typecheck == 'true')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       # runtime/generated/*.ts is gitignored (session/plugin-dependent build
       # output) — regenerate it before typechecking runtime/src, which imports
@@ -212,7 +212,7 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
       needs.changes.outputs.design_tokens == 'true')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: pnpm design:tokens:check
 
@@ -226,7 +226,7 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
       needs.changes.outputs.generate_validate == 'true')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       # `pnpm generate` validates every manifest (exits non-zero on an invalid
       # one) and writes runtime/generated/registry.ts; the runtime typecheck then
@@ -244,7 +244,7 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
       needs.changes.outputs.build == 'true')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: pnpm build
 
@@ -276,7 +276,7 @@ jobs:
     env:
       TEST_DATABASE_URL: postgres://sovereign:sovereign@localhost:5432/sovereign_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       # runtime/generated/*.ts is gitignored (session/plugin-dependent build
       # output) — regenerate it before running runtime/src tests that import
@@ -294,7 +294,7 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
       needs.changes.outputs.audit == 'true')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       # --prod scopes this to production-shipped dependencies, not build/dev
       # tooling; --audit-level=high keeps the signal actionable. Pre-existing,

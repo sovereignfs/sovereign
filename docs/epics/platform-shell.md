@@ -891,6 +891,53 @@ what that app needs — as a product-scoping mechanism, never a security boundar
 - With no focus header, routing is byte-for-byte unchanged.
 - Session, capability, and plugin-permission gates are untouched.
 
+#### ✅ 2.28 — General per-IP rate limiting in `runtime/middleware.ts`
+
+**Goal:** Close a real gap identified in a platform-hardening survey: every
+path `runtime/middleware.ts` gates — session-gated pages/API, the anonymous
+public `/api/<slug>/*` namespace (RFC 0042/PLT-16), and manifest-declared
+public plugin page routes — had zero abuse-prevention layer. Only `apps/auth`'s
+better-auth server had any rate limiting, and only for its own
+sign-in/sign-up/reset endpoints.
+
+**Deliverables:**
+
+- `runtime/src/rate-limit.ts` — a general, IP-keyed fixed-window limiter,
+  the same bucket shape as the existing `checkDirectoryRateLimit`
+  (`runtime/src/directory.ts`) and `checkPluginMailerRateLimit`
+  (`runtime/src/plugin-mailer.ts`), applied per-IP instead of per-user/plugin.
+  Deliberately coarse — a floor against scripted floods, not per-endpoint
+  policy; those two existing feature-specific limiters are unaffected.
+- `clientIp()` — resolves the caller's IP from the **last** hop of
+  `X-Forwarded-For` (the entry a single trusted reverse proxy itself appended,
+  not the client-forgeable first entry), falling back to `X-Real-IP`, then a
+  fixed sentinel bucket.
+- Wired into `middleware.ts` as the first check, before the public-API-namespace
+  branch's own fetch — a 429 short-circuits before any downstream work.
+  Response carries `Retry-After` and the CSP header (every middleware return
+  path must, per `docs/architecture-rules.md`).
+- `SOVEREIGN_RATE_LIMIT_DISABLED` (default: enabled — a security control fails
+  closed), `SOVEREIGN_RATE_LIMIT_WINDOW_MS` (default 60000),
+  `SOVEREIGN_RATE_LIMIT_MAX_REQUESTS` (default 300) — documented in
+  `.env.example` and `docs/self-hosting.md`, including the single-reverse-proxy
+  trust assumption behind `clientIp()`.
+
+**Dependencies:** None.
+
+**SRS reference:** NFR-02 (abuse prevention).
+
+**Review checklist:**
+
+- Requests under the configured max pass through unaffected; exceeding it
+  returns 429 with `Retry-After` and the CSP header.
+- The check runs before any fetch the public-API-namespace branch or session
+  verification would otherwise make — verified by asserting no fetch occurs
+  once rate-limited.
+- Different IPs (via the last `X-Forwarded-For` hop) are tracked independently.
+- `SOVEREIGN_RATE_LIMIT_DISABLED` bypasses the check entirely.
+- `docs/self-hosting.md`'s reverse-proxy section states the single-proxy trust
+  assumption and its bypass risk if the runtime port is also exposed directly.
+
 ## Related RFCs
 
 - [RFC 0001 — Overlay shell variant](../rfcs/0001-overlay-shell-variant.md)

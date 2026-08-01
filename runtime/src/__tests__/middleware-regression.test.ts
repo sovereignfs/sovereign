@@ -1,6 +1,7 @@
 import type { SovereignManifest } from '@sovereignfs/manifest';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetGlobalRateLimitForTests } from '../rate-limit';
 import type { VerifiedSession } from '../session-verify';
 
 const mockState = vi.hoisted(() => ({
@@ -25,6 +26,8 @@ vi.mock('@/src/registry', async () => {
   const actual = await import('../registry');
   return { ...actual, getInstalledPlugins: () => mockState.installedPlugins };
 });
+
+vi.mock('@/src/rate-limit', async () => import('../rate-limit'));
 
 vi.mock('@/src/route-guard', async () => import('../route-guard'));
 
@@ -184,10 +187,14 @@ describe('runtime middleware regressions', () => {
       calls: [],
     };
     installFetchMock(fetchState);
+    resetGlobalRateLimitForTests();
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    delete process.env.SOVEREIGN_RATE_LIMIT_DISABLED;
+    delete process.env.SOVEREIGN_RATE_LIMIT_MAX_REQUESTS;
+    delete process.env.SOVEREIGN_RATE_LIMIT_WINDOW_MS;
   });
 
   it('fails closed by redirecting unauthenticated POST requests to /login with 303', async () => {
@@ -470,6 +477,68 @@ describe('runtime middleware regressions', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('location')).toBeNull();
+    });
+  });
+
+  describe('rate limiting', () => {
+    it('allows requests under the configured max', async () => {
+      process.env.SOVEREIGN_RATE_LIMIT_MAX_REQUESTS = '2';
+
+      const first = await middleware(request('/launcher'));
+      const second = await middleware(request('/launcher'));
+
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+    });
+
+    it('returns 429 with Retry-After and the CSP header once the per-IP max is exceeded', async () => {
+      process.env.SOVEREIGN_RATE_LIMIT_MAX_REQUESTS = '1';
+
+      const first = await middleware(request('/launcher'));
+      const second = await middleware(request('/launcher'));
+
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(429);
+      expect(await second.text()).toBe('Too Many Requests');
+      expect(second.headers.get('Retry-After')).toBeTruthy();
+      expect(second.headers.get('content-security-policy')).toBeTruthy();
+    });
+
+    it('short-circuits before any downstream work — no fetch is made once rate-limited', async () => {
+      process.env.SOVEREIGN_RATE_LIMIT_MAX_REQUESTS = '1';
+      fetchState.calls = [];
+
+      await middleware(request('/launcher'));
+      fetchState.calls = [];
+      const limited = await middleware(request('/launcher'));
+
+      expect(limited.status).toBe(429);
+      expect(fetchState.calls).toHaveLength(0);
+    });
+
+    it('tracks separate IPs independently via the last X-Forwarded-For hop', async () => {
+      process.env.SOVEREIGN_RATE_LIMIT_MAX_REQUESTS = '1';
+
+      const first = await middleware(
+        request('/launcher', { headers: { 'x-forwarded-for': '1.2.3.4' } }),
+      );
+      const second = await middleware(
+        request('/launcher', { headers: { 'x-forwarded-for': '5.6.7.8' } }),
+      );
+
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+    });
+
+    it('is bypassed entirely when SOVEREIGN_RATE_LIMIT_DISABLED is set', async () => {
+      process.env.SOVEREIGN_RATE_LIMIT_MAX_REQUESTS = '1';
+      process.env.SOVEREIGN_RATE_LIMIT_DISABLED = '1';
+
+      const first = await middleware(request('/launcher'));
+      const second = await middleware(request('/launcher'));
+
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
     });
   });
 });

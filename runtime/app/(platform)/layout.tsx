@@ -222,7 +222,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
             </aside>
 
             {/* Mobile header: brand · active-plugin title · bell · avatar menu (RFC 0013).
-                Console is added to the avatar menu for admins (no sidebar on mobile).
+                Console is a tile in the Apps drawer for admins (no sidebar on mobile).
                 Omitted entirely (not CSS-hidden) when the current plugin's
                 shellConfig.mobileHeader is false (RFC 0075). */}
             {showMobileHeader && (
@@ -244,7 +244,6 @@ export default async function PlatformLayout({ children }: { children: ReactNode
                     avatarImageClassName={styles.avatarImage}
                     triggerClassName={styles.avatar}
                     placement="header"
-                    showConsole={isAdmin}
                     userName={userName}
                     userEmail={userEmail}
                     userImage={userImage}
@@ -266,6 +265,8 @@ export default async function PlatformLayout({ children }: { children: ReactNode
               <MobileNav
                 plugins={pluginList}
                 launcherIconUrl={launcher?.icon ? `/plugin-icons/${launcher.id}.svg` : undefined}
+                isAdmin={isAdmin}
+                hydrate={isOfflineRoute}
               />
             )}
           </div>

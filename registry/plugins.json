@@ -1,4 +1,214 @@
 {
   "registryVersion": 1,
-  "plugins": []
+  "plugins": [
+    {
+      "id": "fs.sovereign.docs",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/sovereignfs/sovereign-plugin-docs"
+      },
+      "name": "Docs",
+      "description": "A privacy-first document workspace.",
+      "author": {
+        "name": "kasunben",
+        "email": "kasunben@proton.me"
+      },
+      "license": "AGPL-3.0-or-later",
+      "provenance": {
+        "commit": "18de9da191a3e2df6d59b648d886cb82f93228fd",
+        "contentHash": "sha256:96509bbe139f34d2383c066d2a1535955b2673bb5193e374f817fb8439b58605",
+        "validatedAt": "2026-08-01T13:12:11.937Z"
+      }
+    },
+    {
+      "id": "fs.sovereign.healthlog",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/sovereignfs/sovereign-plugin-healthlog"
+      },
+      "name": "HealthLog",
+      "description": "A private personal health profile, measurements, labs, medications, and notes tracker.",
+      "author": {
+        "name": "kasunben",
+        "email": "kasunben@proton.me"
+      },
+      "license": "AGPL-3.0-or-later",
+      "provenance": {
+        "commit": "72f84765bcdd6d4612b58cc43aaf205c94c9cf7a",
+        "contentHash": "sha256:6915ccd0cf6f285f9ab692c1b51b5b6ec9d4204ae96987f6329f314b21986563",
+        "validatedAt": "2026-08-01T13:12:12.755Z"
+      }
+    },
+    {
+      "id": "fs.sovereign.ledger",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/sovereignfs/sovereign-plugin-ledger"
+      },
+      "name": "Ledger",
+      "description": "Budget-first personal finance tracker with savings jars and multi-currency, plus a net-worth asset overview.",
+      "author": {
+        "name": "kasunben",
+        "email": "kasunben@proton.me"
+      },
+      "license": "AGPL-3.0-or-later",
+      "provenance": {
+        "commit": "d50625ad8898df0a88797d5492ae6d1479aea325",
+        "contentHash": "sha256:97d92a9886f40a34dc46a83ce82d252dea4c42ee37b5f873dbde76bab093461d",
+        "validatedAt": "2026-08-01T13:12:13.555Z"
+      }
+    },
+    {
+      "id": "io.openfs.papertrail",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/kasunben/sovereign-plugin-papertrail"
+      },
+      "name": "PaperTrail",
+      "description": "Evidence-mapping canvas — map your evidence, follow the story.",
+      "author": {
+        "name": "kasunben",
+        "email": "kasunben@proton.me"
+      },
+      "license": "AGPL-3.0-or-later",
+      "provenance": {
+        "commit": "28863e5ba3a61a90a81a298bfc9a5acd23d8f57d",
+        "contentHash": "sha256:98b0a976a1ad542fd0ba9da64bb216160bd5d7f33732a9989e633bce0417e9f4",
+        "validatedAt": "2026-08-01T13:12:14.752Z"
+      }
+    },
+    {
+      "id": "fs.sovereign.plainwrite",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/sovereignfs/sovereign-plugin-plainwrite"
+      },
+      "name": "Plainwrite",
+      "description": "A git-backed content editor for static site generators.",
+      "author": {
+        "name": "kasunben",
+        "email": "kasunben@proton.me"
+      },
+      "license": "AGPL-3.0-or-later",
+      "provenance": {
+        "commit": "33b9666432e1f5a413181d9e1be4ff4e3b4993e6",
+        "contentHash": "sha256:2e13ff560a2b28a8243550d36f34ab50c8749913200f35b3309474675d48250e",
+        "validatedAt": "2026-08-01T13:12:15.535Z"
+      }
+    },
+    {
+      "id": "fs.sovereign.sheets",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/sovereignfs/sovereign-plugin-sheets"
+      },
+      "name": "Sheets",
+      "description": "A lightweight spreadsheet with formulas and a built-in currency conversion function.",
+      "author": {
+        "name": "kasunben",
+        "email": "kasunben@proton.me"
+      },
+      "license": "AGPL-3.0-or-later",
+      "provenance": {
+        "commit": "5333b779f5966567655427f25690967f3986637a",
+        "contentHash": "sha256:242d3c30f9be7a727bea8ecccc293f75309ba171f099d15fb886ce4dc30e9db3",
+        "validatedAt": "2026-08-01T13:12:16.285Z"
+      }
+    },
+    {
+      "id": "fs.sovereign.shopper",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/sovereignfs/sovereign-plugin-shopper"
+      },
+      "name": "Shopper",
+      "description": "A shared grocery list.",
+      "author": {
+        "name": "kasunben",
+        "email": "kasunben@proton.me"
+      },
+      "license": "AGPL-3.0-or-later",
+      "provenance": {
+        "commit": "bef538f1448cbdcac44f3fad6c226f10a096d52d",
+        "contentHash": "sha256:12daa71e5e99381f70a3ec15cce7b882fce482fa79866f79fa69ba7be2288df6",
+        "validatedAt": "2026-08-01T13:12:17.011Z"
+      }
+    },
+    {
+      "id": "fs.sovereign.tally",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/sovereignfs/sovereign-plugin-tally"
+      },
+      "name": "Tally",
+      "description": "Shared expense tracking and debt settlement.",
+      "author": {
+        "name": "kasunben",
+        "email": "kasunben@proton.me"
+      },
+      "license": "AGPL-3.0-or-later",
+      "provenance": {
+        "commit": "924db3197394892d06cc5e42ba45e31abd895ee8",
+        "contentHash": "sha256:fc2e5a102dec5075c5e339a9026966378adc1d2d8093eaa0ad24f3f23ecf7e1a",
+        "validatedAt": "2026-08-01T13:12:17.775Z"
+      }
+    },
+    {
+      "id": "fs.sovereign.tasks",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/sovereignfs/sovereign-plugin-tasks"
+      },
+      "name": "Tasks",
+      "description": "A minimal, privacy-first task manager.",
+      "author": {
+        "name": "kasunben",
+        "email": "kasunben@proton.me"
+      },
+      "license": "AGPL-3.0-or-later",
+      "provenance": {
+        "commit": "1ce86e66fe664cda0f73eaf8b8772e8e395e818e",
+        "contentHash": "sha256:862d613dc280131606b981fdfb6d7374fe4cc7261b2701abd8302dff719dbc86",
+        "validatedAt": "2026-08-01T13:12:18.576Z"
+      }
+    },
+    {
+      "id": "com.mooniak.tritext",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/sovereignfs/sovereign-plugin-tritext"
+      },
+      "name": "Tritext",
+      "description": "Trilingual content and translation management.",
+      "author": {
+        "name": "kasunben",
+        "email": "kasunben@proton.me"
+      },
+      "license": "AGPL-3.0-or-later",
+      "provenance": {
+        "commit": "8dc08eb6608ae371947a189d79eac6f198e23ba2",
+        "contentHash": "sha256:9e8e8a7b7d3a6e3be2ffb81b15bfef70c6c94f1e90626a39dc8b0ddac66976e5",
+        "validatedAt": "2026-08-01T13:12:19.322Z"
+      }
+    },
+    {
+      "id": "fs.sovereign.wallet",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/sovereignfs/sovereign-plugin-wallet"
+      },
+      "name": "Wallet",
+      "description": "A private wallet for loyalty cards, encrypted documents, and personal financial records.",
+      "author": {
+        "name": "kasunben",
+        "email": "kasunben@proton.me"
+      },
+      "license": "AGPL-3.0-or-later",
+      "provenance": {
+        "commit": "79d0c45914ade1b733b04f65f581008bb888b929",
+        "contentHash": "sha256:b6d2e4511427db0d339c8ca4408d980be6e7797c3d7572ff5b0dde814a7456f6",
+        "validatedAt": "2026-08-01T13:12:20.097Z"
+      }
+    }
+  ]
 }

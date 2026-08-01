@@ -49,13 +49,13 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     await loginAndSave(
       browser,
       'admin@sovereign.local',
-      'admin-dev-password',
+      'sovereign',
       path.join(AUTH_DIR, 'admin.json'),
     );
     await loginAndSave(
       browser,
       'user@sovereign.local',
-      'user-dev-password',
+      'sovereign',
       path.join(AUTH_DIR, 'user.json'),
     );
 

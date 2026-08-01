@@ -27,10 +27,12 @@ The suite expects the dev/test seed users created by `pnpm sv seed`; global
 setup runs that command automatically. The seed is non-production-gated and
 idempotent.
 
-| Email                   | Password             | Role             |
-| ----------------------- | -------------------- | ---------------- |
-| `admin@sovereign.local` | `admin-dev-password` | `platform:owner` |
-| `user@sovereign.local`  | `user-dev-password`  | `platform:user`  |
+| Email                     | Password    | Role               |
+| ------------------------- | ----------- | ------------------ |
+| `owner@sovereign.local`   | `sovereign` | `platform:owner`   |
+| `admin@sovereign.local`   | `sovereign` | `platform:admin`   |
+| `auditor@sovereign.local` | `sovereign` | `platform:auditor` |
+| `user@sovereign.local`    | `sovereign` | `platform:user`    |
 
 ## Running
 

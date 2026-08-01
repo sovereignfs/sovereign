@@ -1407,8 +1407,9 @@ SOVEREIGN_DEV_DATABASE_URL=file:./data/sovereign-dev.db
 **Step 2 — Seed the mock database:**
 
 ```bash
-# Seeds admin@dev.local / admin-dev-password and user@dev.local / user-dev-password
-# into the database pointed at by SOVEREIGN_DEV_DATABASE_URL (or DATABASE_URL if not set).
+# Seeds owner@sovereign.local, admin@sovereign.local, auditor@sovereign.local, and
+# user@sovereign.local (all password: sovereign) into the database pointed at by
+# SOVEREIGN_DEV_DATABASE_URL (or DATABASE_URL if not set).
 DATABASE_URL=file:./data/sovereign-dev.db pnpm sv seed
 ```
 
@@ -1452,7 +1453,7 @@ mock database. Remove the header to return to real data — no restart needed.
 | Auth database (`auth.db`) | **Real** — user records, passwords, MFA are untouched        |
 | Activity log              | **Real** — dev-mode activations are logged to the real DB    |
 
-In v1 there is no way to mock the auth layer on prod (the "auth crux" per RFC 0020). Use the seeded test credentials (`admin@dev.local`, `user@dev.local`) on a local or staging instance for that level of isolation.
+In v1 there is no way to mock the auth layer on prod (the "auth crux" per RFC 0020). Use the seeded test credentials (`owner@sovereign.local`, `admin@sovereign.local`, `auditor@sovereign.local`, `user@sovereign.local`) on a local or staging instance for that level of isolation.
 
 ### Safety properties
 

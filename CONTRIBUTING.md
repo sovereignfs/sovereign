@@ -87,13 +87,15 @@ git push --no-verify origin <branch>
 
 ### Dev database seed
 
-`sv seed` inserts two known-password test users into the auth database so you
-can sign in immediately without registering manually:
+`sv seed` inserts four known-password test users (one per platform role) into
+the auth database so you can sign in immediately without registering manually:
 
-| Email                   | Password             | Role             |
-| ----------------------- | -------------------- | ---------------- |
-| `admin@sovereign.local` | `admin-dev-password` | `platform:owner` |
-| `user@sovereign.local`  | `user-dev-password`  | `platform:user`  |
+| Email                     | Password    | Role               |
+| ------------------------- | ----------- | ------------------ |
+| `owner@sovereign.local`   | `sovereign` | `platform:owner`   |
+| `admin@sovereign.local`   | `sovereign` | `platform:admin`   |
+| `auditor@sovereign.local` | `sovereign` | `platform:auditor` |
+| `user@sovereign.local`    | `sovereign` | `platform:user`    |
 
 ```bash
 pnpm sv seed

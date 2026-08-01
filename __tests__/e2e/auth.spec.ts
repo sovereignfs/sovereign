@@ -20,7 +20,7 @@ test.describe('Auth — golden paths', () => {
     await page.goto(`${RUNTIME}/`);
     await page.waitForSelector('#login-email');
     await page.fill('#login-email', 'admin@sovereign.local');
-    await page.fill('#login-password', 'admin-dev-password');
+    await page.fill('#login-password', 'sovereign');
     await page.click('button[type="submit"]');
     // Can't wait for a URL change: the page is already at RUNTIME/ before
     // submitting (see above), so waitForURL(RUNTIME/) would resolve instantly

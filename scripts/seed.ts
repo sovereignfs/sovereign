@@ -1,12 +1,21 @@
 /**
  * Idempotent dev/test seed (RFC 0019). Populates a dev database with baseline
- * platform data and two per-role test users:
+ * platform data and four per-role test users (all password: sovereign):
  *
- *   admin@sovereign.local   password: admin-dev-password   (platform:owner)
- *   user@sovereign.local    password: user-dev-password    (platform:user)
+ *   owner@sovereign.local     (platform:owner)
+ *   admin@sovereign.local     (platform:admin)
+ *   auditor@sovereign.local   (platform:auditor)
+ *   user@sovereign.local      (platform:user)
  *
- * HARD-GATED TO NON-PROD: refuses to run when NODE_ENV=production unless the
- * SOVEREIGN_SEED_ALLOW_PROD override is set. Never run against a real instance.
+ * HARD-GATED TO NON-PROD, two independent checks, both bypassed only by
+ * SOVEREIGN_SEED_ALLOW_PROD=true:
+ *   1. Refuses to run when NODE_ENV=production (catches the documented
+ *      Docker `tools` path, which sets NODE_ENV=production).
+ *   2. Refuses to run if the target auth database already has any real
+ *      (non-test) user account (catches a local shell run pointed at a
+ *      real instance's database via AUTH_DATABASE_URL/DATABASE_URL, where
+ *      NODE_ENV is not production).
+ * Never run against a real instance.
  *
  * Run via: `pnpm sv seed`  or  `pnpm tsx scripts/seed.ts`
  */
@@ -51,15 +60,27 @@ if (process.env.NODE_ENV === 'production' && process.env.SOVEREIGN_SEED_ALLOW_PR
 /** Seed user definitions — exported for use in integration tests. */
 export const SEED_USERS = [
   {
+    email: 'owner@sovereign.local',
+    name: 'Dev Owner',
+    password: 'sovereign',
+    role: 'platform:owner' as const,
+  },
+  {
     email: 'admin@sovereign.local',
     name: 'Dev Admin',
-    password: 'admin-dev-password',
-    role: 'platform:owner' as const,
+    password: 'sovereign',
+    role: 'platform:admin' as const,
+  },
+  {
+    email: 'auditor@sovereign.local',
+    name: 'Dev Auditor',
+    password: 'sovereign',
+    role: 'platform:auditor' as const,
   },
   {
     email: 'user@sovereign.local',
     name: 'Dev User',
-    password: 'user-dev-password',
+    password: 'sovereign',
     role: 'platform:user' as const,
   },
 ] as const;
@@ -88,6 +109,31 @@ function resolveDbPath(url: string, wsRoot: string): string {
   return isAbsolute(path) ? path : resolve(wsRoot, path);
 }
 
+/**
+ * Second, independent guard on top of the NODE_ENV check above. That check
+ * only catches the documented Docker `tools` path (which sets
+ * NODE_ENV=production); it does nothing if someone runs `pnpm sv seed` /
+ * `pnpm tsx scripts/seed.ts` from a plain local shell (NODE_ENV unset or
+ * "development") while AUTH_DATABASE_URL happens to point at a real
+ * instance's database — e.g. a copy-pasted prod .env, or a shared
+ * staging DB that already has real users. Refuse whenever the target
+ * database already has any non-test user account, since that means real
+ * accounts exist and seeding would plant known-password (`sovereign`)
+ * accounts on top of them.
+ */
+function refuseIfRealUsersExist(realUserCount: number): void {
+  if (process.env.SOVEREIGN_SEED_ALLOW_PROD === 'true') return;
+  if (realUserCount > 0) {
+    consola.error(
+      `Refusing to seed: this auth database already has ${String(realUserCount)} real ` +
+        '(non-test) user account(s). sv seed inserts accounts with a well-known password ' +
+        '("sovereign") and must never run against a database with real users. If this really ' +
+        'is a disposable test/staging database, set SOVEREIGN_SEED_ALLOW_PROD=true.',
+    );
+    process.exit(1);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Auth DB seeding
 // ---------------------------------------------------------------------------
@@ -97,6 +143,25 @@ async function seedSqlite(dbPath: string): Promise<void> {
   const key = dbEncryptionKeyFromEnv();
   checkEncryptionMarker(defaultDataDir(), key !== undefined);
   const db = openKeyedSqlite(dbPath, key);
+
+  let realUserCount = 0;
+  try {
+    const row = db.prepare('SELECT COUNT(*) AS c FROM "user" WHERE "isTestUser" != 1').get() as
+      | { c: number }
+      | undefined;
+    realUserCount = row?.c ?? 0;
+  } catch {
+    try {
+      // isTestUser column missing (predates that migration) but the table
+      // exists — count everything as "real" rather than assume it's safe.
+      const row = db.prepare('SELECT COUNT(*) AS c FROM "user"').get() as { c: number } | undefined;
+      realUserCount = row?.c ?? 0;
+    } catch {
+      // "user" table doesn't exist yet — brand-new DB, nothing to protect.
+      realUserCount = 0;
+    }
+  }
+  refuseIfRealUsersExist(realUserCount);
 
   const now = new Date().toISOString();
   for (const u of SEED_USERS) {
@@ -134,6 +199,25 @@ async function seedPostgres(connString: string): Promise<void> {
   const { Pool } = await import('pg');
   const pool = new Pool({ connectionString: connString });
   try {
+    let realUserCount = 0;
+    try {
+      const { rows } = await pool.query(
+        'SELECT COUNT(*) AS c FROM "user" WHERE "isTestUser" != true',
+      );
+      realUserCount = Number((rows[0] as { c: string } | undefined)?.c ?? 0);
+    } catch {
+      try {
+        // isTestUser column missing (predates that migration) but the table
+        // exists — count everything as "real" rather than assume it's safe.
+        const { rows } = await pool.query('SELECT COUNT(*) AS c FROM "user"');
+        realUserCount = Number((rows[0] as { c: string } | undefined)?.c ?? 0);
+      } catch {
+        // "user" table doesn't exist yet — brand-new DB, nothing to protect.
+        realUserCount = 0;
+      }
+    }
+    refuseIfRealUsersExist(realUserCount);
+
     const now = new Date().toISOString();
     for (const u of SEED_USERS) {
       const { rowCount } = await pool.query('SELECT id FROM "user" WHERE email = $1', [u.email]);
@@ -192,10 +276,12 @@ async function main(): Promise<void> {
 
   consola.box(
     [
-      'Seed complete. Test accounts:',
+      'Seed complete. Test accounts (all password: sovereign):',
       '',
-      '  admin@sovereign.local   password: admin-dev-password   (platform:owner)',
-      '  user@sovereign.local    password: user-dev-password    (platform:user)',
+      '  owner@sovereign.local     (platform:owner)',
+      '  admin@sovereign.local     (platform:admin)',
+      '  auditor@sovereign.local   (platform:auditor)',
+      '  user@sovereign.local      (platform:user)',
       '',
       'These are dev-only credentials — NEVER use in production.',
     ].join('\n'),

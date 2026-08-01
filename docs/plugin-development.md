@@ -1398,7 +1398,7 @@ The manifest value is not required to change. If you do update it (e.g. when pub
   "shell": "default",
   "icon": "icon.svg",
   "permissions": ["auth:session", "db:readWrite"],
-  "repository": "https://github.com/sovereignfs/sovereign-tasks",
+  "repository": "https://github.com/sovereignfs/sovereign-plugin-tasks",
   "compatibility": { "minPlatformVersion": "0.5.0" }
 }
 ```

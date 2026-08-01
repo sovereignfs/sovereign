@@ -125,8 +125,8 @@ template and add entries:
 ```json
 {
   "plugins": [
-    { "id": "sovereign-tasks", "repository": "...", "ref": "v0.15.1" },
-    { "id": "sovereign-healthlog", "repository": "...", "ref": "v0.2.0" }
+    { "id": "sovereign-plugin-tasks", "repository": "...", "ref": "v0.15.1" },
+    { "id": "sovereign-plugin-healthlog", "repository": "...", "ref": "v0.2.0" }
   ]
 }
 ```

@@ -35,41 +35,34 @@ jobs:
       # the checkout has none, so install:plugins would otherwise fall back to
       # sovereign.plugins.default.json (empty — platform plugins only). Declare
       # exactly what this job needs instead:
-      #   - example-basic: no spec exercises it directly, but it's required to
-      #     keep launcher.spec.ts's generic "click the first tile" test
-      #     passing. The launcher grid sorts installed plugins alphabetically
-      #     by manifest id (scripts/generate-registry.ts); without a plugin
-      #     that sorts before "fs.sovereign.example-monetized", that paywalled
-      #     plugin becomes the first tile and the test's plain-navigation
-      #     assertion fails on the paywall redirect instead. example-basic
-      #     ("...example-basic" < "...example-monetized") is a free,
-      #     ungated plugin, so it restores the original assumption cheaply.
-      #   - example-monetized: the paywall golden path exercises this plugin
-      #     directly (see __tests__/e2e/paywall.spec.ts, global-setup.ts).
-      #   - sovereign-healthlog: not exercised by any spec's UI flow, but kept
-      #     deliberately for its `database.requireEncryption: true` manifest —
-      #     boot-time regression coverage for the exact per-plugin encryption
-      #     enforcement epic task 8.15 fixed (RFC 0071).
+      #   - sovereign-plugin-healthlog: not exercised by any spec's UI flow,
+      #     but kept deliberately for its `database.requireEncryption: true`
+      #     manifest — boot-time regression coverage for the exact per-plugin
+      #     encryption enforcement epic task 8.15 fixed (RFC 0071).
+      #   - example-basic and example-monetized are NOT declared here: they
+      #     live in-repo under `example-plugins/` (`docs/adhoc/example-plugins-plan.md`,
+      #     2026-08-01 correction) and are composed automatically by the
+      #     `SOVEREIGN_EXAMPLES_ENABLED=true` env var set below, once the
+      #     runtime dev server (started by Playwright's webServer) picks up
+      #     the .env written in a later step. example-basic keeps
+      #     launcher.spec.ts's generic "click the first tile" test passing —
+      #     the launcher grid sorts installed plugins alphabetically by
+      #     manifest id, and without a plugin sorting before
+      #     "fs.sovereign.example-monetized" that paywalled plugin becomes the
+      #     first tile, breaking the test's plain-navigation assertion.
+      #     example-monetized is exercised directly by the paywall golden path
+      #     (see __tests__/e2e/paywall.spec.ts, global-setup.ts). Declaring
+      #     them here too would double-compose them (once from `plugins/`,
+      #     once from `example-plugins/`) and trip the duplicate-manifest-id
+      #     guard in `scripts/generate-registry.ts`.
       - name: Declare plugins for e2e
         run: |
           cat > sovereign.plugins.json <<'EOF'
           {
             "plugins": [
               {
-                "id": "example-basic",
-                "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
-                "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",
-                "subdir": "example-basic"
-              },
-              {
-                "id": "example-monetized",
-                "repository": "https://github.com/sovereignfs/sovereign-plugins-examples.git",
-                "ref": "40ab20ed9a46e129cf6efbd9d0164ea27ef8485a",
-                "subdir": "example-monetized"
-              },
-              {
-                "id": "sovereign-healthlog",
-                "repository": "https://github.com/sovereignfs/sovereign-healthlog.git",
+                "id": "sovereign-plugin-healthlog",
+                "repository": "https://github.com/sovereignfs/sovereign-plugin-healthlog.git",
                 "ref": "v0.2.0"
               }
             ]
@@ -95,7 +88,7 @@ jobs:
       # SOVEREIGN_DB_ENCRYPTION_KEY is generated fresh per run, not a stored
       # secret — the checkout (and its data/ dir) is ephemeral per job, so
       # there's nothing to decrypt across runs and no key to persist. Set here
-      # so sovereign-healthlog (declared above, `database.requireEncryption:
+      # so sovereign-plugin-healthlog (declared above, `database.requireEncryption:
       # true`, RFC 0071) actually gets encrypted rather than just warning
       # (epic task 8.15 — a missing key no longer blocks the whole platform's
       # boot, only that one plugin runs unencrypted). The webServer starts

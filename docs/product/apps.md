@@ -27,7 +27,7 @@ and bottom sheets.
 Tasks uses the Sovereign account and instance database rather than requiring a
 separate task-service account or deployment.
 
-[Source: sovereign-tasks](https://github.com/sovereignfs/sovereign-tasks)
+[Source: sovereign-plugin-tasks](https://github.com/sovereignfs/sovereign-plugin-tasks)
 
 ### Sovereign Shopper
 
@@ -40,7 +40,7 @@ recording, and direct list sharing with other users on the instance.
 Shopper demonstrates how a focused collaborative app can reuse Sovereign
 identity, user selection, notifications, and app-scoped data.
 
-[Source: sovereign-shopper](https://github.com/sovereignfs/sovereign-shopper)
+[Source: sovereign-plugin-shopper](https://github.com/sovereignfs/sovereign-plugin-shopper)
 
 ### Sovereign Plainwrite
 
@@ -55,7 +55,7 @@ Plainwrite is an example of a larger domain app using the SDK for identity,
 secrets, external connections, notifications, activity, portability, and data
 contracts while keeping its publishing workflow plugin-owned.
 
-[Source: sovereign-plainwrite](https://github.com/sovereignfs/sovereign-plainwrite)
+[Source: sovereign-plugin-plainwrite](https://github.com/sovereignfs/sovereign-plugin-plainwrite)
 
 ### Sovereign Wallet
 
@@ -94,9 +94,9 @@ plugins/
 ├── launcher/                       built-in workspace app
 ├── account/                        built-in account app
 ├── console/                        built-in operator app
-├── sovereign-tasks/                first-party app
-├── sovereign-shopper/              first-party app
-├── sovereign-plainwrite/           first-party app
+├── sovereign-plugin-tasks/         first-party app
+├── sovereign-plugin-shopper/       first-party app
+├── sovereign-plugin-plainwrite/    first-party app
 ├── sovereign-wallet/               first-party app under development
 ├── example-basic/                  SDK reference
 ├── example-api/                    public API reference

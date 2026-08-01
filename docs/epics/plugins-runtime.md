@@ -104,7 +104,7 @@ and `files` fields pointing to `dist/`.
     "plugins": [
       {
         "id": "fs.sovereign.tasks",
-        "repository": "https://github.com/sovereignfs/sovereign-tasks"
+        "repository": "https://github.com/sovereignfs/sovereign-plugin-tasks"
       },
       {
         "id": "io.example.plugin",

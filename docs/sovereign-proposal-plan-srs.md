@@ -593,7 +593,7 @@ Every plugin contains a `manifest.json` at its root. The `packages/manifest` pac
   "compatibility": {
     "minPlatformVersion": "0.1.0"
   },
-  "repository": "https://github.com/sovereignfs/sovereign-tasks"
+  "repository": "https://github.com/sovereignfs/sovereign-plugin-tasks"
 }
 ```
 

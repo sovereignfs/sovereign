@@ -480,6 +480,95 @@ describe('runtime middleware regressions', () => {
     });
   });
 
+  describe('forged x-sovereign-* header stripping', () => {
+    const forgedHeaders = {
+      'x-sovereign-user-id': 'attacker',
+      'x-sovereign-user-role': 'platform:owner',
+      'x-sovereign-user-email': 'attacker@example.test',
+      'x-sovereign-user-capabilities': '["console:access"]',
+      'x-sovereign-plugin-id': publicRoutePlugin.id,
+    };
+
+    it('strips a forged header on the public /api/* rewrite (no session, no plugin auth of its own)', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/api/blog/posts/1', { headers: forgedHeaders }));
+
+      expect(response.status).toBe(200);
+      expect(middlewareRewrite(response)).toBe(
+        'http://runtime.test/api-composer/serve/blog/posts/1',
+      );
+      for (const name of Object.keys(forgedHeaders)) {
+        expect(response.headers.get(`x-middleware-request-${name}`)).toBeNull();
+      }
+    });
+
+    it('strips a forged header on an anonymous manifest-declared public route', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/blog/p/some-slug', { headers: forgedHeaders }));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-id')).toBeNull();
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-role')).toBeNull();
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-email')).toBeNull();
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-capabilities')).toBeNull();
+      // The real plugin id for this route is still injected — only the
+      // forger's attempted override of it is what must not survive.
+      expect(response.headers.get('x-middleware-request-x-sovereign-plugin-id')).toBe(
+        publicRoutePlugin.id,
+      );
+    });
+
+    it('replaces (does not merge with) a forged header on an authenticated public route with a session', async () => {
+      fetchState.session = session('platform:user');
+
+      const response = await middleware(
+        request('/blog/p/some-slug', {
+          headers: { ...forgedHeaders, 'x-sovereign-user-role': 'platform:owner' },
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-id')).toBe('user-1');
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-role')).toBe(
+        'platform:user',
+      );
+    });
+
+    it('strips a forged x-sovereign-plugin-id on an authenticated route outside any plugin prefix', async () => {
+      // `/account` isn't under any installed plugin's routePrefix, so the
+      // normal gate's `if (currentPlugin) headers.set(...)` never runs —
+      // a bare clone would let the forged value through untouched.
+      const response = await middleware(
+        request('/account', { headers: { 'x-sovereign-plugin-id': 'com.attacker.evil' } }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-request-x-sovereign-plugin-id')).toBeNull();
+    });
+
+    it('replaces a forged x-sovereign-user-name with the real session value', async () => {
+      const response = await middleware(
+        request('/launcher', { headers: { 'x-sovereign-user-name': 'Forged Name' } }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-name')).toBe('Test User');
+    });
+
+    it('strips a forged x-sovereign-user-image on an authenticated route (session has none)', async () => {
+      const response = await middleware(
+        request('/launcher', {
+          headers: { 'x-sovereign-user-image': 'https://attacker.test/avatar.png' },
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-image')).toBeNull();
+    });
+  });
+
   describe('rate limiting', () => {
     it('allows requests under the configured max', async () => {
       process.env.SOVEREIGN_RATE_LIMIT_MAX_REQUESTS = '2';

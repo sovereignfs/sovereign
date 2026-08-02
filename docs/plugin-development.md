@@ -1653,7 +1653,12 @@ version?)` (sync, `false` until the handshake resolves — capabilities are
   `requestPermission()` since this module can't read a server-injected
   header — see the permission table below for the enforcement caveat this
   implies). Returns typed `DeviceResult` (`ok`/`unavailable`/`denied`/
-  `dismissed`/`failed`) instead of throwing for expected outcomes.
+  `dismissed`/`failed`) instead of throwing for expected outcomes. On a
+  native-bridge transport (Tauri today; `supports('notifications.native')`),
+  `getPermission()`/`requestPermission()` always report `'granted'` — the
+  bridge exposes a one-shot `show`, not a queryable permission state, and the
+  OS gates the real permission at `show()`-time, surfaced through that call's
+  own `DeviceResult` rather than an up-front check (workstream 0003 leg 3).
 - **`env`** — plugin-scoped environment variables (RFC 0018). `sdk.env.get(key)`
   reads the calling plugin's `SV_PLUGIN_<SLUG>_<KEY>` env var, identified by
   the `x-sovereign-plugin-id` request header. Returns `null` when absent or

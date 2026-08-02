@@ -65,6 +65,13 @@ listed in RFC 0038).
 
 #### 📋 17.2 — System tray and OS notifications
 
+> **Notification half done via [workstream 0003](../workstreams/0003-device-bridge-across-surfaces.md)
+> leg 3, rescoped to the Tauri transport of `@sovereignfs/bridge`** —
+> `sdk.device.nativeNotifications.show()` (not `sdk.device.notify()` as
+> originally sketched below) routes to native OS notifications on desktop via
+> `tauri-plugin-notification`, empirically verified end-to-end. The system
+> tray half below is unrelated to the bridge and remains open.
+
 **Goal:** Add persistent system presence via a menu bar / system tray icon and
 OS-level notifications so users receive Sovereign alerts even when the main window
 is closed.

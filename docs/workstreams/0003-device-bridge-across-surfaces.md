@@ -88,12 +88,13 @@ Leg 1 depends on none of these.
 
 ## Legs
 
-| Leg | Name                                  | Epic tasks            | Repo                | Gate? | Done when                                                  |
-| --- | ------------------------------------- | --------------------- | ------------------- | ----- | ---------------------------------------------------------- |
-| 1   | Capability contract + bridge web tier | 3.34 ✅               | this repo           | No    | Contract fixed; web transport works; no plugin surface yet |
-| 2   | Plugin surface, permissions, consent  | 3.35 ✅               | this repo           | No    | Plugins call `sdk.device.*`; consent manageable in Account |
-| 3   | Tauri transport                       | 17.2, 17.4 (rescoped) | `sovereign-desktop` | No    | Both v1 capabilities work in the desktop shell             |
-| 4   | Capacitor transport                   | 20.3 (rescoped)       | `sovereign-mobile`  | No    | Both v1 capabilities work in the mobile shell              |
+| Leg | Name                                  | Epic tasks                  | Repo                | Gate? | Done when                                                  |
+| --- | ------------------------------------- | --------------------------- | ------------------- | ----- | ---------------------------------------------------------- |
+| 1   | Capability contract + bridge web tier | 3.34 ✅                     | this repo           | No    | Contract fixed; web transport works; no plugin surface yet |
+| 2   | Plugin surface, permissions, consent  | 3.35 ✅                     | this repo           | No    | Plugins call `sdk.device.*`; consent manageable in Account |
+| 3   | Tauri transport — notifications       | 17.2 (notification half) ✅ | `sovereign-desktop` | No    | `notifications.native` works in the desktop shell          |
+| 3b  | Tauri transport — secureStorage       | 17.4 (rescoped)             | `sovereign-desktop` | No    | `secureStorage` works via a keychain plugin                |
+| 4   | Capacitor transport                   | 20.3 (rescoped)             | `sovereign-mobile`  | No    | Both v1 capabilities work in the mobile shell              |
 
 **Cross-repo parallelism** applies as in workstream 0002: the leg contract's
 merge-before-next rule is per repository, so legs 3 and 4 may proceed in parallel
@@ -267,24 +268,103 @@ capability)`, hard delete on revoke, mirroring `user_capability_grants`'s
   route actually compile, plus a live dev-server check that the new route
   session-gates identically to its `data-grants` sibling.
 
-### Leg 3 — Tauri transport (`sovereign-desktop`)
+### Leg 3 — Tauri transport, notifications (`sovereign-desktop`)
 
-**Epic tasks:** 17.2 (notification half) and 17.4, both **rescoped** — see
-RFC 0083 §8. Do not implement them as currently written; their inline
-`sdk.device.notify()` / `sdk.device.secureStore.*` sketches are superseded.
+**Epic task:** 17.2 (notification half), **rescoped** — see RFC 0083 §8. Do
+not implement as currently written; the inline `sdk.device.notify()` sketch
+is superseded.
+
+**Scope split from the original leg 3 (2026-08):** this leg covers
+`notifications.native` only. `secureStorage`/keychain (originally task 17.4,
+also folded into leg 3 as written above) is split out to **leg 3b** — it has
+no plugin consumer yet (its first consumer is RFC 0082 §5's durable-session
+sequel), so there was no reason to block a working, empirically-verified
+notifications transport behind unstarted keychain-plugin research.
 
 **Technical notes:**
 
-- Implement `notifications.native` via the Tauri notification plugin and
-  `secureStorage` via the keychain plugin, both behind the bridge.
+- Implement `notifications.native` via the Tauri notification plugin, behind
+  the bridge.
 - **Expose only the narrow bridge object.** No raw `window.__TAURI__` reaching
   page JavaScript — this is what makes native capability gating real.
-- `secureStorage` is platform-internal in v1; its first consumer is RFC 0082 §5's
-  durable-session sequel, not plugins.
 - The shell's `capabilities` list must reflect what this build actually supports —
   advertising a capability the transport does not implement is worse than omitting
   it, because the caller's `unavailable` path never runs.
 - 17.2's system-tray half is unrelated to the bridge and can stay as specified.
+
+**Do not proceed if:** the desktop shell would have to advertise a capability it
+cannot honor to make a test pass.
+
+**Outcome (2026-08, all verified — not assumed):**
+
+- **Tauri v2's IPC model required amending `sovereign-desktop`'s own hard
+  rule** ("remote instance content must never get Tauri IPC access") — a
+  `remote.urls` grant is required for _any_ command, custom or plugin, to
+  reach a non-local origin, with no narrower primitive available. Resolved,
+  by explicit developer decision, with a new capability
+  (`src-tauri/capabilities/bridge.json`) deliberately separate from the
+  existing local-only `default` capability: `remote.urls: ["https://**",
+"http://**"]`, scoped to exactly one app-defined command
+  (`allow-bridge-invoke`) and nothing else — `core:default`/`store:default`
+  stay local-only. `sovereign-desktop`'s `CLAUDE.md` hard rule needs updating
+  to document this narrow, deliberate exception before merge.
+- **Real native delivery, not a `window.Notification` shim**: `bridge_invoke`
+  (`src-tauri/src/bridge.rs`) calls `tauri-plugin-notification`'s
+  `NotificationExt` (`app.notification().builder()...show()`), backed by
+  `mac-notification-sys` — confirmed present in the dependency tree via
+  `cargo check`. Earlier research into the plugin's JS-side `guest-js`
+  showed `requestPermission()`/`sendNotification()` there just call the
+  standard `window.Notification` API directly; going through the Rust-side
+  `NotificationExt` instead sidesteps the open question of whether WKWebView
+  actually implements `window.Notification` at all.
+- **Empirically verified end-to-end**, not just compiled: ran a real `pnpm
+tauri dev` build, triggered `window.__SOVEREIGN_BRIDGE__.invoke('notifications.native',
+...)` from the loaded page, and confirmed via temporary Rust-side debug
+  logging (screen recording and Apple Events access were both unavailable in
+  the build environment, so a literal on-screen banner couldn't be checked
+  directly) that (a) the IPC call reached `bridge_invoke` with the correct
+  payload — proving the `bridge` capability's ACL grant actually works for a
+  non-local origin, not just that it compiles — and (b) `builder.show()`
+  returned `Ok(())`, confirming the native macOS notification API accepted
+  the request.
+- **`getPermission()`/`requestPermission()` needed a real behavior change**,
+  not just a routing fix: the bridge exposes a one-shot `show`, with no
+  separate permission-query action, so there is no native equivalent to
+  "check permission status" to route those methods to. By explicit developer
+  decision, both now report `'granted'` unconditionally on a native-bridge
+  transport (`supports('notifications.native')`) rather than reading
+  `window.Notification` (which may not exist in WKWebView) or adding new
+  Rust/capability surface for a permission check `mac-notification-sys`'s
+  legacy delivery path may not even expose cleanly. The OS still gates the
+  real permission at `show()`-time; a caller sees that outcome through
+  `show()`'s own `DeviceResult`, not an up-front query. See
+  `packages/sdk/src/device-client.ts`'s `nativeNotifications` doc comments
+  and `docs/plugin-development.md`'s device-bridge section.
+- Verified via `packages/sdk/src/__tests__/device-client.test.ts` (2 new
+  tests for the native-bridge permission behavior, 19 passing total in that
+  file), `cargo check` on `sovereign-desktop`, and the live `pnpm tauri dev`
+  round-trip described above.
+
+### Leg 3b — Tauri transport, secureStorage (`sovereign-desktop`)
+
+**Epic task:** 17.4, **rescoped** — see RFC 0083 §8. Do not implement as
+currently written; the inline `sdk.device.secureStore.*` sketch is
+superseded. Split out of the original leg 3 scope (2026-08) — see leg 3's
+scope-split note above.
+
+**Not started.**
+
+**Technical notes:**
+
+- Implement `secureStorage` via a Tauri keychain plugin, behind the bridge —
+  same "expose only the narrow bridge object" requirement as leg 3.
+- `secureStorage` is platform-internal in v1; its first consumer is RFC 0082 §5's
+  durable-session sequel, not plugins. There is no plugin-facing urgency driving
+  this leg — pick it up when that consumer is ready to be built, or sooner if a
+  concrete need emerges.
+- The shell's `capabilities` list must reflect what this build actually supports —
+  advertising a capability the transport does not implement is worse than omitting
+  it, because the caller's `unavailable` path never runs.
 
 **Do not proceed if:** the desktop shell would have to advertise a capability it
 cannot honor to make a test pass.
@@ -375,6 +455,7 @@ before either shell implements a transport.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | July 2026 | Initial draft |
+| Version | Date        | Change                                                                                               |
+| ------- | ----------- | ---------------------------------------------------------------------------------------------------- |
+| 0.1     | July 2026   | Initial draft                                                                                        |
+| 0.2     | August 2026 | Leg 3 split into 3 (notifications, done) and 3b (secureStorage, not started); leg 3 outcome recorded |

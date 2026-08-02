@@ -142,35 +142,45 @@ export const haptics = {
 
 export const nativeNotifications = {
   /**
-   * Current OS/browser notification permission. Reads the platform signal
-   * directly — `'unsupported'` when the Notification API doesn't exist at
-   * all (rather than routing through the device-consent grant, which is
-   * review-time bookkeeping, not the actual permission gate on the web
-   * transport).
+   * Current notification permission. On a native-bridge transport
+   * (`supports('notifications.native')`) this is always `'granted'` — the
+   * bridge exposes a single one-shot `show`, not a separate permission-query
+   * action, and the OS itself gates the real permission at show()-time
+   * (workstream 0003 leg 3: confirmed empirically against
+   * `tauri-plugin-notification`'s native delivery, which handles OS
+   * permission internally and reports failure through `show()`'s own
+   * `DeviceResult`, not a queryable up-front state). On the web transport
+   * this reads the platform signal directly — `'unsupported'` when the
+   * Notification API doesn't exist at all.
    */
   async getPermission(): Promise<'granted' | 'denied' | 'prompt' | 'unsupported'> {
+    if (supports('notifications.native')) return 'granted';
     if (typeof Notification === 'undefined') return 'unsupported';
     return Notification.permission === 'default' ? 'prompt' : Notification.permission;
   },
 
   /**
    * Records a device-consent grant for `pluginId` (Account UI transparency
-   * — see the file doc comment; not the enforcement mechanism) and asks for
-   * OS/browser notification permission. On the web transport this is the
-   * standard `Notification.requestPermission()` flow; the calling plugin's
-   * own UI (e.g. an "Enable notifications" button) is what names the
-   * request to the user — there is no separate platform-rendered prompt in
-   * v1 (see workstream 0003 leg 2's scoping note).
+   * — see the file doc comment; not the enforcement mechanism), then asks
+   * for notification permission. On a native-bridge transport this always
+   * resolves `{ status: 'ok', value: 'granted' }` — see `getPermission()`'s
+   * doc comment for why there's no real up-front permission gate to ask
+   * for. On the web transport this is the standard
+   * `Notification.requestPermission()` flow; the calling plugin's own UI
+   * (e.g. an "Enable notifications" button) is what names the request to
+   * the user — there is no separate platform-rendered prompt in v1 (see
+   * workstream 0003 leg 2's scoping note).
    *
    * If `Notification.permission` is already `'denied'`, the browser will
    * not show a prompt again — returns `{ status: 'denied' }` immediately
    * rather than an `ok` result the caller might mistake for "just asked".
    */
   async requestPermission(pluginId: string): Promise<DeviceResult<'granted' | 'denied'>> {
-    if (typeof Notification === 'undefined') {
+    const native = supports('notifications.native');
+    if (!native && typeof Notification === 'undefined') {
       return { status: 'unavailable', capability: 'notifications.native' };
     }
-    if (Notification.permission === 'denied') return { status: 'denied' };
+    if (!native && Notification.permission === 'denied') return { status: 'denied' };
 
     try {
       await fetch('/api/account/device-grants', {
@@ -182,6 +192,8 @@ export const nativeNotifications = {
       // Grant bookkeeping is best-effort — a network failure here must not
       // block the actual permission request below.
     }
+
+    if (native) return { status: 'ok', value: 'granted' };
 
     const permission = await Notification.requestPermission();
     if (permission === 'granted' || permission === 'denied') {

@@ -219,6 +219,55 @@ describe('nativeNotifications', () => {
     });
   });
 
+  const nativeNotificationsBridge = (): BridgeImpl =>
+    nativeImpl({
+      handshake: async () => ({
+        protocolVersion: 1,
+        shell: { name: 'sovereign-desktop', version: '1.0.0', platform: 'macos' },
+        capabilities: [{ name: 'notifications.native', version: 1 }],
+      }),
+    });
+
+  it('getPermission() reports granted on the native bridge transport', async () => {
+    vi.stubGlobal('Notification', undefined);
+    provideBridge(nativeNotificationsBridge());
+    vi.resetModules();
+    const deviceClient = await import('../device-client');
+
+    // First call starts the (async) handshake; supports() needs it settled.
+    deviceClient.supports('notifications.native');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(await deviceClient.nativeNotifications.getPermission()).toBe('granted');
+  });
+
+  it('requestPermission() reports granted on the native bridge transport without touching the Notification API', async () => {
+    const requestPermission = vi.fn();
+    vi.stubGlobal('Notification', { permission: 'denied', requestPermission });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    provideBridge(nativeNotificationsBridge());
+    vi.resetModules();
+    const deviceClient = await import('../device-client');
+
+    deviceClient.supports('notifications.native');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const result = await deviceClient.nativeNotifications.requestPermission('fs.example.tally');
+
+    expect(result).toEqual({ status: 'ok', value: 'granted' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/account/device-grants',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ pluginId: 'fs.example.tally', capability: 'notifications.native' }),
+      }),
+    );
+    expect(requestPermission).not.toHaveBeenCalled();
+  });
+
   it('show() refuses when permission is not granted', async () => {
     vi.stubGlobal('Notification', { permission: 'default' });
     vi.resetModules();

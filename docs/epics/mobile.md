@@ -292,12 +292,18 @@ covers the `capacitor://`/bundled-scheme service-worker question (confirmed,
 not assumed, and platform-divergent — no SW support on iOS's `capacitor://`
 scheme, but full SW support on Android's default `https://localhost` bundled
 scheme) and found a real, reproducible Android-WebView-specific
-service-worker registration bug against a live instance. **Not yet
-complete** per this task's own review checklist: `sdk.offline` IndexedDB
-persistence across restart (needs an authenticated session — a human
-handoff, not something an agent should do by entering credentials),
-background/foreground cycle survival, and `WKWebsiteDataStore` eviction
-under storage pressure are all still open. See that doc's Open questions.
+service-worker registration bug against a live instance. Background/foreground
+cycle survival is now also confirmed on both platforms, and is itself
+platform-divergent: iOS WKWebView discards the JS execution context entirely
+(fresh reload on return to foreground — any in-memory state is lost with no
+event to catch it), while Android WebView preserves it across the same cycle.
+This is a real, previously-undocumented finding with a direct design
+implication for `sdk.offline` (never rely on in-memory buffering; flush to
+IndexedDB as data is produced). **Not yet complete** per this task's own
+review checklist: `sdk.offline` IndexedDB persistence across restart (needs
+an authenticated session — a human handoff, not something an agent should do
+by entering credentials) and `WKWebsiteDataStore` eviction under storage
+pressure are still open. See that doc's Open questions.
 
 **Goal:** Establish, against a real Capacitor build, whether Sovereign's offline stack
 works inside the mobile WebView. This is the least-verified assumption behind every

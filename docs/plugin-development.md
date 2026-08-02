@@ -1597,6 +1597,16 @@ linkedAt }` — the standard shape for storing an opaque pointer to another
   }
   ```
 
+- **`device`** — surface detection (RFC 0080): `browser` | `mobile` | `desktop`.
+  Server tier `sdk.device.getSurface()`/`getShellVersion()`/`isNativeShell()`
+  reads the runtime-injected `x-sovereign-surface` header (`next/headers`), safe
+  to call anywhere — returns `'browser'`/`null` outside a plugin route context,
+  never throws. Client tier `useDeviceEnvironment()`/`readEnvironment()` live on
+  the dedicated `@sovereignfs/sdk/device-client` subpath (import from the
+  barrel fails to build in a `'use client'` component — it transitively reaches
+  `next/headers`). **A presentation hint only, never a security boundary** —
+  see [Building for mobile](#building-for-mobile) below and the hard rule in
+  `docs/architecture-rules.md`.
 - **`env`** — plugin-scoped environment variables (RFC 0018). `sdk.env.get(key)`
   reads the calling plugin's `SV_PLUGIN_<SLUG>_<KEY>` env var, identified by
   the `x-sovereign-plugin-id` request header. Returns `null` when absent or
@@ -2347,6 +2357,51 @@ If you must build a custom interactive widget (tabs, accordion, carousel), follo
 ## Building for mobile
 
 Sovereign runs as an installable PWA as well as a browser tab, and the platform shell already carries the baseline that makes that feel native rather than "a website on a phone" — global touch hygiene, safe-area insets, the mobile breakpoint, and gesture primitives all live in `@sovereignfs/ui` and `runtime/app/globals.css`. This section is the practical, plugin-author-facing version of that; the full component-level internals (why each rule exists, exact token values, CSS specifics) live in [`docs/design-system.md`](./design-system.md#responsive--mobile) — this section links out to it rather than duplicating it.
+
+### Surface vs. breakpoint — two different questions
+
+`sdk.device.*` (RFC 0080) answers **where am I running** — `browser`,
+`mobile` (the Capacitor shell), or `desktop` (the Tauri shell). `useIsMobile()`
+below answers a completely different question, **how wide is the viewport** —
+a desktop browser window narrowed to 700px is still `surface: 'browser'` but
+`isMobile === true`. Don't conflate them: use `sdk.device.getSurface()` to
+gate a genuinely shell-specific affordance (e.g. "show the native photo-picker
+button only inside the Capacitor shell"), and `useIsMobile()` for responsive
+layout. Three tiers answer three different kinds of question — pick the
+narrowest one that actually answers yours:
+
+| Tier                                                       | Answers                                           | Where            |
+| ---------------------------------------------------------- | ------------------------------------------------- | ---------------- |
+| `sdk.device.getSurface()` (server)                         | `browser`/`mobile`/`desktop`, no hydration flash  | Server Component |
+| `useDeviceEnvironment()` (client, `device-client` subpath) | Same, plus `installed` (PWA) — `null` until mount | Client Component |
+| `useIsMobile()` (`@sovereignfs/ui`)                        | Viewport ≤768px, independent of shell             | Either           |
+
+```tsx
+// Server Component — no flash, since the surface is known before render.
+import { sdk } from '@sovereignfs/sdk';
+
+async function PhotoPicker() {
+  const isNative = await sdk.device.isNativeShell();
+  return isNative ? <NativePickerButton /> : <FileInputFallback />;
+}
+```
+
+```tsx
+'use client';
+import { useDeviceEnvironment } from '@sovereignfs/sdk/device-client';
+
+function InstallHint() {
+  const env = useDeviceEnvironment();
+  if (env === null || env.installed) return null; // not known yet, or already installed
+  return <p>Add Sovereign to your Home Screen for the full experience.</p>;
+}
+```
+
+**Never gate authorization, entitlement, paywall, or data-access decisions on
+surface** — it derives from the shell's own User-Agent, which any caller can
+set to anything. It is a presentation hint, exactly like `useIsMobile()`; the
+one difference is _what_ it tells you, not how much you can trust it. See the
+hard rule in `docs/architecture-rules.md`.
 
 ### Breakpoint
 

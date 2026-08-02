@@ -2,6 +2,7 @@ import * as auth from './auth';
 import { activity } from './activity';
 import { connections } from './connections';
 import { data } from './data';
+import { device } from './device';
 import { directory } from './directory';
 import * as db from './db';
 import { e2ee } from './e2ee';
@@ -36,11 +37,16 @@ import { billing, events } from './unimplemented';
  * crypto and state helpers that produce the ciphertext these methods store),
  * `plugins` (dependency discovery and cross-plugin references, RFC 0051),
  * `email` (user-scoped `sendToUser` email surface, RFC 0062), `billing`
- * (plugin monetization / entitlement gating, RFC 0003), `events`.
+ * (plugin monetization / entitlement gating, RFC 0003), `events`, `device`
+ * (surface detection — `browser`/`mobile`/`desktop` — RFC 0080; a
+ * presentation hint only, never a security boundary; capability probes and
+ * invocation live in `@sovereignfs/sdk/device-client` and the future device
+ * bridge, RFC 0083).
  * `data`, `activity`, `portability`, `env`, `notifications`, `directory`,
- * `secrets`, `storage`, `connections`, `e2ee`, `plugins`, and `email` are
- * implemented; `billing` and `events` throw `NotImplementedError` until their
- * backing mechanisms ship. Their shape may change before they stabilise.
+ * `secrets`, `storage`, `connections`, `e2ee`, `plugins`, `email`, and
+ * `device` are implemented; `billing` and `events` throw
+ * `NotImplementedError` until their backing mechanisms ship. Their shape
+ * may change before they stabilise.
  */
 export const sdk = {
   // Stable (v1.0.0).
@@ -50,6 +56,7 @@ export const sdk = {
   platform,
   // Experimental / reserved — shape may change; some throw until implemented.
   data,
+  device,
   storage,
   directory,
   notifications,
@@ -67,6 +74,7 @@ export const sdk = {
 
 export { provideHost } from './host';
 export type { SdkHost } from './host';
+export type { Surface } from './device';
 /**
  * Client-side CMK/DEK crypto and state helpers (RFC 0060) — browser-only
  * (WebCrypto/IndexedDB). Deliberately NOT re-exported here: this barrel also

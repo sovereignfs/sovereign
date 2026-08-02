@@ -18,6 +18,7 @@ import {
 } from '@/src/route-guard';
 import { checkGlobalRateLimit, clientIp, isGlobalRateLimitDisabled } from '@/src/rate-limit';
 import { buildContentSecurityPolicy, generateNonce } from '@/src/security';
+import { applySurfaceHeaders } from '@/src/surface';
 import {
   type CachedSessionData,
   type VerifiedSession,
@@ -272,6 +273,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       // sending them — strip them so a forged value can never reach plugin
       // code as if it were platform-computed.
       const headers = strippedRequestHeaders(request);
+      applySurfaceHeaders(headers, request.headers.get('user-agent'));
       return applyCsp(NextResponse.rewrite(target, { request: { headers } }));
     }
   }
@@ -332,6 +334,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     // user-identity ones, so the anonymous case must not inherit whatever a
     // caller sent.
     const headers = strippedRequestHeaders(request);
+    applySurfaceHeaders(headers, request.headers.get('user-agent'));
     headers.set('x-nonce', nonce);
     headers.set('content-security-policy', csp);
     headers.set('x-sovereign-plugin-id', publicRoutePluginId);
@@ -470,6 +473,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // an unconditional clone would let a caller-forged value for one of those
   // three survive whenever its condition is false.
   const headers = strippedRequestHeaders(request);
+  applySurfaceHeaders(headers, request.headers.get('user-agent'));
   // Pass the nonce to the rendered request: Next reads it from the CSP request
   // header for its scripts; the layout reads `x-nonce` for the theme script.
   headers.set('x-nonce', nonce);

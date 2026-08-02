@@ -510,6 +510,7 @@ packages/
   mailer/           SMTP abstraction (no-op when unconfigured)
   ui/               shared component library + design tokens
   sdk/              plugin↔platform contract (types + impls)
+  bridge/           device bridge implementation (RFC 0083) — published
   create-plugin/    `npm create @sovereignfs/plugin` scaffolder — published
 runtime/            Sovereign Core (Next.js shell, middleware, registry, SDK bridge)
   generated/        built from manifests — never hand-edit, gitignored (run `pnpm generate`)
@@ -533,6 +534,9 @@ _federated systems_ — reflecting the project's long-term federated direction
 - `packages/ui` → `@sovereignfs/ui` — **published** (design system).
 - `packages/create-plugin` → `@sovereignfs/create-plugin` — **published**
   (`npm create @sovereignfs/plugin` scaffolder; ships a `create-plugin` bin).
+- `packages/bridge` → `@sovereignfs/bridge` — **published** (RFC 0083 device
+  bridge implementation: transports, protocol, shell-side helper; consumed
+  directly by the external `sovereign-mobile`/`sovereign-desktop` repos).
 - `packages/db` → `@sovereignfs/db` — internal, `"private": true`.
 - `packages/manifest` → `@sovereignfs/manifest` — internal, `"private": true`.
 - `packages/mailer` → `@sovereignfs/mailer` — internal, `"private": true`.
@@ -545,7 +549,7 @@ The "do not publish" signal is `"private": true` in the package's
 `package.json` — **not** the scope. A single scope we own avoids the
 dependency-confusion risk of aliasing a scope owned by someone else
 (`@sovereign` is taken on npm; `@sovereignos`/`-stack`/`-core` collide with
-existing products). Only `sdk`, `ui`, and `create-plugin` ever reach npm.
+existing products). Only `sdk`, `ui`, `create-plugin`, and `bridge` ever reach npm.
 
 ## Commands
 

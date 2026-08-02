@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/sdk",
-  "version": "1.29.0",
+  "version": "1.30.0",
   "type": "module",
   "description": "Sovereign SDK — the plugin↔platform contract (types and interfaces).",
   "license": "AGPL-3.0-or-later",
@@ -11,6 +11,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./device-bridge": {
+        "types": "./dist/device-bridge.d.ts",
+        "default": "./dist/device-bridge.js"
       },
       "./device-client": {
         "types": "./dist/device-client.d.ts",
@@ -44,6 +48,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
+    "./device-bridge": "./src/device-bridge.ts",
     "./device-client": "./src/device-client.ts",
     "./e2ee-crypto": "./src/e2ee-crypto.ts",
     "./e2ee-device": "./src/e2ee-device.ts",

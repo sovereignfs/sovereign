@@ -62,6 +62,7 @@ group during the pre-v1 hardening period:
 - `sdk.secrets` — encrypted runtime-created plugin secrets (RFC 0043). Values are server-side only; list/export surfaces expose metadata only.
 - `sdk.storage` — plugin-scoped binary object storage (RFC 0044). Local filesystem storage is implemented; future backends may expand the host implementation without changing plugin calls.
 - `sdk.connections` — external provider connection metadata, OAuth state helpers, and server-side effective provider config reads (RFC 0049). Credential values remain in `sdk.secrets`; Account/Console surfaces expose metadata only.
+- `sdk.device` — surface detection (RFC 0080): `getSurface()`/`getShellVersion()`/`isNativeShell()` (server, main barrel) and `useDeviceEnvironment()`/`readEnvironment()` (client, `@sovereignfs/sdk/device-client` subpath). A presentation hint only, never a security boundary — see `docs/architecture-rules.md`. The device **bridge** capability contract (RFC 0083) — `provideBridge()`, `BridgeImpl`, `DeviceResult` — lives on a separate `@sovereignfs/sdk/device-bridge` subpath, deliberately React-free so `@sovereignfs/bridge` (below) can import it without pulling React into its own zero-dependency build; plugin-facing capability calls (`supports()`, `haptics`, `nativeNotifications`) land in `device-client.ts` in a later task.
 
 These surfaces are **reserved** — they exist as stubs and throw
 `NotImplementedError` (or in `sdk.billing`'s case, `EntitlementRequiredError`).
@@ -101,13 +102,14 @@ for the full authoring ✅ / build ❌ / run ❌ table.
 
 ## Published packages summary
 
-Three packages from this monorepo are published to npm:
+Four packages from this monorepo are published to npm:
 
-| Package                      | Purpose                             | Policy                                                                                  |
-| ---------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------- |
-| `@sovereignfs/sdk`           | Plugin↔platform contract (types)    | Strict semver (this document)                                                           |
-| `@sovereignfs/ui`            | Design system (components + tokens) | Same strict semver as SDK (NFR-04)                                                      |
-| `@sovereignfs/create-plugin` | CLI scaffolding tool                | Semver; CLI tools follow patch/minor/major but have no library compatibility obligation |
+| Package                      | Purpose                                                                           | Policy                                                                                            |
+| ---------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `@sovereignfs/sdk`           | Plugin↔platform contract (types)                                                  | Strict semver (this document)                                                                     |
+| `@sovereignfs/ui`            | Design system (components + tokens)                                               | Same strict semver as SDK (NFR-04)                                                                |
+| `@sovereignfs/create-plugin` | CLI scaffolding tool                                                              | Semver; CLI tools follow patch/minor/major but have no library compatibility obligation           |
+| `@sovereignfs/bridge`        | Device bridge implementation (RFC 0083 — transports, protocol, shell-side helper) | Same strict semver as SDK (NFR-04) — `sovereign-mobile`/`sovereign-desktop` depend on it directly |
 
 `@sovereignfs/create-plugin` is invoked via `npm create @sovereignfs/plugin`.
 It is a dev tool, not a runtime library — plugin code never imports it, so

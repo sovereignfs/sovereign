@@ -324,8 +324,8 @@ mobile app (post-v1 plan)" and SRS §3.12) and lives in a separate
 
 | Version | Task                                                             | Status | Epic task                                                                                           |
 | ------- | ---------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------- |
-| —       | Mobile app shell, iOS and Android (RFC 0058)                     | 📋     | [20.1](docs/epics/mobile.md#-201--sovereign-mobile--capacitor-shell-scaffold)                       |
-| —       | Mobile instance validation and compatibility endpoint (RFC 0058) | 📋     | [20.2](docs/epics/mobile.md#-202--mobile-instance-validation-and-compatibility-endpoint)            |
+| —       | Mobile app shell, iOS and Android (RFC 0058)                     | ⏳     | [20.1](docs/epics/mobile.md#-201--sovereign-mobile--capacitor-shell-scaffold)                       |
+| —       | Mobile instance validation and compatibility endpoint (RFC 0058) | ✅     | [20.2](docs/epics/mobile.md#-202--mobile-instance-validation-and-compatibility-endpoint)            |
 | —       | Mobile SDK native environment and bridge adapter (RFC 0058)      | 📋     | [20.3](docs/epics/mobile.md#-203--mobile-sdk-native-environment-and-bridge-adapter)                 |
 | —       | Mobile store release setup and privacy declarations (RFC 0058)   | 📋     | [20.4](docs/epics/mobile.md#-204--mobile-store-release-setup-and-privacy-declarations)              |
 | —       | Mobile native push notifications (RFC 0058)                      | 📋     | [20.5](docs/epics/mobile.md#-205--native-push-notifications-apnsfcm)                                |

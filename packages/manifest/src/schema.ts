@@ -34,6 +34,8 @@ export const permissionSchema = z.enum([
   'e2ee:use',
   'admin:*',
   'offline:write',
+  'device:haptics',
+  'device:notifications',
 ]);
 
 /** Validate that a string is a valid semver string (e.g. "0.6.0"). */

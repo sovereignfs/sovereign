@@ -744,6 +744,67 @@ export async function hasUserCapabilityGrant(
   return row !== undefined;
 }
 
+// ─── Device bridge consent grants (RFC 0083, workstream 0003 leg 2) ─────────
+
+export interface DeviceConsentGrantRow {
+  userId: string;
+  pluginId: string;
+  capability: string;
+  grantedAt: number;
+}
+
+/**
+ * Record that `userId` granted `pluginId` permission to use `capability`
+ * (e.g. `'notifications.native'`). Idempotent — a re-grant just refreshes
+ * `granted_at`. `pluginId` is self-declared by the calling plugin's own
+ * client-side code (see the schema's doc comment) — this is review-time
+ * bookkeeping for Account UI transparency, not an enforcement boundary.
+ */
+export async function grantDeviceConsent(
+  pdb: PlatformDb,
+  userId: string,
+  pluginId: string,
+  capability: string,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO device_consent_grants
+          (tenant_id, user_id, plugin_id, capability, granted_at)
+        VALUES (${DEFAULT_TENANT_ID}, ${userId}, ${pluginId}, ${capability}, ${now})
+        ON CONFLICT (user_id, plugin_id, capability) DO UPDATE SET granted_at = ${now}`,
+  );
+}
+
+/** Revoke a device consent grant. No-op if not granted. */
+export async function revokeDeviceConsent(
+  pdb: PlatformDb,
+  userId: string,
+  pluginId: string,
+  capability: string,
+): Promise<void> {
+  await dbRun(
+    pdb,
+    sql`DELETE FROM device_consent_grants
+        WHERE user_id = ${userId} AND plugin_id = ${pluginId} AND capability = ${capability}`,
+  );
+}
+
+/** List every device consent grant held by a user. */
+export async function listDeviceConsentGrants(
+  pdb: PlatformDb,
+  userId: string,
+): Promise<DeviceConsentGrantRow[]> {
+  return dbAll<DeviceConsentGrantRow>(
+    pdb,
+    sql`SELECT user_id AS "userId", plugin_id AS "pluginId", capability,
+               granted_at AS "grantedAt"
+        FROM device_consent_grants
+        WHERE user_id = ${userId}
+        ORDER BY granted_at DESC`,
+  );
+}
+
 // ─── Cross-plugin data sharing helpers (RFC 0002) ────────────────────────────
 
 export interface ConsentGrantRow {

@@ -171,6 +171,24 @@ export const userCapabilityGrants = pgTable(
   (table) => [primaryKey({ columns: [table.userId, table.capability] })],
 );
 
+/**
+ * Per-user, per-plugin, per-capability device-bridge consent grants (RFC
+ * 0083, workstream 0003 leg 2) — see the SQLite schema's doc comment for
+ * the full rationale (mirrors `user_capability_grants`'s shape, not
+ * `consent_grants`'s).
+ */
+export const deviceConsentGrants = pgTable(
+  'device_consent_grants',
+  {
+    tenantId: text('tenant_id').notNull(),
+    userId: text('user_id').notNull(),
+    pluginId: text('plugin_id').notNull(),
+    capability: text('capability').notNull(),
+    grantedAt: bigint('granted_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.pluginId, table.capability] })],
+);
+
 export const consentGrants = pgTable('consent_grants', {
   id: text('id').primaryKey(),
   tenantId: text('tenant_id').notNull(),

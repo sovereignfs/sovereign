@@ -218,6 +218,10 @@ Declared SDK capabilities. The v1-functional ones:
 
 | `storage:readWrite` | Read/write plugin-scoped binary objects via `sdk.storage` (RFC 0044). |
 
+| `device:haptics` | Use `sdk.device.haptics.impact()` (RFC 0083). |
+
+| `device:notifications` | Use `sdk.device.nativeNotifications.*` (RFC 0083). |
+
 Reserved (declaring them is allowed; the backing surfaces throw `NotImplementedError` until
 implemented): `events:publish`, `events:subscribe`, `e2ee:use` (client-side encryption,
 `sdk.e2ee` — RFC 0060; distinct from any future server-side `sdk.crypto.encryptField()`
@@ -227,6 +231,38 @@ field crypto, which the runtime _can_ decrypt).
 `offline: true` on the same manifest) but has no backing SDK surface yet —
 reserved for the forthcoming offline write/sync capability, see `offline`
 below.
+
+**`device:haptics` and `device:notifications` (RFC 0083) provide no
+isolation between plugins — say this to yourself in plain words before
+relying on either for anything security-sensitive.** `sdk.device.*` runs
+entirely in the browser, on the browser-only `@sovereignfs/sdk/device-client`
+subpath. There is no server-injected `x-sovereign-plugin-id` header to trust
+there (unlike every server-side SDK surface) — every plugin's client code
+shares one origin and one JavaScript context, so any plugin's client code
+can call `sdk.device.nativeNotifications.requestPermission('any.plugin.id')`
+and claim to be a different plugin entirely. Consequently:
+
+- The manifest declaration is **install/review-time metadata** — a reviewer
+  signal and a consent-prompt input, not an enforced grant.
+- The per-user device consent grant (visible and revocable in Account →
+  Data → "Device app permissions") records _which plugin id asked_, but that
+  id is exactly the self-declared, unverifiable one above. Treat it as "what
+  this plugin's code told us," not "what this plugin's code is."
+- The actual gate on the web transport is the browser's own
+  `Notification.permission` — once granted to the instance's origin, _every_
+  plugin's client code can call `new Notification(...)` directly, with or
+  without going through `sdk.device.nativeNotifications.show()` at all.
+
+This is the same posture RFC 0078 §6 already states for `offline:write` and
+RFC 0080 §2 states for the `x-sovereign-surface` signal — self-declared
+identity is a structural fact of running third-party client code in one
+shared browser origin, not a bug to fix here. A future shell transport that
+withholds its raw native bridge object from page JavaScript (Tauri's opt-in
+command surface makes this realistic; whether a Capacitor shell can do the
+same is an open question — RFC 0083 §5, §6) can make native-only capability
+_calls_ genuinely unforgeable on that transport. It does not, and cannot,
+make the _web_ transport's permission model any more enforceable than the
+browser's own origin-wide `Notification.permission` already is.
 
 Permission declarations are part of the manifest contract and are used by
 platform flows such as portability (`data:export` / `data:import`) and by the
@@ -1606,7 +1642,18 @@ linkedAt }` — the standard shape for storing an opaque pointer to another
   barrel fails to build in a `'use client'` component — it transitively reaches
   `next/headers`). **A presentation hint only, never a security boundary** —
   see [Building for mobile](#building-for-mobile) below and the hard rule in
-  `docs/architecture-rules.md`.
+  `docs/architecture-rules.md`. The same `device-client` subpath also exports
+  the device **bridge** capability surface (RFC 0083): `supports(capability,
+version?)` (sync, `false` until the handshake resolves — capabilities are
+  progressive enhancement, don't block render on them), `getTransport()`,
+  `getShellInfo()`, `haptics.impact(style?)` (no permission needed — falls
+  back to the Vibration API on the web transport), and
+  `nativeNotifications.{getPermission, requestPermission, show}()` (needs the
+  `device:notifications` permission; requires `pluginId` on
+  `requestPermission()` since this module can't read a server-injected
+  header — see the permission table below for the enforcement caveat this
+  implies). Returns typed `DeviceResult` (`ok`/`unavailable`/`denied`/
+  `dismissed`/`failed`) instead of throwing for expected outcomes.
 - **`env`** — plugin-scoped environment variables (RFC 0018). `sdk.env.get(key)`
   reads the calling plugin's `SV_PLUGIN_<SLUG>_<KEY>` env var, identified by
   the `x-sovereign-plugin-id` request header. Returns `null` when absent or

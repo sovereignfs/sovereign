@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { getBridge } from './device-bridge';
+import type { BridgeHandshake, BridgeTransport, DeviceResult } from './device-bridge';
 import type { Surface } from './device';
 
 /**
@@ -56,3 +58,164 @@ export function useDeviceEnvironment(): DeviceEnvironment | null {
   }, []);
   return environment;
 }
+
+export type { BridgeTransport, DeviceResult } from './device-bridge';
+
+/**
+ * Device bridge plugin-facing surface (RFC 0083 §6, workstream 0003 leg 2).
+ *
+ * **A presentation/progressive-enhancement layer, never a security
+ * boundary** — same posture as `useDeviceEnvironment()` above and
+ * `docs/architecture-rules.md`'s device-bridge entry. `pluginId` is
+ * self-declared by the calling plugin's own client-side code (there is no
+ * server-injected header to trust here — this module is browser-only), so
+ * `haptics`/`nativeNotifications` manifest permissions and consent grants
+ * are review-time metadata and a consent-prompt input, not inter-plugin
+ * isolation. Same posture as `offline:write` (RFC 0078 §6).
+ */
+
+let cachedHandshake: BridgeHandshake | null = null;
+let handshakeStarted = false;
+
+/**
+ * Kicks off `BridgeImpl.handshake()` at most once and caches the result.
+ * `supports()`/`getTransport()`/`getShellInfo()` are synchronous by design
+ * (RFC 0083 §6: "capabilities are progressive enhancement; a component must
+ * render a working state without them") — they read whatever is cached
+ * *right now*, returning the safe default before the handshake resolves
+ * rather than blocking on a promise.
+ */
+function ensureHandshakeStarted(): void {
+  if (handshakeStarted) return;
+  handshakeStarted = true;
+  const bridge = getBridge();
+  if (!bridge) return;
+  void bridge.handshake().then((handshake) => {
+    cachedHandshake = handshake;
+  });
+}
+
+/** Whether `capability` is available at `version` or higher. `false` until the handshake resolves. */
+export function supports(capability: string, version = 1): boolean {
+  ensureHandshakeStarted();
+  if (!cachedHandshake) return false;
+  return cachedHandshake.capabilities.some((c) => c.name === capability && c.version >= version);
+}
+
+/** The active bridge transport. `'web'` before the handshake resolves. */
+export function getTransport(): BridgeTransport {
+  ensureHandshakeStarted();
+  const platform = cachedHandshake?.shell.platform;
+  if (platform === 'ios' || platform === 'android') return 'capacitor';
+  if (platform === 'macos' || platform === 'windows' || platform === 'linux') return 'tauri';
+  return 'web';
+}
+
+/** The native shell's identity, or `null` on the web transport / before the handshake resolves. */
+export function getShellInfo(): BridgeHandshake['shell'] | null {
+  ensureHandshakeStarted();
+  if (!cachedHandshake || cachedHandshake.shell.platform === 'web') return null;
+  return cachedHandshake.shell;
+}
+
+export const haptics = {
+  /**
+   * A brief haptic pulse. Needs no manifest permission or consent prompt
+   * (RFC 0083 §7 — chosen as the first capability precisely because it's
+   * trivial and has a clean no-op fallback). Tries the native bridge first;
+   * on the web transport, falls back to the Vibration API where present.
+   */
+  async impact(style: 'light' | 'medium' | 'heavy' = 'medium'): Promise<DeviceResult<void>> {
+    const bridge = getBridge();
+    if (bridge) {
+      const result = await bridge.invoke('haptics.impact', { style });
+      if (result.status !== 'unavailable') return result as DeviceResult<void>;
+    }
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      const durationMs = style === 'light' ? 10 : style === 'heavy' ? 30 : 20;
+      navigator.vibrate(durationMs);
+      return { status: 'ok', value: undefined };
+    }
+    return { status: 'unavailable', capability: 'haptics.impact' };
+  },
+};
+
+export const nativeNotifications = {
+  /**
+   * Current OS/browser notification permission. Reads the platform signal
+   * directly — `'unsupported'` when the Notification API doesn't exist at
+   * all (rather than routing through the device-consent grant, which is
+   * review-time bookkeeping, not the actual permission gate on the web
+   * transport).
+   */
+  async getPermission(): Promise<'granted' | 'denied' | 'prompt' | 'unsupported'> {
+    if (typeof Notification === 'undefined') return 'unsupported';
+    return Notification.permission === 'default' ? 'prompt' : Notification.permission;
+  },
+
+  /**
+   * Records a device-consent grant for `pluginId` (Account UI transparency
+   * — see the file doc comment; not the enforcement mechanism) and asks for
+   * OS/browser notification permission. On the web transport this is the
+   * standard `Notification.requestPermission()` flow; the calling plugin's
+   * own UI (e.g. an "Enable notifications" button) is what names the
+   * request to the user — there is no separate platform-rendered prompt in
+   * v1 (see workstream 0003 leg 2's scoping note).
+   *
+   * If `Notification.permission` is already `'denied'`, the browser will
+   * not show a prompt again — returns `{ status: 'denied' }` immediately
+   * rather than an `ok` result the caller might mistake for "just asked".
+   */
+  async requestPermission(pluginId: string): Promise<DeviceResult<'granted' | 'denied'>> {
+    if (typeof Notification === 'undefined') {
+      return { status: 'unavailable', capability: 'notifications.native' };
+    }
+    if (Notification.permission === 'denied') return { status: 'denied' };
+
+    try {
+      await fetch('/api/account/device-grants', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ pluginId, capability: 'notifications.native' }),
+      });
+    } catch {
+      // Grant bookkeeping is best-effort — a network failure here must not
+      // block the actual permission request below.
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted' || permission === 'denied') {
+      return { status: 'ok', value: permission };
+    }
+    return { status: 'dismissed' };
+  },
+
+  /**
+   * Show a notification now. Web tier uses the Web Notifications API
+   * directly — the always-on, foreground-tab-appropriate mechanism,
+   * distinct from the push/broker pipeline (RFC 0015/0016/0034) that
+   * delivers `sdk.notifications.send()` calls to a possibly-closed tab.
+   */
+  async show(input: { title: string; body?: string; url?: string }): Promise<DeviceResult<void>> {
+    const bridge = getBridge();
+    if (bridge) {
+      const result = await bridge.invoke('notifications.native', input);
+      if (result.status !== 'unavailable') return result as DeviceResult<void>;
+    }
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+      return { status: 'unavailable', capability: 'notifications.native' };
+    }
+    try {
+      const notification = new Notification(input.title, { body: input.body });
+      if (input.url) {
+        const url = input.url;
+        notification.onclick = () => {
+          window.open(url, '_blank');
+        };
+      }
+      return { status: 'ok', value: undefined };
+    } catch (error) {
+      return { status: 'failed', error: error instanceof Error ? error.message : String(error) };
+    }
+  },
+};

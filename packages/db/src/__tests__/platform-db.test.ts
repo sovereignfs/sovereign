@@ -32,6 +32,7 @@ import {
   getStorageObjectByKey,
   getUserGroupById,
   getUserGroupUsage,
+  grantDeviceConsent,
   grantPluginAccessGroup,
   grantPluginAccessUser,
   grantUserCapability,
@@ -39,6 +40,7 @@ import {
   hasUserCapabilityGrant,
   hardDeleteUserE2eeData,
   hardDeleteUserStorageObjects,
+  listDeviceConsentGrants,
   listE2eeDeviceEnrollments,
   listPluginConnections,
   listAllPluginProviderConfigs,
@@ -65,6 +67,7 @@ import {
   listUserActivity,
   recordActivity,
   removeUserGroupMember,
+  revokeDeviceConsent,
   revokeE2eeDeviceEnrollment,
   revokePluginAccessGroup,
   revokePluginAccessUser,
@@ -1127,6 +1130,50 @@ describe('user capability grant helpers (RFC 0070)', () => {
 
     expect(await listUserCapabilityGrants(db, 'user_1')).toHaveLength(1);
     expect(await listUserCapabilityGrants(db, 'user_2')).toEqual([]);
+  });
+});
+
+describe('device consent grant helpers (RFC 0083, workstream 0003 leg 2)', () => {
+  it('grants and lists a device consent idempotently, refreshing grantedAt on re-grant', async () => {
+    const db = await freshDb();
+    await grantDeviceConsent(db, 'user_1', 'fs.example.tally', 'notifications.native');
+    await grantDeviceConsent(db, 'user_1', 'fs.example.tally', 'notifications.native'); // idempotent
+
+    const grants = await listDeviceConsentGrants(db, 'user_1');
+    expect(grants).toEqual([
+      {
+        userId: 'user_1',
+        pluginId: 'fs.example.tally',
+        capability: 'notifications.native',
+        grantedAt: expect.any(Number),
+      },
+    ]);
+  });
+
+  it('revokes a grant; revoking a non-grant is a no-op', async () => {
+    const db = await freshDb();
+    await grantDeviceConsent(db, 'user_1', 'fs.example.tally', 'notifications.native');
+
+    await revokeDeviceConsent(db, 'user_1', 'fs.example.tally', 'notifications.native');
+    expect(await listDeviceConsentGrants(db, 'user_1')).toEqual([]);
+
+    await expect(
+      revokeDeviceConsent(db, 'user_1', 'fs.example.tally', 'notifications.native'),
+    ).resolves.toBeUndefined();
+  });
+
+  it('scopes grants per (user, plugin, capability) independently', async () => {
+    const db = await freshDb();
+    await grantDeviceConsent(db, 'user_1', 'fs.example.tally', 'notifications.native');
+    await grantDeviceConsent(db, 'user_1', 'fs.example.other', 'notifications.native');
+
+    expect(await listDeviceConsentGrants(db, 'user_1')).toHaveLength(2);
+    expect(await listDeviceConsentGrants(db, 'user_2')).toEqual([]);
+
+    await revokeDeviceConsent(db, 'user_1', 'fs.example.tally', 'notifications.native');
+    const remaining = await listDeviceConsentGrants(db, 'user_1');
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0]?.pluginId).toBe('fs.example.other');
   });
 });
 

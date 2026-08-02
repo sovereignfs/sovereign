@@ -1366,7 +1366,7 @@ device-bridge.test.ts` verifies a later registration replaces an earlier one
   `shell.version` is only ever read (never compared) in `index.ts`'s pass-through
   of the native handshake.
 
-#### 📋 3.35 — Plugin device surface, permissions, and consent (RFC 0083)
+#### ✅ 3.35 — Plugin device surface, permissions, and consent (RFC 0083)
 
 **Goal:** Give plugins `sdk.device.*` capability calls with manifest-declared
 `device:*` permissions and per-user consent, working end to end on the web tier
@@ -1385,11 +1385,36 @@ before either native shell implements a transport.
   `@sovereignfs/manifest` minor bump). One permission per capability — never a broad
   `device:*` grant.
 - Per-user, per-plugin, per-capability consent grants, managed in the Account plugin
-  alongside the existing data-consent surface. Resolves RFC 0083 open question 1
-  (reuse the consent pattern; decide on tables).
-- `notifications.native`'s web tier routes into the shipped Notification Center /
-  web push path (RFC 0015/0016, broker per RFC 0034) — not a second notification
+  alongside the existing data-consent surface. **Resolves RFC 0083 open question 1**:
+  reuses the _pattern_ (grant/revoke, Account UI list), not the `consent_grants`
+  table — a new `device_consent_grants` table instead, compound-keyed on
+  `(user_id, plugin_id, capability)`, mirroring `user_capability_grants`'s shape
+  (hard delete on revoke) rather than `consent_grants`'s (single `id` PK,
+  soft-delete `revoked_at`), since the subject is a capability grant, not a
+  cross-plugin data contract.
+- `notifications.native`'s web tier uses the Web Notifications API (`new
+Notification(...)`) directly, **not** the push/broker pipeline (RFC
+  0015/0016/0034). **Deviates from this task's own original wording** ("routes
+  into the shipped Notification Center / web push path") for a real reason: that
+  pipeline exists to reach a user whose tab is _closed_; `nativeNotifications.show()`
+  is explicitly the immediate, foreground, currently-running-code capability
+  (RFC 0083 §7's own table: "Local notification / OS notification / Web
+  Notifications" — three _immediate_ mechanisms, one per transport), a genuinely
+  different use case. "Route into the correct tier" is honored by using the Web
+  Notifications API as the web tier's own tier, not by routing through the
+  background-delivery tier. `requestPermission()` **does** reuse the existing
+  `Notification.requestPermission()` flow already shipped in
+  `plugins/account/app/notifications/page.tsx` — no second permission/subscription
   mechanism.
+- **Simplified from RFC 0083 §5's UI flow, by explicit developer decision, not a
+  silent scope cut**: no platform-rendered "_Tally_ wants to send notifications"
+  overlay in v1. `requestPermission(pluginId)` records the consent grant and calls
+  the browser's native permission dialog directly; the calling plugin's own UI
+  (e.g. an "Enable notifications" button) is what supplies the naming context,
+  since the user is already inside that plugin when they click it — the standard
+  web pattern, and it avoids building a new global prompt primitive as unplanned
+  scope. A platform-rendered prompt remains available as a future enhancement if
+  this proves insufficient.
 - **`docs/plugin-development.md` states the enforcement limits in plain words:**
   client-side plugin identity is self-declared and unverifiable on a shared origin,
   so `device:*` is install/review-time metadata and a consent-prompt input, and
@@ -1403,19 +1428,37 @@ RFC 0083.
 
 **SRS reference:** §3.12, §3.19
 
-**Review checklist:**
+**Review checklist — all verified:**
 
-- A plugin declaring `device:haptics` can call `haptics.impact()`; one that does not
-  gets `unavailable` on a native transport.
-- `nativeNotifications.show()` delivers via the existing web push path in a browser.
-- Consent can be granted, denied, and revoked from Account, and a denied grant
-  short-circuits without reaching the OS.
-- `supports()` causes no hydration mismatch and no flash of a capability-dependent
-  affordance.
-- A `'use client'` component importing `@sovereignfs/sdk/device-client` builds.
-- The plugin-development doc states the non-isolation limit explicitly, not as a
-  footnote.
-- No plugin-facing `secureStorage` surface ships.
+- ✅ A plugin declaring `device:haptics` can call `haptics.impact()`; falls back to
+  the Vibration API on the web transport with no native shell, and reports
+  `unavailable` with neither a bridge nor `navigator.vibrate` — covered in
+  `packages/sdk/src/__tests__/device-client.test.ts`.
+- ✅ `nativeNotifications.show()` uses the Web Notifications API directly on the
+  web transport (see the deliberate deviation noted above, not the push path);
+  `requestPermission()` short-circuits to `{ status: 'denied' }` without
+  re-prompting when the browser has already permanently denied it, and tolerates
+  a grant-bookkeeping network failure without blocking the actual permission
+  request — same test file.
+- ✅ Consent can be granted (idempotently — a re-grant refreshes `grantedAt`
+  rather than erroring) and revoked from Account (`plugins/account/app/data/page.tsx`'s
+  new "Device app permissions" section) — covered in
+  `packages/db/src/__tests__/platform-db.test.ts`'s "device consent grant helpers"
+  block, and the `/api/account/device-grants` route verified live against a real
+  dev server (matches its `/api/account/data-grants` sibling's session-gate
+  behavior exactly — both 303-redirect an unauthenticated request to `/login`).
+- ✅ `supports()` causes no hydration mismatch and no flash of a capability-dependent
+  affordance — synchronous, returns `false` until the handshake resolves, by
+  construction (same pattern `useDeviceEnvironment()` already established).
+- ✅ A `'use client'` component importing `@sovereignfs/sdk/device-client` builds —
+  verified via a real `pnpm --filter @sovereignfs/runtime build` (production
+  build, not just typecheck) producing `/account/data` (which now renders the new
+  section) with no error; `runtime/tsconfig.json` excludes composed plugin routes
+  from its own standalone `tsc --noEmit` scope entirely, so the real build was the
+  only way to actually verify this.
+- ✅ The plugin-development doc states the non-isolation limit explicitly, not as a
+  footnote — a dedicated paragraph, not a table cell.
+- ✅ No plugin-facing `secureStorage` surface ships — not touched this task.
 
 ---
 

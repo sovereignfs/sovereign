@@ -1,6 +1,6 @@
 # Workstream 0003 — Device bridge across surfaces
 
-**Status:** ⏳ In Progress — leg 1 done\
+**Status:** ⏳ In Progress — legs 1–2 done (in-repo work complete; legs 3–4 are external, in `sovereign-desktop`/`sovereign-mobile`)\
 **Date:** July 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -91,7 +91,7 @@ Leg 1 depends on none of these.
 | Leg | Name                                  | Epic tasks            | Repo                | Gate? | Done when                                                  |
 | --- | ------------------------------------- | --------------------- | ------------------- | ----- | ---------------------------------------------------------- |
 | 1   | Capability contract + bridge web tier | 3.34 ✅               | this repo           | No    | Contract fixed; web transport works; no plugin surface yet |
-| 2   | Plugin surface, permissions, consent  | 3.35                  | this repo           | No    | Plugins call `sdk.device.*`; consent manageable in Account |
+| 2   | Plugin surface, permissions, consent  | 3.35 ✅               | this repo           | No    | Plugins call `sdk.device.*`; consent manageable in Account |
 | 3   | Tauri transport                       | 17.2, 17.4 (rescoped) | `sovereign-desktop` | No    | Both v1 capabilities work in the desktop shell             |
 | 4   | Capacitor transport                   | 20.3 (rescoped)       | `sovereign-mobile`  | No    | Both v1 capabilities work in the mobile shell              |
 
@@ -227,6 +227,45 @@ the wrong place — reopen RFC 0083 §1 rather than taking the dependency.
 truthfully. A prompt saying "Tally wants to send notifications" when the identity
 is unverifiable is a misleading prompt — either the copy acknowledges the limit or
 the prompt is instance-scoped rather than plugin-scoped.
+
+**Outcome (2026-08, all verified — not assumed):**
+
+- **This "do not proceed if" gate is satisfied by not building the
+  platform-rendered prompt at all, by explicit developer decision** (asked
+  directly mid-implementation, since the RFC's UI flow implies a real new
+  global overlay primitive — comparable in size to leg 1 on its own —
+  and simpler alternatives existed). `requestPermission(pluginId)` records
+  the consent grant and calls the browser's native
+  `Notification.requestPermission()` directly; the calling plugin's own UI
+  (e.g. an "Enable notifications" button, rendered while the user is already
+  inside that plugin) is what supplies the naming context. No misleading
+  prompt is rendered because no platform-rendered prompt exists in v1 — the
+  standard web pattern, not a corner cut silently. A platform-rendered
+  prompt remains a reasonable future enhancement if this proves insufficient.
+- **Resolved open question 1**: a new `device_consent_grants` table, not the
+  RFC 0002 `consent_grants` table — compound-keyed `(user_id, plugin_id,
+capability)`, hard delete on revoke, mirroring `user_capability_grants`'s
+  shape rather than `consent_grants`'s (which is keyed by consumer/provider/
+  contract/version — the wrong shape for "a capability granted to a plugin").
+- **`nativeNotifications.show()`'s web tier is the Web Notifications API
+  directly** (`new Notification(...)`), not the push/broker pipeline (RFC
+  0015/0016/0034) as this leg's own task description originally said. That
+  pipeline exists to reach a closed tab; `.show()` is the immediate,
+  foreground capability RFC 0083 §7's own table describes per transport
+  ("Local notification" / "OS notification" / "Web Notifications" — three
+  _immediate_ mechanisms). `requestPermission()` does reuse the existing
+  `Notification.requestPermission()` flow already shipped in the Account
+  plugin's notifications page — no second permission/subscription mechanism,
+  which is the part of "route into the correct tier" that actually mattered.
+- `haptics.impact()` needed no consent/permission machinery at all — RFC
+  0083 §7 chose it first specifically because it needs none.
+- Verified via `packages/sdk/src/__tests__/device-client.test.ts` (17 new
+  tests), `packages/db/src/__tests__/platform-db.test.ts`'s new grant-helper
+  block, and — since `runtime/tsconfig.json` excludes composed plugin routes
+  from its own typecheck scope entirely — a real `pnpm --filter
+@sovereignfs/runtime build` confirming the new Account UI section and API
+  route actually compile, plus a live dev-server check that the new route
+  session-gates identically to its `data-grants` sibling.
 
 ### Leg 3 — Tauri transport (`sovereign-desktop`)
 

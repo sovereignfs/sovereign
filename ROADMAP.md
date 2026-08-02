@@ -187,6 +187,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.56.0  | General per-IP rate limiting in runtime/middleware.ts                           | ✅     | [2.28](docs/epics/platform-shell.md#-228--general-per-ip-rate-limiting-in-runtimemiddlewarets)                    |
 | 0.57.0  | Mobile/desktop instance validation endpoint (GET /api/instance)                 | ✅     | [20.2](docs/epics/mobile.md#-202--mobile-instance-validation-and-compatibility-endpoint)                          |
 | 0.58.0  | Plugin surface model and SDK device environment (RFC 0080)                      | ✅     | [3.32](docs/epics/plugins-runtime.md#-332--plugin-surface-model-and-sdk-device-environment-rfc-0080)              |
+| 0.59.0  | Device bridge protocol package — workstream 0003 leg 1 (RFC 0083)               | ✅     | [3.34](docs/epics/plugins-runtime.md#-334--device-bridge-protocol-package-rfc-0083)                               |
 
 ---
 
@@ -222,13 +223,11 @@ once prioritised.
 | —       | Local visual regression testing (RFC 0059)                                | 📋     | [9.14](docs/epics/design-system.md#-914--local-visual-regression-testing-rfc-0059)                                               |
 | —       | NavTabs Link support + PageHeader heading level                           | 📋     | [9.15](docs/epics/design-system.md#-915--navtabs-link-support--pageheader-heading-level)                                         |
 | —       | Static Sovereign Guide and per-user progress (RFC 0056)                   | 📋     | [24.1](docs/epics/plugin-guide.md#-241--static-sovereign-guide-and-per-user-progress-rfc-0056)                                   |
-| —       | Plugin surface model and SDK device environment (RFC 0080)                | 📋     | [3.32](docs/epics/plugins-runtime.md#-332--plugin-surface-model-and-sdk-device-environment-rfc-0080)                             |
 | —       | Manifest surfaces availability declaration (RFC 0080)                     | 📋     | [3.33](docs/epics/plugins-runtime.md#-333--manifest-surfaces-availability-declaration-rfc-0080)                                  |
 | —       | Per-plugin installable PWA manifest (RFC 0081)                            | 📋     | [2.25](docs/epics/platform-shell.md#-225--per-plugin-installable-pwa-manifest-rfc-0081)                                          |
 | —       | Plugin PWA icon generation (RFC 0081)                                     | 📋     | [2.26](docs/epics/platform-shell.md#-226--plugin-pwa-icon-generation-rfc-0081)                                                   |
 | —       | Focused plugin app context and route lock (RFC 0082)                      | 📋     | [2.27](docs/epics/platform-shell.md#-227--focused-plugin-app-context-and-route-lock-rfc-0082)                                    |
 | —       | In-app text-size control (pinch-zoom compensation)                        | 📋     | [10.2](docs/epics/accessibility.md#-102--in-app-text-size-control-pinch-zoom-compensation)                                       |
-| —       | Device bridge protocol package (RFC 0083)                                 | 📋     | [3.34](docs/epics/plugins-runtime.md#-334--device-bridge-protocol-package-rfc-0083)                                              |
 | —       | Plugin device surface, permissions, and consent (RFC 0083)                | 📋     | [3.35](docs/epics/plugins-runtime.md#-335--plugin-device-surface-permissions-and-consent-rfc-0083)                               |
 | —       | Role-aware and instance-aware Guide content (RFC 0056)                    | 📋     | [24.2](docs/epics/plugin-guide.md#-242--role-aware-and-instance-aware-guide-content)                                             |
 | —       | Operator-managed Guide content (RFC 0056)                                 | 📋     | [24.3](docs/epics/plugin-guide.md#-243--operator-managed-guide-content)                                                          |

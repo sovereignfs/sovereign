@@ -1,6 +1,6 @@
 # Workstream 0003 — Device bridge across surfaces
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In Progress — leg 1 done\
 **Date:** July 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -73,11 +73,11 @@ Settled in a design session with kasunben, July 2026. Full reasoning in
 
 ## Prerequisites
 
-| Prerequisite                                          | Owner           | Status                 |
-| ----------------------------------------------------- | --------------- | ---------------------- |
-| Task 3.32 — `device-client` subpath exists (RFC 0080) | epic 3          | 📋 — **blocks leg 2**  |
-| `sovereign-desktop` repo (shipped, epic 17.1)         | external        | ✅ — leg 3 can proceed |
-| `sovereign-mobile` repo (epic 20.1)                   | workstream 0002 | 📋 — **blocks leg 4**  |
+| Prerequisite                                          | Owner           | Status                         |
+| ----------------------------------------------------- | --------------- | ------------------------------ |
+| Task 3.32 — `device-client` subpath exists (RFC 0080) | epic 3          | ✅ — leg 2 can proceed         |
+| `sovereign-desktop` repo (shipped, epic 17.1)         | external        | ✅ — leg 3 can proceed         |
+| `sovereign-mobile` repo (epic 20.1)                   | workstream 0002 | ⏳ — in progress, blocks leg 4 |
 
 Leg 1 depends on none of these.
 
@@ -90,7 +90,7 @@ Leg 1 depends on none of these.
 
 | Leg | Name                                  | Epic tasks            | Repo                | Gate? | Done when                                                  |
 | --- | ------------------------------------- | --------------------- | ------------------- | ----- | ---------------------------------------------------------- |
-| 1   | Capability contract + bridge web tier | 3.34                  | this repo           | No    | Contract fixed; web transport works; no plugin surface yet |
+| 1   | Capability contract + bridge web tier | 3.34 ✅               | this repo           | No    | Contract fixed; web transport works; no plugin surface yet |
 | 2   | Plugin surface, permissions, consent  | 3.35                  | this repo           | No    | Plugins call `sdk.device.*`; consent manageable in Account |
 | 3   | Tauri transport                       | 17.2, 17.4 (rescoped) | `sovereign-desktop` | No    | Both v1 capabilities work in the desktop shell             |
 | 4   | Capacitor transport                   | 20.3 (rescoped)       | `sovereign-mobile`  | No    | Both v1 capabilities work in the mobile shell              |
@@ -150,6 +150,49 @@ one capability's convenience.
 **Do not proceed if:** `packages/sdk` would need a `dependencies` entry to make
 this work. That is the signal the contract/implementation split has been drawn in
 the wrong place — reopen RFC 0083 §1 rather than taking the dependency.
+
+**Outcome (2026-08, all verified — not assumed):**
+
+- **The contract landed on a new `@sovereignfs/sdk/device-bridge` subpath, not
+  `device-client` as written above.** `device-client.ts` (RFC 0080's
+  `useDeviceEnvironment`) imports React; `@sovereignfs/bridge` needs
+  `provideBridge` as a genuine runtime value, and React ships no
+  `"sideEffects": false` in its own `package.json`, so a bundler inlining the
+  contract (required, since the SDK is a devDependency-only relationship)
+  cannot tree-shake an unused React import out of a shared file. Confirmed
+  empirically by actually building `@sovereignfs/bridge` with `tsup` and
+  inspecting the output: co-located, `dist/index.js` was 64KB and contained a
+  full copy of React; split into `device-bridge.ts`, it dropped to 1.46KB with
+  zero `react` references. Leg 2's plugin-facing surface still lands in
+  `device-client.ts` as designed — plugin React components already depend on
+  React, so it carries none of this risk.
+  - **Prerequisites table above still says `device-client` — read it as
+    `device-bridge` for leg 1's contribution.** Leg 2 does create/extend
+    `device-client.ts` itself (its own plugin-facing `supports()` etc.), so
+    the "either order works" note still holds for that subpath; it just isn't
+    the one leg 1 touched.
+- **Open question 2 resolved as recommended**: a native shell whose
+  `protocolVersion` doesn't match this build's degrades to the `web`
+  transport (empty capabilities) with a `console.warn`, never a fatal error.
+- **Open question 7 resolved**: a module-level call to `installWebBridge()` at
+  the top of `runtime/app/(platform)/_components/ClientShell.tsx` — the
+  platform layout's single client-side entry point, rendered around every
+  authenticated route. Runs once as soon as that chunk is evaluated.
+- **A gap in RFC 0083's `BridgeHandshake.shell.platform` enum found and
+  fixed**: the original `'ios' | 'android' | 'macos' | 'windows' | 'linux'`
+  union has no value for "no native shell present", which the web transport's
+  own handshake must still return honestly. Extended with `'web'`.
+- `transpilePackages` added to `runtime/next.config.ts` only, not
+  `apps/auth/next.config.ts` — confirmed by grep that `apps/auth` doesn't
+  import `@sovereignfs/sdk` at all today, so it has no reason to import the
+  bridge either. No `turbo.json` pipeline entry needed — `build`/`typecheck`
+  already run generically via each package's own scripts.
+- Verified via `packages/bridge/src/__tests__/*.test.ts`,
+  `packages/sdk/src/__tests__/device-bridge.test.ts`, and — since the
+  consuming route (`ClientShell`) needs an authenticated session this
+  environment has no credentials for — a real `pnpm --filter
+@sovereignfs/runtime build` (production build, not just typecheck) producing
+  every route including `/launcher` with no error.
 
 ### Leg 2 — Plugin surface, permissions, and consent
 

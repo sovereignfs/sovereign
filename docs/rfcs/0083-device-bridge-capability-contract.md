@@ -228,7 +228,7 @@ export interface BridgeHandshake {
   shell: {
     name: string; // 'sovereign-mobile' | 'sovereign-desktop' | …
     version: string; // informational only — never branch on it
-    platform: 'ios' | 'android' | 'macos' | 'windows' | 'linux';
+    platform: 'ios' | 'android' | 'macos' | 'windows' | 'linux' | 'web'; // 'web' added in leg 1 — see open question 8
   };
   /** Exactly what THIS shell build supports. The authoritative list. */
   capabilities: CapabilityDescriptor[];
@@ -510,8 +510,11 @@ plugin calls haptics.impact() without device:haptics in its manifest
    (RFC 0002's model, surfaced in Account → Data) or its own store? Leaning
    reuse-the-pattern-not-the-table, since the subject is a capability rather than
    a cross-plugin contract.
-2. Should `protocolVersion` mismatch be fatal or degrade to `web`? Leaning
-   degrade-with-a-recorded-warning, so an old shell never hard-breaks an instance.
+2. ~~Should `protocolVersion` mismatch be fatal or degrade to `web`?~~
+   **Resolved in workstream 0003 leg 1, as recommended**: degrade to the `web`
+   transport with a recorded `console.warn`, never fatal — an old shell can
+   never hard-break an instance. Implemented in `@sovereignfs/bridge`'s
+   `handshake()`/`invoke()`.
 3. Where does the "shell too old for this capability" message surface to the
    _user_ — silently absent affordance, or an explicit "update your app" hint?
    Leaning silently absent for v1, since a hint the user cannot act on (auto-update
@@ -528,10 +531,17 @@ plugin calls haptics.impact() without device:haptics in its manifest
    enforcement is advisory on mobile and real only on desktop, and the docs must
    say so. Must be answered in workstream 0003 leg 4, before the enforcement claim
    is relied on.
-7. Where does the client bootstrap that calls `provideBridge()` live in the
+7. ~~Where does the client bootstrap that calls `provideBridge()` live in the
    runtime, and how is it guaranteed to run before a plugin's first `supports()`
-   call? `provideHost()` has `instrumentation.ts` as an unambiguous
-   once-before-any-request hook; the client side has no exact equivalent.
+   call?~~ **Resolved in workstream 0003 leg 1**: a module-level call to
+   `installWebBridge()` at the top of `ClientShell.tsx`, the platform layout's
+   single client-side entry point rendered around every authenticated route —
+   runs once as soon as that chunk is evaluated, the closest client-side
+   analogue to `instrumentation.ts`'s server-side guarantee.
+8. Found during leg 1, not anticipated by this RFC: `BridgeHandshake.shell.platform`
+   (§3) had no value for "no native shell is present" — the web transport's own
+   handshake must still return a real `shell` object. Resolved by extending the
+   union with `'web'` rather than inventing a misleading OS guess.
 
 ## Adoption path
 

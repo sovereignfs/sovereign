@@ -40,6 +40,7 @@ const nextConfig: NextConfig = {
   // Compile all workspace packages from source — package edits trigger HMR.
   transpilePackages: [
     '@sovereignfs/sdk',
+    '@sovereignfs/bridge',
     '@sovereignfs/ui',
     '@sovereignfs/db',
     '@sovereignfs/manifest',

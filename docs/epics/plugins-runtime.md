@@ -1255,19 +1255,36 @@ filter presentation instead of showing a mobile-only app on desktop.
 - Every existing plugin (no `surfaces` field) behaves exactly as before.
 - Manifest validation rejects an empty or duplicated `surfaces` array.
 
-#### 📋 3.34 — Device bridge protocol package (RFC 0083)
+#### ✅ 3.34 — Device bridge protocol package (RFC 0083)
 
 **Goal:** Establish the device-capability contract and its first implementation:
-the contract in `@sovereignfs/sdk/device-client`, the transports in a new published
+the contract in `@sovereignfs/sdk`, the transports in a new published
 `@sovereignfs/bridge`. One protocol owned here and consumed by both external shell
 repositories, so the Capacitor and Tauri shells cannot drift. Web transport only;
 no plugin-facing capability calls yet.
 
 **Deliverables:**
 
-- `packages/sdk`: new `device-client` subpath (joining the five that already exist)
-  holding the **contract** — capability registry, handshake shape, typed
-  `DeviceResult`, the `BridgeImpl` interface, and `provideBridge()`.
+- `packages/sdk`: new **`device-bridge` subpath** — not `device-client` as RFC
+  0083 originally wrote — holding the **contract** — capability registry,
+  handshake shape, typed `DeviceResult`, the `BridgeImpl` interface, and
+  `provideBridge()`. **Deviates from the RFC's literal wording for a verified
+  technical reason:** `device-client.ts` (RFC 0080's `useDeviceEnvironment`)
+  imports React; `@sovereignfs/bridge` imports `provideBridge` as a genuine
+  runtime value (not just a type), and React ships no `"sideEffects": false`
+  in its own `package.json`, so a bundler inlining the contract (required,
+  since `@sovereignfs/bridge` takes the SDK as a devDependency only and must
+  ship no runtime dependency on it) cannot tree-shake an unused React import
+  out of a shared file. Confirmed empirically, not assumed: co-locating the
+  contract in `device-client.ts` pulled ~64KB of React into
+  `@sovereignfs/bridge`'s built `dist/index.js`; splitting it into its own
+  React-free `device-bridge.ts` dropped that to 1.46KB with zero `react`
+  references in the built output (checked directly against the `tsup` build
+  artifact, not inferred from source). Leg 2's plugin-facing surface
+  (`supports()`, `haptics`, `nativeNotifications`) still lands in
+  `device-client.ts` as the RFC specifies — that code is consumed by plugin
+  React components, which already depend on React, so it carries none of
+  this risk.
   **`packages/sdk` keeps zero runtime dependencies** — it has no `dependencies`
   field today and must not gain one.
 - **`provideBridge()` stores the implementation on a `Symbol.for`-keyed global**,
@@ -1287,41 +1304,67 @@ no plugin-facing capability calls yet.
   no Next, no Node built-ins; never imports `next/headers`, `@sovereignfs/db`, or
   anything reachable from `SdkHost`. Verified by a standalone type-check.
 - `runtime`: a client bootstrap that calls `provideBridge()` — the client-side
-  analogue of `instrumentation.ts` calling `provideHost()`. Resolve RFC 0083 open
-  question 7 (where it lives, and how it is guaranteed to run before a plugin's
-  first `supports()` call).
+  analogue of `instrumentation.ts` calling `provideHost()`. **Resolved RFC 0083
+  open question 7**: a module-level call to `installWebBridge()` at the top of
+  `ClientShell.tsx` (the platform layout's single client-side entry point,
+  rendered around every authenticated route) — runs once as soon as that chunk
+  is evaluated, earlier and more reliable than a `useEffect`, since a plugin's
+  first `supports()` call (leg 2) needs the handshake already answerable.
 - Capability negotiation: the shell advertises `{ name, version }` descriptors at
   handshake. **Nothing compares shell versions** — `shell.version` is diagnostic
   only, and branching on it is a review-blocking mistake.
 - `DeviceResult` with distinct `ok` / `unavailable` / `denied` / `dismissed` /
   `failed` states. Exceptions reserved for programmer error, never for user or
   environment outcomes.
-- Build wiring: `tsup`, `turbo.json` pipeline entry, `transpilePackages` in **both**
-  `next.config.ts` files, catalog-pinned dev deps per the pnpm `catalog:` convention.
-- Resolve RFC 0083 open question 2 (protocol-version mismatch: fatal vs. degrade to
-  `web` — recommended degrade with a recorded warning).
-- `docs/sdk-stability.md` and `CLAUDE.md` updated: a fourth published package now
-  exists.
+- Build wiring: `tsup`, catalog-pinned dev deps per the pnpm `catalog:`
+  convention. **`transpilePackages` added to `runtime/next.config.ts` only** —
+  not `apps/auth/next.config.ts` too, despite the RFC's generic "both
+  `next.config.ts` files" phrasing: `apps/auth` doesn't import
+  `@sovereignfs/sdk` at all today (confirmed by grep, not assumed), so it has
+  no reason to import the bridge either. No `turbo.json` pipeline entry needed
+  — `build`/`typecheck` already participate generically via each package's own
+  `package.json` scripts and turbo's existing `dependsOn: ["^build"]` rule.
+- **Resolved RFC 0083 open question 2**: a native shell whose `protocolVersion`
+  doesn't match this build's degrades to the `web` transport (empty
+  capabilities) with a recorded `console.warn`, never a fatal error — an old
+  shell can never hard-break an instance.
+- The RFC's original `BridgeHandshake.shell.platform` enum
+  (`'ios' | 'android' | 'macos' | 'windows' | 'linux'`) had no value for "no
+  native shell is present" — the web transport's own handshake needs one.
+  Extended with `'web'` rather than inventing a misleading OS guess.
 
 **Dependencies:** RFC 0083.
 
 **SRS reference:** §3.12, §3.19
 
-**Review checklist:**
+**Review checklist — all verified:**
 
-- `packages/sdk/package.json` still has **no `dependencies` field**.
-- `packages/bridge` type-checks standalone; its published `dependencies` are empty
-  and `@sovereignfs/sdk` appears only under `devDependencies`.
-- Neither package imports `next/headers`, `@sovereignfs/db`, or anything reachable
-  from `SdkHost`.
-- `provideBridge()` uses a `Symbol.for` global; two module instances of
-  `device-client` resolve to the same registration.
-- An older shell advertising fewer capabilities, and a newer shell advertising an
-  unknown one, both resolve correctly against an unchanged platform.
-- A capability absent from the handshake yields `unavailable`, not a throw.
-- The web transport works in a plain browser tab with no shell present.
-- `pnpm build` produces both packages; both Next apps transpile them.
-- No shell version comparison exists anywhere in either package.
+- ✅ `packages/sdk/package.json` still has **no `dependencies` field**.
+- ✅ `packages/bridge` type-checks standalone (`pnpm --filter @sovereignfs/bridge
+typecheck`); its published `dependencies` are empty and `@sovereignfs/sdk`
+  appears only under `devDependencies`.
+- ✅ Neither package imports `next/headers`, `@sovereignfs/db`, or anything
+  reachable from `SdkHost` — verified by typecheck (would fail to resolve) and
+  by inspecting the built `dist/index.js`/`dist/shell.js` directly.
+- ✅ `provideBridge()` uses a `Symbol.for` global — `packages/sdk/src/__tests__/
+device-bridge.test.ts` verifies a later registration replaces an earlier one
+  via the same key, the two-module-instance scenario in miniature.
+- ✅ An older shell advertising fewer capabilities (empty `capabilities: []`
+  from the web fallback) and a newer/mismatched-protocol shell (degrades to
+  the same empty-capabilities web fallback) both resolve without error —
+  covered in `packages/bridge/src/__tests__/index.test.ts`.
+- ✅ A capability call with no shell present, or a protocol mismatch, yields
+  `{ status: 'unavailable', capability }`, never a throw — same test file.
+- ✅ The web transport works in a plain browser tab with no shell present —
+  same test file's "degrades to the web transport when no native shell has
+  installed a bridge" case.
+- ✅ `pnpm --filter @sovereignfs/runtime build` (a real production build, not
+  just typecheck) produces every route including `/launcher` (which renders
+  `ClientShell`) with no error — chosen over a dev-server click-test because
+  authenticated routes need credentials this session cannot enter.
+- ✅ No shell version comparison exists anywhere in either package —
+  `shell.version` is only ever read (never compared) in `index.ts`'s pass-through
+  of the native handshake.
 
 #### 📋 3.35 — Plugin device surface, permissions, and consent (RFC 0083)
 

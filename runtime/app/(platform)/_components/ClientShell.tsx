@@ -3,11 +3,30 @@
 import { useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { ToastProvider } from '@sovereignfs/ui';
+import { installWebBridge } from '@sovereignfs/bridge';
 import { offline } from '@sovereignfs/sdk/offline';
 import { underPrefix } from '@/src/route-guard';
 import { computeViewportHeight } from '@/src/viewport-height';
 import type { MobileChromeOverride } from '@/src/registry';
 import { mobileFooterVisible, mobileHeaderVisible } from '@/src/mobile-chrome';
+
+/**
+ * Registers the device bridge (RFC 0083 §1, workstream 0003 leg 1) once,
+ * as a module-level side effect rather than inside the component or a
+ * `useEffect` — resolves RFC 0083 open question 7 ("where does the client
+ * bootstrap that calls `provideBridge()` live, and how is it guaranteed to
+ * run before a plugin's first `supports()` call?"). `provideHost()` has
+ * `runtime/instrumentation.ts` as an unambiguous once-before-any-request
+ * server-side hook; the client side has no exact equivalent, but a
+ * module-level call in the platform shell's root client component is the
+ * closest match — it runs exactly once per page load, as soon as this
+ * chunk is evaluated, which is earlier and more reliable than waiting for
+ * a `useEffect` (which waits for React's commit phase). `ClientShell` is
+ * the platform layout's single client-side entry point
+ * (`(platform)/layout.tsx` renders it around every route), so this covers
+ * every authenticated page.
+ */
+installWebBridge();
 
 /** localStorage marker for the last authenticated user id this device purged
  *  the offline cache for. `runtime/src/complete-sign-in.ts` already purges

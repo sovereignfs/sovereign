@@ -188,6 +188,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.57.0  | Mobile/desktop instance validation endpoint (GET /api/instance)                 | ✅     | [20.2](docs/epics/mobile.md#-202--mobile-instance-validation-and-compatibility-endpoint)                          |
 | 0.58.0  | Plugin surface model and SDK device environment (RFC 0080)                      | ✅     | [3.32](docs/epics/plugins-runtime.md#-332--plugin-surface-model-and-sdk-device-environment-rfc-0080)              |
 | 0.59.0  | Device bridge protocol package — workstream 0003 leg 1 (RFC 0083)               | ✅     | [3.34](docs/epics/plugins-runtime.md#-334--device-bridge-protocol-package-rfc-0083)                               |
+| 0.60.0  | Plugin device surface, permissions, and consent — leg 2 (RFC 0083)              | ✅     | [3.35](docs/epics/plugins-runtime.md#-335--plugin-device-surface-permissions-and-consent-rfc-0083)                |
 
 ---
 
@@ -228,7 +229,6 @@ once prioritised.
 | —       | Plugin PWA icon generation (RFC 0081)                                     | 📋     | [2.26](docs/epics/platform-shell.md#-226--plugin-pwa-icon-generation-rfc-0081)                                                   |
 | —       | Focused plugin app context and route lock (RFC 0082)                      | 📋     | [2.27](docs/epics/platform-shell.md#-227--focused-plugin-app-context-and-route-lock-rfc-0082)                                    |
 | —       | In-app text-size control (pinch-zoom compensation)                        | 📋     | [10.2](docs/epics/accessibility.md#-102--in-app-text-size-control-pinch-zoom-compensation)                                       |
-| —       | Plugin device surface, permissions, and consent (RFC 0083)                | 📋     | [3.35](docs/epics/plugins-runtime.md#-335--plugin-device-surface-permissions-and-consent-rfc-0083)                               |
 | —       | Role-aware and instance-aware Guide content (RFC 0056)                    | 📋     | [24.2](docs/epics/plugin-guide.md#-242--role-aware-and-instance-aware-guide-content)                                             |
 | —       | Operator-managed Guide content (RFC 0056)                                 | 📋     | [24.3](docs/epics/plugin-guide.md#-243--operator-managed-guide-content)                                                          |
 | —       | Persistent help entry and Guide update affordance (RFC 0056)              | 📋     | [24.4](docs/epics/plugin-guide.md#-244--persistent-help-entry-and-guide-update-affordance)                                       |

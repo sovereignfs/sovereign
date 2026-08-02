@@ -449,6 +449,35 @@ export type UserCapabilityGrant = typeof userCapabilityGrants.$inferSelect;
 export type NewUserCapabilityGrant = typeof userCapabilityGrants.$inferInsert;
 
 /**
+ * Per-user, per-plugin, per-capability device-bridge consent grants (RFC
+ * 0083, workstream 0003 leg 2). Mirrors `user_capability_grants`'s shape
+ * (compound primary key, hard delete on revoke), not `consent_grants`'s
+ * (single `id` PK, soft-delete via `revoked_at`) — RFC 0083's own open
+ * question 1 leans "reuse the *pattern*, not the table," since the subject
+ * here is a device capability the user granted a specific plugin, not a
+ * cross-plugin data contract. `plugin_id` is self-declared by the calling
+ * plugin's own client-side code (device-client.ts is browser-only, so
+ * there is no server-injected `x-sovereign-plugin-id` header to trust here)
+ * — this table is therefore review-time/consent-prompt bookkeeping for
+ * Account UI transparency and revocation, not an enforcement boundary. See
+ * RFC 0083 §5 and `docs/architecture-rules.md`.
+ */
+export const deviceConsentGrants = sqliteTable(
+  'device_consent_grants',
+  {
+    tenantId: text('tenant_id').notNull(),
+    userId: text('user_id').notNull(),
+    pluginId: text('plugin_id').notNull(),
+    capability: text('capability').notNull(),
+    grantedAt: integer('granted_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.pluginId, table.capability] })],
+);
+
+export type DeviceConsentGrant = typeof deviceConsentGrants.$inferSelect;
+export type NewDeviceConsentGrant = typeof deviceConsentGrants.$inferInsert;
+
+/**
  * Per-user notification inbox (RFC 0015). Tenant-scoped; mutable lifecycle
  * (read / dismissed by the recipient). Distinct from `activity_log` which is
  * append-only audit trail.

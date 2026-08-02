@@ -92,6 +92,14 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       granted_at ${ts} NOT NULL,
       PRIMARY KEY (user_id, capability)
     )`,
+    `CREATE TABLE IF NOT EXISTS device_consent_grants (
+      tenant_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      plugin_id TEXT NOT NULL,
+      capability TEXT NOT NULL,
+      granted_at ${ts} NOT NULL,
+      PRIMARY KEY (user_id, plugin_id, capability)
+    )`,
     `CREATE TABLE IF NOT EXISTS consent_grants (
       id TEXT PRIMARY KEY,
       tenant_id TEXT NOT NULL,

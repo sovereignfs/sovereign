@@ -111,12 +111,19 @@ function holder(): BridgeHolder {
  * Register the bridge implementation. Called once from a client bootstrap —
  * `@sovereignfs/bridge`'s `installWebBridge()` — before any plugin code runs.
  * Plugin code should never need to call this.
- *
- * Leg 1 ships the setter only — nothing in the SDK reads the registration
- * back yet, since leg 1 has no plugin-facing capability calls. Leg 2's
- * `supports()`/`haptics`/`nativeNotifications` (in `device-client.ts`) will
- * add the corresponding getter alongside their first real caller.
  */
 export function provideBridge(impl: BridgeImpl): void {
   holder()[BRIDGE_KEY] = impl;
+}
+
+/**
+ * Return the registered bridge implementation, or `null` if none is
+ * registered yet (e.g. `@sovereignfs/bridge`'s client bootstrap hasn't run,
+ * or this code is executing outside the Sovereign runtime, such as a unit
+ * test). Not exported from the package barrel — `device-client.ts`'s
+ * `supports()`/`getTransport()`/`getShellInfo()`/`haptics`/
+ * `nativeNotifications` (leg 2, workstream 0003) are the intended callers.
+ */
+export function getBridge(): BridgeImpl | null {
+  return holder()[BRIDGE_KEY] ?? null;
 }

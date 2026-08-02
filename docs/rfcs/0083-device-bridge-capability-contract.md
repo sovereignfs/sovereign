@@ -362,7 +362,10 @@ export const haptics: {
 export const nativeNotifications: {
   show(input: { title: string; body?: string; url?: string }): Promise<DeviceResult<void>>;
   getPermission(): Promise<'granted' | 'denied' | 'prompt' | 'unsupported'>;
-  requestPermission(): Promise<DeviceResult<'granted' | 'denied'>>;
+  // `pluginId` added in leg 2 — this module is browser-only, so there is no
+  // server-injected header to attribute the consent grant to; the caller
+  // must self-declare (see §5's honesty section — this is exactly that).
+  requestPermission(pluginId: string): Promise<DeviceResult<'granted' | 'denied'>>;
 };
 ```
 
@@ -453,6 +456,17 @@ plugin calls notifications.native.show(...)
        └─ Never  → grant stored as denied → { status: 'denied' } without OS prompt
 ```
 
+> **v1 simplification (leg 2, by explicit developer decision, not a silent
+> cut):** the "platform prompt" step above does not exist in v1 — building a
+> global overlay primitive any plugin could trigger was comparable in size to
+> leg 1 on its own, for a case ("Do not proceed if" above) that a much
+> smaller change already satisfies. `requestPermission(pluginId)` records the
+> consent grant and goes straight to the OS/browser prompt; the calling
+> plugin's own UI (an "Enable notifications" button, shown while the user is
+> already inside that plugin) is what supplies the naming context instead —
+> the standard web pattern. Revisit a platform-rendered prompt only if this
+> proves insufficient in practice.
+
 **Undeclared permission:**
 
 ```
@@ -506,10 +520,14 @@ plugin calls haptics.impact() without device:haptics in its manifest
 
 ## Open questions
 
-1. Does the per-user consent grant belong in the existing data-consent tables
-   (RFC 0002's model, surfaced in Account → Data) or its own store? Leaning
-   reuse-the-pattern-not-the-table, since the subject is a capability rather than
-   a cross-plugin contract.
+1. ~~Does the per-user consent grant belong in the existing data-consent
+   tables (RFC 0002's model, surfaced in Account → Data) or its own store?~~
+   **Resolved in workstream 0003 leg 2, as recommended**: its own store — a
+   new `device_consent_grants` table, compound-keyed `(user_id, plugin_id,
+capability)` and hard-deleted on revoke, mirroring `user_capability_grants`'s
+   shape rather than `consent_grants`'s (which is keyed by
+   consumer/provider/contract/version — the wrong shape for "a capability
+   granted to a plugin").
 2. ~~Should `protocolVersion` mismatch be fatal or degrade to `web`?~~
    **Resolved in workstream 0003 leg 1, as recommended**: degrade to the `web`
    transport with a recorded `console.warn`, never fatal — an old shell can

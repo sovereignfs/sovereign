@@ -24,6 +24,13 @@ interface VaultSecret {
   lastUsedAt: number | null;
 }
 
+interface DeviceGrant {
+  userId: string;
+  pluginId: string;
+  capability: string;
+  grantedAt: number;
+}
+
 interface ExternalConnection {
   id: string;
   pluginId: string;
@@ -35,8 +42,18 @@ interface ExternalConnection {
   lastUsedAt: number | null;
 }
 
+const DEVICE_CAPABILITY_LABELS: Record<string, string> = {
+  'notifications.native': 'Send notifications',
+  'haptics.impact': 'Use haptics',
+};
+
+function deviceCapabilityLabel(capability: string): string {
+  return DEVICE_CAPABILITY_LABELS[capability] ?? capability;
+}
+
 export default function DataPage() {
   const [grants, setGrants] = useState<ConsentGrant[]>([]);
+  const [deviceGrants, setDeviceGrants] = useState<DeviceGrant[]>([]);
   const [secrets, setSecrets] = useState<VaultSecret[]>([]);
   const [connections, setConnections] = useState<ExternalConnection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,6 +67,12 @@ export default function DataPage() {
       if (!res.ok) throw new Error(`Failed to load grants: ${res.status}`);
       const data = (await res.json()) as { grants: ConsentGrant[] };
       setGrants(data.grants);
+      const deviceRes = await fetch('/api/account/device-grants', { cache: 'no-store' });
+      if (!deviceRes.ok) {
+        throw new Error(`Failed to load device permissions: ${deviceRes.status}`);
+      }
+      const deviceData = (await deviceRes.json()) as { grants: DeviceGrant[] };
+      setDeviceGrants(deviceData.grants);
       const secretsRes = await fetch('/api/account/secrets', { cache: 'no-store' });
       if (!secretsRes.ok) throw new Error(`Failed to load vault metadata: ${secretsRes.status}`);
       const secretsData = (await secretsRes.json()) as { secrets: VaultSecret[] };
@@ -76,6 +99,19 @@ export default function DataPage() {
   const revoke = async (id: string) => {
     const res = await fetch(`/api/account/data-grants/${id}`, { method: 'DELETE' });
     if (res.ok) setGrants((prev) => prev.filter((g) => g.id !== id));
+  };
+
+  const revokeDeviceGrant = async (pluginId: string, capability: string) => {
+    const res = await fetch('/api/account/device-grants', {
+      method: 'DELETE',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ pluginId, capability }),
+    });
+    if (res.ok) {
+      setDeviceGrants((prev) =>
+        prev.filter((g) => !(g.pluginId === pluginId && g.capability === capability)),
+      );
+    }
   };
 
   const revokeSecret = async (id: string) => {
@@ -116,6 +152,45 @@ export default function DataPage() {
                   type="button"
                   className={styles.revokeButton}
                   onClick={() => void revoke(grant.id)}
+                >
+                  Revoke
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Device app permissions</h2>
+          <p className={styles.sectionSubtitle}>
+            Apps you&apos;ve allowed to use device capabilities (notifications, haptics). App
+            identity here is self-reported by the app itself, not verified by the platform — revoke
+            anything you don&apos;t recognize.
+          </p>
+        </div>
+
+        {loading && <p className={styles.help}>Loading&hellip;</p>}
+        {!loading && deviceGrants.length === 0 && (
+          <p className={styles.help}>No device permissions granted.</p>
+        )}
+
+        {deviceGrants.length > 0 && (
+          <ul className={styles.sessionGroup}>
+            {deviceGrants.map((grant) => (
+              <li key={`${grant.pluginId}:${grant.capability}`} className={styles.sessionRow}>
+                <div className={styles.sessionInfo}>
+                  <span className={styles.sessionDevice}>{grant.pluginId}</span>
+                  <span className={styles.sessionMeta}>
+                    {deviceCapabilityLabel(grant.capability)} · Granted{' '}
+                    {new Date(grant.grantedAt * 1000).toLocaleString()}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className={styles.revokeButton}
+                  onClick={() => void revokeDeviceGrant(grant.pluginId, grant.capability)}
                 >
                   Revoke
                 </button>

@@ -332,6 +332,6 @@ mobile app (post-v1 plan)" and SRS §3.12) and lives in a separate
 | —       | Mobile biometric auth capability (RFC 0058)                      | 📋     | [20.7](docs/epics/mobile.md#-207--biometric-auth-capability)                                        |
 | —       | Mobile haptics capability (RFC 0058)                             | 📋     | [20.8](docs/epics/mobile.md#-208--haptics-capability)                                               |
 | —       | Mobile background capability planning (RFC 0058)                 | 📋     | [20.9](docs/epics/mobile.md#-209--background-capability-planning)                                   |
-| —       | WKWebView service-worker and offline spike (RFC 0058, RFC 0082)  | 📋     | [20.10](docs/epics/mobile.md#-2010--wkwebview-service-worker-and-offline-spike-rfc-0058-rfc-0082)   |
+| —       | WKWebView service-worker and offline spike (RFC 0058, RFC 0082)  | ⏳     | [20.10](docs/epics/mobile.md#-2010--wkwebview-service-worker-and-offline-spike-rfc-0058-rfc-0082)   |
 | —       | Focused plugin app build targets (RFC 0082)                      | 📋     | [20.11](docs/epics/mobile.md#-2011--focused-plugin-app-build-targets-rfc-0082)                      |
 | —       | Plugin app store release process and rationing policy (RFC 0082) | 📋     | [20.12](docs/epics/mobile.md#-2012--plugin-app-store-release-process-and-rationing-policy-rfc-0082) |

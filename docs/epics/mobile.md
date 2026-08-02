@@ -285,7 +285,19 @@ the mobile shell.
 - Plugin-facing API shape is explicit or intentionally deferred.
 - Store-review risk is documented before implementation.
 
-#### 📋 20.10 — WKWebView service-worker and offline spike (RFC 0058, RFC 0082)
+#### ⏳ 20.10 — WKWebView service-worker and offline spike (RFC 0058, RFC 0082)
+
+**Progress (2026-08):** [Research 0008](../research/0008-wkwebview-android-webview-offline-spike.md)
+covers the `capacitor://`/bundled-scheme service-worker question (confirmed,
+not assumed, and platform-divergent — no SW support on iOS's `capacitor://`
+scheme, but full SW support on Android's default `https://localhost` bundled
+scheme) and found a real, reproducible Android-WebView-specific
+service-worker registration bug against a live instance. **Not yet
+complete** per this task's own review checklist: `sdk.offline` IndexedDB
+persistence across restart (needs an authenticated session — a human
+handoff, not something an agent should do by entering credentials),
+background/foreground cycle survival, and `WKWebsiteDataStore` eviction
+under storage pressure are all still open. See that doc's Open questions.
 
 **Goal:** Establish, against a real Capacitor build, whether Sovereign's offline stack
 works inside the mobile WebView. This is the least-verified assumption behind every

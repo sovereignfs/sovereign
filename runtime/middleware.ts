@@ -28,6 +28,34 @@ import {
 const AUTH_URL =
   process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
+/**
+ * Headers this middleware treats as platform-computed and injects itself —
+ * never legitimate input from a caller. Every branch that forwards a request
+ * (rewrite or `next()`) must strip these from the *inbound* clone before
+ * conditionally re-setting any of them, so an unauthenticated or anonymous
+ * path can never let a caller-supplied value (e.g. `curl -H
+ * "x-sovereign-user-role: platform:owner"`) survive into a plugin route —
+ * downstream code (e.g. `runtime/app/api/instance/logo/route.ts`) trusts
+ * these headers directly for authorization.
+ */
+const SOVEREIGN_TRUST_HEADERS = [
+  'x-sovereign-user-id',
+  'x-sovereign-user-email',
+  'x-sovereign-user-role',
+  'x-sovereign-user-capabilities',
+  'x-sovereign-user-name',
+  'x-sovereign-user-image',
+  'x-sovereign-session-expires-at',
+  'x-sovereign-plugin-id',
+] as const;
+
+/** Clone the inbound request headers with every platform-trust header stripped. */
+function strippedRequestHeaders(request: NextRequest): Headers {
+  const headers = new Headers(request.headers);
+  for (const name of SOVEREIGN_TRUST_HEADERS) headers.delete(name);
+  return headers;
+}
+
 // Self-fetch address for the runtime's own Node-runtime API routes. The server
 // always listens on :3000 (scripts/dev.ts and the start script both pin it),
 // so localhost is reliable in every environment — unlike the public URL, which
@@ -239,7 +267,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     if (decision.kind === 'rewrite') {
       const target = new URL(decision.target, request.url);
       target.search = request.nextUrl.search;
-      return applyCsp(NextResponse.rewrite(target));
+      // The provider plugin does its own API-key auth for this namespace and
+      // isn't expected to read these headers, but nothing stops a caller from
+      // sending them — strip them so a forged value can never reach plugin
+      // code as if it were platform-computed.
+      const headers = strippedRequestHeaders(request);
+      return applyCsp(NextResponse.rewrite(target, { request: { headers } }));
     }
   }
 
@@ -294,7 +327,11 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    const headers = new Headers(request.headers);
+    // Strip inbound trust headers unconditionally first — the `if
+    // (publicSession)` block below only *conditionally* re-sets the
+    // user-identity ones, so the anonymous case must not inherit whatever a
+    // caller sent.
+    const headers = strippedRequestHeaders(request);
     headers.set('x-nonce', nonce);
     headers.set('content-security-policy', csp);
     headers.set('x-sovereign-plugin-id', publicRoutePluginId);
@@ -427,7 +464,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const headers = new Headers(request.headers);
+  // `strippedRequestHeaders`, not a bare clone: `x-sovereign-user-name`,
+  // `-user-image`, and `-plugin-id` below are only *conditionally* re-set
+  // (no name/image on the session, or a path outside any plugin prefix), so
+  // an unconditional clone would let a caller-forged value for one of those
+  // three survive whenever its condition is false.
+  const headers = strippedRequestHeaders(request);
   // Pass the nonce to the rendered request: Next reads it from the CSP request
   // header for its scripts; the layout reads `x-nonce` for the theme script.
   headers.set('x-nonce', nonce);

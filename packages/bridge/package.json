@@ -1,0 +1,39 @@
+{
+  "name": "@sovereignfs/bridge",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Sovereign device bridge — capability negotiation protocol between plugin code and a native shell (Capacitor/Tauri), with a browser fallback.",
+  "license": "AGPL-3.0-or-later",
+  "publishConfig": {
+    "access": "public",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./shell": {
+        "types": "./dist/shell.d.ts",
+        "default": "./dist/shell.js"
+      }
+    }
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./shell": "./src/shell.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@sovereignfs/sdk": "workspace:*",
+    "@sovereignfs/tsconfig": "workspace:*",
+    "tsup": "catalog:",
+    "typescript": "catalog:"
+  }
+}

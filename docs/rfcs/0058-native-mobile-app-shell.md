@@ -238,8 +238,15 @@ operator-controlled.
 
 ## Open questions
 
-1. Which endpoint should the shell use for first-launch instance validation and
-   compatibility metadata?
+1. ~~Which endpoint should the shell use for first-launch instance validation
+   and compatibility metadata?~~ **Resolved by task 20.2:** a new public,
+   unauthenticated `GET /api/instance` endpoint — `200` +
+   `{ "status": "ok", "product": "sovereign", "instanceName": string,
+"platformVersion": string }`. Supersedes the bare `/api/health` liveness
+   probe the shells used before this endpoint existed, which couldn't
+   reliably distinguish a genuine Sovereign instance from any other server
+   answering `{ "status": "ok" }`, or surface the instance's display name.
+   Shared by both `sovereign-mobile` and `sovereign-desktop`.
 2. Minimum supported iOS and Android versions.
 3. Whether push notifications ship with the initial shell or as the first
    follow-up native capability.
@@ -261,6 +268,7 @@ operator-controlled.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | July 2026 | Initial draft |
+| Version | Date        | Change                                                       |
+| ------- | ----------- | ------------------------------------------------------------ |
+| 0.1     | July 2026   | Initial draft                                                |
+| 0.2     | August 2026 | Resolve open question 1: task 20.2 ships `GET /api/instance` |

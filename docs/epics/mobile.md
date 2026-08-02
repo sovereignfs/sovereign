@@ -5,7 +5,8 @@
 
 ## Status
 
-📋 Planned
+⏳ In Progress — task 20.2 shipped; task 20.1 substantially implemented in
+`sovereign-mobile` (see that repo's own `docs/epics/shell.md` for status).
 
 ## Overview
 
@@ -23,11 +24,18 @@ do not import Capacitor or branch on shell internals.
 
 ## Tasks
 
-#### 📋 20.1 — sovereign-mobile — Capacitor shell scaffold
+#### ⏳ 20.1 — sovereign-mobile — Capacitor shell scaffold
 
 **Goal:** Bootstrap `sovereign-mobile` with a working Capacitor shell for iOS and
 Android: first-launch instance URL onboarding, persistent instance storage,
 WebView loading, navigation policy, and multiple-instance switching.
+
+**Status (2026-08):** Scaffold implemented and largely verified against a real
+instance on both iOS Simulator and Android Emulator — see
+`sovereign-mobile`'s own [docs/epics/shell.md](https://github.com/sovereignfs/sovereign-mobile/blob/main/docs/epics/shell.md)
+for the full review checklist and what remains open (real physical-device
+verification, Android back-navigation reliability). Not yet ✅ here pending
+that repo's own sign-off.
 
 **Deliverables:**
 
@@ -57,11 +65,25 @@ WebView loading, navigation policy, and multiple-instance switching.
   configured instance.
 - No Sovereign auth, role, or plugin behavior is duplicated in native code.
 
-#### 📋 20.2 — Mobile instance validation and compatibility endpoint
+#### ✅ 20.2 — Mobile instance validation and compatibility endpoint
 
 **Goal:** Define and implement the stable runtime endpoint used by native shells
 to validate a user-entered Sovereign instance URL and discover client
 compatibility metadata.
+
+**Status (2026-08):** Shipped as `GET /api/instance` (`runtime/app/api/instance/route.ts`)
+— unauthenticated, returns `{ status, product: "sovereign", instanceName,
+platformVersion }`. Both `sovereign-mobile` and `sovereign-desktop` updated to
+validate against it instead of the bare `/api/health` liveness probe they used
+before this endpoint existed; `instanceLabel()` (derived-from-hostname label)
+removed from both shells' `validate.ts` now that the real `instanceName` is
+available. Verified end-to-end on iOS Simulator against a live local dev
+server, not just unit tests. See
+[sovereignfs/sovereign-mobile#2](https://github.com/sovereignfs/sovereign-mobile/pull/2)
+and
+[sovereignfs/sovereign-desktop#2](https://github.com/sovereignfs/sovereign-desktop/pull/2)
+(both draft, pending review — the desktop change also updates a documented
+"hard rule" in that repo's CLAUDE.md, flagged there for explicit sign-off).
 
 **Deliverables:**
 

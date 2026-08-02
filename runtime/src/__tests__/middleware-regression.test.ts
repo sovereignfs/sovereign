@@ -33,6 +33,8 @@ vi.mock('@/src/route-guard', async () => import('../route-guard'));
 
 vi.mock('@/src/security', async () => import('../security'));
 
+vi.mock('@/src/surface', async () => import('../surface'));
+
 vi.mock('@/src/session-verify', async () => import('../session-verify'));
 
 const { middleware } = await import('../../middleware');
@@ -344,6 +346,53 @@ describe('runtime middleware regressions', () => {
     const rootCall = fetchState.calls.find((c) => c.includes('/api/admin/root-plugin'));
     expect(rootCall).toContain('userId=user-1');
     expect(rootCall).toContain('role=platform%3Aadmin');
+  });
+
+  describe('x-sovereign-surface (RFC 0080)', () => {
+    it('resolves the native shell surface for an authenticated request', async () => {
+      const response = await middleware(
+        request('/launcher', { headers: { 'user-agent': 'Sovereign-Shell/mobile-ios 1.0.0' } }),
+      );
+
+      expect(response.headers.get('x-middleware-request-x-sovereign-surface')).toBe('mobile');
+      expect(response.headers.get('x-middleware-request-x-sovereign-shell-version')).toBe('1.0.0');
+    });
+
+    it('resolves browser and strips a forged inbound header for an ordinary request', async () => {
+      const response = await middleware(
+        request('/launcher', { headers: { 'x-sovereign-surface': 'desktop' } }),
+      );
+
+      expect(response.headers.get('x-middleware-request-x-sovereign-surface')).toBe('browser');
+      expect(response.headers.get('x-middleware-request-x-sovereign-shell-version')).toBeNull();
+    });
+
+    it('resolves the surface for a public plugin route request', async () => {
+      const response = await middleware(
+        request('/blog/p/hello', {
+          headers: { 'user-agent': 'Sovereign-Shell/desktop-macos 2.0.0' },
+        }),
+      );
+
+      expect(response.headers.get('x-middleware-request-x-sovereign-surface')).toBe('desktop');
+      expect(response.headers.get('x-middleware-request-x-sovereign-shell-version')).toBe('2.0.0');
+    });
+
+    it('resolves the surface for a public /api/* namespace request', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(
+        request('/api/blog/posts/1', {
+          headers: { 'user-agent': 'Sovereign-Shell/mobile-android 3.1.0' },
+        }),
+      );
+
+      expect(middlewareRewrite(response)).toBe(
+        'http://runtime.test/api-composer/serve/blog/posts/1',
+      );
+      expect(response.headers.get('x-middleware-request-x-sovereign-surface')).toBe('mobile');
+      expect(response.headers.get('x-middleware-request-x-sovereign-shell-version')).toBe('3.1.0');
+    });
   });
 
   describe('offline route flag (RFC 0074, RFC 0078)', () => {

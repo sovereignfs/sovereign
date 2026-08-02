@@ -8,6 +8,7 @@ export default defineConfig({
   // imports from the barrel instead of these subpaths.
   entry: [
     'src/index.ts',
+    'src/device-client.ts',
     'src/e2ee-crypto.ts',
     'src/e2ee-device.ts',
     'src/e2ee-object.ts',

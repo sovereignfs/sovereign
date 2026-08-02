@@ -1161,7 +1161,7 @@ only which plugins are declared by default).
 
 ---
 
-#### 📋 3.32 — Plugin surface model and SDK device environment (RFC 0080)
+#### ✅ 3.32 — Plugin surface model and SDK device environment (RFC 0080)
 
 **Goal:** Give the platform one way to answer "what surface am I running on?" and
 expose it to plugins as `sdk.device.*` — the abstraction RFC 0058 and RFC 0038 both
@@ -1194,17 +1194,37 @@ promised and neither shipped. Server-side for layout and routing decisions
 
 **SRS reference:** §3.12, §3.19.
 
-**Review checklist:**
+**Review checklist — all verified:**
 
-- A request with a native shell User-Agent resolves the correct surface server-side;
-  an ordinary browser resolves `browser`.
-- A forged inbound `x-sovereign-surface` header is stripped and ignored.
-- `getSurface()` returns `browser` outside a plugin route context and never throws.
-- A `'use client'` component importing `@sovereignfs/sdk/device-client` builds — no
-  server-only module leaks into the client graph.
-- `useDeviceEnvironment()` causes no hydration mismatch.
-- `useIsMobile` in `packages/ui` is unchanged.
-- The architecture-rules entry is present and explicit.
+- ✅ A request with a native shell User-Agent resolves the correct surface
+  server-side; an ordinary browser resolves `browser` — covered by
+  `runtime/src/__tests__/surface.test.ts` (pure `resolveSurface()`/
+  `applySurfaceHeaders()` unit tests) and four new integration tests in
+  `runtime/src/__tests__/middleware-regression.test.ts` exercising all three
+  header-forwarding code paths (authenticated main path, RFC 0042 public
+  plugin route, public `/api/*` namespace delegation) against a real
+  `middleware()` call.
+- ✅ A forged inbound `x-sovereign-surface` header is stripped and ignored —
+  same test suite; `applySurfaceHeaders()` unconditionally overwrites the
+  header on every path (unlike the pre-existing `x-sovereign-user-*`
+  handling, which only overwrites when a session exists — a separate,
+  pre-existing gap flagged as its own follow-up, not fixed here).
+- ✅ `getSurface()` returns `browser` outside a plugin route context and
+  never throws — `packages/sdk/src/__tests__/device.test.ts` (mocked
+  `next/headers`).
+- ✅ A `'use client'` component importing `@sovereignfs/sdk/device-client`
+  builds — verified by actually running `tsup` and inspecting the built
+  `dist/device-client.js`: 712 bytes, imports only `react`, zero occurrences
+  of `next/headers`.
+- ✅ `useDeviceEnvironment()` causes no hydration mismatch — by construction
+  (`useState(null)` + fill in `useEffect`, the same pattern the hard rule
+  against reading browser globals in render requires); `readEnvironment()`
+  itself unit-tested in `packages/sdk/src/__tests__/device-client.test.ts`
+  (jsdom).
+- ✅ `useIsMobile` in `packages/ui` is unchanged — this task never touches
+  `packages/ui`.
+- ✅ The architecture-rules entry is present and explicit — see
+  `docs/architecture-rules.md`'s `sdk.device.getSurface()` entry.
 
 #### 📋 3.33 — Manifest surfaces availability declaration (RFC 0080)
 

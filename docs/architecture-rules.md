@@ -409,3 +409,18 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   full pattern (`packages/db/src/schema/{sqlite,postgres}/platform.ts` is a
   different case — the platform's own query code is dialect-aware via
   `packages/db/src/exec.ts`, so its Postgres schema uses native types).
+- **`sdk.device.getSurface()` / `x-sovereign-surface` (RFC 0080) is a
+  presentation hint only, never a security boundary.** The signal derives
+  from the shell's own User-Agent — a client-controlled value any caller can
+  set to anything — so it must never be an input to authorization,
+  entitlement, paywall, or data-access decisions. Anything that must not be
+  reachable is gated by session, capability, or plugin permission, never by
+  surface. RFC 0082's route lock is a UX and product-scoping mechanism on
+  top of this signal, not a security boundary, and documents itself as such.
+  `runtime/middleware.ts` strips any inbound `x-sovereign-surface` /
+  `x-sovereign-shell-version` header before injecting its own (parsed from
+  the shell's `Sovereign-Shell/<mobile|desktop>-<platform> <version>`
+  User-Agent token via `runtime/src/surface.ts`), the same discipline
+  already applied to the `x-sovereign-user-*` family — but the stripping
+  only protects against a spoofed _header_; it does nothing about a spoofed
+  _User-Agent_, which is the actual trust boundary this rule exists to name.

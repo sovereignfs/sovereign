@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/sdk",
-  "version": "1.28.0",
+  "version": "1.29.0",
   "type": "module",
   "description": "Sovereign SDK — the plugin↔platform contract (types and interfaces).",
   "license": "AGPL-3.0-or-later",
@@ -11,6 +11,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./device-client": {
+        "types": "./dist/device-client.d.ts",
+        "default": "./dist/device-client.js"
       },
       "./e2ee-crypto": {
         "types": "./dist/e2ee-crypto.d.ts",
@@ -40,6 +44,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
+    "./device-client": "./src/device-client.ts",
     "./e2ee-crypto": "./src/e2ee-crypto.ts",
     "./e2ee-device": "./src/e2ee-device.ts",
     "./e2ee-object": "./src/e2ee-object.ts",
@@ -56,11 +61,14 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "next": ">=15.0.0"
+    "next": ">=15.0.0",
+    "react": "^19.0.0"
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",
+    "@types/react": "catalog:",
     "next": "catalog:",
+    "react": "catalog:",
     "tsup": "catalog:",
     "typescript": "catalog:"
   }

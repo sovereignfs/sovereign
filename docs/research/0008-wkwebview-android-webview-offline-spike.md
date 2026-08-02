@@ -153,6 +153,106 @@ strictly than desktop Chrome does — service workers disallowing redirected
 redirect, desktop Chrome should reject it too, which it evidently does not;
 this discrepancy itself is worth a follow-up, not resolved here).
 
+### Background/foreground cycle survival — WebView reloads from scratch on iOS; JS state does not survive
+
+Tested with a second disposable Capacitor 8.5.0 project (`spike-bgfg`, iOS
+only in this pass) loading a bundled local page with a live `setInterval`
+counter and `visibilitychange`/`pagehide`/`pageshow`/`freeze`/`resume` event
+logging, rendered as on-screen text and verified by screenshot (again, no
+remote-debugging access in this environment).
+
+Sequence on iOS Simulator (iPhone 17 Pro):
+
+1. App launched and left running. Screenshot confirmed `counter: 11`,
+   `page loaded at: 2026-08-02T06:50:06...`, one
+   `pageshow:persisted=false` event (the normal first-load event, not a
+   restore).
+2. Backgrounded via the Home button, left backgrounded 30 seconds, then
+   brought back to the foreground via `simctl launch` on the same bundle ID.
+3. Post-foreground screenshot showed `page loaded at:
+2026-08-02T06:51:55...` — a **different, later timestamp** than before
+   backgrounding — with `counter` reset to a small value rather than
+   continuing from 11. A follow-up screenshot ~4 minutes later showed the
+   counter having climbed to 247, consistent with ~1 tick/second counting up
+   fresh from the new load time, not a resumed prior session.
+
+**Conclusion: the WebView's JS execution context did not survive this
+background/foreground cycle on iOS Simulator — the page reloaded from
+scratch.** No `pagehide`/`freeze`/`resume` events from the original page
+instance appeared in the post-foreground log (that in-memory event array was
+gone), consistent with the process being torn down and recreated, not merely
+suspended and resumed.
+
+**Caveat on method:** the foreground trigger was `simctl launch` re-invoked
+on an already-backgrounded process, not a real user gesture (Home Screen
+icon tap or App Switcher). This can't distinguish "the OS/simulator evicted
+the backgrounded WebView content process under memory pressure" from
+"`simctl launch`'s resume path itself forces a fresh load" — both produce
+this exact symptom, and this session didn't cross-check against a real
+foreground gesture. The practical answer (in-memory JS state should not be
+assumed to survive backgrounding) holds either way; the root cause doesn't.
+
+**Practical implication:** this sharpens the earlier IndexedDB finding into
+a concrete constraint — any offline write-queue or buffering in
+`sdk.offline` must flush to IndexedDB (confirmed working in every context
+tested here) as data is produced, not hold it in a JS variable to flush
+later, since a background/foreground cycle can silently discard that state
+with no error or event to catch it.
+
+**Android:** tested with the same `spike-bgfg` project, `./gradlew
+assembleDebug` against Capacitor Android 8.5.0, installed and run on the
+same arm64-v8a API 34 AVD used for the earlier navigation-policy testing.
+Sequence:
+
+1. Installed, launched (`adb shell am start`). Screenshot confirmed
+   `counter: 5`, `page loaded at: 2026-08-02T07:00:02.075Z`, one
+   `pageshow:persisted=false` event.
+2. Backgrounded via `adb shell input keyevent KEYCODE_HOME`, waited (real
+   elapsed time between steps ended up closer to ~10 minutes than the
+   intended 30 seconds, due to tool round-trip latency — visible in the
+   event timestamps below), then re-foregrounded via
+   `adb shell am start` on the same activity. adb itself reported
+   `Warning: Activity not started, its current task has been brought to
+the front` — i.e. Android recognized the existing task and brought it
+   forward rather than creating a new one, closer to a real launcher-icon
+   tap than iOS's `simctl launch` re-invocation.
+3. Post-foreground screenshot: **`page loaded at` unchanged** —
+   still `2026-08-02T07:00:02.075Z`, the exact same value as before
+   backgrounding. The event log had **grown**, not reset: it still
+   contained the original `pageshow:persisted=false@07:00:02` entry, with
+   `visibility:hidden@07:09:16` and `visibility:visible@07:09:50` appended
+   after it — the same in-memory JS array (`window.__bgFgEvents`) from
+   before backgrounding, added to, not recreated. Counter read `40`.
+
+**Conclusion: on Android, the WebView's JS execution context survived the
+background/foreground cycle** — this is the opposite result from iOS. The
+unchanged load timestamp and the appended (not reset) event array both
+confirm the same page instance and the same in-memory state persisted
+through backgrounding, in clear contrast to iOS Simulator's fresh reload
+(new load timestamp, reset counter, empty event history) under the
+equivalent test.
+
+**On the counter value itself:** `40` is lower than a naive "~1 tick per
+elapsed wall-clock second" estimate would predict given the ~9-minute gap
+between load and backgrounding. This is not evidence of a reload — the
+unchanged load timestamp and intact/appended event log rule that out — and
+is consistent with Chromium's well-documented behavior of throttling
+`setInterval` timers in backgrounded/non-visible pages (and, additionally,
+Android Doze/App Standby power management can throttle background JS
+execution independent of the Page Visibility API). The state and code
+survived; the timer's _tick rate_ while not foregrounded did not run at its
+nominal 1/second.
+
+**Practical implication — sharper than the iOS-only version above:** this
+is a genuine, previously-undocumented iOS/Android divergence relevant to
+`sdk.offline`'s design. An in-memory write queue would be silently and
+completely lost across a background/foreground cycle on iOS, but would
+survive (possibly with delayed/throttled execution while backgrounded, not
+loss) on Android. Any design that assumes uniform behavior across platforms
+here is wrong in one direction or the other; the safe design (flush to
+IndexedDB as data is produced, never rely on JS-memory survival) is safe on
+both, and necessary specifically because of the iOS behavior.
+
 ### Note on scope: this spike's setup vs. `sovereign-mobile`'s actual approach
 
 This task's own instructions specify testing via `server.url` pointed
@@ -213,6 +313,14 @@ design decision between options. The real branch points it informs:
    — it's specific enough (one worker chunk, one error type) to be
    actionable independent of the broader offline question, and matters
    for the PWA/mobile-web experience generally, not just the native shell.
+5. **`sdk.offline` must treat in-memory JS state as unsafe across a
+   background/foreground cycle, unconditionally.** This spike found iOS
+   WKWebView discards it entirely (fresh reload on return to foreground)
+   while Android WebView preserves it — a real, previously-undocumented
+   platform divergence (see Background/foreground cycle survival above).
+   Designing to the iOS behavior (flush to IndexedDB as data is produced,
+   never buffer-then-flush-later in memory) is safe on both platforms and
+   is the only design that doesn't silently lose data on iOS specifically.
 
 ## Open questions
 
@@ -227,9 +335,28 @@ design decision between options. The real branch points it informs:
   which needs credentials; entering credentials into any field is outside
   what an agent should do regardless of who supplies them. This needs a
   human tester.
-- **Background/foreground cycle survival** — not tested in this pass.
-  Testable without credentials (just needs an active instance loaded);
-  deferred for time, not blocked on anything.
+- **Whether iOS's observed reload-on-foreground is genuine OS/WebView
+  content-process eviction or an artifact of using `simctl launch` (rather
+  than a real Home Screen tap or App Switcher gesture) to resume the app.**
+  Needs either a real device or a more interactive simulator session that
+  can drive an actual foreground gesture instead of a CLI relaunch. (Android
+  was tested with `adb shell am start` on an already-running task, which
+  `adb` itself confirmed brought the existing task forward rather than
+  recreating it — a closer match to a real launcher-icon tap. The iOS
+  equivalent wasn't cross-checked against a real gesture in this pass.)
+- **Whether iOS's context loss is time-bound or immediate** — this pass
+  only tested a single ~30-second background interval. Whether a very
+  short background (a few seconds, e.g. switching to enter a 2FA code from
+  another app) also reloads, or whether iOS gives some grace period before
+  evicting the WebView content process, is unknown and would need multiple
+  timed trials.
+- **Root cause of Android's `setInterval` under-counting relative to naive
+  elapsed-wall-clock-time expectations** while backgrounded — plausibly
+  ordinary Chromium background-timer throttling and/or Android Doze/App
+  Standby, but not confirmed against documentation or a controlled timing
+  test. Doesn't affect the headline finding (context survives) but would
+  matter for any design relying on background timer precision, which
+  `sdk.offline` should not do regardless.
 - **`WKWebsiteDataStore` eviction under storage pressure or prolonged
   non-use** — not practically testable in a short spike session; needs
   either a long-duration test or artificial storage-pressure simulation

@@ -6,7 +6,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AUTH_DIR = path.resolve(__dirname, '../../.auth');
 
 type AuthFixtures = {
+  ownerPage: Page;
   adminPage: Page;
+  auditorPage: Page;
   userPage: Page;
 };
 
@@ -19,9 +21,27 @@ type AuthFixtures = {
  * '@playwright/test' directly.
  */
 export const test = base.extend<AuthFixtures>({
+  ownerPage: async ({ browser }, use) => {
+    const ctx = await browser.newContext({
+      storageState: path.join(AUTH_DIR, 'owner.json'),
+    });
+    const page = await ctx.newPage();
+    await use(page);
+    await ctx.close();
+  },
+
   adminPage: async ({ browser }, use) => {
     const ctx = await browser.newContext({
       storageState: path.join(AUTH_DIR, 'admin.json'),
+    });
+    const page = await ctx.newPage();
+    await use(page);
+    await ctx.close();
+  },
+
+  auditorPage: async ({ browser }, use) => {
+    const ctx = await browser.newContext({
+      storageState: path.join(AUTH_DIR, 'auditor.json'),
     });
     const page = await ctx.newPage();
     await use(page);

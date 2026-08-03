@@ -8,9 +8,10 @@ servers are already running.
 
 - `*.spec.ts` files cover the current golden paths: auth, password reset,
   launcher, Account, Console, navigation, and paywall flows.
-- `global-setup.ts` runs `pnpm sv seed`, signs in the seeded admin and user,
-  saves storage state under `.auth/`, and prepares the paywall license token.
-- `fixtures.ts` exposes authenticated `adminPage` and `userPage` fixtures.
+- `global-setup.ts` runs `pnpm sv seed`, signs in all four seeded roles, saves
+  storage state under `.auth/`, and prepares the paywall license token.
+- `fixtures.ts` exposes authenticated `ownerPage`, `adminPage`, `auditorPage`,
+  and `userPage` fixtures — one per seeded role below.
 
 Use direct `@playwright/test` imports for unauthenticated flows. Use
 `./fixtures` when a test should begin with an authenticated browser context.

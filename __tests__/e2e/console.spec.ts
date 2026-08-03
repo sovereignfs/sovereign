@@ -30,4 +30,19 @@ test.describe('Console plugin — golden paths', () => {
     await expect(page.getByRole('table').getByText('admin@sovereign.local').first()).toBeVisible();
     await expect(page.getByRole('table').getByText('user@sovereign.local').first()).toBeVisible();
   });
+
+  test('groups page renders', async ({ adminPage: page }) => {
+    await page.goto('/console/groups');
+    await expect(page.getByRole('heading', { name: 'Groups' })).toBeVisible();
+  });
+
+  test('entitlements page renders', async ({ adminPage: page }) => {
+    await page.goto('/console/entitlements');
+    await expect(page.getByRole('heading', { name: 'Plugin entitlements' })).toBeVisible();
+  });
+
+  test('broadcast page renders', async ({ adminPage: page }) => {
+    await page.goto('/console/broadcast');
+    await expect(page.getByRole('heading', { name: 'Broadcast Notification' })).toBeVisible();
+  });
 });

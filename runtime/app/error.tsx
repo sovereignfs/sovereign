@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { EmptyState, Button } from '@sovereignfs/ui';
 import styles from './_error.module.css';
 
 /**
@@ -30,28 +31,24 @@ export default function Error({
   if (offline) {
     return (
       <div className={styles.page}>
-        <div className={styles.card}>
-          <h1 className={styles.message}>You’re offline</h1>
-          <p className={styles.message}>
-            Sovereign can’t reach the server right now. Reconnect and try again.
-          </p>
-          <button className={styles.link} onClick={reset}>
-            Try again
-          </button>
-        </div>
+        <EmptyState
+          icon="alert-triangle"
+          heading="You’re offline"
+          description="Sovereign can’t reach the server right now. Reconnect and try again."
+          action={<Button onClick={reset}>Try again</Button>}
+        />
       </div>
     );
   }
 
   return (
     <div className={styles.page}>
-      <div className={styles.card}>
-        <h1 className={styles.code}>500</h1>
-        <p className={styles.message}>Something went wrong.</p>
-        <button className={styles.link} onClick={reset}>
-          Try again
-        </button>
-      </div>
+      <EmptyState
+        icon="alert-triangle"
+        heading="Something went wrong"
+        description={error.digest ? `Reference: ${error.digest}` : undefined}
+        action={<Button onClick={reset}>Try again</Button>}
+      />
     </div>
   );
 }

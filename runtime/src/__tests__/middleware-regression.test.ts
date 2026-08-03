@@ -66,6 +66,16 @@ const apiShapedPlugin = {
   routePrefix: '/api/plugins/example',
 } as SovereignManifest;
 
+// Prefix starts with a *reserved* /api/ segment ("admin") so it is exempt
+// from the public /api/* namespace delegation (PLT-16, api-namespace.ts) and
+// falls through to the normal session-gated plugin route decision below —
+// same trick apiShapedPlugin above uses with the "plugins" segment.
+const adminApiShapedPlugin = {
+  id: 'fs.example.admin-api-shaped',
+  routePrefix: '/api/admin/console-tools',
+  adminOnly: true,
+} as SovereignManifest;
+
 const publicRoutePlugin = {
   id: 'com.example.blog',
   routePrefix: '/blog',
@@ -175,6 +185,7 @@ describe('runtime middleware regressions', () => {
       paidPlugin,
       apiProviderPlugin,
       apiShapedPlugin,
+      adminApiShapedPlugin,
       publicRoutePlugin,
       paidPublicRoutePlugin,
       offlineRoutePlugin,
@@ -222,40 +233,59 @@ describe('runtime middleware regressions', () => {
     );
   });
 
-  it('returns 403 for non-admin Console access', async () => {
+  it('redirects non-admin Console page access to /forbidden with 303', async () => {
     fetchState.session = session('platform:user');
 
     const response = await middleware(request('/console/users'));
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe('http://runtime.test/forbidden');
+  });
+
+  it('returns raw 403 for a non-admin request to an API-shaped adminOnly plugin', async () => {
+    fetchState.session = session('platform:user');
+
+    const response = await middleware(request('/api/admin/console-tools/users'));
 
     expect(response.status).toBe(403);
     expect(await response.text()).toBe('Forbidden');
   });
 
-  it('returns 404 for disabled plugin routes', async () => {
+  it('rewrites disabled plugin page routes to /__not-found', async () => {
     fetchState.disabledIds = [launcherPlugin.id];
 
     const response = await middleware(request('/launcher'));
 
+    expect(response.status).toBe(200);
+    expect(middlewareRewrite(response)).toBe('http://runtime.test/__not-found');
+  });
+
+  it('returns raw 404 for a disabled API-shaped plugin route', async () => {
+    fetchState.disabledIds = [apiShapedPlugin.id];
+
+    const response = await middleware(request('/api/plugins/example/run'));
+
     expect(response.status).toBe(404);
     expect(await response.text()).toBe('Not Found');
   });
 
-  it('returns 404 for access-policy-restricted plugin routes (RFC 0065)', async () => {
+  it('rewrites access-policy-restricted plugin page routes to /__not-found (RFC 0065)', async () => {
     fetchState.restrictedIds = [launcherPlugin.id];
 
     const response = await middleware(request('/launcher'));
 
-    expect(response.status).toBe(404);
-    expect(await response.text()).toBe('Not Found');
+    expect(response.status).toBe(200);
+    expect(middlewareRewrite(response)).toBe('http://runtime.test/__not-found');
   });
 
-  it('access-policy restriction returns 404, not 403, even for an adminOnly plugin', async () => {
+  it('access-policy restriction rewrites to /__not-found, not /forbidden, even for an adminOnly plugin', async () => {
     fetchState.restrictedIds = [consolePlugin.id];
     fetchState.session = session('platform:admin');
 
     const response = await middleware(request('/console'));
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(200);
+    expect(middlewareRewrite(response)).toBe('http://runtime.test/__not-found');
   });
 
   it('redirects paywalled plugin page routes to the plugin paywall', async () => {

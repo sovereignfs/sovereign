@@ -32,7 +32,7 @@ export default function GlobalError({
       >
         <div style={{ textAlign: 'center', padding: '2rem' }}>
           <h1 style={{ fontSize: '4rem', fontWeight: 700, margin: '0 0 0.5rem' }}>500</h1>
-          <p style={{ margin: '0 0 1.5rem', color: '#71717a' }}>Something went wrong.</p>
+          <p style={{ margin: '0 0 1.5rem', color: '#71717a' }}>Something went wrong</p>
           <button
             onClick={reset}
             style={{

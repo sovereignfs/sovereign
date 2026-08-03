@@ -37,16 +37,21 @@ function loadRootEnv(root) {
   }
 }
 
+// Each entry: where the app's Next.js project lives (relative to ROOT), and
+// the env var + fallback port used when PORT itself isn't set.
+const APPS = {
+  auth: { cwd: ['apps', 'auth'], portEnv: 'AUTH_PORT', defaultPort: '3001' },
+  runtime: { cwd: ['runtime'], portEnv: 'RUNTIME_PORT', defaultPort: '3000' },
+  'push-relay': { cwd: ['apps', 'push-relay'], portEnv: 'PUSH_RELAY_PORT', defaultPort: '3002' },
+};
+
 function usage() {
-  console.error('Usage: node scripts/next-server.mjs <auth|runtime> <dev|start>');
+  console.error(`Usage: node scripts/next-server.mjs <${Object.keys(APPS).join('|')}> <dev|start>`);
   process.exit(1);
 }
 
 function resolvePort(app) {
-  const raw =
-    app === 'auth'
-      ? (process.env.AUTH_PORT ?? process.env.PORT ?? '3001')
-      : (process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000');
+  const raw = process.env[APPS[app].portEnv] ?? process.env.PORT ?? APPS[app].defaultPort;
   const port = Number(raw);
 
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -60,13 +65,13 @@ function resolvePort(app) {
 const app = process.argv[2];
 const mode = process.argv[3];
 
-if ((app !== 'auth' && app !== 'runtime') || (mode !== 'dev' && mode !== 'start')) {
+if (!Object.hasOwn(APPS, app) || (mode !== 'dev' && mode !== 'start')) {
   usage();
 }
 
 loadRootEnv(ROOT);
 
-const cwd = app === 'auth' ? join(ROOT, 'apps', 'auth') : join(ROOT, 'runtime');
+const cwd = join(ROOT, ...APPS[app].cwd);
 const port = resolvePort(app);
 
 console.log(`[next-server] starting ${app} ${mode} on port ${port}`);

@@ -7,9 +7,14 @@ test.describe('Console plugin — golden paths', () => {
     await expect(page.locator('h1')).toBeVisible();
   });
 
-  test('regular user gets a 403 response on /console', async ({ userPage: page }) => {
+  test('regular user is redirected to /forbidden from /console', async ({ userPage: page }) => {
     const response = await page.goto('/console');
-    expect(response?.status()).toBe(403);
+    // Page routes redirect (303) to /forbidden rather than returning a raw
+    // 403, so page.goto()'s terminal response is the /forbidden page's own
+    // 200 — assert on the redirect target instead of the final status.
+    expect(response?.status()).toBe(200);
+    expect(page.url()).toContain('/forbidden');
+    await expect(page.getByText("You don't have access to this")).toBeVisible();
   });
 
   test('plugin list page shows installed plugins', async ({ adminPage: page }) => {

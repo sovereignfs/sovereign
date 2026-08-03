@@ -46,18 +46,37 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
 
   const browser = await chromium.launch();
   try {
-    await loginAndSave(
-      browser,
-      'admin@sovereign.local',
-      'sovereign',
-      path.join(AUTH_DIR, 'admin.json'),
-    );
-    await loginAndSave(
-      browser,
-      'user@sovereign.local',
-      'sovereign',
-      path.join(AUTH_DIR, 'user.json'),
-    );
+    // better-auth rate-limits /sign-in/* (and /sign-up/*, /change-password,
+    // /change-email) to max 3 requests per 10s per IP — see
+    // apps/auth/src/auth.ts's rateLimit config and better-auth's
+    // getDefaultSpecialRules(). In dev every browser request resolves to the
+    // same LOCALHOST_IP bucket, so logging in all four seeded roles
+    // back-to-back always trips this on the 4th request.
+    //
+    // Critically, the counter does NOT reset on a fixed 10s calendar window —
+    // better-auth's decideConsume() only resets `count` when the gap since
+    // the *previous* request exceeds the window (see
+    // node_modules/better-auth/dist/api/rate-limiter/index.mjs). A short
+    // inter-request delay (e.g. 4s) still keeps every request inside the
+    // previous one's window, so count climbs 1 → 2 → 3 → 4 and the 4th is
+    // rejected — surfaced by the login form as a generic "incorrect email or
+    // password" (it maps any non-EMAIL_NOT_VERIFIED error to that message,
+    // deliberately not distinguishing rate-limit from bad credentials). The
+    // delay must exceed the 10s window on every single hop, not just in
+    // aggregate, to force a reset before each subsequent sign-in.
+    const accounts: Array<[string, string]> = [
+      ['owner@sovereign.local', 'owner.json'],
+      ['admin@sovereign.local', 'admin.json'],
+      ['auditor@sovereign.local', 'auditor.json'],
+      ['user@sovereign.local', 'user.json'],
+    ];
+    for (let i = 0; i < accounts.length; i++) {
+      const [email, file] = accounts[i];
+      await loginAndSave(browser, email, 'sovereign', path.join(AUTH_DIR, file));
+      if (i < accounts.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 11_000));
+      }
+    }
 
     await setupPaywallToken(browser);
   } finally {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { zipSync } from 'fflate';
 import {
   EXPORT_FORMAT_VERSION,
+  MAX_DECOMPRESSED_BYTES,
   assertSupportedFormat,
   buildZip,
   createRemapper,
@@ -29,6 +31,37 @@ describe('bundle zip round-trip', () => {
       1,
     );
     expect([...getEntry(out, 'plugins/x/blobs/pic.bin')]).toEqual([1, 2, 3, 4, 255]);
+  });
+});
+
+describe('readZip decompressed-size cap', () => {
+  it('rejects a bundle whose declared uncompressed size exceeds the cap, without inflating it', () => {
+    // A single highly-compressible entry that declares far more bytes than the
+    // (test-scoped, small) cap allows — the filter must reject it before inflate,
+    // based on the ZIP central directory's declared size alone.
+    const bigFile = new Uint8Array(10_000_000); // compresses to a few KB
+    const zip = zipSync({ 'plugins/x/blobs/huge.bin': bigFile }, { level: 6 });
+
+    expect(() => readZip(zip, 1_000_000)).toThrow(/decompressed size limit/);
+  });
+
+  it('accepts a small bundle under the default cap', () => {
+    const files = { 'manifest.json': jsonToU8({ formatVersion: 1 }) };
+    const zip = buildZip(files);
+
+    expect(() => readZip(zip)).not.toThrow();
+    expect(MAX_DECOMPRESSED_BYTES).toBeGreaterThan(zip.byteLength);
+  });
+
+  it('sums declared sizes across entries toward the same cap', () => {
+    const files = {
+      a: new Uint8Array(600_000),
+      b: new Uint8Array(600_000),
+    };
+    const zip = zipSync(files, { level: 6 });
+
+    // Neither entry alone exceeds the cap, but their declared total does.
+    expect(() => readZip(zip, 1_000_000)).toThrow(/decompressed size limit/);
   });
 });
 

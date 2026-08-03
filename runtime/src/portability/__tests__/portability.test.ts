@@ -1,7 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ImportContext, PluginExportSection } from '@sovereignfs/sdk';
 import { type PlatformExportData, assembleExport } from '../assemble';
-import { PLATFORM_SECTION_ID, readZip, u8ToJson } from '../bundle';
+import {
+  type BundleManifest,
+  EXPORT_FORMAT_VERSION,
+  PLATFORM_SECTION_ID,
+  buildZip,
+  jsonToU8,
+  readZip,
+  u8ToJson,
+} from '../bundle';
 import { getPortabilityPluginContext } from '../plugin-context';
 import { clearPortabilityRegistry, registerExporter, registerImporter } from '../registry';
 import { type PlatformAccountSection, applyImport } from '../restore';
@@ -453,5 +461,42 @@ describe('applyImport', () => {
     });
 
     expect(importedSection?.references).toEqual([reference]);
+  });
+
+  it('drops a blob whose path attempts to escape its plugin directory, keeps safe ones', async () => {
+    // Hand-crafted bundle (not produced by assembleExport, which never emits
+    // traversal-shaped keys) — simulates a maliciously altered upload where
+    // the blob entry names are attacker-controlled ZIP paths.
+    const manifest: BundleManifest = {
+      formatVersion: EXPORT_FORMAT_VERSION,
+      exportedAt: new Date().toISOString(),
+      source: { instance: null, platformVersion: '0.6.0' },
+      subject: { userId: 'u1', email: null },
+      sections: [{ pluginId: 'test.plugin', schemaVersion: 1, checksum: 'x' }],
+      installedPlugins: [],
+      notExported: [],
+    };
+    const bytes = buildZip({
+      'manifest.json': jsonToU8(manifest),
+      'plugins/test.plugin/data.json': jsonToU8({}),
+      'plugins/test.plugin/blobs/../../../../etc/passwd': new Uint8Array([1]),
+      'plugins/test.plugin/blobs/../secret.txt': new Uint8Array([2]),
+      'plugins/test.plugin/blobs/notes/good.txt': new Uint8Array([3]),
+    });
+
+    let importedSection: PluginExportSection | undefined;
+    registerImporter('test.plugin', async (section) => {
+      importedSection = section;
+    });
+
+    await applyImport({
+      bytes,
+      userId: 'u2',
+      tenantId: 'default',
+      importPlugins: new Set(['test.plugin']),
+      platformImporter: async () => undefined,
+    });
+
+    expect(importedSection?.blobs).toEqual({ 'notes/good.txt': new Uint8Array([3]) });
   });
 });

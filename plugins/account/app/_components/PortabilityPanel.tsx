@@ -163,8 +163,9 @@ export function PortabilityPanel() {
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Import / restore</h2>
           <p className={styles.sectionSubtitle}>
-            Restore from a Sovereign export ZIP. Data is merged — nothing is overwritten. Plugins
-            not installed are skipped.
+            Restore from a Sovereign export ZIP. App data is merged in as new records. Your profile
+            name, avatar, and preferences are replaced with the values from the ZIP. Apps that
+            aren&apos;t installed are skipped.
           </p>
         </div>
         <form className={styles.form} onSubmit={(e) => void onImport(e)}>

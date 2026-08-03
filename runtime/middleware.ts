@@ -426,10 +426,25 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       restrictedIds,
     );
     if (decision === 'not-found') {
-      return applyCsp(withCookies(new NextResponse('Not Found', { status: 404 })));
+      if (pathname.startsWith('/api/')) {
+        return applyCsp(withCookies(new NextResponse('Not Found', { status: 404 })));
+      }
+      // Rewrite (not redirect) so the URL bar is preserved — the target page
+      // calls next/navigation's notFound(), which guarantees a true 404
+      // status and the styled not-found.tsx boundary, unlike a bare
+      // NextResponse(..., { status: 404 }) for a page navigation.
+      return applyCsp(withCookies(NextResponse.rewrite(new URL('/__not-found', request.url))));
     }
     if (decision === 'forbidden') {
-      return applyCsp(withCookies(new NextResponse('Forbidden', { status: 403 })));
+      if (pathname.startsWith('/api/')) {
+        return applyCsp(withCookies(new NextResponse('Forbidden', { status: 403 })));
+      }
+      // Redirect (not rewrite) to a real page, same pattern as the paywall
+      // gate below — simpler than Next's experimental forbidden()/
+      // authInterrupts API, at the cost of the final page load reporting 200.
+      return applyCsp(
+        withCookies(NextResponse.redirect(new URL('/forbidden', request.url), { status: 303 })),
+      );
     }
     if (decision === 'paywall') {
       const pluginId = matchedPluginId(pathname, installedPlugins) ?? '';

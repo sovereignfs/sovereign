@@ -6,11 +6,6 @@
   padding: var(--sv-space-4);
 }
 
-.card {
-  text-align: center;
-  padding: var(--sv-space-8);
-}
-
 .code {
   margin: 0 0 var(--sv-space-2);
   font-size: 4rem;

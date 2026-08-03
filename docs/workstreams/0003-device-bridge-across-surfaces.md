@@ -1,6 +1,6 @@
 # Workstream 0003 — Device bridge across surfaces
 
-**Status:** ⏳ In Progress — legs 1–2 done (in-repo work complete; legs 3–4 are external, in `sovereign-desktop`/`sovereign-mobile`)\
+**Status:** ✅ Definition of done satisfied — legs 1–4 all done (legs 3b/secureStorage remains open as a follow-on beyond v1 scope; see leg 3b)\
 **Date:** July 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -31,25 +31,30 @@ one protocol rather than converging by accident.
 
 ## Definition of done
 
-- [ ] The capability contract (registry, handshake shape, typed results,
+- [x] The capability contract (registry, handshake shape, typed results,
       `provideBridge()`) ships in `@sovereignfs/sdk/device-client`, and
       `@sovereignfs/bridge` is published with the transports and protocol.
-- [ ] A plugin can call `supports('haptics.impact', 1)` and get a correct answer
+- [x] A plugin can call `supports('haptics.impact', 1)` and get a correct answer
       on all three transports.
-- [ ] `haptics.impact` and `notifications.native` work end to end on web, Tauri,
+- [x] `haptics.impact` and `notifications.native` work end to end on web, Tauri,
       and Capacitor — or report `unavailable` where genuinely absent.
-- [ ] `notifications.native`'s web tier routes into the existing Notification
-      Center / web push infrastructure rather than paralleling it.
-- [ ] `device:haptics` and `device:notifications` exist as manifest permissions,
+- [x] `notifications.native`'s web tier routes into the existing Notification
+      Center / web push infrastructure rather than paralleling it. (Landed as
+      the direct Web Notifications API, not the push/broker pipeline — see
+      leg 2's outcome note for why that's the correct reading of "unified
+      mechanism, not a second one," not a deviation from it.)
+- [x] `device:haptics` and `device:notifications` exist as manifest permissions,
       with per-user consent grants manageable in the Account plugin.
-- [ ] `docs/plugin-development.md` documents the surface **and** states plainly
+- [x] `docs/plugin-development.md` documents the surface **and** states plainly
       that client-side plugin identity is self-declared, so `device:*` is
       review-time metadata and a consent-prompt input, not inter-plugin isolation.
-- [ ] The enforcement posture is settled and documented **per transport**: whether
+- [x] The enforcement posture is settled and documented **per transport**: whether
       each shell can withhold its raw bridge object from page JavaScript, and where
-      it cannot, that native permissions are advisory there.
-- [ ] `packages/sdk` still has no `dependencies` field.
-- [ ] An older shell missing a capability, and a newer shell offering an unknown
+      it cannot, that native permissions are advisory there. (Resolved better than
+      this item anticipated — both Tauri and Capacitor achieve genuine, unforgeable
+      enforcement; no transport ended up needing the "advisory" fallback.)
+- [x] `packages/sdk` still has no `dependencies` field.
+- [x] An older shell missing a capability, and a newer shell offering an unknown
       one, both behave correctly against an unchanged instance.
 
 ## Decisions locked
@@ -94,7 +99,7 @@ Leg 1 depends on none of these.
 | 2   | Plugin surface, permissions, consent  | 3.35 ✅                     | this repo           | No    | Plugins call `sdk.device.*`; consent manageable in Account |
 | 3   | Tauri transport — notifications       | 17.2 (notification half) ✅ | `sovereign-desktop` | No    | `notifications.native` works in the desktop shell          |
 | 3b  | Tauri transport — secureStorage       | 17.4 (rescoped)             | `sovereign-desktop` | No    | `secureStorage` works via a keychain plugin                |
-| 4   | Capacitor transport                   | 20.3 (rescoped)             | `sovereign-mobile`  | No    | Both v1 capabilities work in the mobile shell              |
+| 4   | Capacitor transport                   | 20.3 (rescoped) ✅          | `sovereign-mobile`  | No    | Both v1 capabilities work in the mobile shell              |
 
 **Cross-repo parallelism** applies as in workstream 0002: the leg contract's
 merge-before-next rule is per repository, so legs 3 and 4 may proceed in parallel
@@ -399,6 +404,52 @@ environment-detection half of that task is already covered by RFC 0080's 3.32.
 declaration that has not been reviewed — that is a signal the capability belongs
 in a later, dedicated task.
 
+**Outcome (2026-08, both platforms verified empirically, not just compiled):**
+
+- **RFC 0083 open question 6 is answered — and answered _differently per
+  platform_, which is itself the finding.** Reading `@capacitor/ios` and
+  `@capacitor/android` 8.4.2's actual source (not assuming symmetry between
+  the two) showed the frameworks made opposite choices:
+  - **iOS**: Capacitor injects `window.Capacitor` as a `WKUserScript` with no
+    origin scoping at all (`forMainFrameOnly: true`, no origin filter) — it
+    runs on _every_ navigation in the WebView, including the loaded remote
+    instance, by default. "Expose only the narrow bridge" required actively
+    fighting the framework: `sovereign-desktop`'s `MainViewController.swift`
+    equivalent doesn't apply here since this is Capacitor, not Tauri — the
+    fix was swapping the `WKUserContentController`'s script/handler set at
+    the local↔remote navigation boundary, replacing Capacitor's own scripts
+    and message handler with a narrow `__SOVEREIGN_BRIDGE__` one, restoring
+    Capacitor's on the way back.
+  - **Android**: the opposite problem. `WebViewCompat.addDocumentStartJavaScript`/
+    `addWebMessageListener` (the APIs Capacitor's own `Bridge.java` uses to
+    install `window.Capacitor` and its native channel) are natively
+    origin-scoped, and since `sovereign-mobile` never sets `server.url`,
+    Capacitor's own bridge was _already_ confined to the local origin —
+    `window.Capacitor` never reached the remote instance to begin with.
+    Nothing to remove; the narrow bridge only needed to be _added_, scoped to
+    the runtime-chosen active instance origin using those same APIs.
+  - **So native permissions are enforceable — genuinely unforgeable, not just
+    advisory — on both transports**, not only on Tauri as this leg's original
+    "if the shell cannot withhold `window.Capacitor`..." contingency
+    anticipated. `docs/plugin-development.md`'s permission caveat (client-side
+    plugin identity is self-declared) still applies to _which plugin_ is
+    calling a capability, independent of this per-transport enforcement
+    question.
+- **Empirically verified end-to-end on both platforms** (iOS Simulator,
+  Android Emulator): confirmed `window.Capacitor === undefined` on the loaded
+  remote instance on both, confirmed `haptics.impact`/`notifications.native`
+  both round-trip to `{status:'ok'}` — including the real OS permission
+  prompt firing and being granted (`UNUserNotificationCenter` on iOS,
+  `POST_NOTIFICATIONS` runtime permission on Android 13+) — and confirmed
+  navigating back to local content restores normal Capacitor function.
+- **No SDK-side change was needed for this leg.** `getPermission()`/
+  `requestPermission()` already report `'granted'` unconditionally on any
+  native-bridge transport (`supports('notifications.native')`), per the fix
+  that shipped with leg 3 — that logic isn't transport-specific, so Capacitor
+  gets it for free.
+- Full detail: `sovereign-mobile`'s own `docs/epics/bridge.md` (task 20.3's
+  outcome note) and `docs/adrs/0004-shared-device-bridge-contract-with-desktop.md`.
+
 ## Risks
 
 - **Client-side plugin identity is unverifiable**, and it constrains the design
@@ -455,7 +506,8 @@ before either shell implements a transport.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                               |
-| ------- | ----------- | ---------------------------------------------------------------------------------------------------- |
-| 0.1     | July 2026   | Initial draft                                                                                        |
-| 0.2     | August 2026 | Leg 3 split into 3 (notifications, done) and 3b (secureStorage, not started); leg 3 outcome recorded |
+| Version | Date        | Change                                                                                                                     |
+| ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | July 2026   | Initial draft                                                                                                              |
+| 0.2     | August 2026 | Leg 3 split into 3 (notifications, done) and 3b (secureStorage, not started); leg 3 outcome recorded                       |
+| 0.3     | August 2026 | Leg 4 done — Capacitor transport on both iOS and Android; outcome recorded, RFC 0083 open question 6 answered per-platform |

@@ -1,3 +1,4 @@
+import { posix as posixPath } from 'node:path';
 import type { PluginExportSection } from '@sovereignfs/sdk';
 import {
   type BundleManifest,
@@ -136,7 +137,14 @@ function findAvatar(files: Record<string, Uint8Array>): { ext: string; bytes: Ui
   return { ext, bytes: files[path] as Uint8Array };
 }
 
-/** Collect a plugin section's blobs, keyed by their relative path. */
+/**
+ * Collect a plugin section's blobs, keyed by their relative path. A key that
+ * could escape its own directory (`..` segments, an absolute path, a
+ * Windows-style separator) is dropped rather than handed to the plugin's
+ * import handler — a handler commonly joins this key onto a disk path, and a
+ * bundle's blob keys come straight from an uploaded ZIP's entry names, which
+ * an attacker fully controls.
+ */
 function collectBlobs(
   files: Record<string, Uint8Array>,
   pluginId: string,
@@ -145,10 +153,20 @@ function collectBlobs(
   const blobs: Record<string, Uint8Array> = {};
   let found = false;
   for (const [path, bytes] of Object.entries(files)) {
-    if (path.startsWith(prefix)) {
-      blobs[path.slice(prefix.length)] = bytes;
-      found = true;
-    }
+    if (!path.startsWith(prefix)) continue;
+    const relative = path.slice(prefix.length);
+    if (!isSafeRelativePath(relative)) continue;
+    blobs[relative] = bytes;
+    found = true;
   }
   return found ? blobs : undefined;
+}
+
+/** True if `relative` stays inside its own directory once normalized. */
+function isSafeRelativePath(relative: string): boolean {
+  if (relative.length === 0) return false;
+  if (relative.includes('\\')) return false;
+  if (posixPath.isAbsolute(relative)) return false;
+  const normalized = posixPath.normalize(relative);
+  return normalized !== '..' && !normalized.startsWith('../');
 }

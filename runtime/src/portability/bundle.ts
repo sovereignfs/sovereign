@@ -121,9 +121,38 @@ export function buildZip(files: Record<string, Uint8Array>): Uint8Array {
   return zipSync(files, { level: 6 });
 }
 
-/** Unzip to a flat path→bytes map. Throws on a corrupt archive. */
-export function readZip(bytes: Uint8Array): Record<string, Uint8Array> {
-  return unzipSync(bytes);
+/**
+ * Ceiling on a bundle's total *declared* uncompressed size, checked entry-by-entry
+ * against the ZIP central directory before any inflate happens — a compressed
+ * upload well under the route's size cap can still declare a wildly larger
+ * decompressed payload ("zip bomb"). Generous relative to the compressed cap since
+ * legitimate attachments (images, etc.) often compress poorly.
+ */
+export const MAX_DECOMPRESSED_BYTES = 500 * 1024 * 1024;
+
+/**
+ * Unzip to a flat path→bytes map. Throws on a corrupt archive, or if the
+ * archive's declared uncompressed size exceeds `maxDecompressedBytes` — the
+ * check runs per-entry, before that entry is inflated, so a bundle that fails
+ * it is never fully expanded into memory. `maxDecompressedBytes` defaults to
+ * `MAX_DECOMPRESSED_BYTES`; overridable only for tests.
+ */
+export function readZip(
+  bytes: Uint8Array,
+  maxDecompressedBytes: number = MAX_DECOMPRESSED_BYTES,
+): Record<string, Uint8Array> {
+  let total = 0;
+  return unzipSync(bytes, {
+    filter(file) {
+      total += file.originalSize;
+      if (total > maxDecompressedBytes) {
+        throw new Error(
+          `Bundle exceeds the ${String(maxDecompressedBytes / (1024 * 1024))}MB decompressed size limit.`,
+        );
+      }
+      return true;
+    },
+  });
 }
 
 /**

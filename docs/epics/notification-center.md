@@ -231,6 +231,87 @@ instead of the current logger-only trail.
 
 ---
 
+#### 📋 4.7 — Native mobile push relay (APNs/FCM)
+
+> **New in [RFC 0085](../rfcs/0085-native-push-relay.md).** Covers this
+> monorepo's half of native mobile push: the device-token schema, the
+> registration/revocation API, extending `fanOutPushToUser`'s existing
+> fan-out with an encrypted-relay delivery branch, and the new
+> `apps/push-relay` service. The `sovereign-mobile` client-side half
+> (registration flow, on-device encryption, iOS Notification Service
+> Extension) is tracked in that repo's own epic 20, task 20.5 — see this
+> monorepo's [docs/epics/mobile.md](mobile.md#-205--native-push-notifications-apnsfcm),
+> rescoped alongside this task. Sequenced by
+> [workstream 0005](../workstreams/0005-native-push-relay.md).
+
+**Goal:** Let a self-hosted instance deliver a notification to a user's
+`sovereign-mobile` native app even when it's fully closed, without any
+instance ever exposing notification content to `sovereignfs`'s
+infrastructure — see [Research 0010](../research/0010-native-mobile-push-notifications.md)
+for why a relay is unavoidable (APNs/FCM credentials are tied to one app
+identity, not to individual self-hosted instances) and why it must be
+end-to-end encrypted (the Nextcloud/Matrix/Home Assistant/Bitwarden
+precedent this design follows).
+
+**Deliverables:**
+
+- `push_device_tokens` table (`packages/db`, both SQLite and Postgres
+  dialects): `userId`, `platform`, `deviceToken`, `publicKey`, `relayUrl`,
+  `createdAt`, `lastUsedAt`.
+- `POST /api/account/push-device-token` / `DELETE /api/account/push-device-token/:id`
+  — registration and revocation, mirroring the existing
+  `/api/account/push-subscription` route's shape and auth handling.
+- `runtime/src/push.ts`'s `fanOutPushToUser` extended with a second
+  delivery branch: encrypt the payload against the recipient device's
+  stored public key (ECDH P-256 + HKDF + AES-256-GCM — see RFC 0085's
+  "Encryption" section), POST to the device's stored `relayUrl`. Runs
+  inside the same `Promise.allSettled` fan-out already there, alongside
+  the existing Web Push branch.
+- New `apps/push-relay` service (minimal Next.js app, following
+  `apps/auth`'s existing precedent): `POST /v1/push` (validates a
+  per-instance API key, forwards the already-encrypted payload to APNs or
+  FCM using `sovereignfs`'s own credentials, reports delivery/invalid-token
+  outcomes for pruning) and `POST /v1/enroll` (one-time, issues an
+  instance's API key). Holds the real Apple/Firebase credentials and
+  nothing else sensitive — no payload inspection, no content logging, no
+  persistent notification history.
+- Instance-level Console setting for the configured relay URL (defaults to
+  `sovereignfs`'s relay), so an operator who builds and publishes their own
+  signed app variant can point at a different relay instead — see RFC
+  0085's "Relay URL configurability."
+- Docs: `self-hosting.md` (new relay-related env vars/config, if any land
+  in `runtime` rather than only in Console), and this repo's own Docker
+  setup updated if `apps/push-relay` needs a new Compose service.
+
+**Dependencies:** Task 4.2 (Web Push notifications) — this reuses its
+crypto approach; RFC 0085.
+
+**SRS reference:** RFC 0085
+
+**Review checklist:**
+
+- A registered native device receives a real push when the app is fully
+  closed (not just backgrounded), verified against a real device or
+  simulator/emulator with real APNs/FCM sandbox credentials, not just unit
+  tests.
+- `apps/push-relay` never has access to plaintext notification content —
+  verified by inspecting what it actually receives and logs, not just
+  reading the code that's supposed to prevent it.
+- A user with a browser tab, a PWA, and the native app installed
+  simultaneously gets the notification delivered independently to all
+  three.
+- Revoking a device (sign-out, instance removal, explicit opt-out) stops
+  further pushes to it, verified end-to-end, not just that the DB row is
+  deleted.
+- A device token the relay reports as invalid gets pruned from
+  `push_device_tokens`, mirroring how `push_subscriptions` already prunes
+  on a 410/404.
+- Changing an instance's configured relay URL in Console takes effect for
+  newly registered devices without requiring a restart.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0015 — Notification Center](../rfcs/0015-notification-center.md)
@@ -238,6 +319,7 @@ instead of the current logger-only trail.
 - [RFC 0034 — Notification transport](../rfcs/0034-notification-transport.md)
 - [RFC 0048 — Messages and notification detail](../rfcs/0048-messages-and-notification-detail.md)
 - [RFC 0062 — Email delivery coverage](../rfcs/0062-email-delivery-coverage.md)
+- [RFC 0085 — Native mobile push notification relay](../rfcs/0085-native-push-relay.md)
 
 ## Related Docs
 

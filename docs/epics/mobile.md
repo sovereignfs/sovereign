@@ -177,30 +177,65 @@ the universal mobile shell.
 
 #### 📋 20.5 — Native push notifications (APNs/FCM)
 
-**Goal:** Add native mobile push notification support through `sdk.device.*` and
-the platform notification system so users can receive alerts when the app is not
-open.
+> **Rescoped by [RFC 0085](../rfcs/0085-native-push-relay.md).** The
+> runtime/API device-token registration, the encrypted-relay fan-out, and
+> the new `apps/push-relay` service are **not** this task's work — they're
+> this monorepo's task 4.7 (see
+> [docs/epics/notification-center.md](notification-center.md#-47--native-mobile-push-relay-apnsfcm)).
+> What remains here is **the `sovereign-mobile` client-side half**:
+> Capacitor push registration, on-device keypair generation and
+> encryption/decryption, the iOS Notification Service Extension, and
+> calling this monorepo's registration endpoint. See
+> [Research 0010](../research/0010-native-mobile-push-notifications.md)
+> for why a relay is unavoidable (APNs/FCM credentials are tied to one app
+> identity, not to individual self-hosted instances) — this was not
+> obvious when this task was first scoped. Sequenced by
+> [workstream 0005](../workstreams/0005-native-push-relay.md).
+
+**Goal:** Let `sovereign-mobile`'s native app receive and display a push
+notification while fully closed, by registering a device token and
+encryption keypair with the user's own instance and decrypting what the
+configured relay (`sovereignfs`'s by default) delivers.
 
 **Deliverables:**
 
 - Capacitor push notifications integration for APNs and FCM
-- Runtime/API support for registering and revoking per-user mobile device tokens
-- `sdk.device.*` or notification SDK routing for native push registration
+  (`@capacitor/push-notifications`)
+- On-device keypair generation (`CryptoKit` on iOS, Android `KeyStore`) —
+  private key never leaves the device
+- Registration call to the instance's `POST /api/account/push-device-token`
+  (RFC 0085) on first opt-in; revocation call on sign-out/instance removal
+- iOS **Notification Service Extension** — decrypts the payload and
+  populates notification content before the OS displays it; reuses the
+  `notifications.native` display path from workstream 0003 once decrypted
+- Android FCM background message handling — decrypt inline, no separate
+  extension needed
 - Account UI or preferences surface for mobile push opt-in/opt-out
 - Permission strings, privacy declarations, and operator configuration docs
+  (including that push depends on `sovereignfs`'s relay by default, and
+  what the escape hatch is — RFC 0085's "Relay URL configurability")
 - Tests for token registration, revocation, and permission/error states
 
-**Dependencies:** Task 20.3; RFC 0015 Notification Center; RFC 0016 Web Push.
+**Dependencies:** Task 20.3 (device bridge, for `notifications.native`
+reuse); RFC 0085; this monorepo's task 4.7 (the registration endpoint and
+relay must exist to register against).
 
-**SRS reference:** §3.12; notification transport RFCs
+**SRS reference:** §3.12; RFC 0085
 
 **Review checklist:**
 
 - User can opt in to push on iOS and Android.
-- Revoking permission or signing out removes or invalidates the device token.
-- Push payloads do not expose sensitive content beyond documented behavior.
+- A real push is received and displayed correctly while the app is fully
+  closed, not just backgrounded — verified against a real
+  simulator/emulator with real APNs/FCM sandbox credentials.
+- Revoking permission or signing out removes or invalidates the device
+  token, verified end-to-end (not just that the local keypair is deleted).
+- Push payloads are decrypted only on-device; nothing sent to the relay
+  before encryption is inspectable in transit (verify by capturing the
+  actual network call, not by reading the code).
 - Browser/PWA notification behavior remains unchanged.
-- Missing APNs/FCM configuration degrades to a documented no-op.
+- Missing or unreachable relay configuration degrades to a documented
+  no-op, not a crash.
 
 #### 📋 20.6 — Native photo picker and camera capture
 
@@ -446,6 +481,8 @@ policy on when it is justified — the ongoing cost is per-app and permanent.
 - [RFC 0016 — Web Push notifications](../rfcs/0016-web-push.md)
 - [RFC 0038 — Desktop app shell (Tauri, macOS-first)](../rfcs/0038-desktop-app-shell.md)
 - [RFC 0046 — Plugin background jobs and schedules](../rfcs/0046-plugin-jobs.md)
+- [RFC 0085 — Native mobile push notification relay](../rfcs/0085-native-push-relay.md)
+  (Task 20.5)
 
 ## Related Docs
 

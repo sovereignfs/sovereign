@@ -17,6 +17,7 @@ This epic covers two closely related areas: the `@sovereignfs/ui` design system 
 - [RFC 0032 — Instance identity rename](../rfcs/0032-instance-identity-rename.md)
 - [RFC 0073 — Standalone usage of `@sovereignfs/ui` outside the plugin runtime](../rfcs/0073-standalone-ui-package.md)
 - [RFC 0079 — Mobile PWA layout, overlay, and gesture consistency](../rfcs/0079-mobile-pwa-layout-overlay-gesture-consistency.md)
+- [RFC 0085 — Vertical section navigation for overlay-shell plugins (`NavRail`)](../rfcs/0085-vertical-section-nav-overlay-shell.md)
 
 ## Related Docs
 
@@ -989,3 +990,64 @@ deps beyond React/React-DOM peers.
   real double-flicker bug a wrong reimplementation could reintroduce).
 - No plugin migration in this task — `sovereign-tasks`/`sovereign-shopper`
   are unaffected.
+
+#### 📋 9.22 — `NavRail` vertical section nav + `md` overlay resize (RFC 0085)
+
+**Goal:** Console (11 sections) and Account (7 sections) each hand-roll a
+near-identical horizontal underline tab strip duplicating logic already
+covered by unused `packages/ui` primitives (`Tabs`, `NavTabs`), and both
+render full-screen (`overlaySize: "lg"`) for what is functionally a settings
+panel. Ship a new vertical rail navigation primitive and switch both plugins
+to it inside a resized, landscape `md` dialog — the pattern used by desktop
+OS preference panes and Claude's own settings modal.
+
+**Deliverables:**
+
+- **`NavRail`** in `packages/ui/src/components/NavRail/` — link-based
+  (`items: { label, href, active, icon? }[]`, matching `NavTabs`'s API shape
+  rather than `Tabs`'s controlled `value`/`onChange`), vertical stack, own
+  column width, left-edge active indicator, optional per-item icon slot.
+  Storybook story + `DesignSystemOverview.stories.tsx` gallery entry;
+  `pnpm --filter @sovereignfs/ui typecheck` passes.
+- `Dialog.module.css`'s `.md` resized from `36rem × 42rem` (portrait) to a
+  landscape box sized for rail-plus-content (starting proposal `60rem ×
+40rem`, refine visually against Console's widest real content). Mobile is
+  unaffected — every `DialogSize` already collapses to full-screen under
+  768px.
+- `plugins/console/manifest.json` and `plugins/account/manifest.json`:
+  `shellConfig.overlaySize` `"lg" → "md"`.
+- Delete Console's `.nav`/`.navLink` (`console.module.css`) and Account's
+  `.tabs`/`.tab` (`account.module.css`) hand-rolled CSS; both layouts render
+  `NavRail` instead.
+- Mobile: no behavior change — both layouts keep using
+  `useOverlaySecondRow` with a horizontal strip exactly as today. The full
+  drill-down list (Claude Mobile-style) is explicitly out of scope; tracked
+  as future work, not a follow-up task yet.
+- `docs/upgrade.md` migration note for the `md` size change (visible change
+  to a public DS value per NFR-04) and a `docs/design-system.md` mention of
+  `NavRail` alongside `NavTabs`/`Tabs`.
+
+**Open design decisions (not resolved by RFC 0085 — resolve during
+implementation):** where the plugin's `<h1>` title goes on desktop now that
+the rail leaves no obvious header row for it; whether the standalone
+hard-navigation route (`/console`, `/account` outside the `Dialog`) also
+adopts the rail on desktop or keeps its current horizontal header; exact
+`md` pixel dimensions.
+
+**Dependencies:** None — additive `packages/ui` export, existing `Dialog`
+size infrastructure already supports `md`.
+
+**SRS reference:** [RFC 0085](../rfcs/0085-vertical-section-nav-overlay-shell.md)
+
+**Review checklist:**
+
+- `pnpm --filter @sovereignfs/ui typecheck`, `test`, and `lint` pass.
+- `NavRail` has a Storybook story and gallery entry; renders without console
+  errors.
+- Console and Account both render via `NavRail` inside the resized `md`
+  dialog on desktop; mobile still shows the horizontal `useOverlaySecondRow`
+  strip unchanged (manual check at a mobile viewport).
+- No hand-rolled `.nav`/`.navLink`/`.tabs`/`.tab` CSS remains in either
+  plugin's module CSS.
+- `packages/ui` version bumped (minor) with a `docs/upgrade.md` entry for the
+  `md` resize; each plugin's own `manifest.json` version bumped.

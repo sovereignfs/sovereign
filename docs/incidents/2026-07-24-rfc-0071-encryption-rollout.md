@@ -145,18 +145,18 @@ pnpm sv db encrypt --dataDir /app/data` — encrypted all 7 SQLite files,
 
 ## Follow-up actions
 
-| Item                                                                                                                                  | Status       |
-| ------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| Migrations-loop isolation (`runAllPluginMigrations`)                                                                                  | Done, merged |
-| Marker-guard fresh-instance fix                                                                                                       | Done, merged |
-| E2E workflow / `sv` CLI `.env` loading fixes                                                                                          | Done, merged |
-| `tools` image: skip the unnecessary `next build`                                                                                      | Done, merged |
-| `plugin-client.ts` Postgres `search_path` race fix + regression test                                                                  | Done, merged |
-| Publish a `sovereign-tools` image (or add an `image:` fallback) so `tools` works without a source checkout                            | Not started  |
-| Pre-flight check: warn when a plugin requiring encryption is being added to an instance with pre-existing unencrypted data and no key | Not started  |
-| Plugin-authoring guidance: migration files are append-only once shipped, never regenerate an already-released one                     | Not started  |
-| `docs/self-hosting.md`: explicit "installing a plugin that requires encryption on an existing unencrypted instance" scenario          | Not started  |
-| `docs/troubleshooting.md` / `docs/upgrade.md` entries for this failure class                                                          | Not started  |
+| Item                                                                                                                                  | Status                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Migrations-loop isolation (`runAllPluginMigrations`)                                                                                  | Done, merged                                                                                                                     |
+| Marker-guard fresh-instance fix                                                                                                       | Done, merged                                                                                                                     |
+| E2E workflow / `sv` CLI `.env` loading fixes                                                                                          | Done, merged                                                                                                                     |
+| `tools` image: skip the unnecessary `next build`                                                                                      | Done, merged                                                                                                                     |
+| `plugin-client.ts` Postgres `search_path` race fix + regression test                                                                  | Done, merged                                                                                                                     |
+| Publish a `sovereign-tools` image (or add an `image:` fallback) so `tools` works without a source checkout                            | Tracked — [epic task 0.19](../epics/infrastructure.md#-019--publish-a-sovereign-tools-image)                                     |
+| Pre-flight check: warn when a plugin requiring encryption is being added to an instance with pre-existing unencrypted data and no key | Tracked — [epic task 8.19](../epics/data-sovereignty.md#-819--rfc-0071-incident-pre-flight-warning-and-remaining-doc-follow-ups) |
+| Plugin-authoring guidance: migration files are append-only once shipped, never regenerate an already-released one                     | Tracked — [epic task 8.19](../epics/data-sovereignty.md#-819--rfc-0071-incident-pre-flight-warning-and-remaining-doc-follow-ups) |
+| `docs/self-hosting.md`: explicit "installing a plugin that requires encryption on an existing unencrypted instance" scenario          | Tracked — [epic task 8.19](../epics/data-sovereignty.md#-819--rfc-0071-incident-pre-flight-warning-and-remaining-doc-follow-ups) |
+| `docs/troubleshooting.md` / `docs/upgrade.md` entries for this failure class                                                          | Tracked — [epic task 8.19](../epics/data-sovereignty.md#-819--rfc-0071-incident-pre-flight-warning-and-remaining-doc-follow-ups) |
 
 ## Lessons learned
 

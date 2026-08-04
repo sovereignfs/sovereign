@@ -638,12 +638,67 @@ task's deliverables assume already exists).
 
 ---
 
+#### 📋 0.19 — Publish a `sovereign-tools` image
+
+**Goal:** Close the first still-open follow-up from
+`docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`: the documented
+`sv db encrypt`/`decrypt`/`backup`/`restore` procedure assumes a source
+checkout (`docker compose --profile tools run --rm tools pnpm sv <command>`),
+but `.github/workflows/publish-images.yml`'s build matrix only publishes
+`sovereign-runtime` and `sovereign-auth` to GHCR — no `sovereign-tools`
+image exists, and `docker-compose.prod.yml`'s `tools` service
+(`docker-compose.prod.yml:209-214`) has only a `build:` block, no `image:`
+fallback, unlike `runtime`/`auth` which both have
+`image: ${SOVEREIGN_VERSION:+ghcr.io/sovereignfs/sovereign-<name>:${SOVEREIGN_VERSION}}`
+(`docker-compose.prod.yml:98`) alongside their `build:` block. A production
+deployment that only has `docker-compose.prod.yml` + `.env` — the documented,
+intended `SOVEREIGN_VERSION`-pinned deployment shape — cannot run any `sv`
+admin command without first cloning the full repository as a workaround,
+which is exactly what the incident's resolution steps had to do.
+
+**Deliverables:**
+
+- Add `sovereign-tools` (Dockerfile already has a distinct `tools` build
+  target, `Dockerfile:98`, `AS tools`) to the `build-and-push` matrix in
+  `.github/workflows/publish-images.yml`, alongside `sovereign-runtime` and
+  `sovereign-auth`, passing `target: tools` to `docker/build-push-action`.
+- Add the matching `image:` fallback line to `docker-compose.prod.yml`'s
+  `tools` service, mirroring `runtime`'s exact pattern.
+- `docs/self-hosting.md`'s backup/restore and encryption sections updated to
+  drop the "clone the repo first" workaround as the documented path — the
+  published-image deployment now works as originally intended.
+
+**Dependencies:** None.
+
+**SRS reference:** incident doc above; RFC 0006 (deployment & upgrade
+strategy), RFC 0071 (SQLite at-rest encryption).
+
+**Review checklist:**
+
+- A deployment with only `docker-compose.prod.yml` + `.env` and
+  `SOVEREIGN_VERSION` set (no source checkout) can run
+  `docker compose --profile tools run --rm tools pnpm sv db encrypt` and
+  every other documented `sv` admin command successfully.
+- `docker compose --profile tools run --rm tools` still works with a local
+  source checkout and no `SOVEREIGN_VERSION` set (the `build:` block remains
+  the fallback, unchanged from today).
+- The published `sovereign-tools` image gets the same semver/`latest` tag
+  set as `sovereign-runtime`/`sovereign-auth` (`type=semver`/`type=raw`
+  entries in the existing `docker/metadata-action` step, reused per-matrix-entry).
+- `docs/self-hosting.md` no longer instructs operators to clone the repo as
+  a prerequisite for `sv` admin commands against a published-image
+  deployment.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)
 - [RFC 0010 — Test organization](../rfcs/0010-test-organization.md)
 - [RFC 0019 — Test setup & seeding](../rfcs/0019-test-setup-and-seeding.md)
 - [RFC 0026 — Non-Docker deployment](../rfcs/0026-non-docker-deployment.md)
+- [RFC 0071 — SQLite at-rest encryption](../rfcs/0071-sqlite-at-rest-encryption.md)
+  (Task 0.19)
 
 ## Related Docs
 

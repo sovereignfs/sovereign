@@ -666,6 +666,90 @@ hooks), 8.13 (export completeness hardening).
 
 ---
 
+#### 📋 8.19 — RFC 0071 incident: pre-flight warning and remaining doc follow-ups
+
+**Goal:** Close the four still-untracked, non-Docker follow-ups from
+`docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`'s "Follow-up
+actions" table (a fifth, publishing a `sovereign-tools` image, is tracked
+separately as Task 0.19 — a Docker/CI change, not an RFC 0071 semantics
+change). Task 8.15 already closed the two boot-time reactive cases (no key
+set → warn and boot; key set + a requesting plugin's file already plaintext
+→ fail fast, naming `sv db encrypt`) — what's still missing is surfacing
+that same signal **earlier**, at the point a plugin is added to an instance,
+plus the documentation the incident's own "Lessons learned" section says
+this scenario deserved and never got.
+
+**Per this codebase's standing rule on this subsystem**
+(`CLAUDE.md`'s SQLite/Postgres at-rest encryption hard architectural rule):
+read the incident doc first, and re-run the full test suite plus a live
+encrypt → verify → decrypt → verify round-trip against real data before
+considering this task done — this area has repeatedly looked more finished
+than it was.
+
+**Deliverables:**
+
+- **Pre-flight warning at plugin-install time**, not just next-boot: wire
+  the already-existing `findEncryptionRequiringPlugins()` scanner
+  (`bin/sv.ts:758`, currently only consulted by `sv db encrypt`/`decrypt` to
+  decide which files to touch) into `scripts/install-plugins.ts`'s install
+  path and/or a new `sv plugin add` check, so that adding a plugin
+  declaring `database.requireEncryption: true` to an instance with
+  `SOVEREIGN_DB_ENCRYPTION_KEY` unset — or set but with pre-existing
+  plaintext data — prints a warning naming the plugin and the required
+  follow-up (`sv db encrypt`) **at install time**, before the next restart
+  surfaces it as a boot failure or a silently-degraded warning log.
+- **Plugin-authoring guidance**: a new section in `docs/plugin-development.md`
+  stating Drizzle migration files are append-only once a plugin version
+  ships — never regenerate an already-released migration file, even if its
+  contents would be identical — with a one-paragraph explanation of why
+  (Drizzle's SQLite migrator tracks "already applied" by comparing a
+  migration folder's embedded timestamp against `__drizzle_migrations`, not
+  by hashing content; a regenerated file with a newer timestamp is treated
+  as a new, unapplied migration and re-run against a database that already
+  has its objects). This is the incident's step 9 root cause (the `docs`
+  plugin's `already exists` error), not an encryption bug at all, but only
+  surfaced because encryption had blocked that plugin's migrations from
+  running earlier — worth documenting on its own regardless of encryption.
+- **`docs/self-hosting.md` scenario**: an explicit "installing a plugin that
+  requires encryption on an existing unencrypted instance" walkthrough in
+  the existing "SQLite at-rest encryption (RFC 0071)" section
+  (`docs/self-hosting.md:314`) — distinct from the two scenarios already
+  documented there (fresh instance, converting an already-running plaintext
+  instance) per the incident's own "Lessons learned": adding such a plugin
+  is a combination of both and wasn't called out as its own case.
+- **`docs/troubleshooting.md` / `docs/upgrade.md` entries** for this failure
+  class: the exact `DbEncryptionConfigError: SOVEREIGN_DB_ENCRYPTION_KEY is
+set, but the data directory has not been encrypted yet` message, what it
+  means, and the fix (`sv db encrypt`) — so an operator hitting it from a
+  search or an upgrade note finds the answer directly instead of
+  re-deriving the incident's diagnosis from scratch.
+
+**Dependencies:** Task 8.15 (this surfaces the same check earlier, reusing
+its semantics — not a new encryption-enforcement model).
+
+**SRS reference:** [RFC 0071](../rfcs/0071-sqlite-at-rest-encryption.md)
+(follow-up); incident doc above.
+
+**Review checklist:**
+
+- Running the install path against a plugin declaring
+  `database.requireEncryption: true` on an instance with no key set prints
+  a warning naming that plugin, before any restart — verified live, not
+  just unit-tested.
+- The same install path against a plugin that doesn't request encryption
+  prints nothing new (no false-positive warning noise).
+- `docs/plugin-development.md`'s new section is linked from wherever plugin
+  migrations are otherwise documented, not an orphaned page.
+- `docs/self-hosting.md`'s new scenario walks through the exact incident
+  sequence (add plugin → warning → `sv db encrypt` → restart) end to end.
+- `docs/troubleshooting.md`/`docs/upgrade.md` both surface the exact error
+  string as a searchable heading, not just prose description.
+- Full test suite plus a live encrypt → verify → decrypt → verify round-trip
+  against real data (per this subsystem's standing CLAUDE.md requirement).
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)

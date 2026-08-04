@@ -125,11 +125,12 @@ Workstreams are internal planning documents and are not published (see
 | [0002](0002-native-mobile-app-release.md)     | The whole-instance Sovereign app published to the App and Play Stores | 📋 Planned | 0058, 0013, 0038 |
 | [0003](0003-device-bridge-across-surfaces.md) | One device-capability contract serving web, Tauri, and Capacitor      | 📋 Planned | 0083, 0080       |
 | [0004](0004-ui-backup-restore.md)             | UI-driven, async backup & restore for owners/admins and regular users | 📋 Planned | 0084             |
+| [0006](0006-rfc-0071-incident-followups.md)   | Close the 4 still-open RFC 0071 incident follow-ups                   | 📋 Planned | 0071             |
 
 Workstreams 0001 and 0002 share epic task 20.10 (the WKWebView offline spike) —
 run it once and let both consume the finding. Otherwise they are independent, and
-0002 is the shorter path to a shipped native app. Workstream 0004 is independent
-of the other three.
+0002 is the shorter path to a shipped native app. Workstreams 0004 and 0006 are
+each independent of the other workstreams.
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · ⏸️ Paused · ❌ Stopped_
 

@@ -6,7 +6,7 @@ import type { NextConfig } from 'next';
 loadEnvConfig(resolve(process.cwd(), '../..'), process.env.NODE_ENV !== 'production');
 
 // Static security response headers. No CSP here — this service serves no HTML,
-// only JSON API responses (see RFC 0085), so there is no inline-script surface
+// only JSON API responses (see RFC 0087), so there is no inline-script surface
 // to constrain the way apps/auth's per-request CSP does.
 const isProd = process.env.NODE_ENV === 'production';
 const securityHeaders = [

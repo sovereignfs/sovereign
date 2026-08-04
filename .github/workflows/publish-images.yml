@@ -7,6 +7,13 @@ name: Publish Docker Images
 # Image names:
 #   ghcr.io/<owner>/sovereign-runtime:<tag>
 #   ghcr.io/<owner>/sovereign-auth:<tag>
+#   ghcr.io/<owner>/sovereign-relay:<tag>
+#
+# sovereign-relay (apps/relay, RFC 0087) is published here for two distinct
+# consumers — sovereignfs's own default relay deployment, and any operator
+# taking the self-host escape hatch — but unlike the other two images, it is
+# NOT part of the self-hosted stack (docker-compose.yml / .prod.yml). See
+# docs/rfcs/0087-sovereign-relay.md's "Deployment topology".
 #
 # Tags applied per release:
 #   v1.2.3   — exact version
@@ -44,6 +51,8 @@ jobs:
             dockerfile: Dockerfile
           - name: sovereign-auth
             dockerfile: apps/auth/Dockerfile
+          - name: sovereign-relay
+            dockerfile: apps/relay/Dockerfile
 
     steps:
       - uses: actions/checkout@v7

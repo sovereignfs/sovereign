@@ -177,9 +177,9 @@ the universal mobile shell.
 
 #### 📋 20.5 — Native push notifications (APNs/FCM)
 
-> **Rescoped by [RFC 0085](../rfcs/0085-native-push-relay.md).** The
+> **Rescoped by [RFC 0087](../rfcs/0087-sovereign-relay.md).** The
 > runtime/API device-token registration, the encrypted-relay fan-out, and
-> the new `apps/push-relay` service are **not** this task's work — they're
+> the new `apps/relay` service are **not** this task's work — they're
 > this monorepo's task 4.7 (see
 > [docs/epics/notification-center.md](notification-center.md#-47--native-mobile-push-relay-apnsfcm)).
 > What remains here is **the `sovereign-mobile` client-side half**:
@@ -204,7 +204,7 @@ configured relay (`sovereignfs`'s by default) delivers.
 - On-device keypair generation (`CryptoKit` on iOS, Android `KeyStore`) —
   private key never leaves the device
 - Registration call to the instance's `POST /api/account/push-device-token`
-  (RFC 0085) on first opt-in; revocation call on sign-out/instance removal
+  (RFC 0087) on first opt-in; revocation call on sign-out/instance removal
 - iOS **Notification Service Extension** — decrypts the payload and
   populates notification content before the OS displays it; reuses the
   `notifications.native` display path from workstream 0003 once decrypted
@@ -213,14 +213,14 @@ configured relay (`sovereignfs`'s by default) delivers.
 - Account UI or preferences surface for mobile push opt-in/opt-out
 - Permission strings, privacy declarations, and operator configuration docs
   (including that push depends on `sovereignfs`'s relay by default, and
-  what the escape hatch is — RFC 0085's "Relay URL configurability")
+  what the escape hatch is — RFC 0087's "Deployment topology")
 - Tests for token registration, revocation, and permission/error states
 
 **Dependencies:** Task 20.3 (device bridge, for `notifications.native`
-reuse); RFC 0085; this monorepo's task 4.7 (the registration endpoint and
+reuse); RFC 0087; this monorepo's task 4.7 (the registration endpoint and
 relay must exist to register against).
 
-**SRS reference:** §3.12; RFC 0085
+**SRS reference:** §3.12; RFC 0087
 
 **Review checklist:**
 
@@ -481,7 +481,7 @@ policy on when it is justified — the ongoing cost is per-app and permanent.
 - [RFC 0016 — Web Push notifications](../rfcs/0016-web-push.md)
 - [RFC 0038 — Desktop app shell (Tauri, macOS-first)](../rfcs/0038-desktop-app-shell.md)
 - [RFC 0046 — Plugin background jobs and schedules](../rfcs/0046-plugin-jobs.md)
-- [RFC 0085 — Native mobile push notification relay](../rfcs/0085-native-push-relay.md)
+- [RFC 0087 — Sovereign Relay (native push notifications & WebRTC signaling)](../rfcs/0087-sovereign-relay.md)
   (Task 20.5)
 
 ## Related Docs

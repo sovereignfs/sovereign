@@ -233,11 +233,11 @@ instead of the current logger-only trail.
 
 #### 📋 4.7 — Native mobile push relay (APNs/FCM)
 
-> **New in [RFC 0085](../rfcs/0085-native-push-relay.md).** Covers this
+> **New in [RFC 0087](../rfcs/0087-sovereign-relay.md).** Covers this
 > monorepo's half of native mobile push: the device-token schema, the
 > registration/revocation API, extending `fanOutPushToUser`'s existing
 > fan-out with an encrypted-relay delivery branch, and the new
-> `apps/push-relay` service. The `sovereign-mobile` client-side half
+> `apps/relay` service. The `sovereign-mobile` client-side half
 > (registration flow, on-device encryption, iOS Notification Service
 > Extension) is tracked in that repo's own epic 20, task 20.5 — see this
 > monorepo's [docs/epics/mobile.md](mobile.md#-205--native-push-notifications-apnsfcm),
@@ -263,30 +263,40 @@ precedent this design follows).
   `/api/account/push-subscription` route's shape and auth handling.
 - `runtime/src/push.ts`'s `fanOutPushToUser` extended with a second
   delivery branch: encrypt the payload against the recipient device's
-  stored public key (ECDH P-256 + HKDF + AES-256-GCM — see RFC 0085's
+  stored public key (ECDH P-256 + HKDF + AES-256-GCM — see RFC 0087's
   "Encryption" section), POST to the device's stored `relayUrl`. Runs
   inside the same `Promise.allSettled` fan-out already there, alongside
   the existing Web Push branch.
-- New `apps/push-relay` service (minimal Next.js app, following
-  `apps/auth`'s existing precedent): `POST /v1/push` (validates a
-  per-instance API key, forwards the already-encrypted payload to APNs or
-  FCM using `sovereignfs`'s own credentials, reports delivery/invalid-token
-  outcomes for pruning) and `POST /v1/enroll` (one-time, issues an
-  instance's API key). Holds the real Apple/Firebase credentials and
-  nothing else sensitive — no payload inspection, no content logging, no
-  persistent notification history.
-- Instance-level Console setting for the configured relay URL (defaults to
-  `sovereignfs`'s relay), so an operator who builds and publishes their own
-  signed app variant can point at a different relay instead — see RFC
-  0085's "Relay URL configurability."
-- Docs: `self-hosting.md` (new relay-related env vars/config, if any land
-  in `runtime` rather than only in Console), and this repo's own Docker
-  setup updated if `apps/push-relay` needs a new Compose service.
+- New `apps/relay` service (minimal Next.js app, following
+  `apps/auth`'s existing code precedent, but a deliberately different
+  deployment shape — see RFC 0087's "Deployment topology"): `POST /v1/push`
+  (validates a per-instance API key, forwards the already-encrypted payload
+  to APNs or FCM using `sovereignfs`'s own credentials, reports
+  delivery/invalid-token outcomes for pruning) and `POST /v1/enroll`
+  (one-time, issues an instance's API key). Holds the real Apple/Firebase
+  credentials and nothing else sensitive — no payload inspection, no
+  content logging, no persistent notification history.
+- `apps/relay/Dockerfile` (own image, matching `apps/auth/Dockerfile`'s
+  standalone-Next.js pattern) and a `sovereign-relay` entry in
+  `.github/workflows/publish-images.yml`'s GHCR matrix. **Explicitly not**
+  added to `docker-compose.yml`/`docker-compose.prod.yml` — those model the
+  per-instance stack every operator runs, and the relay is a shared,
+  centrally-operated service almost no operator deploys themselves (see RFC
+  0087's "Deployment topology").
+- Instance-level Console setting (backed by an env var default) for the
+  configured relay URL, shipping with a default that points at
+  `sovereignfs`'s relay (`relay.sovereign.openfs.io`), overridable, and with
+  a distinct full opt-out toggle — see RFC 0087's "Deployment topology."
+- Docs: `self-hosting.md` (the relay-URL env var/default and the opt-out
+  toggle), and the operator-facing deployment playbook in the external
+  `sovereign-infra` (public template) and `openfs-infra` (private
+  production) repos — both already document a generic "Adding a New App"
+  flow that `apps/relay` follows.
 
 **Dependencies:** Task 4.2 (Web Push notifications) — this reuses its
-crypto approach; RFC 0085.
+crypto approach; RFC 0087.
 
-**SRS reference:** RFC 0085
+**SRS reference:** RFC 0087
 
 **Review checklist:**
 
@@ -294,7 +304,7 @@ crypto approach; RFC 0085.
   closed (not just backgrounded), verified against a real device or
   simulator/emulator with real APNs/FCM sandbox credentials, not just unit
   tests.
-- `apps/push-relay` never has access to plaintext notification content —
+- `apps/relay` never has access to plaintext notification content —
   verified by inspecting what it actually receives and logs, not just
   reading the code that's supposed to prevent it.
 - A user with a browser tab, a PWA, and the native app installed
@@ -319,7 +329,7 @@ crypto approach; RFC 0085.
 - [RFC 0034 — Notification transport](../rfcs/0034-notification-transport.md)
 - [RFC 0048 — Messages and notification detail](../rfcs/0048-messages-and-notification-detail.md)
 - [RFC 0062 — Email delivery coverage](../rfcs/0062-email-delivery-coverage.md)
-- [RFC 0085 — Native mobile push notification relay](../rfcs/0085-native-push-relay.md)
+- [RFC 0087 — Sovereign Relay (native push notifications & WebRTC signaling)](../rfcs/0087-sovereign-relay.md)
 
 ## Related Docs
 

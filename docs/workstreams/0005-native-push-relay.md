@@ -4,7 +4,7 @@
 **Date:** August 2026\
 **Author:** Claude Code (design discussion with `kasunben`)\
 **Goal owner:** `kasunben`\
-**RFCs:** [0085](../rfcs/0085-native-push-relay.md) (device-token schema,
+**RFCs:** [0087](../rfcs/0087-sovereign-relay.md) (device-token schema,
 registration API, encryption scheme, relay contract — the governing
 design), [0015](../rfcs/0015-notification-center.md) /
 [0016](../rfcs/0016-web-push.md) (the existing fan-out this extends, not
@@ -38,7 +38,7 @@ relay URL).
       Web Push delivery, in the same fan-out — verified with a user who has
       both a browser subscription and a native device token registered
       simultaneously.
-- [ ] The relay (`apps/push-relay`) never receives, logs, or is otherwise
+- [ ] The relay (`apps/relay`) never receives, logs, or is otherwise
       capable of accessing plaintext notification content — verified by
       inspecting the actual network payload it receives, not just by
       reading the code that's supposed to guarantee this.
@@ -51,26 +51,38 @@ relay URL).
       regression-tested, not just assumed unaffected.
 - [ ] Both this monorepo's and `sovereign-mobile`'s docs describe the
       relay dependency plainly, including what the operator escape hatch
-      actually requires (a separately built and signed app, per RFC 0085).
+      actually requires (a separately built and signed app, per RFC 0087).
+- [ ] `apps/relay` has its own `Dockerfile` and a published
+      `ghcr.io/sovereignfs/sovereign-relay` image, but is **not** part of
+      `docker-compose.yml`/`docker-compose.prod.yml` — verified by
+      confirming those files are untouched and the relay is deployed as an
+      independent app via the `sovereign-infra`/`openfs-infra` playbook
+      instead (RFC 0087's "Deployment topology").
+- [ ] An instance can fully disable the relay dependency with a single
+      `.env`/Console toggle, distinct from just leaving the relay URL at
+      its default — verified end-to-end (Web Push and every other feature
+      keep working with the toggle off).
 
 ## Decisions locked
 
 Settled across [Research 0010](../research/0010-native-mobile-push-notifications.md)
-and [RFC 0085](../rfcs/0085-native-push-relay.md). Full reasoning there.
+and [RFC 0087](../rfcs/0087-sovereign-relay.md). Full reasoning there.
 
-| Decision              | Choice                                                                                        | Rejected alternative, and why                                                                                                                                                        |
-| --------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Relay necessity       | A `sovereignfs`-operated relay is required                                                    | Operator-supplied credentials — structurally impossible for iOS (Apple binds APNs credentials to the Bundle ID's own Developer account); asymmetric and only partial for Android     |
-| Payload privacy       | End-to-end encrypted (Nextcloud precedent) — relay only ever sees an opaque blob              | Full-payload relay (simplest, but every instance's notification content would transit `sovereignfs`'s infrastructure) — rejected once the encrypted design proved no harder to build |
-| Delivery mechanism    | Deliver the full encrypted payload in one push                                                | Silent-wake-then-fetch — depends on iOS/Android's unpredictable background-execution budget for a second round trip; strictly worse reliability for no extra privacy benefit         |
-| Third-party push SaaS | Build the relay in-house                                                                      | OneSignal/Pushwoosh/Airship/etc. — confirmed they still require `sovereignfs`'s own APNs/Firebase credentials; adds a new external party with zero capability gained                 |
-| Operator opt-out      | Configurable relay URL + "build your own signed app" as the real escape hatch                 | No opt-out (rejected — conflicts with self-hosted positioning); "operator supplies credentials into the shared app" (rejected — see relay necessity above)                           |
-| Encryption scheme     | ECDH P-256 + HKDF + AES-256-GCM, hybrid encryption, not Web Push's exact RFC 8291 wire format | Reusing RFC 8291 verbatim — that framing exists to satisfy browser `PushManager` internals, an irrelevant constraint when Sovereign controls both encrypting and decrypting ends     |
-| Relay app framework   | Minimal Next.js app (`apps/push-relay`), matching `apps/auth`'s existing precedent            | A different framework/runtime (e.g. a serverless function, a lightweight Node service) — rejected for now to avoid introducing a second deployment pattern to this monorepo          |
+| Decision                  | Choice                                                                                                                                                              | Rejected alternative, and why                                                                                                                                                                                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Relay necessity           | A `sovereignfs`-operated relay is required                                                                                                                          | Operator-supplied credentials — structurally impossible for iOS (Apple binds APNs credentials to the Bundle ID's own Developer account); asymmetric and only partial for Android                                                                                        |
+| Payload privacy           | End-to-end encrypted (Nextcloud precedent) — relay only ever sees an opaque blob                                                                                    | Full-payload relay (simplest, but every instance's notification content would transit `sovereignfs`'s infrastructure) — rejected once the encrypted design proved no harder to build                                                                                    |
+| Delivery mechanism        | Deliver the full encrypted payload in one push                                                                                                                      | Silent-wake-then-fetch — depends on iOS/Android's unpredictable background-execution budget for a second round trip; strictly worse reliability for no extra privacy benefit                                                                                            |
+| Third-party push SaaS     | Build the relay in-house                                                                                                                                            | OneSignal/Pushwoosh/Airship/etc. — confirmed they still require `sovereignfs`'s own APNs/Firebase credentials; adds a new external party with zero capability gained                                                                                                    |
+| Operator opt-out          | Configurable relay URL + "build your own signed app" as the real escape hatch                                                                                       | No opt-out (rejected — conflicts with self-hosted positioning); "operator supplies credentials into the shared app" (rejected — see relay necessity above)                                                                                                              |
+| Encryption scheme         | ECDH P-256 + HKDF + AES-256-GCM, hybrid encryption, not Web Push's exact RFC 8291 wire format                                                                       | Reusing RFC 8291 verbatim — that framing exists to satisfy browser `PushManager` internals, an irrelevant constraint when Sovereign controls both encrypting and decrypting ends                                                                                        |
+| Relay app framework       | Minimal Next.js app (`apps/relay`), matching `apps/auth`'s existing code precedent                                                                                  | A different framework/runtime (e.g. a serverless function, a lightweight Node service) — rejected for now to avoid introducing a second deployment pattern to this monorepo                                                                                             |
+| Relay deployment topology | Own `Dockerfile` + published image, deployed as an independent app via the `sovereign-infra`/`openfs-infra` playbook — never joins `docker-compose.yml`/`.prod.yml` | Bundling it into the default self-hosted compose stack — rejected: no locality benefit for push (destination is always Apple/Google's cloud), and an always-on local relay would sit idle for the vast majority of instances that never hold their own push credentials |
+| Relay scope               | Built as a shared, generalized `apps/relay` (future features — e.g. WebRTC signaling — can reuse it)                                                                | A push-only, narrowly-named service — rejected once it became clear other planned features need the identical shape of infrastructure; kept push-only _implementation_ in this workstream regardless (RFC 0087)                                                         |
 
 ## Prerequisites
 
-- RFC 0085 accepted (Draft status is sufficient to begin, per this repo's
+- RFC 0087 accepted (Draft status is sufficient to begin, per this repo's
   own precedent — RFC 0083 was still Draft when workstream 0003 executed
   against it).
 - `sovereignfs` needs an APNs key (`.p8`) under its existing Apple Developer
@@ -88,7 +100,7 @@ and [RFC 0085](../rfcs/0085-native-push-relay.md). Full reasoning there.
 | Leg | Name                                      | Epic tasks    | Repo               | Gate? | Done when                                                               |
 | --- | ----------------------------------------- | ------------- | ------------------ | ----- | ----------------------------------------------------------------------- |
 | 1   | Device-token schema + registration API    | 4.7 (partial) | `sovereign`        | No    | Instance can register/revoke a device token; no relay dependency yet    |
-| 2   | Relay service scaffold + APNs/FCM sending | 4.7 (partial) | `sovereign`        | No    | `apps/push-relay` forwards a real encrypted blob to a real device       |
+| 2   | Relay service scaffold + APNs/FCM sending | 4.7 (partial) | `sovereign`        | No    | `apps/relay` forwards a real encrypted blob to a real device            |
 | 3   | Fan-out extension                         | 4.7 (partial) | `sovereign`        | No    | `fanOutPushToUser` delivers to registered devices via the relay         |
 | 4   | `sovereign-mobile` client + iOS extension | 20.5          | `sovereign-mobile` | No    | A real device, app fully closed, receives and displays a decrypted push |
 
@@ -116,7 +128,7 @@ yet, follows the same "contract before consumer" reasoning workstream
 
 - `push_device_tokens` table, both SQLite and Postgres dialects
   (`packages/db/src/schema/{sqlite,postgres}/platform.ts`), alongside the
-  existing `push_subscriptions` table — see RFC 0085's exact column list.
+  existing `push_subscriptions` table — see RFC 0087's exact column list.
   Follow that file's existing patterns (e.g. `device_consent_grants` from
   workstream 0003 leg 2) rather than inventing new schema conventions.
 - `POST /api/account/push-device-token` / `DELETE /api/account/push-device-token/:id`,
@@ -125,7 +137,7 @@ yet, follows the same "contract before consumer" reasoning workstream
   structurally the same kind of endpoint.
 - `relay_url` is captured from the instance's current Console-configured
   relay setting **at registration time** and stored on the row itself, not
-  read fresh from config at send time (RFC 0085's "Device-token schema"
+  read fresh from config at send time (RFC 0087's "Device-token schema"
   section explains why: a relay-URL change must not silently break already-
   registered devices before they re-register).
 - No relay integration in this leg — registration and revocation must work
@@ -147,8 +159,8 @@ review order matches dependency order for a human following along.
 
 **Technical notes:**
 
-- `apps/push-relay` follows `apps/auth`'s exact shape: own `package.json`
-  (`@sovereignfs/push-relay`, private), `Dockerfile`,
+- `apps/relay` follows `apps/auth`'s exact shape: own `package.json`
+  (`@sovereignfs/relay`, private), `Dockerfile`,
   `scripts/next-server.mjs`-driven `dev`/`start`/`build` scripts, own
   `tsconfig.json` extending `@sovereignfs/tsconfig`. See task 13 of this
   session's own work for the initial skeleton, already scaffolded ahead of
@@ -160,7 +172,7 @@ review order matches dependency order for a human following along.
     that distinguishes "delivered," "device token invalid" (for leg 3's
     pruning), and "transient failure").
 - `POST /v1/enroll` — one-time, issues a per-instance API key. Exact
-  auth/rate-limit model is this leg's own design decision within RFC 0085's
+  auth/rate-limit model is this leg's own design decision within RFC 0087's
   stated constraints (see that RFC's "Open questions") — resolve and
   document it here, don't leave it implicit in code.
 - **No payload inspection, no content logging, ever** — this is the leg
@@ -169,6 +181,29 @@ review order matches dependency order for a human following along.
   cannot decrypt or meaningfully log the blob it forwards.
 - Needs real APNs/FCM sandbox credentials to verify against — flagged in
   Prerequisites; do not fake this verification with mocked responses only.
+- **Deployment topology work belongs in this leg too** (RFC 0087's
+  "Deployment topology"), since push is the first feature that needs it:
+  - `apps/relay/Dockerfile`, matching `apps/auth/Dockerfile`'s
+    standalone-Next.js pattern.
+  - A `sovereign-relay` entry in `.github/workflows/publish-images.yml`'s
+    GHCR matrix, tagged the same way as `sovereign-runtime`/`sovereign-auth`.
+  - **Do not** add `apps/relay` to `docker-compose.yml` or
+    `docker-compose.prod.yml` — those model the per-instance stack every
+    operator runs; the relay is a shared, centrally-operated service almost
+    no operator deploys themselves.
+  - `runtime`-side: an admin-configurable relay URL (Console setting backed
+    by an env var default of `relay.sovereign.openfs.io`) plus a distinct,
+    explicit full opt-out toggle — not just an empty/unset value, which
+    should keep meaning "use the default."
+  - Coordinate with the external `sovereign-infra` (public template) and
+    `openfs-infra` (private production) repos so `apps/relay` is deployed
+    via their existing "Adding a New App" playbook — `openfs-infra` runs
+    `sovereignfs`'s actual default relay at `relay.sovereign.openfs.io`
+    (port `4002`, already reserved there); `sovereign-infra`'s template
+    gains an optional, off-by-default step for an operator taking the
+    self-host escape hatch. This is cross-repo coordination similar in
+    spirit to leg 4's, but for infra rather than the mobile client — do not
+    treat it as an afterthought once the relay's application code is done.
 
 **Do not proceed if:** `sovereignfs`'s Apple Developer / Firebase
 credentials aren't actually available yet — this leg cannot be meaningfully
@@ -185,10 +220,10 @@ relay to call).
 **Technical notes:**
 
 - `runtime/src/push.ts`'s `fanOutPushToUser` gains a second delivery branch
-  reading from `push_device_tokens`, encrypting per RFC 0085's scheme, and
+  reading from `push_device_tokens`, encrypting per RFC 0087's scheme, and
   POSTing to each token's stored `relay_url`. Keep the existing Web Push
   branch untouched — this is additive to the function, not a rewrite (see
-  RFC 0085's "Current state" for why the existing `Promise.allSettled`
+  RFC 0087's "Current state" for why the existing `Promise.allSettled`
   fan-out already generalizes to a second delivery type).
 - A "device token invalid" result from the relay prunes the
   `push_device_tokens` row, mirroring the existing 410/404 pruning already
@@ -270,7 +305,7 @@ done, not just "it compiled."
 If the iOS Notification Service Extension proves unreliable in practice
 (leg 4's empirical verification repeatedly fails, e.g. persistent App Group
 keychain-sharing issues with no clean fix), the fallback is **not** to ship
-unencrypted push — it's to pause leg 4 and revisit RFC 0085's encryption
+unencrypted push — it's to pause leg 4 and revisit RFC 0087's encryption
 scheme or delivery model, since the whole design's value proposition rests
 on the relay being genuinely unable to read content. Legs 1–3 remain valid
 and shippable independently either way (the registration API and relay
@@ -283,6 +318,7 @@ considered the least-bad option, not the only conceivable one.
 
 ## Changelog
 
-| Version | Date        | Change        |
-| ------- | ----------- | ------------- |
-| 0.1     | August 2026 | Initial draft |
+| Version | Date        | Change                                                                                                                                                   |
+| ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft                                                                                                                                            |
+| 0.2     | August 2026 | Renamed `apps/push-relay` → `apps/relay` (RFC 0087 broadened to a shared relay platform); added deployment-topology work to leg 2 and Definition of done |

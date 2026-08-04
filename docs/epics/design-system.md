@@ -18,6 +18,7 @@ This epic covers two closely related areas: the `@sovereignfs/ui` design system 
 - [RFC 0073 — Standalone usage of `@sovereignfs/ui` outside the plugin runtime](../rfcs/0073-standalone-ui-package.md)
 - [RFC 0079 — Mobile PWA layout, overlay, and gesture consistency](../rfcs/0079-mobile-pwa-layout-overlay-gesture-consistency.md)
 - [RFC 0085 — Vertical section navigation for overlay-shell plugins (`NavRail`)](../rfcs/0085-vertical-section-nav-overlay-shell.md)
+- [RFC 0088 — Mobile header and footer as Design System components](../rfcs/0088-mobile-header-footer-design-system-components.md)
 
 ## Related Docs
 
@@ -1051,3 +1052,113 @@ size infrastructure already supports `md`.
   plugin's module CSS.
 - `packages/ui` version bumped (minor) with a `docs/upgrade.md` entry for the
   `md` resize; each plugin's own `manifest.json` version bumped.
+
+---
+
+#### ✅ 9.23 — `MobileHeader` and `MobileFooter` Design System components
+
+**Goal:** Extract the runtime's hardcoded mobile header and footer
+(`runtime/app/(platform)/layout.tsx:228-254`,
+`runtime/app/(platform)/_components/MobileNav.tsx:49-83`) into two new
+`packages/ui` components, formalizing which parts of the mobile chrome are
+immutable (brand/logo, avatar menu, and notification bell in the header; the
+centered "Apps" launcher in the footer) versus overridable (an optional
+header title; up to two additional icons on each side of the footer
+launcher), ahead of a not-yet-designed future use case where a plugin
+renders this chrome itself. Groundwork only — no manifest or SDK change.
+
+**Deliverables:**
+
+- **`MobileHeader`** in `packages/ui/src/components/MobileHeader/` —
+  presentational, no data fetching. Props: `logo: ReactNode`,
+  `homeHref?: string`, `title?: string` (absent by default), `bell:
+ReactNode`, `avatarMenu: ReactNode`. Reuses the existing
+  `--sv-shell-header-height` token; does not change its value.
+- **`MobileFooter`** in `packages/ui/src/components/MobileFooter/` —
+  presentational. Props: `onOpenApps: () => void`, `launcherIcon?:
+ReactNode`, `leftIcons: FooterIcon[]` (1 or 2), `rightIcons: FooterIcon[]`
+  (1 or 2), each `FooterIcon` = `{ icon: ReactNode; label: string; href?:
+string; onClick?: () => void; active?: boolean }`. Dev-mode-only
+  `console.error` (never throws) when `leftIcons.length !== rightIcons.length`,
+  matching `SwipableMobileCarousel`'s existing non-fatal-guard pattern.
+  Reuses the existing `--sv-shell-footer-height` token.
+- Storybook stories for both components under the mobile-patterns section
+  (`MobilePatterns.stories.tsx`), covering: header with/without `title`;
+  footer at 1+1 and 2+2 icon counts; a dev-mode console-error assertion for
+  the mismatched-count guard.
+- `docs/design-system.md` gains a short section on the header/footer
+  immutable-vs-overridable boundary, cross-referencing RFC 0088.
+
+**Dependencies:** None — additive `packages/ui` components; no change to
+runtime behavior in this task (that's task 9.24).
+
+**SRS reference:** [RFC 0088](../rfcs/0088-mobile-header-footer-design-system-components.md)
+
+**Version impact:** `@sovereignfs/ui` → **minor** — new, additive components.
+
+**Review checklist:**
+
+- `pnpm --filter @sovereignfs/ui typecheck`, `test`, and `lint` pass.
+- Both components render without console errors at a mobile viewport
+  (Storybook); the footer's mismatched-icon-count guard fires exactly the
+  documented dev-mode warning and never throws.
+- Neither component fetches data or imports `@sovereignfs/sdk` — confirmed
+  presentational (grep for `fetch`/`useEffect` data calls turns up none).
+- `pnpm design:tokens:check` passes; `--sv-shell-header-height` and
+  `--sv-shell-footer-height` are unchanged in value.
+
+---
+
+#### 📋 9.24 — Runtime mobile shell consumes `MobileHeader`/`MobileFooter`
+
+**Goal:** Refactor `runtime/app/(platform)/layout.tsx` and
+`runtime/app/(platform)/_components/MobileNav.tsx` to render through task
+9.23's new `packages/ui` components instead of their current inline markup,
+with no visual or behavioral change except one bug fix: the mobile header's
+contextual title — described in RFC 0013's own comment
+(`layout.tsx:224`, "brand · active-plugin title · bell · avatar menu") but
+never actually wired up — starts rendering for the first time, using the
+existing (currently orphaned) resolution logic from `ActivePluginTitle.tsx`.
+
+**Deliverables:**
+
+- `(platform)/layout.tsx`'s header block (`:228-254`) rewritten to render
+  `<MobileHeader logo={...} title={activePluginTitle} bell={<NotificationBell
+/>} avatarMenu={<AccountMenu .../>} />`, passing the exact same
+  `instanceLogoUrl`/`instanceName`/`accountAvatar` data it already resolves
+  server-side.
+- A new small hook (e.g. `useActivePluginTitle(plugins)`) in
+  `runtime/app/(platform)/_components/`, porting `ActivePluginTitle.tsx`'s
+  existing longest-`routePrefix`-match logic unchanged; `ActivePluginTitle.tsx`
+  and its module CSS are deleted (the logic moves, nothing is reimplemented).
+- `MobileNav.tsx`'s footer `<nav>` (`:49-83`) rewritten to render
+  `<MobileFooter onOpenApps={...} launcherIcon={...} leftIcons={[home]}
+rightIcons={[search]} />`, reproducing today's exact Home/Apps/Search
+  layout via the new 1+1 shape — the Drawer and `MobileSearch` overlay stay
+  owned by `MobileNav.tsx` unchanged.
+- No change to `shellConfig.mobileHeader`/`mobileFooter` visibility gating
+  (RFC 0075) — this task only changes what renders inside the `showMobileHeader`/
+  `showMobileFooter` conditionals, not the conditionals themselves.
+
+**Dependencies:** Task 9.23 (the components this consumes).
+
+**SRS reference:** [RFC 0088](../rfcs/0088-mobile-header-footer-design-system-components.md)
+
+**Version impact:** `runtime` → **patch** — internal refactor plus the
+title-rendering fix; no public API change.
+
+**Review checklist:**
+
+- Visual diff at mobile viewport (375px and 768px breakpoints) shows only
+  the new header title appearing when navigating into a plugin — brand,
+  avatar, bell, and all three footer icons render identically to before.
+- `--sv-dialog-inset-top` and the header/footer height CSS variables are
+  unaffected (`ClientShell`'s `syncViewport()` still measures
+  `[data-mobile-header]` correctly against the new markup).
+- RFC 0075's `shellConfig.mobileHeader`/`mobileFooter: false` still omits
+  the respective element server-side (existing Vitest coverage in
+  `runtime/src/__tests__/mobile-chrome.test.ts` and
+  `runtime/src/__tests__/registry.test.ts` continues to pass unchanged).
+- `pnpm typecheck`, `pnpm lint`, and `pnpm test` pass across `runtime`;
+  `ActivePluginTitle.tsx`/`.module.css` no longer exist and nothing else
+  references them.

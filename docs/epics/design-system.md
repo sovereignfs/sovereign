@@ -1082,10 +1082,14 @@ string; onClick?: () => void; active?: boolean }`. Dev-mode-only
   `console.error` (never throws) when `leftIcons.length !== rightIcons.length`,
   matching `SwipableMobileCarousel`'s existing non-fatal-guard pattern.
   Reuses the existing `--sv-shell-footer-height` token.
-- Storybook stories for both components under the mobile-patterns section
-  (`MobilePatterns.stories.tsx`), covering: header with/without `title`;
-  footer at 1+1 and 2+2 icon counts; a dev-mode console-error assertion for
-  the mismatched-count guard.
+- Dedicated `Components/MobileHeader` and `Components/MobileFooter` story
+  files (`MobileHeader.stories.tsx`, `MobileFooter.stories.tsx`), covering:
+  header with/without `title`; footer at 1+1 and 2+2 icon counts; the
+  launcher's open/active state.
+- A live demo section under `Overview/Mobile Patterns`
+  (`MobilePatterns.stories.tsx`) and a `Component Gallery` entry in
+  `DesignSystemOverview.stories.tsx`, cross-referencing the dedicated
+  stories above.
 - `docs/design-system.md` gains a short section on the header/footer
   immutable-vs-overridable boundary, cross-referencing RFC 0088.
 

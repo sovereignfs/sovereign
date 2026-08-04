@@ -758,6 +758,52 @@ open question.
 
 ---
 
+#### 📋 1.19 — Database-backed rate-limit storage for `apps/auth` (RFC 0086)
+
+**Goal:** Close the multi-instance gap in the auth server's brute-force/
+credential-stuffing protection — today's `storage: 'memory'` limiter
+(`apps/auth/src/auth.ts:113-116`) holds independent counters per process, so
+an operator running more than one `apps/auth` process/container gets up to
+N× the intended sign-in/sign-up/reset attempt limit with no error or log to
+signal it.
+
+**Deliverables:**
+
+- Flip `rateLimit.storage` from `'memory'` to `'database'` in
+  `apps/auth/src/auth.ts`. better-auth's own migrator
+  (`apps/auth/src/migrate.ts`, `getMigrations(getAuthOptions())`, which
+  already runs on every startup) picks up the new `rateLimit` table
+  automatically from the changed option — no hand-written schema or
+  migration needed.
+- Update `docs/security.md`'s "Login rate limiting" bullet, which currently
+  states storage is "in-memory per process (sufficient for single-instance
+  deployments); a shared secondary storage (e.g. Redis) would be needed for
+  multi-instance setups" — that caveat stops being true once this ships.
+- No new env var, no new dependency (reuses the auth database `apps/auth`
+  already connects to for every other request).
+
+**Dependencies:** None blocking — a one-line config change plus a docs
+update. Independent of Task 2.29 (the `runtime` side of the same RFC);
+either can ship first.
+
+**SRS reference:** [RFC 0086](../rfcs/0086-shared-store-rate-limiting.md)
+
+**Review checklist:**
+
+- Sign-in rate limiting still returns `429`/`X-Retry-After` at the same
+  thresholds (3 attempts/10s for sign-in/sign-up, 3/60s for password reset)
+  after the storage switch — behavior is unchanged, only where counters
+  live.
+- The `rateLimit` table exists after `runAuthMigrations()` runs against a
+  fresh database (SQLite and Postgres).
+- Two concurrent `apps/auth` processes pointed at the same database share
+  the same rate-limit counters (the actual bug this closes) — verified
+  against a real multi-process setup, not just unit tests.
+- `docs/security.md` no longer describes rate limiting as single-instance-only.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` — all pass.
+
+---
+
 ## Related RFCs
 
 - [RFC 0012 — Passkeys & TOTP MFA](../rfcs/0012-passkeys-and-mfa.md)
@@ -770,6 +816,7 @@ open question.
 - [RFC 0054 — Plugin-scoped roles and grants](../rfcs/0054-plugin-scoped-roles-and-grants.md)
 - [RFC 0062 — Email delivery coverage](../rfcs/0062-email-delivery-coverage.md)
 - [RFC 0072 — External OAuth/OIDC provider for non-plugin apps](../rfcs/0072-external-oauth-provider.md)
+- [RFC 0086 — Shared-store rate limiting for multi-instance deployments](../rfcs/0086-shared-store-rate-limiting.md)
 
 ## Related Docs
 

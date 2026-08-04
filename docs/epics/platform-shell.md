@@ -938,6 +938,54 @@ sign-in/sign-up/reset endpoints.
 - `docs/self-hosting.md`'s reverse-proxy section states the single-proxy trust
   assumption and its bypass risk if the runtime port is also exposed directly.
 
+---
+
+#### 📋 2.29 — Redis-backed store for the general per-IP rate limiter (RFC 0086)
+
+**Goal:** Close the multi-instance gap in Task 2.28's limiter. Its bucket
+state lives in a bare in-process `Map` (`runtime/src/rate-limit.ts`) — an
+operator running more than one `runtime` process/container (already a
+supported topology, per `NOTIFICATION_TRANSPORT=redis`, RFC 0034) gets
+independent counters per instance, silently weakening the limit by up to N×
+with no error or log.
+
+**Deliverables:**
+
+- New `SOVEREIGN_RATE_LIMIT_STORE` env var (`memory` default | `redis`),
+  mirroring `NOTIFICATION_TRANSPORT`'s shape. `memory` keeps today's
+  behavior unchanged (zero-config, correct for the default single-container
+  topology).
+- New sibling module (e.g. `runtime/src/rate-limit-redis.ts`) implementing
+  the same bucket contract over Redis `INCR`/`PEXPIRE`, using the same lazy
+  `require('ioredis')` pattern as `RedisBroker`
+  (`runtime/src/brokers/redis.ts`), keyed `sv:ratelimit:<ip>`. Reuses the
+  existing `REDIS_URL` — no second connection string.
+- `SOVEREIGN_RATE_LIMIT_STORE=redis` without `REDIS_URL` set fails at
+  startup rather than silently falling back to `memory` — a silent fallback
+  here is exactly the "looks configured, isn't" failure mode this task
+  exists to close.
+- `docs/self-hosting.md`'s "If you run more than one runtime container or
+  process, you must set..." callout gets a second bullet for this, alongside
+  the existing `NOTIFICATION_TRANSPORT=redis` one.
+
+**Dependencies:** Task 2.28 (the limiter this extends). Independent of
+Task 1.19 (the `apps/auth` side of the same RFC); either can ship first.
+
+**SRS reference:** [RFC 0086](../rfcs/0086-shared-store-rate-limiting.md)
+
+**Review checklist:**
+
+- With `SOVEREIGN_RATE_LIMIT_STORE` unset or `memory`, behavior is
+  byte-for-byte unchanged from Task 2.28.
+- With `SOVEREIGN_RATE_LIMIT_STORE=redis` and `REDIS_URL` set, two
+  concurrent `runtime` processes share the same counters — verified against
+  a real multi-process setup, not just unit tests.
+- `SOVEREIGN_RATE_LIMIT_STORE=redis` with `REDIS_URL` unset fails startup,
+  not the first request.
+- New env var documented in `.env.example` and `docs/self-hosting.md`
+  (docs-parity test passes).
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` — all pass.
+
 ## Related RFCs
 
 - [RFC 0001 — Overlay shell variant](../rfcs/0001-overlay-shell-variant.md)
@@ -954,6 +1002,8 @@ sign-in/sign-up/reset endpoints.
   (Tasks 2.25–2.26)
 - [RFC 0082 — Focused plugin app shell](../rfcs/0082-focused-plugin-app-shell.md)
   (Task 2.27)
+- [RFC 0086 — Shared-store rate limiting for multi-instance deployments](../rfcs/0086-shared-store-rate-limiting.md)
+  (Task 2.29)
 
 ## Related Docs
 

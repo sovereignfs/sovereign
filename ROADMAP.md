@@ -189,7 +189,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.58.0  | Plugin surface model and SDK device environment (RFC 0080)                                | ✅     | [3.32](docs/epics/plugins-runtime.md#-332--plugin-surface-model-and-sdk-device-environment-rfc-0080)              |
 | 0.59.0  | Device bridge protocol package — workstream 0003 leg 1 (RFC 0083)                         | ✅     | [3.34](docs/epics/plugins-runtime.md#-334--device-bridge-protocol-package-rfc-0083)                               |
 | 0.60.0  | Plugin device surface, permissions, and consent — leg 2 (RFC 0083)                        | ✅     | [3.35](docs/epics/plugins-runtime.md#-335--plugin-device-surface-permissions-and-consent-rfc-0083)                |
-| 0.62.0  | `MobileHeader`/`MobileFooter` Design System components — workstream 0007 leg 1 (RFC 0088) | 📋     | [9.23](docs/epics/design-system.md#-923--mobileheader-and-mobilefooter-design-system-components)                  |
+| 0.62.0  | `MobileHeader`/`MobileFooter` Design System components — workstream 0007 leg 1 (RFC 0088) | ✅     | [9.23](docs/epics/design-system.md#-923--mobileheader-and-mobilefooter-design-system-components)                  |
 | 0.63.0  | Runtime mobile shell consumes `MobileHeader`/`MobileFooter` — leg 2 (RFC 0088)            | 📋     | [9.24](docs/epics/design-system.md#-924--runtime-mobile-shell-consumes-mobileheadermobilefooter)                  |
 
 ---

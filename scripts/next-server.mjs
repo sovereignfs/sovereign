@@ -42,7 +42,7 @@ function loadRootEnv(root) {
 const APPS = {
   auth: { cwd: ['apps', 'auth'], portEnv: 'AUTH_PORT', defaultPort: '3001' },
   runtime: { cwd: ['runtime'], portEnv: 'RUNTIME_PORT', defaultPort: '3000' },
-  'push-relay': { cwd: ['apps', 'push-relay'], portEnv: 'PUSH_RELAY_PORT', defaultPort: '3002' },
+  relay: { cwd: ['apps', 'relay'], portEnv: 'RELAY_PORT', defaultPort: '3002' },
 };
 
 function usage() {

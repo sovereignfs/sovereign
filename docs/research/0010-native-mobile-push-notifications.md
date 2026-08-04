@@ -4,8 +4,8 @@
 **Date:** August 2026\
 **Author:** Claude Code (research + design discussion with `kasunben`)\
 **Scope:** `sovereign-mobile` (external repo — the Capacitor shell), a new
-standalone relay service (`apps/push-relay` in this monorepo — see
-[RFC 0085](../rfcs/0085-native-push-relay.md)), `runtime` (RFC 0015's
+standalone relay service (`apps/relay` in this monorepo — see
+[RFC 0087](../rfcs/0087-sovereign-relay.md)), `runtime` (RFC 0015's
 Notification Center as the delivery source of truth), `packages/db` (new
 device-token schema)\
 **Related:** [RFC 0015](../rfcs/0015-notification-center.md) (Notification
@@ -17,7 +17,7 @@ Implemented — its crypto is reused here), [RFC 0083](../rfcs/0083-device-bridg
 binary, arbitrary self-hosted instances" hitting a credential-ownership
 wall), workstream 0003 (device bridge across surfaces, legs 1–4 done,
 deliberately excluded push from its v1 slice), **graduates into**
-[RFC 0085](../rfcs/0085-native-push-relay.md) and
+[RFC 0087](../rfcs/0087-sovereign-relay.md) and
 [workstream 0005](../workstreams/0005-native-push-relay.md)
 
 ---
@@ -325,7 +325,7 @@ question:
   exactly as it does today; the two mechanisms coexist via the same
   existing multi-target fan-out, per "Coexistence with Web Push" above.
 
-This graduates directly into [RFC 0085](../rfcs/0085-native-push-relay.md)
+This graduates directly into [RFC 0087](../rfcs/0087-sovereign-relay.md)
 (the committed design: schema, protocol, encryption scheme, relay contract)
 and [workstream 0005](../workstreams/0005-native-push-relay.md) (the
 cross-repo execution sequence, since this spans `sovereign` and
@@ -333,9 +333,9 @@ cross-repo execution sequence, since this spans `sovereign` and
 
 ## Open questions
 
-Carried into RFC 0085 for resolution there, not left open here:
+Carried into RFC 0087 for resolution there, not left open here:
 
-- Exact relay hosting choice (a minimal Next.js app under `apps/push-relay`,
+- Exact relay hosting choice (a minimal Next.js app under `apps/relay`,
   matching `apps/auth`'s existing precedent, vs. a lighter-weight serverless
   function) — leaning toward the Next.js precedent for deployment
   consistency; not yet finalized.
@@ -351,20 +351,20 @@ Carried into RFC 0085 for resolution there, not left open here:
 - Home Assistant's local-network WebSocket fallback is a plausible future
   latency/reliability improvement (deliver instantly when phone and
   instance share a network) but is out of scope for the initial relay —
-  worth a note in RFC 0085 as a deferred enhancement, not a blocker.
+  worth a note in RFC 0087 as a deferred enhancement, not a blocker.
 
 ## Next steps
 
 Done — this doc's role (settle the design direction) is complete. Concrete
 follow-through:
 
-1. [RFC 0085](../rfcs/0085-native-push-relay.md) — the committed design:
+1. [RFC 0087](../rfcs/0087-sovereign-relay.md) — the committed design:
    device-token schema, registration/revocation API, encryption scheme
    (reusing RFC 0016's crypto), the relay's own request/response contract,
    relay-URL configurability, and how this plugs into RFC 0015's existing
    fan-out.
 2. [Workstream 0005](../workstreams/0005-native-push-relay.md) — sequences
-   the cross-repo execution: the new `apps/push-relay` service and
+   the cross-repo execution: the new `apps/relay` service and
    `runtime` changes (this monorepo), plus `sovereign-mobile`'s client
    registration flow and the iOS Notification Service Extension.
 3. Epic task updates: `docs/epics/notification-center.md` (new task 4.7 —

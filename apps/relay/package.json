@@ -1,12 +1,12 @@
 {
-  "name": "@sovereignfs/push-relay",
+  "name": "@sovereignfs/relay",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node ../../scripts/next-server.mjs push-relay dev",
+    "dev": "node ../../scripts/next-server.mjs relay dev",
     "build": "next build",
-    "start": "node ../../scripts/next-server.mjs push-relay start",
+    "start": "node ../../scripts/next-server.mjs relay start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

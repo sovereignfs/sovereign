@@ -1,0 +1,32 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-3);
+  width: 100%;
+  min-height: var(--sv-shell-header-height, 60px);
+}
+
+.brandGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  margin-left: auto;
+  flex-shrink: 0;
+}

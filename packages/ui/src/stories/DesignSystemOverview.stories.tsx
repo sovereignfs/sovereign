@@ -21,6 +21,8 @@ import { StatusBadge } from '../components/StatusBadge/StatusBadge';
 import { SplitPane } from '../components/SplitPane/SplitPane';
 import { TagInput } from '../components/TagInput/TagInput';
 import { SuggestionInput } from '../components/SuggestionInput/SuggestionInput';
+import { MobileFooter } from '../components/MobileFooter/MobileFooter';
+import { MobileHeader } from '../components/MobileHeader/MobileHeader';
 import { NavTabs } from '../components/NavTabs/NavTabs';
 import { PageHeader } from '../components/PageHeader/PageHeader';
 import { PageContainer } from '../components/PageContainer/PageContainer';
@@ -2133,6 +2135,72 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                     maxWidth=&quot;sm&quot;
                   </div>
                 </PageContainer>
+              </div>
+            </ComponentCard>
+
+            {/* MobileHeader */}
+            <ComponentCard
+              name="MobileHeader"
+              importLine="import { MobileHeader } from '@sovereignfs/ui';"
+              usage="Mobile shell header content row (RFC 0088). Logo, bell, and avatarMenu are always rendered by the consumer; the optional title is the only overridable part. Presentational only — see Overview/Mobile Patterns for the full immutable/overridable boundary."
+            >
+              <div
+                style={{
+                  width: '100%',
+                  background: 'var(--sv-color-surface)',
+                  border: '1px solid var(--sv-color-border)',
+                  borderRadius: 'var(--sv-radius-md)',
+                  padding: '0 var(--sv-space-3)',
+                }}
+              >
+                <MobileHeader
+                  logo={
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 28,
+                        height: 28,
+                        borderRadius: 'var(--sv-radius-sm)',
+                        background: 'var(--sv-color-accent)',
+                        color: 'var(--sv-color-text-on-accent)',
+                        fontWeight: 700,
+                        fontSize: 13,
+                      }}
+                    >
+                      S
+                    </span>
+                  }
+                  title="Tasks"
+                  bell={<Icon name="bell" size="md" aria-label="Notifications" />}
+                  avatarMenu={<Avatar name="Jamie Doe" size="sm" />}
+                />
+              </div>
+            </ComponentCard>
+
+            {/* MobileFooter */}
+            <ComponentCard
+              name="MobileFooter"
+              importLine="import { MobileFooter } from '@sovereignfs/ui';"
+              usage="Mobile shell footer nav row (RFC 0088). The centered launcher (onOpenApps) is always rendered; leftIcons/rightIcons take 1 or 2 items each, symmetric so the launcher stays centered."
+            >
+              <div
+                style={{
+                  width: '100%',
+                  background: 'var(--sv-color-surface)',
+                  border: '1px solid var(--sv-color-border)',
+                  borderRadius: 'var(--sv-radius-md)',
+                  padding: '0 var(--sv-space-3)',
+                }}
+              >
+                <MobileFooter
+                  onOpenApps={() => {}}
+                  leftIcons={[{ icon: <Icon name="house" size="md" aria-hidden />, label: 'Home' }]}
+                  rightIcons={[
+                    { icon: <Icon name="search" size="md" aria-hidden />, label: 'Search' },
+                  ]}
+                />
               </div>
             </ComponentCard>
 

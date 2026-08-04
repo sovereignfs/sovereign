@@ -1091,6 +1091,49 @@ Plugins that opt out of shell padding via `data-plugin-fullbleed`
 (`sovereign-tasks`, `sovereign-shopper`) manage their own layout entirely and
 should not use `PageContainer`.
 
+### `MobileHeader` and `MobileFooter` components (RFC 0088)
+
+The runtime shell's mobile header and footer are built from two
+presentational, prop-driven components — `MobileHeader` and `MobileFooter`.
+Both draw a deliberate line between what's **immutable** (rendered
+unconditionally, no prop controls it) and what's **overridable**:
+
+| Component      | Immutable                                           | Overridable                                               |
+| -------------- | --------------------------------------------------- | --------------------------------------------------------- |
+| `MobileHeader` | Logo (`logo` prop, always shown), bell, avatar menu | `title` — absent by default                               |
+| `MobileFooter` | Centered "Apps" launcher (`onOpenApps`)             | `leftIcons` / `rightIcons` — 1 or 2 items each, symmetric |
+
+```tsx
+import { MobileHeader, MobileFooter } from '@sovereignfs/ui';
+
+<MobileHeader
+  logo={<Link href="/">…</Link>}
+  title="Tasks" // optional — omit to match the no-title default
+  bell={<NotificationBell />}
+  avatarMenu={<AccountMenu placement="header" {...userProps} />}
+/>;
+
+<MobileFooter
+  onOpenApps={() => setDrawerOpen(true)}
+  leftIcons={[{ icon: <Icon name="house" aria-hidden />, label: 'Home', href: '/' }]}
+  rightIcons={[{ icon: <Icon name="search" aria-hidden />, label: 'Search', onClick: openSearch }]}
+/>;
+```
+
+Neither component fetches data or imports `@sovereignfs/sdk` — `bell` and
+`avatarMenu` are supplied as already-wired `ReactNode`s by the consumer (the
+runtime shell today), and `leftIcons`/`rightIcons` entries take a plain
+`href` or `onClick` rather than a router import, keeping both components
+framework-agnostic. `MobileFooter` logs a dev-mode-only `console.error`
+(never thrown) if `leftIcons.length !== rightIcons.length`, since a mismatch
+would visually uncenter the launcher — the same non-fatal guard pattern used
+by `SwipableMobileCarousel`'s non-`Slide`-children check.
+
+This extraction is deliberately scoped as groundwork, not a plugin-facing
+override mechanism — see [RFC 0088](./rfcs/0088-mobile-header-footer-design-system-components.md)
+for the full immutable/overridable rationale and the open questions a future
+RFC would need to resolve before a plugin could render this chrome itself.
+
 ### Overlay surfaces — which component for which job
 
 One API per surface; presentation adapts per platform. On mobile the shell

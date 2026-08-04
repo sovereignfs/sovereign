@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Avatar } from '../components/Avatar/Avatar';
 import { Button } from '../components/Button/Button';
 import { Card } from '../components/Card/Card';
 import { Dialog } from '../components/Dialog/Dialog';
@@ -8,6 +9,8 @@ import { EmptyState } from '../components/EmptyState/EmptyState';
 import { FormField } from '../components/FormField/FormField';
 import { Icon } from '../components/Icon/Icon';
 import { Input } from '../components/Input/Input';
+import { MobileFooter } from '../components/MobileFooter/MobileFooter';
+import { MobileHeader } from '../components/MobileHeader/MobileHeader';
 import { NavTabs } from '../components/NavTabs/NavTabs';
 import { PageHeader } from '../components/PageHeader/PageHeader';
 
@@ -259,6 +262,135 @@ function DrawerDemo() {
           for devices with a home indicator.
         </p>
       </Drawer>
+    </>
+  );
+}
+
+function MobileHeaderFooterDemo() {
+  const [showTitle, setShowTitle] = useState(false);
+  const [wideFooter, setWideFooter] = useState(false);
+  const [appsOpen, setAppsOpen] = useState(false);
+
+  const logo = (
+    <span
+      aria-label="Home"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 28,
+        height: 28,
+        borderRadius: 'var(--sv-radius-sm)',
+        background: 'var(--sv-color-accent)',
+        color: 'var(--sv-color-text-on-accent)',
+        fontWeight: 700,
+        fontSize: 13,
+        flexShrink: 0,
+      }}
+    >
+      S
+    </span>
+  );
+
+  const leftOne = [
+    { icon: <Icon name="house" size="md" aria-hidden />, label: 'Home', active: true },
+  ];
+  const rightOne = [{ icon: <Icon name="search" size="md" aria-hidden />, label: 'Search' }];
+  const leftTwo = [
+    ...leftOne,
+    { icon: <Icon name="calendar" size="md" aria-hidden />, label: 'Calendar' },
+  ];
+  const rightTwo = [
+    ...rightOne,
+    { icon: <Icon name="activity" size="md" aria-hidden />, label: 'Activity' },
+  ];
+
+  return (
+    <>
+      <div style={{ display: 'flex', gap: 'var(--sv-space-4)', marginBottom: 'var(--sv-space-4)' }}>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--sv-space-2)',
+            fontSize: 'var(--sv-font-size-sm)',
+            color: 'var(--sv-color-text-primary)',
+            cursor: 'pointer',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={showTitle}
+            onChange={(e) => setShowTitle(e.target.checked)}
+          />
+          Header <code>title</code> prop
+        </label>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--sv-space-2)',
+            fontSize: 'var(--sv-font-size-sm)',
+            color: 'var(--sv-color-text-primary)',
+            cursor: 'pointer',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={wideFooter}
+            onChange={(e) => setWideFooter(e.target.checked)}
+          />
+          Footer: 2 + 2 icons
+        </label>
+      </div>
+
+      <div
+        style={{
+          border: '1px solid var(--sv-color-border)',
+          borderRadius: 'var(--sv-radius-lg)',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            background: 'var(--sv-color-surface)',
+            borderBottom: '1px solid var(--sv-color-border)',
+            padding: '0 var(--sv-space-4)',
+          }}
+        >
+          <MobileHeader
+            logo={logo}
+            title={showTitle ? 'Tasks' : undefined}
+            bell={<Icon name="bell" size="md" aria-label="Notifications" />}
+            avatarMenu={<Avatar name="Jamie Doe" size="sm" />}
+          />
+        </div>
+        <div
+          style={{
+            background: 'var(--sv-color-surface-sunken)',
+            padding: 'var(--sv-space-6) var(--sv-space-4)',
+            textAlign: 'center',
+            color: 'var(--sv-color-text-muted)',
+            fontSize: 'var(--sv-font-size-xs)',
+          }}
+        >
+          Plugin content area
+        </div>
+        <div
+          style={{
+            background: 'var(--sv-color-surface)',
+            borderTop: '1px solid var(--sv-color-border)',
+            padding: '0 var(--sv-space-4)',
+          }}
+        >
+          <MobileFooter
+            onOpenApps={() => setAppsOpen((v) => !v)}
+            launcherOpen={appsOpen}
+            leftIcons={wideFooter ? leftTwo : leftOne}
+            rightIcons={wideFooter ? rightTwo : rightOne}
+          />
+        </div>
+      </div>
     </>
   );
 }
@@ -1063,6 +1195,38 @@ function MobilePatternsDoc() {
             </code>
             .
           </Callout>
+        </Card>
+      </section>
+
+      {/* ── MobileHeader / MobileFooter components (RFC 0088) ── */}
+      <section style={{ marginBottom: 'var(--sv-space-10)' }}>
+        <SectionHeader
+          title="MobileHeader / MobileFooter components"
+          subtitle="The presentational components behind the shell chrome above (RFC 0088). Logo, bell, avatar menu, and the centered launcher are always rendered by the consumer — the header's optional title and the footer's leftIcons/rightIcons are the only overridable parts."
+        />
+        <Card padding="md">
+          <MobileHeaderFooterDemo />
+          <div style={{ marginTop: 'var(--sv-space-4)' }}>
+            <Callout type="info">
+              <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+                leftIcons
+              </code>{' '}
+              and{' '}
+              <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+                rightIcons
+              </code>{' '}
+              must have the same length so the launcher stays centered — a mismatch logs a
+              dev-mode-only{' '}
+              <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+                console.error
+              </code>{' '}
+              (never thrown), the same non-fatal guard pattern used by{' '}
+              <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+                SwipableMobileCarousel
+              </code>
+              .
+            </Callout>
+          </div>
         </Card>
       </section>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
@@ -25,14 +25,35 @@ export function RegisterForm({
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Browser timezone captured silently at registration (a helpful default, never
+  // authoritative — the user can override it later in Account → Preferences).
+  // `null` until detected after mount; submission falls back to UTC.
+  const [timezone, setTimezone] = useState<string | null>(null);
 
   const isInvite = !!invitedEmail;
+
+  // Resolve the browser's localized timezone client-side (useEffect only, not
+  // render — SSR must not read browser globals). Defaults to UTC.
+  useEffect(() => {
+    let detected: string | null = null;
+    try {
+      detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch {
+      detected = null;
+    }
+    setTimezone(detected ?? 'UTC');
+  }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError(null);
-    const result = await authClient.signUp.email({ name, email, password });
+    const result = await authClient.signUp.email({
+      name,
+      email,
+      password,
+      timezone: timezone ?? 'UTC',
+    });
     setLoading(false);
     if (result.error) {
       setError(result.error.message ?? 'Registration failed.');

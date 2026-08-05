@@ -817,8 +817,9 @@ timezone (`Intl`), not the geolocation API. Storage crosses the
 auth→platform-DB boundary by capturing the value on the auth user (a new
 `additionalFields` entry) and lazily seeding it into the account plugin's
 `account_prefs` on first authenticated load, only when the row is still the
-`UTC` default. An editable, pre-filled dropdown in the register form lets the
-user correct the detected zone.
+`UTC` default. The detected value is captured **silently** — no visible field on
+the register form; a user corrects their timezone later in Account →
+Preferences, where it always overrides the registration default.
 
 **Deliverables:**
 
@@ -829,12 +830,13 @@ user correct the detected zone.
   invalid values rather than storing garbage. The better-auth migrator
   (`apps/auth/src/migrate.ts`) auto-creates the `user.timezone` column on
   startup for SQLite and Postgres — no hand-written migration.
-- `apps/auth/app/register/register-form.tsx` — on mount, detect
+- `apps/auth/app/register/register-form.tsx` and
+  `runtime/app/register/register-form.tsx` — on mount, silently detect
   `Intl.DateTimeFormat().resolvedOptions().timeZone` (default `'UTC'` when
-  unavailable). Render an editable timezone dropdown pre-filled with the
-  detected value, populated from `Intl.supportedValuesOf('timeZone')` (the
-  same pattern as `plugins/account/app/_components/TimezoneSelect.tsx`). Pass
-  the selected value into `authClient.signUp.email({ ..., timezone })`.
+  unavailable). No visible timezone field is rendered; the detected value is
+  passed via `authClient.signUp.email({ ..., timezone })`. The runtime form is
+  the end-user entry point; its `/api/auth/*` proxy forwards the full body to
+  the auth server.
 - `apps/auth/app/api/verify/route.ts` — include `timezone` in the returned
   user object so the runtime can read it.
 - `runtime/src/session-verify.ts` — add `timezone` to `VerifiedUser` and
@@ -855,8 +857,10 @@ user correct the detected zone.
 dependency. The existing auth→platform DB boundary is preserved; `apps/auth`
 still never imports `@sovereignfs/db`.
 
-**Root version bump:** root `package.json` — minor (`feat/`), roadmap slot
-`0.64.0`.
+**Root version bump:** root `package.json` — patch (`0.62.1` → `0.62.2`, a
+maintainer release-train decision; roadmap slot `0.63.0` remains in flight).
+Epic slot `0.64.0` reserved the feature; the implementation shipped at the
+patch bump.
 
 **Dependencies:** Task 1.1 (`additionalFields` pattern in `apps/auth`),
 Task 1.2 (session-verify propagation pattern), the Account plugin's
@@ -866,12 +870,12 @@ Task 1.2 (session-verify propagation pattern), the Account plugin's
 
 **Review checklist:**
 
-- Registering with the form shows the detected timezone pre-filled in a
-  dropdown and the selected value is stored on the auth user
+- Registering silently captures the detected timezone onto the auth user (no
+  visible field on the form)
 - An invalid/empty timezone is rejected server-side or falls back to `UTC`,
   never stored garbage
 - After first sign-in, `account_prefs.timezone` reflects the registration value;
-  changing it later in Account → Preferences still wins in top
+  changing it later in Account → Preferences always wins
 - A pre-existing user (or a user whose prefs are already non-`UTC`) is never
   overwritten by the registration seed
 - Email-verification default flow works (timezone carried on the auth user,

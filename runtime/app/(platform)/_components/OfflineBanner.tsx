@@ -15,6 +15,22 @@ export function OfflineBanner() {
   const [status, setStatus] = useState<Status>('online');
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Reserves space for the banner in the shell's own content padding
+  // (shell.module.css reads this same variable) so the banner doesn't just
+  // overlay the top of the page — .content's padding-top transitions
+  // smoothly alongside the banner's own slideDown animation instead of
+  // content abruptly jumping/being covered. Height is one fixed value for
+  // both 'offline' and 'reconnected' (same 32px row in OfflineBanner.module.css).
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--sv-offline-banner-height',
+      status === 'online' ? '0px' : '32px',
+    );
+    return () => {
+      document.documentElement.style.removeProperty('--sv-offline-banner-height');
+    };
+  }, [status]);
+
   useEffect(() => {
     const clearDismiss = () => {
       if (dismissTimer.current !== null) {

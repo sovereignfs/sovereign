@@ -143,6 +143,19 @@
 
 .content {
   padding: var(--sv-space-8);
+  /* OfflineBanner (position: fixed) sets --sv-offline-banner-height on
+     :root while visible so content reserves space below it instead of the
+     banner overlaying the top of the page — see that component's own doc
+     comment. Transition matches the banner's own 200ms slideDown so the
+     content reflow reads as one smooth motion, not a separate abrupt jump. */
+  padding-top: calc(var(--sv-space-8) + var(--sv-offline-banner-height, 0px));
+  transition: padding-top 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content {
+    transition: none;
+  }
 }
 
 /* Full-bleed opt-in: a plugin that owns its own internal layout (columns,
@@ -275,6 +288,12 @@
        default row-major auto-placement. */
     grid-row: 2;
     padding: var(--sv-space-4);
+    /* Overrides the shorthand's own padding-top above with the same
+       banner-height reservation as the desktop rule (see the base .content
+       rule's doc comment) — mobile is where OfflineBanner's fixed
+       positioning is most likely to crowd content, since --sv-space-4 (16px)
+       is noticeably tighter than the banner's own 32px height. */
+    padding-top: calc(var(--sv-space-4) + var(--sv-offline-banner-height, 0px));
     padding-bottom: calc(var(--sv-shell-footer-height, 60px) + var(--sv-space-4));
     /* Content cell scrolls within the fixed-height shell grid. */
     overflow-y: auto;

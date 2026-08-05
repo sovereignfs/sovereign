@@ -16,6 +16,17 @@
   animation: slideDown 200ms ease-out;
 }
 
+/* On mobile the header is a sticky (not fixed) row at the top of the shell's
+   own content flow — pinning the banner to the true viewport top puts it
+   above the header instead of below it, covering the brand/bell/avatar.
+   Desktop has no such row competing for top:0, so this is mobile-only. */
+@media (max-width: 768px) {
+  .offline,
+  .reconnected {
+    top: var(--sv-shell-header-height, 60px);
+  }
+}
+
 .offline {
   background: var(--sv-color-warning-surface);
   color: var(--sv-color-warning-text);

@@ -16,6 +16,7 @@ export const ICON_LIST = [
   'chevron-left',
   'chevron-down',
   'chevron-up',
+  'menu',
   'x',
   // Actions
   'check',

@@ -2,7 +2,19 @@
   display: flex;
   align-items: center;
   width: 100%;
+  /* Mobile-only component — never render wider than the platform's own
+     mobile breakpoint, even if a consumer accidentally mounts it in a wider
+     container (e.g. an un-gated preview). At real mobile widths this is a
+     no-op since the viewport itself is already narrower. */
+  max-width: 768px;
+  margin-inline: auto;
   min-height: var(--sv-shell-footer-height, 60px);
+  padding: 0 var(--sv-space-4);
+  padding-bottom: max(var(--sv-space-2), env(safe-area-inset-bottom));
+  background-color: var(--sv-color-surface);
+  border-top: 1px solid var(--sv-color-border);
+  position: relative;
+  z-index: 101;
 }
 
 .navItem {

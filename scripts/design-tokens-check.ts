@@ -39,6 +39,10 @@ const TOKEN_ALLOWLIST: ReadonlySet<string> = new Set([
   // Set by ClientShell.tsx on resize/orientation change — a JS-computed
   // viewport height (mobile browser chrome workaround), never a CSS literal.
   '--sv-vh',
+  // Set by OfflineBanner.tsx while the banner is visible, so .content can
+  // reserve space below it — a JS-computed value (banner is conditionally
+  // rendered, not always present), never a CSS literal.
+  '--sv-offline-banner-height',
 ]);
 
 // file:line entries permitted to hardcode a colour literal in the scanned dirs

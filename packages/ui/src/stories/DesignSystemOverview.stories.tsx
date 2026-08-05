@@ -21,6 +21,7 @@ import { StatusBadge } from '../components/StatusBadge/StatusBadge';
 import { SplitPane } from '../components/SplitPane/SplitPane';
 import { TagInput } from '../components/TagInput/TagInput';
 import { SuggestionInput } from '../components/SuggestionInput/SuggestionInput';
+import { MobileAppsDrawer } from '../components/MobileAppsDrawer/MobileAppsDrawer';
 import { MobileFooter } from '../components/MobileFooter/MobileFooter';
 import { MobileHeader } from '../components/MobileHeader/MobileHeader';
 import { NavTabs } from '../components/NavTabs/NavTabs';
@@ -636,6 +637,28 @@ function DrawerDemo() {
           ))}
         </ul>
       </Drawer>
+    </>
+  );
+}
+
+function MobileAppsDrawerDemo() {
+  const [open, setOpen] = useState(false);
+  const items = [
+    { key: 'home', icon: <Icon name="house" size="lg" aria-hidden />, label: 'Home' },
+    { key: 'notes', icon: <Icon name="file" size="lg" aria-hidden />, label: 'Notes' },
+    { key: 'gallery', icon: <Icon name="grid-2x2" size="lg" aria-hidden />, label: 'Gallery' },
+  ];
+  return (
+    <>
+      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+        Open drawer
+      </Button>
+      <MobileAppsDrawer
+        open={open}
+        onClose={() => setOpen(false)}
+        aria-label="Sections"
+        items={items.map((item) => ({ ...item, onClick: () => setOpen(false) }))}
+      />
     </>
   );
 }
@@ -2142,7 +2165,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="MobileHeader"
               importLine="import { MobileHeader } from '@sovereignfs/ui';"
-              usage="Mobile shell header content row (RFC 0088). Logo, bell, and avatarMenu are always rendered by the consumer; the optional title is the only overridable part. Presentational only — see Overview/Mobile Patterns for the full immutable/overridable boundary."
+              usage="Mobile shell header content row (RFC 0088). Bell and avatarMenu are always rendered by the consumer; logo is optional — omit it for a default 'S' badge (matching the shell's own fallback brand icon), or supply your own. Title is the only content-level override. Presentational only — see Overview/Mobile Patterns for the full immutable/overridable boundary."
             >
               <div
                 style={{
@@ -2154,26 +2177,8 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                 }}
               >
                 <MobileHeader
-                  logo={
-                    <span
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 28,
-                        height: 28,
-                        borderRadius: 'var(--sv-radius-sm)',
-                        background: 'var(--sv-color-accent)',
-                        color: 'var(--sv-color-text-on-accent)',
-                        fontWeight: 700,
-                        fontSize: 13,
-                      }}
-                    >
-                      S
-                    </span>
-                  }
                   title="Tasks"
-                  bell={<Icon name="bell" size="md" aria-label="Notifications" />}
+                  bell={<Icon name="bell" size="lg" aria-label="Notifications" />}
                   avatarMenu={<Avatar name="Jamie Doe" size="sm" />}
                 />
               </div>
@@ -2202,6 +2207,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   ]}
                 />
               </div>
+            </ComponentCard>
+
+            {/* MobileAppsDrawer */}
+            <ComponentCard
+              name="MobileAppsDrawer"
+              importLine="import { MobileAppsDrawer } from '@sovereignfs/ui';"
+              usage="The mobile 'Apps' bottom sheet: a 3-column tile grid matching the runtime shell's own Apps drawer exactly (56px icon tiles, radius 14px). No header row — Drawer's own grab handle plus swipe-down/scrim-tap dismissal are enough. The tile list is supplied by the consumer via `items` — e.g. installed plugins for the shell, or a plugin's own sections for its own launcher button."
+            >
+              <MobileAppsDrawerDemo />
             </ComponentCard>
 
             {/* EmptyState */}

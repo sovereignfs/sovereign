@@ -63,6 +63,11 @@ export { MobileHeader } from './components/MobileHeader/MobileHeader';
 export type { MobileHeaderProps } from './components/MobileHeader/MobileHeader';
 export { MobileFooter } from './components/MobileFooter/MobileFooter';
 export type { MobileFooterProps, FooterIcon } from './components/MobileFooter/MobileFooter';
+export { MobileAppsDrawer } from './components/MobileAppsDrawer/MobileAppsDrawer';
+export type {
+  MobileAppsDrawerProps,
+  MobileAppsDrawerItem,
+} from './components/MobileAppsDrawer/MobileAppsDrawer';
 export { EmptyState } from './components/EmptyState/EmptyState';
 export type { EmptyStateProps } from './components/EmptyState/EmptyState';
 export { Spinner } from './components/Spinner/Spinner';

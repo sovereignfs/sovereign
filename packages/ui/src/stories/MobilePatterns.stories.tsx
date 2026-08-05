@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Avatar } from '../components/Avatar/Avatar';
 import { Button } from '../components/Button/Button';
 import { Card } from '../components/Card/Card';
 import { Dialog } from '../components/Dialog/Dialog';
@@ -268,6 +267,7 @@ function DrawerDemo() {
 
 function MobileHeaderFooterDemo() {
   const [showTitle, setShowTitle] = useState(false);
+  const [customLogo, setCustomLogo] = useState(true);
   const [wideFooter, setWideFooter] = useState(false);
   const [appsOpen, setAppsOpen] = useState(false);
 
@@ -337,6 +337,23 @@ function MobileHeaderFooterDemo() {
         >
           <input
             type="checkbox"
+            checked={customLogo}
+            onChange={(e) => setCustomLogo(e.target.checked)}
+          />
+          Custom <code>logo</code> prop (unchecked = default badge)
+        </label>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--sv-space-2)',
+            fontSize: 'var(--sv-font-size-sm)',
+            color: 'var(--sv-color-text-primary)',
+            cursor: 'pointer',
+          }}
+        >
+          <input
+            type="checkbox"
             checked={wideFooter}
             onChange={(e) => setWideFooter(e.target.checked)}
           />
@@ -351,20 +368,50 @@ function MobileHeaderFooterDemo() {
           overflow: 'hidden',
         }}
       >
-        <div
-          style={{
-            background: 'var(--sv-color-surface)',
-            borderBottom: '1px solid var(--sv-color-border)',
-            padding: '0 var(--sv-space-4)',
-          }}
-        >
-          <MobileHeader
-            logo={logo}
-            title={showTitle ? 'Tasks' : undefined}
-            bell={<Icon name="bell" size="md" aria-label="Notifications" />}
-            avatarMenu={<Avatar name="Jamie Doe" size="sm" />}
-          />
-        </div>
+        <MobileHeader
+          logo={customLogo ? logo : undefined}
+          title={showTitle ? 'Tasks' : undefined}
+          bell={
+            <button
+              type="button"
+              aria-label="Notifications"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 44,
+                height: 44,
+                background: 'none',
+                border: 'none',
+                borderRadius: 'var(--sv-radius-md)',
+                color: 'var(--sv-color-text-muted)',
+                cursor: 'pointer',
+              }}
+            >
+              <Icon name="bell" size="lg" aria-hidden />
+            </button>
+          }
+          avatarMenu={
+            <span
+              aria-label="Jamie Doe"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 36,
+                height: 36,
+                borderRadius: 'var(--sv-radius-full)',
+                background: 'var(--sv-color-accent)',
+                border: '1px solid var(--sv-color-accent)',
+                color: 'var(--sv-color-text-on-accent)',
+                fontSize: 'var(--sv-font-size-xs)',
+                fontWeight: 'var(--sv-font-weight-semibold)',
+              }}
+            >
+              JD
+            </span>
+          }
+        />
         <div
           style={{
             background: 'var(--sv-color-surface-sunken)',
@@ -376,20 +423,12 @@ function MobileHeaderFooterDemo() {
         >
           Plugin content area
         </div>
-        <div
-          style={{
-            background: 'var(--sv-color-surface)',
-            borderTop: '1px solid var(--sv-color-border)',
-            padding: '0 var(--sv-space-4)',
-          }}
-        >
-          <MobileFooter
-            onOpenApps={() => setAppsOpen((v) => !v)}
-            launcherOpen={appsOpen}
-            leftIcons={wideFooter ? leftTwo : leftOne}
-            rightIcons={wideFooter ? rightTwo : rightOne}
-          />
-        </div>
+        <MobileFooter
+          onOpenApps={() => setAppsOpen((v) => !v)}
+          launcherOpen={appsOpen}
+          leftIcons={wideFooter ? leftTwo : leftOne}
+          rightIcons={wideFooter ? rightTwo : rightOne}
+        />
       </div>
     </>
   );
@@ -1048,11 +1087,19 @@ function MobilePatternsDoc() {
             </div>
           </div>
           <Callout type="info">
-            Plugin developers cannot customise the Launcher Drawer. Use the Drawer component from{' '}
+            Plugin developers cannot customise the Launcher Drawer. Use{' '}
+            <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
+              MobileAppsDrawer
+            </code>{' '}
+            from{' '}
             <code style={{ fontFamily: 'var(--sv-font-family-mono)', fontSize: '0.8em' }}>
               @sovereignfs/ui
             </code>{' '}
-            if you need a similar bottom-sheet pattern inside your own plugin.
+            if you need this exact grid pattern inside your own plugin (e.g. a mobile-only launcher
+            for the plugin's own sections) — same tile styling as the shell's own drawer (no header
+            row; Drawer's own grab handle/swipe-down/scrim-tap already dismiss it), with the tile
+            list supplied by you via its <code>items</code> prop. See the Component Gallery for a
+            live demo.
           </Callout>
         </Card>
 
@@ -1202,7 +1249,7 @@ function MobilePatternsDoc() {
       <section style={{ marginBottom: 'var(--sv-space-10)' }}>
         <SectionHeader
           title="MobileHeader / MobileFooter components"
-          subtitle="The presentational components behind the shell chrome above (RFC 0088). Logo, bell, avatar menu, and the centered launcher are always rendered by the consumer — the header's optional title and the footer's leftIcons/rightIcons are the only overridable parts."
+          subtitle="The presentational components behind the shell chrome above (RFC 0088). Bell, avatar menu, and the centered launcher are always rendered by the consumer — the header's logo/title (logo defaults to an 'S' badge when omitted) and the footer's leftIcons/rightIcons are the only overridable parts."
         />
         <Card padding="md">
           <MobileHeaderFooterDemo />

@@ -50,12 +50,16 @@ function FooterNavItem({ icon, label, href, onClick, active }: FooterIcon) {
 }
 
 /**
- * The mobile footer's nav row: a centered, fixed "Apps" launcher flanked by
- * 1 or 2 overridable icons on each side (3 or 5 total, matching standard
- * iOS/Android bottom-nav conventions). Presentational only — no data
- * fetching. The consumer owns placement within its own page layout (sticky
- * positioning, safe-area padding) and the drawer/overlay `onOpenApps` opens.
- * See RFC 0088 for the immutable/overridable boundary this enforces.
+ * The mobile footer bar: a centered, fixed "Apps" launcher flanked by 1 or 2
+ * overridable icons on each side (3 or 5 total, matching standard
+ * iOS/Android bottom-nav conventions). Owns its own chrome — background,
+ * border-top, safe-area-aware bottom padding, and a 768px max-width (so it
+ * never stretches full-bleed if mounted outside an actual mobile viewport)
+ * — matching the runtime shell's own mobile footer (MobileNav) exactly,
+ * since this component is meant to replace that hand-rolled markup.
+ * Presentational only — no data fetching; the consumer owns the
+ * drawer/overlay `onOpenApps` opens. See RFC 0088 for the
+ * immutable/overridable boundary this enforces.
  */
 export function MobileFooter({
   onOpenApps,

@@ -7,6 +7,7 @@ import { passkey } from '@better-auth/passkey';
 import { oauthProvider } from '@better-auth/oauth-provider';
 import { authGet, authRun, getAuthDatabase } from './db';
 import { getEnv } from './env';
+import { isValidTimezone } from './timezone';
 import { resolveInvitePluginGrants } from './invite-plugin-grants';
 import { isMailerConfigured, sendAuthPlatformEmail } from './platform-email';
 import { readInviteOnlySetting, resolveInviteOnly } from './settings';
@@ -137,12 +138,35 @@ function buildOptions(): BetterAuthOptions {
           defaultValue: false,
           input: false,
         },
+        // The browser timezone captured at registration (a helpful default,
+        // never authoritative — the Account plugin's account_prefs row wins).
+        // `input: true` lets the register form send it via signUp.email; the
+        // create hook validates it against the Intl database, so a client can
+        // never persist a bogus value. `update-user` also accepts it, which is
+        // harmless: the runtime's lazy account_prefs seed only ever applies on
+        // first load when the row is still at its UTC default, and a user
+        // later setting a real preference always overrides it.
+        timezone: {
+          type: 'string',
+          required: false,
+          input: true,
+        },
       },
     },
     databaseHooks: {
       user: {
         create: {
           before: async (user) => {
+            // Reject a bogus registration timezone rather than persisting
+            // garbage into the session and, later, the runtime's account_prefs.
+            if (user.timezone !== undefined && user.timezone !== null) {
+              if (!isValidTimezone(user.timezone)) {
+                throw new APIError('BAD_REQUEST', {
+                  message: 'The timezone provided is not a valid IANA timezone.',
+                });
+              }
+            }
+
             const countRow = await authGet<{ c: number | string }>(
               'SELECT COUNT(*) AS c FROM "user"',
             );

@@ -2532,6 +2532,36 @@ export async function setAccountPrefs(
   return next;
 }
 
+/**
+ * Seed a freshly-registered user's timezone into `account_prefs`, one-time.
+ *
+ * The browser timezone captured at registration lives on the auth user (Task
+ * 1.20); this applies it as the default when the user has never touched their
+ * prefs (no `account_prefs` row exists yet — `getAccountPrefs` returns the UTC
+ * default for those users). It is a one-way seed, never an overwrite: once a
+ * row exists (a user-chosen value, a portability import, or a prior seed), the
+ * registration value is ignored for good. Returns true when it inserted.
+ */
+export async function seedAccountPrefsTimezone(
+  pdb: PlatformDb,
+  userId: string,
+  timezone: string | null,
+): Promise<boolean> {
+  if (!timezone || timezone.length === 0) return false;
+  const existing = await dbGet<{ user_id: string }>(
+    pdb,
+    sql`SELECT user_id FROM account_prefs WHERE user_id = ${userId}`,
+  );
+  if (existing) return false;
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO account_prefs (user_id, tenant_id, timezone, theme, sidebar_plugins, updated_at)
+        VALUES (${userId}, ${DEFAULT_TENANT_ID}, ${timezone}, 'system', NULL, ${now})`,
+  );
+  return true;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Notifications (RFC 0015)
 // ─────────────────────────────────────────────────────────────────────────────

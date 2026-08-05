@@ -16,6 +16,8 @@ export interface VerifiedUser {
   name: string | null;
   image: string | null;
   role: string;
+  /** IANA timezone captured at registration (additionalField), null when unset. */
+  timezone: string | null;
 }
 
 export interface VerifiedSession {
@@ -34,6 +36,7 @@ export interface CachedSessionData {
     image?: string | null;
     role?: string | null;
     active?: boolean | null;
+    timezone?: string | null;
   } | null;
 }
 
@@ -81,6 +84,7 @@ export function verifiedUserFromCache(
       name: user.name ?? null,
       image: user.image ?? null,
       role: user.role ?? 'platform:user',
+      timezone: user.timezone ?? null,
     },
     expiresAt: Math.floor(expiresAtMs / 1000),
   };

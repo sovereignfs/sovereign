@@ -25,6 +25,7 @@ export async function GET(request: Request): Promise<Response> {
     image?: string | null;
     role?: string;
     active?: boolean;
+    timezone?: string | null;
   };
 
   if (user.active === false) {
@@ -40,6 +41,7 @@ export async function GET(request: Request): Promise<Response> {
         name: user.name ?? null,
         image: user.image ?? null,
         role: user.role ?? 'platform:user',
+        timezone: user.timezone ?? null,
       },
       expiresAt: Math.floor(new Date(session.session.expiresAt).getTime() / 1000),
     },

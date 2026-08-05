@@ -109,6 +109,7 @@ function session(role: string = 'platform:owner'): VerifiedSession {
       name: 'Test User',
       image: null,
       role,
+      timezone: null,
     },
     expiresAt: 4_102_444_800,
   };

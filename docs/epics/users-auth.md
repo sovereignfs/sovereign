@@ -804,6 +804,82 @@ either can ship first.
 
 ---
 
+#### ✅ 1.20 — Capture timezone at registration from the browser
+
+**Goal:** When a user registers, detect their timezone from the browser (via
+`Intl.DateTimeFormat().resolvedOptions().timeZone`, no geolocation permission
+prompt) and persist it so their Account timezone (`account_prefs`) defaults to
+their region instead of `UTC`. A user's later explicit Account-plugin choice
+remains authoritative — the registration value only seeds the default.
+
+**Design decisions (confirmed):** detection uses the browser's localized
+timezone (`Intl`), not the geolocation API. Storage crosses the
+auth→platform-DB boundary by capturing the value on the auth user (a new
+`additionalFields` entry) and lazily seeding it into the account plugin's
+`account_prefs` on first authenticated load, only when the row is still the
+`UTC` default. An editable, pre-filled dropdown in the register form lets the
+user correct the detected zone.
+
+**Deliverables:**
+
+- `apps/auth/src/auth.ts` — add `timezone` to `user.additionalFields` with
+  `input: true` and `required: false` (so the client can send it on
+  `signUp.email`). Server-side validate it as an IANA zone (constructing an
+  `Intl.DateTimeFormat` with an unknown zone throws `RangeError`), rejecting
+  invalid values rather than storing garbage. The better-auth migrator
+  (`apps/auth/src/migrate.ts`) auto-creates the `user.timezone` column on
+  startup for SQLite and Postgres — no hand-written migration.
+- `apps/auth/app/register/register-form.tsx` — on mount, detect
+  `Intl.DateTimeFormat().resolvedOptions().timeZone` (default `'UTC'` when
+  unavailable). Render an editable timezone dropdown pre-filled with the
+  detected value, populated from `Intl.supportedValuesOf('timeZone')` (the
+  same pattern as `plugins/account/app/_components/TimezoneSelect.tsx`). Pass
+  the selected value into `authClient.signUp.email({ ..., timezone })`.
+- `apps/auth/app/api/verify/route.ts` — include `timezone` in the returned
+  user object so the runtime can read it.
+- `runtime/src/session-verify.ts` — add `timezone` to `VerifiedUser` and
+  parse it from the signed `session_data` cookie cache (`CachedSessionData` /
+  `verifiedUserFromCache`), so it flows through the offline verification path
+  too.
+- `runtime` — lazily seed `account_prefs`: on a user's first authenticated load
+  where `getAccountPrefs` returns the default `UTC`, call `setAccountPrefs` with
+  the session's `timezone`. One-time only; a null/absent value keeps the `UTC`
+  default; a user's explicitly set timezone later always wins.
+- Tests for the seed helper (only seeds when still default `UTC`) and updated
+  register-form/verify coverage. Keep the `_` prefix for unused params and
+  respect the SDK boundary (no `@sovereignfs/db` import in `apps/auth`).
+- Docs — the auth user schema addition, the registration capture behavior, and
+  the seed semantics (a helpful default, never an overwrite).
+
+**Scope note:** No geolocation API, no third-party timezone lookup, no new
+dependency. The existing auth→platform DB boundary is preserved; `apps/auth`
+still never imports `@sovereignfs/db`.
+
+**Root version bump:** root `package.json` — minor (`feat/`), roadmap slot
+`0.64.0`.
+
+**Dependencies:** Task 1.1 (`additionalFields` pattern in `apps/auth`),
+Task 1.2 (session-verify propagation pattern), the Account plugin's
+`account_prefs` surface (`packages/db` `setAccountPrefs`).
+
+**SRS reference:** SRS §3.3 Auth Layer; ACC-07/08 (Account preferences/timezone)
+
+**Review checklist:**
+
+- Registering with the form shows the detected timezone pre-filled in a
+  dropdown and the selected value is stored on the auth user
+- An invalid/empty timezone is rejected server-side or falls back to `UTC`,
+  never stored garbage
+- After first sign-in, `account_prefs.timezone` reflects the registration value;
+  changing it later in Account → Preferences still wins in top
+- A pre-existing user (or a user whose prefs are already non-`UTC`) is never
+  overwritten by the registration seed
+- Email-verification default flow works (timezone carried on the auth user,
+  surviving the no-session-at-signup path)
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0012 — Passkeys & TOTP MFA](../rfcs/0012-passkeys-and-mfa.md)

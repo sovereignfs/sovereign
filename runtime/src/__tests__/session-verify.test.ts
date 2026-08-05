@@ -44,6 +44,13 @@ describe('verifiedUserFromCache', () => {
     expect(session?.user.role).toBe('platform:user');
   });
 
+  it('carries the registration timezone through, null when unset', () => {
+    const withTz = verifiedUserFromCache(cache({ user: { timezone: 'Europe/Berlin' } }));
+    expect(withTz?.user.timezone).toBe('Europe/Berlin');
+    const withoutTz = verifiedUserFromCache(cache({ user: { timezone: undefined } }));
+    expect(withoutTz?.user.timezone).toBeNull();
+  });
+
   it('rejects payloads without a user id', () => {
     expect(verifiedUserFromCache({ session: { expiresAt: FUTURE }, user: {} })).toBeNull();
     expect(verifiedUserFromCache(null)).toBeNull();

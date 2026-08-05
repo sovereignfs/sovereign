@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getAccountPrefs, setAccountPrefs, type SidebarPluginEntry } from '@sovereignfs/db';
+import {
+  getAccountPrefs,
+  seedAccountPrefsTimezone,
+  setAccountPrefs,
+  type SidebarPluginEntry,
+} from '@sovereignfs/db';
 import { getPlatformDb } from '@/src/db';
+import { readServerSession } from '@/src/server-session';
 import { isValidTheme, isValidTimezone } from '@/src/account';
 
 /**
@@ -28,7 +34,18 @@ function isValidSidebarPlugins(value: unknown): value is SidebarPluginEntry[] | 
 export async function GET(request: Request): Promise<Response> {
   const userId = currentUserId(request);
   if (!userId) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
-  return NextResponse.json(await getAccountPrefs(await getPlatformDb(), userId));
+
+  const pdb = await getPlatformDb();
+
+  // One-time seed (Task 1.20): the timezone captured at registration becomes
+  // the default for users who have never touched their prefs. `readServerSession`
+  // resolves it from the signed session cache (offline path) or /api/verify
+  // fallback; the seed helper only inserts when no account_prefs row exists, so
+  // a user-chosen value later (or a prior seed) is never overwritten.
+  const session = await readServerSession();
+  await seedAccountPrefsTimezone(pdb, userId, session?.user.timezone ?? null);
+
+  return NextResponse.json(await getAccountPrefs(pdb, userId));
 }
 
 export async function PATCH(request: Request): Promise<Response> {

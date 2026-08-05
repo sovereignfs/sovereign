@@ -1,8 +1,8 @@
 'use client';
 
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Button, Input } from '@sovereignfs/ui';
+import { Button, Input, Select } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
 import styles from '../auth.module.css';
 
@@ -24,6 +24,10 @@ export function RegisterForm({
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Browser timezone captured at registration time (a helpful default, never
+  // authoritative). `null` until detected after mount; submission falls back to UTC.
+  const [timezone, setTimezone] = useState<string | null>(null);
+  const [zones, setZones] = useState<string[]>([]);
   // Set once sign-up succeeds without granting a session — happens when
   // AUTH_REQUIRE_EMAIL_VERIFICATION is enabled (the default): the account is
   // created but blocked from signing in until the emailed link is clicked.
@@ -31,13 +35,34 @@ export function RegisterForm({
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
 
+  // Resolve the browser's localized timezone and the supported zone list client-side
+  // (useEffect only, not render — SSR must not read browser globals). Mirrors the
+  // Account plugin's TimezoneSelect. Defaults to UTC when unavailable.
+  useEffect(() => {
+    const supported =
+      typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : ['UTC'];
+    setZones(supported);
+    let detected: string | null = null;
+    try {
+      detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch {
+      detected = null;
+    }
+    setTimezone(detected && supported.includes(detected) ? detected : 'UTC');
+  }, []);
+
   const isInvite = !!invitedEmail;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError(null);
-    const result = await authClient.signUp.email({ name, email, password });
+    const result = await authClient.signUp.email({
+      name,
+      email,
+      password,
+      timezone: timezone ?? 'UTC',
+    });
     setLoading(false);
     if (result.error) {
       setError(result.error.message ?? 'Registration failed.');
@@ -154,6 +179,26 @@ export function RegisterForm({
               onChange={(e) => setPassword(e.target.value)}
             />
             <p className={styles.fieldHint}>At least 8 characters.</p>
+          </div>
+          <div className={styles.field}>
+            <label htmlFor="register-timezone" className={styles.label}>
+              Timezone
+            </label>
+            <Select
+              id="register-timezone"
+              value={timezone ?? 'UTC'}
+              disabled={loading || timezone === null}
+              onChange={(e) => setTimezone(e.target.value)}
+            >
+              {zones.map((zone) => (
+                <option key={zone} value={zone}>
+                  {zone}
+                </option>
+              ))}
+            </Select>
+            <p className={styles.fieldHint}>
+              Detected from your browser — change it if the wrong region was picked.
+            </p>
           </div>
           {error ? <p className={styles.error}>{error}</p> : null}
           <Button type="submit" disabled={loading} className={styles.submitLg}>

@@ -49,3 +49,22 @@ describe('email verification config', () => {
     expect(getAuthOptions().emailVerification?.autoSignInAfterVerification).toBe(true);
   });
 });
+
+describe('registration timezone field (Task 1.20)', () => {
+  it('registers the timezone additionalField as client-input', async () => {
+    const { getAuthOptions } = await import('../auth');
+    const tz = getAuthOptions().user?.additionalFields?.timezone;
+    expect(tz?.type).toBe('string');
+    expect(tz?.input).toBe(true);
+  });
+
+  it('isValidTimezone accepts a real IANA zone and rejects garbage', async () => {
+    const { isValidTimezone } = await import('../timezone');
+    expect(isValidTimezone('Europe/Berlin')).toBe(true);
+    expect(isValidTimezone('UTC')).toBe(true);
+    expect(isValidTimezone('Not/A-Timezone')).toBe(false);
+    expect(isValidTimezone('')).toBe(false);
+    expect(isValidTimezone(null)).toBe(false);
+    expect(isValidTimezone(undefined)).toBe(false);
+  });
+});

@@ -72,6 +72,7 @@ import {
   revokePluginAccessGroup,
   revokePluginAccessUser,
   revokeUserCapability,
+  seedAccountPrefsTimezone,
   setAccountPrefs,
   setInstanceConfig,
   setPlatformSetting,
@@ -278,6 +279,51 @@ describe('account preferences helpers', () => {
     await setAccountPrefs(db, 'u1', { theme: 'dark' });
     expect(await getAccountPrefs(db, 'u2')).toEqual({
       timezone: 'UTC',
+      theme: 'system',
+      sidebarPlugins: null,
+    });
+  });
+
+  it('seedAccountPrefsTimezone seeds a row when none exists and reports the insert', async () => {
+    const db = await freshDb();
+    const seeded = await seedAccountPrefsTimezone(db, 'u1', 'Europe/Berlin');
+    expect(seeded).toBe(true);
+    expect(await getAccountPrefs(db, 'u1')).toEqual({
+      timezone: 'Europe/Berlin',
+      theme: 'system',
+      sidebarPlugins: null,
+    });
+  });
+
+  it('seedAccountPrefsTimezone never overwrites an existing row', async () => {
+    const db = await freshDb();
+    await setAccountPrefs(db, 'u1', { timezone: 'America/New_York', theme: 'dark' });
+    const seeded = await seedAccountPrefsTimezone(db, 'u1', 'Europe/Berlin');
+    expect(seeded).toBe(false);
+    expect(await getAccountPrefs(db, 'u1')).toEqual({
+      timezone: 'America/New_York',
+      theme: 'dark',
+      sidebarPlugins: null,
+    });
+  });
+
+  it('seedAccountPrefsTimezone is a no-op for a missing/empty timezone', async () => {
+    const db = await freshDb();
+    expect(await seedAccountPrefsTimezone(db, 'u1', null)).toBe(false);
+    expect(await seedAccountPrefsTimezone(db, 'u1', '')).toBe(false);
+    expect(await getAccountPrefs(db, 'u1')).toEqual({
+      timezone: 'UTC',
+      theme: 'system',
+      sidebarPlugins: null,
+    });
+  });
+
+  it('seedAccountPrefsTimezone runs exactly once (idempotent via row existence)', async () => {
+    const db = await freshDb();
+    expect(await seedAccountPrefsTimezone(db, 'u1', 'Asia/Tokyo')).toBe(true);
+    expect(await seedAccountPrefsTimezone(db, 'u1', 'Asia/Tokyo')).toBe(false);
+    expect(await getAccountPrefs(db, 'u1')).toEqual({
+      timezone: 'Asia/Tokyo',
       theme: 'system',
       sidebarPlugins: null,
     });

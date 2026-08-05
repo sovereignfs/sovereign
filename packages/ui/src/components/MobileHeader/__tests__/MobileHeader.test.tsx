@@ -40,4 +40,19 @@ describe('MobileHeader', () => {
 
     expect(screen.getByText('Tasks')).toBeDefined();
   });
+
+  it('renders a default "S" badge when logo is omitted', () => {
+    render(<MobileHeader bell={<span />} avatarMenu={<span />} />);
+
+    expect(screen.getByText('S')).toBeDefined();
+  });
+
+  it('renders the supplied logo instead of the default badge when provided', () => {
+    render(
+      <MobileHeader logo={<a href="/">custom logo</a>} bell={<span />} avatarMenu={<span />} />,
+    );
+
+    expect(screen.getByText('custom logo')).toBeDefined();
+    expect(screen.queryByText('S')).toBeNull();
+  });
 });

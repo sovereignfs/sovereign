@@ -1098,16 +1098,16 @@ presentational, prop-driven components — `MobileHeader` and `MobileFooter`.
 Both draw a deliberate line between what's **immutable** (rendered
 unconditionally, no prop controls it) and what's **overridable**:
 
-| Component      | Immutable                                           | Overridable                                               |
-| -------------- | --------------------------------------------------- | --------------------------------------------------------- |
-| `MobileHeader` | Logo (`logo` prop, always shown), bell, avatar menu | `title` — absent by default                               |
-| `MobileFooter` | Centered "Apps" launcher (`onOpenApps`)             | `leftIcons` / `rightIcons` — 1 or 2 items each, symmetric |
+| Component      | Immutable                               | Overridable                                                                                                              |
+| -------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `MobileHeader` | Bell, avatar menu                       | `logo` — defaults to an "S" badge (matches the shell's own logo-less fallback) when omitted; `title` — absent by default |
+| `MobileFooter` | Centered "Apps" launcher (`onOpenApps`) | `leftIcons` / `rightIcons` — 1 or 2 items each, symmetric                                                                |
 
 ```tsx
 import { MobileHeader, MobileFooter } from '@sovereignfs/ui';
 
 <MobileHeader
-  logo={<Link href="/">…</Link>}
+  logo={<Link href="/">…</Link>} // optional — omit to get the default "S" badge
   title="Tasks" // optional — omit to match the no-title default
   bell={<NotificationBell />}
   avatarMenu={<AccountMenu placement="header" {...userProps} />}
@@ -1129,10 +1129,56 @@ framework-agnostic. `MobileFooter` logs a dev-mode-only `console.error`
 would visually uncenter the launcher — the same non-fatal guard pattern used
 by `SwipableMobileCarousel`'s non-`Slide`-children check.
 
+Both components own their own chrome — background, border, safe-area-aware
+padding, sticky positioning, and a 768px max-width (so neither stretches
+full-bleed if mounted outside an actual mobile viewport) — matching the
+runtime shell's own hand-rolled mobile header/footer markup exactly, since
+these components are meant to eventually replace it. A consumer that
+disables the shell's own header/footer for its route
+(`manifest.json`'s `shellConfig.mobileHeader`/`mobileFooter: false`, RFC 0075) to render these itself must also re-declare
+`--sv-shell-header-height`/`--sv-shell-footer-height` (zeroed by the shell
+when that chrome is off) to match what it actually renders — `Drawer`,
+`Dialog`, and `Sheet` all read those variables to know how much screen edge
+to clear, and without them they render straight to the true viewport edges,
+underneath the consumer's own chrome.
+
 This extraction is deliberately scoped as groundwork, not a plugin-facing
 override mechanism — see [RFC 0088](./rfcs/0088-mobile-header-footer-design-system-components.md)
 for the full immutable/overridable rationale and the open questions a future
 RFC would need to resolve before a plugin could render this chrome itself.
+
+### `MobileAppsDrawer` component
+
+A bottom-sheet "Apps" launcher grid — the same 3-column, 56px/radius-14px
+tile layout as the runtime shell's own Apps drawer (opened from
+`MobileFooter`'s launcher button), generalized so the tile list comes from
+the consumer via an `items` prop instead of being hardcoded to installed
+plugins:
+
+```tsx
+import { MobileAppsDrawer } from '@sovereignfs/ui';
+
+<MobileAppsDrawer
+  open={open}
+  onClose={() => setOpen(false)}
+  aria-label="Sections"
+  items={sections.map((s) => ({
+    key: s.slug,
+    icon: <Icon name={s.icon} size="lg" aria-hidden />,
+    label: s.label,
+    onClick: () => {
+      setOpen(false);
+      goTo(s.slug);
+    },
+  }))}
+/>;
+```
+
+Deliberately has **no header row** (title/close button) — `Drawer`'s own
+grab handle plus swipe-down/scrim-tap dismissal are enough, and a header ate
+into the vertical space a launcher grid needs most. `items` accept either an
+`href` (renders an `<a>`) or an `onClick` (renders a `<button>`), same
+dual-mode convention as `MobileFooter`'s `FooterIcon`.
 
 ### Overlay surfaces — which component for which job
 

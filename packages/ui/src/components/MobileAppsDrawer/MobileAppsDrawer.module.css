@@ -1,0 +1,81 @@
+/* Matches the runtime shell's own Apps drawer grid exactly
+   (runtime/app/(platform)/_components/MobileNav.module.css's .drawerGrid/
+   .drawerGridItem/.drawerGridIcon/.drawerGridName) — this component is
+   meant to replace that hand-rolled markup for any consumer building its
+   own Apps-style launcher. No header row — see the component's own doc
+   comment for why. */
+
+.grid {
+  list-style: none;
+  margin: 0;
+  /* Drawer's own grab handle already reserves a 44px touch target above this
+     — no extra top padding needed beyond a touch of breathing room. Bottom
+     gets noticeably more: with no header row to separate the grid from the
+     handle, a tight top/bottom balance read as top-heavy (grid crowding the
+     handle isn't the issue; the *last* row crowding the panel's bottom
+     edge/safe-area is). Drawer's own panel already adds
+     env(safe-area-inset-bottom) below everything, so this is on top of that,
+     not instead of it. */
+  padding: var(--sv-space-1) var(--sv-space-4) var(--sv-space-10);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  row-gap: var(--sv-space-5);
+}
+
+.gridItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sv-space-2);
+  padding: var(--sv-space-1);
+  border: none;
+  background: none;
+  text-decoration: none;
+  color: var(--sv-color-text-primary);
+  font: inherit;
+  cursor: pointer;
+  width: 100%;
+}
+
+@media (hover: hover) {
+  .gridItem:hover .gridIcon {
+    background: var(--sv-color-border);
+  }
+}
+
+.gridItem:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--sv-radius-md);
+}
+
+/* color: text-primary, not text-muted — the reference's own drawerGridIcon
+   uses text-muted only as its monogram-fallback text color for <img>-less
+   plugin icons (raster <img> icons don't inherit CSS color at all, so that
+   value never actually painted a real icon). Every tile here renders a real
+   stroke icon via the Icon component (currentColor), which does inherit —
+   matching the reference's own explicit override for that exact case
+   (.drawerGridIconSettings, used by its Console tile) rather than the
+   fallback default. */
+.gridIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--sv-color-surface-sunken);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+  transition: background 0.1s;
+}
+
+.gridName {
+  font-size: var(--sv-font-size-sm);
+  text-align: center;
+  color: var(--sv-color-text-primary);
+  line-height: 1.3;
+  word-break: break-word;
+  max-width: 80px;
+}

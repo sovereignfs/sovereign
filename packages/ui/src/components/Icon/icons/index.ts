@@ -7,6 +7,7 @@ import { ChevronRightIcon } from './chevron-right';
 import { ChevronLeftIcon } from './chevron-left';
 import { ChevronDownIcon } from './chevron-down';
 import { ChevronUpIcon } from './chevron-up';
+import { MenuIcon } from './menu';
 import { XIcon } from './x';
 import { CheckIcon } from './check';
 import { PlusIcon } from './plus';
@@ -63,6 +64,7 @@ export type IconName =
   | 'chevron-left'
   | 'chevron-down'
   | 'chevron-up'
+  | 'menu'
   | 'x'
   | 'check'
   | 'plus'
@@ -121,6 +123,7 @@ export const ICONS: Record<IconName, IconComponent> = {
   'chevron-left': ChevronLeftIcon,
   'chevron-down': ChevronDownIcon,
   'chevron-up': ChevronUpIcon,
+  menu: MenuIcon,
   x: XIcon,
   check: CheckIcon,
   plus: PlusIcon,
@@ -177,6 +180,7 @@ export { ChevronRightIcon } from './chevron-right';
 export { ChevronLeftIcon } from './chevron-left';
 export { ChevronDownIcon } from './chevron-down';
 export { ChevronUpIcon } from './chevron-up';
+export { MenuIcon } from './menu';
 export { XIcon } from './x';
 export { CheckIcon } from './check';
 export { PlusIcon } from './plus';

@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation';
+import { runtimePublicUrl } from '@/src/runtime-url';
 
-// Auth server no longer serves UI; redirect to the runtime (actual end-user UI).
+// Auth server no longer serves most UI (login/2fa/verify-email stay here — see
+// oauthProvider.loginPage in src/auth.ts); redirect the bare root to the runtime.
+// Must use the browser-facing URL (runtimePublicUrl), not SOVEREIGN_RUNTIME_URL —
+// that's the internal Docker service address and unreachable from the browser.
 export default function Home() {
-  const runtimeUrl =
-    process.env.SOVEREIGN_RUNTIME_URL ?? `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
-  redirect(runtimeUrl);
+  redirect(runtimePublicUrl());
 }

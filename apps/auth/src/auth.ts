@@ -11,6 +11,7 @@ import { isValidTimezone } from './timezone';
 import { resolveInvitePluginGrants } from './invite-plugin-grants';
 import { isMailerConfigured, sendAuthPlatformEmail } from './platform-email';
 import { readInviteOnlySetting, resolveInviteOnly } from './settings';
+import { runtimePublicUrl } from './runtime-url';
 
 function buildOptions(): BetterAuthOptions {
   const env = getEnv();
@@ -58,7 +59,9 @@ function buildOptions(): BetterAuthOptions {
       enabled: true,
       autoSignIn: true,
       sendResetPassword: async ({ user, token }) => {
-        const resetUrl = `${env.baseUrl}/reset-password?token=${token}`;
+        // reset-password UI now lives only on the runtime (apps/auth removed its
+        // copy as redundant) — link there, not to this app's own baseUrl.
+        const resetUrl = `${runtimePublicUrl()}/reset-password?token=${token}`;
         await sendAuthPlatformEmail({
           templateId: 'auth.password_reset',
           deliveryClass: 'authentication',

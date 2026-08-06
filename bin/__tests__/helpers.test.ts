@@ -290,4 +290,20 @@ describe('renderPm2Config', () => {
     const config = renderPm2Config({ dir: '/opt/sovereign' });
     expect(config).not.toContain('env_file');
   });
+
+  it('stays in sync with the committed example fixture', () => {
+    // The fixture (cited from docs/self-hosting.md and RFC 0026 as "what
+    // sv setup pm2 --dir /opt/sovereign generates") carries extra hand-written
+    // explanatory comments above `module.exports` that the real generator
+    // doesn't emit — compare from `module.exports` onward so that prose can
+    // stay richer than the generator's own header without this test failing.
+    const config = renderPm2Config({ dir: '/opt/sovereign' });
+    const fixture = readFileSync(
+      join(ROOT, 'bin', '__tests__', 'fixtures', 'pm2.example.config.js'),
+      'utf-8',
+    );
+    const configBody = config.slice(config.indexOf('module.exports = {'));
+    const fixtureBody = fixture.slice(fixture.indexOf('module.exports = {'));
+    expect(fixtureBody).toBe(configBody);
+  });
 });

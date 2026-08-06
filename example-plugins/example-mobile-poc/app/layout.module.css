@@ -1,0 +1,24 @@
+.shell {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--sv-color-border);
+  overflow-y: auto;
+  background: var(--sv-color-surface-sunken);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  background: var(--sv-color-surface);
+  padding: var(--sv-space-6) var(--sv-space-4);
+}
+
+/* Below the mobile breakpoint, ExampleMobileShell swaps this entire tree for
+   MobileSectionCarousel — see ExampleMobileShell.tsx and useIsMobile. */

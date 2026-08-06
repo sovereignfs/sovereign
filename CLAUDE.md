@@ -95,7 +95,7 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   (`packages/manifest`), the SDK surface (`packages/sdk`), or env vars
   (`.env.example`) means updating the matching doc in the same PR —
   `docs/plugin-development.md` (manifest fields, permissions, SDK methods) and
-  `docs/self-hosting.md` (env vars). The `runtime/src/docs-parity.test.ts` parity
+  `docs/self-hosting.md` (env vars). The `runtime/src/__tests__/docs-parity.test.ts` parity
   test enforces the enumerable parts (every field/permission/SDK key/env var must
   appear in its doc) and fails CI otherwise; review covers the prose.
   **The parity test is one-directional** (`.env.example` → `self-hosting.md`); it
@@ -126,7 +126,7 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.45.1`**
+  to `1.0.0` marks the public release.** The current version is **`0.62.2`**
   (all pre-v1 roadmap tasks through slot `0.13.0` complete; subsequent minor
   bumps track post-slot tasks such as the admin-managed external provider config,
   the RFC 0065 plugin catalog/access-policy work, private plugin repositories
@@ -145,9 +145,47 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   Tier 2), and an external OAuth 2.0 / OIDC provider for non-plugin apps
   (epic task 1.18, RFC 0072 — `@better-auth/oauth-provider`, a Console
   "External clients" registration/rotation/revocation UI gated to
-  `platform:admin`/`platform:owner`, and an `apps/auth` consent page), and
+  `platform:admin`/`platform:owner`, and an `apps/auth` consent page), web
+  push delivery status logging (epic task 4.6, RFC 0016), per-database SQLite
+  encryption enforcement (epic task 8.15, RFC 0071 follow-up — replaced the
+  single directory-wide encryption marker with per-file state, closing the
+  gap where one plugin's `database.requireEncryption` blocked unrelated
+  siblings, per the production incident described further below), the
+  default plugin bundle reduced to
+  Sovereign Tasks only, the example plugins moving in-repo under
+  `example-plugins/` gated by `SOVEREIGN_EXAMPLES_ENABLED`
+  (`docs/epics/example-plugins.md`'s task 12.2 correction note and task 12.4),
+  plugins moving to version only
+  their `manifest.json` with `package.json` pinned at `0.0.0` (see "Plugins
+  version only their `manifest.json`" below), mobile Console access moving
+  from the account menu to the Apps drawer, RFC 0079's mobile PWA layout/overlay/gesture
+  consistency pass (epic tasks 9.18–9.21: shared `PageContainer`, overlay
+  primitive consolidation, `useSwipeReveal`/`useSnapCarousel` extraction, and
+  the `SwipableMobileCarousel`/`SwipableMobileCarouselDots` primitive +
+  `useResponsiveLayout`/`ResponsiveSurface`/`useCarouselRouteSync`), the
+  per-plugin mobile header/footer visibility toggle (RFC 0075), CI
+  dependency-vulnerability scanning (Dependabot, CodeQL, `pnpm audit`),
+  general per-IP rate limiting in `runtime/middleware.ts`, a mobile/desktop
+  instance validation endpoint (`GET /api/instance`), the plugin surface
+  model and SDK device environment (RFC 0080), the device bridge protocol
+  package and plugin device surface/permissions/consent (RFC 0083 workstream
+  0003, legs 1–2, epic tasks 3.34–3.35), a dedicated Forbidden page with a
+  hardened authenticated 404 gate and 500 boundary, and the
+  `MobileHeader`/`MobileFooter` Design System components (RFC 0088 workstream
+  0007 leg 1, epic task 9.23 — the runtime shell itself doesn't consume them
+  yet, that's leg 2/epic task 9.24, still pending), and
   patch versions cover UI additions and production hotfixes —
-  most recently the 2026-07-25 fix to the `tools` Docker stage
+  most recently the 2026-08-06 patch bundling silent browser-timezone
+  capture at registration (epic task 1.20) with a fix giving page content
+  breathing room below the offline banner; before that the 2026-08-02 fix
+  stripping inbound `x-sovereign-user-*`/`x-sovereign-plugin-id` headers
+  before forwarding on public routes and the public `/api/*` namespace
+  rewrite — two middleware branches only conditionally re-set these
+  platform-trust headers, so an anonymous request could otherwise pass a
+  forged `x-sovereign-user-role: platform:owner` straight through to
+  downstream code that trusts them for authorization; no shipped plugin
+  declared `publicRoutes` yet, so this was a dormant gap closed proactively,
+  not an active incident; before that the 2026-07-25 fix to the `tools` Docker stage
   (`Dockerfile`): it built `FROM builder`, which already depended on the
   slow `next build` app-builder stage below it in the file, so `docker compose
 --profile tools run --rm tools pnpm sv <command>` paid for a full Next.js
@@ -518,7 +556,7 @@ plugins/console/    core admin plugin (platform type)
 plugins/launcher/   home screen plugin (platform type)
 plugins/account/    per-user profile plugin (platform type)
 example-plugins/    in-repo reference/teaching plugins — composed only when
-                    SOVEREIGN_EXAMPLES_ENABLED is set (docs/adhoc/example-plugins-plan.md)
+                    SOVEREIGN_EXAMPLES_ENABLED is set (docs/epics/example-plugins.md)
 registry/           public plugin index (plugins.json) + submission process
 scripts/            install-plugins.ts, generate-registry.ts, dev.ts
 bin/sv              CLI (v0.5)
@@ -629,7 +667,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 ## Status
 
-Current platform version: **`0.45.1`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
+Current platform version: **`0.62.2`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
 
 For the full task history and current roadmap position, see:
 

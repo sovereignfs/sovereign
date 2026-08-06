@@ -48,7 +48,7 @@ installable plugin, so it has no registry entry.
 
 `sovereignfs/sovereign-plugins-examples` has been retired: the example
 plugins it previously hosted now live in-repo under `example-plugins/` (see
-`docs/adhoc/example-plugins-plan.md`).
+`docs/epics/example-plugins.md`).
 
 ## Documentation and deployment support
 

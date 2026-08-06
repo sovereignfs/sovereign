@@ -103,7 +103,7 @@ const withPWA = withPWAInit({
   // content after logout/login on a shared device. This only bounds the
   // worst case (a stalled request now falls back after 4s instead of
   // hanging blank); it does not change typical-case latency on a fast
-  // network. See docs/adhoc/ios-pwa-inspection-findings.md #5.
+  // network. See docs/research/0011-ios-pwa-inspection-findings.md #5.
   extendDefaultRuntimeCaching: true,
   workboxOptions: {
     runtimeCaching: [

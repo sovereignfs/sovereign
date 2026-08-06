@@ -4,13 +4,13 @@
 
 ## Status
 
-✅ Complete — 12.1 (starter template & examples), 12.2 (extraction to own repo), 12.3 (admin disable surface).
+✅ Complete — 12.1 (starter template & examples), 12.2 (extraction to own repo, later reversed), 12.3 (admin disable surface), 12.4 (manifest cleanup & example-set expansion), 12.5 (`example-mobile-poc` relocated into the set).
 
 ## Overview
 
 Task 0.5.28 delivered three entry points to the same canonical skeleton: a GitHub template repo (`sovereign-plugin-template`), a `sv plugin new <name>` CLI command, and an `npm create @sovereignfs/plugin` initializer. Capability-demo examples (`example-basic`, `example-api`) demonstrate runtime composition, route-guard patterns, `apiProvider`, and plugin-declared capabilities (Task 0.6.1 extends `example-basic` to demo the `capabilities` manifest field). These examples also serve as fixtures for integration and E2E tests.
 
-The example set has since grown to seven plugins (`example-basic`, `example-api`, `example-minimal`, `example-monetized`, `example-overlay-small/medium/large`) committed directly in `plugins/` via a gitignore allowlist. Tasks 12.2–12.3 move that set out of the monorepo into the dedicated `sovereign-plugins-examples` repository — re-bundled at build time so a default install still ships them — and give operators a first-class way to identify and disable example plugins (in bulk or one at a time) so a production instance need not surface demo apps.
+The example set has since grown to nine plugins (`example-basic`, `example-api`, `example-minimal`, `example-monetized`, `example-overlay-small/medium/large`, `example-mobile`, `example-mobile-poc`) committed directly in `example-plugins/` (a sibling of `plugins/`, composed only when `SOVEREIGN_EXAMPLES_ENABLED` is set). Tasks 12.2–12.3 originally moved that set out of the monorepo into a dedicated `sovereign-plugins-examples` repository and gave operators a first-class way to identify and disable example plugins (in bulk or one at a time); Task 12.2's externalization was itself reversed on 2026-08-01 back to the current in-repo model (see its correction note). Task 12.4 covers the manifest-schema tightening and the expansion from the original two examples to eight; Task 12.5 covers the ninth.
 
 ## Related RFCs
 
@@ -107,8 +107,8 @@ change; `runtime`/`bin` patch only if discovery or install code changes.
   clone-based model added build-time network dependence and friction without
   ever actually shipping the examples by default, while keeping them in-repo
   also makes them directly browsable as reference code for plugin developers.
-  See `docs/adhoc/example-plugins-plan.md`'s matching 2026-08-01 log entry.
-  `sovereignfs/sovereign-plugins-examples` has since been retired outright
+  (Task 12.4's expanded set, including `example-mobile`, landed in the same
+  pass.) `sovereignfs/sovereign-plugins-examples` has since been retired outright
   (2026-08-01) now that nothing references it — see `docs/repositories.md`.
 
 ---
@@ -198,5 +198,95 @@ marker is set).
   (Console toggle, `plugin_status` precedence, access-policy resolution) are
   unaffected; only _where the example plugins' source lives_ and _whether
   they're composed into a given build_ changed.
+
+---
+
+#### ✅ 12.4 — Expand example plugins and tighten the runtime manifest enum
+
+**Goal:** Grow the example set to cover every `shell`/`overlaySize`
+combination and the API-provider/monetization surfaces, and stop the
+manifest schema from accepting runtime models that don't exist in code yet.
+
+**Deliverables:**
+
+- Manifest schema (`packages/manifest/src/schema.ts`) accepts only
+  `runtime: "native"`; `static`/`iframe-local`/`iframe-remote`/`external`
+  remain documented as planned/deferred (`docs/plugin-development.md`'s
+  "Future runtime models") but fail manifest validation until implemented.
+- Three new overlay examples — `example-overlay-small`/`-medium`/`-large` —
+  one per `shellConfig.overlaySize` value, since overlay size is
+  manifest-level configuration a single plugin can't demonstrate at runtime.
+- `example-minimal` (chrome-free `shell: "minimal"` composition) added.
+- `example-api` and `example-monetized` expanded from stubs into fuller
+  references (deterministic GET/POST delegated routes with structured errors
+  for API; explicit manifest/paywall/license-import flow for monetized).
+- `example-mobile` added in the same 2026-08-01 pass as Task 12.2's
+  in-repo reversal, demonstrating `@sovereignfs/ui`'s responsive-layout/
+  carousel work (RFC 0079) — bringing the set to its current 8 plugins.
+- `docs/plugin-development.md`'s example table and the generated registry
+  updated for the full set.
+
+**Dependencies:** None — this manifest-enum and example-set work is
+independent of where the examples are sourced from (Task 12.2), and was
+unaffected by that task's later reversal.
+
+**SRS reference:** None — documentation-first ad hoc plan, no RFC filed.
+Originally tracked in `docs/adhoc/example-plugins-plan.md`; that file has
+been retired and this task is now the canonical record (see
+`docs/documentation-structure.md`'s note on `adhoc/` being phased out).
+
+**Review checklist:**
+
+- Existing first-party plugins validate against the tightened schema; an
+  invalid future `runtime` value fails manifest validation with a clear
+  error.
+- `pnpm generate` composes all 8 examples; the overlay examples exercise all
+  three `overlaySize` values; the minimal example composes under the minimal
+  route group; API-provider uniqueness still holds; the monetized paywall
+  flow stays covered by E2E tests.
+
+**Known open item:** whether the API example should demonstrate API-key or
+signed-request auth, or stay limited to public deterministic endpoints, was
+an open question in the original plan and was never revisited —
+`example-api` currently only demonstrates the latter.
+
+---
+
+#### ✅ 12.5 — Add `example-mobile-poc` and relocate it into the example set
+
+**Goal:** A scratch plugin evaluating `@sovereignfs/ui`'s `MobileHeader`,
+`MobileFooter`, and `SwipableMobileCarousel` stability ahead of the runtime
+shell's own adoption of them (task 9.24) had accumulated directly under
+`plugins/` — gitignored and untracked there, so it existed only locally and
+was invisible to anyone else. Its manifest already declared `id:
+"fs.sovereign.example-mobile-poc"` and `routePrefix: "/example-mobile-poc"`;
+only the directory name and its missing `example: true` flag were wrong.
+
+**Deliverables:**
+
+- Moved `plugins/example-mobile` → `example-plugins/example-mobile-poc`
+  (directory name now matches the manifest `id`/`routePrefix` it already
+  had). Content unchanged — a tasks-style navigable section index with a
+  per-section carousel and a desktop sidebar fork, navigation/UI events
+  only, no data layer.
+- Added the `example: true` manifest flag so it's discovered, gated by
+  `SOVEREIGN_EXAMPLES_ENABLED`, and individually toggleable like every other
+  example — it had none of that while it sat under `plugins/`.
+- `docs/plugin-development.md`'s example table gained a ninth row.
+
+**Dependencies:** None — a relocation and a manifest flag, not new
+functionality. Distinct from Task 9.24 itself (the runtime shell's real
+adoption of `MobileHeader`/`MobileFooter`), which this plugin evaluates but
+does not implement.
+
+**SRS reference:** None — not RFC-tracked; a workspace-hygiene fix.
+
+**Review checklist:**
+
+- `plugins/` no longer contains any `example`-flagged or example-purposed
+  content — `pnpm --filter @sovereignfs/example-mobile-poc typecheck`
+  passes from its new location.
+- `SOVEREIGN_EXAMPLES_ENABLED=1 pnpm generate` composes all 9 examples with
+  no plugin ID or route-prefix collisions.
 
 ---

@@ -261,6 +261,14 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   the Account Security tab broke for day-old sessions. Self-hosted users stay
   signed in for weeks, so freshness re-auth is off. Don't re-enable it without
   a re-auth flow. (A regression test asserts `freshAge === 0`.)
+- **Profile self-mutations must clear both `session_data` cookie variants**
+  (`better-auth.session_data` and `__Secure-better-auth.session_data`, each
+  with `maxAge: 0`) — better-auth's signed session cache lives for 300s, so a
+  self-edit that only clears one variant (or neither) leaves the chrome
+  showing the stale name/avatar for up to 5 minutes even though the
+  underlying record already changed. Done in
+  `runtime/app/api/account/avatar/route.ts` and
+  `plugins/account/app/actions.ts`.
 - **Theme is applied before first paint by an inline script in
   `runtime/app/layout.tsx`** reading the `sv-theme` cookie (`light`/`dark`
   applied directly; `system`/unset follows `prefers-color-scheme`). The Account
@@ -343,7 +351,7 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   irreducible WebKit launch-image-to-first-paint gap for non-native-wrapped
   PWAs) is bounding the worst case with `networkTimeoutSeconds` +
   `fallbacks.document` — configured in `runtime/next.config.ts` — not caching
-  the document itself. See `docs/adhoc/ios-pwa-inspection-findings.md` #5.
+  the document itself. See `docs/research/0011-ios-pwa-inspection-findings.md` #5.
 - **Production images build from Next.js standalone output** (Task 0.5.2).
   Both `next.config.ts` set `output: 'standalone'` **and**
   `outputFileTracingRoot` to the monorepo root — required in a pnpm monorepo or

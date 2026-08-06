@@ -24,7 +24,7 @@ RUN pnpm install --frozen-lockfile
 # ---- builder: compose plugins into the monorepo (no app build yet) --------
 FROM deps AS builder
 ENV NODE_ENV=production
-# Whether to compose example-plugins/ (docs/adhoc/example-plugins-plan.md) into
+# Whether to compose example-plugins/ (docs/epics/example-plugins.md) into
 # this build. Off by default — a plain `docker build` never ships example
 # routes/code unless explicitly opted in. This is a *build-time* decision
 # distinct from (though it shares an env var with) the *runtime* Console

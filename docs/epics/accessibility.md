@@ -70,7 +70,7 @@ the first native app store submission, where a disabled-zoom-with-no-alternative
 state is an accessibility-guideline risk rather than merely known debt.
 
 **Background:** `runtime/app/layout.tsx`'s `viewport` export sets
-`maximumScale: 1, userScalable: false`. `docs/adhoc/ios-pwa-inspection-findings.md`
+`maximumScale: 1, userScalable: false`. `docs/research/0011-ios-pwa-inspection-findings.md`
 records this as a deliberate tradeoff **explicitly conditioned** on "shipping a
 compensating in-app text-size control (tracked as a follow-up)" — that follow-up is
 this task. The original finding also warns against suppressing zoom as a fix for

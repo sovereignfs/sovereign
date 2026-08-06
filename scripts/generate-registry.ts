@@ -43,7 +43,7 @@
  * Run via `pnpm generate`; the runtime dev script runs it before `next dev`.
  * Pass `--watch` to re-run when plugin directories are added or removed.
  *
- * `example-plugins/` (the in-repo teaching/fixture set, `docs/adhoc/example-plugins-plan.md`)
+ * `example-plugins/` (the in-repo teaching/fixture set, `docs/epics/example-plugins.md`)
  * is scanned alongside `plugins/` only when `SOVEREIGN_EXAMPLES_ENABLED` is
  * truthy — off by default, so a plain build never ships or composes example
  * routes unless explicitly opted in. This is distinct from (but shares the

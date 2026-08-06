@@ -893,7 +893,7 @@ behavior is preserved, not changed.
 - `pnpm --filter @sovereignfs/ui typecheck` passes; existing
   `sovereign-tasks`/`sovereign-shopper` test suites pass unchanged.
 
-#### 📋 9.21 — Swipeable mobile carousel primitive and responsive-layout hooks
+#### ✅ 9.21 — Swipeable mobile carousel primitive and responsive-layout hooks
 
 **Goal:** `sovereign-tasks` and `sovereign-shopper` each hand-roll an
 almost-identical "mobile carousel" pattern on top of task 9.20's

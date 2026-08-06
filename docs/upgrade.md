@@ -1043,6 +1043,13 @@ the release you are running.
 | 0.55.0          | Plugin mailer permission and SDK email surface — `sdk.email.sendToUser()` (RFC 0062, epic task 3.26)                 |
 | 0.57.0          | Opt-in single-key SQLite at-rest encryption (RFC 0071, epic task 8.14)                                               |
 | 0.58.0          | External OAuth 2.0 / OIDC provider for non-plugin apps (RFC 0072, epic task 1.18)                                    |
+| 0.59.0          | Offline-route wiring for manifest `offline.root` flag + neutral-shell handling of `/`                                |
+| 0.60.0          | Web push delivery status logging to Console/Account Activities (RFC 0016)                                            |
+| 0.61.0          | Per-plugin mobile header/footer toggle (RFC 0075)                                                                    |
+| 0.62.0          | CI dependency-vulnerability scanning; mobile Console access moved from the account menu to the Apps drawer           |
+| 0.63.0          | Device bridge protocol package — workstream 0003 leg 1 (RFC 0083, epic task 3.34); general per-IP rate limiting      |
+| 0.64.0          | Plugin device surface, permissions, and consent — workstream 0003 leg 2 (RFC 0083, epic task 3.35)                   |
+| 0.65.0          | Forbidden page, authenticated 404 gate, hardened 500 boundary                                                        |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

@@ -1,0 +1,113 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* shellConfig.mobileHeader/mobileFooter: false (manifest.json) zeroes the
+     shell's own --sv-shell-header-height/--sv-shell-footer-height (see
+     shell.module.css's [data-mobile-header-hidden]/[data-mobile-footer-hidden]
+     rules) — correct, since the shell no longer renders that chrome. But we
+     render our own MobileHeader/MobileFooter in its place, and several
+     @sovereignfs/ui components read these same variables to know how much
+     screen edge to clear (Drawer's scrim/panel stop above
+     --sv-shell-footer-height; Dialog/Sheet offset below
+     --sv-shell-header-height). Without re-declaring them here, those
+     components think there's no chrome to avoid and render straight to the
+     true viewport edges — which is exactly what clipped the Apps drawer's
+     last row behind our own (higher z-index) footer. Match the real values
+     our MobileHeader/MobileFooter actually render at (60px + safe-area, same
+     formula shell.module.css uses). */
+  --sv-shell-header-height: calc(
+    60px + max(0px, env(safe-area-inset-top) - var(--sv-space-3, 12px))
+  );
+  --sv-shell-footer-height: calc(
+    60px + max(0px, env(safe-area-inset-bottom) - var(--sv-space-2, 8px))
+  );
+}
+
+.carouselWrap {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Matches NotificationBell's .trigger (mobile: 44px touch target, radius-md,
+   transparent at rest, muted icon color). */
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: none;
+  border-radius: var(--sv-radius-md);
+  color: var(--sv-color-text-muted);
+  cursor: pointer;
+}
+
+/* Matches AccountMenu's .avatar trigger (mobile: locked to 36px). */
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: var(--sv-radius-full);
+  background-color: var(--sv-color-accent);
+  border: 1px solid var(--sv-color-accent);
+  overflow: hidden;
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-on-accent);
+}
+
+.banner {
+  padding: var(--sv-space-2) var(--sv-space-4);
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+  background: var(--sv-color-surface-sunken);
+  border-bottom: 1px solid var(--sv-color-border);
+}
+
+/* Matches MobileNav's .navIcon sizing. color is pinned to text-primary
+   (not inherited from .navItem's muted default) — the reference's own
+   launcher icon is an <img>-sourced SVG that can't inherit page color at
+   all, so it always renders at full contrast regardless of the footer's
+   muted/active icon states; text-primary is the equivalent always-full-
+   contrast, theme-adaptive value for this inline (currentColor-driven) SVG. */
+.launcherIcon {
+  width: var(--sv-icon-size-md);
+  height: var(--sv-icon-size-md);
+  color: var(--sv-color-text-primary);
+}
+
+.slideHeading {
+  padding: var(--sv-space-4);
+  font-size: var(--sv-font-size-lg);
+  font-weight: 700;
+  color: var(--sv-color-text-primary);
+}
+
+.slideBody {
+  padding: 0 var(--sv-space-4) var(--sv-space-6);
+}
+
+/* Replicates SwipableMobileCarousel's own (unexported) .dots positioning —
+   our custom renderIndicator supplies SwipableMobileCarouselDots directly
+   without that internal class, so without this it lays out as a static
+   block instead of overlaying the bottom of the carousel, and gets clipped
+   by .wrap's overflow: hidden. */
+.dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--sv-space-3);
+  pointer-events: none;
+}
+
+.dots > * {
+  pointer-events: auto;
+}

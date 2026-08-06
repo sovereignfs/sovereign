@@ -68,16 +68,17 @@ composed into the build when `SOVEREIGN_EXAMPLES_ENABLED` is set, and even then
 hidden by default per-instance until shown from the Console — see
 [Reference example plugins](self-hosting.md#reference-example-plugins):
 
-| Plugin ID                             | Route                     | What it shows                                                                         |
-| ------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------- |
-| `fs.sovereign.example-basic`          | `/example-basic`          | Session reading, `@sovereignfs/ui`, CSS tokens, plugin-declared capabilities          |
-| `fs.sovereign.example-overlay-small`  | `/example-overlay-small`  | `shell: "overlay"` with `overlaySize: "sm"`                                           |
-| `fs.sovereign.example-overlay-medium` | `/example-overlay-medium` | `shell: "overlay"` with `overlaySize: "md"`                                           |
-| `fs.sovereign.example-overlay-large`  | `/example-overlay-large`  | `shell: "overlay"` with `overlaySize: "lg"`                                           |
-| `fs.sovereign.example-minimal`        | `/example-minimal`        | `shell: "minimal"` chrome-free/fullscreen composition                                 |
-| `fs.sovereign.example-api`            | `/example-api`            | API provider serve-route pattern (PLT-16)                                             |
-| `fs.sovereign.example-monetized`      | `/example-monetized`      | Monetization manifest field, Ed25519 license gating, paywall flow (RFC 0003)          |
-| `fs.sovereign.example-mobile`         | `/example-mobile`         | `@sovereignfs/ui`'s PWA/mobile layout: responsive breakpoint fork, swipeable carousel |
+| Plugin ID                             | Route                     | What it shows                                                                                                                                                             |
+| ------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fs.sovereign.example-basic`          | `/example-basic`          | Session reading, `@sovereignfs/ui`, CSS tokens, plugin-declared capabilities                                                                                              |
+| `fs.sovereign.example-overlay-small`  | `/example-overlay-small`  | `shell: "overlay"` with `overlaySize: "sm"`                                                                                                                               |
+| `fs.sovereign.example-overlay-medium` | `/example-overlay-medium` | `shell: "overlay"` with `overlaySize: "md"`                                                                                                                               |
+| `fs.sovereign.example-overlay-large`  | `/example-overlay-large`  | `shell: "overlay"` with `overlaySize: "lg"`                                                                                                                               |
+| `fs.sovereign.example-minimal`        | `/example-minimal`        | `shell: "minimal"` chrome-free/fullscreen composition                                                                                                                     |
+| `fs.sovereign.example-api`            | `/example-api`            | API provider serve-route pattern (PLT-16)                                                                                                                                 |
+| `fs.sovereign.example-monetized`      | `/example-monetized`      | Monetization manifest field, Ed25519 license gating, paywall flow (RFC 0003)                                                                                              |
+| `fs.sovereign.example-mobile`         | `/example-mobile`         | `@sovereignfs/ui`'s PWA/mobile layout: responsive breakpoint fork, swipeable carousel                                                                                     |
+| `fs.sovereign.example-mobile-poc`     | `/example-mobile-poc`     | Stability evaluation for `MobileHeader`/`MobileFooter`/`SwipableMobileCarousel` ahead of the runtime shell's own adoption (task 9.24) — navigation/UI only, no data layer |
 
 To develop against them locally, set `SOVEREIGN_EXAMPLES_ENABLED=1` in your
 `.env` before `pnpm dev` — `scripts/generate-registry.ts` then composes
@@ -167,7 +168,7 @@ serves at `/tasks/lists`.
 | `adminOnly`     | boolean                                  | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                                                                                                                                             |
 | `apiProvider`   | boolean                                  | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                                                                                                                                                       |
 | `publicRoutes`  | array (see below)                        | no                                   | Manifest-declared public page routes (RFC 0042). Each entry exempts a path prefix — relative to `routePrefix` — from the session-redirect gate; the plugin owns authorization for the exempted paths.                                                                                                                                                               |
-| `offline`       | object (see below)                       | no                                   | Offline-capable page routes (RFC 0074). Declares path prefixes — relative to `routePrefix` — that must render with no network. Grants no auth exemption; the route must render a user-neutral shell and hydrate data client-side via `sdk.offline`.                                                                                                                 |
+| `offline`       | boolean (see below)                      | no (default `false`)                 | Marks the plugin's bare `routePrefix` page as its one offline-capable entry point (RFC 0074, flattened by RFC 0078 from the original `offline.routes[]`/`offline.root` object shape). Grants no auth exemption; the route must render a user-neutral shell and hydrate data client-side via `sdk.offline`.                                                          |
 | `example`       | boolean                                  | no (default `false`)                 | Marks the plugin as a bundled reference/example. Classification only — no effect on routing or permissions. Example plugins are hidden by default and shown via the Console → Settings → Example plugins toggle; each can also be toggled individually on the Plugins page.                                                                                         |
 | `development`   | boolean                                  | no (default `false`)                 | Marks the plugin as still under active development — not yet ready for production use. Classification only, like `example`: no effect on routing, access policy, or the enable/disable default. Surfaced as a warning badge on the Console Plugins page and on the plugin's Launcher tile.                                                                          |
 | `icon`          | string                                   | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                                                                                                                                                                                                                                                                                |
@@ -228,9 +229,11 @@ implemented): `events:publish`, `events:subscribe`, `e2ee:use` (client-side encr
 field crypto, which the runtime _can_ decrypt).
 
 `offline:write` (RFC 0078) is validated at the manifest level (requires
-`offline: true` on the same manifest) but has no backing SDK surface yet —
-reserved for the forthcoming offline write/sync capability, see `offline`
-below.
+`offline: true` on the same manifest). The backing client surface —
+`@sovereignfs/sdk/offline-queue` (`offlineQueue`, `drainQueue`) — is
+implemented; declaring the permission is not yet independently enforced
+against calls into that module. See "Offline writes (`sdk.offline-queue`,
+RFC 0078)" below.
 
 **`device:haptics` and `device:notifications` (RFC 0083) provide no
 isolation between plugins — say this to yourself in plain words before

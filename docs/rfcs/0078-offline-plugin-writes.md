@@ -1,6 +1,12 @@
 # RFC 0078 — Generic offline read+write for plugins
 
-**Status:** Draft\
+**Status:** Implemented — platform plumbing (manifest breaking change,
+`offline:write` permission validation, `@sovereignfs/sdk/offline-queue`
+client module, runtime simplification, logout+login purge) is in place.
+`offline:write` permission enforcement against the queue module itself is
+not yet wired (see `docs/plugin-development.md`'s `permissions` section).
+Shopper's own read+write adoption happens in its own repository, outside
+this monorepo.\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** `packages/manifest` (breaking change to the `offline` field —
@@ -13,10 +19,10 @@ route-prefix resolution, service worker precaching, and the offline-route
 neutral-shell mechanism — fewer cases, not new ones), `docs/plugin-development.md`,
 `docs/upgrade.md`; amends RFC 0074 (offline-capable plugin routes) and builds
 on RFC 0062's `mailer:send` permission-enforcement precedent.\
-**Incorporated into plan:** No roadmap slot yet — documentation-first, same
-posture as RFC 0071 and RFC 0077. Implementation, once scheduled, lands as a
-sequence of small tasks (manifest change, runtime simplification, SDK module,
-Shopper adoption) rather than one PR.
+**Incorporated into plan:** No epic task ID assigned — platform plumbing
+(manifest change, SDK module, runtime simplification, logout/login purge)
+shipped directly ahead of any roadmap slot. Retroactively recorded in
+`ROADMAP.md` at `0.50.1`.
 
 ---
 
@@ -559,6 +565,7 @@ independently reviewable tasks rather than one PR:
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | July 2026 | Initial draft |
+| Version | Date      | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | July 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 0.2     | July 2026 | Platform plumbing implemented on `main`: manifest breaking change (`offline` flattened to boolean, `offline:write` permission added and validated), `@sovereignfs/sdk/offline-queue` (`offlineQueue`, `drainQueue`, last-write-wins conflict resolution), runtime route-resolution/SW-precaching simplification, and the mutation queue purged on both logout and login. Status updated from Draft to Implemented; this changelog entry itself was added retroactively after the header had drifted stale relative to already-merged code. |

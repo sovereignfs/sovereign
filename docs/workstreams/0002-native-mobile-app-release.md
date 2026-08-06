@@ -168,7 +168,7 @@ validates weakly for one more release.
 
 **Why this is a release blocker and not polish:** `runtime/app/layout.tsx` sets
 `maximumScale: 1, userScalable: false`, disabling pinch-zoom app-wide.
-`docs/adhoc/ios-pwa-inspection-findings.md` records that decision as explicitly
+`docs/research/0011-ios-pwa-inspection-findings.md` records that decision as explicitly
 **conditional** on "shipping a compensating in-app text-size control (tracked as
 a follow-up)" — which never shipped. In a browser that is known debt. In a store
 submission it is an accessibility-guideline risk, and a rejection costs a full

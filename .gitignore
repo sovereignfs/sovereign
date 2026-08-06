@@ -44,7 +44,7 @@ runtime/generated/
 # Example plugins are NOT covered by this rule — they live in-repo, tracked in
 # git, under example-plugins/ (not plugins/), and are composed into the build
 # by scripts/generate-registry.ts when SOVEREIGN_EXAMPLES_ENABLED is set. See
-# docs/adhoc/example-plugins-plan.md's 2026-08-01 correction: this supersedes
+# docs/epics/example-plugins.md's 2026-08-01 correction: this supersedes
 # an earlier attempt (Task 12.2) to clone them at build time from a dedicated
 # sovereign-plugins-examples repository.
 /plugins/*/

@@ -78,8 +78,9 @@ connection failures), no restart-on-crash, and no documented production posture.
 
 #### PM2 ecosystem config
 
-`docs/examples/pm2.example.config.js` (committed reference; also the output of
-`sv setup pm2` with default arguments):
+`bin/__tests__/fixtures/pm2.example.config.js` (committed reference, kept in
+sync with the generator by a test; also the output of `sv setup pm2` with
+default arguments):
 
 ```js
 module.exports = {
@@ -114,11 +115,13 @@ module.exports = {
 };
 ```
 
-Load secrets and start:
+Generate your own config (matching the fixture above, but with your real
+paths), load secrets, and start:
 
 ```bash
+pnpm sv setup pm2 --dir /opt/sovereign --env-file /opt/sovereign/.env
 set -a; source /etc/sovereign/env; set +a
-pm2 start /opt/sovereign/docs/examples/pm2.example.config.js
+pm2 start /opt/sovereign/ecosystem.config.js
 pm2 save
 pm2 startup   # prints the init-system hook command; run it as root
 ```
@@ -367,7 +370,7 @@ not a deployment option.
 
 - **This RFC** lands in `docs/rfcs/` as a Draft.
 - **Phase 1 — Task 0.5.30 (pre-v1):** `sv serve` health-gate, `sv setup pm2`,
-  `docs/examples/pm2.example.config.js`, "Non-Docker deployment (PM2)" section in
+  `bin/__tests__/fixtures/pm2.example.config.js`, "Non-Docker deployment (PM2)" section in
   `docs/self-hosting.md`, SRS §3.1 PM2 addition.
 - **Phase 2 — epic task 0.13 (pre-v1):** `sv setup systemd`, systemd unit files in
   `docs/examples/`, "Non-Docker deployment (systemd)" section in

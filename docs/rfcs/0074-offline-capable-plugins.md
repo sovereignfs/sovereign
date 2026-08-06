@@ -13,11 +13,12 @@ worker generation in `next.config.ts` / `scripts/`, logout purge), Console
 (offline-plugin surfacing), `docs/plugin-development.md`; builds on RFC 0013
 (mobile responsiveness & PWA), RFC 0042 (public plugin routes — manifest
 route-list precedent), and the per-user SSR caching rule in CLAUDE.md\
-**Incorporated into plan:** No roadmap slot or epic task ID assigned. Platform
-plumbing shipped directly on `feat/offline-capable-plugins` (manifest fields,
+**Incorporated into plan:** No epic task ID assigned — shipped directly on
+`feat/offline-capable-plugins` ahead of any roadmap slot (manifest fields,
 SDK surface, SW precaching, logout+login purge, shared-shell neutrality,
 Launcher's `offline.root` adoption — §§1–6 of Proposed design, all landed).
-Console surfacing (open question 5) remains optional, not built. Offline
+Retroactively recorded in `ROADMAP.md` at `0.45.0`. Console surfacing (open
+question 5) remains optional, not built. Offline
 **writes** (outbox + sync) remain explicitly out of scope, left to a future
 RFC.
 
@@ -537,11 +538,13 @@ per step:
 7. **Launcher — PWA cold-start entry point.** ✅ `offline.root: true`
    (Changelog 0.5) — see §6.
 
-Offline **writes** (outbox, background sync, conflict resolution) are a separate
-future RFC that builds on the `sdk.offline` store defined here — see RFC 0078,
-which also removes this RFC's `offline.routes[]` array in favor of a single
-plugin-level `offline` boolean, generalizing the `offline.root: true` shape
-Launcher already uses (§6) into the only model.
+Offline **writes** (outbox, background sync, conflict resolution) were a
+separate RFC that builds on the `sdk.offline` store defined here — see RFC
+0078 (now implemented), which also removes this RFC's `offline.routes[]`
+array in favor of a single plugin-level `offline` boolean, generalizing the
+`offline.root: true` shape Launcher already uses (§6) into the only model.
+The manifest schema no longer has `offline.routes[]`/`offline.root` — see
+RFC 0078 for the current shape.
 
 ## Changelog
 

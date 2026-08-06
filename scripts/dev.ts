@@ -58,7 +58,7 @@ process.on('SIGTERM', () => {
 
 // 0. Best-effort: clone any externally-hosted plugins declared in
 // sovereign.plugins.json at their pinned refs. Example plugins are no longer
-// cloned — they live in-repo under example-plugins/ (docs/adhoc/example-plugins-plan.md,
+// cloned — they live in-repo under example-plugins/ (docs/epics/example-plugins.md,
 // 2026-08-01 correction) and are composed directly by generate-registry.ts
 // when SOVEREIGN_EXAMPLES_ENABLED is set. Non-fatal — if this fails (e.g.
 // offline) dev still starts with whatever is already present, you just

@@ -99,7 +99,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # Build-time inclusion of example-plugins/ (docs/adhoc/example-plugins-plan.md) —
+      # Build-time inclusion of example-plugins/ (docs/epics/example-plugins.md) —
       # only applies when actually building locally (no SOVEREIGN_VERSION set
       # above); the published GHCR image bakes in the Dockerfile's own default
       # and ignores this. Distinct from the SOVEREIGN_EXAMPLES_ENABLED runtime

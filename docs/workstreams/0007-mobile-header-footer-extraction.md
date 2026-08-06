@@ -1,6 +1,8 @@
 # Workstream 0007 — Mobile header/footer as Design System components
 
-**Status:** 📋 Planned\
+**Status:** 🔄 In progress — leg 1 done (task 9.23, `MobileHeader`/`MobileFooter`
+shipped in `packages/ui` at platform `0.62.0`); leg 2 (task 9.24, runtime
+consumption) not started\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -25,7 +27,7 @@ chrome — which this workstream does not attempt to build.
 
 ## Definition of done
 
-- [ ] `MobileHeader` and `MobileFooter` exist in `packages/ui`, are
+- [x] `MobileHeader` and `MobileFooter` exist in `packages/ui`, are
       presentational (no data fetching, no SDK import), and have Storybook
       coverage for every stated prop combination (task 9.23).
 - [ ] The runtime's mobile header and footer render through these
@@ -60,7 +62,7 @@ change set (drafted alongside this workstream, not merged separately first).
 
 | Leg | Name                     | Epic tasks | Epics | Gate? | Done when                                                                                                                                 |
 | --- | ------------------------ | ---------- | ----- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `packages/ui` components | 9.23       | 9     | No    | `MobileHeader`/`MobileFooter` ship in `@sovereignfs/ui` with full Storybook coverage; typecheck/lint/test pass.                           |
+| 1   | `packages/ui` components | 9.23 ✅    | 9     | No    | `MobileHeader`/`MobileFooter` ship in `@sovereignfs/ui` with full Storybook coverage; typecheck/lint/test pass.                           |
 | 2   | Runtime consumption      | 9.24       | 9     | No    | Runtime's mobile shell renders through both components; visual diff shows only the title fix; all existing RFC 0075 tests pass unchanged. |
 
 Each leg is one branch, one draft PR, one review gate. The agent runs

@@ -75,7 +75,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # Build-time inclusion of example-plugins/ (docs/adhoc/example-plugins-plan.md) —
+      # Build-time inclusion of example-plugins/ (docs/epics/example-plugins.md) —
       # distinct from the SOVEREIGN_EXAMPLES_ENABLED runtime env var below,
       # which only controls visibility of whatever this build actually
       # composed. Off by default; reuses the same var name deliberately (see

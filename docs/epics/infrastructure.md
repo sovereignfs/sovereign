@@ -332,8 +332,9 @@ supported path to production.
   `bin/__tests__/`
 - `bin/sv.ts`: new `sv setup pm2 [--dir <install-dir>] [--env-file <path>]`
   sub-command; template-fill logic in `bin/helpers.ts`; unit-tested
-- `docs/examples/pm2.example.config.js` — canonical PM2 ecosystem config (same
-  output as `sv setup pm2` with default arguments)
+- `bin/__tests__/fixtures/pm2.example.config.js` — canonical PM2 ecosystem
+  config (same output as `sv setup pm2` with default arguments), kept in sync
+  by a `renderPm2Config` unit test
 - `docs/self-hosting.md`: new "Non-Docker deployment (PM2)" section covering
   Node.js version requirement, build steps, `pm2 startup`/`pm2 save` for boot
   persistence, env-var differences table (Docker vs non-Docker), data-directory

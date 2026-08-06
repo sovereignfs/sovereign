@@ -4,8 +4,9 @@ Reference plugins that double as documentation, runtime test fixtures, and
 copyable starting points for plugin developers. They live here — in-repo,
 tracked in git — as a sibling of `plugins/`, not inside it.
 
-See `docs/adhoc/example-plugins-plan.md` for the full design rationale and
-decision log, and `docs/plugin-development.md`'s "Example plugins" section for
+See `docs/epics/example-plugins.md` (tasks 12.2's correction note and 12.4)
+for the full design rationale and decision log, and
+`docs/plugin-development.md`'s "Example plugins" section for
 the developer-facing walkthrough. This file covers just the mechanics: how
 these get built, and how to add a new one.
 

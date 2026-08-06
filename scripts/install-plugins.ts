@@ -53,7 +53,7 @@
  * listed here; cloned plugins are gitignored (they have their own repositories).
  * Example plugins are also not listed here — they live in-repo under
  * `example-plugins/` and are composed directly by `scripts/generate-registry.ts`
- * when `SOVEREIGN_EXAMPLES_ENABLED` is set (`docs/adhoc/example-plugins-plan.md`,
+ * when `SOVEREIGN_EXAMPLES_ENABLED` is set (`docs/epics/example-plugins.md`,
  * 2026-08-01 correction; this script previously cloned them from a dedicated
  * `sovereign-plugins-examples` repository per Task 12.2, which that correction
  * supersedes).

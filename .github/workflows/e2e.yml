@@ -40,7 +40,7 @@ jobs:
       #     manifest — boot-time regression coverage for the exact per-plugin
       #     encryption enforcement epic task 8.15 fixed (RFC 0071).
       #   - example-basic and example-monetized are NOT declared here: they
-      #     live in-repo under `example-plugins/` (`docs/adhoc/example-plugins-plan.md`,
+      #     live in-repo under `example-plugins/` (`docs/epics/example-plugins.md`,
       #     2026-08-01 correction) and are composed automatically by the
       #     `SOVEREIGN_EXAMPLES_ENABLED=true` env var set below, once the
       #     runtime dev server (started by Playwright's webServer) picks up

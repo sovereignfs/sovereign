@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "fs.sovereign.example-mobile-poc",
+  "name": "Example: Mobile Nav POC",
+  "version": "0.1.0",
+  "description": "POC plugin evaluating the stability of @sovereignfs/ui's mobile layout system — MobileHeader, MobileFooter, and SwipableMobileCarousel composed into a tasks-style navigable section index + per-section carousel, with a desktop sidebar fork. Navigation and UI events only — no data layer.",
+  "type": "platform",
+  "runtime": "native",
+  "routePrefix": "/example-mobile-poc",
+  "shell": "default",
+  "shellConfig": {
+    "mobileHeader": false,
+    "mobileFooter": false
+  },
+  "icon": "icon.svg",
+  "example": true,
+  "permissions": [],
+  "compatibility": {
+    "minPlatformVersion": "0.47.0"
+  }
+}

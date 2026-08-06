@@ -1,16 +1,25 @@
-# iOS PWA inspection findings
+# Research 0011 — iOS PWA inspection findings
 
-**Status: ✅ Complete — all 5 findings resolved (2026-07-02).** See the resolution
-table below. Remaining follow-up is production-build / on-device verification
-only (service worker and home-screen launch behaviour can't be exercised in dev).
+**Status:** Complete — all 5 findings resolved (2026-07-02). Remaining
+follow-up is production-build / on-device verification only (service worker
+and home-screen launch behaviour can't be exercised in dev).\
+**Date:** July 2026\
+**Author:** Claude Code (with kasunben)\
+**Scope:** `runtime/` (PWA manifest, service worker, CSP, viewport/theme
+metadata), `packages/ui` (Input focus-zoom), iOS Safari/installed-PWA
+behavior\
+**Related:** RFC 0013 (mobile responsiveness & PWA),
+[pwa-real-device-testing.md](../pwa-real-device-testing.md) (on-device
+verification of anything fixed from this list)
 
-**Date:** 2026-07-02
+Migrated from `docs/adhoc/` — see `docs/documentation-structure.md`'s note on
+`adhoc/` being phased out in favor of `research/` for closed-out
+investigations of this kind.
+
 **Instance tested:** local dev server (`pnpm dev`, runtime on `:3000`) exposed via ngrok, i.e. the same build an iPhone reaches through the tunnel.
 **Method:** emulated iPhone viewport (390×844, DPR 2) in a Chromium-based inspector; light and dark color schemes; full user flows exercised — sign-up → home → Apps drawer → Search overlay → Tasks plugin (list creation) → account menu → sign-out → sign-in. PWA plumbing (manifest, icons, meta tags, service worker, CSP) inspected directly; iOS-specific behavior (safe-area, viewport units, overscroll, focus zoom) verified against source.
 
 No console errors or warnings were produced anywhere in the session.
-
-Related: [pwa-real-device-testing.md](../pwa-real-device-testing.md) for on-device verification of anything fixed from this list.
 
 ---
 

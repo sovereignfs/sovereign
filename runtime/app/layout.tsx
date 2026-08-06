@@ -57,7 +57,7 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
   // Disables two-finger pinch-to-zoom app-wide (native-app feel, no accidental
   // zoom mid-gesture on iOS). This reverses a prior explicit decision (see
-  // docs/adhoc/ios-pwa-inspection-findings.md #1) made to preserve pinch-zoom
+  // docs/research/0011-ios-pwa-inspection-findings.md #1) made to preserve pinch-zoom
   // as a WCAG 1.4.4 (Resize Text) affordance for low-vision users — that
   // finding explicitly says not to do this without a replacement. A
   // compensating in-app text-size control is tracked as a required follow-up,

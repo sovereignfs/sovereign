@@ -146,6 +146,80 @@ describe('validateManifest', () => {
     if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
   });
 
+  it('accepts a manifest declaring public: true with shell: minimal (RFC 0089)', () => {
+    expect(validateManifest({ ...base, public: true, shell: 'minimal' }).valid).toBe(true);
+  });
+
+  it('rejects public: true without shell: minimal', () => {
+    const res = validateManifest({ ...base, public: true });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('public');
+  });
+
+  it('rejects public: true with shell: default', () => {
+    const res = validateManifest({ ...base, public: true, shell: 'default' });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects public: true with shell: overlay', () => {
+    const res = validateManifest({ ...base, public: true, shell: 'overlay' });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects public: true combined with adminOnly: true', () => {
+    const res = validateManifest({
+      ...base,
+      public: true,
+      shell: 'minimal',
+      adminOnly: true,
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('public');
+  });
+
+  it('rejects public: true combined with publicRoutes', () => {
+    const res = validateManifest({
+      ...base,
+      public: true,
+      shell: 'minimal',
+      publicRoutes: [{ prefix: '/p' }],
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('public');
+  });
+
+  it('rejects public: true combined with a paid monetization model', () => {
+    const res = validateManifest({
+      ...base,
+      type: 'sovereign',
+      repository: 'https://github.com/sovereignfs/sovereign-plugin-example',
+      public: true,
+      shell: 'minimal',
+      monetization: {
+        model: 'one_time',
+        license: { publicKey: 'a'.repeat(43) },
+      },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('public');
+  });
+
+  it('accepts public: true combined with an explicit free monetization model', () => {
+    const res = validateManifest({
+      ...base,
+      type: 'sovereign',
+      repository: 'https://github.com/sovereignfs/sovereign-plugin-example',
+      public: true,
+      shell: 'minimal',
+      monetization: { model: 'free' },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('accepts a manifest with no public field at all', () => {
+    expect(validateManifest({ ...base }).valid).toBe(true);
+  });
+
   it('accepts a manifest declaring offline: true (RFC 0078)', () => {
     expect(validateManifest({ ...base, offline: true }).valid).toBe(true);
   });

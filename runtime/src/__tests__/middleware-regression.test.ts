@@ -101,6 +101,13 @@ const paidPublicRoutePlugin = {
   monetization: { model: 'one_time' },
 } as SovereignManifest;
 
+const fullyPublicPlugin = {
+  id: 'com.example.status',
+  routePrefix: '/status',
+  shell: 'minimal',
+  public: true,
+} as SovereignManifest;
+
 function session(role: string = 'platform:owner'): VerifiedSession {
   return {
     user: {
@@ -189,6 +196,7 @@ describe('runtime middleware regressions', () => {
       adminApiShapedPlugin,
       publicRoutePlugin,
       paidPublicRoutePlugin,
+      fullyPublicPlugin,
       offlineRoutePlugin,
       mobileChromePlugin,
     ];
@@ -557,6 +565,64 @@ describe('runtime middleware regressions', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('location')).toBeNull();
+    });
+  });
+
+  describe('fully public plugins (RFC 0089)', () => {
+    it('allows unauthenticated access to the bare routePrefix', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/status'));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('location')).toBeNull();
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-id')).toBeNull();
+    });
+
+    it('allows unauthenticated access to every nested path under the plugin', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/status/incidents/42'));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('location')).toBeNull();
+    });
+
+    it('returns 404 for a disabled fully public plugin', async () => {
+      fetchState.session = null;
+      fetchState.disabledIds = [fullyPublicPlugin.id];
+
+      const response = await middleware(request('/status'));
+
+      expect(response.status).toBe(404);
+      expect(await response.text()).toBe('Not Found');
+    });
+
+    // The RFC 0042/0089 public-route fast path in middleware.ts only checks
+    // disabledIds, never restrictedIds — RFC 0065 access policy is not
+    // consulted here, same as it already isn't for `publicRoutes`. This is a
+    // pre-existing property of the shared fast path, not something this task
+    // changes; see RFC 0089's "Current state" section.
+    it('does not consult RFC 0065 access policy on the public fast path', async () => {
+      fetchState.session = null;
+      fetchState.restrictedIds = [fullyPublicPlugin.id];
+
+      const response = await middleware(request('/status'));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('location')).toBeNull();
+    });
+
+    it('injects session headers when a valid session exists', async () => {
+      fetchState.session = session('platform:user');
+
+      const response = await middleware(request('/status'));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-id')).toBe('user-1');
+      expect(response.headers.get('x-middleware-request-x-sovereign-plugin-id')).toBe(
+        fullyPublicPlugin.id,
+      );
     });
   });
 

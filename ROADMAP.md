@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.62.2 · **Last updated:** 2026-08-06
+**Version:** 0.64.0 · **Last updated:** 2026-08-07
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -196,8 +196,9 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.60.0  | Plugin device surface, permissions, and consent — leg 2 (RFC 0083)                                                                 | ✅     | [3.35](docs/epics/plugins-runtime.md#-335--plugin-device-surface-permissions-and-consent-rfc-0083)                       |
 | 0.61.0  | Forbidden page, authenticated 404 gate, and hardened 500 boundary                                                                  | ✅     | — (ad-hoc)                                                                                                               |
 | 0.62.0  | `MobileHeader`/`MobileFooter` Design System components — workstream 0007 leg 1 (RFC 0088)                                          | ✅     | [9.23](docs/epics/design-system.md#-923--mobileheader-and-mobilefooter-design-system-components)                         |
-| 0.63.0  | Runtime mobile shell consumes `MobileHeader`/`MobileFooter` — leg 2 (RFC 0088)                                                     | ✅     | [9.24](docs/epics/design-system.md#-924--runtime-mobile-shell-consumes-mobileheadermobilefooter)                         |
 | 0.62.2  | Capture timezone at registration from the browser                                                                                  | ✅     | [1.20](docs/epics/users-auth.md#-120--capture-timezone-at-registration-from-the-browser)                                 |
+| 0.63.0  | Runtime mobile shell consumes `MobileHeader`/`MobileFooter` — leg 2 (RFC 0088)                                                     | ✅     | [9.24](docs/epics/design-system.md#-924--runtime-mobile-shell-consumes-mobileheadermobilefooter)                         |
+| 0.64.0  | Fully public plugins (`public: true`, RFC 0089)                                                                                    | ✅     | [2.30](docs/epics/platform-shell.md#-230--fully-public-plugins-rfc-0089)                                                 |
 
 ---
 

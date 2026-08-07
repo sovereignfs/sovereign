@@ -22,6 +22,7 @@ export async function GET(request: Request): Promise<Response> {
     type: manifest.type,
     routePrefix: manifest.routePrefix,
     adminOnly: manifest.adminOnly ?? false,
+    public: manifest.public ?? false,
     example: manifest.example ?? false,
     development: manifest.development ?? false,
     shell: manifest.shell ?? 'default',

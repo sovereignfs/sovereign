@@ -139,3 +139,70 @@ describe('matchedPublicPluginRouteId', () => {
     expect(matchedPublicPluginRouteId('/other', withPublicRoutes)).toBeNull();
   });
 });
+
+describe('matchedPublicPluginRouteId — public: true (RFC 0089)', () => {
+  const status: PluginRouteInfo = {
+    id: 'com.example.status',
+    routePrefix: '/status',
+    shell: 'minimal',
+    public: true,
+  };
+  const withFullyPublic = [console, launcher, status];
+
+  it('matches the bare routePrefix', () => {
+    expect(matchedPublicPluginRouteId('/status', withFullyPublic)).toBe('com.example.status');
+  });
+
+  it('matches every path under the routePrefix', () => {
+    expect(matchedPublicPluginRouteId('/status/incidents/42', withFullyPublic)).toBe(
+      'com.example.status',
+    );
+  });
+
+  it('does not match other plugins', () => {
+    expect(matchedPublicPluginRouteId('/launcher', withFullyPublic)).toBeNull();
+    expect(matchedPublicPluginRouteId('/console', withFullyPublic)).toBeNull();
+  });
+
+  it('does not match a plugin with public left unset', () => {
+    const blog: PluginRouteInfo = { id: 'com.example.blog', routePrefix: '/blog' };
+    expect(matchedPublicPluginRouteId('/blog', [blog])).toBeNull();
+  });
+});
+
+// decidePluginRoute is the general-purpose route decision function, used
+// directly by the *authenticated* gate in middleware.ts. The public-route
+// fast path (matchedPublicPluginRouteId's callers) takes a separate branch
+// in middleware.ts that only checks disabled-plugin status, not restriction —
+// see the "fully public plugins" describe block in middleware-regression.test.ts
+// for what actually happens on a real request. These tests cover
+// decidePluginRoute's own precedence in isolation, independent of which
+// callers currently exercise it for a public: true plugin.
+describe('decidePluginRoute — public: true plugins (RFC 0089)', () => {
+  const status: PluginRouteInfo = {
+    id: 'com.example.status',
+    routePrefix: '/status',
+    shell: 'minimal',
+    public: true,
+  };
+  const withFullyPublic = [console, launcher, status];
+  const none = new Set<string>();
+
+  it('resolves ok for a fully public plugin', () => {
+    expect(decidePluginRoute('/status', withFullyPublic, none, 'platform:user')).toBe('ok');
+  });
+
+  it('resolves not-found when the fully public plugin is disabled', () => {
+    const disabled = new Set(['com.example.status']);
+    expect(decidePluginRoute('/status', withFullyPublic, disabled, 'platform:user')).toBe(
+      'not-found',
+    );
+  });
+
+  it('resolves not-found when the fully public plugin is access-restricted', () => {
+    const restricted = new Set(['com.example.status']);
+    expect(
+      decidePluginRoute('/status', withFullyPublic, none, 'platform:user', undefined, restricted),
+    ).toBe('not-found');
+  });
+});

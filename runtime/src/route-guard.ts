@@ -14,6 +14,8 @@ export interface PluginRouteInfo {
   adminOnly?: boolean;
   shell?: string;
   publicRoutes?: readonly { prefix: string }[];
+  /** Whole-plugin public exemption (RFC 0089) — equivalent to a `publicRoutes: [{ prefix: '/' }]` declaration. */
+  public?: boolean;
 }
 
 export type RouteDecision = 'ok' | 'not-found' | 'forbidden' | 'paywall';
@@ -64,16 +66,19 @@ export function matchedPluginId(
 
 /**
  * Returns the ID of the plugin whose manifest-declared public route (RFC 0042)
- * covers this path, or null if the path isn't under any declared public route.
- * A `publicRoutes[].prefix` is relative to the plugin's own `routePrefix` — the
- * exempt path is always `<routePrefix><prefix>`, so it can never escape the
- * plugin's own namespace.
+ * or whole-plugin `public: true` flag (RFC 0089) covers this path, or null if
+ * the path isn't under any public exemption. A `publicRoutes[].prefix` is
+ * relative to the plugin's own `routePrefix` — the exempt path is always
+ * `<routePrefix><prefix>`, so it can never escape the plugin's own namespace.
+ * `public: true` is equivalent to a `publicRoutes: [{ prefix: '/' }]`
+ * declaration — it exempts the entire `routePrefix`.
  */
 export function matchedPublicPluginRouteId(
   pathname: string,
   plugins: readonly PluginRouteInfo[],
 ): string | null {
   for (const plugin of plugins) {
+    if (plugin.public === true && underPrefix(pathname, plugin.routePrefix)) return plugin.id;
     for (const route of plugin.publicRoutes ?? []) {
       if (underPrefix(pathname, `${plugin.routePrefix}${route.prefix}`)) return plugin.id;
     }

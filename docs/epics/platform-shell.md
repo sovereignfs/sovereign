@@ -986,6 +986,59 @@ Task 1.19 (the `apps/auth` side of the same RFC); either can ship first.
   (docs-parity test passes).
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` — all pass.
 
+---
+
+#### ✅ 2.30 — Fully public plugins (RFC 0089)
+
+**Goal:** Extend RFC 0042's per-route public-page model to whole plugins, for
+plugins that are public by design with no private mode at all — an instance
+status page, a public wiki, a changelog/blog. RFC 0042 deliberately forbids a
+bare `/` prefix; this task adds an explicit, validated manifest surface for
+that case rather than leaving authors to fight the per-route model.
+
+**Deliverables:**
+
+- `public: z.boolean().optional()` in `packages/manifest/src/schema.ts`,
+  implemented as sugar over the existing `publicRoutes` exemption mechanism —
+  no parallel runtime code path.
+- Manifest validation: `public: true` requires `shell: "minimal"` (RFC 0014);
+  rejects combination with `adminOnly: true`, a non-free `monetization.model`,
+  or `publicRoutes`.
+- `runtime/src/route-guard.ts`'s `PluginRouteInfo`/`matchedPublicPluginRouteId`
+  treat `public: true` as exempting the plugin's entire `routePrefix`. The
+  middleware's public-route fast path still checks disabled-plugin status
+  ahead of the exemption, same as RFC 0042; it does not consult RFC 0065
+  access-policy restriction, matching `publicRoutes`' existing (pre-existing,
+  not introduced here) behavior — see RFC 0089 open question 5.
+- `runtime/app/(minimal)/layout.tsx` doc comment updated — no longer claims
+  the session gate always applies to `shell: "minimal"`.
+- Console Plugins page shows a "public" badge, mirroring the existing
+  "admin-only" badge.
+- `docs/plugin-development.md`: new `public` manifest reference row and
+  section modeled on the `publicRoutes` section; `shell: minimal` section's
+  auth claim updated.
+
+**Dependencies:** RFC 0042 (Task — public plugin page routes, already
+implemented) and RFC 0014 (minimal shell mode, already implemented). Builds
+on both rather than duplicating either.
+
+**SRS reference:** [RFC 0089](../rfcs/0089-fully-public-plugins.md)
+
+**Review checklist:**
+
+- A `public: true` plugin's routes render for an unauthenticated request —
+  no redirect to `/login`.
+- A disabled `public: true` plugin still 404s (both the pure
+  `decidePluginRoute` function and the real middleware fast path). An RFC
+  0065-restricted `public: true` plugin remains reachable on the middleware
+  fast path — documented, not silently left untested.
+- Manifest validation rejects `public: true` combined with `adminOnly: true`,
+  a paid `monetization.model`, `publicRoutes`, or `shell` other than
+  `"minimal"`.
+- Console shows the "public" badge on both the desktop table and mobile card
+  layouts.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` — all pass.
+
 ## Related RFCs
 
 - [RFC 0001 — Overlay shell variant](../rfcs/0001-overlay-shell-variant.md)
@@ -1004,6 +1057,8 @@ Task 1.19 (the `apps/auth` side of the same RFC); either can ship first.
   (Task 2.27)
 - [RFC 0086 — Shared-store rate limiting for multi-instance deployments](../rfcs/0086-shared-store-rate-limiting.md)
   (Task 2.29)
+- [RFC 0089 — Fully public plugins](../rfcs/0089-fully-public-plugins.md)
+  (Task 2.30)
 
 ## Related Docs
 

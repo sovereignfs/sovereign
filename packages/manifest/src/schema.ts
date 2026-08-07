@@ -212,6 +212,21 @@ const manifestObjectSchema = z
       })
       .optional(),
     /**
+     * Marks this plugin as fully public — no auth requirement at all (RFC
+     * 0089), generalizing `publicRoutes` (RFC 0042) from a declared prefix to
+     * the plugin's entire `routePrefix`. For plugins that are public by
+     * design and have no private mode: an instance status page, a public
+     * wiki, a changelog. Requires `shell: "minimal"` explicitly (a `default`
+     * or `overlay` shell assumes an authenticated nav/dialog context this
+     * doesn't have) and cannot combine with `adminOnly`, a paid
+     * `monetization.model`, or `publicRoutes` — see the cross-field
+     * `.refine()` checks below. Like `publicRoutes`, this only exempts page
+     * routes from the session-redirect gate; disabled-plugin and RFC 0065
+     * access-policy denial still apply, and it has no effect on `/api/*`
+     * (that stays `apiProvider`'s decision).
+     */
+    public: z.boolean().optional(),
+    /**
      * Marks this plugin's bare `routePrefix` page as its one offline-capable
      * entry point (RFC 0078, generalizing Launcher's original `offline.root`
      * flag from RFC 0074 into the only offline model). Grants no auth
@@ -601,6 +616,26 @@ export const manifestSchema = manifestObjectSchema
     message: 'platform plugins cannot declare monetization — they are always free',
     path: ['monetization'],
   })
+  .refine((m) => m.public !== true || m.shell === 'minimal', {
+    message: 'public: true requires shell to be explicitly "minimal" (RFC 0089)',
+    path: ['public'],
+  })
+  .refine((m) => m.public !== true || m.adminOnly !== true, {
+    message: 'public: true cannot combine with adminOnly: true (RFC 0089)',
+    path: ['public'],
+  })
+  .refine((m) => m.public !== true || m.publicRoutes === undefined, {
+    message:
+      'public: true cannot combine with publicRoutes — declares whole-plugin exposure already (RFC 0089)',
+    path: ['public'],
+  })
+  .refine(
+    (m) => m.public !== true || m.monetization === undefined || m.monetization.model === 'free',
+    {
+      message: 'public: true cannot combine with a paid monetization model (RFC 0089)',
+      path: ['public'],
+    },
+  )
   .refine(
     (m) => {
       const db = m.database;

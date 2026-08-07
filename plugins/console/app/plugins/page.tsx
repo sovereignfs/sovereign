@@ -15,6 +15,7 @@ interface RawPluginRow {
   type: string;
   routePrefix: string;
   adminOnly: boolean;
+  public: boolean;
   example: boolean;
   development: boolean;
   enabled: boolean;

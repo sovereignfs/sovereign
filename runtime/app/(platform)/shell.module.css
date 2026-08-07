@@ -189,6 +189,14 @@
   }
 }
 
+/* Grid placement + responsive show/hide only — a plain wrapper around
+   @sovereignfs/ui's MobileHeader (RFC 0088), which owns its own chrome
+   (padding, background, sticky positioning, safe-area insets). Kept as a
+   separate wrapper element (rather than merging this class onto
+   MobileHeader's own root via `className`) so this `display: none`/`flex`
+   toggle never has to win a same-specificity cascade tie against
+   MobileHeader's own always-`flex` root class — see PlatformMobileHeader's
+   doc comment. */
 .mobileHeader {
   display: none;
 }
@@ -218,13 +226,6 @@
   font-size: var(--sv-font-size-md);
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);
-}
-
-.mobileHeaderRight {
-  display: flex;
-  align-items: center;
-  gap: var(--sv-space-2);
-  margin-left: auto;
 }
 
 @media (max-width: 768px) {
@@ -332,25 +333,12 @@
   }
 
   .mobileHeader {
-    /* Explicit row — see the .content comment above (RFC 0075). */
+    /* Explicit row — see the .content comment above (RFC 0075). MobileHeader
+       (@sovereignfs/ui) owns all of its own visual chrome — padding,
+       background, sticky positioning, safe-area insets, z-index — this
+       wrapper only places it in the grid and toggles it on for mobile. */
     grid-row: 1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--sv-space-3);
-    min-height: var(--sv-shell-header-height);
-    /* Sit below the notch / status bar in standalone mode. */
-    padding: var(--sv-space-3) var(--sv-space-4);
-    padding-top: max(var(--sv-space-3), env(safe-area-inset-top));
-    padding-right: max(var(--sv-space-4), env(safe-area-inset-right));
-    padding-left: max(var(--sv-space-4), env(safe-area-inset-left));
-    background-color: var(--sv-color-surface);
-    border-bottom: 1px solid var(--sv-color-border);
-    /* Stay above the dialog scrim (z-index: 100) so the header remains
-       visible and usable while an overlay plugin is open. */
-    position: sticky;
-    top: 0;
-    z-index: 101;
+    display: block;
   }
 
   .avatar {

@@ -126,7 +126,7 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.62.2`**
+  to `1.0.0` marks the public release.** The current version is **`0.64.0`**
   (all pre-v1 roadmap tasks through slot `0.13.0` complete; subsequent minor
   bumps track post-slot tasks such as the admin-managed external provider config,
   the RFC 0065 plugin catalog/access-policy work, private plugin repositories
@@ -173,8 +173,13 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   hardened authenticated 404 gate and 500 boundary, and the
   `MobileHeader`/`MobileFooter` Design System components (RFC 0088 workstream
   0007 leg 1, epic task 9.23 — the runtime shell itself doesn't consume them
-  yet, that's leg 2/epic task 9.24, still pending), and
-  patch versions cover UI additions and production hotfixes —
+  yet, that's leg 2/epic task 9.24, still pending), and fully public plugins
+  (`public: true`, RFC 0089, epic task 2.30) — a manifest flag generalizing
+  RFC 0042's per-route `publicRoutes` exemption to a plugin's entire
+  `routePrefix`, for plugins with no private mode at all (a status page, a
+  public wiki); it requires `shell: "minimal"` explicitly and is mutually
+  exclusive with `adminOnly`, a paid `monetization.model`, and `publicRoutes`,
+  and
   most recently the 2026-08-06 patch bundling silent browser-timezone
   capture at registration (epic task 1.20) with a fix giving page content
   breathing room below the offline banner; before that the 2026-08-02 fix
@@ -667,7 +672,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 ## Status
 
-Current platform version: **`0.62.2`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
+Current platform version: **`0.64.0`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
 
 For the full task history and current roadmap position, see:
 

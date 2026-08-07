@@ -22,6 +22,7 @@ export interface PluginRow {
   type: string;
   routePrefix: string;
   adminOnly: boolean;
+  public: boolean;
   example: boolean;
   development: boolean;
   compatibilityError: string | null;
@@ -179,6 +180,7 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated }: Row
         <div className={styles.typeBadges}>
           <Badge variant="mono">{row.type}</Badge>
           {row.adminOnly && <Badge variant="mono">admin-only</Badge>}
+          {row.public && <Badge variant="mono">public</Badge>}
           {row.example && <Badge variant="mono">example</Badge>}
           {row.development && (
             <Badge variant="status" status="pending">
@@ -326,6 +328,7 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
         <code className={styles.pluginCardMetaCode}>{row.version}</code>
         <Badge variant="mono">{row.type}</Badge>
         {row.adminOnly && <Badge variant="mono">admin-only</Badge>}
+        {row.public && <Badge variant="mono">public</Badge>}
         {row.example && <Badge variant="mono">example</Badge>}
         {row.development && (
           <Badge variant="status" status="pending">

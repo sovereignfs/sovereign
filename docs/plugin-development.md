@@ -168,6 +168,7 @@ serves at `/tasks/lists`.
 | `adminOnly`     | boolean                                  | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                                                                                                                                             |
 | `apiProvider`   | boolean                                  | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                                                                                                                                                       |
 | `publicRoutes`  | array (see below)                        | no                                   | Manifest-declared public page routes (RFC 0042). Each entry exempts a path prefix — relative to `routePrefix` — from the session-redirect gate; the plugin owns authorization for the exempted paths.                                                                                                                                                               |
+| `public`        | boolean                                  | no (default `false`)                 | Marks the whole plugin as public — no auth requirement at all (RFC 0089). Requires `shell: "minimal"` explicitly; cannot combine with `adminOnly`, a paid `monetization.model`, or `publicRoutes`. See below.                                                                                                                                                       |
 | `offline`       | boolean (see below)                      | no (default `false`)                 | Marks the plugin's bare `routePrefix` page as its one offline-capable entry point (RFC 0074, flattened by RFC 0078 from the original `offline.routes[]`/`offline.root` object shape). Grants no auth exemption; the route must render a user-neutral shell and hydrate data client-side via `sdk.offline`.                                                          |
 | `example`       | boolean                                  | no (default `false`)                 | Marks the plugin as a bundled reference/example. Classification only — no effect on routing or permissions. Example plugins are hidden by default and shown via the Console → Settings → Example plugins toggle; each can also be toggled individually on the Plugins page.                                                                                         |
 | `development`   | boolean                                  | no (default `false`)                 | Marks the plugin as still under active development — not yet ready for production use. Classification only, like `example`: no effect on routing, access policy, or the enable/disable default. Surfaced as a warning badge on the Console Plugins page and on the plugin's Launcher tile.                                                                          |
@@ -439,6 +440,72 @@ shared token schema — each plugin owns its model): a **hash** of the token
 `expiresAt`, `revokedAt`, and a mode (`expiring`, `permanent`, or a
 plugin-specific enum).
 
+### `public` — fully public plugins (RFC 0089)
+
+`publicRoutes` exempts a declared prefix from the session gate; `public: true`
+exempts the plugin's **entire** `routePrefix` — for plugins that are public by
+design and have no private mode at all: an instance status page, a public
+wiki, a changelog/blog.
+
+```json
+{ "public": true, "shell": "minimal" }
+```
+
+**Validation rules:**
+
+- Requires `shell` to be **explicitly** `"minimal"` — an omitted, `"default"`,
+  or `"overlay"` `shell` is rejected. `default` and `overlay` both assume a
+  chrome or dialog context built around an authenticated user; a standalone
+  public entry point has neither.
+- Cannot combine with `adminOnly: true` (admin-gated and open-to-anyone is
+  contradictory).
+- Cannot combine with a paid `monetization.model` (paid and open-to-anyone is
+  contradictory; an explicit `monetization: { "model": "free" }` is fine).
+- Cannot combine with `publicRoutes` — redundant once the whole plugin is
+  public.
+
+**What the platform does** — identical to `publicRoutes` above, just applied
+to the whole plugin instead of a declared prefix: CSP/security headers still
+apply; no redirect to `/login`; session headers are injected when a valid
+session exists and omitted otherwise; a **disabled** plugin still 404s.
+`public: true` has no effect on `/api/*` — that stays `apiProvider`'s
+decision, independent of this flag.
+
+Note: like `publicRoutes`, an RFC 0065 access-policy restriction does **not**
+apply here — the public-route fast path in `runtime/middleware.ts` only
+checks disabled-plugin status. Restricting a `public: true` plugin has no
+effect on its reachability; to fully lock one down, disable it instead.
+
+**What your plugin must do** — the same posture as `publicRoutes`, generalized
+to every route instead of a carved-out prefix:
+
+- Render sensibly for an anonymous visitor **by default**, everywhere — there
+  is no unexempted part of the plugin left to lean on as "still private".
+- Treat injected session headers as an enhancement (show edit/admin
+  affordances to an authenticated, permitted visitor), never as an assumption.
+- Perform your own authorization on any mutation route; the platform gate is
+  gone for the entire plugin.
+
+**Example — a public status page plugin:**
+
+```json
+// manifest.json
+{
+  "id": "io.example.status",
+  "routePrefix": "/status",
+  "shell": "minimal",
+  "public": true
+}
+```
+
+```ts
+// app/page.tsx
+export default async function StatusPage() {
+  const incidents = await getRecentIncidents(); // read-only, public by design
+  return <StatusView incidents={incidents} />;
+}
+```
+
 ### `offline` — offline-capable plugins (RFC 0074, RFC 0078)
 
 Sovereign is installable as a PWA, but every page is per-user server-rendered
@@ -666,8 +733,10 @@ platform shell would be intrusive.
 
 - The plugin composes into `runtime/app/(minimal)/` so it inherits a
   simple, chrome-free layout (`100dvh`, safe-area insets).
-- The **session gate still applies** — the middleware enforces authentication
-  before the plugin renders. `minimal` does not bypass auth.
+- The **session gate applies by default** — the middleware enforces
+  authentication before the plugin renders. `minimal` alone does not bypass
+  auth; a plugin that also declares `public: true` (RFC 0089) does — see
+  [`public` — fully public plugins](#public--fully-public-plugins-rfc-0089).
 - Unlike `overlay`, a multi-segment `routePrefix` is allowed (e.g. `/kiosk/display`).
 - A `minimal` plugin **may be configured as the root plugin** (kiosk use
   case). When set as root, `/` renders the plugin full-bleed — be aware there

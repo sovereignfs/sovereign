@@ -633,8 +633,9 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 export const config = {
   // Gate everything except auth redirects, internal admin API, the public
   // liveness probe (Docker HEALTHCHECK — must answer without a session), the
-  // offline fallback, the PWA assets (manifest, service worker, Workbox/fallback
-  // bundles, icons — must load without a session), and Next static assets.
+  // offline fallback, the PWA assets (manifest, service worker, Workbox/fallback/
+  // custom-worker bundles, icons — must load without a session), and Next static
+  // assets.
   //
   // `api/instance` is deliberately NOT in this list, unlike the other
   // "must load pre-session" entries: it has privileged POST/DELETE endpoints
@@ -645,6 +646,19 @@ export const config = {
   // the fix that removed this exclusion). The path stays inside the matcher;
   // GET is served early as a public exception inside the middleware body,
   // POST/DELETE fall through to the normal authenticated flow.
+  //
+  // Every service-worker artifact must be listed here, not just `sw.js`:
+  // `sw.js` pulls its siblings in with `importScripts()`, and a redirected
+  // `importScripts()` is a spec-mandated hard failure that aborts the *whole*
+  // SW install — so one un-allowlisted chunk means a logged-out visitor gets
+  // no service worker at all (no precached login page, no offline fallback),
+  // not merely a missing feature. The current set is `sw.js`, the Workbox
+  // runtime (`workbox-<hash>.js`), the document fallback
+  // (`fallback-<hash>.js`), and the custom worker chunk built from
+  // `runtime/worker/index.ts` (`worker-<hash>.js` — @ducanh2912/next-pwa's
+  // `customWorkerSrc` output, the Web Push handler from RFC 0016). If a build
+  // starts emitting another `public/` service-worker chunk, add its prefix
+  // here in the same change.
   matcher: [
     // Exclude: auth pages, admin API (self-authenticated), public liveness probe,
     // dynamic manifest (browsers fetch it before login for PWA install), offline
@@ -652,6 +666,6 @@ export const config = {
     // download route (RFC 0044 — self-authenticated by its HMAC-signed token,
     // not a session; must work for a plain `<img src>`/direct fetch with no
     // session cookie).
-    '/((?!login|register|forgot-password|reset-password|offline|api/auth|api/admin|api/health|api/manifest|api/storage|manifest.json|sw.js|workbox-|fallback-|icons/|_next/static|_next/image|favicon.ico).*)',
+    '/((?!login|register|forgot-password|reset-password|offline|api/auth|api/admin|api/health|api/manifest|api/storage|manifest.json|sw.js|workbox-|worker-|fallback-|icons/|_next/static|_next/image|favicon.ico).*)',
   ],
 };

@@ -106,7 +106,15 @@ built and ran on iOS Simulator, loading the real, live, authenticated
 Sovereign home/launcher screen successfully. Confirms the basic premise:
 Capacitor's `server.url` can serve a real remote origin as primary content.
 
-### A real, reproducible service-worker registration failure exists in Android WebView specifically
+### A real, reproducible service-worker registration failure exists — a server bug, not an Android WebView one
+
+> **Corrected 2026-08-07.** This section originally concluded "**This is
+> Android-WebView-specific, not a server bug**." The _failure_ was real and
+> correctly captured; the _attribution_ was wrong. It is a plain server-side
+> middleware bug affecting every platform, and the original section is kept
+> below with the corrected analysis after it, since the reasoning that
+> produced the wrong conclusion is itself the useful part. See
+> [Root cause](#root-cause-the-middleware-matcher-omitted-worker-hashjs) below.
 
 Captured via `adb logcat` during earlier `sovereign-mobile` testing (not
 this spike's own throwaway build, but the same real instance, loaded via
@@ -152,6 +160,63 @@ strictly than desktop Chrome does — service workers disallowing redirected
 `importScripts()` is spec-correct behavior, so if this is genuinely a
 redirect, desktop Chrome should reject it too, which it evidently does not;
 this discrepancy itself is worth a follow-up, not resolved here).
+
+#### Root cause: the middleware matcher omitted `worker-<hash>.js`
+
+_(Added 2026-08-07, superseding the paragraph above.)_
+
+The redirect was real, it was ours, and it happens on every platform. The
+runtime middleware matcher (`runtime/middleware.ts`) is a negative-lookahead
+allowlist of paths that must load without a session. It listed `sw.js`,
+`workbox-`, and `fallback-`, but not `worker-` — the `worker-<hash>.js`
+chunk `@ducanh2912/next-pwa` builds from `runtime/worker/index.ts`
+(`customWorkerSrc`, the Web Push handler added by RFC 0016). That artifact
+was introduced after the allowlist was written and was never added to it, so
+every sessionless request for it was redirected to `/login`:
+
+```console
+$ curl -sS -o /dev/null -D - https://sovereign.openfs.io/worker-fcda3e92b7d22339.js
+HTTP/2 303
+location: /login?returnUrl=%2Fworker-fcda3e92b7d22339.js
+
+$ curl -sS -o /dev/null -w '%{http_code}\n' https://sovereign.openfs.io/fallback-ce627215c0e4a9af.js
+200
+```
+
+`sw.js` pulls both in the same call —
+`importScripts("/fallback-…js","/worker-…js")` — and a redirected
+`importScripts()` is a spec-mandated hard failure, which aborts the **whole**
+service-worker install rather than just the push handler. So a client with no
+valid session cookie got no service worker at all: no precached login page,
+no `/offline` document fallback, nothing.
+
+**Why the "normal browser" control test pointed the wrong way.** Service
+worker scripts are fetched with same-origin credentials. The desktop Chromium
+tab used as the control was already authenticated against
+`sovereign.openfs.io`, so its request carried a session cookie, got `200`,
+and installed cleanly — while the Android WebView was a cold, unauthenticated
+client and got the `303`. The variable that actually differed between the two
+engines was **auth state**, not the engine. The two observations were
+compared as if only the engine varied, and that is where the reasoning broke:
+a control test has to hold everything else constant, and this one did not.
+
+The failing case reproduces from plain `curl` on any platform, with no
+WebView and no emulator involved — which is the cheap check that would have
+falsified the Android attribution immediately.
+
+Fixed by adding `worker-` to the matcher allowlist, with a regression test in
+`runtime/src/__tests__/middleware-regression.test.ts` asserting that every
+service-worker artifact (`sw.js`, `workbox-*`, `fallback-*`, `worker-*`)
+bypasses the session gate.
+
+**What this does and doesn't change about this spike's conclusions.** It
+removes an Android-specific defect that never existed, so nothing here counts
+against Android WebView. It does not weaken the case for offline — it
+strengthens it: the one hard service-worker failure this spike found is a
+fixed one-line server bug, not a platform limitation. It also means the bug
+was never confined to the native shell: **every logged-out visitor on every
+platform — browser, PWA, WebView — has been getting no service worker**,
+which is a materially larger blast radius than "one Android chunk."
 
 ### Background/foreground cycle survival — WebView reloads from scratch on iOS; JS state does not survive
 
@@ -263,9 +328,10 @@ it loads a small bundled local page first, then navigates the _same_
 WebView to the remote instance via `location.assign()` — the same pattern
 `sovereign-desktop` already ships. That destination navigation is a normal
 `https://` page load, not a `capacitor://`-scheme load, so it is expected
-to register a service worker exactly as a normal browser tab would (module
-the Android-specific bug found above, which is not caused by which loading
-strategy is used — it reproduced against the real instance regardless).
+to register a service worker exactly as a normal browser tab would (modulo
+the server-side session-gate bug found above, which is not caused by which
+loading strategy is used — it reproduced against the real instance
+regardless, from any client without a session cookie).
 Both approaches were tested here for completeness; they answer slightly
 different questions (this spike's `server.url` variant answers "does
 Capacitor's direct-remote-origin mode work at all"; `sovereign-mobile`'s
@@ -278,7 +344,7 @@ design decision between options. The real branch points it informs:
 
 | Question                                                                                         | Answer this spike supports                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Does offline need to be a v1 feature, or can it be a documented follow-up?                       | Service workers are confirmed viable in principle (work in `https://` contexts on iOS's `server.url`/navigate approach, and on Android in _both_ the bundled `https://localhost` scheme and (per the normal-browser check) the real deployment generally). There is a genuine, narrow Android WebView bug against the real deployment specifically to fix or route around before relying on it — nothing found here says offline is unworkable.                                                                                                                                                                                                                                                                                                                                                          |
+| Does offline need to be a v1 feature, or can it be a documented follow-up?                       | Service workers are confirmed viable in principle (work in `https://` contexts on iOS's `server.url`/navigate approach, and on Android in _both_ the bundled `https://localhost` scheme and the real deployment generally). The one hard registration failure found here turned out to be a server-side middleware bug of ours (a missing `worker-` entry in the session-gate allowlist), not a platform limitation — real, cross-platform, and now fixed. Nothing found here says offline is unworkable.                                                                                                                                                                                                                                                                                                |
 | Is `capacitor://`/the bundled local scheme a viable content-loading strategy if offline matters? | **Platform-dependent — this is the headline finding.** No on iOS (confirmed empirically: no `serviceWorker` API at all in that context). Yes on Android's default config (confirmed empirically: SW registers and activates on the bundled `https://localhost` scheme). `sovereign-mobile`'s ADR 0005 decision (never load real content via the bundled scheme, always `server.url`/navigate to the real remote origin) is still right — but for reasons independent of service-worker support: a self-hosted, runtime-chosen instance genuinely cannot be baked into a build at all (per ADR 0002), regardless of what each platform's bundled scheme happens to support. ADR 0005's own stated rationale should be corrected to note the iOS/Android divergence rather than implying uniform behavior. |
 
 ## Recommendation
@@ -288,31 +354,31 @@ design decision between options. The real branch points it informs:
    never bundled) remains correct regardless of the iOS/Android
    divergence found here — its real justification is ADR 0002 (no
    baked-in instance), not service-worker support, and that finding
-   should be corrected to say so. The Android SW bug found against the
-   real deployment is real but looks narrow (one specific failure mode
-   tied to one worker chunk, not "service workers don't work in Android
-   WebView at all" — confirmed not-that, since the bundled-scheme control
-   test registered a _different_ SW successfully on the same engine).
-   Recommend shipping the leg-4/5 scaffold as planned, with offline scope
-   for v1 decided once the Android bug is root-caused (see Open
-   questions) — not before.
+   should be corrected to say so. The SW registration failure found
+   against the real deployment was real, but it was a server-side bug of
+   ours (the middleware session gate redirecting `worker-<hash>.js`), not
+   an Android WebView defect — root-caused and fixed 2026-08-07. Ship the
+   leg-4/5 scaffold as planned; offline scope for v1 no longer waits on
+   this.
 2. **Correct ADR 0005 in `sovereign-mobile`** to stop stating "the
    `capacitor://` custom scheme yields no service worker" as a
    cross-platform fact — it's iOS-specific. Android's default bundled
    scheme (`https://localhost`) does support service workers. This
    doesn't change ADR 0005's decision, only its stated rationale.
 3. **Workstream 0001 (standalone plugin apps, offline is a hard gate):**
-   do not clear this gate yet. The Android service-worker bug against the
-   real deployment is exactly the kind of finding that gate exists to
-   catch. Root-cause it (or find a viable workaround — e.g., app-side
-   caching via IndexedDB directly, which this spike confirmed works in
-   every context tested, iOS and Android, bundled and remote alike, as a
-   fallback that doesn't depend on service workers at all) before
-   treating RFC 0082 §4 as clear to proceed.
-4. **File the Android service-worker redirect bug as its own follow-up**
-   — it's specific enough (one worker chunk, one error type) to be
-   actionable independent of the broader offline question, and matters
-   for the PWA/mobile-web experience generally, not just the native shell.
+   the service-worker registration failure this gate was meant to catch
+   is root-caused and fixed (a server-side session-gate bug, not a WebView
+   limitation), so it no longer blocks. The gate itself is not fully
+   cleared: task 20.10's own checklist still has `sdk.offline` IndexedDB
+   persistence across app restart and `WKWebsiteDataStore` eviction under
+   storage pressure open, both needing a human tester with credentials.
+   Clear the gate on those, not on this bug.
+4. **~~File the Android service-worker redirect bug as its own
+   follow-up.~~** Superseded — root-caused as the middleware allowlist
+   omitting `worker-<hash>.js` and fixed on 2026-08-07. The instinct was
+   right for the wrong reason: it did matter beyond the native shell, but
+   because it broke the service worker for _every_ logged-out visitor on
+   every platform, not because of anything Android-specific.
 5. **`sdk.offline` must treat in-memory JS state as unsafe across a
    background/foreground cycle, unconditionally.** This spike found iOS
    WKWebView discards it entirely (fresh reload on return to foreground)
@@ -324,12 +390,16 @@ design decision between options. The real branch points it informs:
 
 ## Open questions
 
-- **Root cause of the Android WebView service-worker `importScripts`
-  redirect failure.** Is it a CDN/hosting redirect for the specific
-  versioned worker chunk URL? Reproducible outside Android WebView (e.g.
-  in Chrome for Android, or via `adb shell` network tracing)? This needs
-  someone with access to the hosting/CDN configuration for
-  `sovereign.openfs.io`, which this session didn't have.
+- ~~**Root cause of the Android WebView service-worker `importScripts`
+  redirect failure.**~~ **Answered 2026-08-07 — see
+  [Root cause](#root-cause-the-middleware-matcher-omitted-worker-hashjs).**
+  It was a redirect, but ours, not a CDN's: `runtime/middleware.ts`'s
+  session-gate allowlist omitted `worker-`, so `worker-<hash>.js` 303'd to
+  `/login` for any request without a session cookie. Reproducible outside
+  Android WebView on any platform with plain `curl`; no hosting/CDN access
+  was needed after all. The question was framed around the wrong variable —
+  the difference between the failing and passing observations was auth
+  state, not the WebView engine.
 - **`sdk.offline` IndexedDB persistence across app restart** — not tested.
   Requires an authenticated session performing real read/write actions,
   which needs credentials; entering credentials into any field is outside
@@ -361,23 +431,25 @@ design decision between options. The real branch points it informs:
   non-use** — not practically testable in a short spike session; needs
   either a long-duration test or artificial storage-pressure simulation
   neither available here.
-- **Whether the Android SW registration failure is specific to
+- ~~**Whether the SW registration failure is specific to
   `sovereign.openfs.io`'s current deployment/CDN config, or would
-  reproduce against any Sovereign instance.** This spike only had access
-  to one live instance. If it's deployment-specific (e.g., a CDN
-  redirect rule), fixing that one instance's hosting config might be the
-  actual fix, not a code change.
+  reproduce against any Sovereign instance.**~~ **Answered 2026-08-07 —
+  it reproduces against _every_ Sovereign instance.** The redirect came
+  from `runtime/middleware.ts`, which ships with the platform, so it was
+  never deployment-specific and no hosting config change was involved.
 
 ## Next steps
 
-Does not yet graduate to an RFC — the Android service-worker bug needs
-root-causing first, and the credential-gated tests need a human pass. Once
-those land:
+Does not yet graduate to an RFC. The service-worker registration failure
+is root-caused and fixed (a platform code change: `worker-` added to the
+middleware allowlist, with a regression test); what remains open is the
+credential-gated testing that needs a human pass — `sdk.offline` IndexedDB
+persistence across app restart and `WKWebsiteDataStore` eviction.
 
-- If the Android bug is narrow/fixable: no RFC needed, just a fix and a
-  note added to whichever doc references this finding (RFC 0058, ADR
-  0005 in `sovereign-mobile`).
-- If the Android bug turns out to be a fundamental WebView limitation
-  (unlikely given service workers are a shipped, documented Android
-  WebView feature since API 24+): workstream 0001's RFC 0082 §4 would need
-  to be reopened, per that workstream's own kill-criteria language.
+- The SW bug was narrow and fixable, so no RFC is needed for it — just the
+  fix plus a note in whichever docs reference this finding (RFC 0058, ADR
+  0005 in `sovereign-mobile`, epic task 20.10).
+- The contingency below is retired: it was **not** a fundamental WebView
+  limitation (as expected — service workers are a shipped, documented
+  Android WebView feature since API 24+), so workstream 0001's RFC 0082 §4
+  does not need reopening on these grounds.

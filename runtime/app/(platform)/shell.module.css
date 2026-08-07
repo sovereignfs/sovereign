@@ -189,15 +189,19 @@
   }
 }
 
-/* Grid placement + responsive show/hide only — a plain wrapper around
-   @sovereignfs/ui's MobileHeader (RFC 0088), which owns its own chrome
-   (padding, background, sticky positioning, safe-area insets). Kept as a
-   separate wrapper element (rather than merging this class onto
-   MobileHeader's own root via `className`) so this `display: none`/`flex`
-   toggle never has to win a same-specificity cascade tie against
-   MobileHeader's own always-`flex` root class — see PlatformMobileHeader's
-   doc comment. */
-.mobileHeader {
+/* Grid placement + responsive show/hide, applied directly on
+   @sovereignfs/ui's MobileHeader (RFC 0088) root via its `className` prop —
+   which also carries MobileHeader's own always-`flex` root class. The
+   selector is doubled (`.mobileHeader.mobileHeader`) to raise this rule's
+   specificity to (0,2,0), deterministically beating MobileHeader's own
+   single-class (0,1,0) `display: flex` regardless of which stylesheet's
+   bundle chunk loads first — without that, a plain same-specificity
+   `display: none` here could lose the cascade tie to MobileHeader's own
+   rule depending on build/import order. The `@media` rule below must repeat
+   the same doubled selector so its `display: flex` can in turn beat *this*
+   rule at mobile widths (both rules apply there; specificity is compared
+   before the media query is considered at all). */
+.mobileHeader.mobileHeader {
   display: none;
 }
 
@@ -332,13 +336,15 @@
     padding: 0;
   }
 
-  .mobileHeader {
+  .mobileHeader.mobileHeader {
     /* Explicit row — see the .content comment above (RFC 0075). MobileHeader
        (@sovereignfs/ui) owns all of its own visual chrome — padding,
-       background, sticky positioning, safe-area insets, z-index — this
-       wrapper only places it in the grid and toggles it on for mobile. */
+       background, sticky positioning, safe-area insets, z-index; this class
+       only places it in the grid and toggles it on for mobile. Doubled
+       selector — see the base (non-media) `.mobileHeader.mobileHeader` rule
+       above for why. */
     grid-row: 1;
-    display: block;
+    display: flex;
   }
 
   .avatar {

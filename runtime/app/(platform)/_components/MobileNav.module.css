@@ -1,24 +1,26 @@
-/* Grid placement + responsive show/hide only — a plain wrapper around
-   @sovereignfs/ui's MobileFooter (RFC 0088), which owns its own chrome
-   (padding, background, border-top, z-index) and its nav-item styling
-   (`.navItem`/`.navItemActive`/`.navItemApps*`, formerly duplicated here,
-   now live only in MobileFooter.module.css). Kept as a separate wrapper
-   element — not merged onto MobileFooter's own root via `className` — for
-   the same cascade-tie-avoidance reason documented on shell.module.css's
-   `.mobileHeader`; also gives `footerRef` (MobileSearch's height probe) a
-   stable element to measure regardless of MobileFooter's internal markup. */
-.footer {
+/* Grid placement + responsive show/hide, applied directly on
+   @sovereignfs/ui's MobileFooter (RFC 0088) root via its `className` prop —
+   which also carries MobileFooter's own always-`flex` root class and its
+   nav-item styling (`.navItem`/`.navItemActive`/`.navItemApps*`, formerly
+   duplicated here, now live only in MobileFooter.module.css). The selector
+   is doubled (`.footer.footer`) to raise this rule's specificity to (0,2,0),
+   deterministically beating MobileFooter's own single-class (0,1,0)
+   `display: flex` regardless of which stylesheet's bundle chunk loads first
+   — see shell.module.css's `.mobileHeader` for the full rationale. The
+   `@media` rule below repeats the same doubled selector so its
+   `display: flex` can in turn beat *this* rule at mobile widths. */
+.footer.footer {
   display: none;
 }
 
 @media (max-width: 768px) {
-  .footer {
+  .footer.footer {
     /* Explicit row (not implicit DOM-order placement) so a plugin hiding its
        mobile header (shellConfig.mobileHeader, RFC 0075) doesn't shift this
        footer into .shell's content row — see shell.module.css's .content
        comment for the full explanation. */
     grid-row: 3;
-    display: block;
+    display: flex;
   }
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@sovereignfs/ui';
 import styles from './MobileSearch.module.css';
@@ -24,15 +24,10 @@ export function MobileSearch({
   open,
   onClose,
   plugins,
-  footerRef,
 }: {
   open: boolean;
   onClose: () => void;
   plugins: PluginEntry[];
-  /** The footer nav wrapper (MobileNav's sibling `<div>` around MobileFooter) —
-   *  measured directly for its real rendered height; see the viewport effect
-   *  below for why. */
-  footerRef: RefObject<HTMLElement | null>;
 }) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -92,8 +87,12 @@ export function MobileSearch({
       // `|| 60` always won, permanently ignoring the safe-area inset and
       // under-reserving space below the overlay on notched/home-indicator
       // iPhones. getBoundingClientRect().height reflects the fully-resolved
-      // layout regardless of how the CSS computed it.
-      const footerHeight = footerRef.current?.getBoundingClientRect().height ?? 60;
+      // layout regardless of how the CSS computed it. Queried by attribute
+      // (matching ClientShell's [data-mobile-header] measurement) rather than
+      // a ref, since MobileFooter's own root is what needs measuring and
+      // that's a @sovereignfs/ui component we don't own a ref into.
+      const footerEl = document.querySelector('[data-mobile-footer]') as HTMLElement | null;
+      const footerHeight = footerEl?.getBoundingClientRect().height ?? 60;
       el.style.bottom = `${Math.max(footerHeight, keyboardHeight)}px`;
     };
 

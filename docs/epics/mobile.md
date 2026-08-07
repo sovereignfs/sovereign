@@ -348,8 +348,16 @@ the mobile shell.
 covers the `capacitor://`/bundled-scheme service-worker question (confirmed,
 not assumed, and platform-divergent — no SW support on iOS's `capacitor://`
 scheme, but full SW support on Android's default `https://localhost` bundled
-scheme) and found a real, reproducible Android-WebView-specific
-service-worker registration bug against a live instance. Background/foreground
+scheme) and found a real, reproducible service-worker registration failure
+against a live instance. **That failure was originally attributed to Android
+WebView; the attribution was wrong** — root-caused 2026-08-07 as a
+platform-side bug in `runtime/middleware.ts`, whose session-gate allowlist
+omitted the `worker-<hash>.js` custom-worker chunk, so a sessionless request
+for it 303'd to `/login` and the redirected `importScripts()` aborted the
+entire service-worker install. It affected every logged-out visitor on every
+platform, reproduces from plain `curl`, and is now fixed with a regression
+test. Nothing here counts against Android WebView, and the SW question no
+longer blocks anything. Background/foreground
 cycle survival is now also confirmed on both platforms, and is itself
 platform-divergent: iOS WKWebView discards the JS execution context entirely
 (fresh reload on return to foreground — any in-memory state is lost with no

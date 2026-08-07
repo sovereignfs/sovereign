@@ -857,11 +857,16 @@ describe('middleware matcher', () => {
   // is excluded from Next's routing to `middleware()` entirely — the function
   // above is never invoked for it, regardless of what its own logic would do.
   // This is precisely why the `/api/instance` bug (see the
-  // "/api/instance branding" describe block above) could not have been
-  // caught by a test that calls `middleware()` directly: every test in this
-  // file bypasses Next's matcher-based routing by construction, so a
-  // regression at the matcher level is invisible to them. This block is the
-  // only place that exercises the matcher pattern itself.
+  // "/api/instance branding" describe block above) and the missing
+  // `worker-` prefix (below) could not have been caught by a test that calls
+  // `middleware()` directly: every other test in this file bypasses Next's
+  // matcher-based routing by construction, so a regression at the matcher
+  // level is invisible to them. This block is the only place that exercises
+  // the matcher pattern itself. Next.js compiles the entry with
+  // path-to-regexp; for this pattern shape — a single leading `/` followed by
+  // one custom-regex group spanning the rest of the path — that compilation
+  // is equivalent to anchoring the string as a regex, which is what we do
+  // here rather than depending on Next's internals.
   const matches = (pathname: string) =>
     config.matcher.some((entry) => new RegExp(`^${entry}$`).test(pathname));
 
@@ -897,18 +902,29 @@ describe('middleware matcher', () => {
     },
   );
 
-  it.each(['/sw.js', '/workbox-4e0e1e1c.js', '/fallback-ce627215c0e4a9af.js', '/manifest.json'])(
-    'still excludes the genuinely public static asset %s',
-    (pathname) => {
-      expect(matches(pathname)).toBe(false);
-    },
-  );
+  // Regression: `worker-<hash>.js` (@ducanh2912/next-pwa's `customWorkerSrc`
+  // output, the RFC 0016 Web Push handler) was missing from the allowlist, so
+  // an unauthenticated request for it 303'd to /login. `sw.js` reaches it via
+  // `importScripts()`, and a redirected `importScripts()` must fail per spec —
+  // which aborts the entire service-worker install, not just push. A logged-out
+  // visitor therefore never got a service worker at all, so neither the login
+  // page nor the /offline fallback was ever precached.
+  it.each([
+    '/sw.js',
+    '/worker-fcda3e92b7d22339.js',
+    '/worker-abc123.js',
+    '/workbox-4e0e1e1c.js',
+    '/fallback-ce627215c0e4a9af.js',
+  ])('does not gate the service-worker artifact %s', (pathname) => {
+    expect(matches(pathname)).toBe(false);
+  });
 
   it('does not gate the other session-free PWA and auth assets', () => {
     for (const pathname of [
       '/login',
       '/register',
       '/offline',
+      '/manifest.json',
       '/icons/icon-192.png',
       '/favicon.ico',
       '/api/health',

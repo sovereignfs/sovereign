@@ -1,6 +1,16 @@
 # Research 0009 — Universal offline database architecture
 
-**Status:** Exploratory\
+> **Superseded by [Research 0012 — Offline-first architecture](0012-offline-first-architecture.md).**
+> This doc framed the storage question as an open lean between a KV-shaped
+> IndexedDB model and a relational client-side SQL layer, and explicitly did
+> not decide it. Research 0012 decides it — per-tier storage backends
+> (IndexedDB / OPFS-SQLite / native SQLite) behind one SDK surface — and
+> reframes the whole problem as offline-first rather than online-first with an
+> offline fallback. Kept as the decision trail; the options analysis below is
+> still the fullest write-up of why PowerSync and the continuous-sync models
+> were rejected.
+
+**Status:** Superseded\
 **Date:** August 2026\
 **Author:** Claude Code (from a brainstorming session with kasunben)\
 **Scope:** `packages/sdk` (`offline.ts`, `offline-queue.ts`, a possible new

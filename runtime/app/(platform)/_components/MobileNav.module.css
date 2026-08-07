@@ -1,4 +1,12 @@
-/* Hidden by default — only shown on mobile */
+/* Grid placement + responsive show/hide only — a plain wrapper around
+   @sovereignfs/ui's MobileFooter (RFC 0088), which owns its own chrome
+   (padding, background, border-top, z-index) and its nav-item styling
+   (`.navItem`/`.navItemActive`/`.navItemApps*`, formerly duplicated here,
+   now live only in MobileFooter.module.css). Kept as a separate wrapper
+   element — not merged onto MobileFooter's own root via `className` — for
+   the same cascade-tie-avoidance reason documented on shell.module.css's
+   `.mobileHeader`; also gives `footerRef` (MobileSearch's height probe) a
+   stable element to measure regardless of MobileFooter's internal markup. */
 .footer {
   display: none;
 }
@@ -10,80 +18,11 @@
        footer into .shell's content row — see shell.module.css's .content
        comment for the full explanation. */
     grid-row: 3;
-    display: flex;
-    align-items: center;
-    padding: 0 var(--sv-space-4);
-    padding-bottom: max(var(--sv-space-2), env(safe-area-inset-bottom));
-    background-color: var(--sv-color-surface);
-    border-top: 1px solid var(--sv-color-border);
-    /* Sit above the drawer scrim (z-index: 100) so the footer stays visible
-       while the Apps drawer is open. */
-    position: relative;
-    z-index: 101;
+    display: block;
   }
 }
 
 /* ── Footer nav items ────────────────────────────────────────────────────── */
-
-.navItem {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  min-height: 52px;
-  border: none;
-  background: transparent;
-  color: var(--sv-color-text-muted);
-  font: inherit;
-  cursor: pointer;
-  text-decoration: none;
-  border-radius: var(--sv-radius-md);
-  transition: color 0.1s;
-  outline: none;
-}
-
-/* Hover only where a real hovering pointer exists — on touch, :hover state
-   sticks after a tap until the next tap elsewhere, leaving controls looking
-   stuck in their hover style. This whole footer is mobile-only (touch), so
-   the guard matters here in particular. */
-@media (hover: hover) {
-  .navItem:hover {
-    color: var(--sv-color-text-primary);
-  }
-}
-
-.navItem:focus-visible {
-  outline: 2px solid var(--sv-color-focus-ring);
-  outline-offset: -2px;
-}
-
-.navItemActive {
-  color: var(--sv-color-text-primary);
-}
-
-/* Apps button: gets a grey circle background when the drawer is open */
-.navItemApps {
-  position: relative;
-}
-
-.navItemAppsOpen {
-  color: var(--sv-color-text-primary);
-}
-
-.navItemAppsOpen::before {
-  content: '';
-  position: absolute;
-  width: 48px;
-  height: 48px;
-  border-radius: var(--sv-radius-full);
-  background: var(--sv-color-surface-sunken);
-}
-
-.navItemAppsOpen svg,
-.navItemAppsOpen img {
-  position: relative;
-  z-index: 1;
-}
 
 .navIcon {
   width: var(--sv-icon-size-md);

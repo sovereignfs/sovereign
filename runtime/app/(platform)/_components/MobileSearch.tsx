@@ -29,8 +29,9 @@ export function MobileSearch({
   open: boolean;
   onClose: () => void;
   plugins: PluginEntry[];
-  /** The footer nav element (MobileNav's sibling `<nav>`) — measured directly
-   *  for its real rendered height; see the viewport effect below for why. */
+  /** The footer nav wrapper (MobileNav's sibling `<div>` around MobileFooter) —
+   *  measured directly for its real rendered height; see the viewport effect
+   *  below for why. */
   footerRef: RefObject<HTMLElement | null>;
 }) {
   const [query, setQuery] = useState('');

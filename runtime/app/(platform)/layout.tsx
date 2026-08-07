@@ -21,6 +21,7 @@ import { NavIcon } from './_components/NavIcon';
 import { MobileNav } from './_components/MobileNav';
 import { NotificationBell } from './_components/NotificationBell';
 import { OfflineBanner } from './_components/OfflineBanner';
+import { PlatformMobileHeader } from './_components/PlatformMobileHeader';
 import { SidebarPluginIcons } from './_components/SidebarPluginIcons';
 import styles from './shell.module.css';
 
@@ -221,36 +222,47 @@ export default async function PlatformLayout({ children }: { children: ReactNode
               </div>
             </aside>
 
-            {/* Mobile header: brand · active-plugin title · bell · avatar menu (RFC 0013).
+            {/* Mobile header: brand · active-plugin title · bell · avatar menu (RFC 0013),
+                rendered through @sovereignfs/ui's MobileHeader (RFC 0088) via the
+                PlatformMobileHeader client wrapper, which resolves the title.
                 Console is a tile in the Apps drawer for admins (no sidebar on mobile).
                 Omitted entirely (not CSS-hidden) when the current plugin's
                 shellConfig.mobileHeader is false (RFC 0075). */}
             {showMobileHeader && (
-              <header className={styles.mobileHeader} data-mobile-header>
-                <Link href="/" className={styles.mobileBrand} aria-label={`${instanceName} home`}>
-                  <span className={styles.mobileBrandIcon} aria-hidden="true">
-                    {instanceLogoUrl ? (
-                      <img src={instanceLogoUrl} alt="" className={styles.brandLogoImg} />
-                    ) : (
-                      instanceName.charAt(0).toUpperCase()
-                    )}
-                  </span>
-                  <span className={styles.mobileBrandName}>{instanceName}</span>
-                </Link>
-                <div className={styles.mobileHeaderRight}>
-                  <NotificationBell />
-                  <AccountMenu
-                    avatar={accountAvatar}
-                    avatarImageClassName={styles.avatarImage}
-                    triggerClassName={styles.avatar}
-                    placement="header"
-                    userName={userName}
-                    userEmail={userEmail}
-                    userImage={userImage}
-                    hydrateUser={isOfflineRoute}
-                  />
-                </div>
-              </header>
+              <div className={styles.mobileHeader} data-mobile-header>
+                <PlatformMobileHeader
+                  logo={
+                    <Link
+                      href="/"
+                      className={styles.mobileBrand}
+                      aria-label={`${instanceName} home`}
+                    >
+                      <span className={styles.mobileBrandIcon} aria-hidden="true">
+                        {instanceLogoUrl ? (
+                          <img src={instanceLogoUrl} alt="" className={styles.brandLogoImg} />
+                        ) : (
+                          instanceName.charAt(0).toUpperCase()
+                        )}
+                      </span>
+                      <span className={styles.mobileBrandName}>{instanceName}</span>
+                    </Link>
+                  }
+                  bell={<NotificationBell />}
+                  avatarMenu={
+                    <AccountMenu
+                      avatar={accountAvatar}
+                      avatarImageClassName={styles.avatarImage}
+                      triggerClassName={styles.avatar}
+                      placement="header"
+                      userName={userName}
+                      userEmail={userEmail}
+                      userImage={userImage}
+                      hydrateUser={isOfflineRoute}
+                    />
+                  }
+                  plugins={pluginList}
+                />
+              </div>
             )}
 
             <main id="main-scroll" className={styles.content}>

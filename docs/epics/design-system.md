@@ -1113,7 +1113,7 @@ runtime behavior in this task (that's task 9.24).
 
 ---
 
-#### 📋 9.24 — Runtime mobile shell consumes `MobileHeader`/`MobileFooter`
+#### ✅ 9.24 — Runtime mobile shell consumes `MobileHeader`/`MobileFooter`
 
 **Goal:** Refactor `runtime/app/(platform)/layout.tsx` and
 `runtime/app/(platform)/_components/MobileNav.tsx` to render through task

@@ -2,8 +2,8 @@
 
 import { useRef, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Drawer, Icon } from '@sovereignfs/ui';
+import { usePathname, useRouter } from 'next/navigation';
+import { Drawer, Icon, MobileFooter } from '@sovereignfs/ui';
 import styles from './MobileNav.module.css';
 import { MobileSearch } from './MobileSearch';
 import { useSidebarHydration } from './sidebar-hydration';
@@ -41,46 +41,44 @@ export function MobileNav({
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const isHome = pathname === '/';
-  const footerRef = useRef<HTMLElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
   const hydrated = useSidebarHydration(hydrate);
   const showConsole = hydrated ? hydrated.isAdmin : isAdmin;
 
   return (
     <>
-      <nav ref={footerRef} className={styles.footer} aria-label="App navigation">
-        <Link
-          href="/"
-          className={`${styles.navItem} ${isHome ? styles.navItemActive : ''}`}
-          aria-label="Home"
-        >
-          <Icon name="house" size="md" aria-hidden />
-        </Link>
-        <button
-          type="button"
-          className={`${styles.navItem} ${styles.navItemApps} ${open ? styles.navItemAppsOpen : ''}`}
-          aria-label="Apps"
-          aria-expanded={open}
-          aria-haspopup="dialog"
-          onClick={() => setOpen(true)}
-        >
-          {launcherIconUrl ? (
-            <img src={launcherIconUrl} alt="" aria-hidden className={styles.navIcon} />
-          ) : (
-            <Icon name="grid-2x2" size="md" aria-hidden />
-          )}
-        </button>
-        <button
-          type="button"
-          className={`${styles.navItem} ${searchOpen ? styles.navItemActive : ''}`}
-          aria-label="Search"
-          aria-expanded={searchOpen}
-          aria-haspopup="dialog"
-          onClick={() => setSearchOpen(true)}
-        >
-          <Icon name="search" size="md" aria-hidden />
-        </button>
-      </nav>
+      <div ref={footerRef} className={styles.footer}>
+        <MobileFooter
+          onOpenApps={() => setOpen(true)}
+          launcherOpen={open}
+          launcherIcon={
+            launcherIconUrl ? (
+              <img src={launcherIconUrl} alt="" aria-hidden className={styles.navIcon} />
+            ) : undefined
+          }
+          leftIcons={[
+            {
+              // A plain onClick + router.push (rather than FooterIcon's `href`,
+              // which renders a bare <a>) preserves next/link's client-side
+              // navigation instead of a full page reload.
+              icon: <Icon name="house" size="md" aria-hidden />,
+              label: 'Home',
+              active: isHome,
+              onClick: () => router.push('/'),
+            },
+          ]}
+          rightIcons={[
+            {
+              icon: <Icon name="search" size="md" aria-hidden />,
+              label: 'Search',
+              active: searchOpen,
+              onClick: () => setSearchOpen(true),
+            },
+          ]}
+        />
+      </div>
 
       <MobileSearch
         open={searchOpen}

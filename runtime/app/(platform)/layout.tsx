@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import type { SovereignManifest } from '@sovereignfs/manifest';
+import { MobileHeader } from '@sovereignfs/ui';
 import { getAccountPrefs } from '@sovereignfs/db';
 import { hasCapability } from '@/src/capabilities';
 import { getPlatformDb } from '@/src/db';
@@ -21,7 +22,6 @@ import { NavIcon } from './_components/NavIcon';
 import { MobileNav } from './_components/MobileNav';
 import { NotificationBell } from './_components/NotificationBell';
 import { OfflineBanner } from './_components/OfflineBanner';
-import { PlatformMobileHeader } from './_components/PlatformMobileHeader';
 import { SidebarPluginIcons } from './_components/SidebarPluginIcons';
 import styles from './shell.module.css';
 
@@ -222,47 +222,42 @@ export default async function PlatformLayout({ children }: { children: ReactNode
               </div>
             </aside>
 
-            {/* Mobile header: brand · active-plugin title · bell · avatar menu (RFC 0013),
-                rendered through @sovereignfs/ui's MobileHeader (RFC 0088) via the
-                PlatformMobileHeader client wrapper, which resolves the title.
+            {/* Mobile header: brand · bell · avatar menu (RFC 0013), rendered through
+                @sovereignfs/ui's MobileHeader (RFC 0088). No `title` is set — the header
+                always shows the instance brand, regardless of which plugin is active.
                 Console is a tile in the Apps drawer for admins (no sidebar on mobile).
                 Omitted entirely (not CSS-hidden) when the current plugin's
                 shellConfig.mobileHeader is false (RFC 0075). */}
             {showMobileHeader && (
-              <div className={styles.mobileHeader} data-mobile-header>
-                <PlatformMobileHeader
-                  logo={
-                    <Link
-                      href="/"
-                      className={styles.mobileBrand}
-                      aria-label={`${instanceName} home`}
-                    >
-                      <span className={styles.mobileBrandIcon} aria-hidden="true">
-                        {instanceLogoUrl ? (
-                          <img src={instanceLogoUrl} alt="" className={styles.brandLogoImg} />
-                        ) : (
-                          instanceName.charAt(0).toUpperCase()
-                        )}
-                      </span>
-                      <span className={styles.mobileBrandName}>{instanceName}</span>
-                    </Link>
-                  }
-                  bell={<NotificationBell />}
-                  avatarMenu={
-                    <AccountMenu
-                      avatar={accountAvatar}
-                      avatarImageClassName={styles.avatarImage}
-                      triggerClassName={styles.avatar}
-                      placement="header"
-                      userName={userName}
-                      userEmail={userEmail}
-                      userImage={userImage}
-                      hydrateUser={isOfflineRoute}
-                    />
-                  }
-                  plugins={pluginList}
-                />
-              </div>
+              <MobileHeader
+                className={styles.mobileHeader}
+                data-mobile-header
+                logo={
+                  <Link href="/" className={styles.mobileBrand} aria-label={`${instanceName} home`}>
+                    <span className={styles.mobileBrandIcon} aria-hidden="true">
+                      {instanceLogoUrl ? (
+                        <img src={instanceLogoUrl} alt="" className={styles.brandLogoImg} />
+                      ) : (
+                        instanceName.charAt(0).toUpperCase()
+                      )}
+                    </span>
+                    <span className={styles.mobileBrandName}>{instanceName}</span>
+                  </Link>
+                }
+                bell={<NotificationBell />}
+                avatarMenu={
+                  <AccountMenu
+                    avatar={accountAvatar}
+                    avatarImageClassName={styles.avatarImage}
+                    triggerClassName={styles.avatar}
+                    placement="header"
+                    userName={userName}
+                    userEmail={userEmail}
+                    userImage={userImage}
+                    hydrateUser={isOfflineRoute}
+                  />
+                }
+              />
             )}
 
             <main id="main-scroll" className={styles.content}>

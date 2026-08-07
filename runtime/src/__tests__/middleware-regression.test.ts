@@ -37,7 +37,7 @@ vi.mock('@/src/surface', async () => import('../surface'));
 
 vi.mock('@/src/session-verify', async () => import('../session-verify'));
 
-const { middleware } = await import('../../middleware');
+const { middleware, config } = await import('../../middleware');
 
 const consolePlugin = {
   id: 'fs.sovereign.console',
@@ -715,6 +715,80 @@ describe('runtime middleware regressions', () => {
     });
   });
 
+  describe('/api/instance branding — public GET, gated mutation', () => {
+    // Regression: `api/instance` was previously excluded from the matcher
+    // entirely (like sw.js/manifest.json), so middleware never ran on this
+    // path at all — including its POST/DELETE. `/api/instance/logo` and
+    // `/api/instance/favicon`'s route handlers authorize solely on
+    // `request.headers.get('x-sovereign-user-role')`, so a caller with no
+    // session could forge `x-sovereign-user-role: platform:owner` and it
+    // reached the handler untouched. Reproduced against a live instance with
+    // plain curl (`POST -H 'x-sovereign-user-role: platform:owner'` with no
+    // cookie returned 400 "no file provided", not 403 — proving the header
+    // survived and the auth check passed). Fixed by keeping the path inside
+    // the matcher and only carving out public GET (PUBLIC_INSTANCE_GET_PATHS
+    // in middleware.ts), so POST/DELETE fall through to the same
+    // session-verification-then-header-injection flow every other
+    // authenticated route gets.
+    it.each(['/api/instance', '/api/instance/logo', '/api/instance/favicon'])(
+      'serves GET %s with no session (must load before login)',
+      async (path) => {
+        fetchState.session = null;
+
+        const response = await middleware(request(path));
+
+        expect(response.status).toBe(200);
+        expect(response.headers.get('location')).toBeNull();
+      },
+    );
+
+    it('serves HEAD /api/instance/logo with no session', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/api/instance/logo', { method: 'HEAD' }));
+
+      expect(response.status).toBe(200);
+    });
+
+    it.each(['POST', 'DELETE'])(
+      '%s /api/instance/logo with a forged owner header and no session redirects to /login rather than forwarding the header',
+      async (method) => {
+        fetchState.session = null;
+
+        const response = await middleware(
+          request('/api/instance/logo', {
+            method,
+            headers: { 'x-sovereign-user-role': 'platform:owner' },
+          }),
+        );
+
+        expect(response.status).toBe(303);
+        expect(response.headers.get('location')).toBe(
+          'http://runtime.test/login?returnUrl=%2Fapi%2Finstance%2Flogo',
+        );
+        // The response is a redirect, not a forwarded request — nothing was
+        // ever passed downstream, forged header included.
+        expect(response.headers.get('x-middleware-request-x-sovereign-user-role')).toBeNull();
+      },
+    );
+
+    it('replaces a forged owner header with the real, lower-privileged session role on POST /api/instance/favicon', async () => {
+      fetchState.session = session('platform:user');
+
+      const response = await middleware(
+        request('/api/instance/favicon', {
+          method: 'POST',
+          headers: { 'x-sovereign-user-role': 'platform:owner' },
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-role')).toBe(
+        'platform:user',
+      );
+    });
+  });
+
   describe('rate limiting', () => {
     it('allows requests under the configured max', async () => {
       process.env.SOVEREIGN_RATE_LIMIT_MAX_REQUESTS = '2';
@@ -775,5 +849,71 @@ describe('runtime middleware regressions', () => {
       expect(first.status).toBe(200);
       expect(second.status).toBe(200);
     });
+  });
+});
+
+describe('middleware matcher', () => {
+  // The matcher is a negative-lookahead allowlist, so a path listed inside it
+  // is excluded from Next's routing to `middleware()` entirely — the function
+  // above is never invoked for it, regardless of what its own logic would do.
+  // This is precisely why the `/api/instance` bug (see the
+  // "/api/instance branding" describe block above) could not have been
+  // caught by a test that calls `middleware()` directly: every test in this
+  // file bypasses Next's matcher-based routing by construction, so a
+  // regression at the matcher level is invisible to them. This block is the
+  // only place that exercises the matcher pattern itself.
+  const matches = (pathname: string) =>
+    config.matcher.some((entry) => new RegExp(`^${entry}$`).test(pathname));
+
+  it('is a single anchored allowlist pattern (the shape this suite assumes)', () => {
+    expect(config.matcher).toHaveLength(1);
+    expect(config.matcher.every((entry) => entry.startsWith('/((?!'))).toBe(true);
+  });
+
+  it('matches ordinary pages and API routes so the session gate still applies', () => {
+    expect(matches('/')).toBe(true);
+    expect(matches('/launcher')).toBe(true);
+    expect(matches('/console/plugins')).toBe(true);
+    expect(matches('/api/plugins/example')).toBe(true);
+  });
+
+  // Regression: `/api/instance` was excluded from the matcher entirely
+  // (like `sw.js`/`manifest.json`), so `middleware()` never ran on it —
+  // including its POST/DELETE. `/api/instance/logo` and
+  // `/api/instance/favicon` authorize those methods solely on a
+  // `x-sovereign-user-role` header that is only trustworthy because
+  // middleware strips any caller-supplied copy and re-injects it from a
+  // verified session; skip the matcher and that guarantee never applies.
+  // Reproduced against a live instance: an unauthenticated
+  // `POST -H 'x-sovereign-user-role: platform:owner'` returned 400 "no file
+  // provided" (proving the forged header reached the handler and passed),
+  // not the 403 an unprivileged/missing role produces. The fix keeps the
+  // path inside the matcher and carves out only public GET inside
+  // `middleware()` itself (`PUBLIC_INSTANCE_GET_PATHS`).
+  it.each(['/api/instance', '/api/instance/logo', '/api/instance/favicon'])(
+    'does not exclude %s from the session gate (matcher must match it)',
+    (pathname) => {
+      expect(matches(pathname)).toBe(true);
+    },
+  );
+
+  it.each(['/sw.js', '/workbox-4e0e1e1c.js', '/fallback-ce627215c0e4a9af.js', '/manifest.json'])(
+    'still excludes the genuinely public static asset %s',
+    (pathname) => {
+      expect(matches(pathname)).toBe(false);
+    },
+  );
+
+  it('does not gate the other session-free PWA and auth assets', () => {
+    for (const pathname of [
+      '/login',
+      '/register',
+      '/offline',
+      '/icons/icon-192.png',
+      '/favicon.ico',
+      '/api/health',
+    ]) {
+      expect(matches(pathname)).toBe(false);
+    }
   });
 });

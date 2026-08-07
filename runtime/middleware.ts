@@ -57,6 +57,32 @@ function strippedRequestHeaders(request: NextRequest): Headers {
   return headers;
 }
 
+/**
+ * Runtime API routes that must be readable with no session — the login page
+ * renders instance branding before any user is authenticated, and native
+ * shells validate an instance (RFC 0058 epic task 20.2) before one exists.
+ *
+ * GET-only, deliberately: `/api/instance/logo` and `/api/instance/favicon`
+ * also expose privileged POST (upload) and DELETE (remove) on the *same*
+ * path, gated by `request.headers.get('x-sovereign-user-role')` in the route
+ * handler. That header is trustworthy only because middleware strips any
+ * caller-supplied copy and re-injects it from a verified session (see
+ * `SOVEREIGN_TRUST_HEADERS` above) — a guarantee that holds solely for paths
+ * the middleware actually runs on. This path was previously excluded from
+ * the matcher entirely (GET *and* POST/DELETE), which meant middleware never
+ * ran and the header check trusted a caller-supplied value outright: `curl
+ * -X POST -H "x-sovereign-user-role: platform:owner"` with no session
+ * passed. Listing the path here (public GET) while leaving it inside the
+ * matcher (gated everything else) closes that gap: GET is served below
+ * before the session gate runs, POST/DELETE fall through to it like any
+ * other authenticated route.
+ */
+const PUBLIC_INSTANCE_GET_PATHS: ReadonlySet<string> = new Set([
+  '/api/instance',
+  '/api/instance/logo',
+  '/api/instance/favicon',
+]);
+
 // Self-fetch address for the runtime's own Node-runtime API routes. The server
 // always listens on :3000 (scripts/dev.ts and the start script both pin it),
 // so localhost is reliable in every environment — unlike the public URL, which
@@ -276,6 +302,23 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       applySurfaceHeaders(headers, request.headers.get('user-agent'));
       return applyCsp(NextResponse.rewrite(target, { request: { headers } }));
     }
+  }
+
+  // Public, read-only instance branding/identity (see
+  // PUBLIC_INSTANCE_GET_PATHS above) — served before the session gate so it
+  // works on the login page and for pre-auth instance validation. POST/DELETE
+  // to these same paths are NOT included here and fall through to the normal
+  // authenticated flow below, which verifies a real session and injects the
+  // trustworthy `x-sovereign-user-role` header those handlers check.
+  if (
+    (request.method === 'GET' || request.method === 'HEAD') &&
+    PUBLIC_INSTANCE_GET_PATHS.has(pathname)
+  ) {
+    const headers = strippedRequestHeaders(request);
+    applySurfaceHeaders(headers, request.headers.get('user-agent'));
+    headers.set('x-nonce', nonce);
+    headers.set('content-security-policy', csp);
+    return applyCsp(NextResponse.next({ request: { headers } }));
   }
 
   const installedPlugins = getInstalledPlugins();
@@ -592,13 +635,23 @@ export const config = {
   // liveness probe (Docker HEALTHCHECK — must answer without a session), the
   // offline fallback, the PWA assets (manifest, service worker, Workbox/fallback
   // bundles, icons — must load without a session), and Next static assets.
+  //
+  // `api/instance` is deliberately NOT in this list, unlike the other
+  // "must load pre-session" entries: it has privileged POST/DELETE endpoints
+  // (`/api/instance/logo`, `/api/instance/favicon`) alongside their public
+  // GET, and matcher exclusion is all-or-nothing per path — it would also
+  // exempt those from the session gate, trust-header stripping, and CSP
+  // (this was a real, shipped bug — see PUBLIC_INSTANCE_GET_PATHS above and
+  // the fix that removed this exclusion). The path stays inside the matcher;
+  // GET is served early as a public exception inside the middleware body,
+  // POST/DELETE fall through to the normal authenticated flow.
   matcher: [
     // Exclude: auth pages, admin API (self-authenticated), public liveness probe,
-    // brand assets (must load on the login page pre-session), dynamic manifest
-    // (browsers fetch it before login for PWA install), offline fallback, PWA
-    // assets, Next.js static assets, and the signed-URL storage download route
-    // (RFC 0044 — self-authenticated by its HMAC-signed token, not a session;
-    // must work for a plain `<img src>`/direct fetch with no session cookie).
-    '/((?!login|register|forgot-password|reset-password|offline|api/auth|api/admin|api/health|api/instance|api/manifest|api/storage|manifest.json|sw.js|workbox-|fallback-|icons/|_next/static|_next/image|favicon.ico).*)',
+    // dynamic manifest (browsers fetch it before login for PWA install), offline
+    // fallback, PWA assets, Next.js static assets, and the signed-URL storage
+    // download route (RFC 0044 — self-authenticated by its HMAC-signed token,
+    // not a session; must work for a plain `<img src>`/direct fetch with no
+    // session cookie).
+    '/((?!login|register|forgot-password|reset-password|offline|api/auth|api/admin|api/health|api/manifest|api/storage|manifest.json|sw.js|workbox-|fallback-|icons/|_next/static|_next/image|favicon.ico).*)',
   ],
 };

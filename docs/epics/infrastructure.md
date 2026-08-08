@@ -692,6 +692,54 @@ strategy), RFC 0071 (SQLite at-rest encryption).
 
 ---
 
+#### 📋 0.20 — `libSQL`/`sqld` container spike (Research 0003, workstream 0009 leg 2)
+
+**Goal:** Stand up `sqld` (libSQL's server) as its own container and prototype
+`packages/db` talking to it, to answer the two questions Research 0003 left
+open before any production code depends on the answer: how libSQL's
+client — async even for local access — reconciles with `packages/db`'s
+existing dialect-agnostic async contract (`docs/architecture-rules.md:42-47`),
+and how RFC 0071's SQLCipher-based at-rest encryption
+(`openKeyedSqlite`, `packages/db/src/sqlite-encryption.ts:314`, and its
+`apps/auth` twin) maps onto a `sqld`-backed database. This leg's deliverable is
+a decision, written up as an RFC — not working platform code.
+
+**Deliverables:**
+
+- `sqld` added to `docker-compose.yml` and `docker-compose.prod.yml`,
+  reachable from `runtime`/`auth` on the internal network only (no host port),
+  following the same internal-only pattern as the `auth` service
+  (Task 0.6).
+- A throwaway prototype (not wired into `packages/db`'s real call sites)
+  exercising `@libsql/client` against the container, enough to observe the
+  async-contract and encryption questions empirically.
+- An RFC (next available number) that: supersedes Research 0003's "opt-in
+  third tier" recommendation with the mandatory, staged adoption locked in
+  workstream 0009's Decisions Locked table; specifies the driver shape for
+  `packages/db/src/client.ts` and `plugin-client.ts`, including whether
+  `Dialect` (`packages/db/src/dialect.ts:1`, currently `'sqlite' | 'postgres'`)
+  gains a third value or libSQL stays a connection-shape variant under
+  `'sqlite'`; and states explicitly how encrypted SQLite databases are
+  handled — native `sqld` encryption, a different mechanism, or an explicit
+  documented gap, but not silence.
+- Research 0003 updated to mark its SQLite row superseded, pointing at the new
+  RFC.
+
+**Dependencies:** None. Independent of Task 8.22.
+
+**SRS reference:** none yet — this task produces the RFC that will cite one.
+
+**Review checklist:**
+
+- `docker compose up` brings up `sqld` alongside the existing services with no
+  code change to `runtime`/`auth`.
+- The RFC explicitly resolves both open questions (async contract, RFC 0071
+  compatibility) — an RFC that ships without an encryption answer is not done.
+- The RFC's driver-shape decision is concrete enough that Task 8.23 can be
+  scoped from it without a further design conversation.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)

@@ -1,3 +1,23 @@
+/** Default offline-assertion lifetime: 14 days. */
+const OFFLINE_SESSION_TTL_DEFAULT = 14 * 24 * 60 * 60;
+/** Lower bound — below an hour the assertion is useless for real offline use. */
+const OFFLINE_SESSION_TTL_MIN = 60 * 60;
+/** Upper bound — 90 days is already a very wide revocation gap. */
+const OFFLINE_SESSION_TTL_MAX = 90 * 24 * 60 * 60;
+
+/**
+ * Parse `SOVEREIGN_OFFLINE_SESSION_TTL_SECONDS`, clamping to a sane range.
+ * Clamps rather than throws: an out-of-range value here should not stop an
+ * instance booting, and both bounds are safe (the minimum still revokes
+ * quickly, the maximum is still finite).
+ */
+export function parseOfflineSessionTtl(raw: string | undefined): number {
+  if (raw === undefined || raw.trim() === '') return OFFLINE_SESSION_TTL_DEFAULT;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return OFFLINE_SESSION_TTL_DEFAULT;
+  return Math.min(Math.max(Math.floor(parsed), OFFLINE_SESSION_TTL_MIN), OFFLINE_SESSION_TTL_MAX);
+}
+
 function required(name: string): string {
   const value = process.env[name];
   if (value === undefined || value.length === 0) {
@@ -23,6 +43,19 @@ export interface AuthEnv {
   baseUrl: string;
   /** Shared secret for runtime→auth admin API calls. No default — must be set. */
   adminKey: string;
+  /**
+   * How long an offline session assertion stays valid, in seconds (research
+   * 0012, epic task 1.21). This value **is the offline revocation gap**: a
+   * device that goes offline can keep rendering its cached shell for this long
+   * after the server revoked the session, because no server code runs to tell
+   * it otherwise. Deliberately explicit rather than implicit — shortening it
+   * trades offline reach for a tighter revocation window.
+   *
+   * Distinct from `session.cookieCache.maxAge` (300s), which bounds
+   * role-change staleness for *online* requests and must not be stretched to
+   * serve offline. Defaults to 14 days; clamped to 1 hour…90 days.
+   */
+  offlineSessionTtlSeconds: number;
   /**
    * Where the auth server reaches the runtime for server-to-server calls (the
    * reverse of SOVEREIGN_AUTH_URL) — currently used to record email-delivery-
@@ -109,6 +142,9 @@ export function getEnv(): AuthEnv {
     // the same as unset and fall back to the default.
     baseUrl,
     adminKey: required('SOVEREIGN_ADMIN_KEY'),
+    offlineSessionTtlSeconds: parseOfflineSessionTtl(
+      process.env.SOVEREIGN_OFFLINE_SESSION_TTL_SECONDS,
+    ),
     runtimeUrl: process.env.SOVEREIGN_RUNTIME_URL || defaultRuntimeUrl,
     trustedOrigins: (process.env.AUTH_TRUSTED_ORIGINS ?? '')
       .split(',')

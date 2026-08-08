@@ -10,6 +10,7 @@ import { getEnv } from './env';
 import { isValidTimezone } from './timezone';
 import { resolveInvitePluginGrants } from './invite-plugin-grants';
 import { isMailerConfigured, sendAuthPlatformEmail } from './platform-email';
+import { offlineSession } from './offline-session';
 import { readInviteOnlySetting, resolveInviteOnly } from './settings';
 import { runtimePublicUrl } from './runtime-url';
 
@@ -275,6 +276,11 @@ function buildOptions(): BetterAuthOptions {
           return role === 'platform:owner' || role === 'platform:admin';
         },
       }),
+      // Offline session assertion (research 0012, epic task 1.21). Signed with
+      // the jwt() plugin's keypair above — must stay after it in this array so
+      // the keypair is registered when this endpoint signs. See
+      // ./offline-session.ts for the threat model.
+      offlineSession(),
       nextCookies(),
     ],
   };

@@ -141,6 +141,35 @@ const withPWA = withPWAInit({
           cacheName: 'pages',
           expiration: { maxEntries: 32, maxAgeSeconds: 86400 },
           networkTimeoutSeconds: 4,
+          plugins: [
+            {
+              // Per-user cache partitioning (research 0012, epic task 2.31).
+              // Documents cached here are per-user SSR, so a cached entry must
+              // never be replayed for a different user on a shared device.
+              // Keying each entry by the *signature-verified* user id from the
+              // offline session assertion makes that structurally impossible
+              // rather than merely unlikely.
+              //
+              // This function is stringified into the generated sw.js by
+              // workbox-build, so it cannot import anything — it delegates to
+              // a global installed by runtime/worker/offline-session.ts, which
+              // IS properly bundled and is importScripts-ed ahead of any fetch
+              // event. If that global is somehow absent the request falls back
+              // to an explicitly anonymous key, never the bare URL: an
+              // unidentified request then gets a cache miss and goes to
+              // network, which cannot leak across users.
+              cacheKeyWillBeUsed: async ({ request }: { request: Request }) => {
+                const partition = (
+                  self as unknown as { __sovereignCacheKey?: (url: string) => Promise<string> }
+                ).__sovereignCacheKey;
+                if (!partition) {
+                  const separator = request.url.includes('?') ? '&' : '?';
+                  return `${request.url}${separator}__sv_u=anon`;
+                }
+                return partition(request.url);
+              },
+            },
+          ],
         },
       },
     ],

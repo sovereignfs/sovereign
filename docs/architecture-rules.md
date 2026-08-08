@@ -341,17 +341,41 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   production build (`next build`). The PWA assets and the `/offline` fallback
   are excluded from the middleware session gate (they must load without a
   session).
-- **Never switch the service worker's document/page cache entries
-  (`pages`, `pages-rsc`, `pages-rsc-prefetch`) to a stale-serving strategy**
-  (`StaleWhileRevalidate`/`CacheFirst`). Sovereign's pages are per-user SSR
-  (nav, plugin list, account state) — replaying a cached rendered shell risks
-  showing a stale or different user's authenticated content after
-  logout/login on a shared device. Keep these `NetworkFirst`. The one safe
-  lever for the iOS "white flash on standalone launch" (a real, largely
-  irreducible WebKit launch-image-to-first-paint gap for non-native-wrapped
-  PWAs) is bounding the worst case with `networkTimeoutSeconds` +
-  `fallbacks.document` — configured in `runtime/next.config.ts` — not caching
-  the document itself. See `docs/research/0011-ios-pwa-inspection-findings.md` #5.
+- **A cached authenticated document must never be served to a different user.**
+  Sovereign's pages are per-user SSR (nav, plugin list, account state), so
+  replaying a cached rendered shell for the wrong account — after logout/login
+  on a shared device, or on a device several people use — discloses one user's
+  content to another. This is the guarantee; the mechanism below is how it is
+  currently met, and may change as long as the guarantee does not.
+
+  **How it is met today** (research 0012, epic task 2.31): every entry in the
+  `pages` cache is keyed by the **signature-verified** user id from the offline
+  session assertion, via a `cacheKeyWillBeUsed` hook in
+  `runtime/next.config.ts` delegating to `runtime/worker/offline-session.ts`. A
+  request whose user cannot be established gets an explicitly anonymous key,
+  never the bare URL — so it misses and goes to network rather than colliding
+  with a real user's entry. The partition key must come from a verified
+  signature: if it could be forged, an attacker would simply name another user
+  and be handed that user's cached shell, which is the whole failure this
+  prevents. Sign-out deletes that user's entries and clears the assertion.
+
+  **This rule previously read "never switch these entries to a stale-serving
+  strategy, keep them `NetworkFirst`."** That was the right rule while cache
+  entries were unpartitioned — with no way to tell whose document a cached
+  entry was, not caching authenticated documents at all was the only safe
+  option. It was rewritten to state the requirement rather than the mechanism
+  because offline-first needs to serve a cached document with no network, and
+  nothing else can (Next.js's own `experimental.useOffline` explicitly does not
+  cover a full page load). Do not reintroduce a stale-serving strategy for
+  these entries **without** partitioning intact — the two changes are only safe
+  together.
+
+  Separately, the safe lever for the iOS "white flash on standalone launch" (a
+  real, largely irreducible WebKit launch-image-to-first-paint gap for
+  non-native-wrapped PWAs) remains bounding the worst case with
+  `networkTimeoutSeconds` + `fallbacks.document`, not loosening the above. See
+  `docs/research/0011-ios-pwa-inspection-findings.md` #5.
+
 - **Production images build from Next.js standalone output** (Task 0.5.2).
   Both `next.config.ts` set `output: 'standalone'` **and**
   `outputFileTracingRoot` to the monorepo root — required in a pnpm monorepo or

@@ -95,6 +95,28 @@
   color: var(--sv-color-text-muted);
 }
 
+/* Offline notice replacing the form (research 0012, epic task 2.32) — amber
+   like OfflineBanner, distinct from the neutral signed-out/account-deleted
+   notice above, since this one explains why the form isn't here at all. */
+.offlineNotice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sv-space-2);
+  margin-top: var(--sv-space-3);
+  padding: var(--sv-space-4);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-warning-surface);
+  border: 1px solid var(--sv-color-warning-border);
+  color: var(--sv-color-warning-text);
+}
+
+.offlineNoticeText {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-warning-text);
+}
+
 /* ── Form ────────────────────────────────────────────────────────────────── */
 
 .form {

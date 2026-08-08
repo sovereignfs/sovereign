@@ -3,7 +3,7 @@
 import { type FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Button, Input } from '@sovereignfs/ui';
+import { Button, Icon, Input, useIsOffline } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
 import { completeSignIn } from '@/src/complete-sign-in';
 import { ViewportHeightSync } from './ViewportHeightSync';
@@ -16,6 +16,13 @@ export function LoginForm({
   instanceName: string;
   instanceInitial: string;
 }) {
+  // A cached /login can render with no network at all (research 0012, epic
+  // task 2.32) — the SW's session-required fallback sends here when there is
+  // no valid offline assertion. A submitted form would just fail, so the form
+  // itself is swapped for an explanatory notice rather than left to fail per
+  // field. The session check that decides whether /login should render at all
+  // stays server-side in page.tsx; this only changes what's shown once it has.
+  const isOffline = useIsOffline();
   const searchParams = useSearchParams();
   const signedOut = searchParams.get('signedout') === '1';
   const accountDeleted = searchParams.get('accountDeleted') === '1';
@@ -75,54 +82,65 @@ export function LoginForm({
             <p className={styles.noticeText}>Your account has been deleted.</p>
           </div>
         ) : null}
-        <form className={styles.form} onSubmit={onSubmit}>
-          <label htmlFor="login-email" className={styles.field}>
-            <span className={styles.label}>Email</span>
-            <Input
-              id="login-email"
-              type="email"
-              autoComplete="email"
-              required
-              disabled={loading}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
-          <div className={styles.field}>
-            <div className={styles.passwordHeader}>
-              <label htmlFor="login-password" className={styles.label}>
-                Password
-              </label>
-              <Link href="/forgot-password" className={styles.forgotLink}>
-                Forgot password?
-              </Link>
-            </div>
-            <Input
-              id="login-password"
-              type="password"
-              autoComplete="current-password"
-              required
-              disabled={loading}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+        {isOffline ? (
+          <div className={styles.offlineNotice} role="status">
+            <Icon name="alert-triangle" size="sm" aria-hidden />
+            <p className={styles.offlineNoticeText}>
+              You&rsquo;re offline. Connect to the internet to sign in.
+            </p>
           </div>
-          {error ? <p className={styles.error}>{error}</p> : null}
-          <Button type="submit" disabled={loading} className={styles.submitLg}>
-            {loading ? 'Signing in…' : 'Sign in'}
-          </Button>
-        </form>
-        <div className={styles.divider} aria-hidden="true">
-          or
-        </div>
-        <Button
-          variant="secondary"
-          className={styles.passkeyBtn}
-          onClick={onPasskeySignIn}
-          disabled={passkeyLoading}
-        >
-          {passkeyLoading ? 'Waiting for passkey…' : 'Sign in with a passkey'}
-        </Button>
+        ) : (
+          <>
+            <form className={styles.form} onSubmit={onSubmit}>
+              <label htmlFor="login-email" className={styles.field}>
+                <span className={styles.label}>Email</span>
+                <Input
+                  id="login-email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  disabled={loading}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </label>
+              <div className={styles.field}>
+                <div className={styles.passwordHeader}>
+                  <label htmlFor="login-password" className={styles.label}>
+                    Password
+                  </label>
+                  <Link href="/forgot-password" className={styles.forgotLink}>
+                    Forgot password?
+                  </Link>
+                </div>
+                <Input
+                  id="login-password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  disabled={loading}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+              {error ? <p className={styles.error}>{error}</p> : null}
+              <Button type="submit" disabled={loading} className={styles.submitLg}>
+                {loading ? 'Signing in…' : 'Sign in'}
+              </Button>
+            </form>
+            <div className={styles.divider} aria-hidden="true">
+              or
+            </div>
+            <Button
+              variant="secondary"
+              className={styles.passkeyBtn}
+              onClick={onPasskeySignIn}
+              disabled={passkeyLoading}
+            >
+              {passkeyLoading ? 'Waiting for passkey…' : 'Sign in with a passkey'}
+            </Button>
+          </>
+        )}
         <p className={styles.footer}>
           New to {instanceName}?{' '}
           <Link className={styles.link} href="/register">

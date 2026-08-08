@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { PageContainer, useOverlaySecondRow } from '@sovereignfs/ui';
+import { OfflineGate, PageContainer, useOverlaySecondRow } from '@sovereignfs/ui';
 import styles from './account.module.css';
 import { ActiveNavLink } from './_components/ActiveNavLink';
 
@@ -47,7 +47,14 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
         <h1 className={styles.title}>Account</h1>
         {tabStrip}
       </header>
-      <PageContainer maxWidth="full">{children}</PageContainer>
+      <PageContainer maxWidth="full">
+        {/* Account is the platform's settings surface — security, billing,
+            and data pages reflect a point-in-time snapshot with no way to
+            signal a cached copy may be stale (research 0012, epic task 2.32).
+            Block the body, not the nav, so it's still clear where you are
+            while reconnecting. */}
+        <OfflineGate surfaceName="Account">{children}</OfflineGate>
+      </PageContainer>
     </div>
   );
 }

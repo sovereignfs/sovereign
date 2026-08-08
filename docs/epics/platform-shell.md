@@ -1091,7 +1091,7 @@ another on a shared device.
   (`runtime/middleware.ts:544-558`); read that comment before changing it.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
-#### 📋 2.32 — Cold-start offline launch flow and Offline page (Research 0012)
+#### ✅ 2.32 — Cold-start offline launch flow and Offline page (Research 0012)
 
 **Goal:** A returning user can cold-launch the installed PWA or native shell with
 zero connectivity and land on their home screen — and a user whose session has
@@ -1126,6 +1126,29 @@ expired gets a purposeful explanation instead of a login form that cannot work.
 - Verified on a real device per `docs/pwa-real-device-testing.md`, not only in
   DevTools offline mode.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+**Outcome:** The launch decision table has no separate application code — it's
+inherent to the SW mechanism task 2.31 already shipped, extended here with a
+`handlerDidError` plugin on the `pages` cache entry
+(`runtime/next.config.ts`) that checks `__sovereignHasOfflineSession()`
+(`runtime/worker/offline-session.ts`) and routes to the new
+`/offline/session-required` page when false, or delegates to next-pwa's
+existing generic `/offline` fallback when true. Verified end-to-end against
+the actual production build output — the precache manifest entry, the
+`handlerDidError` branch, and the `cacheKeyWillBeUsed` partitioning all
+confirmed present and correctly wired in the generated `sw.js`, not just
+type-checked in isolation.
+
+`useIsOffline` (extracted from `OfflineBanner`, which now consumes it) and
+`OfflineGate` — both new `@sovereignfs/ui` exports — cover the two remaining
+bullets: the login form swaps for a notice via `useIsOffline` when the
+cached `/login` page itself is viewed offline, and Console/Account wrap
+`{children}` in `OfflineGate` to block administrative content while offline.
+
+**Not yet done: the real-device review-checklist item.** This environment has
+no physical device access, so the DevTools-offline-mode checks above are
+verified but the explicit real-device pass per `docs/pwa-real-device-testing.md`
+is still outstanding — flagged in the PR rather than silently skipped.
 
 #### 📋 2.33 — Launcher and shell offline tier states (Research 0012)
 

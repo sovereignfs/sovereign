@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { PageContainer, useOverlaySecondRow } from '@sovereignfs/ui';
+import { OfflineGate, PageContainer, useOverlaySecondRow } from '@sovereignfs/ui';
 import styles from './console.module.css';
 import { ConsoleNavLink } from './_components/ConsoleNavLink';
 
@@ -60,7 +60,11 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
         {navStrip}
       </header>
       <PageContainer maxWidth="full" className={styles.body}>
-        {children}
+        {/* Console is an administrative surface — a cached page here reflects
+            a point-in-time snapshot with no way to signal it may be stale
+            (research 0012, epic task 2.32). Block the body, not the nav, so
+            it's still clear where you are while reconnecting. */}
+        <OfflineGate surfaceName="Console">{children}</OfflineGate>
       </PageContainer>
     </div>
   );

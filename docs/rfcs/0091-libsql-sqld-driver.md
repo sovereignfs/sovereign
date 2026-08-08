@@ -185,6 +185,46 @@ is a single existing boolean this codebase already checks
 (`resolvePluginEncryptionKey`/`checkEncryptionMarker`,
 `packages/db/src/sqlite-encryption.ts`), not new per-plugin flexibility.
 
+**Follow-up spike: does `sqld`'s encryption actually work?** Built
+`libsql-server` locally from source with `--build-arg ENABLE_FEATURES=encryption`
+(the Dockerfile already has this arg; no upstream code change needed) and tested
+it directly rather than relying on the "experimental" label alone:
+
+- Startup banner correctly reports `encryption at rest: enabled` when
+  `SQLD_ENCRYPTION_KEY` is set.
+- Wrote a canary string through the client, confirmed round-trip read, then
+  restarted the container with the **same** key — data read back correctly.
+  Restarted with the **wrong** key — `sqld` refused to start with a clear
+  `Error code 26: File opened that is not a database file`, rather than
+  serving garbage or corrupting anything. Fails safely.
+- Searched every file on disk (binary-safe `grep -a`, since a naive `grep`
+  silently skips files it detects as binary — a real methodology bug this
+  spike caught by cross-checking against a plaintext baseline, which showed
+  the canary present in `data-wal`/`wallog` when unencrypted, and absent from
+  every file — including those same `data-wal`/`wallog` — when encrypted).
+  The canary and shorter substrings of it were genuinely absent everywhere in
+  the encrypted case.
+
+**So the feature is not broken for the basic case** — mechanically, a single
+key set once, no rekeying, no `bottomless` S3 replication, works correctly and
+fails safely. This softens "no viable equivalent" from the earlier draft: it's
+not vaporware. But it doesn't overturn the carve-out recommendation, for three
+reasons that don't require the feature to be broken:
+
+1. **No published image ships it.** Using it means building and maintaining
+   our own `libsql-server` image from source with a non-default Cargo feature,
+   tracking upstream releases ourselves — real, ongoing operational cost,
+   not a one-time flip.
+2. **No HMAC.** The cipher is `Aes256Cbc` with no message authentication
+   (`libsql-sys/src/connection.rs`) — unlike SQLCipher, which authenticates
+   by default. This is a permanent design property, not something that
+   matures with time.
+3. **This spike is not a security audit.** One afternoon of black-box testing
+   against the single-key case is not the bar RFC 0071 was held to (three
+   hardening passes, a production incident, ongoing scrutiny). Treating a
+   quick "it round-trips" as equivalent confidence would undersell exactly
+   the caution CLAUDE.md asks for in this area.
+
 **Cost, stated plainly:** `packages/db`'s SQLite path keeps two drivers
 (`better-sqlite3-multiple-ciphers` for the encrypted case, `@libsql/client` for
 everything else) instead of fully retiring `better-sqlite3`. That's real,
@@ -219,6 +259,16 @@ just merges), a follow-up leg can retire the `better-sqlite3` path entirely.
   would hold the async-contract and driver-shape work (both fully resolved,
   see above) hostage to a dateless external timeline for no reason — those
   parts don't touch encryption at all.
+- **Self-build a `sqld` image with `--build-arg ENABLE_FEATURES=encryption`
+  instead of a carve-out**, using the confirmed-working feature from the spike
+  above for every database, encrypted or not — no `better-sqlite3` path at
+  all. Rejected for now: this trades a self-contained, well-tested dependency
+  (`better-sqlite3-multiple-ciphers`, already in the Docker image, already
+  hardened over three passes) for an unpublished custom build we'd own the
+  maintenance of, using a no-HMAC cipher, validated by one afternoon of
+  black-box testing rather than a real audit. Worth revisiting once `sqld`
+  ships this in a published image and it's had real production exposure
+  elsewhere — not something to build our own supply chain around today.
 - **Accept a guarantee downgrade instead of a carve-out**, matching Postgres's
   existing "disk + operator-managed encryption, startup warning" precedent for
   every SQLite database, encrypted or not. Rejected: this is a real regression
@@ -241,6 +291,12 @@ just merges), a follow-up leg can retire the `better-sqlite3` path entirely.
   — leg 3's call, not this RFC's.
 - Timeline for retiring the carve-out once `sqld`'s encryption-at-rest matures —
   not urgent; revisit when issue #1756 actually closes, not on a schedule.
+- Whether to post this spike's findings (the working build flag, the round-trip
+  and wrong-key results) as a comment on
+  [tursodatabase/libsql#1756](https://github.com/tursodatabase/libsql/issues/1756).
+  Independent of the carve-out decision — this is "share a reproduction that
+  might help an idle upstream issue," not something blocking or blocked by
+  leg 3.
 
 ## Adoption path
 
@@ -259,7 +315,8 @@ private, unpublished packages.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                       |
-| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0.1     | August 2026 | Initial draft from workstream 0009 leg 2's live spike against `sqld` 0.24.33.                                                                                                                                                                                |
-| 0.2     | August 2026 | Added an explicit recommendation for the encryption question: a carve-out scoped to RFC 0071's existing key/`requireEncryption` boundary. Still needs kasunben's sign-off — a security-guarantee tradeoff, not an engineering call this RFC finalizes alone. |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft from workstream 0009 leg 2's live spike against `sqld` 0.24.33.                                                                                                                                                                                                                                                                                                                                                                                             |
+| 0.2     | August 2026 | Added an explicit recommendation for the encryption question: a carve-out scoped to RFC 0071's existing key/`requireEncryption` boundary. Still needs kasunben's sign-off — a security-guarantee tradeoff, not an engineering call this RFC finalizes alone.                                                                                                                                                                                                              |
+| 0.3     | August 2026 | Follow-up spike: built `libsql-server` from source with `--build-arg ENABLE_FEATURES=encryption` and tested it directly. The feature works correctly for the basic single-key case (round-trips, fails safely on a wrong key, no plaintext leakage in the main file, WAL, or replication log) — softens "no viable equivalent" to "no published/audited equivalent." Carve-out recommendation unchanged; added self-built-image as a considered-and-rejected alternative. |

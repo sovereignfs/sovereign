@@ -3,7 +3,7 @@
 import { type FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Button, Input } from '@sovereignfs/ui';
+import { Button, Input, LegalLinks } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
 import { completeSignIn } from '@/src/complete-sign-in';
 import { ViewportHeightSync } from './ViewportHeightSync';
@@ -130,6 +130,7 @@ export function LoginForm({
           </Link>
         </p>
       </div>
+      <LegalLinks />
     </main>
   );
 }

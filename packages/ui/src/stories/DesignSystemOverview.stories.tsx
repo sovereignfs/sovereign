@@ -56,6 +56,7 @@ import {
 } from '../components/Table/Table';
 import { Alert } from '../components/Alert/Alert';
 import { Breadcrumb } from '../components/Breadcrumb/Breadcrumb';
+import { LegalLinks } from '../components/LegalLinks/LegalLinks';
 import { Pagination } from '../components/Pagination/Pagination';
 import { Kbd } from '../components/Kbd/Kbd';
 import { Accordion } from '../components/Accordion/Accordion';
@@ -2441,6 +2442,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   { label: 'sovereign-tasks' },
                 ]}
               />
+            </ComponentCard>
+
+            {/* LegalLinks */}
+            <ComponentCard
+              name="LegalLinks"
+              importLine="import { LegalLinks } from '@sovereignfs/ui';"
+              usage="Privacy Policy / Terms of Service link row for standalone auth pages (login, register, forgot/reset password). Pass renderLink to keep navigation client-side if ever mounted inside an SPA-like shell."
+            >
+              <LegalLinks />
             </ComponentCard>
 
             {/* Pagination */}

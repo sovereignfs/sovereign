@@ -327,6 +327,7 @@ macOS first. Out of scope for v1; the approach is decided (see CLAUDE.md
 | ------- | ---------------------------------------------------- | ------ | --------------------------------------------------------------------------------------- |
 | 0.1.0   | Desktop app shell, macOS-first (RFC 0038)            | ✅     | [17.1](docs/epics/desktop.md#-171--sovereign-desktop--tauri-shell-scaffold-macos-first) |
 | 0.2.0   | Desktop: system tray and OS notifications (RFC 0038) | ✅     | [17.2](docs/epics/desktop.md#-172--system-tray-and-os-notifications)                    |
+| 0.3.0   | Desktop: deep link scheme `sovereign://` (RFC 0038)  | ✅     | [17.3](docs/epics/desktop.md#-173--deep-link-scheme-sovereign)                          |
 
 ---
 
@@ -334,7 +335,6 @@ macOS first. Out of scope for v1; the approach is decided (see CLAUDE.md
 
 | Version | Task                                                      | Status | Epic task                                                                 |
 | ------- | --------------------------------------------------------- | ------ | ------------------------------------------------------------------------- |
-| —       | Desktop: deep link scheme `sovereign://` (RFC 0038)       | 📋     | [17.3](docs/epics/desktop.md#-173--deep-link-scheme-sovereign)            |
 | —       | Desktop: keychain credential storage (RFC 0038)           | 📋     | [17.4](docs/epics/desktop.md#-174--keychain-credential-storage)           |
 | —       | Desktop: auto-updater (RFC 0038)                          | 📋     | [17.5](docs/epics/desktop.md#-175--auto-updater)                          |
 | —       | Desktop: Mac App Store distribution (RFC 0038)            | 📋     | [17.6](docs/epics/desktop.md#-176--mac-app-store-distribution)            |

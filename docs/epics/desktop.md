@@ -103,18 +103,44 @@ is closed.
 - `sdk.device.nativeNotifications.show({ title, body })` triggers a native macOS notification
 - Web Notifications API fallback still works in the browser
 
-#### 📋 17.3 — Deep link scheme (`sovereign://`)
+#### ✅ 17.3 — Deep link scheme (`sovereign://`)
+
+> **Resolution happens in TypeScript, not Rust — Rust only relays the raw
+> URL.** The plugin's own `deep-link://new-url` event is undocumented-race-y
+> on macOS (it can arrive slightly after this app's `setup()` runs, so a
+> Rust-side handler registered there can still lose a cold-launch race
+> against the JS boot path redirecting to a stored instance first). Rather
+> than fighting that race, `src-tauri/src/lib.rs` unconditionally forces the
+> webview back to the local bundled page with the raw URL attached as
+> `?deeplink=` — on cold launch (via the plugin's `get_current()`, populated
+> from CLI args on Windows/Linux before this app's own `setup()` runs) and on
+> every subsequent open while running (via `on_open_url`). `main.ts` /
+> `src/deep-link.ts` then do the actual host-matching against the stored
+> instance list — the same page that already owns that list, rather than
+> duplicating it in Rust. No `@tauri-apps/plugin-deep-link` JS dependency and
+> no new capability/permission grant were needed as a result, since no
+> JS-side plugin command is ever called.
 
 **Goal:** Register a `sovereign://` URL scheme so links in emails and browsers
 open the desktop app and navigate to the correct instance and path.
 
 **Deliverables:**
 
-- `tauri-plugin-deep-link` integration — registers `sovereign://` on macOS,
-  Windows, and Linux
-- URL parsing: `sovereign://<instance-host>/<path>` → validate instance is in
-  stored list → load WebView at `https://<instance-host>/<path>`
-- Unknown instance → prompt user to add it via onboarding flow
+- `tauri-plugin-deep-link` (Rust-side only) — registers `sovereign://` via
+  `tauri.conf.json`'s `plugins.deep-link.desktop.schemes` (verified against
+  the built `.app`'s `Info.plist` → `CFBundleURLTypes`)
+- URL parsing (`src/deep-link.ts`'s `resolveDeepLink`): `sovereign://<instance-host>/<path>`
+  → validate instance is in stored list by hostname → load WebView at the
+  matching stored instance's origin + path
+- Unknown instance → prompt user to add it via onboarding flow, pre-filled
+  with the deep link's host, and resume to the intended path once added
+
+**Known limitation:** Windows/Linux have no single-instance plugin yet, so a
+`sovereign://` click while the app is already running opens a second OS
+process rather than routing to the existing window (the deep-link plugin's
+own documented behavior without `tauri-plugin-single-instance`). A natural
+follow-up if it proves annoying in practice; not blocking since macOS ships
+first.
 
 **SRS reference:** §3.19
 

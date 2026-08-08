@@ -85,12 +85,16 @@ Settled by research 0012. Not to be reopened mid-execution.
 
 **Deliberately still open**, each an explicit gate below:
 
-| Open decision                                          | Resolved by | Owner    |
-| ------------------------------------------------------ | ----------- | -------- |
-| Escrow and recovery for `device-only` data             | Task 8.21   | kasunben |
-| Whether `device-only` needs a different delivery model | Leg 3 gate  | Platform |
-| Whether key strictness is manifest-declared            | Task 8.21   | Platform |
-| Whether revocation should reach device-only data       | Task 8.21   | kasunben |
+| Open decision                                    | Resolved by | Owner    |
+| ------------------------------------------------ | ----------- | -------- |
+| Escrow and recovery for `device-only` data       | Task 8.21   | kasunben |
+| Whether key strictness is manifest-declared      | Task 8.21   | Platform |
+| Whether revocation should reach device-only data | Task 8.21   | kasunben |
+
+**Closed since the initial draft:** whether `device-only` needs a different
+delivery model. Workstream 0003's leg 4 outcome answers it — the bridge reaches
+the remote instance origin on both platforms, and native storage is not
+origin-partitioned. See leg 3 detail.
 
 ## Prerequisites
 
@@ -107,7 +111,7 @@ Settled by research 0012. Not to be reopened mid-execution.
 | --- | --------------------------- | ----------------------- | -------- | ------- | ------------------------------------------------------------------------------- |
 | 1   | Record correction           | —                       | —        | No      | The four documentation-drift items are fixed; the record matches reality.       |
 | 2   | Cold-start offline shell    | 1.21, 2.31, 2.32        | 1, 2     | No      | A cold launch with no connectivity reaches the home screen or the Offline page. |
-| 3   | Tiered plugin offline model | 3.36, 3.37, 2.33        | 2, 3     | **Yes** | Tiers ship; the `device-only` delivery-model question is resolved either way.   |
+| 3   | Tiered plugin offline model | 3.36, 3.37, 2.33        | 2, 3     | No      | Tiers ship; `device-only` availability follows bridge capability.               |
 | 4   | Encryption and device auth  | 8.21, 20.13, 8.20, 1.22 | 1, 8, 20 | **Yes** | Offline data is encrypted in both tiers; `device-only` unlocks by device auth.  |
 | 5   | Background sync             | 3.38                    | 3        | No      | An offline write reaches the server after reconnect, exactly once.              |
 
@@ -139,8 +143,9 @@ a document whose recorded status is already wrong compounds the error, and the
    the revert; git history shows this flip-flopped four times.
 4. RFC 0082 §4 — "offline… is entirely the web stack… nothing about offline is
    native-specific, and that is the payoff." A `device-only` tier backed by
-   native SQLite contradicts this. Add a forward-reference rather than rewriting
-   the section, since leg 3 may reopen it.
+   native SQLite contradicts this. Correct it to say offline _delivery_ is the
+   web stack but `device-only` _storage_ is native — that is the precise split
+   workstream 0003's leg 4 outcome established, and leg 3 no longer reopens it.
 
 **Do not proceed if:** any correction turns out to be a live disagreement rather
 than drift — e.g. if RFC 0074's `/` claim reflects intended behaviour reverted in
@@ -167,16 +172,36 @@ Flagging `/` has already been added and reverted twice; read the comment at
 shared-device case. That is the entire reason the current rule exists, and
 shipping a weaker guarantee is worse than shipping no cold-start offline.
 
-### Leg 3 — Tiered plugin offline model · **GATE**
+### Leg 3 — Tiered plugin offline model
 
 **Epic tasks, in execution order:** 3.36 → 3.37 → 2.33.
 
-**Why this is a gate:** it must resolve whether `device-only` can use the same
-thin-shell delivery model as everything else. Origin isolation means a bundled
-`capacitor://` boot page cannot read storage written by the remote
-`https://instance` origin — so if `device-only` data must survive without the
-instance being reachable at launch, that tier may need a genuinely different
-delivery path, which changes leg 4's size materially and reopens RFC 0082 §4.
+**This leg was originally a gate; it is not one.** The concern was that origin
+isolation would force `device-only` onto a different delivery model — a bundled
+`capacitor://` page cannot read web storage written by the remote
+`https://instance` origin. Workstream 0003's leg 4 outcome already answers this
+empirically, verified on both iOS Simulator and Android Emulator (2026-08):
+
+- A narrow `__SOVEREIGN_BRIDGE__` is injected **scoped to the runtime-chosen
+  active instance origin**, and `haptics.impact` / `notifications.native`
+  round-trip to `{status:'ok'}` **from the loaded remote instance page**.
+- Native storage is **not web storage**. It lives in the app sandbox and is
+  reached through that same bridge. Origin partitioning governs
+  IndexedDB / OPFS / Cache API — not it.
+
+So `device-only` data reached via `secureStorage` has no origin-isolation
+problem, and needs no separate delivery path on that account. RFC 0082 §4's
+claim that offline is "entirely the web stack" is still wrong — `device-only`
+depends on a native capability — but it is wrong about _storage_, not about
+_delivery_.
+
+**What remains is a verification item, not a design fork**, and it belongs to
+leg 2: confirm the service-worker-cached shell cold-starts inside the Capacitor
+WebView, not only in a browser PWA. That is the same question for every tier,
+so it is not `device-only`'s to answer. Fold it into epic task 20.10 (the
+WKWebView spike, already ⏳ in progress) as one added check — write via the
+bridge to native storage from the remote-origin page, kill the network,
+relaunch, read it back. Research 0008's method already covers this shape.
 
 **Technical notes:** `OPFSCoopSyncVFS` (wa-sqlite) is the current web pick and
 does **not** require COOP/COEP, unlike the official `sqlite-wasm` OPFS build —
@@ -186,16 +211,43 @@ in-memory JS state across a background/foreground cycle while Android preserves
 it: flush to storage as data is produced, never buffer in memory. Task 3.36 is a
 **breaking** manifest change — one major bump for the leg, plus the upgrade note.
 
-**Do not proceed if:** the delivery-model answer is "different path" — stop,
-re-scope leg 4, and confirm with the goal owner before continuing.
+**Do not proceed if:** the 20.10 check shows native storage is _not_ reachable
+from the remote-origin document after all. That would contradict workstream
+0003's verified result, so treat it as a finding worth escalating rather than
+routing around.
 
-### Leg 4 — Encryption and device auth · **GATE**
+### Leg 4 — Encryption and device auth · **GATE** · cross-repo
 
-**Epic tasks, in execution order:** 8.21 → 20.13 → 8.20 → 1.22.
+**Epic tasks, in execution order:** 8.21 → 20.13 → 8.20 → 1.22, with the two
+native transport halves owned by the shell repos (see split below).
 
 **Blocked on:** the escrow decision. Task 8.21 leads the leg precisely because
 everything after it branches on the answer. Do not start this leg before the
 decision is made.
+
+**Repo split** — this leg spans three repositories, following the pattern
+workstream 0003 used for the device bridge:
+
+| Piece                                                                         | Repo                | Task                            |
+| ----------------------------------------------------------------------------- | ------------------- | ------------------------------- |
+| `device:secureStorage` permission, bridge protocol, encrypted-store semantics | this repo           | 20.13                           |
+| Tauri transport — keychain-backed `secureStorage`                             | `sovereign-desktop` | 17.4 / workstream 0003 leg 3b   |
+| Capacitor transport — SQLCipher + Keychain/Keystore                           | `sovereign-mobile`  | extends 20.3's bridge transport |
+| Encryption at rest, WebAuthn PRF on web, escrow                               | this repo           | 8.20, 1.22, 8.21                |
+
+The platform-side pieces (protocol, permission, encryption, PRF) must land first
+— the shells implement against a published `@sovereignfs/bridge` contract, not
+the other way around. The two native transports are then independent of each
+other and can run in parallel in their own repos.
+
+**`secureStorage` already exists as a planned capability — do not restate it.**
+RFC 0083 §8 defines it, epic task **17.4** covers the Tauri transport, and
+workstream 0003 **leg 3b** tracks it as not started, parked because "there is no
+plugin-facing urgency driving this leg — pick it up when that consumer is ready
+to be built, or sooner if a concrete need emerges." Research 0012's `device-only`
+tier **is** that concrete need. Task 20.13 adds only what is genuinely new: the
+plugin-facing permission, the encrypted-store semantics (SQLCipher, user-presence
+keys), and the Capacitor transport. It does not duplicate 17.4.
 
 **Technical notes:** passkeys are already deployed
 (`apps/auth/src/auth.ts:231`), so WebAuthn PRF builds on live infrastructure.
@@ -204,7 +256,10 @@ passkeys work — the case that matters. Native SQLite via
 `@capacitor-community/sqlite` provides SQLCipher, so the work is key custody and
 unlock UX, not cryptography. Current device permissions are only
 `device:haptics` and `device:notifications`
-(`packages/manifest/src/schema.ts:37-38`).
+(`packages/manifest/src/schema.ts:37-38`). Note workstream 0003's standing rule:
+a shell's `capabilities` list must reflect what that build actually supports —
+advertising a capability the transport does not implement is worse than omitting
+it, because the caller's `unavailable` path never runs.
 
 **Do not proceed if:** the escrow decision is still open, or the chosen option
 needs a user-held recovery secret the design has no home for.
@@ -236,6 +291,10 @@ sync; if the design drifts there, stop and revisit.
 - **Storage eviction is not hypothetical.** WebKit deletes script-created data
   after seven days without interaction for non-installed origins. Only native
   storage escapes this.
+- **Leg 4 spans three repositories**, so the platform-side contract must land
+  before either shell implements against it, and a shell must never advertise a
+  `capabilities` entry its build does not honor. Workstream 0003 hit both of
+  these; its leg 3/4 notes are the reference.
 - **This is the third shape change to the manifest `offline` field** (object →
   boolean → enum). Each costs plugin authors. Get it right and carry the note.
 - **Encryption surfaces here have a track record of looking more finished than

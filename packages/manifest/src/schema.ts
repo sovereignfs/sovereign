@@ -52,7 +52,6 @@ export const manifestDatabaseSchema = z.union([
   z
     .object({
       isolation: z.enum(['shared', 'isolated']).optional(),
-      dialect: z.enum(['sqlite']).optional(),
       /**
        * RFC 0071 — force SQLite at-rest encryption on for this plugin's own
        * isolated database, regardless of the instance-wide
@@ -68,7 +67,6 @@ export const manifestDatabaseSchema = z.union([
 ]);
 
 export type ManifestDatabase = z.infer<typeof manifestDatabaseSchema>;
-export type ManifestDatabaseDialect = 'sqlite';
 export type ManifestDatabaseIsolation = 'shared' | 'isolated';
 
 const providerConfigFieldKeySchema = z
@@ -104,18 +102,6 @@ export function manifestDatabaseIsolation(database: unknown): ManifestDatabaseIs
     return 'isolated';
   }
   return 'shared';
-}
-
-export function manifestDatabaseDialect(database: unknown): ManifestDatabaseDialect | undefined {
-  if (
-    typeof database === 'object' &&
-    database !== null &&
-    'dialect' in database &&
-    database.dialect === 'sqlite'
-  ) {
-    return 'sqlite';
-  }
-  return undefined;
 }
 
 /**
@@ -649,24 +635,6 @@ export const manifestSchema = manifestObjectSchema
         '"shared" plugin\'s tables live inside the platform database and cannot ' +
         'independently demand at-rest encryption (RFC 0071)',
       path: ['database', 'requireEncryption'],
-    },
-  )
-  .refine(
-    (m) => {
-      const db = m.database;
-      if (typeof db !== 'object' || db === null) return true;
-      if (db.requireEncryption !== true) return true;
-      return db.dialect === 'sqlite';
-    },
-    {
-      message:
-        'database.requireEncryption requires database.dialect to be "sqlite" — ' +
-        "omitting `dialect` lets the platform's own dialect choice silently decide " +
-        'whether this is enforced (throws if the key is missing) or merely advisory ' +
-        '(warns, on Postgres — there is no SQLCipher equivalent there). Pin the ' +
-        'dialect explicitly so the manifest alone guarantees which one applies ' +
-        '(RFC 0071).',
-      path: ['database', 'dialect'],
     },
   )
   .refine((m) => !m.permissions.includes('offline:write') || m.offline === true, {

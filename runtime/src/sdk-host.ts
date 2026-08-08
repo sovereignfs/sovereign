@@ -44,11 +44,7 @@ import {
 } from '@sovereignfs/db';
 import { getPlatformDb } from './db';
 import { createMailer } from '@sovereignfs/mailer';
-import {
-  manifestDatabaseDialect,
-  manifestDatabaseIsolation,
-  manifestRequiresEncryption,
-} from '@sovereignfs/manifest';
+import { manifestDatabaseIsolation, manifestRequiresEncryption } from '@sovereignfs/manifest';
 import { ConsentRequiredError, provideHost } from '@sovereignfs/sdk';
 import { registry } from '../generated/registry';
 import type {
@@ -263,14 +259,9 @@ provideHost({
       if (effectivePluginId) {
         const manifest = registry.find((m) => m.id === effectivePluginId);
         if (manifest && manifestDatabaseIsolation(manifest.database) === 'isolated') {
-          const pluginDialect = manifestDatabaseDialect(manifest.database);
           // Provision on first use (idempotent), then return the dedicated client.
-          await provisionPluginDb(effectivePluginId, pluginDialect);
-          return getPluginDb(
-            effectivePluginId,
-            pluginDialect,
-            manifestRequiresEncryption(manifest.database),
-          ).db;
+          await provisionPluginDb(effectivePluginId);
+          return getPluginDb(effectivePluginId, manifestRequiresEncryption(manifest.database)).db;
         }
       }
       return (await getPlatformDb()).db;

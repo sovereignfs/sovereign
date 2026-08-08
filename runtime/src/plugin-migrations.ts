@@ -13,11 +13,7 @@ import {
   runPluginMigrations,
   type PluginDb,
 } from '@sovereignfs/db';
-import {
-  manifestDatabaseDialect,
-  manifestDatabaseIsolation,
-  manifestRequiresEncryption,
-} from '@sovereignfs/manifest';
+import { manifestDatabaseIsolation, manifestRequiresEncryption } from '@sovereignfs/manifest';
 import { registry } from '../generated/registry';
 import { recordWarnings } from './plugin-compat';
 
@@ -137,13 +133,10 @@ export async function runAllPluginMigrations(): Promise<void> {
 
     const dirName = idToDir.get(manifest.id) ?? manifest.id;
     const pluginDir = `plugins/${dirName}`;
-    const pluginDialect = isIsolated
-      ? (manifestDatabaseDialect(manifest.database) ?? platformDialect)
-      : platformDialect;
 
     if (isIsolated) {
       try {
-        assertPluginEncryptionRequirement(manifest.id, manifest.database, pluginDialect);
+        assertPluginEncryptionRequirement(manifest.id, manifest.database, platformDialect);
       } catch (err) {
         // assertPluginEncryptionRequirement no longer throws for "key not
         // configured" (task 8.15 softened that to a warning — the plugin now
@@ -158,17 +151,13 @@ export async function runAllPluginMigrations(): Promise<void> {
       }
     }
 
-    const folder = pluginMigrationsFolder(pluginDir, pluginDialect);
+    const folder = pluginMigrationsFolder(pluginDir, platformDialect);
     if (!existsSync(folder)) continue;
 
     try {
       if (isIsolated) {
-        await provisionPluginDb(manifest.id, pluginDialect);
-        const pluginDb = getPluginDb(
-          manifest.id,
-          pluginDialect,
-          manifestRequiresEncryption(manifest.database),
-        );
+        await provisionPluginDb(manifest.id);
+        const pluginDb = getPluginDb(manifest.id, manifestRequiresEncryption(manifest.database));
         await runPluginMigrations(pluginDb, folder);
       } else {
         // PlatformDb is structurally identical to PluginDb ({ dialect, db }

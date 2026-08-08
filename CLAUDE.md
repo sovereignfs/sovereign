@@ -126,9 +126,10 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.64.3`**
-  (three ad-hoc patch hotfixes since `0.64.0` — a `nanoid` dependency bump for
-  GHSA-2v37-7h3g-55p8, allowing the custom worker chunk through the session
+  to `1.0.0` marks the public release.** The current version is **`0.65.0`**
+  (three ad-hoc patch hotfixes took it from `0.64.0` to `0.64.3` — a `nanoid`
+  dependency bump for GHSA-2v37-7h3g-55p8, allowing the custom worker chunk
+  through the session
   gate, and pointing e2e auth-page specs at the runtime instead of the auth
   server) (all pre-v1 roadmap tasks through slot `0.13.0` complete; subsequent minor
   bumps track post-slot tasks such as the admin-managed external provider config,
@@ -183,7 +184,19 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   public wiki); it requires `shell: "minimal"` explicitly and is mutually
   exclusive with `adminOnly`, a paid `monetization.model`, and `publicRoutes`,
   and
-  most recently the 2026-08-06 patch bundling silent browser-timezone
+  most recently workstream 0008 leg 2a (research 0012, epic tasks 1.21 + 2.31)
+  — the offline session assertion and per-user service-worker cache
+  partitioning that make cold-start offline safe to build on: the auth server
+  signs a short-lived, asymmetric assertion (reusing the `jwt()` plugin's
+  keypair, no new key material) that the service worker verifies with
+  WebCrypto to key the `pages` cache per user, so a cached authenticated
+  document can never be replayed for a different user on a shared device —
+  rewriting `docs/architecture-rules.md`'s former "never stale-serve, keep
+  `NetworkFirst`" rule to state that requirement rather than the mechanism
+  that used to be the only way to meet it. `SOVEREIGN_OFFLINE_SESSION_TTL_SECONDS`
+  names the offline revocation gap explicitly (14-day default, clamped to
+  1 hour–90 days). Nothing yet consumes the partitioned cache to actually serve
+  a document offline — that is workstream 0008 leg 2b; before that the 2026-08-06 patch bundling silent browser-timezone
   capture at registration (epic task 1.20) with a fix giving page content
   breathing room below the offline banner; before that the 2026-08-02 fix
   stripping inbound `x-sovereign-user-*`/`x-sovereign-plugin-id` headers
@@ -675,7 +688,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 ## Status
 
-Current platform version: **`0.64.3`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
+Current platform version: **`0.65.0`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
 
 For the full task history and current roadmap position, see:
 

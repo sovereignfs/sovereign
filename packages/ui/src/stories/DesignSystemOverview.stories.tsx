@@ -58,6 +58,7 @@ import {
 import { Alert } from '../components/Alert/Alert';
 import { Breadcrumb } from '../components/Breadcrumb/Breadcrumb';
 import { LegalLinks } from '../components/LegalLinks/LegalLinks';
+import { Markdown } from '../components/Markdown/Markdown';
 import { Pagination } from '../components/Pagination/Pagination';
 import { Kbd } from '../components/Kbd/Kbd';
 import { Accordion } from '../components/Accordion/Accordion';
@@ -2465,6 +2466,19 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Privacy Policy / Terms of Service link row for standalone auth pages (login, register, forgot/reset password). Pass renderLink to keep navigation client-side if ever mounted inside an SPA-like shell."
             >
               <LegalLinks />
+            </ComponentCard>
+
+            {/* Markdown */}
+            <ComponentCard
+              name="Markdown"
+              importLine="import { Markdown } from '@sovereignfs/ui';"
+              usage="Renders a constrained markdown subset (headings, paragraphs, bold/italic/code, links, lists, blockquotes) as Typography-based React elements — no HTML string injection. Built for first-party long-form content pages (privacy policy, terms of service), not arbitrary or user-supplied markdown."
+            >
+              <Markdown
+                content={
+                  '## Heading\n\nA paragraph with **bold** and a [link](/privacy).\n\n- One\n- Two'
+                }
+              />
             </ComponentCard>
 
             {/* Pagination */}

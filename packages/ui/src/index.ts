@@ -70,6 +70,8 @@ export type {
 } from './components/MobileAppsDrawer/MobileAppsDrawer';
 export { EmptyState } from './components/EmptyState/EmptyState';
 export type { EmptyStateProps } from './components/EmptyState/EmptyState';
+export { OfflineGate } from './components/OfflineGate/OfflineGate';
+export type { OfflineGateProps } from './components/OfflineGate/OfflineGate';
 export { Spinner } from './components/Spinner/Spinner';
 export type { SpinnerProps } from './components/Spinner/Spinner';
 export { Avatar } from './components/Avatar/Avatar';
@@ -195,6 +197,7 @@ export {
   useDoubleTapHandler,
   useSingleOrDoubleTap,
   useIsMobile,
+  useIsOffline,
   useCommitOnEnterOrBlur,
   useSwipeReveal,
   useSnapCarousel,

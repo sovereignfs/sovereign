@@ -1,19 +1,21 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Icon } from '@sovereignfs/ui';
+import { Icon, useIsOffline } from '@sovereignfs/ui';
 import styles from './OfflineBanner.module.css';
 
 type Status = 'online' | 'offline' | 'reconnected';
 
 export function OfflineBanner() {
-  // Always initialise to 'online' so the server-rendered HTML matches the
-  // first client render. navigator.onLine is checked in useEffect (client-only)
-  // to pick up the case where the user loads the page while already offline
-  // (e.g. from the service-worker cache). The imperceptible one-frame delay
-  // before the banner appears is preferable to a hydration mismatch.
+  // Connectivity detection itself lives in @sovereignfs/ui's useIsOffline
+  // (research 0012, epic task 2.32 — extracted so Console/Account/login share
+  // the same source instead of re-deriving it slightly differently). This
+  // component layers its own extra state on top: a 3s "Back online" flash on
+  // reconnect that a boolean alone can't express.
+  const isOffline = useIsOffline();
   const [status, setStatus] = useState<Status>('online');
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasOffline = useRef(false);
 
   // Reserves space for the banner in the shell's own content padding
   // (shell.module.css reads this same variable) so the banner doesn't just
@@ -39,31 +41,22 @@ export function OfflineBanner() {
       }
     };
 
-    // Sync with actual connectivity state after hydration.
-    if (!navigator.onLine) {
-      setStatus('offline');
-    }
-
-    const handleOffline = () => {
+    if (isOffline) {
       clearDismiss();
+      wasOffline.current = true;
       setStatus('offline');
-    };
-
-    const handleOnline = () => {
+    } else if (wasOffline.current) {
+      // Only flash "reconnected" for a transition we actually observed —
+      // not on first mount, when isOffline starts false with nothing to
+      // recover from.
       clearDismiss();
+      wasOffline.current = false;
       setStatus('reconnected');
       dismissTimer.current = setTimeout(() => setStatus('online'), 3000);
-    };
+    }
 
-    window.addEventListener('offline', handleOffline);
-    window.addEventListener('online', handleOnline);
-
-    return () => {
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('online', handleOnline);
-      clearDismiss();
-    };
-  }, []);
+    return clearDismiss;
+  }, [isOffline]);
 
   if (status === 'online') return null;
 

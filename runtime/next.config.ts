@@ -168,11 +168,52 @@ const withPWA = withPWAInit({
                 }
                 return partition(request.url);
               },
+              // Cold-start offline routing (research 0012, epic task 2.32).
+              // Reached only after BOTH the network fetch and the cache
+              // lookup under the key above have already failed — so there is
+              // definitely nothing to serve for this request under this
+              // partition, and the only question left is which offline
+              // fallback document explains that.
+              //
+              // Adding a `handlerDidError` here means next-pwa will NOT also
+              // inject its own default one for this cache entry (it only does
+              // so when an entry's plugins have none — see
+              // @ducanh2912/next-pwa's dist/index.js), so this must reproduce
+              // that default itself for the "valid session, nothing cached
+              // yet" branch by delegating to the same `self.fallback` global
+              // next-pwa's own handler would have called.
+              handlerDidError: async ({ request }: { request: Request }) => {
+                const hasSession = (
+                  self as unknown as { __sovereignHasOfflineSession?: () => Promise<boolean> }
+                ).__sovereignHasOfflineSession;
+                // No valid offline session → the device cannot prove who it
+                // is, so there is nothing safe to show but the sign-in
+                // prompt, regardless of what might otherwise be cached.
+                if (!hasSession || !(await hasSession())) {
+                  return caches.match('/offline/session-required', { ignoreSearch: true });
+                }
+                // A verified user, just nothing cached at this URL yet (e.g.
+                // the very first offline launch before any page was visited
+                // online). Same generic fallback as every other cache group.
+                const fallback = (
+                  self as unknown as { fallback?: (req: Request) => Promise<Response> }
+                ).fallback;
+                return fallback ? fallback(request) : Response.error();
+              },
             },
           ],
         },
       },
     ],
+    // /offline/session-required is never linked to or navigated in the
+    // ordinary course of using the app (see the route's own doc comment), so
+    // unlike an actually-visited page it would never end up in the "pages"
+    // cache on its own — it has to be precached explicitly, the same way
+    // next-pwa precaches /offline itself via the `fallbacks` option above.
+    // Manually maintained revision (Workbox's own documented convention for
+    // hand-added entries not produced by a build-time content hash): bump it
+    // whenever this page's content changes so installed clients refetch it.
+    additionalManifestEntries: [{ url: '/offline/session-required', revision: '2026-08-08' }],
   },
 });
 

@@ -932,4 +932,15 @@ describe('middleware matcher', () => {
       expect(matches(pathname)).toBe(false);
     }
   });
+
+  // The new offline session-required page (research 0012, epic task 2.32)
+  // must render with no session and no network — it IS the page shown when
+  // no valid session exists. Gating it would be self-defeating: middleware
+  // would redirect to /login, which the service worker cannot reach either.
+  // Covered by the `offline` prefix alternative already in the matcher, not a
+  // new allowlist entry — asserted explicitly since a future edit narrowing
+  // that alternative to an exact `/offline` match would silently break this.
+  it('does not gate the offline session-required page', () => {
+    expect(matches('/offline/session-required')).toBe(false);
+  });
 });

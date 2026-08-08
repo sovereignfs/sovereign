@@ -6,6 +6,7 @@ import {
   useCommitOnEnterOrBlur,
   useDoubleTapHandler,
   useIsMobile,
+  useIsOffline,
   useLongPress,
   useResponsiveLayout,
   useSingleOrDoubleTap,
@@ -331,6 +332,29 @@ function IsMobileDemo() {
     >
       useIsMobile() → {String(isMobile)} — resize the preview or switch the viewport toolbar to see
       this flip at 768px.
+    </div>
+  );
+}
+
+function IsOfflineDemo() {
+  const isOffline = useIsOffline();
+  return (
+    <div
+      style={{
+        padding: 'var(--sv-space-4)',
+        borderRadius: 'var(--sv-radius-md)',
+        background: isOffline
+          ? 'var(--sv-color-warning-surface)'
+          : 'var(--sv-color-success-surface)',
+        color: isOffline ? 'var(--sv-color-warning-text)' : 'var(--sv-color-success-text)',
+        fontFamily: ff,
+        fontSize: 'var(--sv-font-size-sm)',
+        fontWeight: 600,
+        textAlign: 'center',
+      }}
+    >
+      useIsOffline() → {String(isOffline)} — toggle DevTools &gt; Network &gt; Offline (or your OS's
+      airplane mode) to see this flip.
     </div>
   );
 }
@@ -705,6 +729,19 @@ function InteractionHooksDoc() {
         <CodeBlock>{`import { useIsMobile, MOBILE_BREAKPOINT_PX } from '@sovereignfs/ui';
 
 const isMobile = useIsMobile(); // defaults to MOBILE_BREAKPOINT_PX (768)`}</CodeBlock>
+      </section>
+
+      <section style={{ marginBottom: 'var(--sv-space-10)' }}>
+        <SectionHeader
+          title="useIsOffline"
+          subtitle="SSR-safe navigator.onLine tracking, shared by OfflineBanner, the login page, and Console/Account's offline gate (research 0012)."
+        />
+        <Card padding="md">
+          <IsOfflineDemo />
+        </Card>
+        <CodeBlock>{`import { useIsOffline } from '@sovereignfs/ui';
+
+const isOffline = useIsOffline();`}</CodeBlock>
       </section>
 
       <section style={{ marginBottom: 'var(--sv-space-10)' }}>

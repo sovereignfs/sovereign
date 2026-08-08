@@ -246,14 +246,31 @@ async function purgeUserPartition(userId: string): Promise<void> {
   );
 }
 
+/**
+ * Whether the device currently holds a valid offline session assertion —
+ * called from the `pages` cache's `handlerDidError` plugin in
+ * `next.config.ts` (epic task 2.32) to choose between the two offline
+ * fallback documents: `/offline/session-required` when false, next-pwa's
+ * generic `/offline` (via `self.fallback`) when true. Deliberately the same
+ * verification `partitionedCacheKey` already performs — a request only
+ * reaches `handlerDidError` after both network and a cache lookup under this
+ * exact user's partition have already failed, so this is not a second,
+ * separate trust decision.
+ */
+async function hasValidOfflineSession(): Promise<boolean> {
+  return (await currentUserId()) !== null;
+}
+
 interface SovereignWorkerGlobals {
   __sovereignCacheKey: (url: string) => Promise<string>;
+  __sovereignHasOfflineSession: () => Promise<boolean>;
   __sovereignPurgeUser: (userId: string) => Promise<void>;
   __sovereignResetMemo: () => void;
 }
 
 const globals = self as unknown as SovereignWorkerGlobals;
 globals.__sovereignCacheKey = partitionedCacheKey;
+globals.__sovereignHasOfflineSession = hasValidOfflineSession;
 globals.__sovereignPurgeUser = purgeUserPartition;
 globals.__sovereignResetMemo = () => {
   memo = null;

@@ -8,6 +8,7 @@ import { Card } from '../components/Card/Card';
 import { Dialog } from '../components/Dialog/Dialog';
 import { Drawer } from '../components/Drawer/Drawer';
 import { EmptyState } from '../components/EmptyState/EmptyState';
+import { OfflineGate } from '../components/OfflineGate/OfflineGate';
 import { FormField } from '../components/FormField/FormField';
 import { Icon } from '../components/Icon/Icon';
 import type { IconName } from '../components/Icon/Icon';
@@ -2234,6 +2235,19 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   </Button>
                 }
               />
+            </ComponentCard>
+
+            {/* OfflineGate */}
+            <ComponentCard
+              name="OfflineGate"
+              importLine="import { OfflineGate } from '@sovereignfs/ui';"
+              usage="Blocks an administrative/settings surface from rendering possibly-stale cached content while offline, showing an EmptyState instead. Reads the live useIsOffline() hook — toggle DevTools > Network > Offline to see it swap. Wrap the body of a surface like Console or Account where operating against stale data is actively wrong, not every page."
+            >
+              <OfflineGate surfaceName="Console">
+                <p style={{ margin: 0, fontFamily: 'var(--sv-font-family)', fontSize: 14 }}>
+                  Renders normally while online.
+                </p>
+              </OfflineGate>
             </ComponentCard>
 
             {/* Spinner */}

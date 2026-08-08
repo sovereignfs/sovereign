@@ -3,10 +3,14 @@
 > **SQLite recommendation superseded (August 2026).** This doc's "adopt
 > libSQL/`sqld` as an opt-in third dialect path" recommendation below is
 > superseded by [workstream 0009](../workstreams/0009-database-dialect-and-libsql-migration.md),
-> which locks a **mandatory, staged** adoption instead — every SQLite install
-> runs `sqld`, not just instances that opt in. The file-storage and
-> orchestration sections are unaffected. Workstream 0009's leg 2 also produces
-> the RFC this doc's "Next steps" deferred.
+> which locks a **mandatory, staged** adoption instead, and by
+> [RFC 0091](../rfcs/0091-libsql-sqld-driver.md), leg 2's spike — which found the
+> async-contract concern below smaller than expected, but also found a blocking
+> gap this doc never anticipated: `sqld` has no production-ready
+> encryption-at-rest story today, which conflicts with RFC 0071. RFC 0091 is
+> Draft/blocked pending a decision on that gap; workstream 0009 leg 3 cannot
+> proceed until it resolves. The file-storage and orchestration sections below
+> are unaffected.
 
 **Status:** Exploratory\
 **Date:** July 2026\

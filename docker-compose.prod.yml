@@ -241,6 +241,22 @@ services:
   #   networks:
   #     - sovereign_net
 
+  # ── Spike only (workstream 0009 leg 2) — not yet consumed by the platform ──
+  # See docker-compose.yml's `sqld` service comment for the full rationale.
+  # Gated behind a profile so no existing production deployment picks up an
+  # unused running container on its next `up`.
+  sqld:
+    profiles: ['sqld-spike']
+    image: ghcr.io/tursodatabase/libsql-server:latest
+    container_name: sovereign-sqld
+    restart: unless-stopped
+    environment:
+      SQLD_NODE: primary
+    volumes:
+      - sqld_data:/var/lib/sqld
+    networks:
+      - sovereign_net
+
 volumes:
   sovereign_data:
     # Pin the external volume name so it is not prefixed with the Compose project
@@ -248,6 +264,8 @@ volumes:
     # predictable `sovereign_data` regardless of where the repo is cloned — the
     # backup/restore commands in docs/ reference it by this exact name.
     name: sovereign_data
+  sqld_data:
+    name: sovereign_sqld_data
 
 networks:
   sovereign_net:

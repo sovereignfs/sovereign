@@ -43,14 +43,40 @@ topic has one canonical owner; other pages summarize it and link to that owner.
   RFC for open-ended topics; it is not deleted once an RFC lands, and not
   every research doc graduates to one (a documented "not now" is a valid
   outcome). See `docs/research/README.md`.
+- **Research-as-design (the RFC exception).** A research doc may serve as the
+  governing design directly, with no intermediate RFC, when it already contains
+  a settled one. The test is whether an RFC would add a _decision_ or only a
+  _restatement_: if the options were weighed, the choice made, and the rejected
+  alternatives recorded in the research doc, then an RFC repeating them adds a
+  documentation trail and a review cycle without adding information. Permitted
+  only when all four hold:
+  1. The research doc records **rejected alternatives with reasons**, not just a
+     recommendation — this is what an RFC's "Alternatives considered" would have
+     carried, and it is what stops a decision being relitigated later.
+  2. Every **genuinely open** decision is an explicit gate in the workstream, not
+     a silent gap. A design with unresolved forks is not settled and still needs
+     an RFC.
+  3. A **workstream** carries the decisions forward in its "Decisions locked"
+     table, and **epic tasks** carry the deliverables. The design is not left to
+     be re-derived from prose.
+  4. The workstream and epic tasks **cite the research doc where they would
+     otherwise cite an RFC**, so the governing document is unambiguous.
+
+  Reference documentation is still updated on implementation, exactly as it
+  would be after an RFC. This exception changes which document holds the design,
+  not whether the design is written down. When in doubt, write the RFC — the
+  exception exists for the case where the design is genuinely finished, not as a
+  general shortcut.
+
 - Workstream docs sequence work; they do not design it or track its status.
   Design stays in `rfcs/`, full task specs stay in `epics/`, and status stays in
   `ROADMAP.md` rows and epic headings. A workstream adds dependency order across
   epics, the decisions already locked (so they are not reopened mid-execution),
   and the gates that determine whether later work proceeds. It is normally
   written after its governing RFCs — if a design is not settled enough to
-  sequence, the missing step is an RFC or research doc. See
-  `docs/workstreams/README.md`.
+  sequence, the missing step is an RFC or research doc. Under the
+  research-as-design exception above, a workstream may instead be governed by a
+  research doc directly. See `docs/workstreams/README.md`.
 - The public product roadmap describes themes. `ROADMAP.md` and `epics/` remain
   the private engineering queue and source of task status.
 - Incident docs are a factual record of what happened during a specific

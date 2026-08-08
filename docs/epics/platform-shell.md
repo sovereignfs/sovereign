@@ -1039,6 +1039,114 @@ on both rather than duplicating either.
   layouts.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` — all pass.
 
+#### 📋 2.31 — Per-user service worker cache partitioning (Research 0012)
+
+**Goal:** Make it safe to cache an authenticated document, so the shell can be
+served with no network — without ever replaying one user's cached shell to
+another on a shared device.
+
+**Deliverables:**
+
+- Document/RSC cache entries partitioned by user identity: cache name keyed to
+  the user, or a service worker that refuses to serve a cached shell whose
+  embedded identity claim does not match the current session cookie. Either is
+  acceptable; pick one and justify it in the code comment.
+- Sign-out deletes the signing-out user's partition.
+- **Rewrite `docs/architecture-rules.md:344-354`** to state the requirement — a
+  cached authenticated document must never be served to a different user — in
+  place of the current mechanism-level prohibition on stale-serving. The
+  guarantee is unchanged; only the implementation freedom widens.
+- A regression test that a cached shell for user A is never served to user B,
+  including across a sign-out/sign-in on the same browser profile.
+- Decide explicitly whether the existing `x-sovereign-offline-route` neutral-shell
+  mechanism (`runtime/middleware.ts:526-558`,
+  `runtime/src/registry.ts:35-39`) is still needed once partitioning exists, and
+  remove it if not. Do not carry both without a stated reason.
+
+**Dependencies:** Task 1.21. Blocks task 2.32.
+
+**SRS reference:** §3.11, PLT-09.
+
+**Review checklist:**
+
+- User A's cached shell is provably unreachable by user B on the same device.
+- The rewritten architecture rule still forbids what the original forbade.
+- `offline-route-neutrality.test.ts` either still passes or is removed with a
+  recorded rationale.
+- Flagging `/` behaves as intended — note this has been added and reverted twice
+  (`runtime/middleware.ts:544-558`); read that comment before changing it.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+#### 📋 2.32 — Cold-start offline launch flow and Offline page (Research 0012)
+
+**Goal:** A returning user can cold-launch the installed PWA or native shell with
+zero connectivity and land on their home screen — and a user whose session has
+expired gets a purposeful explanation instead of a login form that cannot work.
+
+**Deliverables:**
+
+- Launch decision table implemented in the shell: offline + valid local session →
+  cached shell with the offline banner; offline + no or expired session → the new
+  Offline page; online → unchanged.
+- A new Offline page distinct from today's `/offline` hard-fallback, explaining
+  that a connection is needed to sign in.
+- The login **form** is not rendered when offline; the session **check** is
+  retained. Airplane mode must not become an authentication bypass — a stolen
+  device in flight mode must not open into the cached shell.
+- Console and Settings render connectivity-dimmed while offline: administrative
+  surfaces should not operate against stale cached state.
+- Service worker precaches the login and Offline documents, now possible for
+  logged-out visitors following the `worker-` allowlist fix (`2ac31cf`).
+
+**Dependencies:** Tasks 1.21, 2.31.
+
+**SRS reference:** §3.11, PLT-09.
+
+**Review checklist:**
+
+- Airplane mode, cold launch, valid session → home screen with offline banner.
+- Airplane mode, cold launch, expired session → Offline page, no shell content.
+- Airplane mode with **no** session → Offline page, and no way through to the
+  shell.
+- Console and Settings are visibly non-interactive while offline.
+- Verified on a real device per `docs/pwa-real-device-testing.md`, not only in
+  DevTools offline mode.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+#### 📋 2.33 — Launcher and shell offline tier states (Research 0012)
+
+**Goal:** Show users which apps are usable right now, distinguishing "offline
+right now" from "not available on this device" — two different causes that must
+not read as the same thing.
+
+**Deliverables:**
+
+- **Connectivity-dimmed:** a plugin with no offline tier, dimmed only while
+  actually offline. Reactive and temporary; reuses the existing online/offline
+  detection from `OfflineBanner.tsx`.
+- **Capability-restricted:** a `device-only` plugin on a surface without durable
+  encrypted storage. Static, unrelated to connectivity, and must never say
+  "offline" to a user who is online — reads as "Phone only".
+- Both states applied consistently in the launcher home grid and the Apps drawer.
+- Visiting a capability-restricted plugin's route directly shows an explanatory
+  state rather than a broken screen. The UI gate is advisory; the real gate is
+  that the data is undecryptable (task 1.22).
+- Console surfaces each plugin's declared tier in the plugin list.
+- User-facing copy uses "app", never "plugin", per the naming convention.
+
+**Dependencies:** Task 3.36.
+
+**SRS reference:** §3.11.
+
+**Review checklist:**
+
+- Online desktop: a `device-only` app shows "Phone only", never "offline".
+- Offline: no-tier apps dim; `offline-first` apps stay fully interactive.
+- Direct navigation to a restricted route is explained, not broken.
+- Both states are correct in the home grid and the drawer.
+- `pnpm design:tokens:check` passes; no hardcoded colours.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
 ## Related RFCs
 
 - [RFC 0001 — Overlay shell variant](../rfcs/0001-overlay-shell-variant.md)

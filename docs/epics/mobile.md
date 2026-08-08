@@ -479,6 +479,55 @@ policy on when it is justified — the ongoing cost is per-app and permanent.
 - Store metadata does not imply Sovereign hosts user data.
 - No analytics or crash reporting is enabled by default.
 
+#### 📋 20.13 — `device:secureStorage` bridge capability (Research 0012)
+
+**Goal:** Extend the device bridge with durable, encrypted, device-auth-gated
+storage — the capability that makes the `device-only` tier possible, and the only
+storage on any surface that is not subject to web-storage eviction.
+
+**Deliverables:**
+
+- New `device:secureStorage` permission in `packages/manifest`, alongside the
+  existing `device:haptics` and `device:notifications` (`schema.ts:37-38`).
+- Bridge protocol methods in `packages/bridge` (RFC 0083) for key generation,
+  key retrieval under user-presence, and encrypted key/value or SQLite-backed
+  storage.
+- **Capacitor implementation** (`sovereign-mobile`): native SQLite via
+  `@capacitor-community/sqlite` with SQLCipher; keys in Keychain (iOS) and
+  Keystore (Android) with `setUserAuthenticationRequired(true)` allowing
+  `DEVICE_CREDENTIAL`, so device passcode works when biometrics are unenrolled.
+- **Tauri implementation** (`sovereign-desktop`): `tauri-plugin-sql` via SQLx,
+  with the OS keychain for key custody. Ship behind the same capability contract
+  so a `device-only` plugin lights up on desktop with no manifest change once
+  this exists.
+- Capability reporting so task 3.36's detection can ask "is durable encrypted
+  storage available?" rather than inferring it from the surface string.
+- Consent flow consistent with the existing device-permission pattern from task
+  3.35.
+
+**Why this is native-only for now:** iOS `WKWebsiteDataStore` eviction makes web
+storage unsuitable for a wallet — WebKit deletes script-created data after seven
+days without interaction for non-installed origins, and any origin can be evicted
+under storage pressure. The app sandbox is the only place that survives. This is
+the whole justification for the `device-only` tier being native-first, and it
+directly contradicts RFC 0082 §4's claim that "nothing about offline is
+native-specific" — that section needs revisiting when this lands.
+
+**Dependencies:** RFC 0083, task 3.36. Blocks tasks 1.22 and 8.20.
+
+**SRS reference:** §3.12, §3.19.
+
+**Review checklist:**
+
+- A key generated under user-presence cannot be retrieved without device auth.
+- Data survives an app restart and an OS storage-pressure event.
+- Device passcode unlocks when no biometric is enrolled.
+- The same plugin code works against both the Capacitor and Tauri
+  implementations.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0058 — Native mobile app shell (Capacitor)](../rfcs/0058-native-mobile-app-shell.md)

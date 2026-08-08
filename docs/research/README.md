@@ -22,6 +22,16 @@ RFC(s) reference it back via their "Current state" or "Motivation" section.
 Not every research doc produces an RFC. Some conclude "not now" or "rejected"
 — that's a valid, useful outcome; record it rather than losing the reasoning.
 
+Some skip the RFC in the other direction. **A research doc that already carries a
+settled design — options weighed, choice made, rejected alternatives recorded —
+may govern a workstream and its epic tasks directly**, because an RFC restating
+it would add a review cycle without adding a decision. This is a narrow
+exception with four conditions, set out in
+[documentation-structure.md](../documentation-structure.md) under
+"Research-as-design (the RFC exception)"; the key ones are that rejected
+alternatives must be written down and that any genuinely open decision must
+become an explicit gate in the workstream. When in doubt, write the RFC.
+
 Proposing one? Copy [`TEMPLATE.md`](TEMPLATE.md) to `NNNN-short-slug.md`, fill
 it in, and add a row below.
 

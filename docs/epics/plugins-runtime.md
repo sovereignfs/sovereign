@@ -1462,6 +1462,124 @@ RFC 0083.
 
 ---
 
+#### 📋 3.36 — Tiered `offline` manifest declaration (Research 0012)
+
+**Goal:** Replace the single `offline: boolean` flag with three graduated tiers,
+so a plugin declares how much offline capability it needs — and so "no offline
+support" stays the default.
+
+**Deliverables:**
+
+- `packages/manifest`: `offline: z.enum(['offline-first', 'device-only']).optional()`,
+  replacing `offline: z.boolean()` (`schema.ts:228`). **Breaking** — major bump,
+  plus a `docs/upgrade.md` migration note. This is the third shape change to this
+  field (object → boolean → enum); the note should say so plainly.
+- Omitting the field means no offline support. Deliberately **no** explicit "off"
+  literal — that reintroduces the boolean-vs-enum ambiguity RFC 0078's flattening
+  removed.
+- Remove the `offline:write` permission (`schema.ts:36`) and its cross-field
+  refine (`schema.ts:637`). The enum is sufficient install-review signal once both
+  tiers imply local mutation. This also resolves RFC 0074's open question 1.
+- A **capability-detection** contract deciding whether `device-only` is available
+  on a given surface — is a durable, encrypted, device-auth-gated store present?
+  Explicitly **not** `sdk.device.getSurface()`, which `docs/sdk-stability.md:65`
+  documents as a presentation hint and never a security boundary.
+- Migrate `plugins/launcher` (today's only in-repo adopter) to the new field.
+- Mark RFC 0074 and RFC 0078 superseded; update `docs/rfcs/README.md`.
+- `docs/plugin-development.md` rewritten for the tier model.
+
+**Dependencies:** Research 0012. Blocks tasks 2.33, 3.37, 1.22.
+
+**SRS reference:** §3.11.
+
+**Review checklist:**
+
+- A manifest with `offline: true` fails validation with a message pointing at the
+  migration note.
+- A manifest omitting `offline` gets no offline behaviour.
+- `offline:write` is rejected as an unknown permission.
+- Capability detection reports `device-only` unavailable on desktop web and
+  available in the native shell.
+- `runtime/src/__tests__/docs-parity.test.ts` passes with the new field.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+#### 📋 3.37 — Unified offline storage SDK surface (Research 0012)
+
+**Goal:** One SDK surface over three storage backends, so a plugin author writes
+the same code whether the data lands in IndexedDB, OPFS-backed SQLite, or native
+SQLite.
+
+**Deliverables:**
+
+- A single plugin-facing API replacing `packages/sdk/src/offline.ts` (331 lines)
+  and `offline-queue.ts` (388 lines), selecting a backend by capability:
+  - **IndexedDB** — universal floor; works in every context tested by research
+    0008, including iOS `capacitor://`.
+  - **OPFS + SQLite WASM** — use `OPFSCoopSyncVFS` (wa-sqlite), which does **not**
+    require COOP/COEP headers. The official `sqlite-wasm` OPFS build does, and
+    those headers would fight the CSP. No OPFS in Safari private browsing — fall
+    back.
+  - **Native SQLite** — via the device bridge; the only durable option, since it
+    lives in the app sandbox rather than an evictable web storage partition.
+- **Flush to storage as data is produced.** Research 0008 found iOS WKWebView
+  discards in-memory JS state across a background/foreground cycle while Android
+  preserves it; a buffer-then-flush design silently loses data on iOS only.
+- Preserve the existing cross-tab `BroadcastChannel` purge safety and the
+  sign-in/sign-out purge sites (`runtime/src/complete-sign-in.ts`).
+- An eviction policy, which neither current store has — today the read cache
+  throws at a soft cap and the queue throws at a hard 500-entry cap.
+- Keep the static offline-route neutrality scanner or retire it deliberately,
+  consistent with whatever task 2.31 decided.
+
+**Dependencies:** Task 3.36.
+
+**SRS reference:** §3.11.
+
+**Review checklist:**
+
+- The same plugin code runs unchanged on all three backends.
+- Backend selection is observable and correct per surface.
+- A background/foreground cycle on iOS loses no written data.
+- Sign-out purges every backend, not only IndexedDB.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+#### 📋 3.38 — Background sync for `offline-first` plugins (Research 0012)
+
+**Goal:** Give `offline-first` plugins real background synchronisation, so local
+writes reach the server without the plugin author hand-rolling a sync loop.
+
+**Deliverables:**
+
+- Sync protocol: conflict resolution by last-write-wins timestamps (locked by
+  research 0012 — CRDTs were rejected as solving concurrent multi-writer editing,
+  which Sovereign's predominantly single-writer data is not), plus tie-breaking
+  and clock-skew handling, which are **not** yet decided.
+- Tombstones and deletion propagation.
+- Partial sync and resume; batch sizing; a user-visible failure/retry surface.
+- Drain triggers beyond today's manual `drainQueue()` — mount, reconnect, and an
+  explicit retry affordance. No Background Sync API (no iOS Safari support).
+- Preserve the queue's throw-rather-than-evict property: dropping a queued write
+  silently is data loss.
+- **Re-evaluate build vs. RxDB at this point**, with the design in hand rather
+  than in the abstract. Research 0012 rejected PowerSync (FSL-licensed service,
+  separate Docker dependency, Postgres-oriented), ElectricSQL (Postgres-only,
+  read-path only), and Zero (offline explicitly out of scope), but kept RxDB open.
+
+**Dependencies:** Task 3.37.
+
+**SRS reference:** §3.11.
+
+**Review checklist:**
+
+- A write made offline reaches the server after reconnect, exactly once.
+- Concurrent edits on two devices converge per the documented rule.
+- A deletion made offline propagates and does not resurrect.
+- An interrupted sync resumes without duplicating or dropping writes.
+- The build-vs-RxDB decision is recorded with reasoning.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0004 — Per-plugin database](../rfcs/0004-per-plugin-database.md)

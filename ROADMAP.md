@@ -217,8 +217,8 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 
 ### Non-prioritised tasks
 
-Tasks with accepted or draft RFCs but not yet assigned a roadmap slot. Promoted to a phase table
-once prioritised.
+Tasks with accepted or draft RFCs — or, under the research-as-design exception, a settled research
+doc — but not yet assigned a roadmap slot. Promoted to a phase table once prioritised.
 
 | Version | Task                                                                      | Status | Epic task                                                                                                                        |
 | ------- | ------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------- |
@@ -239,6 +239,17 @@ once prioritised.
 | —       | Per-plugin installable PWA manifest (RFC 0081)                            | 📋     | [2.25](docs/epics/platform-shell.md#-225--per-plugin-installable-pwa-manifest-rfc-0081)                                          |
 | —       | Plugin PWA icon generation (RFC 0081)                                     | 📋     | [2.26](docs/epics/platform-shell.md#-226--plugin-pwa-icon-generation-rfc-0081)                                                   |
 | —       | Focused plugin app context and route lock (RFC 0082)                      | 📋     | [2.27](docs/epics/platform-shell.md#-227--focused-plugin-app-context-and-route-lock-rfc-0082)                                    |
+| —       | Long-lived offline session assertion (Research 0012)                      | 📋     | [1.21](docs/epics/users-auth.md#-121--long-lived-offline-session-assertion-research-0012)                                        |
+| —       | Per-user service worker cache partitioning (Research 0012)                | 📋     | [2.31](docs/epics/platform-shell.md#-231--per-user-service-worker-cache-partitioning-research-0012)                              |
+| —       | Cold-start offline launch flow and Offline page (Research 0012)           | 📋     | [2.32](docs/epics/platform-shell.md#-232--cold-start-offline-launch-flow-and-offline-page-research-0012)                         |
+| —       | Tiered `offline` manifest declaration (Research 0012)                     | 📋     | [3.36](docs/epics/plugins-runtime.md#-336--tiered-offline-manifest-declaration-research-0012)                                    |
+| —       | Unified offline storage SDK surface (Research 0012)                       | 📋     | [3.37](docs/epics/plugins-runtime.md#-337--unified-offline-storage-sdk-surface-research-0012)                                    |
+| —       | Launcher and shell offline tier states (Research 0012)                    | 📋     | [2.33](docs/epics/platform-shell.md#-233--launcher-and-shell-offline-tier-states-research-0012)                                  |
+| —       | `device:secureStorage` bridge capability (Research 0012)                  | 📋     | [20.13](docs/epics/mobile.md#-2013--devicesecurestorage-bridge-capability-research-0012)                                         |
+| —       | Escrow and recovery for `device-only` data (Research 0012)                | 📋     | [8.21](docs/epics/data-sovereignty.md#-821--escrow-and-recovery-for-device-only-data-research-0012)                              |
+| —       | Offline data encryption at rest (Research 0012)                           | 📋     | [8.20](docs/epics/data-sovereignty.md#-820--offline-data-encryption-at-rest-research-0012)                                       |
+| —       | Device-auth unlock for `device-only` plugins (Research 0012)              | 📋     | [1.22](docs/epics/users-auth.md#-122--device-auth-unlock-for-device-only-plugins-research-0012)                                  |
+| —       | Background sync for `offline-first` plugins (Research 0012)               | 📋     | [3.38](docs/epics/plugins-runtime.md#-338--background-sync-for-offline-first-plugins-research-0012)                              |
 | —       | In-app text-size control (pinch-zoom compensation)                        | 📋     | [10.2](docs/epics/accessibility.md#-102--in-app-text-size-control-pinch-zoom-compensation)                                       |
 | —       | Role-aware and instance-aware Guide content (RFC 0056)                    | 📋     | [24.2](docs/epics/plugin-guide.md#-242--role-aware-and-instance-aware-guide-content)                                             |
 | —       | Operator-managed Guide content (RFC 0056)                                 | 📋     | [24.3](docs/epics/plugin-guide.md#-243--operator-managed-guide-content)                                                          |

@@ -284,15 +284,15 @@ of silently taking over the shell.
 - No new capability/permission grant: the policy decision and the browser-open
   call both happen entirely in Rust, with no JS-side plugin command involved
 
-**Known gap, not covered by this task:** `window.open()` / `target="_blank"`
-requests go through a _separate_ Tauri hook (`on_new_window`), not
-`on_navigation`. Without registering that hook too, such requests currently
-no-op (Tauri/WRY's own default with no handler configured) rather than
-opening the system browser — safe (nothing silently escapes to an unmanaged
-native window) but not yet feature-complete for that specific case. A
-follow-up task if it proves disruptive in practice; RFC 0058's own quoted
-requirement is scoped to top-level "navigating the shell away," which
-`on_navigation` alone already covers.
+**`window.open()` / `target="_blank"` gap — closed as a same-day follow-up.**
+Those requests go through a _separate_ Tauri hook (`on_new_window`), not
+`on_navigation`; left unregistered they silently no-op (Tauri/WRY's own
+default with no handler configured) rather than following the policy. Safe
+either way — nothing escapes to an unmanaged native window — but not
+feature-complete until `on_new_window` was also wired up, reusing the same
+`is_allowed_navigation` decision: same-origin gets a real new window, anything
+else is denied and reopened in the system browser, same outcome as
+`on_navigation` reaches for a plain link.
 
 **SRS reference:** §3.19 (desktop), §3.12 (mobile equivalent, same
 requirement)
@@ -306,6 +306,8 @@ requirement)
   instance, unchanged
 - The bundled onboarding/instance-manager page's own navigations (first
   launch, Switch Instance…, a resolved deep link) are unaffected
+- A same-origin `target="_blank"` link opens a real new window; a
+  cross-origin one opens the system browser instead of silently no-op'ing
 - No new entries needed in `capabilities/default.json` or `capabilities/bridge.json`
 
 ## Related RFCs

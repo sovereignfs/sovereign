@@ -332,6 +332,7 @@ leaves the platform better than it started, not half-migrated.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                      |
-| ------- | ----------- | --------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft from research 0012, governed by it directly under the research-as-design exception. Five legs, 11 epic tasks. |
+| Version | Date        | Change                                                                                                                                                                                                                                        |
+| ------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft from research 0012, governed by it directly under the research-as-design exception. Five legs, 11 epic tasks.                                                                                                                   |
+| 0.2     | August 2026 | Leg 3 is no longer a gate — workstream 0003's leg 4 outcome already answers the delivery-model question empirically. Leg 4 split across `sovereign-mobile`/`sovereign-desktop`; task 20.13 rescoped to not duplicate task 17.4 / 0003 leg 3b. |

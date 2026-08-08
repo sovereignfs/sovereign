@@ -114,25 +114,41 @@ RFCs, because it sequences their adoption paths — if the design is not settled
 enough to sequence, the missing step is an RFC or a research doc, not a
 workstream.
 
+**Exception — a research doc may govern a workstream directly.** When a research
+doc already carries a settled design, including the rejected alternatives, an
+RFC that restates it adds a review cycle without adding a decision. In that case
+the workstream names the research doc where it would otherwise name RFCs, its
+**Decisions locked** table carries them forward, and any genuinely open decision
+becomes an explicit **gate** rather than a silent gap. The full conditions are in
+[documentation-structure.md](../documentation-structure.md) under
+"Research-as-design (the RFC exception)". Workstream
+[0008](0008-offline-first-architecture.md) is the first to use it.
+
 Workstreams are internal planning documents and are not published (see
 [documentation-structure.md](../documentation-structure.md)).
 
 ## Index
 
-| Workstream                                      | Goal                                                                                        | Status     | RFCs                        |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------- | --------------------------- |
-| [0001](0001-standalone-plugin-apps.md)          | A single plugin installable as its own PWA and native mobile app                            | 📋 Planned | 0080, 0081, 0082            |
-| [0002](0002-native-mobile-app-release.md)       | The whole-instance Sovereign app published to the App and Play Stores                       | 📋 Planned | 0058, 0013, 0038            |
-| [0003](0003-device-bridge-across-surfaces.md)   | One device-capability contract serving web, Tauri, and Capacitor                            | ✅ Done    | 0083, 0080                  |
-| [0004](0004-ui-backup-restore.md)               | UI-driven, async backup & restore for owners/admins and regular users                       | 📋 Planned | 0084                        |
-| [0005](0005-native-push-relay.md)               | Native mobile push notifications via an end-to-end-encrypted relay                          | 📋 Planned | 0087                        |
-| [0006](0006-rfc-0071-incident-followups.md)     | Close the 4 still-open RFC 0071 incident follow-ups                                         | 📋 Planned | 0071                        |
-| [0007](0007-mobile-header-footer-extraction.md) | `MobileHeader`/`MobileFooter` as Design System components, extracted from the runtime shell | 📋 Planned | 0088 (builds on 0013, 0075) |
+| Workstream                                      | Goal                                                                                                    | Status     | RFCs                            |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------- |
+| [0001](0001-standalone-plugin-apps.md)          | A single plugin installable as its own PWA and native mobile app                                        | 📋 Planned | 0080, 0081, 0082                |
+| [0002](0002-native-mobile-app-release.md)       | The whole-instance Sovereign app published to the App and Play Stores                                   | 📋 Planned | 0058, 0013, 0038                |
+| [0003](0003-device-bridge-across-surfaces.md)   | One device-capability contract serving web, Tauri, and Capacitor                                        | ✅ Done    | 0083, 0080                      |
+| [0004](0004-ui-backup-restore.md)               | UI-driven, async backup & restore for owners/admins and regular users                                   | 📋 Planned | 0084                            |
+| [0005](0005-native-push-relay.md)               | Native mobile push notifications via an end-to-end-encrypted relay                                      | 📋 Planned | 0087                            |
+| [0006](0006-rfc-0071-incident-followups.md)     | Close the 4 still-open RFC 0071 incident follow-ups                                                     | 📋 Planned | 0071                            |
+| [0007](0007-mobile-header-footer-extraction.md) | `MobileHeader`/`MobileFooter` as Design System components, extracted from the runtime shell             | 📋 Planned | 0088 (builds on 0013, 0075)     |
+| [0008](0008-offline-first-architecture.md)      | Offline-first architecture — cold-start offline, tiered plugin offline support, encrypted local storage | 📋 Planned | none yet — legs 2–5 author them |
 
 Workstreams 0001 and 0002 share epic task 20.10 (the WKWebView offline spike) —
 run it once and let both consume the finding. Otherwise they are independent, and
 0002 is the shorter path to a shipped native app. Workstreams 0004, 0006, and
 0007 are each independent of the other workstreams.
+
+Workstream 0008 starts independently, but its leg 3 gate resolves whether
+`device-only` plugins can use the same thin-shell delivery model as everything
+else — which reopens RFC 0082 §4 and therefore feeds workstream 0001. Run 0008's
+design legs before committing 0001's offline scope.
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · ⏸️ Paused · ❌ Stopped_
 

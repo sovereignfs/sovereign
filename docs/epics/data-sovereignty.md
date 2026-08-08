@@ -750,6 +750,96 @@ its semantics — not a new encryption-enforcement model).
 
 ---
 
+#### 📋 8.20 — Offline data encryption at rest (Research 0012)
+
+**Goal:** Encrypt offline data on the device in **both** offline tiers, so
+"plaintext on disk" is never the answer anywhere. The tiers differ in what guards
+the key, not in whether encryption exists.
+
+**Deliverables:**
+
+- `offline-first`: encrypted under a device key with **no** user-presence
+  requirement — Keychain/Keystore without biometric gating, or a non-extractable
+  `CryptoKey`. Zero UX cost; protects against other apps and casual filesystem
+  access.
+- `device-only`: encrypted under the user-presence key from task 1.22.
+- Applied across every backend from task 3.37, including native SQLite, where
+  `@capacitor-community/sqlite` provides SQLCipher — the work there is key
+  custody and unlock UX, not cryptography.
+- A documented statement in `docs/plugin-development.md` of what each tier
+  guarantees, so an author does not assume `offline-first` data is protected
+  against device access when it is not.
+- Explicit note that a non-extractable `CryptoKey` protects against key
+  exfiltration by script but **not** against someone with the device — it unlocks
+  automatically for the origin. Do not let this be mistaken for device-level
+  protection.
+
+**Dependencies:** Tasks 3.37, 1.22.
+
+**Constraints:** This subsystem's standing rule applies — encryption surfaces in
+this repo have repeatedly looked more finished than they were. RFC 0071 needed
+three hardening passes including a production incident
+(`docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`). Require a live
+round-trip against real data before considering this done.
+
+**SRS reference:** §3.11, §5.2.
+
+**Review checklist:**
+
+- On-disk data is ciphertext in both tiers, verified by inspecting storage
+  directly rather than through the app.
+- A `device-only` store is unreadable while locked.
+- Live round-trip: write → lock → unlock → read, on a real device.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+#### 📋 8.21 — Escrow and recovery for `device-only` data (Research 0012)
+
+**Goal:** Decide and implement what happens to `device-only` data when the key
+dies — because with no server copy, a hardware-bound key that is invalidated
+takes the data with it.
+
+**Blocked on a product decision (goal owner: kasunben).** Research 0012
+deliberately makes no recommendation; the three options and their costs are in
+its "Open questions" section. This task cannot start before that decision.
+
+**Why the key dies:** `biometryCurrentSet` is invalidated when fingerprints or
+face data change; deleting a passkey destroys its PRF secret; a lost or wiped
+device takes the key with it. For `offline-first` this is harmless — re-sync. For
+`device-only` it is permanent, irrecoverable loss.
+
+**Deliverables — depend on the decision:**
+
+- **Encrypted server backup:** server stores ciphertext it cannot read, plus a
+  user-held recovery secret and the UX to issue, store, and redeem it.
+- **User-driven export:** an export/import path and honest documentation that
+  data not exported will be lost.
+- **Accept the loss:** explicit in-product warning at enrolment and in
+  `docs/plugin-development.md`; no recovery mechanism.
+
+Whichever is chosen, this also answers device-to-device migration — migration and
+key-invalidation recovery are the same problem.
+
+**Also settle here:** whether key strictness (`biometryCurrentSet` vs
+`userPresence`) is manifest-declared per plugin, and the written position on
+server-side revocation being unable to reach `device-only` data. For a
+sovereignty product the latter is arguably correct — it is the user's data on the
+user's device — but it contradicts the assumption behind the current sign-out
+purge and must be stated deliberately.
+
+**Dependencies:** Task 8.20. Gates task 1.22.
+
+**SRS reference:** §5.2.
+
+**Review checklist:**
+
+- The chosen option is implemented and documented.
+- Enrolment tells the user what happens if they lose the device, before they
+  commit data to the plugin.
+- The revocation position is written down where an operator will find it.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)

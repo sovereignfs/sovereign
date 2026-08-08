@@ -884,6 +884,86 @@ Task 1.2 (session-verify propagation pattern), the Account plugin's
 
 ---
 
+#### 📋 1.21 — Long-lived offline session assertion (Research 0012)
+
+**Goal:** Give the platform a session assertion that can be verified with no
+network for days, so offline access does not expire five minutes after the last
+online request — without weakening revocation for online requests.
+
+**Deliverables:**
+
+- A signed, device-scoped offline session assertion, separate from better-auth's
+  `session.cookieCache` (`apps/auth/src/auth.ts:56`, `maxAge: 300`). That 300s
+  value stays as-is: it correctly bounds role-change staleness for online
+  requests and must not be stretched to serve offline.
+- Explicit, configurable lifetime (default in the 7–30 day range) surfaced as an
+  env var and documented in `docs/self-hosting.md`. This value **is** the offline
+  revocation gap — name it as such rather than leaving it implicit.
+- Verification path in `runtime/middleware.ts` that accepts the offline
+  assertion **only** when the request is genuinely offline, so it can never be
+  used to skip a live revocation check while the network is reachable.
+- Cleared on sign-out alongside both `session_data` cookie variants.
+- For `device-only` plugins (task 3.36) the assertion is stored encrypted under
+  the device-auth key (task 1.22), so its presence is not observable without
+  passing device auth.
+
+**Dependencies:** Research 0012. Blocks tasks 2.31 and 2.32.
+
+**SRS reference:** §3.11, AUTH-05.
+
+**Review checklist:**
+
+- An authenticated user offline for over an hour still reaches the cached shell.
+- The offline assertion is rejected when the network is reachable — verified by a
+  test that presents it with connectivity available.
+- Revoking a session server-side takes effect on the next online request,
+  unchanged from today.
+- Sign-out clears the assertion; a second user on the same device cannot use it.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+#### 📋 1.22 — Device-auth unlock for `device-only` plugins (Research 0012)
+
+**Goal:** Gate `device-only` plugin data behind biometric or device-passcode
+authentication, implemented as **key custody** — the OS releases the decryption
+key after a successful auth — not as a UI check that can be bypassed by reading
+storage directly.
+
+**Deliverables:**
+
+- Web/PWA: WebAuthn PRF key derivation, building on the already-deployed passkey
+  plugin (`apps/auth/src/auth.ts:231`). Handle the case where an existing
+  credential does not support PRF by registering a new passkey with the
+  extension requested, rather than assuming the login passkey can be reused.
+- Native: key stored via task 20.13's `device:secureStorage` bridge, with
+  user-presence access control (biometric **or** device passcode — never
+  biometric-only, which locks out unenrolled users).
+- Enrolment is **structural**: enabling a `device-only` plugin performs it, and
+  there is no preference or toggle that can turn it off while the plugin works.
+- A real UI state for the no-device-passcode case, where the key cannot be
+  created on either platform — a hard block with an explanatory screen, not an
+  unhandled rejection.
+- Re-lock policy: a sensible default plus a user override, following the
+  established pattern of an immediate / timed / on-restart choice.
+- `docs/plugin-development.md` coverage of what a `device-only` plugin can
+  assume about unlock state.
+
+**Dependencies:** Tasks 3.36, 20.13. Gated on the escrow decision (task 8.21) —
+key strictness cannot be chosen before recovery is settled.
+
+**SRS reference:** §3.11, §3.12.
+
+**Review checklist:**
+
+- A `device-only` plugin cannot be enabled without completing enrolment.
+- With the app locked, the on-disk data is ciphertext — verified by inspecting
+  storage directly, not by observing the UI.
+- Biometric failure falls back to device passcode and still unlocks.
+- A device with no passcode shows the explanatory block screen.
+- PRF enrolment succeeds on a fresh passkey and on an existing PRF-capable one.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0012 — Passkeys & TOTP MFA](../rfcs/0012-passkeys-and-mfa.md)

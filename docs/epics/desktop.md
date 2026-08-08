@@ -249,9 +249,71 @@ shipped.
   plain browser tab on the same instance
 - `pnpm test` passes in `packages/sdk` after the addition
 
+#### ✅ 17.8 — Navigation policy enforcement
+
+> **RFC 0038 never carried over RFC 0058's navigation-policy requirement to
+> desktop.** RFC 0058 (mobile) requires: "The shell loads only
+> user-configured Sovereign instances in the primary WebView. External links
+> should open in the platform browser or an approved in-app browser surface
+> instead of silently navigating the shell away from the configured
+> instance." Mobile implemented this in
+> [ADR 0007](https://github.com/sovereignfs/sovereign-mobile/blob/main/docs/adrs/0007-navigation-policy-enforcement.md)
+> via a native `WKNavigationDelegate` / `shouldOverrideUrlLoading` on each
+> platform; desktop had no equivalent until this task, even though the same
+> silent-navigation-away risk applies equally to a WebView-based shell. This
+> task closes that gap for desktop rather than opening it as a fresh design
+> question — the policy itself was already decided for the sibling shell.
+
+**Goal:** Same-origin navigation (the currently active instance) stays in the
+shell's WebView; cross-origin navigation opens in the system browser instead
+of silently taking over the shell.
+
+**Deliverables:**
+
+- `src-tauri/src/lib.rs`'s `WebviewWindowBuilder::on_navigation` — Tauri 2's
+  built-in navigation-decision hook (`Fn(&Url) -> bool`), the desktop
+  equivalent of iOS's `decidePolicyFor` / Android's
+  `shouldOverrideUrlLoading`. Local origin (the bundled onboarding/manager
+  page) is always allowed; a navigation matching the currently active
+  instance's origin — read directly from the same `instances.json` store
+  `src/store.ts` already persists via `tauri-plugin-store`'s Rust API, so
+  there is exactly one source of truth for "what's active," matching how
+  mobile's ADR 0007 reads its own native store — is allowed; anything else is
+  cancelled and reopened via `tauri-plugin-opener`'s `open_url` (system
+  default browser)
+- No new capability/permission grant: the policy decision and the browser-open
+  call both happen entirely in Rust, with no JS-side plugin command involved
+
+**Known gap, not covered by this task:** `window.open()` / `target="_blank"`
+requests go through a _separate_ Tauri hook (`on_new_window`), not
+`on_navigation`. Without registering that hook too, such requests currently
+no-op (Tauri/WRY's own default with no handler configured) rather than
+opening the system browser — safe (nothing silently escapes to an unmanaged
+native window) but not yet feature-complete for that specific case. A
+follow-up task if it proves disruptive in practice; RFC 0058's own quoted
+requirement is scoped to top-level "navigating the shell away," which
+`on_navigation` alone already covers.
+
+**SRS reference:** §3.19 (desktop), §3.12 (mobile equivalent, same
+requirement)
+
+**Review checklist:**
+
+- Clicking a link inside the loaded instance to a path on the same origin
+  stays in the app's WebView
+- Clicking a link to a different origin (e.g. an external documentation link)
+  opens the system default browser and leaves the app's WebView on the
+  instance, unchanged
+- The bundled onboarding/instance-manager page's own navigations (first
+  launch, Switch Instance…, a resolved deep link) are unaffected
+- No new entries needed in `capabilities/default.json` or `capabilities/bridge.json`
+
 ## Related RFCs
 
 - [RFC 0038 — Desktop app shell (Tauri, macOS-first)](../rfcs/0038-desktop-app-shell.md)
+- [RFC 0058 — Native mobile app shell](../rfcs/0058-native-mobile-app-shell.md)
+  (source of Task 17.8's navigation-policy requirement, carried over from
+  mobile's ADR 0007)
 - [RFC 0080 — Plugin surface model](../rfcs/0080-plugin-surface-model.md)
   (supplies the `desktop` surface value; subsumes Task 17.7)
 - [RFC 0083 — Device bridge and capability contract](../rfcs/0083-device-bridge-capability-contract.md)

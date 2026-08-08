@@ -840,7 +840,7 @@ purge and must be stated deliberately.
 
 ---
 
-#### 📋 8.22 — Platform-wide dialect consolidation (workstream 0009 leg 1)
+#### ✅ 8.22 — Platform-wide dialect consolidation (workstream 0009 leg 1)
 
 **Goal:** Make the operator's `DB_DIALECT`/`DATABASE_URL` choice
 (`packages/db/src/dialect.ts:20`) the single source of truth for every

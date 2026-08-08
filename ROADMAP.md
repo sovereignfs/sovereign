@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.64.0 · **Last updated:** 2026-08-07
+**Version:** 0.64.3 · **Last updated:** 2026-08-08
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -199,6 +199,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.62.2  | Capture timezone at registration from the browser                                                                                  | ✅     | [1.20](docs/epics/users-auth.md#-120--capture-timezone-at-registration-from-the-browser)                                 |
 | 0.63.0  | Runtime mobile shell consumes `MobileHeader`/`MobileFooter` — leg 2 (RFC 0088)                                                     | ✅     | [9.24](docs/epics/design-system.md#-924--runtime-mobile-shell-consumes-mobileheadermobilefooter)                         |
 | 0.64.0  | Fully public plugins (`public: true`, RFC 0089)                                                                                    | ✅     | [2.30](docs/epics/platform-shell.md#-230--fully-public-plugins-rfc-0089)                                                 |
+| —       | Platform-wide dialect consolidation — workstream 0009 leg 1                                                                        | ✅     | [8.22](docs/epics/data-sovereignty.md#-822--platform-wide-dialect-consolidation-workstream-0009-leg-1)                   |
 
 ---
 
@@ -264,7 +265,6 @@ doc — but not yet assigned a roadmap slot. Promoted to a phase table once prio
 | —       | Console: instance backup & restore UI (owner/admin) (RFC 0084)            | 📋     | [8.17](docs/epics/data-sovereignty.md#-817--console-instance-backup--restore-ui-owneradmin-rfc-0084)                             |
 | —       | Account: async selective data backup UI (regular users) (RFC 0084)        | 📋     | [8.18](docs/epics/data-sovereignty.md#-818--account-async-selective-data-backup-ui-regular-users-rfc-0084)                       |
 | —       | RFC 0071 incident: pre-flight warning and remaining doc follow-ups        | 📋     | [8.19](docs/epics/data-sovereignty.md#-819--rfc-0071-incident-pre-flight-warning-and-remaining-doc-follow-ups)                   |
-| —       | Platform-wide dialect consolidation (workstream 0009)                     | 📋     | [8.22](docs/epics/data-sovereignty.md#-822--platform-wide-dialect-consolidation-workstream-0009-leg-1)                           |
 | —       | `packages/db` libSQL driver adoption (workstream 0009)                    | 📋     | [8.23](docs/epics/data-sovereignty.md#-823--packagesdb-libsql-driver-adoption-workstream-0009-leg-3)                             |
 | —       | One-time SQLite → libSQL data cutover (workstream 0009)                   | 📋     | [8.24](docs/epics/data-sovereignty.md#-824--one-time-sqlite--libsql-data-cutover-workstream-0009-leg-4)                          |
 | —       | Database-backed rate-limit storage for apps/auth (RFC 0086)               | 📋     | [1.19](docs/epics/users-auth.md#-119--database-backed-rate-limit-storage-for-appsauth-rfc-0086)                                  |

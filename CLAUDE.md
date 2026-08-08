@@ -126,8 +126,11 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.64.0`**
-  (all pre-v1 roadmap tasks through slot `0.13.0` complete; subsequent minor
+  to `1.0.0` marks the public release.** The current version is **`0.64.3`**
+  (three ad-hoc patch hotfixes since `0.64.0` — a `nanoid` dependency bump for
+  GHSA-2v37-7h3g-55p8, allowing the custom worker chunk through the session
+  gate, and pointing e2e auth-page specs at the runtime instead of the auth
+  server) (all pre-v1 roadmap tasks through slot `0.13.0` complete; subsequent minor
   bumps track post-slot tasks such as the admin-managed external provider config,
   the RFC 0065 plugin catalog/access-policy work, private plugin repositories
   via access token, RFC 0068's export completeness hardening, required
@@ -672,7 +675,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 ## Status
 
-Current platform version: **`0.64.0`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
+Current platform version: **`0.64.3`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
 
 For the full task history and current roadmap position, see:
 

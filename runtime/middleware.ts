@@ -660,12 +660,12 @@ export const config = {
   // starts emitting another `public/` service-worker chunk, add its prefix
   // here in the same change.
   matcher: [
-    // Exclude: auth pages, admin API (self-authenticated), public liveness probe,
-    // dynamic manifest (browsers fetch it before login for PWA install), offline
-    // fallback, PWA assets, Next.js static assets, and the signed-URL storage
-    // download route (RFC 0044 — self-authenticated by its HMAC-signed token,
-    // not a session; must work for a plain `<img src>`/direct fetch with no
-    // session cookie).
-    '/((?!login|register|forgot-password|reset-password|offline|api/auth|api/admin|api/health|api/manifest|api/storage|manifest.json|sw.js|workbox-|worker-|fallback-|icons/|_next/static|_next/image|favicon.ico).*)',
+    // Exclude: auth pages, privacy/terms pages, admin API (self-authenticated),
+    // public liveness probe, dynamic manifest (browsers fetch it before login
+    // for PWA install), offline fallback, PWA assets, Next.js static assets,
+    // and the signed-URL storage download route (RFC 0044 — self-authenticated
+    // by its HMAC-signed token, not a session; must work for a plain
+    // `<img src>`/direct fetch with no session cookie).
+    '/((?!login|register|forgot-password|reset-password|privacy|terms|offline|api/auth|api/admin|api/health|api/manifest|api/storage|manifest.json|sw.js|workbox-|worker-|fallback-|icons/|_next/static|_next/image|favicon.ico).*)',
   ],
 };

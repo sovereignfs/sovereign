@@ -3,7 +3,7 @@
 import { type FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Button, Input } from '@sovereignfs/ui';
+import { Button, Input, LegalLinks } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
 import { resolveRuntimeRedirect } from '@/src/post-login-redirect';
 import styles from '../auth.module.css';
@@ -168,6 +168,8 @@ export function LoginForm({
           </Link>
         </p>
       </div>
+      {/* privacy/terms only live on the runtime now — cross-origin links, not same-origin routes here */}
+      <LegalLinks privacyHref={`${runtimeUrl}/privacy`} termsHref={`${runtimeUrl}/terms`} />
     </main>
   );
 }

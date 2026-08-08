@@ -1,0 +1,45 @@
+/* Shared layout for /privacy and /terms — public, unauthenticated pages. */
+
+.page {
+  min-height: 100dvh;
+  background: var(--sv-color-surface);
+  padding: var(--sv-space-8) var(--sv-space-4) var(--sv-space-12);
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: var(--sv-space-6);
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.meta {
+  color: var(--sv-color-text-muted);
+  margin: var(--sv-space-2) 0 var(--sv-space-8);
+}
+
+.section {
+  margin-top: var(--sv-space-8);
+}
+
+.body p,
+.body li {
+  color: var(--sv-color-text-primary);
+  line-height: 1.6;
+}
+
+.body ul {
+  padding-left: var(--sv-space-6);
+}
+
+.notice {
+  margin: var(--sv-space-6) 0;
+  padding: var(--sv-space-4);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+}

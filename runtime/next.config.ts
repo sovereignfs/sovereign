@@ -48,6 +48,33 @@ const nextConfig: NextConfig = {
   ],
   // better-sqlite3-multiple-ciphers (RFC 0071) uses native bindings — Webpack cannot bundle it.
   serverExternalPackages: ['better-sqlite3-multiple-ciphers'],
+  webpack: (config) => {
+    // Drop plain `better-sqlite3` from the server graph. `drizzle-orm/better-sqlite3`
+    // statically imports it at the top of its driver, but only ever constructs it in
+    // the connection-string overloads (`drizzle(':memory:')`, `drizzle({ connection })`).
+    // We never take those paths: every SQLite open goes through `openKeyedSqlite` for
+    // RFC 0071 keying + marker checks, and both call sites hand Drizzle an already-open
+    // handle from the multiple-ciphers fork (packages/db's client.ts, plugin-client.ts).
+    //
+    // Without this alias the module is bundled rather than externalized, and Webpack
+    // then parses its `require(path.resolve(nativeBinding) + '.node')` addon loader and
+    // warns "Critical dependency: require function is used in a way in which
+    // dependencies cannot be statically extracted" on every route that touches the DB.
+    // `serverExternalPackages` cannot fix that: Next already lists better-sqlite3 in its
+    // own defaults, but it refuses to externalize a package that does not resolve
+    // identically from the project root (handle-externals.ts's base-resolve check —
+    // bundled server code is relocated without its node_modules tree). Under pnpm's
+    // strict layout better-sqlite3 is only reachable from inside drizzle-orm's own
+    // .pnpm directory — it is an auto-installed optional peer that nothing here
+    // declares — so the check fails and Next bundles it. Declaring it instead would
+    // mean shipping a native package we deliberately never build (see
+    // pnpm-workspace.yaml's `allowBuilds: better-sqlite3: false`).
+    //
+    // NOTE: this applies to Webpack only. Moving the runtime to Turbopack silently
+    // drops it — port it to `turbopack.resolveAlias` at the same time.
+    config.resolve.alias = { ...config.resolve.alias, 'better-sqlite3': false };
+    return config;
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

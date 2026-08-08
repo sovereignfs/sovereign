@@ -2,7 +2,7 @@
 
 import { type FormEvent, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Button, Input } from '@sovereignfs/ui';
+import { Button, Input, LegalLinks } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
 import { resolveRuntimeRedirect } from '@/src/post-login-redirect';
 import styles from '../../auth.module.css';
@@ -181,6 +181,8 @@ export function ChallengeForm({
           )}
         </p>
       </div>
+      {/* privacy/terms only live on the runtime now — cross-origin links, not same-origin routes here */}
+      <LegalLinks privacyHref={`${runtimeUrl}/privacy`} termsHref={`${runtimeUrl}/terms`} />
     </main>
   );
 }

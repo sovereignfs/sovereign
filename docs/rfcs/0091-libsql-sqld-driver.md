@@ -6,10 +6,11 @@
 **Scope:** `packages/db`, `docker-compose.yml`, `docker-compose.prod.yml`; supersedes
 [research 0003](../research/0003-horizontal-scaling-strategy.md)'s SQLite
 recommendation\
-**Incorporated into plan:** No — documentation-first. Blocks
-[workstream 0009](../workstreams/0009-database-dialect-and-libsql-migration.md)
-leg 3 pending the encryption-guarantee decision in Open Questions; the async-contract
-and deployment-shape findings below are otherwise ready to implement.
+**Incorporated into plan:** No — documentation-first. This draft now carries a
+recommendation for the encryption question (an RFC-0071-scoped carve-out — see
+Proposed design), but it is a security-guarantee tradeoff and still needs
+kasunben's explicit sign-off before leg 3 starts; the async-contract and
+deployment-shape findings are ready to implement regardless.
 
 ---
 
@@ -18,22 +19,25 @@ and deployment-shape findings below are otherwise ready to implement.
 Workstream 0009 locked a decision to make `sqld` (libSQL's server) mandatory for
 every SQLite-dialect Sovereign instance, replacing direct `better-sqlite3` file
 access, staged across legs 2–4. This RFC is leg 2's deliverable: it reports what
-a live spike against `sqld` actually found, proposes a driver shape for the parts
-that are safe to proceed on, and — unlike a typical RFC — does **not** resolve
-everything. One finding is a genuine blocker that needs a decision from kasunben,
-not an engineering judgment call, so it's surfaced as an open question rather than
-quietly designed around.
+a live spike against `sqld` actually found, and proposes a design for all four
+of the questions leg 2 was asked to resolve — including the encryption question,
+which turned out to be a genuine blocker rather than an engineering judgment
+call.
 
 **The short version:** the async-contract concern research 0003 raised is real but
 narrower than feared — 9 call sites, not a rewrite. The deployment shape is
-straightforward and already stood up. But `sqld`'s server-side encryption-at-rest
-has been an open, unresolved upstream issue for roughly two years, and where any
-encryption-at-rest capability exists in the libSQL ecosystem today it's explicitly
-documented as experimental and unsuitable for production data. Adopting `sqld` as
-written today would silently remove the guarantee RFC 0071 was built to provide,
-for zero currently-installed plugins to `requireEncryption: true` — HealthLog,
+straightforward and already stood up. `sqld`'s server-side encryption-at-rest,
+however, has been an open, unresolved upstream issue for roughly two years, and
+where any encryption-at-rest capability exists in the libSQL ecosystem today
+it's explicitly documented as experimental and unsuitable for production data.
+Adopting `sqld` unconditionally would silently remove the guarantee RFC 0071 was
+built to provide, for the one plugin that actually depends on it — HealthLog,
 per the [RFC 0071 incident doc](../incidents/2026-07-24-rfc-0071-encryption-rollout.md).
-That is not a call this RFC makes on its own.
+This RFC's recommendation is a narrow **encryption carve-out**: everything that
+RFC 0071 would encrypt today stays on plain-file SQLite + SQLCipher; everything
+else moves to `sqld`. It's a security-guarantee tradeoff, so it's flagged for
+kasunben's explicit decision rather than treated as settled by this document
+alone — see Proposed design and Alternatives considered.
 
 ## Motivation
 
@@ -152,7 +156,45 @@ pattern to copy already exists in the same file), and rewrite `seed.ts`'s 2 raw
 to a single focused PR, not "comparable to the existing per-dialect schema
 duplication" as research 0003 estimated.
 
-### Encryption-at-rest — **not resolved, see Open Questions**
+### Encryption-at-rest — recommended: a carve-out scoped to RFC 0071's existing boundary
+
+**Recommendation:** move to `sqld` everywhere RFC 0071 would **not** apply
+encryption today; keep plain-file SQLite + SQLCipher everywhere it **would**.
+Reuse RFC 0071's own existing boundary rather than inventing a new one:
+
+- The platform DB (`sovereign.db`) and `apps/auth`'s DB (`auth.db`) stay on
+  plain-file SQLite whenever the operator has `SOVEREIGN_DB_ENCRYPTION_KEY` set
+  at all — that env var is the instance-wide encryption toggle, and moving
+  those two databases to `sqld` would silently drop the guarantee for _every_
+  operator who turned it on, not only `requireEncryption` plugin authors.
+- Any isolated plugin database stays on plain-file SQLite whenever that
+  plugin's manifest declares `database.requireEncryption: true` — the
+  **raise-only** semantics from task 8.15 are unaffected: a plugin can still
+  never be _forced_ onto `sqld` against a real encryption requirement it
+  declared, regardless of what the platform's own dialect otherwise is.
+- Everything else — the platform/auth DBs when no key is set, and every
+  plugin database that never asked for encryption — moves to `sqld`.
+
+This is not the workstream's original "mandatory, no exceptions" as written —
+it's `resolvePluginDialect()`'s removed per-plugin override (leg 1) coming back
+in a much narrower, principled form: not "any plugin can pick any dialect for
+any reason" (arbitrary, ungoverned, unused by any of the 12 shipped manifests —
+exactly why leg 1 removed it), but "a database that has a real, already-validated
+encryption requirement keeps the one mechanism that satisfies it." The condition
+is a single existing boolean this codebase already checks
+(`resolvePluginEncryptionKey`/`checkEncryptionMarker`,
+`packages/db/src/sqlite-encryption.ts`), not new per-plugin flexibility.
+
+**Cost, stated plainly:** `packages/db`'s SQLite path keeps two drivers
+(`better-sqlite3-multiple-ciphers` for the encrypted case, `@libsql/client` for
+everything else) instead of fully retiring `better-sqlite3`. That's real,
+ongoing duplication — some of exactly what this workstream set out to remove —
+carried specifically because RFC 0071's guarantee has cost three hardening
+passes and a production incident to earn, and this RFC is not willing to spend
+that for a `sqld` feature with a ~2-year-open upstream issue and no committed
+timeline. The carve-out is explicitly revisitable: once `sqld`'s
+encryption-at-rest matures (issue #1756 closes and the fix ships stable, not
+just merges), a follow-up leg can retire the `better-sqlite3` path entirely.
 
 ## Alternatives considered
 
@@ -171,68 +213,53 @@ duplication" as research 0003 estimated.
   today's adoption target may itself be superseded eventually — but adopting
   the _less_ mature of the two available options to hedge against that would be
   backwards.
+- **Wait for upstream before starting leg 3 at all.** Track issue #1756, block
+  every part of the migration — not just the encrypted case — until it closes.
+  Rejected: the issue has been open ~2 years with no visible progress, and this
+  would hold the async-contract and driver-shape work (both fully resolved,
+  see above) hostage to a dateless external timeline for no reason — those
+  parts don't touch encryption at all.
+- **Accept a guarantee downgrade instead of a carve-out**, matching Postgres's
+  existing "disk + operator-managed encryption, startup warning" precedent for
+  every SQLite database, encrypted or not. Rejected: this is a real regression
+  for HealthLog specifically — from "the platform refuses to run without a
+  key" to "the platform warns and proceeds anyway" — traded away only to avoid
+  a driver-duplication cost this RFC considers acceptable given RFC 0071's own
+  track record (three hardening passes, one production incident) of being
+  worth extra care.
+- **Reopen mandatory-vs-opt-in itself**, closer to research 0003's original
+  "opt-in third tier" recommendation — plain-file SQLite stays available as a
+  general escape hatch, not just for the encrypted case. Rejected as broader
+  than the actual gap: the async-contract and deployment-shape questions are
+  fully resolved and don't need an opt-out; only the encryption boundary does,
+  and the carve-out already covers exactly that boundary without reopening
+  workstream 0009's mandatory decision for everything else.
 
 ## Open questions
 
-### Blocking: no viable RFC 0071 equivalent in `sqld` today
-
-- Upstream issue [tursodatabase/libsql#1756](https://github.com/tursodatabase/libsql/issues/1756),
-  "Enable encryption at rest in libsql-server," opened September 2024, **still
-  open** as of this spike (~2 years) — "Commit 71a7cfc seems to have disabled
-  encryption at rest in the server. Let's investigate why and work towards
-  enabling it."
-- Independently: where an encryption-at-rest capability exists anywhere in the
-  libSQL/Turso client ecosystem, it is explicitly documented as experimental and
-  "not production ready... should not be used for critical data."
-- The `sqld` container itself prints "This software is in BETA version" on every
-  boot — observed directly when this spike brought it up.
-
-Adopting `sqld` as the mandatory SQLite backend, as written today, means every
-SQLite-dialect instance loses RFC 0071's actual enforced guarantee — not
-degrades it, loses it — with no equivalent available to fall back to. This is
-exactly the "blocking incompatibility... with no acceptable mitigation" case
-workstream 0009 leg 2 named as a reason to stop and escalate rather than push
-into leg 3 on a guess. Options, for kasunben to choose from — this RFC does not
-pick one:
-
-1. **Wait for upstream.** Track issue #1756, revisit before leg 3 starts. Risk:
-   open-ended timeline; the issue has already been open ~2 years with no visible
-   progress.
-2. **Accept a guarantee downgrade**, matching Postgres's existing precedent:
-   `sqld`-backed SQLite falls back to "disk + operator-managed encryption,
-   startup warning" instead of an enforced platform guarantee. Real cost: this
-   is a regression for the one plugin that actually depends on the stronger
-   guarantee today (HealthLog, `requireEncryption: true`) — from "the platform
-   refuses to run without a key" to "the platform warns and proceeds anyway."
-   Needs its own product decision and a `docs/upgrade.md` migration note, not
-   a quiet fallback.
-3. **Encryption carve-out.** Keep `requireEncryption` plugins (and/or the whole
-   platform, operator's choice) on plain-file SQLite + SQLCipher even after
-   everything else moves to `sqld`. Directly reopens workstream 0009's
-   "mandatory, no exceptions" decision — narrowly, for this one case.
-4. **Reopen mandatory-vs-opt-in itself**, closer to research 0003's original
-   recommendation — plain-file SQLite stays available as an escape hatch until
-   `sqld`'s encryption story matures, rather than a hard, dateless cutover.
-
-### Non-blocking
-
 - `sqld` auth model for the internal Docker network (see Deployment shape above)
   — leg 3's call, not this RFC's.
+- Timeline for retiring the carve-out once `sqld`'s encryption-at-rest matures —
+  not urgent; revisit when issue #1756 actually closes, not on a schedule.
 
 ## Adoption path
 
-**Leg 3 is blocked** until the encryption question above is decided. Once it
-is: leg 3 implements the driver swap (`client.ts`, `plugin-client.ts`,
+**Blocked on kasunben's sign-off on the encryption carve-out** — a
+security-guarantee tradeoff, not a call this RFC finalizes unilaterally. Once
+approved: leg 3 implements the driver swap (`client.ts`, `plugin-client.ts`,
 `apps/auth/src/db.ts`, the 9 async-contract call sites, per-dialect schema files
-under `packages/db/src/schema/`), scoped by whichever encryption option was
-chosen. Leg 4 remains the one-time data cutover for the single production
-instance.
+under `packages/db/src/schema/`) with the carve-out's boundary condition
+(current key/`requireEncryption` state) built in from the start, not bolted on
+after. Leg 4 remains the one-time data cutover for the single production
+instance, excluding whichever databases the carve-out keeps on plain-file
+SQLite.
 
 No published-package semver impact — `packages/db` and `apps/auth` are both
 private, unpublished packages.
 
 ## Changelog
 
-| Version | Date        | Change                                                                        |
-| ------- | ----------- | ----------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft from workstream 0009 leg 2's live spike against `sqld` 0.24.33. |
+| Version | Date        | Change                                                                                                                                                                                                                                                       |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | August 2026 | Initial draft from workstream 0009 leg 2's live spike against `sqld` 0.24.33.                                                                                                                                                                                |
+| 0.2     | August 2026 | Added an explicit recommendation for the encryption question: a carve-out scoped to RFC 0071's existing key/`requireEncryption` boundary. Still needs kasunben's sign-off — a security-guarantee tradeoff, not an engineering call this RFC finalizes alone. |

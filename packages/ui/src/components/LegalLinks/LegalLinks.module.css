@@ -1,0 +1,24 @@
+.root {
+  margin: var(--sv-space-5) 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sv-space-2);
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+}
+
+.link {
+  color: var(--sv-color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--sv-color-border);
+}
+
+.link:hover {
+  color: var(--sv-color-text-primary);
+}
+
+.dot {
+  color: var(--sv-color-border);
+}

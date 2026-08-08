@@ -63,14 +63,22 @@ listed in RFC 0038).
 - `cargo tauri build` produces a `.app` bundle and `.dmg`
 - GitHub Actions `release.yml` runs on a `v0.1.0` tag and attaches all artifacts
 
-#### 📋 17.2 — System tray and OS notifications
+#### ✅ 17.2 — System tray and OS notifications
 
-> **Notification half done via [workstream 0003](../workstreams/0003-device-bridge-across-surfaces.md)
-> leg 3, rescoped to the Tauri transport of `@sovereignfs/bridge`** —
+> **Both halves complete, shipped separately.** Notifications shipped via
+> [workstream 0003](../workstreams/0003-device-bridge-across-surfaces.md) leg
+> 3, rescoped to the Tauri transport of `@sovereignfs/bridge` —
 > `sdk.device.nativeNotifications.show()` (not `sdk.device.notify()` as
 > originally sketched below) routes to native OS notifications on desktop via
 > `tauri-plugin-notification`, empirically verified end-to-end. The system
-> tray half below is unrelated to the bridge and remains open.
+> tray half shipped separately, directly in `sovereign-desktop` (unrelated to
+> the bridge): a persistent tray/menu-bar icon with an Open / Switch
+> Instance… / Quit menu, built on Tauri 2's built-in `tray-icon` crate
+> feature rather than a dedicated plugin (no such plugin exists for Tauri 2 —
+> the `tauri-plugin-system-tray` name below was carried over from the Tauri 1
+> API and never matched the v2 dependency graph). Closing the main window now
+> hides it instead of quitting, so the app stays reachable for notifications;
+> Quit (tray menu or Cmd+Q) is the only full exit.
 
 **Goal:** Add persistent system presence via a menu bar / system tray icon and
 OS-level notifications so users receive Sovereign alerts even when the main window
@@ -78,12 +86,12 @@ is closed.
 
 **Deliverables:**
 
-- `tauri-plugin-system-tray` integration — tray icon with a context menu: Open,
-  Switch Instance (submenu), Quit
-- `tauri-plugin-notification` integration — `sdk.device.notify()` routes to native
-  OS notifications in the `"desktop"` environment (falls back to Web Notifications
-  API in browser)
-- `packages/sdk` minor bump — `sdk.device.notify()` desktop tier implementation
+- Tauri's built-in `tray-icon` feature (`src-tauri/src/lib.rs` in
+  `sovereign-desktop`) — tray icon with a context menu: Open, Switch
+  Instance…, Quit
+- `tauri-plugin-notification` integration — `sdk.device.nativeNotifications.show()`
+  routes to native OS notifications in the `"desktop"` environment (falls back to
+  Web Notifications API in browser)
 
 **SRS reference:** §3.19
 
@@ -92,7 +100,7 @@ is closed.
 - App shows a tray icon on macOS menu bar after launch
 - Closing the main window does not quit the app; tray icon remains
 - Context menu "Open" restores the window
-- `sdk.device.notify({ title, body })` triggers a native macOS notification
+- `sdk.device.nativeNotifications.show({ title, body })` triggers a native macOS notification
 - Web Notifications API fallback still works in the browser
 
 #### 📋 17.3 — Deep link scheme (`sovereign://`)

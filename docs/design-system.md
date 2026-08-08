@@ -453,7 +453,7 @@ something to assume silently.
 
 ### Hooks are runtime-independent
 
-`useIsMobile`, `useLongPress`, `useDoubleTapHandler`, and
+`useIsMobile`, `useIsOffline`, `useLongPress`, `useDoubleTapHandler`, and
 `useCommitOnEnterOrBlur` have no dependency on the Sovereign runtime or any
 other package in this monorepo — they're safe to use in any React 18+ app,
 standalone or otherwise.
@@ -764,7 +764,9 @@ import {
   useDoubleTapHandler,
   useSingleOrDoubleTap,
   useIsMobile,
+  useIsOffline,
   useCommitOnEnterOrBlur,
+  OfflineGate,
 } from '@sovereignfs/ui';
 ```
 
@@ -849,6 +851,31 @@ and reads the real viewport, matching every other SSR-safe hook in this
 system. Defaults to the platform's single documented breakpoint (768px, see
 above); pass a different value only when a layout genuinely needs its own
 threshold.
+
+**`useIsOffline()`**
+SSR-safe `navigator.onLine` tracking — defaults to `false` (online) until the
+client mounts and reads the real value, same SSR-safety pattern as
+`useIsMobile`. Reflects only the browser's own signal: true whenever the OS
+reports a network interface is up, even without real upstream connectivity
+(e.g. Wi-Fi with no internet) — there is currently no better cross-browser
+signal available. The platform shell's own `OfflineBanner` is built on this
+hook rather than deriving connectivity separately (research 0012); use it
+directly for any other connectivity-reactive UI.
+
+**`OfflineGate({ children, surfaceName?, className? })`**
+Wraps a surface's content and swaps it for an `EmptyState` while
+`useIsOffline()` is true, instead of rendering `children` against whatever
+happens to be cached. Reach for this only where operating against stale data
+is actively wrong — an administrative or settings surface (Console, Account)
+whose content is a point-in-time snapshot with no way to signal it may be
+stale — not for ordinary pages, where the shell's `OfflineBanner` informing the
+user is enough and the content itself is still worth showing.
+
+```tsx
+<OfflineGate surfaceName="Console">
+  <UserList />
+</OfflineGate>
+```
 
 **`useSwipeReveal({ revealWidth, open, onOpen, onClose, disabled? })`**
 Horizontal swipe-to-reveal for a row's trailing actions (e.g. Done/Delete on a

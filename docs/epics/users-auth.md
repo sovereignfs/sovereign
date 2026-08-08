@@ -886,36 +886,71 @@ Task 1.2 (session-verify propagation pattern), the Account plugin's
 
 #### 📋 1.21 — Long-lived offline session assertion (Research 0012)
 
-**Goal:** Give the platform a session assertion that can be verified with no
-network for days, so offline access does not expire five minutes after the last
-online request — without weakening revocation for online requests.
+**Goal:** Give the platform a session assertion the **service worker** can verify
+with no network for days, so offline access does not expire five minutes after
+the last online request — without weakening revocation for online requests.
+
+> **Spec correction (August 2026, during leg 2).** This task originally called
+> for a "verification path in `runtime/middleware.ts` that accepts the offline
+> assertion only when the request is genuinely offline." That cannot work.
+> Next.js middleware runs on the server: if it is executing, the request reached
+> the server, so the device is online. There is no middleware handling of an
+> offline request.
+>
+> Offline, the browser's navigation request fails and the **service worker**
+> serves a cached document from Cache Storage — no server code runs at all. The
+> offline session decision therefore belongs in the SW, which is also why this
+> task and task 2.31 are **one mechanism, not two**: the SW can only choose a
+> per-user cache partition if it already knows which user it is holding an
+> assertion for.
+>
+> The SW cannot verify an HMAC — that needs `AUTH_SECRET`, which must never
+> reach the browser — so the assertion is **asymmetrically signed** instead.
 
 **Deliverables:**
 
-- A signed, device-scoped offline session assertion, separate from better-auth's
-  `session.cookieCache` (`apps/auth/src/auth.ts:56`, `maxAge: 300`). That 300s
-  value stays as-is: it correctly bounds role-change staleness for online
-  requests and must not be stretched to serve offline.
+- A signed offline session assertion (user id + offline expiry), issued
+  server-side using the **better-auth `jwt()` keypair already enabled** at
+  `apps/auth/src/auth.ts:240`, whose public JWKS is already published at
+  `/.well-known/jwks.json` for RFC 0072. No new key material.
+- Separate from better-auth's `session.cookieCache`
+  (`apps/auth/src/auth.ts:56`, `maxAge: 300`). That 300s value stays as-is: it
+  correctly bounds role-change staleness for **online** requests and must not be
+  stretched to serve offline.
+- Client-side storage of the assertion and a cached copy of the JWKS, written
+  while online. A service worker cannot read cookies portably (the Cookie Store
+  API is not available in Safari), so both go in IndexedDB, which research 0008
+  confirmed works in every context tested including iOS `capacitor://`.
+- SW-side verification via WebCrypto against the cached JWKS, with expiry
+  enforced. No valid assertion ⇒ no cached shell (task 2.32 decides what shows
+  instead).
 - Explicit, configurable lifetime (default in the 7–30 day range) surfaced as an
   env var and documented in `docs/self-hosting.md`. This value **is** the offline
   revocation gap — name it as such rather than leaving it implicit.
-- Verification path in `runtime/middleware.ts` that accepts the offline
-  assertion **only** when the request is genuinely offline, so it can never be
-  used to skip a live revocation check while the network is reachable.
 - Cleared on sign-out alongside both `session_data` cookie variants.
 - For `device-only` plugins (task 3.36) the assertion is stored encrypted under
   the device-auth key (task 1.22), so its presence is not observable without
   passing device auth.
 
-**Dependencies:** Research 0012. Blocks tasks 2.31 and 2.32.
+**Threat model — state it in the code comment, not just here.** Signing does
+**not** stop an attacker with the device from replaying their _own_ still-valid
+assertion; the cached shell is sitting in Cache Storage next to it either way.
+What signing buys is that the offline window cannot be extended beyond what the
+server granted, and the assertion cannot be re-pointed at a **different user** to
+be served that user's cached partition. That second property is the one task 2.31
+depends on for shared-device safety.
+
+**Dependencies:** Research 0012. Paired with task 2.31 (same mechanism); blocks
+task 2.32.
 
 **SRS reference:** §3.11, AUTH-05.
 
 **Review checklist:**
 
 - An authenticated user offline for over an hour still reaches the cached shell.
-- The offline assertion is rejected when the network is reachable — verified by a
-  test that presents it with connectivity available.
+- An assertion past its offline expiry is rejected by the SW.
+- An assertion whose payload has been edited (different user id, later expiry)
+  fails signature verification and is rejected.
 - Revoking a session server-side takes effect on the next online request,
   unchanged from today.
 - Sign-out clears the assertion; a second user on the same device cannot use it.

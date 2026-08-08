@@ -184,6 +184,35 @@ against a real Capacitor build gates this RFC's implementation** (epic task
 20.10), because if WKWebView's service-worker behavior disappoints, the cost
 profile of focused native apps changes materially.
 
+> **Correction (August 2026).** Three claims above have since been measured and
+> are wrong as written. The section is left intact as the original argument;
+> read it with these corrections applied.
+>
+> 1. **"Nothing about offline is native-specific" — no longer true.** The
+>    correct split is that offline _delivery_ is the web stack, but
+>    `device-only` _storage_ is native. Web storage is evictable on every
+>    platform, so the tier that must never lose data
+>    ([research 0012](../research/0012-offline-first-architecture.md)) depends on
+>    a native capability — `device:secureStorage`, epic task 20.13 — not on the
+>    service worker.
+> 2. **"`capacitor://` yields no service worker" is iOS-specific, not
+>    cross-platform.** [Research 0008](../research/0008-wkwebview-android-webview-offline-spike.md)
+>    confirmed empirically that `navigator.serviceWorker` is absent entirely
+>    under iOS's `capacitor://`, but Android's default bundled scheme is
+>    `https://localhost`, where service workers register and activate normally.
+>    The `server.url` conclusion still holds — for the reason in ADR 0002 (a
+>    runtime-chosen instance cannot be baked into a build), not for uniform
+>    service-worker unavailability.
+> 3. **The spike has run.** Epic task 20.10 / research 0008 measured this
+>    against real iOS Simulator and Android Emulator builds. It did not
+>    disappoint: service workers are viable in `https` contexts on both. This is
+>    no longer an open gate on this RFC.
+>
+> Separately, workstream 0003's leg 4 established that the device bridge reaches
+> the remote instance origin on both platforms, so native storage is callable
+> from the `server.url`-loaded document — origin partitioning governs
+> IndexedDB / OPFS / Cache API, not the app sandbox behind the bridge.
+
 **Named limitation:** iOS can evict `WKWebsiteDataStore` — IndexedDB and SW
 caches — under storage pressure or prolonged non-use. For the read cache that is
 a slow cold start. For an unsynced RFC 0078 write queue it is silent data loss,

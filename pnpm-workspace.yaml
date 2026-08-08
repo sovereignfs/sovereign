@@ -24,7 +24,7 @@ catalog:
   '@types/node': ^22.20.1
   next: ^15.5.22
   semver: ^7.8.5
-  '@types/semver': ^7.7.1
+  '@types/semver': ^7.8.0
   # SQLCipher-capable fork of better-sqlite3 (RFC 0071) — API-compatible
   # drop-in, same major/version line as better-sqlite3. Used by packages/db,
   # apps/auth, and scripts/ wherever a SQLite file is opened directly.

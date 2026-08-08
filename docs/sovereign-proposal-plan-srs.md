@@ -697,7 +697,7 @@ The runtime's middleware reads the session cookie and verifies it (v0.3: a call 
 
 ### 3.11 PWA
 
-`@ducanh2912/next-pwa` is added to the runtime. The PWA shell is installable from the browser. The service worker caches the shell and static assets for offline availability. Plugin data is not cached offline in v1.
+`@ducanh2912/next-pwa` is added to the runtime. The PWA shell is installable from the browser. The service worker caches the shell and static assets for offline availability. Plugin data is cached offline only for plugins that opt in: a plugin declaring `offline: true` in its manifest has its bare `routePrefix` precached and may persist data client-side through `sdk.offline` (read cache) and `sdk.offline-queue` (mutation queue), both IndexedDB-backed — see RFC 0074 and RFC 0078. A plugin that does not declare the field gets no offline data caching, which remains the default.
 
 **Offline connectivity banner (Task 0.5.31):** When a user is already in an authenticated session and the network drops, a thin fixed banner (`position: fixed; top: 0; z-index: 200`) slides in with an amber "No internet connection" state. On reconnection it flashes green "Back online" for 3 s, after which the service worker's `reloadOnOnline` triggers a full page reload to restore fresh content. The banner uses `navigator.onLine` + `window` `offline`/`online` events. SSR safety: the component always initialises to `'online'` (matching the server render) and reads the real state in `useEffect` — reading browser APIs during render or in a `useState` initializer causes a hydration mismatch. The banner is wired into both `(platform)` and `(minimal)` shell layouts; the `/offline` fallback page is excluded (it is the hard-offline landing).
 

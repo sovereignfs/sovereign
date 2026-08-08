@@ -1,5 +1,13 @@
 # Research 0003 — Horizontal scaling strategy (database, file storage, orchestration)
 
+> **SQLite recommendation superseded (August 2026).** This doc's "adopt
+> libSQL/`sqld` as an opt-in third dialect path" recommendation below is
+> superseded by [workstream 0009](../workstreams/0009-database-dialect-and-libsql-migration.md),
+> which locks a **mandatory, staged** adoption instead — every SQLite install
+> runs `sqld`, not just instances that opt in. The file-storage and
+> orchestration sections are unaffected. Workstream 0009's leg 2 also produces
+> the RFC this doc's "Next steps" deferred.
+
 **Status:** Exploratory\
 **Date:** July 2026\
 **Author:** Claude Code\

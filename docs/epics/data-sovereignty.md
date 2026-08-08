@@ -840,6 +840,111 @@ purge and must be stated deliberately.
 
 ---
 
+#### 📋 8.22 — Platform-wide dialect consolidation (workstream 0009 leg 1)
+
+**Goal:** Make the operator's `DB_DIALECT`/`DATABASE_URL` choice
+(`packages/db/src/dialect.ts:20`) the single source of truth for every
+database the platform opens — platform, auth, and every plugin — by removing
+the per-plugin override that exists today only to force SQLite on a
+Postgres-dialect instance. No shipped or example plugin manifest uses it.
+
+**Deliverables:**
+
+- Remove `dialect: z.enum(['sqlite']).optional()` from `manifestDatabaseSchema`
+  (`packages/manifest/src/schema.ts:55`) and the `manifestDatabaseDialect()`
+  helper.
+- Remove the refinement pairing `database.requireEncryption` with
+  `database.dialect` (`schema.ts:656-669`) — it exists only to resolve the
+  ambiguity a per-plugin override created. The other `requireEncryption`
+  refinement, requiring `isolation: "isolated"` (`schema.ts:641-654`), is
+  unaffected and stays.
+- Simplify `resolvePluginDialect()` (`packages/db/src/plugin-client.ts:31`) to
+  always resolve to the platform's dialect; delete the
+  plugin-forces-sqlite-on-postgres branch and its cross-dialect error.
+- `docs/plugin-development.md` manifest reference updated to drop the
+  `dialect` field; the docs-parity test
+  (`runtime/src/__tests__/docs-parity.test.ts`) stays green.
+
+**Dependencies:** None. Independent of Task 0.20.
+
+**SRS reference:** none — a manifest/db-package simplification, not a new
+capability.
+
+**Review checklist:**
+
+- Before deleting, grep every plugin manifest in the working tree — including
+  any `.local` plugin present at review time, not only the 12 in-repo plugins
+  checked during design — for `"dialect"` and confirm zero live users.
+- `pnpm typecheck` and `packages/manifest`'s test suite pass with the field
+  gone.
+- An instance with `DB_DIALECT=postgres` provisions every plugin — including
+  any that previously could have forced `sqlite` — onto Postgres without
+  error.
+
+---
+
+#### 📋 8.23 — `packages/db` libSQL driver adoption (workstream 0009 leg 3)
+
+**Goal:** Replace the direct `better-sqlite3`/`better-sqlite3-multiple-ciphers`
+file access in `packages/db`'s SQLite path with a client that talks to the
+`sqld` container from Task 0.20, for the platform DB, `apps/auth`'s DB, and
+every isolated plugin DB.
+
+**Scope is set by Task 0.20's RFC, not by this entry — do not begin detailed
+task breakdown before that RFC is accepted.** Expected surface, subject to the
+RFC's actual driver-shape decision:
+
+- `packages/db/src/client.ts` (`drizzleSqlite`/`better-sqlite3` construction)
+  and `plugin-client.ts`'s SQLite branch of `getPluginDb()`.
+- `packages/db/src/sqlite-encryption.ts`'s `openKeyedSqlite()` chokepoint
+  (line 314) and its `apps/auth` twin, per whatever encryption mapping the RFC
+  settles on.
+- Every per-dialect SQLite schema file under `packages/db/src/schema/sqlite/`.
+- Anywhere in the codebase that assumed `better-sqlite3`'s synchronous API —
+  to be enumerated once the RFC's async-contract decision is known.
+
+**Dependencies:** Task 0.20 (blocked on its RFC), Task 8.22 (dialect
+consolidation should land first so this doesn't need to reconcile with a
+per-plugin override mid-migration).
+
+**SRS reference:** to be added from Task 0.20's RFC.
+
+**Review checklist:** to be written once scope is known from the RFC; must at
+minimum include a live encrypted round-trip (per the RFC 0071 incident
+precedent, `docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`) — not
+just unit tests — before this task is considered done.
+
+---
+
+#### 📋 8.24 — One-time SQLite → libSQL data cutover (workstream 0009 leg 4)
+
+**Goal:** Migrate the single production instance's existing SQLite files
+(`sovereign.db`, `auth.db`, and every isolated plugin `.db`) onto the
+`sqld`-backed setup from Task 8.23, as a one-time cutover — not a phased or
+dual-write migration, since only one production instance exists today.
+
+**Deliverables:**
+
+- A documented, backup-first runbook: snapshot the existing `data/` directory,
+  import into `sqld`, verify row counts and a sample read/write against the
+  new setup, then cut the running instance over.
+- Verification against real production data, not synthetic fixtures alone.
+
+**Dependencies:** Task 8.23, run in production for long enough to be trusted;
+a fresh backup taken immediately before cutover.
+
+**SRS reference:** to be added from Task 0.20's RFC.
+
+**Review checklist:**
+
+- The runbook is rehearsed against a copy of real production data before it is
+  run against the actual instance.
+- The pre-cutover backup is confirmed restorable before the cutover proceeds.
+- Post-cutover, every plugin's data is verifiably intact (row counts, spot
+  checks) against the pre-cutover backup.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)

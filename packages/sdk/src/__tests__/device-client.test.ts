@@ -297,3 +297,87 @@ describe('nativeNotifications', () => {
     expect(NotificationMock).toHaveBeenCalledWith('Hi', { body: 'there' });
   });
 });
+
+describe('camera.photo', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, BRIDGE_SYMBOL);
+    vi.resetModules();
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('uses the native bridge when it answers with something other than unavailable', async () => {
+    provideBridge(
+      nativeImpl({
+        invoke: async () => ({
+          status: 'ok',
+          value: { dataUrl: 'data:image/jpeg;base64,AA==', mimeType: 'image/jpeg' },
+        }),
+      }),
+    );
+    vi.resetModules();
+    const { camera } = await import('../device-client');
+
+    expect(await camera.photo('camera')).toEqual({
+      status: 'ok',
+      value: { dataUrl: 'data:image/jpeg;base64,AA==', mimeType: 'image/jpeg' },
+    });
+  });
+
+  it('records a device-consent grant before invoking the bridge', async () => {
+    provideBridge(
+      nativeImpl({
+        invoke: async () => ({ status: 'ok', value: { dataUrl: 'x', mimeType: 'image/jpeg' } }),
+      }),
+    );
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.resetModules();
+    const { camera } = await import('../device-client');
+
+    await camera.photo('library', 'fs.example.tally');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/account/device-grants',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ pluginId: 'fs.example.tally', capability: 'camera.photo' }),
+      }),
+    );
+  });
+
+  it('falls back to a hidden file input on the web transport', async () => {
+    vi.resetModules();
+    const { camera } = await import('../device-client');
+
+    const resultPromise = camera.photo('library');
+    const input = document.body.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.accept).toBe('image/*');
+
+    const file = new File(['fake-image-bytes'], 'photo.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(input, 'files', { value: [file] });
+    input.dispatchEvent(new Event('change'));
+
+    const result = await resultPromise;
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.value.mimeType).toBe('image/jpeg');
+      expect(result.value.dataUrl.startsWith('data:image/jpeg;base64,')).toBe(true);
+    }
+  });
+
+  it('hints at the device camera via capture="environment" for source: camera', async () => {
+    vi.resetModules();
+    const { camera } = await import('../device-client');
+
+    void camera.photo('camera');
+    const input = document.body.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input.capture).toBe('environment');
+
+    // Unblock the pending promise so it doesn't leak a dangling handler into the next test.
+    const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(input, 'files', { value: [file] });
+    input.dispatchEvent(new Event('change'));
+  });
+});

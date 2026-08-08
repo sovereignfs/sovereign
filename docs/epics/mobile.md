@@ -487,23 +487,51 @@ storage on any surface that is not subject to web-storage eviction.
 
 **Deliverables:**
 
+**Scope — this task does not restate `secureStorage`.** The capability is already
+defined by RFC 0083 §8, with the Tauri transport tracked as task **17.4** and
+[workstream 0003](../workstreams/0003-device-bridge-across-surfaces.md) **leg 3b**
+(not started). That leg was parked because "there is no plugin-facing urgency
+driving this leg — pick it up when that consumer is ready to be built, or sooner
+if a concrete need emerges." Research 0012's `device-only` tier **is** that
+concrete need. This task adds only what is new.
+
+**Deliverables (this repo):**
+
 - New `device:secureStorage` permission in `packages/manifest`, alongside the
-  existing `device:haptics` and `device:notifications` (`schema.ts:37-38`).
-- Bridge protocol methods in `packages/bridge` (RFC 0083) for key generation,
-  key retrieval under user-presence, and encrypted key/value or SQLite-backed
-  storage.
-- **Capacitor implementation** (`sovereign-mobile`): native SQLite via
-  `@capacitor-community/sqlite` with SQLCipher; keys in Keychain (iOS) and
-  Keystore (Android) with `setUserAuthenticationRequired(true)` allowing
-  `DEVICE_CREDENTIAL`, so device passcode works when biometrics are unenrolled.
-- **Tauri implementation** (`sovereign-desktop`): `tauri-plugin-sql` via SQLx,
-  with the OS keychain for key custody. Ship behind the same capability contract
-  so a `device-only` plugin lights up on desktop with no manifest change once
-  this exists.
+  existing `device:haptics` and `device:notifications` (`schema.ts:37-38`) — the
+  plugin-facing surface RFC 0083 deliberately did not ship.
+- Bridge protocol methods in `packages/bridge` for key generation, key retrieval
+  under user-presence, and encrypted SQLite-backed storage — extending the
+  existing `secureStorage` capability rather than defining a second one.
+- Encrypted-store semantics: SQLCipher-backed, user-presence-gated keys, and the
+  behaviour when the key has been invalidated.
 - Capability reporting so task 3.36's detection can ask "is durable encrypted
   storage available?" rather than inferring it from the surface string.
 - Consent flow consistent with the existing device-permission pattern from task
   3.35.
+
+**Deliverables (shell repos, owned separately):**
+
+- **`sovereign-mobile`** — Capacitor transport: native SQLite via
+  `@capacitor-community/sqlite` with SQLCipher; keys in Keychain (iOS) and
+  Keystore (Android) with `setUserAuthenticationRequired(true)` allowing
+  `DEVICE_CREDENTIAL`, so device passcode works when biometrics are unenrolled.
+  Extends task 20.3's bridge transport.
+- **`sovereign-desktop`** — Tauri transport: task 17.4 / workstream 0003 leg 3b,
+  unchanged in scope. Ship behind the same capability contract so a `device-only`
+  plugin lights up on desktop with no manifest change once it exists.
+
+The platform-side contract must land before either shell implements against it.
+Per workstream 0003's standing rule, a shell must never advertise a
+`capabilities` entry its build does not honor — the caller's `unavailable` path
+would never run.
+
+**On origin isolation:** not a concern here. Workstream 0003's leg 4 outcome
+verified on both iOS Simulator and Android Emulator that the narrow
+`__SOVEREIGN_BRIDGE__` is injected scoped to the runtime-chosen active instance
+origin and round-trips successfully from the loaded remote instance page. Native
+storage is not web storage — origin partitioning governs IndexedDB / OPFS /
+Cache API, not the app sandbox reached through the bridge.
 
 **Why this is native-only for now:** iOS `WKWebsiteDataStore` eviction makes web
 storage unsuitable for a wallet — WebKit deletes script-created data after seven
@@ -513,7 +541,8 @@ the whole justification for the `device-only` tier being native-first, and it
 directly contradicts RFC 0082 §4's claim that "nothing about offline is
 native-specific" — that section needs revisiting when this lands.
 
-**Dependencies:** RFC 0083, task 3.36. Blocks tasks 1.22 and 8.20.
+**Dependencies:** RFC 0083, task 3.36. Coordinates with task 17.4 (Tauri
+transport) rather than superseding it. Blocks tasks 1.22 and 8.20.
 
 **SRS reference:** §3.12, §3.19.
 

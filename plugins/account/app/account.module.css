@@ -883,7 +883,3 @@
 :global([data-theme='dark']) .sidebarPluginImg {
   filter: invert(1);
 }
-
-.legalLinks {
-  padding: var(--sv-space-6) 0 var(--sv-space-4);
-}

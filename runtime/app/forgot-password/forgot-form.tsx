@@ -2,7 +2,7 @@
 
 import { type FormEvent, useState } from 'react';
 import Link from 'next/link';
-import { Button, Input, LegalLinks } from '@sovereignfs/ui';
+import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
 import { ViewportHeightSync } from '../login/ViewportHeightSync';
 import styles from '../auth-page.module.css';
@@ -84,7 +84,6 @@ export function ForgotForm({ instanceInitial = 'S' }: { instanceInitial?: string
           </Link>
         </p>
       </div>
-      <LegalLinks />
     </main>
   );
 }

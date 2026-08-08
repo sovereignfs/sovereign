@@ -3,7 +3,7 @@ import styles from './LegalLinks.module.css';
 
 export interface LegalLinksProps {
   privacyHref?: string;
-  termsHref?: string;
+  tosHref?: string;
   /** Renders a linked item. Defaults to a plain `<a href>`, which causes a
    * full page reload — pass Next's `<Link>` (or equivalent) to keep
    * navigation client-side. Not needed for a full-reload navigation away
@@ -15,7 +15,7 @@ export interface LegalLinksProps {
 
 export function LegalLinks({
   privacyHref = '/privacy',
-  termsHref = '/terms',
+  tosHref = '/tos',
   renderLink,
   className,
 }: LegalLinksProps) {
@@ -34,7 +34,7 @@ export function LegalLinks({
       <span aria-hidden="true" className={styles.dot}>
         ·
       </span>
-      {link(termsHref, 'Terms of Service')}
+      {link(tosHref, 'Terms of Service')}
     </p>
   );
 }

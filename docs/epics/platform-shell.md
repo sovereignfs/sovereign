@@ -1047,11 +1047,23 @@ another on a shared device.
 
 **Deliverables:**
 
-- Document/RSC cache entries partitioned by user identity: cache name keyed to
-  the user, or a service worker that refuses to serve a cached shell whose
-  embedded identity claim does not match the current session cookie. Either is
-  acceptable; pick one and justify it in the code comment.
-- Sign-out deletes the signing-out user's partition.
+> **Spec correction (August 2026, during leg 2).** This task and task 1.21 are
+> **one mechanism, not two**. Offline, no server code runs — the SW serves a
+> cached document and must decide, unaided, which user it is serving. It can
+> only do that from task 1.21's signed offline assertion, so partitioning and
+> the assertion have to be built together. The original wording here ("...does
+> not match the current session cookie") assumed a cookie comparison that has
+> nothing to compare against when there is no request in flight.
+
+- Document/RSC cache entries partitioned by user identity, keyed from the
+  **verified** offline assertion (task 1.21) rather than from any unauthenticated
+  client value. Implement via Workbox's `cacheKeyWillBeUsed` hook, which is async
+  and may therefore read the assertion from IndexedDB — this keeps one logical
+  cache with per-user keys instead of a proliferation of cache names.
+- The partition key must come from a **signature-verified** user id. A forged or
+  edited assertion must fail verification before it can select a partition; that
+  is the property this task depends on task 1.21 for.
+- Sign-out deletes the signing-out user's partition entries.
 - **Rewrite `docs/architecture-rules.md:344-354`** to state the requirement — a
   cached authenticated document must never be served to a different user — in
   place of the current mechanism-level prohibition on stale-serving. The
@@ -1063,13 +1075,15 @@ another on a shared device.
   `runtime/src/registry.ts:35-39`) is still needed once partitioning exists, and
   remove it if not. Do not carry both without a stated reason.
 
-**Dependencies:** Task 1.21. Blocks task 2.32.
+**Dependencies:** Paired with task 1.21 (same mechanism). Blocks task 2.32.
 
 **SRS reference:** §3.11, PLT-09.
 
 **Review checklist:**
 
 - User A's cached shell is provably unreachable by user B on the same device.
+- An assertion edited to name a different user fails verification, so it cannot
+  select that user's partition.
 - The rewritten architecture rule still forbids what the original forbade.
 - `offline-route-neutrality.test.ts` either still passes or is removed with a
   recorded rationale.

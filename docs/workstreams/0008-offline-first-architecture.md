@@ -153,12 +153,30 @@ error. Escalate rather than picking a side.
 
 ### Leg 2 — Cold-start offline shell
 
-**Epic tasks, in execution order:** 1.21 → 2.31 → 2.32.
+**Epic tasks:** 1.21 + 2.31 together, then 2.32.
 
 **Why this leg is first among the implementation legs:** it depends on nothing
 else, delivers the headline requirement, and is the only leg that must revise a
 hard architectural rule. It is also the largest standalone user-visible win here
 and stands on its own if the workstream stops afterwards.
+
+> **Correction found during execution (August 2026).** Tasks 1.21 and 2.31 were
+> planned as sequential, and 1.21 specified a `runtime/middleware.ts`
+> verification path. Both were wrong. **Middleware never runs when the device is
+> offline** — the navigation request fails and the service worker serves a
+> cached document with no server involvement — so the offline session decision
+> belongs in the SW. And because the SW can only pick a per-user cache partition
+> if it already knows which user its assertion names, 1.21 and 2.31 are one
+> mechanism and must be built together.
+>
+> The SW cannot verify an HMAC (that needs `AUTH_SECRET`, which must never reach
+> the browser), so the assertion is signed with the **better-auth `jwt()`
+> keypair already enabled** (`apps/auth/src/auth.ts:240`) and verified in the SW
+> via WebCrypto against the JWKS already published at `/.well-known/jwks.json`.
+> Signing does not stop replay of a still-valid assertion — the cached shell is
+> on the device regardless — but it does stop the offline window being extended
+> or the partition being re-pointed at another user, which is exactly what
+> shared-device safety needs. Both task specs have been corrected in place.
 
 **Technical notes:** today's `x-sovereign-offline-route` neutral-shell mechanism
 (`runtime/middleware.ts:526-558`, `runtime/src/registry.ts:35-39`) and the

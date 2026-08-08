@@ -151,13 +151,43 @@ first.
 - Unknown instance shows the add-instance prompt rather than crashing
 - Scheme registered correctly on macOS (`LSApplicationQueriesSchemes` in `Info.plist`)
 
-#### 📋 17.4 — Keychain credential storage
+#### 🚧 17.4 — Keychain credential storage — blocked, not just unstarted
 
-**Goal:** Store the user's session token in the OS keychain (macOS Keychain,
-Windows Credential Manager, Linux Secret Service) so it survives app restarts
-without relying on WebView cookie persistence.
+> **As written below, this task is stale and should not be implemented.**
+> [RFC 0083 §8](../rfcs/0083-device-bridge-capability-contract.md#8-relationship-to-existing-epic-tasks)
+> supersedes it: the `sdk.device.secureStore.*` plugin-facing surface
+> described in the deliverables below is explicitly rejected by that RFC's
+> §7 — `secureStorage` is **not plugin-facing** in v1, because client-side
+> plugin identity is self-declared/spoofable, so a plugin-facing keychain API
+> would let any plugin read any other plugin's stored secrets. Building the
+> deliverables as literally written would reintroduce exactly the mistake
+> RFC 0083 was written to avoid.
+>
+> RFC 0083 §7 names `secureStorage`'s actual first intended consumer as
+> "RFC 0082 §5's durable-session sequel" — but
+> [RFC 0082 §5](../rfcs/0082-focused-plugin-app-shell.md#5-auth--cookie-now-durable-session-named-as-the-sequel)
+> explicitly labels that feature **"designed but not built here"** and
+> **"unresolved; it gates the sequel"**: it depends on RFC 0072's
+> dynamic-client-registration friction for OAuth, which has no resolution
+> yet. RFC 0082 is also scoped to a _different_ shell concept — a
+> single-plugin "focused" app (`sovereign-mobile` config-driven build
+> targets) — not `sovereign-desktop`'s universal multi-instance shell this
+> epic covers. There is currently no concrete, unblocked consumer for
+> keychain storage in `sovereign-desktop` specifically.
+>
+> This task stays open (not ✅) but is now blocked, not merely
+> unprioritised, until RFC 0072's client-registration question resolves and
+> RFC 0082 §5's durable-session design is actually built somewhere it
+> applies. Re-scope the deliverables below against RFC 0083 §6's actual
+> capability shapes when that happens, rather than the pre-RFC-0083 sketch
+> that follows.
 
-**Deliverables:**
+**Goal (pre-RFC-0083 sketch — superseded, see above):** Store the user's
+session token in the OS keychain (macOS Keychain, Windows Credential Manager,
+Linux Secret Service) so it survives app restarts without relying on WebView
+cookie persistence.
+
+**Deliverables (as originally sketched — do not implement as written):**
 
 - `tauri-plugin-stronghold` or `tauri-plugin-keychain` integration — write/read
   session token per instance
@@ -166,7 +196,8 @@ without relying on WebView cookie persistence.
 
 **SRS reference:** §3.19
 
-**Review checklist:**
+**Review checklist (also superseded — will need to be rewritten against
+whatever consumer eventually unblocks this):**
 
 - Session token survives an app restart without re-authentication
 - Removing an instance clears its stored token from the keychain

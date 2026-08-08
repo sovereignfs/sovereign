@@ -334,12 +334,12 @@ macOS first. Out of scope for v1; the approach is decided (see CLAUDE.md
 
 ### Non-prioritised tasks
 
-| Version | Task                                                      | Status | Epic task                                                                 |
-| ------- | --------------------------------------------------------- | ------ | ------------------------------------------------------------------------- |
-| —       | Desktop: keychain credential storage (RFC 0038)           | 📋     | [17.4](docs/epics/desktop.md#-174--keychain-credential-storage)           |
-| —       | Desktop: auto-updater (RFC 0038)                          | 📋     | [17.5](docs/epics/desktop.md#-175--auto-updater)                          |
-| —       | Desktop: Mac App Store distribution (RFC 0038)            | 📋     | [17.6](docs/epics/desktop.md#-176--mac-app-store-distribution)            |
-| —       | SDK `"desktop"` environment for `sdk.device.*` (RFC 0038) | 📋     | [17.7](docs/epics/desktop.md#-177--sdk-desktop-environment-for-sdkdevice) |
+| Version | Task                                                      | Status | Epic task                                                                                   |
+| ------- | --------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
+| —       | Desktop: keychain credential storage (RFC 0038)           | 🚧     | [17.4](docs/epics/desktop.md#-174--keychain-credential-storage--blocked-not-just-unstarted) |
+| —       | Desktop: auto-updater (RFC 0038)                          | 📋     | [17.5](docs/epics/desktop.md#-175--auto-updater)                                            |
+| —       | Desktop: Mac App Store distribution (RFC 0038)            | 📋     | [17.6](docs/epics/desktop.md#-176--mac-app-store-distribution)                              |
+| —       | SDK `"desktop"` environment for `sdk.device.*` (RFC 0038) | 📋     | [17.7](docs/epics/desktop.md#-177--sdk-desktop-environment-for-sdkdevice)                   |
 
 ---
 

@@ -37,23 +37,23 @@ export async function register(): Promise<void> {
 
     if (transport === 'sse') {
       await initBroker('sse');
-      logger.info({ transport: 'sse' }, 'Notification broker: in-process SSE');
+      logger.info('Notification broker: in-process SSE', { transport: 'sse' });
     } else if (transport === 'redis') {
       if (!redisUrl) {
         logger.error('NOTIFICATION_TRANSPORT=redis requires REDIS_URL — falling back to polling');
       } else {
         try {
           await initBroker('redis', redisUrl);
-          logger.info({ transport: 'redis' }, 'Notification broker: Redis Pub/Sub');
+          logger.info('Notification broker: Redis Pub/Sub', { transport: 'redis' });
         } catch (err) {
           logger.error(
-            { err },
             'Failed to initialise Redis broker — falling back to polling. Is ioredis installed?',
+            { err },
           );
         }
       }
     } else {
-      logger.info({ transport: 'polling' }, 'Notification broker: polling (default)');
+      logger.info('Notification broker: polling (default)', { transport: 'polling' });
     }
 
     // Minimal plugin scheduler (RFC 0046 Phase 1) — invokes the

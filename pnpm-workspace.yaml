@@ -22,7 +22,7 @@ catalog:
   '@types/react': ^19.2.18
   '@types/react-dom': ^19.2.4
   '@types/node': ^22.20.1
-  next: ^15.5.22
+  next: ^16.3.0
   semver: ^7.8.5
   '@types/semver': ^7.7.1
   # SQLCipher-capable fork of better-sqlite3 (RFC 0071) — API-compatible

@@ -231,3 +231,89 @@ export const nativeNotifications = {
     }
   },
 };
+
+export const camera = {
+  /**
+   * Captures a photo (device camera) or picks one from the library, per
+   * `source`. Records a device-consent grant for `pluginId` first — same
+   * best-effort bookkeeping as `nativeNotifications.requestPermission`, not
+   * the enforcement mechanism (RFC 0083 §5b's honesty section). Camera
+   * clearly "touches hardware", so it gets a grant the same way
+   * `notifications.native` does; `haptics.impact` is the only capability
+   * that skips this, per RFC 0083 §7.
+   *
+   * Bridge-first — on `capacitor`, the native side owns the OS permission
+   * prompt inline (see `Bridge.swift`/`BridgeCapabilities.java`'s
+   * `cameraPhoto`). On the web transport, falls back to a hidden
+   * `<input type="file">`; `capture="environment"` hints at the device
+   * camera for `source: 'camera'`, though the browser (not this code)
+   * decides whether to honor that hint. There is no reliable cross-browser
+   * "user cancelled the picker" signal for a bare file input, so a
+   * cancelled pick on the web transport resolves `failed` rather than
+   * `dismissed` — a known gap, not a silent bug.
+   */
+  async photo(
+    source: 'camera' | 'library' = 'library',
+    pluginId?: string,
+  ): Promise<DeviceResult<{ dataUrl: string; mimeType: string }>> {
+    if (pluginId) {
+      try {
+        await fetch('/api/account/device-grants', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ pluginId, capability: 'camera.photo' }),
+        });
+      } catch {
+        // Grant bookkeeping is best-effort — see nativeNotifications.requestPermission.
+      }
+    }
+
+    const bridge = getBridge();
+    if (bridge) {
+      const result = await bridge.invoke('camera.photo', { source });
+      if (result.status !== 'unavailable') {
+        return result as DeviceResult<{ dataUrl: string; mimeType: string }>;
+      }
+    }
+
+    if (typeof document === 'undefined') {
+      return { status: 'unavailable', capability: 'camera.photo' };
+    }
+    return pickViaFileInput(source);
+  },
+};
+
+function pickViaFileInput(
+  source: 'camera' | 'library',
+): Promise<DeviceResult<{ dataUrl: string; mimeType: string }>> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    if (source === 'camera') {
+      input.capture = 'environment';
+    }
+    input.style.display = 'none';
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      input.remove();
+      if (!file) {
+        resolve({ status: 'failed', error: 'no file selected' });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve({
+          status: 'ok',
+          value: { dataUrl: reader.result as string, mimeType: file.type || 'image/jpeg' },
+        });
+      };
+      reader.onerror = () => {
+        resolve({ status: 'failed', error: 'could not read selected file' });
+      };
+      reader.readAsDataURL(file);
+    });
+    document.body.appendChild(input);
+    input.click();
+  });
+}

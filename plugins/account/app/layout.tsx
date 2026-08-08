@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { LegalLinks, OfflineGate, PageContainer, useOverlaySecondRow } from '@sovereignfs/ui';
+import { OfflineGate, PageContainer, useOverlaySecondRow } from '@sovereignfs/ui';
 import styles from './account.module.css';
 import { ActiveNavLink } from './_components/ActiveNavLink';
 
@@ -55,7 +55,6 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
             while reconnecting. */}
         <OfflineGate surfaceName="Account">{children}</OfflineGate>
       </PageContainer>
-      <LegalLinks className={styles.legalLinks} />
     </div>
   );
 }

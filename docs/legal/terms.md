@@ -14,7 +14,7 @@ desktop shell apps as distributed by the project.
 > instance.** Your relationship with an instance — what you're allowed to
 > do with it, what the operator can do with your account, suspension,
 > termination, acceptable use — is governed entirely by that instance
-> operator's own terms, usually published at `<instance-url>/terms`. The
+> operator's own terms, usually published at `<instance-url>/tos`. The
 > Sovereign project is not a party to that relationship.
 
 ## What Sovereign is

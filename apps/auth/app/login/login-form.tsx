@@ -168,8 +168,8 @@ export function LoginForm({
           </Link>
         </p>
       </div>
-      {/* privacy/terms only live on the runtime now — cross-origin links, not same-origin routes here */}
-      <LegalLinks privacyHref={`${runtimeUrl}/privacy`} termsHref={`${runtimeUrl}/terms`} />
+      {/* privacy/tos only live on the runtime now — cross-origin links, not same-origin routes here */}
+      <LegalLinks privacyHref={`${runtimeUrl}/privacy`} tosHref={`${runtimeUrl}/tos`} />
     </main>
   );
 }

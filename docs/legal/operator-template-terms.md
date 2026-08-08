@@ -1,102 +1,87 @@
 ---
-title: 'Template: instance Terms of Service'
-description: Default Terms of Service template every self-hosted instance ships at /terms. Operators fill in the bracketed placeholders before going live.
+title: 'Template: instance TOS.md'
+description: Operator-customized copy of the default terms of service — identical to the root TOS.md, plus your name and contact. Replace this instance's TOS.md with your filled-in copy once ready.
 aside: false
 ---
 
-# Template — instance Terms of Service
+# Template — instance TOS.md
 
-Default content served at `/terms` on every Sovereign instance, shipped as
-an editable page in the platform source (`runtime/app/terms/page.tsx`). As
-with the privacy template, **this is a starting point, not finished legal
-advice — [Operator Name] should have it reviewed before going live.**
+This is the platform's default [`TOS.md`](/TOS.md), unchanged, with one
+addition: an "operated by" line for your name and contact. Fill in the two
+placeholders below, then replace this instance's `TOS.md` with your copy —
+edit it directly in your fork and commit it, or mount it over the shipped
+file in your `sovereign-infra` deployment's `docker-compose.override.yml`.
+See `docs/self-hosting.md` for both paths.
+
+That's the whole difference. Nothing else in this document changes from
+the default — add a governing-law or eligibility section only if you
+actually have one to state.
 
 ---
 
-## Terms of Service
+# Terms of Service
 
-**Instance:** [INSTANCE NAME / URL] · **Operator:** [OPERATOR NAME] ·
-**Contact:** [OPERATOR CONTACT EMAIL] · **Effective date:** [DATE]
+Operated by **[Operator or Instance Name]** · Contact: **[Contact Email]**
 
-These terms govern your use of the account and apps offered at [INSTANCE
-URL] ("this instance"), operated by [Operator Name]. This instance runs
-[Sovereign](https://github.com/sovereignfs/sovereign), open-source
-software; these terms are set by [Operator Name], not by the Sovereign
-project — see the
-[Sovereign project's own terms](https://sovereignfs.github.io/legal/terms)
-for terms governing the project's own site, GitHub, and shell apps, which
-are separate from your use of this instance.
+This document describes the default terms of use for
+[Sovereign](https://github.com/sovereignfs/sovereign), the open-source
+self-hosted platform this instance runs.
 
-### Eligibility and accounts
+## Accounts
 
-[Operator Name: state eligibility, e.g. minimum age, invite-only vs. open
-registration — this instance's access policy is [ACCESS POLICY: open /
-approval required / invite only].] You're responsible for keeping your
-account credentials confidential and for activity under your account.
+You're responsible for keeping your account credentials confidential and
+for activity under your account.
 
-### Acceptable use
+## Acceptable use
 
-You agree not to use this instance to: [Operator Name: list prohibited
-uses relevant to your community — e.g. illegal content, harassment, spam,
-attempting to access other users' accounts or data, disrupting the
-service]. [Operator Name] may remove content or suspend accounts that
-violate this section.
+You agree not to use this instance for illegal activity, to harass or abuse
+other users, to attempt to access accounts or data that aren't yours, or to
+disrupt the service for others. [Operator or Instance Name] may remove
+content or suspend accounts that violate this section; they may also set
+additional rules specific to their own community.
 
-### Your content
+## Your content
 
-You retain ownership of the content you create on this instance. By using
-this instance you grant [Operator Name] only the rights needed to store,
-back up, and display your content back to you and, where you choose to
-share it, to other users you've shared it with. [Operator Name] does not
-claim ownership of your content and does not use it for purposes beyond
-operating the instance, except as described in the
-[privacy policy](/privacy).
+You retain ownership of the content you create on this instance. Using this
+instance grants only the rights needed to store, back up, and display your
+content back to you and, where you choose to share it, to other users
+you've shared it with. Neither the platform nor [Operator or Instance Name]
+claims ownership of your content or uses it for purposes beyond operating
+the instance and what's described in the [Privacy Policy](/privacy).
 
-### Installed apps
+## Installed apps
 
-The apps available on this instance may change over time as [Operator
-Name] adds, removes, or updates them. [Operator Name] will [describe
-notice practice, e.g. "post a notice before removing an app you actively
-use" — adjust to your actual practice].
+The apps available on this instance may change over time as [Operator or
+Instance Name] adds, removes, or updates them.
 
-### Availability
+## Availability
 
-[Operator Name] provides this instance on a best-effort basis and does not
-guarantee uptime, data durability beyond normal backup practices, or
-availability of any particular app. [Add an SLA here only if you actually
-offer one.]
+This instance is provided on a best-effort basis. Neither uptime nor data
+durability beyond normal backup practices is guaranteed, and no availability
+commitment applies to any particular app.
 
-### Suspension and termination
+## Suspension and termination
 
-[Operator Name] may suspend or terminate your account for violating these
-terms. You may delete your own account and data at any time from your
-account settings. [Operator Name: state notice practice for
-operator-initiated termination, and what happens to your data afterward.]
+[Operator or Instance Name] may suspend or terminate an account for
+violating these terms. You may delete your own account and data at any
+time from your account settings.
 
-### No warranty
+## No warranty
 
 This instance and the underlying Sovereign software are provided "as is."
-[Operator Name] disclaims warranties to the extent permitted by law. The
-Sovereign open-source project is not a party to this agreement and bears
-no responsibility for how [Operator Name] operates this instance.
+The Sovereign open-source project bears no responsibility for how
+[Operator or Instance Name] operates this instance.
 
-### Limitation of liability
+## Limitation of liability
 
-To the maximum extent permitted by law, [Operator Name] is not liable for
-indirect, incidental, or consequential damages arising from your use of
-this instance. [Add jurisdiction-appropriate liability caps here — consult
-local counsel.]
+To the maximum extent permitted by law, no warranty or liability beyond
+what's stated above is assumed by [Operator or Instance Name] or the
+Sovereign open-source project for your use of this instance.
 
-### Changes to these terms
+## Changes to this document
 
-We'll update the effective date above when these terms change and
-[describe notice method] for material changes. Continued use of this
-instance after a change means you accept the updated terms.
+We'll update this document when these terms change materially.
 
-### Governing law
+## Contact
 
-[Operator Name: state governing law and jurisdiction for disputes.]
-
-### Contact
-
-[OPERATOR CONTACT EMAIL].
+**[Contact Email]**.

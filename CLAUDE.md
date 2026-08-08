@@ -126,8 +126,13 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.66.0`**
-  (three ad-hoc patch hotfixes took it from `0.64.0` to `0.64.3` — a `nanoid`
+  to `1.0.0` marks the public release.** The current version is **`0.67.1`**
+  (a `0.67.0` → `0.67.1` hotfix aliased plain `better-sqlite3` out of the
+  runtime's Webpack server graph — `drizzle-orm/better-sqlite3` statically
+  imports it for connection-string overloads this codebase never takes, and
+  pnpm's strict layout stops Next externalizing it, so it was bundled and its
+  dynamic addon `require` warned on every DB route; before that, three ad-hoc
+  patch hotfixes took it from `0.64.0` to `0.64.3` — a `nanoid`
   dependency bump for GHSA-2v37-7h3g-55p8, allowing the custom worker chunk
   through the session
   gate, and pointing e2e auth-page specs at the runtime instead of the auth
@@ -702,7 +707,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 ## Status
 
-Current platform version: **`0.66.0`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
+Current platform version: **`0.67.1`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
 
 For the full task history and current roadmap position, see:
 

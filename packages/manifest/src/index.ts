@@ -1,6 +1,5 @@
 export {
   manifestSchema,
-  manifestDatabaseDialect,
   manifestDatabaseIsolation,
   manifestDatabaseSchema,
   manifestRequiresEncryption,
@@ -10,7 +9,6 @@ export {
   registryEntryFieldNames,
   CURRENT_MANIFEST_SCHEMA_VERSION,
   type ManifestDatabase,
-  type ManifestDatabaseDialect,
   type ManifestDatabaseIsolation,
 } from './schema';
 export {

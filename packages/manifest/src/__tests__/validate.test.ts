@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  manifestDatabaseDialect,
-  manifestDatabaseIsolation,
-  manifestRequiresEncryption,
-} from '../schema';
+import { manifestDatabaseIsolation, manifestRequiresEncryption } from '../schema';
 import { validateManifest } from '../validate';
 
 const base = {
@@ -279,53 +275,27 @@ describe('validateManifest', () => {
     expect(validateManifest({ ...base, database: 'isolated' }).valid).toBe(true);
   });
 
-  it('accepts the database object form with a SQLite dialect override', () => {
+  it('rejects a manifest database object with an unknown "dialect" key (workstream 0009 leg 1 removed it)', () => {
     const res = validateManifest({
       ...base,
       database: { isolation: 'isolated', dialect: 'sqlite' },
     });
-    expect(res.valid).toBe(true);
-  });
-
-  it('rejects postgres as a manifest database dialect', () => {
-    const res = validateManifest({
-      ...base,
-      database: { isolation: 'isolated', dialect: 'postgres' },
-    });
     expect(res.valid).toBe(false);
-    if (!res.valid) {
-      expect(res.errors.join(' ')).toContain('database');
-    }
   });
 
   it('normalizes manifest database declarations', () => {
     expect(manifestDatabaseIsolation(undefined)).toBe('shared');
     expect(manifestDatabaseIsolation('isolated')).toBe('isolated');
-    expect(manifestDatabaseIsolation({ isolation: 'isolated', dialect: 'sqlite' })).toBe(
-      'isolated',
-    );
-    expect(manifestDatabaseIsolation({ dialect: 'sqlite' })).toBe('shared');
-    expect(manifestDatabaseDialect({ isolation: 'isolated', dialect: 'sqlite' })).toBe('sqlite');
-    expect(manifestDatabaseDialect({ isolation: 'isolated', dialect: 'postgres' })).toBeUndefined();
+    expect(manifestDatabaseIsolation({ isolation: 'isolated' })).toBe('isolated');
+    expect(manifestDatabaseIsolation({})).toBe('shared');
   });
 
-  it('accepts database.requireEncryption alongside isolation: "isolated" and dialect: "sqlite" (RFC 0071)', () => {
-    const res = validateManifest({
-      ...base,
-      database: { isolation: 'isolated', dialect: 'sqlite', requireEncryption: true },
-    });
-    expect(res.valid).toBe(true);
-  });
-
-  it('rejects database.requireEncryption without an explicit dialect: "sqlite" — omitting it would let the platform\'s own dialect choice silently decide enforcement', () => {
+  it('accepts database.requireEncryption alongside isolation: "isolated" (RFC 0071)', () => {
     const res = validateManifest({
       ...base,
       database: { isolation: 'isolated', requireEncryption: true },
     });
-    expect(res.valid).toBe(false);
-    if (!res.valid) {
-      expect(res.errors.join(' ')).toContain('dialect');
-    }
+    expect(res.valid).toBe(true);
   });
 
   it('rejects database.requireEncryption on a "shared" plugin — raise-only, implies isolated', () => {

@@ -25,11 +25,7 @@ import { fileURLToPath } from 'node:url';
 
 import { defineCommand, runMain } from 'citty';
 import { consola } from 'consola';
-import {
-  manifestDatabaseDialect,
-  manifestDatabaseIsolation,
-  manifestRequiresEncryption,
-} from '@sovereignfs/manifest';
+import { manifestDatabaseIsolation, manifestRequiresEncryption } from '@sovereignfs/manifest';
 
 import {
   assertRemovablePlugin,
@@ -339,7 +335,6 @@ const pluginRemove = defineCommand({
 
     // Read the manifest before deletion to know if the plugin used an isolated DB.
     let isIsolated = false;
-    let pluginDialect: 'sqlite' | undefined;
     let manifestPluginId: string | null = null;
     try {
       const raw = JSON.parse(readFileSync(join(dest, 'manifest.json'), 'utf8')) as {
@@ -347,7 +342,6 @@ const pluginRemove = defineCommand({
         id?: string;
       };
       isIsolated = manifestDatabaseIsolation(raw.database) === 'isolated';
-      pluginDialect = manifestDatabaseDialect(raw.database);
       manifestPluginId = raw.id ?? null;
     } catch {
       // Manifest unreadable — treat as shared.
@@ -360,7 +354,7 @@ const pluginRemove = defineCommand({
       consola.info(`Dropping isolated database for "${manifestPluginId}"…`);
       try {
         const { dropPluginDb } = await import('@sovereignfs/db');
-        await dropPluginDb(manifestPluginId, pluginDialect);
+        await dropPluginDb(manifestPluginId);
         consola.success(`Database for "${manifestPluginId}" dropped.`);
       } catch (err) {
         consola.warn(
@@ -431,13 +425,11 @@ const pluginMigrate = defineCommand({
           };
           if (typeof m.id !== 'string') continue;
           const database = manifestDatabaseIsolation(m.database);
-          const pluginDialect =
-            database === 'isolated' ? (manifestDatabaseDialect(m.database) ?? dialect) : dialect;
           pluginsWithMigrations.push({
             dir: entry.name,
             id: m.id,
             database,
-            dialect: pluginDialect,
+            dialect,
             requiresEncryption: manifestRequiresEncryption(m.database),
           });
         } catch {
@@ -471,8 +463,8 @@ const pluginMigrate = defineCommand({
       consola.start(`Migrating "${id}" (${database})…`);
       try {
         if (database === 'isolated') {
-          await provisionPluginDb(id, pluginDialect);
-          const pluginDb = getPluginDb(id, pluginDialect, requiresEncryption);
+          await provisionPluginDb(id);
+          const pluginDb = getPluginDb(id, requiresEncryption);
           await runPluginMigrations(pluginDb, folder);
         } else {
           // PlatformDb is structurally identical to PluginDb ({ dialect, db }).

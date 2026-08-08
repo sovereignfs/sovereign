@@ -4,7 +4,7 @@ import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { findWorkspaceRoot, pgSslMode, resolveSqlitePath } from './client';
-import { resolveDialect, type Dialect, type ResolvedDialect } from './dialect';
+import { resolveDialect, type Dialect } from './dialect';
 import {
   dbEncryptionKeyFromEnv,
   defaultDataDir,
@@ -27,15 +27,6 @@ export type PluginDb =
 
 /** In-process lazy registry: pluginId → PluginDb */
 const _registry = new Map<string, PluginDb>();
-
-function resolvePluginDialect(dialect?: Dialect): ResolvedDialect {
-  const platform = resolveDialect(process.env);
-  if (!dialect) return platform;
-  if (dialect === 'postgres' && platform.dialect === 'sqlite') {
-    throw new Error('Cannot resolve a Postgres plugin database on a SQLite platform.');
-  }
-  return { ...platform, dialect };
-}
 
 function registryKey(pluginId: string, dialect: Dialect): string {
   return `${dialect}:${pluginId}`;
@@ -97,12 +88,8 @@ function pgSsl(url: string): false | { rejectUnauthorized: boolean; ca?: string 
  *   at the Pool construction below for why that distinction matters).
  *   The schema must already exist (call `provisionPluginDb` first).
  */
-export function getPluginDb(
-  pluginId: string,
-  dialect?: Dialect,
-  requiresEncryption = false,
-): PluginDb {
-  const resolved = resolvePluginDialect(dialect);
+export function getPluginDb(pluginId: string, requiresEncryption = false): PluginDb {
+  const resolved = resolveDialect(process.env);
   const cacheKey = registryKey(pluginId, resolved.dialect);
   const cached = _registry.get(cacheKey);
   if (cached) return cached;
@@ -160,8 +147,8 @@ export function getPluginDb(
  *
  * Safe to call multiple times (idempotent).
  */
-export async function provisionPluginDb(pluginId: string, dialect?: Dialect): Promise<void> {
-  const resolved = resolvePluginDialect(dialect);
+export async function provisionPluginDb(pluginId: string): Promise<void> {
+  const resolved = resolveDialect(process.env);
   if (resolved.dialect === 'sqlite') return; // file created on first open
 
   const schema = pluginSchemaName(pluginId);
@@ -186,8 +173,8 @@ export async function provisionPluginDb(pluginId: string, dialect?: Dialect): Pr
  * node-postgres doesn't close sockets on GC), accumulating toward the
  * server's connection limit across repeated install/uninstall cycles.
  */
-export async function dropPluginDb(pluginId: string, dialect?: Dialect): Promise<void> {
-  const resolved = resolvePluginDialect(dialect);
+export async function dropPluginDb(pluginId: string): Promise<void> {
+  const resolved = resolveDialect(process.env);
   const cachedPostgres = _registry.get(registryKey(pluginId, 'postgres'));
   _registry.delete(registryKey(pluginId, 'sqlite'));
   _registry.delete(registryKey(pluginId, 'postgres'));

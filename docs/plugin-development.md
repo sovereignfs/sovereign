@@ -1949,29 +1949,19 @@ modes, set in the manifest:
 need a clean data lifecycle (e.g. uninstall should delete all plugin data), per-plugin
 backup, or blast-radius isolation.
 
-An isolated plugin can also request SQLite explicitly:
+A plugin cannot request a database dialect — the operator's instance-wide
+`DB_DIALECT`/`DATABASE_URL` choice applies to every database the platform
+opens, including every isolated plugin store. There is no manifest override
+(workstream 0009 leg 1 removed the `database.dialect` field that used to
+allow one).
+
+An isolated plugin can require SQLite at-rest encryption (RFC 0071) for its
+own store:
 
 ```json
 {
   "database": {
     "isolation": "isolated",
-    "dialect": "sqlite"
-  }
-}
-```
-
-Omitting `dialect` inherits the platform database dialect. `dialect: "postgres"` is not
-a valid manifest value; an isolated plugin gets Postgres by inheriting it from a
-Postgres platform.
-
-An isolated plugin can additionally require SQLite at-rest encryption
-(RFC 0071) for its own store:
-
-```json
-{
-  "database": {
-    "isolation": "isolated",
-    "dialect": "sqlite",
     "requireEncryption": true
   }
 }
@@ -1983,16 +1973,12 @@ plugin's isolated database regardless of the instance-wide
 _out_ of encryption the operator has enabled. It requires
 `isolation: "isolated"` — whole-file encryption has no per-table granularity,
 so a `shared` plugin (whose tables live inside the platform database) cannot
-independently demand it; the manifest fails validation otherwise. It also
-**requires an explicit `dialect: "sqlite"`** alongside it — omitting `dialect`
-would let the platform's own dialect choice silently decide whether this is
-actually enforced, since there is no SQLCipher equivalent for Postgres: a
-plugin resolved to Postgres only gets a startup warning and a fallback to
-disk-level encryption for its store, not a real guarantee. Pinning
-`dialect: "sqlite"` explicitly means the manifest alone determines the
-outcome — the runtime refuses to start rather than silently install the
-plugin without the encryption it declares, instead of that guarantee quietly
-depending on what the operator chose for the platform database — see
+independently demand it; the manifest fails validation otherwise. Since the
+platform dialect is instance-wide, a `requireEncryption` plugin's actual
+guarantee depends on what the operator chose: on a SQLite platform it's
+enforced (the runtime refuses to start without the key); on Postgres it's
+only a startup warning and a fallback to disk-level encryption, since there
+is no SQLCipher equivalent there — see
 [docs/self-hosting.md's SQLite at-rest encryption section](self-hosting.md#sqlite-at-rest-encryption-rfc-0071).
 
 ```ts
@@ -2273,35 +2259,18 @@ Set `"database"` in your manifest to a string value or the object form:
 
 Omitting `"database"` is equivalent to `"shared"`.
 
-Object form is useful when an isolated plugin should use SQLite even on a Postgres
-platform:
+There is no per-plugin dialect field (workstream 0009 leg 1 removed it). An
+isolated plugin's store always resolves to the operator's instance-wide
+`DB_DIALECT`/`DATABASE_URL` choice:
 
-```json
-{
-  "database": {
-    "isolation": "isolated",
-    "dialect": "sqlite"
-  }
-}
-```
-
-Allowed combinations:
-
-| Platform dialect | Manifest declaration                               | Resolved plugin dialect | Allowed |
-| ---------------- | -------------------------------------------------- | ----------------------- | ------- |
-| SQLite           | omitted                                            | SQLite                  | yes     |
-| SQLite           | `"isolated"`                                       | SQLite                  | yes     |
-| SQLite           | `{ "isolation": "isolated" }`                      | SQLite                  | yes     |
-| SQLite           | `{ "isolation": "isolated", "dialect": "sqlite" }` | SQLite                  | yes     |
-| Postgres         | omitted                                            | Postgres                | yes     |
-| Postgres         | `"isolated"`                                       | Postgres                | yes     |
-| Postgres         | `{ "isolation": "isolated" }`                      | Postgres                | yes     |
-| Postgres         | `{ "isolation": "isolated", "dialect": "sqlite" }` | SQLite                  | yes     |
-
-The platform dialect is a ceiling. SQLite is embedded in every deployment, so a
-Postgres platform can host a SQLite-backed isolated plugin. A SQLite platform has no
-Postgres server to lend to a plugin, so manifests cannot declare
-`{ "dialect": "postgres" }`; the schema rejects it at validation time.
+| Platform dialect | Manifest declaration          | Resolved plugin dialect |
+| ---------------- | ----------------------------- | ----------------------- |
+| SQLite           | omitted                       | SQLite                  |
+| SQLite           | `"isolated"`                  | SQLite                  |
+| SQLite           | `{ "isolation": "isolated" }` | SQLite                  |
+| Postgres         | omitted                       | Postgres                |
+| Postgres         | `"isolated"`                  | Postgres                |
+| Postgres         | `{ "isolation": "isolated" }` | Postgres                |
 
 #### Database setup for local plugins
 

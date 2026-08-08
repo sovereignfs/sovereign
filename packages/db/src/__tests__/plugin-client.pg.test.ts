@@ -29,19 +29,19 @@ describe.skipIf(!PG_URL)('getPluginDb (Postgres search_path pinning)', () => {
     process.on('warning', onWarning);
     process.env.DATABASE_URL = PG_URL;
     process.env.DB_DIALECT = 'postgres';
-    await provisionPluginDb(PLUGIN_ID, 'postgres');
+    await provisionPluginDb(PLUGIN_ID);
   });
 
   afterAll(async () => {
     process.off('warning', onWarning);
-    await dropPluginDb(PLUGIN_ID, 'postgres');
+    await dropPluginDb(PLUGIN_ID);
     delete process.env.DATABASE_URL;
     delete process.env.DB_DIALECT;
   });
 
   it('every connection in a concurrent burst sees the plugin schema on search_path, with no deprecation warnings', async () => {
     deprecationWarnings = [];
-    const pluginDb = getPluginDb(PLUGIN_ID, 'postgres');
+    const pluginDb = getPluginDb(PLUGIN_ID);
     if (pluginDb.dialect !== 'postgres') throw new Error('expected postgres dialect');
     const { db } = pluginDb;
 
@@ -69,7 +69,7 @@ describe.skipIf(!PG_URL)('dropPluginDb (Postgres pool cleanup)', () => {
   beforeAll(async () => {
     process.env.DATABASE_URL = PG_URL;
     process.env.DB_DIALECT = 'postgres';
-    await provisionPluginDb(DROP_PLUGIN_ID, 'postgres');
+    await provisionPluginDb(DROP_PLUGIN_ID);
   });
 
   afterAll(async () => {
@@ -78,7 +78,7 @@ describe.skipIf(!PG_URL)('dropPluginDb (Postgres pool cleanup)', () => {
   });
 
   it('ends the cached pool so its connection cannot be used after drop', async () => {
-    const pluginDb = getPluginDb(DROP_PLUGIN_ID, 'postgres');
+    const pluginDb = getPluginDb(DROP_PLUGIN_ID);
     if (pluginDb.dialect !== 'postgres') throw new Error('expected postgres dialect');
     const { db } = pluginDb;
 
@@ -86,7 +86,7 @@ describe.skipIf(!PG_URL)('dropPluginDb (Postgres pool cleanup)', () => {
     // client to leak if dropPluginDb doesn't end it.
     await db.execute(sql`SELECT 1`);
 
-    await dropPluginDb(DROP_PLUGIN_ID, 'postgres');
+    await dropPluginDb(DROP_PLUGIN_ID);
 
     // The old pool must be ended — further queries against it reject rather
     // than silently succeeding against a schema that no longer exists.
@@ -95,10 +95,10 @@ describe.skipIf(!PG_URL)('dropPluginDb (Postgres pool cleanup)', () => {
     // A fresh getPluginDb call after drop opens a brand-new pool and works
     // once the schema is re-provisioned — confirms drop didn't wedge the
     // registry into a permanently-broken state for this plugin id.
-    await provisionPluginDb(DROP_PLUGIN_ID, 'postgres');
-    const fresh = getPluginDb(DROP_PLUGIN_ID, 'postgres');
+    await provisionPluginDb(DROP_PLUGIN_ID);
+    const fresh = getPluginDb(DROP_PLUGIN_ID);
     if (fresh.dialect !== 'postgres') throw new Error('expected postgres dialect');
     await expect(fresh.db.execute(sql`SELECT 1`)).resolves.toBeDefined();
-    await dropPluginDb(DROP_PLUGIN_ID, 'postgres');
+    await dropPluginDb(DROP_PLUGIN_ID);
   });
 });

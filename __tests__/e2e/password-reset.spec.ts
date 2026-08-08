@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+// The auth server owns the better-auth API (`/api/auth/*`) plus the `/login`,
+// `/login/2fa` and `/verify-email` pages. Every other auth *page* —
+// `/register`, `/forgot-password`, `/reset-password` — is served only by the
+// runtime; the auth server's duplicates were removed when the two were
+// deduplicated. Navigating to one of those on AUTH_SERVER renders the auth
+// app's not-found page, so always reach them via RUNTIME. API calls below stay
+// on AUTH_SERVER.
 const AUTH_SERVER = 'http://localhost:3001';
 const RUNTIME = 'http://localhost:3000';
 const MAILPIT_API = 'http://localhost:8025/api/v1';
@@ -68,7 +75,7 @@ function extractResetUrl(body: string): string | null {
 
 test.describe('Password reset — page rendering', () => {
   test('forgot-password page renders the email form', async ({ page }) => {
-    await page.goto(`${AUTH_SERVER}/forgot-password`);
+    await page.goto(`${RUNTIME}/forgot-password`);
     await expect(page.locator('h1')).toContainText('Reset password');
     await expect(page.locator('input[type="email"]')).toBeVisible();
     await expect(page.locator('button[type="submit"]')).toContainText('Send reset link');
@@ -78,7 +85,7 @@ test.describe('Password reset — page rendering', () => {
   test('submitting an unknown email shows the same confirmation — no user enumeration', async ({
     page,
   }) => {
-    await page.goto(`${AUTH_SERVER}/forgot-password`);
+    await page.goto(`${RUNTIME}/forgot-password`);
     await page.fill('input[type="email"]', 'nobody-registered@example.com');
     await page.click('button[type="submit"]');
     await expect(page.locator('h1')).toContainText('Check your email');
@@ -88,13 +95,13 @@ test.describe('Password reset — page rendering', () => {
   });
 
   test('reset-password page without a token shows the invalid-link state', async ({ page }) => {
-    await page.goto(`${AUTH_SERVER}/reset-password`);
+    await page.goto(`${RUNTIME}/reset-password`);
     await expect(page.locator('h1')).toContainText('Invalid link');
     await expect(page.locator(`a[href="/forgot-password"]`)).toBeVisible();
   });
 
   test('reset-password with a bogus token shows an error after submit', async ({ page }) => {
-    await page.goto(`${AUTH_SERVER}/reset-password?token=this-is-not-a-real-token`);
+    await page.goto(`${RUNTIME}/reset-password?token=this-is-not-a-real-token`);
     await expect(page.locator('h1')).toContainText('Choose a new password');
     await page.fill('#reset-password', 'newpassword123');
     await page.fill('#reset-confirm', 'newpassword123');
@@ -109,7 +116,7 @@ test.describe('Password reset — page rendering', () => {
   test('mismatched passwords show a client-side error without hitting the server', async ({
     page,
   }) => {
-    await page.goto(`${AUTH_SERVER}/reset-password?token=any-token`);
+    await page.goto(`${RUNTIME}/reset-password?token=any-token`);
     await page.fill('#reset-password', 'password-one');
     await page.fill('#reset-confirm', 'password-two');
     await page.click('button[type="submit"]');
@@ -156,7 +163,7 @@ test.describe('Password reset — full flow (requires Mailpit on localhost:8025)
     await clearMailpitInbox();
 
     // 1. Submit the forgot-password form
-    await page.goto(`${AUTH_SERVER}/forgot-password`);
+    await page.goto(`${RUNTIME}/forgot-password`);
     await page.fill('input[type="email"]', testEmail);
     await page.click('button[type="submit"]');
     await expect(page.locator('h1')).toContainText('Check your email');
@@ -213,13 +220,23 @@ test.describe('Password reset — full flow (requires Mailpit on localhost:8025)
     await page.fill('#reset-password', 'single-use-pass-1');
     await page.fill('#reset-confirm', 'single-use-pass-1');
     await page.click('button[type="submit"]');
-    await expect(page.locator('h1')).toContainText('Password reset');
+    // The success heading is "Password updated" (reset-form.tsx's `done` state),
+    // matching the sibling test above — this assertion said "Password reset" and
+    // would always have failed. It never ran in CI: both tests in this describe
+    // block skip without Mailpit, which the e2e job does not start.
+    await expect(page.locator('h1')).toContainText('Password updated');
 
     // Second use with the same token — must fail
     await page.goto(resetUrl!);
     await page.fill('#reset-password', 'single-use-pass-2');
     await page.fill('#reset-confirm', 'single-use-pass-2');
     await page.click('button[type="submit"]');
-    await expect(page.locator('form p')).toContainText(/invalid|expired/i);
+    // Same strict-mode trap as the bogus-token test above: `form p` matches the
+    // "At least 8 characters." field hint as well as the error, so filter down
+    // to the error before asserting. The page itself is correct — it renders
+    // "Invalid token" — this assertion just never ran to find out.
+    await expect(page.locator('form p').filter({ hasText: /invalid|expired/i })).toContainText(
+      /invalid|expired/i,
+    );
   });
 });

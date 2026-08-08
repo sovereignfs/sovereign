@@ -1,5 +1,7 @@
 export { LegalLinks } from './components/LegalLinks/LegalLinks';
 export type { LegalLinksProps } from './components/LegalLinks/LegalLinks';
+export { Markdown } from './components/Markdown/Markdown';
+export type { MarkdownProps } from './components/Markdown/Markdown';
 export { Badge } from './components/Badge/Badge';
 export type { BadgeProps, BadgeVariant, BadgeStatus } from './components/Badge/Badge';
 export { Icon } from './components/Icon/Icon';

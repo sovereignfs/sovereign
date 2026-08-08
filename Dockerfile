@@ -177,6 +177,10 @@ COPY --from=app-builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./pnpm-wo
 # compatibility check. Without it the check falls back to '0.0.0' and disables
 # every plugin that declares a minPlatformVersion.
 COPY --from=app-builder --chown=nextjs:nodejs /app/package.json ./package.json
+# Root PRIVACY.md/TOS.md — read at runtime by the /privacy and /tos pages
+# (RFC 0090). Not traced by Next.js since they're read via fs, not imported.
+COPY --from=app-builder --chown=nextjs:nodejs /app/PRIVACY.md ./PRIVACY.md
+COPY --from=app-builder --chown=nextjs:nodejs /app/TOS.md ./TOS.md
 
 # SQLite + avatars persist here (mounted as a volume). The relative DB path
 # resolves against the cwd (/app) at runtime, so it must be writable by the

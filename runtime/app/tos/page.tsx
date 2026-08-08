@@ -2,14 +2,14 @@ import { PageContainer, Typography } from '@sovereignfs/ui';
 import { resolveInstanceName } from '@/src/instance-name';
 import styles from '../legal-page.module.css';
 
-// Default Terms of Service served at /terms. This is a template, not
+// Default Terms of Service served at /tos. This is a template, not
 // finished legal advice — the operator running this instance should have it
 // reviewed before relying on it. Every [BRACKETED] placeholder below must be
 // filled in or removed before real users see this page. See
 // docs/legal/operator-template-terms.md in the platform source for the
 // annotated version of this content and why each section says what it does.
 
-export default function TermsPage() {
+export default function TosPage() {
   const instanceName = resolveInstanceName(process.env.INSTANCE_NAME);
 
   return (

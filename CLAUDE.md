@@ -126,8 +126,31 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.67.1`**
-  (a `0.67.0` → `0.67.1` hotfix aliased plain `better-sqlite3` out of the
+  to `1.0.0` marks the public release.** The current version is **`0.74.1`**
+  (`0.73.0` → `0.74.0` is unrelated concurrent work — workstream 0010 leg 1's
+  desktop native push scaffold and leg 2's relay macOS APNs topic + Windows
+  WNS client (RFC 0087's addendum, epic task 4.8) — not narrated here; see
+  `ROADMAP.md`. `0.74.0` → `0.74.1` is this fix's own patch, rebased on top.
+  `0.67.1` → `0.72.1` spans a real production incident and its follow-ups —
+  full detail in `ROADMAP.md`'s task history and `docs/epics/data-sovereignty.md`
+  tasks 8.25–8.27, not narrated version-by-version here. Rehearsing workstream
+  0009's SQLite→libSQL cutover tooling against a production backup revealed
+  production actually ran Postgres dialect with 6 legacy plugins stranded on
+  pre-task-8.22 per-plugin SQLite overrides; building and deploying `sv db
+migrate-to-postgres` (task 8.25) to fix that surfaced and fixed, in order: a
+  `@libsql/client` native-module crash reachable via `instrumentation.ts`
+  bypassing Next's webpack bundling (lazy `require()` fix), a Docker Compose
+  gap where the `auth` service's `DB_DIALECT`/`DATABASE_URL` were declared
+  nowhere so `assertAuthDialectMatchesPlatform()` correctly refused to boot, a
+  migration-table collision where isolated Postgres plugins sharing Drizzle's
+  default tracking table silently skipped each other's migrations (task
+  8.26), a generated foreign-key migration hardcoding the `public` schema
+  qualifier instead of resolving through an isolated plugin's `search_path`,
+  `sv db migrate-to-postgres` itself copying tables in plain alphabetical
+  order with no foreign-key dependency awareness, and the `tools` Compose
+  profile never having been wired for a Postgres deployment at all (task
+  8.27). `plainwrite`, `shopper`, and `wallet` are now fully migrated and
+  verified on Postgres; before that, a `0.67.0` → `0.67.1` hotfix aliased plain `better-sqlite3` out of the
   runtime's Webpack server graph — `drizzle-orm/better-sqlite3` statically
   imports it for connection-string overloads this codebase never takes, and
   pnpm's strict layout stops Next externalizing it, so it was bundled and its
@@ -709,7 +732,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 ## Status
 
-Current platform version: **`0.67.1`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
+Current platform version: **`0.74.1`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
 
 For the full task history and current roadmap position, see:
 

@@ -235,6 +235,14 @@ services:
       # data volume) so it survives this container exiting (`--rm`). Lands in
       # ./backups next to this compose file.
       - ./backups:/app/backups
+    # Without this, tools gets Compose's implicit default network instead of
+    # sovereign_net (unlike runtime/auth, which both declare it explicitly) —
+    # any dialect-aware `sv` command that needs to reach `postgres` by service
+    # name (e.g. `sv db migrate-to-postgres`) fails with
+    # "getaddrinfo EAI_AGAIN postgres", even once DB_DIALECT/DATABASE_URL are
+    # correctly set (see docker-compose.postgres.yml's `tools` override).
+    networks:
+      - sovereign_net
 
   # ── Optional: Redis for instant cross-process notification delivery ─────────
   # Uncomment this block and set NOTIFICATION_TRANSPORT=redis + REDIS_URL in the

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { DEFAULT_TENANT_ID, getInstanceConfig, getPlatformDb } from '@sovereignfs/db';
+import { fetchInstanceOAuthClients } from '@/src/instance-oauth-clients';
 import { resolveInstanceName } from '@/src/instance-name';
 import { getPlatformVersion } from '@/src/platform-version';
 
@@ -17,6 +18,13 @@ import { getPlatformVersion } from '@/src/platform-version';
  * reachable before the user is authenticated). Returns no sensitive
  * deployment or user data — the instance name is already public via
  * `/api/manifest` and `/api/instance/logo`.
+ *
+ * `oauthClients` (RFC 0072 addendum, epic task 1.24) exposes this instance's
+ * generated `client_id`s for the well-known, first-party desktop/mobile OAuth
+ * clients — public identifiers, not secrets, needed before login. A server-
+ * to-server call to the auth server, same trust boundary as any other
+ * `SOVEREIGN_AUTH_URL` call; omitted (not erroring) if the auth server can't
+ * be reached, same degrade-gracefully posture as instanceName above.
  */
 export async function GET(): Promise<Response> {
   let instanceName = resolveInstanceName(process.env.INSTANCE_NAME);
@@ -29,10 +37,13 @@ export async function GET(): Promise<Response> {
     // Instance config is cosmetic — serve a working response even on DB failure.
   }
 
+  const oauthClients = await fetchInstanceOAuthClients();
+
   return NextResponse.json({
     status: 'ok',
     product: 'sovereign',
     instanceName,
     platformVersion: getPlatformVersion(),
+    ...(oauthClients && { oauthClients }),
   });
 }

@@ -1049,6 +1049,88 @@ gated on it.
 
 ---
 
+#### ⏳ 1.24 — Well-known first-party OAuth clients for official native shells (RFC 0072 addendum)
+
+**Goal:** Seed a native, secretless, PKCE-required OAuth client per official
+shell (`sovereign-desktop`, `sovereign-mobile`) at auth-server startup, so a
+single published binary can become a registered OAuth client on an arbitrary
+self-hosted instance without an admin hand-registering one first — the
+foundation RFC 0082 §5's durable-session sequel and, transitively,
+`sovereign-desktop` epic task 17.4 (parked, blocked on this) need. This task
+delivers the seeding infrastructure only; it does not itself unblock either —
+see the RFC addendum's own "does not by itself unblock" note.
+
+**Delivered:**
+
+- `apps/auth/src/builtin-oauth-clients.ts` — `seedBuiltinOAuthClient()` /
+  `seedBuiltinOAuthClients()`, idempotent, keyed on a stable `name` column
+  value. **Not implemented via `@better-auth/oauth-provider`'s
+  `adminCreateOAuthClient`, despite it being `SERVER_ONLY`** — verified live
+  that its handler still requires a real user session
+  (`assertClientPrivileges` throws `UNAUTHORIZED` without one), which doesn't
+  exist at server boot. Inserts the row directly instead, the same pattern
+  `instrumentation.ts`'s RFC 0021 owner-migration already uses for
+  `better-auth`-owned tables — the row shape (JSON-encoded array columns,
+  `ON DELETE CASCADE userId` left `NULL` so the client outlives whichever
+  admin happened to exist at seed time, boolean-as-0/1 on SQLite) was
+  reverse-engineered from a client actually created through the legitimate
+  admin path with a genuine session, then confirmed to resolve correctly
+  through `getClient()` — the same internal resolver the real authorize flow
+  uses — not just typechecked against the package's `.d.mts`.
+- `apps/auth/instrumentation.ts` calls `seedBuiltinOAuthClients()` once at
+  startup, after migrations.
+- `apps/auth/app/api/oauth-clients/route.ts` (new) — public, unauthenticated;
+  re-seeds on read (cheap, idempotent) rather than trusting startup timing.
+- `runtime/src/instance-oauth-clients.ts` + `GET /api/instance` extended with
+  an `oauthClients` field, fetched server-to-server from the route above.
+  Omitted entirely (not an error) if the auth server is unreachable — the
+  same "not yet available" shape older-platform-version instances need,
+  resolving the addendum's upgrade-window open question for free.
+- **Also fixed, found while verifying this against a real migrated `:memory:`
+  DB:** `provisionAuthSqldNamespace()` (`apps/auth/src/db.ts`) was missing
+  the `:memory:` carve-out its sibling `getAuthDb()` already had, so a plain
+  `AUTH_DATABASE_URL=':memory:'` caller with no encryption key fell through
+  to the sqld branch and crashed with `getaddrinfo ENOTFOUND sqld` outside
+  Docker's network. No existing test caught it — `db.pg.test.ts` only
+  exercises the early-returning postgres branch. Regression test added.
+- Both shells' redirect URI resolved to the identical `sovereign://oauth/callback`
+  (confirmed against `sovereign-mobile`'s deep-link registration, epic task
+  20.14) — no collision risk, since each is a distinct server-side client row
+  and the two shells never coexist on the same OS.
+- RFC 0072's addendum corrected (mechanism, both resolved open questions) and
+  its own changelog updated; the still-open revocation/recreation gap
+  (`cachedTrustedClients` deliberately not used) is now confirmed real, not
+  hypothetical — deleting a seeded client via Console would currently be
+  silently undone on the next restart. Left open: no real consumer exists yet
+  to make it worth resolving today.
+
+**Not delivered — deliberately out of scope for this task:** the shell-side
+PKCE flow (`ASWebAuthenticationSession`/Custom Tabs) and OS keychain storage
+that actually consume these seeded clients. That is `sovereign-desktop`
+epic task 17.4's and RFC 0082 §5's own work, still unscheduled.
+
+**Dependencies:** RFC 0072 (Implemented), RFC 0082 (Accepted). Epic task 17.3
+(the `sovereign://` scheme desktop already registers) and 20.14 (the same
+scheme on mobile).
+
+**SRS reference:** none — internal auth-server infrastructure, not a
+user-facing capability yet.
+
+**Review checklist:**
+
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`,
+  `pnpm design:tokens:check`, `pnpm test` all pass.
+- Seeding is idempotent — calling it twice produces one row, not two,
+  verified against a real migrated `:memory:` DB (not mocked).
+- The seeded row resolves through better-auth's own `getClient()`/
+  `getOAuthClientPublic`, not just a raw SQL round-trip.
+- `GET /api/instance` includes `oauthClients` when the auth server responds,
+  and omits the field (not an error) when it doesn't.
+- The `provisionAuthSqldNamespace()` regression is covered by a dedicated
+  test.
+
+---
+
 ## Related RFCs
 
 - [RFC 0012 — Passkeys & TOTP MFA](../rfcs/0012-passkeys-and-mfa.md)

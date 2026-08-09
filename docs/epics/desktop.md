@@ -175,25 +175,27 @@ first.
 - Unknown instance shows the add-instance prompt rather than crashing
 - Scheme registered correctly on macOS (`LSApplicationQueriesSchemes` in `Info.plist`)
 
-#### 🚧 17.4 — Keychain credential storage — parked, zero urgency, do not revisit without checking RFC 0082's status first
+#### 🚧 17.4 — Keychain credential storage — parked, do not revisit without reading epic task 1.24 and RFC 0072's addendum first
 
-> **Decision (2026-08): parked, not merely blocked.** This task exists
-> solely to serve RFC 0082 §5's durable-session sketch (see below) — and
-> RFC 0082 itself is still **Draft**, with every one of its own epic tasks
-> (2.27, 20.10–20.12) still 📋 unstarted (20.10 is ⏳ but is only a shared
-> offline-behavior research spike, not the focused-app feature). Nothing in
-> the product today depends on this. Today's shells authenticate by loading
-> the instance's own login page in the WebView and getting a normal session
-> cookie — unaffected either way, works fine, not what this task is about.
+> **Update (2026-08): one layer of the block cleared, but this is still not
+> actionable.** RFC 0082 is now **Accepted**, and epic task 1.24 shipped the
+> platform-side half of RFC 0072's addendum: `sovereign-desktop` can now
+> discover its own instance-specific OAuth `client_id` via
+> `GET /api/instance`'s `oauthClients` field, seeded automatically per
+> instance — no admin hand-registration needed. What's still missing, and
+> still unscheduled: the actual shell-side PKCE flow (Rust/Tauri —
+> `ASWebAuthenticationSession`-equivalent, custom-scheme redirect handling,
+> token exchange) and the OS keychain storage this task is nominally about.
+> Nothing in the product today depends on this — today's shells authenticate
+> fine via a normal WebView session cookie, unaffected either way.
 >
-> **Do not re-investigate this task's design from scratch.** Before picking
-> it up, check whether RFC 0082 has actually been accepted and scheduled
-> (`docs/rfcs/README.md`'s status column). If not, there is nothing to do
-> here — leave it parked and work on something else. If RFC 0082 does get
-> scheduled, the design to build against is
-> [RFC 0072's addendum](../rfcs/0072-external-oauth-provider.md#addendum-well-known-first-party-client-for-official-native-shells),
-> already drafted and verified against the real `@better-auth/oauth-provider`
-> API — read that first rather than re-deriving a mechanism.
+> **Do not re-investigate this task's design from scratch.** Read epic task
+> 1.24 (`docs/epics/users-auth.md`) and
+> [RFC 0072's addendum](../rfcs/0072-external-oauth-provider.md#addendum-well-known-first-party-client-for-official-native-shells)
+> first — the addendum documents exactly what's implemented, what's still a
+> real open question (client revocation/recreation semantics — confirmed
+> real, not hypothetical), and what this task would still need to build
+> against the now-live `client_id` discovery.
 
 > **As written below, this task is stale and should not be implemented.**
 > [RFC 0083 §8](../rfcs/0083-device-bridge-capability-contract.md#8-relationship-to-existing-epic-tasks)

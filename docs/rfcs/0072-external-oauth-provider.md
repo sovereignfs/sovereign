@@ -4,7 +4,7 @@
 **Date:** July 2026\
 **Author:** External contributor (submitted for consideration; adapted to repository conventions and revised during implementation against the actual `@better-auth/oauth-provider` API)\
 **Scope:** `apps/auth`, `runtime` (better-auth client version only), `plugins/console`, `docs/self-hosting.md`, `docs/security.md`, `docs/upgrade.md`. Builds on RFC 0021 (platform roles & capabilities).\
-**Incorporated into plan:** Yes — epic task 1.18.
+**Incorporated into plan:** Yes — epic tasks 1.18, 1.24 (addendum, partial).
 
 ---
 
@@ -232,18 +232,17 @@ docs) — additive, no changes to existing auth flows. `better-auth` bumped
 
 ## Addendum: well-known first-party client for official native shells
 
-**Status:** Draft, **parked (2026-08) — zero urgency, not a pending
-decision to chase.** Everything above this section already shipped and is
-unaffected; this addendum only adds new scope for a consumer that doesn't
-exist yet ([RFC 0082 §5](0082-focused-plugin-app-shell.md#5-auth--cookie-now-durable-session-named-as-the-sequel)'s
-"durable session sequel," itself still an unbuilt design sketch inside an
-RFC that is itself still Draft with none of its own epic tasks started —
-see `docs/rfcs/README.md`'s status column before assuming otherwise).
-Nothing in the shipped product depends on this; today's shells authenticate
-fine via plain WebView cookie sessions either way. Don't implement this
-addendum, or spend time refining its open questions, ahead of RFC 0082
-actually being accepted and scheduled — check that first, each time this
-is revisited.
+**Status:** Partially implemented (2026-08, epic task 1.24) — the seeding
+infrastructure below (points 1–3) is built and live; the shell-side consumer
+(§5's actual PKCE flow + OS keychain storage) is not, and remains genuinely
+unscheduled. RFC 0082 is now **Accepted** (`docs/rfcs/README.md`), but its own
+adoption path (epic tasks 2.27, 20.11, 20.12) doesn't include §5 — that stays
+a separate follow-up per RFC 0082 itself. Nothing in the shipped product
+consumes this yet; today's shells authenticate
+fine via plain WebView cookie sessions either way. The remaining open
+questions below (revocation semantics, Console visibility, the opt-out
+toggle) are still genuinely unresolved product decisions — don't guess at
+them; they matter more once a real shell-side consumer exists.
 
 ### Motivation
 
@@ -277,47 +276,57 @@ server-generated ID, and there is no pluggable client-resolution hook to
 special-case a fixed one.** The design below reflects what the package
 actually supports, not the original sketch.
 
-1. **No patching or forking `@better-auth/oauth-provider` — good news, and
-   now confirmed rather than assumed.** The package already ships
-   everything the well-known client itself needs, natively: `type: "native"`,
-   `token_endpoint_auth_method: "none"` (a secretless public client),
-   `require_pkce: true`. `adminCreateOAuthClient` (the same `SERVER_ONLY`
-   function §2's Console UI already calls under the hood, just invoked
-   directly from server code instead of over HTTP) creates exactly this
-   client shape today, with zero changes to the package.
+1. **Not implemented via `adminCreateOAuthClient` — corrected 2026-08,
+   verified live, not assumed.** The original draft claimed this endpoint
+   was directly callable from server code because it's marked `SERVER_ONLY`.
+   That's true of its HTTP-reachability, but its handler still calls
+   `assertClientPrivileges`, which throws `UNAUTHORIZED` without a real user
+   session (`getSessionFromCtx(ctx)`, checked against `clientPrivileges` in
+   `apps/auth/src/auth.ts`) — and there is no session at server boot.
+   `epic task 1.24` seeds the row via a direct `INSERT` into the
+   `oauthClient` table instead (`apps/auth/src/builtin-oauth-clients.ts`),
+   the same pattern `instrumentation.ts`'s RFC 0021 owner-migration already
+   uses for `better-auth`-owned tables. No patching or forking the package —
+   the row shape (JSON-encoded array columns, boolean-as-0/1 on SQLite,
+   `ON DELETE CASCADE userId` left `NULL`) was reverse-engineered from a
+   client actually created through the legitimate `adminCreateOAuthClient`
+   path with a genuine session, not guessed from the package's `.d.mts`
+   types alone, and the seeded row was confirmed to resolve correctly
+   through `getClient()` — the same internal resolver the real authorize
+   flow uses.
 
-2. **Seed one native, secretless, PKCE-required client per shell at auth
-   server startup**, idempotently — `apps/auth`'s own init code (near
-   `buildOptions()`) checks whether a client tagged as the built-in
-   `sovereign-desktop` / `sovereign-mobile` client already exists for this
-   instance (e.g. by a stable value in `client_name` or the client's
-   `metadata` field, both already part of `OAuthClient`) and, if not, calls
-   `adminCreateOAuthClient` once with the appropriate `redirect_uris`:
-   - `sovereign-desktop` → `sovereign://oauth/callback` (the exact custom
-     scheme `sovereign-desktop` epic task 17.3 already registers via
-     `tauri.conf.json`'s `plugins.deep-link.desktop.schemes` — no new
-     scheme needed)
-   - `sovereign-mobile` → whatever custom scheme that repo registers for
-     the equivalent purpose (unconfirmed from this session — needs
-     checking against `sovereign-mobile` before implementation)
+2. **Implemented: seed one native, secretless, PKCE-required client per
+   shell at auth server startup**, idempotently —
+   `apps/auth/instrumentation.ts` calls `seedBuiltinOAuthClients()` after
+   migrations run, keyed on a stable value in the `name` column (doubles as
+   the idempotency check) rather than `metadata`:
+   - `sovereign-desktop` → `sovereign://oauth/callback` (epic task 17.3's
+     existing scheme)
+   - `sovereign-mobile` → `sovereign://oauth/callback` — **resolved**: both
+     shells register the identical `sovereign://` scheme (confirmed against
+     `sovereign-mobile`'s `Info.plist`/`AndroidManifest.xml`, added for deep
+     linking, epic task 20.14). No collision risk despite the identical
+     literal string — each is a distinct server-side client row scoped by
+     its own `client_id`, and the two shells never coexist on the same OS.
 
-   The resulting `client_id` is **server-generated and different on every
-   instance** — there is no shared literal string. `cachedTrustedClients`
-   (an existing option: caches trusted clients by ID and makes them
-   immutable through the CRUD endpoints) can be populated with the
-   generated IDs once known, so an admin can't accidentally edit or delete
-   the built-in clients from Console — but this doesn't solve discovery
-   (next point), only protects the client once it exists.
+   The resulting `client_id` is **server-generated (a `randomUUID()`, not
+   better-auth's own generator — its exact ID alphabet is an internal
+   implementation detail this doesn't need to match) and different on every
+   instance** — there is no shared literal string. `cachedTrustedClients` is
+   **not used** — left for the still-open revocation-semantics question
+   below, since populating it now would prejudge that decision.
 
-3. **New: the shell needs a way to learn its own generated `client_id` on
-   whatever instance it's talking to** — this is genuinely new platform
-   surface, not something existing today. The natural fit is extending
-   `GET /api/instance` (RFC 0058 epic task 20.2's public, unauthenticated
-   endpoint — both shells already call it during onboarding, before any
-   login has happened) to also return the generated IDs, e.g.
-   `{ "oauthClients": { "desktop": "<generated-id>", "mobile": "<generated-id>" } }`.
-   Safe to expose unauthenticated: these are public client identifiers by
-   design (point 1), not secrets.
+3. **Implemented: `GET /api/instance` now returns `oauthClients`**
+   (`runtime/src/instance-oauth-clients.ts`, called from
+   `runtime/app/api/instance/route.ts`) — a server-to-server call to a new
+   public, unauthenticated `apps/auth` route,
+   `GET /api/oauth-clients` (`apps/auth/app/api/oauth-clients/route.ts`),
+   which re-seeds on read (cheap and idempotent) rather than trusting
+   startup timing alone. Resolves the addendum's own "upgrade window" open
+   question from below: an instance that hasn't seeded yet, or whose auth
+   server is unreachable, gets the field **omitted entirely**, not an error
+   — the shell already has to treat a missing field as "not yet available"
+   for any older-platform-version instance, so no new case to handle.
 
 4. **Redirect URI matching stays exact-string-only**, per §5 above — each
    seeded client's redirect is exactly one value stored on its own
@@ -378,19 +387,16 @@ actually supports, not the original sketch.
 
 ### Open questions
 
-- **New:** if `cachedTrustedClients` is _not_ used (so an operator can
-  delete the seeded client via Console), does the idempotent bootstrap
-  check silently recreate it on the next auth-server restart or upgrade,
-  undoing that operator's deletion? The seeding logic needs a persistent
-  way to distinguish "never created yet" from "created, then deliberately
-  removed" — not designed yet.
-- **New:** how does `GET /api/instance`'s new `oauthClients` field behave
-  during the upgrade window — an instance running an older platform
-  version that predates this feature — versus after upgrade, when seeding
-  first runs? Needs a defined "not yet available" shape the shell can
-  handle without treating it as an error.
-- `sovereign-mobile`'s exact custom-scheme redirect URI — unconfirmed from
-  this session; needs checking against that repo.
+- **Confirmed still open, not merely hypothetical:** `cachedTrustedClients`
+  is not used (see point 2 above), so an operator who deletes a seeded
+  client via Console gets it **silently recreated** on the next auth-server
+  restart — `seedBuiltinOAuthClient` has no way to distinguish "never
+  created yet" from "created, then deliberately removed," since it only
+  checks for a row matching the stable `name`. Not fixed in epic task 1.24;
+  needs a persistence mechanism (e.g. a tombstone row, or an
+  `auth_settings`-style marker) before this matters — i.e. before any real
+  shell-side consumer exists and an operator could actually want to revoke
+  one.
 - Should Console surface these two clients read-only, for operator
   visibility into what can authenticate against their instance, or not
   display them at all since there's nothing to configure?
@@ -398,16 +404,22 @@ actually supports, not the original sketch.
   first-party-shell access always-on — the same category as the platform's
   own built-in Console/Launcher/Account plugins not being uninstallable?
 
-This addendum does not by itself unblock RFC 0082 §5 or sovereign-desktop
-epic task 17.4 — it is the design that would unblock them once accepted,
-the open questions above are resolved, and epic tasks are assigned to build
-it.
+**Resolved:** `sovereign-mobile`'s redirect scheme (`sovereign://oauth/callback`,
+same as desktop) and the upgrade-window behavior of `GET /api/instance`'s
+`oauthClients` field (omitted, not an error) — see points 2–3 above.
+
+This addendum's seeding infrastructure (points 1–3) is implemented and live
+(epic task 1.24), but **does not by itself unblock RFC 0082 §5 or
+sovereign-desktop epic task 17.4** — those need the actual shell-side PKCE
+flow and OS keychain storage built against this, plus the remaining open
+questions above resolved, neither of which is scheduled yet.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0.1     | July 2026   | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| 0.2     | July 2026   | Implemented. Switched from the deprecated bundled `oidc-provider` to `@better-auth/oauth-provider`; corrected the custom-table assumption (plugin auto-manages its own schema); dropped the `tenant` claim (no multi-tenant concept in this platform); resolved both admin-gating open questions.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| 0.3     | August 2026 | Added the well-known first-party client addendum (draft, not implemented) — a design for `sovereign-desktop`/`sovereign-mobile` to authenticate as OAuth clients on arbitrary self-hosted instances without per-instance admin registration, proposed while scoping sovereign-desktop epic task 17.4 (blocked without it) and RFC 0082 §5's durable-session sketch.                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| 0.4     | August 2026 | Corrected the addendum's mechanism against the actual installed `@better-auth/oauth-provider@1.6.25` package: `adminCreateOAuthClient` never accepts a caller-supplied `client_id`, so the "two fixed literal IDs shared across every instance" sketch in 0.3 doesn't work as written. Revised to per-instance bootstrap seeding (idempotent, using the already-shipped `adminCreateOAuthClient` — confirms no patching of the package is needed) plus a new `GET /api/instance` discovery field the shell reads to learn its generated ID. Net effect is a better security story than 0.3's (each instance's client is now independently revocable, not trusted unconditionally everywhere) at the cost of new open questions around deletion/recreation semantics and upgrade-window behavior. Still draft; still not implemented. |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | July 2026   | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 0.2     | July 2026   | Implemented. Switched from the deprecated bundled `oidc-provider` to `@better-auth/oauth-provider`; corrected the custom-table assumption (plugin auto-manages its own schema); dropped the `tenant` claim (no multi-tenant concept in this platform); resolved both admin-gating open questions.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 0.3     | August 2026 | Added the well-known first-party client addendum (draft, not implemented) — a design for `sovereign-desktop`/`sovereign-mobile` to authenticate as OAuth clients on arbitrary self-hosted instances without per-instance admin registration, proposed while scoping sovereign-desktop epic task 17.4 (blocked without it) and RFC 0082 §5's durable-session sketch.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 0.4     | August 2026 | Corrected the addendum's mechanism against the actual installed `@better-auth/oauth-provider@1.6.25` package: `adminCreateOAuthClient` never accepts a caller-supplied `client_id`, so the "two fixed literal IDs shared across every instance" sketch in 0.3 doesn't work as written. Revised to per-instance bootstrap seeding (idempotent, using the already-shipped `adminCreateOAuthClient` — confirms no patching of the package is needed) plus a new `GET /api/instance` discovery field the shell reads to learn its generated ID. Net effect is a better security story than 0.3's (each instance's client is now independently revocable, not trusted unconditionally everywhere) at the cost of new open questions around deletion/recreation semantics and upgrade-window behavior. Still draft; still not implemented.                                                                         |
+| 0.5     | August 2026 | **Partially implemented (epic task 1.24).** Live-verified `adminCreateOAuthClient` itself doesn't work as 0.4 assumed — it's `SERVER_ONLY` but still requires a real user session internally, which doesn't exist at server boot — and corrected the mechanism to a direct `INSERT` into `oauthClient` instead, with the row shape reverse-engineered from a client created through the real admin path and confirmed to resolve via the same `getClient()` the authorize flow uses. Seeding (points 1–2) and `GET /api/instance` discovery (point 3) are shipped and live. Resolved the `sovereign-mobile` redirect-scheme and upgrade-window open questions. The revocation/recreation gap is now confirmed real, not hypothetical. The shell-side PKCE flow and OS keychain storage — the part that actually unblocks RFC 0082 §5 and sovereign-desktop epic task 17.4 — remains unbuilt and unscheduled. |

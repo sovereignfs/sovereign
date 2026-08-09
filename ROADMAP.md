@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.69.1 · **Last updated:** 2026-08-09
+**Version:** 0.70.0 · **Last updated:** 2026-08-09
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -202,7 +202,8 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | —       | Platform-wide dialect consolidation — workstream 0009 leg 1                                                                        | ✅     | [8.22](docs/epics/data-sovereignty.md#-822--platform-wide-dialect-consolidation-workstream-0009-leg-1)                                                                                         |
 | 0.65.0  | Offline session assertion and per-user SW cache partitioning — workstream 0008 leg 2a (Research 0012)                              | ✅     | [1.21](docs/epics/users-auth.md#-121--long-lived-offline-session-assertion-research-0012), [2.31](docs/epics/platform-shell.md#-231--per-user-service-worker-cache-partitioning-research-0012) |
 | 0.66.0  | Cold-start offline launch flow and Offline page — workstream 0008 leg 2b (Research 0012)                                           | ✅     | [2.32](docs/epics/platform-shell.md#-232--cold-start-offline-launch-flow-and-offline-page-research-0012)                                                                                       |
-| 0.70.0  | Focused plugin app context and route lock — workstream 0001 leg 5 (RFC 0082)                                                       | 📋     | [2.27](docs/epics/platform-shell.md#-227--focused-plugin-app-context-and-route-lock-rfc-0082)                                                                                                  |
+| 0.70.0  | Well-known first-party OAuth clients for official native shells, seeding half (RFC 0072 addendum)                                  | ⏳     | [1.24](docs/epics/users-auth.md#-124--well-known-first-party-oauth-clients-for-official-native-shells-rfc-0072-addendum)                                                                       |
+| 0.71.0  | Focused plugin app context and route lock — workstream 0001 leg 5 (RFC 0082)                                                       | 📋     | [2.27](docs/epics/platform-shell.md#-227--focused-plugin-app-context-and-route-lock-rfc-0082)                                                                                                  |
 
 ---
 
@@ -339,11 +340,11 @@ macOS first. Out of scope for v1; the approach is decided (see CLAUDE.md
 
 ### Non-prioritised tasks
 
-| Version | Task                                                      | Status | Epic task                                                                                   |
-| ------- | --------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
-| —       | Desktop: keychain credential storage (RFC 0038)           | 🚧     | [17.4](docs/epics/desktop.md#-174--keychain-credential-storage--blocked-not-just-unstarted) |
-| —       | Desktop: Mac App Store distribution (RFC 0038)            | 📋     | [17.6](docs/epics/desktop.md#-176--mac-app-store-distribution)                              |
-| —       | SDK `"desktop"` environment for `sdk.device.*` (RFC 0038) | 📋     | [17.7](docs/epics/desktop.md#-177--sdk-desktop-environment-for-sdkdevice)                   |
+| Version | Task                                                      | Status | Epic task                                                                                                                                         |
+| ------- | --------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| —       | Desktop: keychain credential storage (RFC 0038)           | 🚧     | [17.4](docs/epics/desktop.md#-174--keychain-credential-storage--parked-do-not-revisit-without-reading-epic-task-124-and-rfc-0072s-addendum-first) |
+| —       | Desktop: Mac App Store distribution (RFC 0038)            | 📋     | [17.6](docs/epics/desktop.md#-176--mac-app-store-distribution)                                                                                    |
+| —       | SDK `"desktop"` environment for `sdk.device.*` (RFC 0038) | 📋     | [17.7](docs/epics/desktop.md#-177--sdk-desktop-environment-for-sdkdevice)                                                                         |
 
 ---
 

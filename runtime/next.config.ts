@@ -2,7 +2,6 @@ import { resolve } from 'node:path';
 import withPWAInit from '@ducanh2912/next-pwa';
 import { loadEnvConfig } from '@next/env';
 import type { NextConfig } from 'next';
-import { getOfflineRoutePrefixes } from './src/registry';
 
 // Load the single monorepo-root .env (mirrors apps/auth). No per-app .env files.
 loadEnvConfig(resolve(process.cwd(), '..'), process.env.NODE_ENV !== 'production');
@@ -90,13 +89,6 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Manifest-declared offline-capable route prefixes (RFC 0078), e.g.
-// "/shopper" — a plugin's bare routePrefix. That route renders a user-neutral
-// shell and hydrates its data client-side via sdk.offline (see
-// docs/plugin-development.md's "offline" section) — that's what makes it
-// safe to cache-first, unlike the per-user SSR "pages" entry below.
-const offlineRoutePrefixes = getOfflineRoutePrefixes();
-
 // Bare `/` deliberately has no entry here — `@ducanh2912/next-pwa`'s
 // `dynamicStartUrl`/`cacheStartUrl` options (both default `true`) already
 // `unshift` an automatic `NetworkFirst` route for `/` ("start-url" cache)
@@ -117,9 +109,146 @@ const offlineRoutePrefixes = getOfflineRoutePrefixes();
 // only for a plugin's bare routePrefix page itself. A nested route is an
 // ordinary per-user SSR page; matching it here would let the service worker
 // precache-and-replay it as if it were safe to share across users.
-function underOfflineRoutePrefix(pathname: string): boolean {
-  return offlineRoutePrefixes.includes(pathname);
-}
+//
+// There is deliberately no shared `isOfflineRoute` helper here, even though
+// both `urlPattern`s below need the same check: every
+// `runtimeCaching[].urlPattern`/`.options.plugins` entry is
+// `Function.prototype.toString()`-serialized into the generated `sw.js` by
+// workbox-build, which captures only that one function's own source text —
+// no closures survive the trip, not even a reference to another top-level
+// `const`/`function` in this same file. (This is exactly how a prior version
+// of this file broke: a `ReferenceError` inside the generated worker
+// silently disabled its entire custom routing, with no try/catch anywhere in
+// workbox-routing's match path to surface it.) So, same as the `pages`
+// entry's `cacheKeyWillBeUsed`/`handlerDidError` plugins below, each matcher
+// inlines its own read of a `self.__sovereign*` global — installed
+// synchronously by `runtime/worker/offline-session.ts`, which IS a properly
+// webpack-bundled module and is `importScripts`-ed ahead of any `fetch`
+// event. If that global is somehow absent, both matchers fail toward the
+// always-safe path: "not an offline-shell route", so an unrecognized path
+// lands on the per-user `NetworkFirst` "pages" handling below rather than
+// the shared `StaleWhileRevalidate` cache.
+
+/**
+ * Extracted as a named export purely so
+ * `src/__tests__/next-config-sw-matchers.test.ts` can import the real
+ * function objects and confirm each one is genuinely self-contained —
+ * exactly the property `workbox-build`'s `Function.prototype.toString()`
+ * serialization silently requires and does not enforce. Passed to
+ * `withPWAInit` unchanged below; this export changes nothing about the
+ * production config.
+ */
+type PWAOptions = NonNullable<Parameters<typeof withPWAInit>[0]>;
+export const runtimeCaching: NonNullable<
+  NonNullable<PWAOptions['workboxOptions']>['runtimeCaching']
+> = [
+  // Offline-capable routes (RFC 0078) — must be listed before the
+  // general "pages" matcher below so it wins for these specific paths.
+  // StaleWhileRevalidate is safe here (and only here) because these
+  // documents are declared user-neutral shells, not per-user SSR: the
+  // cached response serves instantly (works with no network) while a
+  // background fetch refreshes the cache for next time. This matters
+  // for staying current, not just for offline: CacheFirst (the original
+  // choice) never revalidates against network while an entry is still
+  // within maxAgeSeconds, so a deployed change to an offline route's
+  // shell — including a content-hashed JS chunk the stale HTML still
+  // references, no longer served after the deploy — would stay
+  // invisible to a returning user for up to 30 days even though they're
+  // fully online. SWR still serves the fast cached response immediately,
+  // but the background revalidation means the *next* visit already has
+  // the update, deploy or not.
+  {
+    urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) => {
+      if (!sameOrigin) return false;
+      const isOfflineRoute = (
+        self as unknown as { __sovereignIsOfflineRoute?: (pathname: string) => boolean }
+      ).__sovereignIsOfflineRoute;
+      return isOfflineRoute ? isOfflineRoute(url.pathname) : false;
+    },
+    handler: 'StaleWhileRevalidate',
+    options: {
+      cacheName: 'offline-shells',
+      expiration: { maxEntries: 64, maxAgeSeconds: 30 * 86400 },
+    },
+  },
+  {
+    // Same matcher as the library's default "pages" entry (same-origin,
+    // non-API GET) — this only adds networkTimeoutSeconds to it.
+    urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) => {
+      if (!sameOrigin || url.pathname.startsWith('/api/')) return false;
+      const isOfflineRoute = (
+        self as unknown as { __sovereignIsOfflineRoute?: (pathname: string) => boolean }
+      ).__sovereignIsOfflineRoute;
+      return isOfflineRoute ? !isOfflineRoute(url.pathname) : true;
+    },
+    handler: 'NetworkFirst',
+    options: {
+      cacheName: 'pages',
+      expiration: { maxEntries: 32, maxAgeSeconds: 86400 },
+      networkTimeoutSeconds: 4,
+      plugins: [
+        {
+          // Per-user cache partitioning (research 0012, epic task 2.31).
+          // Documents cached here are per-user SSR, so a cached entry must
+          // never be replayed for a different user on a shared device.
+          // Keying each entry by the *signature-verified* user id from the
+          // offline session assertion makes that structurally impossible
+          // rather than merely unlikely.
+          //
+          // This function is stringified into the generated sw.js by
+          // workbox-build, so it cannot import anything — it delegates to
+          // a global installed by runtime/worker/offline-session.ts, which
+          // IS properly bundled and is importScripts-ed ahead of any fetch
+          // event. If that global is somehow absent the request falls back
+          // to an explicitly anonymous key, never the bare URL: an
+          // unidentified request then gets a cache miss and goes to
+          // network, which cannot leak across users.
+          cacheKeyWillBeUsed: async ({ request }: { request: Request }) => {
+            const partition = (
+              self as unknown as { __sovereignCacheKey?: (url: string) => Promise<string> }
+            ).__sovereignCacheKey;
+            if (!partition) {
+              const separator = request.url.includes('?') ? '&' : '?';
+              return `${request.url}${separator}__sv_u=anon`;
+            }
+            return partition(request.url);
+          },
+          // Cold-start offline routing (research 0012, epic task 2.32).
+          // Reached only after BOTH the network fetch and the cache
+          // lookup under the key above have already failed — so there is
+          // definitely nothing to serve for this request under this
+          // partition, and the only question left is which offline
+          // fallback document explains that.
+          //
+          // Adding a `handlerDidError` here means next-pwa will NOT also
+          // inject its own default one for this cache entry (it only does
+          // so when an entry's plugins have none — see
+          // @ducanh2912/next-pwa's dist/index.js), so this must reproduce
+          // that default itself for the "valid session, nothing cached
+          // yet" branch by delegating to the same `self.fallback` global
+          // next-pwa's own handler would have called.
+          handlerDidError: async ({ request }: { request: Request }) => {
+            const hasSession = (
+              self as unknown as { __sovereignHasOfflineSession?: () => Promise<boolean> }
+            ).__sovereignHasOfflineSession;
+            // No valid offline session → the device cannot prove who it
+            // is, so there is nothing safe to show but the sign-in
+            // prompt, regardless of what might otherwise be cached.
+            if (!hasSession || !(await hasSession())) {
+              return caches.match('/offline/session-required', { ignoreSearch: true });
+            }
+            // A verified user, just nothing cached at this URL yet (e.g.
+            // the very first offline launch before any page was visited
+            // online). Same generic fallback as every other cache group.
+            const fallback = (self as unknown as { fallback?: (req: Request) => Promise<Response> })
+              .fallback;
+            return fallback ? fallback(request) : Response.error();
+          },
+        },
+      ],
+    },
+  },
+];
 
 // Installable PWA (SRS §3.11, PLT-09). The service worker is generated into
 // `public/` at build time and is disabled in development so it never
@@ -143,105 +272,7 @@ const withPWA = withPWAInit({
   // network. See docs/research/0011-ios-pwa-inspection-findings.md #5.
   extendDefaultRuntimeCaching: true,
   workboxOptions: {
-    runtimeCaching: [
-      // Offline-capable routes (RFC 0078) — must be listed before the
-      // general "pages" matcher below so it wins for these specific paths.
-      // StaleWhileRevalidate is safe here (and only here) because these
-      // documents are declared user-neutral shells, not per-user SSR: the
-      // cached response serves instantly (works with no network) while a
-      // background fetch refreshes the cache for next time. This matters
-      // for staying current, not just for offline: CacheFirst (the original
-      // choice) never revalidates against network while an entry is still
-      // within maxAgeSeconds, so a deployed change to an offline route's
-      // shell — including a content-hashed JS chunk the stale HTML still
-      // references, no longer served after the deploy — would stay
-      // invisible to a returning user for up to 30 days even though they're
-      // fully online. SWR still serves the fast cached response immediately,
-      // but the background revalidation means the *next* visit already has
-      // the update, deploy or not.
-      {
-        urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
-          sameOrigin && underOfflineRoutePrefix(url.pathname),
-        handler: 'StaleWhileRevalidate',
-        options: {
-          cacheName: 'offline-shells',
-          expiration: { maxEntries: 64, maxAgeSeconds: 30 * 86400 },
-        },
-      },
-      {
-        // Same matcher as the library's default "pages" entry (same-origin,
-        // non-API GET) — this only adds networkTimeoutSeconds to it.
-        urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
-          sameOrigin && !url.pathname.startsWith('/api/') && !underOfflineRoutePrefix(url.pathname),
-        handler: 'NetworkFirst',
-        options: {
-          cacheName: 'pages',
-          expiration: { maxEntries: 32, maxAgeSeconds: 86400 },
-          networkTimeoutSeconds: 4,
-          plugins: [
-            {
-              // Per-user cache partitioning (research 0012, epic task 2.31).
-              // Documents cached here are per-user SSR, so a cached entry must
-              // never be replayed for a different user on a shared device.
-              // Keying each entry by the *signature-verified* user id from the
-              // offline session assertion makes that structurally impossible
-              // rather than merely unlikely.
-              //
-              // This function is stringified into the generated sw.js by
-              // workbox-build, so it cannot import anything — it delegates to
-              // a global installed by runtime/worker/offline-session.ts, which
-              // IS properly bundled and is importScripts-ed ahead of any fetch
-              // event. If that global is somehow absent the request falls back
-              // to an explicitly anonymous key, never the bare URL: an
-              // unidentified request then gets a cache miss and goes to
-              // network, which cannot leak across users.
-              cacheKeyWillBeUsed: async ({ request }: { request: Request }) => {
-                const partition = (
-                  self as unknown as { __sovereignCacheKey?: (url: string) => Promise<string> }
-                ).__sovereignCacheKey;
-                if (!partition) {
-                  const separator = request.url.includes('?') ? '&' : '?';
-                  return `${request.url}${separator}__sv_u=anon`;
-                }
-                return partition(request.url);
-              },
-              // Cold-start offline routing (research 0012, epic task 2.32).
-              // Reached only after BOTH the network fetch and the cache
-              // lookup under the key above have already failed — so there is
-              // definitely nothing to serve for this request under this
-              // partition, and the only question left is which offline
-              // fallback document explains that.
-              //
-              // Adding a `handlerDidError` here means next-pwa will NOT also
-              // inject its own default one for this cache entry (it only does
-              // so when an entry's plugins have none — see
-              // @ducanh2912/next-pwa's dist/index.js), so this must reproduce
-              // that default itself for the "valid session, nothing cached
-              // yet" branch by delegating to the same `self.fallback` global
-              // next-pwa's own handler would have called.
-              handlerDidError: async ({ request }: { request: Request }) => {
-                const hasSession = (
-                  self as unknown as { __sovereignHasOfflineSession?: () => Promise<boolean> }
-                ).__sovereignHasOfflineSession;
-                // No valid offline session → the device cannot prove who it
-                // is, so there is nothing safe to show but the sign-in
-                // prompt, regardless of what might otherwise be cached.
-                if (!hasSession || !(await hasSession())) {
-                  return caches.match('/offline/session-required', { ignoreSearch: true });
-                }
-                // A verified user, just nothing cached at this URL yet (e.g.
-                // the very first offline launch before any page was visited
-                // online). Same generic fallback as every other cache group.
-                const fallback = (
-                  self as unknown as { fallback?: (req: Request) => Promise<Response> }
-                ).fallback;
-                return fallback ? fallback(request) : Response.error();
-              },
-            },
-          ],
-        },
-      },
-    ],
+    runtimeCaching,
     // /offline/session-required is never linked to or navigated in the
     // ordinary course of using the app (see the route's own doc comment), so
     // unlike an actually-visited page it would never end up in the "pages"

@@ -25,7 +25,26 @@
  * never collide with, and be served, a real user's cached document.
  */
 
+import { getOfflineRoutePrefixes } from '../src/registry';
+
 declare const self: ServiceWorkerGlobalScope;
+
+/**
+ * Manifest-declared offline-capable route prefixes (RFC 0078), e.g.
+ * "/shopper" — resolved once at worker-script load time from the generated
+ * registry. This file is a real bundled module (`customWorkerSrc`), so
+ * importing it here is safe; `next.config.ts`'s `runtimeCaching` matcher
+ * functions are not (see the file header above) — they are
+ * `Function.prototype.toString()`-serialized into the generated `sw.js` by
+ * workbox-build, which drops every closure, including references to a
+ * same-file top-level `const`. Exposed below as `self.__sovereignIsOfflineRoute`
+ * so those matchers can read it as a global instead.
+ */
+const offlineRoutePrefixes = getOfflineRoutePrefixes();
+
+function isOfflineRoute(pathname: string): boolean {
+  return offlineRoutePrefixes.includes(pathname);
+}
 
 const DB_NAME = 'sovereign-offline-session';
 const STORE = 'session';
@@ -266,6 +285,7 @@ interface SovereignWorkerGlobals {
   __sovereignHasOfflineSession: () => Promise<boolean>;
   __sovereignPurgeUser: (userId: string) => Promise<void>;
   __sovereignResetMemo: () => void;
+  __sovereignIsOfflineRoute: (pathname: string) => boolean;
 }
 
 const globals = self as unknown as SovereignWorkerGlobals;
@@ -275,5 +295,6 @@ globals.__sovereignPurgeUser = purgeUserPartition;
 globals.__sovereignResetMemo = () => {
   memo = null;
 };
+globals.__sovereignIsOfflineRoute = isOfflineRoute;
 
 export {};

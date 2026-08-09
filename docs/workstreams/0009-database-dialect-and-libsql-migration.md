@@ -1,30 +1,27 @@
 # Workstream 0009 — Database dialect consolidation and libSQL migration
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In Progress\
 **Date:** August 2026\
 **Author:** Claude Code (from a design session with kasunben)\
 **Goal owner:** kasunben\
-**RFCs:** none yet — leg 2 authors one (next available number at time of
-writing is 0090; confirm against `docs/rfcs/` before assigning), superseding
-Research 0003's "opt-in third tier" recommendation for libSQL\
+**RFCs:** [0091](../rfcs/0091-libsql-sqld-driver.md) (Accepted — leg 2's spike,
+approved via merge of PR #364), superseding Research 0003's "opt-in third
+tier" recommendation for libSQL\
 **Epics touched:** 0 (Infrastructure), 8 (Data Sovereignty)\
 **Research:** [0003](../research/0003-horizontal-scaling-strategy.md)
 (horizontal scaling strategy) — its SQLite recommendation is superseded by
 this workstream; the file-storage and orchestration sections are unaffected
 
-> **Why there is no RFC yet, and why that's not skipped.** Research 0003
-> scoped libSQL/`sqld` as an option but explicitly left two questions open —
-> how libSQL's async client reconciles with `packages/db`'s dialect-agnostic
-> async contract, and how RFC 0071's SQLCipher-based encryption maps onto
-> `sqld` (the doc never addresses encryption at all). Those are empirical
-> questions a spike answers, not ones an RFC should guess at. Leg 2 is that
-> spike; writing the RFC is its own final deliverable, and it gates every leg
-> after it. This does **not** qualify for the research-as-design exception
-> ([documentation-structure.md](../documentation-structure.md),
-> first used by [workstream 0008](0008-offline-first-architecture.md)) —
-> that exception requires the design to already be settled including
-> rejected alternatives, and this one still has open technical questions by
-> its own author's admission.
+> **Why leg 2 wrote the RFC instead of it preceding the workstream.** Research
+> 0003 scoped libSQL/`sqld` as an option but explicitly left two questions
+> open — how libSQL's async client reconciles with `packages/db`'s
+> dialect-agnostic async contract, and how RFC 0071's SQLCipher-based
+> encryption maps onto `sqld` (the doc never addressed encryption at all).
+> Those were empirical questions a spike had to answer, not ones an RFC should
+> have guessed at — so this did **not** qualify for the research-as-design
+> exception ([documentation-structure.md](../documentation-structure.md)),
+> and leg 2 produced RFC 0091 as its own deliverable instead. Resolved: see
+> the Decisions table below and RFC 0091 directly.
 
 ---
 
@@ -70,22 +67,22 @@ back-compat period, since only one production instance exists today.
 | Isolation-mode default  | **Unchanged** — `shared` stays the manifest default                                              | Flipping to `isolated`-by-default — raised and explicitly rejected in the design session that produced this workstream; out of scope here entirely, not deferred                                                                                                                                                             |
 | RFC timing              | Leg 2 (the spike) produces the RFC as its own deliverable, gating leg 3                          | Writing the RFC before any spike — the async-contract and encryption questions are empirical; a spike de-risks the RFC instead of the RFC guessing at findings                                                                                                                                                               |
 
-**Deliberately still open**, resolved by leg 2's RFC:
+**Resolved by leg 2's RFC** (0091):
 
-| Open decision                                                                                                                        | Resolved by | Owner    |
-| ------------------------------------------------------------------------------------------------------------------------------------ | ----------- | -------- |
-| How the async libSQL client reconciles with `packages/db`'s sync-today SQLite call sites                                             | Leg 2 RFC   | Platform |
-| How RFC 0071's SQLCipher encryption maps onto `sqld` (native encryption / different mechanism / documented gap)                      | Leg 2 RFC   | Platform |
-| Whether `Dialect` (`packages/db/src/dialect.ts:1`) gains a third literal or libSQL stays a connection-shape variant under `'sqlite'` | Leg 2 RFC   | Platform |
-| Embedded-replica vs. remote-only `sqld` deployment shape                                                                             | Leg 2 RFC   | Platform |
+| Question                                                                                                                             | Resolution                                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| How the async libSQL client reconciles with `packages/db`'s sync-today SQLite call sites                                             | Smaller than feared: the platform data layer is already async-signatured on every dialect. 9 concrete call sites need conversion (7 in `platform-db.ts`, 2 in `scripts/seed.ts`) — not a rewrite.                                                         |
+| How RFC 0071's SQLCipher encryption maps onto `sqld`                                                                                 | It doesn't, cleanly — `sqld`'s encryption-at-rest is unpublished/unaudited (see RFC 0091). **Encryption carve-out**: anything RFC 0071 would encrypt today stays on plain-file SQLite + SQLCipher; everything else moves to `sqld`. Approved via PR #364. |
+| Whether `Dialect` (`packages/db/src/dialect.ts:1`) gains a third literal or libSQL stays a connection-shape variant under `'sqlite'` | No third literal — `DB_DIALECT=sqlite` keeps meaning what it means today; only the connection scheme and driver change underneath.                                                                                                                        |
+| Embedded-replica vs. remote-only `sqld` deployment shape                                                                             | Primary-only. No topology in this design calls for a remote/edge replica.                                                                                                                                                                                 |
 
 ## Prerequisites
 
-| Prerequisite                                                 | Owner    | Status                                                                   |
-| ------------------------------------------------------------ | -------- | ------------------------------------------------------------------------ |
-| None for leg 1 — self-contained, subtractive manifest change | Platform | Ready                                                                    |
-| None for leg 2 — independent spike                           | Platform | Ready                                                                    |
-| Leg 2's RFC accepted                                         | kasunben | ⛔ **Open — gates leg 3.** Not an agent decision to accept unilaterally. |
+| Prerequisite                                                 | Owner    | Status                                  |
+| ------------------------------------------------------------ | -------- | --------------------------------------- |
+| None for leg 1 — self-contained, subtractive manifest change | Platform | ✅ Done — merged (PR #353)              |
+| None for leg 2 — independent spike                           | Platform | ✅ Done — merged (PR #364)              |
+| Leg 2's RFC accepted                                         | kasunben | ✅ Done — approved via merge of PR #364 |
 
 ## Legs
 
@@ -170,19 +167,46 @@ escalate and revise the plan rather than pushing into leg 3 on a guess.
 
 **Epic tasks:** 8.23.
 
-**Deliberately thin — scope is set by leg 2's RFC, not by this document.**
-Do not begin detailed task breakdown before that RFC exists and is accepted.
-Expected surface, subject to the RFC's actual decisions: `client.ts` and
-`plugin-client.ts`'s driver construction; `sqlite-encryption.ts`'s
-`openKeyedSqlite()` chokepoint and its `apps/auth` twin; every per-dialect
-schema file under `packages/db/src/schema/sqlite/`; and anywhere else in the
-codebase that assumed `better-sqlite3`'s synchronous API, to be enumerated
-once the RFC's async-contract decision is known.
+**Scope, per RFC 0091 (accepted):**
 
-**Do not proceed if:** leg 2's RFC is not yet accepted, or this leg's actual
-scope turns out to be substantially larger than a single reviewable PR — split
-it rather than force it into one leg (per the leg contract's reviewability
-rule).
+- New driver: `drizzle-orm/libsql` + `@libsql/client`, replacing
+  `drizzle-orm/better-sqlite3` for every SQLite database the **encryption
+  carve-out doesn't exempt**. `Dialect` stays `'sqlite' | 'postgres'` — no
+  third literal.
+- **Encryption carve-out boundary** (built in from the start, not bolted on
+  after): the platform DB and `apps/auth`'s DB stay on plain-file SQLite +
+  `better-sqlite3-multiple-ciphers` whenever `SOVEREIGN_DB_ENCRYPTION_KEY` is
+  set; any isolated plugin DB stays on plain-file SQLite whenever its
+  manifest declares `requireEncryption: true`. Everything else opens through
+  `sqld`. `sqlite-encryption.ts`'s `openKeyedSqlite()` chokepoint
+  (`packages/db/src/sqlite-encryption.ts:314`) and its `apps/auth` twin are
+  where this branches.
+- **Async-contract conversion** — the 9 call sites RFC 0091 enumerated:
+  `platform-db.ts:172,186,211,250,273,312,349` (drop the SQLite-only
+  `.all()`/`.get()`/`.run()`, use `await` uniformly like the adjacent Postgres
+  branches already do) and `scripts/seed.ts:149,156` (raw
+  `db.prepare(sql).get()` → `await client.execute(sql)`).
+- Driver construction changes land in `packages/db/src/client.ts` (platform
+  DB) and `plugin-client.ts` (`getPluginDb`, `provisionPluginDb`,
+  `dropPluginDb`); `apps/auth/src/db.ts` needs the equivalent change,
+  duplicated deliberately (`architecture-rules.md:51`).
+- **`sqld` auth model — undecided, this leg's call** (RFC 0091 flagged it,
+  didn't resolve it): network isolation alone (matching how Postgres is
+  typically deployed in this stack — no password enforced at the compose
+  level beyond `POSTGRES_PASSWORD` being required), or `sqld`'s own
+  `SQLD_HTTP_AUTH`/JWT credential for defense-in-depth. Decide explicitly,
+  don't default silently.
+- `docker-compose.sqld.yml` gets the `runtime`/`auth` `environment`/
+  `depends_on` overrides `docker-compose.postgres.yml` already has for
+  Postgres, once there's a driver on the other end to point at.
+
+**Do not proceed if:** this leg's actual scope turns out to be substantially
+larger than a single reviewable PR — split it rather than force it into one
+leg (per the leg contract's reviewability rule). Given this touches RFC
+0071's encryption chokepoint directly, read
+`docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md` first and require
+a live encrypted round-trip against real data before considering this leg
+done — not just unit tests.
 
 ### Leg 4 — One-time data cutover
 

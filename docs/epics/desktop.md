@@ -383,6 +383,79 @@ requirement)
   cross-origin one opens the system browser instead of silently no-op'ing
 - No new entries needed in `capabilities/default.json` or `capabilities/bridge.json`
 
+#### ✅ 17.9 — `camera.photo` capability (native file picker only)
+
+> **Scoped deliberately narrower than mobile's — file picker only, never
+> live webcam capture.** Identified as a gap by comparing implemented
+> `sdk.device.*` capabilities across `sovereign-mobile` and
+> `sovereign-desktop`: mobile shipped `camera.photo` (epic task 20.6), and
+> nothing in this repo advertised or implemented it — `bridge.rs`'s
+> `bridge_invoke` only matched `notifications.native`. Live capture was
+> considered and rejected: most desktops have no camera at all, and a
+> laptop's front-facing webcam is a poor fit for the same "photograph a
+> document" use case mobile's camera solves — not worth the extra
+> complexity (permission prompts, a live preview surface) for low product
+> value. `tauri-plugin-dialog`'s native file picker was already a
+> dependency (the auto-updater's prompt, task 17.5) and satisfies the same
+> `DeviceResult<{ dataUrl, mimeType }>` contract with no SDK changes
+> required — `packages/sdk/src/device-client.ts`'s `camera.photo` already
+> calls `bridge.invoke('camera.photo', { source })` generically and uses
+> whatever a registered bridge returns, exactly as it does for
+> `notifications.native`. The `source: 'camera' | 'library'` field the SDK
+> sends is intentionally ignored: both resolve to the same picker, since
+> there is no separate "camera" mode on this transport to route to.
+>
+> **Verification, recorded honestly.** `cargo build`/`cargo check` succeed;
+> `cargo test` passes (10 tests: the 8 pre-existing navigation-policy tests
+> plus 2 new ones covering `mime_type_for_extension`'s known/unknown
+> extension cases); `cargo fmt --check` is clean on the changed files. The
+> hand-written, unbundled JS string in `bridge_script()` (`lib.rs`) that now
+> advertises `camera.photo` was independently checked for syntax validity
+> with Node before committing. **Not verified:** an actual file picked
+> through the native OS dialog end-to-end — same category as mobile's
+> `biometrics.confirm` gap (epic task 20.7), and for the same underlying
+> reason: no real plugin caller exists yet to trigger it, and a native OS
+> file dialog needs GUI interaction this environment cannot drive
+> headlessly either way.
+
+**Goal:** Implement `sdk.device.camera.photo` for the Tauri transport so
+plugins that already call it on mobile/web get a working desktop
+equivalent instead of silently falling through to `unavailable`.
+
+**Deliverables:**
+
+- `src-tauri/src/bridge.rs` — `camera_photo()`: `tauri-plugin-dialog`'s
+  `DialogExt::file().add_filter(...).blocking_pick_file()`, filtered to
+  `png`/`jpg`/`jpeg`/`gif`/`webp`; reads the picked file, base64-encodes it,
+  and returns `{ dataUrl, mimeType }` via the same `ok`/`dismissed`/`failed`
+  helpers `notify()` already uses. No distinct OS cancel signal beyond
+  `None` from `blocking_pick_file()`, so a cancelled pick resolves
+  `dismissed`.
+- `src-tauri/src/lib.rs`'s `bridge_script()` — `camera.photo` added to the
+  advertised `capabilities` array
+- `src-tauri/Cargo.toml` — `base64 = "0.22"` (new dependency; encodes the
+  picked file into the `dataUrl` the SDK contract expects)
+- `capabilities/bridge.json`'s description updated to name both
+  `bridge_invoke` actions now implemented
+- No new capability/permission grant: `tauri-plugin-dialog`'s Rust API is
+  called directly from `bridge_invoke`, the same pattern
+  `tauri-plugin-notification`'s `NotificationExt` already uses — its
+  JS-invokable commands are never exposed to any origin
+
+**SRS reference:** §3.19
+
+**Review checklist:**
+
+- `cargo build`/`cargo check` succeed
+- `cargo test` passes, including the new `mime_type_for_extension` unit tests
+- Requesting `sdk.device.camera.photo()` from a loaded instance opens a
+  native "choose a file" dialog scoped to image files
+- Picking a file resolves `{ status: 'ok', value: { dataUrl, mimeType } }`
+  with a correctly-typed `data:` URL
+- Cancelling the dialog resolves `{ status: 'dismissed' }`, not `failed`
+- `source: 'camera'` and `source: 'library'` behave identically (both open
+  the same picker) — documented as intentional, not a bug
+
 ## Related RFCs
 
 - [RFC 0038 — Desktop app shell (Tauri, macOS-first)](../rfcs/0038-desktop-app-shell.md)

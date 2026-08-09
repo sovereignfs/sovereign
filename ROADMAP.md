@@ -323,13 +323,14 @@ macOS first. Out of scope for v1; the approach is decided (see CLAUDE.md
 
 ### Pre-v1
 
-| Version | Task                                                 | Status | Epic task                                                                               |
-| ------- | ---------------------------------------------------- | ------ | --------------------------------------------------------------------------------------- |
-| 0.1.0   | Desktop app shell, macOS-first (RFC 0038)            | ✅     | [17.1](docs/epics/desktop.md#-171--sovereign-desktop--tauri-shell-scaffold-macos-first) |
-| 0.2.0   | Desktop: system tray and OS notifications (RFC 0038) | ✅     | [17.2](docs/epics/desktop.md#-172--system-tray-and-os-notifications)                    |
-| 0.3.0   | Desktop: deep link scheme `sovereign://` (RFC 0038)  | ✅     | [17.3](docs/epics/desktop.md#-173--deep-link-scheme-sovereign)                          |
-| 0.4.0   | Desktop: navigation policy enforcement (RFC 0058)    | ✅     | [17.8](docs/epics/desktop.md#-178--navigation-policy-enforcement)                       |
-| 0.5.0   | Desktop: auto-updater (RFC 0038)                     | ✅     | [17.5](docs/epics/desktop.md#-175--auto-updater)                                        |
+| Version | Task                                                             | Status | Epic task                                                                               |
+| ------- | ---------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------- |
+| 0.1.0   | Desktop app shell, macOS-first (RFC 0038)                        | ✅     | [17.1](docs/epics/desktop.md#-171--sovereign-desktop--tauri-shell-scaffold-macos-first) |
+| 0.2.0   | Desktop: system tray and OS notifications (RFC 0038)             | ✅     | [17.2](docs/epics/desktop.md#-172--system-tray-and-os-notifications)                    |
+| 0.3.0   | Desktop: deep link scheme `sovereign://` (RFC 0038)              | ✅     | [17.3](docs/epics/desktop.md#-173--deep-link-scheme-sovereign)                          |
+| 0.4.0   | Desktop: navigation policy enforcement (RFC 0058)                | ✅     | [17.8](docs/epics/desktop.md#-178--navigation-policy-enforcement)                       |
+| 0.5.0   | Desktop: auto-updater (RFC 0038)                                 | ✅     | [17.5](docs/epics/desktop.md#-175--auto-updater)                                        |
+| 0.6.0   | Desktop: `camera.photo` capability (file picker only) (RFC 0083) | ✅     | [17.9](docs/epics/desktop.md#-179--cameraphoto-capability-native-file-picker-only)      |
 
 ---
 

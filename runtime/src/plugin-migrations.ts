@@ -159,7 +159,21 @@ export async function runAllPluginMigrations(): Promise<void> {
         const requiresEncryption = manifestRequiresEncryption(manifest.database);
         await provisionPluginDb(manifest.id, requiresEncryption);
         const pluginDb = getPluginDb(manifest.id, requiresEncryption);
-        await runPluginMigrations(pluginDb, folder);
+        // Postgres only: drizzle's node-postgres migrator tracks applied
+        // migrations in a fixed `drizzle` schema regardless of the
+        // connection's search_path, so every isolated Postgres plugin
+        // sharing the untouched default table name (`__drizzle_migrations`)
+        // collides in that one shared table — exactly the hazard
+        // pluginMigrationsTableName() already exists to prevent for shared
+        // mode, just never extended to isolated-mode Postgres because there
+        // was only ever one such plugin until task 8.25's migration. SQLite
+        // isolated plugins are unaffected (a genuinely separate file per
+        // plugin) and must keep the untouched default — every existing one
+        // already has real history under that name; scoping this by
+        // pluginDb.dialect is load-bearing, not cosmetic.
+        const migrationsTable =
+          pluginDb.dialect === 'postgres' ? pluginMigrationsTableName(manifest.id) : undefined;
+        await runPluginMigrations(pluginDb, folder, migrationsTable);
       } else {
         // PlatformDb is structurally identical to PluginDb ({ dialect, db }
         // discriminated union). The cast is safe: runPluginMigrations only

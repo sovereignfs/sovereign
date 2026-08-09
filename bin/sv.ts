@@ -393,6 +393,7 @@ const pluginMigrate = defineCommand({
       getPluginDb,
       getPlatformDb,
       pluginMigrationsFolder,
+      pluginMigrationsTableName,
       provisionPluginDb,
       resolveDialect,
       runPluginMigrations,
@@ -467,7 +468,17 @@ const pluginMigrate = defineCommand({
         if (database === 'isolated') {
           await provisionPluginDb(id, requiresEncryption);
           const pluginDb = getPluginDb(id, requiresEncryption);
-          await runPluginMigrations(pluginDb, folder);
+          // Postgres only: drizzle's node-postgres migrator tracks applied
+          // migrations in a fixed `drizzle` schema regardless of the
+          // connection's search_path, so every isolated Postgres plugin
+          // left on the default table name collides in that one shared
+          // table. SQLite isolated plugins must keep the untouched default
+          // (real history already exists under that name; a genuinely
+          // separate file per plugin has no collision risk anyway) — see
+          // runtime/src/plugin-migrations.ts's identical comment.
+          const migrationsTable =
+            pluginDb.dialect === 'postgres' ? pluginMigrationsTableName(id) : undefined;
+          await runPluginMigrations(pluginDb, folder, migrationsTable);
         } else {
           // PlatformDb is structurally identical to PluginDb ({ dialect, db }).
           // Cast via unknown: runPluginMigrations only accesses .dialect and .db,
@@ -476,6 +487,7 @@ const pluginMigrate = defineCommand({
           await runPluginMigrations(
             pdb as unknown as Parameters<typeof runPluginMigrations>[0],
             folder,
+            pluginMigrationsTableName(id),
           );
         }
         consola.success(`${id}: up to date.`);
@@ -1343,6 +1355,7 @@ const dbMigrateToPostgres = defineCommand({
       isPluginEncryptionMarked,
       migratePluginSqliteToPostgres,
       pluginMigrationsFolder,
+      pluginMigrationsTableName,
       pluginSchemaName,
       previewSqliteFileForPostgres,
       provisionPluginDb,
@@ -1435,7 +1448,14 @@ const dbMigrateToPostgres = defineCommand({
         const pluginDb = getPluginDb(t.id, false);
         const folder = pluginMigrationsFolder(`plugins/${t.dir}`, 'postgres');
         if (existsSync(folder)) {
-          await runPluginMigrations(pluginDb, folder);
+          // Always Postgres here (asserted above) — drizzle's node-postgres
+          // migrator tracks applied migrations in a fixed `drizzle` schema
+          // regardless of the connection's search_path, so every isolated
+          // Postgres plugin left on the default table name collides in that
+          // one shared table with every other one. See
+          // runtime/src/plugin-migrations.ts's identical comment for the
+          // full story — found live, migrating this exact plugin set.
+          await runPluginMigrations(pluginDb, folder, pluginMigrationsTableName(t.id));
         }
         if (pluginDb.dialect !== 'postgres') {
           throw new Error(`Expected a Postgres connection for "${t.id}"; got ${pluginDb.dialect}.`);

@@ -456,6 +456,116 @@ equivalent instead of silently falling through to `unavailable`.
 - `source: 'camera'` and `source: 'library'` behave identically (both open
   the same picker) — documented as intentional, not a bug
 
+#### ✅ 17.10 — `biometrics.confirm` capability (macOS Touch ID; Windows Hello written, unverified)
+
+> **Another gap identified against sovereign-mobile — no Tauri plugin
+> covers this, so it goes straight to each OS's native framework.**
+> `tauri-plugin-biometric`'s own README lists desktop support explicitly:
+> `Linux ✗, Windows ✗, macOS ✗, Android ✓, iOS ✓`. This capability does not
+> exist for desktop anywhere in the Tauri plugin ecosystem.
+>
+> **macOS** (`src/biometrics/macos.rs`) calls `LocalAuthentication.framework`
+> directly via `objc2-local-authentication` — the same `LAContext`/
+> `canEvaluatePolicy`/`evaluatePolicy` API sovereign-mobile's `Bridge.swift`
+> already calls from Swift, reached through Rust↔Objective-C FFI instead.
+> `evaluatePolicy:localizedReason:reply:` is callback-only (Apple exposes no
+> blocking variant, since evaluation may show UI), so it is bridged into
+> `bridge_invoke`'s synchronous `#[tauri::command]` via a channel — the same
+> shape `tauri-plugin-dialog`'s own `blocking_pick_file()` uses internally
+> for its callback-based picker (task 17.9). The `LAError` → `DeviceResult`
+> mapping mirrors `Bridge.swift`'s exactly, verified against
+> `objc2-local-authentication`'s real generated constants, not guessed.
+>
+> **Windows** (`src/biometrics/windows.rs`) calls
+> `Windows.Security.Credentials.UI.UserConsentVerifier` via the `windows`
+> crate's WinRT bindings — API shapes read from the real generated bindings
+> before writing this, not guessed. **This machine has no Windows toolchain
+> at all**, so it is written but genuinely unverified beyond a
+> cross-compile type-check (`rustup target add x86_64-pc-windows-msvc` +
+> `cargo check --target x86_64-pc-windows-msvc`, isolated in a standalone
+> probe crate since the full `sovereign-desktop` binary can't even be
+> cross-checked here — an unrelated pre-existing dependency, `ring`, needs
+> Windows C headers this machine doesn't have). Do not treat this as more
+> verified than "type-checks" until someone builds and runs it on real
+> Windows.
+>
+> **Linux** has no standard OS biometric primitive, so it always reports
+> `unavailable` — the same no-op precedent `haptics.impact` already
+> established (RFC 0083 §7). `lib.rs`'s `capabilities_list()` accordingly
+> advertises `biometrics.confirm` only on macOS/Windows builds, omitted on
+> Linux for the same reason `haptics.impact` is omitted everywhere: no
+> point advertising a capability that always resolves `unavailable`.
+>
+> **Verification, recorded honestly, and sharply different per platform:**
+> ✅ `cargo build`/`cargo check`/`cargo test` succeed on this machine's
+> actual target (macOS) — 8/8 pre-existing tests still pass, no new ones
+> added (nothing here is pure-function-testable the way `camera.photo`'s
+> MIME mapping was). ✅ A standalone probe using the exact same macOS call
+> sequence compiled and, when run, correctly passed `canEvaluatePolicy`
+> (confirming Touch ID is genuinely available on this dev machine) and then
+> blocked waiting on a real interactive OS prompt — killed before
+> completion rather than clicked through, so the FFI plumbing is proven but
+> the success/error-mapping path itself is not end-to-end verified. ✅ The
+> full `sovereign-desktop` dev app was launched (`pnpm dev`) with this code
+> compiled in and stayed up with no crash or panic, confirming the
+> platform-conditional bridge-script injection doesn't break app boot. ❌
+> **Not verified:** an actual Touch ID prompt clicked through to a real
+> `ok`/`denied`/`dismissed` outcome (same category as `camera.photo` and
+> mobile's own `biometrics.confirm` gap — no real plugin caller exists yet
+> to trigger this from the loaded instance either). ❌ **Windows: not built,
+> not linked, not run at all** — type-check only, as detailed above.
+
+**Goal:** Implement `sdk.device.biometrics.confirm()` for the Tauri
+transport so plugins that already call it on mobile get a working desktop
+equivalent (Touch ID on macOS, Windows Hello on Windows) instead of
+silently falling through to `unavailable`.
+
+**Deliverables:**
+
+- `src-tauri/src/biometrics/mod.rs` — `confirm(reason)` entrypoint,
+  platform-dispatched via `#[cfg(target_os = ...)]`
+- `src-tauri/src/biometrics/macos.rs` — Touch ID via
+  `objc2-local-authentication`'s `LAContext`
+- `src-tauri/src/biometrics/windows.rs` — Windows Hello via the `windows`
+  crate's `UserConsentVerifier` (written, cross-compile-type-checked only)
+- `src-tauri/Cargo.toml` — `[target.'cfg(target_os = "macos")'.dependencies]`
+  (`objc2`, `objc2-foundation`, `objc2-local-authentication`, `block2`) and
+  `[target.'cfg(target_os = "windows")'.dependencies]` (`windows`, with the
+  `Security_Credentials_UI` feature)
+- `src-tauri/src/bridge.rs` — `"biometrics.confirm"` dispatch, plus a new
+  `denied()` `DeviceResult` helper (the first capability on this transport
+  to need it)
+- `src-tauri/src/lib.rs`'s `bridge_script()`/`capabilities_list()` —
+  `biometrics.confirm` advertised only when `cfg!(any(target_os = "macos",
+target_os = "windows"))`
+- `capabilities/bridge.json`'s description updated to name all three
+  `bridge_invoke` actions now implemented, with `biometrics.confirm` called
+  out as narrower-not-equivalent to a browser-tab API (no WebAuthn-style
+  fallback, and deliberately scoped to a local presence confirmation only —
+  never a session or platform-auth grant, matching sovereign-mobile's ADR
+  0003 framing)
+- No new capability/permission grant: both native frameworks are called
+  directly from `bridge_invoke`'s Rust code, the same pattern
+  `tauri-plugin-notification`/`tauri-plugin-dialog` already use
+
+**SRS reference:** §3.19
+
+**Review checklist:**
+
+- `cargo build`/`cargo check`/`cargo test` succeed on macOS
+- `cargo check --target x86_64-pc-windows-msvc` succeeds for the isolated
+  `biometrics::windows` API shapes (full-binary cross-check is blocked by
+  an unrelated pre-existing dependency on this machine)
+- `pnpm dev` boots the app cleanly with the platform-conditional bridge
+  script compiled in
+- Requesting `sdk.device.biometrics.confirm()` from a loaded instance on
+  macOS shows the Touch ID/password prompt; a successful match resolves
+  `{ status: 'ok' }`
+- `biometrics.confirm` is absent from the advertised `capabilities` array
+  on Linux, `unavailable` if invoked anyway
+- Manual, once Windows access is available: confirm `src/biometrics/windows.rs`
+  actually builds, links, and round-trips a real Windows Hello prompt
+
 ## Related RFCs
 
 - [RFC 0038 — Desktop app shell (Tauri, macOS-first)](../rfcs/0038-desktop-app-shell.md)

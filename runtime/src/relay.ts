@@ -10,10 +10,12 @@
  * `RELAY_URL_SETTING`/`RELAY_DISABLED_SETTING` via `PATCH /api/admin/settings`
  * — this file still owns the settings' keys and read/resolution behavior.
  */
-import { getPlatformSetting, type PlatformDb } from '@sovereignfs/db';
+import { getPlatformSetting, setPlatformSetting, type PlatformDb } from '@sovereignfs/db';
+import { logger } from './logger';
 
 export const RELAY_URL_SETTING = 'push_relay_url';
 export const RELAY_DISABLED_SETTING = 'push_relay_disabled';
+const INSTANCE_KEY_SETTING = 'push_relay_instance_key';
 
 /** `sovereignfs`'s own default relay — see RFC 0087's "Deployment topology". */
 export const DEFAULT_RELAY_URL = 'https://relay.sovereign.openfs.io';
@@ -37,4 +39,61 @@ export async function getConfiguredRelayUrl(pdb: PlatformDb): Promise<string | n
 
   const configured = await getPlatformSetting(pdb, RELAY_URL_SETTING);
   return configured ?? process.env.SOVEREIGN_RELAY_URL ?? DEFAULT_RELAY_URL;
+}
+
+interface StoredInstanceKey {
+  relayUrl: string;
+  instanceKey: string;
+}
+
+/**
+ * This instance's `instanceKey` for `relayUrl` (RFC 0087's "Minimal,
+ * revocable per-instance authentication") — enrolls once via
+ * `POST /v1/enroll` and caches the result in `platform_settings`, keyed
+ * together with the `relayUrl` it was issued for. A relay-URL change (an
+ * admin repointing at a different relay, e.g. taking the self-host escape
+ * hatch) is detected by comparing the cached `relayUrl`, not just trusting
+ * a stale key — an instanceKey from one relay is meaningless to another.
+ *
+ * Returns `null` (never throws) on any enrollment failure — the caller
+ * (`fanOutPushToUser`'s native branch) must treat that as a normal delivery
+ * failure for this fan-out, not crash the whole notification.
+ */
+export async function getInstanceKey(pdb: PlatformDb, relayUrl: string): Promise<string | null> {
+  const stored = await getPlatformSetting(pdb, INSTANCE_KEY_SETTING);
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored) as StoredInstanceKey;
+      if (parsed.relayUrl === relayUrl && typeof parsed.instanceKey === 'string') {
+        return parsed.instanceKey;
+      }
+    } catch {
+      // Corrupt stored value — fall through and re-enroll.
+    }
+  }
+
+  try {
+    const res = await fetch(`${relayUrl}/v1/enroll`, { method: 'POST' });
+    if (!res.ok) {
+      logger.warn('push relay: enrollment failed', { relayUrl, status: res.status });
+      return null;
+    }
+    const body = (await res.json()) as { instanceKey?: string };
+    if (typeof body.instanceKey !== 'string') {
+      logger.warn('push relay: enrollment response missing instanceKey', { relayUrl });
+      return null;
+    }
+    await setPlatformSetting(
+      pdb,
+      INSTANCE_KEY_SETTING,
+      JSON.stringify({ relayUrl, instanceKey: body.instanceKey } satisfies StoredInstanceKey),
+    );
+    return body.instanceKey;
+  } catch (err) {
+    logger.warn('push relay: enrollment request failed', {
+      relayUrl,
+      err: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
 }

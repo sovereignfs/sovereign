@@ -33,6 +33,21 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@sovereignfs/mailer', '@sovereignfs/ui'],
   // Native bindings must be loaded by Node.js directly rather than bundled by Webpack.
   serverExternalPackages: ['better-sqlite3-multiple-ciphers'],
+  webpack: (config) => {
+    // Drop the native `libsql` package from the server graph (mirrors
+    // runtime/next.config.ts's identical `better-sqlite3` alias). Both
+    // `@libsql/client` (used directly for sqld, RFC 0091) and
+    // `@libsql/kysely-libsql` (its own internally-pinned, older
+    // `@libsql/client`) statically import `libsql` — a native platform
+    // binding — but only ever construct it for `file:`-scheme URLs. This app
+    // only ever connects to sqld over `http(s):` (`getAuthDatabase`,
+    // `getAuthDb` in src/db.ts), so that path is never taken. Without this
+    // alias, Webpack tries to bundle the native addon chain (`libsql` →
+    // `@neon-rs/load` → the platform-specific `@libsql/<target>` binary +
+    // its README) and fails to parse the non-JS files it pulls in.
+    config.resolve.alias = { ...config.resolve.alias, libsql: false };
+    return config;
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

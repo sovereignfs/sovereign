@@ -59,7 +59,10 @@ back-compat period, since only one production instance exists today.
       PR #367.)
 - [ ] The single production instance's existing SQLite files are migrated to
       the `sqld`-backed setup via a documented, rehearsed, backup-first
-      runbook, verified against real data. (Leg 4 — not started.)
+      runbook, verified against real data. (Leg 4 delivers the tool and
+      runbook, verified live against representative fixture data — the
+      actual production cutover is a separate operator action against the
+      real instance, not yet performed.)
 - [x] Research 0003 is marked superseded for its SQLite recommendation
       (done — see the notice at the top of that doc).
 
@@ -84,13 +87,15 @@ back-compat period, since only one production instance exists today.
 
 ## Prerequisites
 
-| Prerequisite                                                                                | Owner    | Status                                  |
-| ------------------------------------------------------------------------------------------- | -------- | --------------------------------------- |
-| None for leg 1 — self-contained, subtractive manifest change                                | Platform | ✅ Done — merged (PR #353)              |
-| None for leg 2 — independent spike                                                          | Platform | ✅ Done — merged (PR #364)              |
-| Leg 2's RFC accepted                                                                        | kasunben | ✅ Done — approved via merge of PR #364 |
-| Leg 3 merged                                                                                | Platform | ✅ Done — merged (PR #367)              |
-| Leg 3 run in production long enough to be trusted, per leg 4's own "do not proceed if" gate | kasunben | ⏳ Pending                              |
+| Prerequisite                                                                                                                                                                                                                                                                                                                                                                                                   | Owner    | Status                                  |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------- |
+| None for leg 1 — self-contained, subtractive manifest change                                                                                                                                                                                                                                                                                                                                                   | Platform | ✅ Done — merged (PR #353)              |
+| None for leg 2 — independent spike                                                                                                                                                                                                                                                                                                                                                                             | Platform | ✅ Done — merged (PR #364)              |
+| Leg 2's RFC accepted                                                                                                                                                                                                                                                                                                                                                                                           | kasunben | ✅ Done — approved via merge of PR #364 |
+| Leg 3 merged                                                                                                                                                                                                                                                                                                                                                                                                   | Platform | ✅ Done — merged (PR #367)              |
+| Leg 4's tool + runbook built and verified live against representative fixture data                                                                                                                                                                                                                                                                                                                             | Platform | ✅ Done — this leg                      |
+| Sequencing revised from the original "leg 3 soaks in prod first" gate: for a single instance, deploying leg 3 alone would immediately orphan any existing unencrypted plaintext data (fresh empty sqld namespaces open in its place) — there's no safe way to run leg 3 in production before leg 4's cutover exists. Leg 3 + the cutover now deploy together as one coordinated maintenance operation instead. | kasunben | ✅ Decided                              |
+| Cutover rehearsed against a copy of the real production instance's data, then run for real                                                                                                                                                                                                                                                                                                                     | kasunben | ⏳ Pending — operator action            |
 
 ## Legs
 
@@ -223,11 +228,23 @@ done — not just unit tests.
 **Technical notes:** single production instance, no back-compat period
 required per the locked migration-strategy decision — a rehearsed,
 backup-first runbook is sufficient; no phased or dual-write tooling is being
-built here. Rehearse against a copy of real production data before running it
-against the actual instance.
+built here.
 
-**Do not proceed if:** leg 3 has not been running stably, or a fresh,
-verified-restorable backup does not exist immediately before cutover.
+**Delivered by this leg:** `sv db migrate-to-sqld` and its runbook
+(`docs/self-hosting.md`), verified live against an isolated `sqld` container
+with representative fixture data covering the platform core, auth core, and
+plugin databases, including every branch of the target-selection logic and
+the non-empty-destination retry-safety guarantee.
+
+**Not delivered by this leg, deliberately:** the actual production cutover.
+This environment has no access to the real single production instance's
+data — rehearsing against a copy of it and then running the real cutover is
+an operator action, to be performed once leg 3 + this leg are deployed
+together (see the sequencing note in Prerequisites above).
+
+**Do not proceed with the actual production cutover if:** a fresh,
+verified-restorable backup does not exist immediately before it, or the
+rehearsal against a copy of real production data hasn't been run first.
 
 ## Risks
 
@@ -268,7 +285,8 @@ stop before leg 3 rather than shipping an encryption regression.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                         |
-| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0.1     | August 2026 | Initial draft from a design session with kasunben. Four legs, locking mandatory/staged libSQL adoption and superseding Research 0003's opt-in recommendation.                  |
-| 0.2     | August 2026 | Legs 1–3 complete (PR #353, #364, #367). Leg 3 delivers the `sqld` driver swap under the RFC 0091 encryption carve-out. Only leg 4 (one-time production data cutover) remains. |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | August 2026 | Initial draft from a design session with kasunben. Four legs, locking mandatory/staged libSQL adoption and superseding Research 0003's opt-in recommendation.                                                                                                                                                                                                                                                                        |
+| 0.2     | August 2026 | Legs 1–3 complete (PR #353, #364, #367). Leg 3 delivers the `sqld` driver swap under the RFC 0091 encryption carve-out. Only leg 4 (one-time production data cutover) remains.                                                                                                                                                                                                                                                       |
+| 0.3     | August 2026 | Leg 4's tool + runbook delivered (`sv db migrate-to-sqld`), verified live against fixture data. Sequencing revised: leg 3 cannot safely soak in production alone (would orphan existing plaintext data), so leg 3 + the actual cutover now deploy together as one coordinated operation. That operation itself — rehearsal against a copy of real production data, then the real cutover — is the only work left in this workstream. |

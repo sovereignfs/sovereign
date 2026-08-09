@@ -6,6 +6,8 @@ import Database from 'better-sqlite3-multiple-ciphers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SqldCutoverError, cutoverSqliteFileToSqld, previewSqliteFile } from '../sqld-cutover';
 
+// TRANSITIONAL TOOLING — see the note atop ../sqld-cutover.ts.
+
 /**
  * A minimal `Client` test double backed by a real in-memory SQLite database
  * (not a stub returning canned values) — `cutoverSqliteFileToSqld` only ever

@@ -16,6 +16,17 @@ import { openKeyedSqlite } from './sqlite-encryption';
  * matched by column name, into tables that are already there.
  *
  * Not used by the runtime's normal open path.
+ *
+ * TRANSITIONAL TOOLING (task 8.25) — exists only to bridge an instance out of
+ * the pre-task-8.22 hybrid-dialect state (a per-plugin `database.dialect`
+ * override that let a plugin diverge from the platform's own dialect). Once
+ * every self-hosted instance is either created fresh under the enforced
+ * single-dialect model or has already run this migration, this file (and
+ * `sv db migrate-to-postgres` in bin/sv.ts, and
+ * `__tests__/postgres-migration.pg.test.ts`) has no further purpose and can
+ * be deleted. Search the repo for "TRANSITIONAL TOOLING" to find every file
+ * this note appears in — `sqld-cutover.ts` carries the equivalent note for
+ * the parallel SQLite → sqld case.
  */
 
 export class PostgresMigrationError extends Error {}

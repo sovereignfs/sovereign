@@ -7,6 +7,16 @@ import Database from 'better-sqlite3-multiple-ciphers';
  * legacy pre-leg-3 file onto the mandatory `sqld` setup leg 3 introduced —
  * not used by the runtime's normal open path (see `sqld.ts`/`client.ts` for
  * that).
+ *
+ * TRANSITIONAL TOOLING — exists only to bridge an instance out of the
+ * pre-leg-3 hybrid-dialect state (plain-file SQLite still in use despite
+ * leg 3's sqld mandate). Once every SQLite-dialect instance is either created
+ * fresh under the enforced sqld-backed model or has already run this
+ * cutover, this file (and `sv db migrate-to-sqld` in bin/sv.ts, and
+ * `__tests__/sqld-cutover.test.ts`) has no further purpose and can be
+ * deleted. Search the repo for "TRANSITIONAL TOOLING" to find every file
+ * this note appears in — `postgres-migration.ts` carries the equivalent note
+ * for the parallel legacy-per-plugin-SQLite-to-Postgres case.
  */
 
 export class SqldCutoverError extends Error {}

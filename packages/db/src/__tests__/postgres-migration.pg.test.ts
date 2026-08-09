@@ -14,6 +14,8 @@ import {
  * Live Postgres coverage for `sv db migrate-to-postgres`. Skipped unless
  * TEST_DATABASE_URL points at a Postgres instance (same gate as
  * postgres.pg.test.ts), so the default `pnpm test` stays Docker-free.
+ *
+ * TRANSITIONAL TOOLING — see the note atop ../postgres-migration.ts.
  */
 const PG_URL = process.env.TEST_DATABASE_URL;
 

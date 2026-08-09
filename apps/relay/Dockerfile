@@ -9,7 +9,7 @@
 # Unlike apps/auth and the runtime image, this one is not part of the default
 # self-hosted stack (docker-compose.yml / docker-compose.prod.yml) — it is a
 # shared, centrally-operated service most self-hosted instances never deploy
-# themselves. See docs/rfcs/0085-sovereign-relay.md's "Deployment topology"
+# themselves. See docs/rfcs/0087-sovereign-relay.md's "Deployment topology"
 # for why, and the sovereign-infra/openfs-infra repos for how it's actually
 # deployed (their own per-app docker-compose.yml + Caddy vhost, not this
 # monorepo's compose files).

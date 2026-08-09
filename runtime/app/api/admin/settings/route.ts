@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   DEFAULT_ROOT_PLUGIN_ID,
+  deletePlatformSetting,
   getDefaultTenant,
   getPlatformSetting,
   setPlatformSetting,
@@ -15,6 +16,7 @@ import {
   getExamplesEnabledFlag,
 } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
+import { DEFAULT_RELAY_URL, RELAY_DISABLED_SETTING, RELAY_URL_SETTING } from '@/src/relay';
 import { validateRootPlugin } from '@/src/root-plugin';
 import { readStoredSmtpSettings, writeStoredSmtpSettings } from '@/src/smtp-settings';
 
@@ -39,19 +41,31 @@ function smtpSource(stored: {
 
 async function readSettings() {
   const db = await getPlatformDb();
-  const [tenant, inviteOnly, rootPluginId, examplesEnabled, smtp] = await Promise.all([
-    getDefaultTenant(db),
-    getPlatformSetting(db, 'invite_only'),
-    getPlatformSetting(db, 'root_plugin_id'),
-    getExamplesEnabledFlag(db),
-    readStoredSmtpSettings(db),
-  ]);
+  const [tenant, inviteOnly, rootPluginId, examplesEnabled, smtp, pushRelayUrl, pushRelayDisabled] =
+    await Promise.all([
+      getDefaultTenant(db),
+      getPlatformSetting(db, 'invite_only'),
+      getPlatformSetting(db, 'root_plugin_id'),
+      getExamplesEnabledFlag(db),
+      readStoredSmtpSettings(db),
+      getPlatformSetting(db, RELAY_URL_SETTING),
+      getPlatformSetting(db, RELAY_DISABLED_SETTING),
+    ]);
   return {
     tenantName: tenant.name,
     inviteOnly: inviteOnly === 'true',
     rootPluginId: rootPluginId ?? DEFAULT_ROOT_PLUGIN_ID,
     examplesEnabled,
     smtp: { ...smtp, source: smtpSource(smtp) },
+    pushRelay: {
+      // null url = using the default below, not "unconfigured" — distinct
+      // from `disabled`, per RFC 0087's "distinct, explicit full opt-out"
+      // requirement (an empty/unset URL must keep meaning "use the default",
+      // never get conflated with turning the relay off).
+      url: pushRelayUrl,
+      defaultUrl: DEFAULT_RELAY_URL,
+      disabled: pushRelayDisabled === 'true',
+    },
   };
 }
 
@@ -71,6 +85,7 @@ export async function PATCH(request: Request): Promise<Response> {
     rootPluginId?: string;
     examplesEnabled?: boolean;
     smtp?: { host?: string; port?: number; user?: string; pass?: string; from?: string };
+    pushRelay?: { url?: string | null; disabled?: boolean };
   };
   const db = await getPlatformDb();
   const actorId = request.headers.get('x-sovereign-user-id');
@@ -195,6 +210,58 @@ export async function PATCH(request: Request): Promise<Response> {
       visibility: 'admin',
       summary: 'SMTP settings changed',
       metadata: { host, port, user, from, hasPassword: !!pass },
+    });
+  }
+
+  if (body.pushRelay !== undefined) {
+    const { url, disabled } = body.pushRelay;
+    if (url !== undefined) {
+      if (url === null) {
+        // Explicit "clear" — revert to the default/env-derived URL. Distinct
+        // from an empty string, which is rejected below rather than silently
+        // treated the same way.
+        await deletePlatformSetting(db, RELAY_URL_SETTING);
+      } else {
+        const trimmed = url.trim();
+        if (trimmed.length === 0) {
+          return NextResponse.json(
+            { error: 'pushRelay.url must not be empty — pass null to clear it' },
+            { status: 400 },
+          );
+        }
+        try {
+          const parsed = new URL(trimmed);
+          if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') throw new Error();
+        } catch {
+          return NextResponse.json(
+            { error: 'pushRelay.url must be a valid http(s) URL' },
+            { status: 400 },
+          );
+        }
+        await setPlatformSetting(db, RELAY_URL_SETTING, trimmed);
+      }
+    }
+    if (disabled !== undefined) {
+      if (typeof disabled !== 'boolean') {
+        return NextResponse.json(
+          { error: 'pushRelay.disabled must be a boolean' },
+          { status: 400 },
+        );
+      }
+      await setPlatformSetting(db, RELAY_DISABLED_SETTING, String(disabled));
+    }
+    void logActivity({
+      actorId,
+      actorType: 'user',
+      action: 'settings.push_relay_changed',
+      visibility: 'admin',
+      summary:
+        disabled === true
+          ? 'Push relay disabled'
+          : disabled === false
+            ? 'Push relay enabled'
+            : 'Push relay URL changed',
+      metadata: { url: url ?? undefined, disabled },
     });
   }
 

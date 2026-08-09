@@ -234,6 +234,17 @@ export async function updateSmtpSettingsAction(
   return patchSettings({ smtp: { host, port, user, pass, from } });
 }
 
+export async function updatePushRelayAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const url = (formData.get('pushRelayUrl') as string | null)?.trim();
+  const disabled = formData.get('pushRelayDisabled') === 'on';
+  // Empty field means "use the default" (clear), not "set to empty" — distinct
+  // from the disabled toggle, per RFC 0087's opt-out requirement.
+  return patchSettings({ pushRelay: { url: url ? url : null, disabled } });
+}
+
 export async function testSmtpSettingsAction(
   _prev: ActionResult | null,
   _formData: FormData,

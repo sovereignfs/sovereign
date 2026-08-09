@@ -256,22 +256,42 @@ instead of the current logger-only trail.
 >   is leg 2's own deliverable, not built here. No relay dependency, fully
 >   tested against a real `:memory:` SQLite DB (`platform-db.test.ts`), not
 >   just mocks.
-> - **📋 Leg 2 — relay service (`apps/relay`) APNs/FCM sending.** Not started.
->   The workstream's own text is explicit: _"Do not proceed if:
->   `sovereignfs`'s Apple Developer / Firebase credentials aren't actually
->   available yet — this leg cannot be meaningfully verified without them,
->   and shipping unverified push-sending code is worse than not shipping
->   it."_ Real credentials are not available in this environment. When this
->   leg is picked up, the two existing `501`-stub routes
->   (`apps/relay/app/v1/{enroll,push}/route.ts`) should be replaced with
->   structurally-complete, environment-gated implementations (return a clear
->   "not configured" error whenever the real credentials are absent —
->   analogous to `sovereign-desktop`'s auto-updater and Windows Hello
->   precedent — never attempt a live Apple/Google call without them), not
->   left blocked entirely.
-> - **📋 Leg 3 — fan-out extension.** Not started; depends on leg 2's real
->   contract existing to call (though the delivery branch itself is
->   mock-testable against leg 1's fixed schema without leg 2 being live).
+> - **✅ Leg 2 — relay service (`apps/relay`) APNs/FCM sending.** Real
+>   credentials are still not available in this environment, so per the
+>   workstream's own gate this ships environment-gated rather than live-
+>   verified — the same posture already used for `sovereign-desktop`'s
+>   auto-updater and Windows Hello. `/v1/enroll`/`/v1/push` return a clear
+>   `503 not_configured`/`platform_not_configured` whenever the relevant
+>   credentials are absent; never a silent success or an attempted live
+>   call. Structurally-complete, real implementations (not stubs):
+>   `apps/relay/src/apns.ts` (ES256 JWT via `node:crypto`, `node:http2` —
+>   Apple's provider API requires genuine HTTP/2, verified Node's built-in
+>   `fetch` does not negotiate this by default, so `fetch()` would have been
+>   silently wrong), `apps/relay/src/fcm.ts` (RS256 service-account OAuth2
+>   JWT bearer flow, plain HTTPS via `fetch()`), `apps/relay/src/enrollment.ts`
+>   (stateless HMAC-signed tokens — resolves RFC 0087's "exact
+>   enrollment/key-rotation design" open question; see that file's own
+>   doc comment for the full reasoning and the accepted coarse-revocation
+>   tradeoff), `apps/relay/src/rate-limit.ts` (copied, not imported, from
+>   `runtime/src/rate-limit.ts`'s bucket shape — `apps/relay` must not
+>   depend on `runtime`). The ES256/RS256 JWT signing was verified
+>   empirically against throwaway keypairs (correct raw-signature encoding,
+>   not DER) before being trusted, and `sendApnsPush` was verified against a
+>   real local `node:http2` server (not mocked) for the full request/
+>   response cycle — real Apple/Google credentials are the only thing
+>   actually unverified. Console gained a "Native mobile push relay" section
+>   (`plugins/console/app/settings/`) for the admin-configurable relay URL +
+>   the distinct, explicit opt-out toggle RFC 0087 requires — the write
+>   side of leg 1's `getConfiguredRelayUrl()`. Deployment topology
+>   (`apps/relay/Dockerfile`, the `sovereign-relay` GHCR publish entry, and
+>   `docker-compose.yml`/`.prod.yml` exclusion) was already scaffolded ahead
+>   of this leg; only a stale RFC-number citation in the Dockerfile's
+>   comments needed fixing. **Not done:** the `sovereign-infra`/`openfs-infra`
+>   deployment-playbook coordination RFC 0087 also calls for — those repos
+>   aren't part of this workbench, so that piece is still open.
+> - **📋 Leg 3 — fan-out extension.** Not started; leg 2's real contract now
+>   exists to call (though the delivery branch itself is mock-testable
+>   against leg 1's fixed schema without leg 2 being live).
 > - **20.5 (`sovereign-mobile`)** — not started; can begin once this leg's
 >   endpoint contract (now merged) is stable, per the workstream's
 >   cross-repo parallelism note.

@@ -1,6 +1,7 @@
 import { sdk } from '@sovereignfs/sdk';
 import styles from '../console.module.css';
 import { ProviderConfigsSection, type ProviderConfigRow } from './ProviderConfigForms';
+import { PushRelaySettingsForm, type PushRelaySettingsView } from './PushRelaySettingsForm';
 import { TenantForm, InviteOnlyForm, ExampleAppsForm, RootPluginForm } from './SettingsForms';
 import { SmtpSettingsForm, type SmtpSettingsView } from './SmtpSettingsForm';
 
@@ -12,6 +13,7 @@ interface Settings {
   examplesEnabled: boolean;
   rootPluginId: string;
   smtp: SmtpSettingsView;
+  pushRelay: PushRelaySettingsView;
 }
 
 interface PluginRow {
@@ -51,6 +53,7 @@ const DEFAULT_SETTINGS: Settings = {
   examplesEnabled: false,
   rootPluginId: '',
   smtp: { host: null, port: null, user: null, from: null, hasPassword: false, source: 'env' },
+  pushRelay: { url: null, defaultUrl: 'https://relay.sovereign.openfs.io', disabled: false },
 };
 
 function settled<T>(result: PromiseSettledResult<T>, fallback: T): T {
@@ -156,6 +159,11 @@ export default async function SettingsPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Email delivery (SMTP)</h2>
         <SmtpSettingsForm smtp={settings.smtp} canEdit={canConfigureSecrets} />
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Native mobile push relay</h2>
+        <PushRelaySettingsForm pushRelay={settings.pushRelay} />
       </section>
     </div>
   );

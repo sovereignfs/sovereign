@@ -44,5 +44,19 @@ services:
       postgres:
         condition: service_healthy
 
+  # Without this, `docker compose --profile tools run --rm tools ...` silently
+  # inherits docker-compose.prod.yml's SQLite-default DATABASE_URL and no
+  # DB_DIALECT at all — every dialect-aware `sv` command (e.g. `sv db
+  # migrate-to-postgres`) then resolves to "sqlite" and refuses to run,
+  # even though runtime/auth are correctly on Postgres. Compose only merges
+  # services present in both files; `tools` was missing here entirely.
+  tools:
+    environment:
+      DB_DIALECT: 'postgres'
+      DATABASE_URL: 'postgres://${POSTGRES_USER:-sovereign}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sovereign}'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   sovereign_pgdata:

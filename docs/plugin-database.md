@@ -415,13 +415,38 @@ and calls `runPluginMigrations(pluginDb, folder, migrationsTable?)` from
 appropriate dialect, which creates the migrations-tracking table on first run and tracks
 applied files.
 
-For isolated plugins, `migrationsTable` is omitted — Drizzle's default
+For isolated SQLite plugins, `migrationsTable` is omitted — Drizzle's default
 `__drizzle_migrations` is fine since each isolated store is already its own dedicated
-database. For shared plugins, the runner passes
-`pluginMigrationsTableName(manifest.id)` (`packages/db/src/plugin-client.ts`), giving
-each one its own uniquely-named table in the platform DB. This matters because
+database file, with no collision risk. For isolated **Postgres** plugins, the runner
+also passes `pluginMigrationsTableName(manifest.id)`, same as shared plugins — Drizzle's
+node-postgres migrator tracks applied migrations in a table living in a _fixed_ `drizzle`
+schema regardless of the connecting pool's `search_path`, so every isolated Postgres
+plugin left on the default table name would otherwise share one tracking table across
+_all_ of them (see task 8.26 — a real incident where a second isolated Postgres plugin's
+migrations were silently skipped as "already applied"). For shared plugins the same call
+gives each one its own uniquely-named table in the platform DB. This matters because
 Drizzle's migrator (`drizzle-orm/*/migrator`) tracks "already applied" by comparing a
 migration's own timestamp against only the single most recent `created_at` row in
 the table — not a per-migration or per-plugin hash lookup. Two independent migration
-histories (the platform's own, and a plugin's) sharing one table would let whichever
-has later timestamps make the other look already-applied and skip silently, forever.
+histories sharing one table would let whichever has later timestamps make the other
+look already-applied and skip silently, forever.
+
+### Foreign keys in an isolated Postgres schema
+
+`drizzle-kit generate --dialect postgresql` always qualifies a generated `FOREIGN KEY`
+constraint's target table with the schema the `pgTable()` was declared in — which is
+`public` by default, since `db/schema.postgres.ts` never declares an explicit
+`pgSchema()` (see "You still need a genuine, separate Postgres schema file" above). At
+runtime an isolated plugin's tables never live in `public` — they live in
+`plugin_<slug>`, reached only via the connection's `search_path` (see above) — so a
+generated `ALTER TABLE ... REFERENCES "public"."other_table"(...)` will always fail
+with `relation "public.other_table" does not exist` the first time an isolated plugin's
+schema has a foreign key between two of its own tables. Drizzle wraps each migration
+file in one transaction, so this failure rolls back every statement in the same file,
+including any `CREATE TABLE`s that came before it — no partial state, but no tables
+either. Fix: after generating, manually strip the schema qualifier from any
+`REFERENCES "public"."..."` down to an unqualified `REFERENCES "..."` — the unqualified
+name resolves correctly through `search_path` for both the plugin's own runtime queries
+and the migration itself. Re-check this by hand after every `drizzle-kit generate` that
+touches a foreign key; the generator has no isolated-schema awareness and will keep
+re-adding the qualifier.

@@ -115,6 +115,66 @@ async function listPostgresTables(client: PoolClient, schema: string): Promise<S
   return new Set(res.rows.map((r) => r.table_name));
 }
 
+/**
+ * Order a set of tables so that any table with a foreign key to another table
+ * in the same set comes after the table it references — otherwise inserting
+ * rows in `listSqliteTables`'s alphabetical order can violate a freshly
+ * provisioned destination's FK constraints (e.g. a `_payloads` child table
+ * sorts before the `_items` parent it references). Falls back to the
+ * DB-declared dependency graph from the destination schema itself, since that
+ * always reflects the real constraints the insert will be checked against.
+ */
+async function orderTablesByDependency(
+  client: PoolClient,
+  schema: string,
+  tables: string[],
+): Promise<string[]> {
+  const res = await client.query<{ dependent_table: string; referenced_table: string }>(
+    `SELECT tc.table_name AS dependent_table, ccu.table_name AS referenced_table
+     FROM information_schema.table_constraints tc
+     JOIN information_schema.constraint_column_usage ccu
+       ON tc.constraint_name = ccu.constraint_name AND tc.table_schema = ccu.table_schema
+     WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = $1`,
+    [schema],
+  );
+
+  const tableSet = new Set(tables);
+  const dependsOn = new Map<string, Set<string>>(tables.map((t) => [t, new Set<string>()]));
+  for (const { dependent_table, referenced_table } of res.rows) {
+    if (dependent_table === referenced_table) continue;
+    if (tableSet.has(dependent_table) && tableSet.has(referenced_table)) {
+      dependsOn.get(dependent_table)?.add(referenced_table);
+    }
+  }
+
+  const ordered: string[] = [];
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+
+  function visit(table: string): void {
+    if (visited.has(table)) return;
+    if (visiting.has(table)) {
+      throw new PostgresMigrationError(
+        `Circular foreign key dependency detected involving table "${table}" in schema ` +
+          `"${schema}" — cannot determine a safe insertion order.`,
+      );
+    }
+    visiting.add(table);
+    for (const dep of dependsOn.get(table) ?? []) {
+      visit(dep);
+    }
+    visiting.delete(table);
+    visited.add(table);
+    ordered.push(table);
+  }
+
+  for (const table of tables) {
+    visit(table);
+  }
+
+  return ordered;
+}
+
 async function listPostgresColumns(
   client: PoolClient,
   schema: string,
@@ -200,10 +260,12 @@ export async function migratePluginSqliteToPostgres(
       }
     }
 
+    const orderedTables = await orderTablesByDependency(client, schema, tables);
+
     await client.query('BEGIN');
 
     const results: PostgresMigrationTableResult[] = [];
-    for (const table of tables) {
+    for (const table of orderedTables) {
       const { n: existingCount } = (
         await client.query<{ n: string }>(`SELECT COUNT(*)::text as n FROM "${schema}"."${table}"`)
       ).rows[0] ?? { n: '0' };

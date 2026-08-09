@@ -1085,9 +1085,9 @@ the tool's own post-copy check and independently via `psql`, and the
 original SQLite files confirmed untouched. `docs`, `healthlog`, `sheets`
 were dropped from this instance's plugin set before the run (never had
 Postgres migrations authored, same conclusion as when this task was
-scoped); `wallet` also still has no Postgres migrations and was left on its
-original SQLite file, working exactly as before — that remains separate,
-not-yet-started follow-up work, not a defect in this tool.
+scoped). `wallet` was migrated in a follow-up pass once it gained Postgres
+migrations of its own — see Task 8.27, which also covers the two further
+bugs that run surfaced.
 
 The real run also surfaced a genuine bug in `runPluginMigrations()` itself
 (pre-existing, not introduced by this task) — see Task 8.26.
@@ -1170,6 +1170,104 @@ data).
   is real, not assumed); its second test proves the fix.
 - Isolated SQLite plugins are unaffected — the fix is dialect-scoped, not a
   blanket change to `runPluginMigrations()`'s default behavior.
+
+---
+
+#### ✅ 8.27 — Wallet Postgres migration: FK ordering and `tools` compose gaps
+
+**Goal:** Give `wallet` (the one plugin Task 8.25 left on SQLite) Postgres
+migrations of its own, migrate its real production data, and fix the two
+further bugs that surfaced doing so — none caused by this task, all
+pre-existing and newly exposed because `wallet` was the first isolated
+Postgres plugin with a foreign key between two of its own tables, and the
+first time `sv db migrate-to-postgres` was ever run through the `tools`
+Compose profile against a live Postgres deployment.
+
+**What was added:**
+
+- `sovereign-plugin-wallet`: `db/schema.postgres.ts` mirroring
+  `app/_db/schema.ts`'s `wallet_items`/`wallet_card_payloads` tables (plain
+  `integer`, never native `boolean`, per `docs/plugin-database.md`), plus
+  generated `migrations/postgres/`. Shipped as `v0.3.0`, then `v0.3.1` fixing
+  the FK bug below.
+
+**Bug 1 — generated FK hardcoded the `public` schema qualifier.**
+`drizzle-kit generate --dialect postgresql` always qualifies a generated
+`FOREIGN KEY`'s target table with the schema the `pgTable()` was declared
+in, which defaults to `public` since no plugin schema file declares an
+explicit `pgSchema()`. An isolated plugin's tables never live in `public` —
+they live in `plugin_<slug>`, reached only via the pool's `search_path` — so
+the generated `ALTER TABLE ... REFERENCES "public"."wallet_items"` failed on
+first boot with `relation "public.wallet_items" does not exist`. Because
+Drizzle wraps each migration file in one transaction, the failure rolled
+back the whole file, including both `CREATE TABLE`s — no partial state, but
+no tables either; `runAllPluginMigrations`'s per-plugin try/catch (Task
+8.26) correctly contained the failure to `wallet` alone. Fixed by hand-
+stripping the schema qualifier down to an unqualified `REFERENCES
+"wallet_items"(...)`, which resolves correctly through `search_path`.
+Documented in `docs/plugin-database.md` under "Foreign keys in an isolated
+Postgres schema" — the generator has no isolated-schema awareness and will
+re-add the qualifier on every future regeneration.
+
+**Bug 2 — `migratePluginSqliteToPostgres` copied tables in plain alphabetical
+order.** `listSqliteTables()` (`packages/db/src/postgres-migration.ts`)
+orders tables with `ORDER BY name`, with no awareness of foreign-key
+dependency. `wallet_card_payloads` sorts before `wallet_items` alphabetically
+but references it — the first real attempt at the data copy failed with
+`insert or update on table "wallet_card_payloads" violates foreign key
+constraint`. `plainwrite`/`shopper` never hit this because neither has a
+foreign key between its own tables; `wallet` is the first migrated plugin
+that does. Fixed by adding `orderTablesByDependency()`, which reads the
+actual FK graph among the tables being migrated from the destination
+schema's own `information_schema` (topological sort, alphabetical order
+preserved as the tie-break for tables with no FK relationship, so the
+existing rollback test's ordering assumption still holds) and orders the
+copy loop by it instead of by name. Covered by a new regression test
+reproducing the exact `wallet_card_payloads` → `wallet_items` case.
+
+**Bug 3 — the `tools` Compose profile was never wired for a Postgres
+deployment.** Two separate gaps, both pre-existing since
+`docker-compose.postgres.yml` was first authored, neither previously
+exercised because this was the first time `tools` ran against a live
+Postgres instance:
+
+- `docker-compose.postgres.yml` overlays `runtime`/`auth` with the real
+  `DB_DIALECT`/`DATABASE_URL`/`AUTH_DATABASE_URL`, but never added a
+  `tools:` override — so `tools` silently kept `docker-compose.prod.yml`'s
+  SQLite-default `DATABASE_URL` and no `DB_DIALECT` at all, and any
+  dialect-aware `sv` command resolved to `"sqlite"` and refused to run.
+- `docker-compose.prod.yml`'s `tools` service never declared `networks:
+[sovereign_net]` at all (unlike `runtime`/`auth`, which both do), so even
+  with the dialect fixed it couldn't resolve the `postgres` hostname
+  (`getaddrinfo EAI_AGAIN postgres`).
+
+Fixed by adding a `tools:` block to `docker-compose.postgres.yml` (mirroring
+`runtime`'s override) and a `networks: [sovereign_net]` line to
+`docker-compose.prod.yml`'s `tools` service.
+
+**Run against the real production instance:** `wallet` migrated
+successfully once both bugs above were fixed — `wallet_items: 2 → 2`,
+`wallet_card_payloads: 2 → 2`, verified independently via `psql`, foreign
+key intact, original SQLite file confirmed untouched. All three
+`sovereign.plugins.json`-declared data plugins (`plainwrite`, `shopper`,
+`wallet`) are now fully on Postgres.
+
+**Dependencies:** Task 8.25 (this task's tool), Task 8.26 (the migration-
+table-collision fix that kept `wallet`'s first, failing migration attempt
+from taking any other plugin down with it).
+
+**SRS reference:** none — bug fixes and one plugin's migration, not a new
+capability.
+
+**Review checklist:**
+
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`,
+  `TEST_DATABASE_URL=... pnpm test` all pass.
+- `postgres-migration.pg.test.ts`'s new test reproduces the FK-ordering bug
+  and proves the fix; all existing tests in the file still pass unchanged,
+  including the alphabetical-order rollback test (no FK edges there, so the
+  topological sort's tie-break preserves it).
+- Run live against the real production instance — done; see above.
 
 ---
 

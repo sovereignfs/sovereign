@@ -273,4 +273,39 @@ describe.skipIf(!PG_URL)('migratePluginSqliteToPostgres', () => {
     const { rows } = await pool.query(`SELECT COUNT(*)::int AS n FROM "${schema}".notes`);
     expect(rows[0].n).toBe(0);
   });
+
+  it('orders inserts by foreign-key dependency, not alphabetically (reproduces the wallet incident)', async () => {
+    const schema = await freshSchema();
+    // "card_payloads" sorts before "items" alphabetically, but it has a FK
+    // to "items" — copying in listSqliteTables's plain alphabetical order
+    // would insert the child first and violate the constraint (this is
+    // exactly what happened migrating the real wallet plugin: a
+    // wallet_card_payloads row referencing a wallet_items row that hadn't
+    // been inserted yet).
+    await pool.query(`CREATE TABLE "${schema}".items (id TEXT PRIMARY KEY)`);
+    await pool.query(
+      `CREATE TABLE "${schema}".card_payloads (
+         id TEXT PRIMARY KEY,
+         item_id TEXT NOT NULL REFERENCES "${schema}".items(id)
+       )`,
+    );
+
+    const { path, db } = sourceDb();
+    db.exec('CREATE TABLE items (id TEXT PRIMARY KEY)');
+    db.exec('CREATE TABLE card_payloads (id TEXT PRIMARY KEY, item_id TEXT NOT NULL)');
+    db.prepare('INSERT INTO items (id) VALUES (?)').run('item1');
+    db.prepare('INSERT INTO card_payloads (id, item_id) VALUES (?, ?)').run('cp1', 'item1');
+    db.close();
+
+    const results = await migratePluginSqliteToPostgres(path, pool, schema);
+    expect(results).toEqual(
+      expect.arrayContaining([
+        { table: 'items', sourceRows: 1, destRows: 1 },
+        { table: 'card_payloads', sourceRows: 1, destRows: 1 },
+      ]),
+    );
+    expect(results.findIndex((r) => r.table === 'items')).toBeLessThan(
+      results.findIndex((r) => r.table === 'card_payloads'),
+    );
+  });
 });

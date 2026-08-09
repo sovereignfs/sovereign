@@ -1283,6 +1283,101 @@ capability.
 
 ---
 
+#### ✅ 8.28 — Retire the `database.isolation`/`"shared"` manifest option
+
+**Goal:** Every `sovereign`/`community` plugin's database is unconditionally
+isolated — its own dedicated SQLite file/namespace or Postgres schema. Retire
+the `shared` manifest option entirely rather than leave it as an
+increasingly-unused, increasingly-risky choice.
+
+**Why now:** tasks 8.26 and 8.27 found three distinct, previously-latent bugs
+in quick succession, all specific to isolated-mode plugins on Postgres. That
+prompted a closer look at what `shared` mode actually buys a real plugin
+author: checking every plugin actually installed anywhere in this repo or
+its known external repos found `shared` used by exactly three plugins —
+`account`, `console`, `launcher` (`type: "platform"`) — and every real,
+user-facing plugin (`tasks`, `plainwrite`, `shopper`, `wallet`) already
+`isolated`. The three `shared` holdouts turned out not to be genuine
+`shared`-mode consumers at all: Console owns no tables of its own at all (it
+reads/writes existing platform tables like `users`/`plugin_status` directly
+through `@sovereignfs/db`, bypassing `sdk.db.getClient()` entirely — already
+true before this task); Account's `account_prefs` table is defined in the
+platform's own schema file, not a plugin-owned one; Launcher has no database
+code at all. None of the three ever participated in the shared/isolated
+choice in the way a real third-party plugin would — they administer the
+platform's own core data, architecturally closer to `apps/auth` (which was
+never a "plugin" with a manifest `database` field to begin with) than to a
+`sovereign`/`community` plugin.
+
+**Delivered:**
+
+- `packages/manifest/src/schema.ts`: `manifestDatabaseSchema` narrowed to
+  `{ requireEncryption?: boolean }` — the `z.enum(['shared', 'isolated'])`
+  shorthand and the `isolation` field are both gone; an existing manifest
+  declaring either fails validation (`.strict()`), the same enforcement
+  shape task 8.22 used to retire `database.dialect`.
+- `manifestDatabaseIsolation()` repurposed: it now derives isolation from
+  `manifest.type` (`type === 'platform' ? 'shared' : 'isolated'`) instead of
+  a `database.isolation` sub-field. Every call site
+  (`runtime/src/plugin-migrations.ts`, `runtime/src/sdk-host.ts`,
+  `runtime/src/user-deletion.ts`, three sites in `bin/sv.ts`) now passes
+  `.type` instead of `.database`. The function's output type and the
+  two-branch control flow at every call site are otherwise unchanged — this
+  keeps `type: "platform"` plugins on exactly their current code path (the
+  platform DB), which matters because none of the three ever exercises it
+  today (no `migrations/` folder), so the change is a no-op for them in
+  practice, not just in theory.
+- The `requireEncryption` validation refinement recast around `type` instead
+  of `isolation`: not valid for `type: "platform"` (no isolated store to
+  encrypt), valid for everything else unconditionally (previously
+  conditional on `isolation: "isolated"` being separately declared, which is
+  now automatic).
+- `docs/plugin-development.md` and `docs/plugin-database.md`: substantial
+  rewrite — the "Choosing a mode" decision and the `shared` walkthrough are
+  gone; the isolated-mode walkthrough is now simply "the" database section;
+  a new "Platform-type plugins" section explains the `account`/`console`/
+  `launcher` exemption for contributors who touch those three specifically.
+  `docs/workstreams/0009-database-dialect-and-libsql-migration.md`'s own
+  "Isolation-mode default: Unchanged" decision is marked superseded with a
+  pointer back here, rather than left silently contradicted.
+- `packages/sdk/src/db.ts`'s `getClient()` doc comment updated to match —
+  the SDK function itself needed no code change, only the description of
+  what it now always does.
+
+**Not yet done, deliberately out of scope:** migrating the manifests of
+already-`isolated` external plugins (`tasks`, `plainwrite`, `shopper`,
+`wallet`, and any others) that still declare
+`"database": { "isolation": "isolated" }` — a shape this task's `.strict()`
+schema now rejects outright, identical in kind to task 8.22's `dialect`
+field removal needing the same six repos patched after the fact. Each
+external plugin repo needs its manifest's `isolation` key removed, a patch
+version bump, and a retag before this platform change can safely ship to
+the production instance — otherwise the next `pnpm install:plugins`/build
+against these plugins fails validation. Left for a follow-up pass once this
+PR is merged, mirroring how the `dialect` field cleanup was sequenced.
+
+**Dependencies:** Tasks 8.26, 8.27 (the bug pattern that prompted this).
+
+**SRS reference:** none — a manifest-schema simplification, not a new
+capability.
+
+**Review checklist:**
+
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test` all pass.
+- `packages/manifest`'s test suite covers: the legacy string/object
+  `isolation` forms are rejected; `manifestDatabaseIsolation()` derives
+  correctly from every `type` value; `requireEncryption` is accepted on a
+  non-platform plugin and rejected on `type: "platform"`.
+- `runtime/src/__tests__/plugin-migrations.test.ts` passes unchanged — its
+  mocked registry entries have no `type` field, which resolves to
+  `"isolated"` under the new function exactly as they did under the old
+  manifest-declared one, confirming the change is behavior-preserving for
+  every currently-real plugin.
+- Follow-up (external repos) tracked separately, not blocking this PR — see
+  "Not yet done" above.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)

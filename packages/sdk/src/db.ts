@@ -5,15 +5,17 @@ import type { DrizzleClient } from './types';
 /**
  * Returns the Drizzle client for this plugin's database.
  *
- * **Shared plugins** (the default, `database` omitted or `"shared"`) receive
- * the platform DB. Tables must be slug-prefixed (e.g. `tasks_lists`) and carry
- * a `tenant_id` column. `sdk.db.getClient()` is unchanged for these plugins —
- * isolation is transparent to the caller.
+ * Every `sovereign`/`community` plugin is unconditionally isolated — a
+ * dedicated Drizzle instance backed by its own SQLite file or Postgres
+ * schema. No slug prefix is required; tables should still carry `tenant_id`
+ * for multi-tenancy readiness. There is no per-plugin choice anymore (the
+ * `database.isolation`/`"shared"` manifest option was retired) — this call
+ * is identical for every plugin, isolation is transparent to the caller.
  *
- * **Isolated plugins** (`database: "isolated"` in the manifest) receive a
- * dedicated Drizzle instance backed by their own SQLite file or Postgres
- * schema. No slug prefix is required inside an isolated store. Tables should
- * still carry `tenant_id` for multi-tenancy readiness.
+ * `type: "platform"` plugins (`account`, `console`, `launcher`) are the one
+ * exception: they receive the platform DB directly, since they administer
+ * the platform's own core data rather than owning data of their own — see
+ * `docs/plugin-database.md`.
  *
  * The plugin ID is read from the `x-sovereign-plugin-id` request header
  * injected by the runtime middleware. Outside a plugin route context (e.g.

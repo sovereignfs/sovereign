@@ -270,48 +270,46 @@ describe('validateManifest', () => {
     expect(validateManifest({ ...base, example: 'yes' }).valid).toBe(false);
   });
 
-  it('accepts the legacy database string form', () => {
-    expect(validateManifest({ ...base, database: 'shared' }).valid).toBe(true);
-    expect(validateManifest({ ...base, database: 'isolated' }).valid).toBe(true);
+  it('rejects the legacy database string/isolation forms (retired — every non-platform plugin is unconditionally isolated)', () => {
+    expect(validateManifest({ ...base, type: 'sovereign', database: 'shared' }).valid).toBe(false);
+    expect(validateManifest({ ...base, type: 'sovereign', database: 'isolated' }).valid).toBe(
+      false,
+    );
+    expect(
+      validateManifest({ ...base, type: 'sovereign', database: { isolation: 'isolated' } }).valid,
+    ).toBe(false);
   });
 
   it('rejects a manifest database object with an unknown "dialect" key (workstream 0009 leg 1 removed it)', () => {
     const res = validateManifest({
       ...base,
-      database: { isolation: 'isolated', dialect: 'sqlite' },
+      type: 'sovereign',
+      database: { dialect: 'sqlite' },
     });
     expect(res.valid).toBe(false);
   });
 
-  it('normalizes manifest database declarations', () => {
-    expect(manifestDatabaseIsolation(undefined)).toBe('shared');
-    expect(manifestDatabaseIsolation('isolated')).toBe('isolated');
-    expect(manifestDatabaseIsolation({ isolation: 'isolated' })).toBe('isolated');
-    expect(manifestDatabaseIsolation({})).toBe('shared');
+  it('derives database isolation from type — always isolated except type: "platform"', () => {
+    expect(manifestDatabaseIsolation('sovereign')).toBe('isolated');
+    expect(manifestDatabaseIsolation('community')).toBe('isolated');
+    expect(manifestDatabaseIsolation('platform')).toBe('shared');
+    expect(manifestDatabaseIsolation(undefined)).toBe('isolated');
   });
 
-  it('accepts database.requireEncryption alongside isolation: "isolated" (RFC 0071)', () => {
+  it('accepts database.requireEncryption on a non-platform plugin (RFC 0071)', () => {
     const res = validateManifest({
       ...base,
-      database: { isolation: 'isolated', requireEncryption: true },
+      type: 'sovereign',
+      repository: 'https://github.com/example/plugin',
+      database: { requireEncryption: true },
     });
     expect(res.valid).toBe(true);
   });
 
-  it('rejects database.requireEncryption on a "shared" plugin — raise-only, implies isolated', () => {
+  it('rejects database.requireEncryption on a type: "platform" plugin — no isolated store to encrypt', () => {
     const res = validateManifest({
       ...base,
-      database: { isolation: 'shared', requireEncryption: true },
-    });
-    expect(res.valid).toBe(false);
-    if (!res.valid) {
-      expect(res.errors.join(' ')).toContain('requireEncryption');
-    }
-  });
-
-  it('rejects database.requireEncryption when isolation is left unspecified (defaults to shared)', () => {
-    const res = validateManifest({
-      ...base,
+      type: 'platform',
       database: { requireEncryption: true },
     });
     expect(res.valid).toBe(false);
@@ -322,14 +320,8 @@ describe('validateManifest', () => {
 
   it('normalizes manifestRequiresEncryption', () => {
     expect(manifestRequiresEncryption(undefined)).toBe(false);
-    expect(manifestRequiresEncryption('isolated')).toBe(false);
-    expect(manifestRequiresEncryption({ isolation: 'isolated' })).toBe(false);
-    expect(manifestRequiresEncryption({ isolation: 'isolated', requireEncryption: true })).toBe(
-      true,
-    );
-    expect(manifestRequiresEncryption({ isolation: 'isolated', requireEncryption: false })).toBe(
-      false,
-    );
+    expect(manifestRequiresEncryption({ requireEncryption: true })).toBe(true);
+    expect(manifestRequiresEncryption({ requireEncryption: false })).toBe(false);
   });
 
   it('accepts shell: "overlay" (RFC 0001)', () => {

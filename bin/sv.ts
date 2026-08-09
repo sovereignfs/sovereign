@@ -340,9 +340,10 @@ const pluginRemove = defineCommand({
     try {
       const raw = JSON.parse(readFileSync(join(dest, 'manifest.json'), 'utf8')) as {
         database?: unknown;
+        type?: unknown;
         id?: string;
       };
-      isIsolated = manifestDatabaseIsolation(raw.database) === 'isolated';
+      isIsolated = manifestDatabaseIsolation(raw.type) === 'isolated';
       manifestPluginId = raw.id ?? null;
       requiresEncryption = manifestRequiresEncryption(raw.database);
     } catch {
@@ -403,10 +404,11 @@ const pluginMigrate = defineCommand({
     const pluginsRoot = join(root, 'plugins');
     const { dialect } = resolveDialect(process.env);
 
-    // Scan plugins/ for any plugin that declares a database (isolated or shared)
-    // or has no database field (defaults to shared). Reads manifests directly so
-    // the command works with both installed (plugins/<id>/) and local-dev
-    // (plugins/<name>.local/) directories.
+    // Scan plugins/ for every plugin — every sovereign/community plugin is
+    // unconditionally isolated (no manifest choice); type: "platform" plugins
+    // resolve to "shared" but never have a migrations/ folder in practice.
+    // Reads manifests directly so the command works with both installed
+    // (plugins/<id>/) and local-dev (plugins/<name>.local/) directories.
     type PluginEntry = {
       dir: string;
       id: string;
@@ -425,9 +427,10 @@ const pluginMigrate = defineCommand({
           const m = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
             id?: string;
             database?: unknown;
+            type?: unknown;
           };
           if (typeof m.id !== 'string') continue;
-          const database = manifestDatabaseIsolation(m.database);
+          const database = manifestDatabaseIsolation(m.type);
           pluginsWithMigrations.push({
             dir: entry.name,
             id: m.id,
@@ -1276,9 +1279,9 @@ const dbMigrateToSqld = defineCommand({
  * platform dialect being Postgres, left behind by a per-plugin
  * `database.dialect: "sqlite"` override from before that manifest field was
  * removed (workstream 0009 leg 1). Only plugins actually present in
- * `plugins/` (matched by manifest id) and still declaring `isolation:
- * "isolated"` are targets — an orphaned `.db` file with no matching manifest
- * has no Postgres migrations to run against, so it's skipped, not migrated.
+ * `plugins/` (matched by manifest id) and not `type: "platform"` are
+ * targets — an orphaned `.db` file with no matching manifest has no
+ * Postgres migrations to run against, so it's skipped, not migrated.
  */
 function findPostgresMigrationTargets(
   dataDir: string,
@@ -1295,9 +1298,9 @@ function findPostgresMigrationTargets(
       try {
         const m = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
           id?: string;
-          database?: unknown;
+          type?: unknown;
         };
-        if (typeof m.id === 'string' && manifestDatabaseIsolation(m.database) === 'isolated') {
+        if (typeof m.id === 'string' && manifestDatabaseIsolation(m.type) === 'isolated') {
           idToDir.set(m.id, entry.name);
         }
       } catch {

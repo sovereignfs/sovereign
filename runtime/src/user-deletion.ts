@@ -68,7 +68,7 @@ export async function deleteUser(userId: string, tenantId: string): Promise<Dele
       const manifest = installedPlugins.find((p) => p.id === pluginId);
       let db: unknown;
       try {
-        if (manifest && manifestDatabaseIsolation(manifest.database) === 'isolated') {
+        if (manifest && manifestDatabaseIsolation(manifest.type) === 'isolated') {
           db = getPluginDb(pluginId, manifestRequiresEncryption(manifest.database)).db;
         } else {
           db = (await getPlatformDb()).db;

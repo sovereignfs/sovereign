@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.74.1 · **Last updated:** 2026-08-09
+**Version:** 0.75.0 · **Last updated:** 2026-08-09
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -209,6 +209,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.71.0  | Focused plugin app context and route lock — workstream 0001 leg 5 (RFC 0082)                                                       | 📋     | [2.27](docs/epics/platform-shell.md#-227--focused-plugin-app-context-and-route-lock-rfc-0082)                                                                                                  |
 | 0.72.1  | Fix isolated-Postgres plugin migration-table collision                                                                             | ✅     | [8.26](docs/epics/data-sovereignty.md#-826--fix-isolated-postgres-plugin-migration-table-collision)                                                                                            |
 | 0.74.1  | Wallet Postgres migration: FK ordering and `tools` compose gaps                                                                    | ✅     | [8.27](docs/epics/data-sovereignty.md#-827--wallet-postgres-migration-fk-ordering-and-tools-compose-gaps)                                                                                      |
+| 0.75.0  | Retire the `database.isolation`/`"shared"` manifest option — every plugin unconditionally isolated                                 | ✅     | [8.28](docs/epics/data-sovereignty.md#-828--retire-the-databaseisolationshared-manifest-option)                                                                                                |
 
 ---
 

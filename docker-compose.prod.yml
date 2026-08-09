@@ -35,6 +35,13 @@ services:
     environment:
       AUTH_SECRET: '${AUTH_SECRET}'
       AUTH_DATABASE_URL: '${AUTH_DATABASE_URL:-file:./data/auth.db}'
+      # Read only for assertAuthDialectMatchesPlatform()'s consistency check
+      # (apps/auth/src/db.ts) — auth's own dialect always comes from
+      # AUTH_DATABASE_URL above, never these two. Must mirror the runtime
+      # service's own DB_DIALECT/DATABASE_URL defaults below exactly, or the
+      # check fails on a correctly-configured instance.
+      DB_DIALECT: '${DB_DIALECT:-sqlite}'
+      DATABASE_URL: '${DATABASE_URL:-file:./data/sovereign.db}'
       AUTH_INVITE_ONLY: '${AUTH_INVITE_ONLY:-false}'
       AUTH_REQUIRE_EMAIL_VERIFICATION: '${AUTH_REQUIRE_EMAIL_VERIFICATION:-true}'
       # Public URL where browsers reach the auth server — better-auth uses it for

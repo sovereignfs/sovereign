@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.69.0 · **Last updated:** 2026-08-09
+**Version:** 0.69.1 · **Last updated:** 2026-08-09
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 

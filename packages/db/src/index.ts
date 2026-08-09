@@ -208,6 +208,12 @@ export {
   encryptSqliteFileInPlace,
   listInstanceSqliteFiles,
 } from './sqlite-migration';
+export {
+  SqldCutoverError,
+  cutoverSqliteFileToSqld,
+  previewSqliteFile,
+  type CutoverTableResult,
+} from './sqld-cutover';
 export { runMigrations, runPluginMigrations, type MigrationResult } from './migrate';
 export {
   dropPluginDb,

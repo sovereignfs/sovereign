@@ -943,7 +943,7 @@ override mid-migration).
 
 ---
 
-#### ⏳ 8.24 — One-time SQLite → libSQL data cutover (workstream 0009 leg 4)
+#### ✅ 8.24 — One-time SQLite → libSQL data cutover (workstream 0009 leg 4)
 
 **Goal:** Migrate the single production instance's existing SQLite files
 (`sovereign.db`, `auth.db`, and every isolated plugin `.db`) onto the
@@ -984,24 +984,36 @@ excluded when it's set; a plugin included when its manifest omits
 marked encrypted always excluded) — each verified against the actual CLI
 command, not a mock.
 
-**Not yet exercised: the actual single production instance's real data and a
-rehearsed dry run against a copy of it** — that's an operational step for
-the instance owner to perform using this tool, not something this environment
-has access to. The tool and runbook are ready for that rehearsal.
+**The real production cutover doesn't apply — resolved, not performed.**
+Rehearsing this tool against a copy of the real production instance's data
+(the starting point for Task 8.25) found that instance's platform dialect is
+already **Postgres**, not SQLite — it has no plain-file SQLite databases at
+all for `sv db migrate-to-sqld` to cut over, and never will while it stays on
+Postgres. This is not a gap: the tool and runbook are correct and complete,
+verified live against representative fixture data (see above); they were
+simply never the right fit for the production instance that actually exists,
+only for a hypothetical future SQLite-dialect deployment. See
+`docs/workstreams/0009-database-dialect-and-libsql-migration.md`'s changelog
+(0.4) for the full closing note.
 
-**Dependencies:** Task 8.23, run in production for long enough to be trusted;
-a fresh backup taken immediately before cutover.
+The rehearsal did surface a real, different problem on that instance — 6
+plugins stranded on pre-task-8.22 per-plugin SQLite overrides on an
+otherwise-Postgres platform — which Task 8.25 built `sv db
+migrate-to-postgres` to fix instead.
+
+**Dependencies:** Task 8.23.
 
 **SRS reference:** none yet — see RFC 0091.
 
 **Review checklist:**
 
 - `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test` all pass.
-- The runbook is rehearsed against a copy of real production data before it is
-  run against the actual instance — **operator action, not yet performed**.
-- The pre-cutover backup is confirmed restorable before the cutover proceeds.
-- Post-cutover, every plugin's data is verifiably intact (row counts, spot
-  checks) against the pre-cutover backup.
+- The tool is verified live against representative fixture data — done; see
+  above. A rehearsal against a copy of real production data was run and
+  found no applicable target (see above) — not a failed check, a correct
+  "nothing to migrate here" outcome.
+- The pre-cutover backup mechanism and non-empty-destination refusal are
+  covered by tests — done.
 
 ---
 

@@ -240,6 +240,8 @@ to get started — every variable is documented there.
 | `DATABASE_URL`                          | no       | `file:./data/sovereign.db`                          | Runtime database. SQLite file path (relative paths resolve against the repo root) or a `postgres://` URL.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `DB_DIALECT`                            | no       | `sqlite`                                            | Set to `postgres` when using PostgreSQL.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `PGSSLROOTCERT`                         | no       | —                                                   | Path to a CA PEM file for Postgres TLS certificate verification. Only meaningful when `DATABASE_URL` / `AUTH_DATABASE_URL` includes `sslmode=verify-full`. Follows the standard libpq convention (same env var accepted by `psql` and `pg_dump`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `SQLD_URL`                              | no       | `http://sqld:8080`                                  | Client-facing endpoint of the [sqld server](#sqld-libsql-server-rfc-0091) (RFC 0091). SQLite dialect only; unused with `DB_DIALECT=postgres`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `SQLD_ADMIN_URL`                        | no       | `http://sqld:8081`                                  | Admin API endpoint of the [sqld server](#sqld-libsql-server-rfc-0091) — namespace create/drop, not exposed to the host by the Docker overlay. SQLite dialect only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `SOVEREIGN_STORAGE_MAX_OBJECT_BYTES`    | no       | `26214400` (25 MiB)                                 | Max size in bytes for a single `sdk.storage.put()` object (RFC 0044). `sdk.storage.put()` throws `StorageQuotaExceededError` above this.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `SOVEREIGN_STORAGE_MAX_PLUGIN_BYTES`    | no       | `524288000` (500 MiB)                               | Max total bytes stored across all of one plugin's `sdk.storage` objects (RFC 0044). `sdk.storage.put()` throws `StorageQuotaExceededError` once a plugin's total would exceed this.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `SMTP_HOST`                             | no       | `localhost` (dev) / — (prod)                        | SMTP server host. In non-production builds, defaults to `localhost` so Mailpit works out of the box with no config. In production, leave unset to disable email (the app still runs) or set to your SMTP relay. Password reset and email verification (`AUTH_REQUIRE_EMAIL_VERIFICATION`, on by default) cannot complete when SMTP is disabled — set `AUTH_REQUIRE_EMAIL_VERIFICATION=false` if you don't plan to configure SMTP. `SMTP_HOST`/`PORT`/`USER`/`PASS`/`FROM` are the deployment-time fallback; **Console → Settings → Email delivery (SMTP)** (platform:owner only) can override each field at runtime with no restart — a Console-saved value always takes precedence over its matching env var. Requires `SOVEREIGN_VAULT_KEY` to be set when a password is saved via Console (the password is encrypted at rest, never stored in plaintext).                                                                                                                                                                  |
@@ -531,6 +533,63 @@ operate on an encrypted `auth.db`, and fail with the same clear
 encrypt`/`decrypt` if something's inconsistent. On a named-volume production
 deployment, run them through the `tools` service too:
 `docker compose -f docker-compose.prod.yml --profile tools run --rm tools pnpm sv user reset-mfa <email>`.
+
+---
+
+## sqld (libSQL server, RFC 0091)
+
+With `DB_DIALECT=sqlite`, most SQLite-dialect databases are served by a
+separate **sqld** container rather than a plain on-disk file — mandatory, not
+opt-in, to give SQLite deployments concurrent-writer headroom a single
+`.db` file doesn't have. Only the databases covered by the [RFC 0071
+encryption carve-out](#sqlite-at-rest-encryption-rfc-0071) stay on a plain
+file:
+
+- The platform core (`sovereign.db` + `auth.db`) stays on a plain file
+  whenever `SOVEREIGN_DB_ENCRYPTION_KEY` is set.
+- A plugin's isolated database stays on a plain file whenever its manifest
+  declares `database.requireEncryption: true`.
+- Everything else — the platform core with no encryption key configured, and
+  every plugin that doesn't request encryption — is served by sqld. Each
+  isolated plugin gets its own sqld **namespace** (sqld's own isolation
+  mechanism, analogous to a Postgres schema); the platform/auth databases
+  share sqld's default namespace.
+
+### With Docker (recommended)
+
+Layer the `docker-compose.sqld.yml` overlay on top of your compose command —
+it provisions the `sqld` service and points both the runtime and the auth
+server at it:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.sqld.yml up --build
+# or, in production:
+docker compose -f docker-compose.prod.yml -f docker-compose.sqld.yml up --build -d
+```
+
+The runtime and auth server wait for sqld to be healthy before starting.
+sqld's data lives in the `sovereign_sqld_data` named volume; back it up the
+same way as `sovereign_data` (see [Data persistence](#data-persistence)),
+substituting the volume name.
+
+### Without Docker
+
+Point `SQLD_URL` (client-facing Hrana-over-HTTP endpoint) and
+`SQLD_ADMIN_URL` (namespace create/drop) at your sqld instance in `.env`;
+both default to the Docker service hostnames (`http://sqld:8080` /
+`http://sqld:8081`), so a non-Docker deployment must override them. See
+[Environment variables](#environment-variables).
+
+### Known gap: enabling encryption after running on sqld
+
+`sv db encrypt` converts an existing plain-file SQLite database in place. If
+an instance has been running unencrypted (and therefore on sqld) and an
+operator later sets `SOVEREIGN_DB_ENCRYPTION_KEY`, there is currently no
+tooling to migrate that plugin's or the platform core's data off sqld into
+the newly-required encrypted file — the instance would start with a fresh,
+empty encrypted file alongside the orphaned sqld data. Decide on encryption
+before you have real data to lose, or ask in the project's issue tracker if
+you need this migrated.
 
 ---
 

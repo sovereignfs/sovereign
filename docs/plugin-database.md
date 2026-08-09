@@ -11,7 +11,8 @@ Sovereign gives every plugin access to a Drizzle client through `sdk.db.getClien
 By default that client is the **shared platform database** — a single SQLite file (or
 Postgres database) that all plugins write into, with isolation by table-name prefix.
 For plugins that need stronger boundaries, `database: "isolated"` provisions a
-**dedicated store** per plugin: a separate SQLite file or a Postgres schema.
+**dedicated store** per plugin: an sqld namespace or SQLite file (depending on the
+RFC 0071 encryption carve-out — see below) or a Postgres schema.
 
 This document covers both modes in full. Start with
 [Choosing a mode](#choosing-a-mode), then jump to
@@ -21,16 +22,16 @@ This document covers both modes in full. Start with
 
 ## Choosing a mode
 
-|                           | Shared                                  | Isolated                                        |
-| ------------------------- | --------------------------------------- | ----------------------------------------------- |
-| Default                   | ✅                                      | opt-in                                          |
-| Setup cost                | Zero (just use slug-prefixed tables)    | Add `"database": "isolated"` to manifest        |
-| Table prefix required     | Yes — slug (e.g. `tasks_lists`)         | No — own namespace                              |
-| Cross-plugin SQL joins    | Possible (same DB)                      | Not possible; use `sdk.data`                    |
-| Uninstall                 | Tables remain — manual cleanup          | Entire store dropped automatically              |
-| Per-plugin backup/restore | Not directly                            | `data/plugins/<id>.db` (SQLite) or named schema |
-| Migration tracking        | Own `__drizzle_migrations_<slug>` table | Per-store `__drizzle_migrations`                |
-| Blast-radius isolation    | Tables only                             | Full store                                      |
+|                           | Shared                                  | Isolated                                                                                                                   |
+| ------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Default                   | ✅                                      | opt-in                                                                                                                     |
+| Setup cost                | Zero (just use slug-prefixed tables)    | Add `"database": "isolated"` to manifest                                                                                   |
+| Table prefix required     | Yes — slug (e.g. `tasks_lists`)         | No — own namespace                                                                                                         |
+| Cross-plugin SQL joins    | Possible (same DB)                      | Not possible; use `sdk.data`                                                                                               |
+| Uninstall                 | Tables remain — manual cleanup          | Entire store dropped automatically                                                                                         |
+| Per-plugin backup/restore | Not directly                            | `data/plugins/<id>.db` (SQLite, `requireEncryption` only), an sqld namespace (SQLite, default), or a named Postgres schema |
+| Migration tracking        | Own `__drizzle_migrations_<slug>` table | Per-store `__drizzle_migrations`                                                                                           |
+| Blast-radius isolation    | Tables only                             | Full store                                                                                                                 |
 
 **Use shared** (the default) unless you have a specific reason:
 
@@ -158,10 +159,11 @@ On the **first request** where a plugin route calls `sdk.db.getClient()`, the ru
 
 **Provisioning by dialect:**
 
-| Dialect  | What gets created                                                                                                                                                                                                                                                                                                 |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SQLite   | `data/plugins/<pluginId>.db` opened with WAL mode and foreign keys enabled. Parent `data/plugins/` directory is created if absent.                                                                                                                                                                                |
-| Postgres | `CREATE SCHEMA IF NOT EXISTS "plugin_<slug>"` on the same server as the platform DB (`DATABASE_URL`). Schema name: plugin id with `.`/`-` → `_`, prefixed with `plugin_` — e.g. `io.example.tasks` → `plugin_io_example_tasks`. The runtime pool sets `SET search_path TO "plugin_slug"` on every new connection. |
+| Dialect                                  | What gets created                                                                                                                                                                                                                                                                                                          |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SQLite, `requireEncryption: true`        | `data/plugins/<pluginId>.db` opened with WAL mode and foreign keys enabled. Parent `data/plugins/` directory is created if absent. The RFC 0071 SQLCipher-capable driver — the only isolated-plugin path that still uses a plain file (see [self-hosting.md's sqld section](self-hosting.md#sqld-libsql-server-rfc-0091)). |
+| SQLite, no `requireEncryption` (default) | A dedicated **sqld namespace** (RFC 0091, workstream 0009 leg 3), created via sqld's admin API. Namespace name: same slug rules as the Postgres schema below — e.g. `io.example.tasks` → `plugin_io_example_tasks`. sqld is a required part of a SQLite deployment, not an optional extra.                                 |
+| Postgres                                 | `CREATE SCHEMA IF NOT EXISTS "plugin_<slug>"` on the same server as the platform DB (`DATABASE_URL`). Schema name: plugin id with `.`/`-` → `_`, prefixed with `plugin_` — e.g. `io.example.tasks` → `plugin_io_example_tasks`. The runtime pool sets `SET search_path TO "plugin_slug"` on every new connection.          |
 
 Subsequent `sdk.db.getClient()` calls return the same cached client — provisioning only
 runs once per process.
@@ -270,15 +272,20 @@ pnpm sv plugin remove io.example.tasks --keep-data  # remove, keep the store
 
 What "drop" means by dialect:
 
-- **SQLite** — deletes `data/plugins/io.example.tasks.db`, plus the WAL sidecar files
-  (`-wal`, `-shm`) if present.
+- **SQLite, `requireEncryption: true`** — deletes `data/plugins/io.example.tasks.db`,
+  plus the WAL sidecar files (`-wal`, `-shm`) if present.
+- **SQLite, no `requireEncryption` (default)** — drops the plugin's sqld namespace via
+  sqld's admin API (`DELETE /v1/namespaces/<ns>`). There is no file on disk to delete.
 - **Postgres** — runs `DROP SCHEMA "plugin_io_example_tasks" CASCADE`, which deletes all
   tables and indexes in that schema.
 
-**`--keep-data`** retains the store on disk. Useful when you want to inspect the data
-before deleting, migrate it elsewhere, or reinstall the plugin with its history intact.
-The retained SQLite file at `data/plugins/<id>.db` is a fully valid SQLite database
-you can open with any SQLite tool.
+**`--keep-data`** retains the store. Useful when you want to inspect the data before
+deleting, migrate it elsewhere, or reinstall the plugin with its history intact. For a
+`requireEncryption` plugin, the retained SQLite file at `data/plugins/<id>.db` is a
+fully valid SQLite database you can open with any SQLite tool; for the default sqld
+case, the namespace itself is retained on the sqld server (see
+[self-hosting.md's sqld section](self-hosting.md#sqld-libsql-server-rfc-0091) for how
+its data is backed up).
 
 ### Reinstall
 
@@ -292,20 +299,23 @@ the store's `__drizzle_migrations`).
 
 ### SQLite
 
-`sv backup` archives the entire `data/` directory, which includes `data/plugins/`:
+Only `requireEncryption` plugin stores are plain files under `data/plugins/` — everything
+else (the default) lives in sqld, backed up as part of its own named volume, not `data/`.
+`sv backup` archives the `data/` directory, which includes `data/plugins/` for any
+`requireEncryption` plugins present:
 
 ```
 data/
-  sovereign.db          # platform DB
-  auth.db               # auth DB
+  sovereign.db          # platform DB (plain file only when SOVEREIGN_DB_ENCRYPTION_KEY is set)
+  auth.db               # auth DB (same condition)
   avatars/              # user avatars
   plugins/
-    io.example.tasks.db # isolated plugin DB
+    io.example.tasks.db # requireEncryption isolated plugin DB only
     io.example.tasks.db-wal
 ```
 
-A full `sv restore` restores all plugin stores in one operation. To back up or restore
-a single plugin's database:
+A full `sv restore` restores all `data/`-resident stores in one operation. To back up or
+restore a single `requireEncryption` plugin's database:
 
 ```bash
 # Backup one plugin store
@@ -314,6 +324,11 @@ cp data/plugins/io.example.tasks.db /backup/
 # Restore (plugin must be uninstalled or not running)
 cp /backup/io.example.tasks.db data/plugins/
 ```
+
+For a default (non-`requireEncryption`) plugin, its data lives in an sqld namespace
+instead — back up and restore sqld as a whole (its `sovereign_sqld_data` volume), not
+per-namespace; see
+[self-hosting.md's sqld section](self-hosting.md#sqld-libsql-server-rfc-0091).
 
 ### Postgres
 

@@ -1005,6 +1005,101 @@ a fresh backup taken immediately before cutover.
 
 ---
 
+#### ⏳ 8.25 — Legacy per-plugin SQLite → Postgres migration tool
+
+**Goal:** Migrate an isolated plugin's data off a legacy plain-file SQLite
+database — left behind by a per-plugin `database.dialect: "sqlite"` manifest
+override from before Task 8.22 removed that field — into its proper Postgres
+schema, on an instance whose platform dialect is already Postgres. Discovered
+while preparing to rehearse Task 8.24's cutover against a real production
+instance: that instance's platform core and auth database had already been
+migrated to Postgres, but 6 plugins were still actively writing to per-plugin
+SQLite files, invisible to `DB_DIALECT` (it only ever governed the platform;
+`apps/auth`'s own dialect is independently inferred from
+`AUTH_DATABASE_URL`'s scheme, and per-plugin isolation was, before Task 8.22,
+independently overridable too). Left unmigrated, upgrading that instance past
+Task 8.22 would silently orphan these plugins' real data: `getPluginDb()`
+would start each one against a fresh, empty Postgres schema instead of
+erroring, since the override that used to force them onto SQLite no longer
+exists to stop it.
+
+Not part of workstream 0009 (that workstream's `sqld` migration is for
+SQLite-_dialect_ deployments; this instance's platform dialect is already
+Postgres) — a standalone tool for the general shape of this problem, since
+any instance that mixed per-plugin SQLite overrides with a Postgres platform
+before Task 8.22 shipped can hit it.
+
+**Delivered:**
+
+- `sv db migrate-to-postgres [pluginId]` (`bin/sv.ts`, backed by
+  `packages/db/src/postgres-migration.ts`): for each isolated plugin with a
+  pending `data/plugins/<id>.db` file (or a single named one), runs the
+  plugin's own Postgres migrations against its `plugin_<slug>` schema first
+  (`provisionPluginDb` + `runPluginMigrations` — the same mechanism the
+  running app itself uses, so the destination shape always matches what the
+  app expects), then copies every row, matched by column name, from the
+  SQLite source into the now-provisioned Postgres tables as one atomic
+  transaction. Unlike `sv db migrate-to-sqld`, this does **not** copy SQLite
+  `CREATE TABLE` DDL verbatim — SQLite and Postgres DDL aren't transferable
+  (no `AUTOINCREMENT` in Postgres, different type keywords) — the destination
+  schema must already exist in its real, dialect-native shape.
+- Column-level type coercion (`coerceForPostgres`) based on the destination's
+  _actual_ Postgres column type, not an assumption that every plugin follows
+  this codebase's own convention of storing booleans/timestamps as plain
+  integers on both dialects (verified true for every already-Postgres-migrated
+  plugin checked, but not guaranteed for an arbitrary third-party schema —
+  `plugin_status.enabled` on the platform's own schema is a real `boolean`
+  column, proof the convention isn't universal): `boolean` columns coerce a
+  SQLite 0/1 integer to a real JS boolean, `timestamp`/`timestamptz` columns
+  coerce a SQLite epoch-seconds integer to a `Date`, `bytea` columns coerce a
+  SQLite BLOB to a `Buffer` — everything else passes through unchanged.
+- Refuses (not silent) on: a destination table missing entirely (migrations
+  weren't run), a destination table already holding rows (one-time migration,
+  not incremental sync — a partial failure must be diagnosed and retried
+  clean, not resumed into), or a source column absent from the destination
+  (would silently drop data). A destination column absent from the source is
+  fine — left at its default/NULL.
+- Reuses the RFC 0071 `openKeyedSqlite` chokepoint for an encrypted source
+  file, keyed the same way every other tool in this codebase resolves
+  `SOVEREIGN_DB_ENCRYPTION_KEY` — 5 of the 6 stranded plugins on the
+  triggering production instance were RFC 0071 encrypted.
+- `--dry-run` previews table/row counts from the SQLite source only, without
+  touching Postgres.
+- The original SQLite file is never written to — left completely untouched
+  whether the migration succeeds or fails, so a failed attempt costs nothing
+  to retry.
+- A documented runbook section in `docs/self-hosting.md`.
+- `packages/db/src/__tests__/postgres-migration.pg.test.ts`: live-Postgres
+  tests (same `TEST_DATABASE_URL` gate as `postgres.pg.test.ts`) covering
+  boolean/timestamp/bytea coercion, encrypted-source open (right key
+  succeeds, wrong key refuses), non-empty-destination refusal, missing-table
+  and missing-column refusal, a destination-only extra column left at its
+  default, exclusive-access contention, mid-transaction rollback (a later
+  table's constraint violation rolls back an earlier table's already-copied
+  rows in the same transaction), and that the original file is provably
+  unmodified after a successful run.
+
+**Not yet exercised: the actual production instance's real 6 plugins** —
+operator action, not yet performed, same posture as Task 8.24.
+
+**Dependencies:** Task 8.22 (the override this cleans up after only exists on
+pre-8.22 deployments).
+
+**SRS reference:** none — a data-migration tool, not a new capability.
+
+**Review checklist:**
+
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`,
+  `TEST_DATABASE_URL=... pnpm test` all pass.
+- Run live against a copy of the triggering production instance's real data
+  before running it against the actual instance — **operator action, not yet
+  performed**.
+- Post-migration, each plugin's data is verifiably intact (row counts, spot
+  checks) against the pre-migration backup, and the original SQLite files are
+  confirmed byte-for-byte untouched.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)

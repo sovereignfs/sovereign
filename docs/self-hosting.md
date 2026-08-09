@@ -1027,6 +1027,42 @@ There is no automatic data migration. To move an existing instance:
 Uploaded files (avatars under `/app/data`) are independent of the database and
 stay on the `sovereign_data` volume regardless of dialect.
 
+### Migrating a legacy per-plugin SQLite database
+
+Before the per-plugin `database.dialect` manifest override was removed, an
+isolated plugin could force itself onto SQLite even while the platform ran on
+Postgres. An instance that mixed the two before upgrading past that change can
+end up with the platform core on Postgres but individual plugins still
+writing to `data/plugins/<id>.db` — files the running app no longer has any
+way to reach once the override is gone, since `getPluginDb()` unconditionally
+follows the platform dialect. Left unmigrated, those plugins would start
+against a fresh, empty Postgres schema instead of their real data.
+
+`sv db migrate-to-postgres [pluginId]` handles this case specifically (not the
+same tool as ["Switching SQLite → PostgreSQL"](#switching-sqlite--postgresql)
+above, which is for a whole-instance dialect change with pgloader):
+
+```bash
+# Preview what would move, without touching Postgres:
+pnpm sv db migrate-to-postgres --dry-run
+
+# Stop the server first, then run for real (takes an automatic backup):
+pnpm sv db migrate-to-postgres
+```
+
+It runs the plugin's own Postgres migrations against its `plugin_<slug>`
+schema first (creating the destination in its real, dialect-native shape —
+Postgres and SQLite DDL aren't transferable), then copies every row across in
+one transaction. If the plugin's SQLite file is RFC 0071 encrypted,
+`SOVEREIGN_DB_ENCRYPTION_KEY` must be set the same as for `sv db decrypt`. The
+original SQLite file is never modified — safe to retry after fixing whatever
+caused a failure, and safe to leave in place indefinitely once verified. Omit
+`pluginId` to migrate every isolated plugin with a pending file at once, or
+name one to migrate just that plugin.
+
+On a Docker deployment, run it through the `tools` service:
+`docker compose -f docker-compose.prod.yml -f docker-compose.postgres.yml --profile tools run --rm tools pnpm sv db migrate-to-postgres`.
+
 ---
 
 ## Email in development

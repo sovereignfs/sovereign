@@ -509,9 +509,178 @@ const pluginMigrate = defineCommand({
   },
 });
 
+const pluginMigrateToIsolated = defineCommand({
+  meta: {
+    name: 'migrate-to-isolated',
+    description:
+      'One-time migration of a database: "shared" plugin\'s tables (living in the ' +
+      'platform database) into its own dedicated isolated store (task 8.28)',
+  },
+  args: {
+    id: {
+      type: 'positional',
+      required: true,
+      description: 'Plugin manifest ID or directory name to migrate',
+    },
+    'dry-run': {
+      type: 'boolean',
+      default: false,
+      description:
+        'Report what would be migrated (tables, row counts) without touching anything or taking a backup',
+    },
+    'skip-backup': {
+      type: 'boolean',
+      default: false,
+      description:
+        'Skip the pre-migration backup. On a SQLite platform this skips the automatic ' +
+        'data/ archive (not recommended). On a Postgres platform there is no automated ' +
+        'backup here yet (task 8.16) — this flag is REQUIRED to proceed at all, as ' +
+        "confirmation you've already taken your own `pg_dump` backup.",
+    },
+  },
+  async run({ args }) {
+    const {
+      discoverPluginTables,
+      getPlatformDb,
+      getPluginDb,
+      migratePluginSharedToIsolated,
+      pluginMigrationsFolder,
+      pluginMigrationsTableName,
+      previewPluginTables,
+      provisionPluginDb,
+      resolveDialect,
+      runPluginMigrations,
+      PluginIsolationMigrationError,
+    } = await import('@sovereignfs/db');
+
+    const dest = join(PLUGINS_DIR, args.id);
+    let dir = args.id;
+    let manifestId = args.id;
+    if (!existsSync(join(dest, 'manifest.json')) && existsSync(PLUGINS_DIR)) {
+      // Allow passing the manifest id when the on-disk dir differs (e.g. a
+      // `.local` dev checkout) — same resolution `pluginMigrate` uses.
+      for (const entry of readdirSync(PLUGINS_DIR, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        const manifestPath = join(PLUGINS_DIR, entry.name, 'manifest.json');
+        if (!existsSync(manifestPath)) continue;
+        try {
+          const m = JSON.parse(readFileSync(manifestPath, 'utf8')) as { id?: string };
+          if (m.id === args.id) {
+            dir = entry.name;
+            manifestId = m.id;
+            break;
+          }
+        } catch {
+          // ignore unreadable manifests
+        }
+      }
+    } else if (existsSync(join(dest, 'manifest.json'))) {
+      const m = JSON.parse(readFileSync(join(dest, 'manifest.json'), 'utf8')) as { id?: string };
+      manifestId = m.id ?? args.id;
+    }
+
+    const pluginDir = `plugins/${dir}`;
+    if (!existsSync(join(ROOT, pluginDir, 'manifest.json'))) {
+      consola.error(`Plugin "${args.id}" is not installed (no ${pluginDir}/manifest.json).`);
+      process.exit(1);
+    }
+
+    const { dialect } = resolveDialect(process.env);
+    const folder = pluginMigrationsFolder(pluginDir, dialect);
+    if (!existsSync(folder)) {
+      consola.error(
+        `${manifestId} has no migrations/${dialect}/ folder — nothing to discover tables from.`,
+      );
+      process.exit(1);
+    }
+
+    const tables = discoverPluginTables(folder);
+    if (tables.length === 0) {
+      consola.error(`No CREATE TABLE statements found under ${folder} — nothing to migrate.`);
+      process.exit(1);
+    }
+
+    consola.info(`Found ${tables.length} table(s) for "${manifestId}": ${tables.join(', ')}`);
+
+    const platformDb = await getPlatformDb();
+
+    if (args['dry-run']) {
+      consola.info('--dry-run: previewing only, nothing will be written.');
+      for (const { table, rows } of await previewPluginTables(tables, platformDb)) {
+        consola.info(`  ${table}: ${rows} row(s)`);
+      }
+      return;
+    }
+
+    if (dialect === 'sqlite') {
+      if (args['skip-backup']) {
+        consola.warn('Skipping the pre-migration backup (--skip-backup). This is not recommended.');
+      } else {
+        const version = readPlatformVersion(ROOT);
+        const archivePath = defaultArchivePath(ROOT, version);
+        consola.start(`Creating a safety backup before migrating → ${archivePath}`);
+        if (!runSqliteBackup(join(ROOT, 'data'), archivePath)) {
+          consola.error('Backup failed — aborting before touching any database.');
+          process.exit(1);
+        }
+        consola.success(`Backup saved → ${archivePath}`);
+      }
+    } else if (!args['skip-backup']) {
+      consola.error(
+        'There is no automated Postgres backup in this CLI yet (task 8.16). Take a manual ' +
+          'backup first, e.g.:\n' +
+          '  pg_dump "$DATABASE_URL" > pre-migration-backup.sql\n' +
+          'then re-run with --skip-backup to confirm you have one.',
+      );
+      process.exit(1);
+    } else {
+      consola.warn('--skip-backup passed — proceeding on the assumption a Postgres backup exists.');
+    }
+
+    consola.warn('Make sure the server is stopped before continuing.');
+
+    try {
+      const requiresEncryption = false; // a shared-mode plugin never had requireEncryption (schema forbids it)
+      await provisionPluginDb(manifestId, requiresEncryption);
+      const pluginDb = getPluginDb(manifestId, requiresEncryption);
+      if (existsSync(folder)) {
+        const migrationsTable =
+          pluginDb.dialect === 'postgres' ? pluginMigrationsTableName(manifestId) : undefined;
+        await runPluginMigrations(pluginDb, folder, migrationsTable);
+      }
+
+      const results = await migratePluginSharedToIsolated(tables, platformDb, pluginDb);
+      for (const r of results) {
+        consola.info(`  ${r.table}: ${r.sourceRows} -> ${r.destRows} row(s)`);
+      }
+      consola.success(
+        `${manifestId}: migrated. The original tables in the platform database were left ` +
+          'untouched — drop them manually once verified.',
+      );
+      consola.info(
+        `Next: remove "database": "shared" from ${pluginDir}/manifest.json, bump its version, ` +
+          'and redeploy.',
+      );
+    } catch (err) {
+      if (err instanceof PluginIsolationMigrationError) {
+        consola.error(err.message);
+      } else {
+        consola.error(`${manifestId}: ${(err as Error).message}`);
+      }
+      process.exit(1);
+    }
+  },
+});
+
 const plugin = defineCommand({
   meta: { name: 'plugin', description: 'Scaffold, add, or remove individual plugins' },
-  subCommands: { new: pluginNew, add: pluginAdd, remove: pluginRemove, migrate: pluginMigrate },
+  subCommands: {
+    new: pluginNew,
+    add: pluginAdd,
+    remove: pluginRemove,
+    migrate: pluginMigrate,
+    'migrate-to-isolated': pluginMigrateToIsolated,
+  },
 });
 
 const backup = defineCommand({

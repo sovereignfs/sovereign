@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/db",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "description": "Drizzle client factory, platform schema, and migration runner for Sovereign.",
@@ -14,6 +14,7 @@
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts && drizzle-kit generate --config=drizzle.config.pg.ts"
   },
   "dependencies": {
+    "@libsql/client": "^0.15.0",
     "better-sqlite3-multiple-ciphers": "catalog:",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.22.0"

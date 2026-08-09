@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
-import { createClient, type Client, type InArgs } from '@libsql/client';
-import { LibsqlDialect } from '@libsql/kysely-libsql';
+import type { Client, InArgs } from '@libsql/client';
+import type { LibsqlDialect } from '@libsql/kysely-libsql';
 import Database from 'better-sqlite3-multiple-ciphers';
 import { Pool } from 'pg';
 import { getEnv } from './env';
@@ -34,6 +35,19 @@ import {
  * duplicated too rather than shared; `@libsql/client`/`@libsql/kysely-libsql`
  * are third-party npm packages, not `@sovereignfs/db` internals, so this
  * doesn't violate that boundary.
+ *
+ * `@libsql/client`/`@libsql/kysely-libsql` are required lazily (via `require`,
+ * not a top-level `import`) — found the hard way in production: Next.js's
+ * `instrumentation.ts` hook loads outside the webpack-bundled server graph, so
+ * the `libsql: false` alias in `next.config.ts` (which stops webpack from
+ * pulling in the native binding for the bundled routes) never applies to it.
+ * `apps/auth/instrumentation.ts` unconditionally imports this module on every
+ * boot, so a top-level `import` of these packages loaded `libsql`'s real
+ * native addon eagerly — on every dialect, not just sqld — and crashed
+ * instantly on a musl (Alpine) image with no matching prebuilt binary,
+ * regardless of whether the sqld path was ever going to be taken. Lazy
+ * `require` defers that load to the two call sites that actually construct a
+ * client, both already only reached on the sqld branch.
  */
 
 /** sqld namespace dedicated to the auth database — kept separate from the
@@ -41,6 +55,8 @@ import {
  * …) can never collide with unrelated platform tables, mirroring today's
  * separate `auth.db`/`sovereign.db` files. */
 const SQLD_AUTH_NAMESPACE = 'auth';
+
+const require = createRequire(import.meta.url);
 
 function sqldUrl(): string {
   return process.env.SQLD_URL ?? 'http://sqld:8080';
@@ -78,6 +94,7 @@ export async function provisionAuthSqldNamespace(): Promise<void> {
 }
 
 function createAuthSqldClient(): Client {
+  const { createClient } = require('@libsql/client') as typeof import('@libsql/client');
   return createClient({
     url: sqldUrl(),
     fetch: (input: unknown, init?: RequestInit) => {
@@ -251,6 +268,8 @@ export function getAuthDatabase():
   const db = getAuthDb();
   if (db.dialect === 'postgres') return db.pool;
   if ('sqld' in db) {
+    const { LibsqlDialect } =
+      require('@libsql/kysely-libsql') as typeof import('@libsql/kysely-libsql');
     const dialect = new LibsqlDialect({
       url: sqldUrl(),
       fetch: (input: unknown, init?: RequestInit) => {

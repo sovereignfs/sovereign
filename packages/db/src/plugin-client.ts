@@ -1,7 +1,9 @@
 import { dirname, join } from 'node:path';
 import { mkdirSync, readFileSync, unlinkSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import type { Client } from '@libsql/client';
 import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
-import { drizzle as drizzleLibsql } from 'drizzle-orm/libsql';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { findWorkspaceRoot, pgSslMode, resolveSqlitePath } from './client';
@@ -21,8 +23,13 @@ import {
   resolvePluginEncryptionKey,
 } from './sqlite-encryption';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnySqliteDb = ReturnType<typeof drizzleSqlite<any>> | ReturnType<typeof drizzleLibsql<any>>;
+// `drizzle-orm/libsql`'s entry point statically imports `@libsql/client` —
+// required lazily; see client.ts's identical comment for the full story.
+const require = createRequire(import.meta.url);
+
+type AnySqliteDb =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ReturnType<typeof drizzleSqlite<any>> | (LibSQLDatabase<any> & { $client: Client });
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyPgDb = ReturnType<typeof drizzlePg<any>>;
 
@@ -110,6 +117,8 @@ export function getPluginDb(pluginId: string, requiresEncryption = false): Plugi
 
   if (resolved.dialect === 'sqlite') {
     if (!requiresEncryption) {
+      const { drizzle: drizzleLibsql } =
+        require('drizzle-orm/libsql') as typeof import('drizzle-orm/libsql');
       const client = createSqldClient(sqldUrl(process.env), pluginNamespaceName(pluginId));
       const pdb: PluginDb = { dialect: 'sqlite', db: drizzleLibsql(client) };
       _registry.set(cacheKey, pdb);

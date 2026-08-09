@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { type BetterSQLite3Database, drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
-import { type LibSQLDatabase, drizzle as drizzleLibsql } from 'drizzle-orm/libsql';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { type NodePgDatabase, drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { Pool } from 'pg';
@@ -15,6 +16,14 @@ import {
   defaultDataDir,
   openKeyedSqlite,
 } from './sqlite-encryption';
+
+// `drizzle-orm/libsql`'s own entry point statically imports `@libsql/client`
+// (its driver.js does `import { createClient } from "@libsql/client"` at top
+// level) — required lazily here for the same reason `sqld.ts` requires
+// `@libsql/client` itself lazily; see that file's doc comment for the full
+// story (found via a production crash: instrumentation-hook loading bypasses
+// the webpack alias that hides this for the bundled route graph).
+const require = createRequire(import.meta.url);
 
 export interface DbConfig {
   /** Override the resolved dialect. Defaults to the environment resolution. */
@@ -102,6 +111,8 @@ export function createClient(config: DbConfig = {}): PlatformDb {
       checkEncryptionMarker(defaultDataDir(), key !== undefined);
 
       if (key === undefined) {
+        const { drizzle: drizzleLibsql } =
+          require('drizzle-orm/libsql') as typeof import('drizzle-orm/libsql');
         const client = createSqldClient(sqldUrl(process.env));
         return { dialect: 'sqlite', db: drizzleLibsql(client, { schema: sqliteSchema }) };
       }

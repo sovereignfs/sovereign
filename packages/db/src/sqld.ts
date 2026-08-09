@@ -1,4 +1,5 @@
-import { createClient, type Client } from '@libsql/client';
+import { createRequire } from 'node:module';
+import type { Client } from '@libsql/client';
 
 /**
  * sqld (libSQL server) connectivity — workstream 0009 leg 3, RFC 0091.
@@ -10,7 +11,22 @@ import { createClient, type Client } from '@libsql/client';
  * stays exactly `'sqlite' | 'postgres'` — no third literal — and these vars
  * only matter for the parts of the `'sqlite'` dialect the carve-out routes to
  * sqld.
+ *
+ * `@libsql/client` is required lazily (via `require`, not a top-level
+ * `import`) — found the hard way in production: `runtime/instrumentation.ts`
+ * unconditionally imports this package (via `sdk-host.ts`/`plugin-migrations.ts`
+ * → `@sovereignfs/db`'s barrel export) on every boot, and Next.js's
+ * instrumentation hook loads outside the webpack-bundled server graph, so the
+ * `libsql: false` alias in `runtime/next.config.ts` never applies to it. A
+ * top-level `import` here loaded `libsql`'s real native addon eagerly — on
+ * every dialect, not just sqld — and crashed instantly on a musl (Alpine)
+ * image with no matching prebuilt binary, regardless of whether the sqld path
+ * was ever going to be taken. `apps/auth/src/db.ts` has the identical fix and
+ * the same story, for the same reason (it duplicates this file's sqld glue
+ * rather than importing it — see that file's own doc comment).
  */
+
+const require = createRequire(import.meta.url);
 
 const DEFAULT_SQLD_URL = 'http://sqld:8080';
 const DEFAULT_SQLD_ADMIN_URL = 'http://sqld:8081';
@@ -45,6 +61,7 @@ export function pluginNamespaceName(pluginId: string): string {
  * that one, unlike every named plugin namespace below.
  */
 export function createSqldClient(url: string, namespace?: string): Client {
+  const { createClient } = require('@libsql/client') as typeof import('@libsql/client');
   if (!namespace) return createClient({ url });
   return createClient({
     url,

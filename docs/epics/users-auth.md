@@ -1049,7 +1049,7 @@ gated on it.
 
 ---
 
-#### ⏳ 1.24 — Well-known first-party OAuth clients for official native shells (RFC 0072 addendum)
+#### ✅ 1.24 — Well-known first-party OAuth clients for official native shells (RFC 0072 addendum)
 
 **Goal:** Seed a native, secretless, PKCE-required OAuth client per official
 shell (`sovereign-desktop`, `sovereign-mobile`) at auth-server startup, so a

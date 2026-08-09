@@ -39,13 +39,14 @@ jobs:
       #     but kept deliberately for its `database.requireEncryption: true`
       #     manifest — boot-time regression coverage for the exact per-plugin
       #     encryption enforcement epic task 8.15 fixed (RFC 0071). Pinned to
-      #     v0.2.2, not the older v0.2.0/v0.2.1 — those still declared the
-      #     manifest `database.dialect` field task 8.22 removed from the
-      #     schema, which the current (stricter, unrecognized-key-rejecting)
-      #     validation fails outright, not just for this fixture but for any
-      #     real deployment composing that plugin. Every published tag of
-      #     this plugin before v0.2.2 is broken against platform builds past
-      #     task 8.22; don't pin back to one.
+      #     v0.2.3, not v0.2.2 or older — v0.2.2 still declared the manifest
+      #     `database.isolation` field task 8.28 removed from the schema
+      #     (v0.2.0/v0.2.1 similarly still declared `database.dialect`, which
+      #     task 8.22 removed earlier); either fails the current (stricter,
+      #     unrecognized-key-rejecting) validation outright, not just for this
+      #     fixture but for any real deployment composing that plugin. Every
+      #     published tag of this plugin before v0.2.3 is broken against
+      #     platform builds past task 8.28; don't pin back to one.
       #   - example-basic and example-monetized are NOT declared here: they
       #     live in-repo under `example-plugins/` (`docs/epics/example-plugins.md`,
       #     2026-08-01 correction) and are composed automatically by the
@@ -70,7 +71,7 @@ jobs:
               {
                 "id": "sovereign-plugin-healthlog",
                 "repository": "https://github.com/sovereignfs/sovereign-plugin-healthlog.git",
-                "ref": "v0.2.2"
+                "ref": "v0.2.3"
               }
             ]
           }

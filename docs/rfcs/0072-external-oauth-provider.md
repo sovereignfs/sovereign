@@ -232,12 +232,18 @@ docs) — additive, no changes to existing auth flows. `better-auth` bumped
 
 ## Addendum: well-known first-party client for official native shells
 
-**Status:** Draft — proposed, not implemented. Everything above this section
-already shipped and is unaffected; this addendum only adds new scope for a
-consumer that doesn't exist yet ([RFC 0082 §5](0082-focused-plugin-app-shell.md#5-auth--cookie-now-durable-session-named-as-the-sequel)'s
-"durable session sequel," itself still an unbuilt design sketch, not an
-accepted commitment). Don't implement this addendum ahead of that consumer
-being scheduled.
+**Status:** Draft, **parked (2026-08) — zero urgency, not a pending
+decision to chase.** Everything above this section already shipped and is
+unaffected; this addendum only adds new scope for a consumer that doesn't
+exist yet ([RFC 0082 §5](0082-focused-plugin-app-shell.md#5-auth--cookie-now-durable-session-named-as-the-sequel)'s
+"durable session sequel," itself still an unbuilt design sketch inside an
+RFC that is itself still Draft with none of its own epic tasks started —
+see `docs/rfcs/README.md`'s status column before assuming otherwise).
+Nothing in the shipped product depends on this; today's shells authenticate
+fine via plain WebView cookie sessions either way. Don't implement this
+addendum, or spend time refining its open questions, ahead of RFC 0082
+actually being accepted and scheduled — check that first, each time this
+is revisited.
 
 ### Motivation
 

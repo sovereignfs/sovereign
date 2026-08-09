@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/auth",
-  "version": "0.16.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,6 +12,8 @@
   "dependencies": {
     "@better-auth/oauth-provider": "^1.6.25",
     "@better-auth/passkey": "^1.6.25",
+    "@libsql/client": "^0.15.0",
+    "@libsql/kysely-libsql": "^0.4.1",
     "@next/env": "^16.2.12",
     "@sovereignfs/mailer": "workspace:*",
     "@sovereignfs/ui": "workspace:*",

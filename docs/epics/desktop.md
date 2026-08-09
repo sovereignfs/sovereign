@@ -151,7 +151,25 @@ first.
 - Unknown instance shows the add-instance prompt rather than crashing
 - Scheme registered correctly on macOS (`LSApplicationQueriesSchemes` in `Info.plist`)
 
-#### 🚧 17.4 — Keychain credential storage — blocked, not just unstarted
+#### 🚧 17.4 — Keychain credential storage — parked, zero urgency, do not revisit without checking RFC 0082's status first
+
+> **Decision (2026-08): parked, not merely blocked.** This task exists
+> solely to serve RFC 0082 §5's durable-session sketch (see below) — and
+> RFC 0082 itself is still **Draft**, with every one of its own epic tasks
+> (2.27, 20.10–20.12) still 📋 unstarted (20.10 is ⏳ but is only a shared
+> offline-behavior research spike, not the focused-app feature). Nothing in
+> the product today depends on this. Today's shells authenticate by loading
+> the instance's own login page in the WebView and getting a normal session
+> cookie — unaffected either way, works fine, not what this task is about.
+>
+> **Do not re-investigate this task's design from scratch.** Before picking
+> it up, check whether RFC 0082 has actually been accepted and scheduled
+> (`docs/rfcs/README.md`'s status column). If not, there is nothing to do
+> here — leave it parked and work on something else. If RFC 0082 does get
+> scheduled, the design to build against is
+> [RFC 0072's addendum](../rfcs/0072-external-oauth-provider.md#addendum-well-known-first-party-client-for-official-native-shells),
+> already drafted and verified against the real `@better-auth/oauth-provider`
+> API — read that first rather than re-deriving a mechanism.
 
 > **As written below, this task is stale and should not be implemented.**
 > [RFC 0083 §8](../rfcs/0083-device-bridge-capability-contract.md#8-relationship-to-existing-epic-tasks)

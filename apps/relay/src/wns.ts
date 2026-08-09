@@ -74,13 +74,21 @@ async function wnsAccessToken(config: WnsConfig): Promise<string> {
 export type WnsSendResult = 'sent' | 'invalid_token' | 'failed';
 
 /**
+ * Matches `notify.windows.com` itself or any depth of subdomain under it
+ * (`db5.notify.windows.com`, `bn1.notify.windows.com`, ...) — every
+ * documented WNS channel URI lives there, so this is the allowlist, not a
+ * denylist of known-bad hosts. Anchored on both ends against the already-
+ * parsed `hostname` (never the raw URL string), so a lookalike like
+ * `notify.windows.com.attacker.example.com` or
+ * `evil.notify.windows.com.attacker.example.com` correctly fails to match.
+ */
+const WNS_CHANNEL_HOST_PATTERN = /^(?:[a-z0-9-]+\.)*notify\.windows\.com$/;
+
+/**
  * True only for a genuine Microsoft WNS channel URI — `sendWnsPush` below
  * duplicates this exact check inline rather than calling this function,
  * see its own comment for why. Exported only so the predicate itself is
  * independently unit-testable; not otherwise called in production code.
- *
- * Every documented WNS channel URI lives under `*.notify.windows.com`, so
- * that's the allowlist, not a denylist of known-bad hosts.
  */
 export function isValidWnsChannelUri(channelUri: string): boolean {
   let url: URL;
@@ -89,10 +97,7 @@ export function isValidWnsChannelUri(channelUri: string): boolean {
   } catch {
     return false;
   }
-  return (
-    url.protocol === 'https:' &&
-    (url.hostname === 'notify.windows.com' || url.hostname.endsWith('.notify.windows.com'))
-  );
+  return url.protocol === 'https:' && WNS_CHANNEL_HOST_PATTERN.test(url.hostname);
 }
 
 /**
@@ -111,14 +116,26 @@ export function isValidWnsChannelUri(channelUri: string): boolean {
  * self-hosted instance called `/v1/push`). Without this check, a malicious
  * or compromised instance could point it at an internal address the relay
  * can reach (a cloud metadata endpoint, an internal service) and use this
- * relay as an authenticated SSRF proxy. GitHub's CodeQL SSRF analysis
- * (`js/request-forgery`) flagged the very first version of this function,
- * which called a separate validation function instead of guarding inline —
- * its taint-tracking didn't recognize a boolean returned from another
- * function as a sanitizer for the value passed to `fetch()` below, even
- * though the check was equivalent. Verified fixed by re-running the same
- * PR's CodeQL check after inlining (PR #388) — this comment exists so a
- * future edit doesn't "clean up" the duplication and reintroduce the flag.
+ * relay as an authenticated SSRF proxy.
+ *
+ * GitHub's CodeQL SSRF analysis (`js/request-forgery`) took three attempts
+ * to satisfy on this function, all logically equivalent, verified against
+ * the same PR (#388):
+ *   1. Guarding via a call to the separate `isValidWnsChannelUri` function
+ *      above — not recognized; CodeQL's taint tracking doesn't treat a
+ *      boolean returned from another function as a sanitizer.
+ *   2. Guarding inline with `url.hostname !== '...' && !url.hostname
+ *      .endsWith('...')`, then passing the parsed `URL` object (not the
+ *      original string) to `fetch()` — still not recognized, even inlined
+ *      and even with the sanitized object (not the raw string) reaching
+ *      the sink.
+ *   3. This version: a single `RegExp#test()` call against `hostname` —
+ *      CodeQL's standard sanitizer-guard recognition specifically models
+ *      `RegExp#test()` as a barrier for tainted string flow, unlike
+ *      `.endsWith()`/compound boolean expressions. If a future edit
+ *      "simplifies" this back to a compound boolean, expect the same
+ *      finding to return — verify against a real CodeQL run before
+ *      assuming a refactor here is safe.
  */
 export async function sendWnsPush(
   channelUri: string,
@@ -132,8 +149,7 @@ export async function sendWnsPush(
   }
   if (
     parsedChannelUri.protocol !== 'https:' ||
-    (parsedChannelUri.hostname !== 'notify.windows.com' &&
-      !parsedChannelUri.hostname.endsWith('.notify.windows.com'))
+    !WNS_CHANNEL_HOST_PATTERN.test(parsedChannelUri.hostname)
   ) {
     return 'invalid_token';
   }

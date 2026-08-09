@@ -202,6 +202,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | —       | Platform-wide dialect consolidation — workstream 0009 leg 1                                                                        | ✅     | [8.22](docs/epics/data-sovereignty.md#-822--platform-wide-dialect-consolidation-workstream-0009-leg-1)                                                                                         |
 | 0.65.0  | Offline session assertion and per-user SW cache partitioning — workstream 0008 leg 2a (Research 0012)                              | ✅     | [1.21](docs/epics/users-auth.md#-121--long-lived-offline-session-assertion-research-0012), [2.31](docs/epics/platform-shell.md#-231--per-user-service-worker-cache-partitioning-research-0012) |
 | 0.66.0  | Cold-start offline launch flow and Offline page — workstream 0008 leg 2b (Research 0012)                                           | ✅     | [2.32](docs/epics/platform-shell.md#-232--cold-start-offline-launch-flow-and-offline-page-research-0012)                                                                                       |
+| 0.70.0  | Focused plugin app context and route lock — workstream 0001 leg 5 (RFC 0082)                                                       | 📋     | [2.27](docs/epics/platform-shell.md#-227--focused-plugin-app-context-and-route-lock-rfc-0082)                                                                                                  |
 
 ---
 
@@ -242,7 +243,6 @@ doc — but not yet assigned a roadmap slot. Promoted to a phase table once prio
 | —       | Manifest surfaces availability declaration (RFC 0080)                     | 📋     | [3.33](docs/epics/plugins-runtime.md#-333--manifest-surfaces-availability-declaration-rfc-0080)                                  |
 | —       | Per-plugin installable PWA manifest (RFC 0081)                            | 📋     | [2.25](docs/epics/platform-shell.md#-225--per-plugin-installable-pwa-manifest-rfc-0081)                                          |
 | —       | Plugin PWA icon generation (RFC 0081)                                     | 📋     | [2.26](docs/epics/platform-shell.md#-226--plugin-pwa-icon-generation-rfc-0081)                                                   |
-| —       | Focused plugin app context and route lock (RFC 0082)                      | 📋     | [2.27](docs/epics/platform-shell.md#-227--focused-plugin-app-context-and-route-lock-rfc-0082)                                    |
 | —       | Tiered `offline` manifest declaration (Research 0012)                     | 📋     | [3.36](docs/epics/plugins-runtime.md#-336--tiered-offline-manifest-declaration-research-0012)                                    |
 | —       | Unified offline storage SDK surface (Research 0012)                       | 📋     | [3.37](docs/epics/plugins-runtime.md#-337--unified-offline-storage-sdk-surface-research-0012)                                    |
 | —       | Launcher and shell offline tier states (Research 0012)                    | 📋     | [2.33](docs/epics/platform-shell.md#-233--launcher-and-shell-offline-tier-states-research-0012)                                  |

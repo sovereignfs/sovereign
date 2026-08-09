@@ -8,9 +8,11 @@
  * it catches the common, direct ones (reading the session header, cookies,
  * or a session helper) before a plugin's offline route ever ships.
  *
- * Scans a plugin's bare `routePrefix` page — `offline: true`'s one
- * offline-capable entry point (RFC 0078; formerly `offline.root`, before RFC
- * 0078 removed the separate `offline.routes[]` sub-path array).
+ * Scans a plugin's bare `routePrefix` page — the one offline-capable entry
+ * point either offline tier (`offline: 'offline-first' | 'device-only'`,
+ * research 0012) declares. Formerly a plain boolean (RFC 0078), and before
+ * that `offline.root`/`offline.routes[]` (RFC 0074) — this rule has applied
+ * to whichever shape the field has taken across all three.
  */
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -120,7 +122,7 @@ describe('offline route SSR neutrality (RFC 0074)', () => {
     const violations: string[] = [];
 
     for (const manifest of getInstalledPlugins()) {
-      if (manifest.offline !== true) continue;
+      if (manifest.offline === undefined) continue;
 
       const pluginDir = findPluginDir(manifest.id);
       // Registry entry with no matching source directory in this checkout

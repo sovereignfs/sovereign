@@ -1,6 +1,8 @@
 # Workstream 0008 — Offline-first architecture
 
-**Status:** 📋 Planned\
+**Status:** 🔄 In progress — legs 1–3 done (leg 2 shipped at platform `0.65.0`–`0.66.0`;
+leg 3 — tasks 3.36 + 2.33 — shipped at `0.76.0`; task 3.37 deliberately deferred,
+see leg 3 detail); legs 4 (gated on the escrow decision) and 5 not started\
 **Date:** August 2026\
 **Author:** Claude Code (from a design session with kasunben)\
 **Goal owner:** kasunben\
@@ -193,6 +195,18 @@ shipping a weaker guarantee is worse than shipping no cold-start offline.
 ### Leg 3 — Tiered plugin offline model
 
 **Epic tasks, in execution order:** 3.36 → 3.37 → 2.33.
+
+**Scope correction found during execution (August 2026).** Tasks 3.36 and 2.33
+shipped together at platform `0.76.0` — the manifest `offline` enum, Launcher's
+migration to it, and the `connectivity-dimmed`/`capability-restricted` tile
+states. Task 3.37 (the unified offline storage SDK surface) turned out to be a
+much bigger, independently reviewable unit — replacing `sdk.offline`/
+`sdk.offline-queue` with one API over three storage backends — with no
+dependency the other two tasks need, so it was carved out into its own
+follow-on leg (leg 3b) rather than blocking this leg's PR. `isDeviceOnlyTierAvailable()`
+(`@sovereignfs/sdk/device-client`) shipped in this leg regardless, since 2.33's
+tile states need it; it returns `false` everywhere until leg 4 ships the
+`secureStorage` bridge capability.
 
 **This leg was originally a gate; it is not one.** The concern was that origin
 isolation would force `device-only` onto a different delivery model — a bundled

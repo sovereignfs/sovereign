@@ -158,3 +158,20 @@
   word-break: break-word;
   max-width: 80px;
 }
+
+/* Connectivity-dimmed / capability-restricted (research 0012, epic task
+   2.33) — same treatment and reasoning as PluginTile's own
+   .tileDimmed/.tileRestrictedBadge (plugins/launcher/app/launcher.module.css):
+   dimming is reactive/temporary and only for a no-tier app while genuinely
+   offline; the restricted badge is static and never dims the item, since
+   that state has nothing to do with connectivity. */
+.drawerGridItemDimmed {
+  opacity: 0.5;
+}
+
+.drawerGridRestrictedBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sv-color-info-text);
+}

@@ -849,6 +849,59 @@ manifest edit beyond removing an `isolation`/`"shared"` declaration if you
 had one; the resulting behavior (a dedicated store) is very likely already
 what your plugin was using.
 
+### `@sovereignfs/manifest` 3.0.0 → 4.0.0 (breaking — research 0012)
+
+**The `offline` manifest field is now a two-value enum, replacing the plain
+boolean from RFC 0078 above.** This is the field's third shape:
+`offline.routes[]`/`offline.root` object (RFC 0074) → `offline: boolean` (RFC 0078) → `offline: 'offline-first' | 'device-only'` (research 0012, epic task
+3.36). Sovereign's offline model has moved from online-first-with-an-allowlist
+to genuinely offline-first, and a single boolean can no longer say which of
+two materially different capability tiers a plugin needs — see
+`docs/research/0012-offline-first-architecture.md` for the full design.
+
+**Before:**
+
+```json
+{ "offline": true }
+```
+
+**After — pick the tier that matches what your plugin needs:**
+
+```json
+{ "offline": "offline-first" }
+```
+
+or
+
+```json
+{ "offline": "device-only" }
+```
+
+- **`offline-first`** — the device holds a full replica of your plugin's data,
+  kept fresh in the background; the server stays the source of truth. This is
+  what `offline: true` meant before — if your plugin previously declared
+  `offline: true`, `offline-first` is very likely the correct replacement, with
+  no other change needed. Launcher migrated this way.
+- **`device-only`** — your plugin's data never leaves the device; there is no
+  server copy. Requires a durable, encrypted, device-auth-gated store, which
+  today only a native shell provides — check
+  `@sovereignfs/sdk/device-client`'s `isDeviceOnlyTierAvailable()` before
+  relying on it; it reports `false` everywhere until the underlying bridge
+  capability ships.
+
+There is no explicit "off" value in the enum — omitting the field entirely
+still means no offline support, exactly as an absent field did before.
+
+**The `offline:write` permission is removed outright**, not replaced. Both
+tiers now imply local mutation, so the tier value itself is sufficient
+install-review signal; a manifest still declaring `offline:write` fails
+validation as an unknown permission, with no deprecation period. If your
+plugin used `sdk.offline-queue`, that module is unaffected by this manifest
+change — its own replacement is tracked separately (epic task 3.37).
+
+A manifest still declaring the plain boolean shape (`offline: true`/`false`)
+now fails validation, same as the old object shape already did.
+
 ### `@sovereignfs/sdk` 1.22.0 → 1.23.0
 
 **`StorageObject` gains a `metadata` field** (RFC 0044/0060). `sdk.storage.put()`

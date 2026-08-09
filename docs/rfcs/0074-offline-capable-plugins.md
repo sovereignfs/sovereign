@@ -1,5 +1,17 @@
 # RFC 0074 — Offline-capable plugin routes
 
+> **Superseded by [Research 0012 — Offline-first architecture](../research/0012-offline-first-architecture.md)
+> and [workstream 0008](../workstreams/0008-offline-first-architecture.md).**
+> The single boolean `offline` field this RFC (as amended by RFC 0078)
+> shipped has been replaced by a two-tier enum,
+> `offline: 'offline-first' | 'device-only'` (epic task 3.36) — this
+> repository's offline model is now offline-first rather than online-first
+> with a narrow offline allowlist, which is a larger reframing than this RFC
+> or RFC 0078 anticipated. Kept as the decision trail for the user-neutral
+> shell rule and the shared-device isolation model, both of which the new
+> design still relies on. Not deleted; see `docs/research/README.md`'s
+> lifecycle convention.
+
 **Status:** Implemented — platform plumbing (manifest fields `offline.routes`/
 `offline.root`, SDK surface, SW precaching, logout+login purge, shared-shell
 neutrality, Launcher as the PWA cold-start entry point) is in place; Shopper

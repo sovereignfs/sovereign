@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "id": "fs.sovereign.launcher",
   "name": "Launcher",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Home screen — lists all installed plugins for easy access.",
   "type": "platform",
   "runtime": "native",
   "routePrefix": "/launcher",
   "shell": "default",
   "icon": "icon.svg",
-  "offline": true,
+  "offline": "offline-first",
   "permissions": ["auth:session", "db:readOnly"],
   "compatibility": {
     "minPlatformVersion": "0.4.0"

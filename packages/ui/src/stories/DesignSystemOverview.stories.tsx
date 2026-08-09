@@ -9,6 +9,7 @@ import { Dialog } from '../components/Dialog/Dialog';
 import { Drawer } from '../components/Drawer/Drawer';
 import { EmptyState } from '../components/EmptyState/EmptyState';
 import { OfflineGate } from '../components/OfflineGate/OfflineGate';
+import { DeviceOnlyGate } from '../components/DeviceOnlyGate/DeviceOnlyGate';
 import { FormField } from '../components/FormField/FormField';
 import { Icon } from '../components/Icon/Icon';
 import type { IconName } from '../components/Icon/Icon';
@@ -2250,6 +2251,19 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   Renders normally while online.
                 </p>
               </OfflineGate>
+            </ComponentCard>
+
+            {/* DeviceOnlyGate */}
+            <ComponentCard
+              name="DeviceOnlyGate"
+              importLine="import { DeviceOnlyGate } from '@sovereignfs/ui';"
+              usage="Blocks a device-only-tier plugin's content on a surface without the durable, encrypted, device-auth-gated store that tier needs. `available` is the caller's own isDeviceOnlyTierAvailable() result (from @sovereignfs/sdk/device-client) — a capability signal, never a security boundary; the real protection is that the data is encrypted regardless."
+            >
+              <DeviceOnlyGate available={false} surfaceName="Wallet">
+                <p style={{ margin: 0, fontFamily: 'var(--sv-font-family)', fontSize: 14 }}>
+                  Renders normally when available.
+                </p>
+              </DeviceOnlyGate>
             </ComponentCard>
 
             {/* Spinner */}

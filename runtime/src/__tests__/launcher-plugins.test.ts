@@ -58,6 +58,23 @@ describe('selectLauncherPlugins', () => {
     expect(selectLauncherPlugins(chromeOnly, none, 'platform:admin')).toEqual([]);
   });
 
+  it('threads the manifest offline tier through to the Launcher projection (research 0012)', () => {
+    const withOffline: LauncherPluginInput[] = [
+      { id: 'fs.example.wallet', name: 'Wallet', routePrefix: '/wallet', offline: 'device-only' },
+      { id: 'fs.example.tasks', name: 'Tasks', routePrefix: '/tasks', offline: 'offline-first' },
+    ];
+    const result = selectLauncherPlugins(withOffline, none, 'platform:admin');
+    expect(result.find((p) => p.id === 'fs.example.wallet')?.offline).toBe('device-only');
+    expect(result.find((p) => p.id === 'fs.example.tasks')?.offline).toBe('offline-first');
+  });
+
+  it('omits the offline field entirely for a plugin declaring no tier', () => {
+    const result = selectLauncherPlugins(plugins, none, 'platform:admin');
+    const tasks = result.find((p) => p.id === 'fs.example.tasks');
+    expect(tasks).toBeDefined();
+    expect(tasks && 'offline' in tasks).toBe(false);
+  });
+
   it('excludes access-policy-restricted plugins (RFC 0065)', () => {
     const restricted = new Set(['fs.example.tasks']);
     const ids = selectLauncherPlugins(plugins, none, 'platform:admin', restricted).map((p) => p.id);

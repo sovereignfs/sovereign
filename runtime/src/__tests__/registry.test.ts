@@ -22,7 +22,7 @@ function manifestWithShellConfig(
 function manifestWithOffline(
   id: string,
   routePrefix: string,
-  offline?: boolean,
+  offline?: 'offline-first' | 'device-only',
 ): SovereignManifest {
   return { id, routePrefix, offline } as unknown as SovereignManifest;
 }
@@ -66,25 +66,27 @@ describe('getDevelopmentPluginIds', () => {
 });
 
 describe('getOfflineRoutePrefixes', () => {
-  it('includes the bare routePrefix for a plugin declaring offline: true', () => {
-    const plugins = [manifestWithOffline('fs.sovereign.launcher', '/launcher', true)];
+  it('includes the bare routePrefix for a plugin declaring offline: "offline-first"', () => {
+    const plugins = [manifestWithOffline('fs.sovereign.launcher', '/launcher', 'offline-first')];
     expect(getOfflineRoutePrefixes(plugins)).toEqual(['/launcher']);
   });
 
-  it('resolves multiple offline-enabled plugins to their own bare routePrefix', () => {
-    const plugins = [
-      manifestWithOffline('fs.sovereign.launcher', '/launcher', true),
-      manifestWithOffline('fs.sovereign.shopper', '/shopper', true),
-    ];
-    expect(getOfflineRoutePrefixes(plugins)).toEqual(['/launcher', '/shopper']);
+  it('includes the bare routePrefix for a plugin declaring offline: "device-only"', () => {
+    const plugins = [manifestWithOffline('fs.sovereign.wallet', '/wallet', 'device-only')];
+    expect(getOfflineRoutePrefixes(plugins)).toEqual(['/wallet']);
   });
 
-  it('returns an empty array when no plugin declares offline: true', () => {
+  it('resolves multiple offline-enabled plugins, of either tier, to their own bare routePrefix', () => {
+    const plugins = [
+      manifestWithOffline('fs.sovereign.launcher', '/launcher', 'offline-first'),
+      manifestWithOffline('fs.sovereign.wallet', '/wallet', 'device-only'),
+    ];
+    expect(getOfflineRoutePrefixes(plugins)).toEqual(['/launcher', '/wallet']);
+  });
+
+  it('returns an empty array when no plugin declares an offline tier', () => {
     expect(
-      getOfflineRoutePrefixes([
-        manifestWithOffline('a', '/a'),
-        manifestWithOffline('b', '/b', false),
-      ]),
+      getOfflineRoutePrefixes([manifestWithOffline('a', '/a'), manifestWithOffline('b', '/b')]),
     ).toEqual([]);
   });
 });

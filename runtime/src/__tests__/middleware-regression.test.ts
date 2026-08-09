@@ -85,7 +85,7 @@ const publicRoutePlugin = {
 const offlineRoutePlugin = {
   id: 'com.example.shopper',
   routePrefix: '/shopper',
-  offline: true,
+  offline: 'offline-first',
 } as SovereignManifest;
 
 const mobileChromePlugin = {

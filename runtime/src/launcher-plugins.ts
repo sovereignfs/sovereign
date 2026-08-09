@@ -25,6 +25,8 @@ export interface LauncherPlugin {
   development?: boolean;
   /** Path-relative URL to the plugin's icon, e.g. `/plugin-icons/<id>.svg`. Absent when the plugin ships no icon. */
   iconUrl?: string;
+  /** Manifest `offline` tier (research 0012) — drives the tile's connectivity-dimmed/capability-restricted states. */
+  offline?: 'offline-first' | 'device-only';
 }
 
 /** A plugin manifest with the fields the Launcher projection needs. */
@@ -34,6 +36,7 @@ export interface LauncherPluginInput extends PluginRouteInfo {
   icon?: string;
   type?: string;
   development?: boolean;
+  offline?: 'offline-first' | 'device-only';
 }
 
 /**
@@ -99,6 +102,7 @@ export function selectLauncherPlugins(
     ...(p.type ? { type: p.type } : {}),
     ...(p.development ? { development: true } : {}),
     ...(p.icon ? { iconUrl: `/plugin-icons/${p.id}.svg` } : {}),
+    ...(p.offline ? { offline: p.offline } : {}),
   }));
 }
 

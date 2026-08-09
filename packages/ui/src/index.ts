@@ -76,6 +76,8 @@ export { EmptyState } from './components/EmptyState/EmptyState';
 export type { EmptyStateProps } from './components/EmptyState/EmptyState';
 export { OfflineGate } from './components/OfflineGate/OfflineGate';
 export type { OfflineGateProps } from './components/OfflineGate/OfflineGate';
+export { DeviceOnlyGate } from './components/DeviceOnlyGate/DeviceOnlyGate';
+export type { DeviceOnlyGateProps } from './components/DeviceOnlyGate/DeviceOnlyGate';
 export { Spinner } from './components/Spinner/Spinner';
 export type { SpinnerProps } from './components/Spinner/Spinner';
 export { Avatar } from './components/Avatar/Avatar';
@@ -202,12 +204,14 @@ export {
   useSingleOrDoubleTap,
   useIsMobile,
   useIsOffline,
+  useOfflineTileState,
   useCommitOnEnterOrBlur,
   useSwipeReveal,
   useSnapCarousel,
   useResponsiveLayout,
   useCarouselRouteSync,
 } from './hooks';
+export type { OfflineTileState } from './hooks';
 export { MOBILE_BREAKPOINT_PX } from './hooks';
 export type {
   UseLongPressOptions,

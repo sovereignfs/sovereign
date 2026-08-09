@@ -33,7 +33,6 @@ export const permissionSchema = z.enum([
   'activity:write',
   'e2ee:use',
   'admin:*',
-  'offline:write',
   'device:haptics',
   'device:notifications',
   'device:biometrics',
@@ -210,19 +209,33 @@ const manifestObjectSchema = z
     public: z.boolean().optional(),
     /**
      * Marks this plugin's bare `routePrefix` page as its one offline-capable
-     * entry point (RFC 0078, generalizing Launcher's original `offline.root`
-     * flag from RFC 0074 into the only offline model). Grants no auth
-     * exemption — it is purely a caching/rendering declaration. This page
-     * must render a user-neutral shell and hydrate everything else
-     * (screens, data, records) client-side via `sdk.offline`/
-     * `sdk.offline-queue` rather than through per-user SSR, so the platform
-     * can safely precache it without risking a stale/different user's
-     * content being replayed on a shared device. Which screens or data a
-     * plugin actually supports offline is entirely its own client-side
-     * decision — invisible to this schema. Pair with the `offline:write`
-     * permission to also enable the mutation-queue/sync capability.
+     * entry point, and declares how much offline capability it needs
+     * (research 0012, superseding RFC 0074/0078's plain boolean — the third
+     * shape this field has taken: object → boolean → enum. See
+     * `docs/upgrade.md` for the migration).
+     *
+     * - `'offline-first'` — the device holds a full replica of the plugin's
+     *   data, kept fresh in the background; the server remains the source of
+     *   truth. Works everywhere. Most offline-capable plugins want this.
+     * - `'device-only'` — the data never leaves the device; there is no
+     *   server copy at all. Requires a durable, encrypted, device-auth-gated
+     *   store, which today only a native shell provides — see
+     *   `@sovereignfs/sdk/device-client`'s `supports('secureStorage')` for
+     *   the capability check. Undeclared (the default) means no offline
+     *   support.
+     *
+     * Grants no auth exemption — it is purely a caching/rendering
+     * declaration. This page must render a user-neutral shell and hydrate
+     * everything else (screens, data, records) client-side rather than
+     * through per-user SSR, so the platform can safely precache it without
+     * risking a stale/different user's content being replayed on a shared
+     * device. Which screens or data a plugin actually supports offline is
+     * entirely its own client-side decision — invisible to this schema.
+     * Both tiers imply local mutation, so no separate write permission is
+     * needed (RFC 0074's open question 1) — the tier value itself is the
+     * install-review signal.
      */
-    offline: z.boolean().optional(),
+    offline: z.enum(['offline-first', 'device-only']).optional(),
     /**
      * Marks this plugin as a bundled reference/example. Purely a classification
      * flag: the platform groups example plugins in Console and offers a bulk
@@ -623,12 +636,6 @@ export const manifestSchema = manifestObjectSchema
       'database.requireEncryption is not valid for a type: "platform" plugin — it has no ' +
       'isolated database of its own to encrypt (see manifestDatabaseIsolation)',
     path: ['database', 'requireEncryption'],
-  })
-  .refine((m) => !m.permissions.includes('offline:write') || m.offline === true, {
-    message:
-      'the "offline:write" permission requires offline: true — write/sync capability ' +
-      'only exists on top of the offline-capable single-shell model (RFC 0078)',
-    path: ['permissions'],
   });
 
 /**

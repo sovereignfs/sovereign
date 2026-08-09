@@ -177,6 +177,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
     name: p.name,
     routePrefix: p.routePrefix,
     iconUrl: p.icon ? `/plugin-icons/${p.id}.svg` : undefined,
+    offline: p.offline,
   }));
 
   return (

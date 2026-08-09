@@ -210,6 +210,35 @@
   padding: 2px 8px;
 }
 
+/* Connectivity-dimmed (research 0012, epic task 2.33) — a no-offline-tier
+   app while genuinely offline right now. Reactive/temporary: reuses the
+   warning tokens the rest of the offline messaging (OfflineBanner,
+   OfflineGate) already uses, so the "you're offline" language reads
+   consistently everywhere it appears. */
+.tileDimmed {
+  opacity: 0.5;
+}
+
+/* Capability-restricted (research 0012, epic task 2.33) — a device-only app
+   unavailable on this surface. Deliberately NOT dimmed like .tileDimmed:
+   this is static and unrelated to connectivity, so the tile stays fully
+   legible and only the badge communicates the restriction — dimming it the
+   same way as an offline tile would wrongly suggest "reconnect to fix
+   this." Info tokens, not warning, for the same reason. */
+.tileRestrictedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+  font-size: 11px;
+  font-weight: var(--sv-font-weight-medium);
+  letter-spacing: 0.02em;
+  color: var(--sv-color-info-text);
+  background-color: var(--sv-color-info-surface);
+  border: 1px solid var(--sv-color-info-border);
+  border-radius: var(--sv-radius-sm);
+  padding: 2px 8px;
+}
+
 @media (max-width: 768px) {
   /* Collapse to a single stacked column on mobile — search drops below
      the title/subtitle and stretches full width. */

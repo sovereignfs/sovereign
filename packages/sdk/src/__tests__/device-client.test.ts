@@ -96,6 +96,48 @@ describe('supports / getTransport / getShellInfo', () => {
     });
   });
 
+  it('isDeviceOnlyTierAvailable() reports false with no bridge registered', async () => {
+    vi.resetModules();
+    const deviceClient = await import('../device-client');
+
+    expect(deviceClient.isDeviceOnlyTierAvailable()).toBe(false);
+  });
+
+  it('isDeviceOnlyTierAvailable() reports false when the bridge exists but does not advertise secureStorage', async () => {
+    provideBridge(nativeImpl());
+    vi.resetModules();
+    const deviceClient = await import('../device-client');
+
+    deviceClient.supports('haptics.impact'); // starts the handshake
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // The stub bridge above only advertises haptics.impact — no shell ships
+    // secureStorage yet (epic task 20.13 is still open), so this must stay
+    // false until that capability is actually advertised.
+    expect(deviceClient.isDeviceOnlyTierAvailable()).toBe(false);
+  });
+
+  it('isDeviceOnlyTierAvailable() reports true once a shell advertises secureStorage', async () => {
+    provideBridge(
+      nativeImpl({
+        handshake: async () => ({
+          protocolVersion: 1,
+          shell: { name: 'sovereign-mobile', version: '1.0.0', platform: 'ios' },
+          capabilities: [{ name: 'secureStorage', version: 1 }],
+        }),
+      }),
+    );
+    vi.resetModules();
+    const deviceClient = await import('../device-client');
+
+    deviceClient.supports('secureStorage'); // starts the handshake
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(deviceClient.isDeviceOnlyTierAvailable()).toBe(true);
+  });
+
   it('maps desktop platforms to the tauri transport', async () => {
     provideBridge(
       nativeImpl({

@@ -1,5 +1,17 @@
 # RFC 0078 — Generic offline read+write for plugins
 
+> **Superseded by [Research 0012 — Offline-first architecture](../research/0012-offline-first-architecture.md)
+> and [workstream 0008](../workstreams/0008-offline-first-architecture.md).**
+> The flat boolean `offline` field this RFC shipped, and the `offline:write`
+> permission it added, have both been replaced — `offline` is now a two-tier
+> enum (`'offline-first' | 'device-only'`), and `offline:write` is removed
+> outright: both tiers imply local mutation, so the enum alone is now the
+> install-review signal (epic task 3.36). `@sovereignfs/sdk/offline-queue`
+> itself is superseded by a unified storage surface still in progress (epic
+> task 3.37). Kept as the decision trail for the read/write isolation model
+> and the "cannot be centrally enforced" permission caveat, both still
+> relevant. Not deleted; see `docs/research/README.md`'s lifecycle convention.
+
 **Status:** Implemented — platform plumbing (manifest breaking change,
 `offline:write` permission validation, `@sovereignfs/sdk/offline-queue`
 client module, runtime simplification, logout+login purge) is in place.

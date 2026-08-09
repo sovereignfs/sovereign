@@ -31,11 +31,13 @@ export async function GET(request: Request): Promise<Response> {
 
 /**
  * POST /api/account/push-device-token
- * Body: { platform: 'ios' | 'android', deviceToken, publicKey }
+ * Body: { platform: 'ios' | 'android' | 'macos' | 'windows', deviceToken, publicKey }
  * Registers (or re-registers) a native push device token for this user,
  * capturing the instance's currently configured relay URL onto the row —
  * see RFC 0087's "Device-token schema" for why that's captured now rather
- * than read fresh at send time.
+ * than read fresh at send time. `'macos'`/`'windows'` are RFC 0087's
+ * "Desktop native push" addendum (workstream 0010) — same schema, same
+ * relay, same encryption scheme as the mobile platforms.
  */
 export async function POST(request: Request): Promise<Response> {
   const userId = request.headers.get('x-sovereign-user-id');
@@ -60,8 +62,16 @@ export async function POST(request: Request): Promise<Response> {
   const deviceToken = body.deviceToken?.trim();
   const publicKey = body.publicKey?.trim();
 
-  if (platform !== 'ios' && platform !== 'android') {
-    return NextResponse.json({ error: "platform must be 'ios' or 'android'" }, { status: 400 });
+  if (
+    platform !== 'ios' &&
+    platform !== 'android' &&
+    platform !== 'macos' &&
+    platform !== 'windows'
+  ) {
+    return NextResponse.json(
+      { error: "platform must be 'ios', 'android', 'macos', or 'windows'" },
+      { status: 400 },
+    );
   }
   if (!deviceToken || !publicKey) {
     return NextResponse.json({ error: 'deviceToken and publicKey are required' }, { status: 400 });

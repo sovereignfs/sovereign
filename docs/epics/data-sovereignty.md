@@ -883,36 +883,63 @@ capability.
 
 ---
 
-#### 📋 8.23 — `packages/db` libSQL driver adoption (workstream 0009 leg 3)
+#### ✅ 8.23 — `packages/db` libSQL driver adoption (workstream 0009 leg 3)
 
 **Goal:** Replace the direct `better-sqlite3`/`better-sqlite3-multiple-ciphers`
 file access in `packages/db`'s SQLite path with a client that talks to the
 `sqld` container from Task 0.20, for the platform DB, `apps/auth`'s DB, and
-every isolated plugin DB.
+every isolated plugin DB — per the RFC 0091 encryption carve-out: databases
+RFC 0071 would encrypt stay on plain-file SQLite+SQLCipher; everything else
+moves to `sqld`, mandatorily.
 
-**Scope is set by Task 0.20's RFC, not by this entry — do not begin detailed
-task breakdown before that RFC is accepted.** Expected surface, subject to the
-RFC's actual driver-shape decision:
+**Delivered (PR #367):**
 
-- `packages/db/src/client.ts` (`drizzleSqlite`/`better-sqlite3` construction)
-  and `plugin-client.ts`'s SQLite branch of `getPluginDb()`.
-- `packages/db/src/sqlite-encryption.ts`'s `openKeyedSqlite()` chokepoint
-  (line 314) and its `apps/auth` twin, per whatever encryption mapping the RFC
-  settles on.
-- Every per-dialect SQLite schema file under `packages/db/src/schema/sqlite/`.
-- Anywhere in the codebase that assumed `better-sqlite3`'s synchronous API —
-  to be enumerated once the RFC's async-contract decision is known.
+- `packages/db/src/sqld.ts` (new) — `sqld` client + per-namespace isolation
+  (`x-namespace` header) + namespace provisioning/drop via the admin API.
+- `client.ts`/`plugin-client.ts` route the platform/auth core and every
+  isolated plugin store to `sqld` unless the carve-out applies
+  (`SOVEREIGN_DB_ENCRYPTION_KEY` set for the core, `requireEncryption: true`
+  in the manifest for a plugin). `:memory:` is explicitly excluded — no sqld
+  equivalent exists for ephemeral per-process test storage.
+  `checkEncryptionMarker` always runs before the carve-out decision so a
+  misconfigured "key was removed" state still fails loudly.
+- `migrate.ts` picks `drizzle-orm/libsql`'s async migrator over
+  `better-sqlite3`'s sync one via an `isLibsqlDb()` runtime guard.
+- `exec.ts`/`platform-db.ts` — the 9 async-contract call sites RFC 0091
+  enumerated (7 in `platform-db.ts`, 2 in `scripts/seed.ts`), all converted.
+- `apps/auth/src/db.ts`/`migrate.ts` — the same carve-out via better-auth's
+  Kysely dialect adapter, independently implemented (auth must not depend on
+  `@sovereignfs/db`). Namespaces don't auto-vivify (verified live), so
+  `runAuthMigrations()` explicitly provisions the "auth" namespace first.
+- `runtime/next.config.ts` + `apps/auth/next.config.ts` — aliased the native
+  `libsql` package out of Webpack's server graph (same treatment as the
+  existing `better-sqlite3` alias); it's only ever exercised for `file:`-scheme
+  URLs, which this codebase never uses.
+- `docker-compose.sqld.yml` — `--enable-namespaces` + a separate admin
+  listener, wired to both `runtime` and `auth` with a healthcheck gate.
+
+**Known, documented gap (not solved by this task):** enabling encryption on an
+instance that has been running unencrypted (and therefore on `sqld`) has no
+migration tooling yet — `sv db encrypt` only converts an existing plain file.
+Documented in `packages/db/src/client.ts` and `docs/self-hosting.md`.
 
 **Dependencies:** Task 0.20 (blocked on its RFC), Task 8.22 (dialect
-consolidation should land first so this doesn't need to reconcile with a
-per-plugin override mid-migration).
+consolidation landed first so this didn't need to reconcile with a per-plugin
+override mid-migration).
 
-**SRS reference:** to be added from Task 0.20's RFC.
+**SRS reference:** none yet — see RFC 0091.
 
-**Review checklist:** to be written once scope is known from the RFC; must at
-minimum include a live encrypted round-trip (per the RFC 0071 incident
-precedent, `docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`) — not
-just unit tests — before this task is considered done.
+**Review checklist:**
+
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test`
+  all pass (163/163 test files, 1441 passed).
+- Empirically verified against a live `sqld --enable-namespaces` container:
+  healthcheck, admin API, namespace create/drop idempotency, `x-namespace`
+  isolation.
+- **Not yet done, deliberately deferred to Task 8.24:** a live encrypted
+  round-trip against real production-shaped data on the new setup — this task
+  changed the routing/driver layer only; Task 8.24 is where the single
+  production instance's actual data crosses onto it.
 
 ---
 

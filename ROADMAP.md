@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.68.3 · **Last updated:** 2026-08-09
+**Version:** 0.69.0 · **Last updated:** 2026-08-09
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -362,7 +362,7 @@ mobile app (post-v1 plan)" and SRS §3.12) and lives in a separate
 | —       | Mobile instance validation and compatibility endpoint (RFC 0058) | ✅     | [20.2](docs/epics/mobile.md#-202--mobile-instance-validation-and-compatibility-endpoint)            |
 | —       | Mobile SDK native environment and bridge adapter (RFC 0058)      | 📋     | [20.3](docs/epics/mobile.md#-203--mobile-sdk-native-environment-and-bridge-adapter)                 |
 | —       | Mobile store release setup and privacy declarations (RFC 0058)   | 📋     | [20.4](docs/epics/mobile.md#-204--mobile-store-release-setup-and-privacy-declarations)              |
-| —       | Native mobile push relay — runtime + relay service (RFC 0087)    | 📋     | [4.7](docs/epics/notification-center.md#-47--native-mobile-push-relay-apnsfcm)                      |
+| —       | Native mobile push relay — runtime + relay service (RFC 0087)    | ⏳     | [4.7](docs/epics/notification-center.md#-47--native-mobile-push-relay-apnsfcm)                      |
 | —       | Mobile native push notifications, client half (RFC 0087)         | 📋     | [20.5](docs/epics/mobile.md#-205--native-push-notifications-apnsfcm)                                |
 | —       | Mobile native photo picker and camera capture (RFC 0058)         | 📋     | [20.6](docs/epics/mobile.md#-206--native-photo-picker-and-camera-capture)                           |
 | —       | Mobile biometric auth capability (RFC 0058)                      | 📋     | [20.7](docs/epics/mobile.md#-207--biometric-auth-capability)                                        |

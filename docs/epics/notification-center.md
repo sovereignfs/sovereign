@@ -231,7 +231,7 @@ instead of the current logger-only trail.
 
 ---
 
-#### 📋 4.7 — Native mobile push relay (APNs/FCM)
+#### ⏳ 4.7 — Native mobile push relay (APNs/FCM)
 
 > **New in [RFC 0087](../rfcs/0087-sovereign-relay.md).** Covers this
 > monorepo's half of native mobile push: the device-token schema, the
@@ -242,7 +242,39 @@ instead of the current logger-only trail.
 > Extension) is tracked in that repo's own epic 20, task 20.5 — see this
 > monorepo's [docs/epics/mobile.md](mobile.md#-205--native-push-notifications-apnsfcm),
 > rescoped alongside this task. Sequenced by
-> [workstream 0005](../workstreams/0005-native-push-relay.md).
+> [workstream 0005](../workstreams/0005-native-push-relay.md), 4 legs:
+>
+> - **✅ Leg 1 — device-token schema + registration API.** `push_device_tokens`
+>   (both dialects, real `drizzle-kit` migrations generated and applied —
+>   `packages/db/migrations/{sqlite,postgres}/0020_*`), `platform-db.ts`
+>   CRUD helpers, `POST`/`GET /api/account/push-device-token` and
+>   `DELETE /api/account/push-device-token/:id`, mirroring
+>   `/api/account/push-subscription`'s auth handling and response shape
+>   exactly, per the workstream's own instruction. `runtime/src/relay.ts`'s
+>   `getConfiguredRelayUrl()` gives this leg (and leg 3, later) something
+>   real to read — the admin-facing Console UI to _set_ the relay URL/opt-out
+>   is leg 2's own deliverable, not built here. No relay dependency, fully
+>   tested against a real `:memory:` SQLite DB (`platform-db.test.ts`), not
+>   just mocks.
+> - **📋 Leg 2 — relay service (`apps/relay`) APNs/FCM sending.** Not started.
+>   The workstream's own text is explicit: _"Do not proceed if:
+>   `sovereignfs`'s Apple Developer / Firebase credentials aren't actually
+>   available yet — this leg cannot be meaningfully verified without them,
+>   and shipping unverified push-sending code is worse than not shipping
+>   it."_ Real credentials are not available in this environment. When this
+>   leg is picked up, the two existing `501`-stub routes
+>   (`apps/relay/app/v1/{enroll,push}/route.ts`) should be replaced with
+>   structurally-complete, environment-gated implementations (return a clear
+>   "not configured" error whenever the real credentials are absent —
+>   analogous to `sovereign-desktop`'s auto-updater and Windows Hello
+>   precedent — never attempt a live Apple/Google call without them), not
+>   left blocked entirely.
+> - **📋 Leg 3 — fan-out extension.** Not started; depends on leg 2's real
+>   contract existing to call (though the delivery branch itself is
+>   mock-testable against leg 1's fixed schema without leg 2 being live).
+> - **20.5 (`sovereign-mobile`)** — not started; can begin once this leg's
+>   endpoint contract (now merged) is stable, per the workstream's
+>   cross-repo parallelism note.
 
 **Goal:** Let a self-hosted instance deliver a notification to a user's
 `sovereign-mobile` native app even when it's fully closed, without any

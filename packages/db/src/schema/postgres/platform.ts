@@ -430,6 +430,19 @@ export const pushSubscriptions = pgTable('push_subscriptions', {
   createdAt: bigint('created_at', { mode: 'number' }).notNull(),
 });
 
+/** Native mobile (APNs/FCM) device tokens (RFC 0087). Mirror of SQLite schema. */
+export const pushDeviceTokens = pgTable('push_device_tokens', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  platform: text('platform').notNull(),
+  deviceToken: text('device_token').notNull().unique(),
+  publicKey: text('public_key').notNull(),
+  relayUrl: text('relay_url').notNull(),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  lastUsedAt: bigint('last_used_at', { mode: 'number' }),
+});
+
 /** Plugin entitlements (RFC 0003). Mirror of SQLite schema. */
 export const entitlements = pgTable('entitlements', {
   id: text('id').primaryKey(),

@@ -1,6 +1,6 @@
 # RFC 0082 — Focused plugin app shell (single-plugin native apps)
 
-**Status:** Draft\
+**Status:** Accepted\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** `sovereign-mobile` (config-driven build targets in the repo RFC 0058
@@ -388,7 +388,8 @@ Ordered; each step gates the next. Tracked as legs 3–4 of
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                    |
-| ------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | July 2026   | Initial draft                                                                                                                                                                                             |
-| 0.2     | August 2026 | Linked §5's client-registration friction to RFC 0072's new draft addendum (well-known first-party OAuth client), proposed while scoping sovereign-desktop epic task 17.4. Still unresolved/unimplemented. |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | July 2026   | Initial draft                                                                                                                                                                                                                                                                                                                                                                         |
+| 0.2     | August 2026 | Linked §5's client-registration friction to RFC 0072's new draft addendum (well-known first-party OAuth client), proposed while scoping sovereign-desktop epic task 17.4. Still unresolved/unimplemented.                                                                                                                                                                             |
+| 0.3     | August 2026 | Status: Draft → Accepted. The design decisions were already locked in workstream 0001's design session; leg 1's spike (epic task 20.10 / research 0008) has run and did not disappoint, closing this RFC's own stated implementation gate. §5's durable-session sequel remains a separate, unscheduled follow-up gated on RFC 0072's addendum — acceptance here does not change that. |

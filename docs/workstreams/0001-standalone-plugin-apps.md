@@ -1,6 +1,6 @@
 # Workstream 0001 — Standalone plugin apps
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In progress\
 **Date:** July 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -314,6 +314,7 @@ coherent value rather than half a feature.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | July 2026 | Initial draft |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                               |
+| ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | July 2026   | Initial draft                                                                                                                                                                                                                                                                                                        |
+| 0.2     | August 2026 | Status: Planned → In progress. RFC 0082 accepted; leg 1's spike has run. Epic task 2.27 (leg 5) promoted into ROADMAP.md at slot `0.70.0` ahead of legs 2–3 completing — a deliberate ordering choice, not a dependency change; 20.11/20.12 still gate on 20.1/20.10 finishing regardless of version-slot placement. |

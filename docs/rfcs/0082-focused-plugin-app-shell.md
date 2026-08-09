@@ -255,6 +255,12 @@ shells get a well-known pre-registered client id provisioned at instance
 bootstrap, or dynamic client registration is revisited for this narrow case.
 Unresolved; it gates the sequel, not this RFC.
 
+The first option is now sketched as a draft addendum —
+[RFC 0072's "Well-known first-party client for official native shells"](0072-external-oauth-provider.md#addendum-well-known-first-party-client-for-official-native-shells) —
+proposed while scoping sovereign-desktop epic task 17.4, which is blocked on
+this exact friction. Still unaccepted and unimplemented; several open
+questions remain (see that section) before it unblocks this sequel.
+
 ### 6. Instance onboarding and validation
 
 Reuse RFC 0058's onboarding (epic 20.1) and validation endpoint (epic 20.2)
@@ -382,6 +388,7 @@ Ordered; each step gates the next. Tracked as legs 3–4 of
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | July 2026 | Initial draft |
+| Version | Date        | Change                                                                                                                                                                                                    |
+| ------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | July 2026   | Initial draft                                                                                                                                                                                             |
+| 0.2     | August 2026 | Linked §5's client-registration friction to RFC 0072's new draft addendum (well-known first-party OAuth client), proposed while scoping sovereign-desktop epic task 17.4. Still unresolved/unimplemented. |

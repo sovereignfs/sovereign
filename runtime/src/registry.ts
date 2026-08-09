@@ -26,15 +26,17 @@ export function getDevelopmentPluginIds(plugins: SovereignManifest[] = registry)
 
 /**
  * Full, absolute path prefixes for every manifest-declared offline-capable
- * plugin (RFC 0078) — bare `<routePrefix>` for any plugin declaring
- * `offline: true`, its one offline-capable entry point. Consumed at build
- * time by `next.config.ts` to scope the service worker's precache to just
- * these routes; every other route stays `NetworkFirst` and falls back to
- * `/offline` as usual.
+ * plugin (research 0012) — bare `<routePrefix>` for any plugin declaring
+ * either offline tier (`'offline-first'` or `'device-only'`), its one
+ * offline-capable entry point. Both tiers get the same precaching treatment
+ * here; they differ in storage and encryption, not in how the shell document
+ * itself is cached. Consumed at build time by `next.config.ts` to scope the
+ * service worker's precache to just these routes; every other route stays
+ * `NetworkFirst` and falls back to `/offline` as usual.
  */
 export function getOfflineRoutePrefixes(plugins: SovereignManifest[] = registry): string[] {
   return plugins
-    .filter((manifest) => manifest.offline === true)
+    .filter((manifest) => manifest.offline !== undefined)
     .map((manifest) => manifest.routePrefix);
 }
 

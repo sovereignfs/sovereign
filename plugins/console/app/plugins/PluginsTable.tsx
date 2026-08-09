@@ -25,6 +25,8 @@ export interface PluginRow {
   public: boolean;
   example: boolean;
   development: boolean;
+  /** Manifest `offline` tier (research 0012) — undeclared means no offline support, the default. */
+  offline?: 'offline-first' | 'device-only';
   compatibilityError: string | null;
   compatibilityWarnings: string[];
   status: PluginStatus;
@@ -187,6 +189,7 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated }: Row
               in development
             </Badge>
           )}
+          {row.offline && <Badge variant="mono">{row.offline}</Badge>}
         </div>
       </td>
 
@@ -335,6 +338,7 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
             in development
           </Badge>
         )}
+        {row.offline && <Badge variant="mono">{row.offline}</Badge>}
         <code className={styles.pluginCardMetaCode}>{row.routePrefix}</code>
       </div>
 

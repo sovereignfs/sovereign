@@ -71,7 +71,8 @@ export type { BridgeTransport, DeviceResult } from './device-bridge';
  * server-injected header to trust here — this module is browser-only), so
  * `haptics`/`nativeNotifications` manifest permissions and consent grants
  * are review-time metadata and a consent-prompt input, not inter-plugin
- * isolation. Same posture as `offline:write` (RFC 0078 §6).
+ * isolation — the same posture every self-declared manifest permission takes
+ * in this system.
  */
 
 let cachedHandshake: BridgeHandshake | null = null;
@@ -100,6 +101,28 @@ export function supports(capability: string, version = 1): boolean {
   ensureHandshakeStarted();
   if (!cachedHandshake) return false;
   return cachedHandshake.capabilities.some((c) => c.name === capability && c.version >= version);
+}
+
+/**
+ * Whether a `device-only`-tier plugin (research 0012, manifest `offline`)
+ * can actually run here — i.e. whether a durable, encrypted,
+ * device-auth-gated store is available. Deliberately **not**
+ * `getSurface()`/`isNativeShell()`: those parse the client-controlled
+ * User-Agent and are documented as a presentation hint only, never a
+ * security boundary (`docs/architecture-rules.md`), so using one to gate an
+ * entire storage tier would both be spoofable and conflate "probably mobile"
+ * with "has secure storage" — wrong on both counts once Tauri desktop or a
+ * sufficiently capable web backend eventually qualifies too.
+ *
+ * Built on `supports()` — the real bridge-handshake capability list — so
+ * this composes with the RFC 0083 "a shell must never advertise a capability
+ * its build doesn't honor" rule for free: it returns `false` everywhere
+ * until epic task 20.13 (workstream 0008 leg 4) actually ships the
+ * `secureStorage` bridge capability, and starts reporting availability
+ * correctly the moment a shell does, with no further change needed here.
+ */
+export function isDeviceOnlyTierAvailable(): boolean {
+  return supports('secureStorage');
 }
 
 /** The active bridge transport. `'web'` before the handshake resolves. */

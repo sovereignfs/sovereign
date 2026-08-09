@@ -18,6 +18,7 @@ interface RawPluginRow {
   public: boolean;
   example: boolean;
   development: boolean;
+  offline?: 'offline-first' | 'device-only';
   enabled: boolean;
   compatibilityError: string | null;
   compatibilityWarnings: string[];

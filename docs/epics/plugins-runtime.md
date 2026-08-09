@@ -1462,7 +1462,7 @@ RFC 0083.
 
 ---
 
-#### 📋 3.36 — Tiered `offline` manifest declaration (Research 0012)
+#### ✅ 3.36 — Tiered `offline` manifest declaration (Research 0012)
 
 **Goal:** Replace the single `offline: boolean` flag with three graduated tiers,
 so a plugin declares how much offline capability it needs — and so "no offline

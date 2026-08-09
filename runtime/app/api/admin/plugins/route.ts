@@ -25,6 +25,7 @@ export async function GET(request: Request): Promise<Response> {
     public: manifest.public ?? false,
     example: manifest.example ?? false,
     development: manifest.development ?? false,
+    offline: manifest.offline,
     shell: manifest.shell ?? 'default',
     enabled: !disabled.has(manifest.id),
     compatibilityError: getIncompatibilityReason(manifest.id),

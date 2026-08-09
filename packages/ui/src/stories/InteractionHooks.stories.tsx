@@ -8,6 +8,7 @@ import {
   useIsMobile,
   useIsOffline,
   useLongPress,
+  useOfflineTileState,
   useResponsiveLayout,
   useSingleOrDoubleTap,
   useSnapCarousel,
@@ -355,6 +356,72 @@ function IsOfflineDemo() {
     >
       useIsOffline() → {String(isOffline)} — toggle DevTools &gt; Network &gt; Offline (or your OS's
       airplane mode) to see this flip.
+    </div>
+  );
+}
+
+function OfflineTileStateDemo() {
+  const [tier, setTier] = useState<'none' | 'offline-first' | 'device-only'>('device-only');
+  const [deviceOnlyAvailable, setDeviceOnlyAvailable] = useState(false);
+  const state = useOfflineTileState(tier === 'none' ? undefined : tier, deviceOnlyAvailable);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sv-space-3)' }}>
+      <div
+        style={{ display: 'flex', gap: 'var(--sv-space-4)', alignItems: 'center', fontFamily: ff }}
+      >
+        <label style={{ fontSize: 'var(--sv-font-size-sm)' }}>
+          offline tier:{' '}
+          <select value={tier} onChange={(e) => setTier(e.target.value as typeof tier)}>
+            <option value="none">(none)</option>
+            <option value="offline-first">offline-first</option>
+            <option value="device-only">device-only</option>
+          </select>
+        </label>
+        <label style={{ fontSize: 'var(--sv-font-size-sm)' }}>
+          <input
+            type="checkbox"
+            checked={deviceOnlyAvailable}
+            onChange={(e) => setDeviceOnlyAvailable(e.target.checked)}
+          />{' '}
+          deviceOnlyAvailable
+        </label>
+      </div>
+      <div
+        style={{
+          padding: 'var(--sv-space-4)',
+          borderRadius: 'var(--sv-radius-md)',
+          background:
+            state === 'connectivity-dimmed'
+              ? 'var(--sv-color-warning-surface)'
+              : state === 'capability-restricted'
+                ? 'var(--sv-color-info-surface)'
+                : 'var(--sv-color-success-surface)',
+          color:
+            state === 'connectivity-dimmed'
+              ? 'var(--sv-color-warning-text)'
+              : state === 'capability-restricted'
+                ? 'var(--sv-color-info-text)'
+                : 'var(--sv-color-success-text)',
+          fontFamily: ff,
+          fontSize: 'var(--sv-font-size-sm)',
+          fontWeight: 600,
+          textAlign: 'center',
+        }}
+      >
+        useOfflineTileState() → {String(state)}
+      </div>
+      <p
+        style={{
+          margin: 0,
+          fontFamily: ff,
+          fontSize: 'var(--sv-font-size-xs)',
+          color: 'var(--sv-color-text-muted)',
+        }}
+      >
+        connectivity-dimmed also reacts live to DevTools &gt; Network &gt; Offline — try it with
+        tier set to (none).
+      </p>
     </div>
   );
 }
@@ -742,6 +809,23 @@ const isMobile = useIsMobile(); // defaults to MOBILE_BREAKPOINT_PX (768)`}</Cod
         <CodeBlock>{`import { useIsOffline } from '@sovereignfs/ui';
 
 const isOffline = useIsOffline();`}</CodeBlock>
+      </section>
+
+      <section style={{ marginBottom: 'var(--sv-space-10)' }}>
+        <SectionHeader
+          title="useOfflineTileState"
+          subtitle="Which of the two app-tile states, if any, applies given a plugin's declared offline tier — connectivity-dimmed (no tier, offline right now) vs. capability-restricted (device-only, unavailable here), never conflated (research 0012)."
+        />
+        <Card padding="md">
+          <OfflineTileStateDemo />
+        </Card>
+        <CodeBlock>{`import { useOfflineTileState } from '@sovereignfs/ui';
+
+// deviceOnlyAvailable comes from isDeviceOnlyTierAvailable() in
+// @sovereignfs/sdk/device-client — passed in, not computed here, so
+// @sovereignfs/ui never depends on @sovereignfs/sdk.
+const state = useOfflineTileState(plugin.offline, deviceOnlyAvailable);
+// 'connectivity-dimmed' | 'capability-restricted' | null`}</CodeBlock>
       </section>
 
       <section style={{ marginBottom: 'var(--sv-space-10)' }}>

@@ -216,12 +216,12 @@ describe('validateManifest', () => {
     expect(validateManifest({ ...base }).valid).toBe(true);
   });
 
-  it('accepts a manifest declaring offline: true (RFC 0078)', () => {
-    expect(validateManifest({ ...base, offline: true }).valid).toBe(true);
+  it('accepts a manifest declaring offline: "offline-first" (research 0012)', () => {
+    expect(validateManifest({ ...base, offline: 'offline-first' }).valid).toBe(true);
   });
 
-  it('accepts a manifest declaring offline: false', () => {
-    expect(validateManifest({ ...base, offline: false }).valid).toBe(true);
+  it('accepts a manifest declaring offline: "device-only" (research 0012)', () => {
+    expect(validateManifest({ ...base, offline: 'device-only' }).valid).toBe(true);
   });
 
   it('accepts a manifest with no offline field at all', () => {
@@ -235,31 +235,22 @@ describe('validateManifest', () => {
     expect(validateManifest({ ...base, offline: { root: true } }).valid).toBe(false);
   });
 
-  it('rejects the "offline:write" permission without offline: true', () => {
+  it('rejects the old plain-boolean offline shape (RFC 0078, replaced by the enum)', () => {
+    expect(validateManifest({ ...base, offline: true }).valid).toBe(false);
+    expect(validateManifest({ ...base, offline: false }).valid).toBe(false);
+  });
+
+  it('rejects an offline value outside the two declared tiers', () => {
+    expect(validateManifest({ ...base, offline: 'offline' }).valid).toBe(false);
+    expect(validateManifest({ ...base, offline: 'none' }).valid).toBe(false);
+  });
+
+  it('rejects the removed "offline:write" permission as unknown', () => {
     const res = validateManifest({
       ...base,
       permissions: ['offline:write'],
     });
     expect(res.valid).toBe(false);
-    if (!res.valid) expect(res.errors.join(' ')).toContain('offline:write');
-  });
-
-  it('rejects the "offline:write" permission when offline is false', () => {
-    const res = validateManifest({
-      ...base,
-      offline: false,
-      permissions: ['offline:write'],
-    });
-    expect(res.valid).toBe(false);
-  });
-
-  it('accepts the "offline:write" permission paired with offline: true', () => {
-    const res = validateManifest({
-      ...base,
-      offline: true,
-      permissions: ['offline:write'],
-    });
-    expect(res.valid).toBe(true);
   });
 
   it('accepts a manifest that declares the example marker', () => {

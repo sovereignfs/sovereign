@@ -231,13 +231,6 @@ implemented): `events:publish`, `events:subscribe`, `e2ee:use` (client-side encr
 `sdk.e2ee` — RFC 0060; distinct from any future server-side `sdk.crypto.encryptField()`
 field crypto, which the runtime _can_ decrypt).
 
-`offline:write` (RFC 0078) is validated at the manifest level (requires
-`offline: true` on the same manifest). The backing client surface —
-`@sovereignfs/sdk/offline-queue` (`offlineQueue`, `drainQueue`) — is
-implemented; declaring the permission is not yet independently enforced
-against calls into that module. See "Offline writes (`sdk.offline-queue`,
-RFC 0078)" below.
-
 **`device:haptics`, `device:notifications`, and `device:biometrics` (RFC 0083)
 provide no isolation between plugins — say this to yourself in plain words
 before relying on any of them for anything security-sensitive.**
@@ -267,10 +260,10 @@ claim to be a different plugin entirely. Consequently:
   read "provides no isolation" as "the confirmation itself is fake"; read it
   as "don't trust which plugin's code claims to have triggered it."
 
-This is the same posture RFC 0078 §6 already states for `offline:write` and
-RFC 0080 §2 states for the `x-sovereign-surface` signal — self-declared
-identity is a structural fact of running third-party client code in one
-shared browser origin, not a bug to fix here. A future shell transport that
+This is the same posture RFC 0080 §2 states for the `x-sovereign-surface`
+signal, and every self-declared manifest permission takes in this system —
+self-declared identity is a structural fact of running third-party client
+code in one shared browser origin, not a bug to fix here. A future shell transport that
 withholds its raw native bridge object from page JavaScript (Tauri's opt-in
 command surface makes this realistic; whether a Capacitor shell can do the
 same is an open question — RFC 0083 §5, §6) can make native-only capability
@@ -516,34 +509,62 @@ export default async function StatusPage() {
 }
 ```
 
-### `offline` — offline-capable plugins (RFC 0074, RFC 0078)
+### `offline` — offline-capable plugins (research 0012)
 
 Sovereign is installable as a PWA, but every page is per-user server-rendered
 and fetched `NetworkFirst` — with no network, everything but the static
-`/offline` fallback is unreachable. `offline: true` marks your plugin's bare
-`routePrefix` page as its one offline-capable entry point — the shell that
-loads with no connection, from which your own client-side code takes over.
+`/offline` fallback is unreachable. Declaring `offline` marks your plugin's
+bare `routePrefix` page as its one offline-capable entry point — the shell
+that loads with no connection, from which your own client-side code takes
+over — and tells the platform how much offline capability your plugin needs:
 
 ```json
 {
   "routePrefix": "/launcher",
-  "offline": true
+  "offline": "offline-first"
 }
 ```
 
-There is no per-route declaration — `offline` is a single boolean at the
-plugin level (RFC 0078 replaced RFC 0074's original `offline.routes[]`/
-`offline.root` object shape with this flat field; that old shape is no longer
-accepted). Which screens, lists, or records your plugin actually supports
-offline is entirely your own client-side decision, invisible to the manifest
-— the platform only needs to know there's a neutral shell to precache.
+`offline` takes one of two values:
 
-`offline` requires no permission and grants **no auth exemption** — it is
-purely a caching/rendering declaration, unlike `publicRoutes`. A separate
-`offline:write` permission gates offline write/sync capability (queued
-mutations applied while offline, synced back once connectivity returns) —
-declaring it requires `offline: true`. See "Offline writes
-(`sdk.offline-queue`, RFC 0078)" below.
+- **`"offline-first"`** — the device keeps a full replica of your plugin's
+  data, refreshed in the background; the server stays the source of truth.
+  Works on every surface. This is what almost every offline-capable plugin
+  wants — a shopping list, a task list, the Launcher's own plugin list.
+- **`"device-only"`** — your plugin's data never leaves the device at all;
+  there is no server copy. This needs a durable, encrypted, device-auth-gated
+  store, which today only a native shell provides. Check
+  `isDeviceOnlyTierAvailable()` from `@sovereignfs/sdk/device-client` before
+  relying on it — it reports `false` on every surface until the underlying
+  device-bridge capability ships, so a plugin declaring this tier must have a
+  real fallback for "not available here" today, not just for a slow network.
+  Wrap your plugin's own root content in `DeviceOnlyGate` (`@sovereignfs/ui`),
+  passing that same `isDeviceOnlyTierAvailable()` result as `available` — it
+  renders an explanatory "Phone only" state instead of your plugin's content
+  when unavailable, the same pattern `OfflineGate` uses for Console/Account.
+  The Launcher's own tile and the shell's Apps drawer already show a
+  restricted badge for `device-only` plugins (epic task 2.33), but that's
+  advisory UI only — a user reaching your route directly (a bookmark, a deep
+  link) skips it entirely, so `DeviceOnlyGate` is the part that actually
+  matters.
+
+Omitting the field entirely means no offline support — the default, and still
+the right choice for most plugins (an admin console, a settings page, anything
+whose whole point is showing live server state has no business working
+offline). There is no third "off" value in the enum on purpose: a field that's
+either a real tier or absent is easier to reason about than one that can also
+hold an explicit "false" meaning the same thing as absent.
+
+There is no per-route declaration — `offline` is a single field at the plugin
+level. Which screens, lists, or records your plugin actually supports offline
+is entirely your own client-side decision, invisible to the manifest — the
+platform only needs to know there's a neutral shell to precache.
+
+`offline` requires no separate permission and grants **no auth exemption** —
+it is purely a caching/rendering declaration, unlike `publicRoutes`. Both
+tiers imply local mutation, so declaring either is sufficient to also use
+`sdk.offline-queue` for writes if your plugin needs them — see "Offline
+writes" below; there's nothing further to declare.
 
 **What the platform does:**
 
@@ -612,19 +633,19 @@ boundary instead comes from the runtime calling `offline.clearAll()` on every
 logout/user-switch: nothing cached ever survives past the session that wrote
 it, which is what makes plugin-only scoping safe on a shared device.
 
-### Offline writes (`sdk.offline-queue`, RFC 0078)
+### Offline writes (`sdk.offline-queue`)
 
 `sdk.offline` above is a **read-only** cache. `@sovereignfs/sdk/offline-queue`
-adds a client-side mutation queue on top of it, so a plugin declaring
-`offline: true` plus the `offline:write` permission can also let a user add,
-edit, or delete data while offline — queuing each write and syncing it back
-once connectivity returns.
+adds a client-side mutation queue on top of it, so a plugin declaring either
+offline tier can also let a user add, edit, or delete data while offline —
+queuing each write and syncing it back once connectivity returns. No separate
+permission is required; declaring `offline` is enough.
 
 ```json
 {
   "routePrefix": "/shopper",
-  "offline": true,
-  "permissions": ["auth:session", "db:readWrite", "offline:write"]
+  "offline": "offline-first",
+  "permissions": ["auth:session", "db:readWrite"]
 }
 ```
 

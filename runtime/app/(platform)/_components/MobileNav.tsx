@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Drawer, Icon, MobileFooter } from '@sovereignfs/ui';
+import { Drawer, Icon, MobileFooter, useOfflineTileState } from '@sovereignfs/ui';
+import { isDeviceOnlyTierAvailable } from '@sovereignfs/sdk/device-client';
 import styles from './MobileNav.module.css';
 import { MobileSearch } from './MobileSearch';
 import { useSidebarHydration } from './sidebar-hydration';
@@ -13,6 +14,48 @@ interface PluginEntry {
   name: string;
   routePrefix: string;
   iconUrl?: string;
+  /** Manifest `offline` tier (research 0012) — drives the drawer item's connectivity-dimmed/capability-restricted states. */
+  offline?: 'offline-first' | 'device-only';
+}
+
+/**
+ * Apps-drawer item, applying the same two offline-tier states as the
+ * Launcher's own `PluginTile` (`plugins/launcher/app/_components/PluginTile.tsx`)
+ * via the shared `useOfflineTileState` hook — research 0012, epic task 2.33.
+ */
+function DrawerGridItem({ plugin, onClose }: { plugin: PluginEntry; onClose: () => void }) {
+  const deviceOnlyAvailable = isDeviceOnlyTierAvailable();
+  const tileState = useOfflineTileState(plugin.offline, deviceOnlyAvailable);
+
+  return (
+    <Link
+      href={plugin.routePrefix}
+      className={[
+        styles.drawerGridItem,
+        tileState === 'connectivity-dimmed' ? styles.drawerGridItemDimmed : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      onClick={onClose}
+    >
+      <span className={styles.drawerGridIcon} aria-hidden="true">
+        {plugin.iconUrl ? (
+          <img src={plugin.iconUrl} alt="" className={styles.drawerGridIconImg} />
+        ) : (
+          monogram(plugin.name)
+        )}
+      </span>
+      <span className={styles.drawerGridName}>{plugin.name}</span>
+      {tileState === 'capability-restricted' && (
+        <span
+          className={styles.drawerGridRestrictedBadge}
+          title="Only available on a phone with secure storage set up"
+        >
+          <Icon name="smartphone" size="sm" aria-hidden />
+        </span>
+      )}
+    </Link>
+  );
 }
 
 function monogram(name: string): string {
@@ -97,20 +140,7 @@ export function MobileNav({
           <ul className={styles.drawerGrid}>
             {plugins.map((plugin) => (
               <li key={plugin.id}>
-                <Link
-                  href={plugin.routePrefix}
-                  className={styles.drawerGridItem}
-                  onClick={() => setOpen(false)}
-                >
-                  <span className={styles.drawerGridIcon} aria-hidden="true">
-                    {plugin.iconUrl ? (
-                      <img src={plugin.iconUrl} alt="" className={styles.drawerGridIconImg} />
-                    ) : (
-                      monogram(plugin.name)
-                    )}
-                  </span>
-                  <span className={styles.drawerGridName}>{plugin.name}</span>
-                </Link>
+                <DrawerGridItem plugin={plugin} onClose={() => setOpen(false)} />
               </li>
             ))}
             {showConsole && (

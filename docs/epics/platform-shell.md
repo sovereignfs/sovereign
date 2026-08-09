@@ -1150,7 +1150,7 @@ no physical device access, so the DevTools-offline-mode checks above are
 verified but the explicit real-device pass per `docs/pwa-real-device-testing.md`
 is still outstanding — flagged in the PR rather than silently skipped.
 
-#### 📋 2.33 — Launcher and shell offline tier states (Research 0012)
+#### ✅ 2.33 — Launcher and shell offline tier states (Research 0012)
 
 **Goal:** Show users which apps are usable right now, distinguishing "offline
 right now" from "not available on this device" — two different causes that must

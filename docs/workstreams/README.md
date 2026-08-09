@@ -129,28 +129,30 @@ Workstreams are internal planning documents and are not published (see
 
 ## Index
 
-| Workstream                                            | Goal                                                                                                    | Status         | RFCs                            |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------- |
-| [0001](0001-standalone-plugin-apps.md)                | A single plugin installable as its own PWA and native mobile app                                        | 📋 Planned     | 0080, 0081, 0082                |
-| [0002](0002-native-mobile-app-release.md)             | The whole-instance Sovereign app published to the App and Play Stores                                   | 📋 Planned     | 0058, 0013, 0038                |
-| [0003](0003-device-bridge-across-surfaces.md)         | One device-capability contract serving web, Tauri, and Capacitor                                        | ✅ Done        | 0083, 0080                      |
-| [0004](0004-ui-backup-restore.md)                     | UI-driven, async backup & restore for owners/admins and regular users                                   | 📋 Planned     | 0084                            |
-| [0005](0005-native-push-relay.md)                     | Native mobile push notifications via an end-to-end-encrypted relay                                      | ✅ Done        | 0087                            |
-| [0006](0006-rfc-0071-incident-followups.md)           | Close the 4 still-open RFC 0071 incident follow-ups                                                     | 📋 Planned     | 0071                            |
-| [0007](0007-mobile-header-footer-extraction.md)       | `MobileHeader`/`MobileFooter` as Design System components, extracted from the runtime shell             | 📋 Planned     | 0088 (builds on 0013, 0075)     |
-| [0008](0008-offline-first-architecture.md)            | Offline-first architecture — cold-start offline, tiered plugin offline support, encrypted local storage | 📋 Planned     | none yet — legs 2–5 author them |
-| [0009](0009-database-dialect-and-libsql-migration.md) | Single operator-chosen DB dialect platform-wide; SQLite moves to a mandatory `sqld` container           | ⏳ In Progress | 0091 (Accepted)                 |
-| [0010](0010-desktop-push-relay.md)                    | Extends workstream 0005's relay/schema to `sovereign-desktop` — macOS APNs, Windows WNS (raw-only)      | ✅ Done        | 0087 (addendum)                 |
+| Workstream                                            | Goal                                                                                                    | Status         | RFCs                                                            |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------- |
+| [0001](0001-standalone-plugin-apps.md)                | A single plugin installable as its own PWA and native mobile app                                        | 📋 Planned     | 0080, 0081, 0082                                                |
+| [0002](0002-native-mobile-app-release.md)             | The whole-instance Sovereign app published to the App and Play Stores                                   | 📋 Planned     | 0058, 0013, 0038                                                |
+| [0003](0003-device-bridge-across-surfaces.md)         | One device-capability contract serving web, Tauri, and Capacitor                                        | ✅ Done        | 0083, 0080                                                      |
+| [0004](0004-ui-backup-restore.md)                     | UI-driven, async backup & restore for owners/admins and regular users                                   | 📋 Planned     | 0084                                                            |
+| [0005](0005-native-push-relay.md)                     | Native mobile push notifications via an end-to-end-encrypted relay                                      | ✅ Done        | 0087                                                            |
+| [0006](0006-rfc-0071-incident-followups.md)           | Close the 4 still-open RFC 0071 incident follow-ups                                                     | 📋 Planned     | 0071                                                            |
+| [0007](0007-mobile-header-footer-extraction.md)       | `MobileHeader`/`MobileFooter` as Design System components, extracted from the runtime shell             | 📋 Planned     | 0088 (builds on 0013, 0075)                                     |
+| [0008](0008-offline-first-architecture.md)            | Offline-first architecture — cold-start offline, tiered plugin offline support, encrypted local storage | ⏳ In Progress | none — governed by research 0012 (research-as-design exception) |
+| [0009](0009-database-dialect-and-libsql-migration.md) | Single operator-chosen DB dialect platform-wide; SQLite moves to a mandatory `sqld` container           | ⏳ In Progress | 0091 (Accepted)                                                 |
+| [0010](0010-desktop-push-relay.md)                    | Extends workstream 0005's relay/schema to `sovereign-desktop` — macOS APNs, Windows WNS (raw-only)      | ✅ Done        | 0087 (addendum)                                                 |
 
 Workstreams 0001 and 0002 share epic task 20.10 (the WKWebView offline spike) —
 run it once and let both consume the finding. Otherwise they are independent, and
 0002 is the shorter path to a shipped native app. Workstreams 0004, 0006, and
 0007 are each independent of the other workstreams.
 
-Workstream 0008 starts independently, but its leg 3 gate resolves whether
-`device-only` plugins can use the same thin-shell delivery model as everything
-else — which reopens RFC 0082 §4 and therefore feeds workstream 0001. Run 0008's
-design legs before committing 0001's offline scope.
+Workstream 0008 is independent of workstream 0001. Leg 3's original gate — whether
+`device-only` plugins need a different thin-shell delivery model — was retired
+during execution: workstream 0003's leg 4 outcome already answered it empirically
+(native storage is reachable from the remote-origin page on both iOS and Android),
+so leg 3 shipped as a verification item folded into epic task 20.10 rather than
+a design fork. See workstream 0008's leg 3 detail for the full record.
 
 Workstream 0009 is independent of the others. Its leg 2 gate produced
 [RFC 0091](../rfcs/0091-libsql-sqld-driver.md), accepted via PR #364 — leg 3

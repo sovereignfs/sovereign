@@ -40,21 +40,27 @@ back-compat period, since only one production instance exists today.
 
 ## Definition of done
 
-- [ ] `database.dialect` no longer exists in the manifest schema; no plugin
-      can diverge from the platform's dialect.
-- [ ] An RFC exists resolving: (a) how the async libSQL client interacts with
+- [x] `database.dialect` no longer exists in the manifest schema; no plugin
+      can diverge from the platform's dialect. (Leg 1, PR #353.)
+- [x] An RFC exists resolving: (a) how the async libSQL client interacts with
       `packages/db`'s dialect-agnostic async contract, (b) how RFC 0071
       at-rest encryption maps onto `sqld`, (c) the concrete driver shape for
-      `packages/db/src/client.ts` and `plugin-client.ts`.
-- [ ] `sqld` runs as a service in `docker-compose.yml` and
-      `docker-compose.prod.yml`.
-- [ ] `packages/db`'s SQLite path talks to `sqld` instead of opening
+      `packages/db/src/client.ts` and `plugin-client.ts`. (Leg 2, RFC 0091,
+      PR #364.)
+- [x] `sqld` runs as a service, reachable by `runtime`/`auth` — delivered as
+      a separate `docker-compose.sqld.yml` overlay (matching the existing
+      `docker-compose.postgres.yml` pattern) rather than embedded in the base
+      compose files, since the encryption carve-out keeps both code paths
+      live in the same process regardless. (Leg 2/3, PR #364, #367.)
+- [x] `packages/db`'s SQLite path talks to `sqld` instead of opening
       `better-sqlite3` files directly, for the platform DB, `apps/auth`'s DB,
-      and every isolated plugin DB.
+      and every isolated plugin DB — except where the RFC 0091 encryption
+      carve-out keeps a database on plain-file SQLite+SQLCipher. (Leg 3,
+      PR #367.)
 - [ ] The single production instance's existing SQLite files are migrated to
       the `sqld`-backed setup via a documented, rehearsed, backup-first
-      runbook, verified against real data.
-- [ ] Research 0003 is marked superseded for its SQLite recommendation
+      runbook, verified against real data. (Leg 4 — not started.)
+- [x] Research 0003 is marked superseded for its SQLite recommendation
       (done — see the notice at the top of that doc).
 
 ## Decisions locked
@@ -78,11 +84,13 @@ back-compat period, since only one production instance exists today.
 
 ## Prerequisites
 
-| Prerequisite                                                 | Owner    | Status                                  |
-| ------------------------------------------------------------ | -------- | --------------------------------------- |
-| None for leg 1 — self-contained, subtractive manifest change | Platform | ✅ Done — merged (PR #353)              |
-| None for leg 2 — independent spike                           | Platform | ✅ Done — merged (PR #364)              |
-| Leg 2's RFC accepted                                         | kasunben | ✅ Done — approved via merge of PR #364 |
+| Prerequisite                                                                                | Owner    | Status                                  |
+| ------------------------------------------------------------------------------------------- | -------- | --------------------------------------- |
+| None for leg 1 — self-contained, subtractive manifest change                                | Platform | ✅ Done — merged (PR #353)              |
+| None for leg 2 — independent spike                                                          | Platform | ✅ Done — merged (PR #364)              |
+| Leg 2's RFC accepted                                                                        | kasunben | ✅ Done — approved via merge of PR #364 |
+| Leg 3 merged                                                                                | Platform | ✅ Done — merged (PR #367)              |
+| Leg 3 run in production long enough to be trusted, per leg 4's own "do not proceed if" gate | kasunben | ⏳ Pending                              |
 
 ## Legs
 
@@ -260,6 +268,7 @@ stop before leg 3 rather than shipping an encryption regression.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                        |
-| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft from a design session with kasunben. Four legs, locking mandatory/staged libSQL adoption and superseding Research 0003's opt-in recommendation. |
+| Version | Date        | Change                                                                                                                                                                         |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | August 2026 | Initial draft from a design session with kasunben. Four legs, locking mandatory/staged libSQL adoption and superseding Research 0003's opt-in recommendation.                  |
+| 0.2     | August 2026 | Legs 1–3 complete (PR #353, #364, #367). Leg 3 delivers the `sqld` driver swap under the RFC 0091 encryption carve-out. Only leg 4 (one-time production data cutover) remains. |

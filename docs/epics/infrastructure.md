@@ -692,7 +692,7 @@ strategy), RFC 0071 (SQLite at-rest encryption).
 
 ---
 
-#### 📋 0.20 — `libSQL`/`sqld` container spike (Research 0003, workstream 0009 leg 2)
+#### ✅ 0.20 — `libSQL`/`sqld` container spike (Research 0003, workstream 0009 leg 2)
 
 **Goal:** Stand up `sqld` (libSQL's server) as its own container and prototype
 `packages/db` talking to it, to answer the two questions Research 0003 left

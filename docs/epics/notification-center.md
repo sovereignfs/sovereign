@@ -289,12 +289,34 @@ instead of the current logger-only trail.
 >   comments needed fixing. **Not done:** the `sovereign-infra`/`openfs-infra`
 >   deployment-playbook coordination RFC 0087 also calls for — those repos
 >   aren't part of this workbench, so that piece is still open.
-> - **📋 Leg 3 — fan-out extension.** Not started; leg 2's real contract now
->   exists to call (though the delivery branch itself is mock-testable
->   against leg 1's fixed schema without leg 2 being live).
-> - **20.5 (`sovereign-mobile`)** — not started; can begin once this leg's
->   endpoint contract (now merged) is stable, per the workstream's
->   cross-repo parallelism note.
+> - **✅ Leg 3 — fan-out extension.** `runtime/src/push.ts`'s `fanOutPushToUser`
+>   gained a second delivery branch, additive to the existing Web Push one —
+>   both feed the same `Promise.allSettled` batch, verified with a dedicated
+>   test that makes one channel fail and the other succeed in the same call,
+>   per the leg's own isolation gate. Required restructuring the function's
+>   control flow: the pre-existing "no VAPID keys → return early" check would
+>   have incorrectly skipped native delivery too, so category-mute (which
+>   genuinely applies to both channels) is now the only whole-function early
+>   return, and VAPID-unconfigured only skips the Web Push branch. New:
+>   `runtime/src/push-encryption.ts` (ECDH P-256 + HKDF-SHA256 + AES-256-GCM,
+>   `node:crypto` only) — the exact wire format (65-byte uncompressed
+>   ephemeral public key ‖ 12-byte IV ‖ 16-byte auth tag ‖ ciphertext) was
+>   verified by encrypting with one generated keypair and decrypting with
+>   only the recipient's own private key, the same way a real device would,
+>   not just round-tripped inside one test. The format is deliberately the
+>   same 65-byte SEC1/X9.63 point both iOS `CryptoKit` and Android's
+>   `ECPublicKey` produce/consume natively — leg 4 needs no conversion.
+>   `runtime/src/relay.ts` gained `getInstanceKey()` — enrolls with the relay
+>   once (`POST /v1/enroll`) and caches the result in `platform_settings`,
+>   re-enrolling automatically if the configured relay URL changes. A
+>   native device silently has no delivery attempted when the user has none
+>   registered (unlike Web Push's explicit "no subscriptions" skip — logging
+>   that for every user on every push would be pure noise, since most users
+>   have no native device registered at all).
+> - **20.5 (`sovereign-mobile`)** — not started; this leg's endpoint contract
+>   is now not just stable but actually exercised end-to-end (minus real
+>   device/relay credentials), per the workstream's cross-repo parallelism
+>   note.
 
 **Goal:** Let a self-hosted instance deliver a notification to a user's
 `sovereign-mobile` native app even when it's fully closed, without any

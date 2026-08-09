@@ -1,25 +1,37 @@
 /**
- * Web Push fan-out helper (RFC 0016).
+ * Push fan-out helper. Two independent delivery channels, both feeding the
+ * same `Promise.allSettled` batch so one channel's failure can never affect
+ * the other's delivery (RFC 0087, workstream 0005 leg 3's own gate):
  *
- * Sends a VAPID-signed push notification to every subscribed device for a
- * given user. Silently no-ops when VAPID keys are absent so deployments
- * without push configured still work — the in-app bell is the fallback.
- *
- * Stale subscriptions (HTTP 410 Gone) are pruned automatically.
+ * - **Web Push** (RFC 0016) — VAPID-signed, sent directly to the browser's
+ *   push service. Silently no-ops when VAPID keys are absent so deployments
+ *   without push configured still work — the in-app bell is the fallback.
+ *   Stale subscriptions (HTTP 410/404) are pruned automatically.
+ * - **Native mobile push** (RFC 0087) — end-to-end encrypted
+ *   (`./push-encryption.ts`) and forwarded through `apps/relay`, which never
+ *   sees plaintext. Silently no-ops per-device when the relay enrollment or
+ *   send fails; a relay-reported invalid device token is pruned the same
+ *   way a dead Web Push subscription is.
  */
 import { randomUUID } from 'node:crypto';
 import webpush from 'web-push';
 import {
+  deletePushDeviceTokenByToken,
   deletePushSubscription,
   getNotificationPrefs,
+  getPushDeviceTokensForUser,
   getPushSubscriptionsByUsers,
   getPushSubscriptionsForUser,
   recordPushDelivery,
+  touchPushDeviceToken,
   type PushDeliveryStatus,
+  type PushDeviceTokenRow,
 } from '@sovereignfs/db';
 import { logActivity } from './activity';
 import { getPlatformDb } from './db';
 import { logger } from './logger';
+import { encryptPushPayload } from './push-encryption';
+import { getInstanceKey } from './relay';
 
 export interface PushPayload {
   title: string;
@@ -95,19 +107,9 @@ export async function fanOutPushToUser(userId: string, payload: PushPayload): Pr
   // indistinguishable from a delivery failure.
   const pdb = await getPlatformDb();
 
-  if (!pushEnabled()) {
-    logger.info('push: skipped — VAPID keys not configured', { userId });
-    await recordDelivery(pdb, {
-      userId,
-      status: 'skipped',
-      errorCode: 'VAPID_NOT_CONFIGURED',
-      category: payload.category ?? null,
-      source: payload.source ?? null,
-    });
-    return;
-  }
-
-  // Skip if the user muted this category.
+  // Skip if the user muted this category — applies to every channel equally,
+  // checked once before any channel-specific logic (VAPID configuration,
+  // below, is a Web Push-only concern and must not gate native delivery).
   const prefs = await getNotificationPrefs(pdb, userId);
   if (payload.category && prefs.mutedCategories.includes(payload.category)) {
     logger.info('push: skipped — category muted by user', {
@@ -124,41 +126,74 @@ export async function fanOutPushToUser(userId: string, payload: PushPayload): Pr
     return;
   }
 
-  const subs = await getPushSubscriptionsForUser(pdb, userId);
-  if (subs.length === 0) {
-    logger.info('push: skipped — user has no push subscriptions (no device ever enabled push)', {
-      userId,
-    });
+  const resolved = resolvePayload(payload);
+  const sendPromises: Promise<'sent' | 'pruned' | 'failed'>[] = [];
+  const pushServices = new Set<string>();
+
+  // Web Push branch (RFC 0016) — unchanged in substance from before this
+  // native branch existed, just no longer an early return for the whole
+  // function (see the module doc comment above `fanOutPushToUser`).
+  if (!pushEnabled()) {
+    logger.info('push: skipped — VAPID keys not configured', { userId });
     await recordDelivery(pdb, {
       userId,
       status: 'skipped',
-      errorCode: 'NO_SUBSCRIPTIONS',
+      errorCode: 'VAPID_NOT_CONFIGURED',
       category: payload.category ?? null,
       source: payload.source ?? null,
     });
-    return;
+  } else {
+    const subs = await getPushSubscriptionsForUser(pdb, userId);
+    if (subs.length === 0) {
+      logger.info('push: skipped — user has no push subscriptions (no device ever enabled push)', {
+        userId,
+      });
+      await recordDelivery(pdb, {
+        userId,
+        status: 'skipped',
+        errorCode: 'NO_SUBSCRIPTIONS',
+        category: payload.category ?? null,
+        source: payload.source ?? null,
+      });
+    } else {
+      applyVapid();
+      for (const sub of subs) pushServices.add(safeHost(sub.endpoint));
+      sendPromises.push(
+        ...subs.map((sub) =>
+          sendOne(
+            pdb,
+            sub.userId,
+            sub.endpoint,
+            { p256dh: sub.p256dh, auth: sub.auth },
+            resolved,
+            payload.category,
+            payload.source,
+          ),
+        ),
+      );
+    }
   }
 
-  applyVapid();
-  const resolved = resolvePayload(payload);
-  const results = await Promise.allSettled(
-    subs.map((sub) =>
-      sendOne(
-        pdb,
-        sub.userId,
-        sub.endpoint,
-        { p256dh: sub.p256dh, auth: sub.auth },
-        resolved,
-        payload.category,
-        payload.source,
+  // Native mobile push branch (RFC 0087, workstream 0005 leg 3) — silent
+  // when the user has no registered device (the overwhelmingly common case;
+  // unlike the Web Push "no subscriptions" case above, this is not worth a
+  // push_delivery_log row for every user on every notification).
+  const deviceTokens = await getPushDeviceTokensForUser(pdb, userId);
+  if (deviceTokens.length > 0) {
+    for (const token of deviceTokens) pushServices.add(safeHost(token.relayUrl));
+    sendPromises.push(
+      ...deviceTokens.map((token) =>
+        sendOneNative(pdb, token, resolved, payload.category, payload.source),
       ),
-    ),
-  );
+    );
+  }
+
+  const results = await Promise.allSettled(sendPromises);
   logger.info('push: fan-out complete', {
     userId,
-    devices: subs.length,
+    devices: sendPromises.length,
     delivered: results.filter((r) => r.status === 'fulfilled' && r.value === 'sent').length,
-    pushServices: [...new Set(subs.map((s) => safeHost(s.endpoint)))],
+    pushServices: [...pushServices],
   });
 }
 
@@ -264,6 +299,138 @@ async function sendOne(
       category: category ?? null,
       source: source ?? null,
       pushService: safeHost(endpoint),
+    });
+    return 'failed';
+  }
+}
+
+interface RelayPushResponse {
+  result?: 'sent' | 'invalid_token' | 'failed';
+}
+
+/**
+ * Deliver one notification to one registered native device via its stored
+ * relay (RFC 0087). `token.relayUrl` is the relay this specific device
+ * registered against — read from the row, never re-resolved from current
+ * config (see `packages/db`'s device-token schema comment: a relay-URL
+ * change must not silently break already-registered devices).
+ */
+async function sendOneNative(
+  pdb: Awaited<ReturnType<typeof getPlatformDb>>,
+  token: PushDeviceTokenRow,
+  payload: Omit<PushPayload, 'source'>,
+  category?: string,
+  source?: string,
+): Promise<'sent' | 'pruned' | 'failed'> {
+  const pushService = safeHost(token.relayUrl);
+
+  const instanceKey = await getInstanceKey(pdb, token.relayUrl);
+  if (!instanceKey) {
+    await recordDelivery(pdb, {
+      userId: token.userId,
+      status: 'failed',
+      errorCode: 'RELAY_ENROLLMENT_FAILED',
+      category: category ?? null,
+      source: source ?? null,
+      pushService,
+    });
+    return 'failed';
+  }
+
+  let encryptedPayload: string;
+  try {
+    encryptedPayload = encryptPushPayload(token.publicKey, payload);
+  } catch (err) {
+    logger.warn('push: failed to encrypt native payload', {
+      pushService,
+      err: err instanceof Error ? err.message : String(err),
+    });
+    await recordDelivery(pdb, {
+      userId: token.userId,
+      status: 'failed',
+      errorCode: 'ENCRYPTION_FAILED',
+      category: category ?? null,
+      source: source ?? null,
+      pushService,
+    });
+    return 'failed';
+  }
+
+  try {
+    const res = await fetch(`${token.relayUrl}/v1/push`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        deviceToken: token.deviceToken,
+        platform: token.platform,
+        encryptedPayload,
+        instanceKey,
+      }),
+    });
+
+    if (!res.ok) {
+      logger.warn('push: relay request failed', { statusCode: res.status, pushService });
+      await recordDelivery(pdb, {
+        userId: token.userId,
+        status: 'failed',
+        errorCode: String(res.status),
+        category: category ?? null,
+        source: source ?? null,
+        pushService,
+      });
+      return 'failed';
+    }
+
+    const body = (await res.json()) as RelayPushResponse;
+
+    if (body.result === 'invalid_token') {
+      await deletePushDeviceTokenByToken(pdb, token.deviceToken).catch(() => undefined);
+      logger.info('push: pruned dead native device token', { pushService });
+      await recordDelivery(pdb, {
+        userId: token.userId,
+        status: 'pruned',
+        errorCode: 'invalid_token',
+        category: category ?? null,
+        source: source ?? null,
+        pushService,
+      });
+      return 'pruned';
+    }
+
+    if (body.result === 'sent') {
+      await touchPushDeviceToken(pdb, token.id).catch(() => undefined);
+      await recordDelivery(pdb, {
+        userId: token.userId,
+        status: 'sent',
+        category: category ?? null,
+        source: source ?? null,
+        pushService,
+      });
+      return 'sent';
+    }
+
+    logger.warn('push: relay reported a failed native send', { pushService });
+    await recordDelivery(pdb, {
+      userId: token.userId,
+      status: 'failed',
+      errorCode: body.result ?? 'unknown_result',
+      category: category ?? null,
+      source: source ?? null,
+      pushService,
+    });
+    return 'failed';
+  } catch (err) {
+    logger.warn('push: relay request errored', {
+      pushService,
+      err: err instanceof Error ? err.message : String(err),
+    });
+    await recordDelivery(pdb, {
+      userId: token.userId,
+      status: 'failed',
+      errorCode: errorMessage(err),
+      category: category ?? null,
+      source: source ?? null,
+      pushService,
     });
     return 'failed';
   }

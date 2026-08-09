@@ -12,34 +12,47 @@ vi.mock('web-push', () => ({
 
 const {
   deletePushSubscription,
+  deletePushDeviceTokenByToken,
   getNotificationPrefs,
+  getPushDeviceTokensForUser,
   getPushSubscriptionsForUser,
+  touchPushDeviceToken,
   recordPushDelivery,
   logActivity,
+  getInstanceKey,
+  encryptPushPayload,
   warn,
   info,
 } = vi.hoisted(() => ({
   deletePushSubscription: vi.fn(async () => undefined),
+  deletePushDeviceTokenByToken: vi.fn(async () => undefined),
   getNotificationPrefs: vi.fn(
     async (): Promise<{ mutedCategories: string[]; pollIntervalSecs: number }> => ({
       mutedCategories: [],
       pollIntervalSecs: 30,
     }),
   ),
+  getPushDeviceTokensForUser: vi.fn(async () => [] as unknown[]),
   getPushSubscriptionsForUser: vi.fn(async () => [
     { userId: 'u1', endpoint: 'https://web.push.apple.com/QOnjBEyWiC6H', p256dh: 'k', auth: 'a' },
   ]),
+  touchPushDeviceToken: vi.fn(async () => undefined),
   recordPushDelivery: vi.fn(async () => undefined),
   logActivity: vi.fn(async () => undefined),
+  getInstanceKey: vi.fn(async (): Promise<string | null> => 'test-instance-key'),
+  encryptPushPayload: vi.fn(() => 'encrypted-blob'),
   warn: vi.fn<(msg: string, meta?: Record<string, unknown>) => void>(),
   info: vi.fn<(msg: string, meta?: Record<string, unknown>) => void>(),
 }));
 
 vi.mock('@sovereignfs/db', () => ({
   deletePushSubscription,
+  deletePushDeviceTokenByToken,
   getNotificationPrefs,
+  getPushDeviceTokensForUser,
   getPushSubscriptionsForUser,
   getPushSubscriptionsByUsers: vi.fn(async () => []),
+  touchPushDeviceToken,
   recordPushDelivery,
 }));
 
@@ -49,6 +62,14 @@ vi.mock('../db', () => ({
 
 vi.mock('../activity', () => ({
   logActivity,
+}));
+
+vi.mock('../relay', () => ({
+  getInstanceKey,
+}));
+
+vi.mock('../push-encryption', () => ({
+  encryptPushPayload,
 }));
 
 vi.mock('../logger', () => ({
@@ -64,6 +85,20 @@ import webpush from 'web-push';
 import { fanOutPushToUser, resetSubjectWarning } from '../push';
 
 const sendNotification = vi.mocked(webpush.sendNotification);
+
+function nativeToken(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 'dt1',
+    userId: 'u1',
+    platform: 'ios',
+    deviceToken: 'device-token-abc',
+    publicKey: 'base64-public-key',
+    relayUrl: 'https://relay.sovereign.openfs.io',
+    createdAt: 0,
+    lastUsedAt: null,
+    ...overrides,
+  };
+}
 
 function webPushError(statusCode: number, body?: string) {
   return Object.assign(new Error(`push failed with ${statusCode}`), { statusCode, body });
@@ -318,6 +353,196 @@ describe('fanOutPushToUser', () => {
       await fanOutPushToUser('u1', { title: 'T', source: 'fs.sovereign.tasks' });
       const [, body] = sendNotification.mock.calls[0] ?? [];
       expect(JSON.parse(body as string)).not.toHaveProperty('source');
+    });
+  });
+
+  describe('native mobile push branch (RFC 0087, workstream 0005 leg 3)', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('is completely silent when the user has no registered device tokens', async () => {
+      // Default mock already returns [] — explicit here for clarity.
+      getPushDeviceTokensForUser.mockResolvedValueOnce([]);
+      sendNotification.mockResolvedValueOnce({} as never);
+      await fanOutPushToUser('u1', { title: 'T' });
+      expect(getInstanceKey).not.toHaveBeenCalled();
+      expect(encryptPushPayload).not.toHaveBeenCalled();
+    });
+
+    it('encrypts and forwards to the relay, then records sent and touches the token', async () => {
+      getPushDeviceTokensForUser.mockResolvedValueOnce([nativeToken()]);
+      sendNotification.mockResolvedValueOnce({} as never);
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: 'sent' }),
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      await fanOutPushToUser('u1', { title: 'T', category: 'reminders' });
+
+      expect(encryptPushPayload).toHaveBeenCalledWith('base64-public-key', expect.anything());
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://relay.sovereign.openfs.io/v1/push',
+        expect.objectContaining({ method: 'POST' }),
+      );
+      const [, init] = fetchMock.mock.calls[0] ?? [];
+      const sentBody = JSON.parse((init as RequestInit).body as string);
+      expect(sentBody).toEqual({
+        deviceToken: 'device-token-abc',
+        platform: 'ios',
+        encryptedPayload: 'encrypted-blob',
+        instanceKey: 'test-instance-key',
+      });
+      expect(touchPushDeviceToken).toHaveBeenCalledWith(expect.anything(), 'dt1');
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          userId: 'u1',
+          status: 'sent',
+          category: 'reminders',
+          pushService: 'relay.sovereign.openfs.io',
+        }),
+      );
+    });
+
+    it('prunes the device token when the relay reports invalid_token', async () => {
+      getPushDeviceTokensForUser.mockResolvedValueOnce([nativeToken()]);
+      sendNotification.mockResolvedValueOnce({} as never);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({ ok: true, json: async () => ({ result: 'invalid_token' }) }),
+      );
+
+      await fanOutPushToUser('u1', { title: 'T' });
+
+      expect(deletePushDeviceTokenByToken).toHaveBeenCalledWith(
+        expect.anything(),
+        'device-token-abc',
+      );
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: 'pruned', errorCode: 'invalid_token' }),
+      );
+    });
+
+    it('records failed, without pruning, when the relay responds with a non-2xx status', async () => {
+      getPushDeviceTokensForUser.mockResolvedValueOnce([nativeToken()]);
+      sendNotification.mockResolvedValueOnce({} as never);
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 503 }));
+
+      await fanOutPushToUser('u1', { title: 'T' });
+
+      expect(deletePushDeviceTokenByToken).not.toHaveBeenCalled();
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: 'failed', errorCode: '503' }),
+      );
+    });
+
+    it('records failed when enrollment fails, without attempting to encrypt or send', async () => {
+      getPushDeviceTokensForUser.mockResolvedValueOnce([nativeToken()]);
+      getInstanceKey.mockResolvedValueOnce(null);
+      sendNotification.mockResolvedValueOnce({} as never);
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+
+      await fanOutPushToUser('u1', { title: 'T' });
+
+      expect(encryptPushPayload).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: 'failed', errorCode: 'RELAY_ENROLLMENT_FAILED' }),
+      );
+    });
+
+    it('records failed when encryption itself throws (malformed stored public key)', async () => {
+      getPushDeviceTokensForUser.mockResolvedValueOnce([nativeToken()]);
+      encryptPushPayload.mockImplementationOnce(() => {
+        throw new Error('bad key');
+      });
+      sendNotification.mockResolvedValueOnce({} as never);
+      vi.stubGlobal('fetch', vi.fn());
+
+      await fanOutPushToUser('u1', { title: 'T' });
+
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: 'failed', errorCode: 'ENCRYPTION_FAILED' }),
+      );
+    });
+
+    it('records failed when the relay request itself throws (network error)', async () => {
+      getPushDeviceTokensForUser.mockResolvedValueOnce([nativeToken()]);
+      sendNotification.mockResolvedValueOnce({} as never);
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')));
+
+      await fanOutPushToUser('u1', { title: 'T' });
+
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: 'failed', errorCode: 'ECONNREFUSED' }),
+      );
+    });
+
+    it('delivers to both Web Push and native channels independently — one failing does not affect the other', async () => {
+      getPushDeviceTokensForUser.mockResolvedValueOnce([nativeToken()]);
+      // Web Push fails...
+      sendNotification.mockRejectedValueOnce(webPushError(403, 'BadJwtToken'));
+      // ...native succeeds.
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({ ok: true, json: async () => ({ result: 'sent' }) }),
+      );
+
+      await fanOutPushToUser('u1', { title: 'T' });
+
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: 'failed', pushService: 'web.push.apple.com' }),
+      );
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: 'sent', pushService: 'relay.sovereign.openfs.io' }),
+      );
+
+      const summary = info.mock.calls.find(([msg]) => msg.includes('fan-out complete'));
+      expect(summary?.[1]?.devices).toBe(2);
+      expect(summary?.[1]?.delivered).toBe(1);
+      expect(summary?.[1]?.pushServices).toEqual(
+        expect.arrayContaining(['web.push.apple.com', 'relay.sovereign.openfs.io']),
+      );
+    });
+
+    it('delivers via native push even when VAPID is not configured', async () => {
+      delete process.env.VAPID_PUBLIC_KEY;
+      getPushDeviceTokensForUser.mockResolvedValueOnce([nativeToken()]);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({ ok: true, json: async () => ({ result: 'sent' }) }),
+      );
+
+      await fanOutPushToUser('u1', { title: 'T' });
+
+      expect(sendNotification).not.toHaveBeenCalled();
+      expect(recordPushDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: 'sent', pushService: 'relay.sovereign.openfs.io' }),
+      );
+    });
+
+    it('is skipped entirely (like Web Push) when the category is muted', async () => {
+      getPushDeviceTokensForUser.mockResolvedValueOnce([nativeToken()]);
+      getNotificationPrefs.mockResolvedValueOnce({
+        mutedCategories: ['info'],
+        pollIntervalSecs: 30,
+      });
+      vi.stubGlobal('fetch', vi.fn());
+
+      await fanOutPushToUser('u1', { title: 'T', category: 'info' });
+
+      expect(getPushDeviceTokensForUser).not.toHaveBeenCalled();
     });
   });
 });

@@ -17,6 +17,9 @@ const PG_URL = process.env.TEST_DATABASE_URL;
 describe.skipIf(!PG_URL)('auth server on Postgres', () => {
   beforeAll(async () => {
     process.env.AUTH_DATABASE_URL = PG_URL;
+    // Matches the deployment shape this test represents — DB_DIALECT must
+    // agree or assertAuthDialectMatchesPlatform() refuses to open anything.
+    process.env.DB_DIALECT = 'postgres';
     process.env.AUTH_SECRET ??= 'test-secret-test-secret-test-secret';
     process.env.SOVEREIGN_ADMIN_KEY ??= 'test-admin-key';
     process.env.AUTH_INVITE_ONLY = 'false';

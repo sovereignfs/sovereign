@@ -76,6 +76,13 @@ interface ApnsErrorBody {
  * what lets `sovereign-mobile`'s iOS Notification Service Extension (leg 4)
  * intercept and decrypt it before the OS shows a banner.
  *
+ * `topic` is the `apns-topic` header value — the app identity's bundle ID.
+ * Passed explicitly rather than read from `config.bundleId` internally so
+ * this function has no notion of "which platform": iOS and macOS share one
+ * Apple Developer Team and JWT credential but use distinct bundle IDs, and
+ * the caller (the push route) is what knows which platform a given device
+ * token belongs to — see RFC 0087's "Desktop native push" addendum.
+ *
  * `originOverride` exists solely so tests can point this at a real local
  * `node:http2` server rather than mocking the transport — see
  * `__tests__/apns.test.ts`. Never set outside tests; production always
@@ -84,6 +91,7 @@ interface ApnsErrorBody {
 export function sendApnsPush(
   deviceToken: string,
   encryptedPayload: string,
+  topic: string,
   originOverride?: string,
 ): Promise<ApnsSendResult> {
   const config = apnsConfig();
@@ -118,7 +126,7 @@ export function sendApnsPush(
       ':method': 'POST',
       ':path': `/3/device/${deviceToken}`,
       authorization: `bearer ${apnsJwt(config)}`,
-      'apns-topic': config.bundleId,
+      'apns-topic': topic,
       'apns-push-type': 'alert',
       'apns-priority': '10',
       'content-type': 'application/json',

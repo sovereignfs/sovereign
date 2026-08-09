@@ -999,6 +999,56 @@ key strictness cannot be chosen before recovery is settled.
 
 ---
 
+#### ✅ 1.23 — `apps/auth` dialect-consistency check
+
+**Goal:** Close a real production gap found while investigating a data
+migration (task 8.25): `apps/auth` resolves its own dialect entirely
+independently of `DB_DIALECT` — purely from `AUTH_DATABASE_URL`'s URL scheme,
+since it deliberately doesn't depend on `packages/db`. An instance whose
+platform core had already been migrated to Postgres (`DB_DIALECT=postgres`)
+still had `AUTH_DATABASE_URL` unset, silently leaving auth on its SQLite
+default while everything else moved — invisible because nothing compared the
+two. The documented model ("auth, platform, and every plugin agree on one
+dialect") has no legitimate case for divergence.
+
+**Delivered:**
+
+- `assertAuthDialectMatchesPlatform()` (`apps/auth/src/db.ts`) — resolves the
+  platform's expected dialect the same way `packages/db/src/dialect.ts`'s
+  `resolveDialect()` does (`DB_DIALECT` authoritative when set, else inferred
+  from `DATABASE_URL`'s scheme, defaulting to SQLite — duplicated
+  deliberately, matching every other piece of dialect-resolution logic this
+  file already duplicates), compares it against `AUTH_DATABASE_URL`'s own
+  inferred dialect, and throws (not warns) on a mismatch. Skipped for
+  `:memory:` — no real platform to compare against in that context.
+- Called from both `getAuthDb()` and `provisionAuthSqldNamespace()` — the
+  latter runs first in the real startup sequence (`runAuthMigrations()`), so
+  the check fires before an sqld namespace could be provisioned for a
+  misconfigured instance, not after.
+- `apps/auth/src/__tests__/db.pg.test.ts` updated to set `DB_DIALECT=postgres`
+  alongside `AUTH_DATABASE_URL`, matching the real deployment shape it
+  represents (Docker's `docker-compose.postgres.yml` overlay already sets
+  both; this test previously only simulated the latter).
+- Unit tests in `apps/auth/src/__tests__/db.test.ts` covering both directions
+  of the mismatch, both defaults-agree cases (`DB_DIALECT` unset, inferred
+  from `DATABASE_URL`), and the `:memory:` carve-out.
+
+**Dependencies:** None — a standalone fix, surfaced by task 8.25 but not
+gated on it.
+
+**SRS reference:** none — a consistency-check bug fix, not a new capability.
+
+**Review checklist:**
+
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`,
+  `TEST_DATABASE_URL=... pnpm test` all pass.
+- `DB_DIALECT=postgres` with `AUTH_DATABASE_URL` left unset throws a clear,
+  actionable error instead of silently opening SQLite.
+- The zero-config default (neither `DB_DIALECT` nor `AUTH_DATABASE_URL` set)
+  is unaffected — both resolve to SQLite, no throw.
+
+---
+
 ## Related RFCs
 
 - [RFC 0012 — Passkeys & TOTP MFA](../rfcs/0012-passkeys-and-mfa.md)

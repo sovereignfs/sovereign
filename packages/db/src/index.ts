@@ -1,6 +1,14 @@
 export { createClient, findWorkspaceRoot, resolveSqlitePath, type DbConfig } from './client';
 export { platformBootstrapStatements } from './bootstrap';
 export {
+  createSqldClient,
+  dropSqldNamespace,
+  pluginNamespaceName,
+  provisionSqldNamespace,
+  sqldAdminUrl,
+  sqldUrl,
+} from './sqld';
+export {
   DEFAULT_ROOT_PLUGIN_ID,
   DEFAULT_TENANT_ID,
   addUserGroupMember,

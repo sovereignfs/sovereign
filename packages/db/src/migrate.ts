@@ -3,10 +3,25 @@ import { join } from 'node:path';
 import { sql } from 'drizzle-orm';
 import { migrate as migratePg } from 'drizzle-orm/node-postgres/migrator';
 import { migrate as migrateSqlite } from 'drizzle-orm/better-sqlite3/migrator';
+import { migrate as migrateLibsql } from 'drizzle-orm/libsql/migrator';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { PlatformDb } from './client';
 import { findWorkspaceRoot } from './client';
 import { dbGet, dbRun } from './exec';
 import type { PluginDb } from './plugin-client';
+
+/**
+ * Distinguishes an sqld-backed (`drizzle-orm/libsql`, async) database from a
+ * plain-file (`drizzle-orm/better-sqlite3`, sync) one — both are tagged
+ * `dialect: 'sqlite'` (RFC 0091: no third `Dialect` literal), so this is the
+ * only place that needs to tell them apart, and only to pick the matching
+ * migrator. `.batch()` exists on `LibSQLDatabase` and nothing else in this
+ * union (verified against drizzle-orm's own type definitions).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isLibsqlDb(db: any): db is LibSQLDatabase<any> {
+  return typeof db.batch === 'function';
+}
 
 export interface MigrationResult {
   /** The platform version stored in the DB before this run. Null on first install. */
@@ -45,7 +60,11 @@ export async function runMigrations(pdb: PlatformDb): Promise<MigrationResult> {
   const folder = migrationsFolder(pdb.dialect);
 
   if (pdb.dialect === 'sqlite') {
-    migrateSqlite(pdb.db, { migrationsFolder: folder });
+    if (isLibsqlDb(pdb.db)) {
+      await migrateLibsql(pdb.db, { migrationsFolder: folder });
+    } else {
+      migrateSqlite(pdb.db as Parameters<typeof migrateSqlite>[0], { migrationsFolder: folder });
+    }
     return seedPlatformData(pdb);
   }
 
@@ -162,6 +181,10 @@ export async function runPluginMigrations(
   migrationsTable?: string,
 ): Promise<void> {
   if (pluginDb.dialect === 'sqlite') {
+    if (isLibsqlDb(pluginDb.db)) {
+      await migrateLibsql(pluginDb.db, { migrationsFolder, migrationsTable });
+      return;
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     migrateSqlite(pluginDb.db as any, { migrationsFolder, migrationsTable });
     return;

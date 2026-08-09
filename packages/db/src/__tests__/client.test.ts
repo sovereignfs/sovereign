@@ -47,11 +47,11 @@ describe('resolveSqlitePath', () => {
 });
 
 describe('createClient', () => {
-  it('opens an in-memory SQLite database with pragmas and tags the dialect', () => {
+  it('opens an in-memory SQLite database with pragmas and tags the dialect', async () => {
     const client = createClient({ url: ':memory:' });
     expect(client.dialect).toBe('sqlite');
     if (client.dialect !== 'sqlite') throw new Error('expected sqlite');
-    const row = client.db.get<{ foreign_keys: number }>(sql`PRAGMA foreign_keys`);
+    const row = await client.db.get<{ foreign_keys: number }>(sql`PRAGMA foreign_keys`);
     expect(row?.foreign_keys).toBe(1);
   });
 

@@ -1009,7 +1009,11 @@ AUTH_DATABASE_URL=postgres://user:pass@host:5432/sovereign
 ```
 
 The runtime and auth server can share one database (their table names don't
-collide) or use separate ones.
+collide) or use separate ones. All three are required — the auth server
+resolves its own dialect purely from `AUTH_DATABASE_URL` (it doesn't read
+`DB_DIALECT`), so a Postgres deployment that leaves it unset fails to start
+with a clear "dialect mismatch" error rather than silently opening a local
+SQLite file instead. The Docker overlay above sets it for you automatically.
 
 ### Switching SQLite → PostgreSQL
 

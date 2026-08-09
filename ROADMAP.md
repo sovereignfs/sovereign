@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.68.0 · **Last updated:** 2026-08-09
+**Version:** 0.68.1 · **Last updated:** 2026-08-09
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -267,6 +267,7 @@ doc — but not yet assigned a roadmap slot. Promoted to a phase table once prio
 | —       | `packages/db` libSQL driver adoption (workstream 0009)                    | ✅     | [8.23](docs/epics/data-sovereignty.md#-823--packagesdb-libsql-driver-adoption-workstream-0009-leg-3)                             |
 | —       | One-time SQLite → libSQL data cutover (workstream 0009)                   | ⏳     | [8.24](docs/epics/data-sovereignty.md#-824--one-time-sqlite--libsql-data-cutover-workstream-0009-leg-4)                          |
 | —       | Legacy per-plugin SQLite → Postgres migration tool                        | ⏳     | [8.25](docs/epics/data-sovereignty.md#-825--legacy-per-plugin-sqlite--postgres-migration-tool)                                   |
+| —       | `apps/auth` dialect-consistency check                                     | ✅     | [1.23](docs/epics/users-auth.md#-123--appsauth-dialect-consistency-check)                                                        |
 | —       | Database-backed rate-limit storage for apps/auth (RFC 0086)               | 📋     | [1.19](docs/epics/users-auth.md#-119--database-backed-rate-limit-storage-for-appsauth-rfc-0086)                                  |
 | —       | Redis-backed store for the general per-IP rate limiter (RFC 0086)         | 📋     | [2.29](docs/epics/platform-shell.md#-229--redis-backed-store-for-the-general-per-ip-rate-limiter-rfc-0086)                       |
 | —       | Plugin background jobs and schedules (RFC 0046)                           | 📋     | [3.16](docs/epics/plugins-runtime.md#-316--plugin-background-jobs-and-schedules-rfc-0046)                                        |

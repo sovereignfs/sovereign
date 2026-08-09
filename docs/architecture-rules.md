@@ -456,3 +456,19 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   already applied to the `x-sovereign-user-*` family — but the stripping
   only protects against a spoofed _header_; it does nothing about a spoofed
   _User-Agent_, which is the actual trust boundary this rule exists to name.
+- **`apps/auth` resolves its own dialect independently of `DB_DIALECT`** —
+  purely from `AUTH_DATABASE_URL`'s URL scheme (`isPostgresUrl()` in
+  `apps/auth/src/db.ts`), since it deliberately doesn't depend on
+  `packages/db`. Discovered as a real production gap, not a hypothetical: an
+  instance whose platform core had already been migrated to Postgres
+  (`DB_DIALECT=postgres`) still had `AUTH_DATABASE_URL` unset, silently
+  leaving auth on its SQLite default while everything else moved, invisible
+  because nothing compared the two. `getAuthDb()`/`provisionAuthSqldNamespace()`
+  now call `assertAuthDialectMatchesPlatform()` before touching anything,
+  which throws (not warns) on a mismatch — auth, platform, and every plugin
+  must agree on one dialect, and both env vars are read from the same shared
+  root `.env` already, so there's no reason for them to diverge. Skipped for
+  `:memory:` (no real platform to compare against in that context). When
+  setting up a Postgres deployment, `AUTH_DATABASE_URL` must be set
+  explicitly alongside `DB_DIALECT`/`DATABASE_URL` — see
+  `docs/self-hosting.md`'s PostgreSQL section.

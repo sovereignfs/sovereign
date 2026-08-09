@@ -52,6 +52,11 @@ import {
   listUserGroupsForUser,
   listUserPluginConnectionRefs,
   listUserPluginSecretRefs,
+  savePushDeviceToken,
+  getPushDeviceTokensForUser,
+  deletePushDeviceToken,
+  deletePushDeviceTokenByToken,
+  touchPushDeviceToken,
   markPluginConnectionError,
   markPluginConnectionUsed,
   markPluginProviderConfigChecked,
@@ -1220,6 +1225,142 @@ describe('device consent grant helpers (RFC 0083, workstream 0003 leg 2)', () =>
     const remaining = await listDeviceConsentGrants(db, 'user_1');
     expect(remaining).toHaveLength(1);
     expect(remaining[0]?.pluginId).toBe('fs.example.other');
+  });
+});
+
+describe('push device token helpers (RFC 0087, workstream 0005 leg 1)', () => {
+  it('registers a device token and lists it for the owning user', async () => {
+    const db = await freshDb();
+    await savePushDeviceToken(db, {
+      id: 'tok_1',
+      userId: 'user_1',
+      platform: 'ios',
+      deviceToken: 'apns-raw-token',
+      publicKey: 'base64-pubkey',
+      relayUrl: 'https://relay.sovereign.openfs.io',
+    });
+
+    const rows = await getPushDeviceTokensForUser(db, 'user_1');
+    expect(rows).toEqual([
+      {
+        id: 'tok_1',
+        userId: 'user_1',
+        platform: 'ios',
+        deviceToken: 'apns-raw-token',
+        publicKey: 'base64-pubkey',
+        relayUrl: 'https://relay.sovereign.openfs.io',
+        createdAt: expect.any(Number),
+        lastUsedAt: null,
+      },
+    ]);
+  });
+
+  it('re-registering the same device token upserts in place rather than duplicating', async () => {
+    const db = await freshDb();
+    await savePushDeviceToken(db, {
+      id: 'tok_1',
+      userId: 'user_1',
+      platform: 'ios',
+      deviceToken: 'apns-raw-token',
+      publicKey: 'old-key',
+      relayUrl: 'https://relay.sovereign.openfs.io',
+    });
+    // Re-registration (e.g. key rotation) reuses a fresh id in the insert —
+    // the upsert must keep the *original* row's id, not overwrite it, since
+    // the id is not part of the ON CONFLICT SET clause.
+    await savePushDeviceToken(db, {
+      id: 'tok_2',
+      userId: 'user_1',
+      platform: 'ios',
+      deviceToken: 'apns-raw-token',
+      publicKey: 'new-key',
+      relayUrl: 'https://relay.self-hosted.example',
+    });
+
+    const rows = await getPushDeviceTokensForUser(db, 'user_1');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      id: 'tok_1',
+      publicKey: 'new-key',
+      relayUrl: 'https://relay.self-hosted.example',
+    });
+  });
+
+  it('scopes tokens per user', async () => {
+    const db = await freshDb();
+    await savePushDeviceToken(db, {
+      id: 'tok_1',
+      userId: 'user_1',
+      platform: 'ios',
+      deviceToken: 'token-a',
+      publicKey: 'key-a',
+      relayUrl: 'https://relay.sovereign.openfs.io',
+    });
+    await savePushDeviceToken(db, {
+      id: 'tok_2',
+      userId: 'user_2',
+      platform: 'android',
+      deviceToken: 'token-b',
+      publicKey: 'key-b',
+      relayUrl: 'https://relay.sovereign.openfs.io',
+    });
+
+    expect(await getPushDeviceTokensForUser(db, 'user_1')).toHaveLength(1);
+    expect(await getPushDeviceTokensForUser(db, 'user_2')).toHaveLength(1);
+  });
+
+  it('deletePushDeviceToken only removes a token owned by the requesting user', async () => {
+    const db = await freshDb();
+    await savePushDeviceToken(db, {
+      id: 'tok_1',
+      userId: 'user_1',
+      platform: 'ios',
+      deviceToken: 'token-a',
+      publicKey: 'key-a',
+      relayUrl: 'https://relay.sovereign.openfs.io',
+    });
+
+    // Wrong user — must not delete, must report false.
+    expect(await deletePushDeviceToken(db, 'tok_1', 'user_2')).toBe(false);
+    expect(await getPushDeviceTokensForUser(db, 'user_1')).toHaveLength(1);
+
+    // A nonexistent id also reports false.
+    expect(await deletePushDeviceToken(db, 'does-not-exist', 'user_1')).toBe(false);
+
+    // Correct owner — deletes and reports true.
+    expect(await deletePushDeviceToken(db, 'tok_1', 'user_1')).toBe(true);
+    expect(await getPushDeviceTokensForUser(db, 'user_1')).toEqual([]);
+  });
+
+  it('deletePushDeviceTokenByToken removes by raw token value (relay-reported invalid token)', async () => {
+    const db = await freshDb();
+    await savePushDeviceToken(db, {
+      id: 'tok_1',
+      userId: 'user_1',
+      platform: 'android',
+      deviceToken: 'fcm-raw-token',
+      publicKey: 'key-a',
+      relayUrl: 'https://relay.sovereign.openfs.io',
+    });
+
+    await deletePushDeviceTokenByToken(db, 'fcm-raw-token');
+    expect(await getPushDeviceTokensForUser(db, 'user_1')).toEqual([]);
+  });
+
+  it('touchPushDeviceToken records lastUsedAt', async () => {
+    const db = await freshDb();
+    await savePushDeviceToken(db, {
+      id: 'tok_1',
+      userId: 'user_1',
+      platform: 'ios',
+      deviceToken: 'token-a',
+      publicKey: 'key-a',
+      relayUrl: 'https://relay.sovereign.openfs.io',
+    });
+
+    await touchPushDeviceToken(db, 'tok_1');
+    const [row] = await getPushDeviceTokensForUser(db, 'user_1');
+    expect(row?.lastUsedAt).toEqual(expect.any(Number));
   });
 });
 

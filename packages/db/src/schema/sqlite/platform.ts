@@ -542,6 +542,35 @@ export const pushSubscriptions = sqliteTable('push_subscriptions', {
 });
 
 /**
+ * Native mobile (APNs/FCM) device tokens (RFC 0087, workstream 0005 leg 1).
+ * Structurally distinct from `push_subscriptions` — a `deviceToken` is not a
+ * `PushSubscription` shape, and delivery goes through the Sovereign Relay
+ * (`apps/relay`), not directly to a push service.
+ *
+ * `relayUrl` is captured from the instance's Console-configured relay
+ * setting **at registration time** and stored on the row itself, not read
+ * fresh from config at send time — see RFC 0087's "Device-token schema"
+ * section: changing the configured relay must not silently break
+ * already-registered devices before they re-register.
+ */
+export const pushDeviceTokens = sqliteTable('push_device_tokens', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  /** `'ios' | 'android'`. */
+  platform: text('platform').notNull(),
+  /** The raw APNs device token or FCM registration token. */
+  deviceToken: text('device_token').notNull().unique(),
+  /** Base64-encoded device public key (ECDH P-256) — the encryption target. */
+  publicKey: text('public_key').notNull(),
+  /** The relay this token was registered against — see doc comment above. */
+  relayUrl: text('relay_url').notNull(),
+  createdAt: integer('created_at').notNull(),
+  /** Unix seconds of the last successful delivery to this token; null until then. */
+  lastUsedAt: integer('last_used_at'),
+});
+
+/**
  * Plugin entitlements (RFC 0003). Tracks signed licenses imported by users.
  * The runtime middleware gates paid plugin routes by checking for an active,
  * unexpired row here. License tokens are verified offline against the plugin

@@ -2845,6 +2845,106 @@ export async function hasPushSubscription(pdb: PlatformDb, userId: string): Prom
   return (row?.n ?? 0) > 0;
 }
 
+// ── Native mobile push device tokens (RFC 0087, workstream 0005 leg 1) ──────
+
+export interface PushDeviceTokenRow {
+  id: string;
+  userId: string;
+  platform: string;
+  deviceToken: string;
+  publicKey: string;
+  relayUrl: string;
+  createdAt: number;
+  lastUsedAt: number | null;
+}
+
+/**
+ * Upsert a native push device token. Re-registering the same device token
+ * (e.g. after a key rotation or relay change) updates the stored public key
+ * and relay URL rather than creating a duplicate row.
+ */
+export async function savePushDeviceToken(
+  pdb: PlatformDb,
+  input: {
+    id: string;
+    userId: string;
+    platform: string;
+    deviceToken: string;
+    publicKey: string;
+    relayUrl: string;
+  },
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO push_device_tokens
+          (id, tenant_id, user_id, platform, device_token, public_key, relay_url, created_at)
+        VALUES (${input.id}, ${DEFAULT_TENANT_ID}, ${input.userId}, ${input.platform},
+                ${input.deviceToken}, ${input.publicKey}, ${input.relayUrl}, ${now})
+        ON CONFLICT (device_token)
+        DO UPDATE SET user_id    = excluded.user_id,
+                      platform   = excluded.platform,
+                      public_key = excluded.public_key,
+                      relay_url  = excluded.relay_url`,
+  );
+}
+
+/** Return all registered native device tokens for a user (used by the fan-out). */
+export async function getPushDeviceTokensForUser(
+  pdb: PlatformDb,
+  userId: string,
+): Promise<PushDeviceTokenRow[]> {
+  return dbAll<PushDeviceTokenRow>(
+    pdb,
+    sql`SELECT id, user_id AS "userId", platform, device_token AS "deviceToken",
+               public_key AS "publicKey", relay_url AS "relayUrl",
+               created_at AS "createdAt", last_used_at AS "lastUsedAt"
+        FROM push_device_tokens
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND user_id = ${userId}`,
+  );
+}
+
+/**
+ * Revoke one device token by id, scoped to the requesting user — a client
+ * must never be able to revoke another user's token by guessing its id.
+ * Returns whether a matching row existed (checked before deleting, since
+ * `dbRun` reports no affected-row count — see `./exec.ts`), so the route
+ * can 404 rather than silently succeed on an id that isn't this user's.
+ */
+export async function deletePushDeviceToken(
+  pdb: PlatformDb,
+  id: string,
+  userId: string,
+): Promise<boolean> {
+  const existing = await dbGet<{ id: string }>(
+    pdb,
+    sql`SELECT id FROM push_device_tokens
+        WHERE id = ${id} AND tenant_id = ${DEFAULT_TENANT_ID} AND user_id = ${userId}`,
+  );
+  if (!existing) return false;
+  await dbRun(
+    pdb,
+    sql`DELETE FROM push_device_tokens
+        WHERE id = ${id} AND tenant_id = ${DEFAULT_TENANT_ID} AND user_id = ${userId}`,
+  );
+  return true;
+}
+
+/** Delete a device token by its raw token value (relay-reported invalid token). */
+export async function deletePushDeviceTokenByToken(
+  pdb: PlatformDb,
+  deviceToken: string,
+): Promise<void> {
+  await dbRun(pdb, sql`DELETE FROM push_device_tokens WHERE device_token = ${deviceToken}`);
+}
+
+/** Record a successful delivery to a device token. */
+export async function touchPushDeviceToken(pdb: PlatformDb, id: string): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(pdb, sql`UPDATE push_device_tokens SET last_used_at = ${now} WHERE id = ${id}`);
+}
+
 // ─── Entitlements (RFC 0003) ───────────────────────────────────────────────
 
 export interface EntitlementRow {

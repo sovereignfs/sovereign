@@ -345,6 +345,18 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       auth TEXT NOT NULL,
       created_at ${ts} NOT NULL
     )`,
+    // RFC 0087 — Sovereign Relay (native mobile push device tokens)
+    `CREATE TABLE IF NOT EXISTS push_device_tokens (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      device_token TEXT NOT NULL UNIQUE,
+      public_key TEXT NOT NULL,
+      relay_url TEXT NOT NULL,
+      created_at ${ts} NOT NULL,
+      last_used_at ${ts}
+    )`,
     `CREATE TABLE IF NOT EXISTS entitlements (
       id TEXT PRIMARY KEY,
       tenant_id TEXT NOT NULL,

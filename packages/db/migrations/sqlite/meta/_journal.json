@@ -141,6 +141,13 @@
       "when": 1785676064319,
       "tag": "0019_dizzy_weapon_omega",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1786282277976,
+      "tag": "0020_brief_zaran",
+      "breakpoints": true
     }
   ]
 }

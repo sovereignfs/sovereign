@@ -85,8 +85,13 @@ describe('sendWnsPush', () => {
           text: async () => 'access_token=fake-wns-token&token_type=bearer&expires_in=86390',
         };
       })
-      .mockImplementationOnce(async (url: string, init: RequestInit) => {
-        expect(url).toBe('https://db5.notify.windows.com/channel-uri');
+      .mockImplementationOnce(async (url: URL, init: RequestInit) => {
+        // sendWnsPush passes a validated URL object here, not the raw
+        // string, so CodeQL's SSRF sanitizer recognition can see the value
+        // reaching fetch() is the one that was just checked — see that
+        // function's own comment.
+        expect(url).toBeInstanceOf(URL);
+        expect(url.toString()).toBe('https://db5.notify.windows.com/channel-uri');
         expect(init.headers).toMatchObject({
           authorization: 'Bearer fake-wns-token',
           'x-wns-type': 'wns/raw',

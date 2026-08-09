@@ -140,6 +140,7 @@ Workstreams are internal planning documents and are not published (see
 | [0007](0007-mobile-header-footer-extraction.md)       | `MobileHeader`/`MobileFooter` as Design System components, extracted from the runtime shell             | 📋 Planned     | 0088 (builds on 0013, 0075)     |
 | [0008](0008-offline-first-architecture.md)            | Offline-first architecture — cold-start offline, tiered plugin offline support, encrypted local storage | 📋 Planned     | none yet — legs 2–5 author them |
 | [0009](0009-database-dialect-and-libsql-migration.md) | Single operator-chosen DB dialect platform-wide; SQLite moves to a mandatory `sqld` container           | ⏳ In Progress | 0091 (Accepted)                 |
+| [0010](0010-desktop-push-relay.md)                    | Extends workstream 0005's relay/schema to `sovereign-desktop` — macOS APNs, Windows WNS (raw-only)      | 📋 Planned     | 0087 (addendum)                 |
 
 Workstreams 0001 and 0002 share epic task 20.10 (the WKWebView offline spike) —
 run it once and let both consume the finding. Otherwise they are independent, and

@@ -214,6 +214,13 @@ export {
   previewSqliteFile,
   type CutoverTableResult,
 } from './sqld-cutover';
+export {
+  PostgresMigrationError,
+  coerceForPostgres,
+  migratePluginSqliteToPostgres,
+  previewSqliteFileForPostgres,
+  type PostgresMigrationTableResult,
+} from './postgres-migration';
 export { runMigrations, runPluginMigrations, type MigrationResult } from './migrate';
 export {
   dropPluginDb,

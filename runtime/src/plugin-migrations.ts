@@ -73,12 +73,15 @@ export function assertPluginEncryptionRequirement(
 /**
  * Run pending schema migrations for all installed plugins (RFC 0004).
  *
- * Two database modes are supported:
- * - `isolated` — plugin owns a dedicated SQLite file / Postgres schema; migrations
- *   run there and never touch the platform DB.
- * - `shared` (or omitted) — plugin writes into the platform DB; migrations run
- *   there after the platform's own migrations have already applied (enforced by
- *   the call order in instrumentation.ts). Trusted first-party plugins only.
+ * Every `sovereign`/`community` plugin is unconditionally isolated — its own
+ * dedicated SQLite file / Postgres schema; migrations run there and never
+ * touch the platform DB. There is no per-plugin choice anymore (the
+ * `database.isolation`/`"shared"` manifest option was retired). The one
+ * exception is `type: "platform"` (`account`, `console`, `launcher`): they
+ * administer the platform's own core data directly, the same as
+ * `apps/auth`, and are never isolated — in practice this branch is
+ * currently unreachable for them anyway, since none of the three declare a
+ * `migrations/` folder of their own.
  *
  * Plugins with no `migrations/{sqlite,postgres}/` folder are skipped silently.
  * A failed plugin migration is logged but does not abort startup — the
@@ -126,10 +129,8 @@ export async function runAllPluginMigrations(): Promise<void> {
   const encryptionViolations: { pluginId: string; message: string }[] = [];
 
   for (const manifest of registry) {
-    const isolation = manifestDatabaseIsolation(manifest.database);
+    const isolation = manifestDatabaseIsolation(manifest.type);
     const isIsolated = isolation === 'isolated';
-    const isShared = isolation === 'shared';
-    if (!isIsolated && !isShared) continue;
 
     const dirName = idToDir.get(manifest.id) ?? manifest.id;
     const pluginDir = `plugins/${dirName}`;

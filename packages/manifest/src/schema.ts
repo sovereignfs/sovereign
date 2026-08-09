@@ -48,24 +48,19 @@ const semverString = (label: string) =>
       message: `${label} must be a valid semver string (e.g. "0.6.0")`,
     });
 
-export const manifestDatabaseSchema = z.union([
-  z.enum(['shared', 'isolated']),
-  z
-    .object({
-      isolation: z.enum(['shared', 'isolated']).optional(),
-      /**
-       * RFC 0071 — force SQLite at-rest encryption on for this plugin's own
-       * isolated database, regardless of the instance-wide
-       * `SOVEREIGN_DB_ENCRYPTION_KEY` default. **Raise-only**: a plugin can
-       * demand encryption, it can never opt out of encryption the operator
-       * has enabled. Requires `isolation: "isolated"` — whole-file encryption
-       * has no per-table granularity, so a `shared` plugin's tables (living
-       * inside the platform database) cannot independently demand it.
-       */
-      requireEncryption: z.boolean().optional(),
-    })
-    .strict(),
-]);
+export const manifestDatabaseSchema = z
+  .object({
+    /**
+     * RFC 0071 — force SQLite at-rest encryption on for this plugin's own
+     * isolated database, regardless of the instance-wide
+     * `SOVEREIGN_DB_ENCRYPTION_KEY` default. **Raise-only**: a plugin can
+     * demand encryption, it can never opt out of encryption the operator
+     * has enabled. Not valid for `type: "platform"` — those plugins have no
+     * isolated store of their own (see `manifestDatabaseIsolation`).
+     */
+    requireEncryption: z.boolean().optional(),
+  })
+  .strict();
 
 export type ManifestDatabase = z.infer<typeof manifestDatabaseSchema>;
 export type ManifestDatabaseIsolation = 'shared' | 'isolated';
@@ -92,17 +87,17 @@ const providerConfigFieldSchema = z
   })
   .strict();
 
-export function manifestDatabaseIsolation(database: unknown): ManifestDatabaseIsolation {
-  if (database === 'isolated') return 'isolated';
-  if (
-    typeof database === 'object' &&
-    database !== null &&
-    'isolation' in database &&
-    database.isolation === 'isolated'
-  ) {
-    return 'isolated';
-  }
-  return 'shared';
+/**
+ * Whether a plugin's database is isolated (own dedicated store) or shared
+ * (lives inside the platform database). Every `sovereign`/`community`
+ * plugin is unconditionally isolated — there is no longer a per-plugin
+ * choice (retired the `database.isolation`/`"shared"` manifest option).
+ * `type: "platform"` plugins (`account`, `console`, `launcher`) are the one
+ * exception: they administer the platform's own core data directly, the
+ * same as `apps/auth`, and are never isolated.
+ */
+export function manifestDatabaseIsolation(type: unknown): ManifestDatabaseIsolation {
+  return type === 'platform' ? 'shared' : 'isolated';
 }
 
 /**
@@ -623,21 +618,12 @@ export const manifestSchema = manifestObjectSchema
       path: ['public'],
     },
   )
-  .refine(
-    (m) => {
-      const db = m.database;
-      if (typeof db !== 'object' || db === null) return true;
-      if (db.requireEncryption !== true) return true;
-      return db.isolation === 'isolated';
-    },
-    {
-      message:
-        'database.requireEncryption requires database.isolation to be "isolated" — a ' +
-        '"shared" plugin\'s tables live inside the platform database and cannot ' +
-        'independently demand at-rest encryption (RFC 0071)',
-      path: ['database', 'requireEncryption'],
-    },
-  )
+  .refine((m) => m.database?.requireEncryption !== true || m.type !== 'platform', {
+    message:
+      'database.requireEncryption is not valid for a type: "platform" plugin — it has no ' +
+      'isolated database of its own to encrypt (see manifestDatabaseIsolation)',
+    path: ['database', 'requireEncryption'],
+  })
   .refine((m) => !m.permissions.includes('offline:write') || m.offline === true, {
     message:
       'the "offline:write" permission requires offline: true — write/sync capability ' +

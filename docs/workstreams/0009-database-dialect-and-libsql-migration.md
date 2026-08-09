@@ -82,8 +82,19 @@ back-compat period, since only one production instance exists today.
 | Dialect selection scope | Single `.env`-driven platform-wide dialect (`DB_DIALECT`/`DATABASE_URL`); no per-plugin override | Per-plugin `database.dialect` override (status quo) — unused by all 12 shipped/example manifests; its only real function was creating the ambiguity the `requireEncryption`+`dialect` refinement had to resolve                                                                                                              |
 | libSQL adoption posture | **Mandatory**, staged across legs 2–4                                                            | Opt-in third tier (Research 0003's original recommendation) — reopens "does the operator need a second container" for every self-hoster, and leaves two dialect-selection code paths live indefinitely; explicitly rejected in favor of a clean, universal cutover now that there is only one production instance to migrate |
 | Migration strategy      | One-time cutover script + runbook against the single production instance                         | Zero-downtime dual-write / phased rollout — unnecessary machinery for one instance; revisit if a second production instance exists before leg 4 ships                                                                                                                                                                        |
-| Isolation-mode default  | **Unchanged** — `shared` stays the manifest default                                              | Flipping to `isolated`-by-default — raised and explicitly rejected in the design session that produced this workstream; out of scope here entirely, not deferred                                                                                                                                                             |
+| Isolation-mode default  | **Unchanged** — `shared` stays the manifest default _(superseded — see below)_                   | Flipping to `isolated`-by-default — raised and explicitly rejected in the design session that produced this workstream; out of scope here entirely, not deferred                                                                                                                                                             |
 | RFC timing              | Leg 2 (the spike) produces the RFC as its own deliverable, gating leg 3                          | Writing the RFC before any spike — the async-contract and encryption questions are empirical; a spike de-risks the RFC instead of the RFC guessing at findings                                                                                                                                                               |
+
+**Superseded, 2026-08:** the isolation-mode default row above no longer holds. A
+follow-up decision (outside this workstream — see epic task
+[8.28](../epics/data-sovereignty.md#-828--retire-the-databaseisolationshared-manifest-option))
+retired the `database.isolation`/`"shared"` manifest option entirely: every
+`sovereign`/`community` plugin is now unconditionally isolated, with `type: "platform"`
+plugins (`account`, `console`, `launcher`) exempted the same way `apps/auth` already was.
+The reasoning that led here — a track record of isolation-specific bugs found migrating
+real plugins to Postgres (tasks 8.26–8.27) prompted a closer look at what `shared` mode
+was actually buying anyone, and the answer turned out to be "very little, for real
+third-party plugins" — is captured in that task, not repeated here.
 
 **Resolved by leg 2's RFC** (0091):
 

@@ -797,6 +797,58 @@ is also added (`permissions: ["offline:write"]`, requires `offline: true`) —
 reserved for a forthcoming offline write/sync capability
 (`@sovereignfs/sdk/offline-queue`), not yet implemented as of this version.
 
+### `@sovereignfs/manifest` 2.1.0 → 3.0.0 (breaking — retire `database.isolation`/`"shared"`)
+
+**Every `sovereign`/`community` plugin's database is now unconditionally
+isolated — its own dedicated SQLite file/namespace or Postgres schema. The
+`shared` manifest option (and the `isolation` field generally) is gone.**
+Checking every real, installed plugin — in this monorepo or its known
+external repos — found `shared` used only by the three first-party
+`type: "platform"` plugins (`account`, `console`, `launcher`), none of which
+were genuine `shared`-mode data owners in the first place (see epic task
+[8.28](epics/data-sovereignty.md#-828--retire-the-databaseisolationshared-manifest-option)
+for the full reasoning); every real third-party plugin was already
+`isolated`.
+
+**Before:**
+
+```json
+{ "database": "shared" }
+```
+
+or
+
+```json
+{ "database": { "isolation": "isolated", "requireEncryption": true } }
+```
+
+**After:**
+
+```json
+{}
+```
+
+or
+
+```json
+{ "database": { "requireEncryption": true } }
+```
+
+A manifest still declaring `"database": "shared"`, `"database": "isolated"`,
+or `database.isolation` now fails validation — this is intentional, no
+deprecation period, the same shape as the `database.dialect` field removal
+(task 8.22). Drop the field or the `isolation` key entirely; every
+non-platform plugin gets a dedicated store regardless. If your plugin was
+genuinely relying on `shared` mode's cross-plugin SQL joins against platform
+tables, that access pattern is not supported for third-party plugins going
+forward — use the consent-gated `sdk.data` mechanism instead (RFC 0002).
+
+`type: "platform"` is reserved for first-party plugins in this monorepo —
+if you maintain a real third-party plugin, this change requires no
+manifest edit beyond removing an `isolation`/`"shared"` declaration if you
+had one; the resulting behavior (a dedicated store) is very likely already
+what your plugin was using.
+
 ### `@sovereignfs/sdk` 1.22.0 → 1.23.0
 
 **`StorageObject` gains a `metadata` field** (RFC 0044/0060). `sdk.storage.put()`

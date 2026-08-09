@@ -151,36 +151,36 @@ serves at `/tasks/lists`.
 `manifest.json` is validated at build time against a strict schema
 (`packages/manifest`); unknown keys fail the build. Every field:
 
-| Field           | Type                                     | Required                             | Description                                                                                                                                                                                                                                                                                                                                                         |
-| --------------- | ---------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schemaVersion` | integer                                  | yes                                  | Manifest format version. Currently `1`.                                                                                                                                                                                                                                                                                                                             |
-| `id`            | string                                   | yes                                  | Globally-unique reverse-DNS id, e.g. `io.example.tasks`. Also the install directory name.                                                                                                                                                                                                                                                                           |
-| `name`          | string                                   | yes                                  | Human-readable name shown in the sidebar and Launcher.                                                                                                                                                                                                                                                                                                              |
-| `version`       | string                                   | yes                                  | Plugin version (semver recommended). This is the **only** version the platform reads — the runtime, registry, and export/portability code all key off it. Your `package.json`'s `version` field is unrelated tooling metadata; leave it at `"0.0.0"` and never bump it.                                                                                             |
-| `description`   | string                                   | no                                   | Short description.                                                                                                                                                                                                                                                                                                                                                  |
-| `database`      | `shared` \| `isolated` \| object         | no                                   | Data isolation model. `shared` (default) keeps plugin tables in the platform DB with a slug prefix. `isolated` gives the plugin its own dedicated store — a separate SQLite file or Postgres schema. Object form can request SQLite for an isolated plugin and/or `requireEncryption` (RFC 0071, raise-only, isolated-only). See the [Database](#database) section. |
-| `type`          | `platform` \| `sovereign` \| `community` | yes                                  | Origin/trust tier (see below).                                                                                                                                                                                                                                                                                                                                      |
-| `runtime`       | `native`                                 | yes                                  | Execution model. v1 plugins use `native`. Other runtime models are planned but are not accepted manifest values until implemented.                                                                                                                                                                                                                                  |
-| `routePrefix`   | string starting with `/`                 | yes                                  | URL prefix the plugin serves under, e.g. `/tasks`. The single source of truth for the plugin's URL.                                                                                                                                                                                                                                                                 |
-| `permissions`   | array of permission strings              | yes (may be `[]`)                    | SDK capabilities the plugin declares (see below).                                                                                                                                                                                                                                                                                                                   |
-| `shell`         | `default` \| `minimal` \| `overlay`      | no                                   | Presentation mode. `default` = full page under the platform sidebar; `overlay` = dialog over the current page (see below); `minimal` = chrome-free, full-bleed (see below).                                                                                                                                                                                         |
-| `shellConfig`   | object (see below)                       | no                                   | Per-shell tuning. Holds `overlaySize` (`sm` \| `md` \| `lg`, default `lg`) for `shell: overlay` plugins, and `mobileHeader`/`mobileFooter` (booleans, default `true`) for `shell: default` plugins (RFC 0075). Each field is only valid for its own `shell` value.                                                                                                  |
-| `adminOnly`     | boolean                                  | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                                                                                                                                             |
-| `apiProvider`   | boolean                                  | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                                                                                                                                                       |
-| `publicRoutes`  | array (see below)                        | no                                   | Manifest-declared public page routes (RFC 0042). Each entry exempts a path prefix — relative to `routePrefix` — from the session-redirect gate; the plugin owns authorization for the exempted paths.                                                                                                                                                               |
-| `public`        | boolean                                  | no (default `false`)                 | Marks the whole plugin as public — no auth requirement at all (RFC 0089). Requires `shell: "minimal"` explicitly; cannot combine with `adminOnly`, a paid `monetization.model`, or `publicRoutes`. See below.                                                                                                                                                       |
-| `offline`       | boolean (see below)                      | no (default `false`)                 | Marks the plugin's bare `routePrefix` page as its one offline-capable entry point (RFC 0074, flattened by RFC 0078 from the original `offline.routes[]`/`offline.root` object shape). Grants no auth exemption; the route must render a user-neutral shell and hydrate data client-side via `sdk.offline`.                                                          |
-| `example`       | boolean                                  | no (default `false`)                 | Marks the plugin as a bundled reference/example. Classification only — no effect on routing or permissions. Example plugins are hidden by default and shown via the Console → Settings → Example plugins toggle; each can also be toggled individually on the Plugins page.                                                                                         |
-| `development`   | boolean                                  | no (default `false`)                 | Marks the plugin as still under active development — not yet ready for production use. Classification only, like `example`: no effect on routing, access policy, or the enable/disable default. Surfaced as a warning badge on the Console Plugins page and on the plugin's Launcher tile.                                                                          |
-| `icon`          | string                                   | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                                                                                                                                                                                                                                                                                |
-| `compatibility` | object (see below)                       | yes                                  | Platform version constraints. Hard-gates install/boot on `minPlatformVersion`; surfaces an advisory warning in Console/health when the platform exceeds the optional `maxPlatformVersion`.                                                                                                                                                                          |
-| `data`          | object (see below)                       | no                                   | Cross-plugin data sharing declarations (RFC 0002). Declare the contracts this plugin exposes (`data.provides`) and the ones it reads (`data.consumes`). Requires the matching `data:provide` / `data:consume` permissions.                                                                                                                                          |
-| `env`           | object (see below)                       | no                                   | Plugin-scoped environment variable declarations (RFC 0018). Keys are auto-namespaced to `SV_PLUGIN_<SLUG>_<KEY>`; read them via `sdk.env.get('KEY')` in server code.                                                                                                                                                                                                |
-| `capabilities`  | object (see below)                       | no                                   | Plugin-declared capabilities (RFC 0022). Each key is a local name auto-namespaced to `<pluginId>:<capName>`; enforce access inside the plugin via `sdk.auth.hasCapability`.                                                                                                                                                                                         |
-| `schedules`     | array (see below)                        | no                                   | Recurring background schedules (RFC 0046 Phase 1). Each entry names a server-side handler module inside `app/` that the platform's in-process scheduler invokes every `intervalMinutes` while the plugin is enabled.                                                                                                                                                |
-| `connections`   | object (see below)                       | no                                   | External provider connection declarations (RFC 0049). Lists OAuth/connect-account providers and callback paths for platform-visible connection metadata.                                                                                                                                                                                                            |
-| `monetization`  | object (see below)                       | no                                   | Monetization model (RFC 0003). Declares the billing model, tiers, and the author's Ed25519 public key for offline license verification. Only `sovereign`/`community` plugins may declare this.                                                                                                                                                                      |
-| `repository`    | string (URL)                             | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                                                                                                                                           |
+| Field           | Type                                     | Required                             | Description                                                                                                                                                                                                                                                                                                    |
+| --------------- | ---------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion` | integer                                  | yes                                  | Manifest format version. Currently `1`.                                                                                                                                                                                                                                                                        |
+| `id`            | string                                   | yes                                  | Globally-unique reverse-DNS id, e.g. `io.example.tasks`. Also the install directory name.                                                                                                                                                                                                                      |
+| `name`          | string                                   | yes                                  | Human-readable name shown in the sidebar and Launcher.                                                                                                                                                                                                                                                         |
+| `version`       | string                                   | yes                                  | Plugin version (semver recommended). This is the **only** version the platform reads — the runtime, registry, and export/portability code all key off it. Your `package.json`'s `version` field is unrelated tooling metadata; leave it at `"0.0.0"` and never bump it.                                        |
+| `description`   | string                                   | no                                   | Short description.                                                                                                                                                                                                                                                                                             |
+| `database`      | object                                   | no                                   | Every plugin is unconditionally isolated — its own dedicated SQLite file or Postgres schema; there is no `shared`/`isolated` choice anymore. The only field this object still carries is `requireEncryption` (RFC 0071, raise-only) — not valid for `type: "platform"`. See the [Database](#database) section. |
+| `type`          | `platform` \| `sovereign` \| `community` | yes                                  | Origin/trust tier (see below).                                                                                                                                                                                                                                                                                 |
+| `runtime`       | `native`                                 | yes                                  | Execution model. v1 plugins use `native`. Other runtime models are planned but are not accepted manifest values until implemented.                                                                                                                                                                             |
+| `routePrefix`   | string starting with `/`                 | yes                                  | URL prefix the plugin serves under, e.g. `/tasks`. The single source of truth for the plugin's URL.                                                                                                                                                                                                            |
+| `permissions`   | array of permission strings              | yes (may be `[]`)                    | SDK capabilities the plugin declares (see below).                                                                                                                                                                                                                                                              |
+| `shell`         | `default` \| `minimal` \| `overlay`      | no                                   | Presentation mode. `default` = full page under the platform sidebar; `overlay` = dialog over the current page (see below); `minimal` = chrome-free, full-bleed (see below).                                                                                                                                    |
+| `shellConfig`   | object (see below)                       | no                                   | Per-shell tuning. Holds `overlaySize` (`sm` \| `md` \| `lg`, default `lg`) for `shell: overlay` plugins, and `mobileHeader`/`mobileFooter` (booleans, default `true`) for `shell: default` plugins (RFC 0075). Each field is only valid for its own `shell` value.                                             |
+| `adminOnly`     | boolean                                  | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                                                                                        |
+| `apiProvider`   | boolean                                  | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                                                                                                  |
+| `publicRoutes`  | array (see below)                        | no                                   | Manifest-declared public page routes (RFC 0042). Each entry exempts a path prefix — relative to `routePrefix` — from the session-redirect gate; the plugin owns authorization for the exempted paths.                                                                                                          |
+| `public`        | boolean                                  | no (default `false`)                 | Marks the whole plugin as public — no auth requirement at all (RFC 0089). Requires `shell: "minimal"` explicitly; cannot combine with `adminOnly`, a paid `monetization.model`, or `publicRoutes`. See below.                                                                                                  |
+| `offline`       | boolean (see below)                      | no (default `false`)                 | Marks the plugin's bare `routePrefix` page as its one offline-capable entry point (RFC 0074, flattened by RFC 0078 from the original `offline.routes[]`/`offline.root` object shape). Grants no auth exemption; the route must render a user-neutral shell and hydrate data client-side via `sdk.offline`.     |
+| `example`       | boolean                                  | no (default `false`)                 | Marks the plugin as a bundled reference/example. Classification only — no effect on routing or permissions. Example plugins are hidden by default and shown via the Console → Settings → Example plugins toggle; each can also be toggled individually on the Plugins page.                                    |
+| `development`   | boolean                                  | no (default `false`)                 | Marks the plugin as still under active development — not yet ready for production use. Classification only, like `example`: no effect on routing, access policy, or the enable/disable default. Surfaced as a warning badge on the Console Plugins page and on the plugin's Launcher tile.                     |
+| `icon`          | string                                   | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                                                                                                                                                                                                                           |
+| `compatibility` | object (see below)                       | yes                                  | Platform version constraints. Hard-gates install/boot on `minPlatformVersion`; surfaces an advisory warning in Console/health when the platform exceeds the optional `maxPlatformVersion`.                                                                                                                     |
+| `data`          | object (see below)                       | no                                   | Cross-plugin data sharing declarations (RFC 0002). Declare the contracts this plugin exposes (`data.provides`) and the ones it reads (`data.consumes`). Requires the matching `data:provide` / `data:consume` permissions.                                                                                     |
+| `env`           | object (see below)                       | no                                   | Plugin-scoped environment variable declarations (RFC 0018). Keys are auto-namespaced to `SV_PLUGIN_<SLUG>_<KEY>`; read them via `sdk.env.get('KEY')` in server code.                                                                                                                                           |
+| `capabilities`  | object (see below)                       | no                                   | Plugin-declared capabilities (RFC 0022). Each key is a local name auto-namespaced to `<pluginId>:<capName>`; enforce access inside the plugin via `sdk.auth.hasCapability`.                                                                                                                                    |
+| `schedules`     | array (see below)                        | no                                   | Recurring background schedules (RFC 0046 Phase 1). Each entry names a server-side handler module inside `app/` that the platform's in-process scheduler invokes every `intervalMinutes` while the plugin is enabled.                                                                                           |
+| `connections`   | object (see below)                       | no                                   | External provider connection declarations (RFC 0049). Lists OAuth/connect-account providers and callback paths for platform-visible connection metadata.                                                                                                                                                       |
+| `monetization`  | object (see below)                       | no                                   | Monetization model (RFC 0003). Declares the billing model, tiers, and the author's Ed25519 public key for offline license verification. Only `sovereign`/`community` plugins may declare this.                                                                                                                 |
+| `repository`    | string (URL)                             | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                                                                                      |
 
 ### Future runtime models
 
@@ -1950,19 +1950,17 @@ your plugin name) is shown as a fallback when no `icon.svg` is present.
 
 ## Database
 
-Plugins access the database through `await sdk.db.getClient()`. There are two isolation
-modes, set in the manifest:
+Plugins access the database through `await sdk.db.getClient()`. Every plugin gets its own
+dedicated store — a separate SQLite file (or `sqld` namespace) or Postgres schema. There is
+no `shared`/`isolated` choice to make: no table prefix is required, and uninstalling a
+plugin drops its entire store. Migrations live at `plugins/<id>/migrations/` and always
+run against the plugin's own dedicated store.
 
-|              | `shared` (default)                             | `isolated`                             |
-| ------------ | ---------------------------------------------- | -------------------------------------- |
-| Store        | Platform DB (shared with all plugins)          | Dedicated store per plugin (see below) |
-| Table prefix | Required (slug, e.g. `tasks_lists`)            | Not required                           |
-| Uninstall    | Tables remain                                  | Entire store dropped                   |
-| Migrations   | `plugins/<id>/migrations/` against platform DB | Same path, routed to dedicated store   |
-
-**For most plugins, shared is the right choice.** Use `"database": "isolated"` when you
-need a clean data lifecycle (e.g. uninstall should delete all plugin data), per-plugin
-backup, or blast-radius isolation.
+`type: "platform"` plugins (`account`, `console`, `launcher`) are the one exception — they
+administer the platform's own core data directly, the same as `apps/auth`, rather than
+owning data of their own, so they are never isolated. This isn't something a plugin author
+configures; it follows automatically from `type`, and only applies to first-party platform
+plugins in this monorepo.
 
 A plugin cannot request a database dialect — the operator's instance-wide
 `DB_DIALECT`/`DATABASE_URL` choice applies to every database the platform
@@ -1970,48 +1968,45 @@ opens, including every isolated plugin store. There is no manifest override
 (workstream 0009 leg 1 removed the `database.dialect` field that used to
 allow one).
 
-On a SQLite-dialect instance, an isolated plugin's "dedicated store" is not
-always a plain file: it depends on the RFC 0071 encryption carve-out
-(workstream 0009 leg 3, RFC 0091). A plugin without `requireEncryption`
-(the common case) gets a dedicated **sqld namespace** — sqld is a required
-part of a SQLite deployment, not optional — instead of a `.db` file; the
-manifest and `sdk.db.getClient()` call are identical either way, so this is
-transparent to plugin code. Only a plugin with `requireEncryption: true`
-gets an actual SQLite file on disk. See
+On a SQLite-dialect instance, a plugin's dedicated store is not always a
+plain file: it depends on the RFC 0071 encryption carve-out (workstream 0009
+leg 3, RFC 0091). A plugin without `requireEncryption` (the common case)
+gets a dedicated **sqld namespace** — sqld is a required part of a SQLite
+deployment, not optional — instead of a `.db` file; the manifest and
+`sdk.db.getClient()` call are identical either way, so this is transparent
+to plugin code. Only a plugin with `requireEncryption: true` gets an actual
+SQLite file on disk. See
 [docs/self-hosting.md's sqld section](self-hosting.md#sqld-libsql-server-rfc-0091).
 
-An isolated plugin can require SQLite at-rest encryption (RFC 0071) for its
-own store:
+A plugin can require SQLite at-rest encryption (RFC 0071) for its own store:
 
 ```json
 {
   "database": {
-    "isolation": "isolated",
     "requireEncryption": true
   }
 }
 ```
 
 `requireEncryption` is **raise-only**: it forces encryption on for this
-plugin's isolated database regardless of the instance-wide
+plugin's database regardless of the instance-wide
 `SOVEREIGN_DB_ENCRYPTION_KEY` default, but a plugin can never use it to opt
-_out_ of encryption the operator has enabled. It requires
-`isolation: "isolated"` — whole-file encryption has no per-table granularity,
-so a `shared` plugin (whose tables live inside the platform database) cannot
-independently demand it; the manifest fails validation otherwise. Since the
-platform dialect is instance-wide, a `requireEncryption` plugin's actual
-guarantee depends on what the operator chose: on a SQLite platform it's
-enforced (the runtime refuses to start without the key); on Postgres it's
-only a startup warning and a fallback to disk-level encryption, since there
-is no SQLCipher equivalent there — see
+_out_ of encryption the operator has enabled. It's not valid for
+`type: "platform"` — whole-file encryption has no per-table granularity,
+and a platform-type plugin has no isolated store of its own to encrypt (it
+shares the platform database directly); the manifest fails validation
+otherwise. Since the platform dialect is instance-wide, a `requireEncryption`
+plugin's actual guarantee depends on what the operator chose: on a SQLite
+platform it's enforced (the runtime refuses to start without the key); on
+Postgres it's only a startup warning and a fallback to disk-level
+encryption, since there is no SQLCipher equivalent there — see
 [docs/self-hosting.md's SQLite at-rest encryption section](self-hosting.md#sqlite-at-rest-encryption-rfc-0071).
 
 ```ts
-// Same call regardless of mode — the runtime routes transparently:
 const db = await sdk.db.getClient();
 ```
 
-**Rules that apply in both modes:**
+**Rules that apply:**
 
 - `tenant_id` on every user-scoped table (multi-tenancy readiness).
 - Your `schema.ts` can target one dialect (typically `sqlite-core`) — Drizzle's
@@ -2273,29 +2268,22 @@ The plugin's own source files stay in their own git history; only the
 platform's generated outputs drift locally, and the pre-commit hook handles
 those silently.
 
-#### Choosing a database mode
+#### Database mode
 
-Set `"database"` in your manifest to a string value or the object form:
+There is no mode to choose — every plugin owns a dedicated SQLite file (or
+`sqld` namespace) / Postgres schema, always. No risk of table conflicts with
+the platform or other plugins, no slug prefix required. The only thing you
+can still set is `"database": { "requireEncryption": true }` (RFC 0071) — see
+above.
 
-| Value        | What it means                                                                                                                                                                                           |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"isolated"` | Plugin owns a dedicated SQLite file / Postgres schema. No risk of table conflicts with the platform or other plugins. **Recommended for all third-party plugins.**                                      |
-| `"shared"`   | Plugin writes into the platform DB. Can join against platform tables (tenants, users, etc.). **For trusted first-party plugins only** — a schema conflict or buggy migration can corrupt platform data. |
-
-Omitting `"database"` is equivalent to `"shared"`.
-
-There is no per-plugin dialect field (workstream 0009 leg 1 removed it). An
-isolated plugin's store always resolves to the operator's instance-wide
+There is no per-plugin dialect field either (workstream 0009 leg 1 removed
+it). A plugin's store always resolves to the operator's instance-wide
 `DB_DIALECT`/`DATABASE_URL` choice:
 
-| Platform dialect | Manifest declaration          | Resolved plugin dialect |
-| ---------------- | ----------------------------- | ----------------------- |
-| SQLite           | omitted                       | SQLite                  |
-| SQLite           | `"isolated"`                  | SQLite                  |
-| SQLite           | `{ "isolation": "isolated" }` | SQLite                  |
-| Postgres         | omitted                       | Postgres                |
-| Postgres         | `"isolated"`                  | Postgres                |
-| Postgres         | `{ "isolation": "isolated" }` | Postgres                |
+| Platform dialect | Resolved plugin dialect |
+| ---------------- | ----------------------- |
+| SQLite           | SQLite                  |
+| Postgres         | Postgres                |
 
 #### Database setup for local plugins
 

@@ -3,6 +3,8 @@ export type { UseLongPressOptions, LongPressHandlers } from './useLongPress';
 export { useDoubleTapHandler, useSingleOrDoubleTap } from './useDoubleTap';
 export { useIsMobile, MOBILE_BREAKPOINT_PX } from './useIsMobile';
 export { useIsOffline } from './useIsOffline';
+export { useOfflineTileState } from './useOfflineTileState';
+export type { OfflineTileState } from './useOfflineTileState';
 export { useCommitOnEnterOrBlur } from './useCommitOnEnterOrBlur';
 export type { CommitOnEnterOrBlurHandlers } from './useCommitOnEnterOrBlur';
 export { useSwipeReveal } from './useSwipeReveal';

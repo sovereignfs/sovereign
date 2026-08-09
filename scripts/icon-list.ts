@@ -11,6 +11,7 @@ export const ICON_LIST = [
   'house',
   'settings',
   'log-out',
+  'smartphone',
   // Navigation / overlay
   'chevron-right',
   'chevron-left',

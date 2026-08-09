@@ -3,6 +3,7 @@ import type { ReactElement, SVGProps } from 'react';
 import { HouseIcon } from './house';
 import { SettingsIcon } from './settings';
 import { LogOutIcon } from './log-out';
+import { SmartphoneIcon } from './smartphone';
 import { ChevronRightIcon } from './chevron-right';
 import { ChevronLeftIcon } from './chevron-left';
 import { ChevronDownIcon } from './chevron-down';
@@ -60,6 +61,7 @@ export type IconName =
   | 'house'
   | 'settings'
   | 'log-out'
+  | 'smartphone'
   | 'chevron-right'
   | 'chevron-left'
   | 'chevron-down'
@@ -119,6 +121,7 @@ export const ICONS: Record<IconName, IconComponent> = {
   house: HouseIcon,
   settings: SettingsIcon,
   'log-out': LogOutIcon,
+  smartphone: SmartphoneIcon,
   'chevron-right': ChevronRightIcon,
   'chevron-left': ChevronLeftIcon,
   'chevron-down': ChevronDownIcon,
@@ -176,6 +179,7 @@ export const ICONS: Record<IconName, IconComponent> = {
 export { HouseIcon } from './house';
 export { SettingsIcon } from './settings';
 export { LogOutIcon } from './log-out';
+export { SmartphoneIcon } from './smartphone';
 export { ChevronRightIcon } from './chevron-right';
 export { ChevronLeftIcon } from './chevron-left';
 export { ChevronDownIcon } from './chevron-down';

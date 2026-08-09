@@ -765,8 +765,10 @@ import {
   useSingleOrDoubleTap,
   useIsMobile,
   useIsOffline,
+  useOfflineTileState,
   useCommitOnEnterOrBlur,
   OfflineGate,
+  DeviceOnlyGate,
 } from '@sovereignfs/ui';
 ```
 
@@ -875,6 +877,44 @@ user is enough and the content itself is still worth showing.
 <OfflineGate surfaceName="Console">
   <UserList />
 </OfflineGate>
+```
+
+**`useOfflineTileState(offline, deviceOnlyAvailable)`**
+Which of two app-tile states, if any, applies given a plugin's declared
+`offline` manifest tier (research 0012, epic task 2.33): `'connectivity-dimmed'`
+(a no-tier app, reactive and temporary, only while genuinely offline right
+now) or `'capability-restricted'` (a `device-only` app on a surface without
+the store it needs — static, unrelated to connectivity, and must never read
+as "offline" to a user who plainly isn't). `deviceOnlyAvailable` is the
+caller's own `isDeviceOnlyTierAvailable()` result (from
+`@sovereignfs/sdk/device-client`) — passed in rather than computed here, so
+this package never depends on `@sovereignfs/sdk`. The Launcher's `PluginTile`
+and the shell's own Apps-drawer item both apply this identically rather than
+each re-deriving the two states slightly differently.
+
+```tsx
+const state = useOfflineTileState(plugin.offline, isDeviceOnlyTierAvailable());
+// 'connectivity-dimmed' | 'capability-restricted' | null
+```
+
+**`DeviceOnlyGate({ children, surfaceName?, available, className? })`**
+The `device-only`-tier counterpart to `OfflineGate`: blocks a plugin's own
+content from rendering on a surface that can't provide the durable, encrypted,
+device-auth-gated store that tier requires, showing an explanatory empty state
+instead of a broken screen. A `device-only` plugin wraps its own root content
+in this the same way Console/Account wrap theirs in `OfflineGate` — an opt-in
+pattern each surface applies to itself, not a platform-level route gate,
+since a user can always reach a route directly (a bookmark, a deep link)
+without passing through a launcher tile first. `available` is the same
+`isDeviceOnlyTierAvailable()` result `useOfflineTileState` takes — **not a
+security boundary**; the actual protection is that the data is encrypted and
+the key requires device auth to release (epic task 1.22), independent of
+whether this gate is present, bypassed, or never reached at all.
+
+```tsx
+<DeviceOnlyGate available={isDeviceOnlyTierAvailable()} surfaceName="Wallet">
+  <CardList />
+</DeviceOnlyGate>
 ```
 
 **`useSwipeReveal({ revealWidth, open, onOpen, onClose, disabled? })`**

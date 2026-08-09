@@ -7,13 +7,18 @@
 API, extends RFC 0015/0016's fan-out, relay-URL configuration), a new
 standalone service `apps/relay` (this monorepo), `sovereign-mobile` (external
 repo — client registration, encryption, native decrypt-and-display; tracked
-there via that repo's own epic 20 task 20.5), the `sovereign-infra` /
+there via that repo's own epic 20 task 20.5), `sovereign-desktop` (external
+repo, per the "Desktop native push" addendum below — client registration,
+encryption, native decrypt-and-display; tracked there via this monorepo's
+own epic 17 task 17.11), the `sovereign-infra` /
 `openfs-infra` deployment repositories (external — relay deployment playbook)\
 **Incorporated into plan:** Yes — epic task 4.7 (this monorepo) and epic task
-20.5, rescoped (`sovereign-mobile`'s client-side half). Sequenced by
-[workstream 0005](../workstreams/0005-native-push-relay.md) for the push
-feature; WebRTC signaling's own implementation is intentionally not
-sequenced yet (see "Feature: WebRTC signaling" below).
+20.5, rescoped (`sovereign-mobile`'s client-side half); epic tasks 4.8 and
+17.11 (the desktop addendum). Sequenced by
+[workstream 0005](../workstreams/0005-native-push-relay.md) for the mobile
+push feature and [workstream 0010](../workstreams/0010-desktop-push-relay.md)
+for the desktop addendum; WebRTC signaling's own implementation is
+intentionally not sequenced yet (see "Feature: WebRTC signaling" below).
 
 ---
 
@@ -456,9 +461,233 @@ unaffected since this is a server + relay + shell-native feature, not a
 plugin-facing SDK surface — plugins keep calling `sdk.notifications.send()`
 exactly as they do today, unaware of which channel(s) actually deliver it.
 
+## Addendum: Desktop native push (macOS APNs, Windows WNS; Linux out of scope)
+
+**Status:** Draft — scoping only, nothing implemented yet. Extends the
+already-Implemented mobile leg (epic task 4.7 / workstream 0005) to
+`sovereign-desktop`, reusing the same schema, relay, and fan-out machinery
+rather than building a parallel system.
+
+### Motivation
+
+`sovereign-desktop` epic task 17.2 already ships local, foreground-triggered
+OS notifications (`notifications.native`, RFC 0083) — but, like
+`sovereign-mobile` before this RFC, has no path to notify a user once the
+app is fully quit. Unlike mobile, a desktop process isn't OS-suspended by
+default and a tray-resident app could in principle stay connected — but
+users do quit desktop apps, and when they do, only real OS-level push closes
+the gap, the same way it did for mobile.
+
+### Current state (desktop-specific)
+
+`sovereign-desktop` is a Tauri 2 app, identifier `fs.sovereign.desktop`,
+macOS-first, shipping as an unpackaged `.dmg`/`.exe`/`.AppImage` — no MSIX,
+no Mac App Store (that's the still-parked epic task 17.6). Its device bridge
+(RFC 0083, `src-tauri/src/bridge.rs`) already implements
+`notifications.native` via `tauri-plugin-notification`'s `NotificationExt` —
+foreground/locally-triggered only, unrelated to this addendum's
+server-initiated delivery except that the native app reuses the same
+display path once a push is decrypted, mirroring how `sovereign-mobile`
+leg 4 reused its own `notifications.native` display path.
+
+### Proposed design
+
+**Schema.** `push_device_tokens.platform` gains `'macos'` and `'windows'`
+alongside the existing `'ios'`/`'android'`. The column is untyped `text` in
+both dialects — no migration needed. TypeScript-level validation widens in
+the registration API (`runtime/app/api/account/push-device-token/route.ts`)
+and the relay's push route.
+
+**macOS uses APNs** — the same service as iOS, under the same Apple
+Developer Team, but a distinct app identity (`fs.sovereign.desktop` vs.
+`fs.sovereign.mobile`) and therefore a distinct `apns-topic`. The relay's
+`apnsConfig()`/`sendApnsPush()` (`apps/relay/src/apns.ts`,`config.ts`)
+generalize to take an explicit topic per call instead of reading one fixed
+`config.bundleId` internally; a new `APNS_BUNDLE_ID_MACOS` env var is
+additive alongside the existing `APNS_BUNDLE_ID` (which keeps meaning iOS,
+unchanged). The shared JWT credential (`APNS_KEY`/`APNS_KEY_ID`/`APNS_TEAM_ID`)
+still gates whether APNs works at all; a platform-specific bundle-id var
+being unset gates only that platform, returning the same
+`platform_not_configured` the push route already returns for FCM.
+
+**macOS decrypt-and-display — proposed to ship without a Notification
+Service Extension equivalent in v1.** iOS's NSE exists because Xcode
+projects have first-class tooling (this RFC's mobile leg used the
+`xcodeproj` gem) for adding an extension target and an "Embed Foundation
+Extensions" build phase. Tauri's build output is a plain `.app` bundle
+produced by `tauri-bundler`, with no Xcode-project equivalent — embedding a
+macOS `.appex` (the same `UNNotificationServiceExtension` mechanism exists
+on macOS 10.14+, per Apple's docs) would mean new, unprecedented build
+tooling: a custom `tauri.conf.json` bundle hook that builds a second binary
+plus its own `Info.plist`/entitlements and copies it into the produced
+`.app`'s `Contents/PlugIns/` post-build. Proposed instead: deliver a generic
+placeholder banner (mirroring the `aps.alert` title-space placeholder
+`sendApnsPush` already sends for the mutable-content path) while the app is
+closed; the app decrypts and shows real content once opened, reusing
+`fanOutPushToUser`'s already-encrypted payload the same way a reopened
+mobile app's inbox would. Content still never transits the relay or Apple
+in plaintext either way — the only difference from iOS is a generic vs.
+specific banner while quit. A real NSE-equivalent is a plausible later leg,
+not ruled out, just not undertaken here.
+
+**Windows uses WNS (Windows Notification Service)** — a different protocol
+from APNs/FCM with no existing relay client. New `apps/relay/src/wns.ts`:
+OAuth2 client-credentials token fetch against
+`https://login.live.com/accesstoken.srf`, authenticating with a Partner
+Center-issued Package SID (as `client_id`) and its client secret — this
+identity step works for an unpackaged Win32 app via a free Partner Center
+app reservation, it does not require MSIX/Store publishing. The resulting
+bearer token (~24h validity per Microsoft's docs) is cached and proactively
+refreshed, mirroring `apnsJwt`'s own caching shape. Sends are **raw**
+notifications only (`X-WNS-Type: wns/raw`), POSTed directly to the device's
+channel URI — WNS has no separate "device token"; the channel URI Windows
+generates client-side _is_ the value stored in `push_device_tokens.device_token`
+for `'windows'` rows, a full HTTPS endpoint the relay calls directly rather
+than a host + opaque-token pair.
+
+Raw-only is a deliberate scope decision, not an oversight: WNS's other
+notification type ("toast") can render a system banner even while the app
+is fully quit, but only because Windows itself renders the banner from
+plaintext XML in the push body — there is no app code running on a quit,
+unpackaged app to decrypt anything first. That directly conflicts with this
+RFC's non-negotiable content-blind guarantee, so it's rejected (see
+"Alternatives considered"). The practical consequence: Windows push only
+reaches a **running** app (tray-resident is sufficient — it does not need
+to be foregrounded), and a fully-quit Windows app receives nothing, the
+same outcome as the Linux gap below for a different underlying reason.
+
+Config: `WNS_PACKAGE_SID`, `WNS_CLIENT_SECRET`, gated by a `wnsConfigured()`
+check with the same "structurally complete, environment-gated" posture
+`apnsConfigured()`/`fcmConfigured()` already established — real credentials
+require a Partner Center registration unavailable in this environment.
+
+**Push route dispatch** (`apps/relay/app/v1/push/route.ts`) widens:
+`'ios'`/`'macos'` → APNs (topic selected per platform), `'android'` → FCM,
+`'windows'` → WNS.
+
+**`runtime/src/push.ts`'s fan-out needs no change.** `fanOutPushToUser`
+already forwards `token.platform` to the relay opaquely, with no branching
+on its value — confirmed by reading the current implementation before
+writing this addendum, not assumed from the mobile leg's shape.
+
+**Linux is permanently out of scope for OS-level closed-app push** — no
+Linux desktop push primitive exists, packaged or not (unlike Windows, there
+isn't even a raw-only fallback). `sovereign-desktop` continues to offer only
+foreground/loaded-instance notifications there, exactly as it does today.
+This is a documented platform gap, not a deferred task — nothing in this
+addendum's adoption path attempts it. (UnifiedPush, a self-hostable open
+push protocol, is a plausible future answer to this specific gap and fits
+this project's self-hosted ethos well, but is a materially bigger,
+open-ended question that belongs in its own `docs/research/` doc if ever
+picked up — not scoped here.)
+
+**Desktop client** (new epic task 17.11, tracked in
+[docs/epics/desktop.md](../epics/desktop.md)): on-device P-256 keypair
+generated in Rust (`p256`/`aes-gcm`/`hkdf` crates), producing the exact same
+65-byte SEC1/X9.63 public-key point and the same ECDH + HKDF-SHA256 +
+AES-256-GCM wire format this RFC already specifies — the relay and
+`runtime/src/push-encryption.ts` need zero changes to support a third
+client language. The private key is persisted via each OS's native
+credential store rather than anything Rust-portable: macOS Keychain via the
+`security-framework` crate (mirroring `PushKeychain.swift`'s approach from
+the mobile leg), Windows Credential Manager via the `windows` crate
+(mirroring `PushKeystore.java`'s "store both public and private key at
+generation time" discipline, since deriving a public key back out of an
+opaque stored private key isn't portably possible there either).
+Registration happens entirely in native Rust — not the bundled onboarding
+page's JS, and not routed through `bridge.json`'s one narrow remote grant —
+reading the active instance URL from the same `tauri-plugin-store`
+`instances.json` `store.ts` already writes and the session cookie via
+Tauri's webview cookie API, then `POST`ing to
+`/api/account/push-device-token` directly. This mirrors
+`sovereign-mobile` leg 4's "entirely native, zero new bridge capability"
+decision for the identical reasons: RFC 0083 §7 (`secureStorage`-shaped
+capabilities must never be plugin-facing) and this repo's own hard rule
+against widening `bridge.json`'s remote grant beyond `allow-bridge-invoke`
+both apply here without modification.
+
+Two genuinely open integration points, neither blocking this addendum's
+acceptance but both real enough to name rather than hand-wave:
+
+- **macOS device-token registration** needs
+  `NSApplication.registerForRemoteNotifications()` plus the
+  `NSApplicationDelegate` callbacks
+  (`didRegisterForRemoteNotificationsWithDeviceToken:` /
+  `didFailToRegisterForRemoteNotificationsWithError:`). These are
+  `NSApplicationDelegate`-only methods — Tauri (via the `tao` windowing
+  crate it's built on) does not surface them as a Tauri-level event, and
+  `tao` already owns the application delegate for its own window
+  management. The implementation leg's first task is a spike: adding these
+  selectors to `tao`'s existing Objective-C delegate class at runtime via
+  the Objective-C runtime (`objc2`, already a dependency here for Touch ID
+  in epic task 17.10), not assumed solved by this addendum.
+- **Windows device-channel registration** needs
+  `Windows.Networking.PushNotifications.PushNotificationChannelManager`
+  (via the `windows` crate) to obtain a channel URI, which for an
+  unpackaged app requires associating the process with the Partner
+  Center-issued identity (Package SID) at runtime — the exact current API
+  for that association on an unpackaged Win32 app needs verification during
+  implementation. Real verification is blocked on both a Windows machine
+  and real Partner Center credentials, the same posture already documented
+  for epic task 17.10's Windows Hello code (`src/biometrics/windows.rs`):
+  type-checked via cross-compile, never built or run for real here.
+
+### Security considerations
+
+The end-to-end encryption guarantee is unchanged and unweakened by any of
+the above — the relay never receives plaintext regardless of platform.
+macOS's placeholder-banner tradeoff and Windows's running-app-only tradeoff
+both reduce _availability_ while the app is quit, never _confidentiality_.
+The Windows raw/toast decision specifically exists to keep it that way —
+see "Alternatives considered."
+
+### Alternatives considered
+
+- **Windows toast notifications with plaintext payloads** — would achieve
+  real closed-app banners on Windows, the same outcome iOS/Android get.
+  Rejected: it requires notification content to reach WNS (and therefore
+  Microsoft) unencrypted, directly conflicting with this RFC's central
+  design goal. Not pursued even as an opt-in mode, since a per-platform
+  exception to the content-blind guarantee would be a confusing, easy-to-
+  misconfigure promise to make to self-hosted operators.
+- **Building a macOS Notification Service Extension equivalent now** —
+  deferred rather than rejected. No existing Tauri build tooling supports
+  it; the investment (custom bundle-hook tooling, a second signed binary)
+  is real and separable from the rest of this addendum's scope.
+- **UnifiedPush for Linux** — a legitimate, self-hosted-friendly answer to
+  the Linux gap, explicitly not scoped here; too open-ended for an
+  addendum, would need its own research doc first per this repo's own
+  "research precedes RFCs" convention.
+
+### Open questions
+
+- The exact Tauri/`tao`/`objc2` mechanism for receiving
+  `didRegisterForRemoteNotificationsWithDeviceToken:` — the desktop leg's
+  first task, not resolved here.
+- The exact unpackaged-app identity-association API for
+  `PushNotificationChannelManager` on Windows — same posture.
+- Whether a later leg should build a real macOS NSE equivalent once the
+  rest of this ships.
+- Real Partner Center / Apple Developer Team credential acquisition for
+  the desktop app's own APNs bundle ID and Windows Package SID —
+  operational, not a design blocker, same category as the existing "real
+  Apple/Firebase credentials" gap already documented for the mobile leg.
+
+### Adoption path
+
+Sequenced by a new workstream (`docs/workstreams/`) covering both
+repositories: this monorepo (schema/registration-API widening, relay APNs
+generalization, new `wns.ts` client — new epic task 4.8) and
+`sovereign-desktop` (native macOS/Windows registration, on-device crypto,
+decrypt-and-display — new epic task 17.11). Both tasks ship
+environment-gated, same as the mobile leg: real delivery is unverifiable
+without real Apple/Microsoft credentials and, for Windows, a real Windows
+machine.
+
 ## Changelog
 
 | Version | Date        | Change                                                                                                                                                                  |
 | ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | August 2026 | Initial draft (push notifications only)                                                                                                                                 |
 | 0.2     | August 2026 | Renamed `apps/push-relay` → `apps/relay`; broadened to a shared "Sovereign Relay" platform with a design-sketched WebRTC signaling feature; added "Deployment topology" |
+| 0.3     | August 2026 | Added "Desktop native push" addendum — macOS APNs, Windows WNS (raw-only, encrypted), Linux explicitly out of scope                                                     |

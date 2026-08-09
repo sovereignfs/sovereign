@@ -396,6 +396,71 @@ crypto approach; RFC 0087.
 
 ---
 
+#### 📋 4.8 — Desktop native push relay support (macOS APNs, Windows WNS)
+
+> **New in [RFC 0087's "Desktop native push" addendum](../rfcs/0087-sovereign-relay.md#addendum-desktop-native-push-macos-apns-windows-wns-linux-out-of-scope).**
+> This monorepo's half of extending native push to `sovereign-desktop`:
+> widening `push_device_tokens`/the registration API to accept `'macos'`/
+> `'windows'`, generalizing the relay's APNs client to a per-platform topic,
+> and a new WNS (raw-only) client. The `sovereign-desktop` client-side half
+> is tracked in that repo's own epic 17, task 17.11 — see this monorepo's
+> [docs/epics/desktop.md](desktop.md#-1711--native-desktop-push-notifications-macos-apns-windows-wns).
+> Sequenced by [workstream 0010](../workstreams/0010-desktop-push-relay.md),
+> 2 legs here (a 3rd, 17.11, lives in `sovereign-desktop`). Not started.
+
+**Goal:** Let `fanOutPushToUser` deliver to a registered `sovereign-desktop`
+macOS or Windows device through the same relay and encryption scheme
+`sovereign-mobile` already uses, with no changes to the fan-out function
+itself — see RFC 0087's addendum for why the existing schema and crypto
+already generalize.
+
+**Deliverables:**
+
+- `push_device_tokens.platform` validation widened (registration API,
+  relay push route) to accept `'macos'` and `'windows'` alongside the
+  existing `'ios'`/`'android'` — no schema migration, the column is
+  already untyped `text`.
+- `apps/relay/src/apns.ts`/`config.ts` generalized: `sendApnsPush()` takes
+  an explicit topic per call instead of one fixed `config.bundleId`; new
+  `APNS_BUNDLE_ID_MACOS` env var, additive alongside the existing
+  `APNS_BUNDLE_ID` (unchanged meaning: iOS).
+- New `apps/relay/src/wns.ts` — OAuth2 client-credentials token fetch
+  (`WNS_PACKAGE_SID`/`WNS_CLIENT_SECRET`), cached and proactively
+  refreshed, sending **raw** notifications only (never toast — toast would
+  require plaintext content reaching Microsoft, rejected per the RFC
+  addendum) directly to the device's channel URI (WNS's own device-token
+  equivalent, a full HTTPS endpoint rather than an opaque string).
+  `wnsConfigured()`/`wnsConfig()` follow the same "gate, don't throw"
+  discipline as `apnsConfigured()`/`fcmConfigured()`.
+- `apps/relay/app/v1/push/route.ts` dispatch widened: `'ios'`/`'macos'` →
+  APNs, `'android'` → FCM, `'windows'` → WNS.
+- No change to `runtime/src/push.ts`'s `fanOutPushToUser` — already
+  forwards `platform` opaquely, confirmed by reading the current
+  implementation before scoping this task.
+
+**Dependencies:** Task 4.7 (native mobile push relay — this task reuses its
+schema, encryption scheme, and fan-out unchanged); RFC 0087's addendum;
+workstream 0010.
+
+**SRS reference:** RFC 0087 (addendum)
+
+**Review checklist:**
+
+- A `'macos'` or `'windows'` device token registers and revokes correctly
+  through the existing registration/revocation endpoints.
+- The relay forwards a real encrypted blob to a real macOS device via APNs
+  using the correct (`fs.sovereign.desktop`) topic — verified once
+  `sovereignfs`'s second bundle ID is provisioned, not before.
+- The relay's WNS client correctly obtains a token and posts a raw
+  notification to a real channel URI — verified once real Partner Center
+  credentials are provisioned; ships environment-gated
+  (`platform_not_configured`) until then, same posture as APNs/FCM.
+- The relay never receives, logs, or is otherwise capable of accessing
+  plaintext content for either platform.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+
+---
+
 ## Related RFCs
 
 - [RFC 0015 — Notification Center](../rfcs/0015-notification-center.md)

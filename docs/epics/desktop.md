@@ -592,6 +592,95 @@ target_os = "windows"))`
 - Manual, once Windows access is available: confirm `src/biometrics/windows.rs`
   actually builds, links, and round-trips a real Windows Hello prompt
 
+#### 📋 17.11 — Native desktop push notifications (macOS APNs, Windows WNS)
+
+> **New in [RFC 0087's "Desktop native push" addendum](../rfcs/0087-sovereign-relay.md#addendum-desktop-native-push-macos-apns-windows-wns-linux-out-of-scope).**
+> Extends the already-Implemented mobile push relay (epic task 4.7,
+> workstream 0005) to `sovereign-desktop`, reusing the same schema, relay,
+> encryption scheme, and `fanOutPushToUser` fan-out unchanged. Sequenced by
+> [workstream 0010](../workstreams/0010-desktop-push-relay.md), 3 legs — this
+> task is leg 3, the `sovereign-desktop` client half; legs 1–2 (schema
+> widening, relay macOS/Windows support) are this monorepo's own task 4.8.
+> Not started.
+>
+> **Two real platform constraints shape this task's scope, not just its
+> implementation** (full reasoning in the RFC addendum): macOS ships without
+> a Notification Service Extension equivalent in v1 — Tauri has no
+> Xcode-project tooling to embed one, so a quit app shows a generic
+> placeholder banner and real content decrypts once opened, not before.
+> Windows ships **raw WNS notifications only** — toast notifications could
+> show a real closed-app banner, but only by sending Microsoft plaintext
+> content, which conflicts with this RFC's content-blind guarantee and was
+> rejected; the accepted tradeoff is that Windows delivery only reaches a
+> **running** (tray-resident is sufficient) process, never a fully-quit one.
+> Linux gets no new capability from this task at all — no OS push primitive
+> exists; it's a documented permanent gap, not a deferred piece of this task.
+
+**Goal:** Let a self-hosted instance deliver a notification to a
+`sovereign-desktop` user's macOS or Windows device through the same relay
+`sovereign-mobile` already uses, without ever exposing content to
+`sovereignfs`'s infrastructure — see RFC 0087's addendum for why the same
+relay/encryption approach that solved this for mobile extends here
+essentially unchanged.
+
+**Deliverables:**
+
+- On-device P-256 keypair (Rust `p256`/`aes-gcm`/`hkdf` crates), producing
+  the same 65-byte SEC1/X9.63 point and wire format iOS/Android already
+  use — zero changes needed to the relay or `runtime/src/push-encryption.ts`.
+- Private key storage: macOS Keychain via `security-framework`; Windows
+  Credential Manager via the `windows` crate. Both public and private key
+  stored at generation time (deriving a public key back out of a stored
+  private key alone isn't portable, the same gap workstream 0005 hit on
+  Android).
+- Native (not page-JS, not routed through `bridge.json`) registration via
+  `POST /api/account/push-device-token`, reading the active instance URL
+  from `tauri-plugin-store`'s `instances.json` and the session cookie via
+  Tauri's webview cookie API — mirroring `sovereign-mobile` leg 4's
+  "entirely native, zero new bridge capability" decision for the same two
+  reasons (RFC 0083 §7, this repo's own hard rule against widening
+  `bridge.json`'s remote grant).
+- macOS: `NSApplication.registerForRemoteNotifications()` plus the
+  `NSApplicationDelegate` device-token callbacks, reached by adding
+  selectors to `tao`'s existing Objective-C delegate class at runtime via
+  `objc2` (already a dependency here for task 17.10's Touch ID) — genuinely
+  new integration surface for this repo, budget real spike time before the
+  rest of the task.
+- Windows: a channel URI via
+  `Windows.Networking.PushNotifications.PushNotificationChannelManager`
+  (the `windows` crate), associating the unpackaged process with the
+  Partner Center Package SID. Real verification blocked on both a Windows
+  machine and real Partner Center credentials — ships cross-compile-checked
+  only, same posture as task 17.10's `src/biometrics/windows.rs`.
+- Decrypt-and-display reuses the already-shipped `notifications.native`
+  path (task 17.2) on both platforms — no second display mechanism.
+- Revocation call on sign-out and on instance removal, both paths
+  independently verified.
+- Version bump: `package.json`, `src-tauri/Cargo.toml`,
+  `src-tauri/tauri.conf.json` in lockstep.
+
+**Dependencies:** Task 4.8 (this monorepo's schema + relay half); RFC 0087's
+addendum; workstream 0010.
+
+**SRS reference:** RFC 0087 (addendum)
+
+**Review checklist:**
+
+- A registered macOS device shows a generic placeholder banner while the
+  app is fully quit, and real decrypted content once opened — verified
+  against real hardware and real APNs sandbox credentials, not just unit
+  tests.
+- A registered Windows device receives and decrypts a push while the app is
+  running but not foregrounded (tray-resident) — verified against real
+  hardware and real WNS credentials once available; a fully-quit Windows
+  app correctly receives nothing, not a silent failure mode.
+- Neither the relay nor Apple/Microsoft ever receives plaintext content —
+  verified by inspecting what's actually sent, not just reading the code.
+- Revoking a device (sign-out, instance removal) stops further pushes,
+  verified end-to-end.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && cargo
+test --manifest-path src-tauri/Cargo.toml`
+
 ## Related RFCs
 
 - [RFC 0038 — Desktop app shell (Tauri, macOS-first)](../rfcs/0038-desktop-app-shell.md)
@@ -602,6 +691,8 @@ target_os = "windows"))`
   (supplies the `desktop` surface value; subsumes Task 17.7)
 - [RFC 0083 — Device bridge and capability contract](../rfcs/0083-device-bridge-capability-contract.md)
   (rescopes Task 17.2's notification half and Task 17.4 to the Tauri transport)
+- [RFC 0087 — Sovereign Relay](../rfcs/0087-sovereign-relay.md) ("Desktop
+  native push" addendum governs Task 17.11)
 
 ## Related Docs
 

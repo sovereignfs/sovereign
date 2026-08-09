@@ -357,18 +357,20 @@ mobile app (post-v1 plan)" and SRS §3.12) and lives in a separate
 
 ### Non-prioritised tasks
 
-| Version | Task                                                             | Status | Epic task                                                                                           |
-| ------- | ---------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------- |
-| —       | Mobile app shell, iOS and Android (RFC 0058)                     | ⏳     | [20.1](docs/epics/mobile.md#-201--sovereign-mobile--capacitor-shell-scaffold)                       |
-| —       | Mobile instance validation and compatibility endpoint (RFC 0058) | ✅     | [20.2](docs/epics/mobile.md#-202--mobile-instance-validation-and-compatibility-endpoint)            |
-| —       | Mobile SDK native environment and bridge adapter (RFC 0058)      | 📋     | [20.3](docs/epics/mobile.md#-203--mobile-sdk-native-environment-and-bridge-adapter)                 |
-| —       | Mobile store release setup and privacy declarations (RFC 0058)   | 📋     | [20.4](docs/epics/mobile.md#-204--mobile-store-release-setup-and-privacy-declarations)              |
-| —       | Native mobile push relay — runtime + relay service (RFC 0087)    | ⏳     | [4.7](docs/epics/notification-center.md#-47--native-mobile-push-relay-apnsfcm)                      |
-| —       | Mobile native push notifications, client half (RFC 0087)         | 📋     | [20.5](docs/epics/mobile.md#-205--native-push-notifications-apnsfcm)                                |
-| —       | Mobile native photo picker and camera capture (RFC 0058)         | 📋     | [20.6](docs/epics/mobile.md#-206--native-photo-picker-and-camera-capture)                           |
-| —       | Mobile biometric auth capability (RFC 0058)                      | 📋     | [20.7](docs/epics/mobile.md#-207--biometric-auth-capability)                                        |
-| —       | Mobile haptics capability (RFC 0058)                             | 📋     | [20.8](docs/epics/mobile.md#-208--haptics-capability)                                               |
-| —       | Mobile background capability planning (RFC 0058)                 | 📋     | [20.9](docs/epics/mobile.md#-209--background-capability-planning)                                   |
-| —       | WKWebView service-worker and offline spike (RFC 0058, RFC 0082)  | ⏳     | [20.10](docs/epics/mobile.md#-2010--wkwebview-service-worker-and-offline-spike-rfc-0058-rfc-0082)   |
-| —       | Focused plugin app build targets (RFC 0082)                      | 📋     | [20.11](docs/epics/mobile.md#-2011--focused-plugin-app-build-targets-rfc-0082)                      |
-| —       | Plugin app store release process and rationing policy (RFC 0082) | 📋     | [20.12](docs/epics/mobile.md#-2012--plugin-app-store-release-process-and-rationing-policy-rfc-0082) |
+| Version | Task                                                                | Status | Epic task                                                                                              |
+| ------- | ------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------ |
+| —       | Mobile app shell, iOS and Android (RFC 0058)                        | ⏳     | [20.1](docs/epics/mobile.md#-201--sovereign-mobile--capacitor-shell-scaffold)                          |
+| —       | Mobile instance validation and compatibility endpoint (RFC 0058)    | ✅     | [20.2](docs/epics/mobile.md#-202--mobile-instance-validation-and-compatibility-endpoint)               |
+| —       | Mobile SDK native environment and bridge adapter (RFC 0058)         | 📋     | [20.3](docs/epics/mobile.md#-203--mobile-sdk-native-environment-and-bridge-adapter)                    |
+| —       | Mobile store release setup and privacy declarations (RFC 0058)      | 📋     | [20.4](docs/epics/mobile.md#-204--mobile-store-release-setup-and-privacy-declarations)                 |
+| —       | Native mobile push relay — runtime + relay service (RFC 0087)       | ⏳     | [4.7](docs/epics/notification-center.md#-47--native-mobile-push-relay-apnsfcm)                         |
+| —       | Mobile native push notifications, client half (RFC 0087)            | 📋     | [20.5](docs/epics/mobile.md#-205--native-push-notifications-apnsfcm)                                   |
+| —       | Desktop native push relay — schema + relay half (RFC 0087 addendum) | 📋     | [4.8](docs/epics/notification-center.md#-48--desktop-native-push-relay-support-macos-apns-windows-wns) |
+| —       | Desktop native push notifications, client half (RFC 0087 addendum)  | 📋     | [17.11](docs/epics/desktop.md#-1711--native-desktop-push-notifications-macos-apns-windows-wns)         |
+| —       | Mobile native photo picker and camera capture (RFC 0058)            | 📋     | [20.6](docs/epics/mobile.md#-206--native-photo-picker-and-camera-capture)                              |
+| —       | Mobile biometric auth capability (RFC 0058)                         | 📋     | [20.7](docs/epics/mobile.md#-207--biometric-auth-capability)                                           |
+| —       | Mobile haptics capability (RFC 0058)                                | 📋     | [20.8](docs/epics/mobile.md#-208--haptics-capability)                                                  |
+| —       | Mobile background capability planning (RFC 0058)                    | 📋     | [20.9](docs/epics/mobile.md#-209--background-capability-planning)                                      |
+| —       | WKWebView service-worker and offline spike (RFC 0058, RFC 0082)     | ⏳     | [20.10](docs/epics/mobile.md#-2010--wkwebview-service-worker-and-offline-spike-rfc-0058-rfc-0082)      |
+| —       | Focused plugin app build targets (RFC 0082)                         | 📋     | [20.11](docs/epics/mobile.md#-2011--focused-plugin-app-build-targets-rfc-0082)                         |
+| —       | Plugin app store release process and rationing policy (RFC 0082)    | 📋     | [20.12](docs/epics/mobile.md#-2012--plugin-app-store-release-process-and-rationing-policy-rfc-0082)    |

@@ -1127,6 +1127,7 @@ async function findSqldCutoverTargets(dataDir: string): Promise<SqldCutoverTarge
   return targets;
 }
 
+// TRANSITIONAL TOOLING — see the note atop packages/db/src/sqld-cutover.ts.
 const dbMigrateToSqld = defineCommand({
   meta: {
     name: 'migrate-to-sqld',
@@ -1304,6 +1305,7 @@ function findPostgresMigrationTargets(
   return targets;
 }
 
+// TRANSITIONAL TOOLING — see the note atop packages/db/src/postgres-migration.ts.
 const dbMigrateToPostgres = defineCommand({
   meta: {
     name: 'migrate-to-postgres',

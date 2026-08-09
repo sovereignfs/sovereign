@@ -36,6 +36,7 @@ export const permissionSchema = z.enum([
   'offline:write',
   'device:haptics',
   'device:notifications',
+  'device:biometrics',
 ]);
 
 /** Validate that a string is a valid semver string (e.g. "0.6.0"). */

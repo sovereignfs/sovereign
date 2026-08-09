@@ -224,6 +224,8 @@ Declared SDK capabilities. The v1-functional ones:
 
 | `device:notifications` | Use `sdk.device.nativeNotifications.*` (RFC 0083). |
 
+| `device:biometrics` | Use `sdk.device.biometrics.confirm()` (RFC 0083, sovereign-mobile epic task 20.7). |
+
 Reserved (declaring them is allowed; the backing surfaces throw `NotImplementedError` until
 implemented): `events:publish`, `events:subscribe`, `e2ee:use` (client-side encryption,
 `sdk.e2ee` — RFC 0060; distinct from any future server-side `sdk.crypto.encryptField()`
@@ -236,15 +238,16 @@ implemented; declaring the permission is not yet independently enforced
 against calls into that module. See "Offline writes (`sdk.offline-queue`,
 RFC 0078)" below.
 
-**`device:haptics` and `device:notifications` (RFC 0083) provide no
-isolation between plugins — say this to yourself in plain words before
-relying on either for anything security-sensitive.** `sdk.device.*` runs
-entirely in the browser, on the browser-only `@sovereignfs/sdk/device-client`
-subpath. There is no server-injected `x-sovereign-plugin-id` header to trust
-there (unlike every server-side SDK surface) — every plugin's client code
-shares one origin and one JavaScript context, so any plugin's client code
-can call `sdk.device.nativeNotifications.requestPermission('any.plugin.id')`
-and claim to be a different plugin entirely. Consequently:
+**`device:haptics`, `device:notifications`, and `device:biometrics` (RFC 0083)
+provide no isolation between plugins — say this to yourself in plain words
+before relying on any of them for anything security-sensitive.**
+`sdk.device.*` runs entirely in the browser, on the browser-only
+`@sovereignfs/sdk/device-client` subpath. There is no server-injected
+`x-sovereign-plugin-id` header to trust there (unlike every server-side SDK
+surface) — every plugin's client code shares one origin and one JavaScript
+context, so any plugin's client code can call
+`sdk.device.nativeNotifications.requestPermission('any.plugin.id')` and
+claim to be a different plugin entirely. Consequently:
 
 - The manifest declaration is **install/review-time metadata** — a reviewer
   signal and a consent-prompt input, not an enforced grant.
@@ -256,6 +259,13 @@ and claim to be a different plugin entirely. Consequently:
   `Notification.permission` — once granted to the instance's origin, _every_
   plugin's client code can call `new Notification(...)` directly, with or
   without going through `sdk.device.nativeNotifications.show()` at all.
+- **`biometrics.confirm()` is a partial exception, worth stating precisely
+  rather than lumping in wholesale:** the biometric check itself is real —
+  the OS genuinely requires the device owner's actual face/fingerprint, no
+  plugin can fake that part. What's spoofable is only the _attribution_ —
+  which plugin id the consent/audit record credits with having asked. Don't
+  read "provides no isolation" as "the confirmation itself is fake"; read it
+  as "don't trust which plugin's code claims to have triggered it."
 
 This is the same posture RFC 0078 §6 already states for `offline:write` and
 RFC 0080 §2 states for the `x-sovereign-surface` signal — self-declared
@@ -1724,13 +1734,18 @@ version?)` (sync, `false` until the handshake resolves — capabilities are
   `device:notifications` permission; requires `pluginId` on
   `requestPermission()` since this module can't read a server-injected
   header — see the permission table below for the enforcement caveat this
-  implies). Returns typed `DeviceResult` (`ok`/`unavailable`/`denied`/
-  `dismissed`/`failed`) instead of throwing for expected outcomes. On a
-  native-bridge transport (Tauri today; `supports('notifications.native')`),
-  `getPermission()`/`requestPermission()` always report `'granted'` — the
-  bridge exposes a one-shot `show`, not a queryable permission state, and the
-  OS gates the real permission at `show()`-time, surfaced through that call's
-  own `DeviceResult` rather than an up-front check (workstream 0003 leg 3).
+  implies), and `biometrics.confirm(reason?, pluginId?)` (needs the
+  `device:biometrics` permission; Face ID/Touch ID/Android `BiometricPrompt`
+  via the Capacitor transport — **a local presence confirmation only, never
+  a session or platform-auth grant**; `unavailable` on the web transport and
+  on desktop, and on any device with no biometrics enrolled). Returns typed
+  `DeviceResult` (`ok`/`unavailable`/`denied`/`dismissed`/`failed`) instead
+  of throwing for expected outcomes. On a native-bridge transport (Tauri
+  today; `supports('notifications.native')`), `getPermission()`/
+  `requestPermission()` always report `'granted'` — the bridge exposes a
+  one-shot `show`, not a queryable permission state, and the OS gates the
+  real permission at `show()`-time, surfaced through that call's own
+  `DeviceResult` rather than an up-front check (workstream 0003 leg 3).
 - **`env`** — plugin-scoped environment variables (RFC 0018). `sdk.env.get(key)`
   reads the calling plugin's `SV_PLUGIN_<SLUG>_<KEY>` env var, identified by
   the `x-sovereign-plugin-id` request header. Returns `null` when absent or

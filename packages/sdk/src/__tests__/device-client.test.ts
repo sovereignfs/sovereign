@@ -381,3 +381,79 @@ describe('camera.photo', () => {
     input.dispatchEvent(new Event('change'));
   });
 });
+
+describe('biometrics.confirm', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, BRIDGE_SYMBOL);
+    vi.resetModules();
+    vi.unstubAllGlobals();
+  });
+
+  it('reports unavailable with no bridge — no web fallback exists', async () => {
+    vi.resetModules();
+    const { biometrics } = await import('../device-client');
+
+    expect(await biometrics.confirm()).toEqual({
+      status: 'unavailable',
+      capability: 'biometrics.confirm',
+    });
+  });
+
+  it('passes the reason through and returns the bridge result as-is', async () => {
+    const invoke = vi.fn().mockResolvedValue({ status: 'ok', value: undefined });
+    provideBridge(nativeImpl({ invoke }));
+    vi.resetModules();
+    const { biometrics } = await import('../device-client');
+
+    expect(await biometrics.confirm('Reveal saved password')).toEqual({
+      status: 'ok',
+      value: undefined,
+    });
+    expect(invoke).toHaveBeenCalledWith('biometrics.confirm', { reason: 'Reveal saved password' });
+  });
+
+  it('surfaces unavailable from the bridge unchanged — e.g. no biometrics enrolled', async () => {
+    provideBridge(
+      nativeImpl({
+        invoke: async () => ({ status: 'unavailable', capability: 'biometrics.confirm' }),
+      }),
+    );
+    vi.resetModules();
+    const { biometrics } = await import('../device-client');
+
+    expect(await biometrics.confirm()).toEqual({
+      status: 'unavailable',
+      capability: 'biometrics.confirm',
+    });
+  });
+
+  it('records a device-consent grant before invoking the bridge', async () => {
+    provideBridge(nativeImpl({ invoke: async () => ({ status: 'ok', value: undefined }) }));
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.resetModules();
+    const { biometrics } = await import('../device-client');
+
+    await biometrics.confirm(undefined, 'fs.example.tally');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/account/device-grants',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ pluginId: 'fs.example.tally', capability: 'biometrics.confirm' }),
+      }),
+    );
+  });
+
+  it('tolerates a grant-bookkeeping network failure', async () => {
+    provideBridge(nativeImpl({ invoke: async () => ({ status: 'ok', value: undefined }) }));
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    vi.resetModules();
+    const { biometrics } = await import('../device-client');
+
+    expect(await biometrics.confirm(undefined, 'fs.example.tally')).toEqual({
+      status: 'ok',
+      value: undefined,
+    });
+  });
+});

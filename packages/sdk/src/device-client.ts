@@ -283,6 +283,47 @@ export const camera = {
   },
 };
 
+export const biometrics = {
+  /**
+   * Confirms the current user's presence via the device's local biometric
+   * sensor (Face ID / Touch ID / Android `BiometricPrompt`) — sovereign-mobile
+   * epic task 20.7. A **local** confirmation gate, never a session grant:
+   * see sovereign-mobile's ADR 0003 (cookie-in-WebView auth) — this
+   * capability never authenticates against the platform by itself, it only
+   * proves "the person holding this already-unlocked device is still here"
+   * for a plugin's own high-trust local action (e.g. revealing a saved
+   * secret, confirming a destructive local action). Records a
+   * device-consent grant for `pluginId` first, same best-effort bookkeeping
+   * as `camera.photo`/`nativeNotifications.requestPermission`.
+   *
+   * No web-transport fallback exists — WebAuthn is a fundamentally
+   * different, session-granting mechanism, not a drop-in local-confirm
+   * equivalent — so this reports `unavailable` outside a native bridge
+   * transport. It also reports `unavailable` (not `denied`) on a real
+   * device with no biometrics enrolled, matching `camera.photo`'s "no
+   * camera hardware" case rather than "user declined."
+   */
+  async confirm(reason?: string, pluginId?: string): Promise<DeviceResult<void>> {
+    if (pluginId) {
+      try {
+        await fetch('/api/account/device-grants', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ pluginId, capability: 'biometrics.confirm' }),
+        });
+      } catch {
+        // Grant bookkeeping is best-effort — see nativeNotifications.requestPermission.
+      }
+    }
+
+    const bridge = getBridge();
+    if (!bridge) {
+      return { status: 'unavailable', capability: 'biometrics.confirm' };
+    }
+    return (await bridge.invoke('biometrics.confirm', { reason })) as DeviceResult<void>;
+  },
+};
+
 function pickViaFileInput(
   source: 'camera' | 'library',
 ): Promise<DeviceResult<{ dataUrl: string; mimeType: string }>> {

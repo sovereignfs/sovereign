@@ -59,6 +59,12 @@ function sqldAdminUrl(): string {
  * `apps/auth/src/migrate.ts`.
  */
 export async function provisionAuthSqldNamespace(): Promise<void> {
+  // Fail fast here too, before any namespace gets created — this runs before
+  // getAuthDb() in the startup sequence (see runAuthMigrations), and a
+  // mismatch would otherwise provision a namespace no one uses before the
+  // error ever surfaces.
+  assertAuthDialectMatchesPlatform(getEnv().databaseUrl);
+
   if (dbEncryptionKeyFromEnv() !== undefined) return; // plain-file path, no namespace involved
   if (isPostgresUrl(getEnv().databaseUrl)) return;
 
@@ -91,6 +97,72 @@ function isPostgresUrl(url: string): boolean {
   return url.startsWith('postgres://') || url.startsWith('postgresql://');
 }
 
+/** The two env vars `resolvePlatformDialect`/`assertAuthDialectMatchesPlatform` read. Narrower
+ * than `NodeJS.ProcessEnv` on purpose — Next.js augments that global type to require `NODE_ENV`,
+ * which would force every caller (including tests) to fake a full process env just to pass one. */
+interface PlatformDialectEnv {
+  DB_DIALECT?: string;
+  DATABASE_URL?: string;
+}
+
+/**
+ * The platform's own resolved dialect — `packages/db/src/dialect.ts`'s
+ * `resolveDialect()`, duplicated here for the same reason the rest of this
+ * file duplicates `packages/db` logic: the auth server intentionally does
+ * not depend on it. `DB_DIALECT` is authoritative when set; otherwise the
+ * dialect is inferred from `DATABASE_URL`'s scheme, defaulting to SQLite —
+ * must stay identical to `resolveDialect()`'s own default, or this and the
+ * platform could each infer a different "default" dialect from the same
+ * unset env.
+ */
+function resolvePlatformDialect(env: PlatformDialectEnv): 'sqlite' | 'postgres' {
+  const explicit = env.DB_DIALECT?.toLowerCase();
+  if (explicit === 'sqlite' || explicit === 'postgres') return explicit;
+  const url = env.DATABASE_URL ?? 'file:./data/sovereign.db';
+  return isPostgresUrl(url) ? 'postgres' : 'sqlite';
+}
+
+/**
+ * Fail fast if the auth database's own dialect (inferred purely from
+ * `AUTH_DATABASE_URL`'s scheme — see the module doc comment) disagrees with
+ * the platform's (`DB_DIALECT`/`DATABASE_URL`).
+ *
+ * This gap is real, not hypothetical: `apps/auth` has always resolved its
+ * dialect entirely independently of `DB_DIALECT`, so nothing else in the
+ * codebase catches a mismatch. An operator can set `DB_DIALECT=postgres` and
+ * reasonably expect "auth, platform, and every plugin" (the documented
+ * model) to follow — but without also pointing `AUTH_DATABASE_URL` at
+ * Postgres, auth silently keeps writing to a local SQLite file instead,
+ * invisibly diverging from the rest of the instance. Both env vars are read
+ * from the same shared root `.env` (`loadEnvConfig` in both `next.config.ts`
+ * files), so this isn't asking the auth process to reach for something it
+ * doesn't already have.
+ *
+ * Skipped for `:memory:` — ephemeral test storage, no real platform to
+ * compare against (same carve-out `checkEncryptionMarker` uses below).
+ */
+export function assertAuthDialectMatchesPlatform(
+  authUrl: string,
+  // Next.js augments the global NodeJS.ProcessEnv type to require NODE_ENV,
+  // which makes it structurally incompatible with the narrower type below at
+  // the default-parameter position — cast, not a behavior change: at runtime
+  // process.env has these two keys (or undefined) same as any other.
+  env: PlatformDialectEnv = process.env as PlatformDialectEnv,
+): void {
+  if (authUrl === ':memory:') return;
+
+  const authDialect = isPostgresUrl(authUrl) ? 'postgres' : 'sqlite';
+  const platformDialect = resolvePlatformDialect(env);
+  if (authDialect === platformDialect) return;
+
+  throw new Error(
+    `Dialect mismatch: the platform resolves to "${platformDialect}" (DB_DIALECT/DATABASE_URL), ` +
+      `but AUTH_DATABASE_URL resolves to "${authDialect}". Auth, platform, and every plugin must ` +
+      "agree on one dialect — set AUTH_DATABASE_URL to match (see docs/self-hosting.md's " +
+      'PostgreSQL section for the required env vars on both dialects).',
+  );
+}
+
 /**
  * Convert a `file:` URL to a filesystem path. Relative paths resolve against the
  * workspace root (nearest ancestor with pnpm-workspace.yaml), not the process
@@ -120,6 +192,7 @@ let _db: AuthDb | undefined;
 function getAuthDb(): AuthDb {
   if (_db) return _db;
   const url = getEnv().databaseUrl;
+  assertAuthDialectMatchesPlatform(url);
 
   if (isPostgresUrl(url)) {
     _db = { dialect: 'postgres', pool: new Pool({ connectionString: url }) };

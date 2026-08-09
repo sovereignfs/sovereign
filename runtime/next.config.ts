@@ -72,7 +72,17 @@ const nextConfig: NextConfig = {
     //
     // NOTE: this applies to Webpack only. Moving the runtime to Turbopack silently
     // drops it — port it to `turbopack.resolveAlias` at the same time.
-    config.resolve.alias = { ...config.resolve.alias, 'better-sqlite3': false };
+    //
+    // Same treatment for `libsql` (RFC 0091's sqld driver): `@libsql/client`'s
+    // `sqlite3.js` statically imports the native `libsql` package (platform
+    // binary addon), but only ever constructs it when a database URL uses the
+    // `file:` scheme — `_createClient` throws for anything else. This codebase
+    // only ever passes `http(s):` URLs to `@libsql/client` (sqld, RFC 0091); the
+    // local/embedded `file:` path is never taken. Without this alias Webpack
+    // bundles the native import chain (`libsql` → `@neon-rs/load` → the
+    // platform-specific `@libsql/<target>` binary + its README) and fails to
+    // parse the non-JS files it pulls in.
+    config.resolve.alias = { ...config.resolve.alias, 'better-sqlite3': false, libsql: false };
     return config;
   },
   async headers() {

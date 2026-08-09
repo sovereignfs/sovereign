@@ -1051,9 +1051,215 @@ const dbDecrypt = defineCommand({
   },
 });
 
+/** A file `sv db migrate-to-sqld` may act on — mirrors `DbCryptTarget`'s shape. */
+type SqldCutoverTarget =
+  | { path: string; kind: 'platform'; namespace: undefined }
+  | { path: string; kind: 'auth'; namespace: string }
+  | { path: string; kind: 'plugin'; pluginId: string; namespace: string };
+
+function describeCutoverTarget(t: SqldCutoverTarget): string {
+  if (t.kind === 'plugin') return `${t.path} (plugin: ${t.pluginId} → namespace "${t.namespace}")`;
+  if (t.kind === 'auth') return `${t.path} (auth core → namespace "${t.namespace}")`;
+  return `${t.path} (platform core → default namespace)`;
+}
+
+/**
+ * Determine every SQLite file leg 3's routing (`packages/db/src/client.ts`,
+ * `plugin-client.ts`) would send to sqld — the RFC 0091 encryption carve-out
+ * in reverse. Ground truth is each file's own on-disk marker
+ * (`isEncryptionMarked`/`isPluginEncryptionMarked`), not just the current
+ * manifest/env state:
+ *
+ * - A file already marked encrypted is never a target — it's staying
+ *   plain-file, untouched by this leg entirely.
+ * - A plaintext file whose *current* config says it should be encrypted
+ *   (platform: `SOVEREIGN_DB_ENCRYPTION_KEY` set; plugin: manifest
+ *   `requireEncryption: true`) is a stuck, not-yet-converted state — the
+ *   same one `checkEncryptionMarker`/`resolvePluginEncryptionKey` already
+ *   refuse to boot from. Skip it here too: cutting it over to sqld would be
+ *   actively wrong, since the runtime will keep looking for it as a
+ *   plain file regardless. `sv db encrypt` is the fix for that state, not
+ *   this command.
+ * - Everything else plaintext is a genuine cutover target.
+ *
+ * A plugin `.db` file with no matching manifest (orphaned/uninstalled) is
+ * still a target — there's no active `requireEncryption` to stop it, and if
+ * the plugin is reinstalled later without it, leg 3 would route it to sqld
+ * anyway.
+ */
+async function findSqldCutoverTargets(dataDir: string): Promise<SqldCutoverTarget[]> {
+  const {
+    dbEncryptionKeyFromEnv,
+    isEncryptionMarked,
+    isPluginEncryptionMarked,
+    pluginNamespaceName,
+  } = await import('@sovereignfs/db');
+
+  const targets: SqldCutoverTarget[] = [];
+
+  if (!isEncryptionMarked(dataDir)) {
+    const keySet = dbEncryptionKeyFromEnv() !== undefined;
+    const platformPath = join(dataDir, 'sovereign.db');
+    const authPath = join(dataDir, 'auth.db');
+    if (!keySet) {
+      if (existsSync(platformPath)) {
+        targets.push({ path: platformPath, kind: 'platform', namespace: undefined });
+      }
+      if (existsSync(authPath)) {
+        targets.push({ path: authPath, kind: 'auth', namespace: 'auth' });
+      }
+    }
+  }
+
+  const requiresEncryption = new Set(findEncryptionRequiringPlugins().map((p) => p.id));
+  const pluginsDir = join(dataDir, 'plugins');
+  if (existsSync(pluginsDir)) {
+    for (const entry of readdirSync(pluginsDir, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith('.db')) continue;
+      const id = entry.name.slice(0, -'.db'.length);
+      const path = join(pluginsDir, entry.name);
+      if (isPluginEncryptionMarked(dataDir, id)) continue;
+      if (requiresEncryption.has(id)) continue;
+      targets.push({ path, kind: 'plugin', pluginId: id, namespace: pluginNamespaceName(id) });
+    }
+  }
+
+  return targets;
+}
+
+const dbMigrateToSqld = defineCommand({
+  meta: {
+    name: 'migrate-to-sqld',
+    description:
+      'One-time cutover of existing plain-file SQLite databases onto sqld (RFC 0091, workstream 0009 leg 4)',
+  },
+  args: {
+    dataDir: {
+      type: 'string',
+      description: 'Path to the data directory (default: ./data)',
+      default: join(ROOT, 'data'),
+    },
+    'dry-run': {
+      type: 'boolean',
+      default: false,
+      description:
+        'Report what would be migrated (files, tables, row counts) without touching sqld or taking a backup',
+    },
+    'skip-backup': {
+      type: 'boolean',
+      default: false,
+      description: 'Skip the automatic pre-cutover backup (not recommended)',
+    },
+  },
+  async run({ args }) {
+    const dataDir = resolve(args.dataDir);
+    const targets = await findSqldCutoverTargets(dataDir);
+
+    if (targets.length === 0) {
+      consola.info(
+        'Nothing to migrate — every plain-file SQLite database here is either already ' +
+          'encrypted or has no pending sqld cutover.',
+      );
+      return;
+    }
+
+    consola.info(`Found ${targets.length} SQLite file(s) to migrate to sqld:`);
+    for (const t of targets) consola.info(`  - ${describeCutoverTarget(t)}`);
+
+    const { previewSqliteFile } = await import('@sovereignfs/db');
+
+    if (args['dry-run']) {
+      consola.info('--dry-run: previewing only, nothing will be written.');
+      for (const t of targets) {
+        const preview = previewSqliteFile(t.path);
+        consola.info(`  ${t.path}:`);
+        for (const { table, rows } of preview) {
+          consola.info(`    ${table}: ${rows} row(s)`);
+        }
+      }
+      return;
+    }
+
+    if (args['skip-backup']) {
+      consola.warn('Skipping the pre-cutover backup (--skip-backup). This is not recommended.');
+    } else {
+      const version = readPlatformVersion(ROOT);
+      const archivePath = defaultArchivePath(ROOT, version);
+      consola.start(`Creating a safety backup before cutover → ${archivePath}`);
+      if (!runSqliteBackup(dataDir, archivePath)) {
+        consola.error('Backup failed — aborting before touching any database.');
+        process.exit(1);
+      }
+      consola.success(`Backup saved → ${archivePath}`);
+    }
+
+    consola.warn('Make sure the server is stopped before continuing.');
+
+    const {
+      createSqldClient,
+      cutoverSqliteFileToSqld,
+      provisionSqldNamespace,
+      sqldAdminUrl,
+      sqldUrl,
+      SqldCutoverError,
+    } = await import('@sovereignfs/db');
+
+    let failed = 0;
+    for (const t of targets) {
+      consola.start(`Migrating ${t.path}…`);
+      try {
+        if (t.kind !== 'platform') {
+          await provisionSqldNamespace(sqldAdminUrl(process.env), t.namespace);
+        }
+        const client = createSqldClient(
+          sqldUrl(process.env),
+          t.kind === 'platform' ? undefined : t.namespace,
+        );
+        const results = await cutoverSqliteFileToSqld(t.path, client);
+
+        let mismatched = false;
+        for (const r of results) {
+          const ok = r.sourceRows === r.destRows;
+          if (!ok) mismatched = true;
+          consola.info(
+            `    ${r.table}: ${r.sourceRows} → ${r.destRows} row(s)${ok ? '' : ' — MISMATCH'}`,
+          );
+        }
+        if (mismatched) {
+          throw new Error(
+            'Post-cutover row counts do not match the source — this should not happen given ' +
+              "client.migrate()'s atomicity; treat the destination namespace as suspect.",
+          );
+        }
+        consola.success(`${t.path}: migrated.`);
+      } catch (err) {
+        const message = err instanceof SqldCutoverError ? err.message : (err as Error).message;
+        consola.error(`${t.path}: ${message}`);
+        failed++;
+      }
+    }
+
+    if (failed > 0) {
+      consola.error(
+        `${failed} of ${targets.length} file(s) failed to migrate. Files that succeeded are ` +
+          'live in sqld; the ones that failed were left completely untouched (their plain files ' +
+          'are unmodified). Fix the issue (see errors above), or restore from the backup taken ' +
+          'above, before retrying.',
+      );
+      process.exit(1);
+    }
+
+    consola.success(`All ${targets.length} file(s) migrated to sqld.`);
+    consola.info(
+      'Start the server with the sqld overlay attached (docker-compose.sqld.yml) — it will now ' +
+        'find the migrated data instead of creating fresh empty namespaces.',
+    );
+  },
+});
+
 const db = defineCommand({
-  meta: { name: 'db', description: 'SQLite at-rest encryption migration tools (RFC 0071)' },
-  subCommands: { encrypt: dbEncrypt, decrypt: dbDecrypt },
+  meta: { name: 'db', description: 'SQLite at-rest encryption and sqld migration tools' },
+  subCommands: { encrypt: dbEncrypt, decrypt: dbDecrypt, 'migrate-to-sqld': dbMigrateToSqld },
 });
 
 const seed = defineCommand({

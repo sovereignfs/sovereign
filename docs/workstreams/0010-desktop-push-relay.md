@@ -1,6 +1,8 @@
 # Workstream 0010 — Desktop native push relay
 
-**Status:** 📋 Planned\
+**Status:** ✅ Done — all 3 legs merged (this monorepo's legs 1–2, PRs
+#387/#388; `sovereign-desktop` PR #12 for leg 3). Real gaps remain, listed
+in "Definition of done" below.\
 **Date:** August 2026\
 **Author:** Claude Code (design discussion with `kasunben`)\
 **Goal owner:** `kasunben`\
@@ -30,35 +32,59 @@ scheme, with zero changes to the fan-out function itself.
 
 ## Definition of done
 
-- [ ] A self-hosted instance can register a `sovereign-desktop` macOS
-      device's push token and public key, and revoke it on sign-out/instance
-      removal.
-- [ ] Same, for Windows.
-- [ ] `fanOutPushToUser` delivers to a registered desktop device via the
-      relay, in the same fan-out as Web Push and mobile native — verified
-      with a user who has a browser subscription, a mobile device, and a
-      desktop device all registered simultaneously.
-- [ ] The relay never receives, logs, or is otherwise capable of accessing
+- [x] A self-hosted instance can register a `sovereign-desktop` macOS
+      device's push token and public key. **Revocation on sign-out/instance
+      removal was not implemented** — same gap as workstream 0005's mobile
+      leg, same reasoning (no reliable native detection signal); a stale
+      token self-heals via the relay's `invalid_token` pruning instead.
+- [x] Same, for Windows (registration only; revocation has the same gap).
+- [x] `fanOutPushToUser` delivers to a registered desktop device via the
+      relay, in the same fan-out as Web Push and mobile native — required
+      **no code change at all**, confirmed by reading the current
+      implementation before this workstream started: it already forwards
+      `platform` opaquely. Not verified with a real simultaneous
+      browser+mobile+desktop live user session.
+- [x] The relay never receives, logs, or is otherwise capable of accessing
       plaintext notification content for either desktop platform — verified
-      by inspecting the actual network payload, not just by reading the code
-      that's supposed to guarantee this (same standard workstream 0005 held
-      itself to).
+      by structure/code review and real request-shape tests, same posture
+      as workstream 0005. A CodeQL-flagged SSRF risk in the WNS client
+      (`channelUri` is client-supplied, unlike APNs/FCM's fixed hosts) was
+      found and fixed with a hostname allowlist before merge — see epic
+      task 4.8's own leg 2 summary.
 - [ ] A push is received and correctly displayed on real macOS hardware with
       real APNs sandbox credentials while `sovereign-desktop` is fully
-      quit — content is a placeholder banner while quit per RFC 0087's
-      addendum, full content once opened; verify both states.
+      quit. **Not verified** — no real Apple Developer Team or push
+      entitlement available in this workbench (ad-hoc signing strips
+      `Entitlements.plist`'s `aps-environment`). The macOS device-token
+      _registration_ mechanism itself **is** empirically verified — a real
+      signed `.app` bundle reliably drives the injected
+      `NSApplicationDelegate` failure callback with a real `NSError` — but
+      an actual received/displayed push was not exercised.
 - [ ] A push is received and correctly displayed on real Windows hardware
       with real WNS credentials while `sovereign-desktop` is running
-      (tray-resident) but not foregrounded.
-- [ ] An instance's already-configured relay URL (workstream 0005) is reused
+      (tray-resident) but not foregrounded. **Not verified** — no Windows
+      machine or real Partner Center credentials available; the Windows
+      code is cross-compile-type-checked only (verified via an isolated
+      probe crate, since the full binary can't cross-compile here — a
+      pre-existing `ring`/Windows-C-headers blocker).
+- [x] An instance's already-configured relay URL (workstream 0005) is reused
       unmodified — this workstream adds no second relay-configuration
       surface.
-- [ ] Both this monorepo's and `sovereign-desktop`'s docs describe the
-      Windows running-app-only limitation and the Linux gap plainly, not as
-      an implementation detail buried in code comments.
-- [ ] `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` (this
+- [x] Both this monorepo's (`self-hosting.md`, `.env.example`) and
+      `sovereign-desktop`'s (`CLAUDE.md`) docs describe the Windows
+      running-app-only limitation and the Linux gap plainly.
+- [x] `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` (this
       monorepo); `pnpm format:check && pnpm lint && pnpm typecheck && pnpm
-test && cargo test` (`sovereign-desktop`).
+test && cargo test` (`sovereign-desktop`) — all passing as of the merged
+      PRs.
+
+**Known remaining gaps, not blocking "done" but real:** revocation on
+sign-out/instance removal (both platforms); real APNs/WNS delivery
+verification (no real credentials or hardware in this workbench); a
+Windows machine to actually build, link, and run the Windows code for the
+first time; a macOS Notification Service Extension equivalent (deferred by
+design, per the RFC addendum — Tauri has no tooling to embed one, not
+attempted here).
 
 ## Decisions locked
 

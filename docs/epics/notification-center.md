@@ -231,7 +231,7 @@ instead of the current logger-only trail.
 
 ---
 
-#### ⏳ 4.7 — Native mobile push relay (APNs/FCM)
+#### ✅ 4.7 — Native mobile push relay (APNs/FCM)
 
 > **New in [RFC 0087](../rfcs/0087-sovereign-relay.md).** Covers this
 > monorepo's half of native mobile push: the device-token schema, the
@@ -313,10 +313,29 @@ instead of the current logger-only trail.
 >   registered (unlike Web Push's explicit "no subscriptions" skip — logging
 >   that for every user on every push would be pure noise, since most users
 >   have no native device registered at all).
-> - **20.5 (`sovereign-mobile`)** — not started; this leg's endpoint contract
->   is now not just stable but actually exercised end-to-end (minus real
->   device/relay credentials), per the workstream's cross-repo parallelism
->   note.
+> - **✅ Leg 4 — `sovereign-mobile` client + iOS Notification Service
+>   Extension** (`sovereign-mobile` PR #8, merged). On-device P-256 keypair
+>   (native `CryptoKit`/Android `KeyStore`-backed equivalent), Keychain/
+>   `EncryptedSharedPreferences` storage, entirely native registration (no
+>   new bridge capability, per RFC 0083 §7 and `sovereign-mobile`'s own
+>   registry-first rule). Two real cross-language bugs caught via
+>   empirical round-trip verification before merge, not assumed: iOS's
+>   `CryptoKit` `.rawRepresentation` is a bare 64-byte encoding, not the
+>   65-byte SEC1/X9.63 point this wire format needs (fixed via
+>   `.x963Representation`); Android's `javax.crypto.Cipher` expects
+>   `ciphertext‖tag`, the opposite byte order of this wire format's
+>   `tag‖ciphertext` (fixed by reordering before `doFinal()`). Real iOS
+>   Notification Service Extension target added via the `xcodeproj` Ruby
+>   gem, not hand-edited `project.pbxproj`. **Not implemented:** revocation
+>   on sign-out/instance removal (no reliable native detection signal for
+>   either event) — a stale token self-heals via this leg's own
+>   `invalid_token` pruning instead.
+>
+> All four legs of workstream 0005 are now merged — see that workstream's
+> own doc for the full definition-of-done status. Still open, out of this
+> workbench's scope: the `sovereign-infra`/`openfs-infra` deployment-
+> playbook coordination noted in leg 2 above, and real end-to-end
+> verification against actual Apple/Google credentials and real hardware.
 
 **Goal:** Let a self-hosted instance deliver a notification to a user's
 `sovereign-mobile` native app even when it's fully closed, without any
@@ -396,7 +415,7 @@ crypto approach; RFC 0087.
 
 ---
 
-#### 📋 4.8 — Desktop native push relay support (macOS APNs, Windows WNS)
+#### ✅ 4.8 — Desktop native push relay support (macOS APNs, Windows WNS)
 
 > **New in [RFC 0087's "Desktop native push" addendum](../rfcs/0087-sovereign-relay.md#addendum-desktop-native-push-macos-apns-windows-wns-linux-out-of-scope).**
 > This monorepo's half of extending native push to `sovereign-desktop`:
@@ -404,9 +423,30 @@ crypto approach; RFC 0087.
 > `'windows'`, generalizing the relay's APNs client to a per-platform topic,
 > and a new WNS (raw-only) client. The `sovereign-desktop` client-side half
 > is tracked in that repo's own epic 17, task 17.11 — see this monorepo's
-> [docs/epics/desktop.md](desktop.md#-1711--native-desktop-push-notifications-macos-apns-windows-wns).
-> Sequenced by [workstream 0010](../workstreams/0010-desktop-push-relay.md),
-> 2 legs here (a 3rd, 17.11, lives in `sovereign-desktop`). Not started.
+> [docs/epics/desktop.md](desktop.md#-1711--native-desktop-push-notifications-macos-apns-windows-wns),
+> now also ✅. Sequenced by
+> [workstream 0010](../workstreams/0010-desktop-push-relay.md), all 3 legs
+> merged (2 here, PRs #387/#388; the 3rd in `sovereign-desktop` PR #12).
+>
+> - **Leg 1 — schema + registration API widening.** `push_device_tokens
+.platform` validation widened to accept `'macos'`/`'windows'`; no schema
+>   migration needed (untyped `text` column already).
+> - **Leg 2 — relay macOS APNs topic + Windows WNS client.**
+>   `sendApnsPush()` generalized to take an explicit topic instead of
+>   reading `config.bundleId` internally (new `APNS_BUNDLE_ID_MACOS`,
+>   additive to the existing iOS-only `APNS_BUNDLE_ID`); new
+>   `apps/relay/src/wns.ts` (OAuth2 client-credentials against
+>   `login.live.com`, raw notifications only). A real bug was caught by
+>   its own test before merge: the first `apnsMacosConfigured()` built on
+>   `apnsConfigured()` directly, which also requires iOS's own
+>   `APNS_BUNDLE_ID` — silently defeating the "enable one platform without
+>   the other" design; fixed via a shared `apnsSharedCredentialConfigured()`
+>   helper. CodeQL also flagged a genuine SSRF risk in `sendWnsPush()`
+>   (`channelUri` is client-supplied, unlike APNs/FCM's fixed hosts) —
+>   fixed with a `RegExp#test()`-based hostname allowlist (the specific
+>   guard shape CodeQL's sanitizer recognition needs; two earlier,
+>   logically-equivalent guard shapes were flagged identically before
+>   landing on this one).
 
 **Goal:** Let `fanOutPushToUser` deliver to a registered `sovereign-desktop`
 macOS or Windows device through the same relay and encryption scheme

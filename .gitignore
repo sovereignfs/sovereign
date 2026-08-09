@@ -37,11 +37,6 @@ runtime/generated/
 # plugin DB provisioner — runtime data, never committed.
 **/data/plugins/
 
-# sqld's own on-disk format (workstream 0009 leg 2, RFC 0090) — a directory
-# tree, not a single .db file, so the patterns above don't cover it. Runtime
-# data from the sqld-spike Compose profile, never committed.
-**/data/sqld/
-
 # Externally-installed plugins (cloned by scripts/install-plugins.ts) are not
 # committed here — they live in their own repositories. Ignore every plugin
 # directory except the platform plugins that ship in this monorepo.

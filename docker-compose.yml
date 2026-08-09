@@ -128,25 +128,6 @@ services:
     networks:
       - sovereign_net
 
-  # ── Spike only (workstream 0009 leg 2) — not yet consumed by the platform ──
-  # libSQL's server (sqld), evaluated as a mandatory replacement for
-  # plain-file SQLite (docs/workstreams/0009-database-dialect-and-libsql-migration.md).
-  # Internal-only, same pattern as `auth` in production: no host port, reached
-  # by service name on the internal network. Gated behind a profile so
-  # `docker compose up` is unchanged for everyone until leg 3 actually wires
-  # packages/db up to it — bring it up explicitly with:
-  #   docker compose --profile sqld-spike up sqld
-  sqld:
-    profiles: ['sqld-spike']
-    image: ghcr.io/tursodatabase/libsql-server:latest
-    container_name: sovereign-sqld
-    environment:
-      SQLD_NODE: primary
-    volumes:
-      - ./data/sqld:/var/lib/sqld
-    networks:
-      - sovereign_net
-
 networks:
   sovereign_net:
     driver: bridge

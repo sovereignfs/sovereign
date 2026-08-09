@@ -706,10 +706,11 @@ a decision, written up as an RFC — not working platform code.
 
 **Deliverables:**
 
-- `sqld` added to `docker-compose.yml` and `docker-compose.prod.yml`,
-  reachable from `runtime`/`auth` on the internal network only (no host port),
-  following the same internal-only pattern as the `auth` service
-  (Task 0.6).
+- `sqld` added via a new `docker-compose.sqld.yml` overlay, mirroring the
+  existing `docker-compose.postgres.yml` pattern rather than being embedded in
+  the base compose files — reachable from `runtime`/`auth` on the internal
+  network only (no host port), a `/health`-backed healthcheck matching
+  `postgres`'s `pg_isready` one.
 - A throwaway prototype (not wired into `packages/db`'s real call sites)
   exercising `@libsql/client` against the container, enough to observe the
   async-contract and encryption questions empirically.
@@ -731,8 +732,9 @@ a decision, written up as an RFC — not working platform code.
 
 **Review checklist:**
 
-- `docker compose up` brings up `sqld` alongside the existing services with no
-  code change to `runtime`/`auth`.
+- `docker compose -f docker-compose.prod.yml -f docker-compose.sqld.yml up`
+  brings up `sqld` with no code change to `runtime`/`auth`; plain
+  `docker compose up` (no overlay) is unchanged for every existing deployment.
 - The RFC explicitly resolves both open questions (async contract, RFC 0071
   compatibility) — an RFC that ships without an encryption answer is not done.
 - The RFC's driver-shape decision is concrete enough that Task 8.23 can be

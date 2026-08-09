@@ -1,0 +1,48 @@
+# sqld (libSQL server) overlay — workstream 0009 leg 2 spike.
+#
+# Unlike docker-compose.postgres.yml, this is not yet a real dialect switch:
+# `runtime`/`auth` don't consume an sqld connection URL yet (that's leg 3 —
+# see docs/rfcs/0091-libsql-sqld-driver.md). This overlay only stands the
+# `sqld` service up for prototyping against directly.
+#
+# Once leg 3 ships the driver, expect this file's shape to change: sqld is
+# meant to become mandatory for DB_DIALECT=sqlite (workstream 0009's locked
+# decision), not an opt-in alternative the way Postgres is — so its service
+# definition, and the runtime/auth overrides that will point at it, likely
+# fold into the base docker-compose.yml/.prod.yml directly rather than
+# staying behind a separate overlay. docker-compose.postgres.yml remains the
+# real "switch away from the default dialect" file either way.
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.sqld.yml up --build -d
+#   docker compose -f docker-compose.yml -f docker-compose.sqld.yml up --build
+services:
+  sqld:
+    image: ghcr.io/tursodatabase/libsql-server:latest
+    container_name: sovereign-sqld
+    restart: unless-stopped
+    environment:
+      SQLD_NODE: primary
+    volumes:
+      - sovereign_sqld_data:/var/lib/sqld
+    healthcheck:
+      # No wget/curl in ghcr.io/tursodatabase/libsql-server (debian:bullseye-slim,
+      # confirmed empty by testing this exact image) — bash's /dev/tcp pseudo-device
+      # needs nothing external, and bash is present.
+      test:
+        [
+          'CMD',
+          'bash',
+          '-c',
+          'exec 3<>/dev/tcp/127.0.0.1/8080 && printf "GET /health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && head -1 <&3 | grep -q "200 OK"',
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+    networks:
+      - sovereign_net
+
+volumes:
+  sovereign_sqld_data:
+    name: sovereign_sqld_data

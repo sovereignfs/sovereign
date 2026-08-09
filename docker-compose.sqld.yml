@@ -1,17 +1,19 @@
-# sqld (libSQL server) overlay — workstream 0009 leg 2 spike.
+# sqld (libSQL server) overlay — workstream 0009 leg 3.
 #
-# Unlike docker-compose.postgres.yml, this is not yet a real dialect switch:
-# `runtime`/`auth` don't consume an sqld connection URL yet (that's leg 3 —
-# see docs/rfcs/0091-libsql-sqld-driver.md). This overlay only stands the
-# `sqld` service up for prototyping against directly.
-#
-# Once leg 3 ships the driver, expect this file's shape to change: sqld is
-# meant to become mandatory for DB_DIALECT=sqlite (workstream 0009's locked
-# decision), not an opt-in alternative the way Postgres is — so its service
-# definition, and the runtime/auth overrides that will point at it, likely
-# fold into the base docker-compose.yml/.prod.yml directly rather than
-# staying behind a separate overlay. docker-compose.postgres.yml remains the
+# Unlike docker-compose.postgres.yml, sqld is not a true opt-in alternative
+# dialect: RFC 0091 / workstream 0009 make it mandatory for every
+# non-encrypted SQLite database (the "encryption carve-out" — anything RFC
+# 0071 would encrypt stays on plain-file SQLite regardless of this overlay).
+# It stays a separate file for now because the carve-out means both code
+# paths are live in the same process; docker-compose.postgres.yml remains the
 # real "switch away from the default dialect" file either way.
+#
+# `--enable-namespaces` has no env-var equivalent in sqld (confirmed against
+# libsql-server's own CLI definitions) — it must be a command-line arg, hence
+# the `command:` override below rather than another `environment:` entry.
+# Namespaces give each isolated plugin database its own logical database
+# within the one sqld instance (`packages/db/src/sqld.ts`'s `x-namespace`
+# header), the sqld analogue of Postgres's per-plugin schema.
 #
 # Usage:
 #   docker compose -f docker-compose.prod.yml -f docker-compose.sqld.yml up --build -d
@@ -21,8 +23,15 @@ services:
     image: ghcr.io/tursodatabase/libsql-server:latest
     container_name: sovereign-sqld
     restart: unless-stopped
+    command: ['/bin/sqld', '--enable-namespaces']
     environment:
       SQLD_NODE: primary
+      # No host port — internal-only, reached by service name, same posture
+      # as `auth` in production. The admin API (namespace create/drop) is
+      # unauthenticated, relying on network isolation alone, matching how
+      # Postgres is deployed in this stack today (no equivalent of an admin
+      # credential beyond POSTGRES_PASSWORD gating the whole server).
+      SQLD_ADMIN_LISTEN_ADDR: '0.0.0.0:8081'
     volumes:
       - sovereign_sqld_data:/var/lib/sqld
     healthcheck:
@@ -42,6 +51,22 @@ services:
       retries: 5
     networks:
       - sovereign_net
+
+  auth:
+    environment:
+      SQLD_URL: 'http://sqld:8080'
+      SQLD_ADMIN_URL: 'http://sqld:8081'
+    depends_on:
+      sqld:
+        condition: service_healthy
+
+  runtime:
+    environment:
+      SQLD_URL: 'http://sqld:8080'
+      SQLD_ADMIN_URL: 'http://sqld:8081'
+    depends_on:
+      sqld:
+        condition: service_healthy
 
 volumes:
   sovereign_sqld_data:

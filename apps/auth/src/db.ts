@@ -81,6 +81,14 @@ export async function provisionAuthSqldNamespace(): Promise<void> {
   // error ever surfaces.
   assertAuthDialectMatchesPlatform(getEnv().databaseUrl);
 
+  // Same ':memory:' carve-out as getAuthDb() and assertAuthDialectMatchesPlatform
+  // above — ephemeral test storage never touches sqld, regardless of whether an
+  // encryption key is set. Missing this sent every plain (no-encryption-key)
+  // ':memory:' caller here into the fetch below, which fails with
+  // "getaddrinfo ENOTFOUND sqld" outside Docker Compose's network — found
+  // empirically while calling runAuthMigrations() against a throwaway instance.
+  if (getEnv().databaseUrl === ':memory:') return;
+
   if (dbEncryptionKeyFromEnv() !== undefined) return; // plain-file path, no namespace involved
   if (isPostgresUrl(getEnv().databaseUrl)) return;
 

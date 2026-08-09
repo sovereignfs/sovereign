@@ -67,3 +67,24 @@ describe('assertAuthDialectMatchesPlatform', () => {
     ).not.toThrow();
   });
 });
+
+describe('provisionAuthSqldNamespace', () => {
+  it('is a no-op for :memory: even with no encryption key set (regression)', async () => {
+    // Found empirically: this used to have no ':memory:' carve-out (unlike
+    // getAuthDb() and assertAuthDialectMatchesPlatform, which both already
+    // had one), so a plain ':memory:' AUTH_DATABASE_URL with no
+    // SOVEREIGN_DB_ENCRYPTION_KEY fell through to the sqld branch and threw
+    // "getaddrinfo ENOTFOUND sqld" outside Docker's network — reproduced
+    // calling runAuthMigrations() against a throwaway ':memory:' instance,
+    // the exact scenario builtin-oauth-clients.test.ts now exercises for
+    // real. No existing test caught this: db.pg.test.ts only exercises the
+    // (early-returning) postgres branch.
+    process.env.AUTH_DATABASE_URL = ':memory:';
+    process.env.AUTH_SECRET ??= 'test-secret-test-secret-test-secret';
+    process.env.SOVEREIGN_ADMIN_KEY ??= 'test-admin-key';
+    delete process.env.SOVEREIGN_DB_ENCRYPTION_KEY;
+
+    const { provisionAuthSqldNamespace } = await import('../db');
+    await expect(provisionAuthSqldNamespace()).resolves.toBeUndefined();
+  });
+});

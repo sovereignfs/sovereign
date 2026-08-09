@@ -29,5 +29,10 @@ export async function register(): Promise<void> {
         console.log(`[sovereign] Migrated user ${oldest.id} to platform:owner (RFC 0021).`);
       }
     }
+
+    // Well-known first-party OAuth clients for the official native shells
+    // (RFC 0072 addendum, epic task 1.24) — idempotent, no-op after first boot.
+    const { seedBuiltinOAuthClients } = await import('./src/builtin-oauth-clients');
+    await seedBuiltinOAuthClients();
   }
 }

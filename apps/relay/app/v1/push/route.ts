@@ -1,20 +1,30 @@
 import { NextResponse } from 'next/server';
 import { sendApnsPush } from '../../../src/apns';
-import { apnsConfigured, enrollmentConfigured, fcmConfigured } from '../../../src/config';
+import {
+  apnsConfig,
+  apnsConfigured,
+  apnsMacosConfigured,
+  enrollmentConfigured,
+  fcmConfigured,
+  wnsConfigured,
+} from '../../../src/config';
 import { verifyEnrollmentToken } from '../../../src/enrollment';
 import { sendFcmPush } from '../../../src/fcm';
 import { checkPushRateLimit } from '../../../src/rate-limit';
+import { sendWnsPush } from '../../../src/wns';
 
 /**
- * Forwards an already-encrypted push payload to APNs or FCM, using this
- * service's own Apple/Firebase credentials. Never inspects, logs, or is
- * otherwise capable of accessing the plaintext content — see RFC 0087's
- * "The relay service" section for why that guarantee is this route's whole
- * reason to exist. `encryptedPayload` is placed directly into the outer
- * platform envelope (`../../../src/apns.ts` / `./fcm.ts`) and never parsed.
+ * Forwards an already-encrypted push payload to APNs, FCM, or WNS, using
+ * this service's own Apple/Firebase/Microsoft credentials. Never inspects,
+ * logs, or is otherwise capable of accessing the plaintext content — see
+ * RFC 0087's "The relay service" section for why that guarantee is this
+ * route's whole reason to exist. `encryptedPayload` is placed directly into
+ * the outer platform envelope (`../../../src/apns.ts` / `./fcm.ts` /
+ * `./wns.ts`) and never parsed.
  *
- * Contract per RFC 0087: `{deviceToken, platform, encryptedPayload,
- * instanceKey}`.
+ * Contract per RFC 0087 (extended by its "Desktop native push" addendum):
+ * `{deviceToken, platform, encryptedPayload, instanceKey}`, `platform` one
+ * of `'ios' | 'android' | 'macos' | 'windows'`.
  */
 
 interface PushRequestBody {
@@ -24,16 +34,21 @@ interface PushRequestBody {
   instanceKey?: unknown;
 }
 
+type Platform = 'ios' | 'android' | 'macos' | 'windows';
+
 function isValidBody(body: PushRequestBody): body is {
   deviceToken: string;
-  platform: 'ios' | 'android';
+  platform: Platform;
   encryptedPayload: string;
   instanceKey: string;
 } {
   return (
     typeof body.deviceToken === 'string' &&
     body.deviceToken.length > 0 &&
-    (body.platform === 'ios' || body.platform === 'android') &&
+    (body.platform === 'ios' ||
+      body.platform === 'android' ||
+      body.platform === 'macos' ||
+      body.platform === 'windows') &&
     typeof body.encryptedPayload === 'string' &&
     body.encryptedPayload.length > 0 &&
     typeof body.instanceKey === 'string' &&
@@ -86,15 +101,48 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  if (body.platform === 'ios') {
-    if (!apnsConfigured()) {
+  if (body.platform === 'ios' || body.platform === 'macos') {
+    const configured = body.platform === 'ios' ? apnsConfigured() : apnsMacosConfigured();
+    if (!configured) {
       return NextResponse.json(
-        { error: 'platform_not_configured', message: 'APNs is not configured on this relay.' },
+        {
+          error: 'platform_not_configured',
+          message: `APNs is not configured on this relay for '${body.platform}'.`,
+        },
+        { status: 503 },
+      );
+    }
+    const config = apnsConfig();
+    const topic = body.platform === 'ios' ? config.bundleId : config.macosBundleId;
+    if (!topic) {
+      return NextResponse.json(
+        {
+          error: 'platform_not_configured',
+          message: `APNs is not configured on this relay for '${body.platform}'.`,
+        },
         { status: 503 },
       );
     }
     try {
-      const result = await sendApnsPush(body.deviceToken, body.encryptedPayload);
+      const result = await sendApnsPush(body.deviceToken, body.encryptedPayload, topic);
+      return NextResponse.json({ result });
+    } catch (err) {
+      return NextResponse.json(
+        { error: 'send_failed', message: err instanceof Error ? err.message : String(err) },
+        { status: 502 },
+      );
+    }
+  }
+
+  if (body.platform === 'windows') {
+    if (!wnsConfigured()) {
+      return NextResponse.json(
+        { error: 'platform_not_configured', message: 'WNS is not configured on this relay.' },
+        { status: 503 },
+      );
+    }
+    try {
+      const result = await sendWnsPush(body.deviceToken, body.encryptedPayload);
       return NextResponse.json({ result });
     } catch (err) {
       return NextResponse.json(

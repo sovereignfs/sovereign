@@ -104,11 +104,19 @@ describe('sendApnsPush (real local HTTP/2 server)', () => {
     });
 
     const { sendApnsPush } = await import('../apns');
-    const result = await sendApnsPush('device-token-abc', 'ZW5jcnlwdGVkLWJsb2I=', origin);
+    // Deliberately a different topic than APNS_BUNDLE_ID (set in
+    // beforeEach) — proves the header comes from this call's own `topic`
+    // argument, not from config internals.
+    const result = await sendApnsPush(
+      'device-token-abc',
+      'ZW5jcnlwdGVkLWJsb2I=',
+      'fs.sovereign.desktop',
+      origin,
+    );
 
     expect(result).toBe('sent');
     expect(received.path).toBe('/3/device/device-token-abc');
-    expect(received.headers?.['apns-topic']).toBe('fs.sovereign.mobile');
+    expect(received.headers?.['apns-topic']).toBe('fs.sovereign.desktop');
     expect(received.headers?.['apns-push-type']).toBe('alert');
     expect(String(received.headers?.authorization)).toMatch(/^bearer /);
     const body = JSON.parse(received.body ?? '{}');
@@ -123,7 +131,7 @@ describe('sendApnsPush (real local HTTP/2 server)', () => {
     });
 
     const { sendApnsPush } = await import('../apns');
-    const result = await sendApnsPush('bad-token', 'cGF5bG9hZA==', origin);
+    const result = await sendApnsPush('bad-token', 'cGF5bG9hZA==', 'fs.sovereign.mobile', origin);
     expect(result).toBe('invalid_token');
   });
 
@@ -134,7 +142,7 @@ describe('sendApnsPush (real local HTTP/2 server)', () => {
     });
 
     const { sendApnsPush } = await import('../apns');
-    const result = await sendApnsPush('gone-token', 'cGF5bG9hZA==', origin);
+    const result = await sendApnsPush('gone-token', 'cGF5bG9hZA==', 'fs.sovereign.mobile', origin);
     expect(result).toBe('invalid_token');
   });
 
@@ -145,7 +153,12 @@ describe('sendApnsPush (real local HTTP/2 server)', () => {
     });
 
     const { sendApnsPush } = await import('../apns');
-    const result = await sendApnsPush('device-token', 'cGF5bG9hZA==', origin);
+    const result = await sendApnsPush(
+      'device-token',
+      'cGF5bG9hZA==',
+      'fs.sovereign.mobile',
+      origin,
+    );
     expect(result).toBe('failed');
   });
 
@@ -156,14 +169,19 @@ describe('sendApnsPush (real local HTTP/2 server)', () => {
     });
 
     const { sendApnsPush } = await import('../apns');
-    const result = await sendApnsPush('device-token', 'cGF5bG9hZA==', origin);
+    const result = await sendApnsPush(
+      'device-token',
+      'cGF5bG9hZA==',
+      'fs.sovereign.mobile',
+      origin,
+    );
     expect(result).toBe('failed');
   });
 
   it('rejects when the server is unreachable', async () => {
     const { sendApnsPush } = await import('../apns');
     await expect(
-      sendApnsPush('device-token', 'cGF5bG9hZA==', 'http://127.0.0.1:1'),
+      sendApnsPush('device-token', 'cGF5bG9hZA==', 'fs.sovereign.mobile', 'http://127.0.0.1:1'),
     ).rejects.toBeInstanceOf(Error);
   });
 });

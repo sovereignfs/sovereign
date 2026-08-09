@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { sendApnsPush } = vi.hoisted(() => ({ sendApnsPush: vi.fn() }));
 const { sendFcmPush } = vi.hoisted(() => ({ sendFcmPush: vi.fn() }));
+const { sendWnsPush } = vi.hoisted(() => ({ sendWnsPush: vi.fn() }));
 
 vi.mock('../../../../src/apns', () => ({ sendApnsPush }));
 vi.mock('../../../../src/fcm', () => ({ sendFcmPush }));
+vi.mock('../../../../src/wns', () => ({ sendWnsPush }));
 
 function jsonRequest(body: unknown): Request {
   return new Request('http://localhost/v1/push', {
@@ -24,6 +26,7 @@ beforeEach(() => {
   process.env.RELAY_ENROLLMENT_SECRET = 'test-secret';
   sendApnsPush.mockReset();
   sendFcmPush.mockReset();
+  sendWnsPush.mockReset();
 });
 
 afterEach(async () => {
@@ -32,7 +35,10 @@ afterEach(async () => {
   delete process.env.APNS_KEY_ID;
   delete process.env.APNS_TEAM_ID;
   delete process.env.APNS_BUNDLE_ID;
+  delete process.env.APNS_BUNDLE_ID_MACOS;
   delete process.env.FCM_SERVICE_ACCOUNT_JSON;
+  delete process.env.WNS_PACKAGE_SID;
+  delete process.env.WNS_CLIENT_SECRET;
   const { resetRateLimitsForTests } = await import('../../../../src/rate-limit');
   resetRateLimitsForTests();
 });
@@ -112,7 +118,48 @@ describe('POST /v1/push', () => {
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ result: 'sent' });
-    expect(sendApnsPush).toHaveBeenCalledWith('device-1', 'blob');
+    expect(sendApnsPush).toHaveBeenCalledWith('device-1', 'blob', 'bundle');
+  });
+
+  it('returns 503 platform_not_configured for macos when APNS_BUNDLE_ID_MACOS is absent (shared APNs creds still set)', async () => {
+    process.env.APNS_KEY = 'key';
+    process.env.APNS_KEY_ID = 'kid';
+    process.env.APNS_TEAM_ID = 'team';
+    process.env.APNS_BUNDLE_ID = 'bundle';
+    // Note: no APNS_BUNDLE_ID_MACOS — iOS is configured, macOS is not.
+    const { instanceKey } = await issueToken();
+    const { POST } = await import('../route');
+    const res = await POST(
+      jsonRequest({ deviceToken: 'd', platform: 'macos', encryptedPayload: 'p', instanceKey }),
+    );
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toBe('platform_not_configured');
+    expect(sendApnsPush).not.toHaveBeenCalled();
+  });
+
+  it('dispatches to sendApnsPush for macos with its own topic when configured, and returns its result', async () => {
+    process.env.APNS_KEY = 'key';
+    process.env.APNS_KEY_ID = 'kid';
+    process.env.APNS_TEAM_ID = 'team';
+    process.env.APNS_BUNDLE_ID = 'fs.sovereign.mobile';
+    process.env.APNS_BUNDLE_ID_MACOS = 'fs.sovereign.desktop';
+    sendApnsPush.mockResolvedValue('sent');
+    const { instanceKey } = await issueToken();
+
+    const { POST } = await import('../route');
+    const res = await POST(
+      jsonRequest({
+        deviceToken: 'device-3',
+        platform: 'macos',
+        encryptedPayload: 'blob',
+        instanceKey,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ result: 'sent' });
+    // Distinct topic from iOS's — proves the macOS branch uses its own
+    // bundle ID, not the shared/iOS one.
+    expect(sendApnsPush).toHaveBeenCalledWith('device-3', 'blob', 'fs.sovereign.desktop');
   });
 
   it('dispatches to sendFcmPush for android when configured, and returns its result', async () => {
@@ -136,6 +183,37 @@ describe('POST /v1/push', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ result: 'invalid_token' });
     expect(sendFcmPush).toHaveBeenCalledWith('device-2', 'blob');
+  });
+
+  it('returns 503 platform_not_configured for windows when WNS creds are absent', async () => {
+    const { instanceKey } = await issueToken();
+    const { POST } = await import('../route');
+    const res = await POST(
+      jsonRequest({ deviceToken: 'd', platform: 'windows', encryptedPayload: 'p', instanceKey }),
+    );
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toBe('platform_not_configured');
+    expect(sendWnsPush).not.toHaveBeenCalled();
+  });
+
+  it('dispatches to sendWnsPush for windows when configured, and returns its result', async () => {
+    process.env.WNS_PACKAGE_SID = 'ms-app://sid';
+    process.env.WNS_CLIENT_SECRET = 'secret';
+    sendWnsPush.mockResolvedValue('sent');
+    const { instanceKey } = await issueToken();
+
+    const { POST } = await import('../route');
+    const res = await POST(
+      jsonRequest({
+        deviceToken: 'https://db5.notify.windows.com/channel-uri',
+        platform: 'windows',
+        encryptedPayload: 'blob',
+        instanceKey,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ result: 'sent' });
+    expect(sendWnsPush).toHaveBeenCalledWith('https://db5.notify.windows.com/channel-uri', 'blob');
   });
 
   it('returns 502 send_failed when the underlying send throws', async () => {

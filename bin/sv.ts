@@ -509,6 +509,7 @@ const pluginMigrate = defineCommand({
   },
 });
 
+// TRANSITIONAL TOOLING — see the note atop packages/db/src/plugin-isolation-migration.ts.
 const pluginMigrateToIsolated = defineCommand({
   meta: {
     name: 'migrate-to-isolated',

@@ -7,7 +7,58 @@ afterEach(() => {
   vi.resetModules();
 });
 
+describe('isValidWnsChannelUri (SSRF guard)', () => {
+  it('accepts real notify.windows.com subdomains over https', async () => {
+    const { isValidWnsChannelUri } = await import('../wns');
+    expect(isValidWnsChannelUri('https://db5.notify.windows.com/channel-uri')).toBe(true);
+    expect(isValidWnsChannelUri('https://bn1.notify.windows.com/x?y=1')).toBe(true);
+    expect(isValidWnsChannelUri('https://notify.windows.com/foo')).toBe(true);
+  });
+
+  it('rejects a non-Microsoft host entirely, including a subdomain-suffix trick', async () => {
+    const { isValidWnsChannelUri } = await import('../wns');
+    expect(isValidWnsChannelUri('https://attacker.example.com/x')).toBe(false);
+    // "notify.windows.com.attacker.example.com" is NOT a notify.windows.com
+    // subdomain — endsWith('.notify.windows.com') correctly rejects this.
+    expect(isValidWnsChannelUri('https://evil.notify.windows.com.attacker.example.com/x')).toBe(
+      false,
+    );
+    // Nor is a lookalike host that merely contains the string.
+    expect(isValidWnsChannelUri('https://notify.windows.com.evil.com/x')).toBe(false);
+  });
+
+  it('rejects internal/metadata-style targets an SSRF would aim at', async () => {
+    const { isValidWnsChannelUri } = await import('../wns');
+    expect(isValidWnsChannelUri('http://169.254.169.254/latest/meta-data/')).toBe(false);
+    expect(isValidWnsChannelUri('http://localhost:8080/internal')).toBe(false);
+    expect(isValidWnsChannelUri('https://10.0.0.5/internal')).toBe(false);
+  });
+
+  it('rejects http (non-TLS) even against the real host', async () => {
+    const { isValidWnsChannelUri } = await import('../wns');
+    expect(isValidWnsChannelUri('http://db5.notify.windows.com/channel')).toBe(false);
+  });
+
+  it('rejects malformed URLs without throwing', async () => {
+    const { isValidWnsChannelUri } = await import('../wns');
+    expect(isValidWnsChannelUri('not-a-url')).toBe(false);
+    expect(isValidWnsChannelUri('')).toBe(false);
+  });
+});
+
 describe('sendWnsPush', () => {
+  it('returns invalid_token for a non-WNS channel URI, without ever calling fetch (SSRF guard)', async () => {
+    process.env.WNS_PACKAGE_SID = 'sid';
+    process.env.WNS_CLIENT_SECRET = 'secret';
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { sendWnsPush } = await import('../wns');
+    const result = await sendWnsPush('https://internal.example.com/steal-me', 'payload');
+    expect(result).toBe('invalid_token');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('throws when WNS is not configured', async () => {
     const { sendWnsPush } = await import('../wns');
     await expect(sendWnsPush('https://db5.notify.windows.com/channel', 'payload')).rejects.toThrow(

@@ -1,6 +1,6 @@
 import { eq, sql } from 'drizzle-orm';
 import { platformBootstrapStatements } from './bootstrap';
-import { type PlatformDb, createClient } from './client';
+import { type PlatformDb, type SqliteDb, createClient } from './client';
 import { dbAll, dbGet, dbRun } from './exec';
 import { runMigrations, type MigrationResult } from './migrate';
 import * as pg from './schema/postgres';
@@ -166,7 +166,7 @@ export async function listPluginStatus(
   pdb: PlatformDb,
 ): Promise<{ pluginId: string; enabled: boolean }[]> {
   if (pdb.dialect === 'sqlite') {
-    return pdb.db
+    return await (pdb.db as SqliteDb)
       .select({ pluginId: sqlite.pluginStatus.pluginId, enabled: sqlite.pluginStatus.enabled })
       .from(sqlite.pluginStatus)
       .all();
@@ -179,7 +179,7 @@ export async function listPluginStatus(
 /** IDs of explicitly-disabled plugins (consumed by the middleware gate). */
 export async function listDisabledPluginIds(pdb: PlatformDb): Promise<string[]> {
   if (pdb.dialect === 'sqlite') {
-    const rows = pdb.db
+    const rows = await (pdb.db as SqliteDb)
       .select({ pluginId: sqlite.pluginStatus.pluginId })
       .from(sqlite.pluginStatus)
       .where(eq(sqlite.pluginStatus.enabled, false))
@@ -201,7 +201,7 @@ export async function setPluginEnabled(
 ): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
   if (pdb.dialect === 'sqlite') {
-    pdb.db
+    await pdb.db
       .insert(sqlite.pluginStatus)
       .values({ pluginId, tenantId: DEFAULT_TENANT_ID, enabled, updatedAt: now })
       .onConflictDoUpdate({
@@ -239,7 +239,7 @@ export async function getPluginAccessPolicy(
   pluginId: string,
 ): Promise<PluginAccessPolicyRow | undefined> {
   if (pdb.dialect === 'sqlite') {
-    return pdb.db
+    return await (pdb.db as SqliteDb)
       .select({
         pluginId: sqlite.pluginStatus.pluginId,
         accessPolicy: sqlite.pluginStatus.accessPolicy,
@@ -263,7 +263,7 @@ export async function getPluginAccessPolicy(
 /** Every plugin's explicit access policy row — for bulk resolution (Launcher, sidebar). */
 export async function listPluginAccessPolicies(pdb: PlatformDb): Promise<PluginAccessPolicyRow[]> {
   if (pdb.dialect === 'sqlite') {
-    return pdb.db
+    return await (pdb.db as SqliteDb)
       .select({
         pluginId: sqlite.pluginStatus.pluginId,
         accessPolicy: sqlite.pluginStatus.accessPolicy,
@@ -295,7 +295,7 @@ export async function setPluginAccessPolicy(
 ): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
   if (pdb.dialect === 'sqlite') {
-    pdb.db
+    await pdb.db
       .insert(sqlite.pluginStatus)
       .values({
         pluginId,
@@ -342,12 +342,15 @@ export async function createPluginStatusRowIfAbsent(
 ): Promise<boolean> {
   const now = Math.floor(Date.now() / 1000);
   if (pdb.dialect === 'sqlite') {
-    const result = pdb.db
+    const result = await pdb.db
       .insert(sqlite.pluginStatus)
       .values({ pluginId, tenantId: DEFAULT_TENANT_ID, ...fields, updatedAt: now })
       .onConflictDoNothing({ target: sqlite.pluginStatus.pluginId })
       .run();
-    return result.changes > 0;
+    // better-sqlite3's RunResult uses `changes`; libsql's ResultSet (RFC 0091
+    // sqld carve-out) uses `rowsAffected` for the same count — same union
+    // ambiguity as everywhere else `dialect: 'sqlite'` now covers two drivers.
+    return 'changes' in result ? result.changes > 0 : result.rowsAffected > 0;
   }
   const result = await pdb.db
     .insert(pg.pluginStatus)

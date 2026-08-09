@@ -557,9 +557,12 @@ export const pushDeviceTokens = sqliteTable('push_device_tokens', {
   id: text('id').primaryKey(),
   tenantId: text('tenant_id').notNull(),
   userId: text('user_id').notNull(),
-  /** `'ios' | 'android'`. */
+  /** `'ios' | 'android' | 'macos' | 'windows'` — see RFC 0087's "Desktop
+   *  native push" addendum for the latter two. */
   platform: text('platform').notNull(),
-  /** The raw APNs device token or FCM registration token. */
+  /** The raw APNs device token, FCM registration token, or (for
+   *  `'windows'`) the WNS channel URI itself — see RFC 0087's addendum for
+   *  why WNS has no separate opaque-token concept. */
   deviceToken: text('device_token').notNull().unique(),
   /** Base64-encoded device public key (ECDH P-256) — the encryption target. */
   publicKey: text('public_key').notNull(),

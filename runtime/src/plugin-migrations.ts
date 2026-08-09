@@ -156,8 +156,9 @@ export async function runAllPluginMigrations(): Promise<void> {
 
     try {
       if (isIsolated) {
-        await provisionPluginDb(manifest.id);
-        const pluginDb = getPluginDb(manifest.id, manifestRequiresEncryption(manifest.database));
+        const requiresEncryption = manifestRequiresEncryption(manifest.database);
+        await provisionPluginDb(manifest.id, requiresEncryption);
+        const pluginDb = getPluginDb(manifest.id, requiresEncryption);
         await runPluginMigrations(pluginDb, folder);
       } else {
         // PlatformDb is structurally identical to PluginDb ({ dialect, db }

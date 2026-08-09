@@ -26,10 +26,14 @@ import { fileURLToPath } from 'node:url';
 import { hashPassword } from 'better-auth/crypto';
 import {
   checkEncryptionMarker,
+  createSqldClient,
   dbEncryptionKeyFromEnv,
   defaultDataDir,
   getPlatformDb,
   openKeyedSqlite,
+  provisionSqldNamespace,
+  sqldAdminUrl,
+  sqldUrl,
 } from '@sovereignfs/db';
 import consola from 'consola';
 import { loadRootEnv } from './load-root-env';
@@ -138,22 +142,67 @@ function refuseIfRealUsersExist(realUserCount: number): void {
 // Auth DB seeding
 // ---------------------------------------------------------------------------
 
-async function seedSqlite(dbPath: string): Promise<void> {
-  mkdirSync(dirname(dbPath), { recursive: true });
+/**
+ * sqld namespace for the auth database — must match
+ * `apps/auth/src/db.ts`'s `SQLD_AUTH_NAMESPACE` (`'auth'`). This script
+ * deliberately doesn't import from `apps/auth` (mirrors it instead, per the
+ * comment above), so the constant is duplicated, not shared.
+ */
+const SQLD_AUTH_NAMESPACE = 'auth';
+
+/** Get/run dispatch, resolved once per RFC 0071 encryption carve-out (RFC
+ * 0091): plain-file `better-sqlite3` when SOVEREIGN_DB_ENCRYPTION_KEY is set,
+ * sqld otherwise. Both accept the same `?` positional placeholders, so the
+ * seeding logic below is written once. */
+async function openAuthSqlite(dbPath: string): Promise<{
+  get: <T>(sql: string, ...args: unknown[]) => Promise<T | undefined>;
+  run: (sql: string, ...args: unknown[]) => Promise<void>;
+  close: () => void;
+}> {
   const key = dbEncryptionKeyFromEnv();
   checkEncryptionMarker(defaultDataDir(), key !== undefined);
+
+  if (key === undefined) {
+    await provisionSqldNamespace(sqldAdminUrl(), SQLD_AUTH_NAMESPACE);
+    const client = createSqldClient(sqldUrl(), SQLD_AUTH_NAMESPACE);
+    return {
+      get: async <T>(sql: string, ...args: unknown[]) => {
+        const res = await client.execute({ sql, args: args as never });
+        return res.rows[0] as T | undefined;
+      },
+      run: async (sql: string, ...args: unknown[]) => {
+        await client.execute({ sql, args: args as never });
+      },
+      close: () => client.close(),
+    };
+  }
+
+  mkdirSync(dirname(dbPath), { recursive: true });
   const db = openKeyedSqlite(dbPath, key);
+  return {
+    get: async <T>(sql: string, ...args: unknown[]) =>
+      db.prepare(sql).get(...args) as T | undefined,
+    run: async (sql: string, ...args: unknown[]) => {
+      db.prepare(sql).run(...args);
+    },
+    close: () => db.close(),
+  };
+}
+
+async function seedSqlite(dbPath: string): Promise<void> {
+  const { get, run, close } = await openAuthSqlite(dbPath);
 
   let realUserCount = 0;
   try {
-    const row = db.prepare('SELECT COUNT(*) AS c FROM "user" WHERE "isTestUser" != 1').get() as
-      { c: number } | undefined;
+    const row = await get<{ c: number }>(
+      'SELECT COUNT(*) AS c FROM "user" WHERE "isTestUser" != 1',
+    );
     realUserCount = row?.c ?? 0;
   } catch {
     try {
       // isTestUser column missing (predates that migration) but the table
       // exists — count everything as "real" rather than assume it's safe.
-      const row = db.prepare('SELECT COUNT(*) AS c FROM "user"').get() as { c: number } | undefined;
+      const row = await get<{ c: number }>('SELECT COUNT(*) AS c FROM "user"');
       realUserCount = row?.c ?? 0;
     } catch {
       // "user" table doesn't exist yet — brand-new DB, nothing to protect.
@@ -164,11 +213,10 @@ async function seedSqlite(dbPath: string): Promise<void> {
 
   const now = new Date().toISOString();
   for (const u of SEED_USERS) {
-    const existing = db.prepare('SELECT id FROM "user" WHERE email = ?').get(u.email) as
-      { id: string } | undefined;
+    const existing = await get<{ id: string }>('SELECT id FROM "user" WHERE email = ?', u.email);
     if (existing) {
       try {
-        db.prepare(`UPDATE "user" SET "isTestUser" = 1 WHERE id = ?`).run(existing.id);
+        await run(`UPDATE "user" SET "isTestUser" = 1 WHERE id = ?`, existing.id);
       } catch {
         consola.warn(
           `  isTestUser backfill skipped for ${u.email} — start the auth server once first`,
@@ -179,18 +227,30 @@ async function seedSqlite(dbPath: string): Promise<void> {
     }
     const userId = randomUUID();
     const hashed = await hashPassword(u.password);
-    db.prepare(
+    await run(
       `INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, active, "isTestUser")
        VALUES (?, ?, ?, 1, NULL, ?, ?, ?, 1, 1)`,
-    ).run(userId, u.name, u.email, now, now, u.role);
-    db.prepare(
+      userId,
+      u.name,
+      u.email,
+      now,
+      now,
+      u.role,
+    );
+    await run(
       `INSERT INTO account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
        VALUES (?, ?, 'credential', ?, ?, ?, ?)`,
-    ).run(randomUUID(), userId, userId, hashed, now, now);
+      randomUUID(),
+      userId,
+      userId,
+      hashed,
+      now,
+      now,
+    );
     consola.success(`  created: ${u.email} (${u.role})`);
   }
 
-  db.close();
+  close();
 }
 
 async function seedPostgres(connString: string): Promise<void> {

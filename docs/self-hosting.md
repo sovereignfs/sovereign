@@ -580,6 +580,70 @@ both default to the Docker service hostnames (`http://sqld:8080` /
 `http://sqld:8081`), so a non-Docker deployment must override them. See
 [Environment variables](#environment-variables).
 
+### One-time cutover from plain-file SQLite (workstream 0009 leg 4)
+
+If this instance was running before leg 3 shipped, its platform core and any
+non-`requireEncryption` plugin data still sit in plain `.db` files under
+`data/`, not in sqld. Leg 3's routing is not aware of that history — once
+the sqld overlay is attached, it opens a fresh, empty namespace for each of
+those, and the old files are simply never looked at again. `sv db
+migrate-to-sqld` performs the one-time move, verbatim (schema + every row),
+before you ever point the running instance at sqld.
+
+**This is a one-time cutover, not a background migration — follow it in
+order, with the server stopped, and rehearse against a copy of your real
+data first.**
+
+1. **Stop the server.** The cutover reads the plain `.db` files directly and
+   needs exclusive access to them (it probes for this and refuses to run
+   otherwise).
+2. **Take a backup** (`sv db migrate-to-sqld` does this automatically unless
+   you pass `--skip-backup`, same as `sv db encrypt`/`decrypt`). Confirm the
+   backup is restorable before proceeding — this is the only way back if
+   anything goes wrong.
+3. **Preview what will move**, with nothing written yet:
+
+   ```bash
+   pnpm sv db migrate-to-sqld --dry-run
+   ```
+
+   This lists every file the cutover would touch — the platform core (if
+   `SOVEREIGN_DB_ENCRYPTION_KEY` is unset) and every plugin database whose
+   manifest doesn't declare `requireEncryption` — with its tables and row
+   counts. A file that's already encrypted, or whose manifest requires
+   encryption but hasn't been converted with `sv db encrypt` yet, is left out
+   entirely; it's not this command's concern either way.
+
+4. **Bring up sqld** (`docker compose -f docker-compose.yml -f
+docker-compose.sqld.yml up -d sqld`, or the `.prod.yml` equivalent) so
+   there's somewhere for the data to land.
+5. **Run the cutover:**
+
+   ```bash
+   pnpm sv db migrate-to-sqld
+   ```
+
+   Each target's schema and every row are copied in one atomic transaction
+   (either the whole file lands, or none of it does), then verified by
+   comparing per-table row counts against the source. A target that fails
+   leaves its plain file completely untouched — a partial failure never
+   corrupts anything, but it does mean you should not just re-run the whole
+   command blindly: it refuses to write into a namespace that already has
+   data (from a target that partially succeeded before a later one failed),
+   so re-running is safe, it just won't retry what already landed. Drop the
+   affected namespace via sqld's admin API first if you need to force a clean
+   retry of a specific target.
+
+6. **Verify**, beyond the tool's own row-count check: spot-check a few real
+   records per plugin against the pre-cutover backup.
+7. **Start the server** with the sqld overlay attached. It now finds the
+   migrated data instead of creating fresh empty namespaces.
+
+The old plain `.db` files under `data/plugins/` are not deleted by this
+command — they're simply no longer read once the server starts against sqld.
+Leave them until you've confirmed the cutover, then remove them (or archive
+the whole pre-cutover backup and delete them) once you're confident.
+
 ### Known gap: enabling encryption after running on sqld
 
 `sv db encrypt` converts an existing plain-file SQLite database in place. If

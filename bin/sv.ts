@@ -1257,9 +1257,246 @@ const dbMigrateToSqld = defineCommand({
   },
 });
 
+/**
+ * Every isolated plugin with a pending legacy SQLite file under
+ * `dataDir/plugins/` — a plugin whose `.db` file exists on disk despite the
+ * platform dialect being Postgres, left behind by a per-plugin
+ * `database.dialect: "sqlite"` override from before that manifest field was
+ * removed (workstream 0009 leg 1). Only plugins actually present in
+ * `plugins/` (matched by manifest id) and still declaring `isolation:
+ * "isolated"` are targets — an orphaned `.db` file with no matching manifest
+ * has no Postgres migrations to run against, so it's skipped, not migrated.
+ */
+function findPostgresMigrationTargets(
+  dataDir: string,
+): { id: string; dir: string; path: string }[] {
+  const pluginsDataDir = join(dataDir, 'plugins');
+  if (!existsSync(pluginsDataDir)) return [];
+
+  const idToDir = new Map<string, string>();
+  if (existsSync(PLUGINS_DIR)) {
+    for (const entry of readdirSync(PLUGINS_DIR, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const manifestPath = join(PLUGINS_DIR, entry.name, 'manifest.json');
+      if (!existsSync(manifestPath)) continue;
+      try {
+        const m = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+          id?: string;
+          database?: unknown;
+        };
+        if (typeof m.id === 'string' && manifestDatabaseIsolation(m.database) === 'isolated') {
+          idToDir.set(m.id, entry.name);
+        }
+      } catch {
+        // ignore unreadable manifests
+      }
+    }
+  }
+
+  const targets: { id: string; dir: string; path: string }[] = [];
+  for (const entry of readdirSync(pluginsDataDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.db')) continue;
+    const id = entry.name.slice(0, -'.db'.length);
+    const dir = idToDir.get(id);
+    if (!dir) continue;
+    targets.push({ id, dir, path: join(pluginsDataDir, entry.name) });
+  }
+  return targets;
+}
+
+const dbMigrateToPostgres = defineCommand({
+  meta: {
+    name: 'migrate-to-postgres',
+    description:
+      'One-time migration of a legacy isolated-plugin SQLite database into its Postgres schema',
+  },
+  args: {
+    pluginId: {
+      type: 'positional',
+      required: false,
+      description:
+        'Plugin manifest ID or directory name to migrate (default: every isolated plugin with a pending SQLite file)',
+    },
+    dataDir: {
+      type: 'string',
+      description: 'Path to the data directory (default: ./data)',
+      default: join(ROOT, 'data'),
+    },
+    'dry-run': {
+      type: 'boolean',
+      default: false,
+      description:
+        'Report what would be migrated (tables, row counts) without touching Postgres or taking a backup',
+    },
+    'skip-backup': {
+      type: 'boolean',
+      default: false,
+      description: 'Skip the automatic pre-migration backup (not recommended)',
+    },
+  },
+  async run({ args }) {
+    const {
+      dbEncryptionKeyFromEnv,
+      getPluginDb,
+      isPluginEncryptionMarked,
+      migratePluginSqliteToPostgres,
+      pluginMigrationsFolder,
+      pluginSchemaName,
+      previewSqliteFileForPostgres,
+      provisionPluginDb,
+      resolveDialect,
+      runPluginMigrations,
+      PostgresMigrationError,
+    } = await import('@sovereignfs/db');
+
+    const { dialect } = resolveDialect(process.env);
+    if (dialect !== 'postgres') {
+      consola.error(
+        'This command migrates a legacy SQLite plugin database into Postgres — DB_DIALECT is ' +
+          `"${dialect}", not "postgres". Nothing to do.`,
+      );
+      process.exit(1);
+    }
+
+    const dataDir = resolve(args.dataDir);
+    const allTargets = findPostgresMigrationTargets(dataDir);
+    const targets = args.pluginId
+      ? allTargets.filter((t) => t.id === args.pluginId || t.dir === args.pluginId)
+      : allTargets;
+
+    if (args.pluginId && targets.length === 0) {
+      consola.error(
+        `No pending SQLite migration found for "${args.pluginId}" — either it has no ` +
+          'data/plugins/<id>.db file, or it is not an installed isolated plugin.',
+      );
+      process.exit(1);
+    }
+
+    if (targets.length === 0) {
+      consola.info('Nothing to migrate — no isolated plugin has a pending legacy SQLite file.');
+      return;
+    }
+
+    consola.info(`Found ${targets.length} plugin(s) with a pending SQLite → Postgres migration:`);
+    for (const t of targets) consola.info(`  - ${t.id} (${t.path})`);
+
+    if (args['dry-run']) {
+      consola.info('--dry-run: previewing only, nothing will be written.');
+      for (const t of targets) {
+        const marked = isPluginEncryptionMarked(dataDir, t.id);
+        const key = marked ? dbEncryptionKeyFromEnv() : undefined;
+        if (marked && !key) {
+          consola.warn(
+            `  ${t.id}: encrypted, but SOVEREIGN_DB_ENCRYPTION_KEY is not set — skipping preview.`,
+          );
+          continue;
+        }
+        consola.info(`  ${t.id}:`);
+        for (const { table, rows } of previewSqliteFileForPostgres(t.path, key)) {
+          consola.info(`    ${table}: ${rows} row(s)`);
+        }
+      }
+      return;
+    }
+
+    if (args['skip-backup']) {
+      consola.warn('Skipping the pre-migration backup (--skip-backup). This is not recommended.');
+    } else {
+      const version = readPlatformVersion(ROOT);
+      const archivePath = defaultArchivePath(ROOT, version);
+      consola.start(`Creating a safety backup before migrating → ${archivePath}`);
+      if (!runSqliteBackup(dataDir, archivePath)) {
+        consola.error('Backup failed — aborting before touching any database.');
+        process.exit(1);
+      }
+      consola.success(`Backup saved → ${archivePath}`);
+    }
+
+    consola.warn('Make sure the server is stopped before continuing.');
+
+    let failed = 0;
+    for (const t of targets) {
+      consola.start(`Migrating "${t.id}"…`);
+      try {
+        const marked = isPluginEncryptionMarked(dataDir, t.id);
+        const key = marked ? dbEncryptionKeyFromEnv() : undefined;
+        if (marked && !key) {
+          throw new Error(
+            'This database is RFC 0071 encrypted, but SOVEREIGN_DB_ENCRYPTION_KEY is not set.',
+          );
+        }
+
+        // Ensure the destination schema + tables exist, via the plugin's own
+        // Postgres migrations — same mechanism the running app itself uses,
+        // so the destination shape always matches what the app expects.
+        await provisionPluginDb(t.id, false);
+        const pluginDb = getPluginDb(t.id, false);
+        const folder = pluginMigrationsFolder(`plugins/${t.dir}`, 'postgres');
+        if (existsSync(folder)) {
+          await runPluginMigrations(pluginDb, folder);
+        }
+        if (pluginDb.dialect !== 'postgres') {
+          throw new Error(`Expected a Postgres connection for "${t.id}"; got ${pluginDb.dialect}.`);
+        }
+
+        const results = await migratePluginSqliteToPostgres(
+          t.path,
+          pluginDb.db.$client,
+          pluginSchemaName(t.id),
+          key,
+        );
+
+        let mismatched = false;
+        for (const r of results) {
+          const ok = r.sourceRows === r.destRows;
+          if (!ok) mismatched = true;
+          consola.info(
+            `    ${r.table}: ${r.sourceRows} → ${r.destRows} row(s)${ok ? '' : ' — MISMATCH'}`,
+          );
+        }
+        if (mismatched) {
+          throw new Error(
+            'Post-migration row counts do not match the source — this should not happen given ' +
+              'the transactional copy; treat the destination schema as suspect.',
+          );
+        }
+        consola.success(`${t.id}: migrated. The original SQLite file was left untouched.`);
+      } catch (err) {
+        const message =
+          err instanceof PostgresMigrationError ? err.message : (err as Error).message;
+        consola.error(`${t.id}: ${message}`);
+        failed++;
+      }
+    }
+
+    if (failed > 0) {
+      consola.error(
+        `${failed} of ${targets.length} plugin(s) failed to migrate. Plugins that succeeded are ` +
+          'live in Postgres; the ones that failed were left completely untouched. Fix the issue ' +
+          '(see errors above), or restore from the backup taken above, before retrying.',
+      );
+      process.exit(1);
+    }
+
+    consola.success(`All ${targets.length} plugin(s) migrated to Postgres.`);
+    consola.info(
+      'Once verified, the original SQLite files under data/plugins/ can be safely removed — ' +
+        'they were left untouched by this migration.',
+    );
+  },
+});
+
 const db = defineCommand({
-  meta: { name: 'db', description: 'SQLite at-rest encryption and sqld migration tools' },
-  subCommands: { encrypt: dbEncrypt, decrypt: dbDecrypt, 'migrate-to-sqld': dbMigrateToSqld },
+  meta: {
+    name: 'db',
+    description: 'SQLite at-rest encryption, sqld migration, and Postgres migration tools',
+  },
+  subCommands: {
+    encrypt: dbEncrypt,
+    decrypt: dbDecrypt,
+    'migrate-to-sqld': dbMigrateToSqld,
+    'migrate-to-postgres': dbMigrateToPostgres,
+  },
 });
 
 const seed = defineCommand({

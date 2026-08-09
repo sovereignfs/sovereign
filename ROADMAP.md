@@ -329,6 +329,7 @@ macOS first. Out of scope for v1; the approach is decided (see CLAUDE.md
 | 0.2.0   | Desktop: system tray and OS notifications (RFC 0038) | ✅     | [17.2](docs/epics/desktop.md#-172--system-tray-and-os-notifications)                    |
 | 0.3.0   | Desktop: deep link scheme `sovereign://` (RFC 0038)  | ✅     | [17.3](docs/epics/desktop.md#-173--deep-link-scheme-sovereign)                          |
 | 0.4.0   | Desktop: navigation policy enforcement (RFC 0058)    | ✅     | [17.8](docs/epics/desktop.md#-178--navigation-policy-enforcement)                       |
+| 0.5.0   | Desktop: auto-updater (RFC 0038)                     | ✅     | [17.5](docs/epics/desktop.md#-175--auto-updater)                                        |
 
 ---
 
@@ -337,7 +338,6 @@ macOS first. Out of scope for v1; the approach is decided (see CLAUDE.md
 | Version | Task                                                      | Status | Epic task                                                                                   |
 | ------- | --------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
 | —       | Desktop: keychain credential storage (RFC 0038)           | 🚧     | [17.4](docs/epics/desktop.md#-174--keychain-credential-storage--blocked-not-just-unstarted) |
-| —       | Desktop: auto-updater (RFC 0038)                          | 📋     | [17.5](docs/epics/desktop.md#-175--auto-updater)                                            |
 | —       | Desktop: Mac App Store distribution (RFC 0038)            | 📋     | [17.6](docs/epics/desktop.md#-176--mac-app-store-distribution)                              |
 | —       | SDK `"desktop"` environment for `sdk.device.*` (RFC 0038) | 📋     | [17.7](docs/epics/desktop.md#-177--sdk-desktop-environment-for-sdkdevice)                   |
 

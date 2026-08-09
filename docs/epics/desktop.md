@@ -203,7 +203,31 @@ whatever consumer eventually unblocks this):**
 - Removing an instance clears its stored token from the keychain
 - `sdk.device.secureStore.set/get/delete` round-trips correctly in the desktop env
 
-#### 📋 17.5 — Auto-updater
+#### ✅ 17.5 — Auto-updater
+
+> **Mechanism shipped; activation is a manual, deliberately-separate step —
+> not code.** `bundle.createUpdaterArtifacts: true` without a matching
+> `TAURI_SIGNING_PRIVATE_KEY` was empirically confirmed (built locally both
+> ways) to break `tauri build` outright — a hard bundler error, unlike the
+> macOS `APPLE_*` signing secrets, which degrade gracefully to an unsigned
+> build when unset. `sovereign-desktop`'s `tauri.conf.json` therefore ships
+> with a placeholder `pubkey` and `createUpdaterArtifacts` intentionally
+> absent, so `pnpm build`/`pnpm dev` and `release.yml` stay completely
+> unaffected until a real signing key is generated and configured — an
+> ordered checklist in that repo's README's "Enabling auto-updates" section
+> (generate a keypair, add two GitHub secrets already forwarded by
+> `release.yml`, paste the public key into config, flip one boolean).
+>
+> Two deliberate deviations from the sketch below, resolved in the
+> checklist's favor where the two disagreed: the update prompt is a
+> **native dialog** (`tauri-plugin-dialog`), not a WebView banner — the
+> WebView may be showing the bundled local page or a loaded instance at
+> any given moment, and shell UI must not touch either, the same reasoning
+> behind epic task 17.8's navigation policy. And "Update Now" downloads,
+> installs, and restarts **immediately**, not "on quit" — matching the
+> checklist's own "app restarts to the new version" wording, which the
+> original deliverables bullet's "install on quit" phrasing didn't quite
+> agree with.
 
 **Goal:** Allow the app to check for and apply updates in-app so users are never
 silently running a stale binary.

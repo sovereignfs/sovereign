@@ -89,21 +89,34 @@ driver shape itself, and embedded-replica vs. remote-only deployment.
 
 ### Deployment shape — resolved
 
-`sqld` added to `docker-compose.yml` and `docker-compose.prod.yml`, internal-only
-(no host port), same pattern as the `auth` service. Gated behind a
-`sqld-spike` Compose profile so `docker compose up` is unchanged for every
-existing deployment until leg 3 actually wires the platform to it:
+`sqld` lives in its own overlay file, `docker-compose.sqld.yml`, mirroring the
+existing `docker-compose.postgres.yml` pattern rather than being embedded in
+the base compose files — internal-only (no host port), reached by service
+name, a `/health`-backed healthcheck matching `postgres`'s `pg_isready` one.
+`docker compose up` is unchanged for every existing deployment; the overlay is
+opt-in by construction (nobody gets it without the extra `-f`):
 
 ```
-docker compose --profile sqld-spike up sqld
+docker compose -f docker-compose.prod.yml -f docker-compose.sqld.yml up --build -d
 ```
 
 Image: `ghcr.io/tursodatabase/libsql-server:latest`. Config used in the spike:
 `SQLD_NODE=primary`, default HTTP (`0.0.0.0:8080`) and gRPC (`0.0.0.0:5001`)
-listeners, data at `/var/lib/sqld` (bind-mounted in dev, a dedicated
-`sovereign_sqld_data` named volume in prod — deliberately separate from
+listeners, data at `/var/lib/sqld` inside the container, backed by a dedicated
+`sovereign_sqld_data` named volume — deliberately separate from
 `sovereign_data`, since `sqld`'s on-disk format isn't a set of `.db` files the
-existing backup/restore tooling understands).
+existing backup/restore tooling understands.
+
+**Unlike `docker-compose.postgres.yml`, this overlay doesn't yet override
+`runtime`/`auth`'s connection settings** — there's no driver in `packages/db`
+that consumes an `sqld` URL yet (that's leg 3). It only stands the service up
+for prototyping directly. Once leg 3 ships, expect this overlay's shape to
+change: `sqld` is meant to become mandatory whenever `DB_DIALECT=sqlite`
+(workstream 0009's locked decision), not an opt-in alternative the way
+Postgres is — so its service definition most likely folds into the base
+`docker-compose.yml`/`.prod.yml` directly at that point, rather than staying
+behind a separate overlay. `docker-compose.postgres.yml` remains the real
+"switch away from the default dialect" file either way.
 
 **Embedded replica vs. remote-only:** primary-only. Nothing in Sovereign's
 design calls for a remote/edge replica — there is exactly one `sqld` instance

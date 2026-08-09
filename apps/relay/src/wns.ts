@@ -74,12 +74,41 @@ async function wnsAccessToken(config: WnsConfig): Promise<string> {
 export type WnsSendResult = 'sent' | 'invalid_token' | 'failed';
 
 /**
+ * True only for a genuine Microsoft WNS channel URI. Required before ever
+ * fetching `channelUri` — unlike APNs/FCM, where the destination host is
+ * always a fixed Apple/Google API endpoint, WNS's own design makes the
+ * "device token" a full URL supplied by whichever self-hosted instance
+ * calls `/v1/push` (ultimately sourced from `push_device_tokens.device_token`,
+ * populated by the mobile app's own registration call). Without this check,
+ * a malicious or compromised instance could point `channelUri` at an
+ * internal address reachable from the relay (e.g. a cloud metadata
+ * endpoint or an internal service) and use this relay as an authenticated
+ * SSRF proxy, sending it an attacker-chosen bearer token's request — caught
+ * by CodeQL before merge (PR #388) and fixed here rather than shipped.
+ * Every documented WNS channel URI lives under `*.notify.windows.com`, so
+ * that's the allowlist, not a denylist of known-bad hosts.
+ */
+export function isValidWnsChannelUri(channelUri: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(channelUri);
+  } catch {
+    return false;
+  }
+  return (
+    url.protocol === 'https:' &&
+    (url.hostname === 'notify.windows.com' || url.hostname.endsWith('.notify.windows.com'))
+  );
+}
+
+/**
  * Forwards an already-encrypted payload as a raw WNS notification directly
  * to the device's channel URI. WNS has no separate opaque device-token
  * concept the way APNs/FCM do — the channel URI itself, generated
  * client-side by Windows, is what `push_device_tokens.device_token` stores
  * for `'windows'` rows, and is a full HTTPS endpoint this function POSTs to
- * directly rather than a host + path pair.
+ * directly rather than a host + path pair. See `isValidWnsChannelUri` for
+ * why that URI is validated before use, not trusted as-is.
  *
  * Response codes per Microsoft's documented WNS contract: `200` is success;
  * `404`/`410` mean the channel is gone (app uninstalled, or the channel's
@@ -93,6 +122,12 @@ export async function sendWnsPush(
   channelUri: string,
   encryptedPayload: string,
 ): Promise<WnsSendResult> {
+  // Validated — and rejected without ever calling fetch() or exchanging a
+  // token — before any network activity at all. See isValidWnsChannelUri.
+  if (!isValidWnsChannelUri(channelUri)) {
+    return 'invalid_token';
+  }
+
   const config = wnsConfig();
   const token = await wnsAccessToken(config);
 

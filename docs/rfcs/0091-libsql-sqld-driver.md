@@ -1,16 +1,15 @@
 # RFC 0091 — libSQL/`sqld` as the SQLite driver
 
-**Status:** Draft\
+**Status:** Accepted\
 **Date:** August 2026\
 **Author:** Claude Code (workstream 0009 leg 2 spike, for kasunben)\
 **Scope:** `packages/db`, `docker-compose.yml`, `docker-compose.prod.yml`; supersedes
 [research 0003](../research/0003-horizontal-scaling-strategy.md)'s SQLite
 recommendation\
-**Incorporated into plan:** No — documentation-first. This draft now carries a
-recommendation for the encryption question (an RFC-0071-scoped carve-out — see
-Proposed design), but it is a security-guarantee tradeoff and still needs
-kasunben's explicit sign-off before leg 3 starts; the async-contract and
-deployment-shape findings are ready to implement regardless.
+**Incorporated into plan:** Yes — the encryption-carve-out recommendation was
+approved via merge of [PR #364](https://github.com/sovereignfs/sovereign/pull/364),
+which served as its review/sign-off vehicle. Workstream 0009 leg 3
+(`packages/db` driver swap) is unblocked.
 
 ---
 
@@ -313,9 +312,7 @@ just merges), a follow-up leg can retire the `better-sqlite3` path entirely.
 
 ## Adoption path
 
-**Blocked on kasunben's sign-off on the encryption carve-out** — a
-security-guarantee tradeoff, not a call this RFC finalizes unilaterally. Once
-approved: leg 3 implements the driver swap (`client.ts`, `plugin-client.ts`,
+**Approved via merge of PR #364.** Leg 3 implements the driver swap (`client.ts`, `plugin-client.ts`,
 `apps/auth/src/db.ts`, the 9 async-contract call sites, per-dialect schema files
 under `packages/db/src/schema/`) with the carve-out's boundary condition
 (current key/`requireEncryption` state) built in from the start, not bolted on

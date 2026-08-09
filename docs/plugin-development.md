@@ -1938,12 +1938,12 @@ your plugin name) is shown as a fallback when no `icon.svg` is present.
 Plugins access the database through `await sdk.db.getClient()`. There are two isolation
 modes, set in the manifest:
 
-|              | `shared` (default)                             | `isolated`                           |
-| ------------ | ---------------------------------------------- | ------------------------------------ |
-| Store        | Platform DB (shared with all plugins)          | Dedicated file or schema per plugin  |
-| Table prefix | Required (slug, e.g. `tasks_lists`)            | Not required                         |
-| Uninstall    | Tables remain                                  | Entire store dropped                 |
-| Migrations   | `plugins/<id>/migrations/` against platform DB | Same path, routed to dedicated store |
+|              | `shared` (default)                             | `isolated`                             |
+| ------------ | ---------------------------------------------- | -------------------------------------- |
+| Store        | Platform DB (shared with all plugins)          | Dedicated store per plugin (see below) |
+| Table prefix | Required (slug, e.g. `tasks_lists`)            | Not required                           |
+| Uninstall    | Tables remain                                  | Entire store dropped                   |
+| Migrations   | `plugins/<id>/migrations/` against platform DB | Same path, routed to dedicated store   |
 
 **For most plugins, shared is the right choice.** Use `"database": "isolated"` when you
 need a clean data lifecycle (e.g. uninstall should delete all plugin data), per-plugin
@@ -1954,6 +1954,16 @@ A plugin cannot request a database dialect — the operator's instance-wide
 opens, including every isolated plugin store. There is no manifest override
 (workstream 0009 leg 1 removed the `database.dialect` field that used to
 allow one).
+
+On a SQLite-dialect instance, an isolated plugin's "dedicated store" is not
+always a plain file: it depends on the RFC 0071 encryption carve-out
+(workstream 0009 leg 3, RFC 0091). A plugin without `requireEncryption`
+(the common case) gets a dedicated **sqld namespace** — sqld is a required
+part of a SQLite deployment, not optional — instead of a `.db` file; the
+manifest and `sdk.db.getClient()` call are identical either way, so this is
+transparent to plugin code. Only a plugin with `requireEncryption: true`
+gets an actual SQLite file on disk. See
+[docs/self-hosting.md's sqld section](self-hosting.md#sqld-libsql-server-rfc-0091).
 
 An isolated plugin can require SQLite at-rest encryption (RFC 0071) for its
 own store:

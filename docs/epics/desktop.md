@@ -142,6 +142,30 @@ own documented behavior without `tauri-plugin-single-instance`). A natural
 follow-up if it proves annoying in practice; not blocking since macOS ships
 first.
 
+> **Follow-up fix (2026-08-09): `resolveDeepLink`'s host parsing no longer
+> trusts `new URL(rawUrl).hostname` for the deep link itself.**
+> `sovereign-mobile`'s port of this exact function (epic task 20.14) found,
+> via live on-device debugging on Android, that Chromium WebView does not
+> populate `.hostname`/`.host` at all for a non-special scheme like
+> `sovereign:` — the entire `//host/path` folds into `.pathname` instead,
+> leaving every deep link unresolvable. WebKit (this app's macOS engine)
+> parses the identical string correctly, and so does Node (this file's own
+> Vitest suite) — a green test suite here never proved this worked on
+> WebView2, this app's Windows engine, which is Chromium-based and the most
+> likely engine to share Android's exact gap. **Applied defensively,
+> without a confirmed reproduction on real WebView2** — this workbench has
+> no Windows access (see this repo's CLAUDE.md Windows-verification notes,
+> also the reason task 17.10's Windows Hello support is similarly
+> unconfirmed) — `resolveDeepLink` now parses the scheme/host/path directly
+> from the string instead of trusting the URL parser's authority
+> recognition for anything but the _stored_ instance URLs, which are
+> ordinary `https://` URLs and parse identically everywhere. Regression-
+> verified on macOS: `pnpm test` (24/24, including two new tests —
+> case-insensitive scheme/host matching, and a renamed "no sovereign://
+> prefix" case replacing the old parse-failure framing) and a real
+> `open sovereign://sovereign.openfs.io/plugins/console` against the
+> actual built `.app` bundle, which launched cleanly with no crash.
+
 **SRS reference:** §3.19
 
 **Review checklist:**

@@ -472,3 +472,29 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   setting up a Postgres deployment, `AUTH_DATABASE_URL` must be set
   explicitly alongside `DB_DIALECT`/`DATABASE_URL` — see
   `docs/self-hosting.md`'s PostgreSQL section.
+- **Every isolated-mode Postgres plugin needs its own `migrationsTable`
+  (`pluginMigrationsTableName(id)`), passed explicitly to
+  `runPluginMigrations()` — the untouched default collides across plugins.**
+  drizzle-orm's node-postgres migrator tracks applied migrations in a table
+  that lives in a **fixed `drizzle` schema**, regardless of the connecting
+  pool's `search_path` — so two isolated plugins left on the default table
+  name (`__drizzle_migrations`) silently share ONE tracking table between
+  them, even though their actual data tables correctly land in separate
+  `plugin_<slug>` schemas via `search_path`. The second plugin's migrator
+  compares its own migration timestamps against whatever the first plugin's
+  migrations left as the newest row in that shared table and concludes
+  "already applied" — skipping every `CREATE TABLE` statement with **no
+  error, no warning**: the schema exists, empty, indistinguishable from a
+  successful no-op migration. `pluginMigrationsTableName()` already existed
+  to prevent this exact hazard for **shared**-mode plugins (writing into the
+  platform DB) — it was never extended to isolated-mode Postgres because,
+  until a real production migration (workstream: legacy SQLite → Postgres,
+  task 8.25's follow-up) added a second one, only one isolated Postgres
+  plugin (`com.mooniak.tritext`) had ever existed, so the collision was
+  latent, not yet possible. **Never apply this to isolated SQLite plugins**
+  — a genuinely separate file per plugin has no collision risk, and every
+  existing SQLite-isolated plugin already has real migration history under
+  the untouched default name; passing a different table name there would
+  orphan it, not fix anything. Scope the fix by `pluginDb.dialect ===
+'postgres'`, exactly as `runtime/src/plugin-migrations.ts` and both
+  `bin/sv.ts` isolated-Postgres call sites do.

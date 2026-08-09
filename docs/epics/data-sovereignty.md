@@ -1005,7 +1005,7 @@ a fresh backup taken immediately before cutover.
 
 ---
 
-#### ⏳ 8.25 — Legacy per-plugin SQLite → Postgres migration tool
+#### ✅ 8.25 — Legacy per-plugin SQLite → Postgres migration tool
 
 **Goal:** Migrate an isolated plugin's data off a legacy plain-file SQLite
 database — left behind by a per-plugin `database.dialect: "sqlite"` manifest
@@ -1079,8 +1079,18 @@ before Task 8.22 shipped can hit it.
   rows in the same transaction), and that the original file is provably
   unmodified after a successful run.
 
-**Not yet exercised: the actual production instance's real 6 plugins** —
-operator action, not yet performed, same posture as Task 8.24.
+**Run against the real production instance:** `plainwrite` and `shopper`
+migrated successfully — every table's row count verified matching both by
+the tool's own post-copy check and independently via `psql`, and the
+original SQLite files confirmed untouched. `docs`, `healthlog`, `sheets`
+were dropped from this instance's plugin set before the run (never had
+Postgres migrations authored, same conclusion as when this task was
+scoped); `wallet` also still has no Postgres migrations and was left on its
+original SQLite file, working exactly as before — that remains separate,
+not-yet-started follow-up work, not a defect in this tool.
+
+The real run also surfaced a genuine bug in `runPluginMigrations()` itself
+(pre-existing, not introduced by this task) — see Task 8.26.
 
 **Dependencies:** Task 8.22 (the override this cleans up after only exists on
 pre-8.22 deployments).
@@ -1092,11 +1102,74 @@ pre-8.22 deployments).
 - `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`,
   `TEST_DATABASE_URL=... pnpm test` all pass.
 - Run live against a copy of the triggering production instance's real data
-  before running it against the actual instance — **operator action, not yet
-  performed**.
+  before running it against the actual instance — done; see above.
 - Post-migration, each plugin's data is verifiably intact (row counts, spot
   checks) against the pre-migration backup, and the original SQLite files are
-  confirmed byte-for-byte untouched.
+  confirmed byte-for-byte untouched — done; see above.
+
+---
+
+#### ✅ 8.26 — Fix isolated-Postgres plugin migration-table collision
+
+**Goal:** Fix a pre-existing bug surfaced while running Task 8.25's migration
+tool against real production data: `plainwrite` and `shopper`'s Postgres
+schemas were provisioned successfully, their migrations folders genuinely
+existed with valid SQL, yet no tables were ever created — `sv plugin
+migrate` reported "up to date" for each, meaning drizzle's migrator believed
+the migrations had already run.
+
+**Root cause:** drizzle-orm's node-postgres migrator tracks applied
+migrations in a table living in a **fixed `drizzle` schema**, regardless of
+the connecting pool's `search_path`. Every isolated-mode Postgres plugin left
+on the untouched default table name (`__drizzle_migrations`) therefore shares
+that one table across every plugin. `com.mooniak.tritext` (the only isolated
+Postgres plugin that existed before this task) had already populated it with
+entries carrying timestamps later than plainwrite/shopper's own migration
+timestamps — so their migrators compared their own (older) pending migrations
+against tritext's newest row, concluded "already applied", and silently
+skipped every `CREATE TABLE` statement. No error, no warning: the schema
+existed, empty, indistinguishable from a successful no-op migration. This is
+the identical hazard `pluginMigrationsTableName()` already existed to prevent
+for **shared**-mode plugins (writing into the platform DB) — never extended
+to isolated-mode Postgres, because until Task 8.25's migration there was only
+ever one isolated Postgres plugin, so the collision was latent, not yet
+possible.
+
+**Delivered:**
+
+- `pluginMigrationsTableName(id)` now passed as the `migrationsTable` at all
+  three call sites that run isolated-plugin Postgres migrations:
+  `runtime/src/plugin-migrations.ts` (the real startup path — every
+  production instance's actual migration flow), and both `bin/sv.ts`
+  commands (`sv plugin migrate`, `sv db migrate-to-postgres`).
+  Deliberately **scoped to `pluginDb.dialect === 'postgres'` only** — isolated
+  SQLite plugins are unaffected (a genuinely separate file per plugin has no
+  collision risk) and must keep the untouched default name; every existing
+  SQLite-isolated plugin already has real migration history under it, and
+  changing that now would orphan it, not fix anything.
+- `packages/db/src/__tests__/migrate.pg.test.ts` (live Postgres): reproduces
+  the exact incident (two isolated plugins, deliberately ordered timestamps
+  matching tritext-then-plainwrite, confirms the second plugin's table is
+  never created without the fix) and confirms the fix (same setup, with
+  `pluginMigrationsTableName()` passed, both plugins' tables created
+  independently).
+- Verified against the real production instance in the same session the bug
+  was found: after this fix, `plainwrite` and `shopper` migrated correctly
+  (see Task 8.25).
+
+**Dependencies:** Task 8.25 (found while running its migration against real
+data).
+
+**SRS reference:** none — a bug fix, not a new capability.
+
+**Review checklist:**
+
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`,
+  `TEST_DATABASE_URL=... pnpm test` all pass.
+- `migrate.pg.test.ts`'s first test reproduces the incident (proves the bug
+  is real, not assumed); its second test proves the fix.
+- Isolated SQLite plugins are unaffected — the fix is dialect-scoped, not a
+  blanket change to `runPluginMigrations()`'s default behavior.
 
 ---
 

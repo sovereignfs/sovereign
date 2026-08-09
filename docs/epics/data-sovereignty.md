@@ -943,29 +943,62 @@ override mid-migration).
 
 ---
 
-#### 📋 8.24 — One-time SQLite → libSQL data cutover (workstream 0009 leg 4)
+#### ⏳ 8.24 — One-time SQLite → libSQL data cutover (workstream 0009 leg 4)
 
 **Goal:** Migrate the single production instance's existing SQLite files
 (`sovereign.db`, `auth.db`, and every isolated plugin `.db`) onto the
 `sqld`-backed setup from Task 8.23, as a one-time cutover — not a phased or
 dual-write migration, since only one production instance exists today.
 
-**Deliverables:**
+**Delivered:**
 
-- A documented, backup-first runbook: snapshot the existing `data/` directory,
-  import into `sqld`, verify row counts and a sample read/write against the
-  new setup, then cut the running instance over.
-- Verification against real production data, not synthetic fixtures alone.
+- `sv db migrate-to-sqld` (`bin/sv.ts`, backed by `packages/db/src/sqld-cutover.ts`):
+  determines every plain-file SQLite database leg 3's routing would send to
+  sqld (ground truth is each file's own on-disk encryption marker plus its
+  current manifest/env state, not a snapshot of history — this also
+  correctly skips a plaintext file that's _supposed_ to be encrypted but
+  hasn't been converted yet with `sv db encrypt`, rather than migrating it to
+  the wrong place), takes an automatic pre-cutover backup, and copies each
+  target's schema + every row into its sqld namespace as one atomic
+  `client.migrate()` transaction — either the whole file lands or none of it
+  does. Refuses to write into an already-populated destination (a one-time
+  cutover, not incremental sync), so a partial failure is always safe to
+  diagnose and retry.
+- `--dry-run` previews exactly what would move (files, tables, row counts)
+  without touching sqld or taking a backup.
+- A documented, backup-first runbook in `docs/self-hosting.md`'s sqld section
+  covering the full sequence: stop the server, back up, dry-run preview,
+  bring up sqld, run the cutover, verify, restart against sqld.
+- `packages/db/src/__tests__/sqld-cutover.test.ts`: unit tests against a real
+  SQLite-backed `Client` test double (schema/FK/row/BLOB fidelity, non-empty
+  destination refusal, empty-source refusal, exclusive-access contention).
+
+**Verification against real data (not synthetic fixtures alone):** the tool
+was run live against an isolated `sqld --enable-namespaces` container with
+representative platform/auth/plugin fixture databases — full cutover
+end-to-end (provisioning, atomic copy, row-count verification, cross-namespace
+isolation), the non-empty-destination refusal on retry, and every branch of
+the target-discovery logic (core included when the encryption key is unset,
+excluded when it's set; a plugin included when its manifest omits
+`requireEncryption`, excluded when it's declared; a core/plugin file already
+marked encrypted always excluded) — each verified against the actual CLI
+command, not a mock.
+
+**Not yet exercised: the actual single production instance's real data and a
+rehearsed dry run against a copy of it** — that's an operational step for
+the instance owner to perform using this tool, not something this environment
+has access to. The tool and runbook are ready for that rehearsal.
 
 **Dependencies:** Task 8.23, run in production for long enough to be trusted;
 a fresh backup taken immediately before cutover.
 
-**SRS reference:** to be added from Task 0.20's RFC.
+**SRS reference:** none yet — see RFC 0091.
 
 **Review checklist:**
 
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test` all pass.
 - The runbook is rehearsed against a copy of real production data before it is
-  run against the actual instance.
+  run against the actual instance — **operator action, not yet performed**.
 - The pre-cutover backup is confirmed restorable before the cutover proceeds.
 - Post-cutover, every plugin's data is verifiably intact (row counts, spot
   checks) against the pre-cutover backup.

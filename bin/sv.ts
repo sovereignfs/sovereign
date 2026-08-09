@@ -336,6 +336,7 @@ const pluginRemove = defineCommand({
     // Read the manifest before deletion to know if the plugin used an isolated DB.
     let isIsolated = false;
     let manifestPluginId: string | null = null;
+    let requiresEncryption = false;
     try {
       const raw = JSON.parse(readFileSync(join(dest, 'manifest.json'), 'utf8')) as {
         database?: unknown;
@@ -343,6 +344,7 @@ const pluginRemove = defineCommand({
       };
       isIsolated = manifestDatabaseIsolation(raw.database) === 'isolated';
       manifestPluginId = raw.id ?? null;
+      requiresEncryption = manifestRequiresEncryption(raw.database);
     } catch {
       // Manifest unreadable — treat as shared.
     }
@@ -354,7 +356,7 @@ const pluginRemove = defineCommand({
       consola.info(`Dropping isolated database for "${manifestPluginId}"…`);
       try {
         const { dropPluginDb } = await import('@sovereignfs/db');
-        await dropPluginDb(manifestPluginId);
+        await dropPluginDb(manifestPluginId, requiresEncryption);
         consola.success(`Database for "${manifestPluginId}" dropped.`);
       } catch (err) {
         consola.warn(
@@ -463,7 +465,7 @@ const pluginMigrate = defineCommand({
       consola.start(`Migrating "${id}" (${database})…`);
       try {
         if (database === 'isolated') {
-          await provisionPluginDb(id);
+          await provisionPluginDb(id, requiresEncryption);
           const pluginDb = getPluginDb(id, requiresEncryption);
           await runPluginMigrations(pluginDb, folder);
         } else {

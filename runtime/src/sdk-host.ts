@@ -259,9 +259,10 @@ provideHost({
       if (effectivePluginId) {
         const manifest = registry.find((m) => m.id === effectivePluginId);
         if (manifest && manifestDatabaseIsolation(manifest.database) === 'isolated') {
+          const requiresEncryption = manifestRequiresEncryption(manifest.database);
           // Provision on first use (idempotent), then return the dedicated client.
-          await provisionPluginDb(effectivePluginId);
-          return getPluginDb(effectivePluginId, manifestRequiresEncryption(manifest.database)).db;
+          await provisionPluginDb(effectivePluginId, requiresEncryption);
+          return getPluginDb(effectivePluginId, requiresEncryption).db;
         }
       }
       return (await getPlatformDb()).db;

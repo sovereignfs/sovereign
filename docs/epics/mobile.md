@@ -175,7 +175,7 @@ the universal mobile shell.
 - iOS and Android release builds can be produced locally or in CI.
 - No telemetry is introduced by default.
 
-#### 📋 20.5 — Native push notifications (APNs/FCM)
+#### ✅ 20.5 — Native push notifications (APNs/FCM)
 
 > **Rescoped by [RFC 0087](../rfcs/0087-sovereign-relay.md).** The
 > runtime/API device-token registration, the encrypted-relay fan-out, and
@@ -190,7 +190,33 @@ the universal mobile shell.
 > for why a relay is unavoidable (APNs/FCM credentials are tied to one app
 > identity, not to individual self-hosted instances) — this was not
 > obvious when this task was first scoped. Sequenced by
-> [workstream 0005](../workstreams/0005-native-push-relay.md).
+> [workstream 0005](../workstreams/0005-native-push-relay.md), leg 4 —
+> merged as `sovereign-mobile` PR #8.
+>
+> **Shipped:** entirely native registration on `applicationDidBecomeActive`
+> (iOS) / `onResume()` (Android) — no new bridge capability, per RFC 0083
+> §7 and `sovereign-mobile`'s own registry-first rule for new device
+> capabilities. On-device P-256 keypair via native `CryptoKit`/Android
+> `KeyStore`-backed `EncryptedSharedPreferences`; a real Xcode Notification
+> Service Extension target (added via the `xcodeproj` Ruby gem, not
+> hand-edited `project.pbxproj`); Android FCM background handling inline,
+> no separate extension. Two real cross-language bugs caught before merge
+> via empirical cross-language round-trip verification, not assumed: iOS
+> `CryptoKit`'s `.rawRepresentation` is a bare 64-byte encoding (not the
+> 65-byte SEC1/X9.63 point this wire format needs — fixed via
+> `.x963Representation`); Android's `javax.crypto.Cipher` expects
+> `ciphertext‖tag`, the opposite byte order of this wire format's
+> `tag‖ciphertext` (fixed by reordering before `doFinal()`).
+>
+> **Not shipped, despite being in the original deliverables list below:**
+> revocation on sign-out/instance removal (no reliable native detection
+> signal for either event without more invasive polling — a stale token
+> self-heals via task 4.7's `invalid_token` pruning instead) and a
+> dedicated Account UI opt-in/opt-out surface (registration is currently
+> automatic/implicit whenever push is configured, with no user-facing
+> toggle). Both are real, open gaps, not silently dropped scope — flag
+> before treating this task as fully closed if either becomes a real
+> product requirement.
 
 **Goal:** Let `sovereign-mobile`'s native app receive and display a push
 notification while fully closed, by registering a device token and

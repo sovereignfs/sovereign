@@ -463,10 +463,14 @@ exactly as they do today, unaware of which channel(s) actually deliver it.
 
 ## Addendum: Desktop native push (macOS APNs, Windows WNS; Linux out of scope)
 
-**Status:** Draft — scoping only, nothing implemented yet. Extends the
+**Status:** Implemented — [workstream 0010](../workstreams/0010-desktop-push-relay.md)'s
+3 legs are all merged (epic tasks 4.8 and 17.11). Extends the
 already-Implemented mobile leg (epic task 4.7 / workstream 0005) to
 `sovereign-desktop`, reusing the same schema, relay, and fan-out machinery
-rather than building a parallel system.
+rather than building a parallel system. Real gaps remain (revocation,
+real-credential/real-hardware verification, a macOS Notification Service
+Extension equivalent) — see workstream 0010's own "Definition of done" for
+the full, honest list.
 
 ### Motivation
 

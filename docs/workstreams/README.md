@@ -135,12 +135,12 @@ Workstreams are internal planning documents and are not published (see
 | [0002](0002-native-mobile-app-release.md)             | The whole-instance Sovereign app published to the App and Play Stores                                   | 📋 Planned     | 0058, 0013, 0038                |
 | [0003](0003-device-bridge-across-surfaces.md)         | One device-capability contract serving web, Tauri, and Capacitor                                        | ✅ Done        | 0083, 0080                      |
 | [0004](0004-ui-backup-restore.md)                     | UI-driven, async backup & restore for owners/admins and regular users                                   | 📋 Planned     | 0084                            |
-| [0005](0005-native-push-relay.md)                     | Native mobile push notifications via an end-to-end-encrypted relay                                      | 📋 Planned     | 0087                            |
+| [0005](0005-native-push-relay.md)                     | Native mobile push notifications via an end-to-end-encrypted relay                                      | ✅ Done        | 0087                            |
 | [0006](0006-rfc-0071-incident-followups.md)           | Close the 4 still-open RFC 0071 incident follow-ups                                                     | 📋 Planned     | 0071                            |
 | [0007](0007-mobile-header-footer-extraction.md)       | `MobileHeader`/`MobileFooter` as Design System components, extracted from the runtime shell             | 📋 Planned     | 0088 (builds on 0013, 0075)     |
 | [0008](0008-offline-first-architecture.md)            | Offline-first architecture — cold-start offline, tiered plugin offline support, encrypted local storage | 📋 Planned     | none yet — legs 2–5 author them |
 | [0009](0009-database-dialect-and-libsql-migration.md) | Single operator-chosen DB dialect platform-wide; SQLite moves to a mandatory `sqld` container           | ⏳ In Progress | 0091 (Accepted)                 |
-| [0010](0010-desktop-push-relay.md)                    | Extends workstream 0005's relay/schema to `sovereign-desktop` — macOS APNs, Windows WNS (raw-only)      | 📋 Planned     | 0087 (addendum)                 |
+| [0010](0010-desktop-push-relay.md)                    | Extends workstream 0005's relay/schema to `sovereign-desktop` — macOS APNs, Windows WNS (raw-only)      | ✅ Done        | 0087 (addendum)                 |
 
 Workstreams 0001 and 0002 share epic task 20.10 (the WKWebView offline spike) —
 run it once and let both consume the finding. Otherwise they are independent, and

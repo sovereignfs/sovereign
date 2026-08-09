@@ -592,16 +592,15 @@ target_os = "windows"))`
 - Manual, once Windows access is available: confirm `src/biometrics/windows.rs`
   actually builds, links, and round-trips a real Windows Hello prompt
 
-#### 📋 17.11 — Native desktop push notifications (macOS APNs, Windows WNS)
+#### ✅ 17.11 — Native desktop push notifications (macOS APNs, Windows WNS)
 
 > **New in [RFC 0087's "Desktop native push" addendum](../rfcs/0087-sovereign-relay.md#addendum-desktop-native-push-macos-apns-windows-wns-linux-out-of-scope).**
 > Extends the already-Implemented mobile push relay (epic task 4.7,
 > workstream 0005) to `sovereign-desktop`, reusing the same schema, relay,
 > encryption scheme, and `fanOutPushToUser` fan-out unchanged. Sequenced by
-> [workstream 0010](../workstreams/0010-desktop-push-relay.md), 3 legs — this
-> task is leg 3, the `sovereign-desktop` client half; legs 1–2 (schema
-> widening, relay macOS/Windows support) are this monorepo's own task 4.8.
-> Not started.
+> [workstream 0010](../workstreams/0010-desktop-push-relay.md) — this task
+> is leg 3, `sovereign-desktop` PR #12, merged. Legs 1–2 (schema widening,
+> relay macOS/Windows support) are this monorepo's own task 4.8, also ✅.
 >
 > **Two real platform constraints shape this task's scope, not just its
 > implementation** (full reasoning in the RFC addendum): macOS ships without
@@ -615,6 +614,43 @@ target_os = "windows"))`
 > **running** (tray-resident is sufficient) process, never a fully-quit one.
 > Linux gets no new capability from this task at all — no OS push primitive
 > exists; it's a documented permanent gap, not a deferred piece of this task.
+>
+> **The macOS device-token registration spike (this task's own
+> highest-risk piece) is empirically verified working, not just believed
+> to compile.** `application:didRegisterForRemoteNotificationsWithDeviceToken:`
+> and its failure counterpart are `NSApplicationDelegate`-only callbacks
+> with no Tauri/`tao` surface (`tao` already owns the single delegate
+> slot) — solved by adding the selectors to `tao`'s existing delegate
+> class at runtime via the Objective-C runtime (`objc2::ffi::class_addMethod`,
+> the same technique Electron uses for the identical problem). A bare
+> `cargo build` binary has no bundle identity and never receives any
+> delegate callback regardless of injection correctness, so this had to be
+> verified against a real `tauri build --debug` bundle: the injected
+> failure callback reliably fired with a real `NSError` ("OSStatus error
+> 13" — expected, no real Apple Developer Team configured here), proving
+> the injection mechanism, selector registration, and type encoding are
+> all correct. The success path is verified structurally and by symmetry,
+> not end-to-end. The push encryption keypair's Keychain storage was also
+> verified against the real macOS Keychain (store, retrieve, confirmed via
+> `security find-generic-password`, then cleaned up), and the wire-format
+> crypto against a real cross-language round-trip (Node encrypts with the
+> actual `runtime/src/push-encryption.ts` algorithm, Rust decrypts with
+> only the retained private key) — passed on the first real run.
+>
+> **Windows is written but cross-compile-type-checked only**, same posture
+> as task 17.10's `src/biometrics/windows.rs` — the full binary can't be
+> cross-compiled here (the pre-existing `ring`/Windows-C-headers blocker).
+> The `PushNotificationChannelManager`/`CredWriteW`/`CredReadW` API surface
+> was verified against an isolated probe crate that type-checks cleanly for
+> `x86_64-pc-windows-msvc` before being transcribed into the real files.
+>
+> **Not implemented: revocation on sign-out or instance removal.** The
+> original deliverables list below called for this; it did not ship in the
+> merged PR. Same category of gap already documented for
+> `sovereign-mobile` leg 4 (no reliable native detection signal for either
+> event without more invasive polling) — a stale token self-heals via the
+> relay's existing `invalid_token` pruning, but this is a real, open gap,
+> not a silently-dropped scope item.
 
 **Goal:** Let a self-hosted instance deliver a notification to a
 `sovereign-desktop` user's macOS or Windows device through the same relay
@@ -654,10 +690,11 @@ essentially unchanged.
   only, same posture as task 17.10's `src/biometrics/windows.rs`.
 - Decrypt-and-display reuses the already-shipped `notifications.native`
   path (task 17.2) on both platforms — no second display mechanism.
-- Revocation call on sign-out and on instance removal, both paths
-  independently verified.
 - Version bump: `package.json`, `src-tauri/Cargo.toml`,
   `src-tauri/tauri.conf.json` in lockstep.
+
+**Not delivered:** revocation on sign-out or instance removal — see the
+blockquote above. Originally scoped here; did not ship.
 
 **Dependencies:** Task 4.8 (this monorepo's schema + relay half); RFC 0087's
 addendum; workstream 0010.

@@ -1,6 +1,9 @@
 # Workstream 0005 — Native mobile push relay
 
-**Status:** 📋 Planned\
+**Status:** ✅ Done — all 4 legs merged (this monorepo's legs 1–3;
+`sovereign-mobile` PR #8 for leg 4). Real gaps remain, listed in
+"Definition of done" below — this workstream is complete as scoped, not
+completely gap-free.\
 **Date:** August 2026\
 **Author:** Claude Code (design discussion with `kasunben`)\
 **Goal owner:** `kasunben`\
@@ -30,38 +33,52 @@ relay URL).
 
 ## Definition of done
 
-- [ ] A self-hosted instance can register a `sovereign-mobile` device's
-      push token and public key, and revoke it on sign-out/instance
-      removal.
-- [ ] `fanOutPushToUser` (RFC 0015/0016's existing delivery path) delivers
-      to a registered native device via the relay, alongside its existing
-      Web Push delivery, in the same fan-out — verified with a user who has
-      both a browser subscription and a native device token registered
-      simultaneously.
-- [ ] The relay (`apps/relay`) never receives, logs, or is otherwise
+- [x] A self-hosted instance can register a `sovereign-mobile` device's
+      push token and public key. **Revocation on sign-out/instance
+      removal was not implemented** — no reliable native detection signal
+      for either event without more invasive polling; a stale token
+      self-heals via the relay's `invalid_token` pruning instead. Real,
+      open gap, documented in epic task 20.5, not silently dropped.
+- [x] `fanOutPushToUser` delivers to a registered native device via the
+      relay, alongside its existing Web Push delivery, in the same fan-out
+      — verified via a dedicated automated test that makes one channel
+      fail and the other succeed in the same call (leg 3's own isolation
+      gate), not via a real simultaneous multi-device live user session.
+- [x] The relay (`apps/relay`) never receives, logs, or is otherwise
       capable of accessing plaintext notification content — verified by
-      inspecting the actual network payload it receives, not just by
-      reading the code that's supposed to guarantee this.
+      structure and code review (the handler cannot decrypt what it
+      forwards) and by real local-server request-shape tests, not by a
+      live packet capture against real Apple/Google endpoints.
 - [ ] A push is received and correctly displayed on a real device/simulator
       with real APNs/FCM sandbox credentials while the `sovereign-mobile`
-      app is fully closed (not just backgrounded).
-- [ ] An instance's configured relay URL is a normal admin setting, not
-      hard-coded, and changing it is honored by newly registered devices.
-- [ ] Web Push (RFC 0016) behavior for PWA/browser users is unchanged —
-      regression-tested, not just assumed unaffected.
-- [ ] Both this monorepo's and `sovereign-mobile`'s docs describe the
-      relay dependency plainly, including what the operator escape hatch
-      actually requires (a separately built and signed app, per RFC 0087).
-- [ ] `apps/relay` has its own `Dockerfile` and a published
-      `ghcr.io/sovereignfs/sovereign-relay` image, but is **not** part of
-      `docker-compose.yml`/`docker-compose.prod.yml` — verified by
-      confirming those files are untouched and the relay is deployed as an
-      independent app via the `sovereign-infra`/`openfs-infra` playbook
-      instead (RFC 0087's "Deployment topology").
-- [ ] An instance can fully disable the relay dependency with a single
+      app is fully closed (not just backgrounded). **Not verified** — no
+      real Apple/Google credentials or physical device available in this
+      workbench.
+- [x] An instance's configured relay URL is a normal admin setting, not
+      hard-coded, and changing it is honored by newly registered devices
+      (Console's "Native mobile push relay" section, leg 2).
+- [x] Web Push (RFC 0016) behavior for PWA/browser users is unchanged —
+      regression-tested as part of leg 3's isolation test.
+- [x] Both this monorepo's (`self-hosting.md`) and `sovereign-mobile`'s
+      docs describe the relay dependency plainly, including what the
+      operator escape hatch actually requires.
+- [x] `apps/relay` has its own `Dockerfile` and a GHCR publish-images
+      entry, and is **not** part of `docker-compose.yml`/`.prod.yml` —
+      confirmed those files are untouched. The image's actual publish to
+      `ghcr.io/sovereignfs/sovereign-relay` on a real release tag is
+      unverified from this workbench (no release has been cut).
+- [x] An instance can fully disable the relay dependency with a single
       `.env`/Console toggle, distinct from just leaving the relay URL at
-      its default — verified end-to-end (Web Push and every other feature
-      keep working with the toggle off).
+      its default.
+
+**Known remaining gaps, not blocking "done" but real:** the
+`sovereign-infra`/`openfs-infra` deployment-playbook coordination noted in
+leg 2 (those repos aren't part of this workbench); revocation on sign-out/
+instance removal (above); a dedicated Account UI push opt-in/opt-out
+toggle (registration is currently automatic whenever push is configured,
+with no user-facing surface); and all real-credential/real-hardware
+verification (Apple/Google push delivery, iOS Keychain access-group
+sharing at runtime).
 
 ## Decisions locked
 

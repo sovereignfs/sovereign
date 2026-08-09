@@ -74,17 +74,11 @@ async function wnsAccessToken(config: WnsConfig): Promise<string> {
 export type WnsSendResult = 'sent' | 'invalid_token' | 'failed';
 
 /**
- * True only for a genuine Microsoft WNS channel URI. Required before ever
- * fetching `channelUri` — unlike APNs/FCM, where the destination host is
- * always a fixed Apple/Google API endpoint, WNS's own design makes the
- * "device token" a full URL supplied by whichever self-hosted instance
- * calls `/v1/push` (ultimately sourced from `push_device_tokens.device_token`,
- * populated by the mobile app's own registration call). Without this check,
- * a malicious or compromised instance could point `channelUri` at an
- * internal address reachable from the relay (e.g. a cloud metadata
- * endpoint or an internal service) and use this relay as an authenticated
- * SSRF proxy, sending it an attacker-chosen bearer token's request — caught
- * by CodeQL before merge (PR #388) and fixed here rather than shipped.
+ * True only for a genuine Microsoft WNS channel URI — `sendWnsPush` below
+ * duplicates this exact check inline rather than calling this function,
+ * see its own comment for why. Exported only so the predicate itself is
+ * independently unit-testable; not otherwise called in production code.
+ *
  * Every documented WNS channel URI lives under `*.notify.windows.com`, so
  * that's the allowlist, not a denylist of known-bad hosts.
  */
@@ -107,31 +101,47 @@ export function isValidWnsChannelUri(channelUri: string): boolean {
  * concept the way APNs/FCM do — the channel URI itself, generated
  * client-side by Windows, is what `push_device_tokens.device_token` stores
  * for `'windows'` rows, and is a full HTTPS endpoint this function POSTs to
- * directly rather than a host + path pair. See `isValidWnsChannelUri` for
- * why that URI is validated before use, not trusted as-is.
+ * directly rather than a host + path pair.
  *
- * Response codes per Microsoft's documented WNS contract: `200` is success;
- * `404`/`410` mean the channel is gone (app uninstalled, or the channel's
- * own undocumented lifetime lapsed) — pruned the same way an APNs/FCM
- * invalid token is. Anything else (including a `401` from an unexpectedly
- * expired token) is `'failed'`, not retried inline — this leg's own scope
- * stays at "forward the payload," matching `./apns.ts`/`./fcm.ts`'s own
- * restraint against building retry logic prematurely.
+ * **The host/scheme check right below is deliberately inlined here, not
+ * delegated to `isValidWnsChannelUri` above**, even though the logic is
+ * identical: unlike APNs/FCM, where the destination host is always a fixed
+ * Apple/Google API endpoint, `channelUri` here is ultimately client-
+ * supplied (via `push_device_tokens.device_token`, from whichever
+ * self-hosted instance called `/v1/push`). Without this check, a malicious
+ * or compromised instance could point it at an internal address the relay
+ * can reach (a cloud metadata endpoint, an internal service) and use this
+ * relay as an authenticated SSRF proxy. GitHub's CodeQL SSRF analysis
+ * (`js/request-forgery`) flagged the very first version of this function,
+ * which called a separate validation function instead of guarding inline —
+ * its taint-tracking didn't recognize a boolean returned from another
+ * function as a sanitizer for the value passed to `fetch()` below, even
+ * though the check was equivalent. Verified fixed by re-running the same
+ * PR's CodeQL check after inlining (PR #388) — this comment exists so a
+ * future edit doesn't "clean up" the duplication and reintroduce the flag.
  */
 export async function sendWnsPush(
   channelUri: string,
   encryptedPayload: string,
 ): Promise<WnsSendResult> {
-  // Validated — and rejected without ever calling fetch() or exchanging a
-  // token — before any network activity at all. See isValidWnsChannelUri.
-  if (!isValidWnsChannelUri(channelUri)) {
+  let parsedChannelUri: URL;
+  try {
+    parsedChannelUri = new URL(channelUri);
+  } catch {
+    return 'invalid_token';
+  }
+  if (
+    parsedChannelUri.protocol !== 'https:' ||
+    (parsedChannelUri.hostname !== 'notify.windows.com' &&
+      !parsedChannelUri.hostname.endsWith('.notify.windows.com'))
+  ) {
     return 'invalid_token';
   }
 
   const config = wnsConfig();
   const token = await wnsAccessToken(config);
 
-  const res = await fetch(channelUri, {
+  const res = await fetch(parsedChannelUri, {
     method: 'POST',
     headers: {
       authorization: `Bearer ${token}`,

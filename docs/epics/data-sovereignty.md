@@ -1378,6 +1378,90 @@ capability.
 
 ---
 
+#### ✅ 8.29 — `sv plugin migrate-to-isolated` (shared → isolated data migration)
+
+**Goal:** A migration tool for the one real gap task 8.28 found: unlike
+`plainwrite`/`shopper`/`wallet` (already `isolated`, just needed a stale
+`isolation` key removed), `sovereign-plugin-tasks` was genuinely
+`database: "shared"` — its tables (`tasks_lists`, `tasks_items`, `tasks_views`,
+`tasks_user_list_prefs`, `tasks_notification_prefs`) live inside the platform's
+own database. Task 8.28's schema change rejects `"shared"` outright, so simply
+editing `tasks`'s manifest without first moving its data would orphan every
+real user's task lists the moment the runtime provisions a fresh, empty
+isolated schema for it — the exact failure shape task 8.27 hit with `wallet`,
+here for the platform's default, most-used plugin.
+
+**Delivered:**
+
+- `sv plugin migrate-to-isolated <id>` (`bin/sv.ts`, backed by
+  `packages/db/src/plugin-isolation-migration.ts`): discovers a plugin's real
+  table list by parsing `CREATE TABLE` statements out of its own
+  `migrations/<dialect>/*.sql` files (`discoverPluginTables()`) rather than
+  deriving it from a slug-prefix convention — plugin authors choose their own,
+  often shorter table prefix (`tasks_*`, not `fs_sovereign_tasks_*`), so the
+  convention can't be trusted to enumerate tables reliably. Same-dialect
+  throughout (SQLite-shared → SQLite-isolated, or Postgres-shared →
+  Postgres-isolated) — unlike task 8.25's tool, there is no cross-dialect type
+  coercion to do, since source and destination tables are created by the
+  identical migration SQL.
+- Copies every row of every discovered table from the platform's own
+  connection into the plugin's freshly-provisioned isolated store
+  (`provisionPluginDb` + `runPluginMigrations`, the same mechanism the
+  running app itself uses) inside one destination-side transaction — either
+  everything lands or nothing does. Uses Drizzle's `.transaction()`, not a
+  hand-rolled `BEGIN`/`COMMIT` over `dbRun` calls: the destination's Postgres
+  connection is a `Pool`, and separate `.execute()` calls can each be handed a
+  different pooled connection, so a manual `BEGIN … COMMIT` sequence would not
+  actually run on one connection. Refuses if any destination table already
+  has rows (one-time migration, not incremental sync). The platform source is
+  never modified — dropping the original `shared`-mode tables afterward is a
+  deliberate, separate, manual step.
+- `--dry-run` (`previewPluginTables()`) previews row counts without touching
+  anything. `--skip-backup` on a SQLite platform skips the automatic `data/`
+  archive (mirroring task 8.25's flag); on Postgres, where this CLI has no
+  automated backup capability yet (task 8.16, still not built), the flag is
+  **required** to proceed at all — the command refuses outright without it,
+  printing the `pg_dump` command to run first, rather than silently skipping
+  a backup step that doesn't exist.
+- `packages/db/src/__tests__/plugin-isolation-migration.pg.test.ts`: live-Postgres
+  tests (same `TEST_DATABASE_URL` gate as `postgres-migration.pg.test.ts`) —
+  row copying, source-untouched verification, multi-table atomicity, non-empty-
+  destination refusal, mid-transaction rollback, dialect-mismatch refusal —
+  plus dialect-agnostic unit tests for `discoverPluginTables()` covering both
+  quoting styles (SQLite backticks, Postgres double quotes), multi-file
+  ordering, and de-duplication.
+- Full CLI rehearsed end-to-end against a throwaway Postgres database (not
+  just the underlying library function via tests): dry-run, real run, source
+  left untouched, isolated destination correct, re-run correctly refused.
+
+**Not yet done — the actual `tasks` production migration and manifest
+update.** This environment has no access to the real production instance;
+running this tool against it (with a real backup first) and then removing
+`"database": "shared"` from `sovereign-plugin-tasks`'s manifest is a
+follow-up operator action, same sequencing as task 8.25/8.27's real-data runs.
+Task 8.28's platform-side schema change cannot deploy to production until
+both are done, since `tasks`'s current manifest would otherwise fail
+validation the moment the new schema ships.
+
+**Dependencies:** Task 8.28 (the schema change that requires this).
+
+**SRS reference:** none — transitional migration tooling, not a new
+capability.
+
+**Review checklist:**
+
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`,
+  `TEST_DATABASE_URL=... pnpm test` all pass.
+- Rehearsed against a copy of real production data before running against
+  the actual instance — **operator action, not yet performed**.
+- The pre-migration backup is confirmed restorable before the migration
+  proceeds.
+- Post-migration, `tasks`'s data is verifiably intact (row counts, spot
+  checks) against the pre-migration backup, and the original platform-DB
+  tables are confirmed unmodified, before `tasks`'s manifest is updated.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)

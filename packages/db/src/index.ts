@@ -227,6 +227,13 @@ export {
   previewSqliteFileForPostgres,
   type PostgresMigrationTableResult,
 } from './postgres-migration';
+export {
+  PluginIsolationMigrationError,
+  discoverPluginTables,
+  migratePluginSharedToIsolated,
+  previewPluginTables,
+  type IsolationMigrationTableResult,
+} from './plugin-isolation-migration';
 export { runMigrations, runPluginMigrations, type MigrationResult } from './migrate';
 export {
   dropPluginDb,

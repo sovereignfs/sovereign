@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { AVATAR_MAX_BYTES, isValidTheme, isValidTimezone, validateAvatar } from '../account';
+import {
+  AVATAR_MAX_BYTES,
+  isValidTextSize,
+  isValidTheme,
+  isValidTimezone,
+  validateAvatar,
+} from '../account';
 
 describe('isValidTheme', () => {
   it('accepts the three known themes', () => {
@@ -13,6 +19,21 @@ describe('isValidTheme', () => {
     expect(isValidTheme('')).toBe(false);
     expect(isValidTheme(null)).toBe(false);
     expect(isValidTheme(undefined)).toBe(false);
+  });
+});
+
+describe('isValidTextSize', () => {
+  it('accepts the three known sizes', () => {
+    expect(isValidTextSize('default')).toBe(true);
+    expect(isValidTextSize('large')).toBe(true);
+    expect(isValidTextSize('larger')).toBe(true);
+  });
+
+  it('rejects anything else', () => {
+    expect(isValidTextSize('huge')).toBe(false);
+    expect(isValidTextSize('')).toBe(false);
+    expect(isValidTextSize(null)).toBe(false);
+    expect(isValidTextSize(undefined)).toBe(false);
   });
 });
 

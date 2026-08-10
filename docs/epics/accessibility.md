@@ -62,7 +62,19 @@ and deliver the plugin developer a11y contract per RFC 0025.
 
 ---
 
-#### 📋 10.2 — In-app text-size control (pinch-zoom compensation)
+#### ✅ 10.2 — In-app text-size control (pinch-zoom compensation)
+
+**Status (2026-08):** Shipped. `--sv-text-size-scale` primitive
+(`packages/ui/src/tokens/primitives.css`) scales the root font size —
+`default` / `large` (+12.5%) / `larger` (+25%) — via `[data-text-size]` on
+`<html>`, applied pre-paint by `runtime/src/theme-script.ts` from the
+`sv-text-size` cookie (same mechanism as `[data-theme]`; CSP hash
+recomputed). Persisted server-side in `account_prefs.text_size` and surfaced
+as `TextSizeControl` (Account → Preferences → Appearance), mirroring
+`ThemeControl`. `runtime/app/layout.tsx`'s `userScalable: false` is kept —
+the comment there now records this control as the discharging replacement
+rather than open debt. `@sovereignfs/ui` bumped to `0.52.0` (new token, no
+breaking change).
 
 **Goal:** Give users a way to enlarge text without pinch-zoom, discharging the
 accessibility debt incurred when pinch-zoom was disabled app-wide. Required before

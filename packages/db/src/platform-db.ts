@@ -2564,19 +2564,27 @@ export interface AccountPrefsValue {
   theme: string;
   /** Saved plugin order and visibility. `null` means "use default install order". */
   sidebarPlugins: SidebarPluginEntry[] | null;
+  /** In-app text-size control (task 10.2). 'default' | 'large' | 'larger'. */
+  textSize: string;
 }
 
 const DEFAULT_ACCOUNT_PREFS: AccountPrefsValue = {
   timezone: 'UTC',
   theme: 'system',
   sidebarPlugins: null,
+  textSize: 'default',
 };
 
 /** A user's Account preferences, falling back to defaults when no row exists. */
 export async function getAccountPrefs(pdb: PlatformDb, userId: string): Promise<AccountPrefsValue> {
-  const row = await dbGet<{ timezone: string; theme: string; sidebarPlugins: string | null }>(
+  const row = await dbGet<{
+    timezone: string;
+    theme: string;
+    sidebarPlugins: string | null;
+    textSize: string;
+  }>(
     pdb,
-    sql`SELECT timezone, theme, sidebar_plugins AS "sidebarPlugins" FROM account_prefs WHERE user_id = ${userId}`,
+    sql`SELECT timezone, theme, sidebar_plugins AS "sidebarPlugins", text_size AS "textSize" FROM account_prefs WHERE user_id = ${userId}`,
   );
   if (!row) return DEFAULT_ACCOUNT_PREFS;
   return {
@@ -2585,6 +2593,7 @@ export async function getAccountPrefs(pdb: PlatformDb, userId: string): Promise<
     sidebarPlugins: row.sidebarPlugins
       ? (JSON.parse(row.sidebarPlugins) as SidebarPluginEntry[])
       : null,
+    textSize: row.textSize,
   };
 }
 
@@ -2600,16 +2609,18 @@ export async function setAccountPrefs(
     theme: prefs.theme ?? current.theme,
     sidebarPlugins:
       'sidebarPlugins' in prefs ? (prefs.sidebarPlugins ?? null) : current.sidebarPlugins,
+    textSize: prefs.textSize ?? current.textSize,
   };
   const sidebarJson = next.sidebarPlugins ? JSON.stringify(next.sidebarPlugins) : null;
   const now = Math.floor(Date.now() / 1000);
   await dbRun(
     pdb,
-    sql`INSERT INTO account_prefs (user_id, tenant_id, timezone, theme, sidebar_plugins, updated_at)
-        VALUES (${userId}, ${DEFAULT_TENANT_ID}, ${next.timezone}, ${next.theme}, ${sidebarJson}, ${now})
+    sql`INSERT INTO account_prefs (user_id, tenant_id, timezone, theme, sidebar_plugins, text_size, updated_at)
+        VALUES (${userId}, ${DEFAULT_TENANT_ID}, ${next.timezone}, ${next.theme}, ${sidebarJson}, ${next.textSize}, ${now})
         ON CONFLICT (user_id)
         DO UPDATE SET timezone = excluded.timezone, theme = excluded.theme,
-                      sidebar_plugins = excluded.sidebar_plugins, updated_at = excluded.updated_at`,
+                      sidebar_plugins = excluded.sidebar_plugins, text_size = excluded.text_size,
+                      updated_at = excluded.updated_at`,
   );
   return next;
 }

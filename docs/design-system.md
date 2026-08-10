@@ -87,6 +87,14 @@ semantic.css     contextual roles — what components and plugins reference
     keep referencing `--sv-radius-sm` etc. by name, never `--sv-radius-scale`
     directly. `--sv-radius-full` (avatars, pills) is not part of the scale and
     stays fixed regardless of the preset.
+  - **Exception:** every `--sv-font-size-*` is `rem`-based, so it scales with
+    `--sv-text-size-scale` (default `1`; `1.125` at `[data-text-size='large']`,
+    `1.25` at `[data-text-size='larger']`) — the user's in-app text-size
+    preference (Account → Preferences → Appearance, task 10.2), applied
+    pre-paint the same way `[data-theme]` is. Unlike the radius exception, this
+    also scales `--sv-space-*` and `--sv-radius-*`, since rem resolves against
+    the root element's actual font-size, not a per-token override — see
+    `packages/ui/src/tokens/primitives.css`'s comment on `--sv-text-size-scale`.
 
 The tokens ship as plain `.css` files. The runtime shell loads them once
 (`@sovereignfs/ui/tokens.css`, which imports primitives then semantic) so the

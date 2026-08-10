@@ -291,17 +291,36 @@ describe.skipIf(!PG_URL)('account preferences helpers', () => {
       timezone: 'UTC',
       theme: 'system',
       sidebarPlugins: null,
+      textSize: 'default',
     });
   });
 
   it('inserts a row on first set and round-trips it', async () => {
     const db = await freshDb();
     const next = await setAccountPrefs(db, 'u1', { timezone: 'America/New_York', theme: 'dark' });
-    expect(next).toEqual({ timezone: 'America/New_York', theme: 'dark', sidebarPlugins: null });
+    expect(next).toEqual({
+      timezone: 'America/New_York',
+      theme: 'dark',
+      sidebarPlugins: null,
+      textSize: 'default',
+    });
     expect(await getAccountPrefs(db, 'u1')).toEqual({
       timezone: 'America/New_York',
       theme: 'dark',
       sidebarPlugins: null,
+      textSize: 'default',
+    });
+  });
+
+  it('persists a text-size update independently of theme/timezone', async () => {
+    const db = await freshDb();
+    await setAccountPrefs(db, 'u1', { timezone: 'Europe/Berlin', theme: 'dark' });
+    const next = await setAccountPrefs(db, 'u1', { textSize: 'larger' });
+    expect(next).toEqual({
+      timezone: 'Europe/Berlin',
+      theme: 'dark',
+      sidebarPlugins: null,
+      textSize: 'larger',
     });
   });
 
@@ -313,6 +332,7 @@ describe.skipIf(!PG_URL)('account preferences helpers', () => {
       timezone: 'Europe/Berlin',
       theme: 'dark',
       sidebarPlugins: null,
+      textSize: 'default',
     });
   });
 
@@ -323,6 +343,7 @@ describe.skipIf(!PG_URL)('account preferences helpers', () => {
       timezone: 'UTC',
       theme: 'system',
       sidebarPlugins: null,
+      textSize: 'default',
     });
   });
 
@@ -334,6 +355,7 @@ describe.skipIf(!PG_URL)('account preferences helpers', () => {
       timezone: 'Europe/Berlin',
       theme: 'system',
       sidebarPlugins: null,
+      textSize: 'default',
     });
   });
 
@@ -346,6 +368,7 @@ describe.skipIf(!PG_URL)('account preferences helpers', () => {
       timezone: 'America/New_York',
       theme: 'dark',
       sidebarPlugins: null,
+      textSize: 'default',
     });
   });
 
@@ -357,6 +380,7 @@ describe.skipIf(!PG_URL)('account preferences helpers', () => {
       timezone: 'UTC',
       theme: 'system',
       sidebarPlugins: null,
+      textSize: 'default',
     });
   });
 
@@ -368,6 +392,7 @@ describe.skipIf(!PG_URL)('account preferences helpers', () => {
       timezone: 'Asia/Tokyo',
       theme: 'system',
       sidebarPlugins: null,
+      textSize: 'default',
     });
   });
 });

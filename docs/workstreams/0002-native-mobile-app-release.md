@@ -42,8 +42,8 @@ plugin apps regardless.
 - [ ] External links open outside the primary WebView.
 - [ ] Offline behavior matches the scope decided by leg 1's finding, and whatever
       is not supported is documented rather than silently broken.
-- [ ] An in-app text-size control ships, discharging the accessibility debt
-      incurred when pinch-zoom was disabled.
+- [x] An in-app text-size control ships, discharging the accessibility debt
+      incurred when pinch-zoom was disabled. (Task 10.2, 2026-08.)
 - [ ] No Sovereign auth, role, or plugin behavior is duplicated in native code.
 - [ ] `docs/repositories.md` lists `sovereign-mobile` and `sovereign-desktop`.
 
@@ -313,6 +313,7 @@ same repository, subject to the usual per-repo leg ordering.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | July 2026 | Initial draft |
+| Version | Date        | Change                                              |
+| ------- | ----------- | --------------------------------------------------- |
+| 0.1     | July 2026   | Initial draft                                       |
+| 0.2     | August 2026 | Leg 3 (task 10.2, in-app text-size control) shipped |

@@ -10,6 +10,14 @@ export function isValidTheme(value: unknown): value is AccountTheme {
   return typeof value === 'string' && (ACCOUNT_THEMES as readonly string[]).includes(value);
 }
 
+/** In-app text-size control (task 10.2), discharging the pinch-zoom-disabled debt. */
+export const ACCOUNT_TEXT_SIZES = ['default', 'large', 'larger'] as const;
+export type AccountTextSize = (typeof ACCOUNT_TEXT_SIZES)[number];
+
+export function isValidTextSize(value: unknown): value is AccountTextSize {
+  return typeof value === 'string' && (ACCOUNT_TEXT_SIZES as readonly string[]).includes(value);
+}
+
 /**
  * Whether `tz` is a valid IANA timezone identifier. Uses the Intl database the
  * runtime already ships — constructing a formatter with an unknown zone throws

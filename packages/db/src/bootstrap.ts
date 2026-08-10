@@ -64,6 +64,7 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       timezone TEXT NOT NULL DEFAULT 'UTC',
       theme TEXT NOT NULL DEFAULT 'system',
       sidebar_plugins TEXT,
+      text_size TEXT NOT NULL DEFAULT 'default',
       updated_at ${ts} NOT NULL
     )`,
     `CREATE TABLE IF NOT EXISTS user_groups (

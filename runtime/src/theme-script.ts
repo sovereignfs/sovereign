@@ -1,8 +1,11 @@
 /**
- * Pre-paint theme resolver, injected inline as the first body child by the root
- * layout (ACC-08). Reads the `sv-theme` cookie and sets `data-theme` on <html>
- * before hydration to avoid a flash. `light`/`dark` apply directly; `system` (or
- * unset) follows the OS via `prefers-color-scheme`.
+ * Pre-paint theme + text-size resolver, injected inline as the first body child
+ * by the root layout (ACC-08, task 10.2). Reads the `sv-theme` and
+ * `sv-text-size` cookies and sets `data-theme`/`data-text-size` on <html>
+ * before hydration to avoid a flash. `light`/`dark` apply directly; `system`
+ * (or unset) follows the OS via `prefers-color-scheme`. `data-text-size` drives
+ * the `--sv-text-size-scale` primitive (`packages/ui/src/tokens/primitives.css`),
+ * which scales the root font size and, through it, every rem-based token.
  *
  * It also owns the `theme-color` meta so the browser/OS chrome (Safari tab tint,
  * iOS status bar, Android system UI) matches the actual UI. This must run in JS,
@@ -32,4 +35,7 @@ document.documentElement.dataset.theme=dark?'dark':'light';
 var meta=document.querySelector('meta[name="theme-color"]');
 if(!meta){meta=document.createElement('meta');meta.setAttribute('name','theme-color');document.head.appendChild(meta);}
 meta.setAttribute('content',dark?'#09090b':'#ffffff');
+var s=document.cookie.match(/(?:^|; )sv-text-size=([^;]+)/);
+var ts=s?decodeURIComponent(s[1]):'default';
+if(ts==='large'||ts==='larger')document.documentElement.dataset.textSize=ts;
 }catch(e){}})();`;

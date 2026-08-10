@@ -148,6 +148,13 @@
       "when": 1786282277976,
       "tag": "0020_brief_zaran",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1786353643186,
+      "tag": "0021_overjoyed_rogue",
+      "breakpoints": true
     }
   ]
 }

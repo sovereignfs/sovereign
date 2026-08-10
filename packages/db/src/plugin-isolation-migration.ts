@@ -33,6 +33,27 @@ import type { PluginDb } from './plugin-client';
 
 export class PluginIsolationMigrationError extends Error {}
 
+/**
+ * Migrations-tracking table name for provisioning a plugin's brand-new
+ * isolated store during its one-time shared → isolated transition.
+ *
+ * **Deliberately not `pluginMigrationsTableName(pluginId)`** (from
+ * `plugin-client.ts`) — a plugin migrating out of `shared` mode already has
+ * real migration history recorded under that exact table name, since
+ * shared-mode migrations always use it too (to avoid colliding with the
+ * platform's own `__drizzle_migrations`). Reusing it here would make
+ * Drizzle's migrator see "already applied" against the brand-new, empty
+ * isolated schema and silently skip every `CREATE TABLE` — found live
+ * migrating `fs.sovereign.tasks`: `__drizzle_migrations_fs_sovereign_tasks`
+ * already had 2 rows from its years of shared-mode operation, so
+ * provisioning its isolated schema created the schema but zero tables, with
+ * no error, until this distinct suffix kept the one-time transition's
+ * history independent of it.
+ */
+export function sharedToIsolatedMigrationsTableName(pluginId: string): string {
+  return `__drizzle_migrations_${pluginId.replace(/[.-]/g, '_')}_shared_to_isolated`;
+}
+
 export interface IsolationMigrationTableResult {
   table: string;
   sourceRows: number;

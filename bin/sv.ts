@@ -546,11 +546,11 @@ const pluginMigrateToIsolated = defineCommand({
       getPluginDb,
       migratePluginSharedToIsolated,
       pluginMigrationsFolder,
-      pluginMigrationsTableName,
       previewPluginTables,
       provisionPluginDb,
       resolveDialect,
       runPluginMigrations,
+      sharedToIsolatedMigrationsTableName,
       PluginIsolationMigrationError,
     } = await import('@sovereignfs/db');
 
@@ -645,8 +645,13 @@ const pluginMigrateToIsolated = defineCommand({
       await provisionPluginDb(manifestId, requiresEncryption);
       const pluginDb = getPluginDb(manifestId, requiresEncryption);
       if (existsSync(folder)) {
+        // See sharedToIsolatedMigrationsTableName's own doc comment for why
+        // this must not be pluginMigrationsTableName(manifestId) — found
+        // live migrating fs.sovereign.tasks.
         const migrationsTable =
-          pluginDb.dialect === 'postgres' ? pluginMigrationsTableName(manifestId) : undefined;
+          pluginDb.dialect === 'postgres'
+            ? sharedToIsolatedMigrationsTableName(manifestId)
+            : undefined;
         await runPluginMigrations(pluginDb, folder, migrationsTable);
       }
 

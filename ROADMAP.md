@@ -212,6 +212,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.75.0  | Retire the `database.isolation`/`"shared"` manifest option — every plugin unconditionally isolated                                      | ✅     | [8.28](docs/epics/data-sovereignty.md#-828--retire-the-databaseisolationshared-manifest-option)                                                                                                |
 | 0.76.0  | Tiered plugin offline model — manifest `offline` enum + launcher/console/mobile-nav tier states — workstream 0008 leg 3 (Research 0012) | ✅     | [3.36](docs/epics/plugins-runtime.md#-336--tiered-offline-manifest-declaration-research-0012), [2.33](docs/epics/platform-shell.md#-233--launcher-and-shell-offline-tier-states-research-0012) |
 | 0.76.0  | `sv plugin migrate-to-isolated` — shared → isolated data migration tool                                                                 | ✅     | [8.29](docs/epics/data-sovereignty.md#-829--sv-plugin-migrate-to-isolated-shared--isolated-data-migration)                                                                                     |
+| 0.76.1  | Fix shared→isolated transition migrations-table collision                                                                               | ✅     | [8.30](docs/epics/data-sovereignty.md#-830--fix-sharedisolated-transition-migrations-table-collision)                                                                                          |
 
 ---
 

@@ -232,6 +232,7 @@ export {
   discoverPluginTables,
   migratePluginSharedToIsolated,
   previewPluginTables,
+  sharedToIsolatedMigrationsTableName,
   type IsolationMigrationTableResult,
 } from './plugin-isolation-migration';
 export { runMigrations, runPluginMigrations, type MigrationResult } from './migrate';

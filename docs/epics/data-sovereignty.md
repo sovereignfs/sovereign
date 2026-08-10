@@ -1434,14 +1434,20 @@ here for the platform's default, most-used plugin.
   just the underlying library function via tests): dry-run, real run, source
   left untouched, isolated destination correct, re-run correctly refused.
 
-**Not yet done — the actual `tasks` production migration and manifest
-update.** This environment has no access to the real production instance;
-running this tool against it (with a real backup first) and then removing
-`"database": "shared"` from `sovereign-plugin-tasks`'s manifest is a
-follow-up operator action, same sequencing as task 8.25/8.27's real-data runs.
-Task 8.28's platform-side schema change cannot deploy to production until
-both are done, since `tasks`'s current manifest would otherwise fail
-validation the moment the new schema ships.
+**Run against the real production instance:** dry-run first, then a real
+`pg_dump` backup, then the real migration — `tasks_lists` (17),
+`tasks_items` (264), `tasks_views` (17), `tasks_user_list_prefs` (17),
+`tasks_notification_prefs` (2) all copied into `plugin_fs_sovereign_tasks`,
+independently verified via direct `psql` queries against both source and
+destination (row counts match; the platform's original shared tables are
+untouched). This run is what surfaced Task 8.30's bug — see that task for the
+fix.
+
+**Not yet done — `sovereign-plugin-tasks`'s manifest update and redeploy.**
+Removing `"database": "shared"` from its manifest, tagging a new release, and
+redeploying with it composed into the runtime image is a follow-up operator
+action; the production runtime currently still has `tasks`'s old manifest on
+disk (data has moved, the manifest declaring where hasn't caught up yet).
 
 **Dependencies:** Task 8.28 (the schema change that requires this).
 
@@ -1453,12 +1459,71 @@ capability.
 - `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`,
   `TEST_DATABASE_URL=... pnpm test` all pass.
 - Rehearsed against a copy of real production data before running against
-  the actual instance — **operator action, not yet performed**.
+  the actual instance.
 - The pre-migration backup is confirmed restorable before the migration
   proceeds.
 - Post-migration, `tasks`'s data is verifiably intact (row counts, spot
   checks) against the pre-migration backup, and the original platform-DB
   tables are confirmed unmodified, before `tasks`'s manifest is updated.
+
+---
+
+#### ✅ 8.30 — Fix shared→isolated transition migrations-table collision
+
+**Goal:** Fix a bug surfaced while running Task 8.29's tool against real
+production data for `fs.sovereign.tasks`: the isolated Postgres schema was
+provisioned successfully but ended up with **zero tables**, no error — only
+surfacing when the subsequent destination-emptiness check tried to
+`SELECT count(*)` from a table that was never created.
+
+**Root cause:** `provisionPluginDb` + `runPluginMigrations` (the same
+provisioning call the running app itself uses) was passed
+`pluginMigrationsTableName(pluginId)` as its `migrationsTable` — the same name
+Task 8.26 already uses to keep every isolated-mode Postgres plugin's history
+independent. But a plugin transitioning **out of** `shared` mode already has
+real migration history recorded under that exact name: shared-mode migrations
+always use `pluginMigrationsTableName()` too, to avoid colliding with the
+platform's own `__drizzle_migrations`. `fs.sovereign.tasks` had two rows there
+from years of real shared-mode operation. Drizzle's migrator compared the
+brand-new isolated schema's pending migration against that stale row,
+concluded "already applied", and silently skipped every `CREATE TABLE` — the
+same failure shape as Task 8.26, but self-inflicted this time: the plugin's
+own prior history collided with its own future history, not another plugin's.
+
+**Delivered:**
+
+- `sharedToIsolatedMigrationsTableName(pluginId)`
+  (`packages/db/src/plugin-isolation-migration.ts`): returns
+  `` `__drizzle_migrations_${pluginId}_shared_to_isolated` `` — a name
+  guaranteed distinct from the plugin's prior shared-mode history, used only
+  for this one-time transition's provisioning step. `bin/sv.ts`'s
+  `pluginMigrateToIsolated` command now passes this instead of
+  `pluginMigrationsTableName()` when provisioning the destination schema.
+- `packages/db/src/__tests__/plugin-isolation-migration.pg.test.ts` (live
+  Postgres): reproduces the exact incident (a plugin's prior history recorded
+  under `pluginMigrationsTableName()`, then the same name reused for a fresh
+  isolated schema — table never created) and confirms the fix (same setup,
+  `sharedToIsolatedMigrationsTableName()` used instead — table created
+  regardless of the other table's stale state).
+- Verified against the real production instance in the same operational
+  session the bug was found: after this fix, `fs.sovereign.tasks`'s isolated
+  schema was correctly provisioned and its data migrated (see Task 8.29).
+
+**Dependencies:** Task 8.29 (found while running its migration against real
+data), Task 8.26 (the migrations-table-name convention this bug collided
+with).
+
+**SRS reference:** none — a bug fix, not a new capability.
+
+**Review checklist:**
+
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`,
+  `TEST_DATABASE_URL=... pnpm test` all pass.
+- `plugin-isolation-migration.pg.test.ts`'s new pair of tests reproduces the
+  incident (proves the bug is real, not assumed) and proves the fix.
+- Isolated-mode Postgres plugins provisioned normally (not mid-transition)
+  are unaffected — `pluginMigrationsTableName()` is untouched for that path;
+  only the one-time transition command uses the new name.
 
 ---
 

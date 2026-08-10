@@ -1,15 +1,18 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { PlatformDb } from '../client';
+import { runPluginMigrations } from '../migrate';
 import {
   PluginIsolationMigrationError,
   discoverPluginTables,
   migratePluginSharedToIsolated,
+  sharedToIsolatedMigrationsTableName,
 } from '../plugin-isolation-migration';
+import { pluginMigrationsTableName } from '../plugin-client';
 import type { PluginDb } from '../plugin-client';
 
 /**
@@ -20,6 +23,23 @@ import type { PluginDb } from '../plugin-client';
  * TRANSITIONAL TOOLING — see the note atop ../plugin-isolation-migration.ts.
  */
 const PG_URL = process.env.TEST_DATABASE_URL;
+
+/** Builds a minimal on-disk Drizzle Postgres migrations folder (journal +
+ *  one .sql file), mirroring migrate.pg.test.ts's own fixture helper. */
+function fixturePostgresMigrationsFolder(createSql: string, whenMs: number): string {
+  const dir = mkdtempSync(join(tmpdir(), 'sv-pg-iso-transition-migrations-'));
+  mkdirSync(join(dir, 'meta'), { recursive: true });
+  writeFileSync(
+    join(dir, 'meta', '_journal.json'),
+    JSON.stringify({
+      version: '7',
+      dialect: 'postgresql',
+      entries: [{ idx: 0, version: '7', when: whenMs, tag: '0000_init', breakpoints: true }],
+    }),
+  );
+  writeFileSync(join(dir, '0000_init.sql'), createSql);
+  return dir;
+}
 
 describe.skipIf(!PG_URL)('migratePluginSharedToIsolated', () => {
   let pool: Pool;
@@ -177,6 +197,95 @@ describe.skipIf(!PG_URL)('migratePluginSharedToIsolated', () => {
     ).rejects.toThrow(PluginIsolationMigrationError);
   });
 });
+
+describe.skipIf(!PG_URL)(
+  'runPluginMigrations — shared→isolated transition table-name collision',
+  () => {
+    let pool: Pool;
+    let schemaCounter = 0;
+
+    beforeAll(() => {
+      pool = new Pool({ connectionString: PG_URL });
+    });
+
+    afterAll(async () => {
+      await pool.end();
+    });
+
+    async function freshSchemaPluginDb(): Promise<{ schema: string; pluginDb: PluginDb }> {
+      const schema = `test_pg_iso_transition_${schemaCounter++}`;
+      await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+      await pool.query(`CREATE SCHEMA "${schema}"`);
+      const scopedPool = new Pool({
+        connectionString: PG_URL,
+        options: `-c search_path="${schema}"`,
+      });
+      return { schema, pluginDb: { dialect: 'postgres', db: drizzle(scopedPool) } };
+    }
+
+    afterEach(async () => {
+      await pool.query(`DROP SCHEMA IF EXISTS "drizzle" CASCADE`);
+    });
+
+    it('reproduces the incident: reusing pluginMigrationsTableName for the isolated transition sees prior shared-mode history as already applied and skips table creation', async () => {
+      const pluginId = 'fs.sovereign.tasks';
+      const migrationsTable = pluginMigrationsTableName(pluginId);
+
+      // Simulate years of real shared-mode migration history already
+      // recorded under this exact table name — shared-mode migrations
+      // always use pluginMigrationsTableName to avoid colliding with the
+      // platform's own __drizzle_migrations table.
+      const historic = await freshSchemaPluginDb();
+      const historicFolder = fixturePostgresMigrationsFolder(
+        'CREATE TABLE tasks_lists (id text primary key);',
+        1700000000000,
+      );
+      await runPluginMigrations(historic.pluginDb, historicFolder, migrationsTable);
+
+      // Provision a brand-new, empty isolated schema for the same plugin —
+      // exactly what `sv plugin migrate-to-isolated` does before copying
+      // data — but reusing the SAME migrations-table name, which already
+      // has history from above (Drizzle's Postgres migrator tracks applied
+      // migrations in a fixed `drizzle` schema, not scoped per connection's
+      // search_path).
+      const isolated = await freshSchemaPluginDb();
+      const isolatedFolder = fixturePostgresMigrationsFolder(
+        'CREATE TABLE tasks_items (id text primary key);',
+        1650000000000, // older than the historic entry above
+      );
+      await runPluginMigrations(isolated.pluginDb, isolatedFolder, migrationsTable);
+
+      const table = await pool.query(`SELECT to_regclass('"${isolated.schema}".tasks_items') as t`);
+      // Reproduces the bug: the isolated schema's table was never created —
+      // its migration's older timestamp looked "already applied" against
+      // the historic shared-mode entry sharing the same tracking table.
+      expect(table.rows[0].t).toBeNull();
+    });
+
+    it('fix: sharedToIsolatedMigrationsTableName keeps the one-time transition independent of prior shared-mode history', async () => {
+      const pluginId = 'fs.sovereign.tasks';
+      const sharedTable = pluginMigrationsTableName(pluginId);
+      const transitionTable = sharedToIsolatedMigrationsTableName(pluginId);
+
+      const historic = await freshSchemaPluginDb();
+      const historicFolder = fixturePostgresMigrationsFolder(
+        'CREATE TABLE tasks_lists (id text primary key);',
+        1700000000000,
+      );
+      await runPluginMigrations(historic.pluginDb, historicFolder, sharedTable);
+
+      const isolated = await freshSchemaPluginDb();
+      const isolatedFolder = fixturePostgresMigrationsFolder(
+        'CREATE TABLE tasks_items (id text primary key);',
+        1650000000000,
+      );
+      await runPluginMigrations(isolated.pluginDb, isolatedFolder, transitionTable);
+
+      const table = await pool.query(`SELECT to_regclass('"${isolated.schema}".tasks_items') as t`);
+      expect(table.rows[0].t).not.toBeNull();
+    });
+  },
+);
 
 describe('discoverPluginTables', () => {
   let dir: string;

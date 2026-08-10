@@ -1,10 +1,13 @@
+import { randomUUID } from 'node:crypto';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { runPluginMigrations } from '../migrate';
+import type { PlatformDb } from '../client';
+import { runMigrations, runPluginMigrations } from '../migrate';
+import { getPlatformSetting, setPlatformSetting } from '../platform-db';
 import { pluginMigrationsTableName } from '../plugin-client';
 import type { PluginDb } from '../plugin-client';
 
@@ -49,7 +52,6 @@ describe.skipIf(!PG_URL)(
   'runPluginMigrations — isolated Postgres plugin migration-table collision',
   () => {
     let pool: Pool;
-    let schemaCounter = 0;
 
     beforeAll(() => {
       pool = new Pool({ connectionString: PG_URL });
@@ -60,7 +62,15 @@ describe.skipIf(!PG_URL)(
     });
 
     async function freshSchemaPluginDb(): Promise<{ schema: string; pluginDb: PluginDb }> {
-      const schema = `test_pg_migrate_${schemaCounter++}`;
+      // randomUUID, not a per-run counter: the migrations-tracking table this
+      // creates lives in a separate, fixed `drizzle` schema that this block's
+      // afterEach only partially cleans (see below) — a counter resets to 0
+      // on every fresh `vitest run` process, so a *second* invocation would
+      // reuse a prior run's leftover tracking-table name, see its old rows,
+      // and conclude its migrations are "already applied" against a schema
+      // that was actually just freshly dropped and recreated. Found live:
+      // this exact staleness broke a rerun of this file in the same session.
+      const schema = `test_pg_migrate_${randomUUID().replace(/-/g, '_')}`;
       await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
       await pool.query(`CREATE SCHEMA "${schema}"`);
       const scopedPool = new Pool({
@@ -71,7 +81,22 @@ describe.skipIf(!PG_URL)(
     }
 
     afterEach(async () => {
-      await pool.query(`DROP SCHEMA IF EXISTS "drizzle" CASCADE`);
+      // The default-named tracking table this suite's first test populates,
+      // plus the two fixed plugin-id tracking tables the "fix:" test below
+      // uses (pluginMigrationsTableName('plugin-a'/'plugin-b') — fixed
+      // deliberately, mirroring a real plugin's stable id, so unlike
+      // freshSchemaPluginDb()'s own schema name these can't be made
+      // per-run-unique without changing what's under test). Never the whole
+      // `drizzle` schema. Other concurrently-running test files (and
+      // better-auth's own Postgres migrator, via apps/auth's
+      // runAuthMigrations()) also keep real tables in that same schema under
+      // their own distinct names; a blanket `DROP SCHEMA … CASCADE` here
+      // raced them, deleting tables mid-use in a real run — found live
+      // running the full suite once apps/auth also depended on this schema
+      // existing.
+      await pool.query(`DROP TABLE IF EXISTS "drizzle"."__drizzle_migrations"`);
+      await pool.query(`DROP TABLE IF EXISTS "drizzle"."${pluginMigrationsTableName('plugin-a')}"`);
+      await pool.query(`DROP TABLE IF EXISTS "drizzle"."${pluginMigrationsTableName('plugin-b')}"`);
     });
 
     it('reproduces the incident: a second isolated plugin silently skips its migration on the shared default table name', async () => {
@@ -126,5 +151,198 @@ describe.skipIf(!PG_URL)(
       expect(aTable.rows[0].t).not.toBeNull();
       expect(bTable.rows[0].t).not.toBeNull();
     });
+  },
+);
+
+/**
+ * Live-Postgres coverage for runMigrations()'s version tracking / downgrade
+ * guard, and runPluginMigrations()'s shared-mode isolation from the
+ * platform's own migration history. Previously ran against `:memory:`
+ * SQLite (free, instant); that fallback no longer exists now that SQLite is
+ * sqld-backed only, which needs a live server just like Postgres. The
+ * behavior under test is dialect-agnostic (runMigrations()/
+ * runPluginMigrations() branch on pdb.dialect internally), so Postgres
+ * proves it just as validly.
+ */
+describe.skipIf(!PG_URL)('runMigrations — version tracking & downgrade guard', () => {
+  let pool: Pool;
+
+  beforeAll(() => {
+    pool = new Pool({ connectionString: PG_URL });
+  });
+
+  afterAll(async () => {
+    await pool.end();
+  });
+
+  // runMigrations() tracks applied migrations in a table that, by default, is
+  // shared across every call in the whole test process regardless of which
+  // schema is actually being targeted (the platform only ever calls it once
+  // per process in production, against one database, so this has never
+  // mattered before). Each test here targets a fresh, empty schema — without
+  // a per-test migrationsTable override, drizzle's migrator would see a
+  // later test's migrations as "already applied" (per an earlier test's
+  // timestamps in that shared table) and silently skip every CREATE TABLE —
+  // same bug class as task 8.26, reproduced live writing these tests.
+  //
+  // randomUUID, not a per-run counter: the migrationsTable this derives lives
+  // in a separate, fixed `drizzle` schema that no test here ever cleans up —
+  // a counter resets to 0 on every fresh `vitest run` process, so a second
+  // invocation in the same session would reuse a prior run's leftover
+  // tracking-table name, see its old "already applied" rows, and skip every
+  // CREATE TABLE against a schema that was actually just freshly dropped and
+  // recreated. Found live: this exact staleness broke a rerun of this file.
+  async function freshPlatformDb(): Promise<{ db: PlatformDb; migrationsTable: string }> {
+    const schema = `test_migrate_version_${randomUUID().replace(/-/g, '_')}`;
+    await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+    await pool.query(`CREATE SCHEMA "${schema}"`);
+    const scopedPool = new Pool({
+      connectionString: PG_URL,
+      options: `-c search_path="${schema}"`,
+    });
+    return {
+      db: { dialect: 'postgres', db: drizzlePg(scopedPool) },
+      migrationsTable: `__drizzle_migrations_${schema}`,
+    };
+  }
+
+  // Each test runs the platform's full, real Postgres migration set (21
+  // files) at least once — a fresh schema plus real DDL is legitimately
+  // slower than the tiny synthetic fixtures elsewhere in this file, so these
+  // need a longer-than-default timeout.
+  it('records the running version and reports no downgrade on a fresh install', async () => {
+    const { db, migrationsTable } = await freshPlatformDb();
+    const result = await runMigrations(db, migrationsTable);
+
+    expect(result.previousVersion).toBeNull();
+    expect(result.downgradeDetected).toBe(false);
+    // The running version is now persisted for the next startup to compare.
+    expect(await getPlatformSetting(db, 'platform_version')).toBe(result.currentVersion);
+  }, 120000);
+
+  it('reports no downgrade on an unchanged restart', async () => {
+    const { db, migrationsTable } = await freshPlatformDb();
+    const first = await runMigrations(db, migrationsTable);
+    const second = await runMigrations(db, migrationsTable);
+
+    expect(second.previousVersion).toBe(first.currentVersion);
+    expect(second.downgradeDetected).toBe(false);
+  }, 120000);
+
+  it('detects a downgrade and keeps the higher stored version (watermark)', async () => {
+    const { db, migrationsTable } = await freshPlatformDb();
+    await runMigrations(db, migrationsTable);
+    // Simulate the DB having been written by a much newer binary.
+    await setPlatformSetting(db, 'platform_version', '999.0.0');
+
+    const result = await runMigrations(db, migrationsTable);
+
+    expect(result.previousVersion).toBe('999.0.0');
+    expect(result.downgradeDetected).toBe(true);
+    // The warning must persist: the stored version stays at the high-water mark
+    // rather than being overwritten with the older running version.
+    expect(await getPlatformSetting(db, 'platform_version')).toBe('999.0.0');
+  }, 120000);
+});
+
+describe.skipIf(!PG_URL)(
+  'runPluginMigrations — shared-mode plugin isolation from the platform history',
+  () => {
+    let pool: Pool;
+
+    beforeAll(() => {
+      pool = new Pool({ connectionString: PG_URL });
+    });
+
+    afterAll(async () => {
+      await pool.end();
+    });
+
+    // See the sibling describe block's identical comment — each test's
+    // runMigrations(db) call needs its own migrationsTable, or a later
+    // test's migrations look "already applied" against an earlier test's
+    // tracking rows and get silently skipped. randomUUID (not a per-run
+    // counter) for the same cross-process-rerun staleness reason documented
+    // in the sibling describe block above.
+    async function freshPlatformDb(): Promise<{
+      schema: string;
+      db: PlatformDb;
+      migrationsTable: string;
+    }> {
+      const schema = `test_migrate_shared_${randomUUID().replace(/-/g, '_')}`;
+      await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+      await pool.query(`CREATE SCHEMA "${schema}"`);
+      const scopedPool = new Pool({
+        connectionString: PG_URL,
+        options: `-c search_path="${schema}"`,
+      });
+      return {
+        schema,
+        db: { dialect: 'postgres', db: drizzlePg(scopedPool) },
+        migrationsTable: `__drizzle_migrations_${schema}`,
+      };
+    }
+
+    // Each test runs the platform's full, real migration set once — see the
+    // sibling describe block's identical timeout comment.
+    it('applies a plugin migration whose timestamp predates the platform migrations already in the shared DB', async () => {
+      const { schema, db, migrationsTable } = await freshPlatformDb();
+      // Platform migrations run first, exactly as instrumentation.ts orders it —
+      // this populates the platform's own migrations table with 2026+ timestamps.
+      await runMigrations(db, migrationsTable);
+
+      const folder = fixturePostgresMigrationsFolder(
+        'CREATE TABLE plugin_x_widgets (id text primary key);',
+        946684800000, // deliberately old (year-2000-ish)
+      );
+
+      // Without a dedicated migrationsTable, Drizzle's migrator would compare
+      // this migration's old `when` against the shared table's newest row
+      // (the platform's) and skip it as "already applied" — reproducing the
+      // bug this test guards against. Suffixed with `schema` (unique per
+      // call) so repeat runs against the same long-lived test Postgres
+      // instance don't see a stale row from an earlier run and flake — same
+      // reasoning as `freshPlatformDb()`'s own migrationsTable above.
+      await runPluginMigrations(
+        db as unknown as PluginDb,
+        folder,
+        `__drizzle_migrations_plugin_x_${schema}`,
+      );
+
+      const row = await pool.query(`SELECT to_regclass('"${schema}".plugin_x_widgets') as t`);
+      expect(row.rows[0].t).not.toBeNull();
+    }, 120000);
+
+    it('keeps two plugins sharing the platform DB on independent migration histories', async () => {
+      const { schema, db, migrationsTable } = await freshPlatformDb();
+      await runMigrations(db, migrationsTable);
+
+      const folderA = fixturePostgresMigrationsFolder(
+        'CREATE TABLE plugin_a_things (id text primary key);',
+        946684800000,
+      );
+      const folderB = fixturePostgresMigrationsFolder(
+        'CREATE TABLE plugin_b_things (id text primary key);',
+        946684800001,
+      );
+
+      // Suffixed with `schema` (unique per call) — see the sibling test's
+      // identical comment.
+      await runPluginMigrations(
+        db as unknown as PluginDb,
+        folderA,
+        `__drizzle_migrations_plugin_a_${schema}`,
+      );
+      await runPluginMigrations(
+        db as unknown as PluginDb,
+        folderB,
+        `__drizzle_migrations_plugin_b_${schema}`,
+      );
+
+      for (const table of ['plugin_a_things', 'plugin_b_things']) {
+        const row = await pool.query(`SELECT to_regclass('"${schema}".${table}') as t`);
+        expect(row.rows[0].t).not.toBeNull();
+      }
+    }, 120000);
   },
 );

@@ -456,22 +456,24 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   already applied to the `x-sovereign-user-*` family — but the stripping
   only protects against a spoofed _header_; it does nothing about a spoofed
   _User-Agent_, which is the actual trust boundary this rule exists to name.
-- **`apps/auth` resolves its own dialect independently of `DB_DIALECT`** —
-  purely from `AUTH_DATABASE_URL`'s URL scheme (`isPostgresUrl()` in
-  `apps/auth/src/db.ts`), since it deliberately doesn't depend on
-  `packages/db`. Discovered as a real production gap, not a hypothetical: an
-  instance whose platform core had already been migrated to Postgres
-  (`DB_DIALECT=postgres`) still had `AUTH_DATABASE_URL` unset, silently
-  leaving auth on its SQLite default while everything else moved, invisible
-  because nothing compared the two. `getAuthDb()`/`provisionAuthSqldNamespace()`
-  now call `assertAuthDialectMatchesPlatform()` before touching anything,
-  which throws (not warns) on a mismatch — auth, platform, and every plugin
-  must agree on one dialect, and both env vars are read from the same shared
-  root `.env` already, so there's no reason for them to diverge. Skipped for
-  `:memory:` (no real platform to compare against in that context). When
-  setting up a Postgres deployment, `AUTH_DATABASE_URL` must be set
-  explicitly alongside `DB_DIALECT`/`DATABASE_URL` — see
-  `docs/self-hosting.md`'s PostgreSQL section.
+- **`apps/auth` reads the exact same `DB_DIALECT`/`POSTGRES_DB_URL` the
+  platform does — no separate auth-specific database variable.** This
+  replaced an earlier design where auth resolved its own dialect
+  independently from a separate `AUTH_DATABASE_URL`, which was a real
+  production gap: an instance whose platform core had already been migrated
+  to Postgres (`DB_DIALECT=postgres`) could leave `AUTH_DATABASE_URL` unset,
+  silently stranding auth on its SQLite default while everything else moved,
+  invisible because nothing compared the two. Removing the second variable
+  removes the disagreement entirely, rather than detecting it after the
+  fact. Auth still gets its own dedicated store — a Postgres schema
+  (`sovereign_auth`, pinned via the connection's `search_path` startup
+  option, same technique isolated plugins use) or an sqld namespace of the
+  same name — so better-auth's tables can never collide with the platform's
+  own. `apps/auth` still deliberately doesn't import `@sovereignfs/db`
+  (service-boundary independence: own Dockerfile, own deploy) — it
+  duplicates the small amount of dialect/sqld resolution logic it needs
+  (`apps/auth/src/db.ts`) rather than sharing code, but reads the same env
+  var _names_ the platform does.
 - **Every isolated-mode Postgres plugin needs its own `migrationsTable`
   (`pluginMigrationsTableName(id)`), passed explicitly to
   `runPluginMigrations()` — the untouched default collides across plugins.**

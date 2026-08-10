@@ -19,6 +19,32 @@
 #   cp .env.example .env            # fill in AUTH_SECRET and all required vars
 #   docker compose -f docker-compose.prod.yml up --build -d
 services:
+  sqld:
+    image: ghcr.io/tursodatabase/libsql-server:latest
+    container_name: sovereign-sqld
+    restart: unless-stopped
+    # See docker-compose.yml's identical service for the full explanation.
+    command: ['/bin/sqld', '--enable-namespaces']
+    environment:
+      SQLD_NODE: primary
+      SQLD_ADMIN_LISTEN_ADDR: '0.0.0.0:8081'
+    volumes:
+      - sovereign_sqld_data:/var/lib/sqld
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'bash',
+          '-c',
+          'exec 3<>/dev/tcp/127.0.0.1/8080 && printf "GET /health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && head -1 <&3 | grep -q "200 OK"',
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+    networks:
+      - sovereign_net
+
   auth:
     # When SOVEREIGN_VERSION is set, pull the published image from GHCR.
     # Without it, build from source in this repo (the fallback for forks and
@@ -34,14 +60,14 @@ services:
     stop_grace_period: 30s
     environment:
       AUTH_SECRET: '${AUTH_SECRET}'
-      AUTH_DATABASE_URL: '${AUTH_DATABASE_URL:-file:./data/auth.db}'
-      # Read only for assertAuthDialectMatchesPlatform()'s consistency check
-      # (apps/auth/src/db.ts) — auth's own dialect always comes from
-      # AUTH_DATABASE_URL above, never these two. Must mirror the runtime
-      # service's own DB_DIALECT/DATABASE_URL defaults below exactly, or the
-      # check fails on a correctly-configured instance.
+      # DB_DIALECT is the sole source of truth (no per-service override) —
+      # auth reads the exact same value the runtime does, so the two can
+      # never disagree. Postgres additionally needs POSTGRES_DB_URL (see
+      # docker-compose.postgres.yml); SQLite needs nothing else here — it's
+      # always sqld-backed (SQLD_URL/SQLD_ADMIN_URL below).
       DB_DIALECT: '${DB_DIALECT:-sqlite}'
-      DATABASE_URL: '${DATABASE_URL:-file:./data/sovereign.db}'
+      SQLD_URL: 'http://sqld:8080'
+      SQLD_ADMIN_URL: 'http://sqld:8081'
       AUTH_INVITE_ONLY: '${AUTH_INVITE_ONLY:-false}'
       AUTH_REQUIRE_EMAIL_VERIFICATION: '${AUTH_REQUIRE_EMAIL_VERIFICATION:-true}'
       # Public URL where browsers reach the auth server — better-auth uses it for
@@ -65,10 +91,6 @@ services:
       # (Email delivery settings) — the auth server decrypts its own local
       # copy independently of the runtime. Same key as the runtime's vault.
       SOVEREIGN_VAULT_KEY: '${SOVEREIGN_VAULT_KEY}'
-      # Opt-in SQLite at-rest encryption (RFC 0071). Empty/unset = plaintext,
-      # unchanged from today. Must match the runtime service's value exactly —
-      # see docs/self-hosting.md's "SQLite at-rest encryption" section.
-      SOVEREIGN_DB_ENCRYPTION_KEY: '${SOVEREIGN_DB_ENCRYPTION_KEY:-}'
       # Internal Docker service address for auth→runtime server-to-server calls
       # (e.g. recording email-delivery-failure activity log entries). Always
       # the internal container port (3000), not the host-mapped RUNTIME_PORT.
@@ -98,6 +120,9 @@ services:
       timeout: 5s
       start_period: 20s
       retries: 3
+    depends_on:
+      sqld:
+        condition: service_healthy
     networks:
       - sovereign_net
 
@@ -141,17 +166,13 @@ services:
       # ("SOVEREIGN_VAULT_KEY is required...") the first time a user tries to
       # save a PAT, not at container startup.
       SOVEREIGN_VAULT_KEY: '${SOVEREIGN_VAULT_KEY}'
-      # Opt-in SQLite at-rest encryption (RFC 0071). Empty/unset = plaintext,
-      # unchanged from today. Must match the auth service's value exactly — see
-      # docs/self-hosting.md's "SQLite at-rest encryption" section. Existing
-      # plaintext instances must run `sv db encrypt` before setting this.
-      SOVEREIGN_DB_ENCRYPTION_KEY: '${SOVEREIGN_DB_ENCRYPTION_KEY:-}'
       # Shared signing secret — the runtime verifies the auth server's session
       # cookie locally with it (SRS AUTH-05); must match the auth service.
       AUTH_SECRET: '${AUTH_SECRET}'
       NEXT_PUBLIC_RUNTIME_URL: '${NEXT_PUBLIC_RUNTIME_URL:-http://localhost:${RUNTIME_PORT:-4000}}'
-      DATABASE_URL: '${DATABASE_URL:-file:./data/sovereign.db}'
       DB_DIALECT: '${DB_DIALECT:-sqlite}'
+      SQLD_URL: 'http://sqld:8080'
+      SQLD_ADMIN_URL: 'http://sqld:8081'
       # Show the bundled example/demo apps (hidden by default). See .env.example.
       SOVEREIGN_EXAMPLES_ENABLED: '${SOVEREIGN_EXAMPLES_ENABLED:-}'
       # Hide plugins flagged development: true (shown by default). See .env.example.
@@ -201,18 +222,21 @@ services:
     depends_on:
       auth:
         condition: service_healthy
+      sqld:
+        condition: service_healthy
     networks:
       - sovereign_net
 
-  # ── On-demand admin CLI (RFC 0071) ──────────────────────────────────────────
+  # ── On-demand admin CLI ──────────────────────────────────────────────────
   # Never starts with a plain `up` — the `tools` profile keeps it out of the
-  # default service set. Gives the `sv` CLI (sv db encrypt/decrypt, sv user
-  # reset-mfa, …) direct access to the same named volume the services above
-  # use, without a separate host checkout. Invoke explicitly, e.g.:
+  # default service set. Gives the `sv` CLI (sv db migrate-to-sqld/
+  # migrate-to-postgres, sv user reset-mfa, …) direct access to the same
+  # named volume the services above use, without a separate host checkout.
+  # Invoke explicitly, e.g.:
   #   docker compose -f docker-compose.prod.yml --profile tools run --rm \
-  #     tools pnpm sv db encrypt --dataDir /app/data
-  # Stop auth/runtime first — these commands assume nothing else has the
-  # SQLite files open.
+  #     tools pnpm sv user reset-mfa someone@example.com
+  # Stop auth/runtime first before running a legacy-file migration tool —
+  # those commands assume nothing else has the old SQLite files open.
   tools:
     profiles: ['tools']
     build:
@@ -225,22 +249,22 @@ services:
         SOVEREIGN_EXAMPLES_ENABLED: '${SOVEREIGN_EXAMPLES_ENABLED:-0}'
     container_name: sovereign-tools
     environment:
-      SOVEREIGN_DB_ENCRYPTION_KEY: '${SOVEREIGN_DB_ENCRYPTION_KEY:-}'
-      DATABASE_URL: '${DATABASE_URL:-file:./data/sovereign.db}'
-      AUTH_DATABASE_URL: '${AUTH_DATABASE_URL:-file:./data/auth.db}'
+      DB_DIALECT: '${DB_DIALECT:-sqlite}'
+      SQLD_URL: 'http://sqld:8080'
+      SQLD_ADMIN_URL: 'http://sqld:8081'
     volumes:
       - sovereign_data:/app/data
-      # `sv db encrypt`/`decrypt` write their automatic pre-migration backup to
+      # Migration tools' automatic pre-migration backup writes to
       # <workspace root>/backups — bind-mounted to the host (not the named
       # data volume) so it survives this container exiting (`--rm`). Lands in
       # ./backups next to this compose file.
       - ./backups:/app/backups
     # Without this, tools gets Compose's implicit default network instead of
     # sovereign_net (unlike runtime/auth, which both declare it explicitly) —
-    # any dialect-aware `sv` command that needs to reach `postgres` by service
-    # name (e.g. `sv db migrate-to-postgres`) fails with
-    # "getaddrinfo EAI_AGAIN postgres", even once DB_DIALECT/DATABASE_URL are
-    # correctly set (see docker-compose.postgres.yml's `tools` override).
+    # any dialect-aware `sv` command that needs to reach `postgres`/`sqld` by
+    # service name (e.g. `sv db migrate-to-postgres`) fails with
+    # "getaddrinfo EAI_AGAIN postgres", even once DB_DIALECT/POSTGRES_DB_URL
+    # are correctly set (see docker-compose.postgres.yml's `tools` override).
     networks:
       - sovereign_net
 
@@ -263,6 +287,8 @@ volumes:
     # predictable `sovereign_data` regardless of where the repo is cloned — the
     # backup/restore commands in docs/ reference it by this exact name.
     name: sovereign_data
+  sovereign_sqld_data:
+    name: sovereign_sqld_data
 
 networks:
   sovereign_net:

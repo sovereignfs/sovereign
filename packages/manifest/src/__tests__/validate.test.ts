@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { manifestDatabaseIsolation, manifestRequiresEncryption } from '../schema';
+import { manifestDatabaseIsolation } from '../schema';
 import { validateManifest } from '../validate';
 
 const base = {
@@ -261,7 +261,7 @@ describe('validateManifest', () => {
     expect(validateManifest({ ...base, example: 'yes' }).valid).toBe(false);
   });
 
-  it('rejects the legacy database string/isolation forms (retired — every non-platform plugin is unconditionally isolated)', () => {
+  it('rejects any "database" key at all — the field was retired entirely (RFC 0071 deferred, no encryption carve-out left to configure)', () => {
     expect(validateManifest({ ...base, type: 'sovereign', database: 'shared' }).valid).toBe(false);
     expect(validateManifest({ ...base, type: 'sovereign', database: 'isolated' }).valid).toBe(
       false,
@@ -269,15 +269,10 @@ describe('validateManifest', () => {
     expect(
       validateManifest({ ...base, type: 'sovereign', database: { isolation: 'isolated' } }).valid,
     ).toBe(false);
-  });
-
-  it('rejects a manifest database object with an unknown "dialect" key (workstream 0009 leg 1 removed it)', () => {
-    const res = validateManifest({
-      ...base,
-      type: 'sovereign',
-      database: { dialect: 'sqlite' },
-    });
-    expect(res.valid).toBe(false);
+    expect(
+      validateManifest({ ...base, type: 'sovereign', database: { requireEncryption: true } }).valid,
+    ).toBe(false);
+    expect(validateManifest({ ...base, type: 'sovereign', database: {} }).valid).toBe(false);
   });
 
   it('derives database isolation from type — always isolated except type: "platform"', () => {
@@ -285,34 +280,6 @@ describe('validateManifest', () => {
     expect(manifestDatabaseIsolation('community')).toBe('isolated');
     expect(manifestDatabaseIsolation('platform')).toBe('shared');
     expect(manifestDatabaseIsolation(undefined)).toBe('isolated');
-  });
-
-  it('accepts database.requireEncryption on a non-platform plugin (RFC 0071)', () => {
-    const res = validateManifest({
-      ...base,
-      type: 'sovereign',
-      repository: 'https://github.com/example/plugin',
-      database: { requireEncryption: true },
-    });
-    expect(res.valid).toBe(true);
-  });
-
-  it('rejects database.requireEncryption on a type: "platform" plugin — no isolated store to encrypt', () => {
-    const res = validateManifest({
-      ...base,
-      type: 'platform',
-      database: { requireEncryption: true },
-    });
-    expect(res.valid).toBe(false);
-    if (!res.valid) {
-      expect(res.errors.join(' ')).toContain('requireEncryption');
-    }
-  });
-
-  it('normalizes manifestRequiresEncryption', () => {
-    expect(manifestRequiresEncryption(undefined)).toBe(false);
-    expect(manifestRequiresEncryption({ requireEncryption: true })).toBe(true);
-    expect(manifestRequiresEncryption({ requireEncryption: false })).toBe(false);
   });
 
   it('accepts shell: "overlay" (RFC 0001)', () => {

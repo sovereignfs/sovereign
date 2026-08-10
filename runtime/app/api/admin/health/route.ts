@@ -1,11 +1,9 @@
-import { statSync } from 'node:fs';
 import { NextResponse } from 'next/server';
 import {
   getEmailDeliveryDiagnostics,
   getLastMigrationResult,
   pingDb,
   resolveDialect,
-  resolveSqlitePath,
 } from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
 import { isDevModeConfigured } from '@/src/dev-mode';
@@ -24,7 +22,10 @@ interface HealthReport {
   database: {
     dialect: string;
     status: 'ok' | 'error';
-    /** SQLite file size in bytes; null for :memory: or Postgres (CON-09). */
+    /**
+     * Always null — SQLite is sqld-backed (a separate server), so there is no
+     * local file to measure. Kept in the report shape for CON-09 compatibility.
+     */
     sizeBytes: number | null;
     /** Last applied migration version, or null before first migration run. */
     migrationVersion: string | null;
@@ -77,15 +78,7 @@ export async function GET(request: Request): Promise<Response> {
     dbStatus = 'error';
   }
 
-  let sizeBytes: number | null = null;
-  if (resolved.dialect === 'sqlite') {
-    try {
-      const path = resolveSqlitePath(resolved.url);
-      if (path !== ':memory:') sizeBytes = statSync(path).size;
-    } catch {
-      sizeBytes = null;
-    }
-  }
+  const sizeBytes: number | null = null;
 
   let authStatus: 'ok' | 'unreachable' = 'unreachable';
   try {

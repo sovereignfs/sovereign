@@ -112,11 +112,6 @@ module.exports = {
 // Backup helpers
 // ---------------------------------------------------------------------------
 
-/** Parse the DATABASE_URL to decide the dialect. */
-export function detectDialect(url: string): 'sqlite' | 'postgres' {
-  return url.startsWith('postgres://') || url.startsWith('postgresql://') ? 'postgres' : 'sqlite';
-}
-
 /**
  * Build the default backup archive path:
  *   <cwd>/backups/sovereign-backup-<timestamp>-v<version>.tar.gz

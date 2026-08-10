@@ -119,6 +119,59 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.74 → v0.75 (root `package.json` 0.76.1 → 0.77.0)
+
+**Breaking — database environment variables changed, and SQLite at-rest
+encryption was retired.** No application code changes for operators, but
+every deployment's `.env`/compose config needs updating before this version
+will boot.
+
+- **`DATABASE_URL` and `AUTH_DATABASE_URL` are gone.** `DB_DIALECT` is now
+  the sole source of truth for the dialect — **required**, no default, no
+  inference from a URL scheme. Postgres additionally requires the new
+  `POSTGRES_DB_URL` (read identically by the runtime and the auth server —
+  there is no longer a separate auth-specific database variable). SQLite
+  needs nothing else here (see below).
+  - **Action required:** set `DB_DIALECT=sqlite` or `DB_DIALECT=postgres`
+    explicitly. On Postgres, rename `DATABASE_URL`/`AUTH_DATABASE_URL` to a
+    single `POSTGRES_DB_URL`.
+- **SQLite has no plain-file fallback anymore — sqld is now baked into the
+  base Docker Compose files** (`docker-compose.yml` /
+  `docker-compose.prod.yml`), not a separate opt-in overlay
+  (`docker-compose.sqld.yml` is deleted). A plain `docker compose up --build`
+  now also starts the `sqld` service automatically.
+  - **Action required for a non-Docker SQLite deployment:** run an sqld
+    instance yourself and point `SQLD_URL`/`SQLD_ADMIN_URL` at it — there is
+    no more "just open `data/sovereign.db`" fallback.
+- **Auth now gets its own dedicated store** instead of sharing the
+  platform's — a Postgres schema (`sovereign_auth`) or an sqld namespace of
+  the same name, mirroring how every isolated plugin already gets its own
+  schema/namespace. On SQLite this matches existing behavior (auth already
+  had its own `'auth'` sqld namespace, just renamed). **On Postgres this is
+  new**: auth's tables move out of `public` into `sovereign_auth`.
+  - **Action required on an existing Postgres instance:** auth's existing
+    data (better-auth's `user`/`session`/`account`/`verification` tables,
+    plus this platform's own `invites`/`auth_settings`/`auth_email_delivery_log`)
+    needs migrating into the new schema before upgrading, or auth starts
+    against a fresh, empty schema. There is no automated migration tool for
+    this yet — take a `pg_dump` backup first, then move the tables manually
+    (`ALTER TABLE ... SET SCHEMA sovereign_auth`) before starting this
+    version.
+- **`SOVEREIGN_DB_ENCRYPTION_KEY` and SQLite at-rest encryption (RFC 0071)
+  are retired** — `sv db encrypt`/`sv db decrypt` are removed. Neither
+  dialect has an application-level at-rest encryption option now; rely on
+  disk/volume-level encryption if this matters for your deployment. A future
+  resolution covering both dialects is tracked separately, not yet designed.
+  - **Action required if you had encryption enabled:** decrypt your data with
+    the previous version's `sv db decrypt` **before** upgrading — there is no
+    decrypt path in this version.
+- The manifest's `database` field is removed entirely (`database.isolation`
+  was already retired; `database.requireEncryption` goes with this change) —
+  a plugin manifest still declaring it fails validation. No first-party
+  plugin in this repository declares it.
+- `@sovereignfs/manifest` **4.0.0 → 5.0.0**, `@sovereignfs/db` **3.4.1 →
+  4.0.0**, `@sovereignfs/auth` **1.1.0 → 2.0.0** (all breaking — see above).
+
 ### Root `package.json` 0.50.1 → 0.51.0 (no `runtime` version bump)
 
 - **Console's "Add a plugin" panel is removed.** Console → Plugins no longer

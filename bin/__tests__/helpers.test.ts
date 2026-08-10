@@ -8,7 +8,6 @@ import {
   assertRemovablePlugin,
   authHealthUrl,
   defaultArchivePath,
-  detectDialect,
   pollUntilHealthy,
   readPlatformVersion,
   renderPm2Config,
@@ -17,18 +16,6 @@ import {
 } from '../helpers';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-
-describe('detectDialect', () => {
-  it.each([
-    ['postgres://user:pass@host:5432/db', 'postgres'],
-    ['postgresql://user@host/db', 'postgres'],
-    ['file:./data/sovereign.db', 'sqlite'],
-    ['/absolute/path/sovereign.db', 'sqlite'],
-    [':memory:', 'sqlite'],
-  ])('classifies %s as %s', (url, expected) => {
-    expect(detectDialect(url)).toBe(expected);
-  });
-});
 
 describe('defaultArchivePath', () => {
   it('builds a timestamped, version-tagged path under backups/', () => {

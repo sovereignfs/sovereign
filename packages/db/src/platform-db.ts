@@ -17,6 +17,26 @@ export const DEFAULT_ROOT_PLUGIN_ID = 'fs.sovereign.launcher';
 const DEFAULT_TENANT_NAME = 'Sovereign';
 
 /**
+ * Coerce a raw `sql`` `-queried bigint column back to a number. Drizzle's
+ * `bigint(..., { mode: 'number' })` column config only coerces automatically
+ * through the typed query builder (`.select().from(table)`) — every function
+ * in this file that reads a bigint column (timestamps, byte counts) via a raw
+ * `sql`` template bypasses that and gets node-postgres's default bigint
+ * representation back: a string, to avoid silent precision loss for values
+ * outside JS's safe integer range. SQLite/sqld never has this quirk (`Number`
+ * is a no-op there), so this is applied unconditionally rather than branching
+ * on dialect.
+ */
+function coerceNum(value: number | string): number {
+  return typeof value === 'string' ? Number(value) : value;
+}
+
+/** Same as `coerceNum`, preserving `null` for optional bigint columns. */
+function coerceNumOrNull(value: number | string | null): number | null {
+  return value === null ? null : coerceNum(value);
+}
+
+/**
  * Apply the interim DDL bootstrap and seed rows. Idempotent — CREATE TABLE IF
  * NOT EXISTS plus conflict-ignoring inserts. Dialect-agnostic: the DDL is
  * dialect-aware (see ./bootstrap) and the seeds are standard `INSERT … ON
@@ -347,10 +367,7 @@ export async function createPluginStatusRowIfAbsent(
       .values({ pluginId, tenantId: DEFAULT_TENANT_ID, ...fields, updatedAt: now })
       .onConflictDoNothing({ target: sqlite.pluginStatus.pluginId })
       .run();
-    // better-sqlite3's RunResult uses `changes`; libsql's ResultSet (RFC 0091
-    // sqld carve-out) uses `rowsAffected` for the same count — same union
-    // ambiguity as everywhere else `dialect: 'sqlite'` now covers two drivers.
-    return 'changes' in result ? result.changes > 0 : result.rowsAffected > 0;
+    return result.rowsAffected > 0;
   }
   const result = await pdb.db
     .insert(pg.pluginStatus)
@@ -422,13 +439,18 @@ export async function listPluginAccessUsers(
   pdb: PlatformDb,
   pluginId: string,
 ): Promise<PluginAccessGrantRow[]> {
-  return dbAll<PluginAccessGrantRow>(
+  const rows = await dbAll<PluginAccessGrantRow>(
     pdb,
     sql`SELECT user_id AS "userId", granted_by_user_id AS "grantedByUserId", granted_at AS "grantedAt"
         FROM plugin_access_users
         WHERE plugin_id = ${pluginId}
         ORDER BY granted_at ASC`,
   );
+  // Raw sql`` queries bypass Drizzle's bigint `mode: 'number'` column
+  // coercion (that only applies through the typed query builder) — Postgres
+  // returns bigint columns as strings to avoid JS precision loss. Coerce
+  // explicitly; a no-op on SQLite, which never has this quirk.
+  return rows.map((r) => ({ ...r, grantedAt: Number(r.grantedAt) }));
 }
 
 /** Every plugin ID a user has a direct access grant for — for bulk resolution. */
@@ -476,13 +498,16 @@ export async function listPluginAccessGroups(
   pdb: PlatformDb,
   pluginId: string,
 ): Promise<PluginAccessGroupGrantRow[]> {
-  return dbAll<PluginAccessGroupGrantRow>(
+  const rows = await dbAll<PluginAccessGroupGrantRow>(
     pdb,
     sql`SELECT group_id AS "groupId", granted_by_user_id AS "grantedByUserId", granted_at AS "grantedAt"
         FROM plugin_access_groups
         WHERE plugin_id = ${pluginId}
         ORDER BY granted_at ASC`,
   );
+  // See listPluginAccessUsers' identical comment — raw sql`` bypasses
+  // Drizzle's bigint coercion.
+  return rows.map((r) => ({ ...r, grantedAt: Number(r.grantedAt) }));
 }
 
 /**
@@ -582,23 +607,31 @@ export async function getUserGroupById(
   pdb: PlatformDb,
   id: string,
 ): Promise<UserGroupRow | undefined> {
-  return dbGet<UserGroupRow>(
+  const row = await dbGet<UserGroupRow>(
     pdb,
     sql`SELECT id, name, slug, description, created_by_user_id AS "createdByUserId",
                created_at AS "createdAt", updated_at AS "updatedAt"
         FROM user_groups
         WHERE id = ${id}`,
   );
+  return (
+    row && { ...row, createdAt: coerceNum(row.createdAt), updatedAt: coerceNum(row.updatedAt) }
+  );
 }
 
 export async function listUserGroups(pdb: PlatformDb): Promise<UserGroupRow[]> {
-  return dbAll<UserGroupRow>(
+  const rows = await dbAll<UserGroupRow>(
     pdb,
     sql`SELECT id, name, slug, description, created_by_user_id AS "createdByUserId",
                created_at AS "createdAt", updated_at AS "updatedAt"
         FROM user_groups
         ORDER BY name ASC`,
   );
+  return rows.map((r) => ({
+    ...r,
+    createdAt: coerceNum(r.createdAt),
+    updatedAt: coerceNum(r.updatedAt),
+  }));
 }
 
 /**
@@ -649,13 +682,14 @@ export async function listUserGroupMembers(
   pdb: PlatformDb,
   groupId: string,
 ): Promise<UserGroupMemberRow[]> {
-  return dbAll<UserGroupMemberRow>(
+  const rows = await dbAll<UserGroupMemberRow>(
     pdb,
     sql`SELECT user_id AS "userId", added_by_user_id AS "addedByUserId", added_at AS "addedAt"
         FROM user_group_members
         WHERE group_id = ${groupId}
         ORDER BY added_at ASC`,
   );
+  return rows.map((r) => ({ ...r, addedAt: coerceNum(r.addedAt) }));
 }
 
 /**
@@ -667,7 +701,7 @@ export async function listUserGroupsForUser(
   pdb: PlatformDb,
   userId: string,
 ): Promise<UserGroupRow[]> {
-  return dbAll<UserGroupRow>(
+  const rows = await dbAll<UserGroupRow>(
     pdb,
     sql`SELECT g.id, g.name, g.slug, g.description,
                g.created_by_user_id AS "createdByUserId",
@@ -677,6 +711,11 @@ export async function listUserGroupsForUser(
         WHERE m.user_id = ${userId}
         ORDER BY g.name ASC`,
   );
+  return rows.map((r) => ({
+    ...r,
+    createdAt: coerceNum(r.createdAt),
+    updatedAt: coerceNum(r.updatedAt),
+  }));
 }
 
 // ─── Per-user capability grants (RFC 0070) ───────────────────────────────────
@@ -722,7 +761,7 @@ export async function listUserCapabilityGrants(
   pdb: PlatformDb,
   userId: string,
 ): Promise<UserCapabilityGrantRow[]> {
-  return dbAll<UserCapabilityGrantRow>(
+  const rows = await dbAll<UserCapabilityGrantRow>(
     pdb,
     sql`SELECT user_id AS "userId", capability, granted_by_user_id AS "grantedByUserId",
                granted_at AS "grantedAt"
@@ -730,6 +769,9 @@ export async function listUserCapabilityGrants(
         WHERE user_id = ${userId}
         ORDER BY granted_at ASC`,
   );
+  // See listPluginAccessUsers' identical comment — raw sql`` bypasses
+  // Drizzle's bigint coercion.
+  return rows.map((r) => ({ ...r, grantedAt: Number(r.grantedAt) }));
 }
 
 /** Whether a user holds a specific capability grant (independent of role). */
@@ -798,7 +840,7 @@ export async function listDeviceConsentGrants(
   pdb: PlatformDb,
   userId: string,
 ): Promise<DeviceConsentGrantRow[]> {
-  return dbAll<DeviceConsentGrantRow>(
+  const rows = await dbAll<DeviceConsentGrantRow>(
     pdb,
     sql`SELECT user_id AS "userId", plugin_id AS "pluginId", capability,
                granted_at AS "grantedAt"
@@ -806,6 +848,9 @@ export async function listDeviceConsentGrants(
         WHERE user_id = ${userId}
         ORDER BY granted_at DESC`,
   );
+  // See listPluginAccessUsers' identical comment — raw sql`` bypasses
+  // Drizzle's bigint coercion.
+  return rows.map((r) => ({ ...r, grantedAt: Number(r.grantedAt) }));
 }
 
 // ─── Cross-plugin data sharing helpers (RFC 0002) ────────────────────────────
@@ -974,6 +1019,16 @@ export interface CreateStorageObjectInput {
   metadata: string | null;
 }
 
+/** Coerce a raw-queried storage object row's bigint columns (size, timestamps) back to numbers — see coerceNum's doc comment. */
+function mapStorageObjectRow(row: PluginStorageObjectRow): PluginStorageObjectRow {
+  return {
+    ...row,
+    size: coerceNum(row.size),
+    createdAt: coerceNum(row.createdAt),
+    updatedAt: coerceNum(row.updatedAt),
+  };
+}
+
 /** A row is readable by a context that owns it, or — for unowned (plugin-scoped) objects — any caller in the same plugin/tenant. */
 function canAccessStorageObject(
   row: PluginStorageObjectRow,
@@ -1028,7 +1083,8 @@ export async function getStorageObjectById(
         LIMIT 1`,
   );
   if (!row) return undefined;
-  return canAccessStorageObject(row, context) ? row : undefined;
+  const mapped = mapStorageObjectRow(row);
+  return canAccessStorageObject(mapped, context) ? mapped : undefined;
 }
 
 /**
@@ -1045,7 +1101,7 @@ export async function getStorageObjectByIdForToken(
   tenantId: string,
   pluginId: string,
 ): Promise<PluginStorageObjectRow | undefined> {
-  return dbGet<PluginStorageObjectRow>(
+  const row = await dbGet<PluginStorageObjectRow>(
     pdb,
     sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId",
                owner_user_id AS "ownerUserId", key, content_type AS "contentType",
@@ -1057,6 +1113,7 @@ export async function getStorageObjectByIdForToken(
           AND plugin_id = ${pluginId}
         LIMIT 1`,
   );
+  return row && mapStorageObjectRow(row);
 }
 
 /** Fetch one accessible storage object row by its plugin-facing key (most recent if duplicated). */
@@ -1079,7 +1136,8 @@ export async function getStorageObjectByKey(
         LIMIT 1`,
   );
   if (!row) return undefined;
-  return canAccessStorageObject(row, context) ? row : undefined;
+  const mapped = mapStorageObjectRow(row);
+  return canAccessStorageObject(mapped, context) ? mapped : undefined;
 }
 
 /** List accessible storage objects, optionally filtered by key prefix. */
@@ -1100,6 +1158,7 @@ export async function listStorageObjects(
         ORDER BY updated_at DESC`,
   );
   return rows
+    .map(mapStorageObjectRow)
     .filter((row) => canAccessStorageObject(row, context))
     .filter((row) => (prefix ? row.key.startsWith(prefix) : true));
 }
@@ -1128,13 +1187,13 @@ export async function sumPluginStorageBytes(
   tenantId: string,
   pluginId: string,
 ): Promise<number> {
-  const row = await dbGet<{ total: number | null }>(
+  const row = await dbGet<{ total: number | string | null }>(
     pdb,
     sql`SELECT SUM(size) AS total
         FROM plugin_storage_objects
         WHERE tenant_id = ${tenantId} AND plugin_id = ${pluginId}`,
   );
-  return row?.total ?? 0;
+  return coerceNumOrNull(row?.total ?? 0) ?? 0;
 }
 
 /** Hard-delete every storage object owned by a user across all plugins (account deletion, RFC 0033). Returns the deleted rows so callers can remove physical bytes. */
@@ -1157,7 +1216,7 @@ export async function hardDeleteUserStorageObjects(
     sql`DELETE FROM plugin_storage_objects
         WHERE tenant_id = ${tenantId} AND owner_user_id = ${userId}`,
   );
-  return rows;
+  return rows.map(mapStorageObjectRow);
 }
 
 // ─── Client-side encryption profile helpers (RFC 0060) ─────────────────────
@@ -1466,11 +1525,24 @@ function canAccessSecret(
 }
 
 function mapPluginSecretRow(row: PluginSecretRow): PluginSecretRow {
-  return { ...row, scope: requirePluginSecretScope(row.scope) };
+  return {
+    ...row,
+    scope: requirePluginSecretScope(row.scope),
+    createdAt: coerceNum(row.createdAt),
+    updatedAt: coerceNum(row.updatedAt),
+    lastUsedAt: coerceNumOrNull(row.lastUsedAt),
+    deletedAt: coerceNumOrNull(row.deletedAt),
+  };
 }
 
 function mapPluginSecretRefRow(row: PluginSecretRefRow): PluginSecretRefRow {
-  return { ...row, scope: requirePluginSecretScope(row.scope) };
+  return {
+    ...row,
+    scope: requirePluginSecretScope(row.scope),
+    createdAt: coerceNum(row.createdAt),
+    updatedAt: coerceNum(row.updatedAt),
+    lastUsedAt: coerceNumOrNull(row.lastUsedAt),
+  };
 }
 
 /** Store encrypted secret material plus non-secret metadata. */
@@ -1734,6 +1806,11 @@ function mapPluginConnectionRow(row: PluginConnectionRefRow): PluginConnectionRe
     ...row,
     scope: requirePluginConnectionScope(row.scope),
     status: requirePluginConnectionStatus(row.status),
+    lastCheckedAt: coerceNumOrNull(row.lastCheckedAt),
+    lastUsedAt: coerceNumOrNull(row.lastUsedAt),
+    createdAt: coerceNum(row.createdAt),
+    updatedAt: coerceNum(row.updatedAt),
+    disconnectedAt: coerceNumOrNull(row.disconnectedAt),
   };
 }
 
@@ -2397,7 +2474,7 @@ export async function listUserActivity(
   limit = 50,
   offset = 0,
 ): Promise<ActivityLogRow[]> {
-  return dbAll<ActivityLogRow>(
+  const rows = await dbAll<ActivityLogRow>(
     pdb,
     sql`SELECT id, tenant_id AS "tenantId", actor_id AS "actorId",
                actor_type AS "actorType", action,
@@ -2411,6 +2488,7 @@ export async function listUserActivity(
         ORDER BY created_at DESC
         LIMIT ${limit} OFFSET ${offset}`,
   );
+  return rows.map((r) => ({ ...r, createdAt: coerceNum(r.createdAt) }));
 }
 
 /** Total count of personal activity rows for the given user (for pagination). */
@@ -2438,7 +2516,7 @@ export async function listAdminActivity(
   const offset = options.offset ?? 0;
   const actorFilter = options.actorId ?? null;
   const actionFilter = options.action ?? null;
-  return dbAll<ActivityLogRow>(
+  const rows = await dbAll<ActivityLogRow>(
     pdb,
     sql`SELECT id, tenant_id AS "tenantId", actor_id AS "actorId",
                actor_type AS "actorType", action,
@@ -2452,6 +2530,7 @@ export async function listAdminActivity(
         ORDER BY created_at DESC
         LIMIT ${limit} OFFSET ${offset}`,
   );
+  return rows.map((r) => ({ ...r, createdAt: coerceNum(r.createdAt) }));
 }
 
 /** Total count of admin-visible activity rows (for pagination). */
@@ -2894,7 +2973,7 @@ export async function getPushDeviceTokensForUser(
   pdb: PlatformDb,
   userId: string,
 ): Promise<PushDeviceTokenRow[]> {
-  return dbAll<PushDeviceTokenRow>(
+  const rows = await dbAll<PushDeviceTokenRow>(
     pdb,
     sql`SELECT id, user_id AS "userId", platform, device_token AS "deviceToken",
                public_key AS "publicKey", relay_url AS "relayUrl",
@@ -2903,6 +2982,13 @@ export async function getPushDeviceTokensForUser(
         WHERE tenant_id = ${DEFAULT_TENANT_ID}
           AND user_id = ${userId}`,
   );
+  // See listPluginAccessUsers' identical comment — raw sql`` bypasses
+  // Drizzle's bigint coercion.
+  return rows.map((r) => ({
+    ...r,
+    createdAt: Number(r.createdAt),
+    lastUsedAt: r.lastUsedAt === null ? null : Number(r.lastUsedAt),
+  }));
 }
 
 /**

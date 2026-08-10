@@ -1,12 +1,11 @@
-import { dirname, join } from 'node:path';
-import { mkdirSync, readFileSync, unlinkSync } from 'node:fs';
+import { join } from 'node:path';
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 import type { Client } from '@libsql/client';
-import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { findWorkspaceRoot, pgSslMode, resolveSqlitePath } from './client';
+import { findWorkspaceRoot, pgSslMode } from './client';
 import { resolveDialect, type Dialect } from './dialect';
 import {
   createSqldClient,
@@ -16,20 +15,12 @@ import {
   sqldAdminUrl,
   sqldUrl,
 } from './sqld';
-import {
-  dbEncryptionKeyFromEnv,
-  defaultDataDir,
-  openKeyedSqlite,
-  resolvePluginEncryptionKey,
-} from './sqlite-encryption';
 
 // `drizzle-orm/libsql`'s entry point statically imports `@libsql/client` —
 // required lazily; see client.ts's identical comment for the full story.
 const require = createRequire(import.meta.url);
 
-type AnySqliteDb =
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ReturnType<typeof drizzleSqlite<any>> | (LibSQLDatabase<any> & { $client: Client });
+type AnySqliteDb = LibSQLDatabase<Record<string, never>> & { $client: Client };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyPgDb = ReturnType<typeof drizzlePg<any>>;
 
@@ -54,14 +45,6 @@ function registryKey(pluginId: string, dialect: Dialect): string {
  */
 export function pluginSchemaName(pluginId: string): string {
   return `plugin_${pluginId.replace(/[.-]/g, '_')}`;
-}
-
-/**
- * SQLite file URL for an isolated plugin. Resolves against the workspace root
- * via `resolveSqlitePath` so the file always lands in `data/plugins/`.
- */
-export function pluginSqliteUrl(pluginId: string): string {
-  return `file:./data/plugins/${pluginId}.db`;
 }
 
 /**
@@ -92,51 +75,27 @@ function pgSsl(url: string): false | { rejectUnauthorized: boolean; ca?: string 
 /**
  * Get (or lazily create and cache) the Drizzle client for an isolated plugin.
  *
- * - **SQLite, `requiresEncryption`:** opens `data/plugins/<pluginId>.db` in
- *   WAL mode through the plain-file, SQLCipher-capable driver — the plugin's
- *   own manifest `database.requireEncryption` (task 8.15) is a **raise-only**
- *   guarantee RFC 0071 makes; RFC 0091's carve-out keeps it off sqld, which
- *   has no equivalent guarantee today. See `resolvePluginEncryptionKey` for
- *   the full per-database decision, including the case where the key isn't
- *   configured yet (open plaintext, not sqld — see RFC 0091).
- * - **SQLite, not `requiresEncryption`:** sqld, isolated via a per-plugin
- *   namespace (`pluginNamespaceName`, the `x-namespace` header — sqld's own
- *   isolation mechanism, verified empirically to hold between namespaces).
- *   The namespace must already exist (call `provisionPluginDb` first).
+ * - **SQLite:** sqld, isolated via a per-plugin namespace (`pluginNamespaceName`,
+ *   the `x-namespace` header — sqld's own isolation mechanism, verified
+ *   empirically to hold between namespaces). The namespace must already exist
+ *   (call `provisionPluginDb` first).
  * - **Postgres:** opens a new Pool targeting the same server as the platform
  *   DB, but with `search_path` pinned to `plugin_<slug>` via the connection's
  *   startup options (not a `SET` issued after connecting — see the comment
  *   at the Pool construction below for why that distinction matters).
  *   The schema must already exist (call `provisionPluginDb` first).
  */
-export function getPluginDb(pluginId: string, requiresEncryption = false): PluginDb {
+export function getPluginDb(pluginId: string): PluginDb {
   const resolved = resolveDialect(process.env);
   const cacheKey = registryKey(pluginId, resolved.dialect);
   const cached = _registry.get(cacheKey);
   if (cached) return cached;
 
   if (resolved.dialect === 'sqlite') {
-    if (!requiresEncryption) {
-      const { drizzle: drizzleLibsql } =
-        require('drizzle-orm/libsql') as typeof import('drizzle-orm/libsql');
-      const client = createSqldClient(sqldUrl(process.env), pluginNamespaceName(pluginId));
-      const pdb: PluginDb = { dialect: 'sqlite', db: drizzleLibsql(client) };
-      _registry.set(cacheKey, pdb);
-      return pdb;
-    }
-
-    const path = resolveSqlitePath(pluginSqliteUrl(pluginId));
-    mkdirSync(dirname(path), { recursive: true });
-    const envKey = dbEncryptionKeyFromEnv();
-    const key = resolvePluginEncryptionKey(
-      defaultDataDir(),
-      pluginId,
-      path,
-      envKey,
-      requiresEncryption,
-    );
-    const sqlite = openKeyedSqlite(path, key);
-    const pdb: PluginDb = { dialect: 'sqlite', db: drizzleSqlite(sqlite) };
+    const { drizzle: drizzleLibsql } =
+      require('drizzle-orm/libsql') as typeof import('drizzle-orm/libsql');
+    const client = createSqldClient(sqldUrl(process.env), pluginNamespaceName(pluginId));
+    const pdb: PluginDb = { dialect: 'sqlite', db: drizzleLibsql(client) };
     _registry.set(cacheKey, pdb);
     return pdb;
   }
@@ -171,23 +130,17 @@ export function getPluginDb(pluginId: string, requiresEncryption = false): Plugi
 
 /**
  * Provision the store for an isolated plugin:
- * - SQLite, `requiresEncryption`: the file is created lazily by `getPluginDb`,
- *   so this is a no-op — unchanged from before the carve-out.
- * - SQLite, not `requiresEncryption`: creates this plugin's sqld namespace
+ * - SQLite: creates this plugin's sqld namespace
  *   (`POST /v1/namespaces/<ns>/create`) so `getPluginDb` and migrations have
  *   somewhere to connect to.
  * - Postgres: runs `CREATE SCHEMA IF NOT EXISTS "plugin_<slug>"` so subsequent
  *   migrations and queries can use the schema.
  *
- * Safe to call multiple times (idempotent) in every branch.
+ * Safe to call multiple times (idempotent) in both branches.
  */
-export async function provisionPluginDb(
-  pluginId: string,
-  requiresEncryption = false,
-): Promise<void> {
+export async function provisionPluginDb(pluginId: string): Promise<void> {
   const resolved = resolveDialect(process.env);
   if (resolved.dialect === 'sqlite') {
-    if (requiresEncryption) return; // file created on first open
     await provisionSqldNamespace(sqldAdminUrl(process.env), pluginNamespaceName(pluginId));
     return;
   }
@@ -203,10 +156,9 @@ export async function provisionPluginDb(
 
 /**
  * Drop the entire store for an isolated plugin (called on uninstall/purge).
- * - SQLite, `requiresEncryption`: deletes the `.db`, `-wal`, and `-shm` files.
- * - SQLite, not `requiresEncryption`: closes the cached sqld client (if this
- *   process ever opened one, mirroring the Postgres pool cleanup below) and
- *   drops this plugin's sqld namespace (`DELETE /v1/namespaces/<ns>`).
+ * - SQLite: closes the cached sqld client (if this process ever opened one,
+ *   mirroring the Postgres pool cleanup below) and drops this plugin's sqld
+ *   namespace (`DELETE /v1/namespaces/<ns>`).
  * - Postgres: runs `DROP SCHEMA IF EXISTS "plugin_<slug>" CASCADE`.
  *
  * Evicts the client from the in-process registry so any subsequent call to
@@ -217,7 +169,7 @@ export async function provisionPluginDb(
  * node-postgres doesn't close sockets on GC), accumulating toward the
  * server's connection limit across repeated install/uninstall cycles.
  */
-export async function dropPluginDb(pluginId: string, requiresEncryption = false): Promise<void> {
+export async function dropPluginDb(pluginId: string): Promise<void> {
   const resolved = resolveDialect(process.env);
   const cachedSqlite = _registry.get(registryKey(pluginId, 'sqlite'));
   const cachedPostgres = _registry.get(registryKey(pluginId, 'postgres'));
@@ -225,25 +177,10 @@ export async function dropPluginDb(pluginId: string, requiresEncryption = false)
   _registry.delete(registryKey(pluginId, 'postgres'));
 
   if (resolved.dialect === 'sqlite') {
-    if (!requiresEncryption) {
-      // Any cached entry here was necessarily created by getPluginDb under
-      // this same !requiresEncryption condition, so it's the sqld-backed
-      // client — never the plain-file one.
-      if (cachedSqlite?.dialect === 'sqlite') {
-        cachedSqlite.db.$client.close();
-      }
-      await dropSqldNamespace(sqldAdminUrl(process.env), pluginNamespaceName(pluginId));
-      return;
+    if (cachedSqlite?.dialect === 'sqlite') {
+      cachedSqlite.db.$client.close();
     }
-
-    const path = resolveSqlitePath(pluginSqliteUrl(pluginId));
-    for (const suffix of ['', '-wal', '-shm']) {
-      try {
-        unlinkSync(path + suffix);
-      } catch {
-        // File may not exist (plugin never accessed the DB)
-      }
-    }
+    await dropSqldNamespace(sqldAdminUrl(process.env), pluginNamespaceName(pluginId));
     return;
   }
 

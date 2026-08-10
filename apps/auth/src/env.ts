@@ -29,8 +29,6 @@ function required(name: string): string {
 export interface AuthEnv {
   /** Shared signing secret. No default — the server refuses to start without it. */
   secret: string;
-  /** Auth database location. Defaults to a local SQLite file. */
-  databaseUrl: string;
   /** When true, registration requires a valid invite (first user exempt). */
   inviteOnly: boolean;
   /**
@@ -133,7 +131,6 @@ export function getEnv(): AuthEnv {
 
   cached ??= {
     secret: required('AUTH_SECRET'),
-    databaseUrl: process.env.AUTH_DATABASE_URL ?? 'file:./data/auth.db',
     inviteOnly: process.env.AUTH_INVITE_ONLY === 'true',
     requireEmailVerification: process.env.AUTH_REQUIRE_EMAIL_VERIFICATION !== 'false',
     // `||` (not `??`): Docker Compose interpolates an unset `${AUTH_BASE_URL}`

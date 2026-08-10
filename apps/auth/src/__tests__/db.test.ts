@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assertAuthDialectMatchesPlatform, sqliteParams, toPgPlaceholders } from '../db';
+import { sqliteParams, toPgPlaceholders } from '../db';
 
 describe('toPgPlaceholders', () => {
   it('rewrites ? to $1, $2, … in order', () => {
@@ -18,73 +18,11 @@ describe('toPgPlaceholders', () => {
 });
 
 describe('sqliteParams', () => {
-  it('maps booleans to 1/0 (better-sqlite3 cannot bind booleans)', () => {
+  it('maps booleans to 1/0 (sqld cannot bind booleans)', () => {
     expect(sqliteParams([true, false])).toEqual([1, 0]);
   });
 
   it('leaves non-boolean params untouched', () => {
     expect(sqliteParams(['x', 5, null, undefined])).toEqual(['x', 5, null, undefined]);
-  });
-});
-
-describe('assertAuthDialectMatchesPlatform', () => {
-  it('allows sqlite auth on a platform with no DB_DIALECT/DATABASE_URL set (both default to sqlite)', () => {
-    expect(() => assertAuthDialectMatchesPlatform('file:./data/auth.db', {})).not.toThrow();
-  });
-
-  it('allows postgres auth when DB_DIALECT=postgres', () => {
-    expect(() =>
-      assertAuthDialectMatchesPlatform('postgres://u:p@host/db', { DB_DIALECT: 'postgres' }),
-    ).not.toThrow();
-  });
-
-  it('allows postgres auth when DB_DIALECT is unset but DATABASE_URL infers postgres', () => {
-    expect(() =>
-      assertAuthDialectMatchesPlatform('postgres://u:p@host/auth', {
-        DATABASE_URL: 'postgres://u:p@host/sovereign',
-      }),
-    ).not.toThrow();
-  });
-
-  it('throws when the platform is postgres but AUTH_DATABASE_URL was left on the sqlite default', () => {
-    // The exact gap this exists to close: DB_DIALECT=postgres is set, but
-    // AUTH_DATABASE_URL was never pointed at Postgres, so it's still the
-    // sqlite default — this used to silently diverge.
-    expect(() =>
-      assertAuthDialectMatchesPlatform('file:./data/auth.db', { DB_DIALECT: 'postgres' }),
-    ).toThrow(/Dialect mismatch/);
-  });
-
-  it('throws when the platform is sqlite (default) but AUTH_DATABASE_URL points at postgres', () => {
-    expect(() => assertAuthDialectMatchesPlatform('postgres://u:p@host/db', {})).toThrow(
-      /Dialect mismatch/,
-    );
-  });
-
-  it('never throws for :memory: regardless of the platform dialect', () => {
-    expect(() =>
-      assertAuthDialectMatchesPlatform(':memory:', { DB_DIALECT: 'postgres' }),
-    ).not.toThrow();
-  });
-});
-
-describe('provisionAuthSqldNamespace', () => {
-  it('is a no-op for :memory: even with no encryption key set (regression)', async () => {
-    // Found empirically: this used to have no ':memory:' carve-out (unlike
-    // getAuthDb() and assertAuthDialectMatchesPlatform, which both already
-    // had one), so a plain ':memory:' AUTH_DATABASE_URL with no
-    // SOVEREIGN_DB_ENCRYPTION_KEY fell through to the sqld branch and threw
-    // "getaddrinfo ENOTFOUND sqld" outside Docker's network — reproduced
-    // calling runAuthMigrations() against a throwaway ':memory:' instance,
-    // the exact scenario builtin-oauth-clients.test.ts now exercises for
-    // real. No existing test caught this: db.pg.test.ts only exercises the
-    // (early-returning) postgres branch.
-    process.env.AUTH_DATABASE_URL = ':memory:';
-    process.env.AUTH_SECRET ??= 'test-secret-test-secret-test-secret';
-    process.env.SOVEREIGN_ADMIN_KEY ??= 'test-admin-key';
-    delete process.env.SOVEREIGN_DB_ENCRYPTION_KEY;
-
-    const { provisionAuthSqldNamespace } = await import('../db');
-    await expect(provisionAuthSqldNamespace()).resolves.toBeUndefined();
   });
 });

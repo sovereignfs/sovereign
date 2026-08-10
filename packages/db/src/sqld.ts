@@ -4,13 +4,11 @@ import type { Client } from '@libsql/client';
 /**
  * sqld (libSQL server) connectivity — workstream 0009 leg 3, RFC 0091.
  *
- * Deliberately independent of `dialect.ts`'s `DB_DIALECT`/`DATABASE_URL`:
- * the RFC 0091 encryption carve-out means a single process can have *both*
- * plain-file SQLite (encrypted databases) and sqld-backed SQLite (everything
- * else) open at once, so one pair of env vars can't serve both. `DB_DIALECT`
- * stays exactly `'sqlite' | 'postgres'` — no third literal — and these vars
- * only matter for the parts of the `'sqlite'` dialect the carve-out routes to
- * sqld.
+ * Every SQLite-dialect database (platform, auth, every plugin) is sqld-backed
+ * — no plain-file fallback. `SQLD_URL`/`SQLD_ADMIN_URL` are their own env
+ * vars, separate from `dialect.ts`'s `DB_DIALECT`/`POSTGRES_DB_URL`, since
+ * they're meaningful only on the `'sqlite'` branch and have sensible Docker
+ * Compose defaults of their own.
  *
  * `@libsql/client` is required lazily (via `require`, not a top-level
  * `import`) — found the hard way in production: `runtime/instrumentation.ts`
@@ -28,8 +26,14 @@ import type { Client } from '@libsql/client';
 
 const require = createRequire(import.meta.url);
 
-const DEFAULT_SQLD_URL = 'http://sqld:8080';
-const DEFAULT_SQLD_ADMIN_URL = 'http://sqld:8081';
+// Defaults target native dev (scripts/ensure-sqld.ts starts sqld on these
+// localhost ports — 28080/28081, not sqld's own internal 8080/8081, since
+// 8080 is a commonly-squatted local dev port on a real developer machine).
+// Docker Compose deployments don't rely on this default — docker-compose.yml
+// /prod.yml set SQLD_URL/SQLD_ADMIN_URL to the internal service hostname
+// (http://sqld:8080/8081) explicitly.
+const DEFAULT_SQLD_URL = 'http://localhost:28080';
+const DEFAULT_SQLD_ADMIN_URL = 'http://localhost:28081';
 
 /** The sqld client-facing HTTP endpoint (Hrana-over-HTTP). */
 export function sqldUrl(env: NodeJS.ProcessEnv = process.env): string {

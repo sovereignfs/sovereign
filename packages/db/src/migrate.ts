@@ -55,15 +55,30 @@ export function migrationsFolder(dialect: 'sqlite' | 'postgres'): string {
  *   provides the same guarantee without an explicit lock.
  * - Backward-compatible: migration SQL uses `IF NOT EXISTS` throughout, so
  *   instances bootstrapped before migrations were introduced are safe to upgrade.
+ *
+ * `migrationsTable` defaults to drizzle's own default (`__drizzle_migrations`,
+ * on Postgres always in a fixed `drizzle` schema regardless of search_path —
+ * see `runPluginMigrations`'s doc comment for the collision this can cause
+ * between two independent stores sharing that one table). The platform only
+ * ever calls this once per process against one real database in production,
+ * so the default is fine there; the override exists for tests that
+ * legitimately call this repeatedly against different throwaway schemas in
+ * one process and need each call's tracking state kept independent.
  */
-export async function runMigrations(pdb: PlatformDb): Promise<MigrationResult> {
+export async function runMigrations(
+  pdb: PlatformDb,
+  migrationsTable?: string,
+): Promise<MigrationResult> {
   const folder = migrationsFolder(pdb.dialect);
 
   if (pdb.dialect === 'sqlite') {
     if (isLibsqlDb(pdb.db)) {
-      await migrateLibsql(pdb.db, { migrationsFolder: folder });
+      await migrateLibsql(pdb.db, { migrationsFolder: folder, migrationsTable });
     } else {
-      migrateSqlite(pdb.db as Parameters<typeof migrateSqlite>[0], { migrationsFolder: folder });
+      migrateSqlite(pdb.db as Parameters<typeof migrateSqlite>[0], {
+        migrationsFolder: folder,
+        migrationsTable,
+      });
     }
     return seedPlatformData(pdb);
   }
@@ -73,7 +88,7 @@ export async function runMigrations(pdb: PlatformDb): Promise<MigrationResult> {
   const LOCK_KEY = 3141592653; // arbitrary stable integer
   await dbGet(pdb, sql`SELECT pg_advisory_lock(${LOCK_KEY})`);
   try {
-    await migratePg(pdb.db, { migrationsFolder: folder });
+    await migratePg(pdb.db, { migrationsFolder: folder, migrationsTable });
     return seedPlatformData(pdb);
   } finally {
     await dbGet(pdb, sql`SELECT pg_advisory_unlock(${LOCK_KEY})`);

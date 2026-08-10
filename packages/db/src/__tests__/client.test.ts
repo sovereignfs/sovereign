@@ -1,7 +1,5 @@
-import { isAbsolute, resolve } from 'node:path';
-import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { createClient, pgSslMode, resolveSqlitePath } from '../client';
+import { createClient, pgSslMode } from '../client';
 
 describe('pgSslMode', () => {
   it('returns null when sslmode is absent or disabled', () => {
@@ -24,41 +22,33 @@ describe('pgSslMode', () => {
   });
 });
 
-describe('resolveSqlitePath', () => {
-  it('passes :memory: through untouched', () => {
-    expect(resolveSqlitePath(':memory:')).toBe(':memory:');
-  });
-
-  it('passes absolute paths through untouched', () => {
-    expect(resolveSqlitePath('/tmp/x.db')).toBe('/tmp/x.db');
-    expect(resolveSqlitePath('file:/tmp/x.db')).toBe('/tmp/x.db');
-  });
-
-  it('resolves relative paths against the workspace root, not the cwd', () => {
-    // Vitest runs from the repo root, which is the workspace root.
-    const expected = resolve(process.cwd(), 'data/sovereign.db');
-    expect(resolveSqlitePath('file:./data/sovereign.db')).toBe(expected);
-    expect(resolveSqlitePath('./data/sovereign.db')).toBe(expected);
-  });
-
-  it('always returns an absolute path for file-backed databases', () => {
-    expect(isAbsolute(resolveSqlitePath('file:./anywhere.db'))).toBe(true);
-  });
-});
-
 describe('createClient', () => {
-  it('opens an in-memory SQLite database with pragmas and tags the dialect', async () => {
-    const client = createClient({ url: ':memory:' });
-    expect(client.dialect).toBe('sqlite');
-    if (client.dialect !== 'sqlite') throw new Error('expected sqlite');
-    const row = await client.db.get<{ foreign_keys: number }>(sql`PRAGMA foreign_keys`);
-    expect(row?.foreign_keys).toBe(1);
-  });
-
   it('constructs a Postgres client (lazy pool) without connecting', () => {
     // node-postgres connects lazily, so building the client must not throw even
     // with an unreachable host — the first query would be what connects.
     const client = createClient({ dialect: 'postgres', url: 'postgres://u:p@127.0.0.1:1/db' });
     expect(client.dialect).toBe('postgres');
+  });
+
+  it('throws when DB_DIALECT is unset and no override is given', () => {
+    const originalDialect = process.env.DB_DIALECT;
+    delete process.env.DB_DIALECT;
+    try {
+      expect(() => createClient()).toThrow(/DB_DIALECT is required/);
+    } finally {
+      if (originalDialect !== undefined) process.env.DB_DIALECT = originalDialect;
+    }
+  });
+});
+
+describe('createClient — sqlite (sqld)', () => {
+  it('tags the dialect as sqlite and issues queries through the sqld client', async () => {
+    // sqld itself is not reachable in this unit test — only asserting the
+    // client is shaped correctly (dialect tag, lazy libsql wiring). Live
+    // sqld behavior is covered by the Docker-gated integration paths.
+    const client = createClient({ dialect: 'sqlite' });
+    expect(client.dialect).toBe('sqlite');
+    if (client.dialect !== 'sqlite') throw new Error('expected sqlite');
+    expect(typeof client.db.get).toBe('function');
   });
 });

@@ -1,38 +1,34 @@
 export type Dialect = 'sqlite' | 'postgres';
 
-export interface ResolvedDialect {
-  dialect: Dialect;
-  url: string;
-}
+export type ResolvedDialect = { dialect: 'postgres'; url: string } | { dialect: 'sqlite' };
 
 /**
- * Default connection when nothing is configured: a local SQLite file. This is a
- * convenience default for zero-config self-hosting, not a secret — secrets such
- * as AUTH_SECRET have no defaults and throw when unset (see SRS NFR).
- */
-const DEFAULT_SQLITE_URL = 'file:./data/sovereign.db';
-
-function isPostgresUrl(url: string): boolean {
-  return url.startsWith('postgres://') || url.startsWith('postgresql://');
-}
-
-/**
- * Resolve the database dialect and connection URL from the environment.
+ * Resolve the database dialect from the environment. `DB_DIALECT` is the
+ * **sole** source of truth — mandatory, no inference, no default. Postgres
+ * additionally requires `POSTGRES_DB_URL`; SQLite needs nothing here (it's
+ * always sqld-backed — see `sqld.ts`'s `SQLD_URL`/`SQLD_ADMIN_URL`, resolved
+ * independently).
  *
- * - `DB_DIALECT` (`sqlite` | `postgres`) is authoritative when set.
- * - Otherwise the dialect is inferred from `DATABASE_URL` (a `postgres(ql)://`
- *   URL → postgres), defaulting to SQLite.
+ * Previously the dialect could be inferred from `DATABASE_URL`'s scheme, and
+ * SQLite could fall back to a plain on-disk file. Both are retired: every
+ * deployment must now say explicitly which dialect it runs, and SQLite has no
+ * file-based fallback left to infer toward.
  */
 export function resolveDialect(env: NodeJS.ProcessEnv = process.env): ResolvedDialect {
   const explicit = env.DB_DIALECT?.toLowerCase();
-  const url = env.DATABASE_URL ?? DEFAULT_SQLITE_URL;
-
-  if (explicit === 'sqlite' || explicit === 'postgres') {
-    return { dialect: explicit, url };
+  if (explicit !== 'sqlite' && explicit !== 'postgres') {
+    throw new Error(
+      `DB_DIALECT is required and must be "sqlite" or "postgres" (got ${
+        explicit === undefined || explicit.length === 0 ? 'unset' : `"${explicit}"`
+      }).`,
+    );
   }
-  if (explicit !== undefined && explicit.length > 0) {
-    throw new Error(`Invalid DB_DIALECT "${explicit}". Expected "sqlite" or "postgres".`);
-  }
 
-  return { dialect: isPostgresUrl(url) ? 'postgres' : 'sqlite', url };
+  if (explicit === 'sqlite') return { dialect: 'sqlite' };
+
+  const url = env.POSTGRES_DB_URL;
+  if (!url) {
+    throw new Error('DB_DIALECT=postgres requires POSTGRES_DB_URL to be set.');
+  }
+  return { dialect: 'postgres', url };
 }

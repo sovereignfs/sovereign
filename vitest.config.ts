@@ -2,6 +2,10 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    // Pre-creates the `drizzle` schema once, before any test file starts —
+    // see the file's own doc comment for the concurrent-CREATE-SCHEMA race
+    // this avoids. No-ops entirely when TEST_DATABASE_URL is unset.
+    globalSetup: ['./packages/db/src/__tests__/global-setup.pg.ts'],
     exclude: [
       '**/node_modules/**',
       '**/.next/**',

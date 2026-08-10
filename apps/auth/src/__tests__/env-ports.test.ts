@@ -7,7 +7,6 @@ beforeEach(() => {
   process.env = { ...ORIGINAL_ENV };
   process.env.AUTH_SECRET = 'test-secret';
   process.env.SOVEREIGN_ADMIN_KEY = 'test-admin-key';
-  process.env.AUTH_DATABASE_URL = ':memory:';
   process.env.AUTH_PORT = '5003';
   process.env.RUNTIME_PORT = '5002';
   Reflect.deleteProperty(process.env, 'AUTH_BASE_URL');

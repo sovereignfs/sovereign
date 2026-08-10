@@ -34,7 +34,7 @@ describe.skipIf(!PG_URL)('platform-db on Postgres', () => {
   let pdb: PlatformDb;
 
   beforeAll(async () => {
-    pdb = createClient({ url: PG_URL });
+    pdb = createClient({ dialect: 'postgres', url: PG_URL });
     // Clean slate — the platform tables only (auth tables live elsewhere).
     for (const table of ['account_prefs', 'platform_settings', 'plugin_status', 'tenants']) {
       await dbRun(pdb, sql.raw(`DROP TABLE IF EXISTS ${table} CASCADE`));

@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { createClient } from '../client';
+import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import * as pgSchema from '../schema/postgres';
 import {
   DEFAULT_TENANT_ID,
   DEFAULT_ROOT_PLUGIN_ID,
@@ -93,8 +95,43 @@ import {
   type PlatformDb,
 } from '../platform-db';
 
+/**
+ * Live-Postgres coverage for the platform data layer. Skipped unless
+ * TEST_DATABASE_URL points at a Postgres instance, so the default `pnpm test`
+ * stays Docker-free — same convention as every other `.pg.test.ts` in this
+ * package. This file used to run against `:memory:` SQLite (free, instant),
+ * but that fallback no longer exists — SQLite is sqld-backed only now, and
+ * sqld itself requires a live server just like Postgres does, so there is no
+ * more "free" dialect for dialect-agnostic logic like this to run against by
+ * default. Genuinely SQLite/sqld-specific behavior has its own coverage
+ * elsewhere (e.g. sqld-cutover.test.ts); this suite exercises the
+ * dialect-agnostic platform-db.ts logic itself, which is just as validly
+ * proven against Postgres.
+ *
+ *   TEST_DATABASE_URL=postgres://user:pass@localhost:5432/db pnpm test
+ */
+const PG_URL = process.env.TEST_DATABASE_URL;
+
+let adminPool: Pool;
+let schemaCounter = 0;
+
+beforeAll(() => {
+  if (!PG_URL) return;
+  adminPool = new Pool({ connectionString: PG_URL });
+});
+
+afterAll(async () => {
+  if (adminPool) await adminPool.end();
+});
+
+/** A genuinely fresh, empty, isolated Postgres schema per call — the Postgres
+ *  analogue of the old `:memory:` SQLite instance's per-call isolation. */
 async function freshDb(): Promise<PlatformDb> {
-  const db = createClient({ url: ':memory:' });
+  const schema = `test_platform_db_${schemaCounter++}`;
+  await adminPool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+  await adminPool.query(`CREATE SCHEMA "${schema}"`);
+  const pool = new Pool({ connectionString: PG_URL, options: `-c search_path="${schema}"` });
+  const db: PlatformDb = { dialect: 'postgres', db: drizzlePg(pool, { schema: pgSchema }) };
   await bootstrapPlatformDb(db);
   return db;
 }
@@ -107,7 +144,7 @@ function restoreEnv(name: string, value: string | undefined): void {
   }
 }
 
-describe('bootstrapPlatformDb', () => {
+describe.skipIf(!PG_URL)('bootstrapPlatformDb', () => {
   it('seeds the default tenant', async () => {
     const tenant = await getDefaultTenant(await freshDb());
     expect(tenant.name).toBe('Sovereign');
@@ -131,7 +168,7 @@ describe('bootstrapPlatformDb', () => {
   });
 });
 
-describe('platform settings helpers', () => {
+describe.skipIf(!PG_URL)('platform settings helpers', () => {
   it('returns null for an unset key', async () => {
     expect(await getPlatformSetting(await freshDb(), 'no_such_key')).toBeNull();
   });
@@ -150,7 +187,7 @@ describe('platform settings helpers', () => {
   });
 });
 
-describe('tenant helpers', () => {
+describe.skipIf(!PG_URL)('tenant helpers', () => {
   it('renames the default tenant', async () => {
     const db = await freshDb();
     await setTenantName(db, 'My Workspace');
@@ -158,7 +195,7 @@ describe('tenant helpers', () => {
   });
 });
 
-describe('instance config helpers', () => {
+describe.skipIf(!PG_URL)('instance config helpers', () => {
   it('treats blank INSTANCE_NAME as unset', async () => {
     const previous = process.env.INSTANCE_NAME;
     process.env.INSTANCE_NAME = '';
@@ -248,7 +285,7 @@ describe('instance config helpers', () => {
   });
 });
 
-describe('account preferences helpers', () => {
+describe.skipIf(!PG_URL)('account preferences helpers', () => {
   it('returns UTC + system defaults when no row exists', async () => {
     expect(await getAccountPrefs(await freshDb(), 'u1')).toEqual({
       timezone: 'UTC',
@@ -335,7 +372,7 @@ describe('account preferences helpers', () => {
   });
 });
 
-describe('activity log helpers (RFC 0005)', () => {
+describe.skipIf(!PG_URL)('activity log helpers (RFC 0005)', () => {
   it('recordActivity inserts a row readable by listAdminActivity', async () => {
     const db = await freshDb();
     await recordActivity(db, {
@@ -536,7 +573,7 @@ describe('activity log helpers (RFC 0005)', () => {
   });
 });
 
-describe('plugin secret vault helpers (RFC 0043)', () => {
+describe.skipIf(!PG_URL)('plugin secret vault helpers (RFC 0043)', () => {
   it('keeps plugin and user scopes isolated and hides soft-deleted rows', async () => {
     const db = await freshDb();
     const context = { tenantId: DEFAULT_TENANT_ID, pluginId: 'com.example.notes', userId: 'u1' };
@@ -607,7 +644,7 @@ describe('plugin secret vault helpers (RFC 0043)', () => {
   });
 });
 
-describe('plugin storage object helpers (RFC 0044)', () => {
+describe.skipIf(!PG_URL)('plugin storage object helpers (RFC 0044)', () => {
   it('scopes reads by tenant/plugin/owner and hides objects from other plugins/users', async () => {
     const db = await freshDb();
     const context = { tenantId: DEFAULT_TENANT_ID, pluginId: 'com.example.notes', userId: 'u1' };
@@ -745,7 +782,7 @@ describe('plugin storage object helpers (RFC 0044)', () => {
   });
 });
 
-describe('client-side encryption profile helpers (RFC 0060)', () => {
+describe.skipIf(!PG_URL)('client-side encryption profile helpers (RFC 0060)', () => {
   it('creates and reads a profile scoped by tenant/user', async () => {
     const db = await freshDb();
     const created = await createE2eeProfile(db, {
@@ -877,7 +914,7 @@ describe('client-side encryption profile helpers (RFC 0060)', () => {
   });
 });
 
-describe('plugin external connection helpers (RFC 0049)', () => {
+describe.skipIf(!PG_URL)('plugin external connection helpers (RFC 0049)', () => {
   it('keeps connection metadata plugin/user scoped and disconnects linked secrets', async () => {
     const db = await freshDb();
     const context = { tenantId: DEFAULT_TENANT_ID, pluginId: 'com.example.notes', userId: 'u1' };
@@ -969,7 +1006,7 @@ describe('plugin external connection helpers (RFC 0049)', () => {
   });
 });
 
-describe('plugin external provider config helpers', () => {
+describe.skipIf(!PG_URL)('plugin external provider config helpers', () => {
   it('stores instance-level provider config metadata and deletes linked vault secrets', async () => {
     const db = await freshDb();
     await createPluginSecret(db, {
@@ -1030,7 +1067,7 @@ describe('plugin external provider config helpers', () => {
   });
 });
 
-describe('plugin status helpers', () => {
+describe.skipIf(!PG_URL)('plugin status helpers', () => {
   it('returns no status rows on a fresh database (absence = enabled)', async () => {
     expect(await listPluginStatus(await freshDb())).toEqual([]);
     expect(await listDisabledPluginIds(await freshDb())).toEqual([]);
@@ -1051,7 +1088,7 @@ describe('plugin status helpers', () => {
   });
 });
 
-describe('user group helpers (RFC 0065)', () => {
+describe.skipIf(!PG_URL)('user group helpers (RFC 0065)', () => {
   it('creates, reads, updates, and deletes a group', async () => {
     const db = await freshDb();
     await createUserGroup(db, 'grp_1', 'Finance', 'finance', 'Finance team', 'admin_1');
@@ -1137,7 +1174,7 @@ describe('user group helpers (RFC 0065)', () => {
   });
 });
 
-describe('user capability grant helpers (RFC 0070)', () => {
+describe.skipIf(!PG_URL)('user capability grant helpers (RFC 0070)', () => {
   it('grants and lists a capability idempotently', async () => {
     const db = await freshDb();
     await grantUserCapability(db, 'user_1', 'plugins:self-manage', 'admin_1');
@@ -1184,7 +1221,7 @@ describe('user capability grant helpers (RFC 0070)', () => {
   });
 });
 
-describe('device consent grant helpers (RFC 0083, workstream 0003 leg 2)', () => {
+describe.skipIf(!PG_URL)('device consent grant helpers (RFC 0083, workstream 0003 leg 2)', () => {
   it('grants and lists a device consent idempotently, refreshing grantedAt on re-grant', async () => {
     const db = await freshDb();
     await grantDeviceConsent(db, 'user_1', 'fs.example.tally', 'notifications.native');
@@ -1228,7 +1265,7 @@ describe('device consent grant helpers (RFC 0083, workstream 0003 leg 2)', () =>
   });
 });
 
-describe('push device token helpers (RFC 0087, workstream 0005 leg 1)', () => {
+describe.skipIf(!PG_URL)('push device token helpers (RFC 0087, workstream 0005 leg 1)', () => {
   it('registers a device token and lists it for the owning user', async () => {
     const db = await freshDb();
     await savePushDeviceToken(db, {
@@ -1364,7 +1401,7 @@ describe('push device token helpers (RFC 0087, workstream 0005 leg 1)', () => {
   });
 });
 
-describe('plugin access policy helpers (RFC 0065)', () => {
+describe.skipIf(!PG_URL)('plugin access policy helpers (RFC 0065)', () => {
   it('returns undefined for a plugin with no explicit row', async () => {
     const db = await freshDb();
     expect(await getPluginAccessPolicy(db, 'fs.example.tasks')).toBeUndefined();
@@ -1406,7 +1443,7 @@ describe('plugin access policy helpers (RFC 0065)', () => {
   });
 });
 
-describe('createPluginStatusRowIfAbsent (RFC 0065 Task 3.28)', () => {
+describe.skipIf(!PG_URL)('createPluginStatusRowIfAbsent (RFC 0065 Task 3.28)', () => {
   it('creates a row and returns true when none exists', async () => {
     const db = await freshDb();
     const inserted = await createPluginStatusRowIfAbsent(db, 'fs.example.tasks', {
@@ -1461,7 +1498,7 @@ describe('createPluginStatusRowIfAbsent (RFC 0065 Task 3.28)', () => {
   });
 });
 
-describe('plugin access grant helpers (RFC 0065)', () => {
+describe.skipIf(!PG_URL)('plugin access grant helpers (RFC 0065)', () => {
   it('grants and checks a direct user grant idempotently', async () => {
     const db = await freshDb();
     expect(await hasPluginAccessUserGrant(db, 'fs.example.tasks', 'user_1')).toBe(false);

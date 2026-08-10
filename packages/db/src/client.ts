@@ -1,7 +1,6 @@
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
-import { type BetterSQLite3Database, drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
+import { dirname, join } from 'node:path';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { type NodePgDatabase, drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
@@ -10,12 +9,6 @@ import { type Dialect, resolveDialect } from './dialect';
 import * as pgSchema from './schema/postgres';
 import * as sqliteSchema from './schema/sqlite';
 import { createSqldClient, sqldUrl } from './sqld';
-import {
-  checkEncryptionMarker,
-  dbEncryptionKeyFromEnv,
-  defaultDataDir,
-  openKeyedSqlite,
-} from './sqlite-encryption';
 
 // `drizzle-orm/libsql`'s own entry point statically imports `@libsql/client`
 // (its driver.js does `import { createClient } from "@libsql/client"` at top
@@ -28,100 +21,53 @@ const require = createRequire(import.meta.url);
 export interface DbConfig {
   /** Override the resolved dialect. Defaults to the environment resolution. */
   dialect?: Dialect;
-  /** Override the connection URL. Defaults to the environment resolution. */
+  /** Postgres only: override the connection URL. Defaults to POSTGRES_DB_URL. */
   url?: string;
+  /** SQLite only: override the sqld namespace. Defaults to sqld's own default namespace. */
+  namespace?: string;
 }
 
 /**
  * A dialect-tagged platform database client. The `dialect` tag drives portable
- * execution (see ./exec) so the same query runs on SQLite (better-sqlite3
- * synchronous, or libsql/sqld async under the RFC 0071 encryption carve-out —
- * see `createClient` below) and Postgres (node-postgres, async). All three
- * expose the same logical schema (see ./schema/{sqlite,postgres}).
+ * execution (see ./exec) so the same query runs on SQLite (libsql/sqld, async)
+ * and Postgres (node-postgres, async). Both expose the same logical schema
+ * (see ./schema/{sqlite,postgres}).
  */
 export type PlatformDb =
-  | {
-      dialect: 'sqlite';
-      db: BetterSQLite3Database<typeof sqliteSchema> | LibSQLDatabase<typeof sqliteSchema>;
-    }
+  | { dialect: 'sqlite'; db: LibSQLDatabase<typeof sqliteSchema> }
   | { dialect: 'postgres'; db: NodePgDatabase<typeof pgSchema> };
 
 /**
  * A single-class view of `PlatformDb`/`PluginDb`'s sqlite branch, for call
- * sites that invoke overloaded Drizzle query-builder methods (`.select()`
- * with a column projection, etc.) directly against `.db`. TypeScript does not
- * correctly resolve overloaded methods across a union of two classes
- * (`BetterSQLite3Database | LibSQLDatabase`) even though both share this
- * common base and behave identically for query *construction* — only the
- * `resultKind` (`'sync'`/`'async'`) differs, and `await` already handles that
- * uniformly at the call site. Cast to this type immediately before the call,
- * not stored — it erases the sync/async distinction `await` still needs.
+ * sites that invoke overloaded Drizzle query-builder methods directly against
+ * `.db`. Kept even though there is now only one concrete SQLite backend
+ * (libsql) — some call sites still branch on dialect before calling
+ * `.transaction()`/etc., and casting through this shared base type keeps that
+ * working uniformly regardless of which concrete class is behind it.
  */
-export type SqliteDb = BaseSQLiteDatabase<'sync' | 'async', unknown, typeof sqliteSchema>;
+export type SqliteDb = BaseSQLiteDatabase<'async', unknown, typeof sqliteSchema>;
 
 /**
- * Create a Drizzle client for the configured dialect. Postgres opens a
- * node-postgres connection pool. SQLite opens one of two backends depending
- * on the RFC 0071 encryption carve-out (RFC 0091):
- *
- * - `SOVEREIGN_DB_ENCRYPTION_KEY` set → plain-file `better-sqlite3` (WAL,
- *   foreign keys on), unchanged from before workstream 0009 — RFC 0071's
- *   guarantee has no equivalent in sqld today (RFC 0091), so an encrypted
- *   instance stays here regardless of the dialect migration.
- * - No key configured → sqld (libSQL server), the platform DB's default
- *   sqld namespace. No admin-API provisioning needed for this one namespace
- *   (unlike every named plugin namespace in `plugin-client.ts`) — sqld
- *   creates its own default namespace itself.
+ * Create a Drizzle client for the configured dialect. SQLite is always
+ * sqld-backed (libSQL server) — no plain-file fallback, no at-rest encryption
+ * carve-out (that's deferred; see the platform's own tracking for the
+ * follow-up). Postgres opens a node-postgres connection pool against
+ * `POSTGRES_DB_URL`.
  *
  * The dialect is resolved from the environment unless overridden via `config`.
- *
- * **Known gap, not yet handled by this leg:** enabling encryption on an
- * instance that has been running unencrypted (and therefore on sqld) does
- * not migrate that data. `checkEncryptionMarker`'s "fresh instance" fast path
- * only checks for local `sovereign.db`/`auth.db` *files* — an sqld-backed
- * instance has none, so it looks identical to a genuinely empty instance and
- * silently opens a brand-new, empty encrypted file, orphaning the real data
- * sitting in sqld's default namespace with no error. The reverse direction
- * (leg 4's plain-file → sqld cutover) is a documented, deliberate one-time
- * migration; this direction has no equivalent tool yet. Needs one before this
- * is safe to document as a supported operator flow.
  */
 export function createClient(config: DbConfig = {}): PlatformDb {
   const resolved = resolveDialect({
     ...process.env,
     ...(config.dialect ? { DB_DIALECT: config.dialect } : {}),
-    ...(config.url ? { DATABASE_URL: config.url } : {}),
+    ...(config.dialect === 'postgres' && config.url ? { POSTGRES_DB_URL: config.url } : {}),
   });
 
   if (resolved.dialect === 'sqlite') {
-    const key = dbEncryptionKeyFromEnv();
-    const path = resolveSqlitePath(resolved.url);
-
-    // :memory: (test-only, via an explicit config.url override — never the
-    // env-resolved default) never goes to sqld: there's no real data to
-    // protect or migrate, and sqld has no equivalent of "ephemeral, isolated
-    // per test process". Falls straight through to the plain-file branch,
-    // which already handles :memory: (openKeyedSqlite, no mkdirSync).
-    if (path !== ':memory:') {
-      // Runs regardless of which branch below is taken — including the sqld
-      // one. This is what catches "this instance's data was encrypted, but
-      // the key is now missing" and refuses to proceed; skipping it in the
-      // sqld branch would let that exact misconfiguration silently open an
-      // empty sqld namespace instead of failing loudly.
-      checkEncryptionMarker(defaultDataDir(), key !== undefined);
-
-      if (key === undefined) {
-        const { drizzle: drizzleLibsql } =
-          require('drizzle-orm/libsql') as typeof import('drizzle-orm/libsql');
-        const client = createSqldClient(sqldUrl(process.env));
-        return { dialect: 'sqlite', db: drizzleLibsql(client, { schema: sqliteSchema }) };
-      }
-
-      mkdirSync(dirname(path), { recursive: true });
-    }
-
-    const sqlite = openKeyedSqlite(path, key);
-    return { dialect: 'sqlite', db: drizzleSqlite(sqlite, { schema: sqliteSchema }) };
+    const { drizzle: drizzleLibsql } =
+      require('drizzle-orm/libsql') as typeof import('drizzle-orm/libsql');
+    const client = createSqldClient(sqldUrl(process.env), config.namespace);
+    return { dialect: 'sqlite', db: drizzleLibsql(client, { schema: sqliteSchema }) };
   }
 
   // node-postgres: the pool connects lazily, so constructing it never blocks or
@@ -161,20 +107,6 @@ function pgSsl(url: string): false | { rejectUnauthorized: boolean; ca?: string 
   const caPath = process.env.PGSSLROOTCERT;
   const ca = caPath ? readFileSync(caPath, 'utf8') : undefined;
   return { rejectUnauthorized: mode === 'verify', ...(ca ? { ca } : {}) };
-}
-
-/**
- * Convert a `file:` URL to a filesystem path. Relative paths resolve against
- * the workspace root (nearest ancestor with pnpm-workspace.yaml), not the
- * process cwd — apps run from their own package directories (runtime/,
- * apps/auth/), and all SQLite files should land in the single root-level
- * data/ directory. Falls back to cwd outside a workspace (standalone builds).
- */
-export function resolveSqlitePath(url: string): string {
-  if (url === ':memory:') return url;
-  const path = url.startsWith('file:') ? url.slice('file:'.length) : url;
-  if (isAbsolute(path)) return path;
-  return resolve(findWorkspaceRoot(), path);
 }
 
 /**

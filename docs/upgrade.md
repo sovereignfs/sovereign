@@ -1093,68 +1093,84 @@ The section headings above correspond to these runtime version transitions.
 `SOVEREIGN_VERSION` in Compose files should match the runtime version for
 the release you are running.
 
-| Runtime version | Key capability delivered                                                                                             |
-| --------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 0.2.0           | Platform DB (tenant_settings, root plugin config), Console settings                                                  |
-| 0.3.0           | Launcher plugin, root-plugin-in-place rewrite                                                                        |
-| 0.4.0           | Account plugin (profile + preferences)                                                                               |
-| 0.5.0           | Plugin install script, PWA configuration                                                                             |
-| 0.6.0           | Local session verification (cookie-cache, AUTH-05)                                                                   |
-| 0.7.0           | Public `/api` namespace delegation (PLT-16)                                                                          |
-| 0.8.0–0.9.1     | Overlay shell mode (RFC 0001), Dialog UI primitive                                                                   |
-| 0.9.0           | Logout / self sign-out (AUTH-02)                                                                                     |
-| 0.10.0          | Security hardening Tier 0 + Tier 1 (RFC 0008)                                                                        |
-| 0.11.0          | SDK distribution (RFC 0023), zero-dep published SDK                                                                  |
-| 0.12.0          | Plugin compatibility & versioning (RFC 0024)                                                                         |
-| 0.13.0          | Cross-plugin data sharing (RFC 0002)                                                                                 |
-| 0.14.0–0.14.1   | Activity log (RFC 0005), icon system (RFC 0011)                                                                      |
-| 0.15.0          | Drizzle-kit migrations, `sv backup`/`restore`, downgrade guard (RFC 0006)                                            |
-| 0.16.0          | User data portability (RFC 0007)                                                                                     |
-| 0.17.0          | Plugin-scoped env vars (RFC 0018)                                                                                    |
-| 0.18.0          | Minimal shell mode (RFC 0014)                                                                                        |
-| 0.19.0          | Mobile responsiveness & PWA hardening (RFC 0013)                                                                     |
-| 0.20.0          | Passkeys & TOTP MFA (RFC 0012), offline connectivity banner                                                          |
-| 0.21.0          | Platform roles & capabilities (RFC 0021)                                                                             |
-| 0.22.0          | Notification Center (RFC 0015)                                                                                       |
-| 0.23.0          | Web Push notifications (RFC 0016)                                                                                    |
-| 0.25.0–0.25.1   | Plugin monetization (RFC 0003), license generator, entitlements                                                      |
-| 0.26.0          | Per-plugin isolated database (RFC 0004)                                                                              |
-| 0.27.0          | Production dev-mode & diagnostics (RFC 0020)                                                                         |
-| 0.28.0          | White-labeling Phase 1 (RFC 0027)                                                                                    |
-| 0.29.0          | Instance identity rename (RFC 0032)                                                                                  |
-| 0.30.0          | User data deletion (RFC 0033)                                                                                        |
-| 0.31.0          | Notification transport (RFC 0034)                                                                                    |
-| 0.32.0          | Sidebar customization (epic task 2.13)                                                                               |
-| 0.33.0          | Instance identity — `instanceId` field + terminology cleanup (RFC 0039)                                              |
-| 0.34.0          | Platform/runtime version reconciliation chore (RFC 0057 plan status fix)                                             |
-| 0.35.0          | iOS PWA launch screens (`apple-touch-startup-image`)                                                                 |
-| 0.36.0          | Admin disable surface for example plugins (epic task 12.3)                                                           |
-| 0.37.0          | Account and security email delivery coverage (RFC 0062, epic task 1.14)                                              |
-| 0.38.0          | Plugin background schedules — Phase 1 (RFC 0046)                                                                     |
-| 0.39.0          | Plugin file storage — `sdk.storage` (RFC 0044)                                                                       |
-| 0.40.0–0.40.1   | Client-side encryption core, steps 1–5 — `sdk.e2ee`, Account UX, object crypto, `sdk.storage` integration (RFC 0060) |
-| 0.41.0          | Client-side encryption core complete, step 6 — export/delete via `sdk.portability` (RFC 0060, epic task 8.9 done)    |
-| 0.42.0          | Plugin portability export metadata, partial (RFC 0052)                                                               |
-| 0.43.0          | Cross-plugin references and dependency discovery (RFC 0051); RFC 0052 complete                                       |
-| 0.44.0          | Launcher grid respects saved sidebar order (epic task 2.22)                                                          |
-| 0.45.0          | User groups foundation + per-user capability grants (RFC 0065/0070, epic tasks 1.15–1.16)                            |
-| 0.46.0          | Plugin access policy enforcement (RFC 0065, epic task 2.21)                                                          |
-| 0.47.0          | Plugin catalog and install-time activation model (RFC 0065, epic task 3.28)                                          |
-| 0.48.0          | Console plugin access management (RFC 0065, epic task 13.7)                                                          |
-| 0.49.0          | Console plugin catalog browser and install-time activation (RFC 0065, epic task 13.8)                                |
-| 0.50.0          | Plugin invite-scope grant resolution (RFC 0065, epic task 2.23)                                                      |
-| 0.51.0          | Plugin directory browsing and self-service enable/disable (RFC 0065, epic task 15.3)                                 |
-| 0.54.0          | Public plugin page routes — `publicRoutes` manifest field (RFC 0042, epic task 2.14)                                 |
-| 0.55.0          | Plugin mailer permission and SDK email surface — `sdk.email.sendToUser()` (RFC 0062, epic task 3.26)                 |
-| 0.57.0          | Opt-in single-key SQLite at-rest encryption (RFC 0071, epic task 8.14)                                               |
-| 0.58.0          | External OAuth 2.0 / OIDC provider for non-plugin apps (RFC 0072, epic task 1.18)                                    |
-| 0.59.0          | Offline-route wiring for manifest `offline.root` flag + neutral-shell handling of `/`                                |
-| 0.60.0          | Web push delivery status logging to Console/Account Activities (RFC 0016)                                            |
-| 0.61.0          | Per-plugin mobile header/footer toggle (RFC 0075)                                                                    |
-| 0.62.0          | CI dependency-vulnerability scanning; mobile Console access moved from the account menu to the Apps drawer           |
-| 0.63.0          | Device bridge protocol package — workstream 0003 leg 1 (RFC 0083, epic task 3.34); general per-IP rate limiting      |
-| 0.64.0          | Plugin device surface, permissions, and consent — workstream 0003 leg 2 (RFC 0083, epic task 3.35)                   |
-| 0.65.0          | Forbidden page, authenticated 404 gate, hardened 500 boundary                                                        |
+| Runtime version | Key capability delivered                                                                                                                |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.2.0           | Platform DB (tenant_settings, root plugin config), Console settings                                                                     |
+| 0.3.0           | Launcher plugin, root-plugin-in-place rewrite                                                                                           |
+| 0.4.0           | Account plugin (profile + preferences)                                                                                                  |
+| 0.5.0           | Plugin install script, PWA configuration                                                                                                |
+| 0.6.0           | Local session verification (cookie-cache, AUTH-05)                                                                                      |
+| 0.7.0           | Public `/api` namespace delegation (PLT-16)                                                                                             |
+| 0.8.0–0.9.1     | Overlay shell mode (RFC 0001), Dialog UI primitive                                                                                      |
+| 0.9.0           | Logout / self sign-out (AUTH-02)                                                                                                        |
+| 0.10.0          | Security hardening Tier 0 + Tier 1 (RFC 0008)                                                                                           |
+| 0.11.0          | SDK distribution (RFC 0023), zero-dep published SDK                                                                                     |
+| 0.12.0          | Plugin compatibility & versioning (RFC 0024)                                                                                            |
+| 0.13.0          | Cross-plugin data sharing (RFC 0002)                                                                                                    |
+| 0.14.0–0.14.1   | Activity log (RFC 0005), icon system (RFC 0011)                                                                                         |
+| 0.15.0          | Drizzle-kit migrations, `sv backup`/`restore`, downgrade guard (RFC 0006)                                                               |
+| 0.16.0          | User data portability (RFC 0007)                                                                                                        |
+| 0.17.0          | Plugin-scoped env vars (RFC 0018)                                                                                                       |
+| 0.18.0          | Minimal shell mode (RFC 0014)                                                                                                           |
+| 0.19.0          | Mobile responsiveness & PWA hardening (RFC 0013)                                                                                        |
+| 0.20.0          | Passkeys & TOTP MFA (RFC 0012), offline connectivity banner                                                                             |
+| 0.21.0          | Platform roles & capabilities (RFC 0021)                                                                                                |
+| 0.22.0          | Notification Center (RFC 0015)                                                                                                          |
+| 0.23.0          | Web Push notifications (RFC 0016)                                                                                                       |
+| 0.25.0–0.25.1   | Plugin monetization (RFC 0003), license generator, entitlements                                                                         |
+| 0.26.0          | Per-plugin isolated database (RFC 0004)                                                                                                 |
+| 0.27.0          | Production dev-mode & diagnostics (RFC 0020)                                                                                            |
+| 0.28.0          | White-labeling Phase 1 (RFC 0027)                                                                                                       |
+| 0.29.0          | Instance identity rename (RFC 0032)                                                                                                     |
+| 0.30.0          | User data deletion (RFC 0033)                                                                                                           |
+| 0.31.0          | Notification transport (RFC 0034)                                                                                                       |
+| 0.32.0          | Sidebar customization (epic task 2.13)                                                                                                  |
+| 0.33.0          | Instance identity — `instanceId` field + terminology cleanup (RFC 0039)                                                                 |
+| 0.34.0          | Platform/runtime version reconciliation chore (RFC 0057 plan status fix)                                                                |
+| 0.35.0          | iOS PWA launch screens (`apple-touch-startup-image`)                                                                                    |
+| 0.36.0          | Admin disable surface for example plugins (epic task 12.3)                                                                              |
+| 0.37.0          | Account and security email delivery coverage (RFC 0062, epic task 1.14)                                                                 |
+| 0.38.0          | Plugin background schedules — Phase 1 (RFC 0046)                                                                                        |
+| 0.39.0          | Plugin file storage — `sdk.storage` (RFC 0044)                                                                                          |
+| 0.40.0–0.40.1   | Client-side encryption core, steps 1–5 — `sdk.e2ee`, Account UX, object crypto, `sdk.storage` integration (RFC 0060)                    |
+| 0.41.0          | Client-side encryption core complete, step 6 — export/delete via `sdk.portability` (RFC 0060, epic task 8.9 done)                       |
+| 0.42.0          | Plugin portability export metadata, partial (RFC 0052)                                                                                  |
+| 0.43.0          | Cross-plugin references and dependency discovery (RFC 0051); RFC 0052 complete                                                          |
+| 0.44.0          | Launcher grid respects saved sidebar order (epic task 2.22)                                                                             |
+| 0.45.0          | User groups foundation + per-user capability grants (RFC 0065/0070, epic tasks 1.15–1.16)                                               |
+| 0.46.0          | Plugin access policy enforcement (RFC 0065, epic task 2.21)                                                                             |
+| 0.47.0          | Plugin catalog and install-time activation model (RFC 0065, epic task 3.28)                                                             |
+| 0.48.0          | Console plugin access management (RFC 0065, epic task 13.7)                                                                             |
+| 0.49.0          | Console plugin catalog browser and install-time activation (RFC 0065, epic task 13.8)                                                   |
+| 0.50.0          | Plugin invite-scope grant resolution (RFC 0065, epic task 2.23)                                                                         |
+| 0.51.0          | Plugin directory browsing and self-service enable/disable (RFC 0065, epic task 15.3)                                                    |
+| 0.54.0          | Public plugin page routes — `publicRoutes` manifest field (RFC 0042, epic task 2.14)                                                    |
+| 0.55.0          | Plugin mailer permission and SDK email surface — `sdk.email.sendToUser()` (RFC 0062, epic task 3.26)                                    |
+| 0.57.0          | Opt-in single-key SQLite at-rest encryption (RFC 0071, epic task 8.14)                                                                  |
+| 0.58.0          | External OAuth 2.0 / OIDC provider for non-plugin apps (RFC 0072, epic task 1.18)                                                       |
+| 0.59.0          | Offline-route wiring for manifest `offline.root` flag + neutral-shell handling of `/`                                                   |
+| 0.60.0          | Web push delivery status logging to Console/Account Activities (RFC 0016)                                                               |
+| 0.61.0          | Per-plugin mobile header/footer toggle (RFC 0075)                                                                                       |
+| 0.62.0          | CI dependency-vulnerability scanning; mobile Console access moved from the account menu to the Apps drawer                              |
+| 0.63.0          | Device bridge protocol package — workstream 0003 leg 1 (RFC 0083, epic task 3.34); general per-IP rate limiting                         |
+| 0.64.0          | Plugin device surface, permissions, and consent — workstream 0003 leg 2 (RFC 0083, epic task 3.35)                                      |
+| 0.65.0          | Forbidden page, authenticated 404 gate, hardened 500 boundary                                                                           |
+| 0.65.1          | Offline banner no longer overlaps the mobile header (renders below it on mobile)                                                        |
+| 0.65.2          | Mobile shell consumes `MobileHeader`/`MobileFooter` — workstream 0007 leg 2 (RFC 0088, epic task 9.24)                                  |
+| 0.65.3          | Fix session gate blocking the custom Web Push worker chunk, which broke the service worker for logged-out visitors                      |
+| 0.65.4          | Fix swapped logger args in `instrumentation.ts`; close a `tsconfig.json` include gap that left the boot path unchecked                  |
+| 0.66.0          | Per-user service worker page-cache partitioning — workstream 0008 leg 2a (Research 0012, epic task 2.31)                                |
+| 0.67.0          | Cold-start offline launch flow and the Offline page — workstream 0008 leg 2b (Research 0012, epic task 2.32)                            |
+| 0.67.1          | Stop bundling plain `better-sqlite3` into the server graph (Webpack externalization fix)                                                |
+| 0.67.2          | Fix SW `runtimeCaching` matchers closing over `next.config.ts` module scope, which had silently disabled custom SW routing              |
+| 0.68.0          | Native mobile push relay — device-token schema + registration API, workstream 0005 leg 1 (RFC 0087, epic task 4.7)                      |
+| 0.69.0          | Well-known first-party OAuth clients for native shells, seeding half (RFC 0072 addendum, epic task 1.24)                                |
+| 0.70.0          | Native mobile push relay — `apps/relay` APNs/FCM sending, environment-gated, workstream 0005 leg 2 (RFC 0087, epic task 4.7)            |
+| 0.71.0          | Native mobile push relay — `fanOutPushToUser` native delivery branch + push encryption, workstream 0005 leg 3 (RFC 0087, epic task 4.7) |
+| 0.71.1          | Isolated-Postgres plugin migration-table collision fix (epic task 8.26)                                                                 |
+| 0.72.0          | Desktop native push scaffold — widen push device tokens to macOS/Windows, workstream 0010 leg 1 (RFC 0087 addendum, epic task 4.8)      |
+| 0.73.0          | Retire the `database.isolation`/`"shared"` manifest option — every plugin unconditionally isolated (epic task 8.28)                     |
+| 0.74.0          | Tiered plugin offline model — manifest `offline` enum + tier states, workstream 0008 leg 3 (Research 0012, epic tasks 3.36, 2.33)       |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

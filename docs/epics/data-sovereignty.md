@@ -80,6 +80,8 @@
 **Goal:** The deferred, crypto-heavy tiers of RFC 0008 / SRS §3.17 — shipped **after v1**. Tier 2 (at-rest encryption + key management), Tier 3 (field-level via `sdk.crypto`), and the handoff to Tier 4 client-side encryption in RFC 0060. The reserved `sdk.crypto` surface + `crypto:use` permission land as `NotImplementedError` stubs first (after RFC 0005's stubs).
 
 > **Scope note:** the SQLite-only, whole-file, opt-in slice of Tier 2b is carved out into **Task 8.14 (RFC 0071)** as a small, independently shippable feature. This task retains the parts 8.14 deliberately drops: the KEK→DEK envelope hierarchy, Postgres at-rest posture, avatar/blob encryption, and field-level Tier 3.
+>
+> **Scope note (August 2026):** RFC 0071 and its SQLCipher path were later retired entirely (see the v0.77.0 upgrade notes), making this task's Tier 2 SQLCipher deliverables obsolete. The KEK→DEK envelope key management and the Tier 3 field-level scope (`sdk.crypto`, `crypto:use`, blind indexes) are carved out into **[RFC 0092](../rfcs/0092-app-level-field-encryption.md)** (tasks 8.31–8.34, workstream 0011), which redesigns them as platform-wide-by-classification app-level field encryption per [Research 0013](../research/0013-layered-database-encryption-strategy.md). What remains here — encrypted backups/export bundles and avatar/blob encryption — stays post-v1 and unscheduled.
 
 **Deliverables:**
 
@@ -1527,6 +1529,106 @@ with).
 
 ---
 
+#### 📋 8.31 — Field-encryption key service (KEK→DEK envelope) (RFC 0092, workstream 0011 leg 1)
+
+**Goal:** The key-management foundation for app-level field encryption: a master Key Encryption Key from the environment, per-(class × plugin) Data Encryption Keys and blind-index HMAC keys wrapped under it, and KEK rotation that re-wraps rather than re-encrypts.
+
+**Deliverables:**
+
+- `SOVEREIGN_FIELD_KEK` env var — 32 bytes, same encoding + fail-fast loader discipline as `SOVEREIGN_VAULT_KEY` (`runtime/src/secrets.ts`), no default. Required iff `SOVEREIGN_ENCRYPT_CLASSES` is non-empty; boot fails loudly on policy-without-key. Deliberately distinct from `SOVEREIGN_VAULT_KEY` (different blast radius and rotation cadence — see RFC 0092 Alternatives).
+- Platform table for wrapped keys: one DEK and one HMAC blind-index key per (sensitivity class × plugin), generated on first use, wrapped under the KEK. Migration in both dialects.
+- Key service module (runtime): resolve/unwrap/cache DEKs, expose to the sdk-host layer only — never to plugin code.
+- `sv keys rotate-field-kek` — re-wraps every stored DEK/HMAC key under a new KEK without touching row data.
+- `.env.example` + `docs/self-hosting.md` + docs-parity for both new env vars; `docker-compose.prod.yml` pass-through.
+
+**Dependencies:** RFC 0092 acceptance including taxonomy sign-off (workstream 0011 gate A).
+
+**SRS reference:** [RFC 0092](../rfcs/0092-app-level-field-encryption.md), RFC 0008 (Tier 2 key-management lineage), SRS §3.17, NFR-02/07/08.
+
+**Review checklist:**
+
+- Boot with `SOVEREIGN_ENCRYPT_CLASSES` set but `SOVEREIGN_FIELD_KEK` unset fails with a message naming both vars; malformed key fails fast; both-unset boots exactly as today.
+- `sv keys rotate-field-kek` on a populated instance leaves every field decryptable and completes without reading a single data row.
+- The wrapped-keys table round-trips on both dialects; DEKs never appear unwrapped outside the key service module.
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test` pass; docs-parity green.
+
+---
+
+#### 📋 8.32 — `sdk.crypto` field encryption surface + `crypto:use` enforcement (RFC 0092, workstream 0011 leg 2)
+
+**Goal:** The plugin-facing crypto API: `sdk.crypto.encryptField()`/`decryptField()` implemented host-side over the leg-1 key service, gated by the `crypto:use` manifest permission, honoring the operator's `SOVEREIGN_ENCRYPT_CLASSES` policy.
+
+**Deliverables:**
+
+- `sdk.crypto.encryptField(value, { sensitivity })` / `sdk.crypto.decryptField(envelope)` in `@sovereignfs/sdk` (types + host-provided impl via `provideHost()` → `runtime/src/sdk-host.ts`), replacing the long-reserved stub reference in `packages/sdk/src/types.ts`.
+- Envelope format `svf1:<dekId>:<iv>:<tag>:<ciphertext>` (base64url), AES-256-GCM, AAD bound to `{tenantId, pluginId, class, column}` — extends the `secrets.ts` `sv1` shape with an explicit DEK id.
+- `crypto:use` added to the manifest permission enum (`packages/manifest`); calls without it throw the standard permission error.
+- Policy behavior: encrypting a class not enabled in `SOVEREIGN_ENCRYPT_CLASSES` is a documented no-op passthrough (returns plaintext-marked envelope), so plugin code is policy-agnostic; decryption handles both envelope and passthrough transparently.
+- Sensitivity taxonomy enum (`pii` | `health` | `financial` | `sensitive`) in `@sovereignfs/sdk` + `@sovereignfs/manifest` — the gate-A-approved set.
+- `docs/plugin-development.md`: new permission + SDK methods (docs-parity covers the enumerable parts).
+
+**Dependencies:** Task 8.31 (key service).
+
+**SRS reference:** [RFC 0092](../rfcs/0092-app-level-field-encryption.md), SRS §5 (`crypto:use`), NFR-04 (additive minor bumps for `@sovereignfs/sdk`).
+
+**Review checklist:**
+
+- A plugin without `crypto:use` calling either method gets the standard permission error; with it, round-trip succeeds.
+- AAD tamper test: an envelope replayed under a different plugin/tenant/column fails authentication.
+- Policy off → passthrough is explicit and lossless; policy on → ciphertext in, plaintext never stored.
+- `@sovereignfs/sdk` and `@sovereignfs/manifest` bumped **minor**; no breaking API change (NFR-04).
+
+---
+
+#### 📋 8.33 — `encryptedText()`/`blindIndex()` schema helpers + policy-driven write path (RFC 0092, workstream 0011 leg 3)
+
+**Goal:** Make classification declarative: drizzle column helpers plugin authors use in schema code, with the write/read path encrypting, decrypting, and maintaining blind-index companions automatically — no imperative crypto calls in plugin CRUD code.
+
+**Deliverables:**
+
+- `encryptedText(name, { sensitivity })` and `blindIndex(name, { source })` exported from `@sovereignfs/sdk` — `customType`-based wrappers over `drizzle-orm` (which plugins already depend on), carrying metadata only; no `@sovereignfs/db` import (SDK zero-deps rule holds).
+- Write/read integration: inserts/updates through the platform data layer encrypt classified columns and compute blind-index HMACs in the same statement; reads decrypt transparently. Works identically on both dialects (ciphertext is an ordinary string column).
+- Exact-match query support via blind index documented and tested (`WHERE <bidx> = hmac(term)` helper).
+- Verify RFC 0092 open question 4: user data export (RFC 0007 path) emits plaintext by routing through the same host service; add a regression test.
+- `docs/plugin-development.md`: schema-helper guide including the three sanctioned search/sort patterns (blind index, plaintext metadata, decrypt-and-filter) with their costs stated.
+
+**Dependencies:** Task 8.32 (SDK surface + taxonomy enum).
+
+**SRS reference:** [RFC 0092](../rfcs/0092-app-level-field-encryption.md), NFR-04.
+
+**Review checklist:**
+
+- A schema using both helpers round-trips on live Postgres and live sqld; the stored column value is ciphertext under an enabled class, plaintext under a disabled one.
+- Blind-index exact match returns identical results pre- and post-encryption for the same dataset.
+- User data export of a row with encrypted fields contains plaintext values.
+- No plugin-side imports beyond `@sovereignfs/sdk`/`drizzle-orm`; ESLint boundary rule passes.
+
+---
+
+#### 📋 8.34 — Operator backfill + blind-index rotation tooling (`sv db encrypt-fields`) (RFC 0092, workstream 0011 leg 4)
+
+**Goal:** The explicit, operator-triggered migration completing the story: encrypt pre-existing plaintext rows for newly enabled classes, and give blind-index key rotation its dual-read transition — the two operations deliberately excluded from automatic boot-time behavior (RFC 0071 incident lesson).
+
+**Deliverables:**
+
+- `sv db encrypt-fields` — offline-safe, backup-first, resumable: walks every plugin schema for classified columns whose class is enabled, encrypts plaintext rows in batches, computes blind indexes, records per-table progress so interruption resumes rather than restarts. Per-plugin scoping flag (`--plugin <id>`) to bound blast radius.
+- Dual-read blind-index rotation (RFC 0092 open question 2, per gate-B design): query matches old-or-new HMAC during a background re-index; `sv keys rotate-blind-index` drives it.
+- Console → Settings: read-only display of active `SOVEREIGN_ENCRYPT_CLASSES` policy and per-plugin backfill status.
+- `docs/self-hosting.md`: the full operator runbook — enabling a class, backfilling, rotating, and the explicit statement that enabling a class never mutates existing rows by itself.
+
+**Dependencies:** Task 8.33 (write path + helpers); workstream 0011 gate B (rotation design sign-off).
+
+**SRS reference:** [RFC 0092](../rfcs/0092-app-level-field-encryption.md), NFR-02/07/08.
+
+**Review checklist:**
+
+- Killing `sv db encrypt-fields` mid-run and re-running completes correctly (resume, not restart); a backup exists before the first mutation.
+- Enabling a class then booting without running the tool changes zero existing rows — verified by checksum.
+- Rotation dual-read: queries return identical results before, during, and after a blind-index re-index.
+- The runbook's commands are copy-paste runnable against the compose stack's `tools` profile.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)
@@ -1542,6 +1644,7 @@ with).
 - [RFC 0064 — Git-backed operator backups](../rfcs/0064-git-backed-operator-backups.md)
 - [RFC 0068 — Export completeness hardening](../rfcs/0068-export-completeness-hardening.md)
 - [RFC 0084 — UI-driven backup & restore](../rfcs/0084-ui-driven-backup-restore.md)
+- [RFC 0092 — App-level field encryption (platform-wide by classification)](../rfcs/0092-app-level-field-encryption.md)
 
 ## Related Docs
 

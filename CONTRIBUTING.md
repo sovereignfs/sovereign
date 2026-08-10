@@ -79,6 +79,20 @@ redirects (login page) use `SOVEREIGN_AUTH_PUBLIC_URL` (defaults to
 the auth host port with `AUTH_PORT=`, set `SOVEREIGN_AUTH_PUBLIC_URL`
 accordingly in your `.env`.
 
+**Container names are fixed, not project-scoped.** `docker-compose.yml` sets
+an explicit `container_name` for every service (`sovereign-runtime`,
+`sovereign-auth`, `sovereign-mailpit`). `docker compose -p <name> up` does
+**not** namespace these away — a second checkout (a different clone, worktree,
+or agent session) running `docker compose up` against the same Docker daemon
+will collide on container name and can **stop the first checkout's running
+containers** as Compose tries to recreate them, even though the two checkouts
+are unrelated. Before running the Compose stack, check `docker ps` for
+containers already using these names; if any exist and you don't own them,
+don't run `docker compose up` without first overriding `container_name` for
+every service via an override file (`docker compose -f docker-compose.yml -f
+your-override.yml up`), and never assume a fresh `docker compose up` is safe
+to run twice on a shared host.
+
 **Code quality hooks:** The pre-commit hook runs Prettier and ESLint on staged
 files automatically. The pre-push hook runs `pnpm verify:push`, which checks
 formatting, lint, typecheck, and the Vitest suite before pushing. Run

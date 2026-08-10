@@ -38,7 +38,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   retries: isCI ? 1 : 0,
-  // Serialise in CI: both apps share one SQLite file — concurrent writes cause locking errors.
+  // Serialise in CI: specs share one sqld instance/namespace, and aren't
+  // written to tolerate concurrent runs against the same data.
   workers: isCI ? 1 : undefined,
   globalSetup: './__tests__/e2e/global-setup.ts',
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

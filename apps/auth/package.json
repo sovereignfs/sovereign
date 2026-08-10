@@ -10,14 +10,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@better-auth/oauth-provider": "^1.6.25",
-    "@better-auth/passkey": "^1.6.25",
-    "@libsql/client": "^0.15.0",
+    "@better-auth/oauth-provider": "^1.6.26",
+    "@better-auth/passkey": "^1.6.26",
+    "@libsql/client": "^0.17.4",
     "@libsql/kysely-libsql": "^0.4.1",
-    "@next/env": "^16.2.12",
+    "@next/env": "^16.3.0",
     "@sovereignfs/mailer": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
-    "better-auth": "^1.6.25",
+    "better-auth": "^1.6.26",
     "better-sqlite3-multiple-ciphers": "catalog:",
     "next": "catalog:",
     "pg": "^8.22.0",
@@ -27,7 +27,7 @@
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/pg": "^8.20.0",
+    "@types/pg": "^8.20.4",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "typescript": "catalog:"

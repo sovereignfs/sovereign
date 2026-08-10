@@ -87,7 +87,7 @@ export function MobileFooter({
     .join(' ');
 
   return (
-    <nav className={cls} aria-label="App navigation" {...rest}>
+    <nav {...rest} className={cls} aria-label="App navigation">
       {leftIcons.map((item) => (
         <FooterNavItem key={item.label} {...item} />
       ))}

@@ -584,18 +584,22 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // it were a safe neutral shell — exactly the leak this mechanism exists to
   // prevent.
   //
-  // `/` is deliberately *not* included here, even though `next-pwa` also
-  // caches it (the PWA start_url, rewritten server-side below to whichever
-  // plugin is configured as the platform root). That cache entry is
-  // `NetworkFirst` (see `next.config.ts`), the same strategy already used for
-  // every other per-user SSR page and already accepted there as safe: a live,
-  // online request always gets a fresh per-user response, and the cached
-  // fallback is only ever served while genuinely offline. Blanking `/`
-  // unconditionally previously forced every live visit through an extra
-  // client-side re-fetch just to show the avatar/name, for a leak window
-  // (a stale cached shell replayed to a different user while offline on a
-  // shared device) no narrower than what's already tolerated for any other
-  // authenticated page.
+  // `/` IS included here (via `getOfflineRoutePrefixes()`) whenever Launcher
+  // — the platform root by default — is itself offline-first, since this
+  // rewrites `/` to Launcher's own route below and the two must get
+  // identical neutral-shell treatment. This used to be argued unnecessary:
+  // `/` was left to next-pwa's own default `NetworkFirst` "start-url" cache
+  // on the premise that its risk was "no narrower than what's already
+  // tolerated" for the per-user `pages` cache. That premise was wrong on two
+  // counts, found via live testing rather than reasoning about it in the
+  // abstract: "start-url" had *no* per-user cache key or session check at
+  // all (weaker than `pages`, not equal to it), and `pages`' own
+  // assertion-based session check was never actually wired up client-side,
+  // so neither cache was ever safe to replay. See
+  // `runtime/next.config.ts`'s comment above `runtimeCaching` for the full
+  // story and the fix (`pages` no longer caches personalized content at
+  // all; `/` now shares Launcher's already-neutral, already-tested cache
+  // instead of getting its own unpartitioned one).
   if (getOfflineRoutePrefixes(installedPlugins).includes(pathname)) {
     headers.set('x-sovereign-offline-route', '1');
   }

@@ -886,6 +886,21 @@ Task 1.2 (session-verify propagation pattern), the Account plugin's
 
 #### 📋 1.21 — Long-lived offline session assertion (Research 0012)
 
+> **Superseded (August 2026).** This task shipped essentially as specified
+> below, then was removed after live testing (sign a user out, take the
+> device offline, reload `/`) found the client-side half that populated the
+> assertion (`refreshOfflineSession()`) was never actually called anywhere in
+> the app — so the assertion never existed, and the per-user partitioning
+> task 2.31 built on top of it was silently checking nothing. Separately, and
+> independently of that gap, next-pwa's own default caching of bare `/` was
+> never routed through this mechanism at all, so the one route most likely to
+> be a cold launch's actual entry point had no session check of any kind
+> regardless. `runtime/next.config.ts`'s `pages` cache entry no longer caches
+> personalized content at all — see that file's comment above
+> `runtimeCaching` for the fix and `docs/architecture-rules.md`'s "cached
+> authenticated document" rule for the current mechanism. Not attempted
+> again without the same live, adversarial verification this fix relied on.
+
 **Goal:** Give the platform a session assertion the **service worker** can verify
 with no network for days, so offline access does not expire five minutes after
 the last online request — without weakening revocation for online requests.

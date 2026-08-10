@@ -66,28 +66,50 @@ describe('getDevelopmentPluginIds', () => {
 });
 
 describe('getOfflineRoutePrefixes', () => {
-  it('includes the bare routePrefix for a plugin declaring offline: "offline-first"', () => {
-    const plugins = [manifestWithOffline('fs.sovereign.launcher', '/launcher', 'offline-first')];
-    expect(getOfflineRoutePrefixes(plugins)).toEqual(['/launcher']);
-  });
-
   it('includes the bare routePrefix for a plugin declaring offline: "device-only"', () => {
     const plugins = [manifestWithOffline('fs.sovereign.wallet', '/wallet', 'device-only')];
     expect(getOfflineRoutePrefixes(plugins)).toEqual(['/wallet']);
   });
 
-  it('resolves multiple offline-enabled plugins, of either tier, to their own bare routePrefix', () => {
+  it('resolves multiple non-Launcher offline-enabled plugins, of either tier, to their own bare routePrefix', () => {
     const plugins = [
-      manifestWithOffline('fs.sovereign.launcher', '/launcher', 'offline-first'),
       manifestWithOffline('fs.sovereign.wallet', '/wallet', 'device-only'),
+      manifestWithOffline('fs.sovereign.shopper', '/shopper', 'offline-first'),
     ];
-    expect(getOfflineRoutePrefixes(plugins)).toEqual(['/launcher', '/wallet']);
+    expect(getOfflineRoutePrefixes(plugins)).toEqual(['/wallet', '/shopper']);
   });
 
   it('returns an empty array when no plugin declares an offline tier', () => {
     expect(
       getOfflineRoutePrefixes([manifestWithOffline('a', '/a'), manifestWithOffline('b', '/b')]),
     ).toEqual([]);
+  });
+
+  // `/` handling (research 0012 leg 2's start-url auth-bypass fix) — `/`
+  // shares Launcher's neutral-shell cache only when Launcher itself is
+  // offline-first, since middleware rewrites `/` to Launcher's route by
+  // default and the two must get identical treatment.
+  it('prepends "/" when the default root plugin (Launcher) declares offline: "offline-first"', () => {
+    const plugins = [manifestWithOffline('fs.sovereign.launcher', '/launcher', 'offline-first')];
+    expect(getOfflineRoutePrefixes(plugins)).toEqual(['/', '/launcher']);
+  });
+
+  it('prepends "/" when Launcher declares offline: "device-only" too', () => {
+    const plugins = [manifestWithOffline('fs.sovereign.launcher', '/launcher', 'device-only')];
+    expect(getOfflineRoutePrefixes(plugins)).toEqual(['/', '/launcher']);
+  });
+
+  it('does not include "/" when Launcher is installed but not offline-enabled', () => {
+    const plugins = [
+      manifestWithOffline('fs.sovereign.launcher', '/launcher'),
+      manifestWithOffline('fs.sovereign.wallet', '/wallet', 'device-only'),
+    ];
+    expect(getOfflineRoutePrefixes(plugins)).toEqual(['/wallet']);
+  });
+
+  it('does not include "/" when Launcher is not installed at all, even if another plugin is offline-enabled', () => {
+    const plugins = [manifestWithOffline('fs.sovereign.wallet', '/wallet', 'device-only')];
+    expect(getOfflineRoutePrefixes(plugins)).toEqual(['/wallet']);
   });
 });
 

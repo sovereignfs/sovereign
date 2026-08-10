@@ -126,11 +126,37 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   The **platform version** in the root `package.json` tracks roadmap
   milestones — **each completed task bumps the minor version; patch versions
   are reserved for ad-hoc bug fixes and hotfixes between tasks; a single jump
-  to `1.0.0` marks the public release.** The current version is **`0.74.1`**
-  (`0.73.0` → `0.74.0` is unrelated concurrent work — workstream 0010 leg 1's
-  desktop native push scaffold and leg 2's relay macOS APNs topic + Windows
-  WNS client (RFC 0087's addendum, epic task 4.8) — not narrated here; see
-  `ROADMAP.md`. `0.74.0` → `0.74.1` is this fix's own patch, rebased on top.
+  to `1.0.0` marks the public release.** The current version is **`0.76.1`**
+  (`0.74.1` → `0.75.0` is unrelated concurrent work — retiring the
+  `database.isolation`/`"shared"` manifest option (task 8.28); `0.75.0` →
+  `0.76.0` is workstream 0008 leg 3 — the manifest `offline` field's third
+  shape change, boolean → tiered enum (tasks 3.36, 2.33); neither narrated
+  here, see `ROADMAP.md`. `0.76.0` → `0.76.1` is this fix's own patch,
+  rebased on top: a real authentication bypass found by live-testing
+  workstream 0008 leg 2b's claims rather than trusting they still held —
+  sign a test user out, take a real production build offline, reload `/`,
+  and the previous user's fully personalized cached shell renders anyway.
+  Root cause: `next-pwa`'s own default caching of bare `/` (the PWA
+  `start_url`) had no per-user cache key and no session check at all — a
+  route this codebase's own custom `runtimeCaching` entries never covered.
+  Compounding it: the per-user assertion system leg 2a/2b built to gate the
+  _rest_ of the app's offline access was itself dead code the whole time —
+  `refreshOfflineSession()`, meant to populate the signed assertion after
+  login, was never called anywhere in the app, so the `pages` cache's
+  partitioning checked nothing in practice either. Fix: `pages` no longer
+  caches personalized content at all (`NetworkOnly`, generic `/offline`
+  fallback on any failure); `/` now shares Launcher's already-neutral,
+  already-tested `offline-shells` cache instead of an unpartitioned one of
+  its own (`next-pwa`'s `cacheStartUrl`/`dynamicStartUrl` disabled). The
+  assertion machinery — `refreshOfflineSession`/`offline-session-client.ts`,
+  the signing endpoint, `SOVEREIGN_OFFLINE_SESSION_TTL_SECONDS`, and
+  `/offline/session-required` — removed outright. See
+  `docs/architecture-rules.md`'s "cached authenticated document" rule and
+  `docs/epics/users-auth.md` task 1.21's correction note for the full
+  account; before that the original leg 2a/2b work this fix supersedes,
+  narrated below as it stood at the time — any mention there of the offline
+  session assertion, `SOVEREIGN_OFFLINE_SESSION_TTL_SECONDS`, or
+  `/offline/session-required` is historical, not current; before that
   `0.67.1` → `0.72.1` spans a real production incident and its follow-ups —
   full detail in `ROADMAP.md`'s task history and `docs/epics/data-sovereignty.md`
   tasks 8.25–8.27, not narrated version-by-version here. Rehearsing workstream
@@ -235,9 +261,9 @@ migrate-to-postgres` (task 8.25) to fix that surfaced and fixed, in order: a
   so a cached authenticated document can never be replayed for a different
   user on a shared device — rewriting `docs/architecture-rules.md`'s former
   "never stale-serve, keep `NetworkFirst`" rule to state that requirement
-  rather than the mechanism that used to be the only way to meet it.
-  `SOVEREIGN_OFFLINE_SESSION_TTL_SECONDS` names the offline revocation gap
-  explicitly (14-day default, clamped to 1 hour–90 days); before that the
+  rather than the mechanism that used to be the only way to meet it (both
+  this mechanism and that rewrite were themselves superseded by the
+  `0.76.0` → `0.76.1` fix narrated above); before that the
   2026-08-06 patch bundling silent browser-timezone
   capture at registration (epic task 1.20) with a fix giving page content
   breathing room below the offline banner; before that the 2026-08-02 fix

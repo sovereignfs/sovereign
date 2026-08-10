@@ -16,12 +16,11 @@ export function LoginForm({
   instanceName: string;
   instanceInitial: string;
 }) {
-  // A cached /login can render with no network at all (research 0012, epic
-  // task 2.32) — the SW's session-required fallback sends here when there is
-  // no valid offline assertion. A submitted form would just fail, so the form
-  // itself is swapped for an explanatory notice rather than left to fail per
-  // field. The session check that decides whether /login should render at all
-  // stays server-side in page.tsx; this only changes what's shown once it has.
+  // A submitted form would just fail while offline, so the form itself is
+  // swapped for an explanatory notice (via the generic connectivity hook)
+  // rather than left to fail per field. The session check that decides
+  // whether /login should render at all stays server-side in page.tsx; this
+  // only changes what's shown once it has.
   const isOffline = useIsOffline();
   const searchParams = useSearchParams();
   const signedOut = searchParams.get('signedout') === '1';

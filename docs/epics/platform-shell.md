@@ -1041,6 +1041,12 @@ on both rather than duplicating either.
 
 #### 📋 2.31 — Per-user service worker cache partitioning (Research 0012)
 
+> **Superseded (August 2026).** See task 1.21's correction note
+> (`docs/epics/users-auth.md`) for the full story — this task's partitioning
+> was built on that task's assertion, which was never actually populated
+> client-side, so it partitioned nothing in practice. `pages` no longer
+> caches personalized content at all, which makes partitioning it moot.
+
 **Goal:** Make it safe to cache an authenticated document, so the shell can be
 served with no network — without ever replaying one user's cached shell to
 another on a shared device.
@@ -1093,6 +1099,20 @@ another on a shared device.
 
 #### ✅ 2.32 — Cold-start offline launch flow and Offline page (Research 0012)
 
+> **Mechanism superseded, goal still met (August 2026).** See task 1.21's
+> correction note for why the assertion-based launch decision table below was
+> removed. The core goal — cold launch reaches the home screen offline —
+> still holds, now via the neutral-shell mechanism (`/` shares Launcher's
+> already-neutral cache; see `docs/architecture-rules.md`'s "cached
+> authenticated document" rule). What's gone is the _distinction_ this task
+> originally shipped between "no valid session" (→ a dedicated explanation
+> page) and "valid session, nothing cached yet" (→ the generic page): neither
+> `pages` nor `/` can tell those two apart anymore, because neither checks
+> session validity at all — `pages` doesn't cache, and `/`'s neutral shell
+> carries no per-user state to be valid or invalid _about_. Both cases now
+> show the same generic `/offline` page. `/offline/session-required` was
+> deleted as a result — it had no reachable caller left.
+
 **Goal:** A returning user can cold-launch the installed PWA or native shell with
 zero connectivity and land on their home screen — and a user whose session has
 expired gets a purposeful explanation instead of a login form that cannot work.
@@ -1116,34 +1136,39 @@ expired gets a purposeful explanation instead of a login form that cannot work.
 
 **SRS reference:** §3.11, PLT-09.
 
-**Review checklist:**
+**Review checklist (superseded — see the note above; kept for history):**
 
-- Airplane mode, cold launch, valid session → home screen with offline banner.
-- Airplane mode, cold launch, expired session → Offline page, no shell content.
-- Airplane mode with **no** session → Offline page, and no way through to the
-  shell.
-- Console and Settings are visibly non-interactive while offline.
-- Verified on a real device per `docs/pwa-real-device-testing.md`, not only in
-  DevTools offline mode.
+- ~~Airplane mode, cold launch, valid session → home screen with offline banner.~~
+  Still true, mechanism changed: cold launch reaches the home screen via the
+  `/` ↔ `/launcher` neutral-shell cache, unconditionally (no session check).
+- ~~Airplane mode, cold launch, expired session → Offline page, no shell content.~~
+  Still true for a manifest-declared offline route in the sense that its
+  neutral shell renders regardless of session validity (it was never
+  personalized); every _other_ route now shows the generic `/offline` page
+  in this case too, same as "nothing cached yet" — the two are no longer
+  distinguished.
+- Console and Settings are visibly non-interactive while offline — unaffected
+  by this fix, still current.
+- Verified on a real device per `docs/pwa-real-device-testing.md` — still
+  outstanding, unaffected by this fix.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
-**Outcome:** The launch decision table has no separate application code — it's
-inherent to the SW mechanism task 2.31 already shipped, extended here with a
-`handlerDidError` plugin on the `pages` cache entry
-(`runtime/next.config.ts`) that checks `__sovereignHasOfflineSession()`
-(`runtime/worker/offline-session.ts`) and routes to the new
-`/offline/session-required` page when false, or delegates to next-pwa's
-existing generic `/offline` fallback when true. Verified end-to-end against
-the actual production build output — the precache manifest entry, the
-`handlerDidError` branch, and the `cacheKeyWillBeUsed` partitioning all
-confirmed present and correctly wired in the generated `sw.js`, not just
-type-checked in isolation.
+**Outcome (original, now superseded — see the note above):** The launch
+decision table had no separate application code — it was inherent to the SW
+mechanism task 2.31 shipped, extended here with a `handlerDidError` plugin on
+the `pages` cache entry that checked `__sovereignHasOfflineSession()` and
+routed to `/offline/session-required` when false. That plugin, its backing
+verification in `runtime/worker/offline-session.ts`, and
+`/offline/session-required` are all removed; `pages` is now `NetworkOnly`
+with no plugins of its own, falling to next-pwa's auto-injected generic
+`/offline` fallback on any failure.
 
 `useIsOffline` (extracted from `OfflineBanner`, which now consumes it) and
-`OfflineGate` — both new `@sovereignfs/ui` exports — cover the two remaining
-bullets: the login form swaps for a notice via `useIsOffline` when the
-cached `/login` page itself is viewed offline, and Console/Account wrap
-`{children}` in `OfflineGate` to block administrative content while offline.
+`OfflineGate` — both `@sovereignfs/ui` exports — still cover the two
+remaining bullets, unaffected by this fix: the login form swaps for a notice
+via `useIsOffline` when the cached `/login` page itself is viewed offline,
+and Console/Account wrap `{children}` in `OfflineGate` to block
+administrative content while offline.
 
 **Not yet done: the real-device review-checklist item.** This environment has
 no physical device access, so the DevTools-offline-mode checks above are

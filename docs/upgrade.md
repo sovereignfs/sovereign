@@ -119,6 +119,25 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.75.0 → v0.75.1
+
+- **`SOVEREIGN_OFFLINE_SESSION_TTL_SECONDS` is removed.** It configured the
+  offline session assertion (research 0012, workstream 0008 legs 2a/2b), an
+  offline-access mechanism found via live testing to have a real
+  authentication bypass: `next-pwa`'s own default caching of `/` never went
+  through it at all, so a signed-out user's cached shell replayed offline
+  regardless of session validity. Offline access to non-neutral pages (i.e.
+  everything except manifest-declared `offline: 'offline-first' | 'device-only'`
+  routes) no longer works — those pages now show the generic `/offline` page
+  when the network is unreachable, rather than a stale, potentially
+  wrong-user copy. Manifest-declared offline-first routes (Launcher, and `/`
+  itself when Launcher is the platform root) are unaffected and still work
+  offline, via the unrelated neutral-shell mechanism.
+  - **Action required:** none. If you set this variable, remove it — it is
+    now unread and has no effect. No data, session, or plugin is affected.
+  - See `docs/architecture-rules.md`'s "cached authenticated document" rule
+    for the current mechanism.
+
 ### v0.74 → v0.75 (root `package.json` 0.76.1 → 0.77.0)
 
 **Breaking — database environment variables changed, and SQLite at-rest

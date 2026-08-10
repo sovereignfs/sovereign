@@ -1553,6 +1553,21 @@ font-weight: var(--sv-font-weight-medium);    /* 500 */
 font-weight: var(--sv-font-weight-semibold);  /* 600 */
 font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
           </div>
+
+          <div style={{ marginTop: 'var(--sv-space-4)' }}>
+            <p
+              style={{
+                fontSize: 'var(--sv-font-size-caption)',
+                color: 'var(--sv-color-text-muted)',
+              }}
+            >
+              Every size above is rem-based, so the whole scale responds to the in-app text-size
+              control (Account → Preferences → Appearance, task 10.2), which sets{' '}
+              <code>[data-text-size]</code> on <code>&lt;html&gt;</code> to override{' '}
+              <code>--sv-text-size-scale</code> — see the &quot;Text-size presets&quot; section of
+              the Token Gallery.
+            </p>
+          </div>
         </section>
 
         {/* ── Spacing & Radius ─────────────────────────────────────────── */}

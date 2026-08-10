@@ -7,7 +7,7 @@ import {
 } from '@sovereignfs/db';
 import { getPlatformDb } from '@/src/db';
 import { readServerSession } from '@/src/server-session';
-import { isValidTheme, isValidTimezone } from '@/src/account';
+import { isValidTheme, isValidTimezone, isValidTextSize } from '@/src/account';
 
 /**
  * Per-user Account preferences (ACC-07/08). Session-gated by the middleware,
@@ -56,6 +56,7 @@ export async function PATCH(request: Request): Promise<Response> {
     timezone?: unknown;
     theme?: unknown;
     sidebar_plugins?: unknown;
+    text_size?: unknown;
   };
   const patch: Parameters<typeof setAccountPrefs>[2] = {};
 
@@ -77,14 +78,27 @@ export async function PATCH(request: Request): Promise<Response> {
     }
     patch.sidebarPlugins = body.sidebar_plugins;
   }
+  if (body.text_size !== undefined) {
+    if (!isValidTextSize(body.text_size)) {
+      return NextResponse.json({ error: 'invalid text_size' }, { status: 400 });
+    }
+    patch.textSize = body.text_size;
+  }
 
   const next = await setAccountPrefs(await getPlatformDb(), userId, patch);
   const res = NextResponse.json(next);
 
-  // Mirror the theme to a cookie so the shell can resolve it before first paint
-  // without a DB round-trip (ACC-08; account.md open question 4).
+  // Mirror theme/text-size to cookies so the shell can resolve them before
+  // first paint without a DB round-trip (ACC-08; account.md open question 4).
   if (patch.theme) {
     res.cookies.set('sv-theme', patch.theme, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: 'lax',
+    });
+  }
+  if (patch.textSize) {
+    res.cookies.set('sv-text-size', patch.textSize, {
       path: '/',
       maxAge: 60 * 60 * 24 * 365,
       sameSite: 'lax',

@@ -64,9 +64,11 @@ export const viewport: Viewport = {
   // zoom mid-gesture on iOS). This reverses a prior explicit decision (see
   // docs/research/0011-ios-pwa-inspection-findings.md #1) made to preserve pinch-zoom
   // as a WCAG 1.4.4 (Resize Text) affordance for low-vision users — that
-  // finding explicitly says not to do this without a replacement. A
-  // compensating in-app text-size control is tracked as a required follow-up,
-  // not optional polish; don't remove this comment until that control ships.
+  // finding explicitly says not to do this without a replacement. Task 10.2's
+  // in-app text-size control (Account → Preferences → Appearance,
+  // --sv-text-size-scale) has since shipped as that replacement, so keeping
+  // pinch-zoom disabled is now a deliberate, discharged tradeoff rather than
+  // unmitigated debt — re-open this decision if the control is ever removed.
   maximumScale: 1,
   userScalable: false,
 };

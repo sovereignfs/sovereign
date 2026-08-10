@@ -1,0 +1,1 @@
+ALTER TABLE `account_prefs` ADD `text_size` text DEFAULT 'default' NOT NULL;

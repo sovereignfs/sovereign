@@ -122,6 +122,13 @@ or reuse an ACC-\* id.
 | ACC-07 | Set timezone from the IANA timezone database (searchable dropdown). Stored in `account_prefs`. The platform uses this value for all date and time display across plugins.                                             |
 | ACC-08 | Set appearance: `System` (follow OS), `Light`, or `Dark`. Stored in `account_prefs`. The shell applies the corresponding `data-theme` attribute on the `<html>` element. Preference is applied immediately on change. |
 
+Not an SRS-numbered ACC requirement, but shipped alongside ACC-08 and stored
+in the same table: an in-app text-size control (`Default` / `Large` /
+`Larger`), tracked as epic task 10.2 (`docs/epics/accessibility.md`). Scales
+`--sv-text-size-scale` via `data-text-size` on `<html>`, discharging the
+accessibility debt from `runtime/app/layout.tsx`'s `userScalable: false`.
+Same applied-pre-paint, applied-immediately shape as ACC-08.
+
 ---
 
 ### v0.2 — Security and customisation (post-v1)
@@ -156,7 +163,9 @@ plugins/account/
 └── components/
     ├── AvatarUpload.tsx              # Image picker + upload + crop
     ├── SessionList.tsx               # Active sessions table with revoke buttons
-    └── TimezoneSelect.tsx            # Searchable IANA timezone dropdown
+    ├── TimezoneSelect.tsx            # Searchable IANA timezone dropdown
+    ├── ThemeControl.tsx              # System / Light / Dark segmented control
+    └── TextSizeControl.tsx           # Default / Large / Larger segmented control (task 10.2)
 ```
 
 ---
@@ -168,13 +177,15 @@ per the platform architectural rule.
 
 ### `account_prefs`
 
-| Column       | Type      | Notes                                                               |
-| ------------ | --------- | ------------------------------------------------------------------- |
-| `user_id`    | string    | PK. FK → users.                                                     |
-| `tenant_id`  | string    |                                                                     |
-| `timezone`   | string    | IANA timezone identifier (e.g. `America/New_York`). Default: `UTC`. |
-| `theme`      | string    | Enum: `system` \| `light` \| `dark`. Default: `system`.             |
-| `updated_at` | timestamp |                                                                     |
+| Column            | Type      | Notes                                                                                |
+| ----------------- | --------- | ------------------------------------------------------------------------------------ |
+| `user_id`         | string    | PK. FK → users.                                                                      |
+| `tenant_id`       | string    |                                                                                      |
+| `timezone`        | string    | IANA timezone identifier (e.g. `America/New_York`). Default: `UTC`.                  |
+| `theme`           | string    | Enum: `system` \| `light` \| `dark`. Default: `system`.                              |
+| `sidebar_plugins` | text      | JSON-serialised `Array<{ id, hidden }>`; `null` = default install order (task 2.13). |
+| `text_size`       | string    | Enum: `default` \| `large` \| `larger`. Default: `default` (task 10.2).              |
+| `updated_at`      | timestamp |                                                                                      |
 
 One row per user; upserted on any preference change.
 
@@ -283,9 +294,10 @@ customisation (pin/unpin/reorder) — see ACC-10.
 
 ## Changelog
 
-| Version | Date     | Change                                                                                                                                                                                                                                                                                                                                    |
-| ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | Jun 2026 | Initial draft — per-user profile and preferences plugin.                                                                                                                                                                                                                                                                                  |
-| 0.1     | Jun 2026 | Part 1 implemented (Task 0.4.6): Profile (ACC-01/02/03) + Preferences (ACC-07/08). Resolved Q1 (avatar → disk + Next route) and Q4 (theme → `account_prefs` + `sv-theme` cookie + pre-paint inline script). Deviation: components live under `app/_components/` (composition copies only `app/`). Security (ACC-04–06) follows in part 2. |
-| 0.1     | Jun 2026 | Part 2 implemented (Task 0.4.6): Security tab — password change (ACC-04) + active-session list/revoke (ACC-05/06). Extended `sdk.auth` with `changePassword`/`listSessions`/`revokeSession` (wrap better-auth with cookie + Origin). v0.1 complete.                                                                                       |
-| 0.1     | Jun 2026 | Specified ACC-11 (self sign-out / "Log out") to close the AUTH-02 gap — current-session Log out action + shell avatar menu, `sdk.auth.signOut()`, better-auth sign-out + session-cache-cookie clear. Scheduled as Task 0.5.12 (not yet implemented).                                                                                      |
+| Version | Date     | Change                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Jun 2026 | Initial draft — per-user profile and preferences plugin.                                                                                                                                                                                                                                                                                                                                    |
+| 0.1     | Jun 2026 | Part 1 implemented (Task 0.4.6): Profile (ACC-01/02/03) + Preferences (ACC-07/08). Resolved Q1 (avatar → disk + Next route) and Q4 (theme → `account_prefs` + `sv-theme` cookie + pre-paint inline script). Deviation: components live under `app/_components/` (composition copies only `app/`). Security (ACC-04–06) follows in part 2.                                                   |
+| 0.1     | Jun 2026 | Part 2 implemented (Task 0.4.6): Security tab — password change (ACC-04) + active-session list/revoke (ACC-05/06). Extended `sdk.auth` with `changePassword`/`listSessions`/`revokeSession` (wrap better-auth with cookie + Origin). v0.1 complete.                                                                                                                                         |
+| 0.1     | Jun 2026 | Specified ACC-11 (self sign-out / "Log out") to close the AUTH-02 gap — current-session Log out action + shell avatar menu, `sdk.auth.signOut()`, better-auth sign-out + session-cache-cookie clear. Scheduled as Task 0.5.12 (not yet implemented).                                                                                                                                        |
+| 0.1     | Aug 2026 | Implemented task 10.2 (in-app text-size control): `text_size` column on `account_prefs`, `TextSizeControl` in Preferences alongside `ThemeControl`, applied pre-paint via the same `sv-text-size` cookie + inline-script mechanism as `sv-theme`. Also backfilled the `sidebar_plugins` column (task 2.13) into this doc's data-model table, which had drifted out of sync with the schema. |

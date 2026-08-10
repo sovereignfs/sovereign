@@ -122,6 +122,7 @@ export const accountPrefs = pgTable('account_prefs', {
   theme: text('theme').notNull().default('system'), // 'system' | 'light' | 'dark'
   /** JSON-serialised Array<{ id: string; hidden: boolean }>; null = use default order. */
   sidebarPlugins: text('sidebar_plugins'),
+  textSize: text('text_size').notNull().default('default'), // 'default' | 'large' | 'larger'
   updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
 });
 

@@ -80,12 +80,14 @@ describe.skipIf(!PG_URL)('platform-db on Postgres', () => {
       timezone: 'UTC',
       theme: 'system',
       sidebarPlugins: null,
+      textSize: 'default',
     });
     await setAccountPrefs(pdb, 'u1', { theme: 'dark' });
     expect(await getAccountPrefs(pdb, 'u1')).toEqual({
       timezone: 'UTC',
       theme: 'dark',
       sidebarPlugins: null,
+      textSize: 'default',
     });
   });
 });

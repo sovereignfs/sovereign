@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import { FormField, Select } from '@sovereignfs/ui';
 import { TimezoneSelect } from '../_components/TimezoneSelect';
 import { ThemeControl } from '../_components/ThemeControl';
+import { TextSizeControl } from '../_components/TextSizeControl';
 import { SidebarControl } from '../_components/SidebarControl';
 import styles from '../account.module.css';
 
@@ -13,6 +14,7 @@ interface Prefs {
   timezone: string;
   theme: string;
   sidebarPlugins: Array<{ id: string; hidden: boolean }> | null;
+  textSize: string;
 }
 
 interface PluginInfo {
@@ -35,12 +37,12 @@ async function getPrefs(): Promise<Prefs> {
     });
     if (!res.ok) {
       console.error(`[preferences] prefs fetch failed: ${res.status}`);
-      return { timezone: 'UTC', theme: 'system', sidebarPlugins: null };
+      return { timezone: 'UTC', theme: 'system', sidebarPlugins: null, textSize: 'default' };
     }
     return res.json() as Promise<Prefs>;
   } catch (err) {
     console.error('[preferences] prefs fetch error:', err instanceof Error ? err.message : err);
-    return { timezone: 'UTC', theme: 'system', sidebarPlugins: null };
+    return { timezone: 'UTC', theme: 'system', sidebarPlugins: null, textSize: 'default' };
   }
 }
 
@@ -75,6 +77,12 @@ export default async function PreferencesPage() {
         <div className={styles.controlGroup}>
           <ThemeControl value={prefs.theme} />
           <p className={styles.help}>Applies immediately and to every session on this device.</p>
+        </div>
+        <div className={styles.controlGroup}>
+          <TextSizeControl value={prefs.textSize} />
+          <p className={styles.help}>
+            Enlarges text across the app. Applies immediately and to every session on this device.
+          </p>
         </div>
       </section>
 

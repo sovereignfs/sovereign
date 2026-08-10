@@ -143,6 +143,10 @@ export async function updateThemeAction(theme: string): Promise<void> {
   await patchPrefs({ theme });
 }
 
+export async function updateTextSizeAction(textSize: string): Promise<void> {
+  await patchPrefs({ text_size: textSize });
+}
+
 export async function updateSidebarPluginsAction(
   sidebarPlugins: Array<{ id: string; hidden: boolean }> | null,
 ): Promise<void> {

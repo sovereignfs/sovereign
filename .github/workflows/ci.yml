@@ -258,7 +258,7 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'skip-ci') &&
       needs.changes.outputs.test == 'true')
     # A throwaway Postgres so the env-gated *.pg.test.ts parity suites run in CI
-    # instead of skipping (NFR-03). SQLite tests need no service.
+    # instead of skipping (NFR-03).
     services:
       postgres:
         image: postgres:16
@@ -275,9 +275,31 @@ jobs:
           --health-retries 5
     env:
       TEST_DATABASE_URL: postgres://sovereign:sovereign@localhost:5432/sovereign_test
+      TEST_SQLD_URL: http://localhost:28080
+      TEST_SQLD_ADMIN_URL: http://localhost:28081
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+      # sqld (SQLite is sqld-backed only — no plain-file fallback — so its
+      # *.sqld.test.ts suites need a real instance, same as Postgres above).
+      # Not a `services:` container: sqld needs the `--enable-namespaces` CLI
+      # flag, and GitHub Actions' services block has no way to override a
+      # service image's command, only env/ports/options — a plain `docker run`
+      # is the documented workaround. Bind to 127.0.0.1 explicitly (not the
+      # container's own hostname) since the runner talks to it over localhost
+      # port mapping, not the Docker bridge network a Compose deployment uses.
+      - name: Start sqld
+        run: |
+          docker run -d --name sqld-ci \
+            -p 28080:8080 -p 28081:8081 \
+            -e SQLD_NODE=primary \
+            -e SQLD_ADMIN_LISTEN_ADDR='0.0.0.0:8081' \
+            ghcr.io/tursodatabase/libsql-server:latest \
+            /bin/sqld --enable-namespaces
+          for i in $(seq 1 15); do
+            curl -sf http://localhost:28080/health && break
+            sleep 2
+          done
       # runtime/generated/*.ts is gitignored (session/plugin-dependent build
       # output) — regenerate it before running runtime/src tests that import
       # from it directly (registry.ts, scheduler.ts).

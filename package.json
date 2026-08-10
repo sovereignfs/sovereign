@@ -1,6 +1,6 @@
 {
   "name": "sovereign",
-  "version": "0.76.1",
+  "version": "0.77.0",
   "private": true,
   "type": "module",
   "description": "Sovereign — a modular, self-hostable workspace runtime.",
@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "turbo build",
-    "dev": "turbo dev",
+    "dev": "tsx scripts/ensure-sqld.ts && turbo dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",

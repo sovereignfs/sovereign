@@ -1,19 +1,18 @@
 import { getMigrations } from 'better-auth/db/migration';
 import { getAuthOptions } from './auth';
-import { authGet, authRun, ensureAuthTables, provisionAuthSqldNamespace } from './db';
+import { authGet, authRun, ensureAuthTables, provisionAuthStore } from './db';
 
 /**
  * Apply better-auth's schema migrations (user/session/account/verification) and
  * create the auth server's own tables (invites, auth_settings). Both are
  * dialect-aware and idempotent — safe to run on every startup.
  *
- * `provisionAuthSqldNamespace` must run first: sqld namespaces don't
- * auto-vivify on first query (verified live — an unprovisioned namespace
- * 404s), unlike plain-file SQLite's "file created on first open". No-op on
- * every path except the RFC 0091 carve-out's sqld branch.
+ * `provisionAuthStore` must run first: an sqld namespace doesn't auto-vivify
+ * on first query (verified live — an unprovisioned namespace 404s), and a
+ * Postgres schema needs to exist before anything can be created inside it.
  */
 export async function runAuthMigrations(): Promise<void> {
-  await provisionAuthSqldNamespace();
+  await provisionAuthStore();
   const { runMigrations } = await getMigrations(getAuthOptions());
   await runMigrations();
   await ensureAuthTables();

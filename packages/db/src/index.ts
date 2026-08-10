@@ -1,4 +1,4 @@
-export { createClient, findWorkspaceRoot, resolveSqlitePath, type DbConfig } from './client';
+export { createClient, findWorkspaceRoot, type DbConfig, type SqliteDb } from './client';
 export { platformBootstrapStatements } from './bootstrap';
 export {
   createSqldClient,
@@ -197,23 +197,9 @@ export {
 export { resolveDialect, type Dialect, type ResolvedDialect } from './dialect';
 export {
   DbEncryptionConfigError,
-  checkEncryptionMarker,
-  clearEncryptionMarker,
-  clearPluginEncryptionMarker,
   dbEncryptionKeyFromEnv,
-  defaultDataDir,
-  isEncryptionMarked,
-  isPluginEncryptionMarked,
   openKeyedSqlite,
-  resolvePluginEncryptionKey,
-  writeEncryptionMarker,
-  writePluginEncryptionMarker,
 } from './sqlite-encryption';
-export {
-  decryptSqliteFileInPlace,
-  encryptSqliteFileInPlace,
-  listInstanceSqliteFiles,
-} from './sqlite-migration';
 export {
   SqldCutoverError,
   cutoverSqliteFileToSqld,
@@ -242,7 +228,6 @@ export {
   pluginMigrationsFolder,
   pluginMigrationsTableName,
   pluginSchemaName,
-  pluginSqliteUrl,
   provisionPluginDb,
   type PluginDb,
 } from './plugin-client';

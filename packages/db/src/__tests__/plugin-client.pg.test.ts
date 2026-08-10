@@ -27,7 +27,7 @@ describe.skipIf(!PG_URL)('getPluginDb (Postgres search_path pinning)', () => {
 
   beforeAll(async () => {
     process.on('warning', onWarning);
-    process.env.DATABASE_URL = PG_URL;
+    process.env.POSTGRES_DB_URL = PG_URL;
     process.env.DB_DIALECT = 'postgres';
     await provisionPluginDb(PLUGIN_ID);
   });
@@ -35,7 +35,7 @@ describe.skipIf(!PG_URL)('getPluginDb (Postgres search_path pinning)', () => {
   afterAll(async () => {
     process.off('warning', onWarning);
     await dropPluginDb(PLUGIN_ID);
-    delete process.env.DATABASE_URL;
+    delete process.env.POSTGRES_DB_URL;
     delete process.env.DB_DIALECT;
   });
 
@@ -67,13 +67,13 @@ describe.skipIf(!PG_URL)('dropPluginDb (Postgres pool cleanup)', () => {
   const DROP_PLUGIN_ID = 'fs.test.pg-drop';
 
   beforeAll(async () => {
-    process.env.DATABASE_URL = PG_URL;
+    process.env.POSTGRES_DB_URL = PG_URL;
     process.env.DB_DIALECT = 'postgres';
     await provisionPluginDb(DROP_PLUGIN_ID);
   });
 
   afterAll(async () => {
-    delete process.env.DATABASE_URL;
+    delete process.env.POSTGRES_DB_URL;
     delete process.env.DB_DIALECT;
   });
 

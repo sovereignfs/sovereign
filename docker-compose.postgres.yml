@@ -5,6 +5,12 @@
 # service and points both the runtime and the auth server at it. No application
 # code changes (NFR-03): only the database connection differs.
 #
+# The base file's `sqld` service still starts (Compose overlays can only add
+# to `depends_on`, not remove from it) but sits completely idle and unused —
+# a small, fixed resource cost (one lightweight container) traded for the
+# base file staying identical regardless of dialect. Not worth engineering
+# around.
+#
 # Usage:
 #   cp .env.example .env            # set AUTH_SECRET, SOVEREIGN_ADMIN_KEY,
 #                                   # POSTGRES_PASSWORD, NEXT_PUBLIC_RUNTIME_URL …
@@ -29,9 +35,13 @@ services:
     networks:
       - sovereign_net
 
+  # auth and runtime both read DB_DIALECT/POSTGRES_DB_URL directly now — no
+  # separate AUTH_DATABASE_URL. auth gets its own schema (sovereign_auth)
+  # within this same database (apps/auth/src/db.ts), not a separate one.
   auth:
     environment:
-      AUTH_DATABASE_URL: 'postgres://${POSTGRES_USER:-sovereign}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sovereign}'
+      DB_DIALECT: 'postgres'
+      POSTGRES_DB_URL: 'postgres://${POSTGRES_USER:-sovereign}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sovereign}'
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,21 +49,21 @@ services:
   runtime:
     environment:
       DB_DIALECT: 'postgres'
-      DATABASE_URL: 'postgres://${POSTGRES_USER:-sovereign}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sovereign}'
+      POSTGRES_DB_URL: 'postgres://${POSTGRES_USER:-sovereign}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sovereign}'
     depends_on:
       postgres:
         condition: service_healthy
 
   # Without this, `docker compose --profile tools run --rm tools ...` silently
-  # inherits docker-compose.prod.yml's SQLite-default DATABASE_URL and no
-  # DB_DIALECT at all — every dialect-aware `sv` command (e.g. `sv db
-  # migrate-to-postgres`) then resolves to "sqlite" and refuses to run,
-  # even though runtime/auth are correctly on Postgres. Compose only merges
-  # services present in both files; `tools` was missing here entirely.
+  # inherits docker-compose.prod.yml's SQLite-default DB_DIALECT — every
+  # dialect-aware `sv` command (e.g. `sv db migrate-to-postgres`) then
+  # resolves to "sqlite" and refuses to run, even though runtime/auth are
+  # correctly on Postgres. Compose only merges services present in both
+  # files; `tools` was missing here entirely.
   tools:
     environment:
       DB_DIALECT: 'postgres'
-      DATABASE_URL: 'postgres://${POSTGRES_USER:-sovereign}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sovereign}'
+      POSTGRES_DB_URL: 'postgres://${POSTGRES_USER:-sovereign}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sovereign}'
     depends_on:
       postgres:
         condition: service_healthy

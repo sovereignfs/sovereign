@@ -1,104 +1,115 @@
-import { existsSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { Client, InArgs } from '@libsql/client';
 import type { LibsqlDialect } from '@libsql/kysely-libsql';
-import Database from 'better-sqlite3-multiple-ciphers';
 import { Pool } from 'pg';
-import { getEnv } from './env';
-import {
-  checkEncryptionMarker,
-  dbEncryptionKeyFromEnv,
-  openKeyedSqlite,
-} from './sqlite-encryption';
 
 /**
- * The auth server's database, dialect-agnostic like the platform DB (NFR-03).
- * The dialect is inferred from the connection URL: a `postgres(ql)://` URL uses
- * node-postgres, anything else a local SQLite file.
+ * The auth server's database. Auth reads the exact same `DB_DIALECT` and
+ * `POSTGRES_DB_URL` the platform does — no separate `AUTH_DATABASE_URL`, and
+ * therefore no way for auth to end up on a different dialect than the
+ * platform (previously a real gap: an operator could set `DB_DIALECT=postgres`
+ * and reasonably expect auth to follow, but without also pointing
+ * `AUTH_DATABASE_URL` at Postgres, auth silently kept writing to a local
+ * SQLite file). Auth gets its own dedicated store — a Postgres schema or an
+ * sqld namespace, both named `AUTH_STORE_NAME` below — so better-auth's
+ * tables (`user`, `session`, `account`, `verification`, …) can never collide
+ * with unrelated platform tables, mirroring how every isolated plugin gets
+ * its own schema/namespace (`packages/db/src/plugin-client.ts`).
  *
- * better-auth manages its own user/session/account/verification tables (created
- * by its migrator, see ./migrate); we add an `invites` table (invite-only gate)
- * an `auth_settings` table (the Console invite-only toggle), and an auth-local
- * `auth_email_delivery_log` table for authentication email diagnostics. better-auth
- * receives the raw driver via `getAuthDatabase()`; the app's own queries go
- * through the async `authGet`/`authAll`/`authRun` helpers, which paper over the
- * better-sqlite3 (sync) vs node-postgres (async) split.
+ * `apps/auth` deliberately doesn't depend on `@sovereignfs/db` (this file
+ * duplicates a small amount of its dialect/sqld resolution logic on purpose —
+ * service-boundary independence: own Dockerfile, own deploy). Reading the
+ * same env var *names* the platform does isn't a violation of that — it's
+ * just agreeing on config, not sharing code.
  *
- * RFC 0091's encryption carve-out (workstream 0009 leg 3): when
- * `SOVEREIGN_DB_ENCRYPTION_KEY` is unset, the SQLite path routes to sqld
- * instead of a plain-file `auth.db` — RFC 0071's guarantee has no equivalent
- * in sqld today, so an encrypted instance stays on the plain-file path
- * regardless. `apps/auth` deliberately doesn't depend on `@sovereignfs/db`
- * (this file duplicates `packages/db/src/client.ts`'s dialect resolution on
- * purpose — see below), so the small amount of sqld-specific glue here is
- * duplicated too rather than shared; `@libsql/client`/`@libsql/kysely-libsql`
- * are third-party npm packages, not `@sovereignfs/db` internals, so this
- * doesn't violate that boundary.
+ * better-auth manages its own user/session/account/verification tables
+ * (created by its migrator, see ./migrate); we add an `invites` table
+ * (invite-only gate), an `auth_settings` table (the Console invite-only
+ * toggle), and an auth-local `auth_email_delivery_log` table for
+ * authentication email diagnostics. better-auth receives the raw driver via
+ * `getAuthDatabase()`; the app's own queries go through the async
+ * `authGet`/`authAll`/`authRun` helpers, which paper over the sqld (async,
+ * `.get`/`.all`/`.run`) vs node-postgres (async, `.execute`) split.
  *
- * `@libsql/client`/`@libsql/kysely-libsql` are required lazily (via `require`,
- * not a top-level `import`) — found the hard way in production: Next.js's
- * `instrumentation.ts` hook loads outside the webpack-bundled server graph, so
- * the `libsql: false` alias in `next.config.ts` (which stops webpack from
- * pulling in the native binding for the bundled routes) never applies to it.
- * `apps/auth/instrumentation.ts` unconditionally imports this module on every
- * boot, so a top-level `import` of these packages loaded `libsql`'s real
- * native addon eagerly — on every dialect, not just sqld — and crashed
- * instantly on a musl (Alpine) image with no matching prebuilt binary,
- * regardless of whether the sqld path was ever going to be taken. Lazy
- * `require` defers that load to the two call sites that actually construct a
- * client, both already only reached on the sqld branch.
+ * `@libsql/client`/`@libsql/kysely-libsql` are required lazily (via
+ * `require`, not a top-level `import`) — found the hard way in production:
+ * Next.js's `instrumentation.ts` hook loads outside the webpack-bundled
+ * server graph, so the `libsql: false` alias in `next.config.ts` (which stops
+ * webpack from pulling in the native binding for the bundled routes) never
+ * applies to it. `apps/auth/instrumentation.ts` unconditionally imports this
+ * module on every boot, so a top-level `import` of these packages loaded
+ * `libsql`'s real native addon eagerly — on every dialect, not just sqld —
+ * and crashed instantly on a musl (Alpine) image with no matching prebuilt
+ * binary, regardless of whether the sqld path was ever going to be taken.
+ * Lazy `require` defers that load to the two call sites that actually
+ * construct a client, both already only reached on the sqlite branch.
  */
 
-/** sqld namespace dedicated to the auth database — kept separate from the
- * platform DB's default namespace so better-auth's tables (`user`, `session`,
- * …) can never collide with unrelated platform tables, mirroring today's
- * separate `auth.db`/`sovereign.db` files. */
-const SQLD_AUTH_NAMESPACE = 'auth';
+/** Schema (Postgres) / namespace (sqld) dedicated to the auth database — same
+ * name on both dialects for consistency with the naming convention plugins
+ * use (`plugin_<slug>` / `plugin_<slug>`), just a fixed name instead of a
+ * slug since there's only ever one auth store. */
+const AUTH_STORE_NAME = 'sovereign_auth';
 
 const require = createRequire(import.meta.url);
 
+function dbDialect(): 'sqlite' | 'postgres' {
+  const explicit = process.env.DB_DIALECT?.toLowerCase();
+  if (explicit === 'sqlite' || explicit === 'postgres') return explicit;
+  throw new Error(
+    `DB_DIALECT is required and must be "sqlite" or "postgres" (got ${
+      explicit === undefined || explicit.length === 0 ? 'unset' : `"${explicit}"`
+    }).`,
+  );
+}
+
+function postgresUrl(): string {
+  const url = process.env.POSTGRES_DB_URL;
+  if (!url) throw new Error('DB_DIALECT=postgres requires POSTGRES_DB_URL to be set.');
+  return url;
+}
+
+// Defaults target native dev (scripts/ensure-sqld.ts starts sqld on these
+// localhost ports — 28080/28081, not sqld's own internal 8080/8081, since
+// 8080 is a commonly-squatted local dev port) — must match
+// packages/db/src/sqld.ts's identical defaults. Docker Compose deployments
+// don't rely on this default; docker-compose.yml/prod.yml set
+// SQLD_URL/SQLD_ADMIN_URL explicitly.
 function sqldUrl(): string {
-  return process.env.SQLD_URL ?? 'http://sqld:8080';
+  return process.env.SQLD_URL ?? 'http://localhost:28080';
 }
 
 function sqldAdminUrl(): string {
-  return process.env.SQLD_ADMIN_URL ?? 'http://sqld:8081';
+  return process.env.SQLD_ADMIN_URL ?? 'http://localhost:28081';
 }
 
 /**
- * Create the auth database's sqld namespace (idempotent — a `400 already
- * exists` response is treated as success, verified live against a real
- * `--enable-namespaces` instance). Namespaces don't auto-vivify on first
- * query (verified live: an unprovisioned namespace 404s), so this must run
- * once before `runAuthMigrations()`'s first real query — see
- * `apps/auth/src/migrate.ts`.
+ * Provision the auth store before first use — sqld namespaces don't
+ * auto-vivify on first query (verified live: an unprovisioned namespace
+ * 404s), and a Postgres schema needs `CREATE SCHEMA IF NOT EXISTS`. Call once
+ * before `runAuthMigrations()`'s first real query (see `./migrate.ts`). Uses
+ * its own short-lived connection rather than `getAuthDb()`'s cached one —
+ * that one's Postgres pool already pins `search_path` to a schema that must
+ * exist first.
  */
-export async function provisionAuthSqldNamespace(): Promise<void> {
-  // Fail fast here too, before any namespace gets created — this runs before
-  // getAuthDb() in the startup sequence (see runAuthMigrations), and a
-  // mismatch would otherwise provision a namespace no one uses before the
-  // error ever surfaces.
-  assertAuthDialectMatchesPlatform(getEnv().databaseUrl);
+export async function provisionAuthStore(): Promise<void> {
+  if (dbDialect() === 'postgres') {
+    const pool = new Pool({ connectionString: postgresUrl() });
+    try {
+      await pool.query(`CREATE SCHEMA IF NOT EXISTS "${AUTH_STORE_NAME}"`);
+    } finally {
+      await pool.end();
+    }
+    return;
+  }
 
-  // Same ':memory:' carve-out as getAuthDb() and assertAuthDialectMatchesPlatform
-  // above — ephemeral test storage never touches sqld, regardless of whether an
-  // encryption key is set. Missing this sent every plain (no-encryption-key)
-  // ':memory:' caller here into the fetch below, which fails with
-  // "getaddrinfo ENOTFOUND sqld" outside Docker Compose's network — found
-  // empirically while calling runAuthMigrations() against a throwaway instance.
-  if (getEnv().databaseUrl === ':memory:') return;
-
-  if (dbEncryptionKeyFromEnv() !== undefined) return; // plain-file path, no namespace involved
-  if (isPostgresUrl(getEnv().databaseUrl)) return;
-
-  const res = await fetch(`${sqldAdminUrl()}/v1/namespaces/${SQLD_AUTH_NAMESPACE}/create`, {
+  const res = await fetch(`${sqldAdminUrl()}/v1/namespaces/${AUTH_STORE_NAME}/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: '{}',
   });
   if (res.ok || res.status === 400) return;
-  throw new Error(`Failed to create sqld namespace "${SQLD_AUTH_NAMESPACE}": ${res.status}`);
+  throw new Error(`Failed to create sqld namespace "${AUTH_STORE_NAME}": ${res.status}`);
 }
 
 function createAuthSqldClient(): Client {
@@ -107,141 +118,35 @@ function createAuthSqldClient(): Client {
     url: sqldUrl(),
     fetch: (input: unknown, init?: RequestInit) => {
       const headers = new Headers(init?.headers);
-      headers.set('x-namespace', SQLD_AUTH_NAMESPACE);
+      headers.set('x-namespace', AUTH_STORE_NAME);
       return fetch(input as string, { ...init, headers });
     },
   });
 }
 
-type AuthDb =
-  | { dialect: 'sqlite'; sqlite: Database.Database }
-  | { dialect: 'sqlite'; sqld: Client }
-  | { dialect: 'postgres'; pool: Pool };
-
-function isPostgresUrl(url: string): boolean {
-  return url.startsWith('postgres://') || url.startsWith('postgresql://');
-}
-
-/** The two env vars `resolvePlatformDialect`/`assertAuthDialectMatchesPlatform` read. Narrower
- * than `NodeJS.ProcessEnv` on purpose — Next.js augments that global type to require `NODE_ENV`,
- * which would force every caller (including tests) to fake a full process env just to pass one. */
-interface PlatformDialectEnv {
-  DB_DIALECT?: string;
-  DATABASE_URL?: string;
-}
-
-/**
- * The platform's own resolved dialect — `packages/db/src/dialect.ts`'s
- * `resolveDialect()`, duplicated here for the same reason the rest of this
- * file duplicates `packages/db` logic: the auth server intentionally does
- * not depend on it. `DB_DIALECT` is authoritative when set; otherwise the
- * dialect is inferred from `DATABASE_URL`'s scheme, defaulting to SQLite —
- * must stay identical to `resolveDialect()`'s own default, or this and the
- * platform could each infer a different "default" dialect from the same
- * unset env.
- */
-function resolvePlatformDialect(env: PlatformDialectEnv): 'sqlite' | 'postgres' {
-  const explicit = env.DB_DIALECT?.toLowerCase();
-  if (explicit === 'sqlite' || explicit === 'postgres') return explicit;
-  const url = env.DATABASE_URL ?? 'file:./data/sovereign.db';
-  return isPostgresUrl(url) ? 'postgres' : 'sqlite';
-}
-
-/**
- * Fail fast if the auth database's own dialect (inferred purely from
- * `AUTH_DATABASE_URL`'s scheme — see the module doc comment) disagrees with
- * the platform's (`DB_DIALECT`/`DATABASE_URL`).
- *
- * This gap is real, not hypothetical: `apps/auth` has always resolved its
- * dialect entirely independently of `DB_DIALECT`, so nothing else in the
- * codebase catches a mismatch. An operator can set `DB_DIALECT=postgres` and
- * reasonably expect "auth, platform, and every plugin" (the documented
- * model) to follow — but without also pointing `AUTH_DATABASE_URL` at
- * Postgres, auth silently keeps writing to a local SQLite file instead,
- * invisibly diverging from the rest of the instance. Both env vars are read
- * from the same shared root `.env` (`loadEnvConfig` in both `next.config.ts`
- * files), so this isn't asking the auth process to reach for something it
- * doesn't already have.
- *
- * Skipped for `:memory:` — ephemeral test storage, no real platform to
- * compare against (same carve-out `checkEncryptionMarker` uses below).
- */
-export function assertAuthDialectMatchesPlatform(
-  authUrl: string,
-  // Next.js augments the global NodeJS.ProcessEnv type to require NODE_ENV,
-  // which makes it structurally incompatible with the narrower type below at
-  // the default-parameter position — cast, not a behavior change: at runtime
-  // process.env has these two keys (or undefined) same as any other.
-  env: PlatformDialectEnv = process.env as PlatformDialectEnv,
-): void {
-  if (authUrl === ':memory:') return;
-
-  const authDialect = isPostgresUrl(authUrl) ? 'postgres' : 'sqlite';
-  const platformDialect = resolvePlatformDialect(env);
-  if (authDialect === platformDialect) return;
-
-  throw new Error(
-    `Dialect mismatch: the platform resolves to "${platformDialect}" (DB_DIALECT/DATABASE_URL), ` +
-      `but AUTH_DATABASE_URL resolves to "${authDialect}". Auth, platform, and every plugin must ` +
-      "agree on one dialect — set AUTH_DATABASE_URL to match (see docs/self-hosting.md's " +
-      'PostgreSQL section for the required env vars on both dialects).',
-  );
-}
-
-/**
- * Convert a `file:` URL to a filesystem path. Relative paths resolve against the
- * workspace root (nearest ancestor with pnpm-workspace.yaml), not the process
- * cwd — the auth server runs from apps/auth/, and all SQLite files should land
- * in the single root-level data/ directory. (Mirrors packages/db; not imported,
- * as the auth server intentionally does not depend on packages/db.)
- */
-function toPath(url: string): string {
-  if (url === ':memory:') return url;
-  const path = url.startsWith('file:') ? url.slice('file:'.length) : url;
-  if (isAbsolute(path)) return path;
-  return resolve(findWorkspaceRoot(), path);
-}
-
-function findWorkspaceRoot(): string {
-  let dir = process.cwd();
-  for (;;) {
-    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir;
-    const parent = dirname(dir);
-    if (parent === dir) return process.cwd();
-    dir = parent;
-  }
-}
+type AuthDb = { dialect: 'sqlite'; sqld: Client } | { dialect: 'postgres'; pool: Pool };
 
 let _db: AuthDb | undefined;
 
 function getAuthDb(): AuthDb {
   if (_db) return _db;
-  const url = getEnv().databaseUrl;
-  assertAuthDialectMatchesPlatform(url);
 
-  if (isPostgresUrl(url)) {
-    _db = { dialect: 'postgres', pool: new Pool({ connectionString: url }) };
+  if (dbDialect() === 'postgres') {
+    // search_path pinned via the connection's startup options (part of the
+    // handshake, applied before Postgres accepts any query) rather than a
+    // `SET` issued after connecting — same technique and same reasoning as
+    // `packages/db/src/plugin-client.ts`'s isolated-plugin pools.
+    _db = {
+      dialect: 'postgres',
+      pool: new Pool({
+        connectionString: postgresUrl(),
+        options: `-c search_path="${AUTH_STORE_NAME}"`,
+      }),
+    };
     return _db;
   }
 
-  const key = dbEncryptionKeyFromEnv();
-  const path = toPath(url);
-
-  // Runs regardless of destination — catches "this instance's auth data was
-  // encrypted, but the key is now missing" before ever opening anything.
-  // Same reasoning as packages/db/src/client.ts's createClient().
-  if (path !== ':memory:') {
-    checkEncryptionMarker(join(findWorkspaceRoot(), 'data'), key !== undefined);
-  }
-
-  if (path !== ':memory:' && key === undefined) {
-    _db = { dialect: 'sqlite', sqld: createAuthSqldClient() };
-    return _db;
-  }
-
-  if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
-  const sqlite = openKeyedSqlite(path, key);
-  _db = { dialect: 'sqlite', sqlite };
+  _db = { dialect: 'sqlite', sqld: createAuthSqldClient() };
   return _db;
 }
 
@@ -251,11 +156,10 @@ export function getAuthDialect(): 'sqlite' | 'postgres' {
 }
 
 /**
- * What better-auth's own `database` config option consumes. For the two
- * unchanged paths (plain-file SQLite, Postgres) this is the raw driver,
- * exactly as before — better-auth auto-detects a `better-sqlite3` `Database`
- * or `pg` `Pool`. For the sqld path there's no raw-driver auto-detection (no
- * official better-auth support for libSQL), so this hands better-auth a
+ * What better-auth's own `database` config option consumes. For Postgres,
+ * the raw `Pool` (search_path already pinned to the auth schema) — better-auth
+ * auto-detects a `pg` `Pool`. For sqld there's no raw-driver auto-detection
+ * (no official better-auth support for libSQL), so this hands better-auth a
  * Kysely `Dialect` + `type: 'sqlite'` instead — the same shape better-auth's
  * own docs use for Cloudflare D1, another non-standard SQLite backend,
  * verified against the installed better-auth@1.6.25's own type definitions
@@ -271,24 +175,21 @@ export function getAuthDialect(): 'sqlite' | 'postgres' {
  * pinned version; both connections still reach the same sqld namespace via
  * the same `x-namespace` header.
  */
-export function getAuthDatabase():
-  Database.Database | Pool | { dialect: LibsqlDialect; type: 'sqlite' } {
+export function getAuthDatabase(): Pool | { dialect: LibsqlDialect; type: 'sqlite' } {
   const db = getAuthDb();
   if (db.dialect === 'postgres') return db.pool;
-  if ('sqld' in db) {
-    const { LibsqlDialect } =
-      require('@libsql/kysely-libsql') as typeof import('@libsql/kysely-libsql');
-    const dialect = new LibsqlDialect({
-      url: sqldUrl(),
-      fetch: (input: unknown, init?: RequestInit) => {
-        const headers = new Headers(init?.headers);
-        headers.set('x-namespace', SQLD_AUTH_NAMESPACE);
-        return fetch(input as string, { ...init, headers });
-      },
-    });
-    return { dialect, type: 'sqlite' };
-  }
-  return db.sqlite;
+
+  const { LibsqlDialect } =
+    require('@libsql/kysely-libsql') as typeof import('@libsql/kysely-libsql');
+  const dialect = new LibsqlDialect({
+    url: sqldUrl(),
+    fetch: (input: unknown, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      headers.set('x-namespace', AUTH_STORE_NAME);
+      return fetch(input as string, { ...init, headers });
+    },
+  });
+  return { dialect, type: 'sqlite' };
 }
 
 /** Create the auth server's own tables (invites, auth_settings). Idempotent. */
@@ -352,9 +253,8 @@ export function toPgPlaceholders(sql: string): string {
 }
 
 /**
- * better-sqlite3 cannot bind booleans; map them to 0/1. Postgres binds natively.
- * libsql (sqld) also cannot bind booleans — same 0/1 mapping as better-sqlite3.
- * Exported for testing.
+ * libsql (sqld) cannot bind booleans; map them to 0/1. Postgres binds
+ * natively. Exported for testing.
  */
 export function sqliteParams(params: readonly unknown[]): unknown[] {
   return params.map((p) => (typeof p === 'boolean' ? (p ? 1 : 0) : p));
@@ -370,11 +270,8 @@ export async function authGet<T>(
     const res = await db.pool.query(toPgPlaceholders(sql), params as unknown[]);
     return res.rows[0] as T | undefined;
   }
-  if ('sqld' in db) {
-    const res = await db.sqld.execute({ sql, args: sqliteParams(params) as InArgs });
-    return res.rows[0] as T | undefined;
-  }
-  return db.sqlite.prepare(sql).get(...sqliteParams(params)) as T | undefined;
+  const res = await db.sqld.execute({ sql, args: sqliteParams(params) as InArgs });
+  return res.rows[0] as T | undefined;
 }
 
 /** Run a query returning all rows. */
@@ -384,11 +281,8 @@ export async function authAll<T>(sql: string, params: readonly unknown[] = []): 
     const res = await db.pool.query(toPgPlaceholders(sql), params as unknown[]);
     return res.rows as T[];
   }
-  if ('sqld' in db) {
-    const res = await db.sqld.execute({ sql, args: sqliteParams(params) as InArgs });
-    return res.rows as T[];
-  }
-  return db.sqlite.prepare(sql).all(...sqliteParams(params)) as T[];
+  const res = await db.sqld.execute({ sql, args: sqliteParams(params) as InArgs });
+  return res.rows as T[];
 }
 
 /** Run a statement for its side effects (INSERT/UPDATE/DDL). */
@@ -398,9 +292,5 @@ export async function authRun(sql: string, params: readonly unknown[] = []): Pro
     await db.pool.query(toPgPlaceholders(sql), params as unknown[]);
     return;
   }
-  if ('sqld' in db) {
-    await db.sqld.execute({ sql, args: sqliteParams(params) as InArgs });
-    return;
-  }
-  db.sqlite.prepare(sql).run(...sqliteParams(params));
+  await db.sqld.execute({ sql, args: sqliteParams(params) as InArgs });
 }

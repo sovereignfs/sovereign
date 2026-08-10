@@ -1,7 +1,9 @@
 # Local development services.
 #
-# Runs Mailpit (email capture), the auth server, and the runtime together on a
-# shared internal network. See docs/self-hosting.md for setup instructions.
+# Runs Mailpit (email capture), sqld (SQLite is always sqld-backed — see
+# docs/self-hosting.md's sqld section), the auth server, and the runtime
+# together on a shared internal network. See docs/self-hosting.md for setup
+# instructions.
 #
 # For active code development (hot-reload), use `pnpm dev` instead. This file
 # is for spinning up the full containerised stack locally.
@@ -24,6 +26,40 @@ services:
     networks:
       - sovereign_net
 
+  sqld:
+    image: ghcr.io/tursodatabase/libsql-server:latest
+    container_name: sovereign-sqld
+    restart: unless-stopped
+    # --enable-namespaces has no env-var equivalent (confirmed against
+    # libsql-server's own CLI definitions) — must be a command-line arg.
+    # Namespaces give each isolated plugin database (and the auth database)
+    # its own logical database within this one sqld instance
+    # (packages/db/src/sqld.ts's x-namespace header), the sqld analogue of
+    # Postgres's per-plugin/per-auth schema.
+    command: ['/bin/sqld', '--enable-namespaces']
+    environment:
+      SQLD_NODE: primary
+      SQLD_ADMIN_LISTEN_ADDR: '0.0.0.0:8081'
+    volumes:
+      - sovereign_sqld_data:/var/lib/sqld
+    healthcheck:
+      # No wget/curl in ghcr.io/tursodatabase/libsql-server (debian:bullseye-slim,
+      # confirmed empty by testing this exact image) — bash's /dev/tcp pseudo-device
+      # needs nothing external, and bash is present.
+      test:
+        [
+          'CMD',
+          'bash',
+          '-c',
+          'exec 3<>/dev/tcp/127.0.0.1/8080 && printf "GET /health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && head -1 <&3 | grep -q "200 OK"',
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+    networks:
+      - sovereign_net
+
   auth:
     build:
       context: .
@@ -41,14 +77,14 @@ services:
       - '${AUTH_PORT:-3001}:3001'
     environment:
       AUTH_SECRET: '${AUTH_SECRET}'
-      AUTH_DATABASE_URL: '${AUTH_DATABASE_URL:-file:./data/auth.db}'
-      # Read only for assertAuthDialectMatchesPlatform()'s consistency check
-      # (apps/auth/src/db.ts) — auth's own dialect always comes from
-      # AUTH_DATABASE_URL above, never these two. Must mirror the runtime
-      # service's own DB_DIALECT/DATABASE_URL defaults below exactly, or the
-      # check fails on a correctly-configured instance.
+      # DB_DIALECT is the sole source of truth (no per-service override) —
+      # auth reads the exact same value the runtime does, so the two can
+      # never disagree. Postgres additionally needs POSTGRES_DB_URL (see
+      # docker-compose.postgres.yml); SQLite needs nothing else here — it's
+      # always sqld-backed (SQLD_URL/SQLD_ADMIN_URL below).
       DB_DIALECT: '${DB_DIALECT:-sqlite}'
-      DATABASE_URL: '${DATABASE_URL:-file:./data/sovereign.db}'
+      SQLD_URL: 'http://sqld:8080'
+      SQLD_ADMIN_URL: 'http://sqld:8081'
       AUTH_INVITE_ONLY: '${AUTH_INVITE_ONLY:-false}'
       AUTH_REQUIRE_EMAIL_VERIFICATION: '${AUTH_REQUIRE_EMAIL_VERIFICATION:-true}'
       # better-auth base URL — must be the browser-reachable address so
@@ -65,16 +101,15 @@ services:
       # (Email delivery settings) — the auth server decrypts its own local
       # copy independently of the runtime. Same key as the runtime's vault.
       SOVEREIGN_VAULT_KEY: '${SOVEREIGN_VAULT_KEY}'
-      # Opt-in SQLite at-rest encryption (RFC 0071). Empty/unset = plaintext,
-      # unchanged from today. Must match the runtime service's value exactly —
-      # see docs/self-hosting.md's "SQLite at-rest encryption" section.
-      SOVEREIGN_DB_ENCRYPTION_KEY: '${SOVEREIGN_DB_ENCRYPTION_KEY:-}'
       # Internal Docker service address for auth→runtime server-to-server calls
       # (e.g. recording email-delivery-failure activity log entries). Mirrors
       # SOVEREIGN_AUTH_URL on the runtime service below, reversed.
       SOVEREIGN_RUNTIME_URL: 'http://runtime:3000'
     volumes:
       - ./data:/app/data
+    depends_on:
+      sqld:
+        condition: service_healthy
     networks:
       - sovereign_net
 
@@ -106,17 +141,13 @@ services:
       # domain in production when compatibility routes need to be reachable.
       SOVEREIGN_AUTH_PUBLIC_URL: '${SOVEREIGN_AUTH_PUBLIC_URL:-http://localhost:3001}'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
-      # Opt-in SQLite at-rest encryption (RFC 0071). Empty/unset = plaintext,
-      # unchanged from today. Must match the auth service's value exactly — see
-      # docs/self-hosting.md's "SQLite at-rest encryption" section. Existing
-      # plaintext instances must run `sv db encrypt` before setting this.
-      SOVEREIGN_DB_ENCRYPTION_KEY: '${SOVEREIGN_DB_ENCRYPTION_KEY:-}'
       # Shared signing secret — the runtime verifies the auth server's session
       # cookie locally with it (SRS AUTH-05); must match the auth service.
       AUTH_SECRET: '${AUTH_SECRET}'
       NEXT_PUBLIC_RUNTIME_URL: '${NEXT_PUBLIC_RUNTIME_URL:-http://localhost:3000}'
-      DATABASE_URL: '${DATABASE_URL:-file:./data/sovereign.db}'
       DB_DIALECT: '${DB_DIALECT:-sqlite}'
+      SQLD_URL: 'http://sqld:8080'
+      SQLD_ADMIN_URL: 'http://sqld:8081'
       # Show the bundled example/demo apps (hidden by default). See .env.example.
       SOVEREIGN_EXAMPLES_ENABLED: '${SOVEREIGN_EXAMPLES_ENABLED:-}'
       # Hide plugins flagged development: true (shown by default). See .env.example.
@@ -134,6 +165,10 @@ services:
       - mailpit
     networks:
       - sovereign_net
+
+volumes:
+  sovereign_sqld_data:
+    name: sovereign_sqld_data
 
 networks:
   sovereign_net:

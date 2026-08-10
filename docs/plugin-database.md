@@ -8,10 +8,9 @@ audiences:
 # Plugin database guide
 
 Sovereign gives every plugin access to a Drizzle client through `sdk.db.getClient()`.
-Every plugin gets its own **dedicated store** — an sqld namespace or SQLite file
-(depending on the RFC 0071 encryption carve-out — see below) or a Postgres schema. There
-is no per-plugin choice to make and nothing to set in the manifest beyond an optional
-`requireEncryption` flag (RFC 0071) — see [Database](#database).
+Every plugin gets its own **dedicated store** — an sqld namespace or a Postgres schema.
+There is no per-plugin choice to make, and no `database` field left in the manifest at
+all — see [Database](#database).
 
 `type: "platform"` plugins (`account`, `console`, `launcher`) are the one exception —
 see [Platform-type plugins](#platform-type-plugins).
@@ -31,11 +30,10 @@ On the **first request** where a plugin route calls `sdk.db.getClient()`, the ru
 
 **Provisioning by dialect:**
 
-| Dialect                                  | What gets created                                                                                                                                                                                                                                                                                                 |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SQLite, `requireEncryption: true`        | `data/plugins/<pluginId>.db` opened with WAL mode and foreign keys enabled. Parent `data/plugins/` directory is created if absent. The RFC 0071 SQLCipher-capable driver — the only path that still uses a plain file (see [self-hosting.md's sqld section](self-hosting.md#sqld-libsql-server-rfc-0091)).        |
-| SQLite, no `requireEncryption` (default) | A dedicated **sqld namespace** (RFC 0091, workstream 0009 leg 3), created via sqld's admin API. Namespace name: same slug rules as the Postgres schema below — e.g. `io.example.tasks` → `plugin_io_example_tasks`. sqld is a required part of a SQLite deployment, not an optional extra.                        |
-| Postgres                                 | `CREATE SCHEMA IF NOT EXISTS "plugin_<slug>"` on the same server as the platform DB (`DATABASE_URL`). Schema name: plugin id with `.`/`-` → `_`, prefixed with `plugin_` — e.g. `io.example.tasks` → `plugin_io_example_tasks`. The runtime pool sets `SET search_path TO "plugin_slug"` on every new connection. |
+| Dialect  | What gets created                                                                                                                                                                                                                                                                                                                    |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| SQLite   | A dedicated **sqld namespace** (RFC 0091, workstream 0009 leg 3), created via sqld's admin API. Namespace name: same slug rules as the Postgres schema below — e.g. `io.example.tasks` → `plugin_io_example_tasks`. sqld is a required part of a SQLite deployment, not an optional extra — no plain-file fallback.                  |
+| Postgres | `CREATE SCHEMA IF NOT EXISTS "plugin_<slug>"` on the same server as the platform DB (`POSTGRES_DB_URL`). Schema name: plugin id with `.`/`-` → `_`, prefixed with `plugin_` — e.g. `io.example.tasks` → `plugin_io_example_tasks`. The runtime pool sets `search_path` on connection (startup option, not a `SET` after connecting). |
 
 Subsequent `sdk.db.getClient()` calls return the same cached client — provisioning only
 runs once per process.
@@ -99,25 +97,10 @@ export const lists = sqliteTable('lists', {
   (`packages/db/src/exec.ts`); a plugin whose application code is not dialect-aware
   must not copy that part of the pattern.
 
-An isolated plugin can require SQLite at-rest encryption (RFC 0071) for its own store:
-
-```json
-{
-  "database": {
-    "requireEncryption": true
-  }
-}
-```
-
-`requireEncryption` is **raise-only**: it forces encryption on for this plugin's
-database regardless of the instance-wide `SOVEREIGN_DB_ENCRYPTION_KEY` default, but a
-plugin can never use it to opt _out_ of encryption the operator has enabled. It's not
-valid for `type: "platform"` plugins — the manifest fails validation otherwise. Since
-the platform dialect is instance-wide, a `requireEncryption` plugin's actual guarantee
-depends on what the operator chose: on a SQLite platform it's enforced (the runtime
-refuses to start without the key); on Postgres it's only a startup warning and a
-fallback to disk-level encryption, since there is no SQLCipher equivalent there — see
-[docs/self-hosting.md's SQLite at-rest encryption section](self-hosting.md#sqlite-at-rest-encryption-rfc-0071).
+There is currently no application-level at-rest encryption option for a plugin's store,
+on either dialect — a prior SQLite-only opt-in (`database.requireEncryption`, RFC 0071)
+was retired along with the rest of the `database` manifest field. Rely on disk/volume-level
+encryption if this matters for your deployment.
 
 ### Migrations
 
@@ -178,20 +161,16 @@ pnpm sv plugin remove io.example.tasks --keep-data  # remove, keep the store
 
 What "drop" means by dialect:
 
-- **SQLite, `requireEncryption: true`** — deletes `data/plugins/io.example.tasks.db`,
-  plus the WAL sidecar files (`-wal`, `-shm`) if present.
-- **SQLite, no `requireEncryption` (default)** — drops the plugin's sqld namespace via
-  sqld's admin API (`DELETE /v1/namespaces/<ns>`). There is no file on disk to delete.
+- **SQLite** — drops the plugin's sqld namespace via sqld's admin API
+  (`DELETE /v1/namespaces/<ns>`). There is no file on disk to delete.
 - **Postgres** — runs `DROP SCHEMA "plugin_io_example_tasks" CASCADE`, which deletes all
   tables and indexes in that schema.
 
 **`--keep-data`** retains the store. Useful when you want to inspect the data before
-deleting, migrate it elsewhere, or reinstall the plugin with its history intact. For a
-`requireEncryption` plugin, the retained SQLite file at `data/plugins/<id>.db` is a
-fully valid SQLite database you can open with any SQLite tool; for the default sqld
-case, the namespace itself is retained on the sqld server (see
+deleting, migrate it elsewhere, or reinstall the plugin with its history intact. The
+namespace/schema itself is retained on the server (see
 [self-hosting.md's sqld section](self-hosting.md#sqld-libsql-server-rfc-0091) for how
-its data is backed up).
+sqld's data is backed up).
 
 ### Reinstall
 
@@ -205,36 +184,10 @@ the store's `__drizzle_migrations`).
 
 ### SQLite
 
-Only `requireEncryption` plugin stores are plain files under `data/plugins/` — everything
-else (the default) lives in sqld, backed up as part of its own named volume, not `data/`.
-`sv backup` archives the `data/` directory, which includes `data/plugins/` for any
-`requireEncryption` plugins present:
-
-```
-data/
-  sovereign.db          # platform DB (plain file only when SOVEREIGN_DB_ENCRYPTION_KEY is set)
-  auth.db               # auth DB (same condition)
-  avatars/              # user avatars
-  plugins/
-    io.example.tasks.db # requireEncryption plugin DB only
-    io.example.tasks.db-wal
-```
-
-A full `sv restore` restores all `data/`-resident stores in one operation. To back up or
-restore a single `requireEncryption` plugin's database:
-
-```bash
-# Backup one plugin store
-cp data/plugins/io.example.tasks.db /backup/
-
-# Restore (plugin must be uninstalled or not running)
-cp /backup/io.example.tasks.db data/plugins/
-```
-
-For a default (non-`requireEncryption`) plugin, its data lives in an sqld namespace
-instead — back up and restore sqld as a whole (its `sovereign_sqld_data` volume), not
-per-namespace; see
-[self-hosting.md's sqld section](self-hosting.md#sqld-libsql-server-rfc-0091).
+Every plugin's data lives in sqld, backed up and restored as part of its own named
+volume (`sovereign_sqld_data`), not per-namespace — see
+[self-hosting.md's sqld section](self-hosting.md#sqld-libsql-server-rfc-0091). `data/`
+now holds only uploaded files (avatars), no databases.
 
 ### Postgres
 
@@ -244,11 +197,11 @@ full `pg_dump` of the database captures them. To dump only one plugin's schema:
 ```bash
 pg_dump \
   --schema "plugin_io_example_tasks" \
-  "$DATABASE_URL" \
+  "$POSTGRES_DB_URL" \
   > io_example_tasks_backup.sql
 
 # Restore
-psql "$DATABASE_URL" < io_example_tasks_backup.sql
+psql "$POSTGRES_DB_URL" < io_example_tasks_backup.sql
 ```
 
 ---
@@ -323,9 +276,13 @@ persists on disk; the client is reconstructed on next access).
 ### Postgres `search_path`
 
 For a plugin's Postgres store, the runtime creates a separate `pg.Pool` pointing at the
-same `DATABASE_URL` but with `SET search_path TO "plugin_<slug>"` run on every new
-connection (via a `pool.on('connect', ...)` handler). This means all unqualified table
-names in queries resolve to the plugin's schema. The platform pool is unaffected.
+same `POSTGRES_DB_URL` but with `search_path` pinned to `"plugin_<slug>"` via the
+connection's startup options (`-c search_path=...`) — part of the connection handshake
+itself, not a `SET` issued after connecting from a `pool.on('connect', ...)` handler
+(that pattern has a real race: the handler fires when the socket connects, but the pool
+doesn't wait for its callback to finish before handing the connection to whichever query
+is waiting). This means all unqualified table names in queries resolve to the plugin's
+schema from the first statement. The platform pool is unaffected.
 
 ### Migration runner
 

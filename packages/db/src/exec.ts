@@ -28,7 +28,16 @@ import type { PlatformDb } from './client';
 /** Run a query for at most one row. */
 export async function dbGet<T>(pdb: PlatformDb, query: SQL): Promise<T | undefined> {
   if (pdb.dialect === 'sqlite') {
-    return (await pdb.db.get<T>(query)) ?? undefined;
+    // Not pdb.db.get() — drizzle-orm@0.45.2's libsql session crashes with
+    // `TypeError: Cannot convert undefined or null to object` (Object.keys on
+    // an undefined row) whenever a raw sql`` query genuinely matches zero
+    // rows (drizzle-orm/libsql/session.cjs's normalizeRow doesn't guard
+    // against an undefined row before calling Object.keys on it) — found
+    // live: a query as ordinary as "does this setting exist yet" crashed
+    // instrumentation on every fresh boot. .all() doesn't share the bug
+    // (an empty array needs no such guard), so route through it instead.
+    const rows = await pdb.db.all<T>(query);
+    return rows[0] ?? undefined;
   }
   const result = await pdb.db.execute(query);
   return (result.rows[0] as T | undefined) ?? undefined;

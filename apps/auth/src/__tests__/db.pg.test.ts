@@ -1,3 +1,4 @@
+import { Client } from 'pg';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 /**
@@ -14,18 +15,47 @@ import { beforeAll, describe, expect, it } from 'vitest';
  */
 const PG_URL = process.env.TEST_DATABASE_URL;
 
+/**
+ * This suite runs in its own DATABASE (not just the sovereign_auth schema)
+ * carved out of the same Postgres server TEST_DATABASE_URL points at.
+ * better-auth's getMigrations() introspects every schema in the connected
+ * database via kysely's PostgresIntrospector — while packages/db's .pg tests
+ * concurrently churn throwaway schemas (`DROP SCHEMA … CASCADE` per test) in
+ * the shared TEST_DATABASE_URL database. A table the introspector saw in the
+ * catalog can vanish mid-introspection, failing runAuthMigrations() with
+ * `relation "<other test's schema>.<table>" does not exist` — found live
+ * running the full suite; reproduced only under cross-file parallelism.
+ * Production has no analogue (nothing drops schemas concurrently with auth
+ * boot), so isolation belongs here in the test, not in the product code.
+ */
+async function dedicatedAuthTestDbUrl(baseUrl: string): Promise<string> {
+  const url = new URL(baseUrl);
+  const dbName = 'sovereign_test_auth';
+  const admin = new Client({ connectionString: baseUrl });
+  await admin.connect();
+  try {
+    await admin.query(`CREATE DATABASE ${dbName}`);
+  } catch (err) {
+    // 42P04 duplicate_database — fine, an earlier run created it.
+    if ((err as { code?: string }).code !== '42P04') throw err;
+  } finally {
+    await admin.end();
+  }
+  url.pathname = `/${dbName}`;
+  return url.toString();
+}
+
 describe.skipIf(!PG_URL)('auth server on Postgres', () => {
   beforeAll(async () => {
-    process.env.AUTH_DATABASE_URL = PG_URL;
-    // Matches the deployment shape this test represents — DB_DIALECT must
-    // agree or assertAuthDialectMatchesPlatform() refuses to open anything.
+    process.env.POSTGRES_DB_URL = await dedicatedAuthTestDbUrl(PG_URL as string);
     process.env.DB_DIALECT = 'postgres';
     process.env.AUTH_SECRET ??= 'test-secret-test-secret-test-secret';
     process.env.SOVEREIGN_ADMIN_KEY ??= 'test-admin-key';
     process.env.AUTH_INVITE_ONLY = 'false';
 
-    const { authRun } = await import('../db');
-    // Clean slate: better-auth's tables + our own.
+    const { provisionAuthStore, authRun } = await import('../db');
+    await provisionAuthStore();
+    // Clean slate: better-auth's tables + our own, inside the auth schema.
     await authRun(
       'DROP TABLE IF EXISTS "user", session, account, verification, invites, auth_settings CASCADE',
     );

@@ -47,21 +47,6 @@ const semverString = (label: string) =>
       message: `${label} must be a valid semver string (e.g. "0.6.0")`,
     });
 
-export const manifestDatabaseSchema = z
-  .object({
-    /**
-     * RFC 0071 — force SQLite at-rest encryption on for this plugin's own
-     * isolated database, regardless of the instance-wide
-     * `SOVEREIGN_DB_ENCRYPTION_KEY` default. **Raise-only**: a plugin can
-     * demand encryption, it can never opt out of encryption the operator
-     * has enabled. Not valid for `type: "platform"` — those plugins have no
-     * isolated store of their own (see `manifestDatabaseIsolation`).
-     */
-    requireEncryption: z.boolean().optional(),
-  })
-  .strict();
-
-export type ManifestDatabase = z.infer<typeof manifestDatabaseSchema>;
 export type ManifestDatabaseIsolation = 'shared' | 'isolated';
 
 const providerConfigFieldKeySchema = z
@@ -100,20 +85,6 @@ export function manifestDatabaseIsolation(type: unknown): ManifestDatabaseIsolat
 }
 
 /**
- * Whether a plugin's manifest declares `database.requireEncryption` (RFC
- * 0071). Only meaningful on an isolated SQLite plugin database — enforced by
- * `manifestSchema`'s refinement, not repeated here.
- */
-export function manifestRequiresEncryption(database: unknown): boolean {
-  return (
-    typeof database === 'object' &&
-    database !== null &&
-    'requireEncryption' in database &&
-    database.requireEncryption === true
-  );
-}
-
-/**
  * The plugin manifest schema — the single source of truth for both runtime
  * validation and the exported TypeScript types (see ./types). Mirrors
  * SRS §5 Plugin Manifest Reference.
@@ -135,7 +106,6 @@ const manifestObjectSchema = z
     name: z.string().min(1),
     version: z.string().min(1),
     description: z.string().optional(),
-    database: manifestDatabaseSchema.optional(),
     type: z.enum(['platform', 'sovereign', 'community']),
     runtime: z.enum(['native']),
     routePrefix: z.string().min(1).startsWith('/', 'routePrefix must start with "/"'),
@@ -630,13 +600,7 @@ export const manifestSchema = manifestObjectSchema
       message: 'public: true cannot combine with a paid monetization model (RFC 0089)',
       path: ['public'],
     },
-  )
-  .refine((m) => m.database?.requireEncryption !== true || m.type !== 'platform', {
-    message:
-      'database.requireEncryption is not valid for a type: "platform" plugin — it has no ' +
-      'isolated database of its own to encrypt (see manifestDatabaseIsolation)',
-    path: ['database', 'requireEncryption'],
-  });
+  );
 
 /**
  * Manifest field names, sourced from the schema so docs and tooling share one

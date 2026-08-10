@@ -1,14 +1,11 @@
 export {
   manifestSchema,
   manifestDatabaseIsolation,
-  manifestDatabaseSchema,
-  manifestRequiresEncryption,
   permissionSchema,
   manifestFieldNames,
   registryEntrySchema,
   registryEntryFieldNames,
   CURRENT_MANIFEST_SCHEMA_VERSION,
-  type ManifestDatabase,
   type ManifestDatabaseIsolation,
 } from './schema';
 export {

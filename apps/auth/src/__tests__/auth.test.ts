@@ -1,10 +1,12 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
 beforeAll(() => {
-  // Required env for getEnv(); :memory: keeps getDb() side-effect-free.
+  // Required env for getEnv(). DB_DIALECT=sqlite only constructs a lazy sqld
+  // client (no connection attempt) — getAuthOptions() never issues a query,
+  // so this stays side-effect-free without needing a live sqld instance.
   process.env.AUTH_SECRET = 'test-secret';
   process.env.SOVEREIGN_ADMIN_KEY = 'test-admin-key';
-  process.env.AUTH_DATABASE_URL = ':memory:';
+  process.env.DB_DIALECT = 'sqlite';
 });
 
 describe('auth options', () => {

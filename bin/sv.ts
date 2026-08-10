@@ -25,13 +25,12 @@ import { fileURLToPath } from 'node:url';
 
 import { defineCommand, runMain } from 'citty';
 import { consola } from 'consola';
-import { manifestDatabaseIsolation, manifestRequiresEncryption } from '@sovereignfs/manifest';
+import { manifestDatabaseIsolation } from '@sovereignfs/manifest';
 
 import {
   assertRemovablePlugin,
   authHealthUrl,
   defaultArchivePath,
-  detectDialect,
   pollUntilHealthy,
   readPlatformVersion,
   renderPm2Config,
@@ -336,16 +335,13 @@ const pluginRemove = defineCommand({
     // Read the manifest before deletion to know if the plugin used an isolated DB.
     let isIsolated = false;
     let manifestPluginId: string | null = null;
-    let requiresEncryption = false;
     try {
       const raw = JSON.parse(readFileSync(join(dest, 'manifest.json'), 'utf8')) as {
-        database?: unknown;
         type?: unknown;
         id?: string;
       };
       isIsolated = manifestDatabaseIsolation(raw.type) === 'isolated';
       manifestPluginId = raw.id ?? null;
-      requiresEncryption = manifestRequiresEncryption(raw.database);
     } catch {
       // Manifest unreadable — treat as shared.
     }
@@ -357,7 +353,7 @@ const pluginRemove = defineCommand({
       consola.info(`Dropping isolated database for "${manifestPluginId}"…`);
       try {
         const { dropPluginDb } = await import('@sovereignfs/db');
-        await dropPluginDb(manifestPluginId, requiresEncryption);
+        await dropPluginDb(manifestPluginId);
         consola.success(`Database for "${manifestPluginId}" dropped.`);
       } catch (err) {
         consola.warn(
@@ -414,7 +410,6 @@ const pluginMigrate = defineCommand({
       id: string;
       database: 'isolated' | 'shared';
       dialect: 'sqlite' | 'postgres';
-      requiresEncryption: boolean;
     };
     const pluginsWithMigrations: PluginEntry[] = [];
 
@@ -426,18 +421,11 @@ const pluginMigrate = defineCommand({
         try {
           const m = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
             id?: string;
-            database?: unknown;
             type?: unknown;
           };
           if (typeof m.id !== 'string') continue;
           const database = manifestDatabaseIsolation(m.type);
-          pluginsWithMigrations.push({
-            dir: entry.name,
-            id: m.id,
-            database,
-            dialect,
-            requiresEncryption: manifestRequiresEncryption(m.database),
-          });
+          pluginsWithMigrations.push({ dir: entry.name, id: m.id, database, dialect });
         } catch {
           // ignore unreadable manifests
         }
@@ -461,7 +449,7 @@ const pluginMigrate = defineCommand({
     let migrated = 0;
     let failed = 0;
 
-    for (const { dir, id, database, dialect: pluginDialect, requiresEncryption } of targets) {
+    for (const { dir, id, database, dialect: pluginDialect } of targets) {
       const pluginDir = `plugins/${dir}`;
       const folder = pluginMigrationsFolder(pluginDir, pluginDialect);
       if (!existsSync(folder)) continue;
@@ -469,8 +457,8 @@ const pluginMigrate = defineCommand({
       consola.start(`Migrating "${id}" (${database})…`);
       try {
         if (database === 'isolated') {
-          await provisionPluginDb(id, requiresEncryption);
-          const pluginDb = getPluginDb(id, requiresEncryption);
+          await provisionPluginDb(id);
+          const pluginDb = getPluginDb(id);
           // Postgres only: drizzle's node-postgres migrator tracks applied
           // migrations in a fixed `drizzle` schema regardless of the
           // connection's search_path, so every isolated Postgres plugin
@@ -630,7 +618,7 @@ const pluginMigrateToIsolated = defineCommand({
       consola.error(
         'There is no automated Postgres backup in this CLI yet (task 8.16). Take a manual ' +
           'backup first, e.g.:\n' +
-          '  pg_dump "$DATABASE_URL" > pre-migration-backup.sql\n' +
+          '  pg_dump "$POSTGRES_DB_URL" > pre-migration-backup.sql\n' +
           'then re-run with --skip-backup to confirm you have one.',
       );
       process.exit(1);
@@ -641,9 +629,8 @@ const pluginMigrateToIsolated = defineCommand({
     consola.warn('Make sure the server is stopped before continuing.');
 
     try {
-      const requiresEncryption = false; // a shared-mode plugin never had requireEncryption (schema forbids it)
-      await provisionPluginDb(manifestId, requiresEncryption);
-      const pluginDb = getPluginDb(manifestId, requiresEncryption);
+      await provisionPluginDb(manifestId);
+      const pluginDb = getPluginDb(manifestId);
       if (existsSync(folder)) {
         // See sharedToIsolatedMigrationsTableName's own doc comment for why
         // this must not be pluginMigrationsTableName(manifestId) — found
@@ -705,7 +692,8 @@ const backup = defineCommand({
       description: 'Output archive path (default: ./backups/sovereign-backup-<ts>-v<ver>.tar.gz)',
     },
   },
-  run({ args }) {
+  async run({ args }) {
+    const { resolveDialect } = await import('@sovereignfs/db');
     const dataDir = resolve(args.dataDir);
     const version = readPlatformVersion(ROOT);
     const archivePath = resolve(args.out ?? defaultArchivePath(ROOT, version));
@@ -718,18 +706,23 @@ const backup = defineCommand({
 
     mkdirSync(archiveDir, { recursive: true });
 
-    const dbUrl = process.env.DATABASE_URL ?? `file:${join(dataDir, 'sovereign.db')}`;
-    const dialect = detectDialect(dbUrl);
+    const { dialect } = resolveDialect(process.env);
 
     if (dialect === 'postgres') {
-      // Postgres: use pg_dump for a consistent snapshot.
+      // One pg_dump of the whole database — the platform's own tables
+      // (public schema), the auth schema (sovereign_auth), and every
+      // isolated plugin's schema (plugin_<slug>) all live in this same
+      // database now, so a single dump already captures everything.
       consola.start(`Creating Postgres backup → ${archivePath}`);
-      // Dump both databases to a temp directory, then tar them up.
       const tmp = mkdtempSync(join(archiveDir, '.sv-backup-'));
       const cleanup = (): void => rmSync(tmp, { recursive: true, force: true });
       try {
-        const pgUrl = dbUrl;
-        const authPgUrl = process.env.AUTH_DATABASE_URL ?? pgUrl.replace(/\/[^/]+$/, '/auth');
+        const pgUrl = process.env.POSTGRES_DB_URL;
+        if (!pgUrl) {
+          cleanup();
+          consola.error('DB_DIALECT=postgres requires POSTGRES_DB_URL to be set.');
+          process.exit(1);
+        }
         const dumpResult = spawnSync(
           'pg_dump',
           ['--format=custom', `--file=${join(tmp, 'sovereign.pgdump')}`, pgUrl],
@@ -737,17 +730,7 @@ const backup = defineCommand({
         );
         if (dumpResult.status !== 0) {
           cleanup();
-          consola.error('pg_dump failed for platform database.');
-          process.exit(1);
-        }
-        const authDumpResult = spawnSync(
-          'pg_dump',
-          ['--format=custom', `--file=${join(tmp, 'auth.pgdump')}`, authPgUrl],
-          { stdio: 'inherit' },
-        );
-        if (authDumpResult.status !== 0) {
-          cleanup();
-          consola.error('pg_dump failed for auth database.');
+          consola.error('pg_dump failed.');
           process.exit(1);
         }
         // Include avatars if they exist.
@@ -767,21 +750,18 @@ const backup = defineCommand({
         throw err;
       }
     } else {
-      // SQLite: archive the whole data directory with paths *relative to it*
-      // (note `-C dataDir .`). Two reasons this matters:
-      //  1. Portability — the archive stores `./sovereign.db`, not an absolute
-      //     host path, so `sv restore` can target any data dir, on any machine
-      //     or inside a container (/app/data). Absolute paths would only restore
-      //     to the exact path they were taken from.
-      //  2. Consistency — it captures the `-wal`/`-shm` sidecars alongside each
-      //     `.db`. In WAL mode recent commits live in the `-wal` file; backing
-      //     up the `.db` alone would silently drop them. SQLite recovers from
-      //     the trio on next open.
-      consola.start(`Creating SQLite backup → ${archivePath}`);
-      if (!runSqliteBackup(dataDir, archivePath)) {
-        consola.error('tar failed creating archive.');
-        process.exit(1);
-      }
+      // SQLite is sqld-backed only — its data lives in the sovereign_sqld_data
+      // Docker volume, not a local directory this CLI can tar. There is no
+      // automated sqld backup here yet (mirrors task 8.16's equivalent
+      // Postgres gap) — point the operator at a volume-level backup instead
+      // of silently producing an incomplete or empty archive.
+      consola.error(
+        'Automated backup for the SQLite (sqld) dialect is not implemented yet. Back up the ' +
+          '`sovereign_sqld_data` Docker volume directly, e.g.:\n' +
+          '  docker run --rm -v sovereign_sqld_data:/data -v "$PWD":/backup alpine ' +
+          'tar -czf /backup/sqld-backup.tar.gz -C /data .',
+      );
+      process.exit(1);
     }
 
     consola.success(`Backup saved → ${archivePath}`);
@@ -805,7 +785,8 @@ const restore = defineCommand({
       default: join(ROOT, 'data'),
     },
   },
-  run({ args }) {
+  async run({ args }) {
+    const { resolveDialect } = await import('@sovereignfs/db');
     const archivePath = resolve(args.archive);
     const dataDir = resolve(args.dataDir);
 
@@ -816,8 +797,7 @@ const restore = defineCommand({
 
     mkdirSync(dataDir, { recursive: true });
 
-    const dbUrl = process.env.DATABASE_URL ?? `file:${join(dataDir, 'sovereign.db')}`;
-    const dialect = detectDialect(dbUrl);
+    const { dialect } = resolveDialect(process.env);
 
     consola.warn(
       `This will overwrite data in ${dataDir}. ` +
@@ -825,7 +805,14 @@ const restore = defineCommand({
     );
 
     if (dialect === 'postgres') {
-      // Extract the dump files then pg_restore them.
+      const pgUrl = process.env.POSTGRES_DB_URL;
+      if (!pgUrl) {
+        consola.error('DB_DIALECT=postgres requires POSTGRES_DB_URL to be set.');
+        process.exit(1);
+      }
+      // Extract the dump file then pg_restore it — one database now covers
+      // the platform's own tables, the auth schema, and every plugin schema
+      // (see `backup`'s identical comment).
       const tmp = mkdtempSync(join(dataDir, '.sv-restore-'));
       const cleanup = (): void => rmSync(tmp, { recursive: true, force: true });
       try {
@@ -838,23 +825,16 @@ const restore = defineCommand({
           process.exit(1);
         }
 
-        const pgUrl = dbUrl;
-        const authPgUrl = process.env.AUTH_DATABASE_URL ?? pgUrl.replace(/\/[^/]+$/, '/auth');
-
-        for (const [dumpFile, url] of [
-          ['sovereign.pgdump', pgUrl],
-          ['auth.pgdump', authPgUrl],
-        ] as const) {
-          const dumpPath = join(tmp, dumpFile);
-          if (!existsSync(dumpPath)) continue;
+        const dumpPath = join(tmp, 'sovereign.pgdump');
+        if (existsSync(dumpPath)) {
           const result = spawnSync(
             'pg_restore',
-            ['--clean', '--if-exists', `--dbname=${url}`, dumpPath],
+            ['--clean', '--if-exists', `--dbname=${pgUrl}`, dumpPath],
             { stdio: 'inherit' },
           );
           if (result.status !== 0) {
             cleanup();
-            consola.error(`pg_restore failed for ${dumpFile}.`);
+            consola.error('pg_restore failed.');
             process.exit(1);
           }
         }
@@ -878,370 +858,20 @@ const restore = defineCommand({
         throw err;
       }
     } else {
-      // SQLite: extract the archive (relative paths) into the data directory.
-      //
-      // tar extracts on top of the existing directory — it overwrites files
-      // present in the archive but never deletes files that are merely
-      // absent from it. That's a problem specifically for the RFC 0071
-      // encryption marker (`data/.db-encrypted`): restoring an OLD backup
-      // taken before this instance was ever encrypted (so its archive has no
-      // marker) onto a CURRENTLY encrypted instance would leave the existing
-      // marker in place, now pointing at freshly-restored plaintext files.
-      // The next boot's `checkEncryptionMarker` would see "marker present,
-      // key present" and consider that normal, then fail with a *misleading*
-      // "the key is likely wrong" error when SQLCipher can't decrypt what is
-      // actually just plaintext — instead of the correct, actionable
-      // "convert existing plaintext instance" message. Reconcile the marker
-      // against what the archive itself contains, not what's already in the
-      // destination, before treating the restore as done.
-      const markerPath = join(dataDir, '.db-encrypted');
-      const hadMarkerBefore = existsSync(markerPath);
-
-      const extractResult = spawnSync('tar', ['-xzf', archivePath, '-C', dataDir], {
-        stdio: 'inherit',
-      });
-      if (extractResult.status !== 0) {
-        consola.error('tar extraction failed.');
-        process.exit(1);
-      }
-
-      const listing = spawnSync('tar', ['-tzf', archivePath]);
-      const archiveHasMarker =
-        listing.status === 0 && /(^|\/)\.db-encrypted$/m.test(listing.stdout.toString());
-
-      if (hadMarkerBefore && !archiveHasMarker) {
-        try {
-          rmSync(markerPath);
-        } catch {
-          // Already gone — fine, that's the state we want anyway.
-        }
-        consola.warn(
-          `This backup predates encryption (no ${markerPath} in the archive), but ` +
-            `${dataDir} was previously marked as encrypted. Removed the stale marker so the ` +
-            'restored plaintext data matches it — the instance will boot in plaintext. Run ' +
-            '`sv db encrypt` again if you want encryption back on this restored data.',
-        );
-      } else if (!hadMarkerBefore && archiveHasMarker) {
-        consola.info(
-          'This backup was taken from an encrypted instance — the encryption marker was ' +
-            'restored along with it. Make sure SOVEREIGN_DB_ENCRYPTION_KEY is set to the same ' +
-            'key that backup was encrypted with before restarting.',
-        );
-      }
+      // See `backup`'s identical branch — sqld's data isn't reachable as a
+      // local directory this CLI can tar/restore.
+      consola.error(
+        'Automated restore for the SQLite (sqld) dialect is not implemented yet. Restore the ' +
+          '`sovereign_sqld_data` Docker volume directly from your own volume-level backup.',
+      );
+      process.exit(1);
     }
 
     consola.success('Restore complete. Restart the server to apply.');
   },
 });
 
-/** A file `sv db encrypt`/`decrypt` may act on — the platform core (as a pair) or one plugin. */
-type DbCryptTarget =
-  { path: string; kind: 'core' } | { path: string; kind: 'plugin'; pluginId: string };
-
-/** Scan each `plugins/<dir>/manifest.json` for plugins declaring `database.requireEncryption`. */
-function findEncryptionRequiringPlugins(): { id: string }[] {
-  const pluginsRoot = join(ROOT, 'plugins');
-  const results: { id: string }[] = [];
-  if (!existsSync(pluginsRoot)) return results;
-  for (const entry of readdirSync(pluginsRoot, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const manifestPath = join(pluginsRoot, entry.name, 'manifest.json');
-    if (!existsSync(manifestPath)) continue;
-    try {
-      const m = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
-        id?: string;
-        database?: unknown;
-      };
-      if (typeof m.id === 'string' && manifestRequiresEncryption(m.database)) {
-        results.push({ id: m.id });
-      }
-    } catch {
-      // ignore unreadable manifests
-    }
-  }
-  return results;
-}
-
-/**
- * Every plugin `.db` file under `dataDir/plugins/` that currently has its own
- * encryption marker — including one belonging to a plugin no longer
- * installed or no longer requesting encryption (RFC 0071 open question 3:
- * data-dir scanning catches orphaned plugin databases the registry doesn't
- * list). `sv db decrypt` uses this so an orphaned encrypted file isn't stuck.
- */
-function findMarkedPluginFiles(
-  dataDir: string,
-  isPluginEncryptionMarked: (dataDir: string, pluginId: string) => boolean,
-): { id: string; path: string }[] {
-  const pluginsDir = join(dataDir, 'plugins');
-  const results: { id: string; path: string }[] = [];
-  if (!existsSync(pluginsDir)) return results;
-  for (const entry of readdirSync(pluginsDir, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith('.db')) continue;
-    const id = entry.name.slice(0, -'.db'.length);
-    if (isPluginEncryptionMarked(dataDir, id)) {
-      results.push({ id, path: join(pluginsDir, entry.name) });
-    }
-  }
-  return results;
-}
-
-function describeCryptTarget(t: DbCryptTarget): string {
-  return t.kind === 'plugin' ? `${t.path} (plugin: ${t.pluginId})` : `${t.path} (platform core)`;
-}
-
-const dbEncrypt = defineCommand({
-  meta: {
-    name: 'encrypt',
-    description:
-      'Encrypt the platform core, plus any plugin database that requests it via its manifest (RFC 0071, task 8.15)',
-  },
-  args: {
-    dataDir: {
-      type: 'string',
-      description: 'Path to the data directory (default: ./data)',
-      default: join(ROOT, 'data'),
-    },
-    'skip-backup': {
-      type: 'boolean',
-      default: false,
-      description: 'Skip the automatic pre-encryption backup (not recommended)',
-    },
-  },
-  async run({ args }) {
-    const {
-      dbEncryptionKeyFromEnv,
-      isEncryptionMarked,
-      isPluginEncryptionMarked,
-      encryptSqliteFileInPlace,
-      writeEncryptionMarker,
-      writePluginEncryptionMarker,
-    } = await import('@sovereignfs/db');
-
-    const dataDir = resolve(args.dataDir);
-
-    let key: Buffer | undefined;
-    try {
-      key = dbEncryptionKeyFromEnv();
-    } catch (err) {
-      consola.error((err as Error).message);
-      process.exit(1);
-    }
-    if (!key) {
-      consola.error(
-        'SOVEREIGN_DB_ENCRYPTION_KEY is not set. Set it to the key you want to encrypt with, then re-run.',
-      );
-      process.exit(1);
-    }
-
-    // Core: always the goal once a key is present — only skip a file that's
-    // already marked, or a pair member that doesn't exist (Postgres auth.db
-    // deployments etc).
-    const coreNeedsEncryption = !isEncryptionMarked(dataDir);
-    const coreFiles = coreNeedsEncryption
-      ? ['sovereign.db', 'auth.db'].map((name) => join(dataDir, name)).filter((p) => existsSync(p))
-      : [];
-
-    // Plugins: only ones that explicitly request it via manifest, and whose
-    // file exists and isn't already marked.
-    const pluginTargets = findEncryptionRequiringPlugins()
-      .map(({ id }) => ({ id, path: join(dataDir, 'plugins', `${id}.db`) }))
-      .filter((p) => existsSync(p.path) && !isPluginEncryptionMarked(dataDir, p.id));
-
-    const targets: DbCryptTarget[] = [
-      ...coreFiles.map((path): DbCryptTarget => ({ path, kind: 'core' })),
-      ...pluginTargets.map((p): DbCryptTarget => ({
-        path: p.path,
-        kind: 'plugin',
-        pluginId: p.id,
-      })),
-    ];
-
-    if (targets.length === 0) {
-      consola.info(
-        'Nothing to encrypt — the platform core is already encrypted (or has no files yet), ' +
-          'and no plugin that requests encryption has an unconverted database.',
-      );
-      return;
-    }
-
-    consola.info(`Found ${targets.length} SQLite file(s) to encrypt:`);
-    for (const t of targets) consola.info(`  - ${describeCryptTarget(t)}`);
-
-    if (args['skip-backup']) {
-      consola.warn('Skipping the pre-encryption backup (--skip-backup). This is not recommended.');
-    } else {
-      const version = readPlatformVersion(ROOT);
-      const archivePath = defaultArchivePath(ROOT, version);
-      consola.start(`Creating a safety backup before encrypting → ${archivePath}`);
-      if (!runSqliteBackup(dataDir, archivePath)) {
-        consola.error('Backup failed — aborting before touching any database.');
-        process.exit(1);
-      }
-      consola.success(`Backup saved → ${archivePath}`);
-    }
-
-    consola.warn('Make sure the server is stopped before continuing.');
-
-    let failed = 0;
-    let coreSucceeded = true;
-    for (const t of targets) {
-      consola.start(`Encrypting ${t.path}…`);
-      try {
-        encryptSqliteFileInPlace(t.path, key);
-        // Mark immediately, per file — a plugin's success doesn't depend on
-        // any other target in this batch, core or sibling plugin.
-        if (t.kind === 'plugin') writePluginEncryptionMarker(dataDir, t.pluginId);
-        consola.success(`${t.path}: encrypted.`);
-      } catch (err) {
-        consola.error(`${t.path}: ${(err as Error).message}`);
-        failed++;
-        if (t.kind === 'core') coreSucceeded = false;
-      }
-    }
-
-    // Core is all-or-nothing (sovereign.db and auth.db share one marker) —
-    // only write it if every core file in this run actually succeeded.
-    if (coreNeedsEncryption && coreFiles.length > 0 && coreSucceeded) {
-      writeEncryptionMarker(dataDir);
-    }
-
-    if (failed > 0) {
-      consola.error(
-        `${failed} of ${targets.length} file(s) failed to encrypt. Files that succeeded were ` +
-          'marked as encrypted individually — re-run `sv db encrypt` after fixing the issue (see ' +
-          'errors above — commonly the server was still running); it will only retry what ' +
-          'remains unconverted, not what already succeeded. Restore from the backup taken above ' +
-          'if anything looks inconsistent.',
-      );
-      process.exit(1);
-    }
-
-    consola.success(`All ${targets.length} file(s) encrypted.`);
-    consola.info('Restart the server with SOVEREIGN_DB_ENCRYPTION_KEY set to this same key.');
-  },
-});
-
-const dbDecrypt = defineCommand({
-  meta: {
-    name: 'decrypt',
-    description:
-      'Decrypt the platform core and any encrypted plugin database, removing at-rest encryption (RFC 0071)',
-  },
-  args: {
-    dataDir: {
-      type: 'string',
-      description: 'Path to the data directory (default: ./data)',
-      default: join(ROOT, 'data'),
-    },
-    'skip-backup': {
-      type: 'boolean',
-      default: false,
-      description: 'Skip the automatic pre-decryption backup (not recommended)',
-    },
-  },
-  async run({ args }) {
-    const {
-      dbEncryptionKeyFromEnv,
-      isEncryptionMarked,
-      isPluginEncryptionMarked,
-      decryptSqliteFileInPlace,
-      clearEncryptionMarker,
-      clearPluginEncryptionMarker,
-    } = await import('@sovereignfs/db');
-
-    const dataDir = resolve(args.dataDir);
-
-    let key: Buffer | undefined;
-    try {
-      key = dbEncryptionKeyFromEnv();
-    } catch (err) {
-      consola.error((err as Error).message);
-      process.exit(1);
-    }
-    if (!key) {
-      consola.error(
-        'SOVEREIGN_DB_ENCRYPTION_KEY is not set. Set it to the CURRENT encryption key, then re-run.',
-      );
-      process.exit(1);
-    }
-
-    const coreMarked = isEncryptionMarked(dataDir);
-    const coreFiles = coreMarked
-      ? ['sovereign.db', 'auth.db'].map((name) => join(dataDir, name)).filter((p) => existsSync(p))
-      : [];
-
-    // Every plugin file with its own marker — including an orphaned one no
-    // longer requesting encryption or no longer installed, so decrypt can
-    // always reverse whatever encrypt actually did.
-    const pluginTargets = findMarkedPluginFiles(dataDir, isPluginEncryptionMarked);
-
-    const targets: DbCryptTarget[] = [
-      ...coreFiles.map((path): DbCryptTarget => ({ path, kind: 'core' })),
-      ...pluginTargets.map((p): DbCryptTarget => ({
-        path: p.path,
-        kind: 'plugin',
-        pluginId: p.id,
-      })),
-    ];
-
-    if (targets.length === 0) {
-      consola.error(`${dataDir} has nothing marked as encrypted. Nothing to do.`);
-      process.exit(1);
-    }
-
-    consola.info(`Found ${targets.length} SQLite file(s) to decrypt:`);
-    for (const t of targets) consola.info(`  - ${describeCryptTarget(t)}`);
-
-    if (args['skip-backup']) {
-      consola.warn('Skipping the pre-decryption backup (--skip-backup). This is not recommended.');
-    } else {
-      const version = readPlatformVersion(ROOT);
-      const archivePath = defaultArchivePath(ROOT, version);
-      consola.start(`Creating a safety backup before decrypting → ${archivePath}`);
-      if (!runSqliteBackup(dataDir, archivePath)) {
-        consola.error('Backup failed — aborting before touching any database.');
-        process.exit(1);
-      }
-      consola.success(`Backup saved → ${archivePath}`);
-    }
-
-    consola.warn('Make sure the server is stopped before continuing.');
-
-    let failed = 0;
-    let coreSucceeded = true;
-    for (const t of targets) {
-      consola.start(`Decrypting ${t.path}…`);
-      try {
-        decryptSqliteFileInPlace(t.path, key);
-        if (t.kind === 'plugin') clearPluginEncryptionMarker(dataDir, t.pluginId);
-        consola.success(`${t.path}: decrypted.`);
-      } catch (err) {
-        consola.error(`${t.path}: ${(err as Error).message}`);
-        failed++;
-        if (t.kind === 'core') coreSucceeded = false;
-      }
-    }
-
-    if (coreMarked && coreSucceeded) clearEncryptionMarker(dataDir);
-
-    if (failed > 0) {
-      consola.error(
-        `${failed} of ${targets.length} file(s) failed to decrypt. Markers for files that ` +
-          'succeeded were already cleared — fix the issue (see errors above), or restore from ' +
-          'the backup taken above, before retrying.',
-      );
-      process.exit(1);
-    }
-
-    consola.success(`All ${targets.length} file(s) decrypted.`);
-    consola.info(
-      'Restart the server with SOVEREIGN_DB_ENCRYPTION_KEY unset, or run `sv db encrypt` again with a new key.',
-    );
-  },
-});
-
-/** A file `sv db migrate-to-sqld` may act on — mirrors `DbCryptTarget`'s shape. */
+/** A file `sv db migrate-to-sqld` may act on. */
 type SqldCutoverTarget =
   | { path: string; kind: 'platform'; namespace: undefined }
   | { path: string; kind: 'auth'; namespace: string }
@@ -1255,61 +885,34 @@ function describeCutoverTarget(t: SqldCutoverTarget): string {
 
 /**
  * Determine every SQLite file leg 3's routing (`packages/db/src/client.ts`,
- * `plugin-client.ts`) would send to sqld — the RFC 0091 encryption carve-out
- * in reverse. Ground truth is each file's own on-disk marker
- * (`isEncryptionMarked`/`isPluginEncryptionMarked`), not just the current
- * manifest/env state:
- *
- * - A file already marked encrypted is never a target — it's staying
- *   plain-file, untouched by this leg entirely.
- * - A plaintext file whose *current* config says it should be encrypted
- *   (platform: `SOVEREIGN_DB_ENCRYPTION_KEY` set; plugin: manifest
- *   `requireEncryption: true`) is a stuck, not-yet-converted state — the
- *   same one `checkEncryptionMarker`/`resolvePluginEncryptionKey` already
- *   refuse to boot from. Skip it here too: cutting it over to sqld would be
- *   actively wrong, since the runtime will keep looking for it as a
- *   plain file regardless. `sv db encrypt` is the fix for that state, not
- *   this command.
- * - Everything else plaintext is a genuine cutover target.
- *
- * A plugin `.db` file with no matching manifest (orphaned/uninstalled) is
- * still a target — there's no active `requireEncryption` to stop it, and if
- * the plugin is reinstalled later without it, leg 3 would route it to sqld
- * anyway.
+ * `plugin-client.ts`) would send to sqld. Every plaintext `.db` file under
+ * `dataDir` is a cutover target — there is no more encryption carve-out to
+ * route around (that mechanism was retired; see the platform's own tracking
+ * for the deferred follow-up). A plugin `.db` file with no matching manifest
+ * (orphaned/uninstalled) is still a target — if the plugin is reinstalled
+ * later, leg 3 would route it to sqld anyway.
  */
 async function findSqldCutoverTargets(dataDir: string): Promise<SqldCutoverTarget[]> {
-  const {
-    dbEncryptionKeyFromEnv,
-    isEncryptionMarked,
-    isPluginEncryptionMarked,
-    pluginNamespaceName,
-  } = await import('@sovereignfs/db');
+  const { pluginNamespaceName } = await import('@sovereignfs/db');
 
   const targets: SqldCutoverTarget[] = [];
 
-  if (!isEncryptionMarked(dataDir)) {
-    const keySet = dbEncryptionKeyFromEnv() !== undefined;
-    const platformPath = join(dataDir, 'sovereign.db');
-    const authPath = join(dataDir, 'auth.db');
-    if (!keySet) {
-      if (existsSync(platformPath)) {
-        targets.push({ path: platformPath, kind: 'platform', namespace: undefined });
-      }
-      if (existsSync(authPath)) {
-        targets.push({ path: authPath, kind: 'auth', namespace: 'auth' });
-      }
-    }
+  const platformPath = join(dataDir, 'sovereign.db');
+  const authPath = join(dataDir, 'auth.db');
+  if (existsSync(platformPath)) {
+    targets.push({ path: platformPath, kind: 'platform', namespace: undefined });
+  }
+  if (existsSync(authPath)) {
+    // Must match apps/auth/src/db.ts's AUTH_STORE_NAME constant.
+    targets.push({ path: authPath, kind: 'auth', namespace: 'sovereign_auth' });
   }
 
-  const requiresEncryption = new Set(findEncryptionRequiringPlugins().map((p) => p.id));
   const pluginsDir = join(dataDir, 'plugins');
   if (existsSync(pluginsDir)) {
     for (const entry of readdirSync(pluginsDir, { withFileTypes: true })) {
       if (!entry.isFile() || !entry.name.endsWith('.db')) continue;
       const id = entry.name.slice(0, -'.db'.length);
       const path = join(pluginsDir, entry.name);
-      if (isPluginEncryptionMarked(dataDir, id)) continue;
-      if (requiresEncryption.has(id)) continue;
       targets.push({ path, kind: 'plugin', pluginId: id, namespace: pluginNamespaceName(id) });
     }
   }
@@ -1442,8 +1045,8 @@ const dbMigrateToSqld = defineCommand({
 
     consola.success(`All ${targets.length} file(s) migrated to sqld.`);
     consola.info(
-      'Start the server with the sqld overlay attached (docker-compose.sqld.yml) — it will now ' +
-        'find the migrated data instead of creating fresh empty namespaces.',
+      'Start the server — it will now find the migrated data instead of creating fresh empty ' +
+        'namespaces.',
     );
   },
 });
@@ -1495,6 +1098,17 @@ function findPostgresMigrationTargets(
   return targets;
 }
 
+/**
+ * Whether a legacy plugin SQLite file was marked encrypted under the retired
+ * RFC 0071 marker-file scheme (`data/plugins/<id>.db-encrypted`) — kept only
+ * as a narrow, read-only file-existence check for this one-time migration
+ * tool, not re-adding the live marker/enforcement machinery that used to
+ * live in `packages/db`.
+ */
+function isLegacyPluginMarkedEncrypted(dataDir: string, pluginId: string): boolean {
+  return existsSync(join(dataDir, 'plugins', `${pluginId}.db-encrypted`));
+}
+
 // TRANSITIONAL TOOLING — see the note atop packages/db/src/postgres-migration.ts.
 const dbMigrateToPostgres = defineCommand({
   meta: {
@@ -1530,7 +1144,6 @@ const dbMigrateToPostgres = defineCommand({
     const {
       dbEncryptionKeyFromEnv,
       getPluginDb,
-      isPluginEncryptionMarked,
       migratePluginSqliteToPostgres,
       pluginMigrationsFolder,
       pluginMigrationsTableName,
@@ -1576,7 +1189,7 @@ const dbMigrateToPostgres = defineCommand({
     if (args['dry-run']) {
       consola.info('--dry-run: previewing only, nothing will be written.');
       for (const t of targets) {
-        const marked = isPluginEncryptionMarked(dataDir, t.id);
+        const marked = isLegacyPluginMarkedEncrypted(dataDir, t.id);
         const key = marked ? dbEncryptionKeyFromEnv() : undefined;
         if (marked && !key) {
           consola.warn(
@@ -1611,7 +1224,7 @@ const dbMigrateToPostgres = defineCommand({
     for (const t of targets) {
       consola.start(`Migrating "${t.id}"…`);
       try {
-        const marked = isPluginEncryptionMarked(dataDir, t.id);
+        const marked = isLegacyPluginMarkedEncrypted(dataDir, t.id);
         const key = marked ? dbEncryptionKeyFromEnv() : undefined;
         if (marked && !key) {
           throw new Error(
@@ -1622,8 +1235,8 @@ const dbMigrateToPostgres = defineCommand({
         // Ensure the destination schema + tables exist, via the plugin's own
         // Postgres migrations — same mechanism the running app itself uses,
         // so the destination shape always matches what the app expects.
-        await provisionPluginDb(t.id, false);
-        const pluginDb = getPluginDb(t.id, false);
+        await provisionPluginDb(t.id);
+        const pluginDb = getPluginDb(t.id);
         const folder = pluginMigrationsFolder(`plugins/${t.dir}`, 'postgres');
         if (existsSync(folder)) {
           // Always Postgres here (asserted above) — drizzle's node-postgres
@@ -1689,11 +1302,9 @@ const dbMigrateToPostgres = defineCommand({
 const db = defineCommand({
   meta: {
     name: 'db',
-    description: 'SQLite at-rest encryption, sqld migration, and Postgres migration tools',
+    description: 'sqld migration and Postgres migration tools',
   },
   subCommands: {
-    encrypt: dbEncrypt,
-    decrypt: dbDecrypt,
     'migrate-to-sqld': dbMigrateToSqld,
     'migrate-to-postgres': dbMigrateToPostgres,
   },

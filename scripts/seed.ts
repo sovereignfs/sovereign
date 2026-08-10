@@ -12,25 +12,20 @@
  *   1. Refuses to run when NODE_ENV=production (catches the documented
  *      Docker `tools` path, which sets NODE_ENV=production).
  *   2. Refuses to run if the target auth database already has any real
- *      (non-test) user account (catches a local shell run pointed at a
- *      real instance's database via AUTH_DATABASE_URL/DATABASE_URL, where
- *      NODE_ENV is not production).
+ *      (non-test) user account (catches a local shell run pointed at a real
+ *      instance's database via DB_DIALECT/POSTGRES_DB_URL, where NODE_ENV is
+ *      not production).
  * Never run against a real instance.
  *
  * Run via: `pnpm sv seed`  or  `pnpm tsx scripts/seed.ts`
  */
-import { existsSync, mkdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hashPassword } from 'better-auth/crypto';
 import {
-  checkEncryptionMarker,
   createSqldClient,
-  dbEncryptionKeyFromEnv,
-  defaultDataDir,
   getPlatformDb,
-  openKeyedSqlite,
   provisionSqldNamespace,
   sqldAdminUrl,
   sqldUrl,
@@ -41,8 +36,7 @@ import { loadRootEnv } from './load-root-env';
 // Normally invoked via `sv seed`, which already loads .env before spawning
 // this as a child process — but load it here too (idempotent, never
 // overrides an already-set var) so the documented direct
-// `pnpm tsx scripts/seed.ts` invocation doesn't silently miss
-// SOVEREIGN_DB_ENCRYPTION_KEY on an encrypted instance.
+// `pnpm tsx scripts/seed.ts` invocation doesn't silently miss DB_DIALECT.
 loadRootEnv(resolve(dirname(fileURLToPath(import.meta.url)), '..'));
 
 // ---------------------------------------------------------------------------
@@ -93,24 +87,14 @@ export const SEED_USERS = [
 // Helpers (mirrors apps/auth/src/db.ts without importing the auth server)
 // ---------------------------------------------------------------------------
 
-function findWorkspaceRoot(): string {
-  const startDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-  let dir = startDir;
-  for (;;) {
-    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir;
-    const parent = dirname(dir);
-    if (parent === dir) return startDir;
-    dir = parent;
-  }
-}
-
-function isPostgresUrl(url: string): boolean {
-  return url.startsWith('postgres://') || url.startsWith('postgresql://');
-}
-
-function resolveDbPath(url: string, wsRoot: string): string {
-  const path = url.startsWith('file:') ? url.slice('file:'.length) : url;
-  return isAbsolute(path) ? path : resolve(wsRoot, path);
+function dbDialect(): 'sqlite' | 'postgres' {
+  const explicit = process.env.DB_DIALECT?.toLowerCase();
+  if (explicit === 'sqlite' || explicit === 'postgres') return explicit;
+  throw new Error(
+    `DB_DIALECT is required and must be "sqlite" or "postgres" (got ${
+      explicit === undefined || explicit.length === 0 ? 'unset' : `"${explicit}"`
+    }).`,
+  );
 }
 
 /**
@@ -118,12 +102,11 @@ function resolveDbPath(url: string, wsRoot: string): string {
  * only catches the documented Docker `tools` path (which sets
  * NODE_ENV=production); it does nothing if someone runs `pnpm sv seed` /
  * `pnpm tsx scripts/seed.ts` from a plain local shell (NODE_ENV unset or
- * "development") while AUTH_DATABASE_URL happens to point at a real
- * instance's database — e.g. a copy-pasted prod .env, or a shared
- * staging DB that already has real users. Refuse whenever the target
- * database already has any non-test user account, since that means real
- * accounts exist and seeding would plant known-password (`sovereign`)
- * accounts on top of them.
+ * "development") while DB_DIALECT/POSTGRES_DB_URL happens to point at a real
+ * instance's database — e.g. a copy-pasted prod .env, or a shared staging DB
+ * that already has real users. Refuse whenever the target database already
+ * has any non-test user account, since that means real accounts exist and
+ * seeding would plant known-password (`sovereign`) accounts on top of them.
  */
 function refuseIfRealUsersExist(realUserCount: number): void {
   if (process.env.SOVEREIGN_SEED_ALLOW_PROD === 'true') return;
@@ -143,54 +126,29 @@ function refuseIfRealUsersExist(realUserCount: number): void {
 // ---------------------------------------------------------------------------
 
 /**
- * sqld namespace for the auth database — must match
- * `apps/auth/src/db.ts`'s `SQLD_AUTH_NAMESPACE` (`'auth'`). This script
- * deliberately doesn't import from `apps/auth` (mirrors it instead, per the
- * comment above), so the constant is duplicated, not shared.
+ * Schema (Postgres) / sqld namespace dedicated to the auth database — must
+ * match `apps/auth/src/db.ts`'s `AUTH_STORE_NAME`. This script deliberately
+ * doesn't import from `apps/auth` (mirrors it instead, per the comment
+ * above), so the constant is duplicated, not shared.
  */
-const SQLD_AUTH_NAMESPACE = 'auth';
+const AUTH_STORE_NAME = 'sovereign_auth';
 
-/** Get/run dispatch, resolved once per RFC 0071 encryption carve-out (RFC
- * 0091): plain-file `better-sqlite3` when SOVEREIGN_DB_ENCRYPTION_KEY is set,
- * sqld otherwise. Both accept the same `?` positional placeholders, so the
- * seeding logic below is written once. */
-async function openAuthSqlite(dbPath: string): Promise<{
-  get: <T>(sql: string, ...args: unknown[]) => Promise<T | undefined>;
-  run: (sql: string, ...args: unknown[]) => Promise<void>;
-  close: () => void;
-}> {
-  const key = dbEncryptionKeyFromEnv();
-  checkEncryptionMarker(defaultDataDir(), key !== undefined);
-
-  if (key === undefined) {
-    await provisionSqldNamespace(sqldAdminUrl(), SQLD_AUTH_NAMESPACE);
-    const client = createSqldClient(sqldUrl(), SQLD_AUTH_NAMESPACE);
-    return {
-      get: async <T>(sql: string, ...args: unknown[]) => {
-        const res = await client.execute({ sql, args: args as never });
-        return res.rows[0] as T | undefined;
-      },
-      run: async (sql: string, ...args: unknown[]) => {
-        await client.execute({ sql, args: args as never });
-      },
-      close: () => client.close(),
-    };
-  }
-
-  mkdirSync(dirname(dbPath), { recursive: true });
-  const db = openKeyedSqlite(dbPath, key);
-  return {
-    get: async <T>(sql: string, ...args: unknown[]) =>
-      db.prepare(sql).get(...args) as T | undefined,
-    run: async (sql: string, ...args: unknown[]) => {
-      db.prepare(sql).run(...args);
-    },
-    close: () => db.close(),
+/**
+ * @param namespace Defaults to the real auth store. Set
+ *   SOVEREIGN_DEV_DATABASE_URL to seed a separate mock/dev-mode namespace
+ *   instead (RFC 0020) — matches runtime/src/dev-db.ts's own interpretation
+ *   of that var for the SQLite dialect.
+ */
+async function seedSqlite(namespace: string = AUTH_STORE_NAME): Promise<void> {
+  await provisionSqldNamespace(sqldAdminUrl(), namespace);
+  const client = createSqldClient(sqldUrl(), namespace);
+  const get = async <T>(sql: string, ...args: unknown[]): Promise<T | undefined> => {
+    const res = await client.execute({ sql, args: args as never });
+    return res.rows[0] as T | undefined;
   };
-}
-
-async function seedSqlite(dbPath: string): Promise<void> {
-  const { get, run, close } = await openAuthSqlite(dbPath);
+  const run = async (sql: string, ...args: unknown[]): Promise<void> => {
+    await client.execute({ sql, args: args as never });
+  };
 
   let realUserCount = 0;
   try {
@@ -250,12 +208,17 @@ async function seedSqlite(dbPath: string): Promise<void> {
     consola.success(`  created: ${u.email} (${u.role})`);
   }
 
-  close();
+  client.close();
 }
 
 async function seedPostgres(connString: string): Promise<void> {
   const { Pool } = await import('pg');
-  const pool = new Pool({ connectionString: connString });
+  // search_path pinned to the auth schema — must match apps/auth/src/db.ts's
+  // own connection, or this would read/write the wrong schema entirely.
+  const pool = new Pool({
+    connectionString: connString,
+    options: `-c search_path="${AUTH_STORE_NAME}"`,
+  });
   try {
     let realUserCount = 0;
     try {
@@ -316,20 +279,24 @@ async function seedPostgres(connString: string): Promise<void> {
 async function main(): Promise<void> {
   consola.info(`Sovereign dev seed  (NODE_ENV=${process.env.NODE_ENV ?? '(unset)'})`);
 
-  const wsRoot = findWorkspaceRoot();
-
   // 1. Platform DB — bootstrapPlatformDb runs inside getPlatformDb(), no extra call needed.
   consola.start('Platform DB...');
   await getPlatformDb();
   consola.success('Platform DB ready.');
 
   // 2. Auth DB — insert test users with hashed passwords (idempotent).
+  // SOVEREIGN_DEV_DATABASE_URL, when set, redirects this to the RFC 0020
+  // mock database instead of the real auth store — same var, same
+  // dialect-dependent meaning runtime/src/dev-db.ts uses (a full connection
+  // string on Postgres, an sqld namespace name on SQLite).
   consola.start('Auth DB — seeding test users...');
-  const authUrl = process.env.AUTH_DATABASE_URL ?? 'file:./data/auth.db';
-  if (isPostgresUrl(authUrl)) {
-    await seedPostgres(authUrl);
+  const devTarget = process.env.SOVEREIGN_DEV_DATABASE_URL;
+  if (dbDialect() === 'postgres') {
+    const pgUrl = devTarget ?? process.env.POSTGRES_DB_URL;
+    if (!pgUrl) throw new Error('DB_DIALECT=postgres requires POSTGRES_DB_URL to be set.');
+    await seedPostgres(pgUrl);
   } else {
-    await seedSqlite(resolveDbPath(authUrl, wsRoot));
+    await seedSqlite(devTarget);
   }
 
   consola.box(

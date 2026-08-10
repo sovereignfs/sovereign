@@ -1127,19 +1127,28 @@ existing (currently orphaned) resolution logic from `ActivePluginTitle.tsx`.
 **Deliverables:**
 
 - `(platform)/layout.tsx`'s header block (`:228-254`) rewritten to render
-  `<MobileHeader logo={...} title={activePluginTitle} bell={<NotificationBell
-/>} avatarMenu={<AccountMenu .../>} />`, passing the exact same
-  `instanceLogoUrl`/`instanceName`/`accountAvatar` data it already resolves
-  server-side.
-- A new small hook (e.g. `useActivePluginTitle(plugins)`) in
-  `runtime/app/(platform)/_components/`, porting `ActivePluginTitle.tsx`'s
-  existing longest-`routePrefix`-match logic unchanged; `ActivePluginTitle.tsx`
-  and its module CSS are deleted (the logic moves, nothing is reimplemented).
+  `<MobileHeader logo={...} bell={<NotificationBell />} avatarMenu={<AccountMenu
+.../>} />`, passing the exact same `instanceLogoUrl`/`instanceName`/
+  `accountAvatar` data it already resolves server-side. **No `title` is
+  set** — see below.
+- `ActivePluginTitle.tsx`'s longest-`routePrefix`-match logic was first
+  ported into a new `useActivePluginTitle` hook plus a `PlatformMobileHeader`
+  client wrapper, to actually surface it as `MobileHeader`'s `title` and
+  close the RFC 0013 gap. A same-day follow-up fix reverted this: showing
+  the instance brand and active-plugin name side by side read oddly, and
+  per-plugin titles weren't actually the goal, so both `useActivePluginTitle`
+  and `PlatformMobileHeader` were deleted and `layout.tsx` renders
+  `MobileHeader` directly as a server component again, with no `title`.
+  `ActivePluginTitle.tsx` and its module CSS are deleted either way — the
+  logic never ships as a rendered title, but the dead code is gone. See RFC
+  0088's Changelog (v0.3) for the full account.
 - `MobileNav.tsx`'s footer `<nav>` (`:49-83`) rewritten to render
   `<MobileFooter onOpenApps={...} launcherIcon={...} leftIcons={[home]}
 rightIcons={[search]} />`, reproducing today's exact Home/Apps/Search
   layout via the new 1+1 shape — the Drawer and `MobileSearch` overlay stay
-  owned by `MobileNav.tsx` unchanged.
+  owned by `MobileNav.tsx` unchanged. The Home icon uses `onClick` +
+  `router.push` rather than `MobileFooter`'s `href` prop, to preserve
+  client-side navigation instead of a full page reload.
 - No change to `shellConfig.mobileHeader`/`mobileFooter` visibility gating
   (RFC 0075) — this task only changes what renders inside the `showMobileHeader`/
   `showMobileFooter` conditionals, not the conditionals themselves.
@@ -1153,9 +1162,10 @@ title-rendering fix; no public API change.
 
 **Review checklist:**
 
-- Visual diff at mobile viewport (375px and 768px breakpoints) shows only
-  the new header title appearing when navigating into a plugin — brand,
-  avatar, bell, and all three footer icons render identically to before.
+- Visual diff at mobile viewport (375px and 768px breakpoints) shows no
+  change at all — brand, avatar, bell, and all three footer icons render
+  identically to before. (The header-title wiring described above was
+  implemented and then reverted the same day, so no title renders.)
 - `--sv-dialog-inset-top` and the header/footer height CSS variables are
   unaffected (`ClientShell`'s `syncViewport()` still measures
   `[data-mobile-header]` correctly against the new markup).

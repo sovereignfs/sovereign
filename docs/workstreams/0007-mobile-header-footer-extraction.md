@@ -1,8 +1,10 @@
 # Workstream 0007 — Mobile header/footer as Design System components
 
-**Status:** 🔄 In progress — leg 1 done (task 9.23, `MobileHeader`/`MobileFooter`
-shipped in `packages/ui` at platform `0.62.0`); leg 2 (task 9.24, runtime
-consumption) not started\
+**Status:** ✅ Complete — leg 1 (task 9.23, `MobileHeader`/`MobileFooter`
+shipped in `packages/ui` at platform `0.62.0`) and leg 2 (task 9.24, runtime
+consumption, shipped at platform `0.63.0`) are both done. Leg 2's
+header-title wiring was implemented and then deliberately reverted the same
+day — see leg 2 detail and the changelog below.\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -19,9 +21,12 @@ consumption) not started\
 (brand, avatar, bell, and the center launcher are fixed; an optional header
 title and up to two footer icons per side are not). The runtime's mobile
 shell (`(platform)/layout.tsx`, `MobileNav.tsx`) renders through them
-instead of its current inline markup, with no visual change other than a
-pre-existing dead-code gap (the RFC 0013 "active-plugin title" that never
-got wired up) finally closing. This is groundwork for a future,
+instead of its current inline markup. The RFC 0013 "active-plugin title"
+dead-code gap was wired up during leg 2 and briefly rendered, then
+deliberately reverted the same day (brand name and plugin name side by side
+read oddly, and per-plugin titles weren't actually the goal) — so the
+shipped result is a like-for-like markup swap with no visible change. This
+is groundwork for a future,
 not-yet-designed use case — a plugin rendering its own equivalent mobile
 chrome — which this workstream does not attempt to build.
 
@@ -30,16 +35,20 @@ chrome — which this workstream does not attempt to build.
 - [x] `MobileHeader` and `MobileFooter` exist in `packages/ui`, are
       presentational (no data fetching, no SDK import), and have Storybook
       coverage for every stated prop combination (task 9.23).
-- [ ] The runtime's mobile header and footer render through these
-      components; a mobile-viewport visual diff shows no change except the
-      header title now appearing (task 9.24).
-- [ ] `ActivePluginTitle.tsx` is deleted; its logic lives in a runtime hook
-      instead, with no remaining references to the old file.
-- [ ] RFC 0075's visibility toggle (`shellConfig.mobileHeader`/`mobileFooter`)
+- [x] The runtime's mobile header and footer render through these
+      components; a mobile-viewport visual diff shows no change (task 9.24
+      — the header-title wiring was implemented and then deliberately
+      reverted the same day; see leg 2 detail below).
+- [x] `ActivePluginTitle.tsx` is deleted. Its logic was ported into a new
+      `useActivePluginTitle` hook and a `PlatformMobileHeader` wrapper to
+      surface it as `MobileHeader`'s `title`; both were then deleted the
+      same day when the title was reverted, so no rendered title and no
+      reference to the old file remain either way.
+- [x] RFC 0075's visibility toggle (`shellConfig.mobileHeader`/`mobileFooter`)
       continues to work unchanged — existing tests pass without modification
       to their assertions.
-- [ ] No manifest, SDK, or plugin-facing behavior changes — this workstream
-      only touches `packages/ui` and the runtime's own consumption of it.
+- [x] No manifest, SDK, or plugin-facing behavior changes — this workstream
+      only touched `packages/ui` and the runtime's own consumption of it.
 
 ## Decisions locked
 
@@ -60,10 +69,10 @@ change set (drafted alongside this workstream, not merged separately first).
 
 ## Legs
 
-| Leg | Name                     | Epic tasks | Epics | Gate? | Done when                                                                                                                                 |
-| --- | ------------------------ | ---------- | ----- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `packages/ui` components | 9.23 ✅    | 9     | No    | `MobileHeader`/`MobileFooter` ship in `@sovereignfs/ui` with full Storybook coverage; typecheck/lint/test pass.                           |
-| 2   | Runtime consumption      | 9.24       | 9     | No    | Runtime's mobile shell renders through both components; visual diff shows only the title fix; all existing RFC 0075 tests pass unchanged. |
+| Leg | Name                     | Epic tasks | Epics | Gate? | Done when                                                                                                                                                      |
+| --- | ------------------------ | ---------- | ----- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `packages/ui` components | 9.23 ✅    | 9     | No    | `MobileHeader`/`MobileFooter` ship in `@sovereignfs/ui` with full Storybook coverage; typecheck/lint/test pass.                                                |
+| 2   | Runtime consumption      | 9.24 ✅    | 9     | No    | Runtime's mobile shell renders through both components; visual diff shows no change (title fix reverted same day); all existing RFC 0075 tests pass unchanged. |
 
 Each leg is one branch, one draft PR, one review gate. The agent runs
 uninterrupted within a leg and stops at its end. See
@@ -125,15 +134,31 @@ rule), or if reproducing today's exact footer icon layout via `leftIcons`/
 `rightIcons` turns out to require a prop shape leg 1 didn't ship — escalate
 back to leg 1 rather than patching around it in the runtime.
 
+**Outcome:** Shipped in `fix(runtime): consume MobileHeader/MobileFooter in
+the mobile shell` (`80f01fb`), including the title wiring via
+`useActivePluginTitle` + `PlatformMobileHeader`. A same-day follow-up,
+`fix(runtime): drop wrapper divs and plugin-name header title` (`1f35a95`),
+reverted the title — showing the instance brand and active-plugin name side
+by side read oddly, and per-plugin titles weren't actually the goal — and
+also dropped the plain `<div>` wrappers around both components in favor of
+putting `className`/`data-mobile-header`/`data-mobile-footer` directly on
+their own root via prop APIs. `layout.tsx` renders `MobileHeader` as a
+server component again, with no `title` set. The footer's Home icon uses
+`onClick` + `router.push` rather than `MobileFooter`'s `href` prop, to
+preserve client-side navigation instead of a full page reload.
+`MobileSearch`'s footer-height probe reads
+`document.querySelector('[data-mobile-footer]')` directly now that
+`MobileFooter` has no wrapper `ref` to forward.
+
 ## Risks
 
 - **Shared-layout staleness.** `(platform)/layout.tsx` is one layout shared
   by every `default`-shell plugin; RFC 0075 already documents a client-side
   navigation staleness trap here (`ClientShell.tsx`'s refresh-diffing). This
-  workstream doesn't add a new per-route signal, so the existing guard
-  should be unaffected — but leg 2's review should explicitly confirm a
-  soft navigation between two plugins still shows the correct title (the
-  one new piece of per-route state this workstream introduces).
+  workstream doesn't add a new per-route signal, so the existing guard is
+  unaffected. (Moot in practice: the per-route title state this risk was
+  written about — `useActivePluginTitle` — shipped and was reverted the same
+  day; see leg 2's Outcome note.)
 - **Token drift.** `MobilePatterns.stories.tsx` treats
   `--sv-shell-header-height`/`--sv-shell-footer-height` as documented public
   tokens; leg 1 must not change their values even incidentally (e.g. via a
@@ -151,6 +176,7 @@ as it does today until leg 2 is ready.
 
 ## Changelog
 
-| Version | Date     | Change        |
-| ------- | -------- | ------------- |
-| 0.1     | Aug 2026 | Initial draft |
+| Version | Date     | Change                                                                                                                                                                 |
+| ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Aug 2026 | Initial draft                                                                                                                                                          |
+| 0.2     | Aug 2026 | Leg 2 shipped (`80f01fb`, platform `0.63.0`); header-title wiring built then reverted the same day (`1f35a95`). Workstream complete — status updated, DoD checked off. |

@@ -1,6 +1,6 @@
 # RFC 0088 — Mobile header and footer as Design System components
 
-**Status:** Draft\
+**Status:** Implemented\
 **Date:** August 2026\
 **Author:** kasunben\
 **Scope:** `packages/ui` (new components), `runtime/app/(platform)/layout.tsx`, `runtime/app/(platform)/_components/MobileNav.tsx`, `runtime/app/(platform)/_components/ActivePluginTitle.tsx` (removed), `docs/design-system.md`, `docs/plugin-development.md`; builds on RFC 0013 (mobile responsiveness & PWA — origin of the footer launcher pattern and the still-unwired "active-plugin title" concept this closes), RFC 0075 (per-plugin mobile header/footer visibility toggle, unchanged by this RFC), RFC 0079 (mobile PWA layout/gesture consistency — sibling `packages/ui` extraction precedent)\
@@ -18,8 +18,10 @@ notification bell in the header; the centered "Apps" launcher in the footer)
 and a small set exposed as overridable (an optional header title; up to two
 additional icons on each side of the footer launcher). The runtime becomes
 the first — and for now, only — consumer, swapping its inline markup for
-these components with no behavior change beyond one small fix: a header
-title that RFC 0013 described but never actually wired up starts rendering.
+these components with no behavior change. A header title that RFC 0013
+described but never actually wired up was wired up during implementation,
+then deliberately reverted the same day (see "UI flows" and the Changelog)
+— so the shipped result is a like-for-like markup swap.
 This is deliberately scoped as groundwork: it does not design the mechanism
 by which a plugin might one day render this chrome itself, because that use
 case doesn't exist yet.
@@ -143,11 +145,13 @@ mid-design once a real trigger use case exists but also aren't lost.
 
 ## UI flows
 
-**Navigating into any plugin** — today the header shows only the instance
-brand; after this change, the header additionally shows the active plugin's
-name as a title next to the brand (the RFC 0013 behavior that was always
-intended but never wired up). This is the one user-visible change in this
-RFC; everything else is a structurally-identical extraction.
+**Navigating into any plugin** — the header continues to show only the
+instance brand, exactly as before this RFC. The active-plugin-name title
+(the RFC 0013 behavior this RFC set out to finally wire up) was implemented
+during leg 2 and briefly rendered, then deliberately reverted the same
+day — showing the instance brand and plugin name side by side read oddly,
+and per-plugin titles turned out not to be the actual goal. The shipped
+result is a structurally-identical extraction with no user-visible change.
 
 ## Alternatives considered
 
@@ -202,14 +206,17 @@ Documentation-first now; scheduled as epic tasks **9.23** (`packages/ui`:
 them, delete `ActivePluginTitle.tsx`), sequenced by
 [Workstream 0007](../workstreams/0007-mobile-header-footer-extraction.md).
 `@sovereignfs/ui` takes a **minor** bump (new, additive components); `runtime`
-takes a **patch** (internal refactor plus the title-rendering fix). No
-manifest or SDK change in this RFC, so no `docs/upgrade.md` migration note is
-needed. The two Open questions above are the explicit gate for whatever
+takes a **patch** (internal refactor — the title-rendering fix was
+implemented and then reverted before shipping, so no runtime behavior
+actually changed). No manifest or SDK change in this RFC, so no
+`docs/upgrade.md` migration note is needed. The two Open questions above are the explicit gate for whatever
 future RFC introduces the plugin self-render use case — they do not block
 this one.
 
 ## Changelog
 
-| Version | Date     | Change        |
-| ------- | -------- | ------------- |
-| 0.1     | Aug 2026 | Initial draft |
+| Version | Date     | Change                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Aug 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                             |
+| 0.2     | Aug 2026 | Leg 1 implemented — `MobileHeader`/`MobileFooter` shipped in `packages/ui` (task 9.23, platform `0.62.0`).                                                                                                                                                                                                                                                                                                |
+| 0.3     | Aug 2026 | Leg 2 implemented — runtime consumes both components (task 9.24, platform `0.63.0`, `80f01fb`). The header-title wiring was built (`useActivePluginTitle` + `PlatformMobileHeader`) then deliberately reverted the same day (`1f35a95`) — brand and plugin name side by side read oddly, and per-plugin titles weren't the actual goal. Shipped runtime has no user-visible change. Status → Implemented. |

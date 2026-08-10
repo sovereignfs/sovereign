@@ -56,4 +56,36 @@ import { writeFileSync } from 'fs';
 writeFileSync('runtime/public/icons/favicon.svg', iconSvg(64));
 console.log('✓ runtime/public/icons/favicon.svg');
 
+// Static favicon.ico fallback, served by runtime/app/favicon.ico/route.ts when
+// no instance favicon is configured. Lives under icons/ rather than directly in
+// public/ — Next.js errors on a public file and an app route sharing one path
+// (`/favicon.ico`), and the dynamic route needs that exact path for itself.
+// ICO's "PNG-in-ICO" form (supported since Windows Vista) just wraps a plain
+// PNG in a minimal ICONDIR/ICONDIRENTRY header — no separate ico encoder needed.
+// Downscaled from icon-512.png (not re-rendered from the SVG source) so it
+// matches the committed icon art exactly regardless of font availability on
+// the machine running this script.
+async function genFaviconIco(outPath) {
+  const png = await sharp('runtime/public/icons/icon-512.png').resize(32, 32).png().toBuffer();
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(0, 0); // reserved
+  header.writeUInt16LE(1, 2); // type: icon
+  header.writeUInt16LE(1, 4); // image count
+
+  const entry = Buffer.alloc(16);
+  entry.writeUInt8(32, 0); // width
+  entry.writeUInt8(32, 1); // height
+  entry.writeUInt8(0, 2); // palette (0 = no palette)
+  entry.writeUInt8(0, 3); // reserved
+  entry.writeUInt16LE(1, 4); // colour planes
+  entry.writeUInt16LE(32, 6); // bits per pixel
+  entry.writeUInt32LE(png.length, 8); // image data size
+  entry.writeUInt32LE(header.length + entry.length, 12); // offset to image data
+
+  writeFileSync(outPath, Buffer.concat([header, entry, png]));
+}
+
+await genFaviconIco('runtime/public/icons/favicon.ico');
+console.log('✓ runtime/public/icons/favicon.ico');
+
 console.log('Done.');

@@ -1,34 +1,58 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { NextResponse } from 'next/server';
-import { getPlatformDb } from '@sovereignfs/db';
-import { DEFAULT_TENANT_ID, getInstanceConfig } from '@sovereignfs/db';
+import {
+  DEFAULT_TENANT_ID,
+  findWorkspaceRoot,
+  getInstanceConfig,
+  getPlatformDb,
+  type InstanceConfig,
+} from '@sovereignfs/db';
+import { buildManifestIcons } from '@/src/manifest-icons';
 import { resolveInstanceName } from '@/src/instance-name';
 
+function staticManifest(): Response {
+  const bytes = readFileSync(join(findWorkspaceRoot(), 'runtime', 'public', 'manifest.json'));
+  return new Response(bytes, {
+    headers: {
+      'Content-Type': 'application/manifest+json',
+      'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
+    },
+  });
+}
+
 /**
- * Dynamic web app manifest — returns the PWA manifest with the tenant's brand
- * name instead of the hardcoded "Sovereign" default. Excluded from the
- * middleware session gate (browsers fetch the manifest before the user logs in).
- * The static public/manifest.json is kept for @ducanh2912/next-pwa build-time
- * tooling; this route is the authoritative one for browsers.
+ * Dynamic web app manifest (RFC 0027 Phases 1 & 3) — returns the PWA manifest
+ * with the tenant's instance name, description, and icon URLs when instance
+ * identity is configured; otherwise serves the static public/manifest.json
+ * byte-for-byte so an unconfigured instance is indistinguishable from serving
+ * the file directly. Excluded from the middleware session gate (browsers
+ * fetch the manifest before the user logs in). The static file is also kept
+ * for @ducanh2912/next-pwa build-time tooling.
+ *
+ * `/api/manifest` (not the RFC's literal `/manifest.webmanifest`) is the
+ * established path — RFC 0081 (per-plugin installable PWA) already extends
+ * this exact route with `/api/manifest/[pluginId]` and explicitly rejects a
+ * `manifest.webmanifest` naming scheme; renaming here would contradict that.
  */
 export async function GET(): Promise<Response> {
-  let instanceName = resolveInstanceName(process.env.INSTANCE_NAME);
-  let description = 'Your self-hosted workspace.';
-
+  let config: InstanceConfig | null = null;
   try {
     const pdb = await getPlatformDb();
-    const config = await getInstanceConfig(pdb, DEFAULT_TENANT_ID);
-    if (config.instanceName) {
-      instanceName = config.instanceName;
-      description = `${instanceName} — your self-hosted workspace.`;
-    }
+    config = await getInstanceConfig(pdb, DEFAULT_TENANT_ID);
   } catch {
     // Instance config is cosmetic — serve a working manifest even on DB failure.
   }
 
+  if (!config || (!config.instanceLogo && config.instanceName === resolveInstanceName(null))) {
+    return staticManifest();
+  }
+
+  const instanceName = config.instanceName;
   const manifest = {
     name: instanceName,
     short_name: instanceName,
-    description,
+    description: `${instanceName} — your self-hosted workspace.`,
     start_url: '/',
     scope: '/',
     display: 'standalone',
@@ -37,16 +61,7 @@ export async function GET(): Promise<Response> {
     theme_color: '#09090b',
     orientation: 'any',
     categories: ['productivity'],
-    icons: [
-      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      {
-        src: '/icons/icon-maskable-512.png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'maskable',
-      },
-    ],
+    icons: buildManifestIcons(config),
     shortcuts: [
       {
         name: 'Launcher',

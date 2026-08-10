@@ -36,8 +36,13 @@ export const metadata: Metadata = {
     startupImage: appleSplashScreens,
   },
   icons: {
+    // /favicon.ico is a dynamic route (runtime/app/favicon.ico/route.ts, RFC
+    // 0027 Phase 3) — it serves the operator's configured instance favicon
+    // when set, falling back to the committed default transparently. Pointed
+    // to unconditionally here rather than branching in this server component,
+    // so no DB read is needed at layout render time.
     icon: [
-      { url: '/icons/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
       { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
     ],
     apple: '/icons/apple-touch-icon.png',

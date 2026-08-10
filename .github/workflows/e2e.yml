@@ -33,47 +33,35 @@ jobs:
 
       # sovereign.plugins.json is a local, gitignored file (epic task 3.31) —
       # the checkout has none, so install:plugins would otherwise fall back to
-      # sovereign.plugins.default.json (empty — platform plugins only). Declare
-      # exactly what this job needs instead:
-      #   - sovereign-plugin-healthlog: not exercised by any spec's UI flow,
-      #     but kept deliberately for its `database.requireEncryption: true`
-      #     manifest — boot-time regression coverage for the exact per-plugin
-      #     encryption enforcement epic task 8.15 fixed (RFC 0071). Pinned to
-      #     v0.2.3, not v0.2.2 or older — v0.2.2 still declared the manifest
-      #     `database.isolation` field task 8.28 removed from the schema
-      #     (v0.2.0/v0.2.1 similarly still declared `database.dialect`, which
-      #     task 8.22 removed earlier); either fails the current (stricter,
-      #     unrecognized-key-rejecting) validation outright, not just for this
-      #     fixture but for any real deployment composing that plugin. Every
-      #     published tag of this plugin before v0.2.3 is broken against
-      #     platform builds past task 8.28; don't pin back to one.
-      #   - example-basic and example-monetized are NOT declared here: they
-      #     live in-repo under `example-plugins/` (`docs/epics/example-plugins.md`,
-      #     2026-08-01 correction) and are composed automatically by the
-      #     `SOVEREIGN_EXAMPLES_ENABLED=true` env var set below, once the
-      #     runtime dev server (started by Playwright's webServer) picks up
-      #     the .env written in a later step. example-basic keeps
-      #     launcher.spec.ts's generic "click the first tile" test passing —
-      #     the launcher grid sorts installed plugins alphabetically by
-      #     manifest id, and without a plugin sorting before
-      #     "fs.sovereign.example-monetized" that paywalled plugin becomes the
-      #     first tile, breaking the test's plain-navigation assertion.
-      #     example-monetized is exercised directly by the paywall golden path
-      #     (see __tests__/e2e/paywall.spec.ts, global-setup.ts). Declaring
-      #     them here too would double-compose them (once from `plugins/`,
-      #     once from `example-plugins/`) and trip the duplicate-manifest-id
-      #     guard in `scripts/generate-registry.ts`.
+      # sovereign.plugins.default.json (empty — platform plugins only).
+      #
+      # No external plugin is declared here (previously sovereign-plugin-
+      # healthlog was, pinned for its `database.requireEncryption: true`
+      # manifest — boot-time regression coverage for the per-plugin encryption
+      # enforcement epic task 8.15 fixed under RFC 0071). At-rest SQLite
+      # encryption was retired entirely (see CLAUDE.md's architecture-rules
+      # note and docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md) —
+      # the manifest `database` field no longer exists at all, so every
+      # published healthlog tag (which still declares it) now fails the
+      # stricter unrecognized-key-rejecting schema. There is nothing left in
+      # the platform for that fixture to regression-test.
+      #
+      # example-basic and example-monetized are composed automatically by the
+      # `SOVEREIGN_EXAMPLES_ENABLED=true` env var set below, once the runtime
+      # dev server (started by Playwright's webServer) picks up the .env
+      # written in a later step — no declaration needed here. example-basic
+      # keeps launcher.spec.ts's generic "click the first tile" test passing —
+      # the launcher grid sorts installed plugins alphabetically by manifest
+      # id, and without a plugin sorting before "fs.sovereign.example-monetized"
+      # that paywalled plugin becomes the first tile, breaking the test's
+      # plain-navigation assertion. example-monetized is exercised directly by
+      # the paywall golden path (see __tests__/e2e/paywall.spec.ts,
+      # global-setup.ts).
       - name: Declare plugins for e2e
         run: |
           cat > sovereign.plugins.json <<'EOF'
           {
-            "plugins": [
-              {
-                "id": "sovereign-plugin-healthlog",
-                "repository": "https://github.com/sovereignfs/sovereign-plugin-healthlog.git",
-                "ref": "v0.2.3"
-              }
-            ]
+            "plugins": []
           }
           EOF
 
@@ -88,27 +76,39 @@ jobs:
           pnpm install:plugins
           pnpm install --no-frozen-lockfile
 
+      # SQLite is sqld-backed only now — DB_DIALECT is mandatory (no default)
+      # and the "sqlite" branch needs a live server, same as ci.yml's own test
+      # job. Not a `services:` container: sqld needs the `--enable-namespaces`
+      # CLI flag, which the services block has no way to pass to a service
+      # image's command — a plain `docker run` is the documented workaround.
+      # Same host ports (28080/28081) as ci.yml/scripts/ensure-sqld.ts for
+      # consistency, though nothing here depends on that specific choice.
+      - name: Start sqld
+        run: |
+          docker run -d --name sqld-e2e \
+            -p 28080:8080 -p 28081:8081 \
+            -e SQLD_NODE=primary \
+            -e SQLD_ADMIN_LISTEN_ADDR='0.0.0.0:8081' \
+            ghcr.io/tursodatabase/libsql-server:latest \
+            /bin/sqld --enable-namespaces
+          for i in $(seq 1 15); do
+            curl -sf http://localhost:28080/health && break
+            sleep 2
+          done
+
       # Write a minimal .env for both apps. Secrets must be set in the repo's
       # Settings → Secrets and variables → Actions.
       # E2E_AUTH_SECRET: any stable base64 string (openssl rand -base64 32)
       # E2E_ADMIN_KEY: any string used as the sovereign admin key
-      #
-      # SOVEREIGN_DB_ENCRYPTION_KEY is generated fresh per run, not a stored
-      # secret — the checkout (and its data/ dir) is ephemeral per job, so
-      # there's nothing to decrypt across runs and no key to persist. Set here
-      # so sovereign-plugin-healthlog (declared above, `database.requireEncryption:
-      # true`, RFC 0071) actually gets encrypted rather than just warning
-      # (epic task 8.15 — a missing key no longer blocks the whole platform's
-      # boot, only that one plugin runs unencrypted). The webServer starts
-      # against a brand-new, empty data/ dir, so the key-set-before-first-boot
-      # path applies (no `sv db encrypt` migration step needed).
       - name: Write .env
         run: |
           {
             echo "AUTH_SECRET=${{ secrets.E2E_AUTH_SECRET }}"
             echo "SOVEREIGN_AUTH_SECRET=${{ secrets.E2E_AUTH_SECRET }}"
             echo "SOVEREIGN_ADMIN_KEY=${{ secrets.E2E_ADMIN_KEY }}"
-            echo "SOVEREIGN_DB_ENCRYPTION_KEY=$(openssl rand -base64 32)"
+            echo "DB_DIALECT=sqlite"
+            echo "SQLD_URL=http://localhost:28080"
+            echo "SQLD_ADMIN_URL=http://localhost:28081"
             echo "SOVEREIGN_AUTH_URL=http://localhost:3001"
             echo "SOVEREIGN_AUTH_PUBLIC_URL=http://localhost:3001"
             echo "NEXT_PUBLIC_RUNTIME_URL=http://localhost:3000"

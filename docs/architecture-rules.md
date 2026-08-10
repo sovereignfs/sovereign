@@ -348,27 +348,48 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   content to another. This is the guarantee; the mechanism below is how it is
   currently met, and may change as long as the guarantee does not.
 
-  **How it is met today** (research 0012, epic task 2.31): every entry in the
-  `pages` cache is keyed by the **signature-verified** user id from the offline
-  session assertion, via a `cacheKeyWillBeUsed` hook in
-  `runtime/next.config.ts` delegating to `runtime/worker/offline-session.ts`. A
-  request whose user cannot be established gets an explicitly anonymous key,
-  never the bare URL — so it misses and goes to network rather than colliding
-  with a real user's entry. The partition key must come from a verified
-  signature: if it could be forged, an attacker would simply name another user
-  and be handed that user's cached shell, which is the whole failure this
-  prevents. Sign-out deletes that user's entries and clears the assertion.
+  **How it is met today:** the `pages` entry in `runtime/next.config.ts`
+  (real per-user SSR — Console, Account, any plugin without an `offline` tier)
+  is `NetworkOnly`, not caching at all — try the network, and on any failure
+  fall straight to the generic `/offline` page. There is no cached document to
+  ever replay to the wrong user, because none exists. Manifest-declared
+  offline routes (`offline: 'offline-first' | 'device-only'`, research 0012)
+  are the one exception, cached via the separate `offline-shells` entry — safe
+  because that document is required to be a **user-neutral shell** (enforced
+  by `runtime/src/__tests__/offline-route-neutrality.test.ts`: no per-user SSR
+  content at all, personalization hydrates client-side), not because of any
+  per-request identity check. `/` shares this treatment whenever Launcher
+  (the default root) is itself offline-first — see
+  `runtime/src/registry.ts`'s `getOfflineRoutePrefixes()`.
+
+  **A signed, per-user offline session assertion previously partitioned the
+  `pages` cache instead** (research 0012, epic tasks 1.21/2.31/2.32) — every
+  entry keyed by a signature-verified user id, so a request whose user
+  couldn't be established got an anonymous key rather than colliding with a
+  real one. Removed after live testing (sign a user out, take the device
+  offline, reload) found two compounding problems: the client-side half that
+  populated the assertion was never actually wired into the app, so the
+  partition key was always the anonymous fallback in practice; and separately,
+  next-pwa's own default caching of bare `/` (the "start-url" cache) had no
+  partitioning or session check of any kind and was never routed through this
+  mechanism at all, so a signed-out user's last-cached `/` replayed
+  indefinitely regardless. Both findings point the same direction: a
+  never-exercised, per-request signature-verification path is a much larger
+  attack surface to keep correct than simply not caching what cannot be
+  proven safe to replay. If per-user offline access to non-neutral pages is
+  ever revisited, budget for the same live, adversarial verification this
+  fix relied on — the failure here shipped past `pnpm test` and code review
+  and was only caught by actually signing out and going offline against a
+  real build.
 
   **This rule previously read "never switch these entries to a stale-serving
-  strategy, keep them `NetworkFirst`."** That was the right rule while cache
-  entries were unpartitioned — with no way to tell whose document a cached
-  entry was, not caching authenticated documents at all was the only safe
-  option. It was rewritten to state the requirement rather than the mechanism
-  because offline-first needs to serve a cached document with no network, and
-  nothing else can (Next.js's own `experimental.useOffline` explicitly does not
-  cover a full page load). Do not reintroduce a stale-serving strategy for
-  these entries **without** partitioning intact — the two changes are only safe
-  together.
+  strategy, keep them `NetworkFirst`."** That was rewritten once
+  (research 0012) to state the requirement rather than the mechanism, on the
+  premise that offline-first needs to serve _some_ cached document with no
+  network. That premise still holds for manifest-declared offline routes
+  (met via neutrality, above) but not for arbitrary per-user pages — `pages`
+  is back to never stale-serving, which happens to again read like the
+  original mechanism, this time for a verified rather than assumed reason.
 
   Separately, the safe lever for the iOS "white flash on standalone launch" (a
   real, largely irreducible WebKit launch-image-to-first-paint gap for

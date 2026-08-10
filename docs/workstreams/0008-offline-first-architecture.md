@@ -192,6 +192,63 @@ Flagging `/` has already been added and reverted twice; read the comment at
 shared-device case. That is the entire reason the current rule exists, and
 shipping a weaker guarantee is worse than shipping no cold-start offline.
 
+> **Mechanism superseded (August 2026, patch `0.76.1`).** It wasn't robust —
+> found by actually doing the adversarial shared-device test this leg's own
+> "do not proceed if" called for, rather than trusting the code review that
+> shipped it: sign a test user out, take a real production build offline,
+> reload `/`, and the previous user's fully personalized cached shell
+> rendered anyway. Two compounding causes, neither caught by `pnpm test`.
+> First, `next-pwa`'s own default caching of bare `/` (the PWA `start_url`)
+> was never routed through this leg's assertion/partitioning mechanism at
+> all — it has no per-user cache key or session check of its own, and `/`
+> is the actual cold-launch entry point (`start_url: '/'`), not a corner
+> case. Second, independently: `refreshOfflineSession()`, the client-side
+> piece meant to populate the signed assertion after login, was never
+> called anywhere in the app — so even where the partitioning mechanism
+> _was_ wired to a route, it had nothing to verify and fell back to an
+> anonymous key every time.
+>
+> This directly answers line 186's open question above ("decide explicitly
+> [whether per-user partitioning makes the neutral-shell mechanism
+> unnecessary] rather than carrying both") — the opposite way expected.
+> Per-user partitioning is gone; the neutral-shell mechanism is now the
+> _only_ one, extended to cover `/` itself (`runtime/src/registry.ts`'s
+> `getOfflineRoutePrefixes()` — `/` is offline-eligible whenever Launcher,
+> the default root, is itself offline-first). Every other page (`pages`
+> cache entry) no longer caches personalized content at all — `NetworkFirst`
+> with a `cacheWillUpdate` that always returns `null` (`workbox-build`
+> rejects `networkTimeoutSeconds` on any handler but `NetworkFirst`, even
+> though `NetworkOnly` supports it at the `workbox-strategies` runtime
+> level — a config-validation restriction, not a strategy one; net effect
+> is identical to `NetworkOnly`, nothing is ever written), generic
+> `/offline` fallback on any failure, no exceptions. Full account:
+> `docs/architecture-rules.md`'s "cached authenticated document" rule,
+> `docs/epics/users-auth.md` task 1.21's correction note, and
+> `runtime/next.config.ts`'s comment above `runtimeCaching`.
+>
+> **Known open question, not yet resolved:** live-tested the critical
+> property directly — sign out, go offline, reload `/` — and confirmed the
+> stale-shell replay is gone; this is the part that matters and it holds.
+> Separately, tried to confirm the generic-fallback UX for a non-offline
+> route (`/console`) while genuinely offline and could not get a clean
+> result: a real top-level navigation shows a raw browser error
+> (`net::ERR_FAILED`) rather than the `/offline` page. Diagnostic
+> instrumentation temporarily added directly to `pages`' `handlerDidError`
+> (writing markers to a scratch cache before/after each step) showed the
+> handler never runs at all for this case, in a real built-and-deployed
+> Docker image — not a stale local artifact, confirmed via `docker exec`.
+> The underlying library logic checks out correct in isolation (reproduced
+> `self.fallback` + the auto-injected `handlerDidError` directly in Node
+> with a realistic navigation-mode Request and got the expected `/offline`
+> response back), and the same failure reproduces identically on
+> pre-fix `main`, so this is not a regression this leg introduced. Root
+> cause not found — possibly specific to the AI-agent browser-automation
+> environment used for this testing pass rather than a real end-user
+> browser; `docs/pwa-real-device-testing.md` already documents that this
+> category of check needs a real device/human handoff for exactly this
+> reason. Needs a real-browser (not automation) check before being
+> considered closed.
+
 ### Leg 3 — Tiered plugin offline model
 
 **Epic tasks, in execution order:** 3.36 → 3.37 → 2.33.

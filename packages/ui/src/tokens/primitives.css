@@ -77,6 +77,16 @@
   --sv-font-weight-semibold: 600;
   --sv-font-weight-bold: 700;
 
+  /* In-app text-size control (task 10.2), discharging the pinch-zoom-disabled
+     accessibility debt (runtime/app/layout.tsx sets userScalable: false).
+     Every --sv-font-size-* above is rem-based, so scaling the root font size
+     scales the whole type system with no per-component changes. Driven by
+     [data-text-size] on <html>, set pre-paint by runtime/src/theme-script.ts
+     from the `sv-text-size` cookie — same mechanism as [data-theme]. Like
+     --sv-radius-scale, this is a theme-stable scale token with no separate
+     semantic tier. */
+  --sv-text-size-scale: 1;
+
   /* Icon sizes — scale tokens used directly by the Icon component */
   --sv-icon-size-xs: 0.75rem; /* 12px — inline metadata (e.g. a due-date badge) */
   --sv-icon-size-sm: 1rem; /* 16px — inline with body text */
@@ -129,4 +139,19 @@
     0.64,
     1
   ); /* slight overshoot — playful emphasis, use sparingly */
+}
+
+/* Root font size scales with --sv-text-size-scale — see the token comment
+   above. calc(...  * 100%) keeps the browser/OS text-zoom default intact at
+   scale 1 rather than hardcoding a px value. */
+html {
+  font-size: calc(var(--sv-text-size-scale) * 100%);
+}
+
+:root[data-text-size='large'] {
+  --sv-text-size-scale: 1.125; /* +12.5% */
+}
+
+:root[data-text-size='larger'] {
+  --sv-text-size-scale: 1.25; /* +25% */
 }

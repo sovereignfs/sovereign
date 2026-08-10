@@ -109,6 +109,20 @@ const FONT_SIZE_TOKENS = [
   '--sv-font-size-2xl',
 ];
 
+// Task 10.2 — in-app text-size control. --sv-text-size-scale is theme-stable
+// like --sv-radius-scale, but unlike radius (a calc() chain resolved once at
+// :root's declaration site — see the RADIUS_PRESETS comment below), rem units
+// genuinely re-resolve against the root element's live computed font-size, so
+// these swatches compute the result directly in JS rather than needing a real
+// [data-text-size] toggle on the document root.
+const TEXT_SIZE_PRESETS = [
+  { preset: 'default', scale: 1 },
+  { preset: 'large', scale: 1.125 },
+  { preset: 'larger', scale: 1.25 },
+] as const;
+
+const TEXT_SIZE_BASE_PX = { md: 16, lg: 18, '2xl': 24 };
+
 const FONT_WEIGHT_TOKENS = [
   '--sv-font-weight-normal',
   '--sv-font-weight-medium',
@@ -243,6 +257,44 @@ function RadiusScaleRow({ token }: { token: string }) {
       />
       <span style={label}>{token}</span>
       <span style={value}>{resolved}</span>
+    </div>
+  );
+}
+
+function TextSizePresetRow({ preset, scale }: { preset: string; scale: number }) {
+  return (
+    <div style={row}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'baseline', flexShrink: 0, width: 180 }}>
+        <span
+          style={{
+            fontSize: `${scale * TEXT_SIZE_BASE_PX.md}px`,
+            color: 'var(--sv-color-text-primary)',
+          }}
+          title="body (--sv-font-size-md)"
+        >
+          Aa
+        </span>
+        <span
+          style={{
+            fontSize: `${scale * TEXT_SIZE_BASE_PX.lg}px`,
+            color: 'var(--sv-color-text-primary)',
+          }}
+          title="large (--sv-font-size-lg)"
+        >
+          Aa
+        </span>
+        <span
+          style={{
+            fontSize: `${scale * TEXT_SIZE_BASE_PX['2xl']}px`,
+            color: 'var(--sv-color-text-primary)',
+          }}
+          title="heading (--sv-font-size-2xl)"
+        >
+          Aa
+        </span>
+      </div>
+      <span style={label}>{preset}</span>
+      <span style={value}>scale {scale}</span>
     </div>
   );
 }
@@ -443,6 +495,19 @@ function TokenGalleryComponent() {
               </span>
             )}
           />
+        ))}
+      </Section>
+
+      <Section title="Text-size presets (task 10.2)">
+        <p style={{ color: 'var(--sv-color-text-muted)', fontSize: 13, marginBottom: 12 }}>
+          Account → Preferences → Appearance. Overrides <code>--sv-text-size-scale</code> via{' '}
+          <code>[data-text-size]</code> on <code>&lt;html&gt;</code> — every rem-based token above
+          (font sizes, but also spacing and radii) scales with it, since the root element&apos;s
+          font-size is what rem resolves against. Discharges the accessibility debt from disabling
+          pinch-zoom (<code>runtime/app/layout.tsx</code>).
+        </p>
+        {TEXT_SIZE_PRESETS.map((p) => (
+          <TextSizePresetRow key={p.preset} preset={p.preset} scale={p.scale} />
         ))}
       </Section>
 

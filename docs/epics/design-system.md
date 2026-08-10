@@ -353,7 +353,7 @@ Task 1.0.03 (Phase 1 — `instance_config` table must exist)
 
 ---
 
-#### 📋 9.10 — White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027)
+#### ✅ 9.10 — White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027)
 
 **Goal:** Extend instance identity to the PWA manifest and favicon so the installed PWA shows the operator's app name and icons. Depends on Phase 1 (instance config DB and serving routes) and the rename in epic task 9.8.
 

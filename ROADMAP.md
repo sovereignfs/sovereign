@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.76.0 · **Last updated:** 2026-08-10
+**Version:** 0.77.0 · **Last updated:** 2026-08-10
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -238,7 +238,7 @@ doc — but not yet assigned a roadmap slot. Promoted to a phase table once prio
 | —       | Internationalization, Phase 1 — Infrastructure (RFC 0029)                 | 📋     | [11.1](docs/epics/i18n.md#-111--internationalization-phase-1--infrastructure-rfc-0029)                                           |
 | —       | Internationalization, Phase 2 — Platform shell adoption (RFC 0029)        | 📋     | [11.2](docs/epics/i18n.md#-112--internationalization-phase-2--platform-shell-adoption-rfc-0029)                                  |
 | —       | Email template system + White-labeling Phase 2 (RFC 0031 + RFC 0027)      | 📋     | [9.9](docs/epics/design-system.md#-99--email-template-system--white-labeling-phase-2--email--auth-login-page-rfc-0031--rfc-0027) |
-| —       | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | 📋     | [9.10](docs/epics/design-system.md#-910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
+| 0.77.0  | White-labeling, Phase 3 — Dynamic PWA manifest + favicon route (RFC 0027) | ✅     | [9.10](docs/epics/design-system.md#-910--white-labeling-phase-3--dynamic-pwa-manifest--favicon-route-rfc-0027)                   |
 | —       | Non-Docker production deployment, Phase 2 — systemd (RFC 0026)            | 📋     | [0.13](docs/epics/infrastructure.md#-013--non-docker-production-deployment-phase-2--systemd)                                     |
 | —       | Remediate known dependency vulnerabilities                                | 📋     | [0.18](docs/epics/infrastructure.md#-018--remediate-known-dependency-vulnerabilities)                                            |
 | —       | Publish a sovereign-tools image (RFC 0071 incident follow-up)             | 📋     | [0.19](docs/epics/infrastructure.md#-019--publish-a-sovereign-tools-image)                                                       |

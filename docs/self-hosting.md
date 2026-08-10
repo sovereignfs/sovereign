@@ -1320,6 +1320,35 @@ works correctly. Safe to ignore.
 
 ---
 
+## PWA manifest and favicon branding (RFC 0027 Phase 3)
+
+`GET /api/manifest` and `GET /favicon.ico` reflect the operator's instance
+identity (Console → Settings → Instance identity, or the `INSTANCE_NAME` /
+`INSTANCE_LOGO` / `INSTANCE_FAVICON` env vars) so an installed PWA shows the
+operator's own app name and icons, not "Sovereign":
+
+- `/api/manifest` returns the operator's `name`/`short_name` and, when a logo
+  is uploaded or configured, includes it as the first icon entry ahead of the
+  built-in Sovereign icon set. When neither an instance name nor a logo is
+  configured, it serves the committed `runtime/public/manifest.json` verbatim.
+- `/favicon.ico` returns the operator's uploaded favicon when set (Console →
+  Instance identity, or `INSTANCE_FAVICON`), falling back to the committed
+  default icon otherwise.
+
+Both routes are excluded from the middleware session gate — browsers and PWA
+installers fetch them before a session exists.
+
+**Known limitation — service worker caching.** The PWA service worker caches
+the manifest on first load. If an operator changes the instance name, logo, or
+favicon after users have already installed the PWA, those users keep seeing
+the old name/icons in their OS launcher until their service worker updates
+(typically on next app open after the SW's own update check). There is no
+active-push mechanism to force an immediate icon refresh on installed PWAs —
+acceptable for v1; a reinstall or waiting for the natural SW update cycle
+resolves it.
+
+---
+
 ## Web Push notifications (RFC 0016)
 
 Background push notifications let the platform deliver alerts to users' devices

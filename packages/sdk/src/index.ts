@@ -1,6 +1,7 @@
 import * as auth from './auth';
 import { activity } from './activity';
 import { connections } from './connections';
+import { crypto } from './crypto';
 import { data } from './data';
 import { device } from './device';
 import { directory } from './directory';
@@ -43,7 +44,7 @@ import { billing, events } from './unimplemented';
  * invocation live in `@sovereignfs/sdk/device-client` and the future device
  * bridge, RFC 0083).
  * `data`, `activity`, `portability`, `env`, `notifications`, `directory`,
- * `secrets`, `storage`, `connections`, `e2ee`, `plugins`, `email`, and
+ * `secrets`, `crypto`, `storage`, `connections`, `e2ee`, `plugins`, `email`, and
  * `device` are implemented; `billing` and `events` throw
  * `NotImplementedError` until their backing mechanisms ship. Their shape
  * may change before they stabilise.
@@ -61,6 +62,7 @@ export const sdk = {
   directory,
   notifications,
   secrets,
+  crypto,
   connections,
   e2ee,
   events,
@@ -72,6 +74,7 @@ export const sdk = {
   billing,
 };
 
+export { SENSITIVITY_CLASSES } from './types';
 export { provideHost } from './host';
 export type { SdkHost } from './host';
 export type { Surface } from './device';
@@ -159,6 +162,10 @@ export type {
   SecretContext,
   SecretRef,
   SecretScope,
+  SensitivityClass,
+  EncryptFieldOptions,
+  DecryptFieldOptions,
+  CryptoContext,
   StorageContext,
   StorageObject,
   StoragePutInput,

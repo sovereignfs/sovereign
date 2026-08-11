@@ -68,6 +68,14 @@ describe('sdk.mailer / sdk.email — plugin ID resolution (RFC 0062)', () => {
         },
       },
       notifications: { async send() {} },
+      crypto: {
+        async encryptField(value: string) {
+          return `svf0:${Buffer.from(value, 'utf8').toString('base64url')}`;
+        },
+        async decryptField(envelope: string) {
+          return Buffer.from(envelope.slice('svf0:'.length), 'base64url').toString('utf8');
+        },
+      },
       secrets: {
         async create() {
           return {} as never;

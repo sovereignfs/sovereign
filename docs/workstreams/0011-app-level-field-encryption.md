@@ -1,6 +1,6 @@
 # Workstream 0011 — App-Level Field Encryption
 
-**Status:** ⏳ In Progress (Leg 1 ✅ → Leg 2 next)\
+**Status:** ⏳ In Progress (Legs 1–2 ✅ → Leg 3 next)\
 **Date:** August 2026\
 **Author:** kasunben & Claude Code\
 **Goal owner:** kasunben\

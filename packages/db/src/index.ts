@@ -209,6 +209,7 @@ export {
   encryptClassesFromEnv,
   fieldKekFromEnv,
   getFieldKeyRow,
+  getFieldKeyRowById,
   kekFingerprint,
   listFieldKeyRows,
   unwrapKeyMaterial,

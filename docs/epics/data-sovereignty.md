@@ -1554,7 +1554,7 @@ with).
 
 ---
 
-#### 📋 8.32 — `sdk.crypto` field encryption surface + `crypto:use` enforcement (RFC 0092, workstream 0011 leg 2)
+#### ✅ 8.32 — `sdk.crypto` field encryption surface + `crypto:use` enforcement (RFC 0092, workstream 0011 leg 2)
 
 **Goal:** The plugin-facing crypto API: `sdk.crypto.encryptField()`/`decryptField()` implemented host-side over the leg-1 key service, gated by the `crypto:use` manifest permission, honoring the operator's `SOVEREIGN_ENCRYPT_CLASSES` policy.
 

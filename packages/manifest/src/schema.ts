@@ -32,6 +32,7 @@ export const permissionSchema = z.enum([
   'data:import',
   'activity:write',
   'e2ee:use',
+  'crypto:use',
   'admin:*',
   'device:haptics',
   'device:notifications',

@@ -129,6 +129,75 @@ pnpm generate   # recomposes all plugin routes
 
 ---
 
+### `table ... already exists` crash on `pnpm dev` startup
+
+**Symptom:** `pnpm dev` compiles `/instrumentation`, then the runtime crashes
+before serving any request:
+
+```text
+Error [LibsqlError]: An error occurred while loading instrumentation hook: SQL_INPUT_ERROR: SQL input error: table `some_table` already exists
+    at async runMigrations (../packages/db/src/migrate.ts:76:7)
+    at async eval (../packages/db/src/platform-db.ts:103:26)
+```
+
+**Cause:** The persistent dev sqld container (`sovereign-sqld-dev`, started or
+reused by `scripts/ensure-sqld.ts`) has schema that's ahead of its own
+migration tracking. Drizzle's libsql migrator
+(`drizzle-orm/libsql/migrator`) doesn't track applied migrations
+individually by hash — it only compares each migration file's timestamp
+against the single most-recent row in `__drizzle_migrations`. If a table or
+column was ever created directly against this container instead of through
+a committed migration applied via `pnpm dev`'s normal boot path — most
+commonly by running `drizzle-kit push` for fast iteration while shaping a
+new schema — the tracking cursor never advances past the last migration
+that actually went through `runMigrations()`. On the next boot, drizzle
+treats every migration newer than that cursor as still pending and replays
+its raw DDL, colliding with schema that's already there.
+
+**Diagnose:** sqld has no bundled `sqlite3` CLI — query it over its HTTP
+port with `@libsql/client` (already a `packages/db` dependency; run this
+from inside `packages/db` so module resolution finds it):
+
+```bash
+cd packages/db
+node --input-type=module -e "
+import { createClient } from '@libsql/client';
+const client = createClient({ url: 'http://localhost:28080' });
+const t = await client.execute(\"SELECT sql FROM sqlite_master WHERE type='table' AND name='TABLE_NAME'\");
+console.log(t.rows[0]?.sql);
+"
+```
+
+Compare the printed DDL's style against the committed migration file:
+`drizzle-kit generate` output uses backtick-quoted identifiers and tab
+indentation; `drizzle-kit push` writes unquoted identifiers with 2-space
+indentation — a quick tell for which path created the table.
+
+**Fix:** For local dev, the simplest fix is to reset the container — this
+wipes local dev data but guarantees a clean migration history from a fresh
+boot:
+
+```bash
+docker rm -f sovereign-sqld-dev
+docker volume rm sovereign_sqld_dev_data
+pnpm dev   # ensure-sqld.ts recreates the container; migrations apply cleanly
+```
+
+To keep existing data instead, reconcile `__drizzle_migrations` by hand:
+insert one row per already-applied-but-untracked migration, using its hash
+and `when` timestamp from `packages/db/migrations/sqlite/meta/_journal.json`,
+without re-running its DDL.
+
+**Avoid recurrence:** Don't run `drizzle-kit push` against
+`sovereign-sqld-dev` or the Docker Compose `sovereign-sqld` container —
+both are shared, long-lived instances, and `push` bypasses migration
+tracking entirely. Iterate on a new schema against a throwaway/ephemeral
+database instead, then run `pnpm --filter @sovereignfs/db db:generate` to
+produce the real migration and let `pnpm dev`'s normal boot path apply and
+track it.
+
+---
+
 ## iOS PWA / mobile
 
 The layout entries below are two distinct iOS-specific bugs, both surfaced

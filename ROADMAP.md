@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.81.0 · **Last updated:** 2026-08-11
+**Version:** 0.82.0 · **Last updated:** 2026-08-11
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -206,13 +206,13 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.68.0  | Legacy per-plugin SQLite → Postgres migration tool                                                                                      | ✅     | [8.25](docs/epics/data-sovereignty.md#-825--legacy-per-plugin-sqlite--postgres-migration-tool)                                                                                                 |
 | 0.68.1  | `apps/auth` dialect-consistency check                                                                                                   | ✅     | [1.23](docs/epics/users-auth.md#-123--appsauth-dialect-consistency-check)                                                                                                                      |
 | 0.70.0  | Well-known first-party OAuth clients for official native shells, seeding half (RFC 0072 addendum)                                       | ✅     | [1.24](docs/epics/users-auth.md#-124--well-known-first-party-oauth-clients-for-official-native-shells-rfc-0072-addendum)                                                                       |
-| 0.71.0  | Focused plugin app context and route lock — workstream 0001 leg 5 (RFC 0082)                                                            | 📋     | [2.27](docs/epics/platform-shell.md#-227--focused-plugin-app-context-and-route-lock-rfc-0082)                                                                                                  |
 | 0.72.1  | Fix isolated-Postgres plugin migration-table collision                                                                                  | ✅     | [8.26](docs/epics/data-sovereignty.md#-826--fix-isolated-postgres-plugin-migration-table-collision)                                                                                            |
 | 0.74.1  | Wallet Postgres migration: FK ordering and `tools` compose gaps                                                                         | ✅     | [8.27](docs/epics/data-sovereignty.md#-827--wallet-postgres-migration-fk-ordering-and-tools-compose-gaps)                                                                                      |
 | 0.75.0  | Retire the `database.isolation`/`"shared"` manifest option — every plugin unconditionally isolated                                      | ✅     | [8.28](docs/epics/data-sovereignty.md#-828--retire-the-databaseisolationshared-manifest-option)                                                                                                |
 | 0.76.0  | Tiered plugin offline model — manifest `offline` enum + launcher/console/mobile-nav tier states — workstream 0008 leg 3 (Research 0012) | ✅     | [3.36](docs/epics/plugins-runtime.md#-336--tiered-offline-manifest-declaration-research-0012), [2.33](docs/epics/platform-shell.md#-233--launcher-and-shell-offline-tier-states-research-0012) |
 | 0.76.0  | `sv plugin migrate-to-isolated` — shared → isolated data migration tool                                                                 | ✅     | [8.29](docs/epics/data-sovereignty.md#-829--sv-plugin-migrate-to-isolated-shared--isolated-data-migration)                                                                                     |
 | 0.76.1  | Fix shared→isolated transition migrations-table collision                                                                               | ✅     | [8.30](docs/epics/data-sovereignty.md#-830--fix-sharedisolated-transition-migrations-table-collision)                                                                                          |
+| 0.82.0  | Focused plugin app context and route lock — workstream 0001 leg 5 (RFC 0082)                                                            | ✅     | [2.27](docs/epics/platform-shell.md#-227--focused-plugin-app-context-and-route-lock-rfc-0082)                                                                                                  |
 
 ---
 

@@ -462,21 +462,30 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   full pattern (`packages/db/src/schema/{sqlite,postgres}/platform.ts` is a
   different case — the platform's own query code is dialect-aware via
   `packages/db/src/exec.ts`, so its Postgres schema uses native types).
-- **`sdk.device.getSurface()` / `x-sovereign-surface` (RFC 0080) is a
-  presentation hint only, never a security boundary.** The signal derives
-  from the shell's own User-Agent — a client-controlled value any caller can
-  set to anything — so it must never be an input to authorization,
-  entitlement, paywall, or data-access decisions. Anything that must not be
-  reachable is gated by session, capability, or plugin permission, never by
-  surface. RFC 0082's route lock is a UX and product-scoping mechanism on
-  top of this signal, not a security boundary, and documents itself as such.
+- **`sdk.device.getSurface()` / `x-sovereign-surface` (RFC 0080), and
+  `x-sovereign-focus-plugin` (RFC 0082), are presentation hints only, never
+  a security boundary.** Both derive from the shell's own User-Agent — a
+  client-controlled value any caller can set to anything — so neither must
+  ever be an input to authorization, entitlement, paywall, or data-access
+  decisions. Anything that must not be reachable is gated by session,
+  capability, or plugin permission, never by surface or focus. RFC 0082's
+  route lock (`runtime/src/route-lock.ts`'s `decideFocusRoute()`, wired into
+  `runtime/middleware.ts`) is a UX and product-scoping mechanism on top of
+  the focus signal, not a security boundary: an out-of-focus path redirects
+  to the focused plugin's root rather than being denied, and a forged focus
+  target (or an edited User-Agent) reaches exactly the routes the caller's
+  session/capability/plugin-permission gates already allow — those gates
+  run entirely independently of the lock, before and after it.
   `runtime/middleware.ts` strips any inbound `x-sovereign-surface` /
-  `x-sovereign-shell-version` header before injecting its own (parsed from
-  the shell's `Sovereign-Shell/<mobile|desktop>-<platform> <version>`
-  User-Agent token via `runtime/src/surface.ts`), the same discipline
-  already applied to the `x-sovereign-user-*` family — but the stripping
-  only protects against a spoofed _header_; it does nothing about a spoofed
-  _User-Agent_, which is the actual trust boundary this rule exists to name.
+  `x-sovereign-shell-version` / `x-sovereign-focus-plugin` header before
+  injecting its own (all parsed from the shell's single
+  `Sovereign-Shell/<mobile|desktop>-<platform> <version> (focus=<pluginId>)`
+  User-Agent token via `runtime/src/surface.ts` — RFC 0082 deliberately
+  extends RFC 0080's existing token rather than inventing a second one),
+  the same discipline already applied to the `x-sovereign-user-*` family —
+  but the stripping only protects against a spoofed _header_; it does
+  nothing about a spoofed _User-Agent_, which is the actual trust boundary
+  this rule exists to name.
 - **`apps/auth` reads the exact same `DB_DIALECT`/`POSTGRES_DB_URL` the
   platform does — no separate auth-specific database variable.** This
   replaced an earlier design where auth resolved its own dialect

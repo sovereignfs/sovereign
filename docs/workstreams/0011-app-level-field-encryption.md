@@ -4,7 +4,7 @@
 **Date:** August 2026\
 **Author:** kasunben & Claude Code\
 **Goal owner:** kasunben\
-**RFCs:** [0092](../rfcs/0092-app-level-field-encryption.md) (Draft — acceptance is prerequisite 1)\
+**RFCs:** [0092](../rfcs/0092-app-level-field-encryption.md) (Implemented)\
 **Epics touched:** 8 (Data Sovereignty)\
 **Research:** [0013](../research/0013-layered-database-encryption-strategy.md)
 
@@ -16,12 +16,12 @@ A Sovereign instance whose operator has enabled field encryption stores classifi
 
 ## Definition of done
 
-- [ ] With `SOVEREIGN_ENCRYPT_CLASSES=pii,health` and `SOVEREIGN_FIELD_KEK` set, a classified column's stored value on live Postgres **and** live sqld is an `svf1:` envelope; with policy unset, behavior is byte-identical to today.
-- [ ] A plugin using `encryptedText()`/`blindIndex()` passes CRUD + exact-match-search tests on both dialects with no imports beyond `@sovereignfs/sdk`/`drizzle-orm`.
-- [ ] `sv keys rotate-field-kek` completes on a populated instance without reading data rows; `sv db encrypt-fields` survives a mid-run kill and resumes.
-- [ ] User data export (RFC 0007) of encrypted rows emits plaintext; `sv backup` archives ciphertext.
-- [ ] `docs/plugin-development.md` (helpers, permission, search patterns) and `docs/self-hosting.md` (env vars, runbook) updated; docs-parity green.
-- [ ] `@sovereignfs/sdk` + `@sovereignfs/manifest` bumped minor only (NFR-04 — no breaking change).
+- [x] With `SOVEREIGN_ENCRYPT_CLASSES=pii,health` and `SOVEREIGN_FIELD_KEK` set, a classified column's stored value on live Postgres **and** live sqld is an `svf1:` envelope; with policy unset, behavior is byte-identical to today.
+- [x] A plugin using `encryptedText()`/`blindIndex()` passes CRUD + exact-match-search tests on both dialects with no imports beyond `@sovereignfs/sdk`/`drizzle-orm`. (Proven by the leg 3/4 live e2e suites; `example-plugins/example-encrypted` — epic task 12.6 — is the first actual _plugin_ built on the pattern, though not yet rendered live — see its PR's stated gap.)
+- [x] `sv keys rotate-field-kek` completes on a populated instance without reading data rows; `sv db encrypt-fields` survives a mid-run kill and resumes.
+- [x] User data export (RFC 0007) of encrypted rows emits plaintext; `sv backup` archives ciphertext.
+- [x] `docs/plugin-development.md` (helpers, permission, search patterns) and `docs/self-hosting.md` (env vars, runbook) updated; docs-parity green.
+- [x] `@sovereignfs/sdk` + `@sovereignfs/manifest` bumped minor only (NFR-04 — no breaking change).
 
 ## Decisions locked
 
@@ -37,9 +37,9 @@ A Sovereign instance whose operator has enabled field encryption stores classifi
 
 ## Prerequisites
 
-1. **RFC 0092 accepted, including gate A (taxonomy)** — kasunben. The four-class enum (`pii`/`health`/`financial`/`sensitive`) ships in leg 2's public packages; changing it later is a compat event.
-2. **PR #408 (research 0013 + this planning set) merged** — kasunben review.
-3. Live-DB test infrastructure (`TEST_DATABASE_URL`/`TEST_SQLD_URL`, CI services) — already in place from workstream 0009; no new infra.
+1. ~~RFC 0092 accepted, including gate A (taxonomy) — kasunben.~~ **Done.** The four-class enum (`pii`/`health`/`financial`/`sensitive`) shipped in leg 2's public packages.
+2. ~~PR #408 (research 0013 + this planning set) merged — kasunben review.~~ **Done**, merged.
+3. Live-DB test infrastructure (`TEST_DATABASE_URL`/`TEST_SQLD_URL`, CI services) — already in place from workstream 0009; no new infra needed.
 
 ## Legs
 
@@ -49,6 +49,11 @@ A Sovereign instance whose operator has enabled field encryption stores classifi
 | 2   | `sdk.crypto` surface + `crypto:use` | 8.32       | 8     | —                                                      | Permission-gated round-trip + AAD tamper tests pass; sdk/manifest minor bumps        |
 | 3   | Schema helpers + policy write path  | 8.33       | 8     | —                                                      | Both-dialect CRUD/search green; export emits plaintext; plugin-dev docs updated      |
 | 4   | Backfill + rotation tooling         | 8.34       | 8     | **B before start:** dual-read rotation design sign-off | Resumable backfill + rotation verified; operator runbook lands                       |
+
+_Downstream of this workstream (not a leg — separate epic task 12.6):
+`example-plugins/example-encrypted` and the "Adopting field encryption"
+checklist in `docs/plugin-development.md` give plugin authors a concrete
+starting point._
 
 ## Leg detail
 
@@ -78,7 +83,9 @@ A Sovereign instance whose operator has enabled field encryption stores classifi
 
 **Why this leg is third:** it consumes both the key service and the SDK surface, and it's where dialect portability is proven (live Postgres + live sqld tests, the `.pg.test.ts`/`.sqld.test.ts` convention from workstream 0009).
 
-**Technical notes:** `customType` metadata is the mechanism — the helpers carry no crypto. The write-path hook lives in the platform data layer, not in drizzle internals. Verify RFC 0092 open question 4 here: the RFC 0007 export path must decrypt (regression test), while `sv backup` stays ciphertext. Blind-index HMAC input should be normalized (case/trim) and documented, or exact-match will surprise plugin authors.
+**Technical notes:** `customType` metadata is the mechanism — the helpers carry no crypto. Verify RFC 0092 open question 4 here: the RFC 0007 export path must decrypt (regression test), while `sv backup` stays ciphertext. Blind-index HMAC input should be normalized (case/trim) and documented, or exact-match will surprise plugin authors.
+
+**Correction (as executed):** "the write-path hook lives in the platform data layer" did not hold — plugins query a raw drizzle client (`sdk.db.getClient()`), and drizzle's only column hook (`customType.toDriver`) is synchronous and identity-blind, so no data-layer interception point exists to hook. This is exactly the leg's own stop condition below; see RFC 0092 §"What this does not protect against" amendment and `docs/epics/data-sovereignty.md` task 8.33's correction note for the shipped design (declarative classification + one `seal()`/`open()` call per statement + a synchronous tripwire).
 
 **Do not proceed if:** the write path can't intercept classified columns without patching drizzle itself — that's a redesign trigger, not a workaround situation.
 
@@ -106,6 +113,7 @@ If leg 3's write-path interception proves unimplementable without forking drizzl
 
 ## Changelog
 
-| Version | Date        | Change        |
-| ------- | ----------- | ------------- |
-| 0.1     | August 2026 | Initial draft |
+| Version | Date        | Change                                                                                                                                                                                                                                                |
+| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft                                                                                                                                                                                                                                         |
+| 0.2     | August 2026 | All four legs shipped and merged (PRs #409, #410, #411, #418); RFC 0092 -> Implemented. Definition of done and prerequisites marked complete; leg 3's write-path note corrected to match the shipped seal()/open() design (see RFC 0092's amendment). |

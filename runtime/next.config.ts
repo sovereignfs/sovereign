@@ -161,6 +161,22 @@ export const runtimeCaching: NonNullable<
     options: {
       cacheName: 'offline-shells',
       expiration: { maxEntries: 64, maxAgeSeconds: 30 * 86400 },
+      // Explicit and synchronous for the same reason `pages` below declares
+      // its own `handlerDidError` — see that entry's comment. A miss here
+      // (cache empty *and* network unreachable — e.g. the very first launch
+      // happens offline) would otherwise hit next-pwa's auto-injected,
+      // `async`-and-therefore-broken fallback instead of the generic
+      // `/offline` page.
+      plugins: [
+        {
+          handlerDidError: ({ request }: { request: Request }): Promise<Response> =>
+            typeof self !== 'undefined'
+              ? (self as unknown as { fallback: (r: Request) => Promise<Response> }).fallback(
+                  request,
+                )
+              : Promise.resolve(Response.error()),
+        },
+      ],
     },
   },
   {
@@ -173,10 +189,36 @@ export const runtimeCaching: NonNullable<
     // trip to the server. So this entry never actually caches: try the
     // network (bounded by networkTimeoutSeconds so a stalled request falls
     // back promptly instead of hanging), and on any failure — offline, or a
-    // timeout — fall straight to the generic `/offline` page via next-pwa's
-    // auto-injected `handlerDidError` (added because this entry's own
-    // `plugins` declare no `handlerDidError`; see
-    // @ducanh2912/next-pwa's dist/index.js).
+    // timeout — fall straight to the generic `/offline` page.
+    //
+    // `handlerDidError` is declared explicitly here rather than left to
+    // next-pwa's auto-injection (`@ducanh2912/next-pwa`'s dist/index.js adds
+    // one itself for any entry whose `plugins` don't already declare it).
+    // That auto-injected version — and the `cacheWillUpdate` below — must be
+    // plain functions, never `async`: Next's `next.config.ts` loader
+    // (`next/dist/build/next-config-ts/transpile-config.js`) transpiles this
+    // file through SWC and, because the compiled source contains `require(`,
+    // registers a *global* CommonJS require hook that runs every module
+    // reached from here — including `@ducanh2912/next-pwa` itself — through
+    // the same SWC pass. That pass lowers `async` arrow functions to
+    // `_async_to_generator(...)`/`_ts_generator(...)` calls, but the helper
+    // *definitions* live only in the transpiled module's own scope — they
+    // are never part of the function's own source text. `workbox-build`
+    // then does exactly the `Function.prototype.toString()` capture
+    // documented above to embed these functions in `sw.js`, so the helper
+    // calls survive but their definitions don't: every `async` plugin hook
+    // here (ours or next-pwa's auto-injected one) throws `ReferenceError:
+    // _async_to_generator is not defined` the instant the service worker
+    // invokes it. Chrome swallows this as a bare `net::ERR_FAILED` with no
+    // visible cause; Safari/WebKit surfaces the `ReferenceError` directly —
+    // that's how this was actually root-caused, live on a real device,
+    // after a Chromium-only automated pass had wrongly filed it as a
+    // possible tooling artifact. Net effect: any offline navigation to a
+    // route that isn't already cache-primed (anything outside
+    // `offline-shells`, e.g. `/console` cold) fell straight through to the
+    // browser's own error page instead of the generic `/offline` fallback.
+    // Plain functions sidestep the transform (no `async`, nothing to
+    // downlevel) and are what's used below.
     //
     // `NetworkFirst`, not `NetworkOnly`: workbox-build's schema rejects
     // `networkTimeoutSeconds` on any handler but `NetworkFirst` ("Unable to
@@ -198,7 +240,17 @@ export const runtimeCaching: NonNullable<
     options: {
       cacheName: 'pages',
       networkTimeoutSeconds: 4,
-      plugins: [{ cacheWillUpdate: async () => null }],
+      plugins: [
+        {
+          cacheWillUpdate: (): Promise<null> => Promise.resolve(null),
+          handlerDidError: ({ request }: { request: Request }): Promise<Response> =>
+            typeof self !== 'undefined'
+              ? (self as unknown as { fallback: (r: Request) => Promise<Response> }).fallback(
+                  request,
+                )
+              : Promise.resolve(Response.error()),
+        },
+      ],
     },
   },
 ];

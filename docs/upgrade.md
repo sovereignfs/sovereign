@@ -119,6 +119,23 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.75.1 → v0.75.2
+
+- **Fix: offline navigation to a non-cached page now shows the `/offline`
+  page instead of a raw browser error.** Root cause: Next's `next.config.ts`
+  loader globally retranspiles every module reached from that file through
+  SWC (because the compiled config contains `require(`), which silently
+  broke every `async` service-worker plugin hook in `runtimeCaching` —
+  including `@ducanh2912/next-pwa`'s own auto-injected `handlerDidError` —
+  with a `ReferenceError: _async_to_generator is not defined` inside the
+  generated `sw.js`. Chrome hid this behind a bare `net::ERR_FAILED`; only
+  Safari/WebKit surfaced the real exception, which is how it was
+  root-caused. Affected any offline request that fell through to a
+  non-precached page (e.g. `/console` visited offline with nothing cached).
+  - **Action required:** none. No config, schema, or data changes.
+  - See `docs/workstreams/0008-offline-first-architecture.md`'s leg 2 section
+    and the comment above `runtimeCaching` in `runtime/next.config.ts`.
+
 ### v0.75.0 → v0.75.1
 
 - **`SOVEREIGN_OFFLINE_SESSION_TTL_SECONDS` is removed.** It configured the

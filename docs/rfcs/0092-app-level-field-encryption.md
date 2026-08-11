@@ -91,6 +91,79 @@ Encrypted columns lose `LIKE`/range/ORDER BY. The supported patterns, in `docs/p
 2. **Plaintext metadata** — keep non-sensitive dates/categories/IDs unencrypted and filter on those.
 3. **Decrypt-and-filter in the app** — the fallback for fuzzy search, with its cost stated plainly.
 
+### Blind-index rotation and the generic re-seal walker (gate B design — leg 4)
+
+Rotating a blind-index HMAC key invalidates every stored index value: queries
+hash the search term under the new key while rows still carry old-key HMACs.
+The leg-4 design makes rotation a bounded, resumable, operator-triggered
+operation during which **search results stay identical** — never an
+indefinite both-keys mode.
+
+**Key state (additive migration to `field_encryption_keys`):**
+
+- `wrapped_hmac_key_previous` (nullable) — the outgoing key, retained only
+  during the rotation window.
+- `hmac_rotation_started_at` (nullable) — window start; both cleared at
+  completion. A rotation window **exists** iff `wrapped_hmac_key_previous`
+  is non-null. Scope stays per-(class × plugin), like every key in the
+  hierarchy — one rotation never touches another plugin's (or class's) rows.
+
+**Dual-read lives at the query layer, not in stored data.** Plugin schemas
+stay untouched (one index column). Two additions:
+
+- Host: `sdk.crypto` gains `hashFieldCandidates(value, { sensitivity })` →
+  `string[]` — `[new]` normally, `[new, old]` during a window.
+- `@sovereignfs/sdk/drizzle` gains **`blindIndexMatch(column, value, {
+sensitivity })`** → a drizzle `SQL` condition (`eq` normally, `inArray`
+  during a window). This becomes the **documented query pattern** for blind
+  indexes; the leg-3 `eq(col, await hashField(term))` form keeps working but
+  is documented as not rotation-safe. `seal()` always writes the new key's
+  HMAC — new rows are findable immediately, old rows via the old candidate
+  until re-sealed.
+
+**The generic re-seal walker — and the registration mechanism enabling it.**
+The platform cannot see plugin schemas (they are plugin code), so both the
+rotation re-seal and the leg-4 backfill need plugins to hand the platform
+their classified tables once:
+
+```ts
+// once, at plugin server-entry scope (same lifecycle as
+// sdk.portability.provideExport — the established registration precedent)
+sdk.crypto.registerTables(entries, otherTable);
+```
+
+The table objects carry everything the walker needs (table name, column
+names, sensitivity classes, blind-index sources) via the leg-3 metadata
+brand. The walker then, per registered table: batch-reads rows, decrypts
+each `svf1` source under the (unchanged) DEK with the stored column-name
+context, recomputes the blind index under the new HMAC key, and updates the
+row — checkpointed per (table, primary key) so interruption resumes rather
+than restarts. `sv db encrypt-fields` (backfill) is the same walker with a
+different row transform (plaintext → sealed), sharing the checkpoint
+machinery. A classified table that is never registered is skipped and named
+in the tool's output — visible, not silent.
+
+**`sv keys rotate-blind-index --plugin <id> [--class <cls>]`:**
+
+1. **Swap** (one transactional row update): generate + wrap the new HMAC
+   key; `previous ← current`, `current ← new`, `started_at ← now`. Refuses
+   to start over an unfinished window (resume it instead).
+2. **Re-seal** via the walker. Idempotent per row; crash-resume from the
+   checkpoint; `--status` reports window age and per-table progress.
+3. **Complete**: after a clean full pass, clear `previous` + `started_at` —
+   the old key is gone and un-re-sealed rows can no longer exist.
+
+**Never-indefinite enforcement:** boot logs a warning (surfaced in Console
+via the existing `recordWarnings` path) whenever a rotation window is older
+than 7 days. Completion is the tool's success path, not a separate manual
+step.
+
+**Interactions:** `sv keys rotate-field-kek` re-wraps `previous` HMAC keys
+too when present (small leg-4 amendment to the leg-1 tool) — KEK rotation
+and index rotation compose. The unkeyed no-KEK `hashField` fallback needs no
+rotation (nothing secret to rotate); enabling a KEK later is a backfill
+(`sv db encrypt-fields`), which re-seals indexes as part of its transform.
+
 ### What this does not protect against
 
 A compromised **app server** sees plaintext and keys at encrypt/decrypt time — that boundary is Layer 3's (RFC 0060) job, at Layer 3's UX cost. The docs state this plainly, mirroring task 8.5's original review-checklist language ("server-held keys do not defend against a curious operator or RCE" — of the _app_ host).
@@ -110,9 +183,9 @@ Two new env vars (`SOVEREIGN_FIELD_KEK`, `SOVEREIGN_ENCRYPT_CLASSES`) → `.env.
 ## Open questions
 
 1. **Taxonomy sign-off.** The four-class enum above is a proposal; it needs kasunben's explicit approval before the manifest/SDK enum lands (workstream 0011 gate A).
-2. **Blind-index key rotation.** Rotating an HMAC key invalidates every stored index value. Proposed: dual-read transition (query matches old _or_ new HMAC while a background re-index runs), designed in detail before leg 4 (gate B).
+2. **Blind-index key rotation.** ~~Rotating an HMAC key invalidates every stored index value.~~ Designed — see "Blind-index rotation and the generic re-seal walker" above (gate B; awaiting kasunben's sign-off before leg 4 starts). One sub-decision is called out there: table registration via `sdk.crypto.registerTables()` (recommended, mirrors the portability-resolver precedent) rather than a manifest-declared table list or schema-file scanning.
 3. **Auth-store fields.** better-auth owns `apps/auth`'s schema; classifying its columns means patching generated tables. Deferred — out of scope for this RFC, tracked as a follow-up once the plugin-side machinery is proven.
-4. **Export/backup interaction.** `sv backup` archives ciphertext (fine — the KEK travels via env, documented). But RFC 0007 user data **export** should emit plaintext (the user's own data, requested by the user) — the export path must decrypt through the same host service. Believed handled by routing exports through `sdk.crypto`; verify during leg 3.
+4. **Export/backup interaction.** Resolved in leg 3: `sdk.crypto`'s context falls back to the portability plugin context host-side, so export resolvers `open()` rows and emit plaintext (documented as a requirement in `docs/plugin-development.md`); `sv backup` archives ciphertext.
 
 ## Adoption path
 
@@ -120,9 +193,11 @@ Documentation-first now. On acceptance: workstream 0011 (four legs = epic tasks 
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| 0.2     | August 2026 | Accepted (developer go-ahead including gate A, the four-class taxonomy); leg 1 (epic task 8.31 — key service) implemented                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| 0.3     | August 2026 | Leg 2 (epic task 8.32) implemented: `sdk.crypto.encryptField()`/`decryptField()`, `crypto:use` permission, `svf1` data envelope + `svf0` passthrough discriminator; decryption deliberately ignores policy so ciphertext outlives a disabled class                                                                                                                                                                                                                                                                                                                                                                                      |
-| 0.4     | August 2026 | Leg 3 (epic task 8.33) implemented, with an approved design amendment: transparent drizzle interception rejected at the leg's stop condition (sync, identity-blind `toDriver`; raw client handed to plugins) in favor of declarative classification + one mechanical `seal()`/`open()` call per statement + a synchronous `toDriver` tripwire that makes unsealed writes to classified columns throw. Added `sdk.crypto.hashField()` (blind-index primitive, unkeyed fallback without a KEK) and the `@sovereignfs/sdk/drizzle` subpath. Verified end-to-end on live sqld and live Postgres with the same sqlite-core table definition. |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 0.2     | August 2026 | Accepted (developer go-ahead including gate A, the four-class taxonomy); leg 1 (epic task 8.31 — key service) implemented                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 0.3     | August 2026 | Leg 2 (epic task 8.32) implemented: `sdk.crypto.encryptField()`/`decryptField()`, `crypto:use` permission, `svf1` data envelope + `svf0` passthrough discriminator; decryption deliberately ignores policy so ciphertext outlives a disabled class                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 0.4     | August 2026 | Leg 3 (epic task 8.33) implemented, with an approved design amendment: transparent drizzle interception rejected at the leg's stop condition (sync, identity-blind `toDriver`; raw client handed to plugins) in favor of declarative classification + one mechanical `seal()`/`open()` call per statement + a synchronous `toDriver` tripwire that makes unsealed writes to classified columns throw. Added `sdk.crypto.hashField()` (blind-index primitive, unkeyed fallback without a KEK) and the `@sovereignfs/sdk/drizzle` subpath. Verified end-to-end on live sqld and live Postgres with the same sqlite-core table definition.                                                              |
+| 0.5     | August 2026 | Gate B design drafted (pending sign-off): per-key dual-read rotation window (`wrapped_hmac_key_previous` + `hmac_rotation_started_at`), query-layer dual-read via `hashFieldCandidates()`/`blindIndexMatch()`, the `sdk.crypto.registerTables()` registration mechanism enabling a generic checkpointed re-seal walker shared by `sv keys rotate-blind-index` and `sv db encrypt-fields`, 7-day stale-window boot warning, KEK-rotation composition. Open questions 2 and 4 updated.                                                                                                                                                                                                                 |
+| 0.6     | August 2026 | Leg 4 (epic task 8.34) implemented per the gate B design, with one strengthening refinement: `registerTables()` **persists** table metadata (`field_table_registrations`) so the CLI walker works outside the runtime process. Shipped: rotation window columns (migration 0023), fresh-read HMAC resolution (live rotation visibility), `hashFieldCandidates()`/`blindIndexMatch()`, the checkpointed re-seal walker, `sv db encrypt-fields`, `sv keys rotate-blind-index` (`--status`, `--force` completion guard), KEK-rotation carry-over of previous keys, 7-day stale-window boot warning, and the Console read-only status section. Dual-read continuity and checkpoint resume verified live. |

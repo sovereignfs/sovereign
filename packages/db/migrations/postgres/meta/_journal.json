@@ -162,6 +162,13 @@
       "when": 1786404859210,
       "tag": "0022_pale_captain_flint",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1786471163360,
+      "tag": "0023_lying_raider",
+      "breakpoints": true
     }
   ]
 }

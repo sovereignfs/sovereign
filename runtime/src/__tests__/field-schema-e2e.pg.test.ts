@@ -35,12 +35,21 @@ const KEYS_DDL = `CREATE TABLE IF NOT EXISTS field_encryption_keys (
   class text NOT NULL,
   wrapped_dek text NOT NULL,
   wrapped_hmac_key text NOT NULL,
+  wrapped_hmac_key_previous text,
+  hmac_rotation_started_at bigint,
   kek_fingerprint text NOT NULL,
   created_at bigint NOT NULL,
   updated_at bigint NOT NULL
 )`;
 const KEYS_IDX = `CREATE UNIQUE INDEX IF NOT EXISTS field_encryption_keys_plugin_class_idx
   ON field_encryption_keys (plugin_id, class)`;
+// Long-lived test databases may pre-date migration 0023 — add its columns
+// tolerantly (sqlite has no ADD COLUMN IF NOT EXISTS; a duplicate errors and
+// is ignored).
+const KEYS_ALTERS = [
+  `ALTER TABLE field_encryption_keys ADD COLUMN IF NOT EXISTS wrapped_hmac_key_previous text`,
+  `ALTER TABLE field_encryption_keys ADD COLUMN IF NOT EXISTS hmac_rotation_started_at bigint`,
+];
 
 const TABLE_NAME = `e2e_entries_${randomUUID().slice(0, 8)}`;
 
@@ -89,6 +98,13 @@ describe.skipIf(!PG_URL)('leg 3 end-to-end (live Postgres, real crypto, real dri
     testPdb = createClient({ dialect: 'postgres', url: PG_URL });
     await rawRun(sql.raw(KEYS_DDL));
     await rawRun(sql.raw(KEYS_IDX));
+    for (const alter of KEYS_ALTERS) {
+      try {
+        await rawRun(sql.raw(alter));
+      } catch {
+        // column already exists
+      }
+    }
     await rawRun(
       sql.raw(
         `CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
@@ -98,8 +114,14 @@ describe.skipIf(!PG_URL)('leg 3 end-to-end (live Postgres, real crypto, real dri
       ),
     );
 
-    const { encryptFieldValue, decryptFieldValue, hashFieldValue, requireCryptoPluginContext } =
-      await import('../field-crypto');
+    const {
+      encryptFieldValue,
+      decryptFieldValue,
+      hashFieldValue,
+      hashFieldCandidatesValue,
+      registerTablesValue,
+      requireCryptoPluginContext,
+    } = await import('../field-crypto');
     const manifest = { id: PLUGIN_ID, permissions: ['crypto:use'] };
     const resolve = (ctx: { tenantId: string; pluginId: string | null }) => {
       if (!ctx.pluginId) throw new Error('no plugin context');
@@ -115,6 +137,12 @@ describe.skipIf(!PG_URL)('leg 3 end-to-end (live Postgres, real crypto, real dri
       },
       async hashField(value, options, ctx) {
         return hashFieldValue(value, options, resolve(ctx));
+      },
+      async hashFieldCandidates(value, options, ctx) {
+        return hashFieldCandidatesValue(value, options, resolve(ctx));
+      },
+      async registerTables(metadata, ctx) {
+        return registerTablesValue(metadata, resolve(ctx));
       },
     };
     provideHost({ crypto } as unknown as SdkHost);

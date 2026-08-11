@@ -215,7 +215,16 @@ export {
   unwrapKeyMaterial,
   updateFieldKeyRowWrapped,
   wrapKeyMaterial,
+  startHmacRotation,
+  completeHmacRotation,
+  listOpenHmacRotations,
+  upsertFieldTableRegistration,
+  listFieldTableRegistrations,
+  getResealCheckpoint,
+  upsertResealCheckpoint,
+  clearResealCheckpoint,
   type FieldEncryptionKeyRow,
+  type FieldTableRegistrationRow,
   type WrappedKeyPurpose,
 } from './field-encryption';
 export {

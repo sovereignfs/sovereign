@@ -4,10 +4,16 @@ import {
   fieldKekFromEnv,
   getFieldKeyRowById,
   getPlatformDb,
+  upsertFieldTableRegistration,
 } from '@sovereignfs/db';
-import type { DecryptFieldOptions, EncryptFieldOptions, HashFieldOptions } from '@sovereignfs/sdk';
+import type {
+  DecryptFieldOptions,
+  EncryptFieldOptions,
+  FieldTableMetadata,
+  HashFieldOptions,
+} from '@sovereignfs/sdk';
 import { FIELD_DATA_PREFIX, FIELD_PASSTHROUGH_PREFIX, SENSITIVITY_CLASSES } from '@sovereignfs/sdk';
-import { getFieldCipher, isClassEnabled } from './field-encryption-keys';
+import { getFieldCipher, getFieldHmacs, isClassEnabled } from './field-encryption-keys';
 
 /**
  * `sdk.crypto` host implementation (RFC 0092, epic task 8.32 — workstream
@@ -179,6 +185,48 @@ export async function hashFieldValue(
       .update(value, 'utf8')
       .digest('base64url');
   }
-  const cipher = await getFieldCipher(ctx.pluginId, cls);
-  return cipher.hmac(value);
+  // Fresh (uncached) key resolution — rotation swaps must be visible live.
+  const hmacs = await getFieldHmacs(ctx.pluginId, cls);
+  return hmacs.current(value);
+}
+
+/**
+ * Blind-index candidates (RFC 0092 gate B): `[current]` normally,
+ * `[current, previous]` while a rotation window is open — so
+ * `blindIndexMatch()` conditions find both not-yet-re-sealed and re-sealed
+ * rows mid-rotation. Order is new-first (new rows dominate over time).
+ */
+export async function hashFieldCandidatesValue(
+  value: string,
+  options: HashFieldOptions,
+  ctx: ResolvedCryptoContext,
+): Promise<string[]> {
+  const cls: string = options.sensitivity;
+  if (!(SENSITIVITY_CLASSES as readonly string[]).includes(cls)) {
+    throw new FieldEncryptionConfigError(
+      `Unknown sensitivity class "${cls}" — expected one of: ${SENSITIVITY_CLASSES.join(', ')}.`,
+    );
+  }
+  if (!fieldKekFromEnv()) {
+    return [await hashFieldValue(value, options, ctx)];
+  }
+  const hmacs = await getFieldHmacs(ctx.pluginId, cls);
+  const candidates = [hmacs.current(value)];
+  if (hmacs.previous) candidates.push(hmacs.previous(value));
+  return candidates;
+}
+
+/**
+ * Persist a plugin's classified-table registrations (RFC 0092 gate B) —
+ * idempotent upserts keyed (plugin × table). The CLI re-seal walker consumes
+ * these from outside the runtime process.
+ */
+export async function registerTablesValue(
+  metadata: FieldTableMetadata[],
+  ctx: ResolvedCryptoContext,
+): Promise<void> {
+  const pdb = await getPlatformDb();
+  for (const table of metadata) {
+    await upsertFieldTableRegistration(pdb, ctx.pluginId, table.tableName, JSON.stringify(table));
+  }
 }

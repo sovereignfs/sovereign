@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, createHmac, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import {
   FieldEncryptionConfigError,
   createFieldKeyRow,
@@ -8,6 +8,7 @@ import {
   getPlatformDb,
   unwrapKeyMaterial,
 } from '@sovereignfs/db';
+import { createHmac } from 'node:crypto';
 
 /**
  * Field-encryption key service (RFC 0092, epic task 8.31 — workstream 0011
@@ -125,4 +126,49 @@ export async function getFieldCipher(pluginId: string, cls: string): Promise<Fie
       return createHmac('sha256', keys.hmacKey).update(input, 'utf8').digest('base64url');
     },
   };
+}
+
+/** HMAC closures for one (plugin × class): current key, plus previous during a rotation window. */
+export interface FieldHmacs {
+  current(input: string): string;
+  previous?: (input: string) => string;
+}
+
+/**
+ * Resolve the blind-index HMAC key(s) with a FRESH row read — deliberately
+ * uncached, unlike the DEK path: `sv keys rotate-blind-index` swaps HMAC keys
+ * while the platform is live, and the dual-read guarantee only holds if
+ * seal/hashField see the swap immediately. One extra row read per hash call
+ * is the price of rotation correctness (RFC 0092 gate B).
+ */
+export async function getFieldHmacs(pluginId: string, cls: string): Promise<FieldHmacs> {
+  const kek = fieldKekFromEnv();
+  if (!kek) {
+    throw new FieldEncryptionConfigError(
+      `SOVEREIGN_FIELD_KEK is not set — cannot resolve blind-index keys for ` +
+        `plugin "${pluginId}" class "${cls}".`,
+    );
+  }
+  const pdb = await getPlatformDb();
+  const row =
+    (await getFieldKeyRow(pdb, pluginId, cls)) ??
+    (await createFieldKeyRow(pdb, kek, pluginId, cls));
+  const currentKey = unwrapKeyMaterial(kek, row.wrappedHmacKey, {
+    pluginId,
+    class: cls,
+    purpose: 'hmac',
+  });
+  const hmacs: FieldHmacs = {
+    current: (input) => createHmac('sha256', currentKey).update(input, 'utf8').digest('base64url'),
+  };
+  if (row.wrappedHmacKeyPrevious) {
+    const previousKey = unwrapKeyMaterial(kek, row.wrappedHmacKeyPrevious, {
+      pluginId,
+      class: cls,
+      purpose: 'hmac',
+    });
+    hmacs.previous = (input) =>
+      createHmac('sha256', previousKey).update(input, 'utf8').digest('base64url');
+  }
+  return hmacs;
 }

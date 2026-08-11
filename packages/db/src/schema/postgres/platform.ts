@@ -483,11 +483,48 @@ export const fieldEncryptionKeys = pgTable(
     class: text('class').notNull(),
     wrappedDek: text('wrapped_dek').notNull(),
     wrappedHmacKey: text('wrapped_hmac_key').notNull(),
+    wrappedHmacKeyPrevious: text('wrapped_hmac_key_previous'),
+    hmacRotationStartedAt: bigint('hmac_rotation_started_at', { mode: 'number' }),
     kekFingerprint: text('kek_fingerprint').notNull(),
     createdAt: bigint('created_at', { mode: 'number' }).notNull(),
     updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
   },
   (table) => [
     uniqueIndex('field_encryption_keys_plugin_class_idx').on(table.pluginId, table.class),
+  ],
+);
+
+/** Persisted classified-table registrations (RFC 0092 gate B) — see the SQLite twin. */
+export const fieldTableRegistrations = pgTable(
+  'field_table_registrations',
+  {
+    id: text('id').primaryKey(),
+    pluginId: text('plugin_id').notNull(),
+    tableName: text('table_name').notNull(),
+    metadata: text('metadata').notNull(),
+    updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('field_table_registrations_plugin_table_idx').on(table.pluginId, table.tableName),
+  ],
+);
+
+/** Re-seal walker checkpoints (RFC 0092 gate B) — see the SQLite twin. */
+export const fieldResealCheckpoints = pgTable(
+  'field_reseal_checkpoints',
+  {
+    id: text('id').primaryKey(),
+    job: text('job').notNull(),
+    pluginId: text('plugin_id').notNull(),
+    tableName: text('table_name').notNull(),
+    lastPk: text('last_pk').notNull(),
+    updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('field_reseal_checkpoints_job_table_idx').on(
+      table.job,
+      table.pluginId,
+      table.tableName,
+    ),
   ],
 );

@@ -35,6 +35,18 @@ export async function register(): Promise<void> {
     const { checkBootCompatibility } = await import('./src/boot-compat');
     await checkBootCompatibility();
 
+    // RFC 0092 gate B "never indefinite": surface abandoned blind-index
+    // rotation windows (older than 7 days) on every boot.
+    const { warnStaleHmacRotations } = await import('./src/field-reseal');
+    const { logger: bootLogger } = await import('./src/logger');
+    try {
+      for (const warning of await warnStaleHmacRotations()) {
+        bootLogger.warn(warning);
+      }
+    } catch {
+      // Best-effort — a fresh instance without the table yet must still boot.
+    }
+
     const transport = process.env.NOTIFICATION_TRANSPORT ?? 'sse';
     const redisUrl = process.env.REDIS_URL;
     const { initBroker, closeBroker } = await import('./src/notification-broker');

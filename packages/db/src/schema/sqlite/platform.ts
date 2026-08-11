@@ -649,12 +649,69 @@ export const fieldEncryptionKeys = sqliteTable(
     class: text('class').notNull(),
     wrappedDek: text('wrapped_dek').notNull(),
     wrappedHmacKey: text('wrapped_hmac_key').notNull(),
+    /**
+     * The outgoing HMAC key during a blind-index rotation window (RFC 0092
+     * gate B). Non-null iff a rotation is in progress; queries dual-read
+     * old+new until the re-seal completes and clears it.
+     */
+    wrappedHmacKeyPrevious: text('wrapped_hmac_key_previous'),
+    /** Unix seconds when the current rotation window opened; null when none. */
+    hmacRotationStartedAt: integer('hmac_rotation_started_at'),
     kekFingerprint: text('kek_fingerprint').notNull(),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
   },
   (table) => [
     uniqueIndex('field_encryption_keys_plugin_class_idx').on(table.pluginId, table.class),
+  ],
+);
+
+/**
+ * Persisted classified-table registrations (RFC 0092 gate B). Written by
+ * `sdk.crypto.registerTables()` from the runtime (idempotent upsert); read by
+ * the CLI re-seal walker (`sv db encrypt-fields`, `sv keys
+ * rotate-blind-index`), which runs in a separate process where plugin code
+ * is not loaded — persistence is what makes operator tooling independent of
+ * lazy plugin module loading. `metadata` is JSON: pk columns + classified
+ * column descriptors (name, kind, class, blind-index source).
+ */
+export const fieldTableRegistrations = sqliteTable(
+  'field_table_registrations',
+  {
+    id: text('id').primaryKey(),
+    pluginId: text('plugin_id').notNull(),
+    tableName: text('table_name').notNull(),
+    metadata: text('metadata').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('field_table_registrations_plugin_table_idx').on(table.pluginId, table.tableName),
+  ],
+);
+
+/**
+ * Re-seal walker checkpoints (RFC 0092 gate B) — one row per
+ * (job × plugin × table), holding the last processed primary key so an
+ * interrupted `sv db encrypt-fields` / `sv keys rotate-blind-index` run
+ * resumes instead of restarting. Deleted when the table completes.
+ */
+export const fieldResealCheckpoints = sqliteTable(
+  'field_reseal_checkpoints',
+  {
+    id: text('id').primaryKey(),
+    /** `backfill` or `rotate-index`. */
+    job: text('job').notNull(),
+    pluginId: text('plugin_id').notNull(),
+    tableName: text('table_name').notNull(),
+    lastPk: text('last_pk').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('field_reseal_checkpoints_job_table_idx').on(
+      table.job,
+      table.pluginId,
+      table.tableName,
+    ),
   ],
 );
 
@@ -694,3 +751,7 @@ export type InstanceConfigRow = typeof instanceConfig.$inferSelect;
 export type NewInstanceConfigRow = typeof instanceConfig.$inferInsert;
 export type FieldEncryptionKey = typeof fieldEncryptionKeys.$inferSelect;
 export type NewFieldEncryptionKey = typeof fieldEncryptionKeys.$inferInsert;
+export type FieldTableRegistration = typeof fieldTableRegistrations.$inferSelect;
+export type NewFieldTableRegistration = typeof fieldTableRegistrations.$inferInsert;
+export type FieldResealCheckpoint = typeof fieldResealCheckpoints.$inferSelect;
+export type NewFieldResealCheckpoint = typeof fieldResealCheckpoints.$inferInsert;

@@ -1,6 +1,7 @@
 import { sdk } from '@sovereignfs/sdk';
 import styles from '../console.module.css';
 import { ProviderConfigsSection, type ProviderConfigRow } from './ProviderConfigForms';
+import { FieldEncryptionStatus, type FieldEncryptionView } from './FieldEncryptionStatus';
 import { PushRelaySettingsForm, type PushRelaySettingsView } from './PushRelaySettingsForm';
 import { TenantForm, InviteOnlyForm, ExampleAppsForm, RootPluginForm } from './SettingsForms';
 import { SmtpSettingsForm, type SmtpSettingsView } from './SmtpSettingsForm';
@@ -13,6 +14,7 @@ interface Settings {
   examplesEnabled: boolean;
   rootPluginId: string;
   smtp: SmtpSettingsView;
+  fieldEncryption: FieldEncryptionView;
   pushRelay: PushRelaySettingsView;
 }
 
@@ -53,6 +55,12 @@ const DEFAULT_SETTINGS: Settings = {
   examplesEnabled: false,
   rootPluginId: '',
   smtp: { host: null, port: null, user: null, from: null, hasPassword: false, source: 'env' },
+  fieldEncryption: {
+    enabledClasses: [],
+    kekConfigured: false,
+    openRotations: [],
+    registrations: [],
+  },
   pushRelay: { url: null, defaultUrl: 'https://relay.sovereign.openfs.io', disabled: false },
 };
 
@@ -108,6 +116,11 @@ export default async function SettingsPage() {
         <p className={styles.helpText}>
           Current setting: <code className={styles.codeInline}>{settings.rootPluginId}</code>
         </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Field encryption</h2>
+        <FieldEncryptionStatus view={settings.fieldEncryption} />
       </section>
 
       <section className={styles.section}>

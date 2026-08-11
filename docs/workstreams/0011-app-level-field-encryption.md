@@ -1,6 +1,6 @@
 # Workstream 0011 — App-Level Field Encryption
 
-**Status:** ⏳ In Progress (Legs 1–3 ✅ → Leg 4 next, gate B pending)\
+**Status:** ✅ Done (all 4 legs shipped; gates A and B signed off)\
 **Date:** August 2026\
 **Author:** kasunben & Claude Code\
 **Goal owner:** kasunben\

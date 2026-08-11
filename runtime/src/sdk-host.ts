@@ -118,7 +118,9 @@ import { checkPluginMailerRateLimit, requireMailerPluginContext } from './plugin
 import {
   decryptFieldValue,
   encryptFieldValue,
+  hashFieldCandidatesValue,
   hashFieldValue,
+  registerTablesValue,
   requireCryptoPluginContext,
   type ResolvedCryptoContext,
 } from './field-crypto';
@@ -712,6 +714,14 @@ provideHost({
     async hashField(value, options, context): Promise<string> {
       const ctx = resolveCryptoContext(context);
       return hashFieldValue(value, options, ctx);
+    },
+    async hashFieldCandidates(value, options, context): Promise<string[]> {
+      const ctx = resolveCryptoContext(context);
+      return hashFieldCandidatesValue(value, options, ctx);
+    },
+    async registerTables(metadata, context): Promise<void> {
+      const ctx = resolveCryptoContext(context);
+      return registerTablesValue(metadata, ctx);
     },
   },
   secrets: {

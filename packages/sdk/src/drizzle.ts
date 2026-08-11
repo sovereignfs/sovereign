@@ -1,3 +1,4 @@
+import { inArray, eq, type Column, type SQL } from 'drizzle-orm';
 import { customType } from 'drizzle-orm/sqlite-core';
 import type { SensitivityClass } from './types';
 import { FIELD_DATA_PREFIX, FIELD_PASSTHROUGH_PREFIX } from './types';
@@ -107,3 +108,27 @@ export {
   type EncryptedColumnMeta,
   type FieldColumnMeta,
 } from './field-schema';
+
+/**
+ * Rotation-safe blind-index condition (RFC 0092 gate B) — the recommended
+ * query pattern for `blindIndex()` columns:
+ *
+ * ```ts
+ * const candidates = await sdk.crypto.hashFieldCandidates(term, { sensitivity: 'health' });
+ * const hits = await db.select().from(entries).where(blindIndexMatch(entries.notesIdx, candidates));
+ * ```
+ *
+ * Builds `eq` for the single-candidate case and `inArray` during a rotation
+ * window (two candidates: new-key and old-key HMACs), so search results stay
+ * identical before, during, and after a blind-index key rotation. Candidates
+ * come from `sdk.crypto.hashFieldCandidates()` — passed in rather than
+ * fetched here so this subpath stays free of server-only imports.
+ */
+export function blindIndexMatch(column: Column, candidates: string | string[]): SQL {
+  const list = Array.isArray(candidates) ? candidates : [candidates];
+  if (list.length === 0) {
+    throw new Error('blindIndexMatch: at least one candidate hash is required.');
+  }
+  const first = list[0] as string;
+  return list.length === 1 ? (eq(column, first) as SQL) : (inArray(column, list) as SQL);
+}

@@ -42,6 +42,7 @@ interface RuntimeCachingEntryLike {
 
 const cachesStub = { match: async () => undefined };
 const responseStub = { error: () => ({ ok: false }) };
+const fallbackStub = async () => ({ ok: true });
 
 describe('next.config.ts runtimeCaching functions survive Workbox serialization', () => {
   const entries = runtimeCaching as unknown as RuntimeCachingEntryLike[];
@@ -63,13 +64,17 @@ describe('next.config.ts runtimeCaching functions survive Workbox serialization'
     }
   });
 
-  // `offline-shells` declares no `plugins` of its own and relies entirely on
-  // next-pwa's auto-injected `handlerDidError` (added because it has none;
-  // see @ducanh2912/next-pwa's dist/index.js). `pages` declares one plugin —
-  // a `cacheWillUpdate` that returns `null` so nothing is ever actually
-  // cached (see next.config.ts's comment on that entry) — and gets the same
-  // auto-injected `handlerDidError` on top, since that plugin object has no
-  // `handlerDidError` key of its own for next-pwa's check to find.
+  // Both entries declare their own explicit, synchronous `handlerDidError`
+  // rather than relying on next-pwa's auto-injected one
+  // (`@ducanh2912/next-pwa`'s dist/index.js adds an `async` version to any
+  // entry whose `plugins` don't already declare the key). `async` plugin
+  // hooks here are never safe: see next.config.ts's comment on the `pages`
+  // entry for why Next's `next.config.ts` SWC loader silently breaks them in
+  // the generated `sw.js` specifically (a `ReferenceError` inside the SW
+  // that Chrome hides behind a bare `net::ERR_FAILED` and only WebKit
+  // surfaces directly) — a materially different failure from the
+  // closure-over-module-scope one this file's own `isolate()` helper above
+  // exists to catch.
   it('every plugin hook function runs standalone with no __sovereign* globals set', () => {
     for (const entry of entries) {
       for (const plugin of entry.options?.plugins ?? []) {
@@ -80,7 +85,7 @@ describe('next.config.ts runtimeCaching functions survive Workbox serialization'
         ]) {
           if (typeof hook !== 'function') continue;
           const isolated = isolate(hook, {
-            self: {},
+            self: { fallback: fallbackStub },
             caches: cachesStub,
             Response: responseStub,
           });
@@ -164,8 +169,41 @@ describe('next.config.ts runtimeCaching functions survive Workbox serialization'
       (p) => typeof p.cacheWillUpdate === 'function',
     )?.cacheWillUpdate;
     if (!cacheWillUpdate) throw new Error('expected a cacheWillUpdate plugin on "pages"');
+    // Not `async` (see next.config.ts's comment on this entry), but it still
+    // returns a `Promise<null>` via a plain `Promise.resolve()` call to
+    // satisfy Workbox's `CacheWillUpdateCallback` type — that's a
+    // synchronous function returning a Promise object, not the `async`
+    // keyword, so it isn't subject to the SWC downleveling this test suite
+    // exists to guard against.
     const isolated = isolate(cacheWillUpdate, {});
     await expect(isolated({ response: { ok: true, status: 200 } } as never)).resolves.toBeNull();
+  });
+
+  // Regression coverage for the `_async_to_generator` ReferenceError bug:
+  // root-caused live on a real device (iOS Simulator Safari/WebKit) as a
+  // genuinely broken offline `/console` fallback, not the automation
+  // artifact it first looked like. Next's `next.config.ts` SWC loader
+  // globally retranspiles every module reached via `require()` from this
+  // file — including third-party ones like `@ducanh2912/next-pwa` — which
+  // downlevels `async` functions to `_async_to_generator(...)` calls whose
+  // helper definitions never survive `workbox-build`'s
+  // `Function.prototype.toString()` capture into `sw.js`. No `async`
+  // function anywhere in this file's `runtimeCaching` plugin hooks can be
+  // safe from that, so this guards the property directly rather than
+  // re-deriving the mechanism per hook.
+  it('no plugin hook function is declared async (see next.config.ts comment on "pages")', () => {
+    for (const entry of entries) {
+      for (const plugin of entry.options?.plugins ?? []) {
+        for (const hook of [
+          plugin.cacheKeyWillBeUsed,
+          plugin.cacheWillUpdate,
+          plugin.handlerDidError,
+        ]) {
+          if (typeof hook !== 'function') continue;
+          expect(hook.toString().trimStart().startsWith('async')).toBe(false);
+        }
+      }
+    }
   });
 
   it('"/" matches offline-shells (not pages) once __sovereignIsOfflineRoute reports it', () => {

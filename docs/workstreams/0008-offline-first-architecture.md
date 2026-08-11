@@ -226,28 +226,55 @@ shipping a weaker guarantee is worse than shipping no cold-start offline.
 > `docs/epics/users-auth.md` task 1.21's correction note, and
 > `runtime/next.config.ts`'s comment above `runtimeCaching`.
 >
-> **Known open question, not yet resolved:** live-tested the critical
-> property directly — sign out, go offline, reload `/` — and confirmed the
-> stale-shell replay is gone; this is the part that matters and it holds.
-> Separately, tried to confirm the generic-fallback UX for a non-offline
-> route (`/console`) while genuinely offline and could not get a clean
-> result: a real top-level navigation shows a raw browser error
-> (`net::ERR_FAILED`) rather than the `/offline` page. Diagnostic
-> instrumentation temporarily added directly to `pages`' `handlerDidError`
-> (writing markers to a scratch cache before/after each step) showed the
-> handler never runs at all for this case, in a real built-and-deployed
-> Docker image — not a stale local artifact, confirmed via `docker exec`.
-> The underlying library logic checks out correct in isolation (reproduced
-> `self.fallback` + the auto-injected `handlerDidError` directly in Node
-> with a realistic navigation-mode Request and got the expected `/offline`
-> response back), and the same failure reproduces identically on
-> pre-fix `main`, so this is not a regression this leg introduced. Root
-> cause not found — possibly specific to the AI-agent browser-automation
-> environment used for this testing pass rather than a real end-user
-> browser; `docs/pwa-real-device-testing.md` already documents that this
-> category of check needs a real device/human handoff for exactly this
-> reason. Needs a real-browser (not automation) check before being
-> considered closed.
+> **Resolved (August 2026), was filed above as an open question.**
+> Live-tested the critical property directly — sign out, go offline, reload
+> `/` — and confirmed the stale-shell replay is gone; that held from the
+> start. The generic-fallback UX for a non-offline route (`/console`) while
+> genuinely offline did not: a real top-level navigation showed a raw
+> browser error (`net::ERR_FAILED` in Chrome) instead of the `/offline`
+> page, reproducing identically in a real built-and-deployed Docker image
+> and on pre-fix `main` — not a regression this leg introduced, and not an
+> AI-agent browser-automation artifact either, as first suspected. Per this
+> note's own prior instruction, it was checked on a real device: the iOS
+> Simulator's actual Safari/WebKit engine (not the CDP-driven automated
+> browser used for the rest of this workstream's testing) reproduced it too,
+> and — critically — WebKit's error page prints the underlying exception
+> Chrome's `net::ERR_FAILED` hides: `FetchEvent.respondWith received an
+error: ReferenceError: Can't find variable: _async_to_generator`.
+>
+> Root cause: Next's own `next.config.ts` loader
+> (`next/dist/build/next-config-ts/transpile-config.js`) transpiles this
+> file through SWC, and — because the compiled output contains `require(`
+> — registers a _global_ CommonJS require hook that runs every module
+> reached from `next.config.ts` through that same SWC pass, including
+> third-party dependencies like `@ducanh2912/next-pwa`. That pass downlevels
+> `async` functions to `_async_to_generator(...)`/`_ts_generator(...)`
+> calls, but the helper _definitions_ live only in the transpiled module's
+> own scope, never in the function's own source text. `workbox-build` then
+> does exactly the `Function.prototype.toString()` capture this workstream's
+> own regression test (`next-config-sw-matchers.test.ts`) was written to
+> guard, embedding these functions into `sw.js` — so the helper calls
+> survive the trip but their definitions don't. Every `async` plugin hook in
+> `runtimeCaching` — ours or next-pwa's own auto-injected
+> `handlerDidError` — threw `ReferenceError` the instant the service worker
+> invoked it, for any request that fell through to it (i.e. any
+> non-precached, non-offline-shell route with no cached response to fall
+> back on — exactly `/console` cold). Fix: `runtime/next.config.ts`'s
+> `pages` and `offline-shells` entries now each declare their own plain
+> (non-`async`) `handlerDidError`, bypassing next-pwa's broken
+> auto-injection entirely; `pages`' `cacheWillUpdate` returns
+> `Promise.resolve(null)` instead of using the `async` keyword, for the same
+> reason. `next-config-sw-matchers.test.ts` gained a regression test
+> asserting no plugin hook function is ever declared `async`. One narrower
+> instance of the same bug class remains: next-pwa's built-in default
+> `runtimeCaching` entries (pulled in via `extendDefaultRuntimeCaching:
+true`, e.g. its `google-fonts-webfonts` cache) still get the broken
+> auto-injected `handlerDidError`, since those entries are defined inside
+> next-pwa itself, not something this file declares or can override
+> per-entry. Not addressed here — Sovereign is self-hosted and doesn't route
+> through Google's font CDN by default, making this a narrow, likely-dead
+> edge case rather than a live gap — but noted for whoever next touches this
+> file.
 
 ### Leg 3 — Tiered plugin offline model
 

@@ -1359,6 +1359,10 @@ scrim covers the full viewport so it works in any shell context. A built-in
 grab handle is the sole drag-initiation region for swipe-down-to-dismiss
 (dragging body content would fight its own internal scroll) — release past
 100px dismisses; release under that, or a `pointercancel`, snaps back open.
+Like `Sheet`, passing `title` renders a built-in `OverlayHeader` (title +
+close) below the grab handle; omit it (the default) when the grab handle and
+swipe-down/scrim-tap dismissal are enough on their own, or the content
+supplies its own header.
 
 ### `Sheet` component
 

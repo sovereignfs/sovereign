@@ -75,6 +75,50 @@ export const Closed: Story = {
   ),
 };
 
+function DrawerWithTitleDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open drawer</Button>
+      <Drawer open={open} onClose={() => setOpen(false)} title="Apps">
+        <ul style={{ listStyle: 'none', margin: 0, padding: '8px 0' }}>
+          {(['house', 'grid-2x2', 'settings', 'user'] as const).map((icon) => (
+            <li key={icon}>
+              <button
+                onClick={() => setOpen(false)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  width: '100%',
+                  padding: '12px 20px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 15,
+                  color: 'var(--sv-color-text-primary)',
+                  fontFamily: 'system-ui',
+                }}
+              >
+                <Icon name={icon} size="md" aria-hidden />
+                {icon.replace(/-/g, ' ')}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Drawer>
+    </>
+  );
+}
+
+/** Opt-in `title` prop renders a built-in `OverlayHeader` (title + close)
+ * below the grab handle — hidden by default (see the `Default` story), for
+ * consumers that want one instead of building their own header markup. */
+export const WithTitle: Story = {
+  args: { open: false, onClose: () => {}, children: null },
+  render: (_args) => <DrawerWithTitleDemo />,
+};
+
 /** Play function opens the drawer and asserts its list items are visible. */
 export const OpenViaInteraction: Story = {
   args: { open: false, onClose: () => {}, children: null },

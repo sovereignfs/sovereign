@@ -7,6 +7,7 @@ import {
   useOverlayKeyboardTrap,
   useOverlayScrollLock,
 } from '../../overlay-shell';
+import { OverlayHeader } from '../OverlayHeader/OverlayHeader';
 import styles from './Drawer.module.css';
 
 // Matches --sv-motion-duration-base (Drawer.module.css) — see Dialog.tsx's
@@ -26,6 +27,12 @@ export interface DrawerProps {
    *  "half screen or less" convention for Drawer, this is the only other
    *  supported size; taller content should use `Sheet` instead. */
   snapHeight?: 'content' | 'half';
+  /** Renders a built-in `OverlayHeader` (title + close) below the grab
+   *  handle. Omit when the content supplies its own header, or none is
+   *  needed at all — e.g. the mobile shell's Apps drawer, whose grab handle
+   *  and swipe-down/scrim-tap dismissal are enough on their own. Mirrors
+   *  `Sheet`'s identical `title` prop. */
+  title?: string;
   children: ReactNode;
 }
 
@@ -62,6 +69,7 @@ export function Drawer({
   onClose,
   'aria-label': ariaLabel,
   snapHeight = 'content',
+  title,
   children,
 }: DrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -160,6 +168,7 @@ export function Drawer({
           onPointerUp={(e) => releaseDrag(e, true)}
           onPointerCancel={(e) => releaseDrag(e, false)}
         />
+        {title && <OverlayHeader title={title} onClose={onClose} />}
         {children}
       </div>
     </div>

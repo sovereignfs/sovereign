@@ -125,17 +125,6 @@ export function MobileNav({
       <MobileSearch open={searchOpen} onClose={() => setSearchOpen(false)} plugins={plugins} />
 
       <Drawer open={open} onClose={() => setOpen(false)} aria-label="App navigation">
-        <div className={styles.drawerHeader}>
-          <span className={styles.drawerTitle}>Apps</span>
-          <button
-            type="button"
-            className={styles.drawerClose}
-            aria-label="Close navigation"
-            onClick={() => setOpen(false)}
-          >
-            <Icon name="x" size="sm" aria-hidden />
-          </button>
-        </div>
         <nav aria-label="Installed plugins">
           <ul className={styles.drawerGrid}>
             {plugins.map((plugin) => (

@@ -17,8 +17,9 @@ import {
   underPrefix,
 } from '@/src/route-guard';
 import { checkGlobalRateLimit, clientIp, isGlobalRateLimitDisabled } from '@/src/rate-limit';
+import { decideFocusRoute } from '@/src/route-lock';
 import { buildContentSecurityPolicy, generateNonce } from '@/src/security';
-import { applySurfaceHeaders } from '@/src/surface';
+import { applySurfaceHeaders, resolveSurface } from '@/src/surface';
 import {
   type CachedSessionData,
   type VerifiedSession,
@@ -322,6 +323,31 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   }
 
   const installedPlugins = getInstalledPlugins();
+
+  // Focused native app route lock (RFC 0082 §3). Must run before any branch
+  // below that could otherwise serve a *different* plugin's content (the
+  // public-plugin-route branch, the session-gated main path, and the `/`
+  // root-plugin rewrite), so an out-of-focus request always redirects
+  // rather than briefly succeeding. Placed after the public-API-namespace
+  // and public-instance-branding branches above on purpose, not by
+  // oversight — both serve only `/api/*` paths, which
+  // `runtime/src/route-lock.ts`'s allowlist always permits, so this check
+  // would be a no-op for them regardless of placement.
+  //
+  // Hard rule (restated from `docs/architecture-rules.md`, canonical there):
+  // this is a product-scoping/UX mechanism, never a security boundary — the
+  // signal derives from a client-controlled User-Agent and is trivially
+  // spoofable. Nothing below this point relies on it for confidentiality;
+  // session, capability, and plugin-permission gates are unchanged and are
+  // the only real boundaries. A forged focus header or edited User-Agent
+  // grants no access the caller's role doesn't already have.
+  const { focusPlugin } = resolveSurface(request.headers.get('user-agent'));
+  const focusDecision = decideFocusRoute(pathname, focusPlugin, installedPlugins);
+  if (focusDecision.kind === 'redirect') {
+    return applyCsp(
+      NextResponse.redirect(new URL(focusDecision.routePrefix, request.url), { status: 303 }),
+    );
+  }
 
   // Manifest-declared public plugin page routes (RFC 0042): resolved before the
   // login-redirect gate, since an anonymous request must be able to reach them.

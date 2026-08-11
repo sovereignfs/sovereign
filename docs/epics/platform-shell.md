@@ -857,7 +857,7 @@ single SVG plugins declare today.
 - `installable: true` without a usable icon fails manifest validation.
 - Generated icons are served correctly from a production Docker image.
 
-#### 📋 2.27 — Focused plugin app context and route lock (RFC 0082)
+#### ✅ 2.27 — Focused plugin app context and route lock (RFC 0082)
 
 **Goal:** When a native shell identifies itself as focused on one plugin, serve only
 what that app needs — as a product-scoping mechanism, never a security boundary.

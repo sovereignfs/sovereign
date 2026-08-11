@@ -243,6 +243,18 @@ not be the plugin that discovers it.
 
 **Epic tasks:** 2.27, then 20.11, then 20.12
 
+**Status (August 2026): 2.27 shipped at platform `0.82.0`.** The runtime half
+of this leg — `x-sovereign-focus-plugin` parsing (extends RFC 0080's
+existing `Sovereign-Shell/...` User-Agent token rather than a second
+grammar, `runtime/src/surface.ts`) and the route lock itself
+(`runtime/src/route-lock.ts`'s `decideFocusRoute()`, wired into
+`runtime/middleware.ts`) — was implementable and independently testable
+against synthetic User-Agent headers without `sovereign-mobile` existing
+yet, per the ordering note in this doc's changelog. 20.11 and 20.12 remain
+blocked on the unmet prerequisites in the table above (`sovereign-mobile`
+repo + RFC 0058 shell, epic 20.1) — nothing to build the actual focused
+target against yet.
+
 **Depends on:** legs 1 (gate), 2, 3, and the epic 20.1/20.2 prerequisites.
 
 **Technical notes:**

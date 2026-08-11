@@ -31,6 +31,8 @@ vi.mock('@/src/rate-limit', async () => import('../rate-limit'));
 
 vi.mock('@/src/route-guard', async () => import('../route-guard'));
 
+vi.mock('@/src/route-lock', async () => import('../route-lock'));
+
 vi.mock('@/src/security', async () => import('../security'));
 
 vi.mock('@/src/surface', async () => import('../surface'));
@@ -848,6 +850,90 @@ describe('runtime middleware regressions', () => {
 
       expect(first.status).toBe(200);
       expect(second.status).toBe(200);
+    });
+  });
+
+  describe('focused app route lock (RFC 0082)', () => {
+    const focusedOnPaid = {
+      'user-agent': 'Sovereign-Shell/mobile-ios 1.0.0 (focus=fs.example.paid)',
+    };
+
+    it('routes byte-for-byte unchanged with no focus signal', async () => {
+      const withoutFocus = await middleware(request('/console'));
+      expect(withoutFocus.status).toBe(200);
+    });
+
+    it('allows the focused plugin itself through to its normal routing decision', async () => {
+      const response = await middleware(request('/paid', { headers: focusedOnPaid }));
+      // Reaches the normal session-gated flow (200, no active paywall
+      // configured in fetchState) rather than being redirected by the lock.
+      expect(response.status).toBe(200);
+    });
+
+    it('redirects an out-of-focus page to the focused plugin root with 303', async () => {
+      const response = await middleware(request('/console', { headers: focusedOnPaid }));
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe('http://runtime.test/paid');
+    });
+
+    it('redirects "/" to the focused plugin root when the focused plugin is not the configured root', async () => {
+      const response = await middleware(request('/', { headers: focusedOnPaid }));
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe('http://runtime.test/paid');
+    });
+
+    it('does not consult the root-plugin API when the focus lock already redirected', async () => {
+      fetchState.calls = [];
+      await middleware(request('/', { headers: focusedOnPaid }));
+      expect(fetchState.calls.some((url) => url.includes('/api/admin/root-plugin'))).toBe(false);
+    });
+
+    it.each(['/account', '/account/preferences', '/paywall/fs.example.paid'])(
+      'allows %s through regardless of focus',
+      async (path) => {
+        const response = await middleware(request(path, { headers: focusedOnPaid }));
+        expect(response.status).not.toBe(303);
+      },
+    );
+
+    it('does not redirect an API request even when out of focus', async () => {
+      const response = await middleware(
+        request('/api/plugins/example', { headers: focusedOnPaid }),
+      );
+      expect(response.status).not.toBe(303);
+    });
+
+    it('fails open (no redirect) when the focused plugin ID matches no installed plugin', async () => {
+      const response = await middleware(
+        request('/console', {
+          headers: {
+            'user-agent': 'Sovereign-Shell/mobile-ios 1.0.0 (focus=fs.example.uninstalled)',
+          },
+        }),
+      );
+      expect(response.status).toBe(200);
+    });
+
+    it('a forged x-sovereign-focus-plugin header with no matching User-Agent token has no effect', async () => {
+      // The focus decision reads the User-Agent (via resolveSurface), not any
+      // inbound header — a caller cannot lock (or unlock) routing merely by
+      // setting the header directly, only by controlling the real UA.
+      const response = await middleware(
+        request('/console', { headers: { 'x-sovereign-focus-plugin': 'fs.example.paid' } }),
+      );
+      expect(response.status).toBe(200);
+    });
+
+    it('grants no access a forged focus target would not already have — the lock only ever redirects', async () => {
+      // A non-admin user focused on the paid plugin, requesting the
+      // adminOnly Console: the lock redirects to /paid (out of focus) rather
+      // than ever reaching — let alone granting — Console's own adminOnly gate.
+      fetchState.session = session('platform:user');
+      const response = await middleware(request('/console', { headers: focusedOnPaid }));
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe('http://runtime.test/paid');
     });
   });
 });

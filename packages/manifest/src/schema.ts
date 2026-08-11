@@ -216,6 +216,19 @@ const manifestObjectSchema = z
      */
     offline: z.enum(['offline-first', 'device-only']).optional(),
     /**
+     * When `true`, this plugin gets its own web app manifest at
+     * `/api/manifest/<id>`, scoped to its `routePrefix`, so a browser can
+     * install it as its own home-screen app rather than the whole instance
+     * (RFC 0081). Deliberately separate from `offline` — installability and
+     * offline support answer different questions (a plugin can be
+     * installable without being offline-capable, or vice versa, as Launcher
+     * already is); deriving one from the other would couple two independent
+     * product decisions. Absent/`false` means today's behavior — the plugin
+     * has no manifest of its own and is only reachable inside the whole
+     * Sovereign PWA.
+     */
+    installable: z.boolean().optional(),
+    /**
      * Surfaces this plugin is available on (RFC 0080). Absent means available
      * everywhere — today's behavior for every existing plugin, so this is a
      * purely additive declaration. The platform uses it to filter Launcher,

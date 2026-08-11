@@ -1,6 +1,6 @@
 # RFC 0092 — App-Level Field Encryption (Platform-Wide by Classification)
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** August 2026\
 **Author:** kasunben & Claude Code\
 **Scope:** `packages/sdk`, `packages/db`, `packages/manifest`, `runtime/src`, `bin/sv`, `.env.example`, `docs/self-hosting.md`, `docs/plugin-development.md`; narrows and partially supersedes RFC 0008's Tier 2/3 scope (epic task 8.5); builds on [Research 0013](../research/0013-layered-database-encryption-strategy.md)\

@@ -290,3 +290,44 @@ does not implement.
   no plugin ID or route-prefix collisions.
 
 ---
+
+---
+
+#### ✅ 12.6 — `example-encrypted`: field-encryption reference plugin (RFC 0092)
+
+**Goal:** A minimal, complete reference for app-level field encryption —
+the canonical starting point for plugin rewrites adopting RFC 0092, per the
+decision to document/exemplify rather than retrofit plugins slated for
+rewrite.
+
+**Delivered:**
+
+- `example-plugins/example-encrypted` (`fs.sovereign.example-encrypted`,
+  `/example-encrypted`): classified schema (`encryptedText` with and without
+  a `blindIndex` — demonstrating the "index only what you exact-match"
+  decision), `seal()`/`open()` CRUD, rotation-safe blind-index search
+  (`hashFieldCandidates` + `blindIndexMatch`), per-request
+  `registerTables()`/`provideExport()` registration (plaintext export), the
+  inline expected-error convention, an `error.tsx` boundary, and migrations
+  for both dialects — whose generated SQL is plain `text` columns, proving
+  the no-special-DDL property.
+- `docs/plugin-development.md`: the step-ordered "Adopting field
+  encryption" checklist (classify → manifest → schema → seal/open →
+  register → export → nothing else), pointing at this plugin as the
+  reference implementation.
+- RFC 0092 status → Implemented; cross-reference from
+  `docs/plugin-database.md`.
+
+**SRS reference:** [RFC 0092](../rfcs/0092-app-level-field-encryption.md), SRS §3.17.
+
+**Review checklist:**
+
+- `pnpm --filter @sovereignfs/plugin-example-encrypted typecheck` clean;
+  manifest validates against the current schema; `pnpm design:tokens:check`
+  passes.
+- With `SOVEREIGN_EXAMPLES_ENABLED` set, the plugin composes and its
+  migrations provision on both dialects.
+- The checklist in `docs/plugin-development.md` matches what the example
+  actually does — the doc and the code must not drift.
+
+---

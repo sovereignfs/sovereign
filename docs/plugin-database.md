@@ -98,7 +98,7 @@ export const lists = sqliteTable('lists', {
   must not copy that part of the pattern.
 
 There is currently no application-level at-rest encryption option for a plugin's store,
-on either dialect — a prior SQLite-only opt-in (`database.requireEncryption`, RFC 0071)
+on either dialect — a prior SQLite-only opt-in (`database.requireEncryption`, RFC 0071) For protecting sensitive _fields_ against a database operator, use app-level field encryption (RFC 0092) — see `docs/plugin-development.md`'s "Adopting field encryption" checklist and the `example-plugins/example-encrypted` reference.
 was retired along with the rest of the `database` manifest field. Rely on disk/volume-level
 encryption if this matters for your deployment.
 

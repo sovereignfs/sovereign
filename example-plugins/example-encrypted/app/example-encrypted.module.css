@@ -1,0 +1,80 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-6);
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--sv-space-6) var(--sv-space-4);
+}
+
+.title {
+  font-size: var(--sv-font-size-2xl);
+  color: var(--sv-color-text-primary);
+  margin: 0 0 var(--sv-space-2);
+}
+
+.subtitle {
+  color: var(--sv-color-text-secondary);
+  margin: 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
+.formError {
+  color: var(--sv-color-error-text);
+  margin: 0;
+}
+
+.search {
+  margin: 0;
+}
+
+.searchInput {
+  width: 100%;
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface);
+  color: var(--sv-color-text-primary);
+  font-size: var(--sv-font-size-md);
+}
+
+.noteList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+}
+
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-1);
+  padding: var(--sv-space-4);
+  background: var(--sv-color-surface);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+}
+
+.noteLabel {
+  font-weight: 600;
+  color: var(--sv-color-text-primary);
+}
+
+.noteBody {
+  color: var(--sv-color-text-secondary);
+}
+
+.errorBoundary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-6);
+}

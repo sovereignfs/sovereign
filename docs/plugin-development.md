@@ -1170,6 +1170,46 @@ Three sanctioned patterns for search/sort over classified data: a
 filtering/sorting; and `open()`-then-filter in application code for anything
 fuzzier, with the cost that implies.
 
+#### Adopting field encryption: the checklist
+
+The reference implementation is `example-plugins/example-encrypted` — a
+complete, minimal plugin exercising everything below. Work through the steps
+in this order:
+
+1. **Classify first — this is design, not code.** For each column: does it
+   hold sensitive data, and which class (`pii` / `health` / `financial` /
+   `sensitive`)? Does the plugin genuinely query it by **exact match**? Only
+   those columns get a `blindIndex()` — every index is a deterministic
+   fingerprint, so index nothing you merely display. Keep filter/sort
+   metadata (dates, categories, foreign keys) deliberately plaintext.
+2. **Manifest:** add `crypto:use` to `permissions`; set
+   `compatibility.minPlatformVersion` to at least `0.82.0` (the first
+   version with the complete surface); bump the manifest `version`.
+3. **Schema:** swap classified `text()` columns for `encryptedText()`; add
+   `blindIndex()` companions. Only _new_ columns need a migration —
+   encrypted columns are still SQL `text`, so there is no column-type
+   migration and no data migration. The Postgres migration-twin schema
+   declares the same columns as plain `text()`.
+4. **Writes and reads:** `await sdk.crypto.seal(table, row)` before inserts
+   and updates; `sdk.crypto.open(table, rows)` after reads; for
+   read-modify-write, `open()` → modify → `seal()`. Exact-match queries use
+   `hashFieldCandidates()` + `blindIndexMatch()`.
+5. **Register:** one `sdk.crypto.registerTables(...)` call at server-entry
+   scope (next to your portability registration). Without it, the
+   operator's backfill and rotation tools cannot cover your tables.
+6. **Export:** your `sdk.portability` export resolver must `open()` rows
+   before emitting — exports are the user's own data, in plaintext.
+7. **Nothing else.** Do not check whether encryption is on, branch on
+   envelope prefixes, or document operator steps in your plugin — policy is
+   the operator's (`SOVEREIGN_ENCRYPT_CLASSES`), the platform handles both
+   states identically from your code's perspective, and pre-existing
+   plaintext rows keep working until the operator runs the backfill.
+
+Rollout story you get for free: the plugin behaves identically on instances
+with encryption off (`svf0` passthrough); existing plaintext rows read fine
+before any backfill; the operator converts history with
+`sv db encrypt-fields --plugin <your-id>` on their own schedule.
+
 ### External connections (`sdk.connections`, RFC 0049)
 
 Use `sdk.connections` for runtime connection metadata around external accounts

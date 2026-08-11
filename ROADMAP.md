@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.82.0 · **Last updated:** 2026-08-11
+**Version:** 0.83.0 · **Last updated:** 2026-08-11
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -276,6 +276,7 @@ doc — but not yet assigned a roadmap slot. Promoted to a phase table once prio
 | 0.80.0  | `sdk.crypto` field encryption surface + `crypto:use` (RFC 0092, workstream 0011 leg 2)                | ✅     | [8.32](docs/epics/data-sovereignty.md#-832--sdkcrypto-field-encryption-surface--cryptouse-enforcement-rfc-0092-workstream-0011-leg-2)            |
 | 0.81.0  | `encryptedText()`/`blindIndex()` schema helpers + policy write path (RFC 0092, workstream 0011 leg 3) | ✅     | [8.33](docs/epics/data-sovereignty.md#-833--encryptedtextblindindex-schema-helpers--policy-driven-write-path-rfc-0092-workstream-0011-leg-3)     |
 | 0.82.0  | Operator backfill + blind-index rotation tooling (RFC 0092, workstream 0011 leg 4)                    | ✅     | [8.34](docs/epics/data-sovereignty.md#-834--operator-backfill--blind-index-rotation-tooling-sv-db-encrypt-fields-rfc-0092-workstream-0011-leg-4) |
+| 0.83.0  | `example-encrypted` field-encryption reference plugin + adoption checklist docs (RFC 0092)            | ✅     | [12.6](docs/epics/example-plugins.md#-126--example-encrypted-field-encryption-reference-plugin-rfc-0092)                                         |
 | —       | `packages/db` libSQL driver adoption (workstream 0009)                                                | ✅     | [8.23](docs/epics/data-sovereignty.md#-823--packagesdb-libsql-driver-adoption-workstream-0009-leg-3)                                             |
 | —       | Database-backed rate-limit storage for apps/auth (RFC 0086)                                           | 📋     | [1.19](docs/epics/users-auth.md#-119--database-backed-rate-limit-storage-for-appsauth-rfc-0086)                                                  |
 | —       | Redis-backed store for the general per-IP rate limiter (RFC 0086)                                     | 📋     | [2.29](docs/epics/platform-shell.md#-229--redis-backed-store-for-the-general-per-ip-rate-limiter-rfc-0086)                                       |

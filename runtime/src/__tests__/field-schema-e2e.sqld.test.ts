@@ -53,6 +53,12 @@ const KEYS_IDX = `CREATE UNIQUE INDEX IF NOT EXISTS field_encryption_keys_plugin
 
 const TABLE_NAME = `e2e_entries_${randomUUID().slice(0, 8)}`;
 
+/** Narrow the discriminated union to the sqlite arm — the dialect this test created. */
+function liveDb() {
+  if (testPdb.dialect !== 'sqlite') throw new Error('expected the sqlite dialect client');
+  return testPdb.db;
+}
+
 /** Raw SQL against the sqlite-dialect drizzle client (async on the libsql driver). */
 async function rawRun(query: ReturnType<typeof sql.raw> | ReturnType<typeof sql>): Promise<void> {
   await (testPdb.db as { run: (q: unknown) => Promise<unknown> }).run(query);
@@ -106,19 +112,18 @@ describe.skipIf(!LIVE)('leg 3 end-to-end (live sqld, real crypto, real drizzle)'
       requireCryptoPluginContext(ctx.pluginId, manifest);
       return { tenantId: ctx.tenantId, pluginId: ctx.pluginId };
     };
-    provideHost({
-      crypto: {
-        async encryptField(value, options, ctx) {
-          return encryptFieldValue(value, options, resolve(ctx));
-        },
-        async decryptField(envelope, options, ctx) {
-          return decryptFieldValue(envelope, options, resolve(ctx));
-        },
-        async hashField(value, options, ctx) {
-          return hashFieldValue(value, options, resolve(ctx));
-        },
+    const crypto: SdkHost['crypto'] = {
+      async encryptField(value, options, ctx) {
+        return encryptFieldValue(value, options, resolve(ctx));
       },
-    } as unknown as SdkHost);
+      async decryptField(envelope, options, ctx) {
+        return decryptFieldValue(envelope, options, resolve(ctx));
+      },
+      async hashField(value, options, ctx) {
+        return hashFieldValue(value, options, resolve(ctx));
+      },
+    };
+    provideHost({ crypto } as unknown as SdkHost);
   });
 
   afterAll(async () => {
@@ -135,7 +140,7 @@ describe.skipIf(!LIVE)('leg 3 end-to-end (live sqld, real crypto, real drizzle)'
   it('sealed insert → ciphertext at rest → tripwire blocks plaintext → exact match → open round-trip', async () => {
     const { sdk } = await import('@sovereignfs/sdk');
     const sdkCrypto = sdk.crypto;
-    const db = testPdb.db;
+    const db = liveDb();
 
     // 1. Seal and insert through real drizzle.
     const sealed = await sdkCrypto.seal(entries, {
@@ -176,7 +181,7 @@ describe.skipIf(!LIVE)('leg 3 end-to-end (live sqld, real crypto, real drizzle)'
   it('a class outside the policy stores an svf0 passthrough and still round-trips', async () => {
     const { sdk } = await import('@sovereignfs/sdk');
     const sdkCrypto = sdk.crypto;
-    const db = testPdb.db;
+    const db = liveDb();
 
     const sealed = await sdkCrypto.seal(entries, { id: 'row-3', memo: 'invoice #42' });
     await db.insert(entries).values(sealed);

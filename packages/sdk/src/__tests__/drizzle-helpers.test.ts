@@ -26,24 +26,23 @@ const entries = sqliteTable('entries', {
 });
 
 function fakeHost(): void {
-  provideHost({
-    crypto: {
-      async encryptField(value, options) {
-        return `svf1:dek1:${options.context ?? ''}:${Buffer.from(value).toString('base64url')}`;
-      },
-      async decryptField(envelope, options) {
-        const parts = envelope.split(':');
-        if (envelope.startsWith('svf0:')) {
-          return Buffer.from(parts[1] as string, 'base64url').toString('utf8');
-        }
-        if (parts[2] !== (options.context ?? '')) throw new Error('context mismatch');
-        return Buffer.from(parts[3] as string, 'base64url').toString('utf8');
-      },
-      async hashField(value, options) {
-        return `h:${options.sensitivity}:${value}`;
-      },
+  const crypto: SdkHost['crypto'] = {
+    async encryptField(value, options) {
+      return `svf1:dek1:${options.context ?? ''}:${Buffer.from(value).toString('base64url')}`;
     },
-  } as unknown as SdkHost);
+    async decryptField(envelope, options) {
+      const parts = envelope.split(':');
+      if (envelope.startsWith('svf0:')) {
+        return Buffer.from(parts[1] as string, 'base64url').toString('utf8');
+      }
+      if (parts[2] !== (options.context ?? '')) throw new Error('context mismatch');
+      return Buffer.from(parts[3] as string, 'base64url').toString('utf8');
+    },
+    async hashField(value, options) {
+      return `h:${options.sensitivity}:${value}`;
+    },
+  };
+  provideHost({ crypto } as unknown as SdkHost);
 }
 
 describe('encryptedText / blindIndex metadata discovery', () => {
@@ -120,7 +119,10 @@ describe('sdk.crypto.seal / open', () => {
   it('re-sealing a sealed row: consistent envelope+index pair passes through; a sealed source without its index throws', async () => {
     fakeHost();
     const { crypto } = await import('../crypto');
-    const sealed = await crypto.seal(entries, { id: '1', notes: 'x' });
+    // seal() adds index keys at runtime; declare them in the row type so the
+    // return type (seal<T> returns T) carries them for the assertions below.
+    const row: { id: string; notes: string; notesIdx?: string } = { id: '1', notes: 'x' };
+    const sealed = await crypto.seal(entries, row);
 
     const again = await crypto.seal(entries, {
       id: '1',

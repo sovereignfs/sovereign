@@ -166,6 +166,10 @@ services:
       # ("SOVEREIGN_VAULT_KEY is required...") the first time a user tries to
       # save a PAT, not at container startup.
       SOVEREIGN_VAULT_KEY: '${SOVEREIGN_VAULT_KEY}'
+      # App-level field encryption (RFC 0092) — both empty by default (off).
+      # Policy without key fails startup loudly; see .env.example.
+      SOVEREIGN_ENCRYPT_CLASSES: '${SOVEREIGN_ENCRYPT_CLASSES:-}'
+      SOVEREIGN_FIELD_KEK: '${SOVEREIGN_FIELD_KEK:-}'
       # Shared signing secret — the runtime verifies the auth server's session
       # cookie locally with it (SRS AUTH-05); must match the auth service.
       AUTH_SECRET: '${AUTH_SECRET}'

@@ -632,6 +632,32 @@ export const instanceConfig = sqliteTable('instance_config', {
   updatedAt: integer('updated_at').notNull(),
 });
 
+/**
+ * Wrapped field-encryption keys (RFC 0092, epic task 8.31). One row per
+ * (sensitivity class × plugin): a Data Encryption Key and a blind-index HMAC
+ * key, each wrapped under `SOVEREIGN_FIELD_KEK` (`svfk1:` envelopes — see
+ * `../../field-encryption.ts`). Key material is never stored unwrapped;
+ * `kek_fingerprint` (non-secret sha256 prefix) records which KEK wraps the
+ * row so `sv keys rotate-field-kek` can resume an interrupted rotation.
+ */
+export const fieldEncryptionKeys = sqliteTable(
+  'field_encryption_keys',
+  {
+    id: text('id').primaryKey(),
+    pluginId: text('plugin_id').notNull(),
+    /** Sensitivity class (`pii`, `health`, …) — enum enforced at the SDK layer (task 8.32). */
+    class: text('class').notNull(),
+    wrappedDek: text('wrapped_dek').notNull(),
+    wrappedHmacKey: text('wrapped_hmac_key').notNull(),
+    kekFingerprint: text('kek_fingerprint').notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('field_encryption_keys_plugin_class_idx').on(table.pluginId, table.class),
+  ],
+);
+
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 export type NotificationPrefs = typeof notificationPrefs.$inferSelect;
@@ -666,3 +692,5 @@ export type Entitlement = typeof entitlements.$inferSelect;
 export type NewEntitlement = typeof entitlements.$inferInsert;
 export type InstanceConfigRow = typeof instanceConfig.$inferSelect;
 export type NewInstanceConfigRow = typeof instanceConfig.$inferInsert;
+export type FieldEncryptionKey = typeof fieldEncryptionKeys.$inferSelect;
+export type NewFieldEncryptionKey = typeof fieldEncryptionKeys.$inferInsert;

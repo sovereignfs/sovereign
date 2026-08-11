@@ -201,6 +201,23 @@ export {
   openKeyedSqlite,
 } from './sqlite-encryption';
 export {
+  ENCRYPT_CLASSES_ENV,
+  FIELD_KEK_ENV,
+  FieldEncryptionConfigError,
+  assertFieldEncryptionConfig,
+  createFieldKeyRow,
+  encryptClassesFromEnv,
+  fieldKekFromEnv,
+  getFieldKeyRow,
+  kekFingerprint,
+  listFieldKeyRows,
+  unwrapKeyMaterial,
+  updateFieldKeyRowWrapped,
+  wrapKeyMaterial,
+  type FieldEncryptionKeyRow,
+  type WrappedKeyPurpose,
+} from './field-encryption';
+export {
   SqldCutoverError,
   cutoverSqliteFileToSqld,
   previewSqliteFile,

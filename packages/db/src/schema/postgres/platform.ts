@@ -473,3 +473,21 @@ export const instanceConfig = pgTable('instance_config', {
   emailLogo: text('email_logo'),
   updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
 });
+
+/** Wrapped field-encryption keys (RFC 0092, epic task 8.31) — see the SQLite twin's doc comment. */
+export const fieldEncryptionKeys = pgTable(
+  'field_encryption_keys',
+  {
+    id: text('id').primaryKey(),
+    pluginId: text('plugin_id').notNull(),
+    class: text('class').notNull(),
+    wrappedDek: text('wrapped_dek').notNull(),
+    wrappedHmacKey: text('wrapped_hmac_key').notNull(),
+    kekFingerprint: text('kek_fingerprint').notNull(),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+    updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('field_encryption_keys_plugin_class_idx').on(table.pluginId, table.class),
+  ],
+);

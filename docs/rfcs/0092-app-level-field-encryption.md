@@ -1,10 +1,10 @@
 # RFC 0092 — App-Level Field Encryption (Platform-Wide by Classification)
 
-**Status:** Draft\
+**Status:** Accepted\
 **Date:** August 2026\
 **Author:** kasunben & Claude Code\
 **Scope:** `packages/sdk`, `packages/db`, `packages/manifest`, `runtime/src`, `bin/sv`, `.env.example`, `docs/self-hosting.md`, `docs/plugin-development.md`; narrows and partially supersedes RFC 0008's Tier 2/3 scope (epic task 8.5); builds on [Research 0013](../research/0013-layered-database-encryption-strategy.md)\
-**Incorporated into plan:** No — documentation-first. Design and task breakdown (epic tasks 8.31–8.34, workstream 0011); implementation starts on acceptance.
+**Incorporated into plan:** Yes — epic tasks 8.31–8.34, sequenced by workstream 0011 (leg 1 shipped as v0.79.0).
 
 ---
 
@@ -120,6 +120,7 @@ Documentation-first now. On acceptance: workstream 0011 (four legs = epic tasks 
 
 ## Changelog
 
-| Version | Date        | Change        |
-| ------- | ----------- | ------------- |
-| 0.1     | August 2026 | Initial draft |
+| Version | Date        | Change                                                                                                                    |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft                                                                                                             |
+| 0.2     | August 2026 | Accepted (developer go-ahead including gate A, the four-class taxonomy); leg 1 (epic task 8.31 — key service) implemented |

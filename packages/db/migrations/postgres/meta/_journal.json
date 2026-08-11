@@ -155,6 +155,13 @@
       "when": 1786353643562,
       "tag": "0021_hard_ares",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1786404859210,
+      "tag": "0022_pale_captain_flint",
+      "breakpoints": true
     }
   ]
 }

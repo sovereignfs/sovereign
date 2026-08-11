@@ -14,6 +14,13 @@ import { selectSidebarPlugins } from '@/src/launcher-plugins';
  * as the sidebar chrome (`(platform)/layout.tsx`) and the Launcher
  * (`/api/plugins`) — otherwise a user could reorder or "show" a plugin here
  * that they're actually denied access to everywhere else.
+ *
+ * Deliberately **not** passed a `currentSurface` (RFC 0080), unlike those two
+ * callers: this is preference-management UI, not a "what's usable right now"
+ * surface — a user on desktop should still be able to see and reorder a
+ * mobile-only plugin's position for when they're next on their phone, rather
+ * than losing the ability to manage it just because they're on the wrong
+ * device today.
  */
 export async function GET(request: Request): Promise<Response> {
   const userId = request.headers.get('x-sovereign-user-id');

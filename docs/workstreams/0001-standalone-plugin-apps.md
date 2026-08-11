@@ -129,6 +129,17 @@ Capacitor WebView. In that case stop, record the finding, and re-open RFC 0082
 
 **Epic tasks:** 3.32, then 3.33
 
+**Status (August 2026): fully shipped.** 3.32 landed the server/client
+surface tiers and `x-sovereign-surface`; 3.33 (platform `0.83.0`) landed the
+manifest `surfaces` field and Launcher/sidebar/mobile-drawer filtering —
+`selectLauncherPlugins`/`selectSidebarPlugins`
+(`runtime/src/launcher-plugins.ts`) and `decidePluginRoute`'s new
+`'unavailable-surface'` outcome (`runtime/src/route-guard.ts`), redirecting
+to a generic `runtime/app/(platform)/unavailable-surface/page.tsx` rather
+than 404ing. `runtime/app/api/account/sidebar-plugins/route.ts` (the sidebar
+reorder preference UI) deliberately does **not** filter by surface — see its
+own doc comment.
+
 **Technical notes:**
 
 - Copy the established injected-header pattern exactly: middleware injects,

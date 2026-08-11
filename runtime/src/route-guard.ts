@@ -5,6 +5,7 @@
  * the verified user's role.
  */
 
+import type { Surface } from '@sovereignfs/manifest';
 import { hasCapability } from './capabilities';
 
 /** The subset of a plugin manifest the route decision needs. */
@@ -16,9 +17,11 @@ export interface PluginRouteInfo {
   publicRoutes?: readonly { prefix: string }[];
   /** Whole-plugin public exemption (RFC 0089) — equivalent to a `publicRoutes: [{ prefix: '/' }]` declaration. */
   public?: boolean;
+  /** Surfaces this plugin is available on (RFC 0080). Absent means every surface. */
+  surfaces?: readonly Surface[];
 }
 
-export type RouteDecision = 'ok' | 'not-found' | 'forbidden' | 'paywall';
+export type RouteDecision = 'ok' | 'not-found' | 'forbidden' | 'paywall' | 'unavailable-surface';
 
 /** Whether a request path falls under a plugin's routePrefix. */
 export function underPrefix(pathname: string, routePrefix: string): boolean {
@@ -36,8 +39,15 @@ export function underPrefix(pathname: string, routePrefix: string): boolean {
  *   independent of the operator-set access policy above)
  * - under a paid plugin's prefix with no active entitlement → 'paywall'
  *   (redirect to /paywall/<pluginId>, RFC 0003)
+ * - under a plugin that declares `surfaces` and doesn't list the current
+ *   request's surface → 'unavailable-surface' (RFC 0080 — checked last,
+ *   deliberately: unlike every decision above, this one is a presentation
+ *   convenience, not a real gate — `surfaces` is bypassable by editing the
+ *   User-Agent, same asymmetry as the RFC 0082 route lock, so it only ever
+ *   fires once every actual access-control check has already passed)
  * - otherwise → 'ok'
- * Disabled and access-policy denial both win over adminOnly, which wins over paywall.
+ * Disabled and access-policy denial both win over adminOnly, which wins over
+ * paywall, which wins over surface availability.
  */
 export function decidePluginRoute(
   pathname: string,
@@ -46,6 +56,7 @@ export function decidePluginRoute(
   userRole: string,
   paywallIds?: ReadonlySet<string>,
   restrictedIds?: ReadonlySet<string>,
+  currentSurface?: Surface,
 ): RouteDecision {
   const matched = plugins.find((plugin) => underPrefix(pathname, plugin.routePrefix));
   if (!matched) return 'ok';
@@ -53,6 +64,9 @@ export function decidePluginRoute(
   if (restrictedIds?.has(matched.id)) return 'not-found';
   if (matched.adminOnly && !hasCapability(userRole, 'console:access')) return 'forbidden';
   if (paywallIds?.has(matched.id)) return 'paywall';
+  if (currentSurface && matched.surfaces && !matched.surfaces.includes(currentSurface)) {
+    return 'unavailable-surface';
+  }
   return 'ok';
 }
 

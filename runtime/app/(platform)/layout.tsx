@@ -14,6 +14,7 @@ import {
   getOfflineRoutePrefixes,
 } from '@/src/registry';
 import { applySidebarOrder, selectSidebarPlugins } from '@/src/launcher-plugins';
+import { parseSurfaceHeader } from '@/src/surface';
 import { InstanceProvider } from '@/src/instance-provider';
 import { AccountMenu } from './_components/AccountMenu';
 import { AdminConsoleIcon } from './_components/AdminConsoleIcon';
@@ -57,6 +58,11 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   // never pays for its hydration/DOM cost.
   const showMobileHeader = h.get('x-sovereign-mobile-header') !== '0';
   const showMobileFooter = h.get('x-sovereign-mobile-footer') !== '0';
+
+  // RFC 0080: filters the sidebar/mobile-drawer plugin list below to plugins
+  // available on this surface. Presentation only — see the hard rule in
+  // docs/architecture-rules.md.
+  const currentSurface = parseSurfaceHeader(h.get('x-sovereign-surface'));
 
   const role = h.get('x-sovereign-user-role') ?? 'platform:user';
   const isAdmin = !isOfflineRoute && hasCapability(role, 'console:access');
@@ -110,7 +116,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
           )
         : [],
     );
-    const rawPlugins = selectSidebarPlugins(allPlugins, disabledIds, restrictedIds);
+    const rawPlugins = selectSidebarPlugins(allPlugins, disabledIds, restrictedIds, currentSurface);
     // Apply the authenticated user's saved sidebar ordering and visibility prefs.
     plugins = rawPlugins;
     if (userId) {

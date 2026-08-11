@@ -1,4 +1,5 @@
 import type { SidebarPluginEntry } from '@sovereignfs/db';
+import type { Surface } from '@sovereignfs/manifest';
 import { hasCapability } from './capabilities';
 import type { PluginRouteInfo } from './route-guard';
 
@@ -29,7 +30,7 @@ export interface LauncherPlugin {
   offline?: 'offline-first' | 'device-only';
 }
 
-/** A plugin manifest with the fields the Launcher projection needs. */
+/** A plugin manifest with the fields the Launcher projection needs. `surfaces` is inherited from `PluginRouteInfo`. */
 export interface LauncherPluginInput extends PluginRouteInfo {
   name: string;
   description?: string;
@@ -60,14 +61,26 @@ function sortDevelopmentLast<T extends { development?: boolean }>(plugins: reado
  * 404s. `restrictedIds` (RFC 0065 access policy denial, resolved by the
  * caller — `./plugin-access-server.ts`) is excluded the same way. Generic so
  * the shell can pass full manifest objects through untouched.
+ *
+ * `currentSurface` (RFC 0080) excludes plugins that declare `surfaces` and
+ * don't list it — presentation filtering only, matching `decidePluginRoute`'s
+ * own `unavailable-surface` outcome. Omit it (or omit `surfaces` on every
+ * plugin) to leave this exactly as it behaved before RFC 0080.
  */
-export function selectSidebarPlugins<T extends { id: string; development?: boolean }>(
+export function selectSidebarPlugins<
+  T extends { id: string; development?: boolean; surfaces?: readonly Surface[] },
+>(
   plugins: readonly T[],
   disabledIds: ReadonlySet<string>,
   restrictedIds?: ReadonlySet<string>,
+  currentSurface?: Surface,
 ): T[] {
   const visible = plugins.filter(
-    (p) => !CHROME_PLUGIN_IDS.has(p.id) && !disabledIds.has(p.id) && !restrictedIds?.has(p.id),
+    (p) =>
+      !CHROME_PLUGIN_IDS.has(p.id) &&
+      !disabledIds.has(p.id) &&
+      !restrictedIds?.has(p.id) &&
+      (!currentSurface || !p.surfaces || p.surfaces.includes(currentSurface)),
   );
   return sortDevelopmentLast(visible);
 }
@@ -80,19 +93,25 @@ export function selectSidebarPlugins<T extends { id: string; development?: boole
  * them. Each result carries `adminOnly` so the Launcher can render the admin
  * tiles in their own section. `development: true` plugins sort last within
  * their section (main or admin), same rule as the sidebar.
+ *
+ * `currentSurface` (RFC 0080) excludes plugins that declare `surfaces` and
+ * don't list it, same as `selectSidebarPlugins` — presentation filtering
+ * only, the platform-wide precedent set by `decidePluginRoute`.
  */
 export function selectLauncherPlugins(
   plugins: readonly LauncherPluginInput[],
   disabledIds: ReadonlySet<string>,
   role: string,
   restrictedIds?: ReadonlySet<string>,
+  currentSurface?: Surface,
 ): LauncherPlugin[] {
   const isAdmin = hasCapability(role, 'console:access');
   const visible = plugins
     .filter((p) => !CHROME_PLUGIN_IDS.has(p.id))
     .filter((p) => !disabledIds.has(p.id))
     .filter((p) => !restrictedIds?.has(p.id))
-    .filter((p) => isAdmin || !p.adminOnly);
+    .filter((p) => isAdmin || !p.adminOnly)
+    .filter((p) => !currentSurface || !p.surfaces || p.surfaces.includes(currentSurface));
   return sortDevelopmentLast(visible).map((p) => ({
     id: p.id,
     name: p.name,

@@ -6,6 +6,7 @@ import { applySidebarOrder, selectSidebarPlugins } from '@/src/launcher-plugins'
 import { getRestrictedPluginIds } from '@/src/plugin-access-server';
 import { getDisabledPluginIds } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
+import { parseSurfaceHeader } from '@/src/surface';
 
 export interface SidebarPluginEntryResponse {
   id: string;
@@ -47,7 +48,13 @@ export async function GET(request: Request): Promise<Response> {
       : [],
   );
 
-  const rawPlugins = selectSidebarPlugins(installedPlugins, disabledIds, restrictedIds);
+  const currentSurface = parseSurfaceHeader(request.headers.get('x-sovereign-surface'));
+  const rawPlugins = selectSidebarPlugins(
+    installedPlugins,
+    disabledIds,
+    restrictedIds,
+    currentSurface,
+  );
   const prefs = userId ? await getAccountPrefs(pdb, userId) : null;
   const ordered = applySidebarOrder(rawPlugins, prefs?.sidebarPlugins ?? null, {
     dropHidden: true,

@@ -57,6 +57,18 @@ const paidPlugin = {
   routePrefix: '/paid',
 } as SovereignManifest;
 
+const mobileOnlyPlugin = {
+  id: 'com.example.scanner',
+  routePrefix: '/scanner',
+  surfaces: ['mobile'],
+} as SovereignManifest;
+
+const mobileOnlyApiShapedPlugin = {
+  id: 'com.example.admin-scanner',
+  routePrefix: '/api/admin/scanner-tools',
+  surfaces: ['mobile'],
+} as SovereignManifest;
+
 const apiProviderPlugin = {
   id: 'fs.sovereign.api-composer',
   routePrefix: '/api-composer',
@@ -201,6 +213,8 @@ describe('runtime middleware regressions', () => {
       fullyPublicPlugin,
       offlineRoutePlugin,
       mobileChromePlugin,
+      mobileOnlyPlugin,
+      mobileOnlyApiShapedPlugin,
     ];
     fetchState = {
       session: session(),
@@ -260,6 +274,52 @@ describe('runtime middleware regressions', () => {
 
     expect(response.status).toBe(403);
     expect(await response.text()).toBe('Forbidden');
+  });
+
+  describe('surface-restricted plugins (RFC 0080)', () => {
+    const mobileUA = { 'user-agent': 'Sovereign-Shell/mobile-ios 1.0.0' };
+
+    it('redirects a mobile-only plugin to /unavailable-surface from an ordinary browser', async () => {
+      const response = await middleware(request('/scanner'));
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe('http://runtime.test/unavailable-surface');
+    });
+
+    it('allows the plugin through on its declared surface', async () => {
+      const response = await middleware(request('/scanner', { headers: mobileUA }));
+
+      expect(response.status).toBe(200);
+    });
+
+    it('returns raw 404 for an API-shaped surface-restricted route off-surface', async () => {
+      const response = await middleware(request('/api/admin/scanner-tools/scan'));
+
+      expect(response.status).toBe(404);
+      expect(await response.text()).toBe('Not Found');
+    });
+
+    it('allows the API-shaped route through on its declared surface', async () => {
+      const response = await middleware(
+        request('/api/admin/scanner-tools/scan', { headers: mobileUA }),
+      );
+
+      expect(response.status).toBe(200);
+    });
+
+    it('does not affect a plugin declaring no surfaces field', async () => {
+      const response = await middleware(request('/launcher'));
+      expect(response.status).toBe(200);
+    });
+
+    it('disabled wins over surface unavailability — 404, not the unavailable-surface redirect', async () => {
+      fetchState.disabledIds = [mobileOnlyPlugin.id];
+
+      const response = await middleware(request('/scanner'));
+
+      expect(response.status).toBe(200);
+      expect(middlewareRewrite(response)).toBe('http://runtime.test/__not-found');
+    });
   });
 
   it('rewrites disabled plugin page routes to /__not-found', async () => {

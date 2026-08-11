@@ -65,3 +65,15 @@ export function applySurfaceHeaders(headers: Headers, userAgent: string | null):
   if (focusPlugin) headers.set('x-sovereign-focus-plugin', focusPlugin);
   else headers.delete('x-sovereign-focus-plugin');
 }
+
+/**
+ * Reads the already-trustworthy `x-sovereign-surface` header a Node-runtime
+ * route or server component receives (injected by `applySurfaceHeaders`
+ * above on every path middleware forwards through — never present as
+ * meaningful caller input, since middleware strips any inbound copy first).
+ * Falls back to `browser` for a missing/unrecognized value, matching
+ * `resolveSurface`'s own safe-default discipline — never throws.
+ */
+export function parseSurfaceHeader(value: string | null): Surface {
+  return value === 'mobile' || value === 'desktop' ? value : 'browser';
+}

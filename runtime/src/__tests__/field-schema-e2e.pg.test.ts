@@ -44,6 +44,18 @@ const KEYS_IDX = `CREATE UNIQUE INDEX IF NOT EXISTS field_encryption_keys_plugin
 
 const TABLE_NAME = `e2e_entries_${randomUUID().slice(0, 8)}`;
 
+/**
+ * The live client, typed the way a plugin sees it: sdk.db.getClient() returns
+ * `DrizzleClient = unknown` and plugins cast to their (sqlite-core-typed)
+ * drizzle client regardless of the live dialect — querying a sqliteTable
+ * through the postgres client is the documented pattern this test exists to
+ * prove (docs/plugin-database.md), so the cast mirrors production usage.
+ */
+function liveDb() {
+  if (testPdb.dialect !== 'postgres') throw new Error('expected the postgres dialect client');
+  return testPdb.db as unknown as import('drizzle-orm/better-sqlite3').BetterSQLite3Database;
+}
+
 /** Raw SQL against the postgres-dialect drizzle client. */
 async function rawRun(query: ReturnType<typeof sql.raw> | ReturnType<typeof sql>): Promise<void> {
   await (testPdb.db as { execute: (q: unknown) => Promise<unknown> }).execute(query);
@@ -94,19 +106,18 @@ describe.skipIf(!PG_URL)('leg 3 end-to-end (live Postgres, real crypto, real dri
       requireCryptoPluginContext(ctx.pluginId, manifest);
       return { tenantId: ctx.tenantId, pluginId: ctx.pluginId };
     };
-    provideHost({
-      crypto: {
-        async encryptField(value, options, ctx) {
-          return encryptFieldValue(value, options, resolve(ctx));
-        },
-        async decryptField(envelope, options, ctx) {
-          return decryptFieldValue(envelope, options, resolve(ctx));
-        },
-        async hashField(value, options, ctx) {
-          return hashFieldValue(value, options, resolve(ctx));
-        },
+    const crypto: SdkHost['crypto'] = {
+      async encryptField(value, options, ctx) {
+        return encryptFieldValue(value, options, resolve(ctx));
       },
-    } as unknown as SdkHost);
+      async decryptField(envelope, options, ctx) {
+        return decryptFieldValue(envelope, options, resolve(ctx));
+      },
+      async hashField(value, options, ctx) {
+        return hashFieldValue(value, options, resolve(ctx));
+      },
+    };
+    provideHost({ crypto } as unknown as SdkHost);
   });
 
   afterAll(async () => {
@@ -123,7 +134,7 @@ describe.skipIf(!PG_URL)('leg 3 end-to-end (live Postgres, real crypto, real dri
   it('sealed insert → ciphertext at rest → tripwire → exact match → open, on Postgres', async () => {
     const { sdk } = await import('@sovereignfs/sdk');
     const sdkCrypto = sdk.crypto;
-    const db = testPdb.db;
+    const db = liveDb();
 
     const sealed = await sdkCrypto.seal(entries, {
       id: 'row-1',

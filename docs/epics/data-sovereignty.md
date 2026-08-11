@@ -1529,7 +1529,7 @@ with).
 
 ---
 
-#### 📋 8.31 — Field-encryption key service (KEK→DEK envelope) (RFC 0092, workstream 0011 leg 1)
+#### ✅ 8.31 — Field-encryption key service (KEK→DEK envelope) (RFC 0092, workstream 0011 leg 1)
 
 **Goal:** The key-management foundation for app-level field encryption: a master Key Encryption Key from the environment, per-(class × plugin) Data Encryption Keys and blind-index HMAC keys wrapped under it, and KEK rotation that re-wraps rather than re-encrypts.
 

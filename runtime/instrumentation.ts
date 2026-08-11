@@ -24,6 +24,11 @@ export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { loadPluginEnv } = await import('./generated/plugin-env');
     loadPluginEnv();
+    // Field-encryption boot guard (RFC 0092): SOVEREIGN_ENCRYPT_CLASSES set
+    // without SOVEREIGN_FIELD_KEK (or a malformed KEK) must fail startup
+    // loudly, before any request — never a silent plaintext fallback.
+    const { assertFieldEncryptionConfig } = await import('./src/field-encryption-keys');
+    assertFieldEncryptionConfig();
     await import('./src/sdk-host');
     const { runAllPluginMigrations } = await import('./src/plugin-migrations');
     await runAllPluginMigrations();

@@ -1342,6 +1342,34 @@ const user = defineCommand({
   subCommands: { 'reset-mfa': userResetMfa },
 });
 
+const ROTATE_FIELD_KEK = join(SCRIPTS_DIR, 'rotate-field-kek.ts');
+
+const keysRotateFieldKek = defineCommand({
+  meta: {
+    name: 'rotate-field-kek',
+    description:
+      'Re-wrap all field-encryption DEKs under a new SOVEREIGN_FIELD_KEK (RFC 0092) — ' +
+      'touches only wrapped key material, never data rows. Stop the platform first.',
+  },
+  args: {
+    'new-key': {
+      type: 'string',
+      description:
+        'The new KEK (base64/base64url/hex, 32 bytes). Generated and printed if omitted.',
+    },
+  },
+  run({ args }) {
+    const scriptArgs = [ROTATE_FIELD_KEK];
+    if (args['new-key']) scriptArgs.push('--new-key', args['new-key']);
+    run('tsx', scriptArgs);
+  },
+});
+
+const keys = defineCommand({
+  meta: { name: 'keys', description: 'Encryption key management utilities' },
+  subCommands: { 'rotate-field-kek': keysRotateFieldKek },
+});
+
 const setupPm2 = defineCommand({
   meta: {
     name: 'pm2',
@@ -1393,6 +1421,7 @@ const main = defineCommand({
     db,
     plugin,
     user,
+    keys,
     setup,
   },
 });

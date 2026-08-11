@@ -137,14 +137,27 @@ my-plugin/
     settings/page.tsx    #   → <routePrefix>/settings
     _components/         #   private components (underscore = not a route)
     _lib/                #   private helpers/tests
+      db/
+        schema.ts        #   optional — Drizzle tables (see Database)
     my-plugin.module.css #   CSS Modules + design tokens
-  db/
-    schema.ts            # optional — Drizzle tables (slug-prefixed, see Database)
+  migrations/
+    sqlite/               # SQLite migration SQL files
+    postgres/             # Postgres migration SQL files
 ```
 
 Anything under `app/` that isn't an underscore-prefixed folder becomes a route
 relative to your `routePrefix`. `routePrefix: "/tasks"` + `app/lists/page.tsx`
 serves at `/tasks/lists`.
+
+**Database code must live inside `app/`.** Only `app/` is composed (copied in
+dev, symlinked in production) into the runtime's route tree — a sibling
+`db/schema.ts` at the plugin root is never copied, so any route file that
+imports it (e.g. `app/actions.ts` importing `'../db/schema'`) fails to build
+with "Module not found". Put schema/query code under `app/_lib/db/` instead —
+`_lib/` is already composed with the rest of `app/` and treated as private
+helpers, not a route. `migrations/` stays at the plugin root (it's read
+directly off disk at startup, not composed into Next's route tree — see
+[Database](plugin-database.md#migrations)).
 
 ## Manifest reference
 

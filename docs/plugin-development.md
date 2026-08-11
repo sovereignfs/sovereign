@@ -169,6 +169,7 @@ serves at `/tasks/lists`.
 | `publicRoutes`  | array (see below)                                       | no                                   | Manifest-declared public page routes (RFC 0042). Each entry exempts a path prefix — relative to `routePrefix` — from the session-redirect gate; the plugin owns authorization for the exempted paths.                                                                                                      |
 | `public`        | boolean                                                 | no (default `false`)                 | Marks the whole plugin as public — no auth requirement at all (RFC 0089). Requires `shell: "minimal"` explicitly; cannot combine with `adminOnly`, a paid `monetization.model`, or `publicRoutes`. See below.                                                                                              |
 | `offline`       | boolean (see below)                                     | no (default `false`)                 | Marks the plugin's bare `routePrefix` page as its one offline-capable entry point (RFC 0074, flattened by RFC 0078 from the original `offline.routes[]`/`offline.root` object shape). Grants no auth exemption; the route must render a user-neutral shell and hydrate data client-side via `sdk.offline`. |
+| `installable`   | boolean (see below)                                     | no (default `false`)                 | Lets the plugin be installed from a browser as its own home-screen app, scoped to `routePrefix`, via a dedicated manifest at `/api/manifest/<id>` (RFC 0081). Deliberately independent of `offline` — see below.                                                                                           |
 | `surfaces`      | array of `browser` \| `mobile` \| `desktop` (see below) | no (default: every surface)          | Surfaces this plugin is available on (RFC 0080). Filters Launcher/sidebar/mobile-drawer presentation only — not a security boundary.                                                                                                                                                                       |
 | `example`       | boolean                                                 | no (default `false`)                 | Marks the plugin as a bundled reference/example. Classification only — no effect on routing or permissions. Example plugins are hidden by default and shown via the Console → Settings → Example plugins toggle; each can also be toggled individually on the Plugins page.                                |
 | `development`   | boolean                                                 | no (default `false`)                 | Marks the plugin as still under active development — not yet ready for production use. Classification only, like `example`: no effect on routing, access policy, or the enable/disable default. Surfaced as a warning badge on the Console Plugins page and on the plugin's Launcher tile.                 |
@@ -724,6 +725,62 @@ own client code is mounted and calls `drainQueue()` — there is no
 platform-orchestrated background sync (the Background Sync API has no iOS
 Safari support). If the app isn't open when connectivity returns, queued
 writes wait until it is.
+
+### `installable` — per-plugin installable PWA (RFC 0081)
+
+Sovereign already installs as a PWA — but only as _Sovereign_, one manifest,
+one icon, `scope: "/"`. Declaring `installable` lets your plugin be installed
+as its **own** home-screen app instead, with its own name, icon, and scope:
+
+```json
+{
+  "routePrefix": "/tally",
+  "installable": true
+}
+```
+
+**Deliberately separate from `offline`.** They answer different questions: a
+plugin can be installable without offline support (it just needs a network to
+work once opened), and offline-capable without being separately installable
+(Launcher, today, is offline-capable but not installable). Deriving one from
+the other would couple two independent product decisions — pair them in your
+own plugin if that's the experience you want, but the platform never assumes
+it for you. An installed app that fails outright on a cold launch with no
+signal is a poor app, so pairing `installable` with `offline` is recommended,
+not required.
+
+**What the platform does:**
+
+- Serves a dedicated web app manifest at `/api/manifest/<your-plugin-id>`,
+  reachable with no session (browsers fetch a manifest before login). It
+  carries your plugin's own `name`/`description` verbatim — the instance name
+  is **not** prepended, since the user is installing _your plugin_, not
+  "MyInstance Tally" — and sets `start_url`, `scope`, and `id` all to your
+  plugin's bare `routePrefix`.
+- Overrides the document's `<head>` metadata (`manifest`, `apple-touch-icon`,
+  and the PWA title) on your plugin's routes, so the browser's install prompt
+  and iOS's home-screen resolution both pick up your plugin's identity
+  instead of the instance's.
+- Rewrites (never redirects) an unauthenticated request to your plugin's bare
+  `routePrefix` to the login document, so signing in from a cold launch stays
+  inside the installed app's scope and returns you to your plugin afterward,
+  not to `/`. The same fix RFC 0013 already applies to bare `/` for the
+  identical reason — a 303 redirect has no body/head at all, so iOS shows a
+  blank white screen instead of resolving the launch image.
+
+**Known temporary limitation:** installed plugin apps have no splash/launch
+image of their own yet — real per-plugin icon rasterization is a separate,
+later task (epic task 2.26). Until it ships, an installed plugin app shows a
+brief blank white flash on cold launch rather than a branded splash screen.
+This is deliberate, not an oversight: showing the _instance's_ splash would
+display the wrong app's identity, which reads as more broken than blank.
+
+`installable` grants **no auth exemption** for anything beyond the bare
+`routePrefix` document itself — every other route your plugin serves is
+gated exactly as it is today. It also registers no second service worker and
+changes nothing about the existing one's scope: manifest `scope` governs the
+_installed app's navigation containment_, which is independent of
+service-worker registration.
 
 ### `surfaces` — plugin availability by surface (RFC 0080)
 

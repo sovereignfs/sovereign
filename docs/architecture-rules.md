@@ -340,7 +340,13 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   never interferes with HMR), so installability/Lighthouse only apply to a
   production build (`next build`). The PWA assets and the `/offline` fallback
   are excluded from the middleware session gate (they must load without a
-  session).
+  session). A plugin declaring `installable: true` (RFC 0081) gets its own
+  manifest at `/api/manifest/[pluginId]`, nested under the already-reserved,
+  already session-exempt `manifest` API segment — safe for the same reason:
+  it re-exposes only fields the plugin's own manifest already publishes
+  (name, description, icon, routePrefix), all of which any authenticated
+  user already sees on that plugin's sidebar icon or Launcher tile. No
+  per-user data, no DB write.
 - **A cached authenticated document must never be served to a different user.**
   Sovereign's pages are per-user SSR (nav, plugin list, account state), so
   replaying a cached rendered shell for the wrong account — after logout/login

@@ -446,8 +446,35 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       // /login document (200, full <head>) at the same URL, same as the
       // authenticated root-plugin rewrite below. GET only: a rewrite
       // preserves the request method, and /login only handles GET.
-      if (pathname === '/' && request.method === 'GET') {
-        return applyCsp(NextResponse.rewrite(new URL('/login', request.url)));
+      //
+      // An `installable` plugin's own bare `routePrefix` (RFC 0081) needs
+      // exactly the same treatment for exactly the same reason: it's that
+      // plugin's *own* PWA `start_url` once installed standalone, with its
+      // own scope — a 303 to /login would either leave the installed app's
+      // scope entirely or show the same blank-flash bug `/` already avoids.
+      // Exact match against the bare prefix only (not `underPrefix()`) — a
+      // nested path like `/tally/groups/42` is an ordinary session-gated
+      // page, not the app's installed entry point.
+      const installablePlugin = installedPlugins.find(
+        (plugin) => plugin.installable === true && plugin.routePrefix === pathname,
+      );
+      if ((pathname === '/' || installablePlugin) && request.method === 'GET') {
+        const rewriteUrl = new URL('/login', request.url);
+        // Only the plugin case needs `returnUrl` — post-login must return
+        // *into the installed app's scope*, not out to `/`. The `/` case
+        // stays exactly as it always has: no param, defaults to `/` itself.
+        // This is set on the *rewrite target* URL, not the browser's visible
+        // address bar (a rewrite never changes that). `runtime/app/login/page.tsx`
+        // reads it server-side via its `searchParams` prop rather than
+        // `LoginForm`'s own `useSearchParams()` client hook — that
+        // distinction is load-bearing, not stylistic: a client hook reads
+        // `window.location`, which a rewrite never updates, so it silently
+        // sees no query string at all here. Confirmed live (not assumed):
+        // the client-hook version landed post-login at `/` instead of the
+        // plugin route every time, until page.tsx was changed to read this
+        // server-side instead. See that file's comment for the full account.
+        if (installablePlugin) rewriteUrl.searchParams.set('returnUrl', pathname);
+        return applyCsp(NextResponse.rewrite(rewriteUrl));
       }
       // 303 (See Other), not the NextResponse.redirect default of 307. A 307
       // preserves the request method, so an unauthenticated POST to a gated

@@ -142,6 +142,26 @@ describe('validateManifest', () => {
     if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
   });
 
+  it('accepts a manifest declaring installable: true (RFC 0081)', () => {
+    expect(validateManifest({ ...base, installable: true }).valid).toBe(true);
+  });
+
+  it('accepts a manifest with no installable field (default behavior)', () => {
+    expect(validateManifest(base).valid).toBe(true);
+  });
+
+  it('rejects a non-boolean installable value', () => {
+    expect(validateManifest({ ...base, installable: 'yes' }).valid).toBe(false);
+  });
+
+  it('accepts installable and offline declared independently (deliberately uncoupled)', () => {
+    expect(validateManifest({ ...base, installable: true, offline: 'offline-first' }).valid).toBe(
+      true,
+    );
+    expect(validateManifest({ ...base, installable: true }).valid).toBe(true);
+    expect(validateManifest({ ...base, offline: 'offline-first' }).valid).toBe(true);
+  });
+
   it('accepts a manifest declaring surfaces (RFC 0080)', () => {
     expect(validateManifest({ ...base, surfaces: ['mobile', 'desktop'] }).valid).toBe(true);
   });

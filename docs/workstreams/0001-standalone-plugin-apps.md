@@ -173,6 +173,16 @@ replay bug.
 
 **Epic tasks:** 2.25, then 2.26
 
+**Status (August 2026): 2.25 shipped at platform `0.84.0`.** 2.26 (real
+per-plugin icon rasterization) remains open — the plugin's own `icon.svg` is
+used directly as a placeholder manifest icon and `apple-touch-icon` for now
+(`runtime/src/plugin-manifest.ts`), and `apple-touch-startup-image` is
+omitted entirely on an installed plugin's routes rather than showing the
+_instance's_ wrong-brand splash. Both are documented, deliberate, temporary
+gaps closed by 2.26, not oversights. One real bug was found and fixed while
+implementing login containment (see the note below the technical notes) —
+worth reading before touching this area again.
+
 **Technical notes:**
 
 - Extend the **existing** `runtime/app/api/manifest/route.ts` into a
@@ -193,6 +203,25 @@ replay bug.
   at `runtime/middleware.ts:320` — **rewrite**, do not redirect, for the reason
   its comment already records. Post-login must return to the plugin route, not
   `/`.
+  - **A second, less obvious bug hides directly behind this one — found live,
+    not by inspection.** "Rewrite, then set `returnUrl` on the rewrite
+    target" sounds sufficient, and the code compiles and type-checks either
+    way, but it silently fails if `/login`'s form reads `returnUrl` via
+    `useSearchParams()` (a client hook bound to the browser's _visible_
+    address bar) — a rewrite never changes that bar, so the hook sees no
+    query string at all, and every post-login navigation quietly lands on
+    `/` regardless of where the user started. Confirmed by driving the exact
+    flow in a real browser: sign out, cold-GET an installable plugin's
+    route, sign in, watch where it lands. It landed on `/` until
+    `runtime/app/login/page.tsx` was changed to read `returnUrl` from its
+    own server-side `searchParams` prop (which _does_ see the rewritten
+    request) and pass it down as an explicit prop instead. The ordinary
+    303-redirect path for every other gated route was never affected — the
+    browser's address bar genuinely changes there, so the client hook was
+    already correct for that case. **Anything that reaches `/login` via a
+    middleware rewrite (not just this leg's case) must go through the
+    server-side prop, not the client hook — future changes to this page
+    should preserve that.**
 - Do not register a second service worker, and do not change the existing one's
   scope. Manifest `scope` is navigation containment; SW registration is
   independent.

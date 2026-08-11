@@ -69,6 +69,12 @@ const mobileOnlyApiShapedPlugin = {
   surfaces: ['mobile'],
 } as SovereignManifest;
 
+const installablePlugin = {
+  id: 'fs.example.tally',
+  routePrefix: '/tally',
+  installable: true,
+} as SovereignManifest;
+
 const apiProviderPlugin = {
   id: 'fs.sovereign.api-composer',
   routePrefix: '/api-composer',
@@ -215,6 +221,7 @@ describe('runtime middleware regressions', () => {
       mobileChromePlugin,
       mobileOnlyPlugin,
       mobileOnlyApiShapedPlugin,
+      installablePlugin,
     ];
     fetchState = {
       session: session(),
@@ -256,6 +263,67 @@ describe('runtime middleware regressions', () => {
     expect(response.headers.get('location')).toBe(
       'http://runtime.test/login?returnUrl=%2Flauncher%2Fsettings%3Ftab%3Dgeneral',
     );
+  });
+
+  describe('installable plugin login containment (RFC 0081)', () => {
+    it('rewrites (not redirects) an unauthenticated GET to /login for an installable plugin', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/tally'));
+
+      expect(response.status).toBe(200);
+      expect(middlewareRewrite(response)).toBe('http://runtime.test/login?returnUrl=%2Ftally');
+    });
+
+    it('sets returnUrl on the rewrite target so post-login returns into the app, not "/"', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/tally'));
+
+      const rewriteTarget = new URL(middlewareRewrite(response) ?? '');
+      expect(rewriteTarget.pathname).toBe('/login');
+      expect(rewriteTarget.searchParams.get('returnUrl')).toBe('/tally');
+    });
+
+    it('does not rewrite a nested path under an installable plugin — falls through to the normal 303 redirect', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/tally/groups/42'));
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe(
+        'http://runtime.test/login?returnUrl=%2Ftally%2Fgroups%2F42',
+      );
+    });
+
+    it('does not rewrite a non-installable plugin — falls through to the normal 303 redirect', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/launcher'));
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe(
+        'http://runtime.test/login?returnUrl=%2Flauncher',
+      );
+    });
+
+    it('leaves the existing "/" rewrite behavior unchanged — still no returnUrl', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/'));
+
+      expect(response.status).toBe(200);
+      expect(middlewareRewrite(response)).toBe('http://runtime.test/login');
+    });
+
+    it('only rewrites GET — an unauthenticated POST to the plugin route still 303s', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/tally', { method: 'POST' }));
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe('http://runtime.test/login?returnUrl=%2Ftally');
+    });
   });
 
   it('redirects non-admin Console page access to /forbidden with 303', async () => {

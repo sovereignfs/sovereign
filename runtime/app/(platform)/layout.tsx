@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import type { SovereignManifest } from '@sovereignfs/manifest';
@@ -32,6 +33,43 @@ function monogram(name: string): string {
   const [first = '', second = ''] = trimmed.split(/\s+/);
   const initials = second ? first.charAt(0) + second.charAt(0) : first.slice(0, 2);
   return initials.toUpperCase();
+}
+
+/**
+ * Per-plugin installable PWA metadata (RFC 0081). Reads the already-injected
+ * `x-sovereign-plugin-id` header and, only for a plugin declaring
+ * `installable: true`, overrides the root layout's instance-level
+ * `manifest`/`appleWebApp`/`icons.apple` so the browser's install prompt
+ * offers the plugin's own identity rather than the whole instance's. Every
+ * other route returns `{}` — Next shallow-merges a nested `generateMetadata`
+ * result over the parent's static `metadata` per top-level key, so an empty
+ * object changes nothing and the instance-level values apply unchanged.
+ *
+ * No `appleWebApp.startupImage` here, deliberately: there is no per-plugin
+ * splash asset yet (real icon/splash rasterization is task 2.26). Omitting
+ * it means an installed plugin app shows a blank white flash on cold
+ * launch until that lands — a known, temporary regression, chosen over the
+ * alternative of reusing the *instance's* splash image, which would show
+ * the wrong app's branding on launch (worse than blank).
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const h = await headers();
+  const pluginId = h.get('x-sovereign-plugin-id');
+  if (!pluginId) return {};
+  const plugin = getInstalledPlugins().find((p) => p.id === pluginId);
+  if (!plugin?.installable) return {};
+
+  return {
+    manifest: `/api/manifest/${encodeURIComponent(plugin.id)}`,
+    appleWebApp: {
+      capable: true,
+      title: plugin.name,
+      statusBarStyle: 'black-translucent',
+    },
+    icons: {
+      apple: plugin.icon ? `/plugin-icons/${plugin.id}.svg` : '/icons/apple-touch-icon.png',
+    },
+  };
 }
 
 export default async function PlatformLayout({ children }: { children: ReactNode }) {

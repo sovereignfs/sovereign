@@ -782,7 +782,7 @@ worker and a self-contained offline navigation fallback.
 - PWA assets and the offline route load without an authenticated session.
 - Development mode does not generate a service worker or interfere with HMR.
 
-#### 📋 2.25 — Per-plugin installable PWA manifest (RFC 0081)
+#### ✅ 2.25 — Per-plugin installable PWA manifest (RFC 0081)
 
 **Goal:** Let a plugin declaring `installable: true` be installed from a browser as
 its own home-screen app, scoped to its `routePrefix`, with its own name, icons, and

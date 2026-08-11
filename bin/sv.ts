@@ -1299,12 +1299,32 @@ const dbMigrateToPostgres = defineCommand({
   },
 });
 
+const ENCRYPT_FIELDS = join(SCRIPTS_DIR, 'encrypt-fields.ts');
+
+const dbEncryptFields = defineCommand({
+  meta: {
+    name: 'encrypt-fields',
+    description:
+      'Backfill app-level field encryption for newly enabled sensitivity classes (RFC 0092) — ' +
+      'explicit, resumable, idempotent. Take a backup first.',
+  },
+  args: {
+    plugin: { type: 'string', description: 'Limit the backfill to one plugin id' },
+  },
+  run({ args }) {
+    const scriptArgs = [ENCRYPT_FIELDS];
+    if (args.plugin) scriptArgs.push('--plugin', args.plugin);
+    run('tsx', scriptArgs);
+  },
+});
+
 const db = defineCommand({
   meta: {
     name: 'db',
     description: 'sqld migration and Postgres migration tools',
   },
   subCommands: {
+    'encrypt-fields': dbEncryptFields,
     'migrate-to-sqld': dbMigrateToSqld,
     'migrate-to-postgres': dbMigrateToPostgres,
   },
@@ -1365,9 +1385,40 @@ const keysRotateFieldKek = defineCommand({
   },
 });
 
+const ROTATE_BLIND_INDEX = join(SCRIPTS_DIR, 'rotate-blind-index.ts');
+
+const keysRotateBlindIndex = defineCommand({
+  meta: {
+    name: 'rotate-blind-index',
+    description:
+      "Rotate a plugin's blind-index HMAC key(s) with a dual-read window (RFC 0092) — " +
+      'searches keep working throughout; resumable; --status shows open windows.',
+  },
+  args: {
+    plugin: { type: 'string', description: 'Plugin id whose keys to rotate' },
+    class: { type: 'string', description: 'Limit to one sensitivity class' },
+    status: { type: 'boolean', description: 'Show open rotation windows and exit' },
+    force: {
+      type: 'boolean',
+      description: 'Complete a window even when the plugin has no registered tables',
+    },
+  },
+  run({ args }) {
+    const scriptArgs = [ROTATE_BLIND_INDEX];
+    if (args.status) scriptArgs.push('--status');
+    if (args.plugin) scriptArgs.push('--plugin', args.plugin);
+    if (args.class) scriptArgs.push('--class', args.class);
+    if (args.force) scriptArgs.push('--force');
+    run('tsx', scriptArgs);
+  },
+});
+
 const keys = defineCommand({
   meta: { name: 'keys', description: 'Encryption key management utilities' },
-  subCommands: { 'rotate-field-kek': keysRotateFieldKek },
+  subCommands: {
+    'rotate-field-kek': keysRotateFieldKek,
+    'rotate-blind-index': keysRotateBlindIndex,
+  },
 });
 
 const setupPm2 = defineCommand({

@@ -75,7 +75,13 @@ export const sdk = {
 };
 
 export { SENSITIVITY_CLASSES, FIELD_DATA_PREFIX, FIELD_PASSTHROUGH_PREFIX } from './types';
-export { getFieldColumns, type DiscoveredFieldColumn, type FieldColumnMeta } from './field-schema';
+export {
+  getFieldColumns,
+  getTableFieldMetadata,
+  type DiscoveredFieldColumn,
+  type FieldColumnMeta,
+  type FieldTableMetadata,
+} from './field-schema';
 export { provideHost } from './host';
 export type { SdkHost } from './host';
 export type { Surface } from './device';

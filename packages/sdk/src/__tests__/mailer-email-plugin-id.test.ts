@@ -78,6 +78,12 @@ describe('sdk.mailer / sdk.email — plugin ID resolution (RFC 0062)', () => {
         async hashField(value: string) {
           return `h:${value}`;
         },
+        async hashFieldCandidates(value: string) {
+          return [`h:${value}`];
+        },
+        async registerTables() {
+          /* no-op */
+        },
       },
       secrets: {
         async create() {

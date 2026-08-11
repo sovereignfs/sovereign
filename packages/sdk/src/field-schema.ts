@@ -54,3 +54,46 @@ export function getFieldColumns(table: object): DiscoveredFieldColumn[] {
   }
   return found;
 }
+
+/**
+ * Serializable descriptor of one classified table (RFC 0092 gate B) — what
+ * `sdk.crypto.registerTables()` persists so the CLI re-seal walker
+ * (`sv db encrypt-fields`, `sv keys rotate-blind-index`) can operate on
+ * plugin tables from a process where plugin code is not loaded.
+ */
+export interface FieldTableMetadata {
+  tableName: string;
+  /** Database column names of the primary key — the walker's checkpoint/batch cursor. */
+  pkColumns: string[];
+  fields: DiscoveredFieldColumn[];
+}
+
+/** Extract a table's persistable metadata. Throws if the table has no classified columns or no PK. */
+export function getTableFieldMetadata(table: object): FieldTableMetadata {
+  const t = table as Record<symbol, unknown>;
+  const tableName = t[Symbol.for('drizzle:Name')] as string | undefined;
+  if (!tableName) {
+    throw new Error('sdk.crypto.registerTables: not a drizzle table object.');
+  }
+  const fields = getFieldColumns(table);
+  if (fields.length === 0) {
+    throw new Error(
+      `sdk.crypto.registerTables: table "${tableName}" has no encryptedText()/blindIndex() columns.`,
+    );
+  }
+  const columns = (t[Symbol.for('drizzle:Columns')] ?? {}) as Record<
+    string,
+    { name?: string; primary?: boolean } | undefined
+  >;
+  const pkColumns = Object.values(columns)
+    .filter((c) => c?.primary)
+    .map((c) => c?.name)
+    .filter((n): n is string => typeof n === 'string');
+  if (pkColumns.length === 0) {
+    throw new Error(
+      `sdk.crypto.registerTables: table "${tableName}" needs a primary key — the re-seal ` +
+        'walker uses it as its resumable cursor.',
+    );
+  }
+  return { tableName, pkColumns, fields };
+}

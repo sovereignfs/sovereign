@@ -41,6 +41,12 @@ function fakeHost(): void {
     async hashField(value, options) {
       return `h:${options.sensitivity}:${value}`;
     },
+    async hashFieldCandidates(value, options) {
+      return [`h:${options.sensitivity}:${value}`];
+    },
+    async registerTables() {
+      /* no-op */
+    },
   };
   provideHost({ crypto } as unknown as SdkHost);
 }

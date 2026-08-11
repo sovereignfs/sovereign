@@ -104,6 +104,12 @@ beforeAll(() => {
       async hashField(value: string) {
         return `h:${value}`;
       },
+      async hashFieldCandidates(value: string) {
+        return [`h:${value}`];
+      },
+      async registerTables() {
+        /* no-op */
+      },
     },
     secrets: {
       async create(input) {

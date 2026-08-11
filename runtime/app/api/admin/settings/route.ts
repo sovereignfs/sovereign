@@ -6,6 +6,10 @@ import {
   getPlatformSetting,
   setPlatformSetting,
   setTenantName,
+  encryptClassesFromEnv,
+  fieldKekFromEnv,
+  listFieldTableRegistrations,
+  listOpenHmacRotations,
 } from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
 import { logActivity } from '@/src/activity';
@@ -51,12 +55,49 @@ async function readSettings() {
       getPlatformSetting(db, RELAY_URL_SETTING),
       getPlatformSetting(db, RELAY_DISABLED_SETTING),
     ]);
+  // App-level field encryption status (RFC 0092) — read-only diagnostics for
+  // Console. Best-effort: a database from before migration 0022/0023 simply
+  // reports the feature as off rather than failing the whole settings read.
+  let fieldEncryption: {
+    enabledClasses: string[];
+    kekConfigured: boolean;
+    openRotations: { pluginId: string; class: string; openedDaysAgo: number }[];
+    registrations: { pluginId: string; tableCount: number }[];
+  } = { enabledClasses: [], kekConfigured: false, openRotations: [], registrations: [] };
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const [openRotations, registrations] = await Promise.all([
+      listOpenHmacRotations(db),
+      listFieldTableRegistrations(db),
+    ]);
+    const perPlugin = new Map<string, number>();
+    for (const r of registrations) {
+      perPlugin.set(r.pluginId, (perPlugin.get(r.pluginId) ?? 0) + 1);
+    }
+    fieldEncryption = {
+      enabledClasses: encryptClassesFromEnv(),
+      kekConfigured: fieldKekFromEnv() !== undefined,
+      openRotations: openRotations.map((r) => ({
+        pluginId: r.pluginId,
+        class: r.class,
+        openedDaysAgo: Math.floor((now - (r.hmacRotationStartedAt ?? now)) / 86400),
+      })),
+      registrations: [...perPlugin.entries()].map(([pluginId, tableCount]) => ({
+        pluginId,
+        tableCount,
+      })),
+    };
+  } catch {
+    // pre-migration database — leave the safe default
+  }
+
   return {
     tenantName: tenant.name,
     inviteOnly: inviteOnly === 'true',
     rootPluginId: rootPluginId ?? DEFAULT_ROOT_PLUGIN_ID,
     examplesEnabled,
     smtp: { ...smtp, source: smtpSource(smtp) },
+    fieldEncryption,
     pushRelay: {
       // null url = using the default below, not "unconfigured" — distinct
       // from `disabled`, per RFC 0087's "distinct, explicit full opt-out"

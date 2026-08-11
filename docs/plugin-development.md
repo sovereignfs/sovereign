@@ -1118,9 +1118,10 @@ await db.insert(entries).values(await sdk.crypto.seal(entries, row));
 // reads — open() decrypts every enveloped value
 const rows = await sdk.crypto.open(entries, await db.select().from(entries));
 
-// exact-match search over encrypted data, via the blind index
-const needle = await sdk.crypto.hashField(term, { sensitivity: 'health' });
-const hits = await db.select().from(entries).where(eq(entries.notesIdx, needle));
+// exact-match search over encrypted data, via the blind index —
+// blindIndexMatch is rotation-safe (dual-reads during a key rotation window)
+const candidates = await sdk.crypto.hashFieldCandidates(term, { sensitivity: 'health' });
+const hits = await db.select().from(entries).where(blindIndexMatch(entries.notesIdx, candidates));
 ```
 
 Rules and guarantees:
@@ -1134,10 +1135,28 @@ Rules and guarantees:
   idempotent for a consistent envelope+index pair, but refuses to compute a
   blind index from an already-sealed source (the plaintext is gone).
 - **Blind indexes are exact-match only** — a keyed HMAC per (class × plugin),
-  never usable for `LIKE`, ranges, or ordering. On an instance with no
-  `SOVEREIGN_FIELD_KEK` configured, `hashField` falls back to an unkeyed
+  never usable for `LIKE`, ranges, or ordering. Query them with
+  `blindIndexMatch()` + `sdk.crypto.hashFieldCandidates()` (shown above):
+  during a key rotation (`sv keys rotate-blind-index`) the candidates cover
+  both the old and new key, so search results stay identical throughout. A
+  bare `eq(col, await sdk.crypto.hashField(term, …))` works but misses
+  not-yet-re-sealed rows mid-rotation. On an instance with no
+  `SOVEREIGN_FIELD_KEK` configured, hashing falls back to an unkeyed
   domain-separated hash (such instances store plaintext anyway); enabling
-  encryption later re-computes indexes via the operator backfill tool.
+  encryption later re-computes indexes via `sv db encrypt-fields`.
+- **Register your classified tables once** at server-entry scope (the same
+  lifecycle as `sdk.portability.provideExport`):
+
+  ```ts
+  await sdk.crypto.registerTables(entries, otherTable);
+  ```
+
+  Registration persists platform-side and is what lets the operator tools
+  (`sv db encrypt-fields` backfill, `sv keys rotate-blind-index` re-seal)
+  walk your tables from outside the runtime process. An unregistered
+  classified table is skipped by those tools — visibly, in their output —
+  which means an operator cannot backfill or rotate it.
+
 - **Export/import:** your `sdk.portability` export resolver must `open()` rows
   before emitting them — users export their data in plaintext, not envelopes.
   `sdk.crypto` works inside portability resolvers (the host resolves your

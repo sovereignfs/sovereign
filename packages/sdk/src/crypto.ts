@@ -1,6 +1,6 @@
 import { headers } from 'next/headers';
 import { requireHost } from './host';
-import { getFieldColumns } from './field-schema';
+import { getFieldColumns, getTableFieldMetadata } from './field-schema';
 import type {
   CryptoContext,
   DecryptFieldOptions,
@@ -162,6 +162,32 @@ export const crypto = {
   async hashField(value: string, options: HashFieldOptions): Promise<string> {
     const context = await cryptoContext();
     return requireHost().crypto.hashField(value, options, context);
+  },
+
+  /**
+   * Blind-index candidates for rotation-safe queries (RFC 0092 gate B):
+   * `[current]` normally, `[current, previous]` during a rotation window.
+   * Pass to `blindIndexMatch()` (`@sovereignfs/sdk/drizzle`) — the
+   * recommended query pattern; a bare `eq(col, await hashField(...))` keeps
+   * working but misses old-key rows mid-rotation.
+   */
+  async hashFieldCandidates(value: string, options: HashFieldOptions): Promise<string[]> {
+    const context = await cryptoContext();
+    return requireHost().crypto.hashFieldCandidates(value, options, context);
+  },
+
+  /**
+   * Register this plugin's classified tables (RFC 0092 gate B) — call once
+   * at server-entry scope (the `sdk.portability.provideExport` lifecycle).
+   * Registrations persist platform-side so the operator tools
+   * (`sv db encrypt-fields`, `sv keys rotate-blind-index`) can walk these
+   * tables from outside the runtime process. An unregistered classified
+   * table is skipped by those tools — visibly, in their output.
+   */
+  async registerTables(...tables: object[]): Promise<void> {
+    const context = await cryptoContext();
+    const metadata = tables.map((t) => getTableFieldMetadata(t));
+    return requireHost().crypto.registerTables(metadata, context);
   },
 
   seal,

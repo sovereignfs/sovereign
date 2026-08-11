@@ -1607,9 +1607,22 @@ with).
 
 ---
 
-#### 📋 8.34 — Operator backfill + blind-index rotation tooling (`sv db encrypt-fields`) (RFC 0092, workstream 0011 leg 4)
+#### ✅ 8.34 — Operator backfill + blind-index rotation tooling (`sv db encrypt-fields`) (RFC 0092, workstream 0011 leg 4)
 
 **Goal:** The explicit, operator-triggered migration completing the story: encrypt pre-existing plaintext rows for newly enabled classes, and give blind-index key rotation its dual-read transition — the two operations deliberately excluded from automatic boot-time behavior (RFC 0071 incident lesson).
+
+> **Implementation notes (as shipped):** table discovery is **persisted**, not
+> in-process — `sdk.crypto.registerTables()` upserts each classified table's
+> metadata (name, pk, columns, classes, index sources) into
+> `field_table_registrations`, because the CLI walker runs outside the runtime
+> process where plugin modules are never loaded (the in-process portability
+> registry pattern cannot serve operator tooling). The blind-index HMAC path
+> reads key rows fresh per call (uncached, unlike DEKs) so a live rotation's
+> key swap is visible immediately — the dual-read guarantee depends on it.
+> `rotate-blind-index` refuses to complete a window for a plugin with zero
+> registrations unless `--force` is passed. v1 walker limitation: composite
+> primary keys are skipped (named in output) — the checkpoint cursor is
+> single-column.
 
 **Deliverables:**
 

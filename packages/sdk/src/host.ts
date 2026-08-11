@@ -1,4 +1,5 @@
 import type { DataContractRef, DataContractResolver } from './data';
+import type { FieldTableMetadata } from './field-schema';
 import type { DeletionHandler, ExportResolver, ImportHandler } from './portability';
 import type { ConsentStatus, PluginAvailability, PluginListFilter } from './plugins';
 import type {
@@ -221,6 +222,18 @@ export interface SdkHost {
     ): Promise<string>;
     /** Blind-index keyed hash (RFC 0092 leg 3). Unkeyed fallback when no KEK is configured. */
     hashField(value: string, options: HashFieldOptions, context: CryptoContext): Promise<string>;
+    /**
+     * Blind-index hash candidates (RFC 0092 gate B): `[current]` normally,
+     * `[current, previous]` while a rotation window is open — the dual-read
+     * primitive `blindIndexMatch()` builds conditions from.
+     */
+    hashFieldCandidates(
+      value: string,
+      options: HashFieldOptions,
+      context: CryptoContext,
+    ): Promise<string[]>;
+    /** Persist classified-table registrations for the CLI re-seal walker (RFC 0092 gate B). */
+    registerTables(metadata: FieldTableMetadata[], context: CryptoContext): Promise<void>;
   };
   connections: {
     create(input: CreateConnectionInput, context: ConnectionContext): Promise<ConnectionRef>;

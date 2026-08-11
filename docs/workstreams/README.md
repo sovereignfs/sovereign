@@ -141,7 +141,7 @@ Workstreams are internal planning documents and are not published (see
 | [0008](0008-offline-first-architecture.md)            | Offline-first architecture — cold-start offline, tiered plugin offline support, encrypted local storage | ⏳ In Progress | none — governed by research 0012 (research-as-design exception) |
 | [0009](0009-database-dialect-and-libsql-migration.md) | Single operator-chosen DB dialect platform-wide; SQLite moves to a mandatory `sqld` container           | ⏳ In Progress | 0091 (Accepted)                                                 |
 | [0010](0010-desktop-push-relay.md)                    | Extends workstream 0005's relay/schema to `sovereign-desktop` — macOS APNs, Windows WNS (raw-only)      | ✅ Done        | 0087 (addendum)                                                 |
-| [0011](0011-app-level-field-encryption.md)            | App-level field encryption — classify in schema, enforce by operator policy, KEK→DEK, blind indexes     | ⏳ In Progress | 0092 (Accepted — gate A signed off; leg 1 ✅)                   |
+| [0011](0011-app-level-field-encryption.md)            | App-level field encryption — classify in schema, enforce by operator policy, KEK→DEK, blind indexes     | ✅ Done        | 0092 (Accepted; all legs shipped)                               |
 
 Workstreams 0001 and 0002 share epic task 20.10 (the WKWebView offline spike) —
 run it once and let both consume the finding. Otherwise they are independent, and

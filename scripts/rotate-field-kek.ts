@@ -106,30 +106,31 @@ async function main(): Promise<void> {
           'Set SOVEREIGN_FIELD_KEK to the KEK that wraps this row, then re-run.',
       );
     }
+    const ctx = { pluginId: row.pluginId, class: row.class } as const;
     return {
       row,
-      dek: unwrapKeyMaterial(oldKek, row.wrappedDek, {
-        pluginId: row.pluginId,
-        class: row.class,
-        purpose: 'dek',
-      }),
-      hmacKey: unwrapKeyMaterial(oldKek, row.wrappedHmacKey, {
-        pluginId: row.pluginId,
-        class: row.class,
-        purpose: 'hmac',
-      }),
+      dek: unwrapKeyMaterial(oldKek, row.wrappedDek, { ...ctx, purpose: 'dek' }),
+      hmacKey: unwrapKeyMaterial(oldKek, row.wrappedHmacKey, { ...ctx, purpose: 'hmac' }),
+      // A KEK rotation during an open blind-index rotation window must carry
+      // the previous HMAC key across, or the dual-read window dies silently.
+      hmacKeyPrevious: row.wrappedHmacKeyPrevious
+        ? unwrapKeyMaterial(oldKek, row.wrappedHmacKeyPrevious, { ...ctx, purpose: 'hmac' })
+        : null,
     };
   });
 
   // Phase 2 — rewrap and persist. Interruption mid-loop is safe: each row is
   // atomically either old-wrapped or new-wrapped, and a re-run resumes.
-  for (const { row, dek, hmacKey } of unwrapped) {
+  for (const { row, dek, hmacKey, hmacKeyPrevious } of unwrapped) {
     const ctx = { pluginId: row.pluginId, class: row.class } as const;
     await updateFieldKeyRowWrapped(
       pdb,
       row.id,
       wrapKeyMaterial(newKek, dek, { ...ctx, purpose: 'dek' }),
       wrapKeyMaterial(newKek, hmacKey, { ...ctx, purpose: 'hmac' }),
+      hmacKeyPrevious
+        ? wrapKeyMaterial(newKek, hmacKeyPrevious, { ...ctx, purpose: 'hmac' })
+        : null,
       newFp,
     );
     consola.success(`Rotated ${row.pluginId} / ${row.class}`);

@@ -33,12 +33,21 @@ const DDL = `CREATE TABLE IF NOT EXISTS field_encryption_keys (
   class text NOT NULL,
   wrapped_dek text NOT NULL,
   wrapped_hmac_key text NOT NULL,
+  wrapped_hmac_key_previous text,
+  hmac_rotation_started_at integer,
   kek_fingerprint text NOT NULL,
   created_at integer NOT NULL,
   updated_at integer NOT NULL
 )`;
 const DDL_IDX = `CREATE UNIQUE INDEX IF NOT EXISTS field_encryption_keys_plugin_class_idx
   ON field_encryption_keys (plugin_id, class)`;
+// Long-lived test databases may pre-date migration 0023 — add its columns
+// tolerantly (sqlite has no ADD COLUMN IF NOT EXISTS; a duplicate errors and
+// is ignored).
+const KEYS_ALTERS = [
+  `ALTER TABLE field_encryption_keys ADD COLUMN wrapped_hmac_key_previous text`,
+  `ALTER TABLE field_encryption_keys ADD COLUMN hmac_rotation_started_at integer`,
+];
 
 describe.skipIf(!LIVE)('field_encryption_keys row helpers (live sqld)', () => {
   const originalDialect = process.env.DB_DIALECT;
@@ -53,6 +62,13 @@ describe.skipIf(!LIVE)('field_encryption_keys row helpers (live sqld)', () => {
     pdb = createClient({ dialect: 'sqlite' });
     await dbRun(pdb, sql.raw(DDL));
     await dbRun(pdb, sql.raw(DDL_IDX));
+    for (const alter of KEYS_ALTERS) {
+      try {
+        await dbRun(pdb, sql.raw(alter));
+      } catch {
+        // column already exists
+      }
+    }
   });
 
   afterAll(async () => {
@@ -94,6 +110,7 @@ describe.skipIf(!LIVE)('field_encryption_keys row helpers (live sqld)', () => {
       row.id,
       wrapKeyMaterial(newKek, dek, { ...ctx, purpose: 'dek' }),
       wrapKeyMaterial(newKek, hmacKey, { ...ctx, purpose: 'hmac' }),
+      null,
       kekFingerprint(newKek),
     );
 

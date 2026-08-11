@@ -63,6 +63,12 @@ function fakeCipher(pluginId: string, cls: string) {
 
 vi.mock('../field-encryption-keys', () => ({
   getFieldCipher: vi.fn(async (pluginId: string, cls: string) => fakeCipher(pluginId, cls)),
+  // Leg 4: hashFieldValue resolves HMAC keys fresh via getFieldHmacs — back
+  // it with the same per-(plugin × class) fake key the cipher uses.
+  getFieldHmacs: vi.fn(async (pluginId: string, cls: string) => {
+    const cipher = fakeCipher(pluginId, cls);
+    return { current: (input: string) => cipher.hmac(input) };
+  }),
   isClassEnabled: vi.fn((cls: string) => enabledClasses.has(cls)),
 }));
 

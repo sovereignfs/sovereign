@@ -58,13 +58,13 @@ dedicated client outside a request, provision it explicitly using the internal
 
 Table names don't need a slug prefix. Your schema can use simple names:
 
-Schema files live under `app/_lib/db/`, not a plugin-root `db/` directory —
+Schema files live under `app/_db/`, not a plugin-root `db/` directory —
 only `app/` is composed into the runtime's route tree (dev: copied; production:
 symlinked), so application code can only import files that live inside it. See
 [File structure](plugin-development.md#file-structure).
 
 ```ts
-// app/_lib/db/schema.ts
+// app/_db/schema.ts
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 
 export const lists = sqliteTable('lists', {
@@ -94,7 +94,7 @@ export const lists = sqliteTable('lists', {
 - **You still need a genuine, separate Postgres schema file to generate Postgres
   migrations from.** `drizzle-kit generate --dialect postgresql` cannot read a
   `sqliteTable()`-based schema file — it silently reports zero tables found. Keep a
-  second file (e.g. `app/_lib/db/schema.postgres.ts`, using `pgTable`/`integer`, a
+  second file (e.g. `app/_db/schema.postgres.ts`, using `pgTable`/`integer`, a
   structural mirror of your real schema) whose only job is driving migration generation;
   application code never imports it. See `packages/db/src/schema/{sqlite,postgres}/platform.ts`
   for the platform's own reference pair — note the platform's own Postgres schema uses
@@ -130,12 +130,12 @@ postgresql` cannot read a `sqliteTable()`-based schema (it silently reports zero
 tables found), so a genuine second `pgTable`-based file is required:
 
 ```bash
-# SQLite — from app/_lib/db/schema.ts (the schema application code queries against):
-pnpm drizzle-kit generate --schema app/_lib/db/schema.ts --out migrations/sqlite --dialect sqlite
+# SQLite — from app/_db/schema.ts (the schema application code queries against):
+pnpm drizzle-kit generate --schema app/_db/schema.ts --out migrations/sqlite --dialect sqlite
 
-# Postgres — from a separate app/_lib/db/schema.postgres.ts, structurally mirroring
-# app/_lib/db/schema.ts but never using native Postgres boolean/bigint (see above):
-pnpm drizzle-kit generate --schema app/_lib/db/schema.postgres.ts --out migrations/postgres --dialect postgresql
+# Postgres — from a separate app/_db/schema.postgres.ts, structurally mirroring
+# app/_db/schema.ts but never using native Postgres boolean/bigint (see above):
+pnpm drizzle-kit generate --schema app/_db/schema.postgres.ts --out migrations/postgres --dialect postgresql
 ```
 
 Review the generated SQL before committing. Migration files are committed
@@ -316,7 +316,7 @@ timestamps make the other look already-applied and skip silently, forever.
 
 `drizzle-kit generate --dialect postgresql` always qualifies a generated `FOREIGN KEY`
 constraint's target table with the schema the `pgTable()` was declared in — which is
-`public` by default, since `app/_lib/db/schema.postgres.ts` never declares an explicit
+`public` by default, since `app/_db/schema.postgres.ts` never declares an explicit
 `pgSchema()` (see "You still need a genuine, separate Postgres schema file" above). At
 runtime a plugin's tables never live in `public` — they live in `plugin_<slug>`, reached
 only via the connection's `search_path` (see above) — so a generated

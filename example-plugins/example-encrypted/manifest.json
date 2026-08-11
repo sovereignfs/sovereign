@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "fs.sovereign.example-encrypted",
+  "name": "Example: Encrypted notes",
+  "version": "0.1.0",
+  "description": "Reference plugin for app-level field encryption (RFC 0092): classified columns, seal/open, blind-index exact-match search, table registration, and plaintext export.",
+  "type": "sovereign",
+  "example": true,
+  "runtime": "native",
+  "routePrefix": "/example-encrypted",
+  "shell": "default",
+  "icon": "icon.svg",
+  "repository": "https://github.com/sovereignfs/sovereign/tree/main/example-plugins/example-encrypted",
+  "permissions": ["auth:session", "db:readWrite", "crypto:use", "data:export"],
+  "compatibility": {
+    "minPlatformVersion": "0.82.0"
+  }
+}

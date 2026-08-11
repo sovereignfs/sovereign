@@ -39,6 +39,14 @@ export const permissionSchema = z.enum([
   'device:biometrics',
 ]);
 
+/**
+ * Surfaces a plugin can run on (RFC 0080). Mirrors the hand-declared `Surface`
+ * type independently kept in sync in `runtime/src/surface.ts` and
+ * `packages/sdk/src/device.ts` — each package keeps its own copy rather than
+ * sharing an import, the existing convention for this exact union.
+ */
+export const surfaceSchema = z.enum(['browser', 'mobile', 'desktop']);
+
 /** Validate that a string is a valid semver string (e.g. "0.6.0"). */
 const semverString = (label: string) =>
   z
@@ -207,6 +215,24 @@ const manifestObjectSchema = z
      * install-review signal.
      */
     offline: z.enum(['offline-first', 'device-only']).optional(),
+    /**
+     * Surfaces this plugin is available on (RFC 0080). Absent means available
+     * everywhere — today's behavior for every existing plugin, so this is a
+     * purely additive declaration. The platform uses it to filter Launcher,
+     * sidebar, and mobile-drawer presentation only — it is **not** a security
+     * boundary. Direct navigation to an unavailable plugin renders a "not
+     * available on this surface" page rather than being blocked outright,
+     * the deliberate RFC 0080/0082 asymmetry with the RFC 0082 route lock:
+     * `surfaces` filters presentation and is bypassable by anyone who edits
+     * their User-Agent, which is fine because nothing behind it is a secret.
+     */
+    surfaces: z
+      .array(surfaceSchema)
+      .min(1)
+      .refine((arr) => new Set(arr).size === arr.length, {
+        message: 'surfaces must be unique within the plugin',
+      })
+      .optional(),
     /**
      * Marks this plugin as a bundled reference/example. Purely a classification
      * flag: the platform groups example plugins in Console and offers a bulk

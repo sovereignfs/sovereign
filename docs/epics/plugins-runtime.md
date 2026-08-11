@@ -1226,7 +1226,7 @@ promised and neither shipped. Server-side for layout and routing decisions
 - ✅ The architecture-rules entry is present and explicit — see
   `docs/architecture-rules.md`'s `sdk.device.getSurface()` entry.
 
-#### 📋 3.33 — Manifest surfaces availability declaration (RFC 0080)
+#### ✅ 3.33 — Manifest surfaces availability declaration (RFC 0080)
 
 **Goal:** Let a plugin declare which surfaces it is available on, so the platform can
 filter presentation instead of showing a mobile-only app on desktop.

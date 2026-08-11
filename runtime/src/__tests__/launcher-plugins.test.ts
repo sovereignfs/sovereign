@@ -102,6 +102,50 @@ describe('selectLauncherPlugins', () => {
       'fs.example.alpha',
     ]);
   });
+
+  it('excludes a plugin unavailable on the current surface (RFC 0080)', () => {
+    const withSurfaces: LauncherPluginInput[] = [
+      { id: 'fs.example.tasks', name: 'Tasks', routePrefix: '/tasks' },
+      { id: 'fs.example.scanner', name: 'Scanner', routePrefix: '/scanner', surfaces: ['mobile'] },
+    ];
+    const ids = selectLauncherPlugins(
+      withSurfaces,
+      none,
+      'platform:admin',
+      undefined,
+      'desktop',
+    ).map((p) => p.id);
+    expect(ids).toEqual(['fs.example.tasks']);
+  });
+
+  it('includes a plugin whose surfaces list matches the current surface', () => {
+    const withSurfaces: LauncherPluginInput[] = [
+      { id: 'fs.example.scanner', name: 'Scanner', routePrefix: '/scanner', surfaces: ['mobile'] },
+    ];
+    const ids = selectLauncherPlugins(
+      withSurfaces,
+      none,
+      'platform:admin',
+      undefined,
+      'mobile',
+    ).map((p) => p.id);
+    expect(ids).toEqual(['fs.example.scanner']);
+  });
+
+  it('leaves every existing plugin (no surfaces field) unaffected when currentSurface is supplied', () => {
+    const ids = selectLauncherPlugins(plugins, none, 'platform:admin', undefined, 'desktop').map(
+      (p) => p.id,
+    );
+    expect(ids).toEqual(['fs.example.tasks', 'fs.example.audit']);
+  });
+
+  it('is a no-op when currentSurface is omitted, even for a plugin declaring surfaces', () => {
+    const withSurfaces: LauncherPluginInput[] = [
+      { id: 'fs.example.scanner', name: 'Scanner', routePrefix: '/scanner', surfaces: ['mobile'] },
+    ];
+    const ids = selectLauncherPlugins(withSurfaces, none, 'platform:admin').map((p) => p.id);
+    expect(ids).toEqual(['fs.example.scanner']);
+  });
 });
 
 describe('selectSidebarPlugins', () => {
@@ -141,6 +185,23 @@ describe('selectSidebarPlugins', () => {
       'fs.example.beta',
       'fs.example.alpha',
     ]);
+  });
+
+  it('excludes a plugin unavailable on the current surface (RFC 0080)', () => {
+    const withSurfaces: LauncherPluginInput[] = [
+      { id: 'fs.example.tasks', name: 'Tasks', routePrefix: '/tasks' },
+      { id: 'fs.example.scanner', name: 'Scanner', routePrefix: '/scanner', surfaces: ['mobile'] },
+    ];
+    const ids = selectSidebarPlugins(withSurfaces, none, undefined, 'desktop').map((p) => p.id);
+    expect(ids).toEqual(['fs.example.tasks']);
+  });
+
+  it('is a no-op when currentSurface is omitted', () => {
+    const withSurfaces: LauncherPluginInput[] = [
+      { id: 'fs.example.scanner', name: 'Scanner', routePrefix: '/scanner', surfaces: ['mobile'] },
+    ];
+    const ids = selectSidebarPlugins(withSurfaces, none).map((p) => p.id);
+    expect(ids).toEqual(['fs.example.scanner']);
   });
 });
 

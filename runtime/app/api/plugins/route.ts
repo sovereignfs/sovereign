@@ -5,6 +5,7 @@ import { getRestrictedPluginIds } from '@/src/plugin-access-server';
 import { getDisabledPluginIds } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
 import { applySidebarOrder, selectLauncherPlugins } from '@/src/launcher-plugins';
+import { parseSurfaceHeader } from '@/src/surface';
 
 /**
  * Launcher-visible plugins for the current user (SRS LCH-01/03/04). Session-
@@ -35,7 +36,14 @@ export async function GET(request: Request): Promise<Response> {
       : [],
   );
 
-  const launcherPlugins = selectLauncherPlugins(installedPlugins, disabledIds, role, restrictedIds);
+  const currentSurface = parseSurfaceHeader(request.headers.get('x-sovereign-surface'));
+  const launcherPlugins = selectLauncherPlugins(
+    installedPlugins,
+    disabledIds,
+    role,
+    restrictedIds,
+    currentSurface,
+  );
   const prefs = userId ? await getAccountPrefs(pdb, userId) : null;
   const plugins = applySidebarOrder(launcherPlugins, prefs?.sidebarPlugins ?? null, {
     dropHidden: false,

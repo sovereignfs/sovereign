@@ -341,7 +341,9 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // session, capability, and plugin-permission gates are unchanged and are
   // the only real boundaries. A forged focus header or edited User-Agent
   // grants no access the caller's role doesn't already have.
-  const { focusPlugin } = resolveSurface(request.headers.get('user-agent'));
+  const { surface: currentSurface, focusPlugin } = resolveSurface(
+    request.headers.get('user-agent'),
+  );
   const focusDecision = decideFocusRoute(pathname, focusPlugin, installedPlugins);
   if (focusDecision.kind === 'redirect') {
     return applyCsp(
@@ -493,6 +495,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       user.role,
       paywallIds,
       restrictedIds,
+      currentSurface,
     );
     if (decision === 'not-found') {
       if (pathname.startsWith('/api/')) {
@@ -526,6 +529,22 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
           NextResponse.redirect(new URL(`/paywall/${encodeURIComponent(pluginId)}`, request.url), {
             status: 303,
           }),
+        ),
+      );
+    }
+    if (decision === 'unavailable-surface') {
+      // RFC 0080 — presentation only, not a security boundary (see the hard
+      // rule in docs/architecture-rules.md): a manifest-declared `surfaces`
+      // list this request's (spoofable) surface isn't in. API routes get 404
+      // — there is no sensible response body for "this works, just not from
+      // here" — page routes redirect to a generic explanation, same pattern
+      // as the paywall/forbidden gates above.
+      if (pathname.startsWith('/api/')) {
+        return applyCsp(withCookies(new NextResponse('Not Found', { status: 404 })));
+      }
+      return applyCsp(
+        withCookies(
+          NextResponse.redirect(new URL('/unavailable-surface', request.url), { status: 303 }),
         ),
       );
     }

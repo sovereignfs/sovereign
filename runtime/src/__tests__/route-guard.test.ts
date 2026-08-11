@@ -105,6 +105,92 @@ describe('decidePluginRoute', () => {
   });
 });
 
+describe('decidePluginRoute — surfaces (RFC 0080)', () => {
+  const mobileOnly: PluginRouteInfo = {
+    id: 'com.example.scanner',
+    routePrefix: '/scanner',
+    surfaces: ['mobile'],
+  };
+  const withSurfaces = [console, launcher, mobileOnly];
+  const none = new Set<string>();
+
+  it('returns unavailable-surface when the current surface is not declared', () => {
+    expect(
+      decidePluginRoute(
+        '/scanner',
+        withSurfaces,
+        none,
+        'platform:user',
+        undefined,
+        undefined,
+        'desktop',
+      ),
+    ).toBe('unavailable-surface');
+  });
+
+  it('allows the plugin on a declared surface', () => {
+    expect(
+      decidePluginRoute(
+        '/scanner',
+        withSurfaces,
+        none,
+        'platform:user',
+        undefined,
+        undefined,
+        'mobile',
+      ),
+    ).toBe('ok');
+  });
+
+  it('allows a plugin with no surfaces declared, regardless of current surface', () => {
+    expect(
+      decidePluginRoute(
+        '/launcher',
+        withSurfaces,
+        none,
+        'platform:user',
+        undefined,
+        undefined,
+        'desktop',
+      ),
+    ).toBe('ok');
+  });
+
+  it('is a no-op when currentSurface is not supplied (backward compatible)', () => {
+    expect(decidePluginRoute('/scanner', withSurfaces, none, 'platform:user')).toBe('ok');
+  });
+
+  it('disabled wins over surface unavailability', () => {
+    const disabled = new Set(['com.example.scanner']);
+    expect(
+      decidePluginRoute(
+        '/scanner',
+        withSurfaces,
+        disabled,
+        'platform:user',
+        undefined,
+        undefined,
+        'desktop',
+      ),
+    ).toBe('not-found');
+  });
+
+  it('paywall wins over surface unavailability', () => {
+    const paywalled = new Set(['com.example.scanner']);
+    expect(
+      decidePluginRoute(
+        '/scanner',
+        withSurfaces,
+        none,
+        'platform:user',
+        paywalled,
+        undefined,
+        'desktop',
+      ),
+    ).toBe('paywall');
+  });
+});
+
 describe('matchedPublicPluginRouteId', () => {
   const blog: PluginRouteInfo = {
     id: 'com.example.blog',

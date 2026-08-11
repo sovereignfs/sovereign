@@ -142,6 +142,32 @@ describe('validateManifest', () => {
     if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
   });
 
+  it('accepts a manifest declaring surfaces (RFC 0080)', () => {
+    expect(validateManifest({ ...base, surfaces: ['mobile', 'desktop'] }).valid).toBe(true);
+  });
+
+  it('accepts a manifest with no surfaces field (available everywhere)', () => {
+    expect(validateManifest(base).valid).toBe(true);
+  });
+
+  it('rejects an empty surfaces array', () => {
+    const res = validateManifest({ ...base, surfaces: [] });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('surfaces');
+  });
+
+  it('rejects duplicate surfaces entries', () => {
+    const res = validateManifest({ ...base, surfaces: ['mobile', 'mobile'] });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
+  });
+
+  it('rejects an invalid surfaces value', () => {
+    const res = validateManifest({ ...base, surfaces: ['tablet'] });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('surfaces');
+  });
+
   it('accepts a manifest declaring public: true with shell: minimal (RFC 0089)', () => {
     expect(validateManifest({ ...base, public: true, shell: 'minimal' }).valid).toBe(true);
   });

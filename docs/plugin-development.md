@@ -1089,9 +1089,67 @@ while a class was enabled stays readable if the operator later disables it.
 An envelope can only be decrypted by the plugin that produced it, with the
 same `context` value it was encrypted under. Encrypted values lose SQL
 `LIKE`/range/`ORDER BY` on their column — keep filterable metadata (dates,
-categories, ids) in separate plaintext columns. Declarative schema helpers
-(`encryptedText()`/`blindIndex()`, with exact-match search) ship with
-workstream 0011 leg 3.
+categories, ids) in separate plaintext columns.
+
+#### Declarative schema helpers (`@sovereignfs/sdk/drizzle`)
+
+Most plugins should never call `encryptField`/`decryptField` directly.
+Classify columns in your schema, then run rows through one mechanical
+`seal()`/`open()` call per statement:
+
+```ts
+// db/schema.ts — classification lives here, visible to reviewers
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { encryptedText, blindIndex } from '@sovereignfs/sdk/drizzle';
+
+export const entries = sqliteTable('entries', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  loggedAt: integer('logged_at').notNull(), // plaintext metadata — filter/sort freely
+  notes: encryptedText('notes', { sensitivity: 'health' }),
+  notesIdx: blindIndex('notes_bidx', { source: 'notes' }), // `source` = the JS key of the encrypted column
+});
+```
+
+```ts
+// writes — seal() encrypts every classified value and computes every blind index
+await db.insert(entries).values(await sdk.crypto.seal(entries, row));
+
+// reads — open() decrypts every enveloped value
+const rows = await sdk.crypto.open(entries, await db.select().from(entries));
+
+// exact-match search over encrypted data, via the blind index
+const needle = await sdk.crypto.hashField(term, { sensitivity: 'health' });
+const hits = await db.select().from(entries).where(eq(entries.notesIdx, needle));
+```
+
+Rules and guarantees:
+
+- **The tripwire.** An `encryptedText` column rejects any write that isn't a
+  sealed envelope — a forgotten `seal()` throws at write time instead of
+  silently storing plaintext. The one exception is raw ` sql` `` statements,
+  which bypass drizzle's column mappers entirely: never write classified
+  columns with raw SQL.
+- **Read-modify-write:** `open()` the row, modify, `seal()` again. `seal()` is
+  idempotent for a consistent envelope+index pair, but refuses to compute a
+  blind index from an already-sealed source (the plaintext is gone).
+- **Blind indexes are exact-match only** — a keyed HMAC per (class × plugin),
+  never usable for `LIKE`, ranges, or ordering. On an instance with no
+  `SOVEREIGN_FIELD_KEK` configured, `hashField` falls back to an unkeyed
+  domain-separated hash (such instances store plaintext anyway); enabling
+  encryption later re-computes indexes via the operator backfill tool.
+- **Export/import:** your `sdk.portability` export resolver must `open()` rows
+  before emitting them — users export their data in plaintext, not envelopes.
+  `sdk.crypto` works inside portability resolvers (the host resolves your
+  plugin identity from the portability context when no request is in flight).
+- **The Postgres migration twin schema** (`db/schema.postgres.ts`, used only
+  by `drizzle-kit generate`) declares these columns as plain `text(...)` — it
+  is never queried through, so it needs neither metadata nor the tripwire.
+
+Three sanctioned patterns for search/sort over classified data: a
+`blindIndex()` for exact match; separate plaintext metadata columns for
+filtering/sorting; and `open()`-then-filter in application code for anything
+fuzzier, with the cost that implies.
 
 ### External connections (`sdk.connections`, RFC 0049)
 

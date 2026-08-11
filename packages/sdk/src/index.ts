@@ -74,7 +74,8 @@ export const sdk = {
   billing,
 };
 
-export { SENSITIVITY_CLASSES } from './types';
+export { SENSITIVITY_CLASSES, FIELD_DATA_PREFIX, FIELD_PASSTHROUGH_PREFIX } from './types';
+export { getFieldColumns, type DiscoveredFieldColumn, type FieldColumnMeta } from './field-schema';
 export { provideHost } from './host';
 export type { SdkHost } from './host';
 export type { Surface } from './device';
@@ -165,6 +166,7 @@ export type {
   SensitivityClass,
   EncryptFieldOptions,
   DecryptFieldOptions,
+  HashFieldOptions,
   CryptoContext,
   StorageContext,
   StorageObject,

@@ -17,6 +17,7 @@ import type {
   CryptoContext,
   DecryptFieldOptions,
   EncryptFieldOptions,
+  HashFieldOptions,
   ConnectionContext,
   ConnectionListFilter,
   ConnectionOAuthState,
@@ -218,6 +219,8 @@ export interface SdkHost {
       options: DecryptFieldOptions,
       context: CryptoContext,
     ): Promise<string>;
+    /** Blind-index keyed hash (RFC 0092 leg 3). Unkeyed fallback when no KEK is configured. */
+    hashField(value: string, options: HashFieldOptions, context: CryptoContext): Promise<string>;
   };
   connections: {
     create(input: CreateConnectionInput, context: ConnectionContext): Promise<ConnectionRef>;

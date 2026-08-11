@@ -115,7 +115,34 @@ import {
 } from './storage';
 import { resolveProviderConfig } from './provider-configs';
 import { checkPluginMailerRateLimit, requireMailerPluginContext } from './plugin-mailer';
-import { decryptFieldValue, encryptFieldValue, requireCryptoPluginContext } from './field-crypto';
+import {
+  decryptFieldValue,
+  encryptFieldValue,
+  hashFieldValue,
+  requireCryptoPluginContext,
+  type ResolvedCryptoContext,
+} from './field-crypto';
+
+/**
+ * Resolve a nullable-pluginId sdk.crypto context (RFC 0092): the header
+ * value when present, else the portability plugin context (export/import
+ * resolvers run outside plugin routes — same fallback db.getClient uses).
+ * Rejects and permission-checks before any crypto happens.
+ */
+function resolveCryptoContext(context: {
+  tenantId: string;
+  pluginId: string | null;
+}): ResolvedCryptoContext {
+  const pluginId = context.pluginId ?? getPortabilityPluginContext() ?? null;
+  if (!pluginId) {
+    throw new Error('sdk.crypto requires a plugin context (route header or portability resolver).');
+  }
+  requireCryptoPluginContext(
+    pluginId,
+    registry.find((m) => m.id === pluginId),
+  );
+  return { tenantId: context.tenantId, pluginId };
+}
 import { sendPlatformEmail } from './platform-email';
 
 let _version: string | undefined;
@@ -675,18 +702,16 @@ provideHost({
   },
   crypto: {
     async encryptField(value, options, context): Promise<string> {
-      requireCryptoPluginContext(
-        context.pluginId,
-        registry.find((m) => m.id === context.pluginId),
-      );
-      return encryptFieldValue(value, options, context);
+      const ctx = resolveCryptoContext(context);
+      return encryptFieldValue(value, options, ctx);
     },
     async decryptField(envelope, options, context): Promise<string> {
-      requireCryptoPluginContext(
-        context.pluginId,
-        registry.find((m) => m.id === context.pluginId),
-      );
-      return decryptFieldValue(envelope, options, context);
+      const ctx = resolveCryptoContext(context);
+      return decryptFieldValue(envelope, options, ctx);
+    },
+    async hashField(value, options, context): Promise<string> {
+      const ctx = resolveCryptoContext(context);
+      return hashFieldValue(value, options, ctx);
     },
   },
   secrets: {

@@ -77,7 +77,12 @@ vi.mock('@sovereignfs/db', async (importOriginal) => {
 
 let enabledClasses = new Set<string>(['pii', 'health']);
 
-import { decryptFieldValue, encryptFieldValue, requireCryptoPluginContext } from '../field-crypto';
+import {
+  decryptFieldValue,
+  encryptFieldValue,
+  hashFieldValue,
+  requireCryptoPluginContext,
+} from '../field-crypto';
 
 const CTX = { tenantId: 'default', pluginId: 'fs.test.plugin' };
 
@@ -144,6 +149,35 @@ describe('encryptFieldValue / decryptFieldValue', () => {
       /Unsupported field envelope/,
     );
     await expect(decryptFieldValue('svf1:onlyone', {}, CTX)).rejects.toThrow(/Malformed svf1/);
+  });
+
+  it('hashField: keyed HMAC when a KEK is set — deterministic, per-class distinct', async () => {
+    process.env.SOVEREIGN_FIELD_KEK = Buffer.from(new Uint8Array(32).fill(7)).toString('base64');
+    try {
+      const a = await hashFieldValue('needle', { sensitivity: 'pii' }, CTX);
+      const b = await hashFieldValue('needle', { sensitivity: 'pii' }, CTX);
+      const c = await hashFieldValue('needle', { sensitivity: 'health' }, CTX);
+      expect(a).toBe(b);
+      expect(a).not.toBe(c);
+    } finally {
+      delete process.env.SOVEREIGN_FIELD_KEK;
+    }
+  });
+
+  it('hashField: unkeyed domain-separated fallback when no KEK — still deterministic and plugin-scoped', async () => {
+    delete process.env.SOVEREIGN_FIELD_KEK;
+    const a = await hashFieldValue('needle', { sensitivity: 'pii' }, CTX);
+    const b = await hashFieldValue('needle', { sensitivity: 'pii' }, CTX);
+    const other = await hashFieldValue(
+      'needle',
+      { sensitivity: 'pii' },
+      { tenantId: 'default', pluginId: 'fs.other' },
+    );
+    expect(a).toBe(b);
+    expect(a).not.toBe(other);
+    await expect(hashFieldValue('x', { sensitivity: 'nope' as never }, CTX)).rejects.toThrow(
+      /Unknown sensitivity class/,
+    );
   });
 
   it('tampered ciphertext fails authentication', async () => {

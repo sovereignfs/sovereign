@@ -75,6 +75,9 @@ describe('sdk.mailer / sdk.email — plugin ID resolution (RFC 0062)', () => {
         async decryptField(envelope: string) {
           return Buffer.from(envelope.slice('svf0:'.length), 'base64url').toString('utf8');
         },
+        async hashField(value: string) {
+          return `h:${value}`;
+        },
       },
       secrets: {
         async create() {

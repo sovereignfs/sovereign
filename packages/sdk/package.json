@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/sdk",
-  "version": "1.34.0",
+  "version": "1.35.0",
   "type": "module",
   "description": "Sovereign SDK — the plugin↔platform contract (types and interfaces).",
   "license": "AGPL-3.0-or-later",
@@ -49,6 +49,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./device-bridge": "./src/device-bridge.ts",
+    "./drizzle": "./src/drizzle.ts",
     "./device-client": "./src/device-client.ts",
     "./e2ee-crypto": "./src/e2ee-crypto.ts",
     "./e2ee-device": "./src/e2ee-device.ts",
@@ -66,11 +67,18 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
+    "drizzle-orm": "^0.45.0",
     "next": ">=15.0.0",
     "react": "^19.0.0"
   },
+  "peerDependenciesMeta": {
+    "drizzle-orm": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",
+    "drizzle-orm": "^0.45.2",
     "@types/react": "catalog:",
     "next": "catalog:",
     "react": "catalog:",

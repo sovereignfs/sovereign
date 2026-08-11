@@ -324,6 +324,16 @@ export interface SecretContext {
 export const SENSITIVITY_CLASSES = ['pii', 'health', 'financial', 'sensitive'] as const;
 export type SensitivityClass = (typeof SENSITIVITY_CLASSES)[number];
 
+/**
+ * Field-envelope prefixes (RFC 0092). `svf1` = ciphertext under the
+ * (class × plugin) DEK; `svf0` = base64url-encoded passthrough written while
+ * the class was not enabled by operator policy. Single source of truth —
+ * the runtime host implementation and the schema-helper tripwire both
+ * consume these.
+ */
+export const FIELD_DATA_PREFIX = 'svf1';
+export const FIELD_PASSTHROUGH_PREFIX = 'svf0';
+
 /** Options for `sdk.crypto.encryptField()` (RFC 0092). */
 export interface EncryptFieldOptions {
   /** The field's sensitivity classification — see `SENSITIVITY_CLASSES`. */
@@ -341,10 +351,21 @@ export interface DecryptFieldOptions {
   context?: string;
 }
 
-/** Runtime-injected request context for `sdk.crypto` calls (RFC 0092). */
+/** Options for `sdk.crypto.hashField()` — the blind-index primitive (RFC 0092). */
+export interface HashFieldOptions {
+  /** The sensitivity class of the source column — selects the HMAC key. */
+  sensitivity: SensitivityClass;
+}
+
+/**
+ * Runtime-injected request context for `sdk.crypto` calls (RFC 0092).
+ * `pluginId` is `null` outside a plugin route context — the host falls back
+ * to the portability plugin context (export/import resolvers run outside
+ * request routes) and rejects the call if no plugin identity resolves.
+ */
 export interface CryptoContext {
   tenantId: string;
-  pluginId: string;
+  pluginId: string | null;
 }
 
 /** Runtime-created external provider connection scope (RFC 0049). */

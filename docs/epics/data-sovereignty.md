@@ -1580,9 +1580,11 @@ with).
 
 ---
 
-#### 📋 8.33 — `encryptedText()`/`blindIndex()` schema helpers + policy-driven write path (RFC 0092, workstream 0011 leg 3)
+#### ✅ 8.33 — `encryptedText()`/`blindIndex()` schema helpers + policy-driven write path (RFC 0092, workstream 0011 leg 3)
 
 **Goal:** Make classification declarative: drizzle column helpers plugin authors use in schema code, with the write/read path encrypting, decrypting, and maintaining blind-index companions automatically — no imperative crypto calls in plugin CRUD code.
+
+> **Correction note (as shipped):** the "no imperative crypto calls" wording proved unachievable safely — plugins query a raw drizzle client (`sdk.db.getClient()`), and drizzle's only column hook (`customType.toDriver`) is synchronous and identity-blind, so fully transparent interception would have required a record-and-replay proxy over drizzle's entire fluent API whose failure mode is silently-unencrypted writes (this leg's designed stop condition). Shipped design, approved at the gate: classification stays fully declarative in the schema; crypto is **one mechanical `sdk.crypto.seal()`/`open()` call per statement**; and `toDriver` serves as a synchronous **tripwire** that throws on any unsealed write to a classified column — a forgotten `seal()` cannot silently store plaintext (raw ` sql` `` statements bypass column mappers and are the documented exception). `sdk.crypto.hashField()` (added this leg) is the blind-index query primitive.
 
 **Deliverables:**
 

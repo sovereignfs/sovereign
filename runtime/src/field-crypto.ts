@@ -1,6 +1,12 @@
-import { FieldEncryptionConfigError, getFieldKeyRowById, getPlatformDb } from '@sovereignfs/db';
-import type { CryptoContext, DecryptFieldOptions, EncryptFieldOptions } from '@sovereignfs/sdk';
-import { SENSITIVITY_CLASSES } from '@sovereignfs/sdk';
+import { createHash } from 'node:crypto';
+import {
+  FieldEncryptionConfigError,
+  fieldKekFromEnv,
+  getFieldKeyRowById,
+  getPlatformDb,
+} from '@sovereignfs/db';
+import type { DecryptFieldOptions, EncryptFieldOptions, HashFieldOptions } from '@sovereignfs/sdk';
+import { FIELD_DATA_PREFIX, FIELD_PASSTHROUGH_PREFIX, SENSITIVITY_CLASSES } from '@sovereignfs/sdk';
 import { getFieldCipher, isClassEnabled } from './field-encryption-keys';
 
 /**
@@ -27,8 +33,19 @@ import { getFieldCipher, isClassEnabled } from './field-encryption-keys';
  * manifest (same shape as `requireMailerPluginContext`).
  */
 
-const DATA_ENVELOPE = 'svf1';
-const PASSTHROUGH_ENVELOPE = 'svf0';
+const DATA_ENVELOPE = FIELD_DATA_PREFIX;
+const PASSTHROUGH_ENVELOPE = FIELD_PASSTHROUGH_PREFIX;
+
+/**
+ * The resolved (non-null pluginId) context this module's functions operate
+ * on. The SDK sends a nullable pluginId; `runtime/src/sdk-host.ts` resolves
+ * it (header value, else the portability plugin context) and rejects the
+ * call before delegating here.
+ */
+export interface ResolvedCryptoContext {
+  tenantId: string;
+  pluginId: string;
+}
 
 /** The minimal manifest slice this module needs — keeps tests independent of the full schema. */
 export interface CryptoPermissionManifest {
@@ -68,7 +85,7 @@ function fieldAad(input: {
 export async function encryptFieldValue(
   value: string,
   options: EncryptFieldOptions,
-  ctx: CryptoContext,
+  ctx: ResolvedCryptoContext,
 ): Promise<string> {
   const cls: string = options.sensitivity;
   if (!(SENSITIVITY_CLASSES as readonly string[]).includes(cls)) {
@@ -92,7 +109,7 @@ export async function encryptFieldValue(
 export async function decryptFieldValue(
   envelope: string,
   options: DecryptFieldOptions,
-  ctx: CryptoContext,
+  ctx: ResolvedCryptoContext,
 ): Promise<string> {
   const sep = envelope.indexOf(':');
   const prefix = sep === -1 ? envelope : envelope.slice(0, sep);
@@ -134,4 +151,34 @@ export async function decryptFieldValue(
     context: options.context ?? '',
   });
   return cipher.decrypt([iv, tag, ciphertext].join(':'), aad);
+}
+
+/**
+ * Blind-index keyed hash (RFC 0092 leg 3): deterministic HMAC-SHA256 of the
+ * plaintext under the (class × plugin) HMAC key — never the DEK, so
+ * revealing index values never weakens ciphertext. When no KEK is
+ * configured, falls back to an unkeyed (domain-separated) SHA-256: such an
+ * instance stores plaintext anyway, and the deterministic value keeps
+ * exact-match search working; enabling encryption later re-seals indexes
+ * via the leg-4 backfill tool.
+ */
+export async function hashFieldValue(
+  value: string,
+  options: HashFieldOptions,
+  ctx: ResolvedCryptoContext,
+): Promise<string> {
+  const cls: string = options.sensitivity;
+  if (!(SENSITIVITY_CLASSES as readonly string[]).includes(cls)) {
+    throw new FieldEncryptionConfigError(
+      `Unknown sensitivity class "${cls}" — expected one of: ${SENSITIVITY_CLASSES.join(', ')}.`,
+    );
+  }
+  if (!fieldKekFromEnv()) {
+    return createHash('sha256')
+      .update(`sovereign:blind-index:${ctx.pluginId}:${cls}:`, 'utf8')
+      .update(value, 'utf8')
+      .digest('base64url');
+  }
+  const cipher = await getFieldCipher(ctx.pluginId, cls);
+  return cipher.hmac(value);
 }

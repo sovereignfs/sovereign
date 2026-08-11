@@ -42,6 +42,20 @@ handing off to `turbo dev`. If Docker isn't running, `pnpm dev` fails fast
 with a clear message instead of the runtime/auth servers starting and then
 failing on the first database call.
 
+**Iterating on a new database schema? Use `drizzle-kit generate`, never
+`drizzle-kit push`,** against `sovereign-sqld-dev` or the Compose
+`sovereign-sqld` container — both are shared, long-lived instances reused
+across every `pnpm dev`/`docker compose up` run. `push` writes schema
+changes directly and never touches `__drizzle_migrations`, which desyncs
+the migration tracking cursor from actual schema state: the next boot then
+tries to replay the "pending" migration's raw DDL against a table that
+already exists and crashes with `SQL_INPUT_ERROR: table ... already exists`
+(see `docs/troubleshooting.md`'s "`table ... already exists` crash on
+`pnpm dev` startup"). Shape a schema interactively against a
+throwaway/ephemeral sqld instance instead, then run
+`pnpm --filter @sovereignfs/db db:generate` once you've settled on the
+shape and let the normal migration path apply and track it for real.
+
 **After the first `pnpm install`, prefer `pnpm install --frozen-lockfile`**
 for routine installs (e.g. after `git pull`) — it installs exactly what
 `pnpm-lock.yaml` already specifies instead of re-resolving the whole

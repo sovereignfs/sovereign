@@ -200,7 +200,7 @@ export interface StorageContext {
  * via `sdk.e2ee`; the browser-only crypto that produces/consumes the
  * ciphertext these methods store lives in `e2ee-crypto`/`e2ee-device`/
  * `e2ee-object`/`e2ee-state`. Distinct from server-side field crypto
- * (`sdk.crypto.encryptField()`, RFC 0008): the runtime can decrypt a
+ * (`sdk.crypto.encryptField()`, RFC 0092): the runtime can decrypt a
  * server-side field; it can never decrypt a client-side encrypted object.
  *
  * The Client Master Key (CMK) itself never exists server-side, plaintext or
@@ -312,6 +312,39 @@ export interface SecretContext {
   pluginId: string;
   userId: string | null;
   capabilities: readonly string[];
+}
+
+/**
+ * Sensitivity taxonomy for server-side field encryption (RFC 0092). A plugin
+ * author *classifies* a field; whether that class is actually encrypted is
+ * the operator's instance-wide policy decision (`SOVEREIGN_ENCRYPT_CLASSES`).
+ * Closed set — extending it is a platform change (minor SDK bump), reviewed
+ * like any other public-contract change.
+ */
+export const SENSITIVITY_CLASSES = ['pii', 'health', 'financial', 'sensitive'] as const;
+export type SensitivityClass = (typeof SENSITIVITY_CLASSES)[number];
+
+/** Options for `sdk.crypto.encryptField()` (RFC 0092). */
+export interface EncryptFieldOptions {
+  /** The field's sensitivity classification — see `SENSITIVITY_CLASSES`. */
+  sensitivity: SensitivityClass;
+  /**
+   * Optional binding scope (e.g. a column name). The same value must be
+   * presented at decryption time; a mismatch fails authentication. Default `''`.
+   */
+  context?: string;
+}
+
+/** Options for `sdk.crypto.decryptField()` (RFC 0092). */
+export interface DecryptFieldOptions {
+  /** Must match the `context` used at encryption time. Default `''`. */
+  context?: string;
+}
+
+/** Runtime-injected request context for `sdk.crypto` calls (RFC 0092). */
+export interface CryptoContext {
+  tenantId: string;
+  pluginId: string;
 }
 
 /** Runtime-created external provider connection scope (RFC 0049). */

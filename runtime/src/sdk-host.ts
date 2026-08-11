@@ -115,6 +115,7 @@ import {
 } from './storage';
 import { resolveProviderConfig } from './provider-configs';
 import { checkPluginMailerRateLimit, requireMailerPluginContext } from './plugin-mailer';
+import { decryptFieldValue, encryptFieldValue, requireCryptoPluginContext } from './field-crypto';
 import { sendPlatformEmail } from './platform-email';
 
 let _version: string | undefined;
@@ -670,6 +671,22 @@ provideHost({
     async revokeDevice(id, context) {
       const pdb = await getPlatformDb();
       await revokeE2eeDeviceEnrollment(pdb, id, context.tenantId, context.userId);
+    },
+  },
+  crypto: {
+    async encryptField(value, options, context): Promise<string> {
+      requireCryptoPluginContext(
+        context.pluginId,
+        registry.find((m) => m.id === context.pluginId),
+      );
+      return encryptFieldValue(value, options, context);
+    },
+    async decryptField(envelope, options, context): Promise<string> {
+      requireCryptoPluginContext(
+        context.pluginId,
+        registry.find((m) => m.id === context.pluginId),
+      );
+      return decryptFieldValue(envelope, options, context);
     },
   },
   secrets: {

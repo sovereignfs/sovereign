@@ -14,6 +14,9 @@ import type {
   SendNotificationInput,
   SendToUserEmailInput,
   CreateSecretInput,
+  CryptoContext,
+  DecryptFieldOptions,
+  EncryptFieldOptions,
   ConnectionContext,
   ConnectionListFilter,
   ConnectionOAuthState,
@@ -195,6 +198,26 @@ export interface SdkHost {
     list(scope: SecretScope | undefined, context: SecretContext): Promise<SecretRef[]>;
     update(id: string, value: string, context: SecretContext): Promise<SecretRef>;
     delete(id: string, context: SecretContext): Promise<void>;
+  };
+  crypto: {
+    /**
+     * Server-side field encryption (RFC 0092). Requires the `crypto:use`
+     * manifest permission, enforced host-side against the calling plugin's
+     * manifest. Returns `svf1:` ciphertext when the operator policy enables
+     * the class, `svf0:` passthrough otherwise; `decryptField` accepts both
+     * and never consults the policy (data written under an enabled class
+     * stays readable after the class is disabled).
+     */
+    encryptField(
+      value: string,
+      options: EncryptFieldOptions,
+      context: CryptoContext,
+    ): Promise<string>;
+    decryptField(
+      envelope: string,
+      options: DecryptFieldOptions,
+      context: CryptoContext,
+    ): Promise<string>;
   };
   connections: {
     create(input: CreateConnectionInput, context: ConnectionContext): Promise<ConnectionRef>;

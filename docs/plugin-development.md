@@ -219,6 +219,8 @@ Declared SDK capabilities. The v1-functional ones:
 
 | `storage:readWrite` | Read/write plugin-scoped binary objects via `sdk.storage` (RFC 0044). |
 
+| `crypto:use` | Server-side field encryption via `sdk.crypto.encryptField()`/`decryptField()` (RFC 0092). |
+
 | `device:haptics` | Use `sdk.device.haptics.impact()` (RFC 0083). |
 
 | `device:notifications` | Use `sdk.device.nativeNotifications.*` (RFC 0083). |
@@ -226,9 +228,10 @@ Declared SDK capabilities. The v1-functional ones:
 | `device:biometrics` | Use `sdk.device.biometrics.confirm()` (RFC 0083, sovereign-mobile epic task 20.7). |
 
 Reserved (declaring them is allowed; the backing surfaces throw `NotImplementedError` until
-implemented): `events:publish`, `events:subscribe`, `e2ee:use` (client-side encryption,
-`sdk.e2ee` — RFC 0060; distinct from any future server-side `sdk.crypto.encryptField()`
-field crypto, which the runtime _can_ decrypt).
+implemented): `events:publish`, `events:subscribe`. `e2ee:use` (client-side encryption,
+`sdk.e2ee` — RFC 0060) and `crypto:use` (server-side field encryption, `sdk.crypto` —
+RFC 0092) are both implemented and deliberately distinct: the runtime _can_ decrypt a
+`sdk.crypto` field, and can never decrypt an `sdk.e2ee` object.
 
 **`device:haptics`, `device:notifications`, and `device:biometrics` (RFC 0083)
 provide no isolation between plugins — say this to yourself in plain words
@@ -1054,6 +1057,41 @@ never returned by list calls, never exported, and never shown in Account UI.
 Account deletion hard-deletes user-scoped vault rows. User exports include
 metadata only so users can see which connections need to be re-created after
 import.
+
+### Server-side field encryption (`sdk.crypto`, RFC 0092)
+
+Encrypt a field's value in the runtime before it reaches the database, so the
+database (and its operator) only ever stores ciphertext. Requires the
+`crypto:use` manifest permission. Distinct from `sdk.e2ee` (RFC 0060): the
+runtime can decrypt these fields — the protection is against the database
+tier, not the app server.
+
+```ts
+import { sdk } from '@sovereignfs/sdk';
+
+// Classify the value; the envelope is an opaque string for any text column.
+const envelope = await sdk.crypto.encryptField(notes, {
+  sensitivity: 'health', // 'pii' | 'health' | 'financial' | 'sensitive'
+  context: 'notes', // optional binding scope (e.g. the column name)
+});
+
+const plaintext = await sdk.crypto.decryptField(envelope, { context: 'notes' });
+```
+
+**You classify; the operator decides.** Whether a sensitivity class is
+actually encrypted is instance-wide policy (`SOVEREIGN_ENCRYPT_CLASSES` in
+`docs/self-hosting.md`). When a class is not enabled, `encryptField` returns
+an encoded passthrough envelope (`svf0:`) instead of ciphertext (`svf1:`) —
+your code stays policy-agnostic, and `decryptField` handles both. Never
+branch on the prefix yourself. Decryption ignores the policy: data written
+while a class was enabled stays readable if the operator later disables it.
+
+An envelope can only be decrypted by the plugin that produced it, with the
+same `context` value it was encrypted under. Encrypted values lose SQL
+`LIKE`/range/`ORDER BY` on their column — keep filterable metadata (dates,
+categories, ids) in separate plaintext columns. Declarative schema helpers
+(`encryptedText()`/`blindIndex()`, with exact-match search) ship with
+workstream 0011 leg 3.
 
 ### External connections (`sdk.connections`, RFC 0049)
 

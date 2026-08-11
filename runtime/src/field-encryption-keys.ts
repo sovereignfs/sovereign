@@ -28,12 +28,15 @@ import {
 export { assertFieldEncryptionConfig } from '@sovereignfs/db';
 
 interface CachedKeys {
+  dekId: string;
   dek: Buffer;
   hmacKey: Buffer;
 }
 
 /** A cipher handle scoped to one (plugin × class). Closures only — no key bytes. */
 export interface FieldCipher {
+  /** The `field_encryption_keys` row id — recorded in `svf1` data envelopes (task 8.32). */
+  readonly dekId: string;
   /** AES-256-GCM. Returns `<iv>:<tag>:<ciphertext>` (base64url segments). */
   encrypt(plaintext: string, aad: Buffer): string;
   /** Inverse of `encrypt`. Throws on authentication failure. */
@@ -73,6 +76,7 @@ async function resolveKeys(pluginId: string, cls: string): Promise<CachedKeys> {
     (await createFieldKeyRow(pdb, kek, pluginId, cls));
 
   const keys: CachedKeys = {
+    dekId: row.id,
     dek: unwrapKeyMaterial(kek, row.wrappedDek, { pluginId, class: cls, purpose: 'dek' }),
     hmacKey: unwrapKeyMaterial(kek, row.wrappedHmacKey, {
       pluginId,
@@ -92,6 +96,7 @@ async function resolveKeys(pluginId: string, cls: string): Promise<CachedKeys> {
 export async function getFieldCipher(pluginId: string, cls: string): Promise<FieldCipher> {
   const keys = await resolveKeys(pluginId, cls);
   return {
+    dekId: keys.dekId,
     encrypt(plaintext: string, aad: Buffer): string {
       const iv = randomBytes(12);
       const cipher = createCipheriv('aes-256-gcm', keys.dek, iv);

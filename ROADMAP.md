@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.79.0 · **Last updated:** 2026-08-11
+**Version:** 0.80.0 · **Last updated:** 2026-08-11
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -273,7 +273,7 @@ doc — but not yet assigned a roadmap slot. Promoted to a phase table once prio
 | —       | Account: async selective data backup UI (regular users) (RFC 0084)                                    | 📋     | [8.18](docs/epics/data-sovereignty.md#-818--account-async-selective-data-backup-ui-regular-users-rfc-0084)                                       |
 | —       | RFC 0071 incident: pre-flight warning and remaining doc follow-ups                                    | 📋     | [8.19](docs/epics/data-sovereignty.md#-819--rfc-0071-incident-pre-flight-warning-and-remaining-doc-follow-ups)                                   |
 | 0.79.0  | Field-encryption key service, KEK→DEK envelope (RFC 0092, workstream 0011 leg 1)                      | ✅     | [8.31](docs/epics/data-sovereignty.md#-831--field-encryption-key-service-kekdek-envelope-rfc-0092-workstream-0011-leg-1)                         |
-| —       | `sdk.crypto` field encryption surface + `crypto:use` (RFC 0092, workstream 0011 leg 2)                | 📋     | [8.32](docs/epics/data-sovereignty.md#-832--sdkcrypto-field-encryption-surface--cryptouse-enforcement-rfc-0092-workstream-0011-leg-2)            |
+| 0.80.0  | `sdk.crypto` field encryption surface + `crypto:use` (RFC 0092, workstream 0011 leg 2)                | ✅     | [8.32](docs/epics/data-sovereignty.md#-832--sdkcrypto-field-encryption-surface--cryptouse-enforcement-rfc-0092-workstream-0011-leg-2)            |
 | —       | `encryptedText()`/`blindIndex()` schema helpers + policy write path (RFC 0092, workstream 0011 leg 3) | 📋     | [8.33](docs/epics/data-sovereignty.md#-833--encryptedtextblindindex-schema-helpers--policy-driven-write-path-rfc-0092-workstream-0011-leg-3)     |
 | —       | Operator backfill + blind-index rotation tooling (RFC 0092, workstream 0011 leg 4)                    | 📋     | [8.34](docs/epics/data-sovereignty.md#-834--operator-backfill--blind-index-rotation-tooling-sv-db-encrypt-fields-rfc-0092-workstream-0011-leg-4) |
 | —       | `packages/db` libSQL driver adoption (workstream 0009)                                                | ✅     | [8.23](docs/epics/data-sovereignty.md#-823--packagesdb-libsql-driver-adoption-workstream-0009-leg-3)                                             |

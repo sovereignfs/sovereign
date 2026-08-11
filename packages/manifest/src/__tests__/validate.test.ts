@@ -345,6 +345,14 @@ describe('validateManifest', () => {
     }
   });
 
+  it('accepts the crypto:use permission (RFC 0092)', () => {
+    const res = validateManifest({
+      ...base,
+      permissions: ['auth:session', 'db:readWrite', 'crypto:use'],
+    });
+    expect(res.valid).toBe(true);
+  });
+
   it('accepts the reserved cross-plugin data-sharing permissions (RFC 0002)', () => {
     const res = validateManifest({
       ...base,

@@ -213,6 +213,21 @@ export async function getFieldKeyRow(
   );
 }
 
+/**
+ * Fetch a wrapped-key row by its id — the `svf1` data envelope (RFC 0092,
+ * task 8.32) records the DEK id, and decryption resolves the row (and thus
+ * the class and owning plugin) from it.
+ */
+export async function getFieldKeyRowById(
+  pdb: PlatformDb,
+  id: string,
+): Promise<FieldEncryptionKeyRow | undefined> {
+  return dbGet<FieldEncryptionKeyRow>(
+    pdb,
+    sql`SELECT ${ROW_COLUMNS} FROM field_encryption_keys WHERE id = ${id}`,
+  );
+}
+
 /** All wrapped-key rows — rotation iterates these. */
 export async function listFieldKeyRows(pdb: PlatformDb): Promise<FieldEncryptionKeyRow[]> {
   return dbAll<FieldEncryptionKeyRow>(

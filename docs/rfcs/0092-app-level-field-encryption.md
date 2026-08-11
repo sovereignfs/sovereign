@@ -120,7 +120,8 @@ Documentation-first now. On acceptance: workstream 0011 (four legs = epic tasks 
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                    |
-| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft                                                                                                             |
-| 0.2     | August 2026 | Accepted (developer go-ahead including gate A, the four-class taxonomy); leg 1 (epic task 8.31 — key service) implemented |
+| Version | Date        | Change                                                                                                                                                                                                                                             |
+| ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft                                                                                                                                                                                                                                      |
+| 0.2     | August 2026 | Accepted (developer go-ahead including gate A, the four-class taxonomy); leg 1 (epic task 8.31 — key service) implemented                                                                                                                          |
+| 0.3     | August 2026 | Leg 2 (epic task 8.32) implemented: `sdk.crypto.encryptField()`/`decryptField()`, `crypto:use` permission, `svf1` data envelope + `svf0` passthrough discriminator; decryption deliberately ignores policy so ciphertext outlives a disabled class |

@@ -37,53 +37,10 @@
 }
 
 /* ── Drawer ──────────────────────────────────────────────────────────────── */
-/* The grab handle is now built into Drawer itself (@sovereignfs/ui) — see its
-   own doc comment. Nothing to render here anymore. */
-
-.drawerHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--sv-space-3) var(--sv-space-4) var(--sv-space-2);
-}
-
-.drawerTitle {
-  font-size: var(--sv-font-size-md);
-  font-weight: var(--sv-font-weight-semibold);
-  color: var(--sv-color-text-primary);
-}
-
-.drawerClose {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* Min hit area (WCAG 2.5.5 / Apple HIG) — this is a touch-only surface, so
-     the close button must be comfortably thumb-tappable. The icon inside stays
-     visually small; only the tap target grows. */
-  width: var(--sv-touch-target-min, 44px);
-  height: var(--sv-touch-target-min, 44px);
-  border: none;
-  border-radius: var(--sv-radius-full);
-  background: var(--sv-color-surface-sunken);
-  color: var(--sv-color-text-muted);
-  cursor: pointer;
-  flex-shrink: 0;
-  /* Suppress the UA focus ring on tap (mobile). The styled ring is applied only
-     on :focus-visible (keyboard navigation) below. */
-  outline: none;
-}
-
-@media (hover: hover) {
-  .drawerClose:hover {
-    background: var(--sv-color-border);
-    color: var(--sv-color-text-primary);
-  }
-}
-
-.drawerClose:focus-visible {
-  outline: 2px solid var(--sv-color-focus-ring);
-  outline-offset: 2px;
-}
+/* The grab handle is built into Drawer itself (@sovereignfs/ui) — see its own
+   doc comment. This drawer doesn't pass Drawer's `title` prop (defaults to
+   hidden), so no header row renders either — the grab handle plus swipe-down/
+   scrim-tap dismissal are enough on their own. Nothing to render here. */
 
 /* 3-column plugin grid */
 .drawerGrid {

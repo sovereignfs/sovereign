@@ -110,6 +110,28 @@ describe('Drawer', () => {
     expect(screen.getByRole('dialog').className).not.toMatch(/panelHalf/);
   });
 
+  it('does not render OverlayHeader when title is omitted (hidden by default)', () => {
+    render(
+      <Drawer open onClose={() => {}} aria-label="Nav">
+        <button type="button">Own action</button>
+      </Drawer>,
+    );
+    // Only the content's own button — no OverlayHeader close button.
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+  });
+
+  it('renders OverlayHeader (title + close) when title is provided', () => {
+    const onClose = vi.fn();
+    render(
+      <Drawer open onClose={onClose} aria-label="Nav" title="Apps">
+        Body
+      </Drawer>,
+    );
+    expect(screen.getByText('Apps')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   describe('swipe-down-to-dismiss (grab handle)', () => {
     // The handle is the panel's first child, aria-hidden and unlabeled —
     // same "select via DOM position" approach the scrim-click test above

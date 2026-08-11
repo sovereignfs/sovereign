@@ -113,7 +113,9 @@ describe.skipIf(!PG_URL)('leg 3 end-to-end (live Postgres, real crypto, real dri
     await rawRun(sql.raw(`DROP TABLE IF EXISTS ${TABLE_NAME}`));
     await rawRun(sql`DELETE FROM field_encryption_keys WHERE plugin_id = ${PLUGIN_ID}`);
     for (const [k, v] of Object.entries(saved)) {
-      if (v === undefined) delete process.env[k];
+      // Reflect.deleteProperty, not `delete env[k]` — next build's own ESLint
+      // pass enforces @typescript-eslint/no-dynamic-delete over runtime/src.
+      if (v === undefined) Reflect.deleteProperty(process.env, k);
       else process.env[k] = v;
     }
   });

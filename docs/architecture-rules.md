@@ -180,6 +180,19 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   resolve it against a server-side allowlist (e.g. the installed-plugin
   registry) and pass the _resolved_ string, so the subprocess argument never
   originates from the request at all.
+- **An anchored quantifier immediately before `$`/`^` is quadratic even alone,
+  with no `g` flag and no alternation.** `/-+$/` against a long run of `-`
+  that does **not** end in one (e.g. `'-'.repeat(n) + 'X'`) backtracks the
+  whole run one character at a time trying to satisfy `$`, fails, then the
+  search restarts that same backtrack from the next starting offset — O(n²)
+  from a single anchored `+`. Dropping `g` or splitting `/^-+|-+$/g` into two
+  separate replaces (a real first attempt, corrected in the same PR that
+  introduced it — CodeQL alert #5/#8) removes the multiplicative effect of
+  global re-matching but **not** this. The actual fix is to not use a
+  backtracking regex for the trim at all: a manual index scan (`while
+(s[start] === '-') start++`, mirrored from the end) is O(n) with nothing to
+  exploit. See `slugify()` in `runtime/app/api/admin/groups/route.ts` and
+  `slugifyVitePressHeading()` in `scripts/check-doc-links.ts`.
 - **Invite-only is dual-written, and the auth-server copy is authoritative.**
   The Console toggle (CON-10) writes `invite_only` to both the platform DB
   (`platform_settings`, read by `sdk.platform.getConfig()`) and the auth

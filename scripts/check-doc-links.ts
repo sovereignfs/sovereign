@@ -108,18 +108,24 @@ function slugifyHeading(heading: string): string {
 }
 
 function slugifyVitePressHeading(heading: string): string {
-  return heading
+  const withoutRuns = heading
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
     .split('')
     .filter((character) => character.charCodeAt(0) > 0x1f)
     .join('')
     .replace(/[\s~`!@#$%^&*()\-_+=[\]{}|\\;:"'“”‘’<>,.?/]+/g, '-')
-    .replace(/-{2,}/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '')
-    .replace(/^(\d)/, '_$1')
-    .toLowerCase();
+    .replace(/-{2,}/g, '-');
+  // Manual scan, not `/^-+/` / `/-+$/` — even a single anchored `-+$` is
+  // quadratic on a long dash run that doesn't end in one; see the sibling fix
+  // in runtime/app/api/admin/groups/route.ts for the mechanism. This input is
+  // repo-authored markdown, not attacker-controlled, but there is no reason
+  // to keep a big-O trap around once it's identified.
+  let start = 0;
+  while (start < withoutRuns.length && withoutRuns[start] === '-') start++;
+  let end = withoutRuns.length;
+  while (end > start && withoutRuns[end - 1] === '-') end--;
+  return withoutRuns.slice(start, end).replace(/^(\d)/, '_$1').toLowerCase();
 }
 
 const anchorCache = new Map<string, Set<string>>();

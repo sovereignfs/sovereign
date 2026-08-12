@@ -502,7 +502,12 @@ render prop (breaking, but zero prior consumers).
 
 ---
 
-#### 📋 9.13 — Subtle Sovereign attribution (RFC 0027)
+#### ❌ 9.13 — Subtle Sovereign attribution (RFC 0027) — Rejected
+
+**Rejected** — excluded from the White-labeling Phase 2 workstream
+([0013](../workstreams/0013-white-labeling-phase-2-and-ds-backlog.md))
+during its planning pass; not carried forward to any other workstream
+either. Left here for the record rather than deleted.
 
 **Goal:** Add subtle, useful attribution surfaces so users and admins can identify
 the platform as Sovereign without adding a persistent badge to daily workspace

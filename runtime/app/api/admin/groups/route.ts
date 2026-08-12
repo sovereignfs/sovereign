@@ -8,18 +8,24 @@ import { getPlatformDb } from '@/src/db';
 /**
  * Kebab-case a group name into a slug candidate. Not guaranteed unique.
  *
- * The trim of leading/trailing separators is two anchored, non-global replaces.
- * The combined `/^-+|-+$/g` form it replaces was quadratic: with `g` the engine
- * retries `-+$` at every offset inside a long run of dashes, backtracking one
- * character at a time on each failure.
+ * The leading/trailing dash trim is a manual index scan, not a regex. Even
+ * `/-+$/` alone (no `g`, no alternation) is quadratic: for an input of many
+ * dashes followed by a non-dash, non-end character, `-+` greedily consumes
+ * the whole run, backtracks it one character at a time to retry `$` at every
+ * position, fails, then the engine restarts the same backtrack from the next
+ * starting offset — O(n^2) with a single anchored quantifier, no `g` flag
+ * required. A plain index walk has no backtracking to exploit.
  */
 function slugify(name: string): string {
-  return name
+  const collapsed = name
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
+    .replace(/[^a-z0-9]+/g, '-');
+  let start = 0;
+  while (start < collapsed.length && collapsed[start] === '-') start++;
+  let end = collapsed.length;
+  while (end > start && collapsed[end - 1] === '-') end--;
+  return collapsed.slice(start, end);
 }
 
 export async function GET(request: Request): Promise<Response> {

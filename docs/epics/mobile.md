@@ -559,13 +559,19 @@ origin and round-trips successfully from the loaded remote instance page. Native
 storage is not web storage — origin partitioning governs IndexedDB / OPFS /
 Cache API, not the app sandbox reached through the bridge.
 
-**Why this is native-only for now:** iOS `WKWebsiteDataStore` eviction makes web
-storage unsuitable for a wallet — WebKit deletes script-created data after seven
-days without interaction for non-installed origins, and any origin can be evicted
-under storage pressure. The app sandbox is the only place that survives. This is
-the whole justification for the `device-only` tier being native-first, and it
-directly contradicts RFC 0082 §4's claim that "nothing about offline is
-native-specific" — that section needs revisiting when this lands.
+**Why this task is native-only:** this task is specifically the Capacitor
+bridge transport — web's equivalent is WebAuthn PRF + OPFS, task 1.22's own
+scope, not a gap left open here. Earlier framing in this doc claimed
+`device-only` was native-first because iOS `WKWebsiteDataStore` eviction
+makes web storage unsuitable for a wallet — true of IndexedDB, but
+[RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md) resolved a
+web path that doesn't route through `WKWebsiteDataStore`/IndexedDB at all
+(OPFS, with its own best-effort-not-guaranteed caveat — RFC 0093 §6). The
+tier is no longer native-only as a whole; this task is native-only because
+of how the work is split across repos, not because web can't have it. RFC
+0082 §4's claim that "nothing about offline is native-specific" still needs
+revisiting for a narrower reason: the _storage-durability guarantee_ is
+stronger on native than web even now, not that web has none at all.
 
 **Dependencies:** RFC 0083, task 3.36. Coordinates with task 17.4 (Tauri
 transport) rather than superseding it. Blocks tasks 1.22 and 8.20.

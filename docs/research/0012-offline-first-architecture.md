@@ -462,13 +462,19 @@ dimmed: administrative surfaces should not operate against stale cached state.
 
 ## Open questions
 
-### 1. Escrow and recovery — the one genuinely undecided thing
+### 1. Escrow and recovery — ~~the one genuinely undecided thing~~ resolved, see RFC 0093
 
+**Answered August 2026 — see [RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md).**
 Hardware-bound keys are invalidated by design: `biometryCurrentSet` dies when
 fingerprints or face data change, deleting a passkey destroys its PRF secret,
 and a lost or wiped device takes the key with it. For tier 2 that is harmless
-(re-authenticate, re-sync). For **`device-only` it means permanent,
-irrecoverable data loss.**
+(re-authenticate, re-sync). For `device-only` it means permanent, irrecoverable
+data loss — for two of the three cases. The design session that produced RFC
+0093 found the biometric-re-enrollment case has a cheap, standard fix a flat
+options table doesn't surface: wrap the same underlying key twice
+(Keychain/Keystore biometric wrapper for daily use, a second RFC
+0060-recovery-secret wrapper that survives re-enrollment), so only actual
+device loss reaches the three options below, not routine biometric changes.
 
 This is the same problem as the "bridge to migrate data between devices" idea —
 device migration and key-invalidation recovery are one problem wearing two
@@ -480,9 +486,13 @@ hats.
 | **User-driven export**        | Yes                                           | Most users will never do it — effectively "you will lose this"                  |
 | **Accept the loss, state it** | Yes                                           | "Your health records are gone because you added a fingerprint" is a trust event |
 
-No recommendation here deliberately. This is a product decision about what
-Sovereign promises, not a technical one, and it should be made explicitly
-before any RFC commits to a design.
+**Decision: all three, layered, not a single pick.** Plain-language warning at
+enrollment (unconditional) + always-available encrypted user export (no
+server involvement) + opt-in encrypted server backup gated by an
+env → Console operator → per-plugin per-user opt-in cascade, reusing RFC
+0060's existing wrapped-key server-storage pattern rather than a new one.
+Default (no env flag set) behaves as "accept the loss, state it" alone. Full
+design in RFC 0093.
 
 ### 2. Tier-3 delivery model
 
@@ -492,12 +502,20 @@ storage. Does `device-only` therefore need a genuinely different delivery path
 determines whether tier 3 is a moderate extension or its own workstream, and it
 contradicts RFC 0082 §4's current position either way.
 
-### 3. Key-strictness as a manifest field?
+### 3. Key-strictness as a manifest field? — resolved, see RFC 0093
 
+**Answered August 2026 — see [RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md) §5.**
 `biometryCurrentSet` (strict, invalidated on enrollment change) versus
-`userPresence` (forgiving, survives it, but a coerced passcode opens it). A
-wallet and a health log might reasonably choose differently. If so this is a
-fourth manifest field; if not, the platform picks one for everyone.
+`userPresence` (forgiving, survives it, but a coerced passcode opens it) was
+framed here as an open tradeoff. It isn't one: this doc's own recommendation
+two sections up — _"Call it device auth, not biometric... biometric-only
+would lock out every user who has not enrolled a face or finger"_ — already
+rules `biometryCurrentSet` out on accessibility grounds, and epic task 1.22
+already specified `userPresence`-equivalent access control (biometric **or**
+device passcode) before this question was reopened. Not a fourth manifest
+field, and not really a choice between two viable options — `userPresence`
+(and its Android/WebAuthn-PRF equivalents) is the only one that satisfies
+the accessibility requirement, so the platform uses it for everyone.
 
 ### 4. Server-side revocation cannot reach device-only data
 
@@ -532,8 +550,10 @@ than a single task. Suggested split, in dependency order:
    IndexedDB / OPFS-SQLite / native SQLite.
 3. **Encryption and device auth** — key custody per tier, the
    `device:secureStorage` permission, RFC 0083 bridge methods for Capacitor and
-   Tauri, PRF enrollment on web. **Gated on the escrow decision** (open
-   question 1).
+   Tauri, PRF enrollment on web. ~~Gated on the escrow decision~~ Drafted as
+   [RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md) (Capacitor
+   half; Tauri parity stays with `sovereign-desktop`'s own task 17.4, PRF
+   enrollment on web stays deferred per that RFC §7).
 4. **Sync protocol for `offline-first`** — RFC 0078's queue is a primitive, not
    a sync engine; conflict policy, tombstones, partial sync, and resume all
    need design. Evaluate RxDB versus building it at this point, not before.

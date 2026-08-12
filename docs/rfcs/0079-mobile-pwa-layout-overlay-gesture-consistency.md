@@ -1,6 +1,6 @@
 # RFC 0079 — Mobile PWA layout, overlay, and gesture consistency
 
-**Status:** Draft\
+**Status:** Implemented\
 **Date:** July 2026\
 **Author:** Claude Code\
 **Scope:** `packages/ui` (new `PageContainer` component, internal refactor of `Dialog`/`Drawer`/`Sheet`/`ConfirmDialog`, new `useSwipeReveal`/`useSnapCarousel` hooks), `plugins/account`, `plugins/console` (the only plugins that live in this monorepo), `docs/design-system.md`, `docs/plugin-development.md`, `docs/architecture-rules.md`. Builds on RFC 0013 (mobile responsiveness & PWA), RFC 0075 (mobile chrome toggle), RFC 0076 (DS sizing alignment), and the `docs/design-system-stabilization-proposal.md` review.\

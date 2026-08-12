@@ -1,6 +1,6 @@
 # RFC 0071 — SQLite at-rest encryption (opt-in, single-key)
 
-**Status:** Implemented\
+**Status:** Retired — shipped at v0.44.0, then removed; see CLAUDE.md's changelog ("At-rest encryption ... was retired") and `docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** packages/db, apps/auth, packages/manifest, runtime/src, bin/sv (scripts), Docker/Compose, `.env.example`, docs; a scoped implementation of RFC 0008 Tier 2b, amends RFC 0008; relates to RFC 0004 (per-plugin database) and RFC 0060 (client-side encryption)\

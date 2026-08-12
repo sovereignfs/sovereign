@@ -1,6 +1,6 @@
 # RFC 0087 — Sovereign Relay: native push notifications and WebRTC signaling
 
-**Status:** Draft\
+**Status:** Implemented\
 **Date:** August 2026\
 **Author:** Claude Code (design discussion with `kasunben`)\
 **Scope:** `packages/db` (new device-token schema), `runtime` (registration

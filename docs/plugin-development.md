@@ -170,6 +170,7 @@ serves at `/tasks/lists`.
 | `public`        | boolean                                                 | no (default `false`)                 | Marks the whole plugin as public — no auth requirement at all (RFC 0089). Requires `shell: "minimal"` explicitly; cannot combine with `adminOnly`, a paid `monetization.model`, or `publicRoutes`. See below.                                                                                              |
 | `offline`       | boolean (see below)                                     | no (default `false`)                 | Marks the plugin's bare `routePrefix` page as its one offline-capable entry point (RFC 0074, flattened by RFC 0078 from the original `offline.routes[]`/`offline.root` object shape). Grants no auth exemption; the route must render a user-neutral shell and hydrate data client-side via `sdk.offline`. |
 | `installable`   | boolean (see below)                                     | no (default `false`)                 | Lets the plugin be installed from a browser as its own home-screen app, scoped to `routePrefix`, via a dedicated manifest at `/api/manifest/<id>` (RFC 0081). Deliberately independent of `offline` — see below.                                                                                           |
+| `icons`         | object (see below)                                      | no                                   | Author-supplied raster icon set (RFC 0081) — overrides the platform's auto-generated icons for `installable: true`, per variant (`png192`/`png512`/`maskable512`), for a glyph that rasterizes poorly. `installable: true` requires `icon` or `icons`.                                                     |
 | `surfaces`      | array of `browser` \| `mobile` \| `desktop` (see below) | no (default: every surface)          | Surfaces this plugin is available on (RFC 0080). Filters Launcher/sidebar/mobile-drawer presentation only — not a security boundary.                                                                                                                                                                       |
 | `example`       | boolean                                                 | no (default `false`)                 | Marks the plugin as a bundled reference/example. Classification only — no effect on routing or permissions. Example plugins are hidden by default and shown via the Console → Settings → Example plugins toggle; each can also be toggled individually on the Plugins page.                                |
 | `development`   | boolean                                                 | no (default `false`)                 | Marks the plugin as still under active development — not yet ready for production use. Classification only, like `example`: no effect on routing, access policy, or the enable/disable default. Surfaced as a warning badge on the Console Plugins page and on the plugin's Launcher tile.                 |
@@ -757,10 +758,24 @@ not required.
   is **not** prepended, since the user is installing _your plugin_, not
   "MyInstance Tally" — and sets `start_url`, `scope`, and `id` all to your
   plugin's bare `routePrefix`.
+- Rasterizes your `icon` SVG into the full icon set an install prompt needs —
+  192×192, 512×512, and a maskable 512×512 — at build time, and lists all
+  three in your plugin's manifest. The maskable variant gets an opaque
+  background plate (never transparent — a transparent maskable icon renders
+  as a floating glyph on a platform-chosen background and looks broken on
+  Android) and is centered within the platform's safe zone so no mask shape
+  clips it.
 - Overrides the document's `<head>` metadata (`manifest`, `apple-touch-icon`,
   and the PWA title) on your plugin's routes, so the browser's install prompt
   and iOS's home-screen resolution both pick up your plugin's identity
   instead of the instance's.
+- Serves both the generated icon set and your raw `icon.svg` (used by the
+  sidebar/Launcher tiles) with no session gate — the same exemption the
+  manifest itself needs and for the same reason: a browser fetching a
+  manifest's icon URLs to decide whether to show an install prompt cannot be
+  expected to already have a session, and most browsers don't follow a
+  redirect when fetching a manifest icon, so a session-gated icon would
+  silently break installability with no other symptom.
 - Rewrites (never redirects) an unauthenticated request to your plugin's bare
   `routePrefix` to the login document, so signing in from a cold launch stays
   inside the installed app's scope and returns you to your plugin afterward,
@@ -768,19 +783,44 @@ not required.
   identical reason — a 303 redirect has no body/head at all, so iOS shows a
   blank white screen instead of resolving the launch image.
 
-**Known temporary limitation:** installed plugin apps have no splash/launch
-image of their own yet — real per-plugin icon rasterization is a separate,
-later task (epic task 2.26). Until it ships, an installed plugin app shows a
-brief blank white flash on cold launch rather than a branded splash screen.
-This is deliberate, not an oversight: showing the _instance's_ splash would
-display the wrong app's identity, which reads as more broken than blank.
+**If your glyph rasterizes poorly** — a maskable icon in particular needs
+safe-area padding and usually a background plate an SVG glyph doesn't have —
+declare your own pre-made PNGs instead of relying on auto-generation:
+
+```json
+{
+  "icon": "icon.svg",
+  "installable": true,
+  "icons": {
+    "png192": "icon-192.png",
+    "png512": "icon-512.png",
+    "maskable512": "icon-maskable-512.png"
+  }
+}
+```
+
+Each path is relative to your plugin root, same as `icon`. You can override
+just one variant and let the platform generate the other two from `icon` —
+`icons` and `icon` are consulted independently per variant, not
+all-or-nothing. `installable: true` requires `icon` **or** `icons` (at least
+one usable icon source); declaring neither fails manifest validation at
+build time rather than shipping a broken install prompt.
+
+**Known permanent-for-now limitation:** installed plugin apps have no
+splash/launch image of their own — that's a separate concern from the icon
+set above (`apple-touch-startup-image`, iOS's launch screen, not a manifest
+icon) and nothing currently generates one per plugin. An installed plugin
+app shows a brief blank white flash on cold launch rather than a branded
+splash screen. This is deliberate, not an oversight: showing the _instance's_
+splash would display the wrong app's identity, which reads as more broken
+than blank.
 
 `installable` grants **no auth exemption** for anything beyond the bare
-`routePrefix` document itself — every other route your plugin serves is
-gated exactly as it is today. It also registers no second service worker and
-changes nothing about the existing one's scope: manifest `scope` governs the
-_installed app's navigation containment_, which is independent of
-service-worker registration.
+`routePrefix` document itself and its icon assets — every other route your
+plugin serves is gated exactly as it is today. It also registers no second
+service worker and changes nothing about the existing one's scope: manifest
+`scope` governs the _installed app's navigation containment_, which is
+independent of service-worker registration.
 
 ### `surfaces` — plugin availability by surface (RFC 0080)
 

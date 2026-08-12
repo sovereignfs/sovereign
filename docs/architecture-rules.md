@@ -346,7 +346,31 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   it re-exposes only fields the plugin's own manifest already publishes
   (name, description, icon, routePrefix), all of which any authenticated
   user already sees on that plugin's sidebar icon or Launcher tile. No
-  per-user data, no DB write.
+  per-user data, no DB write. **The `manifest[].icons` array's own URLs need
+  the identical exemption, on a different matcher entry** —
+  `runtime/middleware.ts`'s matcher must exclude `plugin-icons/` alongside
+  `icons/`, or a manifest icon fetch 303-redirects instead of returning an
+  image. This is not merely inconsistent; most browsers don't follow a
+  redirect when fetching a manifest icon for an installability check, so a
+  gated icon can silently fail the _entire install prompt_ with no other
+  symptom — confirmed live (`curl` against a running instance) before the
+  matcher entry was added, task 2.26. `runtime/src/plugin-manifest.ts`'s
+  `buildPluginManifestIcons()` and `scripts/generate-registry.ts`'s
+  `copyPluginIcons()` are the two halves of this: the former lists an icon
+  URL only if the latter is guaranteed to have written that exact file (an
+  `icon` fallback, or a matching author-supplied `icons.*` path) — never a
+  guess.
+- **A generated maskable plugin icon (RFC 0081, `scripts/generate-registry.ts`)
+  is always composited onto an opaque background plate, never left
+  transparent.** A transparent maskable icon renders as a floating glyph on
+  a platform-chosen background and looks broken on Android. The plate color
+  is the same `#09090b` both manifest routes (instance-level and
+  per-plugin) already hardcode as `theme_color`/`background_color` — there
+  is no per-instance `background_color` config field anywhere in the
+  platform today (only `instancePrimary`/`instanceRadius` do), and these
+  icons are static, build-time PNGs baked into one Docker image shared
+  across every deployment, so they couldn't vary per-instance even if that
+  field existed.
 - **A cached authenticated document must never be served to a different user.**
   Sovereign's pages are per-user SSR (nav, plugin list, account state), so
   replaying a cached rendered shell for the wrong account — after logout/login

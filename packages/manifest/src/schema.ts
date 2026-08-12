@@ -37,6 +37,7 @@ export const permissionSchema = z.enum([
   'device:haptics',
   'device:notifications',
   'device:biometrics',
+  'device:secureStorage',
 ]);
 
 /**

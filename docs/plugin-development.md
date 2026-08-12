@@ -229,8 +229,10 @@ Declared SDK capabilities. The v1-functional ones:
 
 | `device:biometrics` | Use `sdk.device.biometrics.confirm()` (RFC 0083, sovereign-mobile epic task 20.7). |
 
+| `device:secureStorage` | Required for `offline: 'device-only'` (research 0012, RFC 0093). Durable, encrypted, device-auth-gated key/value storage — native Keychain/Keystore key custody + SQLCipher on Capacitor, WebAuthn PRF key custody + OPFS on web. Check availability with `sdk.device.supports('secureStorage')` before relying on it; it reports `false` until a shell's transport actually implements it. Reserved — the backing bridge capability and SDK surface are not implemented yet (workstream 0008 leg 4, epic tasks 20.13/8.20/1.22); declaring it today is accepted metadata only. |
+
 Reserved (declaring them is allowed; the backing surfaces throw `NotImplementedError` until
-implemented): `events:publish`, `events:subscribe`. `e2ee:use` (client-side encryption,
+implemented): `events:publish`, `events:subscribe`, `device:secureStorage`. `e2ee:use` (client-side encryption,
 `sdk.e2ee` — RFC 0060) and `crypto:use` (server-side field encryption, `sdk.crypto` —
 RFC 0092) are both implemented and deliberately distinct: the runtime _can_ decrypt a
 `sdk.crypto` field, and can never decrypt an `sdk.e2ee` object.

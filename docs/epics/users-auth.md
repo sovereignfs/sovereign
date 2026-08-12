@@ -971,12 +971,14 @@ task 2.32.
 - Sign-out clears the assertion; a second user on the same device cannot use it.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
-#### 📋 1.22 — Device-auth unlock for `device-only` plugins (Research 0012)
+#### 📋 1.22 — Device-auth unlock for `device-only` plugins (Research 0012, RFC 0093)
 
 **Goal:** Gate `device-only` plugin data behind biometric or device-passcode
 authentication, implemented as **key custody** — the OS releases the decryption
 key after a successful auth — not as a UI check that can be bypassed by reading
-storage directly.
+storage directly. Design is
+[RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md) (Accepted);
+this task is that RFC's §2/§3/§5 implemented.
 
 **Deliverables:**
 
@@ -997,8 +999,9 @@ storage directly.
 - `docs/plugin-development.md` coverage of what a `device-only` plugin can
   assume about unlock state.
 
-**Dependencies:** Tasks 3.36, 20.13. Gated on the escrow decision (task 8.21) —
-key strictness cannot be chosen before recovery is settled.
+**Dependencies:** Tasks 3.36, 20.13, 8.21. ~~Gated on the escrow decision~~
+Resolved — RFC 0093 decided both escrow and key strictness together (they
+turned out to be one decision, not two sequenced ones).
 
 **SRS reference:** §3.11, §3.12.
 

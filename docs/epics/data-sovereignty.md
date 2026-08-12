@@ -796,37 +796,53 @@ round-trip against real data before considering this done.
 
 #### 📋 8.21 — Escrow and recovery for `device-only` data (Research 0012)
 
-**Goal:** Decide and implement what happens to `device-only` data when the key
-dies — because with no server copy, a hardware-bound key that is invalidated
-takes the data with it.
+**Goal:** Implement what RFC 0093 decided happens to `device-only` data when
+the key dies — because with no server copy, a hardware-bound key that is
+invalidated takes the data with it.
 
-**Blocked on a product decision (goal owner: kasunben).** Research 0012
-deliberately makes no recommendation; the three options and their costs are in
-its "Open questions" section. This task cannot start before that decision.
+**Resolved — see [RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md)
+(Accepted, August 2026).** Research 0012 deliberately made no recommendation;
+the three options and their costs were in its "Open questions" section. The
+decision: all three, layered — mandatory warning, always-available encrypted
+user export, and opt-in encrypted server backup gated by an `.env` → Console
+→ per-plugin per-user opt-in cascade. This task's remaining work is
+implementing that design (Account UX, the toggle cascade, wiring RFC 0060's
+existing wrap/recovery machinery), not deciding it.
 
-**Why the key dies:** `biometryCurrentSet` is invalidated when fingerprints or
-face data change; deleting a passkey destroys its PRF secret; a lost or wiped
-device takes the key with it. For `offline-first` this is harmless — re-sync. For
-`device-only` it is permanent, irrecoverable loss.
+**Why the key dies:** deleting a passkey destroys its PRF secret; an OS-level
+credential change can invalidate a Keychain/Keystore item; a lost or wiped
+device takes the key with it regardless. For `offline-first` this is
+harmless — re-sync. For `device-only`, RFC 0093 §3 gives a second, independent
+recovery wrapper that survives the first two cases without touching escrow
+at all — this task's escrow layer is specifically for the third: the device
+itself gone.
 
-**Deliverables — depend on the decision:**
+**Deliverables — per RFC 0093 §4, all three, layered:**
 
-- **Encrypted server backup:** server stores ciphertext it cannot read, plus a
-  user-held recovery secret and the UX to issue, store, and redeem it.
-- **User-driven export:** an export/import path and honest documentation that
-  data not exported will be lost.
-- **Accept the loss:** explicit in-product warning at enrolment and in
-  `docs/plugin-development.md`; no recovery mechanism.
+- **Mandatory warning (Layer 1):** explicit in-product warning at enrolment
+  and in `docs/plugin-development.md` — what device-only means, that losing
+  the device with no recovery secret saved is permanent, unrecoverable loss.
+- **User-driven export (Layer 2), always available, no toggle:** an
+  encrypted (never plaintext) export/import path. No server involvement.
+- **Encrypted server backup (Layer 3), opt-in:** server stores ciphertext of
+  the recovery-wrapped key, never the key or recovery secret in the clear —
+  reuses RFC 0060's existing wrap/recovery-secret machinery rather than a
+  parallel system. Gated by a three-layer cascade: `.env` flag (hard kill
+  switch) → Console toggle (`platform:owner`/`platform:admin`) → per-plugin
+  per-user opt-in. With no env flag set, an instance behaves as Layer 1+2
+  only.
 
-Whichever is chosen, this also answers device-to-device migration — migration and
-key-invalidation recovery are the same problem.
+This also answers device-to-device migration — migration and key-invalidation
+recovery are the same problem, and Layer 2's export covers it directly.
 
-**Also settle here:** whether key strictness (`biometryCurrentSet` vs
-`userPresence`) is manifest-declared per plugin, and the written position on
-server-side revocation being unable to reach `device-only` data. For a
-sovereignty product the latter is arguably correct — it is the user's data on the
-user's device — but it contradicts the assumption behind the current sign-out
-purge and must be stated deliberately.
+**Also settled here, per RFC 0093 §5 and §7:** key strictness is **not**
+manifest-declared per plugin — one platform-wide, `userPresence`-equivalent
+setting (biometric **or** device passcode; biometric-only was considered and
+rejected on accessibility grounds). Server-side revocation does **not** reach
+`device-only` data, on either platform, by design — the server never holds a
+usable key. Correct for a sovereignty product, but a real departure from the
+sign-out purge's usual assumption; document it in `docs/architecture-rules.md`
+as a stated exception once implemented.
 
 **Dependencies:** Task 8.20. Gates task 1.22.
 

@@ -1,0 +1,424 @@
+# RFC 0093 — Device-only tier: key custody and data-loss recovery, native and web
+
+**Status:** Accepted\
+**Date:** August 2026\
+**Author:** kasunben (design session with Claude Code)\
+**Scope:** `packages/bridge` (new Capacitor secure-storage transport),
+`packages/sdk` (device-client capability surface, WebAuthn PRF helpers,
+`sdk.offline`'s native/OPFS backends), `packages/manifest` (new
+`device:secureStorage` permission), `apps/auth` (PRF enrollment on the
+existing passkey flow), `runtime` (Console operator toggle, `.env` gate),
+`plugins/account` (enrollment/recovery UX), `docs/architecture-rules.md`,
+`docs/plugin-development.md`. Resolves research
+[0012](../research/0012-offline-first-architecture.md)'s Open Questions 1
+(escrow) and 3 (key strictness) and elaborates its `device-only` key-custody
+recommendation into a concrete design covering **both** native shells and
+plain web/PWA. Builds on RFC [0083](0083-device-bridge-capability-contract.md)
+(device bridge — adds a `secureStorage` capability to that contract) and
+reuses RFC [0060](0060-client-side-encryption-core.md)'s (client-side
+encryption core) recovery-secret and wrapped-key server-storage machinery for
+the opt-in backup path. Directly informs epic tasks 8.21, 20.13, 8.20, 1.22
+(workstream 0008 leg 4).\
+**Incorporated into plan:** Yes — unblocks workstream 0008 leg 4, which was
+gated on exactly the decision this RFC makes.
+
+---
+
+## Summary
+
+Defines how a `device-only` plugin's data is actually stored and protected —
+on a native shell (Capacitor) **and** on plain web/PWA — and what happens
+when the key that protects it dies. Four decisions, previously open:
+
+1. **Storage backend.** Native: SQLite via `@capacitor-community/sqlite`
+   (SQLCipher-encrypted, app-sandboxed). Web: OPFS + `wa-sqlite`
+   (`OPFSCoopSyncVFS`), with `navigator.storage.persist()` requested at
+   enrollment. Neither is IndexedDB, and the reason is the same on both:
+   IndexedDB is evictable everywhere it was tested (research 0008).
+2. **Key custody.** Native: Keychain (iOS) / Keystore (Android). Web:
+   WebAuthn PRF, building on the passkey infrastructure already deployed
+   (`apps/auth/src/auth.ts:231`). Both release the key only via a live
+   biometric/passcode (or platform-authenticator) prompt each time — never a
+   JS-side "unlocked" flag — and **both must accept a device passcode as a
+   fallback, never biometric-only** (see section 5 — this corrects an error
+   in this RFC's own first draft).
+3. **Surviving key invalidation short of device loss.** A second,
+   independent recovery wrapper on the same underlying key, so a deleted
+   passkey or an OS-level credential change doesn't destroy data by itself
+   — only losing the device does.
+4. **Escrow.** A three-layer, progressively-available recovery model,
+   platform-agnostic, for the one failure mode the second wrapper can't
+   cover: the device itself being lost, stolen, or wiped.
+
+## Motivation
+
+Research 0012 established that `device-only`'s entire reason to exist is
+durable, encrypted, presence-gated local storage — and that IndexedDB
+satisfies none of that on iOS, nor does it have a presence gate anywhere. It
+also identified, without resolving, that a hardware-bound key is invalidated
+by design under three circumstances (biometric re-enrollment, passkey
+deletion, device loss), and left the resulting data-loss question as its one
+deliberately unresolved open question: _"This is a product decision about
+what Sovereign promises... it should be made explicitly before any RFC
+commits to a design."_ It separately left key strictness (`biometryCurrentSet`
+vs. `userPresence`) as an open tradeoff, despite its own text a few
+paragraphs earlier already ruling one of them out on accessibility grounds.
+
+Both decisions have now been made (design session, August 2026), for native
+**and** web, plus concrete mechanisms to implement them against. This RFC
+records all of it so tasks 20.13 and 1.22 (leg 4, previously blocked) have
+something to build.
+
+## Current state (what this builds on)
+
+- `packages/sdk/src/offline.ts` — the existing plugin-scoped KV cache. Its
+  doc comment explicitly scopes it "Browser-only"; it opens
+  `indexedDB.open('sovereign-offline', 1)` unconditionally
+  (`offline.ts:96-108`). This is the `offline-first`-tier mechanism and is
+  **not** in scope for this RFC — it stays IndexedDB-backed everywhere.
+- `packages/sdk/src/e2ee-device.ts` — RFC 0060's existing "Device Key"
+  mechanism. Also IndexedDB-backed (`DB_NAME = 'sovereign-e2ee'`,
+  `e2ee-device.ts:13-29`), and the stored `CryptoKey`, while
+  non-extractable, is released to any script on the origin with no
+  presence check (`getDeviceKey()`, `e2ee-device.ts:53-63`). Confirmed
+  during this design session to be **insufficient as the `device-only`
+  primary key** for two independent reasons: it inherits IndexedDB's
+  eviction risk, and it has no live-auth gate. Its recovery-secret
+  machinery remains a good fit for a _different_ piece — see section 4.
+- `packages/sdk/src/device-client.ts:124-126` — `isDeviceOnlyTierAvailable()`
+  already exists, gated on `supports('secureStorage')`, and already returns
+  `false` everywhere pending exactly the bridge capability this RFC's
+  design informs.
+- `apps/auth/src/auth.ts:231` — better-auth's `passkey()` plugin is already
+  configured and live. WebAuthn is deployed today; PRF is an extension on
+  top of infrastructure that already exists, not a new subsystem.
+- RFC 0083 defines the device bridge capability contract generally
+  (`haptics`, `notifications`, etc.); this RFC's native design is a new
+  capability (`secureStorage`) on that same contract, not a new mechanism.
+- RFC 0060 (`e2ee-crypto.ts`/`e2ee-object.ts`/`e2ee-device.ts`) already
+  implements a Client Master Key wrapped by a user-held recovery secret,
+  with the wrapped (ciphertext) CMK stored server-side and a documented
+  Account UX for setup, unlock, and recovery-secret handling. Its threat
+  model and recovery shape (server holds ciphertext it cannot read; a
+  recovery secret unwraps it) is exactly the shape this RFC's opt-in
+  escrow layer needs — reused, not reinvented.
+- Epic task 1.22 (`docs/epics/users-auth.md:974-1011`) already specifies
+  "Web/PWA: WebAuthn PRF key derivation... Native: key stored via task
+  20.13's `device:secureStorage` bridge, with user-presence access control
+  (biometric **or** device passcode — never biometric-only)" and was
+  gated on task 8.21 (the escrow decision) until this RFC resolved it.
+  This RFC's design is that task's own scope, made concrete — not new
+  scope invented here.
+- Workstream 0008 leg 4 (`docs/workstreams/0008-offline-first-architecture.md`)
+  was marked a workstream **gate** while this decision was open, and already
+  named `@capacitor-community/sqlite` (SQLCipher) as the native storage pick
+  and `secureStorage` as the permission name. This RFC's acceptance lifts
+  that gate — see the workstream doc's own changelog.
+
+## Proposed design
+
+### 1. Storage backend
+
+**Native (Capacitor):** a SQLCipher-encrypted SQLite database via
+`@capacitor-community/sqlite`, one database per instance (not per plugin —
+mirrors `sdk.offline`'s existing shared-database, composite-key-per-plugin
+shape, so the storage layer's schema and isolation model don't have to be
+reinvented, only its backend swapped). Lives in the app's sandboxed
+storage — outside `WKWebsiteDataStore` on iOS, so it is not subject to the
+storage-pressure/non-interaction eviction policy IndexedDB is.
+
+**Web/PWA:** OPFS via `wa-sqlite`'s `OPFSCoopSyncVFS` — research 0012's own
+"2026 production pick for the web," chosen specifically because it does
+**not** require COOP/COEP headers (the official `sqlite-wasm` OPFS build
+does, and those headers would fight this platform's CSP). At `device-only`
+enrollment, the browser is asked for `navigator.storage.persist()`. This
+is a request, not a guarantee — see "What web cannot fully match," below.
+
+Both backends are reached through the same plugin-facing shape (this RFC
+does not redesign that surface — see task 3.37, "Unified offline storage
+SDK surface," already scoped separately). A plugin declaring `device-only`
+on a surface without a `secureStorage`-capable transport sees
+`isDeviceOnlyTierAvailable() === false` and the existing
+capability-restricted UI treatment (research 0012, shipped in leg 3)
+applies — no manifest change, no plugin-visible branching.
+
+### 2. Primary key custody
+
+**Native:** the SQLCipher database key (a 256-bit symmetric key) is
+generated on-device and held in:
+
+- **iOS:** Keychain, with `kSecAccessControlUserPresence`.
+- **Android:** Keystore, with `setUserAuthenticationRequired(true)` (device
+  credential enabled as an accepted authenticator type, not
+  biometric-only).
+
+Release requires a live biometric-**or**-passcode prompt each time the app
+needs the key (subject to a re-lock policy — see Open questions). Implemented
+as a new `secureStorage` capability in `@sovereignfs/bridge`'s Capacitor
+transport, calling through a dedicated Keychain/Keystore-backed secure-storage
+plugin (candidate: `@aparajita/capacitor-secure-storage` or equivalent —
+final pick is an implementation decision, see Open questions). `sdk.device.*`
+never talks to Keychain/Keystore directly; it calls the bridge capability,
+matching every other native capability in RFC 0083's contract.
+
+**Web/PWA:** WebAuthn's PRF extension, via `navigator.credentials.get()`
+against the user's existing passkey. If the existing credential doesn't
+support PRF, the enrollment flow registers a **new** passkey with the
+extension explicitly requested — it does not assume the login passkey can
+be reused (matching task 1.22's own note). The derived output is used
+directly as (or to derive, via HKDF) the OPFS database's encryption key.
+Same property as native: the secret backing it never leaves the platform
+authenticator (frequently the same Secure Enclave/StrongBox chip Keychain/
+Keystore use), and it can only be reproduced by repeating the ceremony —
+live proof, every time.
+
+**Explicitly rejected: a JS-side PIN or "unlocked" flag as the gate, on
+either platform.** A PIN that merely sets a boolean in app state is bypassed
+entirely by reading raw storage — the check is never in an attacker's path.
+A PIN that actually wraps the key (ciphertext-at-rest, not a flag) is
+stronger but has no hardware-enforced rate limiting: an attacker who
+extracts the database can brute-force a human-length PIN offline, unlimited
+attempts, no lockout. Only a hardware-backed access-control primitive
+(Keychain/Keystore, or WebAuthn's platform authenticator on web) closes
+that gap. Any future proposal to add a PIN-only fallback for convenience
+should cite this section rather than re-litigate it from scratch.
+
+**Explicitly rejected: plain WebAuthn (no PRF) as a client-side gate.** A
+plain WebAuthn assertion is a signed yes/no proof meant for a relying
+party to verify — it does not itself hand back usable key material. Gating
+a local decrypt on "did the assertion succeed" while the actual key sits
+statically in local storage is the same theater problem as the JS-flag
+case above: an attacker reading raw storage never has to pass the check.
+PRF is what makes the ceremony produce something actually usable as a key.
+
+### 3. Surviving key invalidation short of device loss
+
+A hardware-bound key can stop working without the device being lost:
+a passkey gets deleted (web), an OS credential change invalidates a
+Keychain/Keystore item in ways that vary by exact configuration and OS
+version, or (independent of the `userPresence`-equivalent choice in
+section 5 surviving _most_ biometric re-enrollments) some platform
+combination doesn't. Without a second path, any of these destroys
+`device-only` data even though the device itself is still in the user's
+hands — clearly unacceptable for the passkey-deletion case, which is a
+hard, unconditional break with no "survives it" equivalent.
+
+Standard key-slot design (the same shape LUKS and FileVault use) solves
+this cheaply on both platforms: the actual database key is wrapped
+**twice**, independently:
+
+- **Wrapper 1 (daily use):** the Keychain/Keystore or WebAuthn-PRF key, as
+  above.
+- **Wrapper 2 (recovery):** a recovery secret, using RFC 0060's _existing_
+  recovery-secret generation, display, and re-entry UX
+  (`plugins/account/app/_components/EncryptionSection.tsx` and
+  `e2ee-crypto.ts`'s wrap/unwrap primitives) rather than building a parallel
+  system. The recovery secret is shown once at `device-only` enrollment and
+  the user is told to save it, exactly as RFC 0060 already does for its own
+  CMK.
+
+Both wrappers protect the _same_ underlying database key — two independent
+doors to one room, not two copies of the data. When wrapper 1 stops working
+(passkey deleted, Keychain/Keystore item invalidated), the app detects this
+and prompts for the recovery secret to re-derive the key via wrapper 2;
+once unlocked, a fresh wrapper 1 is generated and the recovery secret isn't
+needed again until the next such event. No data is re-encrypted or moved —
+only the key's wrapping changes.
+
+This does **not** resolve "device lost or wiped" — if the recovery secret
+only ever existed on that same device (memorized, or written down and also
+lost), losing the device loses both wrappers together. That is what the
+escrow layer below is for.
+
+### 4. Escrow: recovering from device loss
+
+Three layers, available progressively, platform-agnostic:
+
+**Layer 1 — mandatory, always shown.** At `device-only` enrollment, before
+any data is committed, a plain-language warning: what device-only means,
+that losing the device with no recovery secret saved means permanent,
+unrecoverable loss, stated as the tier's defining property, not an edge
+case buried in settings.
+
+**Layer 2 — always available, no toggle.** User-driven export: an encrypted
+file (never plaintext) the user can generate on demand and re-generate
+after changes, importable to restore on a new device. No server
+involvement at all — this exists regardless of the toggle in Layer 3, and
+answers device-to-device migration for a user who doesn't want any
+server-side footprint whatsoever.
+
+**Layer 3 — opt-in, three-gate cascade.** Encrypted server backup, reusing
+RFC 0060's wrapped-key server-storage pattern (the server stores ciphertext
+of the recovery-wrapped key; it never receives the key or the recovery
+secret in the clear). Available only when all three gates are open:
+
+1. **`.env`** — an instance-level flag the operator must set before the
+   capability exists at all for that instance (the hard kill switch,
+   consistent with how other sensitive opt-in features are gated in this
+   codebase).
+2. **Console** — once the env allows it, `platform:owner`/`platform:admin`
+   decides whether this instance offers it, at all, to any user.
+3. **Per-plugin, per-user opt-in** — even with both gates open, each user
+   decides per `device-only` plugin whether that plugin's data gets backed
+   up.
+
+With no env flag set (the default), an instance behaves exactly as if
+Layer 3 didn't exist — Layers 1 and 2 are unconditional and unaffected.
+
+### 5. Key strictness: `userPresence`-equivalent, required, one setting for everyone
+
+**Correction from this RFC's first draft.** That draft specified
+`kSecAccessControlBiometryCurrentSet` (biometric-only, invalidated on any
+enrollment change) as the native access-control flag. That is wrong and is
+corrected here: research 0012 itself already states, a few sections before
+its own "open question" framing of this exact tradeoff, _"Call it device
+auth, not biometric: both platforms allow biometric or device passcode
+against the same hardware-backed key... Biometric-only would lock out every
+user who has not enrolled a face or finger."_ Epic task 1.22 already
+specifies the same requirement independently. Treating this as an open
+tradeoff in the first draft was an error, not a reconsideration of settled
+guidance — this RFC now matches what was already decided elsewhere.
+
+**Decision: `kSecAccessControlUserPresence` (iOS) /
+`setUserAuthenticationRequired(true)` with device-credential fallback
+enabled (Android) / whatever a given browser's platform authenticator
+accepts as an equivalent (web, via PRF) — for every `device-only` plugin,
+not manifest-declared per plugin.** A single, well-understood, accessible
+setting is simpler to document and support than per-plugin variance, and
+this is no longer really a tradeoff between two viable options: only the
+`userPresence`-equivalent choice satisfies the accessibility requirement
+that was never actually up for debate. Section 3's second wrapper remains
+valuable regardless — it is what makes passkey deletion (web) and any
+OS-level credential-invalidation edge case (native) survivable — but it is
+no longer the thing that makes the _primary_ flag's strictness acceptable,
+because the primary flag is no longer strict.
+
+### 6. What web cannot fully match
+
+Stated plainly rather than implied: WebAuthn PRF gets the **key-custody**
+half to a genuinely equal bar as native — same class of hardware backing,
+same live-proof-required-every-time property, same hardware-enforced
+brute-force resistance. It does not get the **storage-durability** half to
+an equal bar. `navigator.storage.persist()` is a request the browser may
+deny, based on its own heuristics, and even granted it does not carry an
+OS app sandbox's guarantee — a user's "clear site data" action, or a
+browser's own data-clearing settings, can still remove it in ways an
+installed native app's storage is not exposed to. If `persist()` is denied
+at enrollment, the user is told plainly, in the same spirit as the Layer 1
+escrow warning — not silently degraded to a weaker guarantee with no
+notice. `device-only` on web is real and hardware-backed for the key; it is
+best-effort, not guaranteed, for the data surviving to be unlocked at all.
+
+### 7. Revocation position
+
+Stated deliberately, per research 0012's open question 4: server-side
+account deactivation/purge does **not** and cannot reach `device-only`
+data — the server never holds a usable key, on either platform. For a
+sovereignty product this is the correct position (it is the user's data on
+the user's device), but it is a real departure from the existing sign-out
+purge's assumption that it reaches everything, and must be documented in
+`docs/architecture-rules.md` as a stated exception once implemented, not
+discovered later by an operator expecting deactivation to be total.
+
+## Alternatives considered
+
+**Derive the key from device + user credentials, server-assisted.**
+Rejected. If the server can (by verifying credentials) derive or
+reconstruct the key, then anyone with access to the auth database can too —
+this silently converts `device-only` into `offline-first` with a
+misleading name. A version that preserves the "server never learns the
+key" property is possible via an OPRF-style blinded protocol, but that
+requires a rate-limited, tamper-resistant server-side component (ideally
+enclave-backed) purpose-built to resist offline brute-forcing of a human
+password — materially _more_ infrastructure than Keychain/Keystore or PRF
+custody, not a simplification. Worth revisiting only if a future plugin
+needs `device-only`-grade guarantees for users with no platform
+authenticator at all.
+
+**Reuse RFC 0060's existing Device Key as `device-only`'s primary key.**
+Rejected — see "Current state" above. IndexedDB-backed, no presence gate.
+Its recovery-secret and wrapped-key-storage _machinery_ is reused (section
+3, section 4 Layer 3); the key itself is not.
+
+**PIN-only software wrapping, on either platform.** Rejected — see
+section 2. No hardware rate limiting; brute-forceable offline once the
+storage is extracted. Worse on web than native, since web has no hardware
+fallback to lean on at all if the PIN wrapper is the only protection.
+
+**Plain WebAuthn without PRF as a client-side gate.** Rejected — see
+section 2. Produces a yes/no signal, not key material; gating a local
+decrypt on it is the same theater pattern as a JS-side flag.
+
+**`kSecAccessControlBiometryCurrentSet` (this RFC's own first draft).**
+Rejected on reflection — see section 5. Locks out users without enrolled
+biometrics, contradicting an accessibility requirement already stated
+elsewhere in research 0012 and epic task 1.22.
+
+**Operator escrow by default.** Rejected, same reasoning RFC 0060 already
+established: the threat model this tier defends against includes a
+compromised operator, so an operator-held default recovery path
+contradicts the tier's own purpose. Operator involvement only ever enters
+via the explicit, opt-in, env-gated Layer 3 — and even there, the operator
+controls _whether the capability exists_, never the key itself.
+
+## Open questions
+
+1. **Concrete Capacitor secure-storage plugin choice.** Candidates exist
+   (`@aparajita/capacitor-secure-storage`, `capacitor-secure-storage-plugin`,
+   or a thin bridge written directly against `LocalAuthentication`/
+   `BiometricPrompt` + Keychain/Keystore APIs). Needs an evaluation pass at
+   implementation time for maintenance status and whether it exposes
+   `kSecAccessControlUserPresence` / device-credential-enabled Keystore
+   configuration specifically, not just a generic biometric prompt.
+2. **PRF salt scheme and versioning.** The PRF extension takes an
+   app-supplied salt; needs a concrete, documented scheme (likely a
+   constant per purpose, e.g. distinct salts for the wrapper-1 key vs. any
+   future use) and an algorithm/version tag stored alongside ciphertext,
+   matching RFC 0060's existing "explicit algorithm/version metadata"
+   convention.
+3. **Re-lock policy.** Per launch, after N minutes backgrounded, or every
+   open — research 0012 flagged this as needing a default plus a user
+   override; this RFC doesn't pick one. Applies identically to native and
+   web.
+4. **Exact RFC 0060 integration shape for the recovery wrapper (section 3)
+   and Layer 3 backup (section 4).** Does `device-only` reuse the _same_
+   CMK/recovery-secret a user already has from RFC 0060's e2ee setup (one
+   recovery secret covers both), or does it get its own, independent one?
+   The former is less for the user to manage; the latter keeps the two
+   systems' blast radius separate. Needs a decision before implementation,
+   not before this RFC — it doesn't change the shape of either layer, only
+   whether they share a secret.
+5. **Minimum browser/OS support floor for web `device-only`.** PRF needs
+   iOS 18/Safari 18+ and recent Chrome/Android; below that,
+   `isDeviceOnlyTierAvailable()` correctly reports `false` and the
+   capability-restricted UI applies, but the exact floor needs to be
+   pinned and documented for plugin authors and Console's install-review
+   surface.
+6. **Tauri/desktop parity.** Owned by `sovereign-desktop`'s own task 17.4 /
+   workstream 0003 leg 3b, not this RFC — noted here only so a reader
+   doesn't assume desktop is silently included.
+
+## Adoption path
+
+Unblocks workstream 0008 leg 4 (`docs/workstreams/0008-offline-first-architecture.md`),
+sequenced 8.21 → 20.13 → 8.20 → 1.22 per that workstream's existing plan.
+This RFC _is_ the 8.21 decision, plus the key-custody design both 20.13
+(native transport) and 1.22 (device-auth unlock, native and web) need; once
+accepted, leg 4 is no longer blocked on a product decision, only on
+implementation. The Capacitor transport (section 2, native half) is built
+in `sovereign-mobile` against the `@sovereignfs/bridge` contract this repo
+publishes, per the existing repo-split table in the workstream doc. The web
+half (PRF enrollment, OPFS backend) is this repo's own work under task 1.22
+and does not depend on any other repository.
+
+Manifest impact: none by itself (the `offline: 'device-only'` enum value
+already shipped in leg 3). New `device:secureStorage` permission is part of
+task 20.13's own scope, not this RFC's.
+
+## Changelog
+
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.3     | August 2026 | Accepted. Unblocks workstream 0008 leg 4 — see the workstream doc's own changelog for the leg-4 status update this triggered.                                                                                                                                                                                                                                                                                                                   |
+| 0.2     | August 2026 | Brought web/PWA into scope (was deferred in 0.1): WebAuthn PRF key custody, OPFS/`wa-sqlite` storage, `navigator.storage.persist()` handling. Corrected an error in 0.1 — replaced `kSecAccessControlBiometryCurrentSet` with a `userPresence`-equivalent flag everywhere, matching an accessibility requirement research 0012 and epic task 1.22 had already established; resolves research 0012's open question 3 as well as open question 1. |
+| 0.1     | August 2026 | Initial draft, from a design session resolving research 0012's escrow open question and elaborating its device-only key-custody recommendation. Native (Capacitor) only; web explicitly deferred.                                                                                                                                                                                                                                               |

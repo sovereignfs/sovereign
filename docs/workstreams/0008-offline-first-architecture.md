@@ -2,7 +2,8 @@
 
 **Status:** 🔄 In progress — legs 1–3 done (leg 2 shipped at platform `0.65.0`–`0.66.0`;
 leg 3 — tasks 3.36 + 2.33 — shipped at `0.76.0`; task 3.37 deliberately deferred,
-see leg 3 detail); legs 4 (gated on the escrow decision) and 5 not started\
+see leg 3 detail); leg 4's design is Accepted (RFC 0093, August 2026 — see leg 4
+detail) but implementation has not started; leg 5 not started\
 **Date:** August 2026\
 **Author:** Claude Code (from a design session with kasunben)\
 **Goal owner:** kasunben\
@@ -14,15 +15,25 @@ see leg 3 detail); legs 4 (gated on the escrow decision) and 5 not started\
 (supersedes [0009](../research/0009-offline-database-architecture.md); builds on
 [0008](../research/0008-wkwebview-android-webview-offline-spike.md))
 
-> **Why there is no RFC.** Research 0012 already carries the settled design:
-> the options were weighed, the choices made, and the rejected alternatives
-> recorded. An RFC restating them would add a review cycle without adding a
-> decision. This is the first use of the research-as-design exception documented
-> in [documentation-structure.md](../documentation-structure.md); its four
-> conditions are met — rejected alternatives are written down, the one genuinely
-> open decision (escrow) is an explicit gate on leg 4, the decisions are carried
-> forward in the table below, and both this document and the epic tasks cite
-> research 0012 where they would otherwise cite an RFC.
+> **Why there is no RFC — mostly.** Research 0012 already carries the settled
+> design for legs 1, 2, 3, and 5: the options were weighed, the choices made,
+> and the rejected alternatives recorded. An RFC restating them would add a
+> review cycle without adding a decision. This is the first use of the
+> research-as-design exception documented in
+> [documentation-structure.md](../documentation-structure.md); its four
+> conditions are met for those legs — rejected alternatives are written down,
+> the decisions are carried forward in the table below, and both this document
+> and the epic tasks cite research 0012 where they would otherwise cite an RFC.
+>
+> **Leg 4 is the exception to the exception.** Research 0012 deliberately left
+> its escrow question (and, it turned out, its key-strictness question too)
+> unresolved — genuinely open, not just unwritten. Once a design session
+> resolved both, the result was substantial and reviewable enough on its own
+> to warrant an actual RFC rather than a paragraph added back into the
+> research doc: **[RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md)**
+> (Accepted), covering key custody and data-loss recovery for `device-only`
+> on both native and web. Leg 4 is governed by RFC 0093, not directly by
+> research 0012 — the rest of this workstream still is.
 
 ---
 
@@ -85,13 +96,17 @@ Settled by research 0012. Not to be reopened mid-execution.
 | Sync engine                 | Build it; keep RxDB as a fallback if it proves larger than expected                    | PowerSync (FSL-licensed service, separate Docker dep, Postgres-oriented); ElectricSQL (Postgres-only, read-path only); Zero (offline explicitly out of scope per its own authors).  |
 | Conflict resolution         | Last-write-wins timestamps, as RFC 0078 already uses                                   | CRDTs (Yjs/Automerge/Loro) — they solve concurrent multi-writer editing; Sovereign's data is predominantly single-writer-per-record. Decided against explicitly.                    |
 
-**Deliberately still open**, each an explicit gate below:
+**Resolved — see [RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md):**
 
-| Open decision                                    | Resolved by | Owner    |
-| ------------------------------------------------ | ----------- | -------- |
-| Escrow and recovery for `device-only` data       | Task 8.21   | kasunben |
-| Whether key strictness is manifest-declared      | Task 8.21   | Platform |
-| Whether revocation should reach device-only data | Task 8.21   | kasunben |
+| Decision                                         | Resolution                                                                                                                                                                                                           |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Escrow and recovery for `device-only` data       | Three layers, progressive: mandatory plain-language warning, always-available encrypted user export, opt-in encrypted server backup gated by an `.env` → Console → per-plugin per-user opt-in cascade (RFC 0093 §4). |
+| Whether key strictness is manifest-declared      | No — one platform-wide setting, `userPresence`-equivalent (biometric **or** device passcode) on every platform (RFC 0093 §5). Not really a tradeoff between two viable options once accessibility is accounted for.  |
+| Whether revocation should reach device-only data | No, by design, on either platform — the server never holds a usable key (RFC 0093 §7). A stated exception to the sign-out purge's usual assumption, to be recorded in `docs/architecture-rules.md` once implemented. |
+
+These were previously tracked as open gates on task 8.21, owners kasunben/
+Platform. RFC 0093 is the record of that decision being made; the epic tasks'
+own "gated on 8.21" language should be read as satisfied, not still pending.
 
 **Closed since the initial draft:** whether `device-only` needs a different
 delivery model. Workstream 0003's leg 4 outcome answers it — the bridge reaches
@@ -100,12 +115,12 @@ origin-partitioned. See leg 3 detail.
 
 ## Prerequisites
 
-| Prerequisite                                                                   | Owner    | Status                                            |
-| ------------------------------------------------------------------------------ | -------- | ------------------------------------------------- |
-| Service worker installs for logged-out visitors (`worker-` allowlist)          | Platform | ✅ Done — `2ac31cf`                               |
-| Research 0008's Android misattribution corrected                               | Platform | ✅ Done — same commit                             |
-| Research 0009 marked superseded                                                | Platform | ✅ Done                                           |
-| **Escrow/recovery position chosen** — encrypted backup, export, or accept loss | kasunben | ⛔ **Open — gates leg 4.** Not an agent decision. |
+| Prerequisite                                                                   | Owner    | Status                                                                              |
+| ------------------------------------------------------------------------------ | -------- | ----------------------------------------------------------------------------------- |
+| Service worker installs for logged-out visitors (`worker-` allowlist)          | Platform | ✅ Done — `2ac31cf`                                                                 |
+| Research 0008's Android misattribution corrected                               | Platform | ✅ Done — same commit                                                               |
+| Research 0009 marked superseded                                                | Platform | ✅ Done                                                                             |
+| **Escrow/recovery position chosen** — encrypted backup, export, or accept loss | kasunben | ✅ Done — [RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md), Accepted |
 
 ## Legs
 
@@ -332,14 +347,28 @@ from the remote-origin document after all. That would contradict workstream
 0003's verified result, so treat it as a finding worth escalating rather than
 routing around.
 
-### Leg 4 — Encryption and device auth · **GATE** · cross-repo
+### Leg 4 — Encryption and device auth · cross-repo · design Accepted, ready to implement
 
 **Epic tasks, in execution order:** 8.21 → 20.13 → 8.20 → 1.22, with the two
 native transport halves owned by the shell repos (see split below).
 
-**Blocked on:** the escrow decision. Task 8.21 leads the leg precisely because
-everything after it branches on the answer. Do not start this leg before the
-decision is made.
+**Design:** [RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md)
+(Accepted, August 2026). Read it before starting any of this leg's tasks —
+it supersedes the summary that used to live in this section, and covers key
+custody (native Keychain/Keystore, web WebAuthn PRF), the second-wrapper
+design that survives a deleted passkey or biometric change without
+touching escrow, the three-layer escrow cascade, key strictness, and the
+revocation position. Task 8.21 is now a documentation/implementation task
+against an already-accepted design, not an open product decision — the
+"leads the leg because everything branches on the answer" framing no longer
+applies; 8.21's remaining work is wiring the decision into Console/`.env`/
+Account UX, not making it.
+
+**No longer a workstream gate.** It was marked **GATE** while the escrow
+decision was open, to stop any agent starting leg 4 before a human decision
+existed. That decision now exists and is recorded in RFC 0093. Leg 4 can
+be picked up and prioritized like any other leg — the remaining "not
+started" is a scheduling fact, not a blocked one.
 
 **Repo split** — this leg spans three repositories, following the pattern
 workstream 0003 used for the device bridge:
@@ -365,20 +394,21 @@ tier **is** that concrete need. Task 20.13 adds only what is genuinely new: the
 plugin-facing permission, the encrypted-store semantics (SQLCipher, user-presence
 keys), and the Capacitor transport. It does not duplicate 17.4.
 
-**Technical notes:** passkeys are already deployed
-(`apps/auth/src/auth.ts:231`), so WebAuthn PRF builds on live infrastructure.
-Apple does not pass PRF to external roaming authenticators on iOS, but platform
-passkeys work — the case that matters. Native SQLite via
-`@capacitor-community/sqlite` provides SQLCipher, so the work is key custody and
-unlock UX, not cryptography. Current device permissions are only
-`device:haptics` and `device:notifications`
-(`packages/manifest/src/schema.ts:37-38`). Note workstream 0003's standing rule:
-a shell's `capabilities` list must reflect what that build actually supports —
-advertising a capability the transport does not implement is worse than omitting
-it, because the caller's `unavailable` path never runs.
+**Technical notes:** the crypto and key-custody detail (PRF specifics,
+SQLCipher, access-control flags) lives in RFC 0093 now — don't duplicate it
+here. Still true and still worth restating locally: current device
+permissions are only `device:haptics` and `device:notifications`
+(`packages/manifest/src/schema.ts:37-38`), so `device:secureStorage` is new
+manifest surface, and workstream 0003's standing rule applies — a shell's
+`capabilities` list must reflect what that build actually supports;
+advertising a capability the transport does not implement is worse than
+omitting it, because the caller's `unavailable` path never runs.
 
-**Do not proceed if:** the escrow decision is still open, or the chosen option
-needs a user-held recovery secret the design has no home for.
+**Do not proceed if:** implementation drifts from RFC 0093's design without
+a documented reason — e.g. reintroducing the biometric-only flag RFC 0093
+§5 explicitly corrected, or a PIN-only gate §2 explicitly rejected. Either
+is a sign the implementer didn't read the RFC's "Alternatives considered"
+before re-deriving the same dead end.
 
 ### Leg 5 — Background sync
 
@@ -448,7 +478,8 @@ leaves the platform better than it started, not half-migrated.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                        |
-| ------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft from research 0012, governed by it directly under the research-as-design exception. Five legs, 11 epic tasks.                                                                                                                   |
-| 0.2     | August 2026 | Leg 3 is no longer a gate — workstream 0003's leg 4 outcome already answers the delivery-model question empirically. Leg 4 split across `sovereign-mobile`/`sovereign-desktop`; task 20.13 rescoped to not duplicate task 17.4 / 0003 leg 3b. |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                             |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | August 2026 | Initial draft from research 0012, governed by it directly under the research-as-design exception. Five legs, 11 epic tasks.                                                                                                                                                                                                                                        |
+| 0.2     | August 2026 | Leg 3 is no longer a gate — workstream 0003's leg 4 outcome already answers the delivery-model question empirically. Leg 4 split across `sovereign-mobile`/`sovereign-desktop`; task 20.13 rescoped to not duplicate task 17.4 / 0003 leg 3b.                                                                                                                      |
+| 0.3     | August 2026 | Leg 4's escrow and key-strictness decisions made — [RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md), Accepted. Leg 4 is no longer a workstream gate; ready to prioritize and implement. Leg 4's design now lives in RFC 0093, not directly in research 0012 — the research-as-design exception's "no RFC" framing now applies to legs 1/2/3/5 only. |

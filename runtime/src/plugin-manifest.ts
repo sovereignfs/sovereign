@@ -6,7 +6,7 @@
  * consistent with `route-guard.ts`/`route-lock.ts`/`api-namespace.ts`.
  */
 
-import { DEFAULT_MANIFEST_ICONS, guessMimeType } from './manifest-icons';
+import { DEFAULT_MANIFEST_ICONS } from './manifest-icons';
 
 /** The subset of a plugin manifest the per-plugin manifest route needs. */
 export interface InstallablePluginInfo {
@@ -16,6 +16,12 @@ export interface InstallablePluginInfo {
   routePrefix: string;
   icon?: string;
   installable?: boolean;
+  /** Author-supplied raster icon set (RFC 0081) — see `packages/manifest/src/schema.ts`'s `icons` field doc comment. */
+  icons?: {
+    png192?: string;
+    png512?: string;
+    maskable512?: string;
+  };
 }
 
 /**
@@ -38,20 +44,56 @@ export function findInstallablePlugin(
 }
 
 /**
- * A plugin's own icon as a manifest icon entry, or the platform default set
- * when the plugin declares none — an installable plugin should still
- * install with a *working* icon rather than a broken manifest, even before
- * task 2.26 lands real per-plugin raster generation. `sizes: 'any'` since
- * the plugin's `icon` is an author-supplied SVG of unknown/arbitrary
- * dimensions, the same reasoning `buildManifestIcons` already applies to an
- * operator's uploaded instance logo.
+ * The plugin's own generated/author-supplied raster icon set (RFC 0081 §3),
+ * or the platform default set when the plugin declares neither `icon` nor
+ * `icons` — an installable plugin should still install with a *working*
+ * icon rather than a broken manifest (in practice unreachable for
+ * `installable: true`, since schema validation already requires one; kept
+ * as a safe fallback for `installable` left `false`/absent, where no icon
+ * requirement applies).
+ *
+ * References `runtime/public/plugin-icons/<id>-{192,512,maskable-512}.png` —
+ * `scripts/generate-registry.ts`'s `copyPluginIcons()` is the single source
+ * of truth for what actually exists on disk at each of those three paths,
+ * so this function's existence check must mirror its fallback logic
+ * exactly: a variant exists if the plugin declares `icon` (generation
+ * fallback covers every variant) **or** that specific `icons.*` path
+ * (an author-supplied override for just that one variant, mixable with
+ * generated ones). Omitting a variant this function isn't sure exists,
+ * rather than guessing, is deliberate — a manifest `icons` entry pointing
+ * at a 404 is worse than a shorter icons array.
  */
 export function buildPluginManifestIcons(
   plugin: InstallablePluginInfo,
 ): Array<Record<string, string>> {
-  if (!plugin.icon) return DEFAULT_MANIFEST_ICONS;
-  const src = `/plugin-icons/${plugin.id}.svg`;
-  return [{ src, sizes: 'any', type: guessMimeType(src) }];
+  if (!plugin.icon && !plugin.icons) return DEFAULT_MANIFEST_ICONS;
+  const hasFallback = Boolean(plugin.icon);
+  const entries: Array<Record<string, string>> = [];
+  if (hasFallback || plugin.icons?.png192) {
+    entries.push({
+      src: `/plugin-icons/${plugin.id}-192.png`,
+      sizes: '192x192',
+      type: 'image/png',
+      purpose: 'any',
+    });
+  }
+  if (hasFallback || plugin.icons?.png512) {
+    entries.push({
+      src: `/plugin-icons/${plugin.id}-512.png`,
+      sizes: '512x512',
+      type: 'image/png',
+      purpose: 'any',
+    });
+  }
+  if (hasFallback || plugin.icons?.maskable512) {
+    entries.push({
+      src: `/plugin-icons/${plugin.id}-maskable-512.png`,
+      sizes: '512x512',
+      type: 'image/png',
+      purpose: 'maskable',
+    });
+  }
+  return entries.length > 0 ? entries : DEFAULT_MANIFEST_ICONS;
 }
 
 /**

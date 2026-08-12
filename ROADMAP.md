@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.84.0 · **Last updated:** 2026-08-11
+**Version:** 0.85.0 · **Last updated:** 2026-08-12
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -215,6 +215,7 @@ unambiguous root version was recorded; it does not mean the task is still unsche
 | 0.82.0  | Focused plugin app context and route lock — workstream 0001 leg 5 (RFC 0082)                                                            | ✅     | [2.27](docs/epics/platform-shell.md#-227--focused-plugin-app-context-and-route-lock-rfc-0082)                                                                                                  |
 | 0.83.0  | Manifest surfaces availability declaration — workstream 0001 leg 2 (RFC 0080)                                                           | ✅     | [3.33](docs/epics/plugins-runtime.md#-333--manifest-surfaces-availability-declaration-rfc-0080)                                                                                                |
 | 0.84.0  | Per-plugin installable PWA manifest — workstream 0001 leg 3 (RFC 0081)                                                                  | ✅     | [2.25](docs/epics/platform-shell.md#-225--per-plugin-installable-pwa-manifest-rfc-0081)                                                                                                        |
+| 0.85.0  | Plugin PWA icon generation — workstream 0001 leg 3 (RFC 0081)                                                                           | ✅     | [2.26](docs/epics/platform-shell.md#-226--plugin-pwa-icon-generation-rfc-0081)                                                                                                                 |
 
 ---
 
@@ -252,7 +253,6 @@ doc — but not yet assigned a roadmap slot. Promoted to a phase table once prio
 | —       | Local visual regression testing (RFC 0059)                                                            | 📋     | [9.14](docs/epics/design-system.md#-914--local-visual-regression-testing-rfc-0059)                                                               |
 | —       | NavTabs Link support + PageHeader heading level                                                       | 📋     | [9.15](docs/epics/design-system.md#-915--navtabs-link-support--pageheader-heading-level)                                                         |
 | —       | Static Sovereign Guide and per-user progress (RFC 0056)                                               | 📋     | [24.1](docs/epics/plugin-guide.md#-241--static-sovereign-guide-and-per-user-progress-rfc-0056)                                                   |
-| —       | Plugin PWA icon generation (RFC 0081)                                                                 | 📋     | [2.26](docs/epics/platform-shell.md#-226--plugin-pwa-icon-generation-rfc-0081)                                                                   |
 | —       | Unified offline storage SDK surface (Research 0012)                                                   | 📋     | [3.37](docs/epics/plugins-runtime.md#-337--unified-offline-storage-sdk-surface-research-0012)                                                    |
 | —       | `device:secureStorage` bridge capability (Research 0012)                                              | 📋     | [20.13](docs/epics/mobile.md#-2013--devicesecurestorage-bridge-capability-research-0012)                                                         |
 | —       | Escrow and recovery for `device-only` data (Research 0012)                                            | 📋     | [8.21](docs/epics/data-sovereignty.md#-821--escrow-and-recovery-for-device-only-data-research-0012)                                              |

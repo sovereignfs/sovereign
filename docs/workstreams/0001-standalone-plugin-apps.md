@@ -27,20 +27,20 @@ plugin-specific REST API, no second implementation.
 
 ## Definition of done
 
-- [ ] Any plugin can declare `installable: true` and be installed from a browser
+- [x] Any plugin can declare `installable: true` and be installed from a browser
       as its own home-screen app, with its own name, icons, and scope.
 - [ ] An installed plugin app cold-launches offline and renders cached data.
-- [ ] An installed plugin app can be signed into without leaving its scope.
-- [ ] Plugins can gate features and UI on surface (`browser` / `mobile` /
+- [x] An installed plugin app can be signed into without leaving its scope.
+- [x] Plugins can gate features and UI on surface (`browser` / `mobile` /
       `desktop`) server-side with no hydration flash, and on installed-PWA state
       client-side.
-- [ ] A plugin can declare which surfaces it is available on, and the platform
+- [x] A plugin can declare which surfaces it is available on, and the platform
       filters presentation accordingly.
 - [ ] Tally supports offline viewing plus offline **add** of expenses and
       comments, syncing on reconnect.
 - [ ] One focused native app is published from `sovereign-mobile` build targets,
       with the whole-instance app still building from the same codebase.
-- [ ] `docs/plugin-development.md` documents `installable`, `surfaces`, and
+- [x] `docs/plugin-development.md` documents `installable`, `surfaces`, and
       `sdk.device.*` as generic platform capabilities.
 - [ ] The written rationing policy for store-published plugin apps exists
       (RFC 0082 §7).
@@ -173,15 +173,37 @@ replay bug.
 
 **Epic tasks:** 2.25, then 2.26
 
-**Status (August 2026): 2.25 shipped at platform `0.84.0`.** 2.26 (real
-per-plugin icon rasterization) remains open — the plugin's own `icon.svg` is
-used directly as a placeholder manifest icon and `apple-touch-icon` for now
-(`runtime/src/plugin-manifest.ts`), and `apple-touch-startup-image` is
-omitted entirely on an installed plugin's routes rather than showing the
-_instance's_ wrong-brand splash. Both are documented, deliberate, temporary
-gaps closed by 2.26, not oversights. One real bug was found and fixed while
-implementing login containment (see the note below the technical notes) —
-worth reading before touching this area again.
+**Status (August 2026): fully shipped — 2.25 at platform `0.84.0`, 2.26 at
+`0.85.0`.** `scripts/generate-registry.ts`'s `copyPluginIcons()` now
+rasterizes a real 192/512/maskable-512 set from `icon` at build time
+(`sharp`, following `scripts/generate-splash.ts`'s pattern), with
+per-variant author-supplied overrides via the new `icons` manifest field;
+`installable: true` requires `icon` or `icons` (schema-validated, a build
+error rather than a broken install prompt). `apple-touch-startup-image`
+remains permanently omitted on an installed plugin's routes — that was
+never 2.26's scope (icon generation, not splash generation) — rather than
+showing the _instance's_ wrong-brand splash; still deliberate, not an
+oversight, just no longer attributed to a "pending task."
+
+Two real bugs were found and fixed via live testing while implementing this
+leg, not caught by unit tests alone — both worth reading before touching
+this area again:
+
+1. **Login containment's `returnUrl`** (2.25): fixed by reading it
+   server-side in `login/page.tsx` rather than via `LoginForm`'s
+   `useSearchParams()` client hook, which a middleware rewrite's target
+   query string never reaches. Full account in this leg's earlier note,
+   preserved below the technical notes.
+2. **Plugin manifest icons were session-gated while the manifest
+   referencing them wasn't** (2.26): `runtime/middleware.ts`'s matcher
+   excluded `icons/` (the instance-level default set) but not
+   `plugin-icons/` (the per-plugin set this leg added), so an unauthenticated
+   icon fetch 303-redirected — and most browsers don't follow a redirect
+   when fetching a manifest icon for an installability check, so this could
+   have silently prevented the install prompt from ever appearing, with no
+   other symptom. Confirmed live with `curl` against a running instance
+   before the matcher entry was added. See `docs/architecture-rules.md`'s
+   PWA rule for the permanent statement of this requirement.
 
 **Technical notes:**
 

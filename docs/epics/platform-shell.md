@@ -826,7 +826,7 @@ launch behavior — without leaving its scope to sign in.
 - No second service worker is registered and the existing one's scope is unchanged.
 - Existing instance-level PWA install behavior is unchanged.
 
-#### 📋 2.26 — Plugin PWA icon generation (RFC 0081)
+#### ✅ 2.26 — Plugin PWA icon generation (RFC 0081)
 
 **Goal:** Produce the raster icon sets a per-plugin install requires, from the
 single SVG plugins declare today.

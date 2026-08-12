@@ -142,8 +142,8 @@ describe('validateManifest', () => {
     if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
   });
 
-  it('accepts a manifest declaring installable: true (RFC 0081)', () => {
-    expect(validateManifest({ ...base, installable: true }).valid).toBe(true);
+  it('accepts a manifest declaring installable: true with an icon (RFC 0081)', () => {
+    expect(validateManifest({ ...base, installable: true, icon: 'icon.svg' }).valid).toBe(true);
   });
 
   it('accepts a manifest with no installable field (default behavior)', () => {
@@ -151,15 +151,53 @@ describe('validateManifest', () => {
   });
 
   it('rejects a non-boolean installable value', () => {
-    expect(validateManifest({ ...base, installable: 'yes' }).valid).toBe(false);
+    expect(validateManifest({ ...base, installable: 'yes', icon: 'icon.svg' }).valid).toBe(false);
   });
 
   it('accepts installable and offline declared independently (deliberately uncoupled)', () => {
-    expect(validateManifest({ ...base, installable: true, offline: 'offline-first' }).valid).toBe(
-      true,
-    );
-    expect(validateManifest({ ...base, installable: true }).valid).toBe(true);
+    expect(
+      validateManifest({
+        ...base,
+        installable: true,
+        icon: 'icon.svg',
+        offline: 'offline-first',
+      }).valid,
+    ).toBe(true);
+    expect(validateManifest({ ...base, installable: true, icon: 'icon.svg' }).valid).toBe(true);
     expect(validateManifest({ ...base, offline: 'offline-first' }).valid).toBe(true);
+  });
+
+  it('rejects installable: true with no icon and no author-supplied icons set (RFC 0081)', () => {
+    const res = validateManifest({ ...base, installable: true });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('installable');
+  });
+
+  it('accepts installable: true with only an author-supplied icons set, no icon', () => {
+    expect(
+      validateManifest({
+        ...base,
+        installable: true,
+        icons: { png192: 'icon-192.png', png512: 'icon-512.png', maskable512: 'icon-mask.png' },
+      }).valid,
+    ).toBe(true);
+  });
+
+  it('accepts a partial author-supplied icons set', () => {
+    expect(
+      validateManifest({ ...base, installable: true, icons: { png192: 'icon-192.png' } }).valid,
+    ).toBe(true);
+  });
+
+  it('accepts icons declared without installable (harmless, just unused)', () => {
+    expect(validateManifest({ ...base, icons: { png192: 'icon-192.png' } }).valid).toBe(true);
+  });
+
+  it('rejects an unknown key inside icons (strict)', () => {
+    expect(
+      validateManifest({ ...base, installable: true, icons: { png192: 'x.png', bogus: 'y' } })
+        .valid,
+    ).toBe(false);
   });
 
   it('accepts a manifest declaring surfaces (RFC 0080)', () => {

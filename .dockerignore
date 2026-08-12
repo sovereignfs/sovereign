@@ -9,6 +9,15 @@ node_modules
 # Generated plugin directory — recreated by the generate script
 runtime/app/plugins
 
+# Generated plugin PWA icons (SVG copies + rasterized PNGs, RFC 0081) —
+# recreated by the generate script inside the builder stage. Ignored here so
+# a stale host-generated file (e.g. a PNG from a since-renamed plugin, or
+# before a naming-convention change) can never slip into the build context —
+# `runtime/.gitignore` covers this for git, but a `.dockerignore` gap would
+# still let `COPY . .` in the `deps` stage pick up whatever happens to exist
+# on the host's working tree.
+runtime/public/plugin-icons
+
 # Non-platform, non-example plugins are cloned fresh at their pinned refs
 # inside the builder (see `pnpm install:plugins`). Never copy a local working-tree
 # clone into the context: it is absent from the frozen lockfile and would fail

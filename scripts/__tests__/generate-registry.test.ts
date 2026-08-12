@@ -435,6 +435,57 @@ describe('generated artifact pruning', () => {
     expect(existsSync(join(root, 'com.example.active.svg'))).toBe(true);
     expect(existsSync(join(root, 'com.example.stale.svg'))).toBe(false);
   });
+
+  it('prunes PNG variants for a fully-removed plugin, same as its SVG (RFC 0081)', () => {
+    for (const suffix of ['.svg', '-192.png', '-512.png', '-maskable-512.png']) {
+      writeFileSync(join(root, `com.example.stale${suffix}`), 'x');
+    }
+    writeFileSync(join(root, 'com.example.active.svg'), '<svg />');
+
+    pruneStalePluginIcons(root, new Set(['com.example.active']));
+
+    for (const suffix of ['.svg', '-192.png', '-512.png', '-maskable-512.png']) {
+      expect(existsSync(join(root, `com.example.stale${suffix}`))).toBe(false);
+    }
+  });
+
+  it('does not mistake "-maskable-512.png" for "-512.png" when deriving the plugin id', () => {
+    writeFileSync(join(root, 'com.example.active-maskable-512.png'), 'x');
+
+    pruneStalePluginIcons(root, new Set(['com.example.active']));
+
+    // A wrong id-extraction (stripping only "-512.png") would derive
+    // "com.example.active-maskable" — not in the active set — and delete
+    // this file incorrectly.
+    expect(existsSync(join(root, 'com.example.active-maskable-512.png'))).toBe(true);
+  });
+
+  it('prunes only the PNGs — not the SVG — for a plugin still active but no longer installable', () => {
+    writeFileSync(join(root, 'com.example.active.svg'), '<svg />');
+    writeFileSync(join(root, 'com.example.active-192.png'), 'x');
+    writeFileSync(join(root, 'com.example.active-512.png'), 'x');
+    writeFileSync(join(root, 'com.example.active-maskable-512.png'), 'x');
+
+    pruneStalePluginIcons(
+      root,
+      new Set(['com.example.active']),
+      new Set(), // no longer installable, but still installed
+    );
+
+    expect(existsSync(join(root, 'com.example.active.svg'))).toBe(true);
+    expect(existsSync(join(root, 'com.example.active-192.png'))).toBe(false);
+    expect(existsSync(join(root, 'com.example.active-512.png'))).toBe(false);
+    expect(existsSync(join(root, 'com.example.active-maskable-512.png'))).toBe(false);
+  });
+
+  it('defaults installablePluginIds to activePluginIds, keeping every active PNG (backward compatible)', () => {
+    writeFileSync(join(root, 'com.example.active.svg'), '<svg />');
+    writeFileSync(join(root, 'com.example.active-192.png'), 'x');
+
+    pruneStalePluginIcons(root, new Set(['com.example.active'])); // no third arg
+
+    expect(existsSync(join(root, 'com.example.active-192.png'))).toBe(true);
+  });
 });
 
 describe('plugin schedules generation', () => {

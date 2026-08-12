@@ -713,6 +713,18 @@ export const config = {
   // custom-worker bundles, icons — must load without a session), and Next static
   // assets.
   //
+  // `plugin-icons/` (a per-plugin `icon.svg` plus, for `installable: true`
+  // plugins, generated/author-supplied PNGs, RFC 0081) needs the same
+  // exemption as `icons/` and for the same reason: an `installable` plugin's
+  // own manifest (`/api/manifest/[pluginId]`) is itself session-exempt so a
+  // browser can evaluate installability before login, and its `icons[].src`
+  // entries all point here — a session-gated icon fetch 303-redirects
+  // instead of returning an image, and browsers generally don't follow a
+  // redirect when fetching a manifest icon for an installability check, so
+  // the *whole install prompt* can silently fail to appear with no other
+  // symptom. Confirmed live: `curl` against a running instance returned a
+  // 303 to `/login` for a generated plugin icon before this was added.
+  //
   // `api/instance` is deliberately NOT in this list, unlike the other
   // "must load pre-session" entries: it has privileged POST/DELETE endpoints
   // (`/api/instance/logo`, `/api/instance/favicon`) alongside their public
@@ -738,10 +750,11 @@ export const config = {
   matcher: [
     // Exclude: auth pages, privacy/tos pages, admin API (self-authenticated),
     // public liveness probe, dynamic manifest (browsers fetch it before login
-    // for PWA install), offline fallback, PWA assets, Next.js static assets,
-    // and the signed-URL storage download route (RFC 0044 — self-authenticated
-    // by its HMAC-signed token, not a session; must work for a plain
-    // `<img src>`/direct fetch with no session cookie).
-    '/((?!login|register|forgot-password|reset-password|privacy|tos|offline|api/auth|api/admin|api/health|api/manifest|api/storage|manifest.json|sw.js|workbox-|worker-|fallback-|icons/|_next/static|_next/image|favicon.ico).*)',
+    // for PWA install), offline fallback, PWA assets, plugin icons (RFC 0081,
+    // see the comment above this array), Next.js static assets, and the
+    // signed-URL storage download route (RFC 0044 — self-authenticated by its
+    // HMAC-signed token, not a session; must work for a plain `<img src>`/
+    // direct fetch with no session cookie).
+    '/((?!login|register|forgot-password|reset-password|privacy|tos|offline|api/auth|api/admin|api/health|api/manifest|api/storage|manifest.json|sw.js|workbox-|worker-|fallback-|icons/|plugin-icons/|_next/static|_next/image|favicon.ico).*)',
   ],
 };

@@ -260,6 +260,25 @@ const manifestObjectSchema = z
      */
     development: z.boolean().optional(),
     icon: z.string().optional(),
+    /**
+     * An author-supplied raster icon set (RFC 0081), for a plugin whose
+     * glyph rasterizes poorly from `icon` alone — a maskable icon in
+     * particular needs safe-area padding and usually a background plate an
+     * SVG glyph doesn't have. Each path is relative to the plugin root, the
+     * same convention `icon` uses. Optional even when `installable: true`:
+     * the build step generates a full set from `icon` automatically when
+     * this is absent (`scripts/generate-registry.ts`), so most plugins
+     * never need to declare it. `installable: true` requires `icon` or
+     * `icons` — see the cross-field check below.
+     */
+    icons: z
+      .object({
+        png192: z.string().optional(),
+        png512: z.string().optional(),
+        maskable512: z.string().optional(),
+      })
+      .strict()
+      .optional(),
     compatibility: z
       .object({
         /** Minimum platform version this plugin requires (semver). Hard-enforced at install/build/boot. */
@@ -640,7 +659,12 @@ export const manifestSchema = manifestObjectSchema
       message: 'public: true cannot combine with a paid monetization model (RFC 0089)',
       path: ['public'],
     },
-  );
+  )
+  .refine((m) => m.installable !== true || m.icon !== undefined || m.icons !== undefined, {
+    message:
+      'installable: true requires an icon (auto-rasterized) or an author-supplied icons set (RFC 0081)',
+    path: ['installable'],
+  });
 
 /**
  * Manifest field names, sourced from the schema so docs and tooling share one

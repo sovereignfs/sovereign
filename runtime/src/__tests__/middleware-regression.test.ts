@@ -1146,4 +1146,19 @@ describe('middleware matcher', () => {
       expect(matches(pathname)).toBe(false);
     }
   });
+
+  // Regression: a plugin's manifest icons (RFC 0081) were session-gated
+  // while the manifest referencing them (`/api/manifest/[pluginId]`) was
+  // not — a 303 where an image was expected, which browsers generally don't
+  // follow for a manifest icon fetch, silently breaking the install prompt
+  // with no other symptom. Confirmed live against a running instance before
+  // this was fixed.
+  it.each([
+    '/plugin-icons/fs.sovereign.tally.svg',
+    '/plugin-icons/fs.sovereign.tally-192.png',
+    '/plugin-icons/fs.sovereign.tally-512.png',
+    '/plugin-icons/fs.sovereign.tally-maskable-512.png',
+  ])('does not gate the plugin icon asset %s (RFC 0081)', (pathname) => {
+    expect(matches(pathname)).toBe(false);
+  });
 });

@@ -347,6 +347,104 @@ export const biometrics = {
   },
 };
 
+/**
+ * Durable, encrypted, device-auth-gated plugin-scoped key/value storage
+ * (RFC 0093, workstream 0008 leg 4) — the `device-only` offline tier's
+ * storage primitive. Native Keychain/Keystore key custody + SQLCipher on
+ * Capacitor, WebAuthn PRF key custody + OPFS on web; see the RFC for the
+ * full design. Check `isDeviceOnlyTierAvailable()` (this module) before
+ * relying on it — it reports `unavailable` with no bridge, same as
+ * `biometrics`, since there is no meaningful web-transport fallback for a
+ * capability whose entire purpose is hardware-backed key custody.
+ *
+ * Shape deliberately mirrors `@sovereignfs/sdk/offline`'s existing
+ * `get`/`set`/`remove`/`keys`/`clear` (browser IndexedDB cache) rather than
+ * inventing a new one — task 3.37 (unified offline storage SDK surface)
+ * is expected to select between the two backends behind one plugin-facing
+ * API, and a matching shape now means minimal translation then.
+ *
+ * One capability name (`'secureStorage'`), not one per operation like
+ * `haptics.impact`/`camera.photo`/`biometrics.confirm` — the operations
+ * here are CRUD on one logical store, not independent one-shot actions,
+ * so they're distinguished by `op` in the invoke payload instead of by
+ * capability name. `isDeviceOnlyTierAvailable()`'s `supports('secureStorage')`
+ * check already assumes this single-name shape.
+ *
+ * **Deliberately does not record a device-consent grant per call**, unlike
+ * `camera.photo`/`biometrics.confirm`/`nativeNotifications.requestPermission`.
+ * RFC 0093 makes `device-only` enrollment structural — enabling the plugin
+ * *is* the enrollment, with its own dedicated consent/warning flow (epic
+ * task 1.22, Account UX) — so per-operation grant bookkeeping here would be
+ * both redundant and a category error (there is no per-call "permission"
+ * being requested, only ordinary reads/writes against an already-enrolled
+ * store).
+ */
+export const secureStorage = {
+  /** Read this plugin's stored value for `key`, or `null` if never written. */
+  async get<T>(pluginId: string, key: string): Promise<DeviceResult<T | null>> {
+    const bridge = getBridge();
+    if (!bridge) {
+      return { status: 'unavailable', capability: 'secureStorage' };
+    }
+    return (await bridge.invoke('secureStorage', {
+      op: 'get',
+      pluginId,
+      key,
+    })) as DeviceResult<T | null>;
+  },
+
+  /** Write/replace this plugin's stored value for `key`. */
+  async set<T>(pluginId: string, key: string, value: T): Promise<DeviceResult<void>> {
+    const bridge = getBridge();
+    if (!bridge) {
+      return { status: 'unavailable', capability: 'secureStorage' };
+    }
+    return (await bridge.invoke('secureStorage', {
+      op: 'set',
+      pluginId,
+      key,
+      value,
+    })) as DeviceResult<void>;
+  },
+
+  /** Remove this plugin's stored value for `key`. No-op if it was never set. */
+  async remove(pluginId: string, key: string): Promise<DeviceResult<void>> {
+    const bridge = getBridge();
+    if (!bridge) {
+      return { status: 'unavailable', capability: 'secureStorage' };
+    }
+    return (await bridge.invoke('secureStorage', {
+      op: 'remove',
+      pluginId,
+      key,
+    })) as DeviceResult<void>;
+  },
+
+  /** List every key this plugin has stored (unprefixed — as passed to `set`). */
+  async keys(pluginId: string): Promise<DeviceResult<string[]>> {
+    const bridge = getBridge();
+    if (!bridge) {
+      return { status: 'unavailable', capability: 'secureStorage' };
+    }
+    return (await bridge.invoke('secureStorage', {
+      op: 'keys',
+      pluginId,
+    })) as DeviceResult<string[]>;
+  },
+
+  /** Remove every stored value for this plugin. */
+  async clear(pluginId: string): Promise<DeviceResult<void>> {
+    const bridge = getBridge();
+    if (!bridge) {
+      return { status: 'unavailable', capability: 'secureStorage' };
+    }
+    return (await bridge.invoke('secureStorage', {
+      op: 'clear',
+      pluginId,
+    })) as DeviceResult<void>;
+  },
+};
+
 function pickViaFileInput(
   source: 'camera' | 'library',
 ): Promise<DeviceResult<{ dataUrl: string; mimeType: string }>> {

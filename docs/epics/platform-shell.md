@@ -555,7 +555,12 @@ scaffold), Task 14.1 (Account plugin).
 
 ---
 
-#### 📋 2.20 — Error-page digital-rights quote rotation
+#### ❌ 2.20 — Error-page digital-rights quote rotation — Rejected
+
+**Rejected** — excluded from the Engineering Hygiene workstream
+([0012](../workstreams/0012-engineering-hygiene.md)) scope during its
+planning pass; not carried forward to any other workstream either. Left here
+for the record rather than deleted.
 
 **Goal:** Add a small, curated rotating quote treatment to platform-owned error pages so
 dead ends carry Sovereign's privacy and digital-rights voice without obscuring the practical

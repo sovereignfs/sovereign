@@ -4,7 +4,7 @@
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Whole platform — `packages/ui`, `packages/db`, `runtime`, `apps/auth`, `packages/mailer`, `bin/sv`, `.env.example`, docs, Docker/compose, SRS\
-**Incorporated into plan:** Yes — phased pre-v1. SRS §3.18 documents the architecture. Task 1.0.03 (Phase 1: DB + shell + Console form + SDK) is ✅ shipped; epic tasks 9.9 (Phase 2: email + auth login) and 9.10 (Phase 3: dynamic PWA manifest + favicon) are in the pre-release schedule. Epic task 9.8 (RFC 0032) renames `BRAND_*` → `INSTANCE_*` ahead of Phase 2.
+**Incorporated into plan:** Yes — phased pre-v1. SRS §3.18 documents the architecture. Task 1.0.03 (Phase 1: DB + shell + Console form + SDK) and epic task 9.10 (Phase 3: dynamic PWA manifest + favicon) are ✅ shipped; epic task 9.9 (Phase 2: email + auth login) is scheduled in [workstream 0013](../workstreams/0013-white-labeling-phase-2-and-ds-backlog.md). Epic task 9.8 (RFC 0032) renamed `BRAND_*` → `INSTANCE_*` ahead of Phase 2, ✅ shipped. Phase 4 (epic task 9.13, subtle attribution) was rejected and retired.
 
 ---
 
@@ -269,6 +269,13 @@ Logo and favicon URLs are intentionally excluded from `getConfig()` — they are
 
 ### Subtle Sovereign attribution
 
+**Rejected, August 2026** — epic task 9.13, the implementation of this
+section, was rejected by the developer and retired
+(`docs/epics/design-system.md`'s 9.13 entry, `ROADMAP.md`). Not carried into
+[workstream 0013](../workstreams/0013-white-labeling-phase-2-and-ds-backlog.md)
+or any other. The design below is left as a record of what was considered,
+not a pending phase.
+
 Instance identity lets operators make the workspace feel like their own. It
 should not erase the fact that the platform is powered by Sovereign in ordinary
 open-source/self-hosted deployments. Attribution should be useful, subtle, and
@@ -399,15 +406,15 @@ awareness without occupying daily workspace chrome.
 
 This RFC is **documentation-first**. The design is recorded here for review and consensus; implementation scheduling is deferred.
 
-| Phase | What ships                                                                                                                                | Packages affected                                                          | Semver                                                                |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| 0     | Instance identity rename: `BRAND_*` → `INSTANCE_*`, `--sv-brand-*` → `--sv-instance-*`, `tenant_branding` → `instance_config` (RFC 0032)  | `packages/db`, `runtime`, `packages/ui`, `packages/sdk`, `plugins/console` | `ui` minor, `sdk` minor, `db` minor, `runtime` minor, `console` patch |
-| 1     | `instance_config` table + helpers, env vars, `--sv-instance-*` tokens, `InstanceProvider`, Console identity form, `getConfig()` extension | `packages/db`, `runtime`, `plugins/console`, `packages/ui`, `packages/sdk` | `db` minor, `runtime` minor, `ui` minor, `console` minor, `sdk` minor |
-| 2     | Email templates (logo + sender name, RFC 0031), auth login page identity via runtime proxy                                                | `packages/mailer`, `apps/auth`                                             | `mailer` minor, `auth` minor                                          |
-| 3     | Dynamic PWA manifest route, dynamic favicon route                                                                                         | `runtime`                                                                  | `runtime` minor                                                       |
-| 4     | Subtle Sovereign attribution: auth footer, Account/Console About surfaces, avatar-menu entry, generator metadata                          | `runtime`, `apps/auth`, `plugins/account`, `plugins/console`               | `runtime` minor, `auth` minor, `account` minor, `console` minor       |
+| Phase | What ships                                                                                                                                       | Packages affected                                                          | Semver                                                                |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 0     | Instance identity rename: `BRAND_*` → `INSTANCE_*`, `--sv-brand-*` → `--sv-instance-*`, `tenant_branding` → `instance_config` (RFC 0032)         | `packages/db`, `runtime`, `packages/ui`, `packages/sdk`, `plugins/console` | `ui` minor, `sdk` minor, `db` minor, `runtime` minor, `console` patch |
+| 1     | `instance_config` table + helpers, env vars, `--sv-instance-*` tokens, `InstanceProvider`, Console identity form, `getConfig()` extension        | `packages/db`, `runtime`, `plugins/console`, `packages/ui`, `packages/sdk` | `db` minor, `runtime` minor, `ui` minor, `console` minor, `sdk` minor |
+| 2     | Email templates (logo + sender name, RFC 0031), auth login page identity via runtime proxy                                                       | `packages/mailer`, `apps/auth`                                             | `mailer` minor, `auth` minor                                          |
+| 3     | Dynamic PWA manifest route, dynamic favicon route                                                                                                | `runtime`                                                                  | `runtime` minor                                                       |
+| 4     | ~~Subtle Sovereign attribution: auth footer, Account/Console About surfaces, avatar-menu entry, generator metadata~~ — **Rejected, August 2026** | `runtime`, `apps/auth`, `plugins/account`, `plugins/console`               | `runtime` minor, `auth` minor, `account` minor, `console` minor       |
 
-Phase 0 (RFC 0032) shipped as epic task 9.8; Phase 1 shipped as Task 1.0.03. Published packages (`@sovereignfs/ui`, `@sovereignfs/sdk`) treated the Phase 0 rename as a breaking minor bump per NFR-04 (no breaking patch releases).
+Phase 0 (RFC 0032) shipped as epic task 9.8; Phase 1 shipped as Task 1.0.03. Phase 2 (epic task 9.9) and Phase 3 (epic task 9.10, shipped) are the remaining scheduled work — see [workstream 0013](../workstreams/0013-white-labeling-phase-2-and-ds-backlog.md) for Phase 2. Phase 4 (epic task 9.13) was rejected and retired; it will not ship. Published packages (`@sovereignfs/ui`, `@sovereignfs/sdk`) treated the Phase 0 rename as a breaking minor bump per NFR-04 (no breaking patch releases).
 
 ### Required doc updates
 

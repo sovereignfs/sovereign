@@ -29,8 +29,27 @@ async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
   });
 }
 
+/**
+ * Every action in this file is a Console admin surface. Server actions are
+ * reachable by action id, so the middleware `adminOnly` gate on /console is not
+ * on its own a sufficient guard — each action authorizes here. This matters
+ * more than usual because `adminFetch` below attaches SOVEREIGN_ADMIN_KEY:
+ * an unauthorized caller reaching these would be borrowing the platform's own
+ * admin credentials.
+ *
+ * Non-admin self-service enable/disable is a separate surface entirely
+ * (`plugins:self-manage`, POST /api/plugins/[id]/self-service) and does not
+ * route through here.
+ */
+async function requirePluginManage(): Promise<void> {
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'plugin:manage')) {
+    throw new Error('Insufficient privileges to manage apps.');
+  }
+}
+
 export async function togglePluginAction(formData: FormData): Promise<void> {
-  await sdk.auth.requireSession();
+  await requirePluginManage();
   const pluginId = formData.get('pluginId') as string;
   const enabled = formData.get('enabled') === 'true';
   const res = await adminFetch(`/api/admin/plugins/${encodeURIComponent(pluginId)}`, {
@@ -51,7 +70,7 @@ export interface PluginCatalogEntry {
 }
 
 export async function getPluginCatalogAction(): Promise<PluginCatalogEntry[]> {
-  await sdk.auth.requireSession();
+  await requirePluginManage();
   const res = await adminFetch('/api/admin/plugins/catalog');
   if (!res.ok) return [];
   const body = (await res.json()) as { catalog: PluginCatalogEntry[] };
@@ -65,7 +84,7 @@ export async function activatePluginAction(
   _prev: ActivatePluginActionState | null,
   formData: FormData,
 ): Promise<ActivatePluginActionState> {
-  await sdk.auth.requireSession();
+  await requirePluginManage();
   const pluginId = formData.get('pluginId') as string;
 
   const res = await adminFetch(`/api/admin/plugins/${encodeURIComponent(pluginId)}/activate`, {
@@ -116,7 +135,7 @@ export interface ResolvedPluginAccessGroup {
 }
 
 export async function getPluginAccessState(pluginId: string): Promise<PluginAccessState> {
-  await sdk.auth.requireSession();
+  await requirePluginManage();
   const res = await adminFetch(`/api/admin/plugins/${encodeURIComponent(pluginId)}/access`);
   if (!res.ok) {
     return { accessPolicy: 'everyone', selfService: false, users: [], groups: [] };
@@ -154,7 +173,7 @@ export async function listResolvedPluginAccessGroups(
 }
 
 export async function searchPluginAccessDirectoryUsers(query: string): Promise<DirectoryUser[]> {
-  await sdk.auth.requireSession();
+  await requirePluginManage();
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
   return sdk.directory.searchUsers({ query: trimmed, limit: 8 });
@@ -166,7 +185,7 @@ export interface GroupOption {
 }
 
 export async function listGroupOptions(): Promise<GroupOption[]> {
-  await sdk.auth.requireSession();
+  await requirePluginManage();
   const res = await adminFetch('/api/admin/groups');
   if (!res.ok) return [];
   return (await res.json()) as GroupOption[];
@@ -175,7 +194,7 @@ export async function listGroupOptions(): Promise<GroupOption[]> {
 export type PluginAccessActionState = { success: true } | { success: false; error: string };
 
 export async function setPluginAccessPolicyAction(formData: FormData): Promise<void> {
-  await sdk.auth.requireSession();
+  await requirePluginManage();
   const pluginId = formData.get('pluginId') as string;
   const accessPolicy = formData.get('accessPolicy') as string;
   const selfService = formData.get('selfService') === 'true';
@@ -192,7 +211,7 @@ export async function grantPluginAccessUserAction(
   _prev: PluginAccessActionState | null,
   formData: FormData,
 ): Promise<PluginAccessActionState> {
-  await sdk.auth.requireSession();
+  await requirePluginManage();
   const pluginId = formData.get('pluginId') as string;
   const userId = formData.get('userId') as string;
   if (!userId) return { success: false, error: 'Pick a person from the search results.' };
@@ -210,7 +229,7 @@ export async function grantPluginAccessUserAction(
 }
 
 export async function revokePluginAccessUserAction(formData: FormData): Promise<void> {
-  await sdk.auth.requireSession();
+  await requirePluginManage();
   const pluginId = formData.get('pluginId') as string;
   const userId = formData.get('userId') as string;
 
@@ -226,7 +245,7 @@ export async function grantPluginAccessGroupAction(
   _prev: PluginAccessActionState | null,
   formData: FormData,
 ): Promise<PluginAccessActionState> {
-  await sdk.auth.requireSession();
+  await requirePluginManage();
   const pluginId = formData.get('pluginId') as string;
   const groupId = formData.get('groupId') as string;
   if (!groupId) return { success: false, error: 'Pick a group.' };
@@ -244,7 +263,7 @@ export async function grantPluginAccessGroupAction(
 }
 
 export async function revokePluginAccessGroupAction(formData: FormData): Promise<void> {
-  await sdk.auth.requireSession();
+  await requirePluginManage();
   const pluginId = formData.get('pluginId') as string;
   const groupId = formData.get('groupId') as string;
 

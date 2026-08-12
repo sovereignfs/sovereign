@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   generateCmk,
   generateDek,
@@ -42,6 +42,39 @@ describe('generateRecoverySecret', () => {
     expect(secret).toMatch(/^[A-Z2-9]{5}(-[A-Z2-9]{5}){3}$/);
     expect(secret).not.toMatch(/[01IOL]/);
     expect(generateRecoverySecret()).not.toBe(generateRecoverySecret());
+  });
+
+  // The 31-character alphabet does not divide 256 evenly (256 = 8×31 + 8), so
+  // the old `byte % 31` mapping made the first 8 characters ~12% likelier than
+  // the rest. Rejection sampling discards 248..255 instead of folding them
+  // back onto the start of the alphabet.
+  it('discards bytes above the last whole multiple of the alphabet', () => {
+    // Alternates a byte that must be rejected (249) with one that must map to
+    // 'A' (0). 249 is chosen deliberately: under `byte % 31` it folded to
+    // alphabet[1] = 'B', so half the output would be 'B'. (248 would be a
+    // useless probe here — 248 % 31 is 0, which maps to 'A' either way.)
+    let flip = false;
+    const source = vi.spyOn(crypto, 'getRandomValues').mockImplementation(((arr: Uint8Array) => {
+      for (let i = 0; i < arr.length; i++) {
+        flip = !flip;
+        arr[i] = flip ? 249 : 0;
+      }
+      return arr;
+    }) as typeof crypto.getRandomValues);
+
+    try {
+      expect(generateRecoverySecret()).toBe('AAAAA-AAAAA-AAAAA-AAAAA');
+    } finally {
+      source.mockRestore();
+    }
+  });
+
+  it('still fills the full secret when draws are rejected', () => {
+    // Rejection must not shorten the output — the generator redraws until it
+    // has a full complement of characters.
+    for (let i = 0; i < 50; i++) {
+      expect(generateRecoverySecret().replaceAll('-', '')).toHaveLength(20);
+    }
   });
 });
 

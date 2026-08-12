@@ -5,13 +5,21 @@ import { checkAdminKey } from '@/src/admin-guard';
 import { logActivity } from '@/src/activity';
 import { getPlatformDb } from '@/src/db';
 
-/** Kebab-case a group name into a slug candidate. Not guaranteed unique. */
+/**
+ * Kebab-case a group name into a slug candidate. Not guaranteed unique.
+ *
+ * The trim of leading/trailing separators is two anchored, non-global replaces.
+ * The combined `/^-+|-+$/g` form it replaces was quadratic: with `g` the engine
+ * retries `-+$` at every offset inside a long run of dashes, backtracking one
+ * character at a time on each failure.
+ */
 function slugify(name: string): string {
   return name
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
 }
 
 export async function GET(request: Request): Promise<Response> {

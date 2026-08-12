@@ -116,7 +116,8 @@ function slugifyVitePressHeading(heading: string): string {
     .join('')
     .replace(/[\s~`!@#$%^&*()\-_+=[\]{}|\\;:"'“”‘’<>,.?/]+/g, '-')
     .replace(/-{2,}/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '')
     .replace(/^(\d)/, '_$1')
     .toLowerCase();
 }

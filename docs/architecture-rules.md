@@ -157,6 +157,29 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
 - **`adminOnly` routes are gated in the runtime middleware.** A request under an
   admin-only plugin's `routePrefix` from a non-`platform:admin` user returns 403
   (SRS §3.4, PLT-03).
+- **Every server action authorizes inside the action — the middleware's
+  path-based gate is not a substitute.** A `'use server'` function is a public
+  POST endpoint dispatched by **action id**, not by the page it was written on,
+  so the `adminOnly` check the middleware applies to `/console` cannot be
+  assumed to cover it. Every action begins with
+  `const session = await sdk.auth.requireSession();` **and** an explicit
+  `sdk.auth.hasCapability(session, '<capability>')` check —
+  `requireSession()` alone only proves the caller is _some_ logged-in user,
+  which is not an admin check. This binds hardest in
+  `plugins/console/app/**/actions.ts`, whose `adminFetch` helper attaches
+  `SOVEREIGN_ADMIN_KEY`: an action reachable without a capability check hands
+  the platform's own admin credentials to whoever calls it. Precedent:
+  `plugins/console/app/plugins/remove-actions.ts` shipped with no check at all
+  while every sibling action file had one (found by CodeQL alert #1, which
+  flagged the `execSync` in it and not the missing authorization).
+- **Never interpolate a request-derived value into a shell command string.**
+  Use `execFileSync`/`execFile` with an argv array so no shell is spawned.
+  `JSON.stringify()` is **not** shell quoting — it escapes `"` and `\` but
+  leaves `$(…)`, backticks and `${…}` live inside the double quotes it adds,
+  and the shell expands all three. Where the value identifies a known entity,
+  resolve it against a server-side allowlist (e.g. the installed-plugin
+  registry) and pass the _resolved_ string, so the subprocess argument never
+  originates from the request at all.
 - **Invite-only is dual-written, and the auth-server copy is authoritative.**
   The Console toggle (CON-10) writes `invite_only` to both the platform DB
   (`platform_settings`, read by `sdk.platform.getConfig()`) and the auth

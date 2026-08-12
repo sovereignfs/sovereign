@@ -22,7 +22,16 @@ const AES_GCM_KEY_LENGTH = 256;
 const AES_GCM_IV_BYTES = 12;
 const PBKDF2_SALT_BYTES = 16;
 const PBKDF2_ITERATIONS = 600_000; // OWASP 2023 guidance for PBKDF2-HMAC-SHA256
-const RECOVERY_SECRET_ENTROPY_BYTES = 20; // 160 bits
+/**
+ * Displayed characters in a recovery secret — NOT a byte count. Each character
+ * carries log2(31) ≈ 4.95 bits, so 20 characters is ~99 bits, not the 160 the
+ * old `RECOVERY_SECRET_ENTROPY_BYTES = 20 // 160 bits` name and comment
+ * implied: 20 random bytes go in, but each one is squeezed down to a single
+ * 31-value character. Raising this to 32 would deliver the ~158 bits originally
+ * intended; that changes the format users have already written down, so it is
+ * deliberately left alone here.
+ */
+const RECOVERY_SECRET_CHARS = 20;
 
 export const CMK_ALGORITHM = 'AES-GCM-256';
 export const KDF_ALGORITHM = 'PBKDF2-SHA256';
@@ -87,14 +96,27 @@ function concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array {
 /**
  * A high-entropy, human-recordable recovery secret. Grouped base32
  * (Crockford-ish alphabet, ambiguous characters removed) rather than a
- * BIP39 word list — no wordlist dependency, ~160 bits of entropy in 32
- * displayed characters across 6 groups (e.g. `AB3DE-FGH2J-...`).
+ * BIP39 word list — no wordlist dependency, ~99 bits of entropy in 20
+ * displayed characters across 4 groups (e.g. `AB3DE-FGH2J-...`).
+ *
+ * Characters are drawn by rejection sampling, not `byte % alphabet.length`:
+ * 256 is not a multiple of the 31-character alphabet (256 = 8×31 + 8), so
+ * modulo would make the first 8 characters ~12% likelier than the rest,
+ * dropping the secret to ~97 bits of min-entropy.
  */
 export function generateRecoverySecret(): string {
   const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O, 1/I/L
-  const bytes = crypto.getRandomValues(new Uint8Array(RECOVERY_SECRET_ENTROPY_BYTES));
+  // Largest multiple of the alphabet size that fits in a byte; bytes at or
+  // above it are discarded so every accepted byte maps uniformly.
+  const limit = Math.floor(256 / alphabet.length) * alphabet.length;
   let out = '';
-  for (const byte of bytes) out += alphabet[byte % alphabet.length];
+  while (out.length < RECOVERY_SECRET_CHARS) {
+    const bytes = crypto.getRandomValues(new Uint8Array(RECOVERY_SECRET_CHARS - out.length));
+    for (const byte of bytes) {
+      if (byte >= limit) continue;
+      out += alphabet[byte % alphabet.length];
+    }
+  }
   return out.match(/.{1,5}/g)?.join('-') ?? out;
 }
 

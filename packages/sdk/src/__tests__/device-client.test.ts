@@ -499,3 +499,146 @@ describe('biometrics.confirm', () => {
     });
   });
 });
+
+describe('secureStorage', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, BRIDGE_SYMBOL);
+    vi.resetModules();
+    vi.unstubAllGlobals();
+  });
+
+  it('reports unavailable with no bridge on every operation — no web fallback exists', async () => {
+    vi.resetModules();
+    const { secureStorage } = await import('../device-client');
+
+    expect(await secureStorage.get('fs.example.tally', 'k')).toEqual({
+      status: 'unavailable',
+      capability: 'secureStorage',
+    });
+    expect(await secureStorage.set('fs.example.tally', 'k', 'v')).toEqual({
+      status: 'unavailable',
+      capability: 'secureStorage',
+    });
+    expect(await secureStorage.remove('fs.example.tally', 'k')).toEqual({
+      status: 'unavailable',
+      capability: 'secureStorage',
+    });
+    expect(await secureStorage.keys('fs.example.tally')).toEqual({
+      status: 'unavailable',
+      capability: 'secureStorage',
+    });
+    expect(await secureStorage.clear('fs.example.tally')).toEqual({
+      status: 'unavailable',
+      capability: 'secureStorage',
+    });
+  });
+
+  it('get: invokes the single secureStorage capability with op "get" and returns the bridge result as-is', async () => {
+    const invoke = vi.fn().mockResolvedValue({ status: 'ok', value: 'stored-value' });
+    provideBridge(nativeImpl({ invoke }));
+    vi.resetModules();
+    const { secureStorage } = await import('../device-client');
+
+    expect(await secureStorage.get('fs.example.tally', 'balance')).toEqual({
+      status: 'ok',
+      value: 'stored-value',
+    });
+    expect(invoke).toHaveBeenCalledWith('secureStorage', {
+      op: 'get',
+      pluginId: 'fs.example.tally',
+      key: 'balance',
+    });
+  });
+
+  it('set: passes pluginId, key, and value through with op "set"', async () => {
+    const invoke = vi.fn().mockResolvedValue({ status: 'ok', value: undefined });
+    provideBridge(nativeImpl({ invoke }));
+    vi.resetModules();
+    const { secureStorage } = await import('../device-client');
+
+    expect(await secureStorage.set('fs.example.tally', 'balance', 42)).toEqual({
+      status: 'ok',
+      value: undefined,
+    });
+    expect(invoke).toHaveBeenCalledWith('secureStorage', {
+      op: 'set',
+      pluginId: 'fs.example.tally',
+      key: 'balance',
+      value: 42,
+    });
+  });
+
+  it('remove: passes pluginId and key through with op "remove"', async () => {
+    const invoke = vi.fn().mockResolvedValue({ status: 'ok', value: undefined });
+    provideBridge(nativeImpl({ invoke }));
+    vi.resetModules();
+    const { secureStorage } = await import('../device-client');
+
+    expect(await secureStorage.remove('fs.example.tally', 'balance')).toEqual({
+      status: 'ok',
+      value: undefined,
+    });
+    expect(invoke).toHaveBeenCalledWith('secureStorage', {
+      op: 'remove',
+      pluginId: 'fs.example.tally',
+      key: 'balance',
+    });
+  });
+
+  it('keys: passes pluginId through with op "keys"', async () => {
+    const invoke = vi.fn().mockResolvedValue({ status: 'ok', value: ['balance', 'note'] });
+    provideBridge(nativeImpl({ invoke }));
+    vi.resetModules();
+    const { secureStorage } = await import('../device-client');
+
+    expect(await secureStorage.keys('fs.example.tally')).toEqual({
+      status: 'ok',
+      value: ['balance', 'note'],
+    });
+    expect(invoke).toHaveBeenCalledWith('secureStorage', {
+      op: 'keys',
+      pluginId: 'fs.example.tally',
+    });
+  });
+
+  it('clear: passes pluginId through with op "clear"', async () => {
+    const invoke = vi.fn().mockResolvedValue({ status: 'ok', value: undefined });
+    provideBridge(nativeImpl({ invoke }));
+    vi.resetModules();
+    const { secureStorage } = await import('../device-client');
+
+    expect(await secureStorage.clear('fs.example.tally')).toEqual({
+      status: 'ok',
+      value: undefined,
+    });
+    expect(invoke).toHaveBeenCalledWith('secureStorage', {
+      op: 'clear',
+      pluginId: 'fs.example.tally',
+    });
+  });
+
+  it('surfaces a denied/failed result from the bridge unchanged', async () => {
+    provideBridge(
+      nativeImpl({ invoke: async () => ({ status: 'failed', error: 'device auth cancelled' }) }),
+    );
+    vi.resetModules();
+    const { secureStorage } = await import('../device-client');
+
+    expect(await secureStorage.get('fs.example.tally', 'balance')).toEqual({
+      status: 'failed',
+      error: 'device auth cancelled',
+    });
+  });
+
+  it('does not record a device-consent grant — enrollment is structural, not per-call (RFC 0093)', async () => {
+    provideBridge(nativeImpl({ invoke: async () => ({ status: 'ok', value: undefined }) }));
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.resetModules();
+    const { secureStorage } = await import('../device-client');
+
+    await secureStorage.set('fs.example.tally', 'balance', 42);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

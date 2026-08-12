@@ -1,7 +1,7 @@
 ---
 rfc: 0058
 title: Native mobile app shell (Capacitor)
-status: Draft
+status: Partially implemented (task 20.2 shipped; task 20.1 substantially implemented in sovereign-mobile)
 date: July 2026
 author: kasunben
 scope: sovereign-mobile (separate repo), docs, packages/sdk

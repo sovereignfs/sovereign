@@ -1,6 +1,6 @@
 # RFC 0083 — Device bridge and capability contract
 
-**Status:** Draft\
+**Status:** Implemented\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** `packages/sdk` (new `@sovereignfs/sdk/device-client` subpath — the

@@ -1,6 +1,6 @@
 # RFC 0081 — Per-plugin installable PWA
 
-**Status:** Draft\
+**Status:** Partially implemented (epic task 2.25 shipped at v0.84.0; task 2.26, icon generation, still open)\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** `runtime/app/api/manifest/` (new `[pluginId]` dynamic segment

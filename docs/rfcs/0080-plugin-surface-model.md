@@ -1,6 +1,6 @@
 # RFC 0080 — Plugin surface model (`sdk.device.*` and `x-sovereign-surface`)
 
-**Status:** Draft\
+**Status:** Implemented\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** `runtime/middleware.ts` (new `x-sovereign-surface` injected header),

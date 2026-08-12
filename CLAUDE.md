@@ -80,6 +80,17 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
   `docs/epics/<file>.md` task heading in the same PR.** Mark both ✅. Do not
   duplicate completion history in `CLAUDE.md`. The next task is assigned by the
   developer at session start, not inferred from a pointer in this file.
+- **If the task implements or advances an RFC, update that RFC's own
+  `Status:` line and its row in `docs/rfcs/README.md`, in the same PR.**
+  These are a separate status record from `ROADMAP.md`/`docs/epics/` and do
+  not update automatically when the epic task is marked ✅ — nine RFCs
+  (0058, 0071, 0079–0083, 0087, 0088) were found sitting at stale
+  `Draft`/`Accepted` status, in one case (0071) for a feature that had
+  already shipped _and been retired_, before this was caught and fixed.
+  Use `Implemented` once every "Incorporated into plan" task for that RFC is
+  ✅, `Partially implemented (...)` with a short reason when only some are,
+  and `Retired`/`Superseded` (with a pointer to why) if the shipped feature
+  was later removed or replaced.
 - **Verify before claiming done.** Run the task's review-checklist commands and
   show the output.
 - Never merge a PR automatically. Either wait for explicit instruction to merge,

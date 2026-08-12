@@ -1,6 +1,6 @@
 # RFC 0082 — Focused plugin app shell (single-plugin native apps)
 
-**Status:** Accepted\
+**Status:** Implemented\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** `sovereign-mobile` (config-driven build targets in the repo RFC 0058

@@ -14,6 +14,17 @@ incorporated_into_plan: 'Yes — epic task 18.1'
 
 # RFC 0040 — Sovereign Harness
 
+> **Pending revisit, August 2026.** RFC 0063 was substantially rewritten:
+> its "first runtime phase" is now **Warden**, a first-party plugin
+> (`plugins/warden`, in this monorepo) backed by a dedicated `apps/harness`
+> engine service — not the runtime-owned design this RFC's Motivation
+> section still describes, and not a separate repository as this RFC's own
+> `scope` line below still states. This RFC has not been updated to match;
+> both statements are stale until a real revisit happens. See RFC 0063's
+> "Relationship to the Harness roadmap" section for what's now known and
+> what's still open. Do not treat this RFC's architecture as current until
+> that revisit lands.
+
 ## Summary
 
 Add **Sovereign Harness**, a first-party AI assistant and orchestration plugin

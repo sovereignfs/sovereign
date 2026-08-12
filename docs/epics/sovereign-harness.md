@@ -2,6 +2,15 @@
 
 > Platform-shipped AI assistant and orchestration layer for Sovereign.
 
+> **Pending revisit, August 2026.** This overview still describes "Jarvis /
+> Core Assistant (RFC 0063)" as the prerequisite first runtime phase. RFC
+> 0063 was rewritten: the actual phase 1 is now **Warden**
+> (`plugins/warden`) backed by a dedicated `apps/harness` service — see
+> [epic 22](core-assistant.md) and [RFC 0040](../rfcs/0040-sovereign-harness.md)'s
+> own pending-revisit note. This epic's task 18.1 and its dependency list
+> below haven't been updated to match; don't treat them as current until
+> that revisit happens.
+
 ## Status
 
 📋 Planned

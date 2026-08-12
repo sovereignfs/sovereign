@@ -263,7 +263,12 @@ relay must exist to register against).
 - Missing or unreachable relay configuration degrades to a documented
   no-op, not a crash.
 
-#### 📋 20.6 — Native photo picker and camera capture
+#### ✅ 20.6 — Native photo picker and camera capture
+
+> Shipped in `sovereign-mobile` (commit `5defa1c`, 2026-08-08); Capacitor
+> camera/photo-picker integration, `camera.photo` bridge capability. Status
+> corrected here 2026-08 — this file had drifted behind that repo's own
+> `ROADMAP.md`/`docs/epics/bridge.md`, which record it done.
 
 **Goal:** Expose native mobile photo selection and camera capture through
 `sdk.device.*` without plugins importing Capacitor directly.
@@ -290,7 +295,11 @@ relay must exist to register against).
 - Returned file/blob metadata is normalized across environments.
 - Denied permissions are handled without crashing the plugin.
 
-#### 📋 20.7 — Biometric auth capability
+#### ✅ 20.7 — Biometric auth capability
+
+> Shipped in `sovereign-mobile` (commit `463bd6c`, 2026-08-09); Face ID/Touch
+> ID (iOS) and BiometricPrompt (Android), `biometrics.confirm` bridge
+> capability. Status corrected here 2026-08 for the same reason as 20.6.
 
 **Goal:** Add Face ID / fingerprint capability through `sdk.device.*` for
 high-trust local confirmation flows without replacing Sovereign server-side auth.
@@ -318,7 +327,12 @@ using this for sensitive flows.
 - Failed or cancelled biometric prompts are handled predictably.
 - Existing browser/PWA auth behavior remains unchanged.
 
-#### 📋 20.8 — Haptics capability
+#### ✅ 20.8 — Haptics capability
+
+> Shipped in `sovereign-mobile` as part of Task 20.3 (bridge adapter,
+> `haptics.impact`) — closed there as subsumed by 20.3 rather than needing
+> separate work (`sovereign-mobile/ROADMAP.md` changelog 0.2). Status
+> corrected here 2026-08 for the same reason as 20.6/20.7.
 
 **Goal:** Expose lightweight native haptics through `sdk.device.*` for mobile
 interaction feedback where appropriate.

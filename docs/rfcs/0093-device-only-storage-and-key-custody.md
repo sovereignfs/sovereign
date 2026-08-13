@@ -152,13 +152,13 @@ generated on-device and held in:
   credential enabled as an accepted authenticator type, not
   biometric-only).
 
-Release requires a live biometric-**or**-passcode prompt each time the app
-needs the key (subject to a re-lock policy — see Open questions). Implemented
-as a new `secureStorage` capability in `@sovereignfs/bridge`'s Capacitor
-transport, calling through a dedicated Keychain/Keystore-backed secure-storage
-plugin (candidate: `@aparajita/capacitor-secure-storage` or equivalent —
-final pick is an implementation decision, see Open questions). `sdk.device.*`
-never talks to Keychain/Keystore directly; it calls the bridge capability,
+Release requires a live biometric-**or**-passcode prompt, subject to the
+re-lock policy below. Implemented as a new `secureStorage` capability in
+`@sovereignfs/bridge`'s Capacitor transport, calling through a dedicated
+Keychain/Keystore-backed secure-storage plugin (candidate:
+`@aparajita/capacitor-secure-storage` or equivalent — final pick is an
+implementation-time evaluation, see Open questions). `sdk.device.*` never
+talks to Keychain/Keystore directly; it calls the bridge capability,
 matching every other native capability in RFC 0083's contract.
 
 **Web/PWA:** WebAuthn's PRF extension, via `navigator.credentials.get()`
@@ -171,6 +171,41 @@ Same property as native: the secret backing it never leaves the platform
 authenticator (frequently the same Secure Enclave/StrongBox chip Keychain/
 Keystore use), and it can only be reproduced by repeating the ceremony —
 live proof, every time.
+
+**PRF salt and versioning (resolved).** A single fixed salt constant,
+scoped to exactly this purpose and derived from a descriptive string
+(e.g. `sha256("sovereign:device-only-storage:v1")`, not a hand-picked hex
+literal, so it stays auditable) — never a per-user or random salt; the
+salt's only job is domain separation between different _purposes_ using
+the same passkey, not between users, and the credential's own hardware
+secret already supplies the actual security. This matters concretely if
+RFC 0060's own CMK ever adopts PRF unlock too: a different, equally fixed
+salt for that purpose guarantees the two derived keys are cryptographically
+independent, so a compromise of one context can never imply the other. A
+version tag travels with the wrapped-key ciphertext, matching RFC 0060's
+own "explicit algorithm/version metadata stored with each encrypted
+object" convention, so a future scheme change doesn't strand already-
+enrolled users.
+
+**Re-lock policy (resolved): timed, by default, with a user override.**
+Neither "per launch" nor "every open" alone, and the choice is sharpened
+by a finding from this platform's own WKWebView testing (research 0008/
+0012, epic task 20.10): iOS discards the entire JS execution context on
+backgrounding — a fresh reload every time the app returns to foreground —
+while Android WebView preserves it. That means "unlock once per launch"
+is **already, accidentally, "unlock every open" on iOS** (free security
+from a platform quirk) but genuinely **"unlock once, stay unlocked
+indefinitely while backgrounded"** on Android, with nothing forcing
+re-authentication. Same nominal policy, two different real guarantees per
+platform — not an acceptable place to leave an implicit inconsistency.
+Default: re-lock after a timed window of the app being backgrounded (or
+immediately on backgrounding — the exact duration is an implementation
+detail, not a design question), applied deliberately on **both**
+platforms rather than relying on iOS's behavior to cover for a policy
+that doesn't actually specify it. User-adjustable in Account settings —
+stricter (immediate) to more lenient (a longer window) — matching
+research 0012's own "default plus a user override" framing. Applies
+identically to native and web.
 
 **Explicitly rejected: a JS-side PIN or "unlocked" flag as the gate, on
 either platform.** A PIN that merely sets a boolean in app state is bypassed
@@ -209,13 +244,24 @@ this cheaply on both platforms: the actual database key is wrapped
 
 - **Wrapper 1 (daily use):** the Keychain/Keystore or WebAuthn-PRF key, as
   above.
-- **Wrapper 2 (recovery):** a recovery secret, using RFC 0060's _existing_
+- **Wrapper 2 (recovery):** a recovery secret, reusing RFC 0060's _existing_
   recovery-secret generation, display, and re-entry UX
   (`plugins/account/app/_components/EncryptionSection.tsx` and
-  `e2ee-crypto.ts`'s wrap/unwrap primitives) rather than building a parallel
-  system. The recovery secret is shown once at `device-only` enrollment and
-  the user is told to save it, exactly as RFC 0060 already does for its own
-  CMK.
+  `e2ee-crypto.ts`'s wrap/unwrap primitives) rather than building parallel
+  cryptographic machinery. **Resolved: this is a separate, independent
+  secret from RFC 0060's own CMK recovery secret — not the same one.**
+  Enabling a `device-only` plugin never requires touching e2ee setup, and a
+  breach of one recovery secret does not expose data protected by the
+  other. This does cost a user who adopts both features a second phrase to
+  keep track of; that cost is accepted deliberately rather than merging the
+  two systems' blast radius for the sake of one shared secret being
+  marginally easier to manage than two — the entire reason `device-only`
+  is its own tier, distinct from `offline-first`, is to keep a class of
+  especially sensitive data walled off, and a shared recovery secret would
+  quietly undo part of that separation. The recovery secret is shown once
+  at `device-only` enrollment and the user is told to save it, exactly as
+  RFC 0060 already does for its own CMK — same UX pattern, different
+  secret.
 
 Both wrappers protect the _same_ underlying database key — two independent
 doors to one room, not two copies of the data. When wrapper 1 stops working
@@ -363,6 +409,14 @@ controls _whether the capability exists_, never the key itself.
 
 ## Open questions
 
+**Resolved since v0.3** (design session, August 2026) — PRF salt scheme,
+re-lock policy, and the RFC 0060 integration shape are no longer open; see
+section 2 (salt scheme, re-lock policy) and section 3 (recovery-secret
+independence) above for the decisions and reasoning. Kept here only as a
+changelog pointer, not restated.
+
+Still open:
+
 1. **Concrete Capacitor secure-storage plugin choice.** Candidates exist
    (`@aparajita/capacitor-secure-storage`, `capacitor-secure-storage-plugin`,
    or a thin bridge written directly against `LocalAuthentication`/
@@ -370,31 +424,13 @@ controls _whether the capability exists_, never the key itself.
    implementation time for maintenance status and whether it exposes
    `kSecAccessControlUserPresence` / device-credential-enabled Keystore
    configuration specifically, not just a generic biometric prompt.
-2. **PRF salt scheme and versioning.** The PRF extension takes an
-   app-supplied salt; needs a concrete, documented scheme (likely a
-   constant per purpose, e.g. distinct salts for the wrapper-1 key vs. any
-   future use) and an algorithm/version tag stored alongside ciphertext,
-   matching RFC 0060's existing "explicit algorithm/version metadata"
-   convention.
-3. **Re-lock policy.** Per launch, after N minutes backgrounded, or every
-   open — research 0012 flagged this as needing a default plus a user
-   override; this RFC doesn't pick one. Applies identically to native and
-   web.
-4. **Exact RFC 0060 integration shape for the recovery wrapper (section 3)
-   and Layer 3 backup (section 4).** Does `device-only` reuse the _same_
-   CMK/recovery-secret a user already has from RFC 0060's e2ee setup (one
-   recovery secret covers both), or does it get its own, independent one?
-   The former is less for the user to manage; the latter keeps the two
-   systems' blast radius separate. Needs a decision before implementation,
-   not before this RFC — it doesn't change the shape of either layer, only
-   whether they share a secret.
-5. **Minimum browser/OS support floor for web `device-only`.** PRF needs
+2. **Minimum browser/OS support floor for web `device-only`.** PRF needs
    iOS 18/Safari 18+ and recent Chrome/Android; below that,
    `isDeviceOnlyTierAvailable()` correctly reports `false` and the
    capability-restricted UI applies, but the exact floor needs to be
    pinned and documented for plugin authors and Console's install-review
    surface.
-6. **Tauri/desktop parity.** Owned by `sovereign-desktop`'s own task 17.4 /
+3. **Tauri/desktop parity.** Owned by `sovereign-desktop`'s own task 17.4 /
    workstream 0003 leg 3b, not this RFC — noted here only so a reader
    doesn't assume desktop is silently included.
 
@@ -419,6 +455,7 @@ task 20.13's own scope, not this RFC's.
 
 | Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.4     | August 2026 | Resolved the three remaining open questions: PRF salt/versioning scheme (fixed purpose-scoped salt + version tag, section 2), re-lock policy (timed default with a user override, chosen specifically to close the iOS/Android backgrounding-behavior asymmetry task 20.10 found, section 2), and the RFC 0060 integration shape (device-only's recovery secret is independent of RFC 0060's CMK recovery secret, section 3).                   |
 | 0.3     | August 2026 | Accepted. Unblocks workstream 0008 leg 4 — see the workstream doc's own changelog for the leg-4 status update this triggered.                                                                                                                                                                                                                                                                                                                   |
 | 0.2     | August 2026 | Brought web/PWA into scope (was deferred in 0.1): WebAuthn PRF key custody, OPFS/`wa-sqlite` storage, `navigator.storage.persist()` handling. Corrected an error in 0.1 — replaced `kSecAccessControlBiometryCurrentSet` with a `userPresence`-equivalent flag everywhere, matching an accessibility requirement research 0012 and epic task 1.22 had already established; resolves research 0012's open question 3 as well as open question 1. |
 | 0.1     | August 2026 | Initial draft, from a design session resolving research 0012's escrow open question and elaborating its device-only key-custody recommendation. Native (Capacitor) only; web explicitly deferred.                                                                                                                                                                                                                                               |

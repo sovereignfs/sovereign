@@ -1014,6 +1014,20 @@ than failing, since this cache is disposable by design — the server is
 always the source of truth, and the normal "never cached" fetch-fresh path
 already handles it.
 
+### `@sovereignfs/sdk` 1.42.0 → 1.43.0
+
+**`isDeviceOnlyTierAvailable()` now also reports `true` on plain web/PWA**
+when WebAuthn PRF + OPFS are supported (RFC 0093 §1's web backend), not only
+when a native shell advertises the `secureStorage` bridge capability. This
+was a real gap, not an intentional native-only scope: the web backend
+(`@sovereignfs/sdk/device-only-kv`) shipped without this function being
+updated to know about it, so `DeviceOnlyGate` (the documented gating
+pattern) showed "Phone only" on every plain browser tab even after the web
+storage stack was fully working. No action needed if your plugin already
+follows the documented `DeviceOnlyGate`/`DeviceStorageKeyGate` pattern — it
+now correctly lets users onto a `device-only` plugin from a capable browser
+tab instead of only from a native shell.
+
 ### `@sovereignfs/sdk` 1.22.0 → 1.23.0
 
 **`StorageObject` gains a `metadata` field** (RFC 0044/0060). `sdk.storage.put()`

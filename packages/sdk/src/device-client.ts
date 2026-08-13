@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { getBridge } from './device-bridge';
 import type { BridgeHandshake, BridgeTransport, DeviceResult } from './device-bridge';
 import type { Surface } from './device';
+import { isWebAuthnAvailable } from './device-only-crypto';
+import { isOpfsAvailable } from './device-only-storage';
 
 /**
  * Client-observable device environment (RFC 0080).
@@ -114,15 +116,22 @@ export function supports(capability: string, version = 1): boolean {
  * with "has secure storage" — wrong on both counts once Tauri desktop or a
  * sufficiently capable web backend eventually qualifies too.
  *
- * Built on `supports()` — the real bridge-handshake capability list — so
- * this composes with the RFC 0083 "a shell must never advertise a capability
- * its build doesn't honor" rule for free: it returns `false` everywhere
- * until epic task 20.13 (workstream 0008 leg 4) actually ships the
- * `secureStorage` bridge capability, and starts reporting availability
- * correctly the moment a shell does, with no further change needed here.
+ * **Two independent backends, either one sufficient (RFC 0093 §1):** a
+ * native shell via `supports('secureStorage')` — the real bridge-handshake
+ * capability list, composing with the RFC 0083 "a shell must never
+ * advertise a capability its build doesn't honor" rule for free — or plain
+ * web/PWA via WebAuthn PRF + OPFS (`device-only-crypto.ts`/
+ * `device-only-storage.ts`, `device-only-kv.ts`'s own storage layer), which
+ * needs no bridge handshake at all. Checking only the bridge would report
+ * `false` on every plain-browser tab even after the web backend shipped —
+ * this function's own job is "can the tier run here," not "is a native
+ * shell present," and the answer is yes on both paths once either backend
+ * is available. The `secureStorage` check is tried first since it's a
+ * simple lookup in an already-resolved handshake; the web check does two
+ * synchronous capability probes with no ceremony or prompt.
  */
 export function isDeviceOnlyTierAvailable(): boolean {
-  return supports('secureStorage');
+  return supports('secureStorage') || (isWebAuthnAvailable() && isOpfsAvailable());
 }
 
 /** The active bridge transport. `'web'` before the handshake resolves. */

@@ -144,11 +144,14 @@ is a request, not a guarantee — see "What web cannot fully match," below.
 
 Both backends are reached through the same plugin-facing shape (this RFC
 does not redesign that surface — see task 3.37, "Unified offline storage
-SDK surface," already scoped separately). A plugin declaring `device-only`
-on a surface without a `secureStorage`-capable transport sees
-`isDeviceOnlyTierAvailable() === false` and the existing
-capability-restricted UI treatment (research 0012, shipped in leg 3)
-applies — no manifest change, no plugin-visible branching.
+SDK surface," already scoped separately). `isDeviceOnlyTierAvailable()`
+(`device-client.ts`) checks both independently — a native
+`secureStorage`-capable transport, or web/PWA's own WebAuthn PRF + OPFS
+support — and is `true` if either is present. A plugin declaring
+`device-only` on a surface with neither sees `isDeviceOnlyTierAvailable()
+=== false` and the existing capability-restricted UI treatment (research
+0012, shipped in leg 3) applies — no manifest change, no plugin-visible
+branching.
 
 **Interim web primitive, stated plainly:** `device-only-kv.ts` implements a
 smaller piece of this today — an AES-GCM-encrypted key/value store over OPFS

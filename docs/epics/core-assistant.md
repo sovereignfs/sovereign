@@ -96,7 +96,7 @@ instead.
 
 ---
 
-#### 📋 22.2 — `apps/harness` engine service scaffold
+#### ✅ 22.2 — `apps/harness` engine service scaffold
 
 **Goal:** Stand up `apps/harness` as a standalone first-party service
 wrapping the engine Task 22.1 selected, following the `apps/auth`/`apps/relay`
@@ -140,6 +140,25 @@ pattern rather than a loosely-coupled sidecar.
 - CI runs with no real model download, using the fake-engine path.
 - The enrollment/trust-boundary pattern matches `apps/relay`'s, not a new
   invention.
+
+**Result:** `apps/harness` scaffolded as two Compose services under an
+optional `harness` profile — `harness` (this repo's own Next.js wrapper:
+enrollment trust boundary reusing `apps/relay/src/enrollment.ts` exactly,
+lazy non-blocking model download/verification with atomic-rename-on-success,
+server-enforced request limits, the narrow internal `/api/chat` completion
+API) and `harness-engine` (`ghcr.io/ggml-org/llama.cpp:server` itself,
+verified working during leg 1's benchmark). Neither is ever port-mapped to
+the host. `SOVEREIGN_HARNESS_ENGINE=fake` gives CI/tests a deterministic
+canned-response engine with no model file or network I/O. Baseline stack
+confirmed unaffected via `docker compose config` (harness services excluded
+without the profile flag) and a successful `docker compose build`; a literal
+`docker compose up` hit an unrelated pre-existing container-name collision
+with another checkout on the verification machine, not this change — see the
+PR description for full detail. `docs/self-hosting.md` and
+`docs/architecture-rules.md` updated in the same PR, including two new
+architecture rules (the enrollment-pattern reuse, and the wait-loop
+Compose-entrypoint technique for a sidecar that needs a file to exist before
+its own process can start).
 
 ---
 

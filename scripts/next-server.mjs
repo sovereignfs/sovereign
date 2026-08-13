@@ -43,6 +43,7 @@ const APPS = {
   auth: { cwd: ['apps', 'auth'], portEnv: 'AUTH_PORT', defaultPort: '3001' },
   runtime: { cwd: ['runtime'], portEnv: 'RUNTIME_PORT', defaultPort: '3000' },
   relay: { cwd: ['apps', 'relay'], portEnv: 'RELAY_PORT', defaultPort: '3002' },
+  harness: { cwd: ['apps', 'harness'], portEnv: 'HARNESS_PORT', defaultPort: '3003' },
 };
 
 function usage() {

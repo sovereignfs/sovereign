@@ -10,6 +10,7 @@ import { Drawer } from '../components/Drawer/Drawer';
 import { EmptyState } from '../components/EmptyState/EmptyState';
 import { OfflineGate } from '../components/OfflineGate/OfflineGate';
 import { DeviceOnlyGate } from '../components/DeviceOnlyGate/DeviceOnlyGate';
+import { DeviceStorageKeyGate } from '../components/DeviceStorageKeyGate/DeviceStorageKeyGate';
 import { FormField } from '../components/FormField/FormField';
 import { Icon } from '../components/Icon/Icon';
 import type { IconName } from '../components/Icon/Icon';
@@ -2279,6 +2280,27 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   Renders normally when available.
                 </p>
               </DeviceOnlyGate>
+            </ComponentCard>
+
+            {/* DeviceStorageKeyGate */}
+            <ComponentCard
+              name="DeviceStorageKeyGate"
+              importLine="import { DeviceStorageKeyGate } from '@sovereignfs/ui';"
+              usage="Blocks a device-only-tier plugin's content until the user has set up their Device Storage Key. `status` is the caller's own getDeviceStorageKeyStatus() result (from @sovereignfs/sdk/device-only-storage). Enrollment is centralized in Account > Security, not per-plugin — `setupAction` is where the caller supplies a link there."
+            >
+              <DeviceStorageKeyGate
+                status="not-set-up"
+                surfaceName="Notes"
+                setupAction={
+                  <a href="/account/security" style={{ color: 'var(--sv-color-accent)' }}>
+                    Go to Account → Security
+                  </a>
+                }
+              >
+                <p style={{ margin: 0, fontFamily: 'var(--sv-font-family)', fontSize: 14 }}>
+                  Renders normally once set up.
+                </p>
+              </DeviceStorageKeyGate>
             </ComponentCard>
 
             {/* Spinner */}

@@ -78,6 +78,11 @@ export { OfflineGate } from './components/OfflineGate/OfflineGate';
 export type { OfflineGateProps } from './components/OfflineGate/OfflineGate';
 export { DeviceOnlyGate } from './components/DeviceOnlyGate/DeviceOnlyGate';
 export type { DeviceOnlyGateProps } from './components/DeviceOnlyGate/DeviceOnlyGate';
+export { DeviceStorageKeyGate } from './components/DeviceStorageKeyGate/DeviceStorageKeyGate';
+export type {
+  DeviceStorageKeyGateProps,
+  DeviceStorageKeyGateStatus,
+} from './components/DeviceStorageKeyGate/DeviceStorageKeyGate';
 export { Spinner } from './components/Spinner/Spinner';
 export type { SpinnerProps } from './components/Spinner/Spinner';
 export { Avatar } from './components/Avatar/Avatar';

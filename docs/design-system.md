@@ -777,6 +777,7 @@ import {
   useCommitOnEnterOrBlur,
   OfflineGate,
   DeviceOnlyGate,
+  DeviceStorageKeyGate,
 } from '@sovereignfs/ui';
 ```
 
@@ -922,6 +923,42 @@ whether this gate is present, bypassed, or never reached at all.
 ```tsx
 <DeviceOnlyGate available={isDeviceOnlyTierAvailable()} surfaceName="Wallet">
   <CardList />
+</DeviceOnlyGate>
+```
+
+**`DeviceStorageKeyGate({ children, surfaceName?, status, setupAction?, className? })`**
+The enrollment counterpart to `DeviceOnlyGate`: that gate checks whether the
+`device-only` tier is available on this surface at all; this one checks
+whether the user has actually set up their Device Storage Key (RFC 0093 §2,
+epic task 1.22) — the one-time, per-device secret every `device-only` plugin
+on that device shares. `status` is the caller's own
+`getDeviceStorageKeyStatus()` result (from
+`@sovereignfs/sdk/device-only-storage`) — passed in rather than computed
+here, same boundary `available` draws for `DeviceOnlyGate`. Enrollment is
+centralized in Account → Security, not per-plugin — a `device-only` plugin
+never runs its own enrollment ceremony; it wraps its own root content in
+this gate (typically nested inside `DeviceOnlyGate`) and supplies
+`setupAction`, a link to Account → Security, for the `'not-set-up'` case.
+
+`status` also carries a `'no-device-auth'` value — RFC 0093 §5's hard-block
+case, where the environment supports the tier but this device has no
+passcode, fingerprint, or face unlock configured at all, so a key cannot be
+created here regardless of what the user does in your plugin. Distinct from
+`'not-set-up'` (which the user can fix by clicking through `setupAction`):
+this one shows an explanatory message with **no** `setupAction`, since the
+fix is a device settings change, not anything Account → Security can help
+with — the same reasoning `DeviceOnlyGate`'s "Phone only" message has no
+action either.
+
+```tsx
+<DeviceOnlyGate available={isDeviceOnlyTierAvailable()} surfaceName="Notes">
+  <DeviceStorageKeyGate
+    status={deviceStorageKeyStatus}
+    surfaceName="Notes"
+    setupAction={<Link href="/account/security">Set up Device Storage Key</Link>}
+  >
+    <NoteList />
+  </DeviceStorageKeyGate>
 </DeviceOnlyGate>
 ```
 

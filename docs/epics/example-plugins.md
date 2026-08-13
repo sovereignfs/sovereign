@@ -331,3 +331,46 @@ rewrite.
   actually does — the doc and the code must not drift.
 
 ---
+
+#### ✅ 12.7 — `example-device-only`: `device-only` tier reference plugin (RFC 0093)
+
+**Goal:** Prove workstream 0008 leg 4's `device-only` stack end to end
+through a real, minimal plugin — everything shipped for this tier before
+this task (key custody, the encrypted KV store, session enforcement,
+export/import) had only unit-test coverage, nothing exercising it as an
+actual plugin would.
+
+**Delivered:**
+
+- `example-plugins/example-device-only` (`fs.sovereign.example-device-only`,
+  `/example-device-only`, `offline: "device-only"`): a notes list backed
+  entirely by `@sovereignfs/sdk/device-only-kv`, wrapped in `DeviceOnlyGate`
+  → `DeviceStorageKeyGate` in the documented order, with a session status
+  badge (`isDeviceStorageKeyUnlocked()`) and an explicit "Lock now" control
+  (`lockDeviceStorageKey()`) demonstrating the re-lock session directly
+  rather than only through its own test suite.
+- Found and fixed a real bug while wiring this up, not merely exercised
+  existing code: `isDeviceOnlyTierAvailable()` only checked the native
+  bridge capability, so `DeviceOnlyGate` — the documented gating pattern —
+  showed "Phone only" on every plain browser tab even after the web backend
+  shipped and worked. Fixed separately (see task 1.22/8.20's own PRs) and a
+  prerequisite for this plugin actually rendering its content on web.
+- `example-plugins/README.md`'s reference table gains this row.
+
+**SRS reference:** RFC [0093](../rfcs/0093-device-only-storage-and-key-custody.md), §3.11, §3.12.
+
+**Review checklist:**
+
+- `pnpm --filter @sovereignfs/plugin-example-device-only typecheck` clean;
+  manifest validates against the current schema.
+- With `SOVEREIGN_EXAMPLES_ENABLED` set, the plugin composes.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` clean
+  across the monorepo.
+- **Not verified:** an actual interactive click-through (setup a Device
+  Storage Key, save a note, lock, reload, unlock) against a real browser —
+  this environment has no way to drive a real WebAuthn PRF ceremony. Typecheck
+  and the underlying modules' own real-WebCrypto unit tests are what back
+  this plugin's correctness, not an end-to-end UI run — the same honest gap
+  already documented for task 20.13's native capability.
+
+---

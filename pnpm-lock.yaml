@@ -330,6 +330,37 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
+  example-plugins/example-device-only:
+    dependencies:
+      '@sovereignfs/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      '@sovereignfs/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      next:
+        specifier: 'catalog:'
+        version: 15.5.22(@babel/core@7.29.7)(@playwright/test@1.62.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.8
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.8(react@19.2.8)
+    devDependencies:
+      '@sovereignfs/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.4(@types/react@19.2.18)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
   example-plugins/example-encrypted:
     dependencies:
       '@sovereignfs/sdk':

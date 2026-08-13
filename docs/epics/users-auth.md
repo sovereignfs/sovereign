@@ -971,7 +971,31 @@ task 2.32.
 - Sign-out clears the assertion; a second user on the same device cannot use it.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
-#### 📋 1.22 — Device-auth unlock for `device-only` plugins (Research 0012, RFC 0093)
+#### 🚧 1.22 — Device-auth unlock for `device-only` plugins (Research 0012, RFC 0093)
+
+> **Partial — every deliverable below is implemented; two review-checklist
+> items are unverified on real hardware/browsers.** Shipped: the Account →
+> Security "Device Storage Key" section (setup, recovery code, Auto-lock
+> control); WebAuthn PRF key derivation on web (`device-only-crypto.ts`/
+> `device-only-session.ts`), including re-lock policy enforcement (a lazy
+> time-comparison check, not a background timer — see
+> `device-only-session.ts`'s own doc comment); native Keychain/Keystore key
+> custody via task 20.13's `secureStorage` capability
+> (`sovereign-mobile`'s `SecureStorage.swift`/`SecureStorage.java`);
+> centralized (not per-plugin) enrollment via `DeviceStorageKeyGate`; the
+> no-device-passcode hard-block screen; and `docs/plugin-development.md`
+> coverage. **Not verified:** the review checklist's "on-disk data is
+> ciphertext, verified by inspecting storage directly" is covered by unit
+> tests against a real WebCrypto round-trip (`device-only-kv.ts`'s test
+> suite) but not against a real browser's actual OPFS behavior; "biometric
+> failure falls back to device passcode and still unlocks" and "PRF
+> enrolment succeeds on a fresh passkey" are implemented per RFC 0093 §5's
+> requirement but not exercised interactively against real hardware or a
+> real platform authenticator — this environment has no physical device
+> access (same limitation noted in `sovereign-mobile`'s own task 20.13
+> entry). Neither gap blocks the deliverables above from being real,
+> working code; they are the specific claims this checklist makes that
+> remain unconfirmed.
 
 **Goal:** Gate `device-only` plugin data behind biometric or device-passcode
 authentication, implemented as **key custody** — the OS releases the decryption

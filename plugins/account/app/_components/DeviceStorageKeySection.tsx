@@ -161,8 +161,12 @@ function SetupFlow({ onDone, onCancel }: { onDone: () => void; onCancel: () => v
         <p className={styles.help}>
           Sets up a security key on <strong>this device only</strong>, protected by your
           fingerprint, face, or device passcode. Apps that keep their data only on this device use
-          it to encrypt what they save here. It isn&rsquo;t synced or backed up anywhere — set it up
-          again separately on each device you use.
+          it to encrypt what they save here — that data lives exclusively on this device and is
+          never sent to Sovereign&rsquo;s server. If this device is lost, stolen, or wiped and you
+          don&rsquo;t have your recovery code,{' '}
+          <strong>that data is gone permanently — there is no other way to get it back</strong>.
+          You&rsquo;ll get a recovery code in the next step; set up your own key again separately on
+          each device you use.
         </p>
         {error && <p className={styles.error}>{error}</p>}
         <div className={styles.buttonRow}>
@@ -180,9 +184,11 @@ function SetupFlow({ onDone, onCancel }: { onDone: () => void; onCancel: () => v
   return (
     <div className={styles.form}>
       <p className={styles.help}>
-        Your recovery code is the <strong>only</strong> way to regain access if this device stops
-        recognizing your fingerprint, face, or passcode — for example after a biometric reset.
-        Sovereign cannot recover it for you — record it somewhere safe before continuing.
+        Your recovery code is the <strong>only</strong> way to regain access to this device&rsquo;s
+        data — whether this device stops recognizing your fingerprint, face, or passcode (for
+        example after a biometric reset), or the device itself is lost, stolen, or wiped. Sovereign
+        cannot recover it for you, and there is no other backup: without this code, that loss is{' '}
+        <strong>permanent</strong>. Record it somewhere safe before continuing.
       </p>
       <div className={styles.backupCodesBox}>
         <p className={styles.help}>Your recovery code:</p>

@@ -150,6 +150,16 @@ on a surface without a `secureStorage`-capable transport sees
 capability-restricted UI treatment (research 0012, shipped in leg 3)
 applies — no manifest change, no plugin-visible branching.
 
+**Interim web primitive, stated plainly:** `device-only-kv.ts` implements a
+smaller piece of this today — an AES-GCM-encrypted key/value store over OPFS
+(one file per key, per plugin), using the unlocked Device Storage Key from
+`device-only-session.ts`. It is not the `wa-sqlite` relational engine
+described above; a plugin needing actual SQL (joins, indices, cross-record
+queries) is not served by it. It fully serves the more common case — durable,
+encrypted, per-record storage with no query needs — today, without waiting on
+the larger `wa-sqlite` integration. See `docs/plugin-development.md`'s
+`device-only` tier section for the plugin-facing API.
+
 ### 2. Primary key custody
 
 **Native:** the SQLCipher database key (a 256-bit symmetric key) is

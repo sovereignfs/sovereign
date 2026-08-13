@@ -367,9 +367,10 @@ const manifestObjectSchema = z
      *   truth. Works everywhere. Most offline-capable plugins want this.
      * - `'device-only'` — the data never leaves the device; there is no
      *   server copy at all. Requires a durable, encrypted, device-auth-gated
-     *   store, which today only a native shell provides — see
-     *   `@sovereignfs/sdk/device-client`'s `supports('secureStorage')` for
-     *   the capability check. Undeclared (the default) means no offline
+     *   store — available via a native shell's Keychain/Keystore or, as of
+     *   RFC 0093's web backend, plain web/PWA's WebAuthn PRF + OPFS path —
+     *   see `@sovereignfs/sdk/device-client`'s `isDeviceOnlyTierAvailable()`
+     *   for the capability check. Undeclared (the default) means no offline
      *   support.
      *
      * Grants no auth exemption — it is purely a caching/rendering

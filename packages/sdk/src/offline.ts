@@ -18,11 +18,81 @@
  *
  * v1 is read/write-local only — no server sync, no conflict resolution.
  * Writes made while offline are not queued (deferred to a future RFC).
+ *
+ * **Encrypted at rest (RFC 0093 task 8.20), no presence required.** Every
+ * value is AES-GCM-encrypted under `offline-device-key.ts`'s own
+ * automatically-generated, non-extractable device key before it reaches
+ * IndexedDB — silent, zero UX cost, no enrollment step, unlike
+ * `device-only`'s presence-gated Device Storage Key. This protects against
+ * other apps and casual filesystem access, not against another script
+ * running on this same origin (the key is a non-extractable `CryptoKey`
+ * releasable to any script here, same limitation `e2ee-device.ts`'s own key
+ * has and for the same reason: WebCrypto has no per-script isolation
+ * primitive to do better with). **Narrows accepted values to
+ * JSON-serializable data** — encryption requires byte-serializing the
+ * value first, so the structured-clone extras IndexedDB natively supports
+ * (`Blob`, `Map`, etc.) no longer round-trip through `set`. No shipped
+ * caller relies on that today; `checkEntrySize`'s own `JSON.stringify`
+ * estimate already treated JSON as the primary case. A value written before
+ * this change (unencrypted, since nothing wrapped it) fails to decrypt and
+ * `get` returns `null` for it — a cache miss, not a thrown error, since
+ * this cache is disposable by design (the server is the source of truth).
  */
+
+import { getOrCreateOfflineDeviceKey } from './offline-device-key';
 
 const DB_NAME = 'sovereign-offline';
 const DB_VERSION = 1;
 const STORE_NAME = 'kv';
+const AES_GCM_IV_BYTES = 12;
+
+/** On-disk shape for every entry — ciphertext plus the IV needed to decrypt it. */
+interface EncryptedEntry {
+  iv: Uint8Array;
+  data: ArrayBuffer;
+}
+
+async function encryptEntry(value: unknown): Promise<EncryptedEntry> {
+  const key = await getOrCreateOfflineDeviceKey();
+  const iv = crypto.getRandomValues(new Uint8Array(AES_GCM_IV_BYTES));
+  const plaintext = new TextEncoder().encode(JSON.stringify(value));
+  const data = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: iv as BufferSource },
+    key,
+    plaintext as BufferSource,
+  );
+  return { iv, data };
+}
+
+/**
+ * Returns `null` rather than throwing for anything that doesn't decrypt —
+ * covers both a genuinely corrupt entry and, deliberately, a value written
+ * before encryption shipped (unwrapped, so it fails the shape check below
+ * before decryption is even attempted). Both cases resolve the same way a
+ * plugin already handles "never cached": fetch fresh.
+ */
+async function decryptEntry<T>(entry: unknown): Promise<T | null> {
+  if (
+    typeof entry !== 'object' ||
+    entry === null ||
+    !(entry as Partial<EncryptedEntry>).iv ||
+    !(entry as Partial<EncryptedEntry>).data
+  ) {
+    return null;
+  }
+  const { iv, data } = entry as EncryptedEntry;
+  try {
+    const key = await getOrCreateOfflineDeviceKey();
+    const plaintext = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: iv as BufferSource },
+      key,
+      data,
+    );
+    return JSON.parse(new TextDecoder().decode(plaintext)) as T;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Composite key as a native IndexedDB array key — `[pluginId, key]` — rather
@@ -71,11 +141,13 @@ export class OfflineQuotaExceededError extends Error {
  * old entries — so an unbounded write is a slow path to exhausting the
  * shared-with-every-plugin origin quota with no warning until some later,
  * unrelated write fails. Failing fast here gives an immediate, actionable
- * error instead. Estimated via `JSON.stringify`, which is accurate for the
- * JSON-like values this cache is designed for (cards, lists, tasks); a value
- * containing non-JSON-serializable structured-clone data (e.g. a `Blob` or
- * `Map`) can't be measured this way and skips the check, falling through to
- * IndexedDB's own limits instead.
+ * error instead. Estimated via `JSON.stringify`, which is now the actual
+ * on-disk representation (see the module doc comment on encryption
+ * narrowing accepted values to JSON-serializable data) rather than just an
+ * estimate of what IndexedDB's structured clone would store — a value that
+ * fails to `JSON.stringify` here skips this soft-cap check but then fails
+ * for the same reason inside `encryptEntry`, so `set` still surfaces it,
+ * just from a different, less specific error than this one.
  */
 const MAX_ENTRY_BYTES = 5 * 1024 * 1024;
 
@@ -214,14 +286,15 @@ export const offline = {
   /** Read this plugin's cached value for `key`, or `null` if never written (or offline-cleared). */
   async get<T>(pluginId: string, key: string): Promise<T | null> {
     const db = await openDb();
-    const result = await new Promise<T | null>((resolve, reject) => {
+    const stored = await new Promise<unknown>((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readonly');
       const request = tx.objectStore(STORE_NAME).get(compositeKey(pluginId, key));
-      request.onsuccess = () => resolve((request.result as T | undefined) ?? null);
+      request.onsuccess = () => resolve(request.result ?? null);
       request.onerror = () => reject(request.error ?? new Error('Failed to read offline value.'));
     });
     db.close();
-    return result;
+    if (stored === null) return null;
+    return decryptEntry<T>(stored);
   },
 
   /**
@@ -233,6 +306,7 @@ export const offline = {
   async set<T>(pluginId: string, key: string, value: T): Promise<void> {
     checkEntrySize(value);
     const writeEpoch = epoch;
+    const encrypted = await encryptEntry(value);
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {
       if (writeEpoch !== epoch) {
@@ -242,7 +316,7 @@ export const offline = {
         return;
       }
       const tx = db.transaction(STORE_NAME, 'readwrite');
-      tx.objectStore(STORE_NAME).put(value, compositeKey(pluginId, key));
+      tx.objectStore(STORE_NAME).put(encrypted, compositeKey(pluginId, key));
       tx.oncomplete = () => resolve();
       tx.onerror = () => {
         if (tx.error?.name === 'QuotaExceededError') {

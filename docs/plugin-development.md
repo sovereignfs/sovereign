@@ -948,6 +948,15 @@ could be replayed for the wrong user on a shared device:
   the browser's origin storage quota — shared across every installed
   plugin's offline cache — is exhausted). Split large data across multiple
   keys rather than one large entry.
+- Cached values are **encrypted at rest**, automatically — no setup, no opt-in
+  (RFC 0093 task 8.20). `offline.set`'s values must be JSON-serializable
+  (encryption needs to byte-serialize them); a `Blob`/`Map`/`Set` value that
+  IndexedDB's own structured clone would otherwise accept now throws instead.
+  This is a much weaker guarantee than `device-only`'s presence-gated Device
+  Storage Key above — it protects against other apps and casual filesystem
+  access, not against another script on this same origin — appropriate for
+  this tier's own threat model, not a substitute for `device-only` when a
+  plugin's data genuinely needs presence-gating.
 - Everything past the one entry point — which screens or records to show,
   how to route between them — is your own client-side code. There is no
   platform mechanism for a second offline-reachable route; a bookmark or

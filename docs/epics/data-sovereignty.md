@@ -729,21 +729,31 @@ codebase.
 
 #### 🚧 8.20 — Offline data encryption at rest (Research 0012)
 
-> **Partial — `device-only`'s web KV primitive done, everything else in this
-> task's deliverables is not.** `packages/sdk/src/device-only-kv.ts`
+> **Partial — both tiers' web/PWA encryption done, native SQLCipher and the
+> real relational engines are not.** `packages/sdk/src/device-only-kv.ts`
 > (`@sovereignfs/sdk/device-only-kv`) is a real, tested AES-GCM-encrypted
 > key/value store over OPFS, gated on the unlocked Device Storage Key from
-> task 1.22 — a genuine live round-trip (real WebCrypto encrypt/decrypt, not
-> mocked) is covered by its test suite. **What that round-trip does _not_
-> verify**, per this task's own standing constraint below: real browser OPFS
-> behavior — the test suite's OPFS fake (necessary; Node has no OPFS) proves
-> the crypto and the plugin-isolation logic, not that a real browser's File
-> System Access API behaves identically. **Not done at all:** `offline-first`'s
-> own no-presence encryption (this task's other tier); native SQLite/SQLCipher
-> encryption (task 20.13, itself still 🚧 — see `docs/epics/mobile.md`); and
-> this module is explicitly **not** the `wa-sqlite` relational engine RFC 0093
-> §1 specs for the web backend — no queries, no joins, only key/value. See
-> RFC 0093 §1's own "Interim web primitive" note.
+> task 1.22. `packages/sdk/src/offline.ts` (`sdk.offline`, the `offline-first`
+> tier's existing IndexedDB cache) now transparently AES-GCM-encrypts every
+> value under `offline-device-key.ts`'s own automatically-generated,
+> no-presence device key — no enrollment, no opt-in, matching this
+> deliverable's "zero UX cost" requirement exactly. Both have genuine live
+> round-trips (real WebCrypto encrypt/decrypt, not mocked) in their test
+> suites. Since `offline.ts` is plain browser IndexedDB code with no
+> OPFS/native dependency, the same shipped code should also cover the
+> `offline-first` tier inside a Capacitor WebView (`sovereign-mobile`'s "same
+> PWA, unchanged" shell model) — **stated as reasoning, not verified against
+> a real Capacitor build**. **What the round-trips do _not_ verify:** real
+> browser OPFS behavior for `device-only-kv.ts` (its test suite's OPFS fake
+> is necessary — Node has no OPFS — but doesn't prove a real browser's File
+> System Access API behaves identically). **Not done at all:** native
+> SQLite/SQLCipher encryption (task 20.13, itself still 🚧 — see
+> `docs/epics/mobile.md`); neither web module is the real relational engine
+> RFC 0093 §1 specs for `device-only` (`wa-sqlite`) — `device-only-kv.ts` is
+> key/value only, no queries or joins. See RFC 0093 §1's own "Interim web
+> primitive" note. `offline.set` also now requires JSON-serializable values
+> (see `docs/upgrade.md`'s 1.41.0 → 1.42.0 entry) — a documented narrowing,
+> not a silent one.
 
 **Goal:** Encrypt offline data on the device in **both** offline tiers, so
 "plaintext on disk" is never the answer anywhere. The tiers differ in what guards

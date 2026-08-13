@@ -103,8 +103,9 @@
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",
-    "drizzle-orm": "^0.45.2",
     "@types/react": "catalog:",
+    "drizzle-orm": "^0.45.2",
+    "fake-indexeddb": "^6.2.5",
     "next": "catalog:",
     "react": "catalog:",
     "tsup": "catalog:",

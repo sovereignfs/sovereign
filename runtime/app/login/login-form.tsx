@@ -12,10 +12,12 @@ import styles from '../auth-page.module.css';
 export function LoginForm({
   instanceName,
   instanceInitial,
+  instanceLogoUrl,
   returnUrl,
 }: {
   instanceName: string;
   instanceInitial: string;
+  instanceLogoUrl: string | null;
   /**
    * Read server-side by `page.tsx` and passed down explicitly — **not**
    * read via `useSearchParams()` here, deliberately. This page can be
@@ -85,7 +87,11 @@ export function LoginForm({
       <ViewportHeightSync />
       <div className={styles.card}>
         <div className={styles.logo} aria-hidden="true">
-          {instanceInitial}
+          {instanceLogoUrl ? (
+            <img src={instanceLogoUrl} alt={instanceName} className={styles.logoImg} />
+          ) : (
+            instanceInitial
+          )}
         </div>
         <h1 className={styles.title}>Sign in to {instanceName}</h1>
         {signedOut ? (

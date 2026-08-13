@@ -3298,6 +3298,104 @@ export async function setInstanceConfig(
   );
 }
 
+/** RFC 0031 — the only two email templates the platform currently ships. */
+export type EmailTemplateId = 'passwordReset' | 'invite';
+
+const EMAIL_COPY_FIELDS: Record<EmailTemplateId, readonly string[]> = {
+  passwordReset: ['subject', 'intro', 'cta', 'expiry', 'ignore'],
+  invite: ['subject', 'intro', 'cta', 'expiry'],
+};
+
+function isEmailCopyField(templateId: EmailTemplateId, field: string): boolean {
+  return (EMAIL_COPY_FIELDS[templateId] as readonly string[]).includes(field);
+}
+
+function emailCopyKey(templateId: EmailTemplateId, locale: string, field: string): string {
+  return `email_copy_${templateId}_${locale}_${field}`;
+}
+
+/**
+ * Returns operator copy overrides for one template/locale — only the fields
+ * that have actually been overridden in platform_settings. Built-in locale
+ * strings and the `en` fallback are `@sovereignfs/mailer`'s concern
+ * (`resolveEmailCopy`); this returns a partial map so the two layers merge
+ * cleanly with no duplicated copy content living in the DB.
+ */
+export async function getEmailCopy(
+  pdb: PlatformDb,
+  tenantId: string,
+  templateId: EmailTemplateId,
+  locale: string,
+): Promise<Record<string, string>> {
+  const fields = EMAIL_COPY_FIELDS[templateId];
+  const keys = fields.map((field) => emailCopyKey(templateId, locale, field));
+  const rows = await dbAll<{ key: string; value: string }>(
+    pdb,
+    sql`SELECT key, value FROM platform_settings
+        WHERE tenant_id = ${tenantId}
+          AND key IN (${sql.join(
+            keys.map((k) => sql`${k}`),
+            sql`, `,
+          )})`,
+  );
+  const prefix = `email_copy_${templateId}_${locale}_`;
+  const result: Record<string, string> = {};
+  for (const row of rows) {
+    if (row.key.startsWith(prefix)) {
+      result[row.key.slice(prefix.length)] = row.value;
+    }
+  }
+  return result;
+}
+
+/**
+ * Writes a single copy override to platform_settings. `subject` is capped at
+ * 200 chars, every other field at 2000 — raw operator input must never reach
+ * an email template unchecked.
+ */
+export async function setEmailCopy(
+  pdb: PlatformDb,
+  tenantId: string,
+  templateId: EmailTemplateId,
+  locale: string,
+  field: string,
+  value: string,
+): Promise<void> {
+  if (!isEmailCopyField(templateId, field)) {
+    throw new Error(`Invalid email copy field "${field}" for template "${templateId}".`);
+  }
+  const maxLength = field === 'subject' ? 200 : 2000;
+  if (value.length > maxLength) {
+    throw new Error(
+      `Email copy field "${field}" exceeds the maximum length of ${maxLength} characters.`,
+    );
+  }
+  const key = emailCopyKey(templateId, locale, field);
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO platform_settings (key, tenant_id, value, updated_at)
+        VALUES (${key}, ${tenantId}, ${value}, ${now})
+        ON CONFLICT (key, tenant_id)
+        DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+  );
+}
+
+/** Deletes a single copy override, reverting that field to the built-in default. */
+export async function deleteEmailCopy(
+  pdb: PlatformDb,
+  tenantId: string,
+  templateId: EmailTemplateId,
+  locale: string,
+  field: string,
+): Promise<void> {
+  const key = emailCopyKey(templateId, locale, field);
+  await dbRun(
+    pdb,
+    sql`DELETE FROM platform_settings WHERE key = ${key} AND tenant_id = ${tenantId}`,
+  );
+}
+
 /**
  * Return IDs of plugins that require an entitlement (non-free model) and
  * for which the given user currently has NO active entitlement.

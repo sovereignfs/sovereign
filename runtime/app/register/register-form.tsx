@@ -12,11 +12,13 @@ import styles from '../auth-page.module.css';
 export function RegisterForm({
   instanceName = 'Sovereign',
   instanceInitial = 'S',
+  instanceLogoUrl = null,
   invitedEmail,
   invitedBy,
 }: {
   instanceName?: string;
   instanceInitial?: string;
+  instanceLogoUrl?: string | null;
   invitedEmail?: string;
   invitedBy?: string;
 }) {
@@ -67,7 +69,11 @@ export function RegisterForm({
       <ViewportHeightSync />
       <div className={styles.card}>
         <div className={styles.logo} aria-hidden="true">
-          {instanceInitial}
+          {instanceLogoUrl ? (
+            <img src={instanceLogoUrl} alt={instanceName} className={styles.logoImg} />
+          ) : (
+            instanceInitial
+          )}
         </div>
         <h1 className={styles.title}>Create your account</h1>
 

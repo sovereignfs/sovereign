@@ -5,7 +5,9 @@ import { twoFactor } from 'better-auth/plugins/two-factor';
 import { jwt } from 'better-auth/plugins/jwt';
 import { passkey } from '@better-auth/passkey';
 import { oauthProvider } from '@better-auth/oauth-provider';
+import { renderPasswordResetEmail, renderSubject } from '@sovereignfs/mailer';
 import { authGet, authRun, getAuthDatabase } from './db';
+import { getEmailBranding, getPasswordResetCopy } from './email-branding';
 import { getEnv } from './env';
 import { isValidTimezone } from './timezone';
 import { resolveInvitePluginGrants } from './invite-plugin-grants';
@@ -62,15 +64,21 @@ function buildOptions(): BetterAuthOptions {
         // reset-password UI now lives only on the runtime (apps/auth removed its
         // copy as redundant) — link there, not to this app's own baseUrl.
         const resetUrl = `${runtimePublicUrl()}/reset-password?token=${token}`;
+        // No per-user/platform locale preference exists yet (RFC 0029 not
+        // shipped) — 'en' is the documented fallback per RFC 0031's open
+        // questions; Console's Email Templates section still lets an
+        // operator override the English copy today.
+        const [branding, copy] = await Promise.all([getEmailBranding(), getPasswordResetCopy()]);
+        const localeInput = { locale: 'en', overrides: copy };
+        const html = await renderPasswordResetEmail(resetUrl, branding, localeInput);
+        const subject = renderSubject('passwordReset', branding, localeInput);
         await sendAuthPlatformEmail({
           templateId: 'auth.password_reset',
           deliveryClass: 'authentication',
           toUserId: user.id,
           toEmail: user.email,
-          subject: 'Reset your Sovereign password',
-          html: `<p>You requested a password reset. Click the link below to choose a new password.</p>
-<p><a href="${resetUrl}">${resetUrl}</a></p>
-<p>This link expires in 1 hour. If you did not request a password reset, you can ignore this email.</p>`,
+          subject,
+          html,
           text: `You requested a password reset.\n\nReset your password: ${resetUrl}\n\nThis link expires in 1 hour. If you did not request this, ignore this email.`,
           metadata: { flow: 'password_reset' },
         });

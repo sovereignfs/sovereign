@@ -10,6 +10,7 @@ const mockConfig = {
   version: '0.6.0',
   instanceName: 'Test Workspace',
   instanceId: 'test-instance-uuid',
+  instanceUrl: 'http://localhost:3000',
 };
 const mockDataResolvers = new Map<string, (...args: unknown[]) => Promise<unknown[]>>();
 const mockExporters = new Map<string, unknown>();

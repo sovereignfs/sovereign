@@ -146,6 +146,7 @@ function resolveCryptoContext(context: {
   return { tenantId: context.tenantId, pluginId };
 }
 import { sendPlatformEmail } from './platform-email';
+import { instancePublicUrl } from './instance-url';
 
 let _version: string | undefined;
 const AUTH_URL =
@@ -356,6 +357,9 @@ provideHost({
         instanceName: instanceCfg.instanceName,
         instancePrimaryColor: instanceCfg.instancePrimary ?? undefined,
         instanceId,
+        emailFromName: instanceCfg.emailFromName ?? undefined,
+        emailLogo: instanceCfg.emailLogo ?? undefined,
+        instanceUrl: instancePublicUrl(),
       };
     },
   },

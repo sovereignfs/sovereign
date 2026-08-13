@@ -934,6 +934,30 @@ skipped and the user will not receive a link.
 
 ---
 
+## Email template customisation (RFC 0031, RFC 0027 Phase 2)
+
+Password reset and invite emails are branded automatically using the instance
+identity set in **Console → Settings → Instance identity** (sender name,
+logo, accent colour) — no separate configuration needed. To customise the
+wording itself, go to **Console → Settings → Email templates**:
+
+- Pick a template (Password reset / User invite) and locale (English,
+  German, Sinhala, Tamil).
+- Override the subject and body copy fields — `{{brandName}}` interpolates
+  the instance's configured email sender name. Leave a field blank to fall
+  back to the built-in copy for that locale.
+- A live preview panel shows the rendered email; **Send test email to
+  myself** delivers a sample (with a placeholder link, never a real
+  token/reset URL) to your own address.
+
+Locale is not yet user- or per-request-selectable — every email currently
+renders in English regardless of the recipient, with any English-locale
+Console overrides applied. Per-user language preference is a post-v1 item
+(see RFC 0029); the other three built-in locales exist so operator overrides
+and translations are ready ahead of that.
+
+---
+
 ## Two-factor authentication (MFA)
 
 Sovereign supports two opt-in second factors: **TOTP** (authenticator app) and

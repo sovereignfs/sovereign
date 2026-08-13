@@ -28,12 +28,12 @@ gated on exactly the decision this RFC makes.
 
 Defines how a `device-only` plugin's data is actually stored and protected —
 on a native shell (Capacitor) **and** on plain web/PWA — and what happens
-when the key that protects it dies. Four decisions, previously open:
+when the key that protects it dies. Five decisions, previously open:
 
 1. **Storage backend.** Native: SQLite via `@capacitor-community/sqlite`
    (SQLCipher-encrypted, app-sandboxed). Web: OPFS + `wa-sqlite`
    (`OPFSCoopSyncVFS`), with `navigator.storage.persist()` requested at
-   enrollment. Neither is IndexedDB, and the reason is the same on both:
+   setup. Neither is IndexedDB, and the reason is the same on both:
    IndexedDB is evictable everywhere it was tested (research 0008).
 2. **Key custody.** Native: Keychain (iOS) / Keystore (Android). Web:
    WebAuthn PRF, building on the passkey infrastructure already deployed
@@ -42,11 +42,19 @@ when the key that protects it dies. Four decisions, previously open:
    JS-side "unlocked" flag — and **both must accept a device passcode as a
    fallback, never biometric-only** (see section 5 — this corrects an error
    in this RFC's own first draft).
-3. **Surviving key invalidation short of device loss.** A second,
+3. **One Device Storage Key, set up once, shared by every plugin.** Account →
+   Security gets a new "Device Storage Key" section, parallel to RFC 0060's
+   existing "Client-side encryption" section — same UX pattern,
+   cryptographically independent secret, and a deliberately distinct name
+   from RFC 0060's own existing (unrelated) internal "device key" concept
+   (`e2ee-device.ts` — see "Current state"). Not triggered per-plugin; a
+   plugin that finds it missing directs the user there rather than running
+   its own enrollment.
+4. **Surviving key invalidation short of device loss.** A second,
    independent recovery wrapper on the same underlying key, so a deleted
    passkey or an OS-level credential change doesn't destroy data by itself
    — only losing the device does.
-4. **Escrow.** A three-layer, progressively-available recovery model,
+5. **Escrow.** A three-layer, progressively-available recovery model,
    platform-agnostic, for the one failure mode the second wrapper can't
    cover: the device itself being lost, stolen, or wiped.
 
@@ -172,6 +180,29 @@ authenticator (frequently the same Secure Enclave/StrongBox chip Keychain/
 Keystore use), and it can only be reproduced by repeating the ceremony —
 live proof, every time.
 
+**Where and when setup happens (resolved): centralized in Account →
+Security, once, decoupled from any single plugin.** Not triggered inline
+the first time a user opens _some_ `device-only` plugin. Account → Security
+gets a new **"Device Storage Key"** section, alongside the existing
+"Client-side encryption" (RFC 0060) section — same UX pattern (setup,
+recovery-secret display, settings), same location, but a cryptographically
+**independent** secret from RFC 0060's CMK (see section 3 — considered and
+deliberately rejected sharing the two), and a deliberately distinct name
+from RFC 0060's own existing, unrelated internal "device key" concept
+(`e2ee-device.ts`). Set up once, the resulting key is shared by **every**
+`device-only` plugin the user has or later gets access to — not one key
+per plugin, matching the storage model in section 1, which was already one
+database per instance, never one per plugin.
+
+A `device-only` plugin that finds no Device Storage Key set up does not run
+its own enrollment ceremony inline — it shows a message directing the user
+to Account → Security and stops there. This is a deliberate decoupling from
+plugin access: a plugin's install/access-policy lifecycle (who can open it
+at all — an entirely separate, existing mechanism, RFC 0065) has nothing to
+do with whether that user's Device Storage Key exists yet. Revoking and
+later re-granting a user's access to a plugin does not touch their Device
+Storage Key or its data either way — the two lifecycles don't interact.
+
 **PRF salt and versioning (resolved).** A single fixed salt constant,
 scoped to exactly this purpose and derived from a descriptive string
 (e.g. `sha256("sovereign:device-only-storage:v1")`, not a hand-picked hex
@@ -258,10 +289,11 @@ this cheaply on both platforms: the actual database key is wrapped
   marginally easier to manage than two — the entire reason `device-only`
   is its own tier, distinct from `offline-first`, is to keep a class of
   especially sensitive data walled off, and a shared recovery secret would
-  quietly undo part of that separation. The recovery secret is shown once
-  at `device-only` enrollment and the user is told to save it, exactly as
-  RFC 0060 already does for its own CMK — same UX pattern, different
-  secret.
+  quietly undo part of that separation. The recovery secret is shown once,
+  when the Device Storage Key is set up in Account → Security (see section 2's
+  "Where and when setup happens"), and the user is told to save it, exactly
+  as RFC 0060 already does for its own CMK — same UX pattern, different
+  secret, different section of the same page.
 
 Both wrappers protect the _same_ underlying database key — two independent
 doors to one room, not two copies of the data. When wrapper 1 stops working
@@ -415,22 +447,68 @@ section 2 (salt scheme, re-lock policy) and section 3 (recovery-secret
 independence) above for the decisions and reasoning. Kept here only as a
 changelog pointer, not restated.
 
+**Resolved in v0.6** (design review + developer confirmation, August 2026) —
+the Capacitor secure-storage implementation is a **thin custom bridge**,
+not a third-party plugin. A desk review of the readily available, maintained
+candidates found none that cleanly meet this section's requirement:
+
+- **`@aparajita/capacitor-secure-storage`** stores values encrypted at rest
+  (Keychain / Keystore-backed AES-GCM) but applies **no access control to
+  the item itself** — biometric gating is a separate, non-binding check via
+  its companion `@aparajita/capacitor-biometric-auth` plugin, called before
+  `get()`/`set()` in JS. That is exactly the "JS-side PIN or 'unlocked' flag
+  as the gate" pattern this section already rejects above: the storage item
+  has no hardware-enforced lock of its own, so anything that can call the
+  plugin's `get()` can read the value without passing through the biometric
+  check at all.
+- **`capacitor-secure-storage-plugin`** exposes no access-control parameters
+  whatsoever — plain encrypted storage only.
+- **`@drefrajo/capacitor-biometric-keychain`** does invoke device biometric
+  authentication automatically on `getItem()`/`setItem()` (closer to the
+  right shape), but its README documents no option to require a
+  **device-credential fallback** rather than biometry alone, and — small
+  project (single-digit-star range, two open issues at review time) —
+  whether the underlying native binding is actually the hardware
+  access-control primitive versus an app-level check ahead of a plain read
+  isn't verifiable from its public docs.
+- Where the correct native pattern _does_ appear in the wild (an
+  `accessControl`/`SecAccessControlCreateFlags` value bound to the Keychain
+  item on iOS, a `CryptoObject`-gated key on Android), the default nearly
+  everyone reaches for is `.biometryCurrentSet`/`.biometryAny` —
+  **biometry-only** — the exact configuration §5 below already corrected
+  once in this RFC's own design ("never biometric-only, which locks out
+  unenrolled users"). Any pre-built option would need explicit, verified
+  confirmation that it supports the device-credential-inclusive variant
+  (`.userPresence` on iOS, `setDeviceCredentialAllowed(true)` alongside
+  `setUserAuthenticationRequired(true)` on Android), not just whichever
+  flag its README happens to mention — none of the reviewed candidates
+  offered that confirmation.
+
+**The decision:** write the bridge directly against `LocalAuthentication`/
+`BiometricPrompt` + Keychain/Keystore APIs, rather than adopt a third-party
+plugin. The native surface needed is small and fully specified by this
+section (one access-controlled item per device, `get`/`set`/`remove`/
+`keys`/`clear`, `kSecAccessControlUserPresence` /
+`setUserAuthenticationRequired(true)` with device-credential enabled) —
+writing it directly avoids taking a dependency on a third-party plugin
+whose correctness on precisely this security property can't be verified
+from outside, for a surface too small to be worth that risk.
+`sovereign-mobile`'s implementer should still re-check this bar against
+whatever the plugin ecosystem looks like at build time (a library closing
+this exact gap may exist by then) rather than treat "write it from
+scratch" as unconditional — but the bar stays "verified to bind the
+device-credential-inclusive access-control flag to the item itself," not
+"has a biometric prompt somewhere in its API."
+
 Still open:
 
-1. **Concrete Capacitor secure-storage plugin choice.** Candidates exist
-   (`@aparajita/capacitor-secure-storage`, `capacitor-secure-storage-plugin`,
-   or a thin bridge written directly against `LocalAuthentication`/
-   `BiometricPrompt` + Keychain/Keystore APIs). Needs an evaluation pass at
-   implementation time for maintenance status and whether it exposes
-   `kSecAccessControlUserPresence` / device-credential-enabled Keystore
-   configuration specifically, not just a generic biometric prompt.
-2. **Minimum browser/OS support floor for web `device-only`.** PRF needs
+1. **Minimum browser/OS support floor for web `device-only`.** PRF needs
    iOS 18/Safari 18+ and recent Chrome/Android; below that,
    `isDeviceOnlyTierAvailable()` correctly reports `false` and the
    capability-restricted UI applies, but the exact floor needs to be
    pinned and documented for plugin authors and Console's install-review
    surface.
-3. **Tauri/desktop parity.** Owned by `sovereign-desktop`'s own task 17.4 /
+2. **Tauri/desktop parity.** Owned by `sovereign-desktop`'s own task 17.4 /
    workstream 0003 leg 3b, not this RFC — noted here only so a reader
    doesn't assume desktop is silently included.
 
@@ -453,9 +531,11 @@ task 20.13's own scope, not this RFC's.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.4     | August 2026 | Resolved the three remaining open questions: PRF salt/versioning scheme (fixed purpose-scoped salt + version tag, section 2), re-lock policy (timed default with a user override, chosen specifically to close the iOS/Android backgrounding-behavior asymmetry task 20.10 found, section 2), and the RFC 0060 integration shape (device-only's recovery secret is independent of RFC 0060's CMK recovery secret, section 3).                   |
-| 0.3     | August 2026 | Accepted. Unblocks workstream 0008 leg 4 — see the workstream doc's own changelog for the leg-4 status update this triggered.                                                                                                                                                                                                                                                                                                                   |
-| 0.2     | August 2026 | Brought web/PWA into scope (was deferred in 0.1): WebAuthn PRF key custody, OPFS/`wa-sqlite` storage, `navigator.storage.persist()` handling. Corrected an error in 0.1 — replaced `kSecAccessControlBiometryCurrentSet` with a `userPresence`-equivalent flag everywhere, matching an accessibility requirement research 0012 and epic task 1.22 had already established; resolves research 0012's open question 3 as well as open question 1. |
-| 0.1     | August 2026 | Initial draft, from a design session resolving research 0012's escrow open question and elaborating its device-only key-custody recommendation. Native (Capacitor) only; web explicitly deferred.                                                                                                                                                                                                                                               |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.6     | August 2026 | Open question 1 (Capacitor secure-storage plugin choice) resolved: a thin custom bridge, not a third-party plugin. None of the readily available candidates bind a device-credential-inclusive access-control flag to the storage item itself — `@aparajita/capacitor-secure-storage` gates biometry via a separate, non-binding companion check (the JS-side-gate pattern this RFC already rejects), `capacitor-secure-storage-plugin` has no access-control option at all, and `@drefrajo/capacitor-biometric-keychain`'s binding mechanism isn't verifiable from its public docs. Confirmed by the developer; `sovereign-mobile` should still re-check the plugin landscape at build time against the stated bar, not treat this as unconditional, but the default is now build-it, not evaluate-first. |
+| 0.5     | August 2026 | Enrollment centralized: one "Device Storage Key" (renamed from "Device Key" to avoid colliding with RFC 0060's existing, unrelated internal "device key" concept), set up once in Account → Security (parallel to RFC 0060's Client-side encryption section, cryptographically independent from it), shared by every `device-only` plugin — not triggered per-plugin. A plugin missing it directs the user to Account → Security instead of running its own enrollment ceremony. Decouples Device Storage Key lifecycle from any plugin's access grant (RFC 0065) entirely. Section 2, section 3 wording updated to match.                                                                                                                                                                                 |
+| 0.4     | August 2026 | Resolved the three remaining open questions: PRF salt/versioning scheme (fixed purpose-scoped salt + version tag, section 2), re-lock policy (timed default with a user override, chosen specifically to close the iOS/Android backgrounding-behavior asymmetry task 20.10 found, section 2), and the RFC 0060 integration shape (device-only's recovery secret is independent of RFC 0060's CMK recovery secret, section 3).                                                                                                                                                                                                                                                                                                                                                                              |
+| 0.3     | August 2026 | Accepted. Unblocks workstream 0008 leg 4 — see the workstream doc's own changelog for the leg-4 status update this triggered.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 0.2     | August 2026 | Brought web/PWA into scope (was deferred in 0.1): WebAuthn PRF key custody, OPFS/`wa-sqlite` storage, `navigator.storage.persist()` handling. Corrected an error in 0.1 — replaced `kSecAccessControlBiometryCurrentSet` with a `userPresence`-equivalent flag everywhere, matching an accessibility requirement research 0012 and epic task 1.22 had already established; resolves research 0012's open question 3 as well as open question 1.                                                                                                                                                                                                                                                                                                                                                            |
+| 0.1     | August 2026 | Initial draft, from a design session resolving research 0012's escrow open question and elaborating its device-only key-custody recommendation. Native (Capacitor) only; web explicitly deferred.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |

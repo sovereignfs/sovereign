@@ -379,11 +379,11 @@ enhancement, and a component must render a working state without them.
 Deliberately thin — enough to prove negotiation, permissions, transports, and
 result semantics end to end.
 
-| Capability             | Plugin-facing | capacitor          | tauri               | web                                   |
-| ---------------------- | ------------- | ------------------ | ------------------- | ------------------------------------- |
-| `haptics.impact`       | Yes           | Haptics plugin     | no-op `unavailable` | Vibration API where present           |
-| `notifications.native` | Yes           | Local notification | OS notification     | Web Notifications / existing web push |
-| `secureStorage.*`      | **No**        | Keychain/Keystore  | Keychain equivalent | `unavailable`                         |
+| Capability             | Plugin-facing           | capacitor          | tauri               | web                                   |
+| ---------------------- | ----------------------- | ------------------ | ------------------- | ------------------------------------- |
+| `haptics.impact`       | Yes                     | Haptics plugin     | no-op `unavailable` | Vibration API where present           |
+| `notifications.native` | Yes                     | Local notification | OS notification     | Web Notifications / existing web push |
+| `secureStorage.*`      | **Yes, since RFC 0093** | Keychain/Keystore  | Keychain equivalent | `unavailable`                         |
 
 **`haptics.impact`** is chosen first precisely because it is trivial, needs no
 permission prompt, and has a clean no-op fallback — it proves the round trip
@@ -394,13 +394,44 @@ its web tier routes into the already-shipped Notification Center / web push
 infrastructure rather than paralleling it. This is the "SDK routes to the correct
 tier" promise made real on shipped code.
 
-**`secureStorage` is platform-internal in v1, not plugin-facing** — and that is a
-direct consequence of §5. Since client-side plugin identity is self-declared, a
-plugin-facing keychain would let any plugin's client code read any other's
-entries. Scoping it to the shell and platform (its actual first consumer is
-RFC 0082 §5's durable-session sequel — storing an OAuth refresh token in the OS
-keychain) sidesteps that entirely. Exposing it to plugins requires a verifiable
-client-side identity mechanism, which does not exist and is out of scope here.
+**`secureStorage` was platform-internal in v1, not plugin-facing — superseded by
+RFC 0093.** The reasoning at the time was a direct consequence of §5: since
+client-side plugin identity is self-declared, a plugin-facing keychain would let
+any plugin's client code read any other's entries, and its only planned consumer
+was RFC 0082 §5's durable-session sequel (an OAuth refresh token in the OS
+keychain), which doesn't need plugin exposure at all. RFC 0093 (the `device-only`
+offline tier's key custody design) later made it plugin-facing anyway:
+`sdk.device.secureStorage.{get,set,remove,keys,clear}()` in `device-client.ts`,
+gated by a new `device:secureStorage` manifest permission. The identity-
+verification gap above was never closed — it is accepted, not solved, and
+documented as such in `docs/sdk-stability.md`: "secureStorage is the one
+exception worth naming: its own hardware-backed device-auth gate (Keychain/
+Keystore or WebAuthn PRF) is real even though the plugin-id attribution around
+it is not." The trade RFC 0093 made is that the value being protected is
+inherently the calling plugin's own data (each `device-only` plugin's own local
+records, scoped by the `pluginId` each call self-declares) — a plugin that lies
+about its id can only read another plugin's storage _location_, not bypass the
+device-auth gate that protects the underlying key, which is the property that
+actually matters for RFC 0093's threat model. This paragraph is kept as history
+rather than deleted, so a reader lands on both the original reasoning and what
+changed it, not just the current state.
+
+**Unresolved tension for whoever builds RFC 0082 §5's sequel next: the wire
+contract has no per-item access-control policy.** RFC 0093's `secureStorage`
+requires a live biometric-or-passcode prompt on **every** operation, gated in
+the native implementation itself (see that RFC's §2 and its now-resolved open
+question 1) — not a caller-supplied option, since `invoke('secureStorage',
+{op, pluginId, key, value?})` has no field for it. RFC 0082 §5's own refresh
+-token consumer explicitly wants "silent recovery after a data purge, and
+biometric unlock" — read together, that sounds like it wants **both** an
+ungated silent read (to exchange the token for a session cookie automatically)
+**and** a gated one (to unlock), which the current single-capability-name,
+uniformly-gated design cannot express. Neither RFC resolves this because
+neither consumer has been built yet (RFC 0082 §5 is explicitly "designed but
+not built," gated on RFC 0072's own addendum) — it isn't a live bug. Whichever
+lands second should either confirm uniform gating is actually fine for its
+own use case, or this contract needs a policy field before both consumers can
+share one capability name.
 
 ### 8. Relationship to existing epic tasks
 
@@ -586,6 +617,7 @@ Sequenced across epics and repositories as
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | July 2026 | Initial draft |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.2     | August 2026 | Corrected a stale claim: §7 said `secureStorage` was platform-internal, not plugin-facing — RFC 0093 superseded that decision (it is now plugin-facing, gated by the `device:secureStorage` permission), and this section's prose and capability table were out of sync with the shipped SDK surface. Updated to record both the original reasoning and what changed it. Flagged a not-yet-live tension for whoever builds RFC 0082 §5's sequel: the wire contract has no per-item access-control policy, and RFC 0093's uniform every-operation gating may not fit that consumer's "silent recovery and biometric unlock" framing. |
+| 0.1     | July 2026   | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |

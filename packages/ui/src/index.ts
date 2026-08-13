@@ -88,7 +88,7 @@ export type { SpinnerProps } from './components/Spinner/Spinner';
 export { Avatar } from './components/Avatar/Avatar';
 export type { AvatarProps } from './components/Avatar/Avatar';
 export { NavTabs } from './components/NavTabs/NavTabs';
-export type { NavTabsProps, NavTabItem } from './components/NavTabs/NavTabs';
+export type { NavTabsProps, NavTabItem, NavTabLinkProps } from './components/NavTabs/NavTabs';
 export { Tooltip } from './components/Tooltip/Tooltip';
 export type { TooltipProps } from './components/Tooltip/Tooltip';
 export { Checkbox } from './components/Checkbox/Checkbox';

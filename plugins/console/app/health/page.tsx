@@ -14,6 +14,21 @@ interface HealthReport {
     lastFailureCode: string | null;
     recentFailureCount: number;
   };
+  jobs: {
+    workerDisabled: boolean;
+    queuedCount: number;
+    scheduledCount: number;
+    runningCount: number;
+    stuckCount: number;
+    failedLast24h: number;
+    recentFailures: Array<{
+      id: string;
+      pluginId: string;
+      type: string;
+      lastError: string | null;
+      updatedAt: number;
+    }>;
+  };
   uptimeSeconds: number;
 }
 
@@ -27,6 +42,15 @@ const DEFAULT_HEALTH: HealthReport = {
     lastSendAt: null,
     lastFailureCode: null,
     recentFailureCount: 0,
+  },
+  jobs: {
+    workerDisabled: false,
+    queuedCount: 0,
+    scheduledCount: 0,
+    runningCount: 0,
+    stuckCount: 0,
+    failedLast24h: 0,
+    recentFailures: [],
   },
   uptimeSeconds: 0,
 };
@@ -143,6 +167,26 @@ export default async function HealthPage() {
             <span className={styles.cardDesc}>
               Last failure: {health.email.lastFailureCode} · {health.email.recentFailureCount} in
               24h
+            </span>
+          )}
+        </li>
+
+        <li className={styles.healthCard}>
+          <span className={styles.cardDesc}>Background jobs</span>
+          <span className={styles.healthValue}>
+            <StatusBadge
+              ok={!health.jobs.workerDisabled && health.jobs.stuckCount === 0}
+              okLabel="Running"
+              badLabel={health.jobs.workerDisabled ? 'Worker disabled' : 'Stuck jobs'}
+            />
+          </span>
+          <span className={styles.cardDesc}>
+            {health.jobs.queuedCount} queued · {health.jobs.scheduledCount} scheduled ·{' '}
+            {health.jobs.runningCount} running
+          </span>
+          {(health.jobs.stuckCount > 0 || health.jobs.failedLast24h > 0) && (
+            <span className={styles.cardDesc}>
+              {health.jobs.stuckCount} stuck · {health.jobs.failedLast24h} failed in 24h
             </span>
           )}
         </li>

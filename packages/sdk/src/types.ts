@@ -595,3 +595,92 @@ export interface HandoffRequestContext {
   pluginId: string;
   actorUserId: string | null;
 }
+/**
+ * A background job's lifecycle state (RFC 0046). `'scheduled'` means a
+ * recurring (`cron`-bearing) job waiting for its next occurrence — distinct
+ * from `'queued'`, a one-off job (or a due recurring occurrence) waiting to
+ * be claimed.
+ */
+export type JobStatus = 'queued' | 'scheduled' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+
+/** A background job's observable state, returned by `sdk.jobs.enqueue()`/`schedule()`/`get()`. */
+export interface JobRef {
+  id: string;
+  /** The plugin-local job type (e.g. `"sync.remote"`) — not the `<pluginId>:<type>` namespaced form. */
+  type: string;
+  status: JobStatus;
+  /** Epoch-second next-eligible-run time (one-off run time, or a recurring job's next occurrence). */
+  runAt: number;
+  attempts: number;
+  maxAttempts: number;
+  lastError?: string | null;
+  /** 0–100, set by the handler via `ctx.reportProgress()`; `null` when not reported. */
+  progress?: number | null;
+  progressMessage?: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Input to `sdk.jobs.enqueue()` — a one-off job. */
+export interface EnqueueJobInput {
+  /** Must match a `type` declared in the plugin's manifest `jobs` array. */
+  type: string;
+  /** JSON-serializable — large inputs belong in `sdk.storage`, referenced by id. */
+  payload?: unknown;
+  /** Epoch seconds; defaults to now (run as soon as claimed). */
+  runAt?: number;
+  /**
+   * Idempotency key, scoped to this plugin. Enqueueing with a `dedupeKey`
+   * that matches an already-active (queued/scheduled/running) job of this
+   * plugin returns that existing job instead of creating a duplicate.
+   */
+  dedupeKey?: string;
+  /** Overrides the manifest declaration's default, if any (falls back to 3). */
+  maxAttempts?: number;
+}
+
+/** Input to `sdk.jobs.schedule()` — a recurring job. */
+export interface ScheduleJobInput {
+  /** Must match a `type` declared in the plugin's manifest `jobs` array. */
+  type: string;
+  payload?: unknown;
+  /**
+   * 5- or 6-field cron expression. Validated immediately — an invalid
+   * expression throws rather than producing a schedule that never fires.
+   */
+  cron: string;
+  /** IANA timezone name (e.g. `"America/New_York"`); defaults to `"UTC"`. */
+  timezone?: string;
+  dedupeKey?: string;
+  maxAttempts?: number;
+}
+
+/**
+ * Context passed to a plugin's job handler (RFC 0046). There is no
+ * originating HTTP request — the platform's job worker invokes handlers
+ * directly — so the runtime supplies synthetic `headers` pre-stamped with
+ * the calling plugin's identity, exactly like `ScheduleContext`.
+ */
+export interface JobContext {
+  /** The invoking plugin's manifest id. */
+  pluginId: string;
+  /** The claimed job's row id. */
+  jobId: string;
+  /** The plugin-local job type this handler was registered for. */
+  type: string;
+  /** 1-indexed attempt number for this occurrence (resets to 1 after a recurring job's success). */
+  attempt: number;
+  /** Synthetic headers carrying `x-sovereign-plugin-id` for SDK attribution. */
+  headers: Headers;
+  /** Report progress (0–100) on a long-running job; visible via `sdk.jobs.get()`. */
+  reportProgress: (progress: number, message?: string) => Promise<void>;
+}
+
+/**
+ * A plugin's job handler — the **default export** of a manifest-declared
+ * `jobs[].entry` module. Invoked server-side whenever a claimed job of that
+ * `type` becomes due. Thrown errors are caught, logged, and retried with
+ * backoff up to the job's `maxAttempts` before the job (or, for a recurring
+ * job, that occurrence) is marked failed.
+ */
+export type JobHandler = (ctx: JobContext, payload: unknown) => Promise<void>;

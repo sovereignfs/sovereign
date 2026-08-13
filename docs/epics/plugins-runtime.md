@@ -444,7 +444,7 @@ minor (new optional params on exported functions), `runtime` → patch, `bin/sv`
 
 ---
 
-#### 📋 3.16 — Plugin background jobs and schedules (RFC 0046)
+#### ✅ 3.16 — Plugin background jobs and schedules (RFC 0046)
 
 **Goal:** Add a platform-managed background job surface so plugins can enqueue one-off work, schedule recurring work, and report progress without relying on a browser request.
 

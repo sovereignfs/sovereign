@@ -13,10 +13,12 @@ import {
   type PluginHandoffRow,
   createPluginSecret,
   createPluginConnection,
+  cancelJob,
   createStorageObject,
   deletePluginSecret,
   deleteStorageObject,
   disconnectPluginConnection,
+  enqueueJob,
   findWorkspaceRoot,
   getConsentGrant,
   getDefaultTenant,
@@ -24,6 +26,7 @@ import {
   getE2eeProfile,
   getE2eeRecoveryWrapper,
   getInstanceId,
+  getJobById,
   getPlatformSetting,
   getPluginSecret,
   getPluginConnection,
@@ -42,11 +45,13 @@ import {
   provisionPluginDb,
   recordActivity,
   revokeE2eeDeviceEnrollment,
+  scheduleJob,
   sendNotification,
   sumPluginStorageBytes,
   updatePluginConnection,
   updatePluginSecret,
   upsertE2eeRecoveryWrapper,
+  type PluginJobRow,
 } from '@sovereignfs/db';
 import { getPlatformDb } from './db';
 import { createMailer } from '@sovereignfs/mailer';
@@ -64,11 +69,14 @@ import type {
   DeletionHandler,
   E2eeProfile,
   EmailSendResult,
+  EnqueueJobInput,
   ExportResolver,
   ImportHandler,
+  JobRef,
   PluginAvailability,
   PluginListFilter,
   ResolveUsersInput,
+  ScheduleJobInput,
   SearchUsersInput,
   SecretContext,
   SecretRef,
@@ -85,6 +93,7 @@ import type {
   ProviderConfig,
   StorageObject,
 } from '@sovereignfs/sdk';
+import { requireJobsPluginContext } from './jobs';
 import { getDisabledPluginIds } from './plugin-status';
 import { getPortabilityPluginContext } from './portability/plugin-context';
 import { registerDeleter, registerExporter, registerImporter } from './portability/registry';
@@ -160,6 +169,23 @@ function resolveCryptoContext(context: {
     registry.find((m) => m.id === pluginId),
   );
   return { tenantId: context.tenantId, pluginId };
+}
+
+/** `PluginJobRow` (internal, has tenantId/cron/timezone/dedupeKey/createdBy/...) → the SDK-facing `JobRef`. */
+function toJobRef(row: PluginJobRow): JobRef {
+  return {
+    id: row.id,
+    type: row.type,
+    status: row.status,
+    runAt: row.runAt,
+    attempts: row.attempts,
+    maxAttempts: row.maxAttempts,
+    lastError: row.lastError,
+    progress: row.progress,
+    progressMessage: row.progressMessage,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
 }
 import { sendPlatformEmail } from './platform-email';
 import { instancePublicUrl } from './instance-url';
@@ -822,6 +848,70 @@ provideHost({
       void auditHandoffOperation('plugin.handoff.consumed', row);
 
       return toHandoffContext(row);
+    },
+  },
+  jobs: {
+    async enqueue(
+      input: EnqueueJobInput,
+      pluginId: string,
+      userId: string | null,
+    ): Promise<JobRef> {
+      requireJobsPluginContext(
+        pluginId,
+        registry.find((m) => m.id === pluginId),
+      );
+      const pdb = await getPlatformDb();
+      const row = await enqueueJob(pdb, {
+        id: randomUUID(),
+        pluginId,
+        type: input.type,
+        payload: input.payload,
+        runAt: input.runAt,
+        dedupeKey: input.dedupeKey ?? null,
+        maxAttempts: input.maxAttempts,
+        createdBy: userId,
+      });
+      return toJobRef(row);
+    },
+    async schedule(
+      input: ScheduleJobInput,
+      pluginId: string,
+      userId: string | null,
+    ): Promise<JobRef> {
+      requireJobsPluginContext(
+        pluginId,
+        registry.find((m) => m.id === pluginId),
+      );
+      const pdb = await getPlatformDb();
+      const row = await scheduleJob(pdb, {
+        id: randomUUID(),
+        pluginId,
+        type: input.type,
+        payload: input.payload,
+        cron: input.cron,
+        timezone: input.timezone ?? null,
+        dedupeKey: input.dedupeKey ?? null,
+        maxAttempts: input.maxAttempts,
+        createdBy: userId,
+      });
+      return toJobRef(row);
+    },
+    async cancel(id: string, pluginId: string): Promise<boolean> {
+      requireJobsPluginContext(
+        pluginId,
+        registry.find((m) => m.id === pluginId),
+      );
+      const pdb = await getPlatformDb();
+      return cancelJob(pdb, id, pluginId);
+    },
+    async get(id: string, pluginId: string): Promise<JobRef | null> {
+      requireJobsPluginContext(
+        pluginId,
+        registry.find((m) => m.id === pluginId),
+      );
+      const pdb = await getPlatformDb();
+      const row = await getJobById(pdb, id, pluginId);
+      return row ? toJobRef(row) : null;
     },
   },
   storage: {

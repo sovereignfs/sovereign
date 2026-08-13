@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm';
 import { platformBootstrapStatements } from './bootstrap';
+import { computeNextCronRun } from './cron';
 import { type PlatformDb, type SqliteDb, createClient } from './client';
 import { dbAll, dbGet, dbRun } from './exec';
 import { runMigrations, type MigrationResult } from './migrate';
@@ -3742,4 +3743,478 @@ export async function consumePluginHandoff(
                   consumed_at AS "consumedAt", created_at AS "createdAt", expires_at AS "expiresAt"`,
   );
   return row ? toPluginHandoffRow(row) : null;
+}
+
+// ─── Plugin background jobs and schedules (RFC 0046) ─────────────────────────
+
+export type JobStatus = 'queued' | 'scheduled' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+
+export interface PluginJobRow {
+  id: string;
+  tenantId: string;
+  pluginId: string;
+  type: string;
+  status: JobStatus;
+  payload: string | null;
+  runAt: number;
+  cron: string | null;
+  timezone: string | null;
+  dedupeKey: string | null;
+  attempts: number;
+  maxAttempts: number;
+  lastError: string | null;
+  progress: number | null;
+  progressMessage: string | null;
+  createdBy: string | null;
+  createdAt: number;
+  updatedAt: number;
+  startedAt: number | null;
+  completedAt: number | null;
+  cancelledAt: number | null;
+}
+
+interface RawPluginJobRow {
+  id: string;
+  tenantId: string;
+  pluginId: string;
+  type: string;
+  status: string;
+  payload: string | null;
+  runAt: number | string;
+  cron: string | null;
+  timezone: string | null;
+  dedupeKey: string | null;
+  attempts: number;
+  maxAttempts: number;
+  lastError: string | null;
+  progress: number | null;
+  progressMessage: string | null;
+  createdBy: string | null;
+  createdAt: number | string;
+  updatedAt: number | string;
+  startedAt: number | string | null;
+  completedAt: number | string | null;
+  cancelledAt: number | string | null;
+}
+
+function coerceJobRow(row: RawPluginJobRow): PluginJobRow {
+  return {
+    ...row,
+    status: row.status as JobStatus,
+    runAt: coerceNum(row.runAt),
+    createdAt: coerceNum(row.createdAt),
+    updatedAt: coerceNum(row.updatedAt),
+    startedAt: coerceNumOrNull(row.startedAt),
+    completedAt: coerceNumOrNull(row.completedAt),
+    cancelledAt: coerceNumOrNull(row.cancelledAt),
+  };
+}
+
+const JOB_COLUMNS_SQL = `id, tenant_id AS "tenantId", plugin_id AS "pluginId", type, status, payload,
+  run_at AS "runAt", cron, timezone, dedupe_key AS "dedupeKey",
+  attempts, max_attempts AS "maxAttempts", last_error AS "lastError",
+  progress, progress_message AS "progressMessage", created_by AS "createdBy",
+  created_at AS "createdAt", updated_at AS "updatedAt",
+  started_at AS "startedAt", completed_at AS "completedAt", cancelled_at AS "cancelledAt"`;
+
+const JOB_SELECT = sql.raw(`SELECT ${JOB_COLUMNS_SQL} FROM plugin_jobs`);
+const JOB_RETURNING = sql.raw(`RETURNING ${JOB_COLUMNS_SQL}`);
+
+const JOB_RETRY_BASE_DELAY_SECONDS = 30;
+const JOB_RETRY_MAX_DELAY_SECONDS = 3600;
+
+/** Exponential backoff (capped at 1h) keyed off the attempt number just made (1-indexed). */
+function jobRetryBackoffSeconds(attempts: number): number {
+  return Math.min(JOB_RETRY_BASE_DELAY_SECONDS * 2 ** (attempts - 1), JOB_RETRY_MAX_DELAY_SECONDS);
+}
+
+async function getJobByIdUnscoped(pdb: PlatformDb, id: string): Promise<PluginJobRow | undefined> {
+  const row = await dbGet<RawPluginJobRow>(pdb, sql`${JOB_SELECT} WHERE id = ${id}`);
+  return row ? coerceJobRow(row) : undefined;
+}
+
+async function getActiveJobByDedupeKey(
+  pdb: PlatformDb,
+  pluginId: string,
+  dedupeKey: string,
+): Promise<PluginJobRow | undefined> {
+  const row = await dbGet<RawPluginJobRow>(
+    pdb,
+    sql`${JOB_SELECT}
+        WHERE plugin_id = ${pluginId} AND dedupe_key = ${dedupeKey}
+          AND status IN ('queued', 'scheduled', 'running')
+        ORDER BY created_at DESC
+        LIMIT 1`,
+  );
+  return row ? coerceJobRow(row) : undefined;
+}
+
+export interface EnqueueJobInput {
+  id: string;
+  pluginId: string;
+  type: string;
+  payload?: unknown;
+  runAt?: number;
+  dedupeKey?: string | null;
+  maxAttempts?: number;
+  createdBy?: string | null;
+}
+
+/**
+ * Enqueue a one-off job. Idempotent on `dedupeKey`: if an active (queued/
+ * scheduled/running) job with the same plugin + dedupe key already exists,
+ * returns it unchanged instead of inserting a duplicate.
+ */
+export async function enqueueJob(pdb: PlatformDb, input: EnqueueJobInput): Promise<PluginJobRow> {
+  if (input.dedupeKey) {
+    const existing = await getActiveJobByDedupeKey(pdb, input.pluginId, input.dedupeKey);
+    if (existing) return existing;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const runAt = input.runAt ?? now;
+  const payload = input.payload !== undefined ? JSON.stringify(input.payload) : null;
+  await dbRun(
+    pdb,
+    sql`INSERT INTO plugin_jobs
+          (id, tenant_id, plugin_id, type, status, payload, run_at, cron, timezone,
+           dedupe_key, attempts, max_attempts, last_error, progress, progress_message,
+           created_by, created_at, updated_at, started_at, completed_at, cancelled_at)
+        VALUES
+          (${input.id}, ${DEFAULT_TENANT_ID}, ${input.pluginId}, ${input.type}, 'queued',
+           ${payload}, ${runAt}, NULL, NULL, ${input.dedupeKey ?? null}, 0,
+           ${input.maxAttempts ?? 3}, NULL, NULL, NULL, ${input.createdBy ?? null}, ${now}, ${now},
+           NULL, NULL, NULL)`,
+  );
+  const row = await getJobByIdUnscoped(pdb, input.id);
+  if (!row) throw new Error('enqueueJob: insert did not produce a row');
+  return row;
+}
+
+export interface ScheduleJobInput {
+  id: string;
+  pluginId: string;
+  type: string;
+  payload?: unknown;
+  cron: string;
+  timezone?: string | null;
+  dedupeKey?: string | null;
+  maxAttempts?: number;
+  createdBy?: string | null;
+}
+
+/**
+ * Create a recurring job. `cron`/`timezone` are validated immediately via
+ * `computeNextCronRun` — an invalid expression throws `InvalidCronExpressionError`
+ * here rather than producing a schedule that silently never fires. Same
+ * dedupe-key idempotency as `enqueueJob`.
+ */
+export async function scheduleJob(pdb: PlatformDb, input: ScheduleJobInput): Promise<PluginJobRow> {
+  if (input.dedupeKey) {
+    const existing = await getActiveJobByDedupeKey(pdb, input.pluginId, input.dedupeKey);
+    if (existing) return existing;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const nextRunAt = computeNextCronRun(input.cron, input.timezone ?? undefined, now);
+  const payload = input.payload !== undefined ? JSON.stringify(input.payload) : null;
+  await dbRun(
+    pdb,
+    sql`INSERT INTO plugin_jobs
+          (id, tenant_id, plugin_id, type, status, payload, run_at, cron, timezone,
+           dedupe_key, attempts, max_attempts, last_error, progress, progress_message,
+           created_by, created_at, updated_at, started_at, completed_at, cancelled_at)
+        VALUES
+          (${input.id}, ${DEFAULT_TENANT_ID}, ${input.pluginId}, ${input.type}, 'scheduled',
+           ${payload}, ${nextRunAt}, ${input.cron}, ${input.timezone ?? null},
+           ${input.dedupeKey ?? null}, 0, ${input.maxAttempts ?? 3}, NULL, NULL, NULL,
+           ${input.createdBy ?? null}, ${now}, ${now}, NULL, NULL, NULL)`,
+  );
+  const row = await getJobByIdUnscoped(pdb, input.id);
+  if (!row) throw new Error('scheduleJob: insert did not produce a row');
+  return row;
+}
+
+/** Read one job, scoped to the plugin that owns it — a plugin cannot read another's job. */
+export async function getJobById(
+  pdb: PlatformDb,
+  id: string,
+  pluginId: string,
+): Promise<PluginJobRow | undefined> {
+  const row = await dbGet<RawPluginJobRow>(
+    pdb,
+    sql`${JOB_SELECT} WHERE id = ${id} AND plugin_id = ${pluginId}`,
+  );
+  return row ? coerceJobRow(row) : undefined;
+}
+
+/** Most recent jobs for a plugin, newest first — admin/health and Console listing. */
+export async function listJobsForPlugin(
+  pdb: PlatformDb,
+  pluginId: string,
+  opts: { limit?: number } = {},
+): Promise<PluginJobRow[]> {
+  const limit = Math.min(opts.limit ?? 50, 200);
+  const rows = await dbAll<RawPluginJobRow>(
+    pdb,
+    sql`${JOB_SELECT} WHERE plugin_id = ${pluginId} ORDER BY created_at DESC LIMIT ${limit}`,
+  );
+  return rows.map(coerceJobRow);
+}
+
+/** Cancel one active job, scoped to the owning plugin. Returns whether a row was cancelled. */
+export async function cancelJob(pdb: PlatformDb, id: string, pluginId: string): Promise<boolean> {
+  const now = Math.floor(Date.now() / 1000);
+  const row = await dbGet<{ id: string }>(
+    pdb,
+    sql`UPDATE plugin_jobs
+        SET status = 'cancelled', cancelled_at = ${now}, updated_at = ${now}
+        WHERE id = ${id} AND plugin_id = ${pluginId}
+          AND status IN ('queued', 'scheduled', 'running')
+        RETURNING id`,
+  );
+  return row !== undefined;
+}
+
+/**
+ * Cancel every active job for a plugin — called on `sv plugin remove`
+ * (RFC 0046: "uninstalled plugins leave jobs cancelled or archived"). Not
+ * called on mere disable; a disabled plugin's jobs stay queued/scheduled and
+ * simply aren't claimed (`claimNextJob`'s `disabledPluginIds` filter) until
+ * it's re-enabled.
+ */
+export async function cancelJobsForPlugin(pdb: PlatformDb, pluginId: string): Promise<number> {
+  const now = Math.floor(Date.now() / 1000);
+  const rows = await dbAll<{ id: string }>(
+    pdb,
+    sql`UPDATE plugin_jobs
+        SET status = 'cancelled', cancelled_at = ${now}, updated_at = ${now}
+        WHERE plugin_id = ${pluginId} AND status IN ('queued', 'scheduled', 'running')
+        RETURNING id`,
+  );
+  return rows.length;
+}
+
+/**
+ * Report progress on a running job. No-ops (matches zero rows) once the job
+ * has left `running` — a straggling progress call from a handler that
+ * already finished (or was cancelled) must not resurrect stale state.
+ */
+export async function updateJobProgress(
+  pdb: PlatformDb,
+  id: string,
+  progress: number,
+  message?: string | null,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  const clamped = Math.max(0, Math.min(100, Math.round(progress)));
+  await dbRun(
+    pdb,
+    sql`UPDATE plugin_jobs
+        SET progress = ${clamped}, progress_message = ${message ?? null}, updated_at = ${now}
+        WHERE id = ${id} AND status = 'running'`,
+  );
+}
+
+/**
+ * Atomically claim the single most-overdue eligible job (`queued`/`scheduled`,
+ * `run_at <= now`, not belonging to a disabled plugin) and transition it to
+ * `running`. Multi-node safe on Postgres via `FOR UPDATE SKIP LOCKED` inside
+ * the claiming subquery — two runtime replicas racing on the same tick will
+ * never both claim the same row. SQLite deployments run single-node by design
+ * (RFC 0046), so the simpler `WHERE id = (SELECT ...)` form is safe there
+ * without row locking (SQLite serializes writers).
+ */
+export async function claimNextJob(
+  pdb: PlatformDb,
+  opts: { disabledPluginIds: string[]; now: number },
+): Promise<PluginJobRow | undefined> {
+  const { disabledPluginIds, now } = opts;
+  const disabledClause =
+    disabledPluginIds.length > 0
+      ? sql`AND plugin_id NOT IN (${sql.join(
+          disabledPluginIds.map((id) => sql`${id}`),
+          sql`, `,
+        )})`
+      : sql``;
+
+  if (pdb.dialect === 'sqlite') {
+    const row = await dbGet<RawPluginJobRow>(
+      pdb,
+      sql`UPDATE plugin_jobs
+          SET status = 'running', started_at = ${now}, attempts = attempts + 1, updated_at = ${now}
+          WHERE id = (
+            SELECT id FROM plugin_jobs
+            WHERE status IN ('queued', 'scheduled') AND run_at <= ${now} ${disabledClause}
+            ORDER BY run_at ASC
+            LIMIT 1
+          )
+          ${JOB_RETURNING}`,
+    );
+    return row ? coerceJobRow(row) : undefined;
+  }
+
+  const row = await dbGet<RawPluginJobRow>(
+    pdb,
+    sql`UPDATE plugin_jobs
+        SET status = 'running', started_at = ${now}, attempts = attempts + 1, updated_at = ${now}
+        WHERE id IN (
+          SELECT id FROM plugin_jobs
+          WHERE status IN ('queued', 'scheduled') AND run_at <= ${now} ${disabledClause}
+          ORDER BY run_at ASC
+          LIMIT 1
+          FOR UPDATE SKIP LOCKED
+        )
+        ${JOB_RETURNING}`,
+  );
+  return row ? coerceJobRow(row) : undefined;
+}
+
+/**
+ * Mark a claimed job as succeeded. A recurring job (`cron` set) goes back to
+ * `scheduled` at its next occurrence and its attempt counter resets — a
+ * successful run always re-arms the schedule. A one-off job becomes
+ * terminally `succeeded`.
+ */
+export async function completeJobSuccess(pdb: PlatformDb, job: PluginJobRow): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  if (job.cron) {
+    const nextRunAt = computeNextCronRun(job.cron, job.timezone ?? undefined, now);
+    await dbRun(
+      pdb,
+      sql`UPDATE plugin_jobs
+          SET status = 'scheduled', run_at = ${nextRunAt}, attempts = 0,
+              progress = NULL, progress_message = NULL, updated_at = ${now}
+          WHERE id = ${job.id}`,
+    );
+    return;
+  }
+  await dbRun(
+    pdb,
+    sql`UPDATE plugin_jobs
+        SET status = 'succeeded', completed_at = ${now}, progress = 100, updated_at = ${now}
+        WHERE id = ${job.id}`,
+  );
+}
+
+export interface CompleteJobFailureResult {
+  /**
+   * `retrying` — attempts remain, re-queued at a backoff delay.
+   * `rescheduled` — a recurring job exhausted this occurrence's retries and
+   * moved on to its next cron run rather than dying permanently.
+   * `failed` — a one-off job exhausted its retries; terminal.
+   */
+  outcome: 'retrying' | 'rescheduled' | 'failed';
+}
+
+/**
+ * Mark a claimed job's attempt as failed. `job.attempts` must be the
+ * post-claim value (already incremented by `claimNextJob`) — this function
+ * decides retry vs. terminal purely from `attempts` vs. `maxAttempts`.
+ */
+export async function completeJobFailure(
+  pdb: PlatformDb,
+  job: PluginJobRow,
+  error: string,
+): Promise<CompleteJobFailureResult> {
+  const now = Math.floor(Date.now() / 1000);
+  const exhausted = job.attempts >= job.maxAttempts;
+
+  if (exhausted && job.cron) {
+    const nextRunAt = computeNextCronRun(job.cron, job.timezone ?? undefined, now);
+    await dbRun(
+      pdb,
+      sql`UPDATE plugin_jobs
+          SET status = 'scheduled', run_at = ${nextRunAt}, attempts = 0,
+              last_error = ${error}, progress = NULL, progress_message = NULL, updated_at = ${now}
+          WHERE id = ${job.id}`,
+    );
+    return { outcome: 'rescheduled' };
+  }
+
+  if (!exhausted) {
+    const runAt = now + jobRetryBackoffSeconds(job.attempts);
+    await dbRun(
+      pdb,
+      sql`UPDATE plugin_jobs
+          SET status = ${job.cron ? 'scheduled' : 'queued'}, run_at = ${runAt},
+              last_error = ${error}, updated_at = ${now}
+          WHERE id = ${job.id}`,
+    );
+    return { outcome: 'retrying' };
+  }
+
+  await dbRun(
+    pdb,
+    sql`UPDATE plugin_jobs
+        SET status = 'failed', completed_at = ${now}, last_error = ${error}, updated_at = ${now}
+        WHERE id = ${job.id}`,
+  );
+  return { outcome: 'failed' };
+}
+
+export interface JobHealthSummary {
+  queuedCount: number;
+  scheduledCount: number;
+  runningCount: number;
+  /** `running` jobs whose `started_at` is older than the stuck threshold (30 min). */
+  stuckCount: number;
+  failedLast24h: number;
+  recentFailures: {
+    id: string;
+    pluginId: string;
+    type: string;
+    lastError: string | null;
+    updatedAt: number;
+  }[];
+}
+
+const JOB_STUCK_THRESHOLD_SECONDS = 30 * 60;
+
+/** Aggregate job counts for `/api/admin/health` — stuck/failed visibility (RFC 0046). */
+export async function getJobHealthSummary(pdb: PlatformDb): Promise<JobHealthSummary> {
+  const now = Math.floor(Date.now() / 1000);
+  const dayAgo = now - 24 * 60 * 60;
+  const stuckBefore = now - JOB_STUCK_THRESHOLD_SECONDS;
+
+  const counts = await dbAll<{ status: string; count: number | string }>(
+    pdb,
+    sql`SELECT status, COUNT(*) AS count FROM plugin_jobs
+        WHERE status IN ('queued', 'scheduled', 'running')
+        GROUP BY status`,
+  );
+  const byStatus = new Map(counts.map((r) => [r.status, coerceNum(r.count)]));
+
+  const stuckRow = await dbGet<{ count: number | string }>(
+    pdb,
+    sql`SELECT COUNT(*) AS count FROM plugin_jobs
+        WHERE status = 'running' AND started_at IS NOT NULL AND started_at < ${stuckBefore}`,
+  );
+  const failedRow = await dbGet<{ count: number | string }>(
+    pdb,
+    sql`SELECT COUNT(*) AS count FROM plugin_jobs
+        WHERE status = 'failed' AND completed_at IS NOT NULL AND completed_at >= ${dayAgo}`,
+  );
+  const recent = await dbAll<{
+    id: string;
+    pluginId: string;
+    type: string;
+    lastError: string | null;
+    updatedAt: number | string;
+  }>(
+    pdb,
+    sql`SELECT id, plugin_id AS "pluginId", type, last_error AS "lastError",
+               updated_at AS "updatedAt"
+        FROM plugin_jobs
+        WHERE status = 'failed'
+        ORDER BY updated_at DESC
+        LIMIT 10`,
+  );
+
+  return {
+    queuedCount: byStatus.get('queued') ?? 0,
+    scheduledCount: byStatus.get('scheduled') ?? 0,
+    runningCount: byStatus.get('running') ?? 0,
+    stuckCount: coerceNum(stuckRow?.count ?? 0),
+    failedLast24h: coerceNum(failedRow?.count ?? 0),
+    recentFailures: recent.map((r) => ({ ...r, updatedAt: coerceNum(r.updatedAt) })),
+  };
 }

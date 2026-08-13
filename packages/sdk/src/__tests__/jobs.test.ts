@@ -1,28 +1,41 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { provideHost } from '../host';
-import { webhooks } from '../webhooks';
-import type { CheckWebhookReplayInput, VerifyWebhookHmacInput } from '../types';
+import { jobs } from '../jobs';
+import type { EnqueueJobInput, JobRef, ScheduleJobInput } from '../types';
 
 /**
- * Proves that `sdk.webhooks.*` resolves the calling plugin's ID exclusively
- * from the `x-sovereign-plugin-id` request header, and — unlike
- * notifications/events/jobs — **fails closed (returns `false`) rather than
- * falling back to `'unknown'`** when the header is missing, since a webhook
- * helper called with no real plugin context has no legitimate use.
+ * Proves that `sdk.jobs.*` resolves the calling plugin's ID and the acting
+ * user's ID exclusively from request headers — explicit `Headers`, not
+ * `next/headers()`, since these methods must also work from inside a job
+ * handler's own synthetic `ctx.headers` (no HTTP request in scope). Mirrors
+ * `mailer-email-plugin-id.test.ts`'s focus on header resolution.
  */
-describe('sdk.webhooks — header resolution', () => {
-  let seenPluginId: string | undefined;
-  let seenHmacInput: VerifyWebhookHmacInput | undefined;
-  let seenReplayInput: CheckWebhookReplayInput | undefined;
-  let hmacResult = true;
-  let replayResult = true;
+describe('sdk.jobs — header resolution', () => {
+  let seenPluginId: string | null | undefined;
+  let seenUserId: string | null | undefined;
+  let seenEnqueueInput: EnqueueJobInput | undefined;
+  let seenScheduleInput: ScheduleJobInput | undefined;
+  let seenCancelId: string | undefined;
+  let seenGetId: string | undefined;
+
+  const stubJobRef: JobRef = {
+    id: 'job-1',
+    type: 'sync.remote',
+    status: 'queued',
+    runAt: 0,
+    attempts: 0,
+    maxAttempts: 3,
+    createdAt: 0,
+    updatedAt: 0,
+  };
 
   beforeEach(() => {
     seenPluginId = undefined;
-    seenHmacInput = undefined;
-    seenReplayInput = undefined;
-    hmacResult = true;
-    replayResult = true;
+    seenUserId = undefined;
+    seenEnqueueInput = undefined;
+    seenScheduleInput = undefined;
+    seenCancelId = undefined;
+    seenGetId = undefined;
 
     provideHost({
       db: {
@@ -90,15 +103,11 @@ describe('sdk.webhooks — header resolution', () => {
       },
       notifications: { async send() {} },
       webhooks: {
-        async verifyHmac(input, pluginId) {
-          seenHmacInput = input;
-          seenPluginId = pluginId;
-          return hmacResult;
+        async verifyHmac() {
+          return false;
         },
-        async checkReplay(input, pluginId) {
-          seenReplayInput = input;
-          seenPluginId = pluginId;
-          return replayResult;
+        async checkReplay() {
+          return true;
         },
       },
       handoffs: {
@@ -110,17 +119,27 @@ describe('sdk.webhooks — header resolution', () => {
         },
       },
       jobs: {
-        async enqueue() {
-          return {} as never;
+        async enqueue(input, pluginId, userId) {
+          seenEnqueueInput = input;
+          seenPluginId = pluginId;
+          seenUserId = userId;
+          return stubJobRef;
         },
-        async schedule() {
-          return {} as never;
+        async schedule(input, pluginId, userId) {
+          seenScheduleInput = input;
+          seenPluginId = pluginId;
+          seenUserId = userId;
+          return stubJobRef;
         },
-        async cancel() {
-          return false;
+        async cancel(id, pluginId) {
+          seenCancelId = id;
+          seenPluginId = pluginId;
+          return true;
         },
-        async get() {
-          return null;
+        async get(id, pluginId) {
+          seenGetId = id;
+          seenPluginId = pluginId;
+          return stubJobRef;
         },
       },
       crypto: {
@@ -232,53 +251,54 @@ describe('sdk.webhooks — header resolution', () => {
     });
   });
 
-  it('verifyHmac resolves pluginId from the x-sovereign-plugin-id header', async () => {
-    const headers = new Headers({ 'x-sovereign-plugin-id': 'com.example.provider' });
-    const input: VerifyWebhookHmacInput = {
-      body: new Uint8Array([1, 2, 3]),
-      signatureHeader: 'abc',
-      secretRef: 'secret-1',
-      algorithm: 'sha256',
-    };
-    const result = await webhooks.verifyHmac(input, headers);
-    expect(seenPluginId).toBe('com.example.provider');
-    expect(seenHmacInput).toBe(input);
+  it('enqueue resolves pluginId and userId from headers', async () => {
+    const headers = new Headers({
+      'x-sovereign-plugin-id': 'com.example.notes',
+      'x-sovereign-user-id': 'user-1',
+    });
+    await jobs.enqueue({ type: 'sync.remote', payload: { a: 1 } }, headers);
+    expect(seenPluginId).toBe('com.example.notes');
+    expect(seenUserId).toBe('user-1');
+    expect(seenEnqueueInput).toEqual({ type: 'sync.remote', payload: { a: 1 } });
+  });
+
+  it('enqueue defaults pluginId to "unknown" and userId to null with no headers', async () => {
+    await jobs.enqueue({ type: 'sync.remote' });
+    expect(seenPluginId).toBe('unknown');
+    expect(seenUserId).toBeNull();
+  });
+
+  it('schedule resolves pluginId and userId from headers', async () => {
+    const headers = new Headers({
+      'x-sovereign-plugin-id': 'com.example.notes',
+      'x-sovereign-user-id': 'user-1',
+    });
+    await jobs.schedule({ type: 'cleanup.expired', cron: '0 3 * * *' }, headers);
+    expect(seenPluginId).toBe('com.example.notes');
+    expect(seenUserId).toBe('user-1');
+    expect(seenScheduleInput).toEqual({ type: 'cleanup.expired', cron: '0 3 * * *' });
+  });
+
+  it('cancel resolves pluginId from headers and forwards the job id', async () => {
+    const headers = new Headers({ 'x-sovereign-plugin-id': 'com.example.notes' });
+    const result = await jobs.cancel('job-1', headers);
+    expect(seenPluginId).toBe('com.example.notes');
+    expect(seenCancelId).toBe('job-1');
     expect(result).toBe(true);
   });
 
-  it('verifyHmac returns false (fail closed) with no plugin id header, without calling the host', async () => {
-    const headers = new Headers();
-    const result = await webhooks.verifyHmac(
-      { body: new Uint8Array(), signatureHeader: 'abc', secretRef: 's', algorithm: 'sha256' },
-      headers,
-    );
-    expect(result).toBe(false);
-    expect(seenPluginId).toBeUndefined();
+  it('get resolves pluginId from headers and forwards the job id', async () => {
+    const headers = new Headers({ 'x-sovereign-plugin-id': 'com.example.notes' });
+    const result = await jobs.get('job-1', headers);
+    expect(seenPluginId).toBe('com.example.notes');
+    expect(seenGetId).toBe('job-1');
+    expect(result).toEqual(stubJobRef);
   });
 
-  it('checkReplay resolves pluginId from the x-sovereign-plugin-id header', async () => {
-    const headers = new Headers({ 'x-sovereign-plugin-id': 'com.example.provider' });
-    const input: CheckWebhookReplayInput = { provider: 'stripe', eventId: 'evt_1' };
-    const result = await webhooks.checkReplay(input, headers);
-    expect(seenPluginId).toBe('com.example.provider');
-    expect(seenReplayInput).toBe(input);
-    expect(result).toBe(true);
-  });
-
-  it('checkReplay returns false (fail closed) with no plugin id header, without calling the host', async () => {
-    const headers = new Headers();
-    const result = await webhooks.checkReplay({ provider: 'stripe', eventId: 'evt_1' }, headers);
-    expect(result).toBe(false);
-    expect(seenPluginId).toBeUndefined();
-  });
-
-  it('forwards the host verifyHmac result through unchanged', async () => {
-    hmacResult = false;
-    const headers = new Headers({ 'x-sovereign-plugin-id': 'com.example.provider' });
-    const result = await webhooks.verifyHmac(
-      { body: new Uint8Array(), signatureHeader: 'abc', secretRef: 's', algorithm: 'sha256' },
-      headers,
-    );
-    expect(result).toBe(false);
+  it('a job handler can pass its own ctx.headers to enqueue further work', async () => {
+    // Synthetic headers, same shape runtime/src/jobs.ts hands to JobContext.
+    const syntheticHeaders = new Headers({ 'x-sovereign-plugin-id': 'com.example.notes' });
+    await jobs.enqueue({ type: 'followup.task' }, syntheticHeaders);
+    expect(seenPluginId).toBe('com.example.notes');
   });
 });

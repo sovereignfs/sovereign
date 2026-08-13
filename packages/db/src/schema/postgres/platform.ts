@@ -1,6 +1,7 @@
 import {
   bigint,
   boolean,
+  index,
   integer,
   pgTable,
   primaryKey,
@@ -566,3 +567,35 @@ export const pluginHandoffs = pgTable('plugin_handoffs', {
   createdAt: bigint('created_at', { mode: 'number' }).notNull(),
   expiresAt: bigint('expires_at', { mode: 'number' }).notNull(),
 });
+
+/** Platform-managed background jobs and schedules (RFC 0046) — see the SQLite twin. */
+export const pluginJobs = pgTable(
+  'plugin_jobs',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenant_id').notNull(),
+    pluginId: text('plugin_id').notNull(),
+    type: text('type').notNull(),
+    status: text('status').notNull(),
+    payload: text('payload'),
+    runAt: bigint('run_at', { mode: 'number' }).notNull(),
+    cron: text('cron'),
+    timezone: text('timezone'),
+    dedupeKey: text('dedupe_key'),
+    attempts: integer('attempts').notNull().default(0),
+    maxAttempts: integer('max_attempts').notNull().default(3),
+    lastError: text('last_error'),
+    progress: integer('progress'),
+    progressMessage: text('progress_message'),
+    createdBy: text('created_by'),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+    updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+    startedAt: bigint('started_at', { mode: 'number' }),
+    completedAt: bigint('completed_at', { mode: 'number' }),
+    cancelledAt: bigint('cancelled_at', { mode: 'number' }),
+  },
+  (table) => [
+    index('plugin_jobs_status_run_at_idx').on(table.status, table.runAt),
+    index('plugin_jobs_plugin_dedupe_idx').on(table.pluginId, table.dedupeKey),
+  ],
+);

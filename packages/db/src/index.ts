@@ -1,5 +1,6 @@
 export { createClient, findWorkspaceRoot, type DbConfig, type SqliteDb } from './client';
 export { platformBootstrapStatements } from './bootstrap';
+export { InvalidCronExpressionError, computeNextCronRun } from './cron';
 export {
   createSqldClient,
   dropSqldNamespace,
@@ -149,6 +150,23 @@ export {
   type CreatePluginHandoffInput,
   type PluginHandoffRow,
   MAX_HANDOFF_PAYLOAD_BYTES,
+  enqueueJob,
+  scheduleJob,
+  getJobById,
+  listJobsForPlugin,
+  cancelJob,
+  cancelJobsForPlugin,
+  updateJobProgress,
+  claimNextJob,
+  completeJobSuccess,
+  completeJobFailure,
+  getJobHealthSummary,
+  type JobStatus,
+  type PluginJobRow,
+  type EnqueueJobInput,
+  type ScheduleJobInput,
+  type CompleteJobFailureResult,
+  type JobHealthSummary,
   type AccountPrefsValue,
   type SidebarPluginEntry,
   type DeleteUserDataResult,
@@ -325,4 +343,6 @@ export type {
   NewWebhookReplay,
   PluginHandoff,
   NewPluginHandoff,
+  PluginJob,
+  NewPluginJob,
 } from './schema/sqlite/platform';

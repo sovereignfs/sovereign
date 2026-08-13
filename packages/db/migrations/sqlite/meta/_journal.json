@@ -183,6 +183,13 @@
       "when": 1786651730354,
       "tag": "0025_goofy_lady_ursula",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1786657340114,
+      "tag": "0026_curious_marten_broadcloak",
+      "breakpoints": true
     }
   ]
 }

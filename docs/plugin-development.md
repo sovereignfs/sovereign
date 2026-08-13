@@ -181,6 +181,7 @@ serves at `/tasks/lists`.
 | `env`           | object (see below)                                      | no                                   | Plugin-scoped environment variable declarations (RFC 0018). Keys are auto-namespaced to `SV_PLUGIN_<SLUG>_<KEY>`; read them via `sdk.env.get('KEY')` in server code.                                                                                                                                       |
 | `capabilities`  | object (see below)                                      | no                                   | Plugin-declared capabilities (RFC 0022). Each key is a local name auto-namespaced to `<pluginId>:<capName>`; enforce access inside the plugin via `sdk.auth.hasCapability`.                                                                                                                                |
 | `schedules`     | array (see below)                                       | no                                   | Recurring background schedules (RFC 0046 Phase 1). Each entry names a server-side handler module inside `app/` that the platform's in-process scheduler invokes every `intervalMinutes` while the plugin is enabled.                                                                                       |
+| `jobs`          | array (see below)                                       | no                                   | Background job type declarations (RFC 0046). Each entry names a server-side handler module inside `app/` that the platform's job worker invokes whenever a `sdk.jobs.enqueue()`/`schedule()` call for that `type` becomes due. Coexists with `schedules` — see below for when to use each.                 |
 | `connections`   | object (see below)                                      | no                                   | External provider connection declarations (RFC 0049). Lists OAuth/connect-account providers and callback paths for platform-visible connection metadata.                                                                                                                                                   |
 | `monetization`  | object (see below)                                      | no                                   | Monetization model (RFC 0003). Declares the billing model, tiers, and the author's Ed25519 public key for offline license verification. Only `sovereign`/`community` plugins may declare this.                                                                                                             |
 | `repository`    | string (URL)                                            | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                                                                                  |
@@ -220,6 +221,8 @@ Declared SDK capabilities. The v1-functional ones:
 | `activity:write` | Record activity-log events via `sdk.activity.log()` (RFC 0005). |
 
 | `notifications:send` | Send notifications to users via `sdk.notifications.send()` (RFC 0015). |
+
+| `jobs:write` | Enqueue/schedule/cancel/read background jobs via `sdk.jobs` (RFC 0046). |
 
 | `storage:readWrite` | Read/write plugin-scoped binary objects via `sdk.storage` (RFC 0044). |
 
@@ -1958,6 +1961,101 @@ Query the users to act for from your own tables (always scoped by `tenant_id`).
 generate time and imported at server startup — editing a handler requires a
 dev-server restart (unlike routes, they do not hot-reload). Operators can
 disable all plugin schedules with `SOVEREIGN_SCHEDULER_DISABLED=1`.
+
+### `jobs` — background jobs (RFC 0046)
+
+`sdk.jobs` is the general-purpose complement to `schedules` above: a
+persistent, retried, queue-backed mechanism for one-off and dynamically
+recurring work, rather than a fixed manifest-declared interval. Use
+`schedules` for a simple fixed-cadence tick (e.g. "run every 5 minutes");
+use `jobs` when you need any of: work triggered by a user action (enqueue
+a one-off export/import/sync), retries with backoff on failure, work that
+must survive a runtime restart, progress reporting, or a recurring cadence
+computed at runtime (a user-configurable cron schedule) rather than fixed
+in the manifest. The two mechanisms coexist — neither is deprecated —
+and share the same underlying idioms (synthetic `ctx.headers`, idempotent
+handlers).
+
+Requires the `jobs:write` permission. Declare each job **type** your plugin
+handles and the handler module that implements it:
+
+```json
+"permissions": ["jobs:write"],
+"jobs": [
+  { "type": "sync.remote", "entry": "app/_jobs/sync-remote.ts", "maxAttempts": 5 }
+]
+```
+
+| Field         | Notes                                                                                                                                                                         |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`        | Plugin-local job type name, unique within the plugin, lowercase dot-separated segments (e.g. `"sync.remote"`). The runtime namespaces it to `<pluginId>:<type>` internally.   |
+| `entry`       | Handler module path relative to the plugin root, inside `app/`. Must be a `.ts` module; use an underscore-prefixed directory (e.g. `app/_jobs/`) so it never becomes a route. |
+| `maxAttempts` | Default max attempts for jobs of this type when a caller's `enqueue()`/`schedule()` call doesn't specify one (optional, integer ≥ 1; falls back to 3).                        |
+| `description` | Optional human-readable note.                                                                                                                                                 |
+
+The entry module's **default export** is a `JobHandler` from
+`@sovereignfs/sdk` — invoked whenever a claimed job of that `type` becomes
+due, exactly like `schedules`' `entry`/composed-at-generate-time model (this
+is deliberate: a job handler must be reachable without any HTTP request ever
+touching the plugin's routes, so it's wired the same way — a manifest entry
+composed into the runtime's build graph — rather than a runtime `register()`
+call a route module would only make on first load):
+
+```ts
+// app/_jobs/sync-remote.ts
+import type { JobContext } from '@sovereignfs/sdk';
+
+export default async function syncRemote(ctx: JobContext, payload: unknown): Promise<void> {
+  const { accountId } = payload as { accountId: string };
+  await ctx.reportProgress(10, 'Fetching remote data');
+  // …do the work, calling ctx.reportProgress() periodically for long jobs…
+  await ctx.reportProgress(100);
+}
+```
+
+From a server action or route handler, callers enqueue or schedule work
+through `sdk.jobs`:
+
+```ts
+import { headers } from 'next/headers';
+import { sdk } from '@sovereignfs/sdk';
+
+// One-off, run as soon as claimed:
+await sdk.jobs.enqueue({ type: 'sync.remote', payload: { accountId } }, await headers());
+
+// Recurring, cron + timezone:
+await sdk.jobs.schedule(
+  { type: 'cleanup.expired', cron: '0 3 * * *', timezone: 'UTC' },
+  await headers(),
+);
+```
+
+`enqueue()`/`schedule()`/`cancel()`/`get()` all take an explicit
+`Headers` argument rather than reading `next/headers()` internally — this is
+what lets a job handler call them too (pass `ctx.headers`), so a job can
+enqueue further jobs. `dedupeKey` makes `enqueue()`/`schedule()` idempotent:
+calling with a `dedupeKey` that matches an already-active (queued/scheduled/
+running) job of your plugin returns that job instead of creating a
+duplicate — useful for "at most one sync in flight per account" patterns.
+
+**Lifecycle and retries.** A job is `queued` (one-off, due) or `scheduled`
+(recurring, waiting for its next `cron` occurrence), then `running` once
+claimed, then `succeeded`/`failed` (one-off) or back to `scheduled` at its
+next occurrence (recurring — a successful or exhausted-retries run always
+re-arms the schedule rather than killing it permanently). A thrown error
+retries with exponential backoff up to the job's `maxAttempts` before the
+job (or, for a recurring job, that occurrence) is marked failed.
+
+**No originating request**, same as `schedules`: `ctx.headers` carries the
+plugin's identity for SDK surfaces that attribute by request headers.
+Payloads must be JSON-serializable and small — large inputs belong in
+`sdk.storage`, referenced by id.
+
+**Dev-mode caveat:** job handlers are composed into the runtime at generate
+time and imported at server startup — editing a handler requires a
+dev-server restart, same as `schedules`. Operators can disable the job
+worker with `SOVEREIGN_JOB_WORKER_DISABLED=1`. Console → System health
+shows queued/scheduled/running counts and recent failures.
 
 ### `monetization` — plugin monetization (RFC 0003)
 

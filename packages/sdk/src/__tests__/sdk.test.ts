@@ -111,6 +111,20 @@ beforeAll(() => {
         return {} as never;
       },
     },
+    jobs: {
+      async enqueue() {
+        return {} as never;
+      },
+      async schedule() {
+        return {} as never;
+      },
+      async cancel() {
+        return false;
+      },
+      async get() {
+        return null;
+      },
+    },
     crypto: {
       async encryptField(value: string) {
         return `svf0:${Buffer.from(value, 'utf8').toString('base64url')}`;

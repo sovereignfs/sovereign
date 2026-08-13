@@ -349,6 +349,26 @@ const pluginRemove = defineCommand({
     rmSync(dest, { recursive: true, force: true });
     consola.success(`Removed plugins/${id}.`);
 
+    // RFC 0046: uninstalled plugins leave jobs cancelled, not silently
+    // running/queued forever. plugin_jobs is platform-owned (not the
+    // per-plugin isolated DB dropped below), so this runs unconditionally —
+    // independent of isIsolated/keepData.
+    if (manifestPluginId) {
+      try {
+        const { cancelJobsForPlugin, getPlatformDb } = await import('@sovereignfs/db');
+        const pdb = await getPlatformDb();
+        const cancelled = await cancelJobsForPlugin(pdb, manifestPluginId);
+        if (cancelled > 0) {
+          consola.info(`Cancelled ${cancelled} active job(s) for "${manifestPluginId}".`);
+        }
+      } catch (err) {
+        consola.warn(
+          `Could not cancel active jobs for "${manifestPluginId}" — ` +
+            `you may need to review plugin_jobs manually. Error: ${(err as Error).message}`,
+        );
+      }
+    }
+
     if (isIsolated && manifestPluginId && !keepData) {
       consola.info(`Dropping isolated database for "${manifestPluginId}"…`);
       try {

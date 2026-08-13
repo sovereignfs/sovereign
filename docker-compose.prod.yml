@@ -233,9 +233,13 @@ services:
 
   # ── On-demand admin CLI ──────────────────────────────────────────────────
   # Never starts with a plain `up` — the `tools` profile keeps it out of the
-  # default service set. Gives the `sv` CLI (sv db migrate-to-sqld/
-  # migrate-to-postgres, sv user reset-mfa, …) direct access to the same
-  # named volume the services above use, without a separate host checkout.
+  # default service set. Gives the `sv` CLI (sv backup/restore, sv db
+  # migrate-to-sqld/migrate-to-postgres/encrypt-fields, sv keys
+  # rotate-field-kek/rotate-blind-index, sv user reset-mfa, …) direct access
+  # to the same named volume the services above use. With SOVEREIGN_VERSION
+  # set, this pulls the published `sovereign-tools` image (workstream 0006
+  # leg 1) — a deployment with only this compose file + .env needs no source
+  # checkout at all; without it, falls back to the local `build:` block below.
   # Invoke explicitly, e.g.:
   #   docker compose -f docker-compose.prod.yml --profile tools run --rm \
   #     tools pnpm sv user reset-mfa someone@example.com
@@ -243,6 +247,7 @@ services:
   # those commands assume nothing else has the old SQLite files open.
   tools:
     profiles: ['tools']
+    image: ${SOVEREIGN_VERSION:+ghcr.io/sovereignfs/sovereign-tools:${SOVEREIGN_VERSION}}
     build:
       context: .
       dockerfile: Dockerfile

@@ -8,12 +8,20 @@ name: Publish Docker Images
 #   ghcr.io/<owner>/sovereign-runtime:<tag>
 #   ghcr.io/<owner>/sovereign-auth:<tag>
 #   ghcr.io/<owner>/sovereign-relay:<tag>
+#   ghcr.io/<owner>/sovereign-tools:<tag>
 #
 # sovereign-relay (apps/relay, RFC 0087) is published here for two distinct
 # consumers — sovereignfs's own default relay deployment, and any operator
-# taking the self-host escape hatch — but unlike the other two images, it is
+# taking the self-host escape hatch — but unlike the other three images, it is
 # NOT part of the self-hosted stack (docker-compose.yml / .prod.yml). See
 # docs/rfcs/0087-sovereign-relay.md's "Deployment topology".
+#
+# sovereign-tools (workstream 0006 leg 1, epic task 0.19) builds the same
+# Dockerfile's `tools` stage (Dockerfile:98, `AS tools`) — the on-demand `sv`
+# admin CLI image `docker-compose.prod.yml`'s `tools` service runs against a
+# named-volume production deployment. Before this, that service had no
+# `image:` fallback, so it silently required a full source checkout to build
+# locally even in a published-image-only deployment.
 #
 # Tags applied per release:
 #   v1.2.3   — exact version
@@ -49,10 +57,16 @@ jobs:
         include:
           - name: sovereign-runtime
             dockerfile: Dockerfile
+            target: ''
           - name: sovereign-auth
             dockerfile: apps/auth/Dockerfile
+            target: ''
           - name: sovereign-relay
             dockerfile: apps/relay/Dockerfile
+            target: ''
+          - name: sovereign-tools
+            dockerfile: Dockerfile
+            target: tools
 
     steps:
       - uses: actions/checkout@v7
@@ -83,6 +97,7 @@ jobs:
         with:
           context: .
           file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

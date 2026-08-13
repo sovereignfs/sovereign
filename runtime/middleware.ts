@@ -13,7 +13,9 @@ import { getInstalledPlugins, getOfflineRoutePrefixes } from '@/src/registry';
 import {
   decidePluginRoute,
   matchedPluginId,
+  matchedPublicHandoffRoute,
   matchedPublicPluginRouteId,
+  matchedWebhookRoute,
   underPrefix,
 } from '@/src/route-guard';
 import { checkGlobalRateLimit, clientIp, isGlobalRateLimitDisabled } from '@/src/rate-limit';
@@ -351,6 +353,48 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // Manifest-declared public webhook endpoints (RFC 0050): resolved before
+  // both the public-page-route branch and the login-redirect gate. A webhook
+  // is a narrower, distinct primitive from a public *page* route — no
+  // paywall or session-fallback logic applies, since there is no human
+  // browsing session on the other end, only a provider's callback. Method
+  // and Content-Length limits are enforced here, before any plugin code
+  // runs (RFC 0050 requirement 3) — see docs/plugin-development.md's
+  // "webhooks" section for the documented gap this doesn't close: a
+  // chunked-transfer body with no Content-Length header cannot be
+  // pre-checked without consuming it, so the plugin's own handler is the
+  // backstop for that case. A method not in the declared list gets 404, not
+  // 405 — the platform never reveals which methods a declared path accepts,
+  // matching the disabled-plugin 404 below (RFC 0050: "Invalid signatures
+  // return 404 or 401 without revealing whether a resource exists" — the
+  // same fail-closed-without-disclosure posture extends to method mismatch).
+  const webhookMatch = matchedWebhookRoute(pathname, installedPlugins);
+  if (webhookMatch) {
+    const disabledIds = await fetchDisabledPluginIds();
+    if (disabledIds.has(webhookMatch.pluginId)) {
+      return applyCsp(new NextResponse('Not Found', { status: 404 }));
+    }
+    if (!webhookMatch.webhook.methods.includes(request.method)) {
+      return applyCsp(new NextResponse('Not Found', { status: 404 }));
+    }
+    const contentLength = request.headers.get('content-length');
+    if (contentLength !== null && Number(contentLength) > webhookMatch.webhook.maxBodyBytes) {
+      return applyCsp(new NextResponse('Payload Too Large', { status: 413 }));
+    }
+
+    // Strip inbound trust headers unconditionally, then set only plugin
+    // identity — deliberately never any x-sovereign-user-* header, even if
+    // the request happens to carry a valid session cookie. RFC 0050: "never
+    // injects a forged user identity" — there is no user for a webhook call.
+    const webhookHeaders = strippedRequestHeaders(request);
+    applySurfaceHeaders(webhookHeaders, request.headers.get('user-agent'));
+    webhookHeaders.set('x-nonce', nonce);
+    webhookHeaders.set('content-security-policy', csp);
+    webhookHeaders.set('x-sovereign-plugin-id', webhookMatch.pluginId);
+
+    return applyCsp(NextResponse.next({ request: { headers: webhookHeaders } }));
+  }
+
   // Manifest-declared public plugin page routes (RFC 0042): resolved before the
   // login-redirect gate, since an anonymous request must be able to reach them.
   // The plugin itself owns authorization for these paths (token/public-ID/
@@ -427,6 +471,62 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
     const response = NextResponse.next({ request: { headers } });
     for (const cookie of publicSetCookies) response.headers.append('set-cookie', cookie);
+    return applyCsp(response);
+  }
+
+  // Manifest-declared public handoff receivers (RFC 0053): resolved before
+  // the login-redirect gate, for the same reason as the public-page-route
+  // branch above — an anonymous visitor consuming a `mode: 'public'` handoff
+  // must be able to reach the receiver with no session. Unlike that branch,
+  // there is no paywall check here — RFC 0053 doesn't gate handoffs on
+  // monetization, and inventing one wasn't asked for. A session, if present,
+  // is still forwarded (an authenticated visitor can legitimately land on a
+  // `public: true` receiver too) — actual mode/actor enforcement (does this
+  // token require a session, does the consuming user match the creating
+  // user) happens in `sdk.handoffs.consume()`, not here; this branch only
+  // decides whether the *platform's* session gate applies to the path.
+  const handoffMatch = matchedPublicHandoffRoute(pathname, installedPlugins);
+  if (handoffMatch) {
+    const disabledIds = await fetchDisabledPluginIds();
+    if (disabledIds.has(handoffMatch.pluginId)) {
+      return applyCsp(new NextResponse('Not Found', { status: 404 }));
+    }
+
+    let handoffSession = await verifyFromCookieCache(request);
+    let handoffSetCookies: string[] = [];
+    if (!handoffSession) {
+      const fallback = await verifyViaAuthServer(request);
+      if (fallback) {
+        handoffSession = fallback.session;
+        handoffSetCookies = fallback.setCookies;
+      }
+      // No redirect to /login on failure — proceed anonymously, same as the
+      // public-page-route branch above.
+    }
+
+    const headers = strippedRequestHeaders(request);
+    applySurfaceHeaders(headers, request.headers.get('user-agent'));
+    headers.set('x-nonce', nonce);
+    headers.set('content-security-policy', csp);
+    headers.set('x-sovereign-plugin-id', handoffMatch.pluginId);
+    if (handoffSession) {
+      const { user, expiresAt } = handoffSession;
+      headers.set('x-sovereign-user-id', user.id);
+      headers.set('x-sovereign-user-email', user.email);
+      headers.set('x-sovereign-user-role', user.role);
+      const platformCaps = capabilitiesForRole(user.role);
+      const allCaps =
+        ALL_GRANTED_PLUGIN_CAPS.length > 0
+          ? [...platformCaps, ...ALL_GRANTED_PLUGIN_CAPS]
+          : platformCaps;
+      headers.set('x-sovereign-user-capabilities', JSON.stringify(allCaps));
+      headers.set('x-sovereign-session-expires-at', String(expiresAt));
+      if (user.name != null) headers.set('x-sovereign-user-name', user.name);
+      if (user.image != null) headers.set('x-sovereign-user-image', user.image);
+    }
+
+    const response = NextResponse.next({ request: { headers } });
+    for (const cookie of handoffSetCookies) response.headers.append('set-cookie', cookie);
     return applyCsp(response);
   }
 

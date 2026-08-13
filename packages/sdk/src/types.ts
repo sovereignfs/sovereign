@@ -165,6 +165,36 @@ export interface SendNotificationInput {
   icon?: string;
 }
 
+/**
+ * `sdk.webhooks.verifyHmac()` input (RFC 0050). `body` is the raw request
+ * bytes exactly as received — read them with a bounded-size reader before
+ * any JSON parsing, since parsing first would defeat the point of verifying
+ * the signature against the exact bytes the provider signed.
+ * `signatureHeader` is the digest **value** your provider sent (hex-encoded,
+ * with any provider-specific prefix like GitHub's `sha256=` already
+ * stripped by your own code) — this helper does not parse provider-specific
+ * header formats, only compares a raw hex digest.
+ */
+export interface VerifyWebhookHmacInput {
+  body: Uint8Array;
+  signatureHeader: string;
+  /** A `SecretRef.id` for a `'plugin'`-scoped secret created via `sdk.secrets.create()`. */
+  secretRef: string;
+  algorithm: 'sha256' | 'sha512';
+}
+
+/**
+ * `sdk.webhooks.checkReplay()` input (RFC 0050). `provider`/`eventId`
+ * together are the dedupe key, scoped to the calling plugin — two plugins
+ * (or two providers on the same plugin) never collide on the same `eventId`.
+ */
+export interface CheckWebhookReplayInput {
+  provider: string;
+  eventId: string;
+  /** Defaults to 24h. How long a claim blocks reprocessing of the same event. */
+  ttlSeconds?: number;
+}
+
 /** Plugin-scoped file storage object metadata (RFC 0044). */
 export interface StorageObject {
   id: string;
@@ -495,3 +525,63 @@ export interface ScheduleContext {
  * in Phase 1.
  */
 export type ScheduleHandler = (ctx: ScheduleContext) => Promise<void>;
+
+// ---------------------------------------------------------------------------
+// Plugin flow handoffs (RFC 0053)
+// ---------------------------------------------------------------------------
+
+/** Whether a handoff requires an authenticated Sovereign session to consume, or allows an anonymous visitor. */
+export type HandoffMode = 'authenticated' | 'public';
+
+export interface CreateHandoffInput<TPayload = unknown> {
+  /** The receiving plugin's manifest `id`. */
+  providerId: string;
+  /** The handoff name, matching one of the provider's declared `handoffs.receives[]` entries. */
+  name: string;
+  payload: TPayload;
+  /**
+   * Where the provider should send the visitor back afterward. Validated
+   * with the same same-origin-relative-path check `/login`'s own
+   * `returnUrl` uses — an absolute or scheme-relative URL is rejected
+   * (open-redirect prevention, RFC 0053 security requirement).
+   */
+  returnUrl?: string;
+  mode: HandoffMode;
+  /** Defaults to `true` — the token (and the handoff row) can only ever be consumed once. */
+  singleUse?: boolean;
+  /** Defaults to 15 minutes, capped at 1 hour. */
+  expiresInSeconds?: number;
+}
+
+export interface HandoffToken {
+  token: string;
+  expiresAt: number;
+}
+
+export interface ConsumeHandoffOptions {
+  /** The handoff name this provider expects — must match what the token was created for. */
+  name: string;
+}
+
+/** What a provider receives back from a successfully consumed handoff. */
+export interface HandoffContext<TPayload = unknown> {
+  sourcePluginId: string;
+  providerId: string;
+  name: string;
+  tenantId: string;
+  /** The user who created the handoff, when `mode: 'authenticated'`; `null` for `mode: 'public'`. */
+  actorUserId: string | null;
+  mode: HandoffMode;
+  payload: TPayload;
+  returnUrl: string | null;
+  createdAt: number;
+  expiresAt: number;
+}
+
+/** Runtime-injected context for a handoff create/consume call — derived from verified request headers. */
+export interface HandoffRequestContext {
+  tenantId: string;
+  /** The plugin making the call — the *source* on create, the *provider* on consume. */
+  pluginId: string;
+  actorUserId: string | null;
+}

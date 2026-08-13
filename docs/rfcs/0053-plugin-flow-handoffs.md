@@ -1,7 +1,7 @@
 ---
 rfc: 0053
 title: Plugin flow handoffs
-status: Draft
+status: Implemented
 date: June 2026
 author: kasunben
 scope: packages/sdk, runtime, packages/db, packages/manifest, docs; builds on RFC 0042, RFC 0050, RFC 0051, and RFC 0047
@@ -194,12 +194,32 @@ Rejected. URLs leak into logs/history and are too small for structured payloads.
 
 ## Open questions
 
-1. Should handoff payloads always be stored server-side, or can small payloads be
-   embedded in signed tokens?
-2. Should source plugins be able to revoke unconsumed handoffs?
-3. Should public handoffs support one anonymous browser session binding to reduce
-   token forwarding?
-4. Should handoff schemas use the same schema format as tool contracts?
+1. ~~Should handoff payloads always be stored server-side, or can small
+   payloads be embedded in signed tokens?~~ **Resolved:** always server-side,
+   in a new `plugin_handoffs` table. The signed token carries only an opaque
+   `handoffId`; embedding the payload in the token itself was rejected even
+   for small payloads to keep one code path and one size limit rather than
+   two.
+2. ~~Should source plugins be able to revoke unconsumed handoffs?~~
+   **Resolved: not in this pass.** The default 15-minute (max 1-hour) expiry
+   bounds exposure without needing a revocation API; add one later if a real
+   use case needs it.
+3. ~~Should public handoffs support one anonymous browser session binding to
+   reduce token forwarding?~~ **Resolved: no** — public-mode handoffs are
+   consumable by anyone holding the token, same as a public webhook payload.
+   Authenticated-mode handoffs get the stronger property instead: consumption
+   is pinned to the exact creating user (see the Security requirements
+   note below), which covers the case that actually matters (a logged-in
+   user's flow being hijacked), without adding session-binding machinery to
+   the public/anonymous path where there's no session to bind to.
+4. ~~Should handoff schemas use the same schema format as tool contracts?~~
+   **Resolved: yes, same shape, not shared enforcement.** `inputSchema` uses
+   the same JSON-Schema-subset shape RFC 0047 (tool contracts) defines, for
+   author familiarity — but it is declarative metadata only. The platform
+   validates a tool call's input before invoking the tool; it does **not**
+   validate a handoff's payload, per this RFC's own "Provider responsibility"
+   text above. A provider must validate `context.payload` itself in its
+   receiver route.
 
 ## Adoption path
 
@@ -212,6 +232,7 @@ Rejected. URLs leak into logs/history and are too small for structured payloads.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | June 2026 | Initial draft |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | June 2026   | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 0.2     | August 2026 | Shipped (epic task 3.21, workstream 0015 leg 5). Payload always server-side in a new `plugin_handoffs` table (`packages/db`) — the signed token carries only an opaque `handoffId`. Token is `base64url(json) + "." + HMAC-SHA256` (`runtime/src/handoff-token.ts`), same shape as `connections.ts`'s OAuth state token, but — unlike RFC 0047's tool-confirmation tokens — has **no in-memory replay tracking**; single-use is enforced entirely by the DB row's `consumed_at`, claimed atomically via `UPDATE ... WHERE consumed_at IS NULL RETURNING`, the same idiom `checkWebhookReplay` (RFC 0050) uses. `handoffs.receives[].path` is an **exact** match, mirroring `webhooks[].path`, not `publicRoutes`' prefix match — resolved the same way RFC 0050 resolved its own equivalent question. `matchedPublicHandoffRoute()` (`runtime/src/route-guard.ts`) only matches `public: true` receivers; unlike the webhook middleware branch (which never forwards user identity), the new handoff branch forwards `x-sovereign-user-id` conditionally when a session is present, like `publicRoutes`' own branch — mode/actor enforcement happens in `sdk-host.ts`'s `consume()`, not in middleware. **Authenticated-mode consumption is pinned to the exact creating user** (`context.actorUserId === existing.actorUserId`), tighter than this RFC's literal text (which only required _a_ session) — closes a confused-deputy gap where a leaked/forwarded authenticated handoff URL could otherwise be redeemed by a different logged-in visitor; flagged in the epic correction note as a deliberate strengthening, not scope creep. `returnUrl` reuses `post-login-redirect.ts`'s existing `sanitizeRedirectPath()` rather than reimplementing the same-origin check. Default expiry is 15 minutes; `expiresInSeconds` is clamped server-side to a 1-hour maximum regardless of what a plugin requests. New permissions `handoffs:send`/`handoffs:receive`, mirroring `data:provide`/`data:consume` and `tools:provide`/`tools:call`'s naming. All four open questions above resolved during implementation — see their entries. |

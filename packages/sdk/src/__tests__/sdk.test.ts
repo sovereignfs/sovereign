@@ -94,6 +94,22 @@ beforeAll(() => {
         /* no-op */
       },
     },
+    webhooks: {
+      async verifyHmac(_input, _pluginId) {
+        return false;
+      },
+      async checkReplay(_input, _pluginId) {
+        return true;
+      },
+    },
+    handoffs: {
+      async create() {
+        return { token: 'token', expiresAt: 0 };
+      },
+      async consume() {
+        return {} as never;
+      },
+    },
     crypto: {
       async encryptField(value: string) {
         return `svf0:${Buffer.from(value, 'utf8').toString('base64url')}`;
@@ -329,6 +345,16 @@ describe('sdk surface', () => {
 
   it('exposes the activity surface (RFC 0005)', () => {
     expect(typeof sdk.activity.log).toBe('function');
+  });
+
+  it('exposes the webhooks surface (RFC 0050)', () => {
+    expect(typeof sdk.webhooks.verifyHmac).toBe('function');
+    expect(typeof sdk.webhooks.checkReplay).toBe('function');
+  });
+
+  it('exposes the handoffs surface (RFC 0053)', () => {
+    expect(typeof sdk.handoffs.create).toBe('function');
+    expect(typeof sdk.handoffs.consume).toBe('function');
   });
 
   it('exposes the portability surface (RFC 0007)', () => {

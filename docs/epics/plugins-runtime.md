@@ -574,7 +574,7 @@ minor (new optional params on exported functions), `runtime` → patch, `bin/sv`
 
 ---
 
-#### 📋 3.21 — Plugin flow handoffs (RFC 0053)
+#### ✅ 3.21 — Plugin flow handoffs (RFC 0053)
 
 **Goal:** Add platform-mediated handoffs so one plugin can start or continue a user-facing flow in another plugin with a signed, short-lived payload.
 
@@ -598,6 +598,36 @@ minor (new optional params on exported functions), `runtime` → patch, `bin/sv`
 - A provider plugin can consume only tokens addressed to its own plugin ID and handoff name.
 - Expired, replayed, malformed, or wrong-provider tokens fail closed.
 - Public handoffs work for anonymous visitors only when explicitly declared.
+
+**Implementation notes (deviations from the RFC, found while implementing against real code, not RFC assumptions):**
+
+- **No in-memory single-use tracking**, unlike RFC 0047's tool-confirmation
+  tokens on the parallel leg 4 branch — single-use enforcement lives entirely
+  in the new `plugin_handoffs` DB row's `consumed_at` column, claimed
+  atomically via `UPDATE ... WHERE consumed_at IS NULL RETURNING`, the same
+  idiom `checkWebhookReplay` (RFC 0050, leg 3) already uses. More correct
+  than an in-memory `Map` under horizontal scaling, and RFC 0053 itself
+  states a preference for server-side storage.
+- **`handoffs.receives[].path` is an exact match**, not a prefix — mirrors
+  `webhooks[].path` (RFC 0050), not `publicRoutes`' subtree match. A handoff
+  receiver is one specific declared endpoint.
+- **Input-schema validation is provider-owned, not platform-enforced** — RFC
+  0053's own text places schema validation under "Provider responsibility,"
+  unlike RFC 0047's tool contracts, which the platform validates before every
+  call. `handoffs.receives[].inputSchema` is declarative metadata only.
+- **Authenticated-mode consumption is pinned to the exact creating user** —
+  a deliberate tightening beyond the RFC's literal text (which only required
+  _a_ session): the consuming request's actor must equal the creating
+  request's actor, closing a confused-deputy gap where a leaked or forwarded
+  authenticated handoff URL could otherwise be redeemed by a different
+  logged-in user.
+- **`returnUrl` reuses `runtime/src/post-login-redirect.ts`'s existing
+  `sanitizeRedirectPath()`** rather than reimplementing the same-origin
+  relative-path check.
+- **`expiresInSeconds` is clamped server-side to a 1-hour maximum**
+  (default 15 minutes) regardless of what a plugin requests — found and
+  fixed during this task's own test-writing pass, since nothing enforced the
+  cap the SDK type's doc comment already claimed.
 
 ---
 

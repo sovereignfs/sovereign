@@ -8,6 +8,20 @@
 import type { Surface } from '@sovereignfs/manifest';
 import { hasCapability } from './capabilities';
 
+/** One manifest-declared webhook endpoint (RFC 0050) — see `PluginRouteInfo.webhooks`. */
+export interface PluginWebhookInfo {
+  path: string;
+  methods: readonly string[];
+  maxBodyBytes: number;
+}
+
+/** One manifest-declared handoff receiver (RFC 0053) — see `PluginRouteInfo.handoffReceivers`. */
+export interface PluginHandoffReceiverInfo {
+  name: string;
+  path: string;
+  public: boolean;
+}
+
 /** The subset of a plugin manifest the route decision needs. */
 export interface PluginRouteInfo {
   id: string;
@@ -19,6 +33,16 @@ export interface PluginRouteInfo {
   public?: boolean;
   /** Surfaces this plugin is available on (RFC 0080). Absent means every surface. */
   surfaces?: readonly Surface[];
+  /** Manifest-declared public webhook endpoints (RFC 0050) — see `matchedWebhookRoute`. */
+  webhooks?: readonly PluginWebhookInfo[];
+  /**
+   * Manifest-declared flow handoffs (RFC 0053) — see `matchedPublicHandoffRoute`.
+   * Nested (`handoffs.receives`), matching the manifest's own shape exactly
+   * (unlike `webhooks` above, a top-level array) so `installedPlugins`
+   * (typed as `SovereignManifest[]`) satisfies `PluginRouteInfo` structurally
+   * with no glue/mapping step in the middleware.
+   */
+  handoffs?: { receives?: readonly PluginHandoffReceiverInfo[] };
 }
 
 export type RouteDecision = 'ok' | 'not-found' | 'forbidden' | 'paywall' | 'unavailable-surface';
@@ -95,6 +119,70 @@ export function matchedPublicPluginRouteId(
     if (plugin.public === true && underPrefix(pathname, plugin.routePrefix)) return plugin.id;
     for (const route of plugin.publicRoutes ?? []) {
       if (underPrefix(pathname, `${plugin.routePrefix}${route.prefix}`)) return plugin.id;
+    }
+  }
+  return null;
+}
+
+export interface MatchedWebhookRoute {
+  pluginId: string;
+  webhook: PluginWebhookInfo;
+}
+
+/**
+ * Returns the plugin + webhook declaration whose manifest-declared webhook
+ * (RFC 0050) covers this exact path, or null. Unlike `matchedPublicPluginRouteId`
+ * (a prefix match — a whole subtree of human-facing pages), this is an
+ * **exact** match: a webhook is one specific machine-to-machine endpoint, not
+ * a namespace, so `<routePrefix><path>` must equal `pathname` precisely —
+ * `/myplugin/webhooks/provider/extra` does NOT match a declared
+ * `/webhooks/provider` webhook, even though it would match an equivalent
+ * `publicRoutes` prefix.
+ */
+export function matchedWebhookRoute(
+  pathname: string,
+  plugins: readonly PluginRouteInfo[],
+): MatchedWebhookRoute | null {
+  for (const plugin of plugins) {
+    for (const webhook of plugin.webhooks ?? []) {
+      if (pathname === `${plugin.routePrefix}${webhook.path}`) {
+        return { pluginId: plugin.id, webhook };
+      }
+    }
+  }
+  return null;
+}
+
+export interface MatchedHandoffRoute {
+  pluginId: string;
+  receiver: PluginHandoffReceiverInfo;
+}
+
+/**
+ * Returns the plugin + handoff-receiver declaration whose manifest-declared
+ * public receiver (RFC 0053, `handoffs.receives[].public`) covers this
+ * exact path, or null. Only `public: true` receivers match here —
+ * authenticated-only receivers need no middleware exemption at all, since
+ * the ordinary session gate already covers them correctly.
+ *
+ * **Exact** match, mirroring `matchedWebhookRoute` (RFC 0050's declaration
+ * pattern) rather than `matchedPublicPluginRouteId`'s prefix match: a
+ * handoff receiver is one specific declared endpoint, not a page subtree.
+ * Unlike a webhook match, this does **not** imply "never forward user
+ * identity" — an authenticated visitor can still legitimately reach a
+ * `public: true` receiver with their session intact; mode/actor
+ * enforcement happens at `sdk.handoffs.consume()`, not here.
+ */
+export function matchedPublicHandoffRoute(
+  pathname: string,
+  plugins: readonly PluginRouteInfo[],
+): MatchedHandoffRoute | null {
+  for (const plugin of plugins) {
+    for (const receiver of plugin.handoffs?.receives ?? []) {
+      if (!receiver.public) continue;
+      if (pathname === `${plugin.routePrefix}${receiver.path}`) {
+        return { pluginId: plugin.id, receiver };
+      }
     }
   }
   return null;

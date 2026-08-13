@@ -9,6 +9,7 @@ import * as db from './db';
 import { e2ee } from './e2ee';
 import { email } from './email';
 import { env } from './env';
+import { handoffs } from './handoffs';
 import * as mailer from './mailer';
 import { notifications } from './notifications';
 import * as platform from './platform';
@@ -17,6 +18,7 @@ import { portability } from './portability';
 import { secrets } from './secrets';
 import { storage } from './storage';
 import { billing, events } from './unimplemented';
+import { webhooks } from './webhooks';
 
 /**
  * The Sovereign SDK — the only contract between a plugin and the platform.
@@ -37,17 +39,19 @@ import { billing, events } from './unimplemented';
  * `e2ee-crypto`/`e2ee-device`/`e2ee-object`/`e2ee-state` for the browser-only
  * crypto and state helpers that produce the ciphertext these methods store),
  * `plugins` (dependency discovery and cross-plugin references, RFC 0051),
- * `email` (user-scoped `sendToUser` email surface, RFC 0062), `billing`
- * (plugin monetization / entitlement gating, RFC 0003), `events`, `device`
- * (surface detection — `browser`/`mobile`/`desktop` — RFC 0080; a
- * presentation hint only, never a security boundary; capability probes and
- * invocation live in `@sovereignfs/sdk/device-client` and the future device
- * bridge, RFC 0083).
+ * `email` (user-scoped `sendToUser` email surface, RFC 0062), `webhooks`
+ * (public plugin webhook helpers — `verifyHmac`/`checkReplay`, RFC 0050),
+ * `handoffs` (signed, short-lived cross-plugin flow handoffs —
+ * authenticated or public/anonymous, RFC 0053), `billing` (plugin
+ * monetization / entitlement gating, RFC 0003), `events`, `device` (surface
+ * detection — `browser`/`mobile`/`desktop` — RFC 0080; a presentation hint
+ * only, never a security boundary; capability probes and invocation live in
+ * `@sovereignfs/sdk/device-client` and the future device bridge, RFC 0083).
  * `data`, `activity`, `portability`, `env`, `notifications`, `directory`,
- * `secrets`, `crypto`, `storage`, `connections`, `e2ee`, `plugins`, `email`, and
- * `device` are implemented; `billing` and `events` throw
- * `NotImplementedError` until their backing mechanisms ship. Their shape
- * may change before they stabilise.
+ * `secrets`, `crypto`, `storage`, `connections`, `e2ee`, `plugins`, `email`,
+ * `webhooks`, `handoffs`, and `device` are implemented; `billing` and
+ * `events` throw `NotImplementedError` until their backing mechanisms ship.
+ * Their shape may change before they stabilise.
  */
 export const sdk = {
   // Stable (v1.0.0).
@@ -61,6 +65,8 @@ export const sdk = {
   storage,
   directory,
   notifications,
+  webhooks,
+  handoffs,
   secrets,
   crypto,
   connections,
@@ -154,6 +160,8 @@ export type {
   DrizzleClient,
   SendNotificationInput,
   SendToUserEmailInput,
+  VerifyWebhookHmacInput,
+  CheckWebhookReplayInput,
   ConnectionContext,
   ConnectionListFilter,
   ConnectionOAuthState,
@@ -189,4 +197,10 @@ export type {
   EnrollE2eeDeviceInput,
   UpdateSecretInput,
   UpdateConnectionInput,
+  HandoffMode,
+  CreateHandoffInput,
+  HandoffToken,
+  ConsumeHandoffOptions,
+  HandoffContext,
+  HandoffRequestContext,
 } from './types';

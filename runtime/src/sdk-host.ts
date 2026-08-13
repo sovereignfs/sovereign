@@ -3,9 +3,14 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   DEFAULT_TENANT_ID,
+  checkWebhookReplay,
+  consumePluginHandoff,
   createE2eeDeviceEnrollment,
   createE2eeProfile,
   type E2eeProfileRow,
+  createPluginHandoff,
+  type CreatePluginHandoffInput,
+  type PluginHandoffRow,
   createPluginSecret,
   createPluginConnection,
   createStorageObject,
@@ -15,6 +20,7 @@ import {
   findWorkspaceRoot,
   getConsentGrant,
   getDefaultTenant,
+  getPluginHandoff,
   getE2eeProfile,
   getE2eeRecoveryWrapper,
   getInstanceId,
@@ -69,6 +75,13 @@ import type {
   SecretScope,
   SendNotificationInput,
   SendToUserEmailInput,
+  VerifyWebhookHmacInput,
+  CheckWebhookReplayInput,
+  ConsumeHandoffOptions,
+  CreateHandoffInput,
+  HandoffContext,
+  HandoffRequestContext,
+  HandoffToken,
   ProviderConfig,
   StorageObject,
 } from '@sovereignfs/sdk';
@@ -114,6 +127,9 @@ import {
   writeObjectBytes,
 } from './storage';
 import { resolveProviderConfig } from './provider-configs';
+import { verifyHmacDigest } from './webhook-hmac';
+import { createHandoffToken, verifyHandoffToken } from './handoff-token';
+import { sanitizeRedirectPath } from './post-login-redirect';
 import { checkPluginMailerRateLimit, requireMailerPluginContext } from './plugin-mailer';
 import {
   decryptFieldValue,
@@ -258,6 +274,44 @@ async function auditConnectionOperation(
     visibility: ref.scope === 'user' ? 'user' : 'admin',
     summary: `External connection ${action.split('.').at(-1) ?? 'changed'}: ${ref.label}`,
     metadata: { scope: ref.scope, provider: ref.provider },
+  });
+}
+
+function toHandoffContext(row: PluginHandoffRow): HandoffContext {
+  return {
+    sourcePluginId: row.sourcePluginId,
+    providerId: row.providerId,
+    name: row.name,
+    tenantId: row.tenantId,
+    actorUserId: row.actorUserId,
+    mode: row.mode,
+    payload: row.payload,
+    returnUrl: row.returnUrl,
+    createdAt: row.createdAt,
+    expiresAt: row.expiresAt,
+  };
+}
+
+/**
+ * Audit a handoff create/consume (RFC 0053: "Handoff creation and
+ * consumption are audited when an authenticated actor exists; public
+ * handoffs record source/provider metadata without sensitive visitor data
+ * in platform logs") — never the raw `payload`.
+ */
+async function auditHandoffOperation(action: string, row: PluginHandoffRow): Promise<void> {
+  const pdb = await getPlatformDb();
+  await recordActivity(pdb, {
+    id: randomUUID(),
+    actorId: row.actorUserId,
+    actorType: row.actorUserId ? 'user' : 'plugin',
+    action,
+    subjectUserId: row.mode === 'authenticated' ? row.actorUserId : null,
+    targetType: 'plugin_handoff',
+    targetId: row.id,
+    pluginId: row.providerId,
+    visibility: row.mode === 'authenticated' ? 'user' : 'admin',
+    summary: `Handoff ${action.split('.').at(-1) ?? 'changed'}: ${row.sourcePluginId} -> ${row.providerId}:${row.name}`,
+    metadata: { sourcePluginId: row.sourcePluginId, mode: row.mode },
   });
 }
 
@@ -572,6 +626,198 @@ provideHost({
         icon: input.icon,
         source: pluginId,
       });
+    },
+  },
+  webhooks: {
+    /**
+     * Only `'plugin'`-scoped secrets are accepted — deliberately, not
+     * `'user'` (a webhook request has no user to scope to) or `'instance'`
+     * (reading that scope normally requires the `instance:configure`
+     * capability via `requireInstanceSecretCapability`, which needs a user
+     * context this call never has; bypassing that check here to allow it
+     * would be a real widening, not a convenience). Any lookup/decrypt/scope
+     * failure returns `false` rather than throwing, so a webhook route can
+     * respond 401/404 uniformly without leaking which failure occurred.
+     */
+    async verifyHmac(input: VerifyWebhookHmacInput, pluginId: string): Promise<boolean> {
+      const pdb = await getPlatformDb();
+      const row = await getPluginSecret(pdb, input.secretRef, {
+        tenantId: DEFAULT_TENANT_ID,
+        pluginId,
+        userId: null,
+      });
+      if (!row || row.scope !== 'plugin') return false;
+
+      let secretValue: string;
+      try {
+        secretValue = decryptSecretValue(row.ciphertext, {
+          tenantId: row.tenantId,
+          pluginId: row.pluginId,
+          scope: row.scope,
+          userId: row.userId,
+        });
+      } catch {
+        return false;
+      }
+
+      const matches = verifyHmacDigest(
+        input.algorithm,
+        secretValue,
+        input.body,
+        input.signatureHeader,
+      );
+      if (matches)
+        void markPluginSecretUsed(pdb, input.secretRef, {
+          tenantId: DEFAULT_TENANT_ID,
+          pluginId,
+          userId: null,
+        });
+      return matches;
+    },
+    async checkReplay(input: CheckWebhookReplayInput, pluginId: string): Promise<boolean> {
+      const pdb = await getPlatformDb();
+      return checkWebhookReplay(pdb, {
+        id: randomUUID(),
+        pluginId,
+        provider: input.provider,
+        eventId: input.eventId,
+        ttlSeconds: input.ttlSeconds,
+      });
+    },
+  },
+  handoffs: {
+    async create(input: CreateHandoffInput, context: HandoffRequestContext): Promise<HandoffToken> {
+      const providerManifest = registry.find((m) => m.id === input.providerId);
+      if (!providerManifest) {
+        throw new Error(`sdk.handoffs: provider plugin "${input.providerId}" is not installed.`);
+      }
+      if (!providerManifest.permissions.includes('handoffs:receive')) {
+        throw new Error(
+          `Plugin "${input.providerId}" does not have the "handoffs:receive" permission.`,
+        );
+      }
+      const receiver = providerManifest.handoffs?.receives?.find((r) => r.name === input.name);
+      if (!receiver) {
+        throw new Error(
+          `sdk.handoffs: "${input.providerId}" does not declare a handoff receiver named "${input.name}".`,
+        );
+      }
+      if (input.mode === 'public' && !receiver.public) {
+        throw new Error(
+          `sdk.handoffs: "${input.providerId}:${input.name}" does not accept public (anonymous) handoffs.`,
+        );
+      }
+
+      const sourceManifest = registry.find((m) => m.id === context.pluginId);
+      if (!sourceManifest) {
+        throw new Error(`sdk.handoffs: source plugin "${context.pluginId}" is not installed.`);
+      }
+      if (!sourceManifest.permissions.includes('handoffs:send')) {
+        throw new Error(
+          `Plugin "${context.pluginId}" does not have the "handoffs:send" permission.`,
+        );
+      }
+
+      const disabledIds = new Set(await getDisabledPluginIds(await getPlatformDb()));
+      if (disabledIds.has(input.providerId)) {
+        throw new Error(`sdk.handoffs: provider plugin "${input.providerId}" is disabled.`);
+      }
+      if (disabledIds.has(context.pluginId)) {
+        throw new Error(`sdk.handoffs: source plugin "${context.pluginId}" is disabled.`);
+      }
+
+      if (input.mode === 'authenticated' && !context.actorUserId) {
+        throw new Error(
+          'sdk.handoffs.create(): mode "authenticated" requires an authenticated user.',
+        );
+      }
+
+      let returnUrl: string | null = null;
+      if (input.returnUrl) {
+        returnUrl = sanitizeRedirectPath(input.returnUrl);
+        if (!returnUrl) {
+          throw new Error('sdk.handoffs.create(): returnUrl must be a same-origin relative path.');
+        }
+      }
+
+      const pdb = await getPlatformDb();
+      const createInput: CreatePluginHandoffInput = {
+        id: randomUUID(),
+        sourcePluginId: context.pluginId,
+        providerId: input.providerId,
+        name: input.name,
+        mode: input.mode,
+        actorUserId: context.actorUserId,
+        payload: input.payload,
+        returnUrl,
+        singleUse: input.singleUse ?? true,
+        expiresInSeconds: input.expiresInSeconds,
+      };
+      const row = await createPluginHandoff(pdb, createInput);
+
+      const token = createHandoffToken({
+        handoffId: row.id,
+        providerId: row.providerId,
+        name: row.name,
+        expiresAt: row.expiresAt,
+      });
+
+      void auditHandoffOperation('plugin.handoff.created', row);
+
+      return { token, expiresAt: row.expiresAt };
+    },
+
+    async consume(
+      token: string,
+      options: ConsumeHandoffOptions,
+      context: HandoffRequestContext,
+    ): Promise<HandoffContext> {
+      const { handoffId } = verifyHandoffToken(token, {
+        providerId: context.pluginId,
+        name: options.name,
+      });
+
+      const pdb = await getPlatformDb();
+      const existing = await getPluginHandoff(pdb, handoffId);
+      if (!existing) {
+        throw new Error('sdk.handoffs.consume(): handoff not found.');
+      }
+      // Defense in depth — the token's signature already binds provider/name,
+      // but re-checking the row itself costs nothing and guards against any
+      // future bug that could let a row's own fields drift from the token.
+      if (existing.providerId !== context.pluginId || existing.name !== options.name) {
+        throw new Error('sdk.handoffs.consume(): handoff is not addressed to this plugin/name.');
+      }
+      if (existing.expiresAt <= Math.floor(Date.now() / 1000)) {
+        throw new Error('sdk.handoffs.consume(): handoff has expired.');
+      }
+      if (existing.mode === 'authenticated') {
+        // Deliberate tightening beyond RFC 0053's literal text (which only
+        // requires *a* session): the consuming actor must be the exact same
+        // user who created the handoff, closing a confused-deputy gap where
+        // a leaked/forwarded authenticated handoff URL could otherwise be
+        // redeemed by a different logged-in visitor.
+        if (!context.actorUserId || context.actorUserId !== existing.actorUserId) {
+          throw new Error(
+            'sdk.handoffs.consume(): this handoff requires the same authenticated user who created it.',
+          );
+        }
+      }
+
+      let row: PluginHandoffRow;
+      if (existing.singleUse) {
+        const claimed = await consumePluginHandoff(pdb, handoffId);
+        if (!claimed) {
+          throw new Error('sdk.handoffs.consume(): handoff has already been consumed.');
+        }
+        row = claimed;
+      } else {
+        row = existing;
+      }
+
+      void auditHandoffOperation('plugin.handoff.consumed', row);
+
+      return toHandoffContext(row);
     },
   },
   storage: {

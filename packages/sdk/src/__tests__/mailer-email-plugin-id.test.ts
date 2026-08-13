@@ -68,6 +68,22 @@ describe('sdk.mailer / sdk.email — plugin ID resolution (RFC 0062)', () => {
         },
       },
       notifications: { async send() {} },
+      webhooks: {
+        async verifyHmac() {
+          return false;
+        },
+        async checkReplay() {
+          return true;
+        },
+      },
+      handoffs: {
+        async create() {
+          return { token: 'token', expiresAt: 0 };
+        },
+        async consume() {
+          return {} as never;
+        },
+      },
       crypto: {
         async encryptField(value: string) {
           return `svf0:${Buffer.from(value, 'utf8').toString('base64url')}`;

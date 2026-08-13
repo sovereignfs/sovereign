@@ -387,5 +387,33 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       email_logo TEXT,
       updated_at ${ts} NOT NULL
     )`,
+    // RFC 0050 — webhook replay-protection claims
+    `CREATE TABLE IF NOT EXISTS webhook_replays (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      plugin_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      event_id TEXT NOT NULL,
+      received_at ${ts} NOT NULL,
+      expires_at ${ts} NOT NULL
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS webhook_replays_plugin_provider_event_idx
+       ON webhook_replays (plugin_id, provider, event_id)`,
+    // RFC 0053 — plugin flow handoffs
+    `CREATE TABLE IF NOT EXISTS plugin_handoffs (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      source_plugin_id TEXT NOT NULL,
+      provider_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      actor_user_id TEXT,
+      payload TEXT NOT NULL,
+      return_url TEXT,
+      single_use ${bool} NOT NULL,
+      consumed_at ${ts},
+      created_at ${ts} NOT NULL,
+      expires_at ${ts} NOT NULL
+    )`,
   ];
 }

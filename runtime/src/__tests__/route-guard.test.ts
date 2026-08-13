@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   decidePluginRoute,
+  matchedPublicHandoffRoute,
   matchedPublicPluginRouteId,
+  matchedWebhookRoute,
   underPrefix,
   type PluginRouteInfo,
 } from '../route-guard';
@@ -253,6 +255,99 @@ describe('matchedPublicPluginRouteId — public: true (RFC 0089)', () => {
   it('does not match a plugin with public left unset', () => {
     const blog: PluginRouteInfo = { id: 'com.example.blog', routePrefix: '/blog' };
     expect(matchedPublicPluginRouteId('/blog', [blog])).toBeNull();
+  });
+});
+
+describe('matchedWebhookRoute', () => {
+  const provider: PluginRouteInfo = {
+    id: 'com.example.provider',
+    routePrefix: '/provider',
+    webhooks: [
+      { path: '/webhooks/deliver', methods: ['POST'], maxBodyBytes: 262144 },
+      { path: '/webhooks/verify', methods: ['GET'], maxBodyBytes: 262144 },
+    ],
+  };
+  const withWebhooks = [console, launcher, provider];
+
+  it('matches an exact declared webhook path', () => {
+    const result = matchedWebhookRoute('/provider/webhooks/deliver', withWebhooks);
+    expect(result?.pluginId).toBe('com.example.provider');
+    expect(result?.webhook.methods).toEqual(['POST']);
+  });
+
+  it('matches a second declared webhook on the same plugin independently', () => {
+    const result = matchedWebhookRoute('/provider/webhooks/verify', withWebhooks);
+    expect(result?.webhook.methods).toEqual(['GET']);
+  });
+
+  it('does not match a sub-path of a declared webhook (exact match only, unlike publicRoutes)', () => {
+    expect(matchedWebhookRoute('/provider/webhooks/deliver/extra', withWebhooks)).toBeNull();
+  });
+
+  it('does not match the bare routePrefix', () => {
+    expect(matchedWebhookRoute('/provider', withWebhooks)).toBeNull();
+  });
+
+  it('returns null for plugins with no webhooks declared', () => {
+    expect(matchedWebhookRoute('/launcher', withWebhooks)).toBeNull();
+    expect(matchedWebhookRoute('/console', withWebhooks)).toBeNull();
+  });
+
+  it('returns null for unrelated paths', () => {
+    expect(matchedWebhookRoute('/', withWebhooks)).toBeNull();
+    expect(matchedWebhookRoute('/other', withWebhooks)).toBeNull();
+  });
+
+  it('does not confuse one plugin webhook path with a similarly-named path on another plugin', () => {
+    const other: PluginRouteInfo = {
+      id: 'com.example.other',
+      routePrefix: '/other-provider',
+      webhooks: [{ path: '/webhooks/deliver', methods: ['POST'], maxBodyBytes: 262144 }],
+    };
+    const result = matchedWebhookRoute('/other-provider/webhooks/deliver', [provider, other]);
+    expect(result?.pluginId).toBe('com.example.other');
+  });
+});
+
+describe('matchedPublicHandoffRoute (RFC 0053)', () => {
+  const checkout: PluginRouteInfo = {
+    id: 'com.example.checkout',
+    routePrefix: '/checkout',
+    handoffs: {
+      receives: [
+        { name: 'checkout-session', path: '/cart', public: true },
+        { name: 'internal-flow', path: '/internal', public: false },
+      ],
+    },
+  };
+  const withHandoffs = [console, launcher, checkout];
+
+  it('matches an exact declared public receiver path', () => {
+    const result = matchedPublicHandoffRoute('/checkout/cart', withHandoffs);
+    expect(result?.pluginId).toBe('com.example.checkout');
+    expect(result?.receiver.name).toBe('checkout-session');
+  });
+
+  it('does not match a receiver declared public: false', () => {
+    expect(matchedPublicHandoffRoute('/checkout/internal', withHandoffs)).toBeNull();
+  });
+
+  it('does not match a sub-path of a declared receiver (exact match only)', () => {
+    expect(matchedPublicHandoffRoute('/checkout/cart/extra', withHandoffs)).toBeNull();
+  });
+
+  it('does not match the bare routePrefix', () => {
+    expect(matchedPublicHandoffRoute('/checkout', withHandoffs)).toBeNull();
+  });
+
+  it('returns null for plugins with no handoffs declared', () => {
+    expect(matchedPublicHandoffRoute('/launcher', withHandoffs)).toBeNull();
+    expect(matchedPublicHandoffRoute('/console', withHandoffs)).toBeNull();
+  });
+
+  it('returns null for unrelated paths', () => {
+    expect(matchedPublicHandoffRoute('/', withHandoffs)).toBeNull();
+    expect(matchedPublicHandoffRoute('/other', withHandoffs)).toBeNull();
   });
 });
 

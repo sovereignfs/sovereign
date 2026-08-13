@@ -755,3 +755,67 @@ export type FieldTableRegistration = typeof fieldTableRegistrations.$inferSelect
 export type NewFieldTableRegistration = typeof fieldTableRegistrations.$inferInsert;
 export type FieldResealCheckpoint = typeof fieldResealCheckpoints.$inferSelect;
 export type NewFieldResealCheckpoint = typeof fieldResealCheckpoints.$inferInsert;
+
+/**
+ * Webhook replay-protection claims (RFC 0050). One row per
+ * (plugin × provider × event) the platform has seen — `sdk.webhooks.checkReplay()`
+ * atomically claims a row via `INSERT ... ON CONFLICT DO NOTHING`; a
+ * conflict means the event was already processed. `expires_at` bounds how
+ * long a claim blocks reprocessing — a row past its expiry is deleted (not
+ * reused in place) before a fresh claim attempt, so an old, expired event id
+ * can be legitimately reprocessed rather than permanently blocked.
+ */
+export const webhookReplays = sqliteTable(
+  'webhook_replays',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenant_id').notNull(),
+    pluginId: text('plugin_id').notNull(),
+    provider: text('provider').notNull(),
+    eventId: text('event_id').notNull(),
+    receivedAt: integer('received_at').notNull(),
+    expiresAt: integer('expires_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('webhook_replays_plugin_provider_event_idx').on(
+      table.pluginId,
+      table.provider,
+      table.eventId,
+    ),
+  ],
+);
+
+export type WebhookReplay = typeof webhookReplays.$inferSelect;
+export type NewWebhookReplay = typeof webhookReplays.$inferInsert;
+
+/**
+ * Plugin flow handoffs (RFC 0053). One row per handoff a source plugin
+ * created for a provider plugin to consume — the payload lives here
+ * server-side (the RFC's own stated preference over embedding it in the
+ * signed token); the token itself carries only this row's `id`.
+ *
+ * `consumed_at` is the single-use claim: `consumePluginHandoff()` sets it
+ * atomically via `UPDATE ... WHERE consumed_at IS NULL RETURNING`, the same
+ * idiom `checkWebhookReplay` above uses for its own atomic claim. A
+ * non-single-use handoff (`single_use = false`) is never claimed this way —
+ * it may be consumed more than once within its expiry window, per RFC
+ * 0053's "optionally single-use."
+ */
+export const pluginHandoffs = sqliteTable('plugin_handoffs', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  sourcePluginId: text('source_plugin_id').notNull(),
+  providerId: text('provider_id').notNull(),
+  name: text('name').notNull(),
+  mode: text('mode').notNull(), // 'authenticated' | 'public'
+  actorUserId: text('actor_user_id'),
+  payload: text('payload').notNull(), // JSON-encoded
+  returnUrl: text('return_url'),
+  singleUse: integer('single_use', { mode: 'boolean' }).notNull(),
+  consumedAt: integer('consumed_at'),
+  createdAt: integer('created_at').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+});
+
+export type PluginHandoff = typeof pluginHandoffs.$inferSelect;
+export type NewPluginHandoff = typeof pluginHandoffs.$inferInsert;

@@ -7,6 +7,10 @@ import {
   DEFAULT_ROOT_PLUGIN_ID,
   addUserGroupMember,
   bootstrapPlatformDb,
+  checkWebhookReplay,
+  consumePluginHandoff,
+  createPluginHandoff,
+  getPluginHandoff,
   createE2eeDeviceEnrollment,
   createE2eeProfile,
   createPluginConnection,
@@ -1595,5 +1599,177 @@ describe.skipIf(!PG_URL)('plugin access grant helpers (RFC 0065)', () => {
     expect(await getUserGroupUsage(db, 'grp_1')).toEqual({
       referencedByPluginAccessPolicies: true,
     });
+  });
+});
+
+describe.skipIf(!PG_URL)('checkWebhookReplay (RFC 0050)', () => {
+  it('returns true the first time an event is seen', async () => {
+    const db = await freshDb();
+    const claimed = await checkWebhookReplay(db, {
+      id: 'claim-1',
+      pluginId: 'fs.example.provider',
+      provider: 'stripe',
+      eventId: 'evt_1',
+    });
+    expect(claimed).toBe(true);
+  });
+
+  it('returns false on a second call with the same (pluginId, provider, eventId)', async () => {
+    const db = await freshDb();
+    const input = { pluginId: 'fs.example.provider', provider: 'stripe', eventId: 'evt_1' };
+    expect(await checkWebhookReplay(db, { id: 'claim-1', ...input })).toBe(true);
+    expect(await checkWebhookReplay(db, { id: 'claim-2', ...input })).toBe(false);
+  });
+
+  it('scopes replay claims per plugin — the same (provider, eventId) is independent across plugins', async () => {
+    const db = await freshDb();
+    const a = await checkWebhookReplay(db, {
+      id: 'claim-1',
+      pluginId: 'fs.example.a',
+      provider: 'stripe',
+      eventId: 'evt_1',
+    });
+    const b = await checkWebhookReplay(db, {
+      id: 'claim-2',
+      pluginId: 'fs.example.b',
+      provider: 'stripe',
+      eventId: 'evt_1',
+    });
+    expect(a).toBe(true);
+    expect(b).toBe(true);
+  });
+
+  it('scopes replay claims per provider — the same eventId is independent across providers for one plugin', async () => {
+    const db = await freshDb();
+    const stripe = await checkWebhookReplay(db, {
+      id: 'claim-1',
+      pluginId: 'fs.example.provider',
+      provider: 'stripe',
+      eventId: 'evt_1',
+    });
+    const github = await checkWebhookReplay(db, {
+      id: 'claim-2',
+      pluginId: 'fs.example.provider',
+      provider: 'github',
+      eventId: 'evt_1',
+    });
+    expect(stripe).toBe(true);
+    expect(github).toBe(true);
+  });
+
+  it('allows reclaiming an expired event id rather than blocking it permanently', async () => {
+    const db = await freshDb();
+    const input = { pluginId: 'fs.example.provider', provider: 'stripe', eventId: 'evt_1' };
+    // Claim with a TTL that's already in the past — expires immediately.
+    expect(await checkWebhookReplay(db, { id: 'claim-1', ...input, ttlSeconds: -1 })).toBe(true);
+    // A fresh claim attempt should succeed since the prior one is expired.
+    expect(await checkWebhookReplay(db, { id: 'claim-2', ...input })).toBe(true);
+  });
+
+  it('defaults to a 24h TTL when none is given', async () => {
+    const db = await freshDb();
+    const input = { pluginId: 'fs.example.provider', provider: 'stripe', eventId: 'evt_1' };
+    expect(await checkWebhookReplay(db, { id: 'claim-1', ...input })).toBe(true);
+    // Still within the default TTL — must remain a replay.
+    expect(await checkWebhookReplay(db, { id: 'claim-2', ...input })).toBe(false);
+  });
+});
+
+describe.skipIf(!PG_URL)('plugin handoffs (RFC 0053)', () => {
+  const baseInput = {
+    id: 'ho_1',
+    sourcePluginId: 'fs.example.checkout-source',
+    providerId: 'fs.example.checkout',
+    name: 'checkout-session',
+    mode: 'authenticated' as const,
+    actorUserId: 'u1',
+    payload: { items: ['a', 'b'] },
+    singleUse: true,
+  };
+
+  it('creates a handoff row and round-trips the JSON payload', async () => {
+    const db = await freshDb();
+    const row = await createPluginHandoff(db, baseInput);
+    expect(row.id).toBe('ho_1');
+    expect(row.payload).toEqual({ items: ['a', 'b'] });
+    expect(row.consumedAt).toBeNull();
+    expect(row.mode).toBe('authenticated');
+  });
+
+  it('getPluginHandoff returns the row without consuming it', async () => {
+    const db = await freshDb();
+    await createPluginHandoff(db, baseInput);
+    const first = await getPluginHandoff(db, 'ho_1');
+    const second = await getPluginHandoff(db, 'ho_1');
+    expect(first?.consumedAt).toBeNull();
+    expect(second?.consumedAt).toBeNull();
+  });
+
+  it('getPluginHandoff returns null for an unknown id', async () => {
+    const db = await freshDb();
+    expect(await getPluginHandoff(db, 'nonexistent')).toBeNull();
+  });
+
+  it('consumePluginHandoff atomically claims a single-use handoff exactly once', async () => {
+    const db = await freshDb();
+    await createPluginHandoff(db, baseInput);
+    const first = await consumePluginHandoff(db, 'ho_1');
+    const second = await consumePluginHandoff(db, 'ho_1');
+    expect(first?.id).toBe('ho_1');
+    expect(first?.consumedAt).not.toBeNull();
+    expect(second).toBeNull();
+  });
+
+  it('consumePluginHandoff returns null for an unknown id', async () => {
+    const db = await freshDb();
+    expect(await consumePluginHandoff(db, 'nonexistent')).toBeNull();
+  });
+
+  it('stores a null actorUserId and "public" mode for anonymous handoffs', async () => {
+    const db = await freshDb();
+    const row = await createPluginHandoff(db, {
+      ...baseInput,
+      mode: 'public',
+      actorUserId: null,
+    });
+    expect(row.mode).toBe('public');
+    expect(row.actorUserId).toBeNull();
+  });
+
+  it('stores and returns a returnUrl when provided, null when omitted', async () => {
+    const db = await freshDb();
+    const withUrl = await createPluginHandoff(db, {
+      ...baseInput,
+      id: 'ho_url',
+      returnUrl: '/source/thank-you',
+    });
+    expect(withUrl.returnUrl).toBe('/source/thank-you');
+
+    const withoutUrl = await createPluginHandoff(db, { ...baseInput, id: 'ho_no_url' });
+    expect(withoutUrl.returnUrl).toBeNull();
+  });
+
+  it('rejects a payload larger than the byte cap', async () => {
+    const db = await freshDb();
+    const huge = { blob: 'x'.repeat(20 * 1024) };
+    await expect(
+      createPluginHandoff(db, { ...baseInput, id: 'ho_huge', payload: huge }),
+    ).rejects.toThrow(/exceeds/);
+  });
+
+  it('defaults expiresAt to 15 minutes out when expiresInSeconds is omitted', async () => {
+    const db = await freshDb();
+    const before = Math.floor(Date.now() / 1000);
+    const row = await createPluginHandoff(db, baseInput);
+    expect(row.expiresAt).toBeGreaterThanOrEqual(before + 15 * 60 - 5);
+    expect(row.expiresAt).toBeLessThanOrEqual(before + 15 * 60 + 5);
+  });
+
+  it('clamps an oversized expiresInSeconds to the 1-hour maximum', async () => {
+    const db = await freshDb();
+    const before = Math.floor(Date.now() / 1000);
+    const row = await createPluginHandoff(db, { ...baseInput, expiresInSeconds: 24 * 60 * 60 });
+    expect(row.expiresAt).toBeGreaterThanOrEqual(before + 60 * 60 - 5);
+    expect(row.expiresAt).toBeLessThanOrEqual(before + 60 * 60 + 5);
   });
 });

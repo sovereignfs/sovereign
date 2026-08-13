@@ -17,6 +17,7 @@ useNodeVersion: 24.12.0
 catalog:
   typescript: ^5.9.3
   tsup: ^8.5.1
+  '@playwright/test': ^1.62.1
   react: ^19.2.8
   react-dom: ^19.2.8
   '@types/react': ^19.2.18

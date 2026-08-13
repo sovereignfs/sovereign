@@ -13,6 +13,13 @@ export default defineConfig({
       // The include patterns below only match *.test.{ts,tsx} so .spec.ts would
       // not match anyway, but this explicit exclude documents the intent.
       '__tests__/e2e/**',
+      // Playwright visual-regression specs (RFC 0059) — same reasoning as
+      // __tests__/e2e/** above. Deliberately named *.visual.spec.ts, not
+      // RFC 0010's reserved *.visual.test.tsx — that suffix would match the
+      // *.test.{ts,tsx} include globs below and Vitest would try (and fail)
+      // to run a Playwright spec as a unit test. See docs/testing-visual.md.
+      '__tests__/visual/**',
+      'packages/ui/__tests__/visual/**',
     ],
     include: [
       // Unit / component / integration tests inside each package or app.
@@ -33,7 +40,9 @@ export default defineConfig({
       'bin/__tests__/**/*.test.{ts,tsx}',
       // The public plugin registry index (registry/plugins.json validation).
       'registry/__tests__/**/*.test.{ts,tsx}',
-      // Root __tests__/ tree: cross-service integration, e2e, visual (future).
+      // Root __tests__/ tree: cross-service integration tests. e2e and
+      // visual specs also live under __tests__/ but use *.spec.ts, which
+      // this pattern doesn't match — see the excludes above.
       '__tests__/**/*.test.{ts,tsx}',
     ],
     // Default to node; component tests opt into jsdom with a

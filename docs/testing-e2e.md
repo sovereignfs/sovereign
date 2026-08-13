@@ -145,3 +145,11 @@ and iPhone cache reset steps.
 The global setup (`global-setup.ts`) runs once per Playwright process. If your test requires
 additional one-time setup (e.g. seeding a specific record), add it there and write the cleanup
 in the spec's `test.afterEach`.
+
+---
+
+## See also
+
+[`docs/testing-visual.md`](testing-visual.md) — local Playwright **screenshot** regression
+testing (RFC 0059), a separate tier from this behavioral golden-path suite. It reuses this
+suite's `global-setup.ts`/`fixtures.ts` for pre-authenticated pages.

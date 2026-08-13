@@ -41,7 +41,10 @@
   "scripts": {
     "build": "tsup",
     "storybook": "storybook dev -p 6006",
+    "storybook:visual": "storybook dev -p 6100 --ci --quiet",
     "build-storybook": "storybook build --output-dir storybook-static",
+    "test:visual": "playwright test --config=playwright.visual.config.ts",
+    "test:visual:update": "playwright test --config=playwright.visual.config.ts --update-snapshots",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
@@ -49,6 +52,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
     "@sovereignfs/tsconfig": "workspace:*",
     "@storybook/addon-a11y": "catalog:storybook",
     "@storybook/addon-themes": "catalog:storybook",

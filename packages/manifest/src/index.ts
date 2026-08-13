@@ -19,4 +19,10 @@ export { findApiProvider, type ApiProviderResult } from './api-provider';
 export { checkCompatibility, type CompatibilityResult } from './compatibility';
 export { toEnvSlug, toEnvVarName } from './env-utils';
 export { pluginCapabilityName } from './cap-utils';
-export type { SovereignManifest, Permission, RegistryEntry, Surface } from './types';
+export type {
+  SovereignManifest,
+  Permission,
+  RegistryEntry,
+  Surface,
+  HandoffReceiverDeclaration,
+} from './types';

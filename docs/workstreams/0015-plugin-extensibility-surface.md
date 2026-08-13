@@ -1,6 +1,12 @@
 # Workstream 0015 — Plugin extensibility surface
 
-**Status:** 📋 Planned\
+**Status:** 🔄 In progress — legs 3 and 5 done, shipped together at platform
+`0.87.0` (this PR rebased cleanly onto `main` — see leg 5's changelog entry
+for the version reconciliation this required); legs 1 and 2 are each
+separately implemented on their own not-yet-merged branches and will need
+fresh version numbers picked against `main`'s post-merge state (no longer
+`0.86.0`) when they rebase; leg 4 implemented on its own branch stacked on
+workstream 0017 and has the same reconciliation ahead of it\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -51,7 +57,7 @@ short-lived signed token.
       a matching confirmation token for mutating/external effects; every
       execution logs provider, caller, actor, effect class, result, and
       error metadata.
-- [ ] `3.21` — `sdk.handoffs.create()`/`consume()` work with signed,
+- [x] `3.21` — `sdk.handoffs.create()`/`consume()` work with signed,
       expiry-bound, provider-scoped tokens; a provider can only consume
       tokens addressed to its own plugin ID and handoff name; expired,
       replayed, malformed, or wrong-provider tokens fail closed; public
@@ -82,23 +88,27 @@ Leg 4 (3.18): **blocked** on workstream 0017's legs for Task 1.8/1.9
 this dependency explicitly. Task 5.1 and RFC 0002 (cross-plugin data sharing)
 are already ✅.
 
-Leg 5 (3.21): blocked on leg 3 (2.15) and leg 4 (3.18) of this workstream —
-both now in-scope here, so this is an internal sequencing constraint, not an
-external gate. RFC 0042 and RFC 0051 (2.14, 3.20) are already ✅.
+Leg 5 (3.21): blocked on leg 3 (2.15) of this workstream — leg 4 (3.18) was
+originally listed here too, but turned out to be a soft/compositional
+dependency only once leg 5's actual scope was re-checked directly (see leg
+5's own "Correction" note in Leg detail below); RFC 0042 and RFC 0051 (2.14,
+3.20) are already ✅.
 
 ## Legs
 
-| Leg | Name                                 | Epic tasks | Epics | Gate?              | Done when                                                                                                        |
-| --- | ------------------------------------ | ---------- | ----- | ------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| 1   | Plugin background jobs and schedules | 3.16       | 3     | No                 | A plugin can enqueue/schedule work that survives a restart and reports completion without holding a request open |
-| 2   | Plugin events and realtime channels  | 3.17       | 3     | No                 | Two sessions on the same authorized resource get realtime updates; unauthorized users cannot subscribe           |
-| 3   | Public plugin webhooks               | 2.15       | 2     | No                 | Declared webhook paths work with signature/replay protection; undeclared paths stay protected                    |
-| 4   | Plugin tool contracts                | 3.18       | 3     | **Yes — external** | Providers can register tools; mutating/external execution requires a confirmation token                          |
-| 5   | Plugin flow handoffs                 | 3.21       | 3     | No — internal      | Signed, provider-scoped handoff tokens work for both authenticated and declared-public flows                     |
+| Leg | Name                                 | Epic tasks | Epics | Gate?                       | Done when                                                                                                        |
+| --- | ------------------------------------ | ---------- | ----- | --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1   | Plugin background jobs and schedules | 3.16       | 3     | No                          | A plugin can enqueue/schedule work that survives a restart and reports completion without holding a request open |
+| 2   | Plugin events and realtime channels  | 3.17       | 3     | No                          | Two sessions on the same authorized resource get realtime updates; unauthorized users cannot subscribe           |
+| 3   | Public plugin webhooks               | 2.15       | 2     | No — ✅ `0.87.0`            | Declared webhook paths work with signature/replay protection; undeclared paths stay protected                    |
+| 4   | Plugin tool contracts                | 3.18       | 3     | **Yes — external**          | Providers can register tools; mutating/external execution requires a confirmation token                          |
+| 5   | Plugin flow handoffs                 | 3.21       | 3     | No — internal — ✅ `0.87.0` | Signed, provider-scoped handoff tokens work for both authenticated and declared-public flows                     |
 
 Legs 1–3 may run in any order or in parallel — none depends on another. Leg
-4 is gated on workstream 0017 (external). Leg 5 depends on legs 3 and 4 of
-this workstream and must run last.
+4 is gated on workstream 0017 (external). Leg 5 depends on leg 3 of this
+workstream (leg 4 was originally thought to be a hard dependency too — see
+leg 5's "Correction" note in Leg detail below for why it turned out not to
+be) and shipped after leg 3.
 
 ## Leg detail
 
@@ -228,6 +238,24 @@ provider-declared public routes using leg 3's validation pattern — shipping
 authenticated-only handoffs under this task's name would silently
 under-deliver its own spec; flag the gap and hold the leg instead.
 
+**Correction — leg 4 turned out to be a soft dependency, not a hard one:**
+this doc's own "Why this leg is last" line above and the Prerequisites
+section both named leg 4 (3.18) as a blocking dependency. Re-reading leg 5's
+actual scope directly against RFC 0053 and leg 4's shipped code before
+starting found that leg 4 is named only as "for later mutating actions after
+a handoff" — a compositional pattern (a handoff can hand off to a flow that
+itself later calls a tool), not a literal code import; nothing in leg 5's
+implementation reads from `packages/manifest`'s `tools` field, `sdk.tools`,
+or `runtime/src/tool-schema.ts`/`tool-confirmation.ts`. Leg 5 was therefore
+implemented stacked only on leg 3 (which _is_ a hard dependency — the
+public-route validation pattern and the HMAC/atomic-claim idioms are reused
+directly), avoiding an unnecessary and risky three-way merge across the
+files leg 3 and leg 4 both touch (`schema.ts`, `host.ts`, `index.ts`,
+`middleware.ts`, `sdk-host.ts`, `route-guard.ts`,
+`docs/plugin-development.md`). This is a sequencing correction, not a scope
+reduction — leg 5 still delivers everything 3.21's Definition of done line
+requires.
+
 ## Risks
 
 - **Leg 5 is genuinely security-sensitive** (signed tokens, replay
@@ -255,7 +283,10 @@ and hold leg 5 rather than rushing the public-anonymous handoff validation.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                |
-| ------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft — 4 tasks (3.16, 3.17, 3.18, 3.21); Task 2.15 flagged as an unresolved external gate on leg 4 (then leg 4, "Plugin flow handoffs")                                                                                                                                                                                                                                                                      |
-| 0.2     | August 2026 | Folded Task 2.15 (RFC 0050, public plugin webhooks) in as leg 3, per explicit developer instruction — it was a direct dependency of the handoffs leg and had no workstream of its own. Legs renumbered: 2.15 → leg 3, tool contracts (3.18) → leg 4, flow handoffs (3.21) → leg 5. Flow handoffs' gate status changed from "external" to "internal," since both its dependencies are now legs of this same workstream |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft — 4 tasks (3.16, 3.17, 3.18, 3.21); Task 2.15 flagged as an unresolved external gate on leg 4 (then leg 4, "Plugin flow handoffs")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 0.2     | August 2026 | Folded Task 2.15 (RFC 0050, public plugin webhooks) in as leg 3, per explicit developer instruction — it was a direct dependency of the handoffs leg and had no workstream of its own. Legs renumbered: 2.15 → leg 3, tool contracts (3.18) → leg 4, flow handoffs (3.21) → leg 5. Flow handoffs' gate status changed from "external" to "internal," since both its dependencies are now legs of this same workstream                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 0.3     | August 2026 | Leg 3 (2.15, RFC 0050) shipped at platform `0.88.0` on this branch — see RFC 0050's own 0.2 changelog entry for full detail. Legs 1 (3.16) and 2 (3.17) were each implemented in parallel on their own separate, not-yet-merged branches targeting `0.86.0` and `0.87.0` respectively; this version number, and this changelog's own numbering, need reconciling against both legs' identically-numbered "0.3" entries at whichever leg merges last — not a collision to silently resolve by picking one arbitrarily. Leg 4 remains gated on workstream 0017; leg 5 remains gated on legs 3–4 (leg 3's own dependency is now satisfied on this branch, but leg 5 still needs leg 4 too)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 0.4     | August 2026 | Leg 5 (3.21, RFC 0053) shipped at platform `0.88.1`, stacked on leg 3's branch rather than on leg 3 **and** leg 4 as this doc originally required — re-reading leg 5's actual scope found leg 4 (3.18) is only a soft/compositional dependency, not a hard code one; see leg 5's own "Correction" note above for the full reasoning. Workstream is now feature-complete across all five legs, each on its own uncommitted branch cut from a different `main` base commit as `main` advanced during implementation — root platform version claims across the five legs (`0.86.0`/`0.87.0`/`0.88.0`/`0.88.1` here, plus workstream 0017's own `0.89.0`/`0.90.0` and leg 4's `0.91.0` claimed on top of that) collide and need real reconciliation, not just renumbering on paper, at whichever branch is rebased onto `main` first — that branch's author inherits resolving this                                                                                                                                                                                                                                                                                                                                                                               |
+| 0.5     | August 2026 | The combined legs 3+5 branch was the one that ended up rebasing onto `main` first (PR #445), which resolved the reconciliation the 0.4 entry flagged as pending. `main`'s actual state at rebase time (`0.86.0` root, `packages/sdk` already independently bumped to `1.38.0` by unrelated RFC 0093 work) didn't match any of the provisional numbers guessed above — this branch's version bumps were `0.86.0` and never touched `0.88.0`/`0.88.1` at all, since those were relative to a stale, disconnected base, not real `main`. Both legs now ship together as one root bump to **`0.87.0`** (one PR, one commit, since splitting them at the file-hunk level across two commits wasn't worth the risk — see PR #445's description). `packages/sdk` bumped to `1.39.0` (not `1.38.0`, which the rebase revealed `main` had already claimed independently — an actual collision, not just a numbering guess, caught by re-checking real values against `main` rather than trusting the pre-rebase plan). Legs 1, 2, and 4 remain on their own not-yet-merged branches and will need to repeat this same exercise — check `main`'s real current versions at rebase time, not carry forward a number picked against a stale base — when each of them lands |

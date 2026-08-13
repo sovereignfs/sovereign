@@ -3399,3 +3399,249 @@ export async function deleteUserData(
 
   return { platformRowsDeleted };
 }
+
+// ─── Webhook replay protection (RFC 0050) ─────────────────────────────────────
+
+const DEFAULT_WEBHOOK_REPLAY_TTL_SECONDS = 24 * 60 * 60;
+
+export interface CheckWebhookReplayInput {
+  id: string;
+  pluginId: string;
+  provider: string;
+  eventId: string;
+  /** Defaults to 24h. How long a claim blocks reprocessing of the same (provider, eventId). */
+  ttlSeconds?: number;
+}
+
+/**
+ * Atomically claims `(pluginId, provider, eventId)` for replay protection.
+ * Returns `true` the first time this event is seen (safe to process) and
+ * `false` on every subsequent call within `ttlSeconds` (a replay). A prior
+ * claim past its expiry is deleted before the claim attempt, so an old event
+ * id can be legitimately reprocessed rather than permanently blocked —
+ * expiry means "safe to reprocess," not "row lives forever."
+ *
+ * The claim itself (`INSERT ... ON CONFLICT DO NOTHING ... RETURNING`) is a
+ * single atomic statement — safe under concurrent calls with the same key
+ * even though the preceding expired-row cleanup is a separate statement.
+ */
+export async function checkWebhookReplay(
+  pdb: PlatformDb,
+  input: CheckWebhookReplayInput,
+): Promise<boolean> {
+  const now = Math.floor(Date.now() / 1000);
+  const ttlSeconds = input.ttlSeconds ?? DEFAULT_WEBHOOK_REPLAY_TTL_SECONDS;
+  const expiresAt = now + ttlSeconds;
+
+  await dbRun(
+    pdb,
+    sql`DELETE FROM webhook_replays
+        WHERE plugin_id = ${input.pluginId} AND provider = ${input.provider}
+          AND event_id = ${input.eventId} AND expires_at < ${now}`,
+  );
+
+  const claimed = await dbGet<{ id: string }>(
+    pdb,
+    sql`INSERT INTO webhook_replays
+          (id, tenant_id, plugin_id, provider, event_id, received_at, expires_at)
+        VALUES
+          (${input.id}, ${DEFAULT_TENANT_ID}, ${input.pluginId}, ${input.provider},
+           ${input.eventId}, ${now}, ${expiresAt})
+        ON CONFLICT (plugin_id, provider, event_id) DO NOTHING
+        RETURNING id`,
+  );
+  return claimed !== undefined;
+}
+
+// ─── Plugin flow handoffs (RFC 0053) ──────────────────────────────────────────
+
+export const MAX_HANDOFF_PAYLOAD_BYTES = 16 * 1024;
+const DEFAULT_HANDOFF_TTL_SECONDS = 15 * 60;
+const MAX_HANDOFF_TTL_SECONDS = 60 * 60;
+
+export interface CreatePluginHandoffInput {
+  id: string;
+  sourcePluginId: string;
+  providerId: string;
+  name: string;
+  mode: 'authenticated' | 'public';
+  actorUserId: string | null;
+  payload: unknown;
+  returnUrl?: string | null;
+  singleUse: boolean;
+  /** Defaults to 15 minutes. */
+  expiresInSeconds?: number;
+}
+
+export interface PluginHandoffRow {
+  id: string;
+  tenantId: string;
+  sourcePluginId: string;
+  providerId: string;
+  name: string;
+  mode: 'authenticated' | 'public';
+  actorUserId: string | null;
+  payload: unknown;
+  returnUrl: string | null;
+  singleUse: boolean;
+  consumedAt: number | null;
+  createdAt: number;
+  expiresAt: number;
+}
+
+function toPluginHandoffRow(row: {
+  id: string;
+  tenantId: string;
+  sourcePluginId: string;
+  providerId: string;
+  name: string;
+  mode: string;
+  actorUserId: string | null;
+  payload: string;
+  returnUrl: string | null;
+  singleUse: boolean | number;
+  consumedAt: number | null;
+  createdAt: number;
+  expiresAt: number;
+}): PluginHandoffRow {
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    sourcePluginId: row.sourcePluginId,
+    providerId: row.providerId,
+    name: row.name,
+    mode: row.mode === 'public' ? 'public' : 'authenticated',
+    actorUserId: row.actorUserId,
+    payload: JSON.parse(row.payload) as unknown,
+    returnUrl: row.returnUrl,
+    singleUse: row.singleUse === true || row.singleUse === 1,
+    consumedAt: row.consumedAt,
+    createdAt: row.createdAt,
+    expiresAt: row.expiresAt,
+  };
+}
+
+/**
+ * Store a handoff's payload server-side (RFC 0053's own stated preference
+ * over embedding it in the signed token) and return the full row — the
+ * caller (`runtime/src/sdk-host.ts`) signs a token carrying only `id`.
+ * Throws if the JSON-encoded payload exceeds `MAX_HANDOFF_PAYLOAD_BYTES`
+ * (RFC 0053 security requirement: "Payload size is capped").
+ */
+export async function createPluginHandoff(
+  pdb: PlatformDb,
+  input: CreatePluginHandoffInput,
+): Promise<PluginHandoffRow> {
+  const payloadJson = JSON.stringify(input.payload ?? null);
+  if (Buffer.byteLength(payloadJson, 'utf8') > MAX_HANDOFF_PAYLOAD_BYTES) {
+    throw new Error(`Handoff payload exceeds the ${String(MAX_HANDOFF_PAYLOAD_BYTES)}-byte limit.`);
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const ttlSeconds = Math.min(
+    input.expiresInSeconds ?? DEFAULT_HANDOFF_TTL_SECONDS,
+    MAX_HANDOFF_TTL_SECONDS,
+  );
+  const row = {
+    id: input.id,
+    tenantId: DEFAULT_TENANT_ID,
+    sourcePluginId: input.sourcePluginId,
+    providerId: input.providerId,
+    name: input.name,
+    mode: input.mode,
+    actorUserId: input.actorUserId,
+    payload: payloadJson,
+    returnUrl: input.returnUrl ?? null,
+    singleUse: input.singleUse,
+    consumedAt: null,
+    createdAt: now,
+    expiresAt: now + ttlSeconds,
+  };
+  await dbRun(
+    pdb,
+    sql`INSERT INTO plugin_handoffs
+          (id, tenant_id, source_plugin_id, provider_id, name, mode, actor_user_id,
+           payload, return_url, single_use, consumed_at, created_at, expires_at)
+        VALUES
+          (${row.id}, ${row.tenantId}, ${row.sourcePluginId}, ${row.providerId}, ${row.name},
+           ${row.mode}, ${row.actorUserId}, ${row.payload}, ${row.returnUrl}, ${row.singleUse},
+           ${row.consumedAt}, ${row.createdAt}, ${row.expiresAt})`,
+  );
+  return toPluginHandoffRow(row);
+}
+
+/**
+ * Look up a handoff row by id, without claiming it. Used to verify a
+ * non-single-use handoff (no atomic claim needed) and, for a single-use
+ * handoff, to distinguish "not found" from "already consumed" before the
+ * atomic claim attempt (better error messages) — the claim itself is still
+ * the sole source of truth for whether consumption succeeds.
+ */
+export async function getPluginHandoff(
+  pdb: PlatformDb,
+  id: string,
+): Promise<PluginHandoffRow | null> {
+  const row = await dbGet<{
+    id: string;
+    tenantId: string;
+    sourcePluginId: string;
+    providerId: string;
+    name: string;
+    mode: string;
+    actorUserId: string | null;
+    payload: string;
+    returnUrl: string | null;
+    singleUse: boolean | number;
+    consumedAt: number | null;
+    createdAt: number;
+    expiresAt: number;
+  }>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", source_plugin_id AS "sourcePluginId",
+               provider_id AS "providerId", name, mode, actor_user_id AS "actorUserId",
+               payload, return_url AS "returnUrl", single_use AS "singleUse",
+               consumed_at AS "consumedAt", created_at AS "createdAt", expires_at AS "expiresAt"
+        FROM plugin_handoffs WHERE id = ${id}`,
+  );
+  return row ? toPluginHandoffRow(row) : null;
+}
+
+/**
+ * Atomically claim a single-use handoff for consumption:
+ * `UPDATE ... WHERE consumed_at IS NULL RETURNING` — the same atomic-claim
+ * idiom `checkWebhookReplay` above uses. Returns `null` if the row doesn't
+ * exist or was already consumed (a replay) — the caller cannot distinguish
+ * those from the return value alone and should call `getPluginHandoff`
+ * first if it needs to report *why* consumption failed. A non-single-use
+ * handoff is never claimed this way — the caller should use
+ * `getPluginHandoff` directly and skip this call entirely.
+ */
+export async function consumePluginHandoff(
+  pdb: PlatformDb,
+  id: string,
+): Promise<PluginHandoffRow | null> {
+  const now = Math.floor(Date.now() / 1000);
+  const row = await dbGet<{
+    id: string;
+    tenantId: string;
+    sourcePluginId: string;
+    providerId: string;
+    name: string;
+    mode: string;
+    actorUserId: string | null;
+    payload: string;
+    returnUrl: string | null;
+    singleUse: boolean | number;
+    consumedAt: number | null;
+    createdAt: number;
+    expiresAt: number;
+  }>(
+    pdb,
+    sql`UPDATE plugin_handoffs SET consumed_at = ${now}
+        WHERE id = ${id} AND consumed_at IS NULL
+        RETURNING id, tenant_id AS "tenantId", source_plugin_id AS "sourcePluginId",
+                  provider_id AS "providerId", name, mode, actor_user_id AS "actorUserId",
+                  payload, return_url AS "returnUrl", single_use AS "singleUse",
+                  consumed_at AS "consumedAt", created_at AS "createdAt", expires_at AS "expiresAt"`,
+  );
+  return row ? toPluginHandoffRow(row) : null;
+}

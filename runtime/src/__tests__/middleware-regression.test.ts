@@ -121,11 +121,31 @@ const paidPublicRoutePlugin = {
   monetization: { model: 'one_time' },
 } as SovereignManifest;
 
+const webhookPlugin = {
+  id: 'com.example.provider',
+  routePrefix: '/provider',
+  webhooks: [
+    { path: '/webhooks/deliver', methods: ['POST'], maxBodyBytes: 1000, requiresSignature: true },
+    { path: '/webhooks/verify', methods: ['GET'], maxBodyBytes: 1000, requiresSignature: false },
+  ],
+} as SovereignManifest;
+
 const fullyPublicPlugin = {
   id: 'com.example.status',
   routePrefix: '/status',
   shell: 'minimal',
   public: true,
+} as SovereignManifest;
+
+const handoffPlugin = {
+  id: 'com.example.checkout',
+  routePrefix: '/checkout',
+  handoffs: {
+    receives: [
+      { name: 'checkout-session', path: '/cart', title: 'Start checkout', public: true },
+      { name: 'internal-flow', path: '/internal', title: 'Internal flow', public: false },
+    ],
+  },
 } as SovereignManifest;
 
 function session(role: string = 'platform:owner'): VerifiedSession {
@@ -216,7 +236,9 @@ describe('runtime middleware regressions', () => {
       adminApiShapedPlugin,
       publicRoutePlugin,
       paidPublicRoutePlugin,
+      webhookPlugin,
       fullyPublicPlugin,
+      handoffPlugin,
       offlineRoutePlugin,
       mobileChromePlugin,
       mobileOnlyPlugin,
@@ -695,6 +717,154 @@ describe('runtime middleware regressions', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('location')).toBeNull();
+    });
+  });
+
+  describe('public plugin webhooks (RFC 0050)', () => {
+    it('allows an unauthenticated POST to a declared webhook path', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/provider/webhooks/deliver', { method: 'POST' }));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-request-x-sovereign-plugin-id')).toBe(
+        webhookPlugin.id,
+      );
+    });
+
+    it('injects no user identity header, even with a valid session cookie', async () => {
+      fetchState.session = session('platform:owner');
+
+      const response = await middleware(request('/provider/webhooks/deliver', { method: 'POST' }));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-id')).toBeNull();
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-role')).toBeNull();
+    });
+
+    it('still redirects to /login for an undeclared path under the same plugin', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/provider/other-path'));
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe(
+        'http://runtime.test/login?returnUrl=%2Fprovider%2Fother-path',
+      );
+    });
+
+    it('returns 404 for a disabled plugin’s webhook', async () => {
+      fetchState.session = null;
+      fetchState.disabledIds = [webhookPlugin.id];
+
+      const response = await middleware(request('/provider/webhooks/deliver', { method: 'POST' }));
+
+      expect(response.status).toBe(404);
+      expect(await response.text()).toBe('Not Found');
+    });
+
+    it('returns 404 (not 405) for a method not declared on the webhook', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/provider/webhooks/deliver', { method: 'GET' }));
+
+      expect(response.status).toBe(404);
+      expect(await response.text()).toBe('Not Found');
+    });
+
+    it('allows GET on a webhook that declares GET (verification challenge)', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/provider/webhooks/verify', { method: 'GET' }));
+
+      expect(response.status).toBe(200);
+    });
+
+    it('returns 413 when Content-Length exceeds the declared maxBodyBytes', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(
+        request('/provider/webhooks/deliver', {
+          method: 'POST',
+          headers: { 'content-length': '2000' },
+        }),
+      );
+
+      expect(response.status).toBe(413);
+      expect(await response.text()).toBe('Payload Too Large');
+    });
+
+    it('allows a body within the declared maxBodyBytes', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(
+        request('/provider/webhooks/deliver', {
+          method: 'POST',
+          headers: { 'content-length': '500' },
+        }),
+      );
+
+      expect(response.status).toBe(200);
+    });
+
+    it('passes through when Content-Length is absent (chunked body — plugin handler is the backstop)', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/provider/webhooks/deliver', { method: 'POST' }));
+
+      expect(response.status).toBe(200);
+    });
+  });
+
+  describe('public plugin flow handoffs (RFC 0053)', () => {
+    it('allows an unauthenticated GET to a declared public receiver path', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/checkout/cart'));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-request-x-sovereign-plugin-id')).toBe(
+        handoffPlugin.id,
+      );
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-id')).toBeNull();
+    });
+
+    it('still forwards user identity when a valid session is present', async () => {
+      fetchState.session = session('platform:owner');
+
+      const response = await middleware(request('/checkout/cart'));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-request-x-sovereign-user-id')).toBe('user-1');
+    });
+
+    it('returns 404 for a disabled plugin’s public receiver', async () => {
+      fetchState.session = null;
+      fetchState.disabledIds = [handoffPlugin.id];
+
+      const response = await middleware(request('/checkout/cart'));
+
+      expect(response.status).toBe(404);
+      expect(await response.text()).toBe('Not Found');
+    });
+
+    it('redirects to /login for a receiver not declared public, with no session', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/checkout/internal'));
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe(
+        'http://runtime.test/login?returnUrl=%2Fcheckout%2Finternal',
+      );
+    });
+
+    it('still redirects to /login for an undeclared path under the same plugin, with no session', async () => {
+      fetchState.session = null;
+
+      const response = await middleware(request('/checkout/other-path'));
+
+      expect(response.status).toBe(303);
     });
   });
 

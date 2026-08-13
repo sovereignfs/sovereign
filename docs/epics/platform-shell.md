@@ -387,7 +387,7 @@ The Platform Shell is the runtime that composes plugins into a coherent experien
 
 ---
 
-#### 📋 2.15 — Public plugin webhooks (RFC 0050)
+#### ✅ 2.15 — Public plugin webhooks (RFC 0050)
 
 **Goal:** Add manifest-declared unauthenticated webhook ingress for plugins, with route validation, request limits, signature helpers, and replay protection.
 

@@ -169,6 +169,20 @@
       "when": 1786471162822,
       "tag": "0023_chief_expediter",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1786641681885,
+      "tag": "0024_clear_mandrill",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1786651730354,
+      "tag": "0025_goofy_lady_ursula",
+      "breakpoints": true
     }
   ]
 }

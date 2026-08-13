@@ -17,3 +17,8 @@ export type Surface = z.infer<typeof surfaceSchema>;
 
 /** A public-registry entry (thin pointer + display metadata), inferred from the schema. */
 export type RegistryEntry = z.infer<typeof registryEntrySchema>;
+
+/** One manifest-declared plugin flow handoff receiver (RFC 0053). */
+export type HandoffReceiverDeclaration = NonNullable<
+  NonNullable<SovereignManifest['handoffs']>['receives']
+>[number];

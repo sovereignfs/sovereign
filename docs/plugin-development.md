@@ -167,6 +167,7 @@ serves at `/tasks/lists`.
 | `adminOnly`     | boolean                                                 | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                                                                                    |
 | `apiProvider`   | boolean                                                 | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                                                                                              |
 | `publicRoutes`  | array (see below)                                       | no                                   | Manifest-declared public page routes (RFC 0042). Each entry exempts a path prefix — relative to `routePrefix` — from the session-redirect gate; the plugin owns authorization for the exempted paths.                                                                                                      |
+| `webhooks`      | array (see below)                                       | no                                   | Manifest-declared public webhook endpoints (RFC 0050) — unauthenticated machine-to-machine ingress, distinct from `publicRoutes`' human-facing pages. Each entry is one exact endpoint with method/body-size limits enforced before your handler runs.                                                     |
 | `public`        | boolean                                                 | no (default `false`)                 | Marks the whole plugin as public — no auth requirement at all (RFC 0089). Requires `shell: "minimal"` explicitly; cannot combine with `adminOnly`, a paid `monetization.model`, or `publicRoutes`. See below.                                                                                              |
 | `offline`       | boolean (see below)                                     | no (default `false`)                 | Marks the plugin's bare `routePrefix` page as its one offline-capable entry point (RFC 0074, flattened by RFC 0078 from the original `offline.routes[]`/`offline.root` object shape). Grants no auth exemption; the route must render a user-neutral shell and hydrate data client-side via `sdk.offline`. |
 | `installable`   | boolean (see below)                                     | no (default `false`)                 | Lets the plugin be installed from a browser as its own home-screen app, scoped to `routePrefix`, via a dedicated manifest at `/api/manifest/<id>` (RFC 0081). Deliberately independent of `offline` — see below.                                                                                           |
@@ -231,6 +232,10 @@ Declared SDK capabilities. The v1-functional ones:
 | `device:biometrics` | Use `sdk.device.biometrics.confirm()` (RFC 0083, sovereign-mobile epic task 20.7). |
 
 | `device:secureStorage` | Required for `offline: 'device-only'` (research 0012, RFC 0093). Durable, encrypted, device-auth-gated key/value storage — native Keychain/Keystore key custody + SQLCipher on Capacitor, WebAuthn PRF key custody + OPFS on web. Check availability with `sdk.device.supports('secureStorage')` before relying on it; it reports `false` until a shell's transport actually implements it. Reserved — the backing bridge capability and SDK surface are not implemented yet (workstream 0008 leg 4, epic tasks 20.13/8.20/1.22); declaring it today is accepted metadata only. |
+
+| `handoffs:send` | Create a signed handoff token addressed to another plugin's declared receiver via `sdk.handoffs.create()` (RFC 0053). |
+
+| `handoffs:receive` | Declare `handoffs.receives[]` entries and consume tokens addressed to them via `sdk.handoffs.consume()` (RFC 0053). |
 
 Reserved (declaring them is allowed; the backing surfaces throw `NotImplementedError` until
 implemented): `events:publish`, `events:subscribe`, `device:secureStorage`. `e2ee:use` (client-side encryption,
@@ -449,6 +454,208 @@ shared token schema — each plugin owns its model): a **hash** of the token
 (never the plaintext), the resource ID, who created it, `createdAt`,
 `expiresAt`, `revokedAt`, and a mode (`expiring`, `permanent`, or a
 plugin-specific enum).
+
+### `webhooks` — public plugin webhooks (RFC 0050)
+
+Unauthenticated machine-to-machine ingress — distinct from `publicRoutes`
+above, which is for human-facing **pages**. A webhook is for provider
+callbacks: message delivery, payment events, sync notifications, OAuth
+provider postbacks. Each declared entry is one **exact** endpoint, not a
+prefix — the platform bypasses the session redirect for exactly that
+`<routePrefix><path>` + declared method(s), applies method and
+`Content-Length` limits before your handler runs, and injects
+`x-sovereign-plugin-id` — but **never** a user identity header, even if the
+request happens to carry a valid session cookie. There is no user for a
+webhook call.
+
+```json
+"webhooks": [
+  {
+    "path": "/webhooks/deliver",
+    "description": "Provider delivery callback",
+    "methods": ["POST"],
+    "maxBodyBytes": 262144,
+    "requiresSignature": true
+  }
+]
+```
+
+| Field               | Notes                                                                                                                                                                                                                                    |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`              | Relative to `routePrefix`; must start with `/`, must not be `/`. Exact match — `/webhooks/deliver/extra` does **not** match a declared `/webhooks/deliver` entry.                                                                        |
+| `description`       | Optional human-readable note.                                                                                                                                                                                                            |
+| `methods`           | Allowed HTTP methods; defaults to `["POST"]`. `GET` is accepted only for provider verification challenges. A request with an undeclared method gets a 404, not a 405 — the platform never reveals which methods a declared path accepts. |
+| `maxBodyBytes`      | Defaults to `262144` (256 KiB), hard-capped at 5 MiB regardless of what you declare. Enforced via a `Content-Length` pre-check in middleware — see the caveat below.                                                                     |
+| `requiresSignature` | Documentation/introspection only — declaring `true` enforces nothing by itself; your handler must actually call `sdk.webhooks.verifyHmac()`.                                                                                             |
+
+**Your handler is an ordinary route.** Unlike `schedules`/`jobs`/`events`,
+there is no manifest `entry` field and no generate-time composition — you
+just place a normal Next.js `route.ts` at the path (e.g.
+`app/webhooks/deliver/route.ts`), composed into the runtime the same way
+every other plugin route already is. This genuinely is just an HTTP route;
+the manifest only declares metadata the platform enforces around it.
+
+**Verify signatures and check replays yourself** — the platform gives you
+the primitives, not a provider framework:
+
+```ts
+// app/webhooks/deliver/route.ts
+import { sdk } from '@sovereignfs/sdk';
+
+export async function POST(request: Request): Promise<Response> {
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  const signature = request.headers.get('x-provider-signature') ?? '';
+
+  const verified = await sdk.webhooks.verifyHmac(
+    { body: bytes, signatureHeader: signature, secretRef, algorithm: 'sha256' },
+    request.headers,
+  );
+  if (!verified) return new Response('Unauthorized', { status: 401 });
+
+  const event = JSON.parse(new TextDecoder().decode(bytes)) as { id: string };
+  const isNew = await sdk.webhooks.checkReplay(
+    { provider: 'my-provider', eventId: event.id },
+    request.headers,
+  );
+  if (!isNew) return new Response('OK', { status: 200 }); // already processed — don't reprocess, don't error
+
+  // …handle the event…
+  return new Response('OK', { status: 200 });
+}
+```
+
+- **`sdk.webhooks.verifyHmac()`** — `secretRef` is a `SecretRef.id` for a
+  **`'plugin'`-scoped** secret you created via `sdk.secrets.create()` (user-
+  and instance-scoped secrets are rejected — there's no user for a webhook
+  call, and instance-scoped secrets normally require the `instance:configure`
+  capability, which this call never has). `signatureHeader` is the digest
+  **value** your provider sent, hex-encoded, with any provider-specific
+  prefix (GitHub's `sha256=`, for example) already stripped by your own
+  code — this helper compares a raw hex digest, it doesn't parse
+  provider-specific header formats. Read the body as raw bytes _before_ any
+  JSON parsing — parsing first and re-serializing would verify different
+  bytes than the provider actually signed.
+- **`sdk.webhooks.checkReplay()`** — `provider`/`eventId` together are the
+  dedupe key, scoped to your plugin (two plugins, or two providers on one
+  plugin, never collide on the same `eventId`). Returns `true` the first
+  time an event is seen (safe to process) and `false` on every call within
+  `ttlSeconds` after that (default 24h) — a replay. Most providers treat a
+  non-2xx response as "retry me," so respond 200 on a detected replay
+  rather than reprocessing or erroring.
+
+**The `Content-Length` limit has a real gap, not swept under the rug:** a
+chunked-transfer body has no `Content-Length` header, so middleware cannot
+pre-check its size without consuming it (Next.js middleware can't buffer a
+body and then forward an unconsumed stream to your route handler). For a
+request with no `Content-Length`, the platform's check simply doesn't fire
+— your own handler is the backstop. If this matters for your provider,
+bound your own read (don't call `request.arrayBuffer()`/`.json()`
+unconditionally on an untrusted body with no declared limit).
+
+**Dev-mode caveat:** none — unlike `schedules`/`jobs`/`events`, a webhook's
+`route.ts` hot-reloads normally, since it's composed the same way every
+other plugin route is.
+
+### `handoffs` — plugin flow handoffs (RFC 0053)
+
+A signed, short-lived payload that lets one plugin start or continue a
+user-facing flow in another — a task app handing a pre-filled item off to a
+notes plugin, a shop plugin handing a cart off to a checkout plugin. This is
+the flow-continuation counterpart to `data` (read-only queries) and `tools`
+(RFC 0047, single mutating calls): a handoff carries the visitor's browser
+across a redirect, with a specific payload, to a specific declared endpoint.
+
+```json
+"handoffs": {
+  "receives": [
+    {
+      "name": "checkout-session",
+      "path": "/checkout",
+      "title": "Start a checkout session",
+      "description": "Accepts a cart handed off from another plugin.",
+      "public": true
+    }
+  ],
+  "sends": [
+    { "provider": "io.example.checkout", "name": "checkout-session", "reason": "Cart handoff at purchase time" }
+  ]
+}
+```
+
+| Field          | Notes                                                                                                                                                                                                                                                                                                                                                                                    |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `receives`     | This plugin's own handoff endpoints. Requires the `handoffs:receive` permission. Optional — omit if this plugin only ever sends.                                                                                                                                                                                                                                                         |
+| `.name`        | Stable handoff name, lowercase kebab-case, unique within the plugin. Callers pass this to `sdk.handoffs.create()`.                                                                                                                                                                                                                                                                       |
+| `.path`        | Relative to `routePrefix`; must start with `/`, must not be `/`. **Exact match**, not a prefix — mirrors `webhooks[].path` above, not `publicRoutes`' subtree match: a handoff receiver is one specific declared page.                                                                                                                                                                   |
+| `.title`       | Human-readable name shown in caller-facing docs/Console.                                                                                                                                                                                                                                                                                                                                 |
+| `.description` | Optional longer note.                                                                                                                                                                                                                                                                                                                                                                    |
+| `.inputSchema` | Optional, declarative only — like `webhooks[].requiresSignature`, the platform does **not** validate a handoff's payload against this automatically. Unlike RFC 0047 tool contracts (platform-enforced input schemas), RFC 0053 places schema validation under the _provider's own_ responsibility — validate `context.payload` yourself in your receiver route.                         |
+| `.public`      | Whether an anonymous, unauthenticated visitor may consume a handoff at this receiver. Defaults to `false`. Must be declared explicitly — never inferred — so a plugin can't accidentally receive arbitrary public payloads.                                                                                                                                                              |
+| `sends`        | Optional discovery/review metadata about handoffs this plugin creates for other providers. Requires `handoffs:send`. **Nothing at runtime validates a `sends` entry against the named provider's actual `receives[]` declarations** — this array exists for docs/Console display only; the real check happens at `sdk.handoffs.create()` call time against the provider's live manifest. |
+
+**Source (the plugin starting the flow):**
+
+```ts
+import { sdk } from '@sovereignfs/sdk';
+
+const handoff = await sdk.handoffs.create({
+  providerId: 'io.example.checkout',
+  name: 'checkout-session',
+  payload: { items },
+  returnUrl: '/cart/thank-you',
+  mode: 'public', // or 'authenticated'
+});
+// Redirect the visitor's browser to the provider's declared receiver path,
+// carrying the token as a query param the receiver route reads itself —
+// e.g. `/checkout?ho=${handoff.token}`.
+```
+
+**Provider (the plugin receiving the flow), at the declared `path`:**
+
+```ts
+// app/checkout/route.ts (or a page/action reading the query param)
+import { sdk } from '@sovereignfs/sdk';
+
+const token = new URL(request.url).searchParams.get('ho') ?? '';
+const context = await sdk.handoffs.consume(token, { name: 'checkout-session' });
+// context.payload      — whatever the source passed, unvalidated by the platform
+// context.sourcePluginId, context.returnUrl, context.actorUserId (null if public)
+```
+
+- **Payload storage is always server-side**, in a `plugin_handoffs` DB row —
+  the token itself carries only an opaque id, never the payload. Capped at
+  16 KiB JSON-encoded; a larger payload throws at `create()` time.
+- **`mode: 'authenticated'`** requires the creating request to have an actor
+  (`sdk.handoffs.create()` throws otherwise), and — tighter than a plain
+  session check — **can only be consumed by that exact same user**. A
+  leaked or forwarded authenticated handoff URL cannot be redeemed by a
+  different logged-in visitor.
+- **`mode: 'public'`** may be created and consumed anonymously, but only
+  against a receiver the provider's manifest marks `public: true`; a
+  non-public receiver rejects a public-mode token outright.
+- **Single-use by default** (`singleUse: true`) — consuming claims the row
+  atomically (`UPDATE ... WHERE consumed_at IS NULL RETURNING ...`, the same
+  idiom `sdk.webhooks.checkReplay()` uses for replay detection); a second
+  consume attempt on the same token throws. Pass `singleUse: false` for a
+  handoff meant to be read more than once before it expires.
+- **Expiry defaults to 15 minutes**, and any `expiresInSeconds` you pass is
+  clamped to a 1-hour maximum server-side — a handoff token is a short-lived
+  redirect, not a durable link.
+- **`returnUrl`** is validated with the same same-origin-relative-path check
+  `/login`'s own `returnUrl` uses; an absolute or scheme-relative URL is
+  rejected (open-redirect prevention). It's carried on `context.returnUrl`
+  for the provider to redirect back to when the flow completes — the
+  platform doesn't redirect for you.
+- **The receiving route is an ordinary route**, same as `webhooks` above —
+  no manifest `entry` field, no generate-time composition, hot-reloads
+  normally in dev.
+- A **public** receiver's page route bypasses the session-redirect gate the
+  same way a public webhook does, and — like `publicRoutes` above, unlike
+  `webhooks` — forwards `x-sovereign-user-id` when a session happens to be
+  present, so a logged-in visitor's flow can still resolve to their account
+  if your handler wants that; a **non-public** receiver still requires an
+  authenticated session to even reach the route (the platform redirects to
+  `/login` first, same as any other authenticated page).
 
 ### `public` — fully public plugins (RFC 0089)
 
@@ -2146,6 +2353,15 @@ version?)` (sync, `false` until the handshake resolves — capabilities are
 - **`storage`** — plugin-scoped binary object storage (RFC 0044). Requires the
   `storage:readWrite` manifest permission. See
   [Plugin file storage (RFC 0044)](#plugin-file-storage-rfc-0044) below.
+- **`webhooks`** — public plugin webhook helpers (RFC 0050).
+  `sdk.webhooks.verifyHmac(input, requestHeaders)` verifies a signature
+  against a `'plugin'`-scoped secret; `sdk.webhooks.checkReplay(input,
+requestHeaders)` claims a `(provider, eventId)` pair for replay
+  protection. Both take `requestHeaders` as a **required** argument and
+  fail closed (`false`) rather than defaulting to `'unknown'` if it's
+  missing a plugin id — there's no legitimate call site without one. See
+  [`webhooks` — public plugin webhooks (RFC 0050)](#webhooks--public-plugin-webhooks-rfc-0050)
+  above.
 - **Reserved** (throw `NotImplementedError` in v1): `events`.
 
 ### The SDK boundary rule

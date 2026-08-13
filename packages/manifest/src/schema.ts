@@ -38,6 +38,8 @@ export const permissionSchema = z.enum([
   'device:notifications',
   'device:biometrics',
   'device:secureStorage',
+  'handoffs:send',
+  'handoffs:receive',
 ]);
 
 /**
@@ -171,6 +173,170 @@ const manifestObjectSchema = z
       .refine((arr) => new Set(arr.map((r) => r.prefix)).size === arr.length, {
         message: 'publicRoutes prefixes must be unique within the plugin',
       })
+      .optional(),
+    /**
+     * Unauthenticated machine-to-machine webhook ingress (RFC 0050) —
+     * distinct from `publicRoutes` above, which is for human-facing pages.
+     * Each entry is one exact endpoint, not a prefix: `path` resolves to
+     * `<routePrefix><path>` and the plugin places an ordinary Next.js
+     * `route.ts` there (composed the same way every other plugin route is —
+     * no separate entry-file/generate-time wiring, unlike `schedules`/
+     * `jobs`/`events`, since this genuinely is just an HTTP route). The
+     * platform bypasses the session redirect for exactly this path+method
+     * combination, applies the declared method/body-size limits before the
+     * plugin's own route handler runs, and injects `x-sovereign-plugin-id`
+     * — but never a user identity, since there is no user. The plugin's own
+     * handler is responsible for verifying provider-specific authorization
+     * (`sdk.webhooks.verifyHmac()`/`checkReplay()`) and must fail closed.
+     */
+    webhooks: z
+      .array(
+        z
+          .object({
+            /** Relative to routePrefix; must start with "/" and must not be "/". Exact match, not a prefix. */
+            path: z
+              .string()
+              .min(1)
+              .startsWith('/', 'webhook path must start with "/"')
+              .refine((p) => p !== '/', { message: 'webhook path must not be "/"' })
+              .refine((p) => !p.split('/').includes('..'), {
+                message: 'webhook path must not contain ".." segments',
+              })
+              .refine((p) => !/[()]/.test(p), {
+                message:
+                  'webhook path must not contain route groups or interception markers ("(", ")")',
+              }),
+            /** Human-readable description shown in docs/Console. */
+            description: z.string().min(1).optional(),
+            /**
+             * Allowed HTTP methods for this endpoint. Restricted to `POST`
+             * by default; `GET` is accepted only for provider verification
+             * challenges (a request with a method not in this list gets a
+             * 404, not a 405 — the platform never reveals which methods a
+             * declared path accepts).
+             */
+            methods: z
+              .array(z.enum(['GET', 'POST']))
+              .min(1)
+              .default(['POST']),
+            /**
+             * Maximum request body size in bytes the platform allows before
+             * the plugin's own handler runs, enforced via a `Content-Length`
+             * pre-check in middleware — capped hard at 5 MiB regardless of
+             * what a plugin declares. A chunked-transfer body with no
+             * `Content-Length` header cannot be pre-checked this way; the
+             * plugin's own handler is the backstop for that case (see
+             * `docs/plugin-development.md`'s "webhooks" section).
+             */
+            maxBodyBytes: z
+              .number()
+              .int()
+              .min(1)
+              .max(5 * 1024 * 1024)
+              .default(262144),
+            /**
+             * Documentation/introspection metadata only — declaring `true`
+             * does not itself enforce anything; the plugin's own handler
+             * must actually call `sdk.webhooks.verifyHmac()`.
+             */
+            requiresSignature: z.boolean().optional().default(false),
+          })
+          .strict(),
+      )
+      .min(1)
+      .refine((arr) => new Set(arr.map((w) => w.path)).size === arr.length, {
+        message: 'webhook paths must be unique within the plugin',
+      })
+      .optional(),
+    /**
+     * Platform-mediated flow handoffs (RFC 0053) — a signed, short-lived
+     * payload that lets one plugin start or continue a user-facing flow in
+     * another. `receives` declares this plugin's own handoff endpoints
+     * (requires `handoffs:receive`); `sends` is optional discovery/review
+     * metadata about handoffs this plugin creates for other providers
+     * (requires `handoffs:send`) — unlike `receives`, nothing at runtime
+     * validates `sends` entries against the named provider's actual
+     * declarations; it exists for docs/Console display only.
+     */
+    handoffs: z
+      .object({
+        receives: z
+          .array(
+            z
+              .object({
+                /** Stable handoff name, unique within the plugin (lowercase kebab-case). */
+                name: z
+                  .string()
+                  .regex(
+                    /^[a-z][a-z0-9-]*$/,
+                    'handoff name must start with a lowercase letter and contain only lowercase letters, digits, and hyphens',
+                  ),
+                /**
+                 * Relative to routePrefix; must start with "/" and must not
+                 * be "/". Exact match, not a prefix — mirrors `webhooks[].path`
+                 * above (RFC 0050's declaration pattern), not `publicRoutes`'
+                 * broader subtree match: a handoff receiver is one specific
+                 * declared endpoint.
+                 */
+                path: z
+                  .string()
+                  .min(1)
+                  .startsWith('/', 'handoff path must start with "/"')
+                  .refine((p) => p !== '/', { message: 'handoff path must not be "/"' })
+                  .refine((p) => !p.split('/').includes('..'), {
+                    message: 'handoff path must not contain ".." segments',
+                  })
+                  .refine((p) => !/[()]/.test(p), {
+                    message:
+                      'handoff path must not contain route groups or interception markers ("(", ")")',
+                  }),
+                /** Human-readable name shown in caller-facing docs/Console. */
+                title: z.string().min(1),
+                description: z.string().optional(),
+                /**
+                 * Declarative metadata only — like `webhooks[].requiresSignature`,
+                 * the platform does not validate a handoff's payload against
+                 * this schema automatically (RFC 0053 lists schema validation
+                 * under the *provider's* own responsibility, unlike RFC 0047's
+                 * tool contracts, which validate before every call).
+                 */
+                inputSchema: z.record(z.string(), z.unknown()).optional(),
+                /**
+                 * Whether an anonymous, unauthenticated visitor may consume a
+                 * handoff at this receiver. Defaults to `false` (authenticated
+                 * only). Must be explicit — never inferred — per RFC 0053:
+                 * "A plugin cannot accidentally receive arbitrary public
+                 * payloads."
+                 */
+                public: z.boolean().optional().default(false),
+              })
+              .strict(),
+          )
+          .min(1)
+          .refine((arr) => new Set(arr.map((r) => r.name)).size === arr.length, {
+            message: 'handoff receiver names must be unique within the plugin',
+          })
+          .refine((arr) => new Set(arr.map((r) => r.path)).size === arr.length, {
+            message: 'handoff receiver paths must be unique within the plugin',
+          })
+          .optional(),
+        sends: z
+          .array(
+            z
+              .object({
+                /** The manifest `id` of the plugin expected to receive this handoff. */
+                provider: z.string().min(1),
+                /** Handoff name (should match the provider's declared receiver name). */
+                name: z.string().min(1),
+                /** Human-readable reason shown in docs/Console. */
+                reason: z.string().optional(),
+              })
+              .strict(),
+          )
+          .min(1)
+          .optional(),
+      })
+      .strict()
       .optional(),
     /**
      * Marks this plugin as fully public — no auth requirement at all (RFC

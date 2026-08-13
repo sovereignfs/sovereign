@@ -169,6 +169,20 @@
       "when": 1786471163360,
       "tag": "0023_lying_raider",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1786641682327,
+      "tag": "0024_needy_tag",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1786651730766,
+      "tag": "0025_outstanding_clint_barton",
+      "breakpoints": true
     }
   ]
 }

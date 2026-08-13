@@ -14,6 +14,8 @@ import type {
   SearchUsersInput,
   SendNotificationInput,
   SendToUserEmailInput,
+  CheckWebhookReplayInput,
+  VerifyWebhookHmacInput,
   CreateSecretInput,
   CryptoContext,
   DecryptFieldOptions,
@@ -40,6 +42,11 @@ import type {
   StorageObject,
   StoragePutInput,
   UpdateConnectionInput,
+  ConsumeHandoffOptions,
+  CreateHandoffInput,
+  HandoffContext,
+  HandoffRequestContext,
+  HandoffToken,
 } from './types';
 
 /**
@@ -160,6 +167,22 @@ export interface SdkHost {
      * supplies the payload fields.
      */
     send(input: SendNotificationInput, pluginId: string): Promise<void>;
+  };
+  webhooks: {
+    /** Verify an HMAC signature against a plugin-scoped secret (RFC 0050). */
+    verifyHmac(input: VerifyWebhookHmacInput, pluginId: string): Promise<boolean>;
+    /** Claim `(provider, eventId)` for replay protection, scoped to `pluginId`. */
+    checkReplay(input: CheckWebhookReplayInput, pluginId: string): Promise<boolean>;
+  };
+  handoffs: {
+    /** Source: create a signed handoff token for a provider-declared receiver. */
+    create(input: CreateHandoffInput, context: HandoffRequestContext): Promise<HandoffToken>;
+    /** Provider: consume a handoff token, returning its stored payload and context. */
+    consume(
+      token: string,
+      options: ConsumeHandoffOptions,
+      context: HandoffRequestContext,
+    ): Promise<HandoffContext>;
   };
   storage: {
     put(input: StoragePutInput, context: StorageContext): Promise<StorageObject>;

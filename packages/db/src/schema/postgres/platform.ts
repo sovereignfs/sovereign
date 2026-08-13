@@ -528,3 +528,41 @@ export const fieldResealCheckpoints = pgTable(
     ),
   ],
 );
+
+/** Webhook replay-protection claims (RFC 0050) — see the SQLite twin. */
+export const webhookReplays = pgTable(
+  'webhook_replays',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenant_id').notNull(),
+    pluginId: text('plugin_id').notNull(),
+    provider: text('provider').notNull(),
+    eventId: text('event_id').notNull(),
+    receivedAt: bigint('received_at', { mode: 'number' }).notNull(),
+    expiresAt: bigint('expires_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('webhook_replays_plugin_provider_event_idx').on(
+      table.pluginId,
+      table.provider,
+      table.eventId,
+    ),
+  ],
+);
+
+/** Plugin flow handoffs (RFC 0053). See ../sqlite/platform.ts for the full doc comment. */
+export const pluginHandoffs = pgTable('plugin_handoffs', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  sourcePluginId: text('source_plugin_id').notNull(),
+  providerId: text('provider_id').notNull(),
+  name: text('name').notNull(),
+  mode: text('mode').notNull(),
+  actorUserId: text('actor_user_id'),
+  payload: text('payload').notNull(),
+  returnUrl: text('return_url'),
+  singleUse: boolean('single_use').notNull(),
+  consumedAt: bigint('consumed_at', { mode: 'number' }),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  expiresAt: bigint('expires_at', { mode: 'number' }).notNull(),
+});

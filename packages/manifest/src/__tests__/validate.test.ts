@@ -142,6 +142,266 @@ describe('validateManifest', () => {
     if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
   });
 
+  it('accepts a manifest that declares webhooks (RFC 0050)', () => {
+    const res = validateManifest({
+      ...base,
+      webhooks: [
+        {
+          path: '/webhooks/provider',
+          description: 'Provider delivery callback',
+          methods: ['POST'],
+          maxBodyBytes: 262144,
+          requiresSignature: true,
+        },
+      ],
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('accepts a webhooks entry with only a path — every other field defaults', () => {
+    const manifest = { ...base, webhooks: [{ path: '/webhooks/provider' }] };
+    const res = validateManifest(manifest);
+    expect(res.valid).toBe(true);
+  });
+
+  it('defaults methods to ["POST"], maxBodyBytes to 262144, and requiresSignature to false', () => {
+    const res = validateManifest({ ...base, webhooks: [{ path: '/webhooks/provider' }] });
+    expect(res.valid).toBe(true);
+    if (res.valid) {
+      const webhook = res.manifest.webhooks?.[0];
+      expect(webhook?.methods).toEqual(['POST']);
+      expect(webhook?.maxBodyBytes).toBe(262144);
+      expect(webhook?.requiresSignature).toBe(false);
+    }
+  });
+
+  it('accepts a GET webhook for provider verification challenges', () => {
+    const res = validateManifest({
+      ...base,
+      webhooks: [{ path: '/webhooks/verify', methods: ['GET'] }],
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects a webhook path that does not start with "/"', () => {
+    const res = validateManifest({ ...base, webhooks: [{ path: 'webhooks/provider' }] });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('webhook path');
+  });
+
+  it('rejects a webhook path of "/"', () => {
+    const res = validateManifest({ ...base, webhooks: [{ path: '/' }] });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects a webhook path containing ".." segments', () => {
+    const res = validateManifest({
+      ...base,
+      webhooks: [{ path: '/webhooks/../../etc' }],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects a webhook path containing route group / interception markers', () => {
+    expect(validateManifest({ ...base, webhooks: [{ path: '/(group)' }] }).valid).toBe(false);
+    expect(validateManifest({ ...base, webhooks: [{ path: '/(.)webhooks' }] }).valid).toBe(false);
+  });
+
+  it('rejects an unknown HTTP method', () => {
+    const res = validateManifest({
+      ...base,
+      webhooks: [{ path: '/webhooks/provider', methods: ['DELETE'] }],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects an empty methods array', () => {
+    const res = validateManifest({
+      ...base,
+      webhooks: [{ path: '/webhooks/provider', methods: [] }],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects maxBodyBytes above the 5 MiB hard cap', () => {
+    const res = validateManifest({
+      ...base,
+      webhooks: [{ path: '/webhooks/provider', maxBodyBytes: 6 * 1024 * 1024 }],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects maxBodyBytes of 0 or negative', () => {
+    for (const maxBodyBytes of [0, -1]) {
+      const res = validateManifest({
+        ...base,
+        webhooks: [{ path: '/webhooks/provider', maxBodyBytes }],
+      });
+      expect(res.valid).toBe(false);
+    }
+  });
+
+  it('rejects an empty webhooks array', () => {
+    expect(validateManifest({ ...base, webhooks: [] }).valid).toBe(false);
+  });
+
+  it('rejects duplicate webhook paths within a plugin', () => {
+    const res = validateManifest({
+      ...base,
+      webhooks: [{ path: '/webhooks/provider' }, { path: '/webhooks/provider' }],
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
+  });
+
+  it('accepts publicRoutes and webhooks declared together', () => {
+    const res = validateManifest({
+      ...base,
+      publicRoutes: [{ prefix: '/p' }],
+      webhooks: [{ path: '/webhooks/provider' }],
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  const checkoutReceiver = {
+    name: 'checkout-session',
+    path: '/cart',
+    title: 'Start checkout',
+    inputSchema: { type: 'object', properties: { items: { type: 'array' } }, required: ['items'] },
+  };
+
+  it('accepts a manifest declaring a handoff receiver (RFC 0053)', () => {
+    const res = validateManifest({ ...base, handoffs: { receives: [checkoutReceiver] } });
+    expect(res.valid).toBe(true);
+  });
+
+  it('defaults a receiver\'s "public" field to false (authenticated only)', () => {
+    const res = validateManifest({ ...base, handoffs: { receives: [checkoutReceiver] } });
+    expect(res.valid).toBe(true);
+    if (res.valid) {
+      expect(res.manifest.handoffs?.receives?.[0]?.public).toBe(false);
+    }
+  });
+
+  it('accepts a receiver explicitly declared public', () => {
+    const res = validateManifest({
+      ...base,
+      handoffs: { receives: [{ ...checkoutReceiver, public: true }] },
+    });
+    expect(res.valid).toBe(true);
+    if (res.valid) {
+      expect(res.manifest.handoffs?.receives?.[0]?.public).toBe(true);
+    }
+  });
+
+  it('accepts a receiver without inputSchema or description (both optional)', () => {
+    const { inputSchema: _inputSchema, ...withoutSchema } = checkoutReceiver;
+    const res = validateManifest({ ...base, handoffs: { receives: [withoutSchema] } });
+    expect(res.valid).toBe(true);
+  });
+
+  it('accepts a manifest declaring handoffs.sends', () => {
+    const res = validateManifest({
+      ...base,
+      handoffs: {
+        sends: [
+          {
+            provider: 'io.openfs.sovereign.checkout',
+            name: 'checkout-session',
+            reason: 'Send selected items to checkout',
+          },
+        ],
+      },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('accepts receives and sends declared together', () => {
+    const res = validateManifest({
+      ...base,
+      handoffs: {
+        receives: [checkoutReceiver],
+        sends: [{ provider: 'com.example.other', name: 'other-flow' }],
+      },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects a handoff path that does not start with "/"', () => {
+    const res = validateManifest({
+      ...base,
+      handoffs: { receives: [{ ...checkoutReceiver, path: 'cart' }] },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('handoff path');
+  });
+
+  it('rejects a handoff path of "/"', () => {
+    const res = validateManifest({
+      ...base,
+      handoffs: { receives: [{ ...checkoutReceiver, path: '/' }] },
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects a handoff path containing ".." segments', () => {
+    const res = validateManifest({
+      ...base,
+      handoffs: { receives: [{ ...checkoutReceiver, path: '/../etc' }] },
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects an invalid handoff name', () => {
+    const res = validateManifest({
+      ...base,
+      handoffs: { receives: [{ ...checkoutReceiver, name: 'Not_Valid' }] },
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects an empty receives array', () => {
+    expect(validateManifest({ ...base, handoffs: { receives: [] } }).valid).toBe(false);
+  });
+
+  it('rejects duplicate receiver names within a plugin', () => {
+    const res = validateManifest({
+      ...base,
+      handoffs: {
+        receives: [checkoutReceiver, { ...checkoutReceiver, path: '/other' }],
+      },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
+  });
+
+  it('rejects duplicate receiver paths within a plugin', () => {
+    const res = validateManifest({
+      ...base,
+      handoffs: {
+        receives: [checkoutReceiver, { ...checkoutReceiver, name: 'other-name' }],
+      },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) expect(res.errors.join(' ')).toContain('unique');
+  });
+
+  it('rejects an unknown key on a receiver entry (strict)', () => {
+    const res = validateManifest({
+      ...base,
+      handoffs: { receives: [{ ...checkoutReceiver, bogus: true }] },
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('accepts a manifest declaring handoffs:send and handoffs:receive permissions', () => {
+    const res = validateManifest({
+      ...base,
+      permissions: [...base.permissions, 'handoffs:send', 'handoffs:receive'],
+    });
+    expect(res.valid).toBe(true);
+  });
+
   it('accepts a manifest declaring installable: true with an icon (RFC 0081)', () => {
     expect(validateManifest({ ...base, installable: true, icon: 'icon.svg' }).valid).toBe(true);
   });

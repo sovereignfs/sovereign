@@ -1,7 +1,7 @@
 ---
 rfc: 0050
 title: Public plugin webhooks
-status: Draft
+status: Implemented
 date: June 2026
 author: kasunben
 scope: packages/manifest, runtime middleware, runtime route guard, packages/sdk, docs; builds on RFC 0042 and RFC 0043
@@ -43,6 +43,14 @@ limits, or standard security expectations.
 - There is no narrow manifest declaration for public plugin webhook endpoints.
 
 ## Proposed design
+
+**As shipped, this matches the sketch below closely** — see the 0.2
+changelog entry for the few real deviations (`sdk.webhooks.checkReplay()`
+returns "is this new/safe" rather than "is this a replay," `requiresSignature`
+is documentation-only metadata with no enforcement of its own, and body-size
+limits have a documented gap for chunked-transfer bodies). See
+`docs/plugin-development.md`'s "webhooks" section for the actual shipped
+surface and examples.
 
 ### Manifest declarations
 
@@ -134,22 +142,48 @@ Rejected. It makes plugin installation operator-hostile and weakens portability.
 
 ## Open questions
 
-1. Should webhook route paths live under `/api/<pluginPrefix>/...` regardless of
-   plugin page route prefix?
-2. Should the platform provide per-webhook rate limiting in v1?
-3. Should successful webhook events be visible in Console, or only failures?
-4. Should webhook verification challenge routes support unauthenticated `GET`?
+_Resolved — see the 0.2 changelog entry for the full implementation:_
+
+1. **Should webhook route paths live under `/api/<pluginPrefix>/...`
+   regardless of plugin page route prefix?** No — `webhooks[].path` resolves
+   to `<routePrefix><path>`, the same convention `publicRoutes` uses, and is
+   unrelated to the `/api/*` public-namespace-delegation mechanism (PLT-16,
+   `apiProvider`) entirely. A plugin's webhook `route.ts` is composed into
+   the runtime route tree exactly like any other plugin route.
+2. **Should the platform provide per-webhook rate limiting in v1?** No.
+   `runtime/middleware.ts`'s existing general per-IP rate limiter still
+   applies (webhook requests go through the same middleware pipeline), but
+   there is no rate limit scoped to an individual declared webhook. Flagged
+   as a real gap for a future task, not a silent omission — a provider
+   retry storm on one webhook endpoint is only bounded by the
+   instance-wide per-IP limit today.
+3. **Should successful webhook events be visible in Console, or only
+   failures?** Neither, in this leg — there is no Console UI surface for
+   webhook activity at all (success or failure). A plugin that wants
+   visibility must log its own activity via `sdk.activity.log()`. Flagged
+   as a follow-up, not built here.
+4. **Should webhook verification challenge routes support unauthenticated
+   `GET`?** Yes — `methods: ['GET']` is a supported per-declaration choice,
+   exactly for this case; `POST` is the default when `methods` is omitted.
 
 ## Adoption path
 
-1. Add manifest `webhooks` declarations and validation.
-2. Extend middleware route decisions for declared webhook paths.
-3. Add request method/body limits.
-4. Add signature and replay SDK helpers.
-5. Document provider webhook implementation patterns and tests.
+1. ✅ Add manifest `webhooks` declarations and validation
+   (`packages/manifest/src/schema.ts`).
+2. ✅ Extend middleware route decisions for declared webhook paths
+   (`runtime/src/route-guard.ts`'s `matchedWebhookRoute`,
+   `runtime/middleware.ts`).
+3. ✅ Add request method/body limits (enforced in middleware before the
+   plugin's route handler runs — see open question 2 for what this
+   doesn't cover, and the 0.2 changelog for the `Content-Length` caveat).
+4. ✅ Add signature and replay SDK helpers (`sdk.webhooks.verifyHmac()`/
+   `checkReplay()`).
+5. ✅ Document provider webhook implementation patterns and tests
+   (`docs/plugin-development.md`).
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | June 2026 | Initial draft |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | June 2026   | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 0.2     | August 2026 | Full manifest-declared webhooks shipped (epic task 2.15, workstream 0015 leg 3). Manifest `webhooks` field (`path`/`description`/`methods`/`maxBodyBytes`/`requiresSignature`) mirrors `publicRoutes`' (RFC 0042) validation shape, but `path` is an **exact** match, not a prefix — `matchedWebhookRoute()` (`runtime/src/route-guard.ts`), resolving open question 1. `runtime/middleware.ts` adds a webhook bypass branch ahead of the public-page-route branch: disabled-plugin → 404, undeclared method → 404 (never 405 — never reveal accepted methods), `Content-Length` over `maxBodyBytes` → 413, plugin id injected, **no** `x-sovereign-user-*` header ever set (even with a valid session cookie — there is no user for a webhook call, unlike `publicRoutes` which does forward session headers when present). `sdk.webhooks.verifyHmac()`/`checkReplay()` (`packages/sdk/src/webhooks.ts`) take `requestHeaders` as a **required** argument and fail closed (`false`) rather than defaulting to `'unknown'` — no legitimate webhook call site lacks one. `verifyHmac()` accepts only `'plugin'`-scoped secrets (`runtime/src/sdk-host.ts`'s `webhooks.verifyHmac`, secret lookup via `getPluginSecret`/`decryptSecretValue`) — `'user'`-scoped is inapplicable (no user) and `'instance'`-scoped is deliberately not exposed here since its normal capability check (`instance:configure`) needs a user context this call never has. The HMAC comparison itself (`runtime/src/webhook-hmac.ts`'s `verifyHmacDigest`) computes a hex digest and does a length-checked `timingSafeEqual` against the caller-supplied `signatureHeader` — compared as a hex **string**, not decoded first (decoding malformed hex never throws in Node, so string comparison is simpler and no less safe); provider-specific prefixes (e.g. GitHub's `sha256=`) must be stripped by the caller first, this helper doesn't parse header formats. `checkReplay()` — the RFC's sketch didn't specify return-value polarity; resolved as `true` = "new, safe to process," `false` = "replay" (a "claim, not query" semantics), backed by a new `webhook_replays` platform table (`packages/db`, unique index on `(pluginId, provider, eventId)`, atomic `INSERT ... ON CONFLICT DO NOTHING ... RETURNING` claim, 24h default TTL, expired rows deleted before each claim attempt so an old event id can be legitimately reprocessed rather than blocked forever) — the RFC sketch's `timestamp` input field was dropped since this design keys expiry off server receipt time, not a provider-supplied timestamp. Open questions 2 (per-webhook rate limiting) and 3 (Console visibility) remain unresolved — see their entries below for why neither blocks this leg. |

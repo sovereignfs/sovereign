@@ -862,6 +862,26 @@ over — and tells the platform how much offline capability your plugin needs:
   module yet; that gap (a real `wa-sqlite`-backed engine) is tracked as
   remaining work, not silently worked around.
 
+  You don't need to build export/import yourself — `@sovereignfs/sdk/device-only-export`
+  covers every `device-only` plugin's data in one call, not per-plugin:
+
+  ```ts
+  import { exportDeviceOnlyData, importDeviceOnlyData } from '@sovereignfs/sdk/device-only-export';
+
+  const result = await exportDeviceOnlyData(userChosenPassphrase);
+  if (result.status === 'ok') {
+    // result.file is plain JSON — write it to a file for the user to download.
+  }
+  ```
+
+  This is Account → Security's own "Export device data" action (RFC 0093 §4
+  Layer 2) — always available, no per-plugin opt-in, no server involvement.
+  Import re-encrypts every value under the _importing_ device's own unlocked
+  Device Storage Key rather than copying ciphertext across devices, since two
+  devices never share the same key. You will not normally call either
+  function directly from plugin code; it's documented here so a plugin author
+  understands what already covers their data without them building it.
+
 Omitting the field entirely means no offline support — the default, and still
 the right choice for most plugins (an admin console, a settings page, anything
 whose whole point is showing live server state has no business working

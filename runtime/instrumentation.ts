@@ -11,6 +11,7 @@
  * 5. Initialise the notification broker (RFC 0034).
  * 6. Start the minimal plugin scheduler (RFC 0046 Phase 1).
  * 7. Start the plugin job worker (RFC 0046).
+ * 8. Initialise the realtime event broker (RFC 0045).
  *
  * (There used to be a step here that eagerly created a `plugin_status` row
  * for every non-chrome plugin on first boot — removed 2026-07-19, see
@@ -86,10 +87,39 @@ export async function register(): Promise<void> {
     const { startJobWorker, stopJobWorker } = await import('./src/jobs');
     startJobWorker();
 
+    // Realtime event broker (RFC 0045) — independent of the notification
+    // broker above (separate env var, separate keyspace); see
+    // event-broker.ts's doc comment for why. Unlike the notification broker,
+    // an event broker is always instantiated (including 'polling' mode) —
+    // its ring buffer is what `/api/events/poll` reads, since events have no
+    // durable store to poll against instead.
+    const eventsTransport = process.env.SOVEREIGN_EVENTS_TRANSPORT ?? 'sse';
+    const { initEventBroker, closeEventBroker } = await import('./src/event-broker');
+    if (eventsTransport === 'redis') {
+      if (!redisUrl) {
+        logger.error(
+          'SOVEREIGN_EVENTS_TRANSPORT=redis requires REDIS_URL — falling back to in-process',
+        );
+        await initEventBroker('sse');
+      } else {
+        await initEventBroker('redis', redisUrl);
+        logger.info('Event broker: Redis Pub/Sub', { transport: 'redis' });
+      }
+    } else {
+      // Any non-'redis' value (default 'sse', or 'polling') instantiates the
+      // same in-process broker — see initEventBroker()'s doc comment for why
+      // an event broker exists even in 'polling' mode. The distinction only
+      // matters to `/api/events/stream`, which reads this env var directly
+      // to decide whether to accept SSE connections at all.
+      await initEventBroker(eventsTransport);
+      logger.info(`Event broker: in-process (${eventsTransport})`, { transport: eventsTransport });
+    }
+
     process.on('SIGTERM', () => {
       stopScheduler();
       stopJobWorker();
       void closeBroker();
+      void closeEventBroker();
     });
   }
 }

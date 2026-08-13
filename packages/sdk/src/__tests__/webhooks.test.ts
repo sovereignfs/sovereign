@@ -123,6 +123,7 @@ describe('sdk.webhooks — header resolution', () => {
           return null;
         },
       },
+      events: { async publish() {} },
       crypto: {
         async encryptField(value: string) {
           return `svf0:${Buffer.from(value, 'utf8').toString('base64url')}`;

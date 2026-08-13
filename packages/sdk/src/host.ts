@@ -37,6 +37,7 @@ import type {
   EnrollE2eeDeviceInput,
   MarkConnectionErrorInput,
   OAuthStateInput,
+  PublishEventInput,
   SecretContext,
   SecretRef,
   SecretScope,
@@ -195,6 +196,15 @@ export interface SdkHost {
     cancel(id: string, pluginId: string): Promise<boolean>;
     /** Scoped to `pluginId` — cannot read another plugin's job. */
     get(id: string, pluginId: string): Promise<JobRef | null>;
+  };
+  events: {
+    /**
+     * Publish one event to a plugin-scoped channel (RFC 0045). `pluginId`
+     * is resolved by the SDK from an explicitly passed request `Headers`
+     * object, same as `notifications.send` — `'unknown'` means the call
+     * happened outside a plugin route context.
+     */
+    publish(input: PublishEventInput, pluginId: string): Promise<void>;
   };
   storage: {
     put(input: StoragePutInput, context: StorageContext): Promise<StorageObject>;

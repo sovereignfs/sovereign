@@ -205,6 +205,52 @@ export interface CheckWebhookReplayInput {
   ttlSeconds?: number;
 }
 
+/**
+ * One delivered realtime event (RFC 0045). `channel` here is always the
+ * fully namespaced `<pluginId>:<local channel>` form — plugins never see or
+ * set this themselves; see `PublishEventInput.channel` for the plugin-local
+ * form they do pass.
+ */
+export interface EventEnvelope<T = unknown> {
+  id: string;
+  channel: string;
+  type: string;
+  payload: T;
+  /** Epoch **milliseconds** — unlike DB-persisted timestamps elsewhere in the platform (epoch seconds), never written to a database column. */
+  createdAt: number;
+}
+
+/**
+ * `sdk.events.publish()` input. Ephemeral — not a durable queue, not a
+ * notification inbox, not an audit log (RFC 0045). `channel` is
+ * plugin-local (e.g. `"list:${listId}"`); the runtime prefixes it with the
+ * calling plugin's ID before publishing, so plugins can never publish into
+ * (or collide with) another plugin's channel namespace.
+ */
+export interface PublishEventInput {
+  channel: string;
+  type: string;
+  payload?: unknown;
+}
+
+/** Context passed to a manifest-declared `events[].entry` channel authorizer handler. */
+export interface EventChannelAuthorizerContext {
+  pluginId: string;
+  /** The subscribing user. */
+  userId: string;
+  /** Plugin-local channel being subscribed to (not the namespaced form). */
+  channel: string;
+  headers: Headers;
+}
+
+/**
+ * A manifest-declared `events[].entry` module's default export. Returns
+ * whether `ctx.userId` may subscribe to `ctx.channel`. **No matching
+ * declared pattern, or every match returning falsy/throwing, denies** — see
+ * `docs/plugin-development.md`'s "events" section.
+ */
+export type EventChannelAuthorizer = (ctx: EventChannelAuthorizerContext) => Promise<boolean>;
+
 /** Plugin-scoped file storage object metadata (RFC 0044). */
 export interface StorageObject {
   id: string;

@@ -1010,10 +1010,26 @@ describe('validateManifest', () => {
     expect(res.valid).toBe(true);
   });
 
+  it('accepts a valid events declaration (RFC 0045)', () => {
+    const res = validateManifest({
+      ...base,
+      events: [{ pattern: 'list:*', entry: 'app/_events/authorize-list.ts' }],
+    });
+    expect(res.valid).toBe(true);
+  });
+
   it('accepts a jobs declaration without optional fields', () => {
     const res = validateManifest({
       ...base,
       jobs: [{ type: 'cleanup', entry: 'app/_jobs/cleanup.ts' }],
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('accepts an events declaration without optional fields', () => {
+    const res = validateManifest({
+      ...base,
+      events: [{ pattern: 'list:overview', entry: 'app/_events/authorize.ts' }],
     });
     expect(res.valid).toBe(true);
   });
@@ -1026,10 +1042,56 @@ describe('validateManifest', () => {
     expect(res.valid).toBe(false);
   });
 
+  it('accepts a multi-segment event pattern with and without a trailing wildcard', () => {
+    for (const pattern of ['list:item:comments', 'list:item:comments:*']) {
+      const res = validateManifest({
+        ...base,
+        events: [{ pattern, entry: 'app/_events/authorize.ts' }],
+      });
+      expect(res.valid, `expected pattern "${pattern}" to be accepted`).toBe(true);
+    }
+  });
+
+  it('rejects an event pattern with a wildcard outside the trailing segment', () => {
+    for (const pattern of ['*', '*:list', 'li*st', 'list:*:comments']) {
+      const res = validateManifest({
+        ...base,
+        events: [{ pattern, entry: 'app/_events/authorize.ts' }],
+      });
+      expect(res.valid, `expected pattern "${pattern}" to be rejected`).toBe(false);
+    }
+  });
+
+  it('rejects an event pattern that is not lowercase colon-separated segments', () => {
+    for (const pattern of ['List:*', 'list_item:*', 'list.item:*']) {
+      const res = validateManifest({
+        ...base,
+        events: [{ pattern, entry: 'app/_events/authorize.ts' }],
+      });
+      expect(res.valid, `expected pattern "${pattern}" to be rejected`).toBe(false);
+    }
+  });
+
+  it('rejects an event entry outside app/', () => {
+    const res = validateManifest({
+      ...base,
+      events: [{ pattern: 'list:*', entry: 'lib/authorize.ts' }],
+    });
+    expect(res.valid).toBe(false);
+  });
+
   it('rejects a job entry that traverses out of the plugin', () => {
     const res = validateManifest({
       ...base,
       jobs: [{ type: 'sync.remote', entry: 'app/../../etc/passwd.ts' }],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects an event entry that traverses out of the plugin', () => {
+    const res = validateManifest({
+      ...base,
+      events: [{ pattern: 'list:*', entry: 'app/../../etc/passwd.ts' }],
     });
     expect(res.valid).toBe(false);
   });
@@ -1042,12 +1104,31 @@ describe('validateManifest', () => {
     expect(res.valid).toBe(false);
   });
 
+  it('rejects a non-.ts event entry', () => {
+    const res = validateManifest({
+      ...base,
+      events: [{ pattern: 'list:*', entry: 'app/_events/authorize.tsx' }],
+    });
+    expect(res.valid).toBe(false);
+  });
+
   it('rejects duplicate job types within a plugin', () => {
     const res = validateManifest({
       ...base,
       jobs: [
         { type: 'sync.remote', entry: 'app/_jobs/a.ts' },
         { type: 'sync.remote', entry: 'app/_jobs/b.ts' },
+      ],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects duplicate event patterns within a plugin', () => {
+    const res = validateManifest({
+      ...base,
+      events: [
+        { pattern: 'list:*', entry: 'app/_events/a.ts' },
+        { pattern: 'list:*', entry: 'app/_events/b.ts' },
       ],
     });
     expect(res.valid).toBe(false);
@@ -1091,6 +1172,20 @@ describe('validateManifest', () => {
       ...base,
       schedules: [{ id: 'due-reminders', intervalMinutes: 1, entry: 'app/_jobs/due-reminders.ts' }],
       jobs: [{ type: 'sync.remote', entry: 'app/_jobs/sync-remote.ts' }],
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects an empty events array', () => {
+    const res = validateManifest({ ...base, events: [] });
+    expect(res.valid).toBe(false);
+  });
+
+  it('accepts schedules and events declared together', () => {
+    const res = validateManifest({
+      ...base,
+      schedules: [{ id: 'due-reminders', intervalMinutes: 1, entry: 'app/_jobs/due-reminders.ts' }],
+      events: [{ pattern: 'list:*', entry: 'app/_events/authorize-list.ts' }],
     });
     expect(res.valid).toBe(true);
   });

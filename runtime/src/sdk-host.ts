@@ -91,14 +91,19 @@ import type {
   HandoffRequestContext,
   HandoffToken,
   ProviderConfig,
+  PublishEventInput,
   StorageObject,
 } from '@sovereignfs/sdk';
 import { requireJobsPluginContext } from './jobs';
+import type { EventEnvelope } from './event-broker';
 import { getDisabledPluginIds } from './plugin-status';
 import { getPortabilityPluginContext } from './portability/plugin-context';
 import { registerDeleter, registerExporter, registerImporter } from './portability/registry';
 import { fanOutPushToUser } from './push';
 import { getBroker } from './notification-broker';
+import { getEventBroker } from './event-broker';
+import { assertEventPayloadSize } from './event-limits';
+import { requireEventsPluginContext } from './plugin-events';
 import {
   checkDirectoryRateLimit,
   normalizeResolveUsersInput,
@@ -912,6 +917,30 @@ provideHost({
       const pdb = await getPlatformDb();
       const row = await getJobById(pdb, id, pluginId);
       return row ? toJobRef(row) : null;
+    },
+  },
+  events: {
+    async publish(input: PublishEventInput, pluginIdInput: string): Promise<void> {
+      const manifest = registry.find((m) => m.id === pluginIdInput);
+      const { pluginId } = requireEventsPluginContext(pluginIdInput, manifest, 'events:publish');
+      assertEventPayloadSize(input.payload);
+
+      // Namespaced so a plugin can never publish into (or collide with)
+      // another plugin's channel — the local `input.channel` never appears
+      // on the wire by itself.
+      const channel = `${pluginId}:${input.channel}`;
+      const envelope: EventEnvelope = {
+        id: randomUUID(),
+        channel,
+        type: input.type,
+        payload: input.payload,
+        createdAt: Date.now(),
+      };
+
+      const broker = getEventBroker();
+      if (broker) {
+        await broker.publish(channel, envelope);
+      }
     },
   },
   storage: {

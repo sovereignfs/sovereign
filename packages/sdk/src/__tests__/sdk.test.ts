@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { provideHost } from '../host';
-import { ConsentRequiredError, NotAuthenticatedError, NotImplementedError, sdk } from '../index';
+import { ConsentRequiredError, NotAuthenticatedError, sdk } from '../index';
 
 // A minimal mock host — lets us test SDK delegation without a real runtime.
 const mockDbClient = { select: () => ({}), insert: () => ({}) };
@@ -123,6 +123,11 @@ beforeAll(() => {
       },
       async get() {
         return null;
+      },
+    },
+    events: {
+      async publish(_input, _pluginId) {
+        /* no-op */
       },
     },
     crypto: {
@@ -410,7 +415,6 @@ describe('sdk surface', () => {
     expect(typeof sdk.connections.verifyOAuthState).toBe('function');
     expect(typeof sdk.connections.getProviderConfig).toBe('function');
     expect(typeof sdk.events.publish).toBe('function');
-    expect(typeof sdk.events.subscribe).toBe('function');
     expect(typeof sdk.e2ee.getProfile).toBe('function');
     expect(typeof sdk.e2ee.createProfile).toBe('function');
     expect(typeof sdk.e2ee.getRecoveryWrapper).toBe('function');
@@ -449,17 +453,17 @@ describe('sdk — host guard', () => {
   });
 });
 
-describe('sdk — experimental surfaces throw NotImplementedError', () => {
+describe('sdk — experimental surfaces', () => {
   it('notifications.send delegates to the registered host (RFC 0015)', async () => {
-    // No longer throws NotImplementedError — now delegates to the host.
     await expect(
       sdk.notifications.send({ recipientUserId: 'u1', title: 'Test' }),
     ).resolves.toBeUndefined();
   });
 
-  it('events.publish / events.subscribe', () => {
-    expect(() => sdk.events.publish('e', {})).toThrow(NotImplementedError);
-    expect(() => sdk.events.subscribe('e', () => undefined)).toThrow(NotImplementedError);
+  it('events.publish delegates to the registered host (RFC 0045)', async () => {
+    await expect(
+      sdk.events.publish({ channel: 'list:1', type: 'item.checked', payload: {} }),
+    ).resolves.toBeUndefined();
   });
 
   it('data.provide delegates to the registered host (RFC 0002)', () => {

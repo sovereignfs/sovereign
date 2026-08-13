@@ -182,6 +182,7 @@ serves at `/tasks/lists`.
 | `capabilities`  | object (see below)                                      | no                                   | Plugin-declared capabilities (RFC 0022). Each key is a local name auto-namespaced to `<pluginId>:<capName>`; enforce access inside the plugin via `sdk.auth.hasCapability`.                                                                                                                                |
 | `schedules`     | array (see below)                                       | no                                   | Recurring background schedules (RFC 0046 Phase 1). Each entry names a server-side handler module inside `app/` that the platform's in-process scheduler invokes every `intervalMinutes` while the plugin is enabled.                                                                                       |
 | `jobs`          | array (see below)                                       | no                                   | Background job type declarations (RFC 0046). Each entry names a server-side handler module inside `app/` that the platform's job worker invokes whenever a `sdk.jobs.enqueue()`/`schedule()` call for that `type` becomes due. Coexists with `schedules` — see below for when to use each.                 |
+| `events`        | array (see below)                                       | no                                   | Realtime channel authorization declarations for `sdk.events` (RFC 0045). Each entry names a server-side handler module inside `app/` that decides whether a subscribing user may receive events on a matching channel pattern.                                                                             |
 | `connections`   | object (see below)                                      | no                                   | External provider connection declarations (RFC 0049). Lists OAuth/connect-account providers and callback paths for platform-visible connection metadata.                                                                                                                                                   |
 | `monetization`  | object (see below)                                      | no                                   | Monetization model (RFC 0003). Declares the billing model, tiers, and the author's Ed25519 public key for offline license verification. Only `sovereign`/`community` plugins may declare this.                                                                                                             |
 | `repository`    | string (URL)                                            | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                                                                                  |
@@ -224,6 +225,10 @@ Declared SDK capabilities. The v1-functional ones:
 
 | `jobs:write` | Enqueue/schedule/cancel/read background jobs via `sdk.jobs` (RFC 0046). |
 
+| `events:publish` | Publish realtime events via `sdk.events.publish()` (RFC 0045). |
+
+| `events:subscribe` | Declares the plugin's channels are subscribable — a `GET /api/events/stream`/`poll` caller must still pass a manifest-declared `events[]` channel authorizer before actually receiving anything (RFC 0045). |
+
 | `storage:readWrite` | Read/write plugin-scoped binary objects via `sdk.storage` (RFC 0044). |
 
 | `crypto:use` | Server-side field encryption via `sdk.crypto.encryptField()`/`decryptField()` (RFC 0092). |
@@ -241,7 +246,7 @@ Declared SDK capabilities. The v1-functional ones:
 | `handoffs:receive` | Declare `handoffs.receives[]` entries and consume tokens addressed to them via `sdk.handoffs.consume()` (RFC 0053). |
 
 Reserved (declaring them is allowed; the backing surfaces throw `NotImplementedError` until
-implemented): `events:publish`, `events:subscribe`, `device:secureStorage`. `e2ee:use` (client-side encryption,
+implemented): `device:secureStorage`. `e2ee:use` (client-side encryption,
 `sdk.e2ee` — RFC 0060) and `crypto:use` (server-side field encryption, `sdk.crypto` —
 RFC 0092) are both implemented and deliberately distinct: the runtime _can_ decrypt a
 `sdk.crypto` field, and can never decrypt an `sdk.e2ee` object.
@@ -2066,6 +2071,97 @@ dev-server restart, same as `schedules`. Operators can disable the job
 worker with `SOVEREIGN_JOB_WORKER_DISABLED=1`. Console → System health
 shows queued/scheduled/running counts and recent failures.
 
+### `events` — realtime channels (RFC 0045)
+
+`sdk.events` is for low-latency, ephemeral application state updates — list
+changes, presence, cursors, progress updates. **It is not a durable queue,
+not a notification inbox (`sdk.notifications`), and not an audit log
+(`sdk.activity`).** Events are best-effort, unordered across processes, and
+not persisted by default — a disconnected client must refetch state on
+reconnect rather than trust it received every event.
+
+Requires the `events:publish` permission to publish. Declare a channel
+authorizer for every channel pattern your plugin wants subscribable:
+
+```json
+"permissions": ["events:publish", "events:subscribe"],
+"events": [
+  { "pattern": "list:*", "entry": "app/_events/authorize-list.ts" }
+]
+```
+
+| Field         | Notes                                                                                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pattern`     | Plugin-local channel pattern this handler authorizes — lowercase colon-separated segments, optionally ending in a `:*` wildcard segment (e.g. `"list:*"` or exact `"list:overview"`). |
+| `entry`       | Handler module path relative to the plugin root, inside `app/`. Must be a `.ts` module; use an underscore-prefixed directory (e.g. `app/_events/`) so it never becomes a route.       |
+| `description` | Optional human-readable note.                                                                                                                                                         |
+
+The entry module's **default export** is an `EventChannelAuthorizer` from
+`@sovereignfs/sdk` — invoked whenever a user tries to subscribe to a channel
+matching `pattern`, wired the same way as `schedules`' `entry` (manifest
+declaration + generate-time static import, not a runtime `register()` call —
+there is no reliable moment for plugin code to register a callback before
+the first subscribe request needs it):
+
+```ts
+// app/_events/authorize-list.ts
+import type { EventChannelAuthorizerContext } from '@sovereignfs/sdk';
+
+export default async function authorizeList(ctx: EventChannelAuthorizerContext): Promise<boolean> {
+  const listId = ctx.channel.split(':')[1];
+  return userCanReadList(ctx.userId, listId);
+}
+```
+
+**No matching declared pattern, or every matching handler returning
+falsy/throwing, denies — subscriptions fail closed, not open.**
+
+From server-side plugin code (a server action, route handler, or job
+handler), publish with `sdk.events.publish()`:
+
+```ts
+import { headers } from 'next/headers';
+import { sdk } from '@sovereignfs/sdk';
+
+await sdk.events.publish(
+  { channel: `list:${listId}`, type: 'item.checked', payload: { itemId } },
+  await headers(),
+);
+```
+
+The runtime prefixes `channel` with your plugin's ID before publishing — you
+never see or set the namespaced form, and you cannot publish into another
+plugin's channel. Payloads are capped at 16 KB.
+
+**There is no `sdk.events.subscribe()`.** The browser subscribes via a
+runtime route, not a server-side SDK call:
+
+```
+GET /api/events/stream?pluginId=<your-plugin-id>&channel=list:1
+```
+
+An `EventSource` connection receives one `data:` line (JSON `EventEnvelope`)
+per published event. When `SOVEREIGN_EVENTS_TRANSPORT=polling` (or as a
+general fallback), poll instead:
+
+```
+GET /api/events/poll?pluginId=<your-plugin-id>&channel=list:1&sinceId=<last-seen-id>
+```
+
+`poll` reads from a small, bounded, **in-memory, per-process** buffer (a few
+minutes of recent events, not a database) — it exists specifically so
+polling clients have something to read even though events aren't persisted;
+it is not a substitute for `sdk.notifications` if you need guaranteed
+delivery. Both routes run the identical authorization check (session, your
+plugin's `events:subscribe` permission and enabled state, then your declared
+channel authorizer) — polling is not a lesser-checked shortcut.
+
+**Dev-mode caveat:** channel authorizer handlers are composed into the
+runtime at generate time and imported at server startup — editing one
+requires a dev-server restart, same as `schedules`. Operators can select the
+transport with `SOVEREIGN_EVENTS_TRANSPORT` (`sse` default, `redis`, or
+`polling`) and point it at Redis with the existing `REDIS_URL`.
+
 ### `monetization` — plugin monetization (RFC 0003)
 
 Plugins can declare a monetization model to require users to hold a valid signed
@@ -2547,7 +2643,13 @@ requestHeaders)` claims a `(provider, eventId)` pair for replay
   missing a plugin id — there's no legitimate call site without one. See
   [`webhooks` — public plugin webhooks (RFC 0050)](#webhooks--public-plugin-webhooks-rfc-0050)
   above.
-- **Reserved** (throw `NotImplementedError` in v1): `events`.
+- **`events`** — ephemeral realtime channels (RFC 0045). `sdk.events.publish(input,
+requestHeaders)` publishes to a plugin-scoped channel; requires the
+  `events:publish` manifest permission. There is no `sdk.events.subscribe()` —
+  clients subscribe via `GET /api/events/stream` (or `/api/events/poll` as a
+  fallback), gated by a manifest-declared `events[]` channel authorizer. See
+  [`events` — realtime channels (RFC 0045)](#events--realtime-channels-rfc-0045)
+  above.
 
 ### The SDK boundary rule
 

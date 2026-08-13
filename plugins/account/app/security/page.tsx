@@ -1,5 +1,6 @@
 import { headers } from 'next/headers';
 import { sdk } from '@sovereignfs/sdk';
+import { DeviceStorageKeySection } from '../_components/DeviceStorageKeySection';
 import { EncryptionSection } from '../_components/EncryptionSection';
 import { PasswordChangeForm } from '../_components/PasswordChangeForm';
 import { SessionList } from '../_components/SessionList';
@@ -61,6 +62,17 @@ export default async function SecurityPage() {
           initialRecoveryWrapper={e2eeRecoveryWrapper}
           initialDevices={e2eeDevices}
         />
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Device Storage Key</h2>
+          <p className={styles.sectionSubtitle}>
+            Unlocks apps that keep their data only on this device — set up once here, used by every
+            app on this device automatically.
+          </p>
+        </div>
+        <DeviceStorageKeySection />
       </section>
 
       <section className={styles.section}>

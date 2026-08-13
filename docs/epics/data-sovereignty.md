@@ -794,9 +794,11 @@ itself gone.
 
 **Deliverables — per RFC 0093 §4, all three, layered:**
 
-- **Mandatory warning (Layer 1):** explicit in-product warning at enrolment
-  and in `docs/plugin-development.md` — what device-only means, that losing
-  the device with no recovery secret saved is permanent, unrecoverable loss.
+- **Mandatory warning (Layer 1):** explicit in-product warning shown once,
+  when the user sets up their Device Storage Key in Account → Security (task
+  1.22) — not per-plugin — and in `docs/plugin-development.md`: what
+  device-only means, that losing the device with no recovery secret saved
+  is permanent, unrecoverable loss.
 - **User-driven export (Layer 2), always available, no toggle:** an
   encrypted (never plaintext) export/import path. No server involvement.
 - **Encrypted server backup (Layer 3), opt-in:** server stores ciphertext of
@@ -826,8 +828,9 @@ as a stated exception once implemented.
 **Review checklist:**
 
 - The chosen option is implemented and documented.
-- Enrolment tells the user what happens if they lose the device, before they
-  commit data to the plugin.
+- Setting up the Device Storage Key (Account → Security, task 1.22) tells the user
+  what happens if they lose the device, before any `device-only` plugin
+  commits data under it.
 - The revocation position is written down where an operator will find it.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 

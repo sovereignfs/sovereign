@@ -96,6 +96,7 @@ export type { Surface } from './device';
  *
  * ```ts
  * import { generateCmk, wrapCmkWithRecoverySecret } from '@sovereignfs/sdk/e2ee-crypto';
+ * import { deriveDeviceOnlyKeyViaPrf } from '@sovereignfs/sdk/device-only-crypto';
  * import { getOrCreateDeviceId, storeDeviceKey } from '@sovereignfs/sdk/e2ee-device';
  * import { encryptBlob, encryptJson } from '@sovereignfs/sdk/e2ee-object';
  * import { getE2eeLocalState } from '@sovereignfs/sdk/e2ee-state';

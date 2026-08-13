@@ -17,6 +17,8 @@ export default defineConfig({
     'src/index.ts',
     'src/device-bridge.ts',
     'src/device-client.ts',
+    'src/device-only-crypto.ts',
+    'src/device-only-storage.ts',
     'src/drizzle.ts',
     'src/e2ee-crypto.ts',
     'src/e2ee-device.ts',

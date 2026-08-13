@@ -20,9 +20,22 @@ const TEMPLATES: Array<{ id: EmailTemplateId; label: string }> = [
 const LOCALES: Array<{ id: string; label: string }> = [
   { id: 'en', label: 'English' },
   { id: 'de', label: 'German (Deutsch)' },
-  { id: 'si', label: 'Sinhala (සිංහල)' },
+  { id: 'si', label: 'Sinhala (සிංහල)' },
   { id: 'ta', label: 'Tamil (தமிழ்)' },
 ];
+
+// templateId/locale flow into the preview <iframe>'s src (a URL/HTML sink) —
+// validate the <select>'s reported value against the fixed option set before
+// it ever reaches state, rather than trusting e.target.value directly
+// (CodeQL js/xss-through-dom: a change event isn't guaranteed to carry one of
+// the option values actually rendered).
+function isTemplateId(value: string): value is EmailTemplateId {
+  return TEMPLATES.some((t) => t.id === value);
+}
+
+function isLocaleId(value: string): boolean {
+  return LOCALES.some((l) => l.id === value);
+}
 
 /** Field key → label + whether it's a multi-line body field. Subject is
  * capped at 200 chars server-side; body fields at 2000 (see
@@ -99,7 +112,9 @@ export function EmailTemplatesForm() {
             <Select
               {...field}
               value={templateId}
-              onChange={(e) => setTemplateId(e.target.value as EmailTemplateId)}
+              onChange={(e) => {
+                if (isTemplateId(e.target.value)) setTemplateId(e.target.value);
+              }}
             >
               {TEMPLATES.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -111,7 +126,13 @@ export function EmailTemplatesForm() {
         </FormField>
         <FormField label="Locale" id="email-locale-select">
           {(field) => (
-            <Select {...field} value={locale} onChange={(e) => setLocale(e.target.value)}>
+            <Select
+              {...field}
+              value={locale}
+              onChange={(e) => {
+                if (isLocaleId(e.target.value)) setLocale(e.target.value);
+              }}
+            >
               {LOCALES.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.label}

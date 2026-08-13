@@ -138,6 +138,27 @@ describe('supports / getTransport / getShellInfo', () => {
     expect(deviceClient.isDeviceOnlyTierAvailable()).toBe(true);
   });
 
+  it('isDeviceOnlyTierAvailable() reports true on plain web/PWA with WebAuthn + OPFS, no bridge needed', async () => {
+    vi.stubGlobal('PublicKeyCredential', function PublicKeyCredential() {});
+    vi.stubGlobal('navigator', {
+      credentials: {},
+      storage: { getDirectory: async () => ({}) },
+    });
+    vi.resetModules();
+    const deviceClient = await import('../device-client');
+
+    expect(deviceClient.isDeviceOnlyTierAvailable()).toBe(true);
+  });
+
+  it('isDeviceOnlyTierAvailable() reports false on web when only one of WebAuthn/OPFS is present', async () => {
+    vi.stubGlobal('PublicKeyCredential', function PublicKeyCredential() {});
+    vi.stubGlobal('navigator', { credentials: {} }); // no navigator.storage.getDirectory
+    vi.resetModules();
+    const deviceClient = await import('../device-client');
+
+    expect(deviceClient.isDeviceOnlyTierAvailable()).toBe(false);
+  });
+
   it('maps desktop platforms to the tauri transport', async () => {
     provideBridge(
       nativeImpl({

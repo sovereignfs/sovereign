@@ -755,15 +755,19 @@ over — and tells the platform how much offline capability your plugin needs:
   wants — a shopping list, a task list, the Launcher's own plugin list.
 - **`"device-only"`** — your plugin's data never leaves the device at all;
   there is no server copy. This needs a durable, encrypted, device-auth-gated
-  store, which today only a native shell provides. Check
+  store — available via **either** a native shell's Keychain/Keystore
+  (`sovereign-mobile`'s `secureStorage` capability) **or** plain web/PWA's
+  WebAuthn PRF + OPFS path (`@sovereignfs/sdk/device-only-kv`). Check
   `isDeviceOnlyTierAvailable()` from `@sovereignfs/sdk/device-client` before
-  relying on it — it reports `false` on every surface until the underlying
-  device-bridge capability ships, so a plugin declaring this tier must have a
-  real fallback for "not available here" today, not just for a slow network.
-  Wrap your plugin's own root content in `DeviceOnlyGate` (`@sovereignfs/ui`),
-  passing that same `isDeviceOnlyTierAvailable()` result as `available` — it
-  renders an explanatory "Phone only" state instead of your plugin's content
-  when unavailable, the same pattern `OfflineGate` uses for Console/Account.
+  relying on it — it's `true` on whichever of the two backends this surface
+  actually has, `false` only when neither is available (an older browser, a
+  native shell build that hasn't shipped `secureStorage` yet), so a plugin
+  declaring this tier still needs a real fallback for that case, not just for
+  a slow network. Wrap your plugin's own root content in `DeviceOnlyGate`
+  (`@sovereignfs/ui`), passing that same `isDeviceOnlyTierAvailable()` result
+  as `available` — it renders an explanatory "Phone only" state instead of
+  your plugin's content when unavailable, the same pattern `OfflineGate` uses
+  for Console/Account.
   The Launcher's own tile and the shell's Apps drawer already show a
   restricted badge for `device-only` plugins (epic task 2.33), but that's
   advisory UI only — a user reaching your route directly (a bookmark, a deep

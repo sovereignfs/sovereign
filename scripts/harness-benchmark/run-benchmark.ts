@@ -36,6 +36,8 @@ interface ChatCompletionResult {
   tokensReported: boolean;
   tokensPerSecond: number | null;
   completionText: string;
+  reasoningText: string;
+  error: string | null;
 }
 
 function parseArgs(argv: string[]): Record<string, string | boolean> {
@@ -60,10 +62,13 @@ async function runChatCompletion(
   model: string,
   messages: { role: string; content: string }[],
   timeoutSeconds: number,
+  maxTokens: number,
+  enableThinking: boolean,
 ): Promise<ChatCompletionResult> {
   const start = performance.now();
   let firstTokenAt: number | null = null;
   let text = '';
+  let reasoningText = '';
   let reportedTokens: number | null = null;
 
   const controller = new AbortController();
@@ -78,6 +83,20 @@ async function runChatCompletion(
         messages,
         stream: true,
         stream_options: { include_usage: true },
+        max_tokens: maxTokens,
+        // Qwen3 defaults to "thinking" mode -- reasoning tokens stream
+        // under delta.reasoning_content, not delta.content, and can burn
+        // the whole max_tokens budget before any visible answer starts
+        // (confirmed on this rig: a 200-token budget produced zero
+        // content, TTFT-to-content of 20+s on the ones that did). Warden
+        // phase 1 is basic chat, not reasoning, so thinking is disabled
+        // by default here to measure the latency that actually matters
+        // for that product surface. `think` is Ollama's native flag,
+        // `chat_template_kwargs.enable_thinking` is llama.cpp's -- both
+        // sent unconditionally since each engine ignores the field it
+        // doesn't recognize.
+        think: enableThinking,
+        chat_template_kwargs: { enable_thinking: enableThinking },
       }),
       signal: controller.signal,
     });
@@ -100,7 +119,9 @@ async function runChatCompletion(
         const payload = trimmed.slice('data:'.length).trim();
         if (payload === '[DONE]') continue;
         let parsed: {
-          choices?: { delta?: { content?: string } }[];
+          choices?: {
+            delta?: { content?: string; reasoning_content?: string; reasoning?: string };
+          }[];
           usage?: { completion_tokens?: number };
         };
         try {
@@ -109,9 +130,20 @@ async function runChatCompletion(
           continue;
         }
         const delta = parsed.choices?.[0]?.delta?.content;
+        // llama.cpp uses reasoning_content; Ollama's OpenAI-compat layer
+        // uses reasoning -- and as of Ollama v0.32.9, that layer doesn't
+        // honor `think: false` at all (only its native /api/chat does),
+        // so Ollama-via-this-endpoint always streams reasoning regardless
+        // of the enableThinking flag. Real engineering-cost finding for
+        // Research 0015, not a bug to paper over.
+        const reasoningDelta =
+          parsed.choices?.[0]?.delta?.reasoning_content ?? parsed.choices?.[0]?.delta?.reasoning;
         if (delta) {
           if (firstTokenAt === null) firstTokenAt = performance.now();
           text += delta;
+        }
+        if (reasoningDelta) {
+          reasoningText += reasoningDelta;
         }
         if (parsed.usage?.completion_tokens) {
           reportedTokens = parsed.usage.completion_tokens;
@@ -136,6 +168,8 @@ async function runChatCompletion(
         ? Math.round((approxTokens / durationSeconds) * 100) / 100
         : null,
     completionText: text,
+    reasoningText,
+    error: null,
   };
 }
 
@@ -165,12 +199,22 @@ async function main() {
   const outputPath = args.output as string;
   const container = args.container as string | undefined;
   const cold = Boolean(args.cold);
-  const timeoutSeconds = args.timeout ? Number(args.timeout) : 60;
+  const timeoutSeconds = args.timeout ? Number(args.timeout) : 120;
+  // Capped so a rambling completion on slow CPU-only hardware can't blow
+  // past --timeout -- an uncapped generation is exactly what crashed the
+  // first llama.cpp run on the 2 vCPU benchmark box (task ran past 60s,
+  // AbortController fired mid-stream, unhandled rejection killed the
+  // whole corpus instead of just that item).
+  const maxTokens = args['max-tokens'] ? Number(args['max-tokens']) : 200;
+  // Off by default -- see runChatCompletion's comment. Pass --think to
+  // measure the reasoning-enabled path instead.
+  const enableThinking = Boolean(args.think);
 
   if (!provider || !model || !outputPath) {
     console.error(
       'Usage: tsx run-benchmark.ts --provider <llama-cpp|ollama> --model <name> --output <path> ' +
-        '[--base-url <url>] [--container <name>] [--cold] [--corpus <path>] [--timeout <seconds>]',
+        '[--base-url <url>] [--container <name>] [--cold] [--corpus <path>] [--timeout <seconds>] ' +
+        '[--max-tokens <n>] [--think]',
     );
     process.exit(1);
   }
@@ -199,8 +243,33 @@ async function main() {
   // Ollama, 6.96s -- check whether it reproduces here or whether a kept-
   // warm Compose service avoids it).
   for (const item of corpus.items) {
-    const result = await runChatCompletion(baseUrl, model, item.messages, timeoutSeconds);
-    items.push({ id: item.id, ...result });
+    try {
+      const result = await runChatCompletion(
+        baseUrl,
+        model,
+        item.messages,
+        timeoutSeconds,
+        maxTokens,
+        enableThinking,
+      );
+      items.push({ id: item.id, ...result });
+    } catch (error) {
+      // One slow/failed item (e.g. an abort on a memory- and CPU-
+      // constrained box) must not discard every other item's data --
+      // Research 0015 explicitly wants both engines' numbers kept, not
+      // silently lost to a single bad prompt.
+      items.push({
+        id: item.id,
+        timeToFirstTokenSeconds: null,
+        totalDurationSeconds: timeoutSeconds,
+        completionTokens: null,
+        tokensReported: false,
+        tokensPerSecond: null,
+        completionText: '',
+        reasoningText: '',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   report.items = items;

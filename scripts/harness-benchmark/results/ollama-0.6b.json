@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-08-13T18:22:59.476Z",
+  "provider": "ollama",
+  "model": "qwen3:0.6b",
+  "baseUrl": "http://127.0.0.1:11434",
+  "corpusId": "warden-phase1-chat-v1",
+  "cold": true,
+  "items": [
+    {
+      "id": "greeting",
+      "timeToFirstTokenSeconds": 11.706971847999998,
+      "totalDurationSeconds": 12.96,
+      "completionTokens": 145,
+      "tokensReported": true,
+      "tokensPerSecond": 11.19,
+      "completionText": "Hi! How can I assist you today? Just let me know what you need! 😊",
+      "reasoningText": "Okay, the user just asked, \"Hi! What can you help me with?\" I need to respond appropriately. They're probably trying to get a response. Let me consider different scenarios.\n\nFirst, I should acknowledge their greeting. A simple \"Hi\" is good. Then, ask them to specify their question. It's important to be open-ended so they can provide more details. Maybe mention that I'm here to help in all cases, to show that I'm willing to assist. Also, be polite and friendly, keeping the tone natural. Let me make sure the response is clear and helpful.\n",
+      "error": null
+    },
+    {
+      "id": "short-explain",
+      "timeToFirstTokenSeconds": null,
+      "totalDurationSeconds": 12.1322,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 16.49,
+      "completionText": "",
+      "reasoningText": "Okay, so I need to explain what a self-hosted app means in two sentences. Let's start by breaking down the key points. \n\nFirst, self-hosted apps are apps that run on the user's own servers or a third-party service. That makes sense because you control the hosting. Like, if I set up my own server, my app is there, right?\n\nSecond, maybe mention that users can manage the app themselves. Since the hosting is their own, they can update content, tweak functionality, and make changes without relying on external support. Oh, and maybe add that it's often used for specific tasks or projects, like a personal portfolio site or a business platform. That would make the explanation complete.\n\nWait, is there anything else? Maybe clarify that you can customize the app according to business needs. Yeah, that's important for a self-hosted app. Also, it's important that the app remains secure since you're hosting it yourself rather than having external",
+      "error": null
+    },
+    {
+      "id": "list-format",
+      "timeToFirstTokenSeconds": null,
+      "totalDurationSeconds": 12.3461,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 16.2,
+      "completionText": "",
+      "reasoningText": "Okay, so the user wants me to list three benefits of keeping data on their own server. Let me start by thinking about the main areas where server storage can provide advantages. \n\nFirst, redundancy. If the data is stored on a server, you can have multiple copies, so if one fails, the other still functions. That's a basic benefit. Then, cost savings. Having a separate server might lower expenses if you can manage the hosting via a cloud provider, right? Or maybe just pay for it on your own, saving money over time as you don't have to rely on others.\n\nThird, better performance. If the server is off, maybe there's less traffic, so processing is smoother. Or perhaps the server is used for specific tasks, like caching, which can enhance speed. But wait, the user is asking for three benefits. Let me verify. Redundancy, cost savings from managing costs, and performance when the server isn't in use. That three points",
+      "error": null
+    },
+    {
+      "id": "followup-context",
+      "timeToFirstTokenSeconds": 7.240211432999997,
+      "totalDurationSeconds": 7.6267,
+      "completionTokens": 126,
+      "tokensReported": true,
+      "tokensPerSecond": 16.52,
+      "completionText": "The capital of Germany is Berlin.",
+      "reasoningText": "Okay, the user is asking about the capital of Germany. I remember France's capital is Paris, but I need to confirm. Let me think. France's capital is indeed Paris, located in the northern part of France. Now, Germany's capital is Berlin, right? But wait, sometimes there's confusion with the capital of other countries. I should make sure both answers are correct and distinct. Also, the user might be testing if I can recall correct facts, so it's important to double-check the answer. No errors here, so the response is accurate.\n",
+      "error": null
+    },
+    {
+      "id": "longer-response",
+      "timeToFirstTokenSeconds": 10.993036909000002,
+      "totalDurationSeconds": 12.0503,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 16.6,
+      "completionText": "A home assistant chatbot could streamline tasks and notes by organizing daily work, setting reminders for deadlines",
+      "reasoningText": "Okay, so the user wants me to write a short paragraph (about 80 words) describing what a home assistant chatbot could do for someone managing tasks and notes. Let me start by breaking down the key elements.\n\nFirst, the main purpose of a home assistant chatbot. It's supposed to handle tasks and notes efficiently. I need to mention tasks like organizing files, scheduling, and communication. Maybe mention time management by suggesting tasks and checking deadlines. Then, notes are important, so talking about managing personal information and reminders. Words like to-do lists, task tracking, and reminders come to mind. Also, maybe include how it provides quick access to information like project schedules. Need to keep it concise, around 80 words. Let me check for flow and ensure all points are there without being too verbose. Make sure it's clear and covers both tasks and notes.\n",
+      "error": null
+    }
+  ],
+  "coldStartTimeToFirstTokenSeconds": 11.706971847999998,
+  "warmItems": [
+    {
+      "id": "short-explain",
+      "timeToFirstTokenSeconds": null,
+      "totalDurationSeconds": 12.1322,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 16.49,
+      "completionText": "",
+      "reasoningText": "Okay, so I need to explain what a self-hosted app means in two sentences. Let's start by breaking down the key points. \n\nFirst, self-hosted apps are apps that run on the user's own servers or a third-party service. That makes sense because you control the hosting. Like, if I set up my own server, my app is there, right?\n\nSecond, maybe mention that users can manage the app themselves. Since the hosting is their own, they can update content, tweak functionality, and make changes without relying on external support. Oh, and maybe add that it's often used for specific tasks or projects, like a personal portfolio site or a business platform. That would make the explanation complete.\n\nWait, is there anything else? Maybe clarify that you can customize the app according to business needs. Yeah, that's important for a self-hosted app. Also, it's important that the app remains secure since you're hosting it yourself rather than having external",
+      "error": null
+    },
+    {
+      "id": "list-format",
+      "timeToFirstTokenSeconds": null,
+      "totalDurationSeconds": 12.3461,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 16.2,
+      "completionText": "",
+      "reasoningText": "Okay, so the user wants me to list three benefits of keeping data on their own server. Let me start by thinking about the main areas where server storage can provide advantages. \n\nFirst, redundancy. If the data is stored on a server, you can have multiple copies, so if one fails, the other still functions. That's a basic benefit. Then, cost savings. Having a separate server might lower expenses if you can manage the hosting via a cloud provider, right? Or maybe just pay for it on your own, saving money over time as you don't have to rely on others.\n\nThird, better performance. If the server is off, maybe there's less traffic, so processing is smoother. Or perhaps the server is used for specific tasks, like caching, which can enhance speed. But wait, the user is asking for three benefits. Let me verify. Redundancy, cost savings from managing costs, and performance when the server isn't in use. That three points",
+      "error": null
+    },
+    {
+      "id": "followup-context",
+      "timeToFirstTokenSeconds": 7.240211432999997,
+      "totalDurationSeconds": 7.6267,
+      "completionTokens": 126,
+      "tokensReported": true,
+      "tokensPerSecond": 16.52,
+      "completionText": "The capital of Germany is Berlin.",
+      "reasoningText": "Okay, the user is asking about the capital of Germany. I remember France's capital is Paris, but I need to confirm. Let me think. France's capital is indeed Paris, located in the northern part of France. Now, Germany's capital is Berlin, right? But wait, sometimes there's confusion with the capital of other countries. I should make sure both answers are correct and distinct. Also, the user might be testing if I can recall correct facts, so it's important to double-check the answer. No errors here, so the response is accurate.\n",
+      "error": null
+    },
+    {
+      "id": "longer-response",
+      "timeToFirstTokenSeconds": 10.993036909000002,
+      "totalDurationSeconds": 12.0503,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 16.6,
+      "completionText": "A home assistant chatbot could streamline tasks and notes by organizing daily work, setting reminders for deadlines",
+      "reasoningText": "Okay, so the user wants me to write a short paragraph (about 80 words) describing what a home assistant chatbot could do for someone managing tasks and notes. Let me start by breaking down the key elements.\n\nFirst, the main purpose of a home assistant chatbot. It's supposed to handle tasks and notes efficiently. I need to mention tasks like organizing files, scheduling, and communication. Maybe mention time management by suggesting tasks and checking deadlines. Then, notes are important, so talking about managing personal information and reminders. Words like to-do lists, task tracking, and reminders come to mind. Also, maybe include how it provides quick access to information like project schedules. Need to keep it concise, around 80 words. Let me check for flow and ensure all points are there without being too verbose. Make sure it's clear and covers both tasks and notes.\n",
+      "error": null
+    }
+  ],
+  "averageWarmTimeToFirstTokenSeconds": 9.1166,
+  "averageWarmTokensPerSecond": 16.45,
+  "idleMemoryUsage": null,
+  "finishedAt": "2026-08-13T18:23:56.601Z"
+}

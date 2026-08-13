@@ -1,6 +1,7 @@
 # Workstream 0014 — Warden: harness engine and platform plugin, phase 1
 
-**Status:** 📋 Planned\
+**Status:** 🔄 In progress — leg 1 (task 22.1) done, llama.cpp selected;
+legs 2–3 remain\
 **Date:** August 2026 (rewritten; originally drafted for a different
 architecture)\
 **Author:** kasunben\
@@ -36,11 +37,12 @@ infrastructure the operator controls.
 
 ## Definition of done
 
-- [ ] `22.1` — the llama.cpp-vs-Ollama benchmark from
+- [x] `22.1` — the llama.cpp-vs-Ollama benchmark from
       [Research 0015](../research/0015-harness-engine-benchmark.md) is
       actually run (not estimated) on representative self-hosting hardware,
       covering both `qwen3:1.7b` and `qwen3:0.6b`; the research doc is
       updated in place with a filled-in decision and moved to `Decided`.
+      **Done:** llama.cpp selected — see Research 0015's Decision section.
 - [ ] `22.2` — `apps/harness` exists as a standalone first-party service
       (own `package.json`/`Dockerfile`/health endpoint), wraps the chosen
       engine, joins `sovereign_net`, stays unexposed to the public internet
@@ -75,7 +77,7 @@ service existing and exposing its internal chat API.
 
 | Leg | Name                                   | Epic tasks | Epics | Gate?   | Done when                                                                                                 |
 | --- | -------------------------------------- | ---------- | ----- | ------- | --------------------------------------------------------------------------------------------------------- |
-| 1   | Harness engine benchmark               | 22.1       | 22    | **Yes** | Research 0015 is resolved with a measured decision, not a guess                                           |
+| 1   | Harness engine benchmark ✅            | 22.1       | 22    | **Yes** | Research 0015 is resolved with a measured decision, not a guess — done, llama.cpp selected                |
 | 2   | `apps/harness` engine service scaffold | 22.2       | 22    | No      | The chosen engine runs as a standalone, unexposed-by-default service with a real trust boundary to Warden |
 | 3   | Warden platform plugin: basic chat     | 22.3       | 22    | No      | A user can install Warden and chat end to end, with zero tool/handoff/voice/floating-button surface       |
 
@@ -113,6 +115,16 @@ scope.
 hardware (e.g. only a high-end dev workstation is available) — note that
 limitation explicitly in the research doc's decision rather than presenting
 workstation numbers as representative of a typical self-hosted deployment.
+
+**Leg outcome:** ran on the actual production self-hosting box (2 vCPU /
+3.7GB RAM, no GPU) — genuinely representative, not a workstation. llama.cpp
+selected; the deciding factor was Qwen3's default "thinking" mode, which
+llama.cpp can disable (`chat_template_kwargs.enable_thinking: false`) and
+Ollama's OpenAI-compatible endpoint cannot (only its native `/api/chat`
+honors `think: false`), costing 9–21s of TTFT on every Ollama request vs.
+llama.cpp's sub-second TTFT. Full detail in
+[Research 0015](../research/0015-harness-engine-benchmark.md)'s Decision
+section.
 
 ### Leg 2 — `apps/harness` engine service scaffold
 
@@ -193,7 +205,8 @@ especially) will depend on being solid.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                              |
-| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft — 5 legs (22.1–22.5) against RFC 0063's original runtime-owned "Jarvis" design                                                                                                                                                                                                                        |
-| 0.2     | August 2026 | Full rewrite following RFC 0063's own rewrite (Warden, `plugins/warden` + `apps/harness`) — 3 legs (engine benchmark, service scaffold, plugin chat), tool execution/task handoff/floating button/voice all moved out of this workstream's scope entirely, per direct developer instruction to ship foundation only |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft — 5 legs (22.1–22.5) against RFC 0063's original runtime-owned "Jarvis" design                                                                                                                                                                                                                                                                                          |
+| 0.2     | August 2026 | Full rewrite following RFC 0063's own rewrite (Warden, `plugins/warden` + `apps/harness`) — 3 legs (engine benchmark, service scaffold, plugin chat), tool execution/task handoff/floating button/voice all moved out of this workstream's scope entirely, per direct developer instruction to ship foundation only                                                                   |
+| 0.3     | 2026-08-13  | Leg 1 (task 22.1) done — llama.cpp server selected over Ollama, measured on the actual production self-hosting box. Decisive factor was Qwen3's default thinking mode: llama.cpp can disable it cleanly, Ollama's OpenAI-compatible endpoint can't (only its native `/api/chat` does). Full data in [Research 0015](../research/0015-harness-engine-benchmark.md). Legs 2–3 unblocked |

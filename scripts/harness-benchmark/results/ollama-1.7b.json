@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-08-13T18:20:00.351Z",
+  "provider": "ollama",
+  "model": "qwen3:1.7b",
+  "baseUrl": "http://127.0.0.1:11434",
+  "corpusId": "warden-phase1-chat-v1",
+  "cold": false,
+  "items": [
+    {
+      "id": "greeting",
+      "timeToFirstTokenSeconds": null,
+      "totalDurationSeconds": 27.6357,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 7.24,
+      "completionText": "",
+      "reasoningText": "Okay, the user asked, \"Hi! What can you help me with?\" So, I need to respond in a way that's helpful and engaging. Let me think about the possible ways I can assist them.\n\nFirst, I should acknowledge their greeting and express willingness to help. Then, maybe list some common areas where I can assist. Let me recall the topics I can handle. \n\nI can help with answering questions, providing information, solving problems, writing, coding, explaining concepts, etc. But I need to make it clear and not too generic. Maybe break it down into categories.\n\nAlso, the user might not know what I can do, so I should explain briefly. Maybe use bullet points or sections. But since the user asked for help, I should prompt them to specify what they need. \n\nWait, the original query was in Chinese, but the user wrote \"Hi! What can you help me with?\" So, maybe they want to know the range of help I",
+      "error": null
+    },
+    {
+      "id": "short-explain",
+      "timeToFirstTokenSeconds": 20.828958405999998,
+      "totalDurationSeconds": 26.0553,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 7.68,
+      "completionText": "A self-hosted app is an application that is hosted and managed by the user rather than being hosted on a cloud provider, giving them full control over infrastructure, data, and security. This approach allows for",
+      "reasoningText": "Okay, the user wants a definition of a self-hosted app in two sentences. Let me start by recalling what a self-hosted app is. It's when the user hosts their own application, not using a cloud provider. So the first sentence should mention that it's a custom setup where the user manages the infrastructure.\n\nNow, the second sentence needs to highlight the key benefits. Maybe talk about control over data and security. But wait, the user might be looking for more specific points. Oh, and they mentioned two sentences, so need to be concise. Also, the user might be a developer or someone looking to deploy an app, so emphasizing control and customization is important. Let me make sure the sentences are clear and directly answer the question without extra fluff.\n",
+      "error": null
+    },
+    {
+      "id": "list-format",
+      "timeToFirstTokenSeconds": null,
+      "totalDurationSeconds": 26.7262,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 7.48,
+      "completionText": "",
+      "reasoningText": "Okay, the user is asking for three benefits of keeping data on their own server. Let me think about this. First, I need to make sure I understand the question correctly. They want to know the advantages of hosting data locally instead of using cloud services.\n\nSo, the benefits... Let's start with control. If you have your own server, you have full control over the data. You can manage access, security, and compliance. That's a big one. Then there's security. Data on your own server might be more secure because you can implement your own security measures, like encryption, access controls, and regular backups. That's another benefit. Third, maybe scalability? Wait, scalability is more about cloud services. Or maybe data localization? If you're in a region with strict data laws, having your own server might allow you to comply with local regulations. But I need to check if that's a common benefit. Alternatively, maybe the third benefit is data ownership and privacy",
+      "error": null
+    },
+    {
+      "id": "followup-context",
+      "timeToFirstTokenSeconds": null,
+      "totalDurationSeconds": 27.3442,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 7.31,
+      "completionText": "",
+      "reasoningText": "Okay, the user just asked, \"What about Germany?\" after previously inquiring about the capital of France. I need to figure out what they're looking for here.\n\nFirst, I should recall that the user might be following up on the previous question about France. Since the user mentioned \"Germany\" after \"France,\" they might be asking about the capital of Germany. But maybe they're interested in something else related to Germany.\n\nI need to make sure I understand the context. The user might be testing if I know the capitals of multiple countries. The previous question was about France, so the next logical step is Germany. But I should check if there's a specific aspect they want about Germany. For example, maybe they want to know the capital, or something else like the economy, culture, or geography.\n\nThe user could be a student studying geography, or perhaps they're trying to learn about European countries. Since the previous answer was straightforward, I should provide a clear and concise response",
+      "error": null
+    },
+    {
+      "id": "longer-response",
+      "timeToFirstTokenSeconds": null,
+      "totalDurationSeconds": 27.9605,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 7.15,
+      "completionText": "",
+      "reasoningText": "Okay, the user wants a short paragraph (about 80 words) about what a home assistant chatbot could do for someone managing their tasks and notes. Let me start by thinking about the key functions of a home assistant. They usually handle tasks like scheduling, reminders, maybe integrating with calendars. Then there's the aspect of notes—organizing thoughts, keeping track of ideas.\n\nI need to mention specific features. Maybe something like scheduling meetings, setting reminders, managing to-do lists. Also, note-taking capabilities, like organizing notes, categorizing them, maybe even summarizing. Integration with other apps could be important too, like Google Calendar or Slack. The user might be looking for how the chatbot enhances productivity. \n\nI should structure the paragraph to first introduce the chatbot's role, then list the features. Make sure it's concise, stays within 80 words. Avoid technical jargon but keep it specific. Maybe start with \"A home assistant chatbot...\" then",
+      "error": null
+    }
+  ],
+  "coldStartTimeToFirstTokenSeconds": null,
+  "warmItems": [
+    {
+      "id": "greeting",
+      "timeToFirstTokenSeconds": null,
+      "totalDurationSeconds": 27.6357,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 7.24,
+      "completionText": "",
+      "reasoningText": "Okay, the user asked, \"Hi! What can you help me with?\" So, I need to respond in a way that's helpful and engaging. Let me think about the possible ways I can assist them.\n\nFirst, I should acknowledge their greeting and express willingness to help. Then, maybe list some common areas where I can assist. Let me recall the topics I can handle. \n\nI can help with answering questions, providing information, solving problems, writing, coding, explaining concepts, etc. But I need to make it clear and not too generic. Maybe break it down into categories.\n\nAlso, the user might not know what I can do, so I should explain briefly. Maybe use bullet points or sections. But since the user asked for help, I should prompt them to specify what they need. \n\nWait, the original query was in Chinese, but the user wrote \"Hi! What can you help me with?\" So, maybe they want to know the range of help I",
+      "error": null
+    },
+    {
+      "id": "short-explain",
+      "timeToFirstTokenSeconds": 20.828958405999998,
+      "totalDurationSeconds": 26.0553,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 7.68,
+      "completionText": "A self-hosted app is an application that is hosted and managed by the user rather than being hosted on a cloud provider, giving them full control over infrastructure, data, and security. This approach allows for",
+      "reasoningText": "Okay, the user wants a definition of a self-hosted app in two sentences. Let me start by recalling what a self-hosted app is. It's when the user hosts their own application, not using a cloud provider. So the first sentence should mention that it's a custom setup where the user manages the infrastructure.\n\nNow, the second sentence needs to highlight the key benefits. Maybe talk about control over data and security. But wait, the user might be looking for more specific points. Oh, and they mentioned two sentences, so need to be concise. Also, the user might be a developer or someone looking to deploy an app, so emphasizing control and customization is important. Let me make sure the sentences are clear and directly answer the question without extra fluff.\n",
+      "error": null
+    },
+    {
+      "id": "list-format",
+      "timeToFirstTokenSeconds": null,
+      "totalDurationSeconds": 26.7262,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 7.48,
+      "completionText": "",
+      "reasoningText": "Okay, the user is asking for three benefits of keeping data on their own server. Let me think about this. First, I need to make sure I understand the question correctly. They want to know the advantages of hosting data locally instead of using cloud services.\n\nSo, the benefits... Let's start with control. If you have your own server, you have full control over the data. You can manage access, security, and compliance. That's a big one. Then there's security. Data on your own server might be more secure because you can implement your own security measures, like encryption, access controls, and regular backups. That's another benefit. Third, maybe scalability? Wait, scalability is more about cloud services. Or maybe data localization? If you're in a region with strict data laws, having your own server might allow you to comply with local regulations. But I need to check if that's a common benefit. Alternatively, maybe the third benefit is data ownership and privacy",
+      "error": null
+    },
+    {
+      "id": "followup-context",
+      "timeToFirstTokenSeconds": null,
+      "totalDurationSeconds": 27.3442,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 7.31,
+      "completionText": "",
+      "reasoningText": "Okay, the user just asked, \"What about Germany?\" after previously inquiring about the capital of France. I need to figure out what they're looking for here.\n\nFirst, I should recall that the user might be following up on the previous question about France. Since the user mentioned \"Germany\" after \"France,\" they might be asking about the capital of Germany. But maybe they're interested in something else related to Germany.\n\nI need to make sure I understand the context. The user might be testing if I know the capitals of multiple countries. The previous question was about France, so the next logical step is Germany. But I should check if there's a specific aspect they want about Germany. For example, maybe they want to know the capital, or something else like the economy, culture, or geography.\n\nThe user could be a student studying geography, or perhaps they're trying to learn about European countries. Since the previous answer was straightforward, I should provide a clear and concise response",
+      "error": null
+    },
+    {
+      "id": "longer-response",
+      "timeToFirstTokenSeconds": null,
+      "totalDurationSeconds": 27.9605,
+      "completionTokens": 200,
+      "tokensReported": true,
+      "tokensPerSecond": 7.15,
+      "completionText": "",
+      "reasoningText": "Okay, the user wants a short paragraph (about 80 words) about what a home assistant chatbot could do for someone managing their tasks and notes. Let me start by thinking about the key functions of a home assistant. They usually handle tasks like scheduling, reminders, maybe integrating with calendars. Then there's the aspect of notes—organizing thoughts, keeping track of ideas.\n\nI need to mention specific features. Maybe something like scheduling meetings, setting reminders, managing to-do lists. Also, note-taking capabilities, like organizing notes, categorizing them, maybe even summarizing. Integration with other apps could be important too, like Google Calendar or Slack. The user might be looking for how the chatbot enhances productivity. \n\nI should structure the paragraph to first introduce the chatbot's role, then list the features. Make sure it's concise, stays within 80 words. Avoid technical jargon but keep it specific. Maybe start with \"A home assistant chatbot...\" then",
+      "error": null
+    }
+  ],
+  "averageWarmTimeToFirstTokenSeconds": 20.829,
+  "averageWarmTokensPerSecond": 7.37,
+  "idleMemoryUsage": null,
+  "finishedAt": "2026-08-13T18:22:16.092Z"
+}

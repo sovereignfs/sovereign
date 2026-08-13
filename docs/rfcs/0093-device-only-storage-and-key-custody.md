@@ -349,6 +349,18 @@ involvement at all — this exists regardless of the toggle in Layer 3, and
 answers device-to-device migration for a user who doesn't want any
 server-side footprint whatsoever.
 
+Implemented as `device-only-export.ts`'s `exportDeviceOnlyData`/
+`importDeviceOnlyData` — a full snapshot of every plugin's
+`device-only-kv.ts` data in one encrypted file per call, wrapped under a
+user-chosen passphrase with the same PBKDF2/AES-GCM shape section 3's
+recovery-secret wrapper uses (a different passphrase and a different
+purpose, not the same secret). Import re-encrypts each value under the
+_importing_ device's own unlocked Device Storage Key rather than copying
+ciphertext across devices — the exporting and importing devices' keys are
+never the same secret. See `docs/plugin-development.md`'s `device-only` tier
+section for the plugin-facing note (plugin authors don't call this
+themselves; Account → Security's export/import action does).
+
 **Layer 3 — opt-in, three-gate cascade.** Encrypted server backup, reusing
 RFC 0060's wrapped-key server-storage pattern (the server stores ciphertext
 of the recovery-wrapped key; it never receives the key or the recovery

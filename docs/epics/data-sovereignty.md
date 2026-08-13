@@ -787,18 +787,20 @@ round-trip against real data before considering this done.
 
 #### 🚧 8.21 — Escrow and recovery for `device-only` data (Research 0012)
 
-> **Partial — Layer 2 done, Layer 3 is not.** (Layer 1's mandatory-warning
-> status is tracked on a separate concurrent PR — reconcile this callout with
-> that one at merge time rather than treating either as stale.)
+> **Partial — Layers 1 and 2 done, Layer 3 is not.** The mandatory warning
+> (`DeviceStorageKeySection.tsx`'s setup flow, both steps) now states
+> permanent, unrecoverable loss as the tier's defining property, per RFC
+> 0093 §4's exact language — not just "isn't synced or backed up anywhere."
 > `device-only-export.ts`'s `exportDeviceOnlyData`/`importDeviceOnlyData`
 > implement the always-available, no-toggle, no-server encrypted export/import
-> RFC 0093 §4 Layer 2 calls for — a genuine, tested round-trip (real WebCrypto
-> AES-GCM/PBKDF2, wrong-passphrase rejection, cross-"device" re-encryption)
-> against `device-only-kv.ts`. **Not done:** the opt-in encrypted server
-> backup cascade (Layer 3 — `.env` → Console → per-plugin per-user gates);
-> Account → Security's own UI to trigger export/import is not wired up yet
-> (the SDK functions exist and are documented for plugin authors, but no
-> product surface calls them).
+> Layer 2 calls for — a genuine, tested round-trip (real WebCrypto AES-GCM/
+> PBKDF2, wrong-passphrase rejection, cross-"device" re-encryption) against
+> `device-only-kv.ts` — so Layer 1's warning is now backed by an actual
+> mitigation a user can act on, not just an accurate statement of risk.
+> **Not done:** the opt-in encrypted server backup cascade (Layer 3 —
+> `.env` → Console → per-plugin per-user gates); Account → Security's own UI
+> to trigger export/import is not wired up yet (the SDK functions exist and
+> are documented for plugin authors, but no product surface calls them).
 
 **Goal:** Implement what RFC 0093 decided happens to `device-only` data when
 the key dies — because with no server copy, a hardware-bound key that is

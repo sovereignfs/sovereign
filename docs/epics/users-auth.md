@@ -982,22 +982,38 @@ this task is that RFC's §2/§3/§5 implemented.
 
 **Deliverables:**
 
+- **A new "Device Storage Key" section in Account → Security**, parallel to the
+  existing "Client-side encryption" (RFC 0060) section — same UX pattern
+  (setup, recovery-secret display, settings), cryptographically independent
+  secret. Set up **once**; the resulting key is shared by every
+  `device-only` plugin the user has or later gets access to — not one key
+  per plugin. This is the enrollment surface; there is no other one.
 - Web/PWA: WebAuthn PRF key derivation, building on the already-deployed passkey
   plugin (`apps/auth/src/auth.ts:231`). Handle the case where an existing
   credential does not support PRF by registering a new passkey with the
-  extension requested, rather than assuming the login passkey can be reused.
+  extension explicitly requested, rather than assuming the login passkey can
+  be reused.
 - Native: key stored via task 20.13's `device:secureStorage` bridge, with
   user-presence access control (biometric **or** device passcode — never
   biometric-only, which locks out unenrolled users).
-- Enrolment is **structural**: enabling a `device-only` plugin performs it, and
-  there is no preference or toggle that can turn it off while the plugin works.
+- **Enrollment is centralized, not per-plugin.** A `device-only` plugin
+  never runs its own enrollment ceremony — it checks whether the Device Storage Key
+  is set up and, if not, shows a message directing the user to Account →
+  Security and stops there. Still structural in the sense research 0012
+  originally meant (no toggle to disable a Device Storage Key while a plugin
+  depends on it), but the trigger is the user setting up their Device Storage Key
+  once, not any single plugin's enable/access-grant action — those two
+  lifecycles (RFC 0065 plugin access vs. Device Storage Key existence) are
+  deliberately decoupled; revoking and later re-granting a user's access to
+  a plugin does not touch their Device Storage Key or its data.
 - A real UI state for the no-device-passcode case, where the key cannot be
   created on either platform — a hard block with an explanatory screen, not an
   unhandled rejection.
 - Re-lock policy: a sensible default plus a user override, following the
   established pattern of an immediate / timed / on-restart choice.
 - `docs/plugin-development.md` coverage of what a `device-only` plugin can
-  assume about unlock state.
+  assume about unlock state, including the "Device Storage Key not set up yet"
+  redirect case.
 
 **Dependencies:** Tasks 3.36, 20.13, 8.21. ~~Gated on the escrow decision~~
 Resolved — RFC 0093 decided both escrow and key strictness together (they
@@ -1007,7 +1023,13 @@ turned out to be one decision, not two sequenced ones).
 
 **Review checklist:**
 
-- A `device-only` plugin cannot be enabled without completing enrolment.
+- A `device-only` plugin with no Device Storage Key set up shows the Account →
+  Security redirect message, never its own inline enrollment ceremony.
+- Setting up the Device Storage Key once in Account → Security is immediately
+  sufficient for every `device-only` plugin the user has access to — no
+  per-plugin repeat setup.
+- Revoking and re-granting a user's access to a `device-only` plugin leaves
+  their Device Storage Key and its data untouched.
 - With the app locked, the on-disk data is ciphertext — verified by inspecting
   storage directly, not by observing the UI.
 - Biometric failure falls back to device passcode and still unlocks.

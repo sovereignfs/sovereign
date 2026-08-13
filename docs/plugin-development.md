@@ -555,6 +555,57 @@ over — and tells the platform how much offline capability your plugin needs:
   link) skips it entirely, so `DeviceOnlyGate` is the part that actually
   matters.
 
+  `DeviceOnlyGate` covers whether the tier is available on this surface at
+  all — it says nothing about whether _this user_ has actually set up the key
+  that tier needs. Assume nothing about unlock state beyond that: a
+  `device-only` plugin must **never run its own enrollment ceremony**.
+  Enrollment is centralized, one-time, and per-device — the user sets up
+  their Device Storage Key once in Account → Security (RFC 0093 §2, epic task
+  1.22), and every `device-only` plugin they have or later get access to
+  shares that same key; there is no per-plugin setup step and no separate key
+  to create. Check with `getDeviceStorageKeyStatus()` from
+  `@sovereignfs/sdk/device-only-storage` and wrap your plugin's own root
+  content (nested inside `DeviceOnlyGate`) in `DeviceStorageKeyGate`
+  (`@sovereignfs/ui`), passing that status and a `setupAction` link to
+  Account → Security:
+
+  ```tsx
+  const [status, setStatus] = useState<DeviceStorageKeyGateStatus>('checking');
+  useEffect(() => {
+    void getDeviceStorageKeyStatus().then(setStatus);
+  }, []);
+
+  <DeviceOnlyGate available={isDeviceOnlyTierAvailable()} surfaceName="Notes">
+    <DeviceStorageKeyGate
+      status={status}
+      surfaceName="Notes"
+      setupAction={<Link href="/account/security">Set up Device Storage Key</Link>}
+    >
+      <NoteList />
+    </DeviceStorageKeyGate>
+  </DeviceOnlyGate>;
+  ```
+
+  When no key is set up yet, `DeviceStorageKeyGate` shows a message pointing
+  the user at Account → Security and stops there — it does not redirect the
+  browser itself, the same "block and explain" pattern `OfflineGate`/
+  `DeviceOnlyGate` use rather than a server-side or router-level redirect.
+  Revoking and re-granting a user's access to your plugin (RFC 0065) never
+  touches their Device Storage Key or its data — those two lifecycles are
+  deliberately independent, so re-checking status on every mount (as above)
+  is the correct behavior, not a one-time gate you can cache past a
+  navigation.
+
+  `status` can also come back `'no-device-auth'` — the device supports the
+  tier but has no passcode, fingerprint, or face unlock configured at all, so
+  no key can be created there regardless of what the user does in your
+  plugin. `DeviceStorageKeyGate` shows an explanatory message for this case
+  with no `setupAction`, since the fix is a change in the device's own system
+  settings, not anything your plugin or Account → Security can do. Don't
+  treat this the same as `'not-set-up'` in your own code (e.g. by lumping
+  both into a single "go set it up" branch) — the redirect that helps for one
+  does nothing for the other.
+
 Omitting the field entirely means no offline support — the default, and still
 the right choice for most plugins (an admin console, a settings page, anything
 whose whole point is showing live server state has no business working

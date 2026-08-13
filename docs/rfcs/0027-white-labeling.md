@@ -1,10 +1,10 @@
 # RFC 0027 — White-labeling (tenant branding)
 
-**Status:** Accepted\
+**Status:** Implemented (Phase 4/epic task 9.13, subtle attribution, was rejected and retired — not part of this status)\
 **Date:** June 2026\
 **Author:** kasunben\
 **Scope:** Whole platform — `packages/ui`, `packages/db`, `runtime`, `apps/auth`, `packages/mailer`, `bin/sv`, `.env.example`, docs, Docker/compose, SRS\
-**Incorporated into plan:** Yes — phased pre-v1. SRS §3.18 documents the architecture. Task 1.0.03 (Phase 1: DB + shell + Console form + SDK) and epic task 9.10 (Phase 3: dynamic PWA manifest + favicon) are ✅ shipped; epic task 9.9 (Phase 2: email + auth login) is scheduled in [workstream 0013](../workstreams/0013-white-labeling-phase-2-and-ds-backlog.md). Epic task 9.8 (RFC 0032) renamed `BRAND_*` → `INSTANCE_*` ahead of Phase 2, ✅ shipped. Phase 4 (epic task 9.13, subtle attribution) was rejected and retired.
+**Incorporated into plan:** Yes — phased pre-v1. SRS §3.18 documents the architecture. Task 1.0.03 (Phase 1: DB + shell + Console form + SDK), epic task 9.10 (Phase 3: dynamic PWA manifest + favicon), and epic task 9.9 (Phase 2: email + auth login, [workstream 0013](../workstreams/0013-white-labeling-phase-2-and-ds-backlog.md) leg 3) are all ✅ shipped. Epic task 9.8 (RFC 0032) renamed `BRAND_*` → `INSTANCE_*` ahead of Phase 2, ✅ shipped. Phase 4 (epic task 9.13, subtle attribution) was rejected and retired.
 
 ---
 

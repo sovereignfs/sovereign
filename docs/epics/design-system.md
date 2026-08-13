@@ -290,7 +290,7 @@ adopt the correct naming from day one. No production users means zero migration 
 
 ---
 
-#### 📋 9.9 — Email template system + White-labeling Phase 2 — Email + auth login page (RFC 0031 + RFC 0027)
+#### ✅ 9.9 — Email template system + White-labeling Phase 2 — Email + auth login page (RFC 0031 + RFC 0027)
 
 **Goal:** Introduce the email template infrastructure (RFC 0031) — React Email–based
 templates with branding injection, standalone locale support, and operator copy/subject
@@ -350,6 +350,37 @@ Task 1.0.03 (Phase 1 — `instance_config` table must exist)
 - Auth server offline → password reset sends with graceful Sovereign defaults
 - A configured instance shows the operator's logo and name on the login/register page
 - Auth server login page falls back to Sovereign defaults if the runtime is unreachable
+
+**Correction note (shipped, workstream 0013 leg 3):** several details diverged from the plan
+above during implementation:
+
+- `@react-email/components` was deprecated by its maintainers in favor of a unified
+  `react-email` package partway through this task's timeline (React Email 6.0, April 2026) —
+  shipped against the unified package instead; `@react-email/render` is unchanged.
+- Console's invite action cannot import `@sovereignfs/mailer`/`@sovereignfs/db` directly (the
+  SDK boundary rule, added after this task was originally scoped) — added
+  `POST /api/admin/email-templates/send` as the one path a plugin can reach the branded
+  templates through, rather than the direct import the original design assumed.
+  `GET .../preview` and `POST .../test` (sample-link preview/test-send) round out the set,
+  alongside `GET`/`PATCH /api/admin/email-templates` for the copy overrides themselves.
+- The actual pre-auth branded login/registration page work landed on the runtime's own
+  `runtime/app/login/`, `runtime/app/register/` (both previously read only
+  `process.env.INSTANCE_NAME`, ignoring the DB-stored config the authenticated shell already
+  used, and had unused `.logoImg` CSS with no code ever rendering it) — not `apps/auth`'s
+  compatibility login page, which the task's own text assumed was the primary surface;
+  `apps/auth`'s page is branded too, but as a secondary path (`GET /api/admin/instance-config`
+  already existed and needed no changes).
+- No new env vars were needed — `SOVEREIGN_RUNTIME_INTERNAL_URL` (the plan's proposal) already
+  existed as `SOVEREIGN_RUNTIME_URL`, and `NEXT_PUBLIC_RUNTIME_URL` already covered the public
+  instance URL.
+- Locale resolution defaults to `en` everywhere in this task's send paths — no per-user/platform
+  language preference exists yet (RFC 0029 not shipped), per RFC 0031's own open question #4.
+  All four locale files ship and are fully wired; only the "pick a locale per recipient" step is
+  deferred to RFC 0029.
+- Verified live end-to-end: `getEmailCopy`/`setEmailCopy`/`deleteEmailCopy` against a real
+  Postgres instance; the branded login/register pages and Console's Email Templates section in
+  a browser; the Save round trip; and actual delivery through Mailpit for both the test-send
+  path and Console's real invite flow (arrived with a genuine token, correct branding).
 
 ---
 
@@ -545,7 +576,7 @@ identity), Task 14.2 (Account workflow coverage) where relevant.
 
 ---
 
-#### 📋 9.14 — Local visual regression testing (RFC 0059)
+#### ✅ 9.14 — Local visual regression testing (RFC 0059)
 
 **Goal:** Add local Playwright-based visual regression testing for the stabilized
 UI contract without introducing hosted visual review services.
@@ -580,9 +611,18 @@ test organization, existing Playwright e2e setup.
 - Docs explain when to add a visual test, when to update baselines, and when
   snapshots are acceptable.
 
+**Correction note (shipped, workstream 0013 leg 2):** the Tier 1 (`packages/ui`) component
+suite is fully implemented and verified live (25/25 passing against a running Storybook
+instance). Baselines are macOS-generated (Playwright's default `-darwin` filename suffix) and
+will not match Linux CI runners on first run — per this leg's own documented "Do not proceed
+if" fallback, CI baseline calibration (generating `-linux` baselines) is left as an explicit
+follow-up rather than blocking the leg, so `pnpm test:visual` is not yet a real CI gate. The
+Tier 2 root smoke suite (`__tests__/visual/`) is scaffolded with real spec files but its actual
+assertions were deferred pending live-app verification — see `docs/testing-visual.md`.
+
 ---
 
-#### 📋 9.15 — NavTabs Link support + PageHeader heading level
+#### ✅ 9.15 — NavTabs Link support + PageHeader heading level
 
 **Goal:** Close two `@sovereignfs/ui` API gaps discovered while dogfooding
 `NavTabs` and `PageHeader` during Task 9.12's Account/Console migration —

@@ -1,6 +1,6 @@
 # Workstream 0013 — White-labeling Phase 2 and design-system backlog
 
-**Status:** 📋 Planned\
+**Status:** ✅ Complete — all 3 legs shipped\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -37,22 +37,30 @@ workstream 0012's leg 7 follow-up.
 
 ## Definition of done
 
-- [ ] `9.15` — `NavTabs` accepts a consumer-supplied link renderer (or `as`
+- [x] `9.15` — `NavTabs` accepts a consumer-supplied link renderer (or `as`
       prop) so overlay-shell plugins can use it without a full-page
       navigation; `PageHeader` accepts a `headingLevel` prop, defaulting to
-      `1`.
-- [ ] `9.14` — `pnpm test:visual`/`pnpm test:visual:update` exist; Storybook-driven
+      `1`. Shipped: [PR #438](https://github.com/sovereignfs/sovereign/pull/438).
+- [x] `9.14` — `pnpm test:visual`/`pnpm test:visual:update` exist; Storybook-driven
       component visual tests cover the curated `packages/ui` baseline set
       across light/dark and key viewports; a root visual smoke suite covers
       auth, shell, Launcher, Account, Console, overlays, and mobile nav; CI
-      uploads expected/actual/diff artifacts on failure.
-- [ ] `9.9` — `packages/mailer` ships React Email templates
+      uploads expected/actual/diff artifacts on failure. Shipped:
+      [PR #441](https://github.com/sovereignfs/sovereign/pull/441) — root smoke
+      suite is scaffolded (specs written, assertions deferred); Linux CI
+      baseline calibration is an explicit follow-up per this leg's own "Do not
+      proceed if" clause, not a blocker.
+- [x] `9.9` — `packages/mailer` ships React Email templates
       (`PasswordResetEmail`, `InviteEmail`) with locale support
       (`en`/`de`/`si`/`ta`); Console gains an Email Templates settings
       section with live preview and test-send; `apps/auth`'s login/registration
       page renders branded per-instance identity via
       `/api/admin/instance-config` with a documented fallback to Sovereign
-      defaults.
+      defaults. Shipped: [PR #444](https://github.com/sovereignfs/sovereign/pull/444)
+      — see `docs/epics/design-system.md`'s task 9.9 correction note for
+      implementation deviations (branded auth login landed on the runtime's
+      own `/login`/`/register`, not `apps/auth`; Console's invite reaches the
+      templates via a new admin API route, not a direct import).
 
 ## Decisions locked
 
@@ -195,6 +203,7 @@ whole leg.
 
 ## Changelog
 
-| Version | Date        | Change                                                                               |
-| ------- | ----------- | ------------------------------------------------------------------------------------ |
-| 0.1     | August 2026 | Initial draft — 3 tasks (9.9, 9.14, 9.15); excludes Task 9.13 (rejected and retired) |
+| Version | Date        | Change                                                                                                                                                                                                              |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft — 3 tasks (9.9, 9.14, 9.15); excludes Task 9.13 (rejected and retired)                                                                                                                                |
+| 0.2     | August 2026 | All 3 legs shipped and merged — PR #438 (leg 1), #441 (leg 2), #444 (leg 3, plus 2 follow-up commits fixing a CodeQL `js/xss-through-dom` finding on the Email Templates form found post-merge). Workstream closed. |

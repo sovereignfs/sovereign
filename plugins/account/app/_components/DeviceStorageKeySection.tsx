@@ -22,6 +22,7 @@ import {
   saveReLockPolicy,
   saveWrappedDeviceStorageKeys,
 } from '@sovereignfs/sdk/device-only-storage';
+import { lockDeviceStorageKey } from '@sovereignfs/sdk/device-only-session';
 import type { DeviceStorageKeyStatus, ReLockPolicy } from '@sovereignfs/sdk/device-only-storage';
 import styles from '../account.module.css';
 
@@ -295,6 +296,7 @@ export function DeviceStorageKeySection() {
   function handleForget() {
     startForget(async () => {
       await clearWrappedDeviceStorageKeys();
+      lockDeviceStorageKey();
       setForgetOpen(false);
       await refreshLocalState();
     });

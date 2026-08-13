@@ -18,6 +18,7 @@ export default defineConfig({
     'src/device-bridge.ts',
     'src/device-client.ts',
     'src/device-only-crypto.ts',
+    'src/device-only-kv.ts',
     'src/device-only-session.ts',
     'src/device-only-storage.ts',
     'src/drizzle.ts',

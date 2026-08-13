@@ -727,7 +727,23 @@ codebase.
 
 ---
 
-#### 📋 8.20 — Offline data encryption at rest (Research 0012)
+#### 🚧 8.20 — Offline data encryption at rest (Research 0012)
+
+> **Partial — `device-only`'s web KV primitive done, everything else in this
+> task's deliverables is not.** `packages/sdk/src/device-only-kv.ts`
+> (`@sovereignfs/sdk/device-only-kv`) is a real, tested AES-GCM-encrypted
+> key/value store over OPFS, gated on the unlocked Device Storage Key from
+> task 1.22 — a genuine live round-trip (real WebCrypto encrypt/decrypt, not
+> mocked) is covered by its test suite. **What that round-trip does _not_
+> verify**, per this task's own standing constraint below: real browser OPFS
+> behavior — the test suite's OPFS fake (necessary; Node has no OPFS) proves
+> the crypto and the plugin-isolation logic, not that a real browser's File
+> System Access API behaves identically. **Not done at all:** `offline-first`'s
+> own no-presence encryption (this task's other tier); native SQLite/SQLCipher
+> encryption (task 20.13, itself still 🚧 — see `docs/epics/mobile.md`); and
+> this module is explicitly **not** the `wa-sqlite` relational engine RFC 0093
+> §1 specs for the web backend — no queries, no joins, only key/value. See
+> RFC 0093 §1's own "Interim web primitive" note.
 
 **Goal:** Encrypt offline data on the device in **both** offline tiers, so
 "plaintext on disk" is never the answer anywhere. The tiers differ in what guards

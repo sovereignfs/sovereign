@@ -834,6 +834,34 @@ over — and tells the platform how much offline capability your plugin needs:
   const deviceStorageKey = result.key; // CryptoKey, ready to use
   ```
 
+  Most plugins don't need the raw `CryptoKey` at all — for "durable, encrypted,
+  per-record device-local storage" (notes, entries, settings — the common
+  case), use `@sovereignfs/sdk/device-only-kv` directly instead of calling
+  `getUnlockedDeviceStorageKey()` yourself. It's a small encrypted key/value
+  store, one AES-GCM-encrypted file per key, scoped to your plugin's own id —
+  the same shape as `@sovereignfs/sdk/offline`'s existing IndexedDB-backed
+  cache for the `offline-first` tier, but encrypted and gated on the Device
+  Storage Key instead:
+
+  ```ts
+  import { getDeviceOnlyValue, setDeviceOnlyValue } from '@sovereignfs/sdk/device-only-kv';
+
+  const result = await getDeviceOnlyValue<Note>('io.example.notes', 'note-1');
+  if (result.status === 'ok') {
+    const note = result.value; // Note | undefined — undefined means never written
+  }
+
+  await setDeviceOnlyValue('io.example.notes', 'note-1', { title: 'Groceries' });
+  ```
+
+  `listDeviceOnlyKeys`/`deleteDeviceOnlyValue`/`clearDeviceOnlyPluginData` round
+  out the surface — the latter two need no unlocked session (deleting a file
+  needs no decryption), `get`/`set` do. **This is not a relational database** —
+  no queries, no joins, no indices beyond the key itself. A plugin that
+  genuinely needs SQL against its `device-only` data isn't served by this
+  module yet; that gap (a real `wa-sqlite`-backed engine) is tracked as
+  remaining work, not silently worked around.
+
 Omitting the field entirely means no offline support — the default, and still
 the right choice for most plugins (an admin console, a settings page, anything
 whose whole point is showing live server state has no business working

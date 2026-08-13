@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/sdk",
-  "version": "1.39.0",
+  "version": "1.40.0",
   "type": "module",
   "description": "Sovereign SDK — the plugin↔platform contract (types and interfaces).",
   "license": "AGPL-3.0-or-later",
@@ -23,6 +23,10 @@
       "./device-only-crypto": {
         "types": "./dist/device-only-crypto.d.ts",
         "default": "./dist/device-only-crypto.js"
+      },
+      "./device-only-kv": {
+        "types": "./dist/device-only-kv.d.ts",
+        "default": "./dist/device-only-kv.js"
       },
       "./device-only-session": {
         "types": "./dist/device-only-session.d.ts",
@@ -64,6 +68,7 @@
     "./drizzle": "./src/drizzle.ts",
     "./device-client": "./src/device-client.ts",
     "./device-only-crypto": "./src/device-only-crypto.ts",
+    "./device-only-kv": "./src/device-only-kv.ts",
     "./device-only-session": "./src/device-only-session.ts",
     "./device-only-storage": "./src/device-only-storage.ts",
     "./e2ee-crypto": "./src/e2ee-crypto.ts",

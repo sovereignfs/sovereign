@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-08-13T18:11:40.625Z",
+  "provider": "llama-cpp",
+  "model": "qwen3-1.7b",
+  "baseUrl": "http://127.0.0.1:8081",
+  "corpusId": "warden-phase1-chat-v1",
+  "cold": true,
+  "items": [
+    {
+      "id": "greeting",
+      "timeToFirstTokenSeconds": 1.3243630939999997,
+      "totalDurationSeconds": 5.4886,
+      "completionTokens": 38,
+      "tokensReported": true,
+      "tokensPerSecond": 6.92,
+      "completionText": "Hello! I'm here to help with any questions or tasks you have. Whether it's solving problems, writing something, or just having a conversation, feel free to ask! 😊",
+      "reasoningText": "",
+      "error": null
+    },
+    {
+      "id": "short-explain",
+      "timeToFirstTokenSeconds": 0.14221573500000068,
+      "totalDurationSeconds": 5.1145,
+      "completionTokens": 44,
+      "tokensReported": true,
+      "tokensPerSecond": 8.6,
+      "completionText": "A self-hosted app is an application that is not hosted by a third-party service but instead runs on the user's own server or cloud infrastructure. It requires the user to manage the server and its associated resources.",
+      "reasoningText": "",
+      "error": null
+    },
+    {
+      "id": "list-format",
+      "timeToFirstTokenSeconds": 0.6721218359999984,
+      "totalDurationSeconds": 16.817,
+      "completionTokens": 142,
+      "tokensReported": true,
+      "tokensPerSecond": 8.44,
+      "completionText": "Keeping your data on your own server offers several benefits, including:\n\n1. **Control and Security**: You have full control over your data, allowing you to implement custom security measures, encryption, and access controls that are tailored to your needs.\n\n2. **Data Privacy and Compliance**: You can ensure compliance with data protection regulations (like GDPR or HIPAA) by managing your own data and maintaining proper records, which is essential for businesses handling sensitive information.\n\n3. **Reduced Dependency on Third-Party Services**: You avoid relying on external cloud providers, which can offer vulnerabilities, data breaches, or service outages. Having your data on-premises or in a private cloud offers greater reliability and control.",
+      "reasoningText": "",
+      "error": null
+    },
+    {
+      "id": "followup-context",
+      "timeToFirstTokenSeconds": 1.2595961420000021,
+      "totalDurationSeconds": 2.0462,
+      "completionTokens": 8,
+      "tokensReported": true,
+      "tokensPerSecond": 3.91,
+      "completionText": "The capital of Germany is Berlin.",
+      "reasoningText": "",
+      "error": null
+    },
+    {
+      "id": "longer-response",
+      "timeToFirstTokenSeconds": 1.3515599880000009,
+      "totalDurationSeconds": 11.3474,
+      "completionTokens": 87,
+      "tokensReported": true,
+      "tokensPerSecond": 7.67,
+      "completionText": "A home assistant chatbot can help manage tasks and notes by organizing daily routines, setting reminders, and keeping track of important information. It can answer questions, suggest actions based on context, and provide summaries of tasks. Users can also add, edit, or delete notes directly through the chat interface, making it easy to keep their information organized and accessible. The chatbot adapts to user preferences, ensuring a seamless and personalized experience.",
+      "reasoningText": "",
+      "error": null
+    }
+  ],
+  "coldStartTimeToFirstTokenSeconds": 1.3243630939999997,
+  "warmItems": [
+    {
+      "id": "short-explain",
+      "timeToFirstTokenSeconds": 0.14221573500000068,
+      "totalDurationSeconds": 5.1145,
+      "completionTokens": 44,
+      "tokensReported": true,
+      "tokensPerSecond": 8.6,
+      "completionText": "A self-hosted app is an application that is not hosted by a third-party service but instead runs on the user's own server or cloud infrastructure. It requires the user to manage the server and its associated resources.",
+      "reasoningText": "",
+      "error": null
+    },
+    {
+      "id": "list-format",
+      "timeToFirstTokenSeconds": 0.6721218359999984,
+      "totalDurationSeconds": 16.817,
+      "completionTokens": 142,
+      "tokensReported": true,
+      "tokensPerSecond": 8.44,
+      "completionText": "Keeping your data on your own server offers several benefits, including:\n\n1. **Control and Security**: You have full control over your data, allowing you to implement custom security measures, encryption, and access controls that are tailored to your needs.\n\n2. **Data Privacy and Compliance**: You can ensure compliance with data protection regulations (like GDPR or HIPAA) by managing your own data and maintaining proper records, which is essential for businesses handling sensitive information.\n\n3. **Reduced Dependency on Third-Party Services**: You avoid relying on external cloud providers, which can offer vulnerabilities, data breaches, or service outages. Having your data on-premises or in a private cloud offers greater reliability and control.",
+      "reasoningText": "",
+      "error": null
+    },
+    {
+      "id": "followup-context",
+      "timeToFirstTokenSeconds": 1.2595961420000021,
+      "totalDurationSeconds": 2.0462,
+      "completionTokens": 8,
+      "tokensReported": true,
+      "tokensPerSecond": 3.91,
+      "completionText": "The capital of Germany is Berlin.",
+      "reasoningText": "",
+      "error": null
+    },
+    {
+      "id": "longer-response",
+      "timeToFirstTokenSeconds": 1.3515599880000009,
+      "totalDurationSeconds": 11.3474,
+      "completionTokens": 87,
+      "tokensReported": true,
+      "tokensPerSecond": 7.67,
+      "completionText": "A home assistant chatbot can help manage tasks and notes by organizing daily routines, setting reminders, and keeping track of important information. It can answer questions, suggest actions based on context, and provide summaries of tasks. Users can also add, edit, or delete notes directly through the chat interface, making it easy to keep their information organized and accessible. The chatbot adapts to user preferences, ensuring a seamless and personalized experience.",
+      "reasoningText": "",
+      "error": null
+    }
+  ],
+  "averageWarmTimeToFirstTokenSeconds": 0.8564,
+  "averageWarmTokensPerSecond": 7.15,
+  "idleMemoryUsage": null,
+  "finishedAt": "2026-08-13T18:12:21.447Z"
+}

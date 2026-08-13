@@ -1,6 +1,6 @@
 # Research 0015 — `apps/harness` engine: llama.cpp vs. Ollama
 
-**Status:** Exploratory\
+**Status:** Decided\
 **Date:** August 2026\
 **Author:** kasunben\
 **Scope:** `apps/harness` (new)\
@@ -22,9 +22,8 @@ real candidates are **llama.cpp server** and **Ollama**. Which one, and why —
 decided by a real, measured comparison rather than by reputation or
 convenience.
 
-This doc frames the question and the evaluation method. **It does not yet
-contain the benchmark results or a decision** — that's epic task 22.1's job,
-to be filled in when that task runs. See "Next steps."
+This doc frames the question and the evaluation method. See "Decision" below
+for the measured result — epic task 22.1's benchmark has now run.
 
 ## Findings
 
@@ -114,15 +113,116 @@ Current-state facts the comparison should be measured against, not assumed:
   its equivalent RFC-0002, for reference — this repo would face the same
   open question, not a solved one.
 
+## Decision
+
+**llama.cpp server.** Measured 2026-08-13 on the actual production
+self-hosting box (`openfs`, 2 vCPU / 3.7GB RAM, no GPU) — genuinely
+representative hardware, not a dev workstation. Tooling and raw reports live
+in `scripts/harness-benchmark/` (not shipped product code; throwaway rig for
+this task) with results in `scripts/harness-benchmark/results/*.json`.
+
+### Results
+
+|                     | llama.cpp `1.7b` | llama.cpp `0.6b` | Ollama `1.7b`           | Ollama `0.6b` |
+| ------------------- | ---------------- | ---------------- | ----------------------- | ------------- |
+| Cold-start TTFT     | 1.32s            | 0.46s            | not captured (see note) | 11.71s        |
+| Warm avg TTFT       | 0.86s            | 0.41s            | 20.83s                  | 9.12s         |
+| Warm avg tokens/sec | 7.15             | 16.61            | 7.37                    | 16.45         |
+
+(Ollama `1.7b`'s cold pass is not directly comparable — see the thinking-mode
+finding below; a clean re-run landed as a warm-cache pass instead of
+recapturing cold-start specifically, since by that point the cold-start
+question had already been answered by the `0.6b` pass and the llama.cpp
+passes.)
+
+### Why llama.cpp won: it isn't close, and it isn't really about raw speed
+
+Raw token-generation throughput is nearly identical between the two engines
+— expected, since both run the same underlying compute on the same
+quantized weights. The decisive gap is almost entirely about **Qwen3's
+default "thinking" mode**, which turned out to be the real story of this
+benchmark, not a footnote:
+
+- Qwen3 models think by default — reasoning tokens stream separately from
+  the actual answer (a distinct API field) and can consume an entire
+  response's token budget before any visible answer text appears.
+- **llama.cpp server** exposes `chat_template_kwargs.enable_thinking: false`
+  and it works correctly — disabling it drops TTFT to sub-second across
+  both model sizes.
+- **Ollama's OpenAI-compatible endpoint (`/v1/chat/completions`, v0.32.9)
+  does not honor `think: false` at all.** Only Ollama's own native
+  `/api/chat` endpoint respects that flag (confirmed directly: identical
+  request against `/api/chat` disables thinking correctly). Every request
+  through Ollama's OpenAI-compatible surface pays the full reasoning tax —
+  9–21 seconds of silence before any answer, far outside acceptable chat
+  latency for Warden.
+- The two engines also disagree on the streaming field name for reasoning
+  tokens: `reasoning_content` (llama.cpp, OpenAI's own convention) vs.
+  `reasoning` (Ollama). A client written against one silently drops the
+  other's reasoning stream unless it checks both — confirmed the hard way
+  when the first benchmark pass showed several prompts returning empty
+  completions with a full token count consumed.
+
+This directly echoes `sovereign-os`'s own finding that Ollama carries a real
+latency cost llama.cpp doesn't — but the mechanism here is different from
+`sovereign-os`'s cold-load-time story. There, it was lazy model loading. Here
+(on a kept-warm Compose service, as anticipated), model loading isn't the
+issue at all — it's that Ollama's more convenient API surface (its
+OpenAI-compatible endpoint, the one every wrapper would default to using)
+simply doesn't support turning off a behavior that's disqualifying for a
+basic-chat product surface.
+
+### Engineering cost
+
+- **Model download/verification**: real added scope for llama.cpp as
+  expected — `apps/harness` (leg 2) must build this itself. Confirmed
+  workable in practice: `curl` against the correct GGUF repo is enough (see
+  note below on repo drift), no auth/EULA gate hit.
+- **One correction to this doc's assumption**: the _official_
+  `Qwen/Qwen3-{0.6B,1.7B}-GGUF` repos on Hugging Face only publish `Q8_0`
+  quantization, not `Q4_K_M`. The `Q4_K_M` files used for this benchmark
+  came from the community `unsloth/Qwen3-{0.6B,1.7B}-GGUF` repos instead.
+  `apps/harness`'s model download/verification layer (leg 2) needs to know
+  this — hardcoding the official Qwen repo path and assuming `Q4_K_M`
+  exists there will 404.
+- **Chat API shape**: both engines expose OpenAI-compatible streaming
+  endpoints, confirming this doc's earlier finding — but Ollama's version of
+  that compatibility is incomplete (the thinking-mode gap above). To get
+  Ollama to genuinely equivalent no-think chat behavior, `apps/harness`
+  would have to abandon the OpenAI-compatible surface for Ollama
+  specifically and integrate its native `/api/chat` instead — a real,
+  asymmetric engineering cost llama.cpp doesn't impose. Since task 22.2's
+  own scope already says the internal chat API doesn't need to be literally
+  OpenAI-compatible, this cost is avoidable by choosing llama.cpp, not by
+  designing around it.
+- **Licensing**: no concern for either path. llama.cpp (MIT), Ollama (MIT),
+  and the Qwen3 model weights themselves (Apache 2.0) all impose no
+  self-hosting/redistribution restriction and require no EULA acceptance —
+  resolves this doc's open question below.
+
+### Resource footprint on representative hardware
+
+Both engines used comparable memory in practice — around 2GB resident for
+the `1.7b` model, out of 3.7GB total on the benchmark box, alongside the
+platform's own live `sovereign-runtime`/`sovereign-auth`/`sovereign-sqld`/
+`sovereign-postgres`/`caddy` stack (already consuming ~1GB). Available memory
+never dropped below ~800MB during any single pass; no OOM, no measurable
+production-service degradation. This is genuinely tight on a 4GB-class VPS,
+though — a production `apps/harness` deployment should budget for it
+explicitly (Warden's leg 3 request-limit work, and this data point, should
+inform that), and it's a real argument for `0.6b` as more than just a
+"fallback" on the smallest self-hosting tiers.
+
 ## Recommendation
 
-**Not yet made.** This doc intentionally stops short of a recommendation —
-per [RFC 0063](../rfcs/0063-core-assistant-jarvis.md)'s explicit instruction,
-the choice is gated on epic task 22.1 actually running the benchmark, not on
-this doc's authors' priors.
+**llama.cpp server**, per the Decision above. Locked in for epic task 22.2
+(`apps/harness` scaffold, workstream 0014 leg 2), which now needs to build
+its own model download/verification/storage layer against the `unsloth`
+GGUF repos (not the official `Qwen` ones) and should default
+`chat_template_kwargs.enable_thinking: false` for phase 1's chat-only scope.
 
-**Proposed benchmark method**, to be executed by task 22.1 — reusing
-`sovereign-os`'s method rather than designing one from scratch, since it's
+**Proposed benchmark method** (as executed by task 22.1) — reused
+`sovereign-os`'s method rather than designing one from scratch, since it was
 already proven useful there:
 
 1. Run both engines with `qwen3:1.7b` on representative self-hosting
@@ -134,7 +234,9 @@ already proven useful there:
    for a short chat-shaped completion, and time-to-first-token —
    specifically check for the same Ollama lazy-load cold-start penalty
    `sovereign-os` found (6.96s TTFT), since a Compose service that's kept
-   warm may or may not reproduce it.
+   warm may or may not reproduce it. (It didn't reproduce in that form here
+   — the dominant cost turned out to be thinking-mode handling instead, see
+   Decision above.)
 3. If tool-call accuracy ever becomes relevant to this decision (it isn't
    for phase 1's chat-only scope, but the comparison method transfers), a
    small versioned prompt corpus like `sovereign-os`'s 28-item set is a
@@ -143,20 +245,20 @@ already proven useful there:
    each to expose the internal chat API `apps/harness` needs, and whether
    model download/verification needs to be hand-built (llama.cpp) or comes
    free (Ollama) — `sovereign-os` left this exact question open for its own
-   RFC-0002 equivalent, so don't expect an existing answer to crib from.
+   RFC-0002 equivalent; this doc's own answer is recorded above.
 5. Record both engines' numbers and qualitative cost side by side — don't
-   discard the losing engine's data, future re-evaluation may need it.
+   discard the losing engine's data, future re-evaluation may need it. (Kept
+   in full in `scripts/harness-benchmark/results/*.json`.)
 
 ## Open questions
 
-- Should the benchmark also cover `qwen3:0.6b` (the low-resource fallback),
-  or is `qwen3:1.7b` alone sufficient signal for this decision? Leaning
-  toward covering both, since the fallback model is exactly the case where
-  engine overhead (Ollama's daemon weight, in particular) matters most.
-- Does either engine's licensing or distribution model create a self-hosting
-  concern (e.g. a EULA a self-hosted operator would need to accept)? Not
-  yet checked — should be part of task 22.1's writeup even though it's not
-  a performance question.
+- ~~Should the benchmark also cover `qwen3:0.6b`...~~ Resolved: yes, and it
+  mattered — `0.6b` roughly doubles throughput over `1.7b` on this hardware
+  (see Decision above), a meaningful data point for the smallest
+  self-hosting tiers.
+- ~~Does either engine's licensing or distribution model create a
+  self-hosting concern...~~ Resolved: no concern for either engine or the
+  model weights — see Decision above.
 
 ## Next steps
 

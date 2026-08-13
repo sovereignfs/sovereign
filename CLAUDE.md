@@ -773,7 +773,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 ## Status
 
-Current platform version: **`0.85.1`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
+Current platform version: **`0.86.0`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
 
 For the full task history and current roadmap position, see:
 

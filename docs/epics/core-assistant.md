@@ -42,7 +42,7 @@ part of this epic.
 
 ## Tasks
 
-#### 📋 22.1 — Resolve the harness engine benchmark (Research 0015)
+#### ✅ 22.1 — Resolve the harness engine benchmark (Research 0015)
 
 **Goal:** Decide, with real measurements rather than priors, whether
 `apps/harness` wraps llama.cpp server or Ollama.
@@ -80,6 +80,19 @@ part of this epic.
 - Both model profiles (`qwen3:1.7b` and `qwen3:0.6b`) were covered.
 - Research 0015 reflects the decision and the reasoning, not just a
   one-line verdict.
+
+**Result:** llama.cpp server selected. Measured on the actual production
+self-hosting box (2 vCPU / 3.7GB RAM, no GPU) — raw token throughput was
+nearly identical between engines, but Ollama's OpenAI-compatible endpoint
+(v0.32.9) does not honor `think: false` (only its native `/api/chat` does),
+so every request through it pays Qwen3's full default "thinking" tax —
+9–21s of silence before any visible answer, vs. llama.cpp's sub-second TTFT
+with `chat_template_kwargs.enable_thinking: false`. Full data and reasoning
+in [Research 0015](../research/0015-harness-engine-benchmark.md)'s Decision
+section; raw reports in `scripts/harness-benchmark/results/`. Also found:
+the official `Qwen/Qwen3-*-GGUF` repos only publish `Q8_0`, not `Q4_K_M` —
+task 22.2's model download layer needs the `unsloth/Qwen3-*-GGUF` repos
+instead.
 
 ---
 

@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-08-13T18:13:05.137Z",
+  "provider": "llama-cpp",
+  "model": "qwen3-0.6b",
+  "baseUrl": "http://127.0.0.1:8081",
+  "corpusId": "warden-phase1-chat-v1",
+  "cold": true,
+  "items": [
+    {
+      "id": "greeting",
+      "timeToFirstTokenSeconds": 0.45848033099999996,
+      "totalDurationSeconds": 1.1819,
+      "completionTokens": 17,
+      "tokensReported": true,
+      "tokensPerSecond": 14.38,
+      "completionText": "Hello! How can I assist you today? What can I help you with?",
+      "reasoningText": "",
+      "error": null
+    },
+    {
+      "id": "short-explain",
+      "timeToFirstTokenSeconds": 0.2963452769999999,
+      "totalDurationSeconds": 2.7847,
+      "completionTokens": 56,
+      "tokensReported": true,
+      "tokensPerSecond": 20.11,
+      "completionText": "A self-hosted app is an app developed and managed by the user themselves, allowing them to run and maintain the app independently without relying on external services or cloud providers. It typically involves using a platform like a web framework or app development platform to build and deploy the app.",
+      "reasoningText": "",
+      "error": null
+    },
+    {
+      "id": "list-format",
+      "timeToFirstTokenSeconds": 0.3168260279999995,
+      "totalDurationSeconds": 6.429,
+      "completionTokens": 124,
+      "tokensReported": true,
+      "tokensPerSecond": 19.29,
+      "completionText": "Here are three benefits of keeping your data on your own server:\n\n1. **Increased Security**: By isolating your data from external sources, you reduce the risk of data breaches and unauthorized access, which enhances the security posture of your system.\n\n2. **Reduced Dependence on Third Parties**: Since your data is stored locally, you don’t need to rely on third-party services or cloud providers, which can be a potential vulnerability or cost issue.\n\n3. **Improved Data Availability**: If your server goes down or is compromised, your data remains intact and accessible, which is a key advantage for businesses and individuals.",
+      "reasoningText": "",
+      "error": null
+    },
+    {
+      "id": "followup-context",
+      "timeToFirstTokenSeconds": 0.45120884599999955,
+      "totalDurationSeconds": 0.8559,
+      "completionTokens": 8,
+      "tokensReported": true,
+      "tokensPerSecond": 9.35,
+      "completionText": "The capital of Germany is Berlin.",
+      "reasoningText": "",
+      "error": null
+    },
+    {
+      "id": "longer-response",
+      "timeToFirstTokenSeconds": 0.5911873770000002,
+      "totalDurationSeconds": 3.9557,
+      "completionTokens": 70,
+      "tokensReported": true,
+      "tokensPerSecond": 17.7,
+      "completionText": "A home assistant chatbot can help users manage their tasks and notes by providing real-time assistance with scheduling, reminders, and organizing information. It can streamline daily routines, simplify note-taking, and offer insights into productivity and priorities. By integrating with personal devices and cloud services, the chatbot supports seamless interaction, making daily tasks more efficient and organized.",
+      "reasoningText": "",
+      "error": null
+    }
+  ],
+  "coldStartTimeToFirstTokenSeconds": 0.45848033099999996,
+  "warmItems": [
+    {
+      "id": "short-explain",
+      "timeToFirstTokenSeconds": 0.2963452769999999,
+      "totalDurationSeconds": 2.7847,
+      "completionTokens": 56,
+      "tokensReported": true,
+      "tokensPerSecond": 20.11,
+      "completionText": "A self-hosted app is an app developed and managed by the user themselves, allowing them to run and maintain the app independently without relying on external services or cloud providers. It typically involves using a platform like a web framework or app development platform to build and deploy the app.",
+      "reasoningText": "",
+      "error": null
+    },
+    {
+      "id": "list-format",
+      "timeToFirstTokenSeconds": 0.3168260279999995,
+      "totalDurationSeconds": 6.429,
+      "completionTokens": 124,
+      "tokensReported": true,
+      "tokensPerSecond": 19.29,
+      "completionText": "Here are three benefits of keeping your data on your own server:\n\n1. **Increased Security**: By isolating your data from external sources, you reduce the risk of data breaches and unauthorized access, which enhances the security posture of your system.\n\n2. **Reduced Dependence on Third Parties**: Since your data is stored locally, you don’t need to rely on third-party services or cloud providers, which can be a potential vulnerability or cost issue.\n\n3. **Improved Data Availability**: If your server goes down or is compromised, your data remains intact and accessible, which is a key advantage for businesses and individuals.",
+      "reasoningText": "",
+      "error": null
+    },
+    {
+      "id": "followup-context",
+      "timeToFirstTokenSeconds": 0.45120884599999955,
+      "totalDurationSeconds": 0.8559,
+      "completionTokens": 8,
+      "tokensReported": true,
+      "tokensPerSecond": 9.35,
+      "completionText": "The capital of Germany is Berlin.",
+      "reasoningText": "",
+      "error": null
+    },
+    {
+      "id": "longer-response",
+      "timeToFirstTokenSeconds": 0.5911873770000002,
+      "totalDurationSeconds": 3.9557,
+      "completionTokens": 70,
+      "tokensReported": true,
+      "tokensPerSecond": 17.7,
+      "completionText": "A home assistant chatbot can help users manage their tasks and notes by providing real-time assistance with scheduling, reminders, and organizing information. It can streamline daily routines, simplify note-taking, and offer insights into productivity and priorities. By integrating with personal devices and cloud services, the chatbot supports seamless interaction, making daily tasks more efficient and organized.",
+      "reasoningText": "",
+      "error": null
+    }
+  ],
+  "averageWarmTimeToFirstTokenSeconds": 0.4139,
+  "averageWarmTokensPerSecond": 16.61,
+  "idleMemoryUsage": null,
+  "finishedAt": "2026-08-13T18:13:20.352Z"
+}

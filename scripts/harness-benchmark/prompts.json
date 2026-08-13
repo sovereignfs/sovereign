@@ -1,0 +1,42 @@
+{
+  "id": "warden-phase1-chat-v1",
+  "description": "Chat-shaped completions only, matching Warden phase 1's scope (no tool calls). Short prompts on purpose -- the comparison cares about engine overhead (load time, TTFT, tokens/sec), not model reasoning depth.",
+  "items": [
+    {
+      "id": "greeting",
+      "messages": [{ "role": "user", "content": "Hi! What can you help me with?" }]
+    },
+    {
+      "id": "short-explain",
+      "messages": [
+        { "role": "user", "content": "In two sentences, explain what a self-hosted app means." }
+      ]
+    },
+    {
+      "id": "list-format",
+      "messages": [
+        {
+          "role": "user",
+          "content": "List three benefits of keeping your data on your own server."
+        }
+      ]
+    },
+    {
+      "id": "followup-context",
+      "messages": [
+        { "role": "user", "content": "What's the capital of France?" },
+        { "role": "assistant", "content": "The capital of France is Paris." },
+        { "role": "user", "content": "What about Germany?" }
+      ]
+    },
+    {
+      "id": "longer-response",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Write a short paragraph (about 80 words) describing what a home assistant chatbot could do for someone managing their tasks and notes."
+        }
+      ]
+    }
+  ]
+}

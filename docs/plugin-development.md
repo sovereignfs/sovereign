@@ -2323,7 +2323,8 @@ Plugins access the database through `await sdk.db.getClient()`. Every plugin get
 dedicated store — a separate SQLite file (or `sqld` namespace) or Postgres schema. There is
 no `shared`/`isolated` choice to make: no table prefix is required, and uninstalling a
 plugin drops its entire store. Migrations live at `plugins/<id>/migrations/` and always
-run against the plugin's own dedicated store.
+run against the plugin's own dedicated store — once a migration file ships, treat it as
+append-only (see ["Migration files are append-only once shipped"](#migration-files-are-append-only-once-shipped) below).
 
 `type: "platform"` plugins (`account`, `console`, `launcher`) are the one exception — they
 administer the platform's own core data directly, the same as `apps/auth`, rather than
@@ -2621,7 +2622,10 @@ those silently.
 There is no mode to choose, and no `database` field left in the manifest at
 all — every plugin owns a dedicated sqld namespace / Postgres schema,
 always. No risk of table conflicts with the platform or other plugins, no
-slug prefix required.
+slug prefix required. Before writing your first migration, see
+["Migration files are append-only once shipped"](#migration-files-are-append-only-once-shipped)
+below — regenerating a migration file after release breaks every instance
+that already applied it.
 
 There is no per-plugin dialect field either (workstream 0009 leg 1 removed
 it). A plugin's store always resolves to the operator's instance-wide
@@ -2691,6 +2695,30 @@ pnpm sv plugin migrate
 The command reads from your plugin's `migrations/sqlite/` folder and updates
 the DB (plugin file for `isolated`, platform DB for `shared`). The running dev
 server picks up the new schema on the next request — no restart needed.
+
+#### Migration files are append-only once shipped
+
+Never regenerate an already-released migration file — not even to fix a typo
+in a comment, and not even if the regenerated contents would be byte-for-byte
+identical to what shipped. Once a plugin version with a given migration file
+has been released, that file is frozen; any further change is a **new**
+migration file, added on top.
+
+**Why this matters:** Drizzle's SQLite migrator decides whether a migration
+has "already applied" by comparing the migration folder's embedded
+timestamp (`meta/_journal.json`'s `when` field) against the
+`__drizzle_migrations` tracking table in the target database — it does not
+hash file contents. Regenerating a migration file (e.g. via `drizzle-kit
+generate`) gives it a new timestamp, so the migrator treats it as a brand
+new, unapplied migration and re-runs it against a database that already has
+the objects that migration creates. The result is a boot-time `already
+exists` error on every instance that already applied the original file —
+exactly the kind of failure that looks like a data-corruption bug but is
+actually just a stale mental model of how the migrator tracks state.
+
+If you need to fix a mistake in an already-released migration, write a new
+migration file that corrects it (e.g. `ALTER TABLE` to fix a wrong column
+type) — never edit or regenerate the original.
 
 See [`docs/plugin-database.md`](plugin-database.md) for the full migration
 reference: SQL conventions, journal format, Postgres variant, lifecycle, and

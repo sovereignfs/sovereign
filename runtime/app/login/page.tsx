@@ -1,8 +1,18 @@
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
-import { resolveInstanceName } from '@/src/instance-name';
+import type { Metadata } from 'next';
+import { InstanceProvider, resolveInstanceConfig } from '@/src/instance-provider';
 import { readServerSession } from '@/src/server-session';
 import { LoginForm } from './login-form';
+
+// RFC 0027 Phase 2 — branded per the instance's configured name, not just
+// the static root layout title. `(platform)/layout.tsx`'s own
+// generateMetadata is per-plugin PWA metadata, unrelated to this; /login
+// sits outside that route group entirely (pre-auth), so it needs its own.
+export async function generateMetadata(): Promise<Metadata> {
+  const { instanceName } = await resolveInstanceConfig();
+  return { title: `Sign in to ${instanceName}` };
+}
 
 export default async function LoginPage({
   searchParams,
@@ -28,14 +38,18 @@ export default async function LoginPage({
   // works identically there too — one source of truth for both paths.
   const { returnUrl } = await searchParams;
 
-  const instanceName = resolveInstanceName(process.env.INSTANCE_NAME);
   return (
-    <Suspense>
-      <LoginForm
-        instanceName={instanceName}
-        instanceInitial={instanceName[0]?.toUpperCase() ?? 'S'}
-        returnUrl={returnUrl ?? null}
-      />
-    </Suspense>
+    <InstanceProvider>
+      {({ instanceName, instanceLogoUrl }) => (
+        <Suspense>
+          <LoginForm
+            instanceName={instanceName}
+            instanceInitial={instanceName[0]?.toUpperCase() ?? 'S'}
+            instanceLogoUrl={instanceLogoUrl}
+            returnUrl={returnUrl ?? null}
+          />
+        </Suspense>
+      )}
+    </InstanceProvider>
   );
 }

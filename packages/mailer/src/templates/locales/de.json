@@ -1,0 +1,15 @@
+{
+  "passwordReset": {
+    "subject": "Setzen Sie Ihr {{brandName}}-Passwort zurück",
+    "intro": "Sie haben eine Zurücksetzung des Passworts für Ihr {{brandName}}-Konto angefordert.",
+    "cta": "Passwort zurücksetzen",
+    "expiry": "Dieser Link läuft in 1 Stunde ab.",
+    "ignore": "Wenn Sie dies nicht angefordert haben, können Sie diese E-Mail ignorieren."
+  },
+  "invite": {
+    "subject": "Sie wurden zu {{brandName}} eingeladen",
+    "intro": "Sie wurden eingeladen, {{brandName}} beizutreten.",
+    "cta": "Konto erstellen",
+    "expiry": "Diese Einladung läuft in 48 Stunden ab."
+  }
+}

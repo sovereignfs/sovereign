@@ -15,10 +15,14 @@ import styles from '../auth.module.css';
  */
 export function LoginForm({
   runtimeUrl,
+  instanceName,
   instanceInitial,
+  instanceLogoUrl,
 }: {
   runtimeUrl: string;
+  instanceName: string;
   instanceInitial: string;
+  instanceLogoUrl: string | null;
 }) {
   const searchParams = useSearchParams();
   const signedOut = searchParams.get('signedout') === '1';
@@ -80,9 +84,13 @@ export function LoginForm({
     <main className={styles.page}>
       <div className={styles.card}>
         <div className={styles.logo} aria-hidden="true">
-          {instanceInitial}
+          {instanceLogoUrl ? (
+            <img src={instanceLogoUrl} alt={instanceName} className={styles.logoImg} />
+          ) : (
+            instanceInitial
+          )}
         </div>
-        <h1 className={styles.title}>Sign in to Sovereign</h1>
+        <h1 className={styles.title}>Sign in to {instanceName}</h1>
         {signedOut ? (
           <div className={styles.notice} role="status">
             <p className={styles.noticeText}>You&rsquo;ve been signed out.</p>
@@ -162,7 +170,7 @@ export function LoginForm({
           {passkeyLoading ? 'Waiting for passkey…' : 'Sign in with a passkey'}
         </Button>
         <p className={styles.footer}>
-          New to Sovereign?{' '}
+          New to {instanceName}?{' '}
           <Link className={styles.link} href={`${runtimeUrl}/register`}>
             Create account
           </Link>

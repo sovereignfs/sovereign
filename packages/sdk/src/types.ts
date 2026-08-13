@@ -104,6 +104,16 @@ export interface PlatformConfig {
    * instance in federated contexts, license checks, or analytics.
    */
   instanceId: string;
+  /** Display name for outbound email's "From" header; falls back to instanceName when unset. */
+  emailFromName?: string;
+  /** Absolute URL to the logo image used in email headers, or undefined when unset. */
+  emailLogo?: string;
+  /**
+   * Public base URL of this Sovereign instance (from `NEXT_PUBLIC_RUNTIME_URL`,
+   * falling back to `http://localhost:<RUNTIME_PORT ?? 3000>`). Use this to
+   * build absolute links (e.g. in outbound email) instead of hardcoding a URL.
+   */
+  instanceUrl: string;
 }
 
 /**

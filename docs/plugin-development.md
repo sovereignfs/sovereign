@@ -2159,15 +2159,24 @@ The SDK surface (`sdk.*`):
 - **`mailer`** — `send({ to, subject, text, html }, requestHeaders?)`. Requires
   `mailer:send` and `mailer:sendExternal` (RFC 0062 — see "Plugin email"
   above); pass `await headers()` as `requestHeaders`. No-ops when SMTP is
-  unconfigured.
+  unconfigured. `html`/`text` are pre-rendered strings — the SDK does not
+  render templates for you. A plugin wanting polished HTML email can add
+  [React Email](https://react.email) as its own dependency and render to a
+  string itself before calling `send()`; the platform's own branded
+  templates (`@sovereignfs/mailer`, RFC 0031) are internal and not
+  importable by plugins (SDK boundary rule).
 - **`email`** — `sendToUser({ recipientUserId, templateId, subject, html?, text?, data? }, requestHeaders?)`
   (RFC 0062). The recommended default over `mailer.send` — see "Plugin email"
   above. Requires `mailer:send`; pass `await headers()` as `requestHeaders`.
-- **`platform`** — `getConfig()` → `{ tenantName, inviteOnly, version, instanceName, instancePrimaryColor? }`
+- **`platform`** — `getConfig()` → `{ tenantName, inviteOnly, version, instanceName, instancePrimaryColor?, instanceId, emailFromName?, emailLogo?, instanceUrl }`
   (await it). `instanceName` falls back to `tenantName` when no instance name is
   configured; `instancePrimaryColor` is a validated 6-digit hex string or
-  `undefined`. Use these to display the operator's instance identity in plugin UI without
-  reading CSS variables.
+  `undefined`. `instanceId` is a stable UUID generated once at bootstrap.
+  `emailFromName`/`emailLogo` (RFC 0031) are the operator's email-branding
+  overrides, `undefined` when unset; `instanceUrl` is this instance's public
+  base URL — use it instead of hardcoding a URL when building absolute links
+  (e.g. in outbound email). Use these to display the operator's instance
+  identity in plugin UI without reading CSS variables.
 - **`directory`** — member selection for sharing, assignment, membership, and
   recipient flows (RFC 0041). No manifest permission is required. Use
   `searchUsers({ query, limit? })` for user-picker search and

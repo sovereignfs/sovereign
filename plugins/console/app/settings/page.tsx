@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { sdk } from '@sovereignfs/sdk';
 import styles from '../console.module.css';
 import { ProviderConfigsSection, type ProviderConfigRow } from './ProviderConfigForms';
@@ -5,6 +6,7 @@ import { FieldEncryptionStatus, type FieldEncryptionView } from './FieldEncrypti
 import { PushRelaySettingsForm, type PushRelaySettingsView } from './PushRelaySettingsForm';
 import { TenantForm, InviteOnlyForm, ExampleAppsForm, RootPluginForm } from './SettingsForms';
 import { SmtpSettingsForm, type SmtpSettingsView } from './SmtpSettingsForm';
+import { EmailTemplatesForm } from './EmailTemplatesForm';
 
 const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
@@ -172,6 +174,15 @@ export default async function SettingsPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Email delivery (SMTP)</h2>
         <SmtpSettingsForm smtp={settings.smtp} canEdit={canConfigureSecrets} />
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Email templates</h2>
+        <p className={styles.helpText}>
+          Override the subject and body copy for transactional email, per locale. Branding (sender
+          name, logo) is set on the <Link href="/console/identity">Instance identity</Link> page.
+        </p>
+        <EmailTemplatesForm />
       </section>
 
       <section className={styles.section}>

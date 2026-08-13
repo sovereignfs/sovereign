@@ -299,19 +299,31 @@ export async function sendInviteAction(
   const runtimeUrl =
     process.env[runtimeUrlKey] ?? `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
   const registerUrl = `${runtimeUrl}/register?token=${token}`;
-  const emailResult = await sendAdminEmail({
-    templateId: 'console.invite_created',
-    toEmail: email,
-    actorUserId: session.user.id,
-    subject: 'You have been invited to Sovereign',
-    text: [
-      'You have been invited to join this Sovereign instance.',
-      '',
-      `Create your account at: ${registerUrl}`,
-    ].join('\n'),
-    html: `<p>You have been invited to join this Sovereign instance.</p><p><a href="${registerUrl}">Create your account</a></p>`,
-    metadata: { expiresInDays: expiresInDays ?? null },
+  // Branded rendering (RFC 0031) happens server-side in the runtime, not
+  // here — the SDK boundary rule blocks this plugin from importing
+  // @sovereignfs/mailer/@sovereignfs/db directly.
+  const emailRes = await selfAdminFetch('/api/admin/email-templates/send', {
+    method: 'POST',
+    body: JSON.stringify({
+      templateId: 'invite',
+      toEmail: email,
+      actorUserId: session.user.id,
+      url: registerUrl,
+      source: 'console',
+    }),
   });
+  const emailData = (await emailRes.json().catch(() => null)) as {
+    status?: 'skipped' | 'sent' | 'failed';
+    errorCode?: string;
+    error?: string;
+  } | null;
+  const emailResult: { ok: true } | { ok: false; error: string } =
+    emailRes.ok && emailData?.status !== 'skipped' && emailData?.status !== 'failed'
+      ? { ok: true }
+      : {
+          ok: false,
+          error: emailData?.errorCode ?? emailData?.error ?? `email ${emailRes.status}`,
+        };
 
   void logActivity({
     actorId: await actorId(),

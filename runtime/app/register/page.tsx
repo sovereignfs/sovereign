@@ -1,11 +1,18 @@
 import { redirect } from 'next/navigation';
-import { resolveInstanceName } from '@/src/instance-name';
+import type { Metadata } from 'next';
+import { InstanceProvider, resolveInstanceConfig } from '@/src/instance-provider';
 import { readServerSession } from '@/src/server-session';
 import { RegisterForm } from './register-form';
 import styles from '../auth-page.module.css';
 
 const AUTH_URL =
   process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
+
+// RFC 0027 Phase 2 — see login/page.tsx's matching comment.
+export async function generateMetadata(): Promise<Metadata> {
+  const { instanceName } = await resolveInstanceConfig();
+  return { title: `Create your ${instanceName} account` };
+}
 
 interface InviteLookupResponse {
   valid: boolean;
@@ -37,13 +44,39 @@ export default async function RegisterPage({
   searchParams: Promise<{ token?: string }>;
 }) {
   const { token } = await searchParams;
-  const instanceName = resolveInstanceName(process.env.INSTANCE_NAME);
-  const instanceInitial = instanceName[0]?.toUpperCase() ?? 'S';
 
   // Already signed in? Send them to the app rather than showing the form.
   // (Skipped for invite-token links, handled below.) See readServerSession.
   if (!token && (await readServerSession())) redirect('/');
 
+  return (
+    <InstanceProvider>
+      {({ instanceName, instanceLogoUrl }) => {
+        const instanceInitial = instanceName[0]?.toUpperCase() ?? 'S';
+        return (
+          <RegisterPageContent
+            token={token}
+            instanceName={instanceName}
+            instanceInitial={instanceInitial}
+            instanceLogoUrl={instanceLogoUrl}
+          />
+        );
+      }}
+    </InstanceProvider>
+  );
+}
+
+async function RegisterPageContent({
+  token,
+  instanceName,
+  instanceInitial,
+  instanceLogoUrl,
+}: {
+  token: string | undefined;
+  instanceName: string;
+  instanceInitial: string;
+  instanceLogoUrl: string | null;
+}) {
   if (token) {
     const invite = await lookupInvite(token);
     if (!invite?.valid || !invite.email) {
@@ -61,11 +94,18 @@ export default async function RegisterPage({
       <RegisterForm
         instanceName={instanceName}
         instanceInitial={instanceInitial}
+        instanceLogoUrl={instanceLogoUrl}
         invitedEmail={invite.email}
         invitedBy={invite.invitedBy ?? undefined}
       />
     );
   }
 
-  return <RegisterForm instanceInitial={instanceInitial} />;
+  return (
+    <RegisterForm
+      instanceName={instanceName}
+      instanceInitial={instanceInitial}
+      instanceLogoUrl={instanceLogoUrl}
+    />
+  );
 }

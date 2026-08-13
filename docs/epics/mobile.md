@@ -519,7 +519,22 @@ policy on when it is justified — the ongoing cost is per-app and permanent.
 - Store metadata does not imply Sovereign hosts user data.
 - No analytics or crash reporting is enabled by default.
 
-#### 📋 20.13 — `device:secureStorage` bridge capability (Research 0012)
+#### 🚧 20.13 — `device:secureStorage` bridge capability (Research 0012)
+
+> **Partial — key custody done, the SQLCipher database is not.** This
+> repo's own three deliverables below (permission, bridge protocol
+> semantics, capability reporting) are done — see `packages/manifest`'s
+> `device:secureStorage` permission and `packages/sdk/src/device-client.ts`'s
+> `secureStorage` surface (RFC 0093, leg 4). `sovereign-mobile`'s
+> Keychain/Keystore-backed key custody is also done and build-verified on
+> both platforms (iOS `xcodebuild`, Android `:app:assembleDebug`) — see that
+> repo's own epic task 20.13. **Not done:** `sovereign-mobile`'s
+> `@capacitor-community/sqlite` + SQLCipher database integration — the
+> `secureStorage` capability built so far stores small Keychain/Keystore-
+> backed values (the Device Storage Key itself, per RFC 0093 §2), not the
+> actual encrypted SQLite database `device-only` plugin data would live in.
+> That remains open, tracked under task 8.20's own native-backend scope.
+> `sovereign-desktop`'s Tauri transport (task 17.4) has also not started.
 
 **Goal:** Extend the device bridge with durable, encrypted, device-auth-gated
 storage — the capability that makes the `device-only` tier possible, and the only

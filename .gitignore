@@ -100,6 +100,13 @@ playwright-report/
 test-results/
 .auth/
 
+# Playwright visual regression (RFC 0059) — actual/diff output and reports;
+# baseline *-snapshots/ directories are source artifacts and ARE committed.
+test-results-visual/
+packages/ui/test-results-visual/
+playwright-report-visual/
+storybook-visual-report/
+
 # Storybook
 packages/ui/storybook-static/
 

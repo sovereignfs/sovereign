@@ -1,0 +1,148 @@
+name: Visual regression
+
+# RFC 0059 — local/CI Playwright visual regression testing. Reusable
+# (workflow_call only, like e2e.yml) — NOT yet wired into publish-images.yml
+# as a release gate. Baselines committed so far were generated on macOS;
+# Playwright's default snapshot naming is platform-suffixed
+# (*-darwin.png/*-linux.png), so a Linux CI run currently has no matching
+# baseline and would fail on "snapshot doesn't exist" rather than a real
+# diff. A maintainer needs to run `pnpm test:visual:update` once from a
+# Linux environment (this workflow, dispatched manually, or a matching
+# container) to produce real -linux.png baselines before this becomes a
+# blocking gate. See docs/testing-visual.md's "Known limitation".
+on:
+  workflow_call:
+    secrets:
+      E2E_AUTH_SECRET:
+        required: true
+      E2E_ADMIN_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      updateSnapshots:
+        description: 'Run with --update-snapshots (for the initial Linux baseline calibration pass)'
+        type: boolean
+        default: false
+
+jobs:
+  # Tier 1 (RFC 0059): packages/ui's own curated component/token-gallery
+  # baseline set. No DB — just Storybook — so it never depends on the
+  # heavier Tier 2 setup below succeeding.
+  visual-components:
+    name: Component visuals (Storybook)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Build workspace packages
+        run: pnpm turbo build --filter='./packages/*'
+      - name: Run component visual tests
+        run: >
+          pnpm --filter @sovereignfs/ui exec playwright test
+          --config=playwright.visual.config.ts
+          ${{ inputs.updateSnapshots && '--update-snapshots' || '' }}
+        env:
+          CI: 'true'
+      - name: Upload diff artifacts
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: visual-components-report
+          path: |
+            packages/ui/test-results-visual/
+            packages/ui/storybook-visual-report/
+          retention-days: 7
+      - name: Upload updated baselines
+        uses: actions/upload-artifact@v7
+        if: ${{ inputs.updateSnapshots }}
+        with:
+          name: visual-components-baselines
+          path: packages/ui/__tests__/visual/**/*-snapshots/**
+          retention-days: 7
+
+  # Tier 2 (RFC 0059): cross-runtime smoke suite (auth, shell, first-party
+  # plugins, overlays, mobile nav). Setup mirrors e2e.yml — same sqld-backed
+  # runtime/auth stack.
+  visual-smoke:
+    name: Runtime smoke visuals
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Build workspace packages
+        run: pnpm turbo build --filter='./packages/*'
+
+      # See e2e.yml's matching step for the full rationale — same plugin set
+      # (platform plugins only) keeps this suite's fixtures aligned with e2e's.
+      - name: Declare plugins for visual tests
+        run: |
+          cat > sovereign.plugins.json <<'EOF'
+          {
+            "plugins": []
+          }
+          EOF
+
+      - name: Install and compose plugins
+        run: |
+          pnpm install:plugins
+          pnpm install --no-frozen-lockfile
+
+      - name: Start sqld
+        run: |
+          docker run -d --name sqld-visual \
+            -p 28080:8080 -p 28081:8081 \
+            -e SQLD_NODE=primary \
+            -e SQLD_ADMIN_LISTEN_ADDR='0.0.0.0:8081' \
+            ghcr.io/tursodatabase/libsql-server:latest \
+            /bin/sqld --enable-namespaces
+          for i in $(seq 1 15); do
+            curl -sf http://localhost:28080/health && break
+            sleep 2
+          done
+
+      - name: Write .env
+        run: |
+          {
+            echo "AUTH_SECRET=${{ secrets.E2E_AUTH_SECRET }}"
+            echo "SOVEREIGN_AUTH_SECRET=${{ secrets.E2E_AUTH_SECRET }}"
+            echo "SOVEREIGN_ADMIN_KEY=${{ secrets.E2E_ADMIN_KEY }}"
+            echo "DB_DIALECT=sqlite"
+            echo "SQLD_URL=http://localhost:28080"
+            echo "SQLD_ADMIN_URL=http://localhost:28081"
+            echo "SOVEREIGN_AUTH_URL=http://localhost:3001"
+            echo "SOVEREIGN_AUTH_PUBLIC_URL=http://localhost:3001"
+            echo "NEXT_PUBLIC_RUNTIME_URL=http://localhost:3000"
+            echo "AUTH_INVITE_ONLY=false"
+          } >> .env
+
+      - name: Run smoke visual tests
+        run: >
+          playwright test --config=playwright.visual.config.ts
+          ${{ inputs.updateSnapshots && '--update-snapshots' || '' }}
+        env:
+          CI: 'true'
+
+      - name: Upload diff artifacts
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: visual-smoke-report
+          path: |
+            test-results-visual/
+            playwright-report-visual/
+          retention-days: 7
+      - name: Upload updated baselines
+        uses: actions/upload-artifact@v7
+        if: ${{ inputs.updateSnapshots }}
+        with:
+          name: visual-smoke-baselines
+          path: __tests__/visual/**/*-snapshots/**
+          retention-days: 7

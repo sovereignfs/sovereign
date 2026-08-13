@@ -1,6 +1,6 @@
 # Workstream 0006 — RFC 0071 incident: remaining follow-ups
 
-**Status:** 📋 Planned\
+**Status:** 🚧 In progress — Leg 1 only (Leg 2 rejected, see Changelog v0.3)\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -17,58 +17,56 @@ Close the four items from `docs/incidents/2026-07-24-rfc-0071-encryption-rollout
 became a task — invisible to `ROADMAP.md` and unlikely to get done because
 nothing pointed at them. (A fifth original item, the migrations-loop
 isolation fix, and four others shipped same-day as code fixes; this
-workstream is only the leftover four.) At the end: a published-image
-deployment can run `sv` admin commands without a source checkout, an
-operator adding an encryption-requiring plugin gets warned before the next
-restart instead of at it, and the three documentation gaps the incident's
-own "Lessons learned" section named are filled.
+workstream is only the leftover four.)
+
+**Re-scoped 2026-08-13 (see Changelog v0.2–v0.3):** RFC 0071's at-rest
+encryption was retired from the live code path before this workstream was
+started, which invalidated three of the original four items outright (Leg
+2 — see its section below for the rejection rationale). What remains: a
+published-image deployment can run `sv` admin commands without a source
+checkout (Leg 1, re-pointed at today's actual commands rather than the
+retired `sv db encrypt`/`decrypt`).
 
 ## Definition of done
 
 - [ ] A production deployment with only `docker-compose.prod.yml` + `.env`
       and `SOVEREIGN_VERSION` set (no source checkout) can run
       `docker compose --profile tools run --rm tools pnpm sv <command>`
-      successfully — the exact workaround the incident needed no longer
-      applies.
-- [ ] Adding a plugin that declares `database.requireEncryption: true` to an
-      instance with no encryption key set (or a key set but pre-existing
-      plaintext data) prints a warning naming the plugin **at install time**,
-      not only discovered at the next restart.
-- [ ] `docs/plugin-development.md` states migration files are append-only
-      once a plugin version ships.
-- [ ] `docs/self-hosting.md`'s RFC 0071 section documents "installing an
-      encryption-requiring plugin onto an already-running unencrypted
-      instance" as its own scenario, distinct from the two already covered.
-- [ ] `docs/troubleshooting.md` and `docs/upgrade.md` both surface the exact
-      `DbEncryptionConfigError` message (the incident doc's step 6) as a
-      searchable heading.
+      successfully for every documented admin command (`sv backup`/`restore`,
+      `sv db migrate-to-sqld`/`migrate-to-postgres`/`encrypt-fields`,
+      `sv keys rotate-field-kek`/`rotate-blind-index`, `sv user reset-mfa`)
+      — the exact workaround the incident needed no longer applies.
+
+Leg 2's three definition-of-done items (pre-flight encryption warning,
+`docs/plugin-development.md` append-only-migrations note, and the
+`docs/self-hosting.md`/`troubleshooting.md`/`upgrade.md` doc gaps) are
+dropped along with the leg — see its section below.
 
 ## Decisions locked
 
-| Decision                        | Choice                                                                                                                                                                                  | Rejected alternative and why                                                                                                                                                                            |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scope                           | Only the 4 items the incident doc's own table still lists as "Not started" (epic tasks 0.19, 8.19)                                                                                      | Re-opening the encryption-enforcement model itself — Task 8.15 already redesigned that; this workstream only adds earlier warning and documentation on top of it, not a new semantics change            |
-| Task split                      | Two epic tasks by domain: 0.19 (Docker/CI, infrastructure epic) and 8.19 (CLI code + docs, data-sovereignty epic)                                                                       | One combined task — rejected because a Docker/CI publish-workflow change and a CLI/docs change are independently reviewable and touch unrelated file trees; bundling them makes the PR harder to review |
-| Pre-flight check implementation | Reuse the existing, already-written `findEncryptionRequiringPlugins()` scanner (`bin/sv.ts:758`, currently only called by `sv db encrypt`/`decrypt`) by wiring it into the install path | Writing a new detector — rejected as pure duplication; the scanning logic already exists and is already correct, it's just never invoked at install time                                                |
-| `sovereign-tools` image build   | Add `sovereign-tools` to the existing publish matrix using the Dockerfile's existing `tools` build target (`Dockerfile:98`)                                                             | A separate, dedicated Dockerfile for the tools image — rejected as unnecessary; `docker-compose.prod.yml`'s `tools` service already builds from this exact target locally, this only publishes it       |
-| Workstream execution            | Legs — one branch, one draft PR, one review gate per leg                                                                                                                                | A single combined PR — rejected for the same reviewability reason as the task split above                                                                                                               |
+| Decision                        | Choice                                                                                                                                                                                                                | Rejected alternative and why                                                                                                                                                                            |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scope                           | Only the 4 items the incident doc's own table still lists as "Not started" (epic tasks 0.19, 8.19)                                                                                                                    | Re-opening the encryption-enforcement model itself — Task 8.15 already redesigned that; this workstream only adds earlier warning and documentation on top of it, not a new semantics change            |
+| Task split                      | Two epic tasks by domain: 0.19 (Docker/CI, infrastructure epic) and 8.19 (CLI code + docs, data-sovereignty epic)                                                                                                     | One combined task — rejected because a Docker/CI publish-workflow change and a CLI/docs change are independently reviewable and touch unrelated file trees; bundling them makes the PR harder to review |
+| Pre-flight check implementation | ~~Reuse the existing, already-written `findEncryptionRequiringPlugins()` scanner...~~ **Moot as of v0.3** — that scanner and the manifest field it scanned for no longer exist; Leg 2 is rejected, not re-implemented | —                                                                                                                                                                                                       |
+| `sovereign-tools` image build   | Add `sovereign-tools` to the existing publish matrix using the Dockerfile's existing `tools` build target (`Dockerfile:98`)                                                                                           | A separate, dedicated Dockerfile for the tools image — rejected as unnecessary; `docker-compose.prod.yml`'s `tools` service already builds from this exact target locally, this only publishes it       |
+| Workstream execution            | Legs — one branch, one draft PR, one review gate per leg                                                                                                                                                              | A single combined PR — rejected for the same reviewability reason as the task split above                                                                                                               |
 
 ## Prerequisites
 
-None blocking. Epic task 8.15 (per-database SQLite encryption enforcement,
-✅ shipped) is the semantics this workstream's pre-flight check surfaces
-earlier — it is not amended or reopened.
+None blocking for Leg 1. Epic task 8.15 (per-database SQLite encryption
+enforcement) is no longer relevant to this workstream — it was the semantics
+Leg 2's pre-flight check would have surfaced earlier, and Leg 2 is rejected.
 
 ## Legs
 
-| Leg | Name                                            | Epic tasks | Epics | Gate? | Done when                                                                                                                              |
-| --- | ----------------------------------------------- | ---------- | ----- | ----- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Publish a `sovereign-tools` image               | 0.19       | 0     | No    | A published-image-only deployment (no source checkout) runs `sv db encrypt` and every other documented `sv` admin command successfully |
-| 2   | Pre-flight warning and remaining doc follow-ups | 8.19       | 8     | No    | Installing an encryption-requiring plugin on an unencrypted instance warns at install time, and all three doc gaps are filled          |
+| Leg | Name                                                               | Epic tasks | Epics | Gate? | Done when                                                                                                                                            |
+| --- | ------------------------------------------------------------------ | ---------- | ----- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Publish a `sovereign-tools` image                                  | 0.19       | 0     | No    | A published-image-only deployment (no source checkout) runs every documented `sv` admin command successfully (see Leg 1 detail for the current list) |
+| 2   | ~~Pre-flight warning and remaining doc follow-ups~~ — **Rejected** | ~~8.19~~   | ~~8~~ | —     | Not applicable — see Leg 2 detail below                                                                                                              |
 
-Legs 1 and 2 are independent — neither depends on the other, and either can
-ship first. Default sequence is 1 → 2 only because Leg 1 is the smaller,
-more mechanical change.
+Legs 1 and 2 were independent — neither depended on the other. Leg 2 is
+rejected outright (see its section below), so only Leg 1 proceeds.
 
 ## Leg detail
 
@@ -97,10 +95,43 @@ workstream, good to land and verify independently.
 - Verify the existing local `build:` fallback (no `SOVEREIGN_VERSION` set)
   still works unchanged — this leg adds a fallback, it doesn't replace the
   existing path.
-- `docs/self-hosting.md`'s backup/restore and encryption sections currently
-  instruct operators to clone the repo before running `tools` commands
-  against a published-image deployment — update those instructions once the
-  image exists.
+- **Re-scoped (2026-08-13): the motivating commands were `sv db encrypt`/
+  `decrypt`, which no longer exist** — RFC 0071's at-rest encryption was
+  retired from the live code path (see CLAUDE.md's changelog and
+  `docs/rfcs/0071-sqlite-at-rest-encryption.md`'s Status line) before this leg
+  was ever started. `findEncryptionRequiringPlugins()` is also gone from
+  `bin/sv.ts`, and the manifest schema now rejects any `database` key at all
+  (`packages/manifest/src/__tests__/validate.test.ts:347-358`). The
+  underlying gap this leg closes — no `sovereign-tools` image, so a
+  named-volume production deployment needs a full source checkout to run any
+  admin `sv` command — is still real and unrelated to encryption; verify
+  against today's actual commands instead:
+  - `sv backup` / `sv restore` (platform data snapshot/restore)
+  - `sv db migrate-to-sqld` (one-time plain-file SQLite → sqld cutover)
+  - `sv db migrate-to-postgres` (legacy per-plugin SQLite → Postgres)
+  - `sv db encrypt-fields`, `sv keys rotate-field-kek`,
+    `sv keys rotate-blind-index` (RFC 0092 field-level encryption — the
+    mechanism that actually replaced RFC 0071)
+  - `sv user reset-mfa` (break-glass MFA reset)
+- `docs/self-hosting.md` sections needing a `tools`-service update once the
+  image exists:
+  - "Break-glass CLI" (`sv user reset-mfa`, ~line 987) already documents
+    `--profile tools` usage; its closing pointer used to be a **dead anchor**
+    (`#sqlite-at-rest-encryption-rfc-0071`, a heading removed with the
+    retirement) — already fixed out-of-band (2026-08-13, re-pointed at
+    "Migrating a legacy per-plugin SQLite database"), no action needed here.
+  - "Migrating a legacy per-plugin SQLite database" (`sv db
+migrate-to-postgres`, ~line 797) already documents `--profile tools`
+    usage — no change needed beyond confirming it still works once the image
+    is published.
+  - The backup procedure under "Upgrade procedure (non-Docker)" (`sv backup`,
+    ~line 707) does not mention the `tools` service at all for Docker
+    deployments — add it.
+  - "Field encryption (RFC 0092)" (~line 1701) documents `sv db
+encrypt-fields`, `sv keys rotate-blind-index`, and `sv keys
+rotate-field-kek` with plain `pnpm sv ...` invocations only — add the
+    `--profile tools` equivalent for named-volume production deployments,
+    same pattern as the MFA and migrate-to-postgres sections.
 
 **Do not proceed if:** the `tools` image, once published, turns out to
 depend on build context (source files) not present in the image itself at
@@ -108,81 +139,61 @@ runtime — verify the built image actually contains everything `sv`'s
 commands need (migrations, `bin/sv.ts`'s compiled output) before treating
 this leg as done; a published image that still silently needs a source
 checkout for some commands would not actually close the incident's gap.
+Verify specifically against the command list above, not the retired
+`sv db encrypt`/`decrypt` commands the leg was originally written against.
 
-### Leg 2 — Pre-flight warning and remaining doc follow-ups
+### Leg 2 — Pre-flight warning and remaining doc follow-ups — **Rejected (2026-08-13)**
 
-**Epic tasks:** 8.19
+**Epic tasks:** ~~8.19~~ — rejected, see
+[docs/epics/data-sovereignty.md#-819--rfc-0071-incident-pre-flight-warning-and-remaining-doc-follow-ups--rejected](../epics/data-sovereignty.md#-819--rfc-0071-incident-pre-flight-warning-and-remaining-doc-follow-ups--rejected)
+for the full rationale.
 
-**Technical notes:**
+**Why:** every technical note below assumed `database.requireEncryption` and
+`findEncryptionRequiringPlugins()` (`bin/sv.ts:758`) still existed. Neither
+does — RFC 0071's at-rest encryption was retired from the live code path
+before this leg was started (CLAUDE.md's changelog;
+[RFC 0071](../rfcs/0071-sqlite-at-rest-encryption.md)'s Status line), the
+manifest schema now rejects any `database` key at all
+(`packages/manifest/src/__tests__/validate.test.ts:347-358`), and the scanner
+function is gone. There is nothing left to scan for or warn about at
+install time. Of the four sub-deliverables this leg carried, three are moot
+along with the mechanism (the pre-flight warning itself, the
+`docs/self-hosting.md` scenario, and the `docs/troubleshooting.md`/
+`docs/upgrade.md` entries for the now-unreachable
+`DbEncryptionConfigError: ... has not been encrypted yet` message). The
+fourth — `docs/plugin-development.md`'s append-only-migrations note — is
+**not** encryption-specific and is still valid; it's been split out as its
+own standalone follow-up rather than resurrected here (spawned as a separate
+task on 2026-08-13).
 
-- **Per this codebase's standing CLAUDE.md rule on this subsystem**: read
-  `docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md` in full before
-  touching anything here, and re-run the full test suite plus a live
-  encrypt → verify → decrypt → verify round-trip against real data before
-  considering this leg done — this area has repeatedly looked more finished
-  than it was.
-- Wire `findEncryptionRequiringPlugins()` (`bin/sv.ts:758`) into
-  `scripts/install-plugins.ts`'s install path and/or a new `sv plugin add`
-  check. It already knows how to scan `plugins/<dir>/manifest.json` for
-  `database.requireEncryption` — the only new work is calling it at install
-  time and comparing against the instance's current key/marker state
-  (reuse whatever helper Task 8.15 already exposes for that check, don't
-  reimplement it).
-- This is a **warning**, not a new blocking gate — the instance still boots
-  and Task 8.15's existing warn-on-no-key / fail-fast-on-plaintext behavior
-  is unchanged. This leg only makes the same signal visible earlier.
-- `docs/plugin-development.md`'s new append-only-migrations section should
-  explain _why_ (Drizzle's SQLite migrator compares a migration folder's
-  embedded timestamp against `__drizzle_migrations`, not a content hash —
-  see the incident doc's step 9) so plugin authors understand the failure
-  mode, not just the rule.
-- `docs/self-hosting.md`'s new scenario should walk the exact incident
-  sequence end to end: add plugin → install-time warning (this leg) →
-  `sv db encrypt` → restart — so it reads as a runnable recipe, not just a
-  warning that something can go wrong.
-- `docs/troubleshooting.md`/`docs/upgrade.md` entries should each be a
-  distinct, searchable heading containing the exact error string, not
-  buried in prose — an operator's first move is usually to search the exact
-  message.
-
-**Do not proceed if:** the install-time check can't be made to cover every
-real install path (`sv plugin add`, `pnpm install:plugins`, a manually
-cloned `.local` plugin) without disproportionate new plumbing — in that
-case, ship the check for whichever paths it can cover cleanly (most likely
-`scripts/install-plugins.ts`, the one every documented install flow already
-routes through) and note the gap explicitly in this workstream's Risks
-section, rather than block the whole leg chasing full coverage.
+Re-scoping this leg against RFC 0092's field-level encryption (the mechanism
+that actually replaced RFC 0071, with its own `sv db encrypt-fields`/
+`sv keys rotate-*` commands) would be a materially different task with a
+different scanner, different manifest surface, and different failure modes
+— not a fix to this leg. If wanted, plan it fresh under a new epic task, not
+under 8.19.
 
 ## Risks
 
-- **RFC 0071's encryption work needed three hardening passes including a
-  production incident** (per `CLAUDE.md`'s own account) — Leg 2 touches
-  code adjacent to that machinery (even though it doesn't change its
-  enforcement semantics). Treat it as above-average-risk, not routine, per
-  that file's standing guidance.
 - **Leg 1 is a supply-chain-adjacent change** (a new published image) —
   low risk in itself, but any mistake in the publish matrix could affect
   the existing `sovereign-runtime`/`sovereign-auth` publish jobs if the
   matrix or shared steps are edited carelessly. Keep the diff additive
   (a new matrix entry), not a restructuring of the existing jobs.
-- **The install-time check (Leg 2) can only warn, not force** an operator
-  to run `sv db encrypt` before restarting — someone can still ignore the
-  warning and hit the same boot-time failure Task 8.15 already handles
-  gracefully. That's an accepted limitation, not a bug: forcing the action
-  at install time would mean blocking plugin installation entirely, a much
-  bigger behavior change this workstream doesn't propose.
+
+~~RFC 0071 encryption hardening risk and the install-time-check-can-only-warn
+risk~~ — both applied to Leg 2, which is rejected; removed.
 
 ## Kill criteria
 
-**If Leg 2's install-time check can't reliably cover the common install
-paths** (see "Do not proceed if" above) — ship the documentation and
-`sovereign-tools` image work regardless; those two items stand on their own
-value even without the pre-flight warning. What survives: the docs and
-image-publish fixes are unconditionally useful; only the warning's coverage
-would be narrower than planned.
+Moot — Leg 2 (the only leg the original kill criteria covered) is rejected
+outright, not conditionally. Leg 1 has no kill criteria of its own beyond
+its "Do not proceed if" clause above.
 
 ## Changelog
 
-| Version | Date        | Change        |
-| ------- | ----------- | ------------- |
-| 0.1     | August 2026 | Initial draft |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 0.2     | 2026-08-13  | Re-scoped Leg 1: RFC 0071 at-rest encryption was retired from the live code path before this leg started, so the `sv db encrypt`/`decrypt` commands it was written against no longer exist. Leg 1's underlying goal (a `sovereign-tools` image so production doesn't need a source checkout) still stands — re-pointed at today's actual admin commands (`sv backup`/`restore`, `sv db migrate-to-sqld`/`migrate-to-postgres`, RFC 0092's `sv db encrypt-fields`/`sv keys rotate-*`, `sv user reset-mfa`) and flagged a dead anchor link in `docs/self-hosting.md`'s break-glass CLI section pointing at a heading removed with the retirement. Leg 2 is unaffected by this change — it remains fully moot and out of scope until separately re-planned. |
+| 0.3     | 2026-08-13  | Rejected Leg 2 (epic task 8.19) outright — its mechanism (`database.requireEncryption`, `findEncryptionRequiringPlugins()`) no longer exists in the codebase; see `docs/epics/data-sovereignty.md`'s 8.19 section and `ROADMAP.md` (now ❌). One of its four sub-deliverables — `docs/plugin-development.md`'s append-only-migrations note — was encryption-independent and mis-bundled into the original rejection scope; corrected and spawned as its own standalone follow-up rather than resurrected under 8.19. Workstream proceeds with Leg 1 only.                                                                                                                                                                                                |

@@ -716,6 +716,19 @@ manifest, and isolated plugin SQLite databases before pushing them to a private 
 repository. RFC 0064 tracks the platform-owned future `sv backup`/`sv restore` flow, which
 generalizes Git-backed encrypted backups beyond the infra template.
 
+**Named-volume Docker production deployments** (`docker-compose.prod.yml`)
+have no host path to run `pnpm sv backup` against directly — use the
+profile-gated `tools` service instead, same pattern as the
+[break-glass CLI](#break-glass-cli) below:
+
+```bash
+docker compose -f docker-compose.prod.yml --profile tools run --rm \
+  tools pnpm sv backup
+# ...and to restore:
+docker compose -f docker-compose.prod.yml --profile tools run --rm \
+  tools pnpm sv restore /app/backups/sovereign-backup-<ts>-v<ver>.tar.gz
+```
+
 ---
 
 ## PostgreSQL
@@ -1007,8 +1020,8 @@ docker compose -f docker-compose.prod.yml --profile tools run --rm \
   tools pnpm sv user reset-mfa admin@example.com
 ```
 
-See [SQLite at-rest encryption](#sqlite-at-rest-encryption-rfc-0071) above for
-more on the `tools` service.
+See ["Migrating a legacy per-plugin SQLite database"](#migrating-a-legacy-per-plugin-sqlite-database)
+above for another example of running `sv` through the `tools` service.
 
 ---
 
@@ -1734,6 +1747,20 @@ pnpm sv keys rotate-blind-index --status               # show open windows
 A rotation window left open longer than 7 days is warned about on every
 boot and in Console. **Rotate the master key** (`sv keys rotate-field-kek`)
 any time — it re-wraps key material only and never touches data rows.
+
+**Named-volume Docker production deployments** run every command on this
+page through the profile-gated `tools` service instead of plain `pnpm sv`,
+same pattern as [backup/restore](#upgrade-procedure-non-docker) and the
+[break-glass CLI](#break-glass-cli) above:
+
+```bash
+docker compose -f docker-compose.prod.yml --profile tools run --rm \
+  tools pnpm sv db encrypt-fields
+docker compose -f docker-compose.prod.yml --profile tools run --rm \
+  tools pnpm sv keys rotate-blind-index --plugin <id>
+docker compose -f docker-compose.prod.yml --profile tools run --rm \
+  tools pnpm sv keys rotate-field-kek
+```
 
 **Losing `SOVEREIGN_FIELD_KEK` makes every encrypted field unreadable.**
 Store it with the same care as `AUTH_SECRET`.

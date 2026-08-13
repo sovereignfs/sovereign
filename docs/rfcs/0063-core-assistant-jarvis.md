@@ -1,7 +1,10 @@
 ---
 rfc: 0063
 title: Warden — core assistant platform plugin and harness engine (formerly "Jarvis")
-status: Accepted
+status: >
+  Implemented (phase 1 — epic tasks 22.1-22.3 all done, workstream 0014; tool
+  execution/task handoff/floating button/voice are a future, not-yet-scheduled
+  phase per this RFC's own Adoption path, not part of incorporated_into_plan)
 date: August 2026 (rewritten; originally drafted July 2026)
 author: kasunben
 scope: >

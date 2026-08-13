@@ -51,6 +51,7 @@ runtime/generated/
 !/plugins/account/
 !/plugins/console/
 !/plugins/launcher/
+!/plugins/warden/
 
 # sovereign.plugins.json declares which non-platform plugins get installed
 # (epic task 3.31) — a local, per-checkout file, never committed or shared.

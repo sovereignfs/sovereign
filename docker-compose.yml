@@ -140,6 +140,13 @@ services:
       # name "auth". Defaults to localhost in dev; set to your auth public
       # domain in production when compatibility routes need to be reachable.
       SOVEREIGN_AUTH_PUBLIC_URL: '${SOVEREIGN_AUTH_PUBLIC_URL:-http://localhost:3001}'
+      # Warden's harness engine (RFC 0063, workstream 0014 leg 3) — only
+      # reachable when the optional `harness` Compose profile is running.
+      # Harmless when it isn't: Warden's own server-side fetch just fails,
+      # which is exactly the "installed but unreachable" state its UI
+      # already handles. Same internal-service-name pattern as
+      # SOVEREIGN_AUTH_URL above.
+      SOVEREIGN_HARNESS_URL: 'http://harness:3003'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
       # Shared signing secret — the runtime verifies the auth server's session
       # cookie locally with it (SRS AUTH-05); must match the auth service.

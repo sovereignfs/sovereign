@@ -156,6 +156,9 @@ services:
       # to the mapped auth host port so local prod testing works without a
       # reverse proxy (browser → localhost:4001, not auth:3001).
       SOVEREIGN_AUTH_PUBLIC_URL: '${SOVEREIGN_AUTH_PUBLIC_URL:-${AUTH_BASE_URL:-http://localhost:${AUTH_PORT:-4001}}}'
+      # Warden's harness engine (RFC 0063, workstream 0014 leg 3) — see
+      # docker-compose.yml's identical entry for the full explanation.
+      SOVEREIGN_HARNESS_URL: 'http://harness:3003'
       SOVEREIGN_ADMIN_KEY: '${SOVEREIGN_ADMIN_KEY}'
       # 32-byte key for the plugin secret vault (sdk.secrets) — encrypts
       # values like a plugin-stored GitHub PAT at rest. No default (fails

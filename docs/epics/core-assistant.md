@@ -162,7 +162,7 @@ its own process can start).
 
 ---
 
-#### 📋 22.3 — Warden platform plugin: basic chat
+#### ✅ 22.3 — Warden platform plugin: basic chat
 
 **Goal:** Ship Warden as a first-party plugin with its own routed space and
 basic ephemeral chat, wired to `apps/harness`, with zero tool execution.
@@ -203,6 +203,31 @@ internal chat API before Warden can call it).
 - Uninstalling Warden leaves no dangling entry point or broken route.
 - `apps/harness` unreachable produces a clean unavailable state, not an
   unhandled error or an infinite retry loop.
+
+**Result:** `plugins/warden` shipped as a first-party platform plugin
+(`fs.sovereign.warden`, `shell: default`, `permissions: ["auth:session"]`
+only), composing automatically alongside `console`/`launcher`/`account`.
+`app/api/chat/route.ts` is a plugin-owned Route Handler (a first precedent
+in this repo — every other plugin uses server actions only) proxying
+`apps/harness`'s SSE stream straight through in the success case;
+`app/_lib/harness-client.ts` handles enrollment-token caching (stateless,
+process-lifetime cache, re-enrolls once on a 401) and maps every
+`apps/harness` failure mode to a small state set the UI branches on.
+`ChatView.tsx` reuses `packages/ui`'s already-built, previously-unconsumed
+`Message`/`MessageScroller` components. Verified against a **real**
+`apps/harness` instance, not just the fake-engine test path: built and ran
+the actual `harness`/`harness-engine` containers, confirmed
+`GET /api/health` → `modelStatus: ready`, then drove the real
+`/api/enroll` → `/api/chat` flow directly (curl) with `qwen3:0.6b` and
+confirmed the streamed SSE frames (`token`/`done`, no reasoning
+bleed-through) match `harness-client.ts`'s parsing exactly. A full
+browser-level login-and-chat pass was not possible on the verification
+machine — the baseline stack (`auth`/`sqld`/`runtime`) collides on fixed
+container names with an already-running sibling checkout, the same
+constraint noted in leg 2's PR; the service-contract-level check above is
+the mitigation. Scope-creep audit: grepped the whole `plugins/warden` tree
+for tool/handoff/voice/floating-button reachability and for any SDK import
+beyond `sdk.auth` — none found.
 
 ## Future phases (not yet scheduled)
 

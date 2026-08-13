@@ -107,8 +107,8 @@ as `example.com` and `auth.example.com`. Override `AUTH_PORT` and
 
 `sovereign.plugins.json` at the repo root declares which non-platform plugins
 `pnpm install:plugins` clones and composes into the runtime — the **platform
-plugins** (`console`, `launcher`, `account`) always ship regardless, since they
-live in this repository. `sovereign.plugins.json` is a **local, gitignored
+plugins** (`console`, `launcher`, `account`, `warden`) always ship regardless,
+since they live in this repository. `sovereign.plugins.json` is a **local, gitignored
 file**, never committed: a fresh checkout, `pnpm dev`, and the CI-published
 image all fall back to the committed `sovereign.plugins.default.json` when it
 doesn't exist, which declares **no plugins** (`{"plugins": []}`). The default
@@ -1224,13 +1224,15 @@ DELETE FROM push_subscriptions;
 
 ---
 
-## Warden's harness engine (RFC 0063, workstream 0014 leg 2)
+## Warden's harness engine (RFC 0063, workstream 0014 legs 2-3)
 
 `apps/harness` is a standalone service wrapping a local inference engine
 (llama.cpp server — selected over Ollama by
 [Research 0015](research/0015-harness-engine-benchmark.md)'s benchmark) for
 Warden's basic local chat. Entirely optional and off by default — a plain
-`docker compose up` never starts it.
+`docker compose up` never starts it, and Warden (the `fs.sovereign.warden`
+plugin) shows a clean "unavailable" state instead of a broken chat page
+when `apps/harness` isn't running.
 
 ### Enabling it
 
@@ -1263,18 +1265,19 @@ First boot on a slow connection can take a few minutes for the ~1.1GB
 
 ### Environment variables
 
-| Variable                              | Required | Default                      | Purpose                                                                                                    |
-| ------------------------------------- | -------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `SOVEREIGN_HARNESS_ENROLLMENT_SECRET` | Yes      | none                         | HMAC secret signing/verifying enrollment tokens                                                            |
-| `SOVEREIGN_HARNESS_MODEL`             | No       | `qwen3-1.7b`                 | `qwen3-1.7b` or `qwen3-0.6b`                                                                               |
-| `SOVEREIGN_HARNESS_CONTEXT_SIZE`      | No       | `8192`                       | llama.cpp server's context window (tokens)                                                                 |
-| `SOVEREIGN_HARNESS_MAX_INPUT_CHARS`   | No       | `4000`                       | Server-enforced input length cap                                                                           |
-| `SOVEREIGN_HARNESS_MAX_OUTPUT_TOKENS` | No       | `512`                        | Server-enforced output length cap                                                                          |
-| `SOVEREIGN_HARNESS_MAX_RECENT_TURNS`  | No       | `10`                         | How many recent messages are kept as context                                                               |
-| `SOVEREIGN_HARNESS_MAX_CONCURRENCY`   | No       | `2`                          | Concurrent in-flight chat requests allowed                                                                 |
-| `SOVEREIGN_HARNESS_TIMEOUT_SECONDS`   | No       | `120`                        | Per-request timeout                                                                                        |
-| `SOVEREIGN_HARNESS_LLAMACPP_URL`      | No       | `http://harness-engine:8080` | Internal-only override, not a normal operator knob                                                         |
-| `SOVEREIGN_HARNESS_ENGINE`            | No       | `llamacpp`                   | `fake` selects a deterministic canned-response engine — CI/tests only, never set this in a real deployment |
+| Variable                              | Required | Default                      | Purpose                                                                                                                               |
+| ------------------------------------- | -------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `SOVEREIGN_HARNESS_ENROLLMENT_SECRET` | Yes      | none                         | HMAC secret signing/verifying enrollment tokens (`apps/harness` only — Warden never sees it, only the token `/api/enroll` hands back) |
+| `SOVEREIGN_HARNESS_URL`               | No       | `http://harness:3003`        | Where the runtime (Warden) reaches `apps/harness` — harmless to leave set even when the `harness` profile isn't running               |
+| `SOVEREIGN_HARNESS_MODEL`             | No       | `qwen3-1.7b`                 | `qwen3-1.7b` or `qwen3-0.6b`                                                                                                          |
+| `SOVEREIGN_HARNESS_CONTEXT_SIZE`      | No       | `8192`                       | llama.cpp server's context window (tokens)                                                                                            |
+| `SOVEREIGN_HARNESS_MAX_INPUT_CHARS`   | No       | `4000`                       | Server-enforced input length cap                                                                                                      |
+| `SOVEREIGN_HARNESS_MAX_OUTPUT_TOKENS` | No       | `512`                        | Server-enforced output length cap                                                                                                     |
+| `SOVEREIGN_HARNESS_MAX_RECENT_TURNS`  | No       | `10`                         | How many recent messages are kept as context                                                                                          |
+| `SOVEREIGN_HARNESS_MAX_CONCURRENCY`   | No       | `2`                          | Concurrent in-flight chat requests allowed                                                                                            |
+| `SOVEREIGN_HARNESS_TIMEOUT_SECONDS`   | No       | `120`                        | Per-request timeout                                                                                                                   |
+| `SOVEREIGN_HARNESS_LLAMACPP_URL`      | No       | `http://harness-engine:8080` | Internal-only override, not a normal operator knob                                                                                    |
+| `SOVEREIGN_HARNESS_ENGINE`            | No       | `llamacpp`                   | `fake` selects a deterministic canned-response engine — CI/tests only, never set this in a real deployment                            |
 
 ### Known limitation
 

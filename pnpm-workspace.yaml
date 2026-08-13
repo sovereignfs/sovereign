@@ -26,6 +26,10 @@ catalog:
   next: ^15.5.22
   semver: ^7.8.5
   '@types/semver': ^7.8.0
+  # Client-component testing — shared by packages/ui and any plugin with its
+  # own client components (first cross-consumer: plugins/warden's ChatView).
+  '@testing-library/react': ^16.3.2
+  '@testing-library/dom': ^10.4.1
   # SQLCipher-capable fork of better-sqlite3 (RFC 0071) — API-compatible
   # drop-in, same major/version line as better-sqlite3. Used by packages/db,
   # apps/auth, and scripts/ wherever a SQLite file is opened directly.

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "fs.sovereign.warden",
+  "name": "Warden",
+  "version": "0.1.0",
+  "description": "Basic local chat, powered entirely by infrastructure you control.",
+  "type": "platform",
+  "runtime": "native",
+  "routePrefix": "/warden",
+  "shell": "default",
+  "icon": "icon.svg",
+  "permissions": ["auth:session"],
+  "compatibility": {
+    "minPlatformVersion": "0.87.0"
+  }
+}

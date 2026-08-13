@@ -26,9 +26,12 @@ const LOCALES: Array<{ id: string; label: string }> = [
 
 // templateId/locale flow into the preview <iframe>'s src (a URL/HTML sink) —
 // validate the <select>'s reported value against the fixed option set before
-// it ever reaches state, rather than trusting e.target.value directly
-// (CodeQL js/xss-through-dom: a change event isn't guaranteed to carry one of
-// the option values actually rendered).
+// it ever reaches state, rather than trusting e.target.value directly (a
+// change event isn't guaranteed to carry one of the option values actually
+// rendered). previewUrl's own construction below additionally
+// encodeURIComponent()s both values — CodeQL's js/xss-through-dom doesn't
+// treat an arbitrary predicate function as a taint barrier, only a
+// recognized sanitizer like encodeURIComponent.
 function isTemplateId(value: string): value is EmailTemplateId {
   return TEMPLATES.some((t) => t.id === value);
 }
@@ -102,7 +105,7 @@ export function EmailTemplatesForm() {
   }, [saveState]);
 
   const fields = FIELDS_BY_TEMPLATE[templateId];
-  const previewUrl = `/api/admin/email-templates/preview?templateId=${templateId}&locale=${locale}`;
+  const previewUrl = `/api/admin/email-templates/preview?templateId=${encodeURIComponent(templateId)}&locale=${encodeURIComponent(locale)}`;
 
   return (
     <div className={styles.providerConfigCard}>

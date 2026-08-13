@@ -207,6 +207,31 @@ export async function listDeviceOnlyKeys(pluginId: string): Promise<string[]> {
 }
 
 /**
+ * List every plugin id that has stored at least one `device-only` value on
+ * this device — e.g. for `device-only-export.ts` to know which plugins to
+ * include in a full-device export without needing a separate registry of
+ * "which plugins have used this store." Needs no unlocked key, same
+ * reasoning as `listDeviceOnlyKeys`.
+ */
+export async function listDeviceOnlyPluginIds(): Promise<string[]> {
+  if (!isOpfsAvailable()) return [];
+  let data: FileSystemDirectoryHandle;
+  try {
+    const root = await navigator.storage.getDirectory();
+    const base = await root.getDirectoryHandle(DIRECTORY_NAME, { create: false });
+    data = await base.getDirectoryHandle(DATA_DIRECTORY_NAME, { create: false });
+  } catch (err) {
+    if (isNotFound(err)) return [];
+    throw err;
+  }
+  const pluginIds: string[] = [];
+  for await (const name of (data as AsyncIterableDirectoryHandle).keys()) {
+    pluginIds.push(name);
+  }
+  return pluginIds;
+}
+
+/**
  * Remove every value this plugin has stored — e.g. on uninstall, or a
  * user-initiated "delete my device-only data" action. Needs no unlocked key,
  * same reasoning as `deleteDeviceOnlyValue`.

@@ -639,7 +639,17 @@ task's deliverables assume already exists).
 
 ---
 
-#### 📋 0.19 — Publish a `sovereign-tools` image
+#### ✅ 0.19 — Publish a `sovereign-tools` image
+
+**Shipped as workstream [0006](../workstreams/0006-rfc-0071-incident-followups.md)
+leg 1, re-scoped during implementation** (2026-08-13): RFC 0071's at-rest
+encryption was retired from the live code path before this task started, so
+`sv db encrypt`/`decrypt` — named below and in the original review checklist
+— no longer exist. The underlying gap (no source-checkout-free `sovereign-tools`
+image) was unaffected and shipped against today's real admin commands
+instead: `sv backup`/`restore`, `sv db migrate-to-sqld`/`migrate-to-postgres`/
+`encrypt-fields`, `sv keys rotate-field-kek`/`rotate-blind-index`, and
+`sv user reset-mfa`. See the workstream doc for the full re-scope rationale.
 
 **Goal:** Close the first still-open follow-up from
 `docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`: the documented

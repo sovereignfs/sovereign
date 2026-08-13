@@ -1,6 +1,6 @@
 # Workstream 0006 — RFC 0071 incident: remaining follow-ups
 
-**Status:** 🚧 In progress — Leg 1 only (Leg 2 rejected, see Changelog v0.3)\
+**Status:** ✅ Definition of done satisfied — Leg 1 shipped ([PR #431](https://github.com/sovereignfs/sovereign/pull/431), merged 2026-08-13), Leg 2 rejected (see Changelog v0.3)\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -29,13 +29,14 @@ retired `sv db encrypt`/`decrypt`).
 
 ## Definition of done
 
-- [ ] A production deployment with only `docker-compose.prod.yml` + `.env`
+- [x] A production deployment with only `docker-compose.prod.yml` + `.env`
       and `SOVEREIGN_VERSION` set (no source checkout) can run
       `docker compose --profile tools run --rm tools pnpm sv <command>`
       successfully for every documented admin command (`sv backup`/`restore`,
       `sv db migrate-to-sqld`/`migrate-to-postgres`/`encrypt-fields`,
       `sv keys rotate-field-kek`/`rotate-blind-index`, `sv user reset-mfa`)
-      — the exact workaround the incident needed no longer applies.
+      — the exact workaround the incident needed no longer applies. Shipped
+      in [PR #431](https://github.com/sovereignfs/sovereign/pull/431).
 
 Leg 2's three definition-of-done items (pre-flight encryption warning,
 `docs/plugin-development.md` append-only-migrations note, and the
@@ -60,13 +61,14 @@ Leg 2's pre-flight check would have surfaced earlier, and Leg 2 is rejected.
 
 ## Legs
 
-| Leg | Name                                                               | Epic tasks | Epics | Gate? | Done when                                                                                                                                            |
-| --- | ------------------------------------------------------------------ | ---------- | ----- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Publish a `sovereign-tools` image                                  | 0.19       | 0     | No    | A published-image-only deployment (no source checkout) runs every documented `sv` admin command successfully (see Leg 1 detail for the current list) |
-| 2   | ~~Pre-flight warning and remaining doc follow-ups~~ — **Rejected** | ~~8.19~~   | ~~8~~ | —     | Not applicable — see Leg 2 detail below                                                                                                              |
+| Leg | Name                                                               | Epic tasks | Epics | Gate? | Done when                                                                                                                                                                                                                   |
+| --- | ------------------------------------------------------------------ | ---------- | ----- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | ✅ Publish a `sovereign-tools` image                               | 0.19       | 0     | No    | A published-image-only deployment (no source checkout) runs every documented `sv` admin command successfully (see Leg 1 detail for the current list) — shipped [PR #431](https://github.com/sovereignfs/sovereign/pull/431) |
+| 2   | ~~Pre-flight warning and remaining doc follow-ups~~ — **Rejected** | ~~8.19~~   | ~~8~~ | —     | Not applicable — see Leg 2 detail below                                                                                                                                                                                     |
 
 Legs 1 and 2 were independent — neither depended on the other. Leg 2 is
-rejected outright (see its section below), so only Leg 1 proceeds.
+rejected outright (see its section below); Leg 1 shipped and this
+workstream's definition of done is satisfied.
 
 ## Leg detail
 
@@ -197,3 +199,4 @@ its "Do not proceed if" clause above.
 | 0.1     | August 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 0.2     | 2026-08-13  | Re-scoped Leg 1: RFC 0071 at-rest encryption was retired from the live code path before this leg started, so the `sv db encrypt`/`decrypt` commands it was written against no longer exist. Leg 1's underlying goal (a `sovereign-tools` image so production doesn't need a source checkout) still stands — re-pointed at today's actual admin commands (`sv backup`/`restore`, `sv db migrate-to-sqld`/`migrate-to-postgres`, RFC 0092's `sv db encrypt-fields`/`sv keys rotate-*`, `sv user reset-mfa`) and flagged a dead anchor link in `docs/self-hosting.md`'s break-glass CLI section pointing at a heading removed with the retirement. Leg 2 is unaffected by this change — it remains fully moot and out of scope until separately re-planned. |
 | 0.3     | 2026-08-13  | Rejected Leg 2 (epic task 8.19) outright — its mechanism (`database.requireEncryption`, `findEncryptionRequiringPlugins()`) no longer exists in the codebase; see `docs/epics/data-sovereignty.md`'s 8.19 section and `ROADMAP.md` (now ❌). One of its four sub-deliverables — `docs/plugin-development.md`'s append-only-migrations note — was encryption-independent and mis-bundled into the original rejection scope; corrected and spawned as its own standalone follow-up rather than resurrected under 8.19. Workstream proceeds with Leg 1 only.                                                                                                                                                                                                |
+| 0.4     | 2026-08-13  | Leg 1 (epic task 0.19) shipped — [PR #431](https://github.com/sovereignfs/sovereign/pull/431), merged into `main` as `f6f005b`. `ROADMAP.md` and `docs/epics/infrastructure.md`'s 0.19 heading marked ✅. The split-out append-only-migrations doc note (from the 0.3 correction above) shipped separately as [PR #435](https://github.com/sovereignfs/sovereign/pull/435), also merged. This workstream's definition of done is satisfied — Leg 1 done, Leg 2 rejected — and it is closed.                                                                                                                                                                                                                                                              |

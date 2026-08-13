@@ -991,6 +991,29 @@ change — its own replacement is tracked separately (epic task 3.37).
 A manifest still declaring the plain boolean shape (`offline: true`/`false`)
 now fails validation, same as the old object shape already did.
 
+### `@sovereignfs/sdk` 1.41.0 → 1.42.0
+
+**`sdk.offline`'s cache is now encrypted at rest** (RFC 0093 task 8.20's
+`offline-first`-tier half) — every value is AES-GCM-encrypted under an
+automatically-generated, non-extractable device key before it reaches
+IndexedDB, no enrollment step or opt-in required. `offline.get`/`offline.set`
+keep the exact same signatures; nothing to change in a plugin that only
+stores JSON-like data through them (the documented, designed-for use case).
+
+**Narrows accepted values to JSON-serializable data.** Encryption requires
+byte-serializing the value first, so `IndexedDB`'s native structured-clone
+support for extras like `Blob`/`Map`/`Set` no longer round-trips through
+`offline.set` — passing one now throws instead of silently storing it. No
+shipped plugin in this repo relies on that; `offline.set`'s own soft
+per-entry size cap already estimated size via `JSON.stringify` and treated
+non-JSON-serializable values as an edge case, not the primary path.
+
+**A value cached before this version won't be readable afterward.**
+`offline.get` returns `null` for it (a cache miss, not a thrown error) rather
+than failing, since this cache is disposable by design — the server is
+always the source of truth, and the normal "never cached" fetch-fresh path
+already handles it.
+
 ### `@sovereignfs/sdk` 1.22.0 → 1.23.0
 
 **`StorageObject` gains a `metadata` field** (RFC 0044/0060). `sdk.storage.put()`

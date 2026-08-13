@@ -1,7 +1,6 @@
 /**
- * Thrown by SDK surfaces that have no standalone implementation: the v1 methods
- * that the Sovereign runtime supplies at runtime, and the post-v1 surfaces
- * (storage, notifications, events) that are declared but not yet implemented.
+ * Thrown by SDK surfaces declared in the contract but with no backing
+ * implementation yet (e.g. `sdk.billing`).
  */
 export class NotImplementedError extends Error {
   constructor(message: string) {
@@ -42,5 +41,21 @@ export class EntitlementRequiredError extends Error {
   constructor(message = 'An active entitlement is required to access this feature.') {
     super(message);
     this.name = 'EntitlementRequiredError';
+  }
+}
+
+/**
+ * Thrown by `sdk.events.publish()` when a serialized event payload exceeds
+ * the platform's size cap (RFC 0045 security requirement: "payload size is
+ * capped"). Events have no durable storage to absorb an oversized payload,
+ * unlike `sdk.storage`'s quota-checked objects — this is a hard per-call
+ * limit, not a cumulative one.
+ */
+export class EventPayloadTooLargeError extends Error {
+  constructor(byteLength: number, maxBytes: number) {
+    super(
+      `Event payload is ${String(byteLength)} bytes, exceeding the ${String(maxBytes)}-byte limit.`,
+    );
+    this.name = 'EventPayloadTooLargeError';
   }
 }

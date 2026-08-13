@@ -470,7 +470,7 @@ minor (new optional params on exported functions), `runtime` → patch, `bin/sv`
 
 ---
 
-#### 📋 3.17 — Plugin events and realtime channels (RFC 0045)
+#### ✅ 3.17 — Plugin events and realtime channels (RFC 0045)
 
 **Goal:** Implement `sdk.events` as a plugin-scoped realtime publish/subscribe surface for ephemeral UI synchronization.
 

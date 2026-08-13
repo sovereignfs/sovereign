@@ -11,10 +11,11 @@ export const CURRENT_MANIFEST_SCHEMA_VERSION = 1;
 
 /**
  * SDK capabilities a plugin may declare. Mirrors the `Permission` union in
- * SRS §5. Several are reserved for post-v1 (storage, notifications, events).
- * Cross-plugin data sharing (`data:provide` / `data:consume`, RFC 0002), the
- * activity log (`activity:write`, RFC 0005), and user data portability
- * (`data:export` / `data:import`, RFC 0007) are implemented.
+ * SRS §5. `storage:readWrite` (RFC 0044), `notifications:send` (RFC 0015),
+ * `events:publish` / `events:subscribe` (RFC 0045), cross-plugin data
+ * sharing (`data:provide` / `data:consume`, RFC 0002), the activity log
+ * (`activity:write`, RFC 0005), and user data portability (`data:export` /
+ * `data:import`, RFC 0007) are all implemented.
  */
 export const permissionSchema = z.enum([
   'auth:session',
@@ -674,6 +675,54 @@ const manifestObjectSchema = z
       .min(1)
       .refine((arr) => new Set(arr.map((j) => j.type)).size === arr.length, {
         message: 'job types must be unique within the plugin',
+      })
+      .optional(),
+    /**
+     * Channel authorization declarations for `sdk.events` (RFC 0045). Each
+     * entry names a server-side handler module inside the plugin's `app/`
+     * directory whose **default export** is an `EventChannelAuthorizer`
+     * (`@sovereignfs/sdk`) — invoked to decide whether a given user may
+     * subscribe to a channel matching `pattern`. Wired the same way as
+     * `schedules`/`jobs` above (manifest entry + generate-time static
+     * import), not a runtime `register()` call — for the same reason: there
+     * is no reliable moment for plugin code to register a callback before
+     * the first subscribe request needs it. A channel with no matching
+     * pattern declaration fails closed (subscription denied).
+     */
+    events: z
+      .array(
+        z
+          .object({
+            /**
+             * Plugin-local channel pattern this handler authorizes — lowercase
+             * colon-separated segments, optionally ending in a `:*` wildcard
+             * segment (e.g. `"list:*"` or an exact `"list:overview"`).
+             */
+            pattern: z
+              .string()
+              .regex(
+                /^[a-z][a-z0-9-]*(?::[a-z0-9-]+)*(?::\*)?$/,
+                'channel pattern must be lowercase colon-separated segments, optionally ending in ":*"',
+              ),
+            /**
+             * Handler module path relative to the plugin root, inside `app/`
+             * (e.g. `"app/_events/authorize-list.ts"`). Must be a `.ts`
+             * module and must not traverse outside the plugin.
+             */
+            entry: z
+              .string()
+              .startsWith('app/', "entry must be a path inside the plugin's app/ directory")
+              .endsWith('.ts', 'entry must be a .ts module')
+              .refine((p) => !p.split('/').includes('..'), {
+                message: 'entry must not contain ".." path segments',
+              }),
+            description: z.string().optional(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .refine((arr) => new Set(arr.map((e) => e.pattern)).size === arr.length, {
+        message: 'event channel patterns must be unique within the plugin',
       })
       .optional(),
     /**

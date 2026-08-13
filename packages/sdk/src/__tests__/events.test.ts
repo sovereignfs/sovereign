@@ -1,41 +1,22 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { events } from '../events';
 import { provideHost } from '../host';
-import { jobs } from '../jobs';
-import type { EnqueueJobInput, JobRef, ScheduleJobInput } from '../types';
+import type { PublishEventInput } from '../types';
 
 /**
- * Proves that `sdk.jobs.*` resolves the calling plugin's ID and the acting
- * user's ID exclusively from request headers — explicit `Headers`, not
- * `next/headers()`, since these methods must also work from inside a job
- * handler's own synthetic `ctx.headers` (no HTTP request in scope). Mirrors
- * `mailer-email-plugin-id.test.ts`'s focus on header resolution.
+ * Proves that `sdk.events.publish()` resolves the calling plugin's ID
+ * exclusively from an explicit `Headers` argument — never `next/headers()`
+ * — mirroring `mailer-email-plugin-id.test.ts`'s focus on header resolution
+ * for surfaces that must also work from a non-request context (a job
+ * handler's synthetic `ctx.headers`, for instance).
  */
-describe('sdk.jobs — header resolution', () => {
-  let seenPluginId: string | null | undefined;
-  let seenUserId: string | null | undefined;
-  let seenEnqueueInput: EnqueueJobInput | undefined;
-  let seenScheduleInput: ScheduleJobInput | undefined;
-  let seenCancelId: string | undefined;
-  let seenGetId: string | undefined;
-
-  const stubJobRef: JobRef = {
-    id: 'job-1',
-    type: 'sync.remote',
-    status: 'queued',
-    runAt: 0,
-    attempts: 0,
-    maxAttempts: 3,
-    createdAt: 0,
-    updatedAt: 0,
-  };
+describe('sdk.events.publish — header resolution', () => {
+  let seenPluginId: string | undefined;
+  let seenInput: PublishEventInput | undefined;
 
   beforeEach(() => {
     seenPluginId = undefined;
-    seenUserId = undefined;
-    seenEnqueueInput = undefined;
-    seenScheduleInput = undefined;
-    seenCancelId = undefined;
-    seenGetId = undefined;
+    seenInput = undefined;
 
     provideHost({
       db: {
@@ -119,30 +100,25 @@ describe('sdk.jobs — header resolution', () => {
         },
       },
       jobs: {
-        async enqueue(input, pluginId, userId) {
-          seenEnqueueInput = input;
-          seenPluginId = pluginId;
-          seenUserId = userId;
-          return stubJobRef;
+        async enqueue() {
+          return {} as never;
         },
-        async schedule(input, pluginId, userId) {
-          seenScheduleInput = input;
-          seenPluginId = pluginId;
-          seenUserId = userId;
-          return stubJobRef;
+        async schedule() {
+          return {} as never;
         },
-        async cancel(id, pluginId) {
-          seenCancelId = id;
-          seenPluginId = pluginId;
-          return true;
+        async cancel() {
+          return false;
         },
-        async get(id, pluginId) {
-          seenGetId = id;
-          seenPluginId = pluginId;
-          return stubJobRef;
+        async get() {
+          return null;
         },
       },
-      events: { async publish() {} },
+      events: {
+        async publish(input, pluginId) {
+          seenInput = input;
+          seenPluginId = pluginId;
+        },
+      },
       crypto: {
         async encryptField(value: string) {
           return `svf0:${Buffer.from(value, 'utf8').toString('base64url')}`;
@@ -252,54 +228,33 @@ describe('sdk.jobs — header resolution', () => {
     });
   });
 
-  it('enqueue resolves pluginId and userId from headers', async () => {
-    const headers = new Headers({
-      'x-sovereign-plugin-id': 'com.example.notes',
-      'x-sovereign-user-id': 'user-1',
-    });
-    await jobs.enqueue({ type: 'sync.remote', payload: { a: 1 } }, headers);
+  it('resolves pluginId from the x-sovereign-plugin-id header', async () => {
+    const headers = new Headers({ 'x-sovereign-plugin-id': 'com.example.notes' });
+    await events.publish(
+      { channel: 'list:1', type: 'item.checked', payload: { itemId: 'x' } },
+      headers,
+    );
     expect(seenPluginId).toBe('com.example.notes');
-    expect(seenUserId).toBe('user-1');
-    expect(seenEnqueueInput).toEqual({ type: 'sync.remote', payload: { a: 1 } });
+    expect(seenInput).toEqual({
+      channel: 'list:1',
+      type: 'item.checked',
+      payload: { itemId: 'x' },
+    });
   });
 
-  it('enqueue defaults pluginId to "unknown" and userId to null with no headers', async () => {
-    await jobs.enqueue({ type: 'sync.remote' });
+  it('defaults pluginId to "unknown" with no headers argument', async () => {
+    await events.publish({ channel: 'list:1', type: 'item.checked' });
     expect(seenPluginId).toBe('unknown');
-    expect(seenUserId).toBeNull();
   });
 
-  it('schedule resolves pluginId and userId from headers', async () => {
-    const headers = new Headers({
-      'x-sovereign-plugin-id': 'com.example.notes',
-      'x-sovereign-user-id': 'user-1',
-    });
-    await jobs.schedule({ type: 'cleanup.expired', cron: '0 3 * * *' }, headers);
-    expect(seenPluginId).toBe('com.example.notes');
-    expect(seenUserId).toBe('user-1');
-    expect(seenScheduleInput).toEqual({ type: 'cleanup.expired', cron: '0 3 * * *' });
+  it('defaults pluginId to "unknown" when headers has no plugin id set', async () => {
+    await events.publish({ channel: 'list:1', type: 'item.checked' }, new Headers());
+    expect(seenPluginId).toBe('unknown');
   });
 
-  it('cancel resolves pluginId from headers and forwards the job id', async () => {
-    const headers = new Headers({ 'x-sovereign-plugin-id': 'com.example.notes' });
-    const result = await jobs.cancel('job-1', headers);
-    expect(seenPluginId).toBe('com.example.notes');
-    expect(seenCancelId).toBe('job-1');
-    expect(result).toBe(true);
-  });
-
-  it('get resolves pluginId from headers and forwards the job id', async () => {
-    const headers = new Headers({ 'x-sovereign-plugin-id': 'com.example.notes' });
-    const result = await jobs.get('job-1', headers);
-    expect(seenPluginId).toBe('com.example.notes');
-    expect(seenGetId).toBe('job-1');
-    expect(result).toEqual(stubJobRef);
-  });
-
-  it('a job handler can pass its own ctx.headers to enqueue further work', async () => {
-    // Synthetic headers, same shape runtime/src/jobs.ts hands to JobContext.
+  it('accepts a job handler-style synthetic Headers object, same as ctx.headers would provide', async () => {
     const syntheticHeaders = new Headers({ 'x-sovereign-plugin-id': 'com.example.notes' });
-    await jobs.enqueue({ type: 'followup.task' }, syntheticHeaders);
+    await events.publish({ channel: 'followup:task', type: 'created' }, syntheticHeaders);
     expect(seenPluginId).toBe('com.example.notes');
   });
 });

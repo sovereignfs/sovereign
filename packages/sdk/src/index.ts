@@ -9,6 +9,7 @@ import * as db from './db';
 import { e2ee } from './e2ee';
 import { email } from './email';
 import { env } from './env';
+import { events } from './events';
 import { handoffs } from './handoffs';
 import { jobs } from './jobs';
 import * as mailer from './mailer';
@@ -18,7 +19,7 @@ import { plugins } from './plugins';
 import { portability } from './portability';
 import { secrets } from './secrets';
 import { storage } from './storage';
-import { billing, events } from './unimplemented';
+import { billing } from './unimplemented';
 import { webhooks } from './webhooks';
 
 /**
@@ -44,16 +45,18 @@ import { webhooks } from './webhooks';
  * (public plugin webhook helpers — `verifyHmac`/`checkReplay`, RFC 0050),
  * `handoffs` (signed, short-lived cross-plugin flow handoffs —
  * authenticated or public/anonymous, RFC 0053), `jobs` (background jobs and
- * schedules, RFC 0046), `billing` (plugin monetization / entitlement
- * gating, RFC 0003), `events`, `device` (surface detection —
+ * schedules, RFC 0046), `events` (ephemeral realtime channels, RFC 0045 —
+ * `publish()` only; subscribing is a runtime route, not an SDK call, see
+ * `docs/plugin-development.md`), `billing` (plugin monetization /
+ * entitlement gating, RFC 0003), `device` (surface detection —
  * `browser`/`mobile`/`desktop` — RFC 0080; a presentation hint only, never
  * a security boundary; capability probes and invocation live in
  * `@sovereignfs/sdk/device-client` and the future device bridge, RFC 0083).
  * `data`, `activity`, `portability`, `env`, `notifications`, `directory`,
  * `secrets`, `crypto`, `storage`, `connections`, `e2ee`, `plugins`, `email`,
- * `webhooks`, `handoffs`, `jobs`, and `device` are implemented; `billing`
- * and `events` throw `NotImplementedError` until their backing mechanisms
- * ship. Their shape may change before they stabilise.
+ * `webhooks`, `handoffs`, `jobs`, `events`, and `device` are implemented;
+ * `billing` throws `NotImplementedError` until its backing mechanism
+ * ships. Their shape may change before they stabilise.
  */
 export const sdk = {
   // Stable (v1.0.0).
@@ -124,6 +127,7 @@ export {
   NotAuthenticatedError,
   ConsentRequiredError,
   EntitlementRequiredError,
+  EventPayloadTooLargeError,
 } from './errors';
 export type { DataContractRef, DataContractResolver } from './data';
 export type {
@@ -165,6 +169,10 @@ export type {
   SendToUserEmailInput,
   VerifyWebhookHmacInput,
   CheckWebhookReplayInput,
+  EventEnvelope,
+  PublishEventInput,
+  EventChannelAuthorizerContext,
+  EventChannelAuthorizer,
   ConnectionContext,
   ConnectionListFilter,
   ConnectionOAuthState,

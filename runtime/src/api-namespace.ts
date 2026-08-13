@@ -23,6 +23,7 @@ export const RESERVED_API_SEGMENTS: ReadonlySet<string> = new Set([
   'admin',
   'auth',
   'directory',
+  'events',
   'health',
   'instance',
   'manifest',

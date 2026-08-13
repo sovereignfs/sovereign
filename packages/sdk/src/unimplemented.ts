@@ -5,15 +5,6 @@ import { EntitlementRequiredError, NotImplementedError } from './errors';
  * NotImplementedError so plugins fail loudly rather than silently misbehaving.
  */
 
-export const events = {
-  publish(_event: string, _payload: unknown): Promise<void> {
-    throw new NotImplementedError('sdk.events.publish() is not implemented in Sovereign v1.');
-  },
-  subscribe(_event: string, _handler: (payload: unknown) => void): void {
-    throw new NotImplementedError('sdk.events.subscribe() is not implemented in Sovereign v1.');
-  },
-};
-
 /**
  * Billing and entitlement surface (RFC 0003). Plugin authors use these helpers
  * to gate in-plugin features by entitlement tier. Route-level access is gated

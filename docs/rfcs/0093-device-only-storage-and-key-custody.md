@@ -238,6 +238,20 @@ stricter (immediate) to more lenient (a longer window) — matching
 research 0012's own "default plus a user override" framing. Applies
 identically to native and web.
 
+On web, the preference (`device-only-storage.ts`'s `saveReLockPolicy`/
+`loadReLockPolicy`) and its enforcement are deliberately separate modules:
+`device-only-session.ts`'s `getUnlockedDeviceStorageKey()` holds the
+unwrapped key in memory only for the caller's process lifetime, comparing
+elapsed wall-clock time against the chosen window on each access rather than
+relying on a timer to fire while backgrounded (browsers throttle or suspend
+those unreliably) — see that module's own doc comment for the full
+reasoning, including why a discarded JS context (iOS's behavior above)
+self-enforces even more strictly than the policy requires rather than
+needing separate handling. On native, the equivalent enforcement is
+Keychain/Keystore's own access-control window (`SecureStorage.swift`'s
+`reuseWindow`/`sovereign-mobile`'s `SecureStorage.java` key-validity
+duration) — see task 20.13.
+
 **Explicitly rejected: a JS-side PIN or "unlocked" flag as the gate, on
 either platform.** A PIN that merely sets a boolean in app state is bypassed
 entirely by reading raw storage — the check is never in an attacker's path.

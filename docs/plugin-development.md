@@ -606,6 +606,27 @@ over — and tells the platform how much offline capability your plugin needs:
   both into a single "go set it up" branch) — the redirect that helps for one
   does nothing for the other.
 
+  Once past the gate, your plugin's own storage layer still needs the
+  _unwrapped_ key for every actual read or write — call
+  `getUnlockedDeviceStorageKey()` from `@sovereignfs/sdk/device-only-session`
+  for that, never `deriveDeviceOnlyKeyViaPrf` directly. It transparently
+  reuses the current unlock session while the user's chosen re-lock policy
+  (Account → Security's Auto-lock setting) still allows it, and only re-runs
+  the platform ceremony — prompting for biometric/passcode presence again —
+  once that window has elapsed, so your plugin doesn't need to track re-lock
+  timing itself:
+
+  ```ts
+  const result = await getUnlockedDeviceStorageKey();
+  if (result.status !== 'ok') {
+    // 'cancelled' | 'failed' | any DeviceStorageKeyGateStatus other than
+    // 'set-up' — show your own retry affordance; DeviceStorageKeyGate
+    // already covers the steady 'not-set-up'/'no-device-auth' cases above.
+    return;
+  }
+  const deviceStorageKey = result.key; // CryptoKey, ready to use
+  ```
+
 Omitting the field entirely means no offline support — the default, and still
 the right choice for most plugins (an admin console, a settings page, anything
 whose whole point is showing live server state has no business working

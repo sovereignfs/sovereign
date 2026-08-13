@@ -170,9 +170,63 @@ services:
     networks:
       - sovereign_net
 
+  # ── Optional: Warden's harness engine (RFC 0063, workstream 0014 leg 2) ──
+  # Never starts with a plain `up` — the `harness` profile keeps both
+  # services out of the default set, same pattern as docker-compose.prod.yml's
+  # `tools` profile. `docker compose --profile harness up` brings both up.
+  #
+  # Two containers, not one: `harness` (this repo's own Next.js wrapper —
+  # trust boundary, model download/verification, request limits) and
+  # `harness-engine` (llama.cpp server itself, Research 0015's decision).
+  # Neither is ever port-mapped to the host — reachable only from the other
+  # over sovereign_net, never the public internet by default.
+  harness:
+    profiles: ['harness']
+    build:
+      context: .
+      dockerfile: apps/harness/Dockerfile
+    container_name: sovereign-harness
+    user: root
+    environment:
+      SOVEREIGN_HARNESS_ENROLLMENT_SECRET: '${SOVEREIGN_HARNESS_ENROLLMENT_SECRET}'
+      SOVEREIGN_HARNESS_LLAMACPP_URL: 'http://harness-engine:8080'
+      SOVEREIGN_HARNESS_MODEL: '${SOVEREIGN_HARNESS_MODEL:-qwen3-1.7b}'
+    volumes:
+      - sovereign_harness_models:/app/models
+    depends_on:
+      - harness-engine
+    networks:
+      - sovereign_net
+
+  harness-engine:
+    profiles: ['harness']
+    image: ghcr.io/ggml-org/llama.cpp:server
+    container_name: sovereign-harness-engine
+    # Overrides the image's own entrypoint (verified: /app/llama-server) with
+    # a wait loop — llama-server takes -m <path> as a required startup arg
+    # and has no wait/retry of its own if the file isn't there yet. `harness`
+    # writes the model to this exact path (atomic rename on completion, see
+    # apps/harness/src/model.ts) only once fully downloaded and verified, so
+    # `-s` (exists AND non-empty) is a reliable readiness signal here.
+    entrypoint: ['sh', '-c']
+    command:
+      - >-
+        until [ -s /models/model.gguf ]; do
+        echo "[harness-engine] waiting for model download...";
+        sleep 3;
+        done;
+        exec /app/llama-server -m /models/model.gguf --host 0.0.0.0 --port 8080
+        -c ${SOVEREIGN_HARNESS_CONTEXT_SIZE:-8192}
+    volumes:
+      - sovereign_harness_models:/models
+    networks:
+      - sovereign_net
+
 volumes:
   sovereign_sqld_data:
     name: sovereign_sqld_data
+  sovereign_harness_models:
+    name: sovereign_harness_models
 
 networks:
   sovereign_net:

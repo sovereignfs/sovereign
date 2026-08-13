@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.86.0 · **Last updated:** 2026-08-13
+**Version:** 0.87.0 · **Last updated:** 2026-08-13
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -291,7 +291,7 @@ doc — but not yet assigned a roadmap slot. Promoted to a phase table once prio
 | —       | Sovereign Council POC (RFC 0055)                                                                      | 📋     | [19.1](docs/epics/sovereign-council.md#-191--sovereign-council-poc-rfc-0055)                                                                     |
 | —       | Sovereign Council full deliberation workspace                                                         | 📋     | [19.2](docs/epics/sovereign-council.md#-192--sovereign-council-full-deliberation-workspace)                                                      |
 | 0.86.0  | Resolve harness engine benchmark, llama.cpp selected (Research 0015) — workstream 0014 leg 1          | ✅     | [22.1](docs/epics/core-assistant.md#-221--resolve-the-harness-engine-benchmark-research-0015)                                                    |
-| —       | `apps/harness` engine service scaffold (RFC 0063) — workstream 0014 leg 2                             | 📋     | [22.2](docs/epics/core-assistant.md#-222--appsharness-engine-service-scaffold)                                                                   |
+| 0.87.0  | `apps/harness` engine service scaffold (RFC 0063) — workstream 0014 leg 2                             | ✅     | [22.2](docs/epics/core-assistant.md#-222--appsharness-engine-service-scaffold)                                                                   |
 | —       | Warden platform plugin: basic chat (RFC 0063) — workstream 0014 leg 3                                 | 📋     | [22.3](docs/epics/core-assistant.md#-223--warden-platform-plugin-basic-chat)                                                                     |
 | —       | Middleware decomposition — workstream 0012 leg 5                                                      | 📋     | [2.17](docs/epics/platform-shell.md#-217--middleware-decomposition)                                                                              |
 | —       | Generate script decomposition — workstream 0012 leg 4                                                 | 📋     | [3.23](docs/epics/plugins-runtime.md#-323--generate-script-decomposition)                                                                        |

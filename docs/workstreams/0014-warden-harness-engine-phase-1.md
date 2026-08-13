@@ -1,7 +1,7 @@
 # Workstream 0014 — Warden: harness engine and platform plugin, phase 1
 
-**Status:** 🔄 In progress — leg 1 (task 22.1) done, llama.cpp selected;
-legs 2–3 remain\
+**Status:** 🔄 In progress — legs 1–2 (tasks 22.1–22.2) done, `apps/harness`
+scaffolded; leg 3 remains\
 **Date:** August 2026 (rewritten; originally drafted for a different
 architecture)\
 **Author:** kasunben\
@@ -43,13 +43,16 @@ infrastructure the operator controls.
       covering both `qwen3:1.7b` and `qwen3:0.6b`; the research doc is
       updated in place with a filled-in decision and moved to `Decided`.
       **Done:** llama.cpp selected — see Research 0015's Decision section.
-- [ ] `22.2` — `apps/harness` exists as a standalone first-party service
+- [x] `22.2` — `apps/harness` exists as a standalone first-party service
       (own `package.json`/`Dockerfile`/health endpoint), wraps the chosen
       engine, joins `sovereign_net`, stays unexposed to the public internet
       by default; the enrollment-token trust boundary reuses `apps/relay`'s
       pattern; CI runs against a deterministic fake-engine path with no
       real model download; the baseline stack is provably unaffected when
       the `harness` Compose profile isn't enabled.
+      **Done:** scaffolded as two Compose services (`harness` +
+      `harness-engine`), both gated behind the optional `harness` profile.
+      See the epic file's completion note for full detail.
 - [ ] `22.3` — Warden exists as a first-party plugin (`plugins/warden`)
       with its own routed page; a user can install it and hold a basic,
       ephemeral (non-persisted) conversation against a real `apps/harness`
@@ -75,11 +78,11 @@ service existing and exposing its internal chat API.
 
 ## Legs
 
-| Leg | Name                                   | Epic tasks | Epics | Gate?   | Done when                                                                                                 |
-| --- | -------------------------------------- | ---------- | ----- | ------- | --------------------------------------------------------------------------------------------------------- |
-| 1   | Harness engine benchmark ✅            | 22.1       | 22    | **Yes** | Research 0015 is resolved with a measured decision, not a guess — done, llama.cpp selected                |
-| 2   | `apps/harness` engine service scaffold | 22.2       | 22    | No      | The chosen engine runs as a standalone, unexposed-by-default service with a real trust boundary to Warden |
-| 3   | Warden platform plugin: basic chat     | 22.3       | 22    | No      | A user can install Warden and chat end to end, with zero tool/handoff/voice/floating-button surface       |
+| Leg | Name                                      | Epic tasks | Epics | Gate?   | Done when                                                                                                        |
+| --- | ----------------------------------------- | ---------- | ----- | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1   | Harness engine benchmark ✅               | 22.1       | 22    | **Yes** | Research 0015 is resolved with a measured decision, not a guess — done, llama.cpp selected                       |
+| 2   | `apps/harness` engine service scaffold ✅ | 22.2       | 22    | No      | The chosen engine runs as a standalone, unexposed-by-default service with a real trust boundary to Warden — done |
+| 3   | Warden platform plugin: basic chat        | 22.3       | 22    | No      | A user can install Warden and chat end to end, with zero tool/handoff/voice/floating-button surface              |
 
 Strict sequence — each leg's PR must merge before the next leg's branch is
 cut. Leg 1 is marked a gate: its outcome (which engine) determines the
@@ -151,6 +154,23 @@ profile) is affected by this leg's changes in any way — verify with an
 actual `docker compose up` run without the profile, not a read of the
 compose file.
 
+**Leg outcome:** scaffolded as two Compose services under an optional
+`harness` profile — `harness` (own `package.json`/`Dockerfile`, the
+enrollment trust boundary reusing `apps/relay/src/enrollment.ts` exactly,
+lazy non-blocking model download/verification, server-enforced request
+limits, the narrow internal `/api/chat` API) and `harness-engine`
+(`ghcr.io/ggml-org/llama.cpp:server`, the leg 1 winner). Neither is ever
+port-mapped to the host. `docker compose config` (no `--profile` flag)
+confirms both services are excluded from the default set, and
+`docker compose build` succeeds; a literal `docker compose up` on the
+verification machine hit an unrelated pre-existing container-name collision
+with a sibling checkout also using the fixed `sovereign-*` names — not
+caused by this leg's changes (see the leg's PR description). Two new
+`docs/architecture-rules.md` entries came out of this leg: reusing the
+enrollment pattern beyond `apps/relay` itself, and the wait-loop
+Compose-`entrypoint` technique for a sidecar container that needs a file to
+exist before its own process can start.
+
 ### Leg 3 — Warden platform plugin: basic chat
 
 **Epic tasks:** 22.3
@@ -205,8 +225,9 @@ especially) will depend on being solid.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                |
-| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft — 5 legs (22.1–22.5) against RFC 0063's original runtime-owned "Jarvis" design                                                                                                                                                                                                                                                                                          |
-| 0.2     | August 2026 | Full rewrite following RFC 0063's own rewrite (Warden, `plugins/warden` + `apps/harness`) — 3 legs (engine benchmark, service scaffold, plugin chat), tool execution/task handoff/floating button/voice all moved out of this workstream's scope entirely, per direct developer instruction to ship foundation only                                                                   |
-| 0.3     | 2026-08-13  | Leg 1 (task 22.1) done — llama.cpp server selected over Ollama, measured on the actual production self-hosting box. Decisive factor was Qwen3's default thinking mode: llama.cpp can disable it cleanly, Ollama's OpenAI-compatible endpoint can't (only its native `/api/chat` does). Full data in [Research 0015](../research/0015-harness-engine-benchmark.md). Legs 2–3 unblocked |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft — 5 legs (22.1–22.5) against RFC 0063's original runtime-owned "Jarvis" design                                                                                                                                                                                                                                                                                                                         |
+| 0.2     | August 2026 | Full rewrite following RFC 0063's own rewrite (Warden, `plugins/warden` + `apps/harness`) — 3 legs (engine benchmark, service scaffold, plugin chat), tool execution/task handoff/floating button/voice all moved out of this workstream's scope entirely, per direct developer instruction to ship foundation only                                                                                                  |
+| 0.3     | 2026-08-13  | Leg 1 (task 22.1) done — llama.cpp server selected over Ollama, measured on the actual production self-hosting box. Decisive factor was Qwen3's default thinking mode: llama.cpp can disable it cleanly, Ollama's OpenAI-compatible endpoint can't (only its native `/api/chat` does). Full data in [Research 0015](../research/0015-harness-engine-benchmark.md). Legs 2–3 unblocked                                |
+| 0.4     | 2026-08-13  | Leg 2 (task 22.2) done — `apps/harness` scaffolded as two Compose services (`harness` + `harness-engine`) under an optional `harness` profile, neither host-port-mapped. Enrollment trust boundary reuses `apps/relay/src/enrollment.ts` exactly; model download is lazy/non-blocking with atomic-rename-on-success; deterministic fake engine for CI. Two new `docs/architecture-rules.md` entries. Leg 3 unblocked |

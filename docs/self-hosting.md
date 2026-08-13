@@ -1199,6 +1199,66 @@ DELETE FROM push_subscriptions;
 
 ---
 
+## Warden's harness engine (RFC 0063, workstream 0014 leg 2)
+
+`apps/harness` is a standalone service wrapping a local inference engine
+(llama.cpp server — selected over Ollama by
+[Research 0015](research/0015-harness-engine-benchmark.md)'s benchmark) for
+Warden's basic local chat. Entirely optional and off by default — a plain
+`docker compose up` never starts it.
+
+### Enabling it
+
+```bash
+# Generate an enrollment secret (same reused pattern as RELAY_ENROLLMENT_SECRET):
+openssl rand -base64 32   # → SOVEREIGN_HARNESS_ENROLLMENT_SECRET in .env
+
+docker compose --profile harness up -d --build
+```
+
+This starts two containers, both gated behind the `harness` Compose
+profile and neither ever mapped to a host port — reachable only from each
+other over `sovereign_net`, never the public internet:
+
+- `harness` — this repo's own Next.js wrapper: the enrollment/trust
+  boundary, model download/verification/storage, request limits, and the
+  internal-only `/api/chat` completion API.
+- `harness-engine` — the llama.cpp server process itself
+  (`ghcr.io/ggml-org/llama.cpp:server`), started only once `harness` has
+  finished downloading and verifying the model file into the shared
+  `sovereign_harness_models` volume.
+
+The model (`qwen3:1.7b` by default, `qwen3:0.6b` as a documented
+low-resource fallback via `SOVEREIGN_HARNESS_MODEL`) downloads
+automatically and lazily — `harness` itself starts immediately; download
+happens in the background and `GET /api/health` reports `modelStatus`
+(`not_downloaded` / `downloading` / `ready` / `error`) until it completes.
+First boot on a slow connection can take a few minutes for the ~1.1GB
+`qwen3:1.7b` file (~400MB for `qwen3:0.6b`).
+
+### Environment variables
+
+| Variable                              | Required | Default                      | Purpose                                                                                                    |
+| ------------------------------------- | -------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `SOVEREIGN_HARNESS_ENROLLMENT_SECRET` | Yes      | none                         | HMAC secret signing/verifying enrollment tokens                                                            |
+| `SOVEREIGN_HARNESS_MODEL`             | No       | `qwen3-1.7b`                 | `qwen3-1.7b` or `qwen3-0.6b`                                                                               |
+| `SOVEREIGN_HARNESS_CONTEXT_SIZE`      | No       | `8192`                       | llama.cpp server's context window (tokens)                                                                 |
+| `SOVEREIGN_HARNESS_MAX_INPUT_CHARS`   | No       | `4000`                       | Server-enforced input length cap                                                                           |
+| `SOVEREIGN_HARNESS_MAX_OUTPUT_TOKENS` | No       | `512`                        | Server-enforced output length cap                                                                          |
+| `SOVEREIGN_HARNESS_MAX_RECENT_TURNS`  | No       | `10`                         | How many recent messages are kept as context                                                               |
+| `SOVEREIGN_HARNESS_MAX_CONCURRENCY`   | No       | `2`                          | Concurrent in-flight chat requests allowed                                                                 |
+| `SOVEREIGN_HARNESS_TIMEOUT_SECONDS`   | No       | `120`                        | Per-request timeout                                                                                        |
+| `SOVEREIGN_HARNESS_LLAMACPP_URL`      | No       | `http://harness-engine:8080` | Internal-only override, not a normal operator knob                                                         |
+| `SOVEREIGN_HARNESS_ENGINE`            | No       | `llamacpp`                   | `fake` selects a deterministic canned-response engine — CI/tests only, never set this in a real deployment |
+
+### Known limitation
+
+No tool execution, task handoff, floating quick-access button, or voice —
+this phase is deliberately basic chat only (RFC 0063's phase 1 scope).
+Chat history is ephemeral, never persisted.
+
+---
+
 ## Notification transport (RFC 0034)
 
 The notification bell can receive updates in three modes, selected by

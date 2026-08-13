@@ -596,3 +596,40 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   orphan it, not fix anything. Scope the fix by `pluginDb.dialect ===
 'postgres'`, exactly as `runtime/src/plugin-migrations.ts` and both
   `bin/sv.ts` isolated-Postgres call sites do.
+- **Trust between two first-party services on the internal Docker network
+  reuses `apps/relay/src/enrollment.ts`'s signed-token pattern — do not
+  design a new mechanism per service pair.** A self-verifying, HMAC-SHA256
+  `header.payload.signature` token (hand-rolled with `node:crypto`, no
+  library), verified with `timingSafeEqual`, no persistent state, revocation
+  via secret rotation. First applied beyond `apps/relay` itself in
+  `apps/harness/src/enrollment.ts` (RFC 0063, workstream 0014 leg 2) —
+  `apps/harness` and Warden's server-side code authenticate each other this
+  way, `SOVEREIGN_HARNESS_ENROLLMENT_SECRET` in place of
+  `RELAY_ENROLLMENT_SECRET`. The scenario doesn't have to match relay's
+  exactly (many remote instances enrolling with one shared service) for the
+  pattern to still apply — `apps/harness` has exactly one caller on a
+  private network, and reuses the same shape anyway, since it costs nothing
+  extra and any later genuinely-remote consumer needs no redesign.
+- **A Compose service needing a file to exist before its own process starts
+  (no wait/retry of its own) needs an explicit wait-loop `entrypoint`
+  override — `depends_on` only orders container _start_, not readiness for
+  an arbitrary precondition like a downloaded file landing on a shared
+  volume.** `docker-compose.yml`'s `harness-engine` service (llama.cpp
+  server) is the example: `-m <path>` is a required startup arg with no
+  built-in wait behavior, so its `entrypoint` polls `until [ -s
+/models/model.gguf ]` before `exec`-ing the real binary. Verify the image's
+  actual entrypoint binary path first (`docker inspect <image> --format
+'{{.Config.Entrypoint}}'`) before writing the override — guessing it
+  wrong silently breaks the service with no useful error.
+- **A self-hosted service's first-boot asset download (a model file, a
+  large bundle) should be lazy and non-blocking, not a gate on container
+  startup or the Docker healthcheck.** `apps/harness/src/model.ts` starts
+  the Next.js server immediately and downloads the GGUF model in the
+  background; `/api/health` exposes `modelStatus` separately so a caller
+  can distinguish "engine unreachable" from "engine up, model still
+  downloading" from "ready" (RFC 0063 §6's failure-mode table treats this
+  as a normal, observable state, not an edge case to hide behind
+  orchestration timing). Download completion is signaled by an atomic
+  rename to a fixed final filename — any reader (including a separate
+  sidecar container polling for the file) only ever observes either nothing
+  or a fully-verified file, never a partial download.

@@ -51,17 +51,18 @@ two-layer model, including the Docker build-arg mechanics.
 
 ## The current set
 
-| Plugin ID                             | Route                     | What it shows                                                                                                           |
-| ------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `fs.sovereign.example-basic`          | `/example-basic`          | Session reading, `@sovereignfs/ui`, CSS tokens, plugin-declared capabilities                                            |
-| `fs.sovereign.example-overlay-small`  | `/example-overlay-small`  | `shell: "overlay"` with `overlaySize: "sm"`                                                                             |
-| `fs.sovereign.example-overlay-medium` | `/example-overlay-medium` | `shell: "overlay"` with `overlaySize: "md"`                                                                             |
-| `fs.sovereign.example-overlay-large`  | `/example-overlay-large`  | `shell: "overlay"` with `overlaySize: "lg"`                                                                             |
-| `fs.sovereign.example-minimal`        | `/example-minimal`        | `shell: "minimal"` chrome-free/fullscreen composition                                                                   |
-| `fs.sovereign.example-api`            | `/example-api`            | API provider serve-route pattern (PLT-16)                                                                               |
-| `fs.sovereign.example-monetized`      | `/example-monetized`      | Monetization manifest field, Ed25519 license gating, paywall flow (RFC 0003)                                            |
-| `fs.sovereign.example-mobile`         | `/example-mobile`         | `@sovereignfs/ui`'s PWA/mobile layout: responsive breakpoint fork, swipeable carousel                                   |
-| `fs.sovereign.example-encrypted`      | `/example-encrypted`      | App-level field encryption (RFC 0092): classified schema, seal/open, blind-index search, registration, plaintext export |
+| Plugin ID                             | Route                     | What it shows                                                                                                                                             |
+| ------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fs.sovereign.example-basic`          | `/example-basic`          | Session reading, `@sovereignfs/ui`, CSS tokens, plugin-declared capabilities                                                                              |
+| `fs.sovereign.example-overlay-small`  | `/example-overlay-small`  | `shell: "overlay"` with `overlaySize: "sm"`                                                                                                               |
+| `fs.sovereign.example-overlay-medium` | `/example-overlay-medium` | `shell: "overlay"` with `overlaySize: "md"`                                                                                                               |
+| `fs.sovereign.example-overlay-large`  | `/example-overlay-large`  | `shell: "overlay"` with `overlaySize: "lg"`                                                                                                               |
+| `fs.sovereign.example-minimal`        | `/example-minimal`        | `shell: "minimal"` chrome-free/fullscreen composition                                                                                                     |
+| `fs.sovereign.example-api`            | `/example-api`            | API provider serve-route pattern (PLT-16)                                                                                                                 |
+| `fs.sovereign.example-monetized`      | `/example-monetized`      | Monetization manifest field, Ed25519 license gating, paywall flow (RFC 0003)                                                                              |
+| `fs.sovereign.example-mobile`         | `/example-mobile`         | `@sovereignfs/ui`'s PWA/mobile layout: responsive breakpoint fork, swipeable carousel                                                                     |
+| `fs.sovereign.example-encrypted`      | `/example-encrypted`      | App-level field encryption (RFC 0092): classified schema, seal/open, blind-index search, registration, plaintext export                                   |
+| `fs.sovereign.example-device-only`    | `/example-device-only`    | `offline: "device-only"` (RFC 0093): `DeviceOnlyGate`/`DeviceStorageKeyGate`, encrypted notes via `device-only-kv.ts`, unlock-session status/lock control |
 
 Each plugin's own `manifest.json` and (where present) `README.md` cover its
 specifics — start there for the pattern you want to copy.

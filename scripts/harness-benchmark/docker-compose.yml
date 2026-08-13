@@ -1,0 +1,42 @@
+# Throwaway benchmark rig for Research 0015 / epic task 22.1 (workstream
+# 0014 leg 1). Not part of the shipped stack -- apps/harness doesn't exist
+# yet; that's leg 2, gated on this benchmark's result. Do not wire this into
+# the root docker-compose.yml.
+#
+# `llamacpp` and `ollama` are separate profiles, never started together --
+# the target VPS (2 vCPU / 4GB RAM) doesn't have headroom to run both at
+# once without the results reflecting memory pressure instead of the engine
+# itself. Run one profile, benchmark it, tear it down, run the other.
+
+services:
+  llamacpp:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    profiles: ['llamacpp']
+    container_name: harness-bench-llamacpp
+    ports:
+      - '127.0.0.1:8081:8080'
+    volumes:
+      - ./models:/models:ro
+    command:
+      [
+        '-m',
+        '/models/${LLAMACPP_MODEL_FILE}',
+        '--host',
+        '0.0.0.0',
+        '--port',
+        '8080',
+        '-c',
+        '${LLAMACPP_CTX_SIZE:-8192}',
+      ]
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ['ollama']
+    container_name: harness-bench-ollama
+    ports:
+      - '127.0.0.1:11434:11434'
+    volumes:
+      - ollama-data:/root/.ollama
+
+volumes:
+  ollama-data:

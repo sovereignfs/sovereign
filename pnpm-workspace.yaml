@@ -30,6 +30,17 @@ catalog:
   # apps/auth, and scripts/ wherever a SQLite file is opened directly.
   better-sqlite3-multiple-ciphers: ^12.11.1
 
+# Forced transitive resolutions for dependencies we don't control directly.
+# nanoid: GHSA-2v37-7h3g-55p8 (custom generators looping indefinitely on
+# size: 0) — pulled in four levels deep via next > postcss > nanoid, not
+# something a catalog bump of next alone resolves since postcss's own nanoid
+# dependency isn't independently pinned by us. Forces every resolution in
+# the tree to the patched line rather than adding an ignoreGhsas exception,
+# since a real fix is available and low-risk (nanoid patch releases are
+# tiny, ID-generation-only).
+overrides:
+  nanoid: '>=3.3.18'
+
 # Transitive deps allowed to run install scripts (pnpm blocks them by default).
 # esbuild (via tsx) needs its postinstall to link the platform binary.
 # better-sqlite3-multiple-ciphers needs its postinstall to fetch/compile the

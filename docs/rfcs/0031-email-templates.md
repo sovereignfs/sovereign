@@ -1,7 +1,7 @@
 ---
 rfc: 0031
 title: Email Template System
-status: Accepted
+status: Implemented
 date: June 2026
 author: kasunben
 scope: >

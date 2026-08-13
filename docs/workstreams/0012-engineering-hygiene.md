@@ -59,21 +59,23 @@ this backlog as unowned.
 
 ## Decisions locked
 
-| Decision                | Choice                                                                                    | Rejected alternative and why                                                                                                                                                                                                                                                                                     |
-| ----------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scope                   | Exactly the 10 tasks listed above                                                         | Including task **2.20** (error-page quote rotation) — rejected outright by the developer during this workstream's planning pass; marked ❌ in `ROADMAP.md` and `docs/epics/platform-shell.md`, not carried into any workstream                                                                                   |
-| Scope boundary          | The "Pre-v1 stabilization gate" cluster (0.13, 0.15, 0.16, 0.18) is **not** included here | Bundling it in — rejected because 0.16 itself depends on this workstream's legs 4 and 5 (Tasks 3.23, 2.17) completing first; folding a gate into the workstream it gates creates a circular workstream. That cluster is a separate, future workstream once this one ships                                        |
-| `13.6` leg scope        | Only the confirm-dialog, table-pattern, and icon-button-consolidation deliverables        | Also migrating Console's section nav to `NavTabs` and page headers to `PageHeader` — rejected for this workstream because the epic's own text blocks those two items on Task 9.13 (NavTabs `Link` support + `PageHeader` heading level), which is not in scope here; re-add them to `13.6`'s leg once 9.13 ships |
-| Leg 6 (`2.18`) ordering | After leg 5 (`2.17`), never before                                                        | The epic's own Dependencies line requires it — caching correctness on top of a not-yet-decomposed middleware would be built against code this workstream is about to restructure underneath it                                                                                                                   |
-| Workstream execution    | Legs — one branch, one draft PR, one review gate per leg                                  | A single combined PR — rejected for the same reviewability reason as every other workstream in this index; these ten tasks touch disjoint file trees and have no reason to share a PR                                                                                                                            |
+| Decision                | Choice                                                                                    | Rejected alternative and why                                                                                                                                                                                                                                                                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scope                   | Exactly the 10 tasks listed above                                                         | Including task **2.20** (error-page quote rotation) — rejected outright by the developer during this workstream's planning pass; marked ❌ in `ROADMAP.md` and `docs/epics/platform-shell.md`, not carried into any workstream                                                                                                                     |
+| Scope boundary          | The "Pre-v1 stabilization gate" cluster (0.13, 0.15, 0.16, 0.18) is **not** included here | Bundling it in — rejected because 0.16 itself depends on this workstream's legs 4 and 5 (Tasks 3.23, 2.17) completing first; folding a gate into the workstream it gates creates a circular workstream. That cluster is a separate, future workstream once this one ships                                                                          |
+| `13.6` leg scope        | Only the confirm-dialog, table-pattern, and icon-button-consolidation deliverables        | Also migrating Console's section nav to `NavTabs` and page headers to `PageHeader` — rejected for this workstream because the epic's own text blocks those two items on Task 9.15 (NavTabs `Link` support + `PageHeader` heading level), which is not in scope here; re-add them to `13.6`'s leg now that 9.15 has shipped (workstream 0013 leg 1) |
+| Leg 6 (`2.18`) ordering | After leg 5 (`2.17`), never before                                                        | The epic's own Dependencies line requires it — caching correctness on top of a not-yet-decomposed middleware would be built against code this workstream is about to restructure underneath it                                                                                                                                                     |
+| Workstream execution    | Legs — one branch, one draft PR, one review gate per leg                                  | A single combined PR — rejected for the same reviewability reason as every other workstream in this index; these ten tasks touch disjoint file trees and have no reason to share a PR                                                                                                                                                              |
 
 ## Prerequisites
 
 None blocking leg 1. Every task's own epic-listed dependency (2.16, 3.22,
 0.2/0.9, 0.3/3.9/3.13, 14.1/2.13/4.2/1.4, 13.4/9.8/1.10/1.5, 15.1/2.13/7.1,
-9.12, 3.4/3.13) is already ✅. The one **not** fully satisfied — Task 9.13,
-for `13.6`'s nav/header items — is handled by scoping those items out of this
-workstream's leg 7 rather than blocking it (see Decisions locked).
+9.12, 3.4/3.13) is already ✅. Task 9.15, for `13.6`'s nav/header items, was
+**not yet satisfied when this workstream was drafted** — handled by scoping
+those items out of this workstream's leg 7 rather than blocking it (see
+Decisions locked). It has since shipped (workstream 0013 leg 1), so leg 7's
+deferred nav/header migration can be re-added.
 
 ## Legs
 
@@ -225,9 +227,10 @@ with no measured benefit is new risk for nothing.
   `.pluginCardBtnToggle`, `.pluginCardBtnRemove`, `.userCardMenuBtn`).
 
 **Explicitly out of scope for this leg:** migrating Console's section nav to
-`NavTabs` and per-page headers to `PageHeader` — blocked on Task 9.13, which
-is not part of this workstream. Re-open this task (or file a follow-up) once
-9.13 ships.
+`NavTabs` and per-page headers to `PageHeader` — was blocked on Task 9.15,
+which is not part of this workstream. 9.15 has since shipped (workstream 0013
+leg 1); re-open this task (or file a follow-up) to add the deferred
+migration.
 
 **Technical notes:**
 

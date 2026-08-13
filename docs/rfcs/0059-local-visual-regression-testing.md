@@ -1,7 +1,7 @@
 ---
 rfc: 0059
 title: Local visual regression testing
-status: Draft
+status: Partially implemented (Tier 1 shipped and CI-artifact-uploading; Tier 2 root smoke suite scaffolded; Linux CI baseline calibration pending)
 date: July 2026
 author: kasunben
 scope: packages/ui, runtime, plugins/account, plugins/console, plugins/launcher, __tests__/visual, docs; builds on RFC 0010 and epic task 9.7

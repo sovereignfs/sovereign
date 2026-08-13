@@ -20,7 +20,10 @@ import type {
   CryptoContext,
   DecryptFieldOptions,
   EncryptFieldOptions,
+  EnqueueJobInput,
   HashFieldOptions,
+  JobRef,
+  ScheduleJobInput,
   ConnectionContext,
   ConnectionListFilter,
   ConnectionOAuthState,
@@ -183,6 +186,15 @@ export interface SdkHost {
       options: ConsumeHandoffOptions,
       context: HandoffRequestContext,
     ): Promise<HandoffContext>;
+  };
+  jobs: {
+    /** `pluginId`/`userId` are resolved by the SDK from request headers (real or synthetic). */
+    enqueue(input: EnqueueJobInput, pluginId: string, userId: string | null): Promise<JobRef>;
+    schedule(input: ScheduleJobInput, pluginId: string, userId: string | null): Promise<JobRef>;
+    /** Scoped to `pluginId` — cannot cancel another plugin's job. */
+    cancel(id: string, pluginId: string): Promise<boolean>;
+    /** Scoped to `pluginId` — cannot read another plugin's job. */
+    get(id: string, pluginId: string): Promise<JobRef | null>;
   };
   storage: {
     put(input: StoragePutInput, context: StorageContext): Promise<StorageObject>;

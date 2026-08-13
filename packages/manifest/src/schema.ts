@@ -24,6 +24,7 @@ export const permissionSchema = z.enum([
   'mailer:sendExternal',
   'storage:readWrite',
   'notifications:send',
+  'jobs:write',
   'events:publish',
   'events:subscribe',
   'data:provide',
@@ -624,6 +625,55 @@ const manifestObjectSchema = z
       .min(1)
       .refine((arr) => new Set(arr.map((s) => s.id)).size === arr.length, {
         message: 'schedule ids must be unique within the plugin',
+      })
+      .optional(),
+    /**
+     * Background job types (RFC 0046). Each entry names a server-side handler
+     * module inside the plugin's `app/` directory whose **default export** is
+     * a `JobHandler` (`@sovereignfs/sdk`) — invoked by the platform's job
+     * worker when a `sdk.jobs.enqueue()`/`sdk.jobs.schedule()` call for that
+     * `type` becomes due.
+     *
+     * Distinct from `schedules` above (RFC 0046's earlier Phase 1 subset —
+     * simple manifest-declared intervals, no persistence/retries): `jobs` is
+     * the general queued/scheduled/retried mechanism plugins call into
+     * dynamically. The two mechanisms coexist; `schedules` is not deprecated.
+     *
+     * Use an underscore-prefixed directory (e.g. `app/_jobs/`) so the module
+     * composes into the runtime route tree without becoming a route.
+     */
+    jobs: z
+      .array(
+        z
+          .object({
+            /** Plugin-local job type name, unique within the plugin (e.g. `"sync.remote"`). */
+            type: z
+              .string()
+              .regex(
+                /^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*)*$/,
+                'job type must be lowercase dot-separated segments (e.g. "sync.remote")',
+              ),
+            /**
+             * Handler module path relative to the plugin root, inside `app/`
+             * (e.g. `"app/_jobs/sync-remote.ts"`). Must be a `.ts` module and
+             * must not traverse outside the plugin (`..` is rejected).
+             */
+            entry: z
+              .string()
+              .startsWith('app/', "entry must be a path inside the plugin's app/ directory")
+              .endsWith('.ts', 'entry must be a .ts module')
+              .refine((p) => !p.split('/').includes('..'), {
+                message: 'entry must not contain ".." path segments',
+              }),
+            /** Default max attempts when a caller's enqueue/schedule call does not specify one. */
+            maxAttempts: z.number().int().min(1).optional(),
+            description: z.string().optional(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .refine((arr) => new Set(arr.map((j) => j.type)).size === arr.length, {
+        message: 'job types must be unique within the plugin',
       })
       .optional(),
     /**

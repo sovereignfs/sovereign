@@ -10,6 +10,7 @@
  *    incompatible ones in the DB, and record reasons for health/admin routes.
  * 5. Initialise the notification broker (RFC 0034).
  * 6. Start the minimal plugin scheduler (RFC 0046 Phase 1).
+ * 7. Start the plugin job worker (RFC 0046).
  *
  * (There used to be a step here that eagerly created a `plugin_status` row
  * for every non-chrome plugin on first boot — removed 2026-07-19, see
@@ -79,8 +80,15 @@ export async function register(): Promise<void> {
     const { startScheduler, stopScheduler } = await import('./src/scheduler');
     startScheduler();
 
+    // Plugin job worker (RFC 0046) — claims and runs jobs enqueued/scheduled
+    // via sdk.jobs, composed into generated/plugin-jobs.ts. No-op when
+    // nothing declares a job type.
+    const { startJobWorker, stopJobWorker } = await import('./src/jobs');
+    startJobWorker();
+
     process.on('SIGTERM', () => {
       stopScheduler();
+      stopJobWorker();
       void closeBroker();
     });
   }

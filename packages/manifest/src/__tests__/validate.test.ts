@@ -1002,6 +1002,99 @@ describe('validateManifest', () => {
     expect(res.valid).toBe(false);
   });
 
+  it('accepts a valid jobs declaration (RFC 0046)', () => {
+    const res = validateManifest({
+      ...base,
+      jobs: [{ type: 'sync.remote', entry: 'app/_jobs/sync-remote.ts', maxAttempts: 5 }],
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('accepts a jobs declaration without optional fields', () => {
+    const res = validateManifest({
+      ...base,
+      jobs: [{ type: 'cleanup', entry: 'app/_jobs/cleanup.ts' }],
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects a job entry outside app/', () => {
+    const res = validateManifest({
+      ...base,
+      jobs: [{ type: 'sync.remote', entry: 'lib/jobs.ts' }],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects a job entry that traverses out of the plugin', () => {
+    const res = validateManifest({
+      ...base,
+      jobs: [{ type: 'sync.remote', entry: 'app/../../etc/passwd.ts' }],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects a non-.ts job entry', () => {
+    const res = validateManifest({
+      ...base,
+      jobs: [{ type: 'sync.remote', entry: 'app/_jobs/handler.tsx' }],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects duplicate job types within a plugin', () => {
+    const res = validateManifest({
+      ...base,
+      jobs: [
+        { type: 'sync.remote', entry: 'app/_jobs/a.ts' },
+        { type: 'sync.remote', entry: 'app/_jobs/b.ts' },
+      ],
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects job types that are not lowercase dot-separated segments', () => {
+    for (const type of ['SyncRemote', 'sync-remote', 'sync..remote', '.sync', 'sync.']) {
+      const res = validateManifest({
+        ...base,
+        jobs: [{ type, entry: 'app/_jobs/x.ts' }],
+      });
+      expect(res.valid, `expected type "${type}" to be rejected`).toBe(false);
+    }
+  });
+
+  it('accepts a multi-segment dotted job type', () => {
+    const res = validateManifest({
+      ...base,
+      jobs: [{ type: 'sync.remote.accounts', entry: 'app/_jobs/x.ts' }],
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects a non-integer or sub-1 maxAttempts', () => {
+    for (const maxAttempts of [0, -1, 1.5]) {
+      const res = validateManifest({
+        ...base,
+        jobs: [{ type: 'sync.remote', entry: 'app/_jobs/x.ts', maxAttempts }],
+      });
+      expect(res.valid).toBe(false);
+    }
+  });
+
+  it('rejects an empty jobs array', () => {
+    const res = validateManifest({ ...base, jobs: [] });
+    expect(res.valid).toBe(false);
+  });
+
+  it('accepts schedules and jobs declared together', () => {
+    const res = validateManifest({
+      ...base,
+      schedules: [{ id: 'due-reminders', intervalMinutes: 1, entry: 'app/_jobs/due-reminders.ts' }],
+      jobs: [{ type: 'sync.remote', entry: 'app/_jobs/sync-remote.ts' }],
+    });
+    expect(res.valid).toBe(true);
+  });
+
   it('accepts a valid integrations.optional declaration (RFC 0051)', () => {
     const res = validateManifest({
       ...base,

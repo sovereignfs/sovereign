@@ -1,13 +1,19 @@
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { computeNextCronRun } from '../cron';
 import * as pgSchema from '../schema/postgres';
 import {
   DEFAULT_TENANT_ID,
   DEFAULT_ROOT_PLUGIN_ID,
   addUserGroupMember,
   bootstrapPlatformDb,
+  cancelJob,
+  cancelJobsForPlugin,
   checkWebhookReplay,
+  claimNextJob,
+  completeJobFailure,
+  completeJobSuccess,
   consumePluginHandoff,
   createPluginHandoff,
   getPluginHandoff,
@@ -22,6 +28,12 @@ import {
   deletePluginProviderConfig,
   deleteStorageObject,
   deleteUserData,
+  enqueueJob,
+  getJobById,
+  getJobHealthSummary,
+  listJobsForPlugin,
+  scheduleJob,
+  updateJobProgress,
   deleteUserGroup,
   disconnectPluginConnection,
   getAccountPrefs,
@@ -1771,5 +1783,398 @@ describe.skipIf(!PG_URL)('plugin handoffs (RFC 0053)', () => {
     const row = await createPluginHandoff(db, { ...baseInput, expiresInSeconds: 24 * 60 * 60 });
     expect(row.expiresAt).toBeGreaterThanOrEqual(before + 60 * 60 - 5);
     expect(row.expiresAt).toBeLessThanOrEqual(before + 60 * 60 + 5);
+  });
+});
+
+describe.skipIf(!PG_URL)('plugin jobs (RFC 0046)', () => {
+  it('enqueueJob inserts a queued job with runAt defaulting to now', async () => {
+    const db = await freshDb();
+    const before = Math.floor(Date.now() / 1000);
+    const job = await enqueueJob(db, {
+      id: 'job-1',
+      pluginId: 'fs.example.tasks',
+      type: 'sync.remote',
+      payload: { accountId: 'acct-1' },
+    });
+    expect(job.status).toBe('queued');
+    expect(job.cron).toBeNull();
+    expect(job.attempts).toBe(0);
+    expect(job.maxAttempts).toBe(3);
+    expect(job.runAt).toBeGreaterThanOrEqual(before);
+    expect(JSON.parse(job.payload ?? 'null')).toEqual({ accountId: 'acct-1' });
+  });
+
+  it('enqueueJob with a dedupeKey returns the existing active job instead of duplicating', async () => {
+    const db = await freshDb();
+    const first = await enqueueJob(db, {
+      id: 'job-1',
+      pluginId: 'fs.example.tasks',
+      type: 'sync.remote',
+      dedupeKey: 'acct-1',
+    });
+    const second = await enqueueJob(db, {
+      id: 'job-2',
+      pluginId: 'fs.example.tasks',
+      type: 'sync.remote',
+      dedupeKey: 'acct-1',
+    });
+    expect(second.id).toBe(first.id);
+    expect(await getJobById(db, 'job-2', 'fs.example.tasks')).toBeUndefined();
+  });
+
+  it('enqueueJob with a dedupeKey does not dedupe across different plugins', async () => {
+    const db = await freshDb();
+    const a = await enqueueJob(db, {
+      id: 'job-1',
+      pluginId: 'fs.example.tasks',
+      type: 'sync.remote',
+      dedupeKey: 'acct-1',
+    });
+    const b = await enqueueJob(db, {
+      id: 'job-2',
+      pluginId: 'fs.example.other',
+      type: 'sync.remote',
+      dedupeKey: 'acct-1',
+    });
+    expect(b.id).not.toBe(a.id);
+  });
+
+  it('enqueueJob with a dedupeKey allows a new job once the previous one is terminal', async () => {
+    const db = await freshDb();
+    const first = await enqueueJob(db, {
+      id: 'job-1',
+      pluginId: 'fs.example.tasks',
+      type: 'sync.remote',
+      dedupeKey: 'acct-1',
+    });
+    await completeJobSuccess(db, first);
+    const second = await enqueueJob(db, {
+      id: 'job-2',
+      pluginId: 'fs.example.tasks',
+      type: 'sync.remote',
+      dedupeKey: 'acct-1',
+    });
+    expect(second.id).toBe('job-2');
+  });
+
+  it('scheduleJob inserts a scheduled job with a computed next cron run', async () => {
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+    const job = await scheduleJob(db, {
+      id: 'job-1',
+      pluginId: 'fs.example.tasks',
+      type: 'cleanup.expired',
+      cron: '0 3 * * *',
+      timezone: 'UTC',
+    });
+    expect(job.status).toBe('scheduled');
+    expect(job.cron).toBe('0 3 * * *');
+    expect(job.runAt).toBeGreaterThan(now);
+  });
+
+  it('scheduleJob rejects a malformed cron expression', async () => {
+    const db = await freshDb();
+    await expect(
+      scheduleJob(db, {
+        id: 'job-1',
+        pluginId: 'fs.example.tasks',
+        type: 'cleanup.expired',
+        cron: 'not a cron',
+      }),
+    ).rejects.toThrow(/invalid cron expression/);
+  });
+
+  it('getJobById is scoped to the owning plugin', async () => {
+    const db = await freshDb();
+    await enqueueJob(db, { id: 'job-1', pluginId: 'fs.example.tasks', type: 'sync.remote' });
+    expect(await getJobById(db, 'job-1', 'fs.example.tasks')).toBeDefined();
+    expect(await getJobById(db, 'job-1', 'fs.example.other')).toBeUndefined();
+  });
+
+  it('listJobsForPlugin returns only that plugin’s jobs, newest first', async () => {
+    const db = await freshDb();
+    await enqueueJob(db, { id: 'job-1', pluginId: 'fs.example.tasks', type: 'sync.remote' });
+    await enqueueJob(db, { id: 'job-2', pluginId: 'fs.example.tasks', type: 'cleanup.expired' });
+    await enqueueJob(db, { id: 'job-3', pluginId: 'fs.example.other', type: 'sync.remote' });
+
+    const jobs = await listJobsForPlugin(db, 'fs.example.tasks');
+    expect(jobs.map((j) => j.id).sort()).toEqual(['job-1', 'job-2']);
+  });
+
+  it('cancelJob cancels an active job scoped to the owning plugin', async () => {
+    const db = await freshDb();
+    await enqueueJob(db, { id: 'job-1', pluginId: 'fs.example.tasks', type: 'sync.remote' });
+
+    expect(await cancelJob(db, 'job-1', 'fs.example.other')).toBe(false);
+    expect(await cancelJob(db, 'job-1', 'fs.example.tasks')).toBe(true);
+    expect((await getJobById(db, 'job-1', 'fs.example.tasks'))?.status).toBe('cancelled');
+    // Already cancelled — not active anymore.
+    expect(await cancelJob(db, 'job-1', 'fs.example.tasks')).toBe(false);
+  });
+
+  it('cancelJob returns false for a nonexistent job', async () => {
+    const db = await freshDb();
+    expect(await cancelJob(db, 'no-such-job', 'fs.example.tasks')).toBe(false);
+  });
+
+  it('cancelJobsForPlugin cancels every active job for a plugin and nothing else', async () => {
+    const db = await freshDb();
+    await enqueueJob(db, { id: 'job-1', pluginId: 'fs.example.tasks', type: 'sync.remote' });
+    await scheduleJob(db, {
+      id: 'job-2',
+      pluginId: 'fs.example.tasks',
+      type: 'cleanup.expired',
+      cron: '0 3 * * *',
+    });
+    await enqueueJob(db, { id: 'job-3', pluginId: 'fs.example.other', type: 'sync.remote' });
+
+    const cancelled = await cancelJobsForPlugin(db, 'fs.example.tasks');
+    expect(cancelled).toBe(2);
+    expect((await getJobById(db, 'job-1', 'fs.example.tasks'))?.status).toBe('cancelled');
+    expect((await getJobById(db, 'job-2', 'fs.example.tasks'))?.status).toBe('cancelled');
+    expect((await getJobById(db, 'job-3', 'fs.example.other'))?.status).toBe('queued');
+  });
+
+  it('claimNextJob claims the oldest due job and marks it running', async () => {
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+    await enqueueJob(db, {
+      id: 'job-later',
+      pluginId: 'fs.example.tasks',
+      type: 'sync.remote',
+      runAt: now - 10,
+    });
+    await enqueueJob(db, {
+      id: 'job-earlier',
+      pluginId: 'fs.example.tasks',
+      type: 'sync.remote',
+      runAt: now - 100,
+    });
+
+    const claimed = await claimNextJob(db, { disabledPluginIds: [], now });
+    expect(claimed?.id).toBe('job-earlier');
+    expect(claimed?.status).toBe('running');
+    expect(claimed?.attempts).toBe(1);
+    expect(claimed?.startedAt).not.toBeNull();
+  });
+
+  it('claimNextJob does not claim a job whose runAt is still in the future', async () => {
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+    await enqueueJob(db, {
+      id: 'job-future',
+      pluginId: 'fs.example.tasks',
+      type: 'sync.remote',
+      runAt: now + 3600,
+    });
+    expect(await claimNextJob(db, { disabledPluginIds: [], now })).toBeUndefined();
+  });
+
+  it('claimNextJob skips jobs belonging to disabled plugins', async () => {
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+    await enqueueJob(db, { id: 'job-1', pluginId: 'fs.example.disabled', type: 'sync.remote' });
+    expect(
+      await claimNextJob(db, { disabledPluginIds: ['fs.example.disabled'], now }),
+    ).toBeUndefined();
+    // Re-enabled: now claimable.
+    expect((await claimNextJob(db, { disabledPluginIds: [], now }))?.id).toBe('job-1');
+  });
+
+  it('claimNextJob never returns the same job twice while it is running', async () => {
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+    await enqueueJob(db, { id: 'job-1', pluginId: 'fs.example.tasks', type: 'sync.remote' });
+
+    const first = await claimNextJob(db, { disabledPluginIds: [], now });
+    const second = await claimNextJob(db, { disabledPluginIds: [], now });
+    expect(first?.id).toBe('job-1');
+    expect(second).toBeUndefined();
+  });
+
+  it('completeJobSuccess marks a one-off job succeeded', async () => {
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+    await enqueueJob(db, { id: 'job-1', pluginId: 'fs.example.tasks', type: 'sync.remote' });
+    const claimed = await claimNextJob(db, { disabledPluginIds: [], now });
+    if (!claimed) throw new Error('expected a claimed job');
+
+    await completeJobSuccess(db, claimed);
+    const row = await getJobById(db, 'job-1', 'fs.example.tasks');
+    expect(row?.status).toBe('succeeded');
+    expect(row?.completedAt).not.toBeNull();
+    expect(row?.progress).toBe(100);
+  });
+
+  it('completeJobSuccess re-arms a recurring job at its next occurrence and resets attempts', async () => {
+    const db = await freshDb();
+    const scheduled = await scheduleJob(db, {
+      id: 'job-1',
+      pluginId: 'fs.example.tasks',
+      type: 'cleanup.expired',
+      cron: '0 3 * * *',
+    });
+    // Claim as if the tick happened right at the scheduled occurrence — but
+    // completeJobSuccess itself computes the *next* occurrence from real
+    // wall-clock time (not this injected `now`), same as production. Assert
+    // against that relationship via the row's own `updatedAt` (stamped from
+    // the same `now` the implementation used) rather than a wall-clock race.
+    const claimed = await claimNextJob(db, {
+      disabledPluginIds: [],
+      now: scheduled.runAt,
+    });
+    if (!claimed) throw new Error('expected a claimed job');
+
+    await completeJobSuccess(db, claimed);
+    const row = await getJobById(db, 'job-1', 'fs.example.tasks');
+    expect(row?.status).toBe('scheduled');
+    expect(row?.attempts).toBe(0);
+    expect(row?.completedAt).toBeNull();
+    expect(row?.runAt).toBe(computeNextCronRun('0 3 * * *', undefined, row?.updatedAt ?? 0));
+  });
+
+  it('completeJobFailure retries a one-off job with backoff when attempts remain', async () => {
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+    await enqueueJob(db, { id: 'job-1', pluginId: 'fs.example.tasks', type: 'sync.remote' });
+    const claimed = await claimNextJob(db, { disabledPluginIds: [], now });
+    if (!claimed) throw new Error('expected a claimed job');
+    expect(claimed.attempts).toBe(1);
+    expect(claimed.maxAttempts).toBe(3);
+
+    const result = await completeJobFailure(db, claimed, 'boom');
+    expect(result.outcome).toBe('retrying');
+    const row = await getJobById(db, 'job-1', 'fs.example.tasks');
+    expect(row?.status).toBe('queued');
+    expect(row?.lastError).toBe('boom');
+    expect(row?.runAt).toBeGreaterThan(now);
+  });
+
+  it('completeJobFailure permanently fails a one-off job once attempts are exhausted', async () => {
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+    await enqueueJob(db, {
+      id: 'job-1',
+      pluginId: 'fs.example.tasks',
+      type: 'sync.remote',
+      maxAttempts: 1,
+    });
+    const claimed = await claimNextJob(db, { disabledPluginIds: [], now });
+    if (!claimed) throw new Error('expected a claimed job');
+    expect(claimed.attempts).toBe(1);
+    expect(claimed.maxAttempts).toBe(1);
+
+    const result = await completeJobFailure(db, claimed, 'boom');
+    expect(result.outcome).toBe('failed');
+    const row = await getJobById(db, 'job-1', 'fs.example.tasks');
+    expect(row?.status).toBe('failed');
+    expect(row?.completedAt).not.toBeNull();
+    expect(row?.lastError).toBe('boom');
+  });
+
+  it('completeJobFailure reschedules a recurring job to its next occurrence once exhausted, rather than killing it', async () => {
+    const db = await freshDb();
+    const scheduled = await scheduleJob(db, {
+      id: 'job-1',
+      pluginId: 'fs.example.tasks',
+      type: 'cleanup.expired',
+      cron: '0 3 * * *',
+      maxAttempts: 1,
+    });
+    const claimed = await claimNextJob(db, {
+      disabledPluginIds: [],
+      now: scheduled.runAt,
+    });
+    if (!claimed) throw new Error('expected a claimed job');
+
+    const result = await completeJobFailure(db, claimed, 'boom');
+    expect(result.outcome).toBe('rescheduled');
+    const row = await getJobById(db, 'job-1', 'fs.example.tasks');
+    expect(row?.status).toBe('scheduled');
+    expect(row?.attempts).toBe(0);
+    expect(row?.lastError).toBe('boom');
+    // See the completeJobSuccess test above for why this compares against
+    // the row's own updatedAt rather than `scheduled.runAt`.
+    expect(row?.runAt).toBe(computeNextCronRun('0 3 * * *', undefined, row?.updatedAt ?? 0));
+  });
+
+  it('updateJobProgress updates progress while running but no-ops once the job has left running', async () => {
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+    await enqueueJob(db, { id: 'job-1', pluginId: 'fs.example.tasks', type: 'sync.remote' });
+    const claimed = await claimNextJob(db, { disabledPluginIds: [], now });
+    if (!claimed) throw new Error('expected a claimed job');
+
+    await updateJobProgress(db, 'job-1', 42, 'partway there');
+    let row = await getJobById(db, 'job-1', 'fs.example.tasks');
+    expect(row?.progress).toBe(42);
+    expect(row?.progressMessage).toBe('partway there');
+
+    await completeJobSuccess(db, claimed);
+    await updateJobProgress(db, 'job-1', 99, 'too late');
+    row = await getJobById(db, 'job-1', 'fs.example.tasks');
+    expect(row?.progress).toBe(100); // set by completeJobSuccess, unaffected by the stale update
+  });
+
+  it('updateJobProgress clamps to the 0-100 range', async () => {
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+    await enqueueJob(db, { id: 'job-1', pluginId: 'fs.example.tasks', type: 'sync.remote' });
+    await claimNextJob(db, { disabledPluginIds: [], now });
+
+    await updateJobProgress(db, 'job-1', 150);
+    expect((await getJobById(db, 'job-1', 'fs.example.tasks'))?.progress).toBe(100);
+
+    await updateJobProgress(db, 'job-1', -20);
+    expect((await getJobById(db, 'job-1', 'fs.example.tasks'))?.progress).toBe(0);
+  });
+
+  it('getJobHealthSummary reports queued/scheduled/running counts and recent failures', async () => {
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+
+    // Claim and terminally fail this one first, before any other job exists
+    // to compete with it for claimNextJob's "oldest due" ordering.
+    await enqueueJob(db, {
+      id: 'job-to-fail',
+      pluginId: 'fs.example.tasks',
+      type: 'sync.remote',
+      maxAttempts: 1,
+    });
+    const claimed = await claimNextJob(db, { disabledPluginIds: [], now });
+    if (!claimed) throw new Error('expected a claimed job');
+    await completeJobFailure(db, claimed, 'kaboom');
+
+    await enqueueJob(db, { id: 'job-queued', pluginId: 'fs.example.tasks', type: 'sync.remote' });
+    await scheduleJob(db, {
+      id: 'job-scheduled',
+      pluginId: 'fs.example.tasks',
+      type: 'cleanup.expired',
+      cron: '0 3 * * *',
+    });
+
+    const summary = await getJobHealthSummary(db);
+    expect(summary.queuedCount).toBe(1);
+    expect(summary.scheduledCount).toBe(1);
+    expect(summary.failedLast24h).toBe(1);
+    expect(
+      summary.recentFailures.some((f) => f.id === 'job-to-fail' && f.lastError === 'kaboom'),
+    ).toBe(true);
+  });
+
+  it('getJobHealthSummary counts a long-running job as stuck', async () => {
+    const db = await freshDb();
+    const longAgo = Math.floor(Date.now() / 1000) - 3600; // 1h ago, past the 30min stuck threshold
+    await enqueueJob(db, {
+      id: 'job-1',
+      pluginId: 'fs.example.tasks',
+      type: 'sync.remote',
+      runAt: longAgo,
+    });
+    await claimNextJob(db, { disabledPluginIds: [], now: longAgo });
+
+    const summary = await getJobHealthSummary(db);
+    expect(summary.stuckCount).toBe(1);
+    expect(summary.runningCount).toBe(1);
   });
 });

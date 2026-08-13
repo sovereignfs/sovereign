@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.87.0 · **Last updated:** 2026-08-13
+**Version:** 0.89.0 · **Last updated:** 2026-08-14
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -280,7 +280,7 @@ doc — but not yet assigned a roadmap slot. Promoted to a phase table once prio
 | —       | `packages/db` libSQL driver adoption (workstream 0009)                                                | ✅     | [8.23](docs/epics/data-sovereignty.md#-823--packagesdb-libsql-driver-adoption-workstream-0009-leg-3)                                             |
 | —       | Database-backed rate-limit storage for apps/auth (RFC 0086) — workstream 0017 leg 4                   | 📋     | [1.19](docs/epics/users-auth.md#-119--database-backed-rate-limit-storage-for-appsauth-rfc-0086)                                                  |
 | —       | Redis-backed store for the general per-IP rate limiter (RFC 0086) — workstream 0017 leg 5             | 📋     | [2.29](docs/epics/platform-shell.md#-229--redis-backed-store-for-the-general-per-ip-rate-limiter-rfc-0086)                                       |
-| —       | Plugin background jobs and schedules (RFC 0046) — workstream 0015 leg 1                               | 📋     | [3.16](docs/epics/plugins-runtime.md#-316--plugin-background-jobs-and-schedules-rfc-0046)                                                        |
+| 0.89.0  | Plugin background jobs and schedules (RFC 0046) — workstream 0015 leg 1                               | ✅     | [3.16](docs/epics/plugins-runtime.md#-316--plugin-background-jobs-and-schedules-rfc-0046)                                                        |
 | 0.87.0  | Public plugin webhooks (RFC 0050) — workstream 0015 leg 3                                             | ✅     | [2.15](docs/epics/platform-shell.md#-215--public-plugin-webhooks-rfc-0050)                                                                       |
 | —       | Error-page digital-rights quote rotation                                                              | ❌     | [2.20](docs/epics/platform-shell.md#-220--error-page-digital-rights-quote-rotation--rejected)                                                    |
 | —       | Plugin events and realtime channels (RFC 0045) — workstream 0015 leg 2                                | 📋     | [3.17](docs/epics/plugins-runtime.md#-317--plugin-events-and-realtime-channels-rfc-0045)                                                         |

@@ -10,6 +10,7 @@ import { e2ee } from './e2ee';
 import { email } from './email';
 import { env } from './env';
 import { handoffs } from './handoffs';
+import { jobs } from './jobs';
 import * as mailer from './mailer';
 import { notifications } from './notifications';
 import * as platform from './platform';
@@ -42,16 +43,17 @@ import { webhooks } from './webhooks';
  * `email` (user-scoped `sendToUser` email surface, RFC 0062), `webhooks`
  * (public plugin webhook helpers — `verifyHmac`/`checkReplay`, RFC 0050),
  * `handoffs` (signed, short-lived cross-plugin flow handoffs —
- * authenticated or public/anonymous, RFC 0053), `billing` (plugin
- * monetization / entitlement gating, RFC 0003), `events`, `device` (surface
- * detection — `browser`/`mobile`/`desktop` — RFC 0080; a presentation hint
- * only, never a security boundary; capability probes and invocation live in
+ * authenticated or public/anonymous, RFC 0053), `jobs` (background jobs and
+ * schedules, RFC 0046), `billing` (plugin monetization / entitlement
+ * gating, RFC 0003), `events`, `device` (surface detection —
+ * `browser`/`mobile`/`desktop` — RFC 0080; a presentation hint only, never
+ * a security boundary; capability probes and invocation live in
  * `@sovereignfs/sdk/device-client` and the future device bridge, RFC 0083).
  * `data`, `activity`, `portability`, `env`, `notifications`, `directory`,
  * `secrets`, `crypto`, `storage`, `connections`, `e2ee`, `plugins`, `email`,
- * `webhooks`, `handoffs`, and `device` are implemented; `billing` and
- * `events` throw `NotImplementedError` until their backing mechanisms ship.
- * Their shape may change before they stabilise.
+ * `webhooks`, `handoffs`, `jobs`, and `device` are implemented; `billing`
+ * and `events` throw `NotImplementedError` until their backing mechanisms
+ * ship. Their shape may change before they stabilise.
  */
 export const sdk = {
   // Stable (v1.0.0).
@@ -67,6 +69,7 @@ export const sdk = {
   notifications,
   webhooks,
   handoffs,
+  jobs,
   secrets,
   crypto,
   connections,
@@ -175,6 +178,12 @@ export type {
   CreateSecretInput,
   ScheduleContext,
   ScheduleHandler,
+  JobStatus,
+  JobRef,
+  EnqueueJobInput,
+  ScheduleJobInput,
+  JobContext,
+  JobHandler,
   SecretContext,
   SecretRef,
   SecretScope,

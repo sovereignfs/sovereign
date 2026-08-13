@@ -415,5 +415,67 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       created_at ${ts} NOT NULL,
       expires_at ${ts} NOT NULL
     )`,
+    // RFC 0092 gate B — field-level encryption key material and re-seal walker state.
+    `CREATE TABLE IF NOT EXISTS field_encryption_keys (
+      id TEXT PRIMARY KEY,
+      plugin_id TEXT NOT NULL,
+      class TEXT NOT NULL,
+      wrapped_dek TEXT NOT NULL,
+      wrapped_hmac_key TEXT NOT NULL,
+      wrapped_hmac_key_previous TEXT,
+      hmac_rotation_started_at ${ts},
+      kek_fingerprint TEXT NOT NULL,
+      created_at ${ts} NOT NULL,
+      updated_at ${ts} NOT NULL
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS field_encryption_keys_plugin_class_idx
+       ON field_encryption_keys (plugin_id, class)`,
+    `CREATE TABLE IF NOT EXISTS field_table_registrations (
+      id TEXT PRIMARY KEY,
+      plugin_id TEXT NOT NULL,
+      table_name TEXT NOT NULL,
+      metadata TEXT NOT NULL,
+      updated_at ${ts} NOT NULL
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS field_table_registrations_plugin_table_idx
+       ON field_table_registrations (plugin_id, table_name)`,
+    `CREATE TABLE IF NOT EXISTS field_reseal_checkpoints (
+      id TEXT PRIMARY KEY,
+      job TEXT NOT NULL,
+      plugin_id TEXT NOT NULL,
+      table_name TEXT NOT NULL,
+      last_pk TEXT NOT NULL,
+      updated_at ${ts} NOT NULL
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS field_reseal_checkpoints_job_table_idx
+       ON field_reseal_checkpoints (job, plugin_id, table_name)`,
+    // RFC 0046 — Plugin background jobs and schedules
+    `CREATE TABLE IF NOT EXISTS plugin_jobs (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      plugin_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      status TEXT NOT NULL,
+      payload TEXT,
+      run_at ${ts} NOT NULL,
+      cron TEXT,
+      timezone TEXT,
+      dedupe_key TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      max_attempts INTEGER NOT NULL DEFAULT 3,
+      last_error TEXT,
+      progress INTEGER,
+      progress_message TEXT,
+      created_by TEXT,
+      created_at ${ts} NOT NULL,
+      updated_at ${ts} NOT NULL,
+      started_at ${ts},
+      completed_at ${ts},
+      cancelled_at ${ts}
+    )`,
+    `CREATE INDEX IF NOT EXISTS plugin_jobs_status_run_at_idx
+       ON plugin_jobs (status, run_at)`,
+    `CREATE INDEX IF NOT EXISTS plugin_jobs_plugin_dedupe_idx
+       ON plugin_jobs (plugin_id, dedupe_key)`,
   ];
 }

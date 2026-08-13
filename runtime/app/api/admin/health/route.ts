@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   getEmailDeliveryDiagnostics,
+  getJobHealthSummary,
   getLastMigrationResult,
   pingDb,
   resolveDialect,
@@ -8,6 +9,7 @@ import {
 import { checkAdminKey } from '@/src/admin-guard';
 import { isDevModeConfigured } from '@/src/dev-mode';
 import { getPlatformDb } from '@/src/db';
+import { jobWorkerDisabled } from '@/src/jobs';
 import { getBroker } from '@/src/notification-broker';
 import { getIncompatiblePlugins } from '@/src/plugin-compat';
 import { getPlatformVersion } from '@/src/platform-version';
@@ -61,6 +63,22 @@ interface HealthReport {
     lastFailureCode: string | null;
     recentFailureCount: number;
   };
+  /** Background job queue health (RFC 0046) — stuck/failed visibility for operators. */
+  jobs: {
+    workerDisabled: boolean;
+    queuedCount: number;
+    scheduledCount: number;
+    runningCount: number;
+    stuckCount: number;
+    failedLast24h: number;
+    recentFailures: Array<{
+      id: string;
+      pluginId: string;
+      type: string;
+      lastError: string | null;
+      updatedAt: number;
+    }>;
+  };
   uptimeSeconds: number;
 }
 
@@ -104,6 +122,7 @@ export async function GET(request: Request): Promise<Response> {
 
   const installedPlugins = getInstalledPlugins();
   const emailDiagnostics = await getEmailDeliveryDiagnostics(pdb, await isSmtpConfigured());
+  const jobHealth = await getJobHealthSummary(pdb);
 
   const rawTransport = process.env.NOTIFICATION_TRANSPORT ?? 'sse';
   const notifTransport: 'polling' | 'sse' | 'redis' =
@@ -141,6 +160,10 @@ export async function GET(request: Request): Promise<Response> {
       brokerConnected,
     },
     email: emailDiagnostics,
+    jobs: {
+      workerDisabled: jobWorkerDisabled(),
+      ...jobHealth,
+    },
     uptimeSeconds: Math.floor(process.uptime()),
   };
   return NextResponse.json(report);

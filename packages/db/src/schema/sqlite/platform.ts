@@ -1,4 +1,11 @@
-import { integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 
 /**
  * Platform schema (SQLite dialect).
@@ -819,3 +826,49 @@ export const pluginHandoffs = sqliteTable('plugin_handoffs', {
 
 export type PluginHandoff = typeof pluginHandoffs.$inferSelect;
 export type NewPluginHandoff = typeof pluginHandoffs.$inferInsert;
+
+/**
+ * Platform-managed background jobs and schedules (RFC 0046). Full
+ * queued/scheduled/running/succeeded/failed/cancelled lifecycle — distinct
+ * from the RFC 0046 "Phase 1 subset" manifest `schedules` field (interval-only,
+ * no persistence, see `runtime/src/scheduler.ts`), which this table does not
+ * replace; the two mechanisms coexist (see `docs/rfcs/0046-plugin-jobs.md`).
+ * `type` is plugin-local (e.g. `"sync.remote"`) — the runtime namespaces it to
+ * `<pluginId>:<type>` when resolving a handler, never stored pre-namespaced.
+ * `run_at` doubles as "next eligible run" for both one-off and recurring
+ * (`cron` non-null) rows. `progress`/`progress_message` let long-running
+ * handlers report status without a request staying open.
+ */
+export const pluginJobs = sqliteTable(
+  'plugin_jobs',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenant_id').notNull(),
+    pluginId: text('plugin_id').notNull(),
+    type: text('type').notNull(),
+    status: text('status').notNull(),
+    payload: text('payload'),
+    runAt: integer('run_at').notNull(),
+    cron: text('cron'),
+    timezone: text('timezone'),
+    dedupeKey: text('dedupe_key'),
+    attempts: integer('attempts').notNull().default(0),
+    maxAttempts: integer('max_attempts').notNull().default(3),
+    lastError: text('last_error'),
+    progress: integer('progress'),
+    progressMessage: text('progress_message'),
+    createdBy: text('created_by'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+    startedAt: integer('started_at'),
+    completedAt: integer('completed_at'),
+    cancelledAt: integer('cancelled_at'),
+  },
+  (table) => [
+    index('plugin_jobs_status_run_at_idx').on(table.status, table.runAt),
+    index('plugin_jobs_plugin_dedupe_idx').on(table.pluginId, table.dedupeKey),
+  ],
+);
+
+export type PluginJob = typeof pluginJobs.$inferSelect;
+export type NewPluginJob = typeof pluginJobs.$inferInsert;

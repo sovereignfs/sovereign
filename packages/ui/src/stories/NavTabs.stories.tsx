@@ -33,3 +33,21 @@ export const ManyTabs: Story = {
   },
   parameters: { viewport: { defaultViewport: 'mobile' } },
 };
+
+/** Simulates a consumer swapping in a client-side router link (e.g. Next's
+ * `<Link replace>` inside an overlay-shell plugin) instead of a plain `<a>`. */
+export const WithCustomLinkRenderer: Story = {
+  args: {
+    renderLink: (item, linkProps) => (
+      <button
+        type="button"
+        className={linkProps.className}
+        aria-current={linkProps['aria-current']}
+        onClick={() => console.log(`client-side navigate to ${item.href}`)}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
+      >
+        {linkProps.children}
+      </button>
+    ),
+  },
+};

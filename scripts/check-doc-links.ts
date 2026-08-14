@@ -97,11 +97,18 @@ function withoutCodeFences(content: string, stripInlineCode = true): string {
     .join('\n');
 }
 
+function stripTags(input: string): string {
+  let previous: string;
+  let current = input;
+  do {
+    previous = current;
+    current = current.replace(/<[^<>]*>/g, '');
+  } while (current !== previous);
+  return current;
+}
+
 function slugifyHeading(heading: string): string {
-  return heading
-    .trim()
-    .toLowerCase()
-    .replace(/<[^>]+>/g, '')
+  return stripTags(heading.trim().toLowerCase())
     .replace(/!?(?:\[([^\]]+)\])\([^)]*\)/g, '$1')
     .replace(/\s+/g, '-')
     .replace(/[^\p{L}\p{N}_-]/gu, '');

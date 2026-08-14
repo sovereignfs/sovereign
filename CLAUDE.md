@@ -773,7 +773,7 @@ pnpm registry:check     # verify-only (no write) — CI runs this on registry/ c
 
 ## Status
 
-Current platform version: **`0.91.1`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes.
+Current platform version: **`0.91.2`**. All roadmap tasks through slot `0.13.0` are complete; later minor bumps track post-slot tasks and patch versions are hotfixes. `0.91.1` → `0.91.2` is a hotfix for a CodeQL `js/incomplete-multi-character-sanitization` finding in `scripts/check-doc-links.ts`'s `slugifyHeading()`: its single-pass `.replace(/<[^>]+>/g, '')` HTML-tag strip could leave a reconstructed tag behind on crafted nested input (e.g. `<<script>script>` → `<script>`); replaced with a loop-until-stable `stripTags()` helper. A companion CodeQL finding (`js/insufficient-password-hash` on the HMAC-SHA256 call in `runtime/src/connections.ts`'s `sign()`) was reviewed and dismissed as a false positive — that HMAC signs/verifies an OAuth state token for integrity, not a stored user password.
 
 For the full task history and current roadmap position, see:
 

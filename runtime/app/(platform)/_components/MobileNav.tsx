@@ -72,13 +72,15 @@ export function MobileNav({
   isAdmin,
   hydrate,
 }: {
+  /** Server-rendered plugin list — see `hydrate`'s doc comment for why this
+   *  is empty on an offline route's neutral shell. */
   plugins: PluginEntry[];
   launcherIconUrl?: string;
   /** Server-rendered admin status — see `AdminConsoleIcon`'s doc comment for
    *  why this must be `false` on an offline route's neutral shell. */
   isAdmin: boolean;
-  /** Restores real admin status client-side for a live tab on an offline
-   *  route — see `useSidebarHydration`'s doc comment. */
+  /** Restores the real plugin list and admin status client-side for a live
+   *  tab on an offline route — see `useSidebarHydration`'s doc comment. */
   hydrate: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -88,6 +90,21 @@ export function MobileNav({
   const isHome = pathname === '/';
   const hydrated = useSidebarHydration(hydrate);
   const showConsole = hydrated ? hydrated.isAdmin : isAdmin;
+  // Same neutral-shell rule the desktop sidebar's SidebarPluginIcons already
+  // follows: the SSR list is a fixed, identical-for-everyone placeholder on
+  // an offline route, and must not leak into the drawer/search once a live
+  // tab has fetched the real, personalized list. The hydration API doesn't
+  // carry `offline` tier, so a hydrated tile never shows the
+  // connectivity-dimmed/capability-restricted state — the same limitation
+  // the desktop hydrated icons already accept.
+  const effectivePlugins: PluginEntry[] = hydrated
+    ? hydrated.plugins.map((p) => ({
+        id: p.id,
+        name: p.name,
+        routePrefix: p.routePrefix,
+        iconUrl: p.iconUrl,
+      }))
+    : plugins;
 
   return (
     <>
@@ -122,12 +139,16 @@ export function MobileNav({
         ]}
       />
 
-      <MobileSearch open={searchOpen} onClose={() => setSearchOpen(false)} plugins={plugins} />
+      <MobileSearch
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        plugins={effectivePlugins}
+      />
 
       <Drawer open={open} onClose={() => setOpen(false)} aria-label="App navigation">
         <nav aria-label="Installed plugins">
           <ul className={styles.drawerGrid}>
-            {plugins.map((plugin) => (
+            {effectivePlugins.map((plugin) => (
               <li key={plugin.id}>
                 <DrawerGridItem plugin={plugin} onClose={() => setOpen(false)} />
               </li>

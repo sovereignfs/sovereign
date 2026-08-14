@@ -133,3 +133,13 @@
   line-height: 1.6;
   margin: 0;
 }
+
+.buttonRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+}
+
+.hiddenInput {
+  display: none;
+}

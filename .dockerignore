@@ -26,6 +26,7 @@ plugins/*/
 !plugins/account/
 !plugins/console/
 !plugins/launcher/
+!plugins/warden/
 
 # example-plugins/ is intentionally NOT ignored here — it's tracked in git and
 # part of the frozen lockfile (unlike plugins/*/ above), so it's copied into

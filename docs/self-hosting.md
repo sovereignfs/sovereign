@@ -156,8 +156,9 @@ network access to GitHub.** Pin refs (tags or commit SHAs) for reproducibility.
 ### Reference example plugins
 
 The reference **example plugins** (basic, API provider, minimal/overlay
-shells, monetization demo, mobile layout — teaching artifacts and runtime test
-fixtures, `docs/epics/example-plugins.md`) live in-repo under
+shells, monetization demo, mobile layout, field encryption, device-only
+offline — teaching artifacts and runtime test fixtures,
+`docs/epics/example-plugins.md`) live in-repo under
 `example-plugins/`, tracked in git — they are **not** cloned via
 `sovereign.plugins.json` (an earlier plan moved them to a separate
 `sovereign-plugins-examples` repository; that was reversed on 2026-08-01, see

@@ -4,11 +4,14 @@
 platform `0.83.0`; task 3.32 itself pre-dates this workstream, shipped at
 `0.58.0`) and leg 3 done (tasks 2.25–2.26, per-plugin installable PWA +
 icon generation, shipped at `0.84.0`–`0.85.0`); leg 5's runtime half done
-(task 2.27, shipped at `0.82.0`). Leg 1 (the WKWebView spike, gate) is **not
-done but substantially progressed** — research 0008 confirmed the
-platform-divergent service-worker finding and root-caused/fixed a real
-session-gate bug, but its own review checklist still has two credential- or
-long-duration-gated items open. Leg 4 was redesigned (see its own section)
+(task 2.27, shipped at `0.82.0`). Leg 1 (the WKWebView spike, gate) is
+**down to one open item** — research 0008 confirmed the platform-divergent
+service-worker finding, root-caused/fixed a real session-gate bug, and (as
+of 2026-08-15, with a human supplying login credentials) confirmed
+`sdk.offline` IndexedDB persistence across a hard app restart at the
+storage layer. Only `WKWebsiteDataStore` eviction under storage pressure
+remains, which needs elapsed time/storage-pressure simulation, not a human
+credential step. Leg 4 was redesigned (see its own section)
 to ship as an in-repo reference plugin instead of depending on an external
 plugin repository, and has not started. The rest of leg 5 (tasks 20.11–20.12)
 remains blocked on leg 1 and on epic 20.1 (`sovereign-mobile` shell,
@@ -140,25 +143,30 @@ instance, and found:
   lost, no event fires to catch it); Android WebView preserves it. This is a
   hard design constraint on `sdk.offline`: flush to IndexedDB as data is
   produced, never buffer-then-flush-later in memory.
-- **Not yet complete**, per this task's own review checklist — two items
-  remain, both requiring a human rather than an agent:
-  1. `sdk.offline` IndexedDB persistence across a real app restart — needs an
-     authenticated session performing real reads/writes. Entering
-     credentials into any field is outside what an agent should do,
-     regardless of who supplies them, so this needs a human tester driving
-     the simulator (or a real device) themselves.
-  2. `WKWebsiteDataStore` eviction under storage pressure or prolonged
-     non-use — not practically testable in a short session; needs either a
-     long-duration test or artificial storage-pressure simulation, neither
-     available in this environment.
+- **`sdk.offline` IndexedDB persistence across a real app restart — now
+  confirmed at the storage layer (2026-08-15).** Tested live against
+  `sovereign.openfs.io` with a human supplying login credentials in the
+  simulator panel and an agent driving everything else (build, navigation,
+  the hard process kill/relaunch, and inspecting the app's on-disk WebKit
+  storage directly). Found real, origin-correct IndexedDB databases —
+  object stores named `kv`, `queue`, and `key`, matching `sdk.offline`'s and
+  RFC 0078's own naming — that were reopened and written to after a full
+  process kill, not merely surviving in the UI. See research 0008's
+  dedicated finding for the method and its one caveat: true cache-first
+  rendering under an actual network outage (rather than storage-layer
+  survival, which is what was actually verified) still wasn't isolated,
+  since cutting simulator network reliably would have meant touching
+  host-level system settings, which was out of scope for that session.
+- **Still open — needs a human, or elapsed real time, not more agent
+  work:** `WKWebsiteDataStore` eviction under storage pressure or prolonged
+  non-use. Not practically testable in a short session; needs either a
+  long-duration trial or artificial storage-pressure simulation, neither
+  available in this environment.
 
-**This leg cannot be finished by an agent alone.** Everything that could be
-verified without credentials or elapsed real time has been verified, written
-up, and (where it uncovered a real bug) fixed. What remains needs a human to
-either drive the simulator through an authenticated read/write/restart cycle,
-or run a longer-duration/storage-pressure trial — a session where a human
-does that hand-in-hand with an agent (agent drives the build and captures
-findings, human supplies the login) is the fastest path to closing it out.
+**This leg is now down to one open item, and it genuinely can't be closed
+by another agent session.** Everything else — including the item that
+previously needed a human for credentials — is done. What remains is a
+question of elapsed time or storage-pressure simulation, not access.
 
 **Why this leg is first:** it is the cheapest leg and carries the most
 information. Research 0005 identifies WKWebView's service-worker behavior as the
@@ -397,27 +405,32 @@ exists to catch before any real, higher-stakes plugin copies the pattern.
 
 **Epic tasks:** 2.27, then 20.11, then 20.12
 
-**Status (August 2026): 2.27 shipped at platform `0.82.0`.** The runtime half
-of this leg — `x-sovereign-focus-plugin` parsing (extends RFC 0080's
-existing `Sovereign-Shell/...` User-Agent token rather than a second
-grammar, `runtime/src/surface.ts`) and the route lock itself
+**Status (August 2026): 2.27 shipped at platform `0.82.0`; 20.11/20.12 not
+started.** The runtime half of this leg — `x-sovereign-focus-plugin` parsing
+(extends RFC 0080's existing `Sovereign-Shell/...` User-Agent token rather
+than a second grammar, `runtime/src/surface.ts`) and the route lock itself
 (`runtime/src/route-lock.ts`'s `decideFocusRoute()`, wired into
 `runtime/middleware.ts`) — was implementable and independently testable
 against synthetic User-Agent headers without `sovereign-mobile` existing
-yet, per the ordering note in this doc's changelog. 20.11 and 20.12 remain
-blocked on the unmet prerequisites in the table above (`sovereign-mobile`
-repo + RFC 0058 shell, epic 20.1) — nothing to build the actual focused
-target against yet.
+yet, per the ordering note in this doc's changelog. `sovereign-mobile` now
+exists with a substantially-implemented shell (epic 20.1), but that task is
+not yet signed off in its own repo (real device verification and Android
+back-navigation reliability still open there), and leg 1 (task 20.10, this
+workstream's gate) still has two open items of its own — see that leg's
+status note. 20.11 and 20.12 remain blocked on both.
 
-**Depends on:** legs 1 (gate), 2, 3, and the epic 20.1/20.2 prerequisites.
+**Depends on:** leg 1 (gate, not yet cleared), legs 2 and 3 (done), and epic
+20.1 (substantially implemented, not yet signed off — the remaining unmet
+prerequisite; epic 20.2 shipped).
 
 **Technical notes:**
 
 - The route lock is the highest-churn surface in this workstream. Start from
   RFC 0082 §3's allowlist and expect to extend it. Known entries that are easy
   to forget: `/account` — needed for password change, session revocation, **and
-  `data:provide` consent**, which Tally requires and which lives in Account →
-  Data; and `/paywall/*`, which middleware already redirects to.
+  `data:provide` consent**, which any offline-writing plugin using leg 4's
+  pattern may require and which lives in Account → Data; and `/paywall/*`,
+  which middleware already redirects to.
 - Out-of-focus routes **redirect to the focused plugin root, not 404** — the
   content exists and the user is entitled to it.
 - Re-state in code comments that the lock is not a security boundary. The
@@ -452,10 +465,14 @@ unmaintained store listings happen.
   encryption needed three passes including a production incident. RFC 0078 shares
   its profile (cross-cutting data layer, client/server reconciliation, a
   destructive purge path). Expect the same, which is why the queue hardens on
-  Shopper and Tally stays append-only.
-- **The flat `offline: boolean` is new** (landed `4d9ab5a`) with one trivial
-  adopter. Leg 4 is its first real test; treat unexpected behavior as the field
-  being immature rather than as Tally being wrong.
+  Shopper first and leg 4's reference plugin stays append-only.
+- **The `offline` manifest field has changed shape twice since this workstream
+  was drafted** (boolean → tiered enum: `"offline-first" | "device-only"`,
+  workstream 0008 leg 3) with `example-device-only` as its first real
+  `device-only` adopter. Leg 4 is the first reference plugin to exercise the
+  `"offline-first"` tier's actual sync-queue path end to end; treat unexpected
+  behavior there as the field/queue combination being immature rather than as
+  the reference plugin's own design being wrong.
 - **`sdk.device.*` has two pending consumers** (epic tasks 17.7, 20.3) written
   before its base existed. Leg 2 should reconcile their assumptions rather than
   let three environment models coexist.
@@ -471,16 +488,19 @@ RFC 0082 returns to design; RFCs 0079 and 0080 stand.
 **If the store rationing policy cannot be agreed:** stop after leg 4. The PWA
 rung is the product; native distribution is an amplifier, not a prerequisite.
 
-**If Tally's append-only model proves insufficient in practice:** that is a
-finding for a follow-up RFC on offline conflict resolution for multi-user
-ledgers, not a licence to adopt LWW mid-leg.
+**If the reference plugin's append-only model proves insufficient in
+practice:** that is a finding for a follow-up RFC on offline conflict
+resolution for multi-user/multi-party data, not a licence to adopt LWW
+mid-leg.
 
 In every case the workstream is designed so that stopping early leaves shipped,
 coherent value rather than half a feature.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                               |
-| ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | July 2026   | Initial draft                                                                                                                                                                                                                                                                                                        |
-| 0.2     | August 2026 | Status: Planned → In progress. RFC 0082 accepted; leg 1's spike has run. Epic task 2.27 (leg 5) promoted into ROADMAP.md at slot `0.70.0` ahead of legs 2–3 completing — a deliberate ordering choice, not a dependency change; 20.11/20.12 still gate on 20.1/20.10 finishing regardless of version-slot placement. |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | July 2026   | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 0.2     | August 2026 | Status: Planned → In progress. RFC 0082 accepted; leg 1's spike has run. Epic task 2.27 (leg 5) promoted into ROADMAP.md at slot `0.70.0` ahead of legs 2–3 completing — a deliberate ordering choice, not a dependency change; 20.11/20.12 still gate on 20.1/20.10 finishing regardless of version-slot placement.                                                                                                                                                                                                                                                |
+| 0.3     | August 2026 | Corrected drift between this doc and actual status: leg 1 (research 0008) had substantive findings not reflected here, and epic 20.2 had shipped. **Leg 4 redesigned**: dropped the dependency on an external plugin repository entirely; it now ships as an in-repo `example-plugins/` reference plugin (Epic 12), so this workstream's definition of done no longer depends on any repo outside this monorepo's own control, versioning, or review cycle. All Tally-specific references in the Decisions table, Risks, and Kill criteria generalized accordingly. |
+| 0.4     | August 2026 | Leg 1: `sdk.offline` IndexedDB persistence across app restart confirmed live (research 0008), closing the previously-open credential-gated item — a human supplied login credentials in the simulator panel, an agent drove the build, the hard restart, and the on-disk storage inspection that provided the actual evidence. Only `WKWebsiteDataStore` eviction under storage pressure remains open on this leg, and it's a time/simulation problem, not an access problem.                                                                                       |

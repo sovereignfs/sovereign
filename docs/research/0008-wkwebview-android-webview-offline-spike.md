@@ -318,6 +318,66 @@ here is wrong in one direction or the other; the safe design (flush to
 IndexedDB as data is produced, never rely on JS-memory survival) is safe on
 both, and necessary specifically because of the iOS behavior.
 
+### `sdk.offline` IndexedDB persistence across a real app restart — confirmed at the storage layer, with a caveat
+
+_(Added 2026-08-15, closing most of this task's previously-open credential-gated
+item.)_ Tested live against `https://sovereign.openfs.io` with a real,
+human-supplied login (a human typed credentials into the simulator panel; the
+agent driving the rest of this session never touched that field, per this
+doc's own standing rule above) using a fresh disposable Capacitor 8.5.0
+project (`server.url` mode, iPhone 17 Pro Simulator, iOS 26.5 — same setup as
+the rest of this spike).
+
+**Method:** signed in, opened Shopper (RFC 0078's first offline-queue
+adopter), added a distinctively-named item (`leg1-restart-marker-9f31`) to a
+real list, confirmed it synced. Then fully killed the app process
+(`xcrun simctl terminate`, followed by a fresh `simctl launch` — a new PID,
+not a background/foreground cycle) and relaunched.
+
+**Behavioral result:** the item was present and correct after relaunch, and
+the session was still signed in.
+
+**Storage-layer result (the more decisive check, since the app stayed
+online throughout, so the UI result alone can't rule out "just re-fetched
+over the network"):** inspected the app's on-disk WebKit storage directly —
+`~/Library/.../Containers/.../Library/WebKit/<bundleId>/WebsiteData/Default/<origin-salt>/<origin-salt>/IndexedDB/`.
+Three real IndexedDB databases exist there for origin `https://sovereign.openfs.io`,
+using WebKit's standard on-disk IDB schema (`ObjectStoreInfo`, `Records`,
+`KeyGenerators`, etc.), with object stores named **`kv`** (2 records, 1293
+and 2534 bytes — consistent with `sdk.offline`'s cache), **`queue`** (0
+records — expected, since the app was online the whole time and never had
+anything to queue), and **`key`** (1 record, 207 bytes). All three
+databases' `-wal` files show write activity from _after_ the process
+restart, confirming the app reopened and used these same on-disk databases
+post-relaunch rather than starting from an empty store.
+
+This is meaningful independent of the UI check: `WKWebsiteDataStore`'s
+default store (the one Capacitor uses unless explicitly configured
+otherwise, which this spike did not do) is disk-backed, not memory-backed —
+by construction, data written there does not depend on the JS execution
+context surviving, only on nothing explicitly clearing it (logout purge,
+`sdk.offline.clearAll()`) or the OS evicting it under storage pressure
+(**still open — see below**). Finding real, non-trivial, origin-correct
+records that were reopened and touched after a hard process kill is direct
+evidence the mechanism works as designed, not just an inference from the UI
+looking right.
+
+**What this does _not_ close:** the exact plaintext content of the `kv`
+records wasn't verified byte-for-byte — WebKit serializes IDB values as a
+binary property list wrapping its own structured-clone encoding, not plain
+JSON or UTF-16 text, and decoding that fully was out of scope for this
+pass. It also doesn't isolate a true cache-first paint (rendering before/
+without a network round-trip), since the instance was reachable over a live
+network for the entire test — cutting network reliably for the Simulator
+without touching host-level system settings (out of scope for the agent
+that ran this pass) wasn't attempted. Treat this finding as "the persistent
+storage layer demonstrably survives a hard restart with real data,"
+not as "cache-first rendering while offline was observed."
+
+**Cleanup:** the disposable project and its installed app/data were removed
+from the simulator after this test, per this task's own "spike branch is
+disposable" rule.
+
 ### Note on scope: this spike's setup vs. `sovereign-mobile`'s actual approach
 
 This task's own instructions specify testing via `server.url` pointed
@@ -400,11 +460,14 @@ design decision between options. The real branch points it informs:
   was needed after all. The question was framed around the wrong variable —
   the difference between the failing and passing observations was auth
   state, not the WebView engine.
-- **`sdk.offline` IndexedDB persistence across app restart** — not tested.
-  Requires an authenticated session performing real read/write actions,
-  which needs credentials; entering credentials into any field is outside
-  what an agent should do regardless of who supplies them. This needs a
-  human tester.
+- ~~**`sdk.offline` IndexedDB persistence across app restart**~~ **Answered
+  2026-08-15 — see the dedicated finding above.** Confirmed at the storage
+  layer (real, origin-correct IndexedDB databases reopened and written to
+  after a hard process kill) with a human supplying the login, an agent
+  driving everything else. Not fully closed: byte-level content
+  verification of the cached values, and true cache-first rendering under
+  an actual network outage, remain unverified — see that finding's own
+  caveat.
 - **Whether iOS's observed reload-on-foreground is genuine OS/WebView
   content-process eviction or an artifact of using `simctl launch` (rather
   than a real Home Screen tap or App Switcher gesture) to resume the app.**
@@ -442,9 +505,12 @@ design decision between options. The real branch points it informs:
 
 Does not yet graduate to an RFC. The service-worker registration failure
 is root-caused and fixed (a platform code change: `worker-` added to the
-middleware allowlist, with a regression test); what remains open is the
-credential-gated testing that needs a human pass — `sdk.offline` IndexedDB
-persistence across app restart and `WKWebsiteDataStore` eviction.
+middleware allowlist, with a regression test). `sdk.offline` IndexedDB
+persistence across app restart is now confirmed at the storage layer (see
+above); what remains open is `WKWebsiteDataStore` eviction under storage
+pressure or prolonged non-use, which is not a credentials problem — it
+needs either a long-duration trial or artificial storage-pressure
+simulation, neither practical in a short session.
 
 - The SW bug was narrow and fixable, so no RFC is needed for it — just the
   fix plus a note in whichever docs reference this finding (RFC 0058, ADR

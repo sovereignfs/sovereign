@@ -42,17 +42,20 @@ import { registry } from '../generated/registry';
 export async function runAllPluginMigrations(): Promise<void> {
   const { dialect: platformDialect } = resolveDialect(process.env);
 
-  // Build a map from manifest id → actual on-disk directory name.
+  // Build a map from manifest id → actual on-disk directory (base + name).
   // `sv plugin add` names dirs after the manifest id (plugins/<id>/), but local
   // development dirs may use a different name (e.g. plugins/sovereign-tasks.local/).
-  // Scanning lets both cases resolve correctly without assuming dir === id.
+  // Scanning lets both cases resolve correctly without assuming dir === id. Also
+  // scans `example-plugins/` (composed alongside `plugins/` only when
+  // SOVEREIGN_EXAMPLES_ENABLED is set — see generate-registry.ts) so example
+  // plugins' own migrations are found too, not just their composed routes.
   const idToDir = buildIdToDirMap();
 
   for (const manifest of registry) {
     const isIsolated = manifestDatabaseIsolation(manifest.type) === 'isolated';
 
-    const dirName = idToDir.get(manifest.id) ?? manifest.id;
-    const pluginDir = `plugins/${dirName}`;
+    const located = idToDir.get(manifest.id);
+    const pluginDir = located ? `${located.base}/${located.dir}` : `plugins/${manifest.id}`;
 
     const folder = pluginMigrationsFolder(pluginDir, platformDialect);
     if (!existsSync(folder)) continue;
@@ -93,20 +96,24 @@ export async function runAllPluginMigrations(): Promise<void> {
   }
 }
 
-function buildIdToDirMap(): Map<string, string> {
-  const map = new Map<string, string>();
-  const pluginsRoot = join(findWorkspaceRoot(), 'plugins');
-  if (!existsSync(pluginsRoot)) return map;
+function buildIdToDirMap(): Map<string, { base: string; dir: string }> {
+  const map = new Map<string, { base: string; dir: string }>();
+  const workspaceRoot = findWorkspaceRoot();
 
-  for (const entry of readdirSync(pluginsRoot, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const manifestPath = join(pluginsRoot, entry.name, 'manifest.json');
-    if (!existsSync(manifestPath)) continue;
-    try {
-      const m = JSON.parse(readFileSync(manifestPath, 'utf8')) as { id?: string };
-      if (typeof m.id === 'string') map.set(m.id, entry.name);
-    } catch {
-      // ignore unreadable manifests — generate-registry.ts will catch them
+  for (const base of ['plugins', 'example-plugins']) {
+    const root = join(workspaceRoot, base);
+    if (!existsSync(root)) continue;
+
+    for (const entry of readdirSync(root, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const manifestPath = join(root, entry.name, 'manifest.json');
+      if (!existsSync(manifestPath)) continue;
+      try {
+        const m = JSON.parse(readFileSync(manifestPath, 'utf8')) as { id?: string };
+        if (typeof m.id === 'string') map.set(m.id, { base, dir: entry.name });
+      } catch {
+        // ignore unreadable manifests — generate-registry.ts will catch them
+      }
     }
   }
   return map;

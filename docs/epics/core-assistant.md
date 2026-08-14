@@ -222,12 +222,34 @@ the actual `harness`/`harness-engine` containers, confirmed
 confirmed the streamed SSE frames (`token`/`done`, no reasoning
 bleed-through) match `harness-client.ts`'s parsing exactly. A full
 browser-level login-and-chat pass was not possible on the verification
-machine — the baseline stack (`auth`/`sqld`/`runtime`) collides on fixed
-container names with an already-running sibling checkout, the same
-constraint noted in leg 2's PR; the service-contract-level check above is
+machine at the time — the baseline stack (`auth`/`sqld`/`runtime`) collides
+on fixed container names with an already-running sibling checkout, the same
+constraint noted in leg 2's PR; the service-contract-level check above was
 the mitigation. Scope-creep audit: grepped the whole `plugins/warden` tree
 for tool/handoff/voice/floating-button reachability and for any SDK import
 beyond `sdk.auth` — none found.
+
+**Follow-up verification (2026-08-14):** the container-name collision was
+worked around with a local, uncommitted Compose override
+(`container_name: !reset null` on every service, letting Compose fall back
+to project-prefixed naming), unblocking the full browser-level pass this
+task's own review checklist calls for: register → login → Console → activate
+Warden → set access to Everyone → open `/warden` → send a real message →
+confirm a real streamed response from `qwen3:0.6b`. That pass surfaced a
+real gap in this leg's own delivery: `.dockerignore`'s `plugins/*/`
+blanket-ignore was never updated to whitelist `plugins/warden/` (unlike
+`account`/`console`/`launcher`), so every Docker build — dev and prod alike
+— silently dropped the plugin from its build context; Warden worked under
+`pnpm dev` and passed CI but never appeared in a Docker-built instance.
+Fixed in [PR #457](https://github.com/sovereignfs/sovereign/pull/457). A
+second, unrelated pre-existing bug was also found and fixed along the way:
+`apps/auth`'s Docker image crashed on boot on Apple Silicon/musl hosts with
+a missing `@libsql/linux-arm64-musl` native binding (three-layer root
+cause: `pnpm-workspace.yaml` lacked `supportedArchitectures`, Next's file
+tracer couldn't see `@neon-rs/load`'s dynamic `require()`, and pnpm's
+isolated `node_modules` layout was missing a symlink even after the raw
+package files landed) — fixed in
+[PR #456](https://github.com/sovereignfs/sovereign/pull/456).
 
 ## Future phases (not yet scheduled)
 

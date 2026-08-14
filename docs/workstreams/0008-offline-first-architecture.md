@@ -1,6 +1,6 @@
 # Workstream 0008 — Offline-first architecture
 
-**Status:** 🔄 In progress — legs 1–3 done (leg 2 shipped at platform `0.65.0`–`0.66.0`;
+**Status:** ⏳ In progress — legs 1–3 done (leg 2 shipped at platform `0.65.0`–`0.66.0`;
 leg 3 — tasks 3.36 + 2.33 — shipped at `0.76.0`; task 3.37 deliberately deferred,
 see leg 3 detail); **leg 4 shipped its key-custody/session/escrow-Layers-1-2 scope**
 (web WebAuthn PRF + native Keychain/Keystore, re-lock enforcement, encrypted

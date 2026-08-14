@@ -1,6 +1,7 @@
 # RFC 0091 — libSQL/`sqld` as the SQLite driver
 
-**Status:** Accepted\
+**Status:** Implemented — workstream 0009's all 4 legs are done; `sqld` is now
+baked into the base Docker Compose files as the mandatory SQLite driver\
 **Date:** August 2026\
 **Author:** Claude Code (workstream 0009 leg 2 spike, for kasunben)\
 **Scope:** `packages/db`, `docker-compose.yml`, `docker-compose.prod.yml`; supersedes

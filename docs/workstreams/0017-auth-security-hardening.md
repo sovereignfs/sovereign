@@ -1,6 +1,6 @@
 # Workstream 0017 — Auth and security hardening
 
-**Status:** 🔄 In progress — legs 1–2 done (task 1.8, RFC 0035 Phase 1
+**Status:** ⏳ In progress — legs 1–2 done (task 1.8, RFC 0035 Phase 1
 infrastructure; task 1.9, Phase 2 capability opt-in); legs 3–5 not started\
 **Date:** August 2026\
 **Author:** kasunben\

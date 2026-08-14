@@ -1,6 +1,6 @@
 # Workstream 0015 — Plugin extensibility surface
 
-**Status:** 🔄 In progress — legs 1, 2, 3, and 5 merged to `main` (PR #447,
+**Status:** ⏳ In progress — legs 1, 2, 3, and 5 merged to `main` (PR #447,
 #453, #445, #445 respectively; leg 1 needed three rebase rounds chasing a
 fast-moving `main` — see its own changelog entries below). Leg 4 (this PR,
 bundled with workstream 0017's prerequisite legs 1–2 in the same branch —

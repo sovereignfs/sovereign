@@ -1,6 +1,10 @@
 # Workstream 0001 — Standalone plugin apps
 
-**Status:** ⏳ In progress\
+**Status:** ⏳ In progress — leg 2 done (task 3.33, surface model shipped at
+platform `0.83.0`; task 3.32 itself pre-dates this workstream, shipped at
+`0.58.0`) and leg 3 done (tasks 2.25–2.26, per-plugin installable PWA +
+icon generation, shipped at `0.84.0`–`0.85.0`); leg 1 (the WKWebView spike,
+gate) and legs 4–5 not started\
 **Date:** July 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -84,13 +88,13 @@ queue shipped, so only leg 5 still has an unmet prerequisite.
 
 ## Legs
 
-| Leg | Name                       | Epic tasks         | Epics | Gate?   | Done when                                                              |
-| --- | -------------------------- | ------------------ | ----- | ------- | ---------------------------------------------------------------------- |
-| 1   | WKWebView offline spike    | 20.10              | 20    | **Yes** | Service-worker + IndexedDB behavior in a real Capacitor build is known |
-| 2   | Surface model              | 3.32, 3.33         | 3     | No      | Plugins can gate on surface server-side and declare `surfaces`         |
-| 3   | Per-plugin installable PWA | 2.25, 2.26         | 2     | No      | Two plugins install as their own home-screen apps                      |
-| 4   | Tally offline adoption     | _external repo_    | —     | No      | Tally works offline read + append, syncing on reconnect                |
-| 5   | Focused native app         | 2.27, 20.11, 20.12 | 2, 20 | No      | One focused app builds and passes store review                         |
+| Leg | Name                          | Epic tasks         | Epics | Gate?   | Done when                                                              |
+| --- | ----------------------------- | ------------------ | ----- | ------- | ---------------------------------------------------------------------- |
+| 1   | WKWebView offline spike       | 20.10              | 20    | **Yes** | Service-worker + IndexedDB behavior in a real Capacitor build is known |
+| 2   | Surface model ✅              | 3.32, 3.33         | 3     | No      | Plugins can gate on surface server-side and declare `surfaces` — done  |
+| 3   | Per-plugin installable PWA ✅ | 2.25, 2.26         | 2     | No      | Two plugins install as their own home-screen apps — done               |
+| 4   | Tally offline adoption        | _external repo_    | —     | No      | Tally works offline read + append, syncing on reconnect                |
+| 5   | Focused native app            | 2.27, 20.11, 20.12 | 2, 20 | No      | One focused app builds and passes store review                         |
 
 ## Leg detail
 

@@ -170,15 +170,17 @@ the RFC 0060 adoption notes) — not something that broadens automatically.
 - [ ] **Generate strong secrets** (`openssl rand -base64 32`) for `AUTH_SECRET`
       and `SOVEREIGN_ADMIN_KEY`; never reuse or commit them.
 - [ ] **Encrypt the host disk / volume** — nothing is encrypted at rest by
-      default, so this is your baseline protection for a stolen disk or
-      snapshot. For SQLite deployments, an opt-in, single-key at-rest option
-      is available — see
-      [SQLite at-rest encryption](self-hosting.md#sqlite-at-rest-encryption-rfc-0071)
-      (RFC 0071, `SOVEREIGN_DB_ENCRYPTION_KEY`). Postgres has no equivalent; host-level
-      encryption remains the only protection there. Either way, back up the
-      encryption key separately from the data.
+      default on either dialect, so this is your baseline protection for a
+      stolen disk or snapshot. (Whole-database, single-key SQLite at-rest
+      encryption — RFC 0071 — was tried and later retired after repeated
+      hardening passes; there is no dialect-wide at-rest option today.) For
+      protecting specific sensitive fields regardless of disk encryption, see
+      [Field encryption](self-hosting.md#field-encryption-rfc-0092) (RFC 0092,
+      `SOVEREIGN_ENCRYPT_CLASSES` / `SOVEREIGN_FIELD_KEK`) — opt-in, per-field,
+      works on both dialects. Either way, back up any encryption key
+      separately from the data.
 - [ ] **Use Postgres over TLS** for non-local databases: add `?sslmode=require`
-      (or `verify-full` with a CA) to `DATABASE_URL` / `AUTH_DATABASE_URL`.
+      (or `verify-full` with a CA) to `POSTGRES_DB_URL`.
 - [ ] **Enable MFA for all admin accounts** — enroll TOTP or a passkey from
       Account → Security. MFA is opt-in; admins are not automatically required to
       use it in v1. Until mandatory-MFA enforcement lands, treat admin enrollment

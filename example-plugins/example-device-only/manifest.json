@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "fs.sovereign.example-device-only",
   "name": "Example: Device-only",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A minimal notes plugin demonstrating the device-only offline tier: encrypted, device-auth-gated, never leaves the device (RFC 0093).",
   "type": "platform",
   "example": true,

@@ -42,7 +42,7 @@ function monogram(name: string): string {
  * - Newly installed plugins not yet in the saved list are appended, visible
  * - Entries for uninstalled plugins are dropped
  */
-function buildEntries(plugins: PluginInfo[], saved: PluginEntry[] | null): PluginEntry[] {
+export function buildEntries(plugins: PluginInfo[], saved: PluginEntry[] | null): PluginEntry[] {
   const installedIds = new Set(plugins.map((p) => p.id));
   if (!saved) return plugins.map((p) => ({ id: p.id, hidden: false }));
   const ordered = saved.filter((e) => installedIds.has(e.id));

@@ -12,6 +12,7 @@
     "@sovereignfs/ui": "workspace:*",
     "better-auth": "^1.6.25",
     "next": "catalog:",
+    "qrcode": "^1.5.4",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
@@ -19,6 +20,7 @@
     "@sovereignfs/tsconfig": "workspace:*",
     "@testing-library/dom": "catalog:",
     "@testing-library/react": "catalog:",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "typescript": "catalog:"

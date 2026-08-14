@@ -110,7 +110,41 @@ Console is a `type: platform`, `adminOnly` plugin that ships with Sovereign. It 
 
 ---
 
-#### 📋 13.5 — Console plugin workflow coverage
+#### ✅ 13.5 — Console plugin workflow coverage
+
+**Status (August 2026): shipped — workstream 0012 leg 1.** Added
+`app/plugins/__tests__/toggle-actions.test.ts` (enable/disable),
+`app/users/__tests__/actions.test.ts` (invite creation and cancellation,
+role-change guardrails, deactivation, the owner-cannot-be-deleted guard),
+and `app/settings/__tests__/actions.test.ts` (branding/settings updates,
+admin-only behavior).
+
+**Two real, live authorization gaps were found and fixed while writing this
+coverage, not invented as test scenarios:**
+
+1. `resetMfaAction` (`app/users/actions.ts`) called only `requireSession()` —
+   every sibling action in the file (`toggleActiveAction`, `changeRoleAction`,
+   `vouchAction`, `deleteUserAction`) checks `hasCapability(session,
+'user:manage')` as well. Since server actions are reachable by action id
+   independent of the Console page's `adminOnly` gate
+   (`docs/architecture-rules.md`), any authenticated non-admin user could
+   reset MFA on any other account. Fixed: now checks `user:manage` like its
+   siblings.
+2. Almost every action in `app/settings/actions.ts` had the same gap, and it
+   was worse there — `patchSettings` (backing tenant name, invite-only,
+   example-apps visibility, root plugin, push relay) and the direct-fetch
+   branding/logo/favicon/provider-config actions all attached
+   `SOVEREIGN_ADMIN_KEY` on the caller's behalf with no capability check at
+   all. Only `updateSmtpSettingsAction`/`testSmtpSettingsAction` had the
+   correct gate. Any authenticated non-admin user could previously rename
+   the instance, disable invite-only, change the root plugin, overwrite
+   branding, or save/test/delete OAuth provider configs (which carry secret
+   values). Fixed: general settings now require `instance:configure`;
+   provider-config actions require `instance:configure-secrets`, matching
+   the pre-existing SMTP precedent (`platform:owner` only).
+
+Both fixes have regression tests in the new suites proving the check exists
+and rejects an unprivileged session before any admin API call is made.
 
 **Goal:** Add meaningful regression coverage for Console workflows that
 operators depend on, beyond private helper functions.

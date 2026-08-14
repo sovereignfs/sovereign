@@ -46,7 +46,20 @@ The Account plugin (`fs.sovereign.account`) is a `type: platform`, `shell: overl
 
 ---
 
-#### 📋 14.2 — Account plugin workflow coverage
+#### ✅ 14.2 — Account plugin workflow coverage
+
+**Status (August 2026): shipped — workstream 0012 leg 1.** Added
+`app/__tests__/actions.test.ts` (display-name update, password validation +
+`changePasswordAction`, sidebar-preference save via
+`updateSidebarPluginsAction`), exported `buildEntries` from
+`SidebarControl.tsx` for a dedicated read/merge-behavior test, and a
+component test for `NotificationsPage`'s mute-toggle/save path. The security
+panel deliverable was already satisfied by the pre-existing
+`device-hint.test.ts` (SRS ACC-05), not new work. Along the way, found and
+fixed a real dependency gap: `actions.ts` imports `qrcode` directly but only
+`runtime/package.json` declared it — pnpm's strict per-package resolution
+meant this plugin could never actually resolve its own import in isolation;
+now declared in `plugins/account/package.json` itself.
 
 **Goal:** Add meaningful regression coverage for Account workflows that users
 depend on, beyond private helper functions.

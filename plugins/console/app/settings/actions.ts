@@ -10,8 +10,35 @@ const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
 export type ActionResult = { ok: true; message: string } | { ok: false; error: string };
 
+/**
+ * Every action in this file is a Console admin surface, and `patchSettings`/
+ * the direct-fetch actions below all attach `SOVEREIGN_ADMIN_KEY` on the
+ * caller's behalf — so `requireSession()` alone is not enough here. Server
+ * actions are reachable by action id independent of the Console page's
+ * `adminOnly` gate (see `docs/architecture-rules.md`), so without this check
+ * any authenticated non-admin user could rename the instance, disable
+ * invite-only, change the root plugin, or overwrite branding, borrowing the
+ * platform's own admin credentials to do it.
+ */
+async function requireInstanceConfigure(): Promise<void> {
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'instance:configure')) {
+    throw new Error('Insufficient privileges to change instance settings.');
+  }
+}
+
+/** Same authorization gap as `requireInstanceConfigure`, for the subset of
+ * actions here that handle secret values (provider client secrets) — held to
+ * the same owner-only bar as `updateSmtpSettingsAction` already uses. */
+async function requireInstanceConfigureSecrets(): Promise<void> {
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'instance:configure-secrets')) {
+    throw new Error('Insufficient privileges to change instance secrets.');
+  }
+}
+
 async function patchSettings(body: Record<string, unknown>): Promise<ActionResult> {
-  await sdk.auth.requireSession();
+  await requireInstanceConfigure();
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   const res = await fetch(`${SELF_URL}/api/admin/settings`, {
     method: 'PATCH',
@@ -68,7 +95,7 @@ export async function updateInstanceAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await sdk.auth.requireSession();
+  await requireInstanceConfigure();
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
 
   const instanceName = (formData.get('instanceName') as string | null)?.trim() || null;
@@ -115,7 +142,7 @@ export async function uploadLogoAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await sdk.auth.requireSession();
+  await requireInstanceConfigure();
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   const dark = formData.get('dark') === '1';
   const file = formData.get('file') as File | null;
@@ -141,7 +168,7 @@ export async function uploadFaviconAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await sdk.auth.requireSession();
+  await requireInstanceConfigure();
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   const file = formData.get('file') as File | null;
   if (!file || file.size === 0) return { ok: false, error: 'No file selected.' };
@@ -165,7 +192,10 @@ export async function saveProviderConfigAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await sdk.auth.requireSession();
+  // Provider configs carry `secretValues` (OAuth client secrets etc.) — held
+  // to the same owner-only bar as SMTP credentials, not the general
+  // instance:configure bar the rest of this file uses.
+  await requireInstanceConfigureSecrets();
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   const pluginId = formData.get('pluginId') as string | null;
   const provider = formData.get('provider') as string | null;
@@ -196,7 +226,7 @@ export async function testProviderConfigAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await sdk.auth.requireSession();
+  await requireInstanceConfigureSecrets();
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   const id = formData.get('id') as string | null;
   if (!id) return { ok: false, error: 'Save the provider config before testing.' };
@@ -275,7 +305,7 @@ export async function deleteProviderConfigAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await sdk.auth.requireSession();
+  await requireInstanceConfigureSecrets();
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   const id = formData.get('id') as string | null;
   if (!id) return { ok: false, error: 'No saved provider config to remove.' };

@@ -79,6 +79,8 @@ hidden by default per-instance until shown from the Console — see
 | `fs.sovereign.example-monetized`      | `/example-monetized`      | Monetization manifest field, Ed25519 license gating, paywall flow (RFC 0003)                                                                                              |
 | `fs.sovereign.example-mobile`         | `/example-mobile`         | `@sovereignfs/ui`'s PWA/mobile layout: responsive breakpoint fork, swipeable carousel                                                                                     |
 | `fs.sovereign.example-mobile-poc`     | `/example-mobile-poc`     | Stability evaluation for `MobileHeader`/`MobileFooter`/`SwipableMobileCarousel` ahead of the runtime shell's own adoption (task 9.24) — navigation/UI only, no data layer |
+| `fs.sovereign.example-encrypted`      | `/example-encrypted`      | App-level field encryption (RFC 0092): classified schema, seal/open, blind-index search, table registration, plaintext export                                             |
+| `fs.sovereign.example-device-only`    | `/example-device-only`    | `offline: "device-only"` tier (RFC 0093): `DeviceOnlyGate`/`DeviceStorageKeyGate`, encrypted notes, unlock-session status/lock control                                    |
 
 To develop against them locally, set `SOVEREIGN_EXAMPLES_ENABLED=1` in your
 `.env` before `pnpm dev` — `scripts/generate-registry.ts` then composes

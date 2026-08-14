@@ -47,6 +47,37 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/auth/.next/static ./apps/aut
 # and would be missing from backups.
 COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
+# Repairs a real gap in Next's standalone-output file tracer (@vercel/nft):
+# @neon-rs/load (libsql's native-binding loader) requires the
+# platform-specific `@libsql/<target>` package dynamically — branching on
+# the running platform at call time — so the tracer's static analysis never
+# discovers that require and silently omits the package from the standalone
+# output's node_modules, even though apps/auth/next.config.ts's
+# outputFileTracingIncludes now force-copies the raw package *files*
+# themselves. What's still missing is the symlink pnpm's isolated
+# node_modules layout requires: libsql's own require('@libsql/<target>')
+# resolves through a symlink inside ITS OWN scoped node_modules
+# (.pnpm/libsql@<version>/node_modules/@libsql/<target>), which the tracer
+# also never recreates for this dynamic require. Confirmed by direct
+# inspection: the raw @libsql/linux-arm64-musl package content lands
+# correctly at .pnpm/@libsql+linux-arm64-musl@0.5.29/..., but no symlink to
+# it exists inside libsql@0.5.29's own node_modules/@libsql/ — so Node's
+# `require('@libsql/linux-arm64-musl')` from within libsql's module scope
+# still fails with MODULE_NOT_FOUND. Recreates it for every musl target the
+# Alpine-based runner image could actually run on (arm64: Apple Silicon
+# Docker Desktop; x64: most cloud hosts) — `|| true` because a given build
+# only produces one of these two raw packages (whichever the tracer
+# happened to include for the host's own architecture), not both.
+RUN for target in linux-arm64-musl linux-x64-musl; do \
+  src="/app/node_modules/.pnpm/@libsql+${target}@0.5.29/node_modules/@libsql/${target}"; \
+  dest="/app/node_modules/.pnpm/libsql@0.5.29/node_modules/@libsql/${target}"; \
+  if [ -d "$src" ] && [ ! -e "$dest" ]; then \
+  mkdir -p "$(dirname "$dest")" && \
+  ln -s "../../../@libsql+${target}@0.5.29/node_modules/@libsql/${target}" "$dest" && \
+  echo "[auth Dockerfile] linked $dest -> $src"; \
+  fi; \
+  done
+
 # auth.db persists here (mounted as a volume). The relative DB path resolves
 # against the workspace root (/app, via the marker above), so it must be
 # writable by the non-root runner.

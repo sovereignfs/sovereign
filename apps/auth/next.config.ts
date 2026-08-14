@@ -33,6 +33,25 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@sovereignfs/mailer', '@sovereignfs/ui'],
   // Native bindings must be loaded by Node.js directly rather than bundled by Webpack.
   serverExternalPackages: ['better-sqlite3-multiple-ciphers'],
+  // The standalone output's file tracer (@vercel/nft) can't see this at all —
+  // @neon-rs/load's require() of the platform-specific `@libsql/<target>`
+  // package is dynamic (branches on the running platform at call time), so
+  // the tracer's static analysis never discovers it and silently omits it
+  // from `.next/standalone/node_modules`, even when it's genuinely present
+  // in the full node_modules the build ran with. Crashes
+  // apps/auth/instrumentation.ts's eager `runAuthMigrations()` at boot with
+  // `Cannot find module '@libsql/linux-arm64-musl'` (or the -gnu/-x64
+  // sibling) despite the webpack alias below already stopping Webpack from
+  // trying to bundle this chain — that alias only prevents a *build-time
+  // parse failure* for statically-traceable import paths; it does nothing
+  // for this dynamic, tracer-invisible one. Force-include every platform
+  // variant pnpm-workspace.yaml's `supportedArchitectures` now installs.
+  outputFileTracingIncludes: {
+    '/**': [
+      '../../node_modules/.pnpm/@libsql+linux-*/node_modules/@libsql/linux-*/**',
+      '../../node_modules/.pnpm/@libsql+darwin-*/node_modules/@libsql/darwin-*/**',
+    ],
+  },
   webpack: (config) => {
     // Drop the native `libsql` package from the server graph (mirrors
     // runtime/next.config.ts's identical `better-sqlite3` alias). Both

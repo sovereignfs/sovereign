@@ -3,17 +3,26 @@
 **Status:** ⏳ In progress — leg 2 done (task 3.33, surface model shipped at
 platform `0.83.0`; task 3.32 itself pre-dates this workstream, shipped at
 `0.58.0`) and leg 3 done (tasks 2.25–2.26, per-plugin installable PWA +
-icon generation, shipped at `0.84.0`–`0.85.0`); leg 1 (the WKWebView spike,
-gate) and legs 4–5 not started\
+icon generation, shipped at `0.84.0`–`0.85.0`); leg 5's runtime half done
+(task 2.27, shipped at `0.82.0`). Leg 1 (the WKWebView spike, gate) is **not
+done but substantially progressed** — research 0008 confirmed the
+platform-divergent service-worker finding and root-caused/fixed a real
+session-gate bug, but its own review checklist still has two credential- or
+long-duration-gated items open. Leg 4 was redesigned (see its own section)
+to ship as an in-repo reference plugin instead of depending on an external
+plugin repository, and has not started. The rest of leg 5 (tasks 20.11–20.12)
+remains blocked on leg 1 and on epic 20.1 (`sovereign-mobile` shell,
+substantially implemented but not yet signed off)\
 **Date:** July 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
 **RFCs:** [0080](../rfcs/0080-plugin-surface-model.md) (surface model),
 [0081](../rfcs/0081-per-plugin-installable-pwa.md) (per-plugin installable PWA),
 [0082](../rfcs/0082-focused-plugin-app-shell.md) (focused plugin app shell)\
-**Epics touched:** 2 (Platform Shell), 3 (Plugins Runtime), 20 (Mobile), plus
-the `sovereign-tally` plugin repository\
-**Research:** [0006](../research/0006-standalone-plugin-apps.md)
+**Epics touched:** 2 (Platform Shell), 3 (Plugins Runtime), 12 (Example
+Plugins), 20 (Mobile)\
+**Research:** [0006](../research/0006-standalone-plugin-apps.md),
+[0008](../research/0008-wkwebview-android-webview-offline-spike.md)
 
 ---
 
@@ -40,8 +49,8 @@ plugin-specific REST API, no second implementation.
       client-side.
 - [x] A plugin can declare which surfaces it is available on, and the platform
       filters presentation accordingly.
-- [ ] Tally supports offline viewing plus offline **add** of expenses and
-      comments, syncing on reconnect.
+- [ ] An in-repo reference plugin demonstrates offline viewing plus offline
+      **append** writes, syncing on reconnect.
 - [ ] One focused native app is published from `sovereign-mobile` build targets,
       with the whole-instance app still building from the same codebase.
 - [x] `docs/plugin-development.md` documents `installable`, `surfaces`, and
@@ -55,52 +64,101 @@ Settled in a design session with kasunben, July 2026. Recorded so they are not
 reopened mid-execution — full reasoning in research
 [0006](../research/0006-standalone-plugin-apps.md).
 
-| Decision                     | Choice                                                                | Rejected alternative, and why                                                                                            |
-| ---------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Overall shape                | Ladder: installable PWA first, focused native shell second            | Native UI + plugin REST API — forks every plugin into two implementations; same reason RFC 0058 rejected React Native    |
-| Plugin API surface           | None new; WebView uses existing Server Actions                        | A REST API per plugin — unnecessary for a WebView, and the only new endpoint (offline sync) RFC 0078 already requires    |
-| Surface mechanism            | Server-injected `x-sovereign-surface` **plus** `sdk.device.*`         | Client-only detection (hydration flash); `NEXT_PUBLIC_*` (build-time inlining); capability-system reuse (category error) |
-| Feature flags                | None. Surface + capability only                                       | General flag service with targeting/percentages — single-tenant self-hosted, no fleet to roll out across                 |
-| Operator flags               | Not built                                                             | `PlatformConfig` booleans + Console UI — no concrete need; don't ship a settings surface nobody asked for                |
-| Focused app scope            | Hard lock to the plugin's `routePrefix`                               | Soft lock (chrome-less but freely navigable) — a Tally app should not be a browser into the whole instance               |
-| Lock trust level             | **Presentation/UX only, never a security boundary**                   | Treating it as access control — the signal is a spoofable User-Agent                                                     |
-| Bearer-token plugin API      | Deferred, explicitly additive                                         | Ruling it out (forecloses CLI/third-party clients); or including it now (would make native plugin UIs tempting)          |
-| Native auth                  | Cookie-in-WebView for v1; OAuth refresh token + keychain named sequel | OAuth-first now — blocked on RFC 0072's per-instance admin-only client registration                                      |
-| Tally offline writes         | **Append-only** (add expense, add comment). Edit/delete/settle online | RFC 0078's LWW — row-level LWW across expense/payers/shares can desync shares from amount and silently corrupt balances  |
-| Queue first adopter          | Shopper (single-user)                                                 | Tally — a multi-member financial ledger is the wrong place to harden a new mutation queue                                |
-| Shell repository             | Build targets inside `sovereign-mobile`                               | A repo per plugin app, or a separate generic shell repo — guarantees divergence, multiplies store tooling                |
-| Per-plugin manifest location | `/api/manifest/<pluginId>` (already session-exempt)                   | `/<routePrefix>/manifest.webmanifest` — session-gated, so a logged-out browser never gets an install prompt              |
-| `installable` vs `offline`   | Separate manifest fields                                              | Deriving one from the other — independent concerns; Launcher is offline-capable and should not become installable        |
-| Service worker               | One, unchanged, at `/`                                                | A second SW scoped per plugin — manifest scope is not SW scope; two SWs would overlap on the same origin                 |
-| Workstream execution         | Legs — one branch, one draft PR, one review gate per leg              | Stacked per-task branches, or one giant PR per workstream                                                                |
+| Decision                        | Choice                                                                                                        | Rejected alternative, and why                                                                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overall shape                   | Ladder: installable PWA first, focused native shell second                                                    | Native UI + plugin REST API — forks every plugin into two implementations; same reason RFC 0058 rejected React Native                         |
+| Plugin API surface              | None new; WebView uses existing Server Actions                                                                | A REST API per plugin — unnecessary for a WebView, and the only new endpoint (offline sync) RFC 0078 already requires                         |
+| Surface mechanism               | Server-injected `x-sovereign-surface` **plus** `sdk.device.*`                                                 | Client-only detection (hydration flash); `NEXT_PUBLIC_*` (build-time inlining); capability-system reuse (category error)                      |
+| Feature flags                   | None. Surface + capability only                                                                               | General flag service with targeting/percentages — single-tenant self-hosted, no fleet to roll out across                                      |
+| Operator flags                  | Not built                                                                                                     | `PlatformConfig` booleans + Console UI — no concrete need; don't ship a settings surface nobody asked for                                     |
+| Focused app scope               | Hard lock to the plugin's `routePrefix`                                                                       | Soft lock (chrome-less but freely navigable) — a focused plugin app should not be a browser into the whole instance                           |
+| Lock trust level                | **Presentation/UX only, never a security boundary**                                                           | Treating it as access control — the signal is a spoofable User-Agent                                                                          |
+| Bearer-token plugin API         | Deferred, explicitly additive                                                                                 | Ruling it out (forecloses CLI/third-party clients); or including it now (would make native plugin UIs tempting)                               |
+| Native auth                     | Cookie-in-WebView for v1; OAuth refresh token + keychain named sequel                                         | OAuth-first now — blocked on RFC 0072's per-instance admin-only client registration                                                           |
+| Offline reference plugin writes | **Append-only** (add-item, add-comment style mutations only). Edit/delete/settle-style operations stay online | RFC 0078's LWW — row-level LWW across a resource's dependent tables can desync a derived total from its parts and silently corrupt aggregates |
+| Queue first adopter             | Shopper (single-user)                                                                                         | A multi-member, financial-ledger-shaped plugin — the wrong place to harden a new mutation queue                                               |
+| Leg 4 test vehicle              | An in-repo `example-plugins/` reference plugin                                                                | An external plugin repository — couples this workstream's completion to a repo outside its own control/versioning                             |
+| Shell repository                | Build targets inside `sovereign-mobile`                                                                       | A repo per plugin app, or a separate generic shell repo — guarantees divergence, multiplies store tooling                                     |
+| Per-plugin manifest location    | `/api/manifest/<pluginId>` (already session-exempt)                                                           | `/<routePrefix>/manifest.webmanifest` — session-gated, so a logged-out browser never gets an install prompt                                   |
+| `installable` vs `offline`      | Separate manifest fields                                                                                      | Deriving one from the other — independent concerns; Launcher is offline-capable and should not become installable                             |
+| Service worker                  | One, unchanged, at `/`                                                                                        | A second SW scoped per plugin — manifest scope is not SW scope; two SWs would overlap on the same origin                                      |
+| Workstream execution            | Legs — one branch, one draft PR, one review gate per leg                                                      | Stacked per-task branches, or one giant PR per workstream                                                                                     |
 
 ## Prerequisites
 
-| Prerequisite                                                     | Owner         | Status                              |
-| ---------------------------------------------------------------- | ------------- | ----------------------------------- |
-| RFC 0078 offline write queue (`@sovereignfs/sdk/offline-queue`)  | separate task | ✅ Shipped — no longer blocks leg 4 |
-| RFC 0078 §7 logout/login purge wired                             | separate task | ✅ Shipped — both call sites        |
-| `sovereign-mobile` repo exists with RFC 0058's shell (epic 20.1) | epic 20       | 📋 — **blocks leg 5**               |
-| Instance validation endpoint (epic 20.2)                         | epic 20       | 📋 — **blocks leg 5**               |
+| Prerequisite                                                     | Owner         | Status                                                                    |
+| ---------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------- |
+| RFC 0078 offline write queue (`@sovereignfs/sdk/offline-queue`)  | separate task | ✅ Shipped — no longer blocks leg 4                                       |
+| RFC 0078 §7 logout/login purge wired                             | separate task | ✅ Shipped — both call sites                                              |
+| Instance validation endpoint (epic 20.2)                         | epic 20       | ✅ Shipped — `GET /api/instance`, no longer blocks leg 5                  |
+| `sovereign-mobile` repo exists with RFC 0058's shell (epic 20.1) | epic 20       | ⏳ Substantially implemented, not yet signed off — **still blocks leg 5** |
 
 Legs 1–4 depend on none of these and can start immediately — the offline write
-queue shipped, so only leg 5 still has an unmet prerequisite.
+queue and instance validation endpoint both shipped, so only leg 5 still has
+an unmet prerequisite (epic 20.1), on top of its own leg 1 gate.
 
 ## Legs
 
-| Leg | Name                          | Epic tasks         | Epics | Gate?   | Done when                                                              |
-| --- | ----------------------------- | ------------------ | ----- | ------- | ---------------------------------------------------------------------- |
-| 1   | WKWebView offline spike       | 20.10              | 20    | **Yes** | Service-worker + IndexedDB behavior in a real Capacitor build is known |
-| 2   | Surface model ✅              | 3.32, 3.33         | 3     | No      | Plugins can gate on surface server-side and declare `surfaces` — done  |
-| 3   | Per-plugin installable PWA ✅ | 2.25, 2.26         | 2     | No      | Two plugins install as their own home-screen apps — done               |
-| 4   | Tally offline adoption        | _external repo_    | —     | No      | Tally works offline read + append, syncing on reconnect                |
-| 5   | Focused native app            | 2.27, 20.11, 20.12 | 2, 20 | No      | One focused app builds and passes store review                         |
+| Leg | Name                                 | Epic tasks            | Epics | Gate?   | Done when                                                                     |
+| --- | ------------------------------------ | --------------------- | ----- | ------- | ----------------------------------------------------------------------------- |
+| 1   | WKWebView offline spike ⏳           | 20.10                 | 20    | **Yes** | Service-worker + IndexedDB behavior in a real Capacitor build is known        |
+| 2   | Surface model ✅                     | 3.32, 3.33            | 3     | No      | Plugins can gate on surface server-side and declare `surfaces` — done         |
+| 3   | Per-plugin installable PWA ✅        | 2.25, 2.26            | 2     | No      | Two plugins install as their own home-screen apps — done                      |
+| 4   | Offline append-only reference plugin | _new_                 | 12    | No      | An in-repo reference plugin works offline read + append, syncing on reconnect |
+| 5   | Focused native app                   | 2.27 ✅, 20.11, 20.12 | 2, 20 | No      | One focused app builds and passes store review                                |
 
 ## Leg detail
 
 ### Leg 1 — WKWebView offline spike (gate)
 
 **Epic tasks:** 20.10
+
+**Status (August 2026): substantially progressed, not complete.** Research
+[0008](../research/0008-wkwebview-android-webview-offline-spike.md) ran the
+spike against real iOS Simulator and Android Emulator builds and a live
+instance, and found:
+
+- The bundled local scheme's service-worker support is **platform-divergent**
+  — confirmed, not assumed. No `serviceWorker` API at all on iOS's
+  `capacitor://` scheme; full registration and activation on Android's
+  default `https://localhost` bundled scheme. `sovereign-mobile`'s ADR 0005
+  decision (never load real content via the bundled scheme, always
+  `server.url`/navigate to the real remote origin) is still correct, but for
+  a different reason than originally stated (ADR 0002 — no baked-in
+  instance — not service-worker support); the ADR's rationale needs
+  correcting to say so, in that repo.
+- A real, reproducible service-worker **registration failure** was found and
+  root-caused: `runtime/middleware.ts`'s session-gate allowlist omitted the
+  `worker-<hash>.js` custom-worker chunk, so any sessionless request for it
+  303'd to `/login`, and the redirected `importScripts()` aborted the whole
+  SW install. **This was never Android-specific** — it reproduced from plain
+  `curl` on any platform and affected every logged-out visitor everywhere,
+  not just native shells. Fixed 2026-08-07, with a regression test.
+- Background/foreground cycle survival is confirmed **and platform-divergent
+  in a way not previously documented**: iOS WKWebView discards the JS
+  execution context entirely on backgrounding (fresh reload, in-memory state
+  lost, no event fires to catch it); Android WebView preserves it. This is a
+  hard design constraint on `sdk.offline`: flush to IndexedDB as data is
+  produced, never buffer-then-flush-later in memory.
+- **Not yet complete**, per this task's own review checklist — two items
+  remain, both requiring a human rather than an agent:
+  1. `sdk.offline` IndexedDB persistence across a real app restart — needs an
+     authenticated session performing real reads/writes. Entering
+     credentials into any field is outside what an agent should do,
+     regardless of who supplies them, so this needs a human tester driving
+     the simulator (or a real device) themselves.
+  2. `WKWebsiteDataStore` eviction under storage pressure or prolonged
+     non-use — not practically testable in a short session; needs either a
+     long-duration test or artificial storage-pressure simulation, neither
+     available in this environment.
+
+**This leg cannot be finished by an agent alone.** Everything that could be
+verified without credentials or elapsed real time has been verified, written
+up, and (where it uncovered a real bug) fixed. What remains needs a human to
+either drive the simulator through an authenticated read/write/restart cycle,
+or run a longer-duration/storage-pressure trial — a session where a human
+does that hand-in-hand with an agent (agent drives the build and captures
+findings, human supplies the login) is the fastest path to closing it out.
 
 **Why this leg is first:** it is the cheapest leg and carries the most
 information. Research 0005 identifies WKWebView's service-worker behavior as the
@@ -111,8 +169,9 @@ result reshapes the workstream before anything is invested in it.
 
 - Service workers require an `https` document. Point Capacitor's `server.url` at
   a real instance. **Bundling assets behind the `capacitor://` custom scheme
-  yields no service worker at all** — confirm this rather than assuming it, since
-  it is the constraint the whole offline story rests on.
+  yields no service worker on iOS — but does on Android's default bundled
+  scheme** — this was assumed to be a cross-platform fact and confirmed to be
+  iOS-specific instead; see the status note above.
 - Verify all four layers, not just registration: SW registration; `offline-shells`
   document caching; `sdk.offline` IndexedDB persistence across app restart; and
   survival of a background/foreground cycle.
@@ -123,11 +182,16 @@ result reshapes the workstream before anything is invested in it.
   result covers both platforms.
 
 **Deliverable is a written finding**, appended to research 0005 or as its own
-short research doc — not code. The spike branch is disposable.
+short research doc — not code. The spike branch is disposable. (In practice
+the finding landed in research 0008, its own doc, cross-referenced from
+research 0005.)
 
 **Do not proceed if:** service workers are unavailable or unreliable in the
 Capacitor WebView. In that case stop, record the finding, and re-open RFC 0082
 §4 rather than proceeding to leg 5. Legs 2–4 are unaffected and still ship.
+(The one hard SW failure found here was a fixed server bug, not a platform
+limitation — see status note above. Nothing found so far says offline is
+unworkable.)
 
 ### Leg 2 — Surface model
 
@@ -263,47 +327,71 @@ the background-plate question (RFC 0081 open question 1) before declaring the le
 done, rather than shipping an install prompt that produces an ugly springboard
 icon.
 
-### Leg 4 — Tally offline adoption
+### Leg 4 — Offline append-only reference plugin
 
-**Epic tasks:** none in this repository — `sovereign-tally` has its own
-versioning and its own task tracking. Referenced here because the workstream's
-definition of done depends on it.
+**Epic tasks:** none yet — requires a new task under Epic 12 (Example
+Plugins), alongside the existing `example-device-only` (RFC 0093) and
+`example-mobile` reference plugins in `example-plugins/`.
+
+**Redesigned from the original plan.** The original leg routed this through
+Tally, a plugin outside this monorepo's own versioning and task tracking.
+That coupled this workstream's definition of done to a separate repo's own
+schedule, and put the append-only design, the pending-sync UI requirement,
+and RFC 0078 §5's audit reasoning in a doc that couldn't be checked against
+code living here. Leg 4 now ships as an in-repo **reference plugin** under
+`example-plugins/`, built, reviewed, and tested in this repository like every
+other example — usable afterward as a working precedent by any plugin, in
+this repo or outside it, without this workstream depending on that plugin's
+own repo, roadmap, or review cycle.
 
 **Technical notes:**
 
-- **Append-only. This is a locked decision, not a starting point.** Add expense
-  and add comment queue offline with client-minted ULIDs and
-  `INSERT ... ON CONFLICT (id) DO NOTHING`. Edit, delete, and settle stay
-  online-only. Do not adopt RFC 0078's LWW path for Tally — row-level LWW across
-  `tallyExpenses` / `tallyExpensePayers` / `tallyExpenseShares` can land the
-  amount from one edit and the shares from another, desyncing an expense's shares
-  from its total and silently corrupting every member's balances.
+- **Append-only. This is a locked decision, not a starting point.** The
+  reference plugin's writable resource should be a minimal add-only list —
+  e.g. "add item" plus "add comment on an item," enough to exercise a
+  dependent-table relationship without needing a real domain. Offline
+  mutations queue with client-minted ULIDs and
+  `INSERT ... ON CONFLICT (id) DO NOTHING`. Edit, delete, and any
+  settle/finalize-style operation are online-only. Do not adopt RFC 0078's
+  LWW path here — row-level LWW across dependent tables can land one edit's
+  change to a total and another edit's change to its parts, desyncing a
+  derived value from what it's derived from and silently corrupting it. The
+  reference plugin exists specifically to demonstrate the safe alternative,
+  not to reproduce that bug class in miniature.
 - Because writes are inserts only, **no `updatedAt` column and no audit of
-  existing online write paths is required** — the expensive, easy-to-miss part of
-  RFC 0078 §5 does not apply. This is the main reason append-only was chosen.
-- The rewrite is the real work: `app/page.tsx` and `app/[groupId]/page.tsx` are
-  per-user SSR today and must render a user-neutral shell with client
-  hydration. `plugins/launcher/app/_components/LauncherOfflineView.tsx` is the
-  reference pattern — render cached immediately, always fire a live fetch in
+  existing online write paths is required** — the expensive, easy-to-miss part
+  of RFC 0078 §5 does not apply. This is the main reason append-only was
+  chosen, and the reference plugin's own README should say so, since that's
+  the lesson a future plugin author is meant to take from it.
+- Manifest `offline: "offline-first"` (the tiered enum — not `"device-only"`,
+  which never talks to the server and already has its own reference plugin
+  in `example-device-only`). The rewrite target is a user-neutral shell with
+  client hydration: render cached immediately, always fire a live fetch in
   parallel, update view and cache on success.
-- Mutations move from Server Actions (`app/_lib/actions.ts`) to a JSON Route
-  Handler, because a Server Action cannot be queued and replayed, and because a
-  Route Handler is what a future native client could call.
-- Balances are **derived** (`computeNetBalances`, `simplifyDebts`), so a
-  partially-synced client shows different numbers to different members. The UI
-  must make pending-sync state visible rather than presenting provisional
-  balances as settled.
-- Only the bare `/tally` route is SW-served offline (RFC 0078 §2's accepted
-  tradeoff), so nested group views become client-side view switching inside one
-  shell.
+  `plugins/launcher/app/_components/LauncherOfflineView.tsx` is the reference
+  pattern to follow, not re-derive independently.
+- Mutations go through a JSON Route Handler, not a Server Action, because a
+  Server Action cannot be queued and replayed, and because a Route Handler is
+  what a future native client could call. This distinction is itself one of
+  the plugin's main teaching points for plugin developers.
+- If the reference plugin surfaces any derived/aggregate value (a count, a
+  running total), it must make pending-sync state visible in the UI rather
+  than presenting a partially-synced value as settled — a partially-synced
+  client can legitimately show a different number than a fully-synced one,
+  and hiding that is exactly the failure class this leg exists to catch
+  before a higher-stakes plugin (financial, multi-party, or otherwise) ships
+  it for real.
+- Keep the offline-served surface to a single bare route (RFC 0078 §2's
+  accepted tradeoff) — nested per-item views become client-side view
+  switching inside that one shell, not separately SW-cached routes.
 
 **Do not proceed if:** the shipped purge turns out to discard un-synced additions
 without warning the user. RFC 0078 §7 left open whether a confirmation prompt
 should precede the destructive purge, calling it "a product decision, not an
 engineering one"; the queue shipped with the purge wired at both sign-out and
-sign-in. Verify what it actually does before Tally relies on it — silently
-dropping a queued expense is data loss in a financial ledger, and Tally should
-not be the plugin that discovers it.
+sign-in. Verify what it actually does before calling this leg done — silently
+dropping a queued write is exactly the failure mode this reference plugin
+exists to catch before any real, higher-stakes plugin copies the pattern.
 
 ### Leg 5 — Focused native app
 

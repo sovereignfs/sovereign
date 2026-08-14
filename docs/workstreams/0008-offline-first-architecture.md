@@ -18,8 +18,11 @@ used for task 3.37; legs 6, 7, 8, 10 not started; leg 5 not started\
 **Date:** August 2026\
 **Author:** Claude Code (from a design session with kasunben)\
 **Goal owner:** kasunben\
-**RFCs:** none — governed directly by research 0012 under the
-[research-as-design exception](../documentation-structure.md)\
+**RFCs:** [0093](../rfcs/0093-device-only-storage-and-key-custody.md) (leg 4
+only — device-only storage and key custody); legs 1, 2, 3, 5 have none,
+governed directly by research 0012 under the
+[research-as-design exception](../documentation-structure.md) — see the note
+below\
 **Epics touched:** 1 (Users & Auth), 2 (Platform Shell), 3 (Plugins Runtime),
 8 (Data Sovereignty), 20 (Mobile)\
 **Research:** [0012](../research/0012-offline-first-architecture.md)
@@ -65,27 +68,67 @@ meaningfully under the user's control.
 
 ## Definition of done
 
-- [ ] A returning user can cold-launch the installed PWA or native shell with
+- [x] A returning user can cold-launch the installed PWA or native shell with
       **zero connectivity** and land on their home screen — not a white screen,
-      not the generic `/offline` page.
-- [ ] A user whose session has expired sees a purpose-built Offline page
-      explaining they need a connection to sign in — **not** a login form that
-      cannot work, and **not** an unlocked cached shell.
-- [ ] Airplane mode is **not** an authentication bypass: the gate is a valid
-      local session, plus device auth for `device-only` plugins.
-- [ ] A cached authenticated document can never be served to a different user on
-      a shared device, with a regression test proving it.
-- [ ] Plugins declare `offline: 'offline-first' | 'device-only'`; omitting the
-      field means no offline support, and that remains the default.
+      not the generic `/offline` page. Shipped in leg 2 — `/` is offline-eligible
+      via the neutral-shell mechanism (`runtime/src/registry.ts`'s
+      `getOfflineRoutePrefixes()`), live-tested cold against a real build.
+- [x] A user whose session has expired sees a purpose-built notice explaining
+      they need a connection to sign in — **not** a login form that cannot
+      work, and **not** an unlocked cached shell. Shipped in leg 2, but not as
+      originally envisioned: there is no separate session-expired page — the
+      generic `/offline` page (`runtime/app/offline/page.tsx`) covers every
+      offline navigation failure, and `runtime/app/login/login-form.tsx` uses
+      `useIsOffline()` to swap the login form itself for a notice when
+      `/login` is viewed offline. Functionally equivalent to the original
+      wording; the mechanism differs.
+- [x] Airplane mode is **not** an authentication bypass. Shipped in leg 2, via
+      a stronger guarantee than originally envisioned: the signed
+      offline-session-assertion gate this item originally described was
+      built, found to be dead code (`refreshOfflineSession()` was never
+      called), and removed outright — see leg 2's "Mechanism superseded"
+      note. What ships instead is simpler and strictly safer: the `pages`
+      cache never stores personalized content at all (`NetworkOnly`
+      effective behavior), so there is no cached authenticated document to
+      replay regardless of session state. Only manifest-declared
+      `offline: 'offline-first' | 'device-only'` routes render offline, and
+      those are user-neutral by construction.
+- [x] A cached authenticated document can never be served to a different user
+      on a shared device, with a regression test proving it. Shipped in leg
+      2 — live-tested directly (sign out, go offline, reload `/`) against a
+      real production build; see `docs/architecture-rules.md`'s "cached
+      authenticated document" rule.
+- [x] Plugins declare `offline: 'offline-first' | 'device-only'`; omitting the
+      field means no offline support, and that remains the default. Shipped
+      in leg 3, task 3.36, at platform `0.76.0`.
 - [ ] `offline-first` plugins read and write locally and sync in the background;
-      `device-only` plugins never send data to the server.
-- [ ] Offline data is encrypted at rest in **both** offline tiers.
-- [ ] `device-only` plugins refuse to expose their data without the user's
-      Device Storage Key set up (Account → Security), and that is enforced by key
-      custody, not a UI check.
+      `device-only` plugins never send data to the server. The `device-only`
+      half is trivially true today (leg 10/Layer 3 hasn't shipped, so there
+      is no code path that could send that data to the server at all). The
+      `offline-first` half needs leg 5 (background sync, task 3.38 — not
+      started).
+- [x] Offline data is encrypted at rest in **both** offline tiers, for the
+      backends that exist today. `offline.ts` (offline-first, IndexedDB)
+      AES-GCM-encrypts every entry via `offline-device-key.ts`; `device-only-kv.ts`
+      (device-only) is independently AES-GCM-encrypted. **Scope note:** legs
+      7–8 (not started) add a real relational SQL engine on web — when that
+      lands, this item needs re-verification against the new backend; it
+      does not need to stay unchecked until then, since no plugin can reach
+      an unencrypted engine that doesn't exist yet.
+- [x] `device-only` plugins refuse to expose their data without the user's
+      Device Storage Key set up (Account → Security), and that is enforced by
+      key custody, not a UI check. Shipped in leg 4 — `DeviceOnlyGate`/
+      `DeviceStorageKeyGate` backed by real WebAuthn PRF (web) and
+      Keychain/Keystore (native) key custody, not a JS flag.
 - [ ] The escrow/recovery position is decided, documented, and implemented.
-- [ ] RFC 0074 and RFC 0078 are marked superseded, with a `docs/upgrade.md`
-      migration note for the manifest change.
+      Decided and documented: [RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md),
+      Accepted. Implemented: Layers 1–2 (warning copy, encrypted export) shipped
+      in leg 4; Layer 3 (opt-in encrypted server backup) is leg 10, not started.
+- [x] RFC 0074 and RFC 0078 are marked superseded, with a `docs/upgrade.md`
+      migration note for the manifest change. Both RFCs carry a Superseded
+      banner and are listed as such in `docs/rfcs/README.md`; `docs/upgrade.md`
+      has the migration note for the manifest field's enum shape change and a
+      separate note on the removed offline-session-assertion mechanism.
 
 ## Decisions locked
 
@@ -843,3 +886,4 @@ leaves the platform better than it started, not half-migrated.
 | 0.2     | August 2026 | Leg 3 is no longer a gate — workstream 0003's leg 4 outcome already answers the delivery-model question empirically. Leg 4 split across `sovereign-mobile`/`sovereign-desktop`; task 20.13 rescoped to not duplicate task 17.4 / 0003 leg 3b.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 0.3     | August 2026 | Leg 4's escrow and key-strictness decisions made — [RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md), Accepted. Leg 4 is no longer a workstream gate; ready to prioritize and implement. Leg 4's design now lives in RFC 0093, not directly in research 0012 — the research-as-design exception's "no RFC" framing now applies to legs 1/2/3/5 only.                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 0.4     | August 2026 | Leg 4 shipped its key-custody/session/escrow-Layers-1-2 scope (web WebAuthn PRF + native Keychain/Keystore, re-lock enforcement, encrypted export/import, a reference plugin) across several PRs — its real size only became clear during execution, same as task 3.37 did in leg 3. The remaining scope — the real relational storage engines RFC 0093 §1 specs (`wa-sqlite` on web, SQLCipher on native), their encryption, and Layer 3 escrow — is carved out into new legs 6–10, documented here rather than implemented, at the goal owner's request: a properly-scoped plan for a future session, not a same-session build. Leg 7 (the web engine) and leg 8 (its encryption) are each marked a gate — see their own "why this leg is a gate" notes. Added corresponding risks and kill-criteria entries. |
+| 0.5     | August 2026 | Corrected drift between the Definition of done checklist and this doc's own leg-detail sections: 6 of 10 items were still unchecked despite the corresponding leg text describing them as shipped and verified (cold-start offline, the shared-device replay regression test, the manifest enum, both tiers' at-rest encryption via the currently-shipped backends, key-custody enforcement, and both superseded-RFC/upgrade-note requirements). Reworded the session-expired item to match what actually shipped (a login-page notice, not a separate page) rather than the originally-envisioned mechanism. Also fixed the header `RFCs:` field, which read "none" while the callout directly beneath it names RFC 0093 as governing leg 4 — now lists it explicitly, scoped to that leg.                     |

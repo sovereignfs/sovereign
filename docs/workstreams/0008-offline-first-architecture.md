@@ -2,8 +2,19 @@
 
 **Status:** 🔄 In progress — legs 1–3 done (leg 2 shipped at platform `0.65.0`–`0.66.0`;
 leg 3 — tasks 3.36 + 2.33 — shipped at `0.76.0`; task 3.37 deliberately deferred,
-see leg 3 detail); leg 4's design is Accepted (RFC 0093, August 2026 — see leg 4
-detail) but implementation has not started; leg 5 not started\
+see leg 3 detail); **leg 4 shipped its key-custody/session/escrow-Layers-1-2 scope**
+(web WebAuthn PRF + native Keychain/Keystore, re-lock enforcement, encrypted
+export/import, the reference plugin — see leg 4 detail for the full account and
+what's still 🚧 partial in the epic docs); **leg 9 (`sovereign-mobile`, cross-repo)
+mostly shipped** — the SQLCipher database is built and build-verified on both
+platforms, and interactive end-to-end verification is done on iOS (real
+device-credential round-trip plus the reference plugin surviving a full app
+kill/relaunch); Android is build-verified but not interactively confirmed —
+an emulator-specific SystemUI instability with credential/PIN screens, not a
+code defect, see leg 9 detail — so leg 9 stays 🚧 partial rather than done;
+its remaining scope (the real relational storage engines RFC 0093 §1 specs,
+and Layer 3 escrow) is carved out into **legs 6–8 and 10**, same pattern leg 3
+used for task 3.37; legs 6, 7, 8, 10 not started; leg 5 not started\
 **Date:** August 2026\
 **Author:** Claude Code (from a design session with kasunben)\
 **Goal owner:** kasunben\
@@ -126,13 +137,18 @@ origin-partitioned. See leg 3 detail.
 
 ## Legs
 
-| Leg | Name                        | Epic tasks              | Epics    | Gate?   | Done when                                                                       |
-| --- | --------------------------- | ----------------------- | -------- | ------- | ------------------------------------------------------------------------------- |
-| 1   | Record correction           | —                       | —        | No      | The four documentation-drift items are fixed; the record matches reality.       |
-| 2   | Cold-start offline shell    | 1.21, 2.31, 2.32        | 1, 2     | No      | A cold launch with no connectivity reaches the home screen or the Offline page. |
-| 3   | Tiered plugin offline model | 3.36, 3.37, 2.33        | 2, 3     | No      | Tiers ship; `device-only` availability follows bridge capability.               |
-| 4   | Encryption and device auth  | 8.21, 20.13, 8.20, 1.22 | 1, 8, 20 | **Yes** | Offline data is encrypted in both tiers; `device-only` unlocks by device auth.  |
-| 5   | Background sync             | 3.38                    | 3        | No      | An offline write reaches the server after reconnect, exactly once.              |
+| Leg | Name                                                        | Epic tasks              | Epics    | Gate?   | Done when                                                                                                                                                               |
+| --- | ----------------------------------------------------------- | ----------------------- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Record correction                                           | —                       | —        | No      | The four documentation-drift items are fixed; the record matches reality.                                                                                               |
+| 2   | Cold-start offline shell                                    | 1.21, 2.31, 2.32        | 1, 2     | No      | A cold launch with no connectivity reaches the home screen or the Offline page.                                                                                         |
+| 3   | Tiered plugin offline model                                 | 3.36, 3.37, 2.33        | 2, 3     | No      | Tiers ship; `device-only` availability follows bridge capability.                                                                                                       |
+| 4   | Encryption and device auth                                  | 8.21, 20.13, 8.20, 1.22 | 1, 8, 20 | **Yes** | Offline data is encrypted in both tiers; `device-only` unlocks by device auth.                                                                                          |
+| 5   | Background sync                                             | 3.38                    | 3        | No      | An offline write reaches the server after reconnect, exactly once.                                                                                                      |
+| 6   | Unified storage surface — IndexedDB + native backends       | 3.37 (partial)          | 3, 20    | No      | A plugin author calls one API; it lands on IndexedDB or the native bridge depending on surface, with the OPFS/SQL backend still a stub.                                 |
+| 7   | OPFS + `wa-sqlite` engine (unencrypted)                     | 3.37 (completion)       | 3        | **Yes** | A Worker-hosted `wa-sqlite` database, backed by `OPFSCoopSyncVFS`, persists real SQL data across a reload — plaintext, not yet reachable by any `device-only` plugin.   |
+| 8   | Encryption at rest for the new web engine                   | 8.20 (completion)       | 8        | **Yes** | Every page the web SQL engine writes is ciphertext under the Device Storage Key; a live write → lock → unlock → read round-trip passes on a real browser.               |
+| 9   | Native SQLCipher database · cross-repo (`sovereign-mobile`) | 20.13 (completion)      | 20       | No      | `@capacitor-community/sqlite` + SQLCipher backs a real `device-only` plugin's data on iOS and Android, keyed by task 20.13's already-shipped Keychain/Keystore custody. |
+| 10  | Layer 3 escrow — opt-in server backup                       | 8.21 (completion)       | 2, 8, 13 | No      | With the `.env` flag and Console toggle both on, a user can opt one `device-only` plugin into encrypted server backup, and back out.                                    |
 
 Each leg is one branch, one draft PR, one review gate. The agent runs
 uninterrupted within a leg and stops at its end. See
@@ -412,6 +428,31 @@ a documented reason — e.g. reintroducing the biometric-only flag RFC 0093
 is a sign the implementer didn't read the RFC's "Alternatives considered"
 before re-deriving the same dead end.
 
+> **Shipped scope, and what got carved out (August 2026).** Leg 4 ran across
+> several PRs rather than the usual single-PR leg — its real size only became
+> clear during execution, the same thing that happened to task 3.37 in leg 3.
+> **Shipped:** web WebAuthn PRF key derivation with re-lock session
+> enforcement (`device-only-session.ts`); native Keychain/Keystore key
+> custody, build-verified on both platforms (`sovereign-mobile`); the
+> Account → Security "Device Storage Key" section (setup, recovery code,
+> Auto-lock, Export/Import data); RFC 0093 §4's escrow Layers 1
+> (strengthened warning copy) and 2 (`device-only-export.ts`, wired into a
+> real UI); a reference plugin (`example-plugins/example-device-only`)
+> proving the whole chain end to end. Task 1.22 is 🚧 (every deliverable
+> shipped; two review-checklist claims — real-browser OPFS behavior,
+> interactive biometric/PRF ceremonies — are unverified for lack of
+> hardware here, see its own epic entry). Tasks 8.21 and 20.13 are 🚧 for
+> the reasons below. **Carved out, not shipped:** the actual relational
+> storage engines RFC 0093 §1 specs (`wa-sqlite` on web, SQLCipher via
+> `@capacitor-community/sqlite` on native) — what shipped instead is a
+> smaller, immediately-buildable stopgap, `device-only-kv.ts`, an
+> AES-GCM-encrypted key/value store with no queries or joins (see its own
+> doc comment). Task 8.20 is 🚧 for this reason. Also carved out: RFC
+> 0093 §4's Layer 3 (opt-in encrypted server backup cascade) — deliberately
+> deferred as a separate, large piece (Console UI, `.env` gate, DB schema,
+> Docker-config impact). These four gaps — the two relational engines,
+> their encryption, and Layer 3 — are **legs 6–10** below, not restated here.
+
 ### Leg 5 — Background sync
 
 **Epic tasks:** 3.38.
@@ -424,6 +465,283 @@ throws rather than evicting, deliberately; preserve that property.
 substantially larger than the rest of this workstream combined. Research 0012
 converged on network-first-with-local-fallback rather than continuous local-first
 sync; if the design drifts there, stop and revisit.
+
+### Leg 6 — Unified storage surface: IndexedDB + native backends (task 3.37, partial)
+
+**Epic tasks:** 3.37 (the IndexedDB and native-bridge backends only — the OPFS
+backend is leg 7).
+
+**Why this leg is first among 6–10:** it ships the new unified API's _shape_
+against the two backends that need no novel engineering — IndexedDB already
+works (`offline.ts`/`offline-queue.ts` exist today) and native SQLite is
+reached through the bridge, not built here — so the hard part (leg 7) starts
+from an API surface already exercised by two working backends instead of
+being designed and built at the same time.
+
+**Goal:** one plugin-facing API — capability-selected between IndexedDB, the
+(stubbed, until leg 7) OPFS/SQL backend, and native SQLite — replacing
+`packages/sdk/src/offline.ts` and `offline-queue.ts` as described in task
+3.37's own deliverables. Do not re-derive that list here; read it.
+
+**Technical notes:**
+
+- `offline.ts` already gained encryption-at-rest this session
+  (`offline-device-key.ts`, task 8.20) — preserve that property when folding
+  it into the unified surface, not just the API shape.
+- Preserve the existing cross-tab `BroadcastChannel` purge safety and the
+  sign-in/sign-out purge sites (`runtime/src/complete-sign-in.ts`) — task
+  3.37's own review checklist calls this out explicitly.
+- The OPFS/SQL backend can be a capability-detection stub that always reports
+  unavailable until leg 7 lands — plugins on that backend fall back to
+  IndexedDB in the interim, same fallback behavior task 3.37 already
+  specifies for Safari private browsing (no OPFS there either).
+- `device-only-kv.ts` (this session's stopgap) is **not** what this leg
+  unifies underneath — it stays as-is, serving `device-only` plugins, until
+  leg 7's real engine exists to replace it. Don't start migrating
+  `device-only-kv.ts` callers in this leg.
+
+**Do not proceed if:** the unified API's shape can't accommodate a genuinely
+relational backend later without a breaking change — that would mean leg 7
+forces a second breaking API change right after this one ships. Design the
+interface leg 7 will need (even though leg 7 doesn't implement it yet)
+before finalizing this leg's surface, not after.
+
+### Leg 7 — OPFS + `wa-sqlite` engine, unencrypted · GATE
+
+**Epic tasks:** 3.37 (completion — the OPFS/SQL backend).
+
+**Why this leg is a gate:** everything downstream (leg 8's encryption layer,
+any future migration of `device-only-kv.ts` callers onto a real relational
+store) assumes a Worker-hosted `wa-sqlite` engine actually works acceptably
+in the browsers this platform supports. That assumption is well-founded —
+`OPFSCoopSyncVFS` is a real, used-elsewhere pattern, not a fresh design bet —
+but it has never been tried in this codebase, so treat it as unproven until
+this leg's own live round-trip passes.
+
+**Goal:** a working, _unencrypted_ SQLite database via `wa-sqlite`'s
+`OPFSCoopSyncVFS`, running in a dedicated Worker, that persists real SQL data
+(a table, a few rows, a `SELECT … WHERE`) across a page reload in a real
+browser. Deliberately not wired to any plugin or the Device Storage Key yet —
+proving the architecture is the whole point of this leg; encryption is leg 8.
+
+**Technical notes:**
+
+- **Must run in a Worker.** `OPFSCoopSyncVFS` needs `FileSystemSyncAccessHandle`,
+  which browsers only expose inside a dedicated Worker, not the main thread.
+  The main-thread React code talks to the Worker over `postMessage` — design
+  that message protocol as part of this leg, it doesn't exist yet anywhere in
+  this codebase.
+- **Bundling the `.wasm` binary** needs Next.js asset-handling changes and
+  probably a service-worker precache entry (`runtime/next.config.ts`'s
+  `runtimeCaching`) so it's available offline once fetched once. Check CSP
+  implications — WASM instantiation can require `'wasm-unsafe-eval'`
+  depending on how it's compiled/streamed; the nonce-based CSP
+  (`docs/architecture-rules.md`'s "never `'unsafe-inline'` in `script-src`"
+  rule) must still hold.
+- **No COOP/COEP headers** — this is _why_ `OPFSCoopSyncVFS` was picked over
+  the official `sqlite-wasm` OPFS build in the first place (RFC 0093 §1,
+  research 0012). If the implementation ends up needing those headers
+  anyway, that's a finding worth surfacing immediately, not routing around —
+  they would fight this platform's CSP.
+- **Verification tier is different from everything else in this workstream.**
+  A hand-rolled OPFS fake (the pattern `device-only-kv.ts`'s and
+  `offline.ts`'s test suites both use) cannot meaningfully stand in for a
+  real SQLite engine with a custom VFS. This leg needs actual browser
+  verification — Playwright (`'@playwright/test'` is already a pinned
+  catalog dependency, not yet used for anything like this) or, at minimum,
+  manual verification via the preview/browser tools against a real dev
+  server, not a unit test claiming success.
+
+**Do not proceed if:** a real-browser spike shows `OPFSCoopSyncVFS` doesn't
+perform acceptably, or the Worker/main-thread messaging overhead makes
+routine plugin queries noticeably slow. That's new information worth
+escalating — it would mean `device-only-kv.ts`'s simpler KV shape is not a
+temporary stopgap but the right permanent answer for this platform, and
+leg 7 (and everything downstream of it) should be reconsidered, not pushed
+through.
+
+### Leg 8 — Encryption at rest for the new web engine · GATE
+
+**Epic tasks:** 8.20 (completion — the web relational engine's half; native
+SQLCipher is leg 9).
+
+**Why this leg is a gate, and why it is separate from leg 7:** encryption
+surfaces in this repo have a documented track record of looking more
+finished than they are — RFC 0071 needed three hardening passes including a
+production incident
+(`docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`) before it was
+ultimately retired outright. Keeping this leg narrowly scoped to _just_ the
+crypto layer, reviewed on its own rather than folded into leg 7's larger
+architectural change, is a deliberate application of that lesson.
+
+**Goal:** every page `wa-sqlite` writes to OPFS is ciphertext, keyed by the
+already-unlocked Device Storage Key (`device-only-session.ts`'s
+`getUnlockedDeviceStorageKey()` — reused, not reinvented) for `device-only`
+callers. A live write → lock → unlock → read round-trip, verified by
+inspecting the raw OPFS file's bytes directly (not just through the app),
+passes in a real browser — matching task 8.20's own standing review-checklist
+requirement.
+
+**Technical notes:**
+
+- This needs a **page-level encrypting shim in the VFS**, not a
+  wrap-the-whole-file approach — SQLite reads/writes fixed-size pages
+  individually, and a VFS-level shim is the layer that sees each page as it
+  crosses the OPFS boundary.
+- **IV/nonce management is the actual hard part.** The same page gets
+  rewritten many times over a database's life (updates, vacuum, journal
+  activity) — reusing a nonce for the same key is an AES-GCM catastrophic
+  failure, not a theoretical concern. Design this explicitly (e.g. a
+  per-page monotonic counter combined with a random per-database salt) rather
+  than assuming a fresh random IV per write is automatically safe at this
+  volume — it likely still is, but the birthday-bound math for how many page
+  writes are safe under one key should be checked, not assumed, given
+  `device-only` data can accumulate for years.
+- **Only `device-only` callers get this treatment initially.** If leg 6's
+  unified surface also routes `offline-first` plugins through the OPFS
+  backend eventually, that tier's own no-presence key
+  (`offline-device-key.ts`) is a separate, independent secret from the
+  Device Storage Key — do not let the two crypto paths merge just because
+  they end up sharing a storage engine.
+
+**Do not proceed if:** the live round-trip can't be verified end-to-end in a
+real browser (see leg 7's own note on why this workstream's usual test
+approach doesn't cover this). Landing an encryption layer that only "looks"
+correct via a mocked test is exactly the RFC 0071 pattern this leg exists to
+avoid repeating.
+
+### Leg 9 — Native SQLCipher database · cross-repo (`sovereign-mobile`)
+
+**Epic tasks:** 20.13 (completion — the actual database; the bridge
+permission, protocol, and Keychain/Keystore key custody already shipped in
+leg 4).
+
+**Why this leg can run independently of legs 6–8:** it's a different repo,
+a different platform (native, not web), and RFC 0093 already resolved the
+one thing native and web share (key custody design) — SQLCipher does its own
+page encryption natively, so this leg has none of leg 8's "design the
+crypto" problem, only integration and migration work. It can be picked up in
+parallel with legs 6–8, same as leg 4's own native/web split.
+
+**Goal:** `@capacitor-community/sqlite`, with SQLCipher enabled, backs a real
+`device-only` plugin's data on iOS and Android — encrypted database, unlocked
+by the same Keychain/Keystore-gated key task 20.13 already ships (the
+`secureStorage` capability's key-custody half). Verified with the same
+honesty standard the rest of `sovereign-mobile`'s work this session used:
+build-verified (`xcodebuild`, `:app:assembleDebug`) at minimum, a real
+interactive round-trip on Simulator/Emulator if at all achievable in that
+environment.
+
+**Technical notes:**
+
+- `sovereign-mobile`'s own epic doc entry for task 20.13 already states this
+  gap plainly ("Not done: … the `@capacitor-community/sqlite` + SQLCipher
+  database itself") — read that entry before starting, it has the current,
+  authoritative status.
+- The SQLCipher encryption key is not the Device Storage Key directly —
+  follow RFC 0093 §2/§3's existing key-custody design for how the database
+  key relates to the Keychain/Keystore-held key already shipped; don't
+  re-derive this from scratch.
+- Advertise `secureStorage`'s capability version bump (if the wire contract
+  changes to reflect "database now backed for real," not just "key custody
+  exists") consistent with workstream 0003's standing rule — a shell must
+  never advertise a capability its build doesn't actually honor.
+
+**Do not proceed if:** `@capacitor-community/sqlite`'s SQLCipher support
+turns out to have a real gap against this platform's requirements (e.g. no
+way to rotate the encryption key without a full re-encrypt, if that turns
+out to matter for a re-enrolled passkey scenario) — that's a finding worth
+surfacing against RFC 0093's own design, not silently working around.
+
+> **Shipped scope, and what's still open (August 2026).** `@capacitor-community/sqlite`
+> turned out to be unusable as designed here — its API is entirely JS-facing
+> and this shell strips Capacitor's own bridge when showing remote content —
+> so `sovereign-mobile` links the same underlying SQLCipher libraries
+> directly instead (`SQLCipher.swift` SPM package on iOS,
+> `net.zetetic:sqlcipher-android` + `androidx.sqlite:sqlite` on Android). See
+> that repo's own `docs/epics/bridge.md` task 20.13 entry for the full
+> account, including the genuine iOS/Android key-custody divergence (raw
+> Keychain key vs. Android envelope encryption, since Keystore keys are
+> non-extractable). `SecureDatabase.swift`/`SecureDatabase.java` are built
+> and build-verified on both platforms and wired into the `secureStorage`
+> dispatch, replacing the key-custody-only `SecureStorage.swift`/`.java` as
+> the live handler.
+>
+> On the `sovereign` monorepo side, this leg also fixed two bugs that were
+> silently blocking the whole capability from ever being reachable, neither
+> caused by leg 9's own new code: `DeviceStorageKeySection.tsx`
+> (`plugins/account`) called only the web/PWA-only status check, never
+> branching to the bridge's `supports('secureStorage')`, so the UI entry
+> point for this capability was unreachable on any native shell; and
+> `device-only-kv.ts` (`packages/sdk`) — the actual plugin-data storage
+> primitive, distinct from that status-check UI — was entirely OPFS/web-only,
+> so even after the UI fix no `device-only` plugin could persist data
+> natively. Both are fixed: `DeviceStorageKeySection.tsx` now dispatches
+> between a native branch and the original web flow, and every function in
+> `device-only-kv.ts` (`get`/`set`/`delete`/`list`/`clear`) now routes
+> through the native `secureStorage` bridge when `supports('secureStorage')`
+> is true, falling through to the existing OPFS logic otherwise —
+> deliberately excluding `listDeviceOnlyPluginIds()`, which has no bridge
+> equivalent and whose only caller (full export/import) is already
+> web-only. The `example-device-only` reference plugin now proves the whole
+> stack end to end on iOS: a note written through the native path survives a
+> full force-kill and relaunch of the app.
+>
+> **iOS verified interactively; Android is not, and the gap is
+> environment-specific.** On iOS, a real UI-driven `secureStorage.set`+`get`
+> round-trip succeeded on the Simulator via Account → Security's "Verify it
+> works" control, and the reference plugin's persistence-across-relaunch
+> check passed. On Android, the same UI path reaches a real credential-
+> confirmation dialog once a device credential is configured (correctly
+> reporting `'no-device-auth'` beforehand, and `'dismissed'`/`'cancelled'`
+> from the real dialog after — both materially different, correct results
+> from the dispatch layer working) — but this specific AVD image
+> (`sovereign-edge`, emulator 37.1.11) reproducibly wedges its SystemUI when
+> interacting with PIN/credential screens, requiring a hard kill and restart
+> each time, across multiple independent attempts. Genuine on-device testing
+> (tracked as still-needed, matching `docs/pwa-real-device-testing.md`'s note
+> for the web side) is the way to settle the Android `ok` path conclusively;
+> repeated emulator crashes made further attempts here an unproductive use
+> of time rather than a code question. Leg 9 stays 🚧 partial for this
+> reason alone — everything else in its scope is shipped and verified.
+
+### Leg 10 — Layer 3 escrow: opt-in encrypted server backup
+
+**Epic tasks:** 8.21 (completion — RFC 0093 §4's Layer 3; Layers 1 and 2
+already shipped in leg 4).
+
+**Why this leg is independent of legs 6–9:** Layer 3 backs up the _wrapped
+key material_, not the underlying data — it has no dependency on which
+storage engine (`device-only-kv.ts` or a future relational one) actually
+holds a plugin's records. It could run before, after, or interleaved with
+legs 6–9 without conflict.
+
+**Goal:** the three-gate opt-in cascade RFC 0093 §4 specifies — `.env` flag
+(hard kill switch) → Console toggle (`platform:owner`/`platform:admin`) →
+per-plugin per-user opt-in — reusing RFC 0060's existing wrapped-key
+server-storage pattern (the server stores ciphertext it cannot read; a
+recovery secret unwraps it), not a parallel system.
+
+**Technical notes:**
+
+- **Flag Docker-config impact immediately**, per this repo's own standing
+  rule — a new `.env` var needs `.env.example` + `docs/self-hosting.md`
+  entries in the same PR, and the `docs-parity.test.ts` one-directional
+  check only catches the `.env.example` → docs direction, not the reverse.
+- Reuses RFC 0060's wrap/recovery-secret machinery (`e2ee-crypto.ts`'s wrap
+  functions) for the _pattern_, not the _secret_ — RFC 0093 §3 is explicit
+  that `device-only`'s recovery secret is cryptographically independent of
+  RFC 0060's CMK recovery secret. Do not let this leg quietly merge the two.
+- With no `.env` flag set (the default), an instance must behave exactly as
+  if Layer 3 didn't exist — Layers 1 and 2 stay unconditional. This is
+  already a locked decision (workstream 0008's own "Decisions locked"
+  table), not open for reconsideration in this leg.
+
+**Do not proceed if:** the Console toggle or per-plugin opt-in design can't
+cleanly express "opted in, then opted back out" without leaving orphaned
+server-side ciphertext for a plugin the user no longer trusts with backup —
+that's a real data-handling gap worth resolving before implementation, not
+after.
 
 ## Risks
 
@@ -453,6 +771,24 @@ sync; if the design drifts there, stop and revisit.
   "connected to Wi-Fi with no upstream internet", which `navigator.onLine`
   cannot, and its Server Action retry overlaps the sync queue. Sequence it
   deliberately rather than letting it arrive mid-workstream.
+- **Legs 7–8 are genuinely novel for this codebase, not a variation on an
+  existing pattern.** Nothing here has run SQLite-in-a-Worker or a custom
+  encrypting VFS before. Budget for the architecture itself needing
+  iteration, not just its plugin-facing API.
+- **The usual verification approach (a hand-rolled fake plus real WebCrypto)
+  does not cover legs 7–8.** A real SQLite engine with a custom VFS cannot be
+  meaningfully faked in Node/vitest the way OPFS-as-a-file-map or
+  IndexedDB-as-a-Map could be. These legs need actual browser verification
+  (Playwright, or careful manual checks via the preview/browser tools) — a
+  green unit-test suite alone is not evidence these legs work.
+- **IV/nonce reuse in leg 8's page-encryption scheme is a silent-failure
+  risk, not a loud one.** Get the per-page nonce scheme wrong and nothing
+  crashes — the confidentiality guarantee just quietly doesn't hold. This is
+  exactly the shape of bug RFC 0071's incident history warns about; design
+  and review it as carefully as that history suggests.
+- **Leg 9 lives in `sovereign-mobile`, a separate repo this session's agent
+  had access to but a future one may not.** Confirm repo access before
+  starting leg 9, the same prerequisite leg 4 needed.
 
 ## Kill criteria
 
@@ -464,6 +800,13 @@ sync; if the design drifts there, stop and revisit.
 - The escrow question cannot be answered in a way the project is willing to ship.
   `device-only` is then not viable and the workstream reduces to tiers 1–2 —
   legs 1, 2, 3 (minus `device-only`) and 5 still stand.
+- Leg 7's real-browser spike shows `OPFSCoopSyncVFS` performs unacceptably, or
+  the Worker-messaging overhead makes routine queries noticeably slow. Legs
+  8–10 (and any future migration of `device-only-kv.ts` onto a relational
+  store) are then not viable as designed — `device-only-kv.ts`'s simpler
+  key/value shape becomes this platform's permanent web answer, not a
+  stopgap, and that's a real product-scope finding worth surfacing rather
+  than working around.
 
 **What survives if it dies partway:**
 
@@ -472,16 +815,31 @@ sync; if the design drifts there, stop and revisit.
   user-visible win here — stands alone without any tiering work.
 - After leg 3: the tiered manifest and storage abstraction are useful for
   `offline-first` plugins even if `device-only` never ships.
+- After leg 4: `device-only` is fully viable for the common case — key/value
+  data, no queries or joins — via `device-only-kv.ts`, with real key custody,
+  re-lock enforcement, and a working escrow floor (Layers 1–2). Nothing in
+  legs 6–10 is required for `device-only` to be genuinely usable; they raise
+  its ceiling (real SQL, native SQLCipher, opt-in server backup), they don't
+  unblock its floor.
 - After leg 5: `offline-first` is complete as a tier without `device-only`
   existing at all.
+- After leg 6: plugin authors get one unified API shape across backends even
+  if leg 7's relational engine never lands — IndexedDB and native SQLite both
+  work standalone.
+- After leg 9: `device-only` plugins on native get a real relational database
+  even if the web engine (legs 7–8) never ships — the two platforms don't
+  depend on each other.
+- After leg 10: Layer 3 stands alone as a genuine escrow improvement
+  regardless of which storage engine underlies a plugin's data.
 
 Each leg is drawn to leave shipped, coherent value behind. A stop at any boundary
 leaves the platform better than it started, not half-migrated.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                             |
-| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0.1     | August 2026 | Initial draft from research 0012, governed by it directly under the research-as-design exception. Five legs, 11 epic tasks.                                                                                                                                                                                                                                        |
-| 0.2     | August 2026 | Leg 3 is no longer a gate — workstream 0003's leg 4 outcome already answers the delivery-model question empirically. Leg 4 split across `sovereign-mobile`/`sovereign-desktop`; task 20.13 rescoped to not duplicate task 17.4 / 0003 leg 3b.                                                                                                                      |
-| 0.3     | August 2026 | Leg 4's escrow and key-strictness decisions made — [RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md), Accepted. Leg 4 is no longer a workstream gate; ready to prioritize and implement. Leg 4's design now lives in RFC 0093, not directly in research 0012 — the research-as-design exception's "no RFC" framing now applies to legs 1/2/3/5 only. |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft from research 0012, governed by it directly under the research-as-design exception. Five legs, 11 epic tasks.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 0.2     | August 2026 | Leg 3 is no longer a gate — workstream 0003's leg 4 outcome already answers the delivery-model question empirically. Leg 4 split across `sovereign-mobile`/`sovereign-desktop`; task 20.13 rescoped to not duplicate task 17.4 / 0003 leg 3b.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 0.3     | August 2026 | Leg 4's escrow and key-strictness decisions made — [RFC 0093](../rfcs/0093-device-only-storage-and-key-custody.md), Accepted. Leg 4 is no longer a workstream gate; ready to prioritize and implement. Leg 4's design now lives in RFC 0093, not directly in research 0012 — the research-as-design exception's "no RFC" framing now applies to legs 1/2/3/5 only.                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 0.4     | August 2026 | Leg 4 shipped its key-custody/session/escrow-Layers-1-2 scope (web WebAuthn PRF + native Keychain/Keystore, re-lock enforcement, encrypted export/import, a reference plugin) across several PRs — its real size only became clear during execution, same as task 3.37 did in leg 3. The remaining scope — the real relational storage engines RFC 0093 §1 specs (`wa-sqlite` on web, SQLCipher on native), their encryption, and Layer 3 escrow — is carved out into new legs 6–10, documented here rather than implemented, at the goal owner's request: a properly-scoped plan for a future session, not a same-session build. Leg 7 (the web engine) and leg 8 (its encryption) are each marked a gate — see their own "why this leg is a gate" notes. Added corresponding risks and kill-criteria entries. |

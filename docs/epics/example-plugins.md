@@ -349,6 +349,11 @@ actual plugin would.
   badge (`isDeviceStorageKeyUnlocked()`) and an explicit "Lock now" control
   (`lockDeviceStorageKey()`) demonstrating the re-lock session directly
   rather than only through its own test suite.
+- An "Export data"/"Import data" panel calling
+  `@sovereignfs/sdk/device-only-export`'s `exportDeviceOnlyData`/
+  `importDeviceOnlyData` directly, mirroring Account → Security's own
+  controls — so Layer 2 (RFC 0093 §4) is exercised by this plugin too, not
+  just the key-custody/KV/session pieces above.
 - Found and fixed a real bug while wiring this up, not merely exercised
   existing code: `isDeviceOnlyTierAvailable()` only checked the native
   bridge capability, so `DeviceOnlyGate` — the documented gating pattern —

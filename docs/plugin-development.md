@@ -870,6 +870,38 @@ over — and tells the platform how much offline capability your plugin needs:
   is the correct behavior, not a one-time gate you can cache past a
   navigation.
 
+  **`getDeviceStorageKeyStatus()`/`DeviceStorageKeyGate` are web/PWA only —
+  check `supports('secureStorage')` from `@sovereignfs/sdk/device-client`
+  first and skip this gate entirely on native.** A native shell has no
+  enrollment step to gate on at all: `sovereign-mobile`'s SQLCipher database
+  is already gated by the OS's own biometric/passcode prompt on every
+  `secureStorage` call, so there is nothing to "set up" from your plugin's
+  perspective. Calling `getDeviceStorageKeyStatus()` unconditionally answers
+  `'unsupported'` on every native shell regardless of whether
+  `isDeviceOnlyTierAvailable()` said the tier itself was available — it
+  checks WebAuthn/OPFS support, not the bridge — which would permanently
+  block your plugin's content there. Dispatch on transport before deciding
+  whether to render `DeviceStorageKeyGate` at all, the same pattern
+  `example-plugins/example-device-only`'s `DeviceOnlyNotesView.tsx` and
+  Account → Security's own `DeviceStorageKeySection.tsx` both use:
+
+  ```tsx
+  const [native, setNative] = useState<boolean | null>(null);
+  useEffect(() => {
+    setNative(supports('secureStorage'));
+  }, []);
+
+  <DeviceOnlyGate available={isDeviceOnlyTierAvailable()} surfaceName="Notes">
+    {native === null ? null : native ? (
+      <NoteList /> // no enrollment gate on native — straight to content
+    ) : (
+      <DeviceStorageKeyGate status={status} surfaceName="Notes" setupAction={/* … */}>
+        <NoteList />
+      </DeviceStorageKeyGate>
+    )}
+  </DeviceOnlyGate>;
+  ```
+
   `status` can also come back `'no-device-auth'` — the device supports the
   tier but has no passcode, fingerprint, or face unlock configured at all, so
   no key can be created there regardless of what the user does in your
@@ -904,11 +936,17 @@ over — and tells the platform how much offline capability your plugin needs:
   Most plugins don't need the raw `CryptoKey` at all — for "durable, encrypted,
   per-record device-local storage" (notes, entries, settings — the common
   case), use `@sovereignfs/sdk/device-only-kv` directly instead of calling
-  `getUnlockedDeviceStorageKey()` yourself. It's a small encrypted key/value
-  store, one AES-GCM-encrypted file per key, scoped to your plugin's own id —
-  the same shape as `@sovereignfs/sdk/offline`'s existing IndexedDB-backed
-  cache for the `offline-first` tier, but encrypted and gated on the Device
-  Storage Key instead:
+  `getUnlockedDeviceStorageKey()` yourself. It's a small key/value store,
+  scoped to your plugin's own id, that works the same way from your plugin's
+  code on **both** backends — the same shape as `@sovereignfs/sdk/offline`'s
+  existing IndexedDB-backed cache for the `offline-first` tier, but gated on
+  the Device Storage Key instead. What "encrypted" means differs by backend
+  and is not something your plugin needs to reason about: on native it routes
+  straight through the `secureStorage` bridge capability, where
+  `sovereign-mobile`'s SQLCipher database is already the encryption boundary
+  (no second, app-level encryption layer); on web/PWA it's one
+  AES-GCM-encrypted file per key over OPFS, using `getUnlockedDeviceStorageKey()`
+  internally so you don't have to:
 
   ```ts
   import { getDeviceOnlyValue, setDeviceOnlyValue } from '@sovereignfs/sdk/device-only-kv';

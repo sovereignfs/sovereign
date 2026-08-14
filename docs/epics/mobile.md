@@ -533,8 +533,11 @@ policy on when it is justified — the ongoing cost is per-app and permanent.
 > `secureStorage` capability built so far stores small Keychain/Keystore-
 > backed values (the Device Storage Key itself, per RFC 0093 §2), not the
 > actual encrypted SQLite database `device-only` plugin data would live in.
-> That remains open, tracked under task 8.20's own native-backend scope.
-> `sovereign-desktop`'s Tauri transport (task 17.4) has also not started.
+> That remains open, tracked under task 8.20's own native-backend scope and
+> now planned as
+> [workstream 0008](../workstreams/0008-offline-first-architecture.md)'s
+> leg 9 (`sovereign-mobile`, cross-repo). `sovereign-desktop`'s Tauri
+> transport (task 17.4) has also not started.
 
 **Goal:** Extend the device bridge with durable, encrypted, device-auth-gated
 storage — the capability that makes the `device-only` tier possible, and the only

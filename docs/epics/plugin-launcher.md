@@ -51,7 +51,29 @@ The Launcher (`fs.sovereign.launcher`) is a `type: platform`, `shell: default` p
 
 ---
 
-#### 📋 15.2 — Launcher plugin workflow coverage
+#### ✅ 15.2 — Launcher plugin workflow coverage
+
+**Status (August 2026): shipped — workstream 0012 leg 1.** Most of the
+substantive filtering logic this task's deliverables describe (chrome-plugin
+exclusion, access-policy/admin-only filtering, ordering) lives server-side
+in `runtime/src/launcher-plugins.ts` (`selectLauncherPlugins`) and
+`runtime/src/route-guard.ts` (the paywall redirect), both already covered by
+their own pre-existing test files (`launcher-plugins.test.ts`,
+`route-guard.test.ts`) from earlier, unrelated tasks — not duplicated here.
+What actually belongs to this plugin's own directory and had no coverage:
+`SearchableGrid`'s client-side search filter
+(`app/_components/__tests__/SearchableGrid.test.tsx` — name/description
+match, case-insensitivity, empty state) and `LauncherOfflineView`'s
+admin/non-admin section split and empty/monetized-tile rendering
+(`app/_components/__tests__/LauncherOfflineView.test.tsx`).
+
+**A real bug was found and fixed while writing the search test:**
+`SearchableGrid.tsx`'s filter predicate compared against the raw, un-trimmed
+`query` state instead of the already-computed `trimmedQuery`, so a search
+with incidental leading/trailing whitespace (e.g. pasted text, or a trailing
+space left while typing) failed to match even an exact plugin name —
+`"  tasks  "` never matched "Tasks". Fixed to use `trimmedQuery` in both
+comparisons, with a regression test.
 
 **Goal:** Add meaningful regression coverage for Launcher workflows that users
 depend on.

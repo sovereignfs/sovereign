@@ -175,7 +175,10 @@ export async function toggleActiveAction(formData: FormData): Promise<void> {
 }
 
 export async function resetMfaAction(formData: FormData): Promise<void> {
-  await sdk.auth.requireSession();
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'user:manage')) {
+    throw new Error('Insufficient privileges to manage users.');
+  }
   const userId = formData.get('userId') as string;
   const res = await adminFetch(`/api/admin/users/${userId}`, {
     method: 'PATCH',

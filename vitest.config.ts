@@ -1,6 +1,21 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      // Matches runtime/tsconfig.json's own `"@/*": ["./*"]` mapping. The
+      // three platform plugins (console, launcher, account) are composed
+      // into runtime/app at build time and use `@/src/...` to reach
+      // runtime/src directly (an allowed exception to the plugin SDK
+      // boundary rule, unlike third-party plugins) — this alias is what
+      // lets their *source*-tree tests (plugins/<id>/app/__tests__/) resolve
+      // those imports without needing the composed copy under
+      // runtime/app/(platform)/(plugins)/, which vitest's include patterns
+      // deliberately never run.
+      '@': fileURLToPath(new URL('./runtime', import.meta.url)),
+    },
+  },
   test: {
     // Pre-creates the `drizzle` schema once, before any test file starts —
     // see the file's own doc comment for the concurrent-CREATE-SCHEMA race

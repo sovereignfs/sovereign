@@ -13,8 +13,8 @@ export function SearchableGrid({ plugins, total }: { plugins: PluginTileData[]; 
   const filtered = trimmedQuery
     ? plugins.filter(
         (p) =>
-          p.name.toLowerCase().includes(query.toLowerCase()) ||
-          p.description.toLowerCase().includes(query.toLowerCase()),
+          p.name.toLowerCase().includes(trimmedQuery.toLowerCase()) ||
+          p.description.toLowerCase().includes(trimmedQuery.toLowerCase()),
       )
     : plugins;
 

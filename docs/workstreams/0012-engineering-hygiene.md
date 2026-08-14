@@ -1,6 +1,9 @@
 # Workstream 0012 — Engineering hygiene
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In progress — leg 1 done (tasks 14.2, 13.5, 15.2, additive test
+coverage across Account/Console/Launcher). Legs 2–8 not started; legs 2, 3,
+4, 5, 7, 8 have no blocking dependency and can proceed in any order — only
+leg 6 waits on leg 5\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -28,9 +31,13 @@ this backlog as unowned.
 
 ## Definition of done
 
-- [ ] `14.2`, `13.5`, `15.2` — Account, Console, and Launcher plugin
+- [x] `14.2`, `13.5`, `15.2` — Account, Console, and Launcher plugin
       workflows named in each task's own Deliverables have unit/action or E2E
-      coverage; no existing user-facing behavior changed.
+      coverage; no existing user-facing behavior changed. (Two real
+      authorization gaps and one search-matching bug were found and fixed
+      along the way — see leg 1's own status note; none were pre-existing
+      _tested_ behavior, so this doesn't count as a behavior change made to
+      enable testing.)
 - [ ] `3.24` — the plugin import-boundary ESLint rule has a fixture test
       proving it rejects a forbidden import, and the four listed SDK host
       behaviors have regression coverage.
@@ -81,7 +88,7 @@ deferred nav/header migration can be re-added.
 
 | Leg | Name                                          | Epic tasks       | Epics      | Gate? | Done when                                                                                                |
 | --- | --------------------------------------------- | ---------------- | ---------- | ----- | -------------------------------------------------------------------------------------------------------- |
-| 1   | Plugin workflow test coverage                 | 14.2, 13.5, 15.2 | 13, 14, 15 | No    | Account, Console, and Launcher workflows named in each task have regression coverage; no behavior change |
+| 1   | Plugin workflow test coverage ✅              | 14.2, 13.5, 15.2 | 13, 14, 15 | No    | Account, Console, and Launcher workflows named in each task have regression coverage; no behavior change |
 | 2   | SDK boundary and runtime contract tests       | 3.24             | 3          | No    | Import-boundary rule and SDK host behaviors are test-covered, not just configured                        |
 | 3   | Typecheck performance                         | 0.14             | 0          | No    | Recorded `pnpm typecheck` speedup; Turbo caching and Next.js typechecking unaffected                     |
 | 4   | Generate script decomposition                 | 3.23             | 3          | No    | `scripts/generate/*` modules exist; `pnpm generate` output unchanged                                     |
@@ -97,9 +104,32 @@ smallest/safest first.
 
 ## Leg detail
 
-### Leg 1 — Plugin workflow test coverage
+### Leg 1 — Plugin workflow test coverage ✅
 
 **Epic tasks:** 14.2, 13.5, 15.2
+
+**Status (August 2026): shipped.** Full account in each task's own epic doc
+(`docs/epics/plugin-accounts.md`, `plugin-console.md`, `plugin-launcher.md`).
+Three real bugs were found and fixed while writing this coverage — two
+authorization gaps in Console (`resetMfaAction` and nearly every
+settings/branding action had no capability check at all, despite attaching
+`SOVEREIGN_ADMIN_KEY` on the caller's behalf) and one search-matching bug in
+Launcher (`SearchableGrid` compared against the un-trimmed query). None of
+these were "changing behavior to make it testable" — this leg's own "do not
+proceed if" below is about that specific trap, and doesn't apply here: the
+code was already fully testable in its buggy state; the fixes are
+independent, flagged corrections discovered by close reading, the same class
+of finding this project's history treats as worth fixing immediately rather
+than shipping a test that documents a vulnerability as if it were correct
+behavior. Also fixed in passing: `plugins/account/package.json` was missing
+its own `qrcode` dependency (only `runtime/package.json` declared it), so
+the plugin's source could never resolve its own import in isolation —
+surfaced only because this leg was the first to actually import
+`actions.ts` from a test. Added a `resolve.alias` for `@/` to the root
+`vitest.config.ts` (matching `runtime/tsconfig.json`'s own mapping), needed
+because Console's `users/actions.ts` reaches `runtime/src` directly (the
+documented platform-plugin exception to the SDK boundary rule) and nothing
+had exercised that import path from a test before.
 
 **Why this leg is first:** purely additive test coverage across three
 disjoint plugin directories — lowest risk in the workstream, and the fastest
@@ -301,6 +331,7 @@ of the backlog and are independently valuable.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                      |
-| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft — 10 tasks, excludes Task 2.20 (rejected) and the Pre-v1 stabilization-gate cluster (0.13, 0.15, 0.16, 0.18, deferred to a future workstream) |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft — 10 tasks, excludes Task 2.20 (rejected) and the Pre-v1 stabilization-gate cluster (0.13, 0.15, 0.16, 0.18, deferred to a future workstream)                                                                                                                                                                                                                                                                                                                                                                        |
+| 0.2     | August 2026 | Leg 1 shipped (tasks 14.2, 13.5, 15.2). Found and fixed two live authorization gaps in Console (missing capability checks on `resetMfaAction` and nearly every settings/branding action) and one search-matching bug in Launcher (`SearchableGrid` filtering against an un-trimmed query) — full account in each task's own epic doc. Also fixed `plugins/account`'s missing `qrcode` dependency declaration and added a `@/` alias to `vitest.config.ts` for platform-plugin source-tree tests that reach `runtime/src` directly. |

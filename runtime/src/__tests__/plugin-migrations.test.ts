@@ -22,6 +22,9 @@ vi.mock('../../generated/registry', () => ({
   registry: [
     { id: 'fs.example.aaa', type: 'sovereign' },
     { id: 'fs.example.broken', type: 'sovereign' },
+    // Sorted between the two other ids so a bug that only checked `disabled`
+    // for the first/last loop entry wouldn't be caught by accident.
+    { id: 'fs.example.hard-disabled', type: 'sovereign', disabled: true },
     { id: 'fs.example.zzz', type: 'sovereign' },
   ],
 }));
@@ -60,12 +63,13 @@ describe('runAllPluginMigrations — per-plugin failure isolation', () => {
     }));
   });
 
-  it('migrates every plugin when none fail', async () => {
+  it('migrates every plugin when none fail, skipping manifest hard-disabled ones', async () => {
     const { runAllPluginMigrations } = await import('../plugin-migrations');
     await expect(runAllPluginMigrations()).resolves.toBeUndefined();
 
     const migratedIds = provisionPluginDb.mock.calls.map((call) => call[0]);
     expect(migratedIds).toEqual(['fs.example.aaa', 'fs.example.broken', 'fs.example.zzz']);
+    expect(migratedIds).not.toContain('fs.example.hard-disabled');
   });
 
   it("one plugin's migration failure is logged but does not abort the rest of the loop", async () => {
@@ -88,6 +92,7 @@ describe('runAllPluginMigrations — per-plugin failure isolation', () => {
     expect(migratedIds).toContain('fs.example.aaa');
     expect(migratedIds).toContain('fs.example.broken');
     expect(migratedIds).toContain('fs.example.zzz');
+    expect(migratedIds).not.toContain('fs.example.hard-disabled');
     expect(error).toHaveBeenCalled();
   });
 });

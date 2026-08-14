@@ -1237,6 +1237,14 @@ Warden's basic local chat. Entirely optional and off by default — a plain
 plugin) shows a clean "unavailable" state instead of a broken chat page
 when `apps/harness` isn't running.
 
+**Currently deprioritized.** Warden's manifest declares `disabled: true` — a
+build-time hard disable (see `docs/plugin-development.md`'s manifest
+reference and `docs/architecture-rules.md`), unrelated to and stronger than
+the `harness` Compose profile below. Even with `apps/harness` running,
+Warden itself stays unreachable until that manifest flag is removed. This
+section is left in place for when the plugin is re-enabled — see
+[RFC 0063](rfcs/0063-core-assistant-jarvis.md) for background.
+
 ### Enabling it
 
 ```bash

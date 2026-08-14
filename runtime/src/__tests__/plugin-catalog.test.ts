@@ -5,14 +5,19 @@ vi.mock('@sovereignfs/db', () => ({
   createPluginStatusRowIfAbsent: vi.fn(),
 }));
 
+const launcher = { id: 'fs.sovereign.launcher', name: 'Launcher' } as SovereignManifest;
+const tasks = { id: 'fs.example.tasks', name: 'Tasks', description: 'To-dos' } as SovereignManifest;
+const shopper = { id: 'fs.example.shopper', name: 'Shopper' } as SovereignManifest;
+const warden = { id: 'fs.example.warden', name: 'Warden', disabled: true } as SovereignManifest;
+
+vi.mock('../registry', () => ({
+  getInstalledPlugins: () => [launcher, tasks, shopper, warden],
+}));
+
 import { createPluginStatusRowIfAbsent } from '@sovereignfs/db';
 import { activatePlugin, getPluginCatalog } from '../plugin-catalog';
 
 const mockPdb = { dialect: 'sqlite' } as never;
-
-const launcher = { id: 'fs.sovereign.launcher', name: 'Launcher' } as SovereignManifest;
-const tasks = { id: 'fs.example.tasks', name: 'Tasks', description: 'To-dos' } as SovereignManifest;
-const shopper = { id: 'fs.example.shopper', name: 'Shopper' } as SovereignManifest;
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -48,5 +53,12 @@ describe('activatePlugin', () => {
     const result = await activatePlugin(mockPdb, 'fs.example.tasks');
 
     expect(result).toEqual({ activated: false, reason: 'already-active' });
+  });
+
+  it('refuses to activate a manifest hard-disabled plugin, without touching the DB', async () => {
+    const result = await activatePlugin(mockPdb, 'fs.example.warden');
+
+    expect(result).toEqual({ activated: false, reason: 'hard-disabled' });
+    expect(createPluginStatusRowIfAbsent).not.toHaveBeenCalled();
   });
 });

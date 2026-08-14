@@ -38,6 +38,16 @@ export function getDevelopmentPluginIds(plugins: SovereignManifest[] = registry)
 }
 
 /**
+ * IDs of plugins flagged `disabled: true`. The source of truth for the
+ * unconditional, author-declared hard-disable gate in `./plugin-status.ts` —
+ * resolved from the registry so a caller can never target a non-flagged
+ * plugin through it.
+ */
+export function getHardDisabledPluginIds(plugins: SovereignManifest[] = registry): string[] {
+  return plugins.filter((manifest) => manifest.disabled === true).map((manifest) => manifest.id);
+}
+
+/**
  * Full, absolute path prefixes for every manifest-declared offline-capable
  * plugin (research 0012) — bare `<routePrefix>` for any plugin declaring
  * either offline tier (`'offline-first'` or `'device-only'`), its one

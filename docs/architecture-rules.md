@@ -228,6 +228,17 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   regression, not intended production behavior. Never applies outside
   `next dev`; a production or staging deployment still defaults new plugins
   closed.
+- **A manifest `disabled: true` plugin is hard-disabled unconditionally,
+  including in local dev.** Unlike the row-less-defaults-to-open dev bypass
+  above, `getDisabledPluginIds()` (`runtime/src/plugin-status.ts`) computes
+  manifest hard-disabled ids (`getHardDisabledPluginIds()`,
+  `runtime/src/registry.ts`) _before_ checking `bypassPluginVisibilityInDev()`
+  and returns them regardless. This is deliberate: a hard disable is the
+  plugin author's own declaration shipped with the code, not a missing-row
+  default a local session should see through. It also has no DB override —
+  `activatePlugin()` (`runtime/src/plugin-catalog.ts`) refuses to create a
+  `plugin_status` row for one at all, and `runAllPluginMigrations()`
+  (`runtime/src/plugin-migrations.ts`) skips it entirely.
 - **Chrome plugins** (`fs.sovereign.launcher`, `fs.sovereign.account`,
   `fs.sovereign.console`) are reached through the sidebar chrome (home `/`,
   Console ⚙, Account avatar), never via the Launcher grid or the sidebar's

@@ -27,7 +27,9 @@ import { registry } from '../generated/registry';
  * currently unreachable for them anyway, since none of the three declare a
  * `migrations/` folder of their own.
  *
- * Plugins with no `migrations/{sqlite,postgres}/` folder are skipped silently.
+ * Plugins with no `migrations/{sqlite,postgres}/` folder are skipped silently,
+ * as are plugins declaring manifest `disabled: true` (a hard disable — see
+ * `packages/manifest/src/schema.ts`'s doc comment).
  * A failed plugin migration is logged but does not abort startup — the
  * compatibility check that follows will gate access to the broken plugin.
  * One plugin's failure must not take every *other* plugin down with it just
@@ -52,6 +54,12 @@ export async function runAllPluginMigrations(): Promise<void> {
   const idToDir = buildIdToDirMap();
 
   for (const manifest of registry) {
+    // Manifest hard-disable (`disabled: true`) — an author declaration to
+    // take a plugin fully out of reach, not just an admin's per-instance
+    // toggle. No reason to keep provisioning/migrating an isolated DB for a
+    // plugin nobody can reach.
+    if (manifest.disabled) continue;
+
     const isIsolated = manifestDatabaseIsolation(manifest.type) === 'isolated';
 
     const located = idToDir.get(manifest.id);

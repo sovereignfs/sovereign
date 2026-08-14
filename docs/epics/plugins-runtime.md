@@ -1560,6 +1560,16 @@ support" stays the default.
 
 #### 📋 3.37 — Unified offline storage SDK surface (Research 0012)
 
+> **Planning note (August 2026):** this task's execution plan is now split
+> across [workstream 0008](../workstreams/0008-offline-first-architecture.md)'s
+> legs 6 (IndexedDB + native-bridge backends) and 7 (the OPFS + `wa-sqlite`
+> backend, marked a gate) — see those legs for the current, authoritative
+> technical plan. Nothing here has shipped yet; this task stays 📋.
+> `device-only-kv.ts` (`@sovereignfs/sdk/device-only-kv`), shipped this
+> session, is a deliberately smaller, separate stopgap for `device-only`
+> plugins specifically — not this task's own deliverable, and not something
+> leg 6 migrates in place. See that module's own doc comment.
+
 **Goal:** One SDK surface over three storage backends, so a plugin author writes
 the same code whether the data lands in IndexedDB, OPFS-backed SQLite, or native
 SQLite.

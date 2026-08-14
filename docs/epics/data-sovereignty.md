@@ -753,7 +753,10 @@ codebase.
 > key/value only, no queries or joins. See RFC 0093 §1's own "Interim web
 > primitive" note. `offline.set` also now requires JSON-serializable values
 > (see `docs/upgrade.md`'s 1.41.0 → 1.42.0 entry) — a documented narrowing,
-> not a silent one.
+> not a silent one. The remaining relational-engine and encryption work is
+> now planned, not just noted here — see
+> [workstream 0008](../workstreams/0008-offline-first-architecture.md)'s
+> legs 6–8.
 
 **Goal:** Encrypt offline data on the device in **both** offline tiers, so
 "plaintext on disk" is never the answer anywhere. The tiers differ in what guards
@@ -807,10 +810,13 @@ round-trip against real data before considering this done.
 > PBKDF2, wrong-passphrase rejection, cross-"device" re-encryption) against
 > `device-only-kv.ts` — so Layer 1's warning is now backed by an actual
 > mitigation a user can act on, not just an accurate statement of risk.
-> **Not done:** the opt-in encrypted server backup cascade (Layer 3 —
-> `.env` → Console → per-plugin per-user gates); Account → Security's own UI
-> to trigger export/import is not wired up yet (the SDK functions exist and
-> are documented for plugin authors, but no product surface calls them).
+> Account → Security's "Export data"/"Import data" controls
+> (`DeviceStorageKeySection.tsx`) now call those functions directly — a user
+> can actually reach Layer 2, not just a plugin author. **Not done:** the
+> opt-in encrypted server backup cascade (Layer 3 — `.env` → Console →
+> per-plugin per-user gates) — now planned as
+> [workstream 0008](../workstreams/0008-offline-first-architecture.md)'s
+> leg 10.
 
 **Goal:** Implement what RFC 0093 decided happens to `device-only` data when
 the key dies — because with no server copy, a hardware-bound key that is

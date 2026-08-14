@@ -30,8 +30,10 @@ Defines how a `device-only` plugin's data is actually stored and protected —
 on a native shell (Capacitor) **and** on plain web/PWA — and what happens
 when the key that protects it dies. Five decisions, previously open:
 
-1. **Storage backend.** Native: SQLite via `@capacitor-community/sqlite`
-   (SQLCipher-encrypted, app-sandboxed). Web: OPFS + `wa-sqlite`
+1. **Storage backend.** Native: SQLite, SQLCipher-encrypted, app-sandboxed —
+   built directly against the SQLCipher native libraries, not the
+   `@capacitor-community/sqlite` plugin originally named here; see "Resolved
+   in v0.7" below for why. Web: OPFS + `wa-sqlite`
    (`OPFSCoopSyncVFS`), with `navigator.storage.persist()` requested at
    setup. Neither is IndexedDB, and the reason is the same on both:
    IndexedDB is evictable everywhere it was tested (research 0008).
@@ -127,13 +129,17 @@ something to build.
 
 ### 1. Storage backend
 
-**Native (Capacitor):** a SQLCipher-encrypted SQLite database via
-`@capacitor-community/sqlite`, one database per instance (not per plugin —
-mirrors `sdk.offline`'s existing shared-database, composite-key-per-plugin
-shape, so the storage layer's schema and isolation model don't have to be
-reinvented, only its backend swapped). Lives in the app's sandboxed
-storage — outside `WKWebsiteDataStore` on iOS, so it is not subject to the
-storage-pressure/non-interaction eviction policy IndexedDB is.
+**Native (Capacitor):** a SQLCipher-encrypted SQLite database, one database
+per instance (not per plugin — mirrors `sdk.offline`'s existing
+shared-database, composite-key-per-plugin shape, so the storage layer's
+schema and isolation model don't have to be reinvented, only its backend
+swapped). Lives in the app's sandboxed storage — outside `WKWebsiteDataStore`
+on iOS, so it is not subject to the storage-pressure/non-interaction
+eviction policy IndexedDB is. **Not** reached via `@capacitor-community/sqlite`
+as originally named here — see "Resolved in v0.7" under Open questions: that
+plugin's entire API is JS-facing and unreachable from this shell's bridge
+-isolated remote content, so `sovereign-mobile` links the same underlying
+native SQLCipher libraries directly instead.
 
 **Web/PWA:** OPFS via `wa-sqlite`'s `OPFSCoopSyncVFS` — research 0012's own
 "2026 production pick for the web," chosen specifically because it does
@@ -153,15 +159,28 @@ support — and is `true` if either is present. A plugin declaring
 0012, shipped in leg 3) applies — no manifest change, no plugin-visible
 branching.
 
-**Interim web primitive, stated plainly:** `device-only-kv.ts` implements a
-smaller piece of this today — an AES-GCM-encrypted key/value store over OPFS
-(one file per key, per plugin), using the unlocked Device Storage Key from
-`device-only-session.ts`. It is not the `wa-sqlite` relational engine
-described above; a plugin needing actual SQL (joins, indices, cross-record
-queries) is not served by it. It fully serves the more common case — durable,
-encrypted, per-record storage with no query needs — today, without waiting on
-the larger `wa-sqlite` integration. See `docs/plugin-development.md`'s
-`device-only` tier section for the plugin-facing API.
+**Interim key/value primitive, stated plainly:** `device-only-kv.ts` implements
+a smaller piece of this today, across both backends — not the `wa-sqlite`
+relational engine described above (a plugin needing actual SQL, joins,
+indices, or cross-record queries is not served by it), but durable, encrypted,
+per-record storage with no query needs, which is the more common case. Each
+function (`get`/`set`/`delete`/`list`/`clear`) checks `supports('secureStorage')`
+first: **native** routes straight through the bridge's `secureStorage`
+capability — `sovereign-mobile`'s SQLCipher database is already the
+encryption boundary, so no second, app-level encryption layer runs on this
+path; **web/PWA** falls through to the AES-GCM-encrypted-over-OPFS
+implementation (one file per key, per plugin) using the unlocked Device
+Storage Key from `device-only-session.ts`, as originally shipped. One
+exception: `listDeviceOnlyPluginIds()` (enumerate every plugin with
+`device-only` data, not a single plugin's own keys) stayed OPFS-only — the
+`secureStorage` wire protocol has no "list all plugin ids" operation, only
+per-plugin-scoped ones, and its only caller (`device-only-export.ts`'s full
+export/import, RFC 0093 §4 Layer 2) is itself web-only for the same reason,
+so the gap is already masked in practice. See `docs/plugin-development.md`'s
+`device-only` tier section for the plugin-facing API, and
+`example-plugins/example-device-only` for a plugin exercising both backends
+end to end, including its own transport-specific gating (see "Resolved in
+v0.7 (continued)" under Open questions).
 
 ### 2. Primary key custody
 
@@ -175,12 +194,22 @@ generated on-device and held in:
 
 Release requires a live biometric-**or**-passcode prompt, subject to the
 re-lock policy below. Implemented as a new `secureStorage` capability in
-`@sovereignfs/bridge`'s Capacitor transport, calling through a dedicated
-Keychain/Keystore-backed secure-storage plugin (candidate:
-`@aparajita/capacitor-secure-storage` or equivalent — final pick is an
-implementation-time evaluation, see Open questions). `sdk.device.*` never
-talks to Keychain/Keystore directly; it calls the bridge capability,
-matching every other native capability in RFC 0083's contract.
+`@sovereignfs/bridge`'s Capacitor transport, calling through a thin custom
+bridge written directly against `LocalAuthentication`/`BiometricPrompt` +
+Keychain/Keystore — see "Resolved in v0.6" under Open questions for why no
+third-party plugin was adopted. `sdk.device.*` never talks to
+Keychain/Keystore directly; it calls the bridge capability, matching every
+other native capability in RFC 0083's contract.
+
+Android Keystore keys are non-extractable by design — there is no route to
+the raw key bytes this section describes for iOS's Keychain. `sovereign-mobile`
+resolves this with envelope encryption: a `SecureRandom`-generated database
+key is wrapped by an authentication-gated Keystore AES key and the ciphertext
+lives in `SharedPreferences`, unwrapped via `Cipher.init()` on every use —
+still authentication-gated, so the property this section actually requires
+(release of the key is gated) holds identically; only the storage mechanics
+differ. See that repo's own `docs/epics/bridge.md` task 20.13 entry for the
+full implementation detail on both platforms.
 
 **Web/PWA:** WebAuthn's PRF extension, via `navigator.credentials.get()`
 against the user's existing passkey. If the existing credential doesn't
@@ -539,6 +568,88 @@ scratch" as unconditional — but the bar stays "verified to bind the
 device-credential-inclusive access-control flag to the item itself," not
 "has a biometric prompt somewhere in its API."
 
+**Resolved in v0.7** (`sovereign-mobile` implementation, August 2026) — the
+storage-backend pick from section 1, `@capacitor-community/sqlite`, is
+unusable as this shell is built and was replaced with a direct SQLCipher
+library dependency, not evaluated against alternatives (there was no
+alternative-plugin question here — the finding ruled out the entire "native
+storage via a Capacitor plugin" approach, not just one plugin's choice of
+access-control flag as v0.6 did for key custody).
+
+The problem: `@capacitor-community/sqlite`'s entire API is JS-facing
+(`window.Capacitor` + registered-plugin calls from page JS), but this shell
+strips Capacitor's own bridge from the WebView whenever it shows remote
+content — `sovereign-mobile`'s `MainViewController.swift` documents this as
+"Bridge isolation," a hard security property of the shell (RFC 0080's
+device-surface model depends on the remote page never reaching raw
+Capacitor), not a bug to route around. The plugin has no native-to-native
+API to call instead; its Swift/Kotlin implementation is written to be driven
+by its own JS bridge glue, which is exactly what gets removed. This was
+confirmed by inspecting the plugin's own source (its podspec/`build.gradle`
+dependency declarations), not assumed.
+
+**The fix:** link the same underlying native SQLCipher libraries that
+plugin itself depends on, directly — `SQLCipher.swift` (the official
+Zetetic-maintained Swift Package) on iOS, `net.zetetic:sqlcipher-android` +
+`androidx.sqlite:sqlite` on Android — bypassing the plugin wrapper entirely.
+Both link and build-verify cleanly (real `xcodebuild`/`:app:assembleDebug`
+runs, not just dependency resolution) against `sovereign-mobile`'s existing
+project structure. Full detail, including the resulting iOS/Android
+key-custody divergence this forced (Android Keystore's non-extractability,
+noted in section 2 above), lives in that repo's own
+`docs/epics/bridge.md` task 20.13 entry — not restated here since it's
+implementation detail this RFC's "Native (Capacitor)" line only needs to
+name correctly, not fully re-derive.
+
+This is a correction to this RFC's own section 1, not a new decision this
+RFC needed to make: the _shape_ section 1 specifies (a SQLCipher-encrypted
+SQLite database, app-sandboxed, one per instance) is unchanged and fully
+delivered — only the mechanism reaching it (direct library linkage instead
+of a Capacitor plugin) differs from what was originally named.
+
+**Resolved in v0.7 (continued)** — with the native `secureStorage` bridge
+capability build- and interactively-verified on both platforms (task 20.13),
+two plugin-facing gaps stood between that and an actually-usable
+`device-only` tier on native shells, both found and closed by live-testing
+against a real installed native app rather than trusting the earlier
+build-verification alone:
+
+1. `plugins/account/app/_components/DeviceStorageKeySection.tsx` (the
+   Account → Security setup UI) unconditionally called the web-only
+   `getDeviceStorageKeyStatus()`, which always answers `'unsupported'` on
+   native (it checks WebAuthn/OPFS availability, not the bridge) — making
+   the entire section permanently unreachable there. Fixed with a
+   transport-specific dispatcher: `supports('secureStorage')` picks between
+   a native branch (no enrollment step — native has none, the OS gates every
+   `secureStorage` call directly — just a "Verify it works" round-trip
+   button surfacing the device's real state, including the `'no-device-auth'`
+   hard block from section 5) and the original web/PWA setup flow, unchanged.
+2. `device-only-kv.ts` itself — the actual plugin-data storage primitive the
+   fix above only gates access to — was still entirely OPFS-only, so even
+   after fix 1, no `device-only` plugin could persist anything on a native
+   shell; the read/write would silently no-op against a key derivation path
+   (`getUnlockedDeviceStorageKey()`) that only ever returns `'unsupported'`
+   there. Closed as described in section 1's "Interim key/value primitive"
+   paragraph above: each of `get`/`set`/`delete`/`list`/`clear` now checks
+   `supports('secureStorage')` and routes through the bridge on native,
+   falling through to the original OPFS path otherwise.
+
+The reference plugin (`example-plugins/example-device-only`,
+`DeviceOnlyNotesView.tsx`) had the same class of bug as fix 1 — it gated its
+own content behind `getDeviceStorageKeyStatus()` unconditionally, so it
+would have stayed permanently blocked on native even with both fixes above
+in place. Given the same transport-specific treatment: on native it skips
+straight to its `NotesPanel` (no enrollment gate to pass), and hides the
+web-only unlock-session badge/"Lock now" control and the
+`ExportImportPanel` (RFC 0093 §4 Layer 2's export/import is web-only for the
+same `listDeviceOnlyPluginIds()` reason noted above) rather than presenting
+controls that would silently do nothing. Verified live on the iOS
+Simulator against a real installed native app, not just typechecked: created
+a note, confirmed it round-tripped through the bridge, force-killed and
+relaunched the app, and confirmed the note survived — proving the write
+path goes through the actual SQLCipher database rather than an in-memory
+cache that a fresh JS context would lose.
+
 Still open:
 
 1. **Minimum browser/OS support floor for web `device-only`.** PRF needs
@@ -570,11 +681,13 @@ task 20.13's own scope, not this RFC's.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| ------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.6     | August 2026 | Open question 1 (Capacitor secure-storage plugin choice) resolved: a thin custom bridge, not a third-party plugin. None of the readily available candidates bind a device-credential-inclusive access-control flag to the storage item itself — `@aparajita/capacitor-secure-storage` gates biometry via a separate, non-binding companion check (the JS-side-gate pattern this RFC already rejects), `capacitor-secure-storage-plugin` has no access-control option at all, and `@drefrajo/capacitor-biometric-keychain`'s binding mechanism isn't verifiable from its public docs. Confirmed by the developer; `sovereign-mobile` should still re-check the plugin landscape at build time against the stated bar, not treat this as unconditional, but the default is now build-it, not evaluate-first. |
-| 0.5     | August 2026 | Enrollment centralized: one "Device Storage Key" (renamed from "Device Key" to avoid colliding with RFC 0060's existing, unrelated internal "device key" concept), set up once in Account → Security (parallel to RFC 0060's Client-side encryption section, cryptographically independent from it), shared by every `device-only` plugin — not triggered per-plugin. A plugin missing it directs the user to Account → Security instead of running its own enrollment ceremony. Decouples Device Storage Key lifecycle from any plugin's access grant (RFC 0065) entirely. Section 2, section 3 wording updated to match.                                                                                                                                                                                 |
-| 0.4     | August 2026 | Resolved the three remaining open questions: PRF salt/versioning scheme (fixed purpose-scoped salt + version tag, section 2), re-lock policy (timed default with a user override, chosen specifically to close the iOS/Android backgrounding-behavior asymmetry task 20.10 found, section 2), and the RFC 0060 integration shape (device-only's recovery secret is independent of RFC 0060's CMK recovery secret, section 3).                                                                                                                                                                                                                                                                                                                                                                              |
-| 0.3     | August 2026 | Accepted. Unblocks workstream 0008 leg 4 — see the workstream doc's own changelog for the leg-4 status update this triggered.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| 0.2     | August 2026 | Brought web/PWA into scope (was deferred in 0.1): WebAuthn PRF key custody, OPFS/`wa-sqlite` storage, `navigator.storage.persist()` handling. Corrected an error in 0.1 — replaced `kSecAccessControlBiometryCurrentSet` with a `userPresence`-equivalent flag everywhere, matching an accessibility requirement research 0012 and epic task 1.22 had already established; resolves research 0012's open question 3 as well as open question 1.                                                                                                                                                                                                                                                                                                                                                            |
-| 0.1     | August 2026 | Initial draft, from a design session resolving research 0012's escrow open question and elaborating its device-only key-custody recommendation. Native (Capacitor) only; web explicitly deferred.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.8     | August 2026 | Closed the gap between task 20.13's build-verified native `secureStorage` bridge and an actually-usable native `device-only` tier, found by live-testing against a real installed native app rather than trusting the build-verification alone: `DeviceStorageKeySection.tsx` and `device-only-kv.ts` both unconditionally used web-only status/key-derivation functions that always answer "unsupported" on native, permanently blocking the tier's UI and its data storage respectively. Both now dispatch on `supports('secureStorage')`; `device-only-kv.ts`'s native path routes straight through the bridge with no app-level re-encryption layer (the SQLCipher database is already the encryption boundary), matching every function except `listDeviceOnlyPluginIds()` (no bridge equivalent exists, and its only caller is already web-only). The reference plugin (`example-plugins/example-device-only`) had the same gating bug and was fixed the same way. Verified live on the iOS Simulator: a note written through the reference plugin survived a force-kill and relaunch of the app. Section 1 and "Resolved in v0.7" under Open questions updated. |
+| 0.7     | August 2026 | Section 1's storage-backend pick corrected: `@capacitor-community/sqlite` is unusable in `sovereign-mobile` as built — its JS-facing API is unreachable from the remote page under this shell's bridge-isolation model. Replaced with a direct SQLCipher library dependency (`SQLCipher.swift` on iOS, `net.zetetic:sqlcipher-android` on Android), confirmed by inspecting the plugin's own source and build- and link-verified on both platforms. Section 2 updated to note Android Keystore's non-extractability forces envelope encryption there, unlike iOS's direct Keychain-held raw key. See "Resolved in v0.7" under Open questions.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 0.6     | August 2026 | Open question 1 (Capacitor secure-storage plugin choice) resolved: a thin custom bridge, not a third-party plugin. None of the readily available candidates bind a device-credential-inclusive access-control flag to the storage item itself — `@aparajita/capacitor-secure-storage` gates biometry via a separate, non-binding companion check (the JS-side-gate pattern this RFC already rejects), `capacitor-secure-storage-plugin` has no access-control option at all, and `@drefrajo/capacitor-biometric-keychain`'s binding mechanism isn't verifiable from its public docs. Confirmed by the developer; `sovereign-mobile` should still re-check the plugin landscape at build time against the stated bar, not treat this as unconditional, but the default is now build-it, not evaluate-first.                                                                                                                                                                                                                                                                                                                                                             |
+| 0.5     | August 2026 | Enrollment centralized: one "Device Storage Key" (renamed from "Device Key" to avoid colliding with RFC 0060's existing, unrelated internal "device key" concept), set up once in Account → Security (parallel to RFC 0060's Client-side encryption section, cryptographically independent from it), shared by every `device-only` plugin — not triggered per-plugin. A plugin missing it directs the user to Account → Security instead of running its own enrollment ceremony. Decouples Device Storage Key lifecycle from any plugin's access grant (RFC 0065) entirely. Section 2, section 3 wording updated to match.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 0.4     | August 2026 | Resolved the three remaining open questions: PRF salt/versioning scheme (fixed purpose-scoped salt + version tag, section 2), re-lock policy (timed default with a user override, chosen specifically to close the iOS/Android backgrounding-behavior asymmetry task 20.10 found, section 2), and the RFC 0060 integration shape (device-only's recovery secret is independent of RFC 0060's CMK recovery secret, section 3).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 0.3     | August 2026 | Accepted. Unblocks workstream 0008 leg 4 — see the workstream doc's own changelog for the leg-4 status update this triggered.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 0.2     | August 2026 | Brought web/PWA into scope (was deferred in 0.1): WebAuthn PRF key custody, OPFS/`wa-sqlite` storage, `navigator.storage.persist()` handling. Corrected an error in 0.1 — replaced `kSecAccessControlBiometryCurrentSet` with a `userPresence`-equivalent flag everywhere, matching an accessibility requirement research 0012 and epic task 1.22 had already established; resolves research 0012's open question 3 as well as open question 1.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 0.1     | August 2026 | Initial draft, from a design session resolving research 0012's escrow open question and elaborating its device-only key-custody recommendation. Native (Capacitor) only; web explicitly deferred.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |

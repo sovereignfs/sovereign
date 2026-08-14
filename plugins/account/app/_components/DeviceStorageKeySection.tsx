@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { createAuthClient } from 'better-auth/react';
 import type { BetterAuthClientPlugin } from 'better-auth/client';
 import { passkeyClient } from '@better-auth/passkey/client';
-import { Button, ConfirmDialog, FormField, Select } from '@sovereignfs/ui';
+import { Button, ConfirmDialog, FormField, Input, Select } from '@sovereignfs/ui';
+import { secureStorage, supports } from '@sovereignfs/sdk/device-client';
 import {
   deriveDeviceOnlyKeyViaPrf,
   fromBase64Url,
@@ -23,6 +24,12 @@ import {
   saveWrappedDeviceStorageKeys,
 } from '@sovereignfs/sdk/device-only-storage';
 import { lockDeviceStorageKey } from '@sovereignfs/sdk/device-only-session';
+import { exportDeviceOnlyData, importDeviceOnlyData } from '@sovereignfs/sdk/device-only-export';
+import type {
+  DeviceOnlyExportFile,
+  DeviceOnlyExportResult,
+  DeviceOnlyImportResult,
+} from '@sovereignfs/sdk/device-only-export';
 import type { DeviceStorageKeyStatus, ReLockPolicy } from '@sovereignfs/sdk/device-only-storage';
 import styles from '../account.module.css';
 
@@ -37,7 +44,24 @@ const RE_LOCK_POLICY_OPTIONS: ReLockPolicy[] = ['immediate', '1m', '5m', '15m', 
 
 /** `'checking'` is a local UI-only state before `getDeviceStorageKeyStatus` resolves — same pattern as EncryptionSection's own `LocalState`. */
 type LocalState = 'checking' | DeviceStorageKeyStatus;
-type View = 'idle' | 'setup';
+type View = 'idle' | 'setup' | 'export' | 'import';
+
+/**
+ * Every export/import failure mode short of the two import-specific ones
+ * (`invalid-passphrase`/`invalid-file`) is one of `getUnlockedDeviceStorageKey()`'s
+ * own non-`'ok'` statuses, re-surfaced unchanged by both
+ * `exportDeviceOnlyData`/`importDeviceOnlyData` — see their own doc
+ * comments in `device-only-export.ts`. Shared here rather than duplicated
+ * per flow.
+ */
+function unlockFailureMessage(
+  status: 'unsupported' | 'no-device-auth' | 'not-set-up' | 'cancelled' | 'failed',
+  error?: string,
+): string {
+  if (status === 'cancelled') return 'Cancelled.';
+  if (status === 'failed') return error ?? 'Something went wrong. Please try again.';
+  return 'Device Storage Key isn’t available right now — check its status above and try again.';
+}
 
 interface PendingSetup {
   secret: string;
@@ -276,7 +300,349 @@ function AutoLockControl() {
   );
 }
 
-// ── Main section ──────────────────────────────────────────────────────────
+// ── Export ────────────────────────────────────────────────────────────────
+//
+// RFC 0093 §4 Layer 2 — the always-available, no-server floor for moving
+// device-only data to a new device or just having a backup. Passphrase is
+// user-chosen here (unlike the machine-generated recovery code above), so it
+// is typed twice to catch mistakes before the file is unusable.
+
+function ExportFlow({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+  const [passphrase, setPassphrase] = useState('');
+  const [confirmPassphrase, setConfirmPassphrase] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function handleExport() {
+    setError(null);
+    if (passphrase !== confirmPassphrase) {
+      setError('Passphrases don’t match.');
+      return;
+    }
+    if (passphrase.length < 8) {
+      setError('Use a passphrase of at least 8 characters.');
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const result: DeviceOnlyExportResult = await exportDeviceOnlyData(passphrase);
+        if (result.status !== 'ok') {
+          setError(
+            unlockFailureMessage(
+              result.status,
+              result.status === 'failed' ? result.error : undefined,
+            ),
+          );
+          return;
+        }
+        downloadExportFile(result.file);
+        onDone();
+      } catch {
+        setError('Something went wrong exporting your data. Please try again.');
+      }
+    });
+  }
+
+  return (
+    <div className={styles.form}>
+      <p className={styles.help}>
+        Downloads a single encrypted file with every app&rsquo;s data that lives only on this
+        device. Choose a passphrase to protect it — you&rsquo;ll need the same passphrase to restore
+        it on another device. Sovereign doesn&rsquo;t store this passphrase and can&rsquo;t recover
+        it for you if you lose it.
+      </p>
+      <FormField label="Passphrase" id="device-only-export-passphrase" required>
+        {(field) => (
+          <Input
+            {...field}
+            type="password"
+            value={passphrase}
+            onChange={(e) => setPassphrase(e.currentTarget.value)}
+            autoComplete="new-password"
+          />
+        )}
+      </FormField>
+      <FormField label="Confirm passphrase" id="device-only-export-passphrase-confirm" required>
+        {(field) => (
+          <Input
+            {...field}
+            type="password"
+            value={confirmPassphrase}
+            onChange={(e) => setConfirmPassphrase(e.currentTarget.value)}
+            autoComplete="new-password"
+          />
+        )}
+      </FormField>
+      {error && <p className={styles.error}>{error}</p>}
+      <div className={styles.buttonRow}>
+        <button type="button" onClick={onCancel} className={styles.revokeButton}>
+          Cancel
+        </button>
+        <Button
+          type="button"
+          disabled={!passphrase || !confirmPassphrase || pending}
+          onClick={handleExport}
+        >
+          {pending ? 'Exporting…' : 'Download export'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Matches `PortabilityPanel.tsx`'s own download pattern (RFC 0007) exactly —
+ * the anchor must be attached to the document before `.click()` for some
+ * browsers to honor `download`, not just constructed in memory.
+ */
+function downloadExportFile(file: DeviceOnlyExportFile): void {
+  const blob = new Blob([JSON.stringify(file)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `sovereign-device-only-export-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ── Import ────────────────────────────────────────────────────────────────
+//
+// Restores a file from `ExportFlow` (this device or another) into this
+// device's own store, re-encrypted under this device's own unlocked key —
+// `importDeviceOnlyData` never copies ciphertext across devices, see its own
+// doc comment. A full restore, not a merge: an existing value under the same
+// app/item name on this device is overwritten.
+
+function ImportFlow({
+  onDone,
+  onCancel,
+}: {
+  onDone: (summary: string) => void;
+  onCancel: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [passphrase, setPassphrase] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function handleImport() {
+    if (!selectedFile) return;
+    setError(null);
+    startTransition(async () => {
+      let parsed: DeviceOnlyExportFile;
+      try {
+        parsed = JSON.parse(await selectedFile.text()) as DeviceOnlyExportFile;
+      } catch {
+        setError('That file doesn’t look like a Sovereign export.');
+        return;
+      }
+      try {
+        const result: DeviceOnlyImportResult = await importDeviceOnlyData(parsed, passphrase);
+        if (result.status === 'invalid-passphrase') {
+          setError('Incorrect passphrase.');
+          return;
+        }
+        if (result.status === 'invalid-file') {
+          setError('That file doesn’t look like a Sovereign export.');
+          return;
+        }
+        if (result.status !== 'ok') {
+          setError(
+            unlockFailureMessage(
+              result.status,
+              result.status === 'failed' ? result.error : undefined,
+            ),
+          );
+          return;
+        }
+        onDone(
+          `Restored ${String(result.entryCount)} item${result.entryCount === 1 ? '' : 's'} across ${String(result.pluginCount)} app${result.pluginCount === 1 ? '' : 's'}.`,
+        );
+      } catch {
+        setError('Something went wrong restoring your data. Please try again.');
+      }
+    });
+  }
+
+  return (
+    <div className={styles.form}>
+      <p className={styles.help}>
+        Restores data from an export file onto this device. This replaces any existing data under
+        the same app and item name on this device.
+      </p>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/json"
+        className={styles.hiddenInput}
+        onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+      />
+      <button
+        type="button"
+        className={styles.revokeButton}
+        onClick={() => inputRef.current?.click()}
+      >
+        {selectedFile ? selectedFile.name : 'Choose export file'}
+      </button>
+      <FormField label="Passphrase" id="device-only-import-passphrase" required>
+        {(field) => (
+          <Input
+            {...field}
+            type="password"
+            value={passphrase}
+            onChange={(e) => setPassphrase(e.currentTarget.value)}
+            autoComplete="off"
+          />
+        )}
+      </FormField>
+      {error && <p className={styles.error}>{error}</p>}
+      <div className={styles.buttonRow}>
+        <button type="button" onClick={onCancel} className={styles.revokeButton}>
+          Cancel
+        </button>
+        <Button
+          type="button"
+          disabled={!selectedFile || !passphrase || pending}
+          onClick={handleImport}
+        >
+          {pending ? 'Restoring…' : 'Restore'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Native (Capacitor) ────────────────────────────────────────────────────
+//
+// The `secureStorage` bridge capability (sovereign-mobile's
+// `SecureDatabase.swift`/`SecureDatabase.java`) already gates every
+// operation behind the device's own biometric-or-passcode prompt and
+// auto-generates its own Keychain/Keystore-held database key on first use —
+// there is no separate JS-side enrollment ceremony to run here the way the
+// web/PWA flow below needs (no WebAuthn PRF, no wrapped-key storage,
+// nothing to "set up" from this component's perspective). This section's
+// job on native is narrower: explain that, and offer a real round-trip
+// through the bridge so a user (or tester) can confirm it actually works,
+// surfacing the device's real state — including RFC 0093 §5's
+// no-device-auth hard block — rather than precomputing it. There is no
+// cheap, no-prompt status check to run eagerly on mount the way the web
+// path's `getDeviceStorageKeyStatus()` has: every native `secureStorage`
+// operation needs the database open, unlike the old per-item Keychain
+// scheme where a read of a nonexistent key never touched the OS prompt.
+//
+// Auto-lock and export/import are deliberately not offered here. The
+// re-lock window is currently fixed native-side
+// (`SecureStorage.swift`/`SecureStorage.java`'s own 300s constant, not yet
+// wired to this section's saved policy — see sovereign-mobile's
+// `docs/epics/bridge.md` task 20.13 follow-up note), and
+// `device-only-export.ts`/`device-only-kv.ts` are themselves OPFS-only
+// today — neither reads or writes through the native `secureStorage`
+// bridge, so showing either control here would offer a setting or an
+// export that silently does nothing.
+
+const NATIVE_VERIFY_PLUGIN_ID = 'fs.sovereign.account';
+const NATIVE_VERIFY_KEY = 'device-storage-key-verify';
+
+type NativeVerifyState = 'idle' | 'pending' | 'ok' | 'no-device-auth' | 'dismissed' | 'failed';
+
+function NativeDeviceStorageKeySection() {
+  const [state, setState] = useState<NativeVerifyState>('idle');
+  const [error, setError] = useState<string | null>(null);
+
+  function handleVerify() {
+    setState('pending');
+    setError(null);
+    void (async () => {
+      const probeValue = Date.now();
+      const writeResult = await secureStorage.set(
+        NATIVE_VERIFY_PLUGIN_ID,
+        NATIVE_VERIFY_KEY,
+        probeValue,
+      );
+      switch (writeResult.status) {
+        case 'unavailable':
+          setState('no-device-auth');
+          return;
+        case 'dismissed':
+          setState('dismissed');
+          return;
+        case 'denied':
+        case 'failed':
+          setState('failed');
+          setError(writeResult.status === 'failed' ? writeResult.error : null);
+          return;
+        case 'ok':
+          break;
+      }
+
+      const readResult = await secureStorage.get<number>(
+        NATIVE_VERIFY_PLUGIN_ID,
+        NATIVE_VERIFY_KEY,
+      );
+      switch (readResult.status) {
+        case 'unavailable':
+          setState('no-device-auth');
+          return;
+        case 'dismissed':
+          setState('dismissed');
+          return;
+        case 'denied':
+        case 'failed':
+          setState('failed');
+          setError(readResult.status === 'failed' ? readResult.error : null);
+          return;
+        case 'ok':
+          if (readResult.value === probeValue) {
+            setState('ok');
+          } else {
+            setState('failed');
+            setError('Wrote successfully but could not read the value back correctly.');
+          }
+          return;
+      }
+    })();
+  }
+
+  return (
+    <div className={styles.passkeySection}>
+      <p className={styles.help}>
+        Unlocks apps that keep their data only on this device — no server copy, nothing to sync. On
+        the native app this is handled automatically by your device&rsquo;s own passcode,
+        fingerprint, or face unlock; there is nothing to set up here.
+      </p>
+      {state === 'ok' && (
+        <p className={styles.success}>
+          Verified — your device&rsquo;s passcode, fingerprint, or face unlock works for apps that
+          keep data only on this device.
+        </p>
+      )}
+      {state === 'no-device-auth' && (
+        <p className={styles.help}>
+          This device has no passcode, fingerprint, or face unlock set up — Sovereign can&rsquo;t
+          protect on-device data without it. Set one up in your device&rsquo;s system settings, then
+          try again.
+        </p>
+      )}
+      {state === 'dismissed' && <p className={styles.help}>Cancelled.</p>}
+      {state === 'failed' && (
+        <p className={styles.error}>{error ?? 'Something went wrong. Please try again.'}</p>
+      )}
+      <button
+        type="button"
+        className={styles.revokeButton}
+        disabled={state === 'pending'}
+        onClick={handleVerify}
+      >
+        {state === 'pending' ? 'Checking…' : 'Verify it works'}
+      </button>
+    </div>
+  );
+}
+
+// ── Web/PWA main section ─────────────────────────────────────────────────
 //
 // No server-side data to fetch: unlike RFC 0060's CMK, the Device Storage
 // Key is never synced across devices (RFC 0093 §3) — setup state lives
@@ -284,12 +650,13 @@ function AutoLockControl() {
 // and no server action for the core setup fact itself. Moving data to a new
 // device is RFC 0093 §4's own export/import layer, not this key.
 
-export function DeviceStorageKeySection() {
+function WebDeviceStorageKeySection() {
   const [localState, setLocalState] = useState<LocalState>('checking');
   const [view, setView] = useState<View>('idle');
   const [forgetOpen, setForgetOpen] = useState(false);
   const [forgetPending, startForget] = useTransition();
   const [checkAgainPending, startCheckAgain] = useTransition();
+  const [importSummary, setImportSummary] = useState<string | null>(null);
 
   async function refreshLocalState() {
     setLocalState(await getDeviceStorageKeyStatus());
@@ -351,6 +718,22 @@ export function DeviceStorageKeySection() {
     );
   }
 
+  if (view === 'export') {
+    return <ExportFlow onCancel={() => setView('idle')} onDone={() => setView('idle')} />;
+  }
+
+  if (view === 'import') {
+    return (
+      <ImportFlow
+        onCancel={() => setView('idle')}
+        onDone={(summary) => {
+          setImportSummary(summary);
+          setView('idle');
+        }}
+      />
+    );
+  }
+
   if (localState === 'not-set-up') {
     return (
       <div className={styles.passkeySection}>
@@ -377,6 +760,22 @@ export function DeviceStorageKeySection() {
         </button>
       </div>
       <AutoLockControl />
+      {importSummary && <p className={styles.success}>{importSummary}</p>}
+      <div className={styles.buttonRow}>
+        <button type="button" className={styles.revokeButton} onClick={() => setView('export')}>
+          Export data
+        </button>
+        <button
+          type="button"
+          className={styles.revokeButton}
+          onClick={() => {
+            setImportSummary(null);
+            setView('import');
+          }}
+        >
+          Import data
+        </button>
+      </div>
       <ConfirmDialog
         open={forgetOpen}
         onClose={() => setForgetOpen(false)}
@@ -389,4 +788,35 @@ export function DeviceStorageKeySection() {
       />
     </div>
   );
+}
+
+// ── Transport dispatch ───────────────────────────────────────────────────
+//
+// The one thing every render path here needs to get right before anything
+// else: which of the two independent `device-only` backends (RFC 0093 §1)
+// this surface is actually running against. `supports('secureStorage')` is
+// the same check `isDeviceOnlyTierAvailable()` uses for the native half —
+// checked here directly, rather than inferring it from `getTransport()`'s
+// coarser platform value, so this stays correct if a future shell (desktop)
+// ever implements the same bridge capability. A native shell never has the
+// web/PWA backend simultaneously (WebAuthn PRF + OPFS support is
+// irrelevant inside a Capacitor WebView even where present), so this is a
+// strict either/or, not a preference order.
+//
+// Deferred to a mount-time effect, not read directly in render — this
+// package's own hard rule against reading browser/bridge globals during
+// render (matching `useDeviceEnvironment()`'s identical `null`-until-mount
+// pattern above) applies to the bridge handshake the same way it does to
+// `navigator`/`window`.
+
+export function DeviceStorageKeySection() {
+  const [nativeSecureStorage, setNativeSecureStorage] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setNativeSecureStorage(supports('secureStorage'));
+  }, []);
+
+  if (nativeSecureStorage === null) return null;
+  if (nativeSecureStorage) return <NativeDeviceStorageKeySection />;
+  return <WebDeviceStorageKeySection />;
 }

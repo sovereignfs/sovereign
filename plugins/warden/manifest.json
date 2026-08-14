@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "id": "fs.sovereign.warden",
   "name": "Warden",
+  "development": true,
   "version": "0.1.0",
   "description": "Basic local chat, powered entirely by infrastructure you control.",
   "type": "platform",

@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getUnlockedDeviceStorageKey = vi.fn();
+const supports = vi.fn();
+const secureStorageGet = vi.fn();
+const secureStorageSet = vi.fn();
+const secureStorageRemove = vi.fn();
+const secureStorageKeys = vi.fn();
+const secureStorageClear = vi.fn();
 
 vi.mock('../device-only-session', async () => {
   const actual =
@@ -10,6 +16,21 @@ vi.mock('../device-only-session', async () => {
     getUnlockedDeviceStorageKey: (...args: unknown[]) => getUnlockedDeviceStorageKey(...args),
   };
 });
+
+// `supports('secureStorage')` defaults to `false` in every test below that
+// doesn't touch it — no bridge registered, matching a plain browser — same
+// default the real `getBridge()` falls back to. Only the "native" describe
+// block overrides it.
+vi.mock('../device-client', () => ({
+  supports: (...args: unknown[]) => supports(...args),
+  secureStorage: {
+    get: (...args: unknown[]) => secureStorageGet(...args),
+    set: (...args: unknown[]) => secureStorageSet(...args),
+    remove: (...args: unknown[]) => secureStorageRemove(...args),
+    keys: (...args: unknown[]) => secureStorageKeys(...args),
+    clear: (...args: unknown[]) => secureStorageClear(...args),
+  },
+}));
 
 const {
   clearDeviceOnlyPluginData,
@@ -101,6 +122,12 @@ async function generateFakeDeviceStorageKey(): Promise<CryptoKey> {
 describe('device-only-kv', () => {
   beforeEach(() => {
     getUnlockedDeviceStorageKey.mockReset();
+    supports.mockReset().mockReturnValue(false);
+    secureStorageGet.mockReset();
+    secureStorageSet.mockReset();
+    secureStorageRemove.mockReset();
+    secureStorageKeys.mockReset();
+    secureStorageClear.mockReset();
   });
 
   afterEach(() => {
@@ -234,5 +261,100 @@ describe('device-only-kv', () => {
   it('clearing a plugin with nothing stored is a no-op', async () => {
     stubOpfs();
     await expect(clearDeviceOnlyPluginData('io.example.notes')).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * Regression coverage for the gap this describe block exists to close:
+ * every function here used to be OPFS-only, so a native shell (where
+ * `getUnlockedDeviceStorageKey()` always fails — no WebAuthn PRF/OPFS in a
+ * Capacitor WebView) could never actually store `device-only` plugin data,
+ * even though `isDeviceOnlyTierAvailable()` correctly reported the tier as
+ * available there. Each function now checks `supports('secureStorage')`
+ * first and, when true, routes through the bridge instead of ever touching
+ * OPFS or `getUnlockedDeviceStorageKey()`.
+ */
+describe('device-only-kv — native (Capacitor)', () => {
+  beforeEach(() => {
+    supports.mockReturnValue(true);
+  });
+
+  it('reads a value through the bridge and never touches the web unlock path', async () => {
+    secureStorageGet.mockResolvedValue({ status: 'ok', value: { title: 'Grocery list' } });
+
+    const result = await getDeviceOnlyValue('io.example.notes', 'note-1');
+
+    expect(result).toEqual({ status: 'ok', value: { title: 'Grocery list' } });
+    expect(secureStorageGet).toHaveBeenCalledWith('io.example.notes', 'note-1');
+    expect(getUnlockedDeviceStorageKey).not.toHaveBeenCalled();
+  });
+
+  it('reports value: undefined for a null (never-written) bridge read', async () => {
+    secureStorageGet.mockResolvedValue({ status: 'ok', value: null });
+
+    const result = await getDeviceOnlyValue('io.example.notes', 'missing');
+
+    expect(result).toEqual({ status: 'ok', value: undefined });
+  });
+
+  it('maps an unavailable read to no-device-auth', async () => {
+    secureStorageGet.mockResolvedValue({ status: 'unavailable', capability: 'secureStorage' });
+
+    const result = await getDeviceOnlyValue('io.example.notes', 'note-1');
+
+    expect(result).toEqual({ status: 'no-device-auth' });
+  });
+
+  it('maps a dismissed write to cancelled', async () => {
+    secureStorageSet.mockResolvedValue({ status: 'dismissed' });
+
+    const result = await setDeviceOnlyValue('io.example.notes', 'note-1', { x: 1 });
+
+    expect(result).toEqual({ status: 'cancelled' });
+    expect(getUnlockedDeviceStorageKey).not.toHaveBeenCalled();
+  });
+
+  it('maps a failed write to failed with the bridge error message', async () => {
+    secureStorageSet.mockResolvedValue({
+      status: 'failed',
+      error: 'Keychain write failed (-25299)',
+    });
+
+    const result = await setDeviceOnlyValue('io.example.notes', 'note-1', { x: 1 });
+
+    expect(result).toEqual({ status: 'failed', error: 'Keychain write failed (-25299)' });
+  });
+
+  it('writes a plaintext value through the bridge — no app-level re-encryption', async () => {
+    secureStorageSet.mockResolvedValue({ status: 'ok', value: undefined });
+
+    await setDeviceOnlyValue('io.example.notes', 'note-1', { title: 'Grocery list' });
+
+    expect(secureStorageSet).toHaveBeenCalledWith('io.example.notes', 'note-1', {
+      title: 'Grocery list',
+    });
+  });
+
+  it('deletes through the bridge and swallows a bridge failure to a no-op', async () => {
+    secureStorageRemove.mockResolvedValue({ status: 'dismissed' });
+
+    await expect(deleteDeviceOnlyValue('io.example.notes', 'note-1')).resolves.toBeUndefined();
+    expect(secureStorageRemove).toHaveBeenCalledWith('io.example.notes', 'note-1');
+  });
+
+  it('lists keys through the bridge and returns an empty array on any non-ok status', async () => {
+    secureStorageKeys.mockResolvedValue({ status: 'ok', value: ['note-1', 'note-2'] });
+    await expect(listDeviceOnlyKeys('io.example.notes')).resolves.toEqual(['note-1', 'note-2']);
+
+    secureStorageKeys.mockResolvedValue({ status: 'unavailable', capability: 'secureStorage' });
+    await expect(listDeviceOnlyKeys('io.example.notes')).resolves.toEqual([]);
+  });
+
+  it('clears through the bridge', async () => {
+    secureStorageClear.mockResolvedValue({ status: 'ok', value: undefined });
+
+    await clearDeviceOnlyPluginData('io.example.notes');
+
+    expect(secureStorageClear).toHaveBeenCalledWith('io.example.notes');
   });
 });

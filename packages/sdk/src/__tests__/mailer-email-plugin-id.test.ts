@@ -159,6 +159,15 @@ describe('sdk.mailer / sdk.email — plugin ID resolution (RFC 0062)', () => {
           return {} as never;
         },
       },
+      tools: {
+        provide() {},
+        async preview() {
+          return {} as never;
+        },
+        async execute() {
+          return {} as never;
+        },
+      },
       storage: {
         async put() {
           return {} as never;

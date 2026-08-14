@@ -119,6 +119,17 @@ describe('sdk.events.publish — header resolution', () => {
           seenPluginId = pluginId;
         },
       },
+      tools: {
+        provide() {
+          /* no-op */
+        },
+        async preview() {
+          return { summary: '' };
+        },
+        async execute() {
+          return null;
+        },
+      },
       crypto: {
         async encryptField(value: string) {
           return `svf0:${Buffer.from(value, 'utf8').toString('base64url')}`;

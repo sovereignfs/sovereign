@@ -10,6 +10,9 @@ export interface AuthUserRow {
   // Reads back as 0/1 on SQLite, true/false on Postgres. Absent on rows from
   // instances that haven't run the auth migration yet — treated as false.
   isTestUser?: number | boolean | null;
+  // 0-3 (RFC 0035). Absent on rows from instances that haven't run this
+  // leg's migration yet — treated as 0 (registered, the column's own default).
+  verificationLevel?: number | string | null;
   createdAt: string; // normalised to an ISO 8601 string by the caller (Date on pg)
 }
 
@@ -26,8 +29,18 @@ export interface MemberRow {
   role: string | null;
   status: 'active' | 'deactivated' | 'invited';
   isTestUser?: boolean;
+  verificationLevel: 0 | 1 | 2 | 3;
   createdAt: string;
   expiresAt: string | null;
+}
+
+/** Clamp a raw DB value (number, bigint-as-string on pg, or absent) to 0-3. */
+function normalizeVerificationLevel(raw: number | string | null | undefined): 0 | 1 | 2 | 3 {
+  const n = Number(raw ?? 0);
+  if (n >= 3) return 3;
+  if (n === 2) return 2;
+  if (n === 1) return 1;
+  return 0;
 }
 
 /**
@@ -55,6 +68,7 @@ export function buildMemberList(users: AuthUserRow[], invites: PendingInviteRow[
     role: u.role,
     status: u.active === 0 || u.active === false ? 'deactivated' : 'active',
     isTestUser: u.isTestUser === 1 || u.isTestUser === true,
+    verificationLevel: normalizeVerificationLevel(u.verificationLevel),
     createdAt: u.createdAt,
     expiresAt: null,
   }));
@@ -66,6 +80,7 @@ export function buildMemberList(users: AuthUserRow[], invites: PendingInviteRow[
     role: null,
     status: 'invited',
     isTestUser: false,
+    verificationLevel: 0,
     createdAt: new Date(inv.created_at * 1000).toISOString(),
     expiresAt: inv.expires_at ? new Date(inv.expires_at * 1000).toISOString() : null,
   }));

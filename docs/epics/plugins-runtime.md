@@ -495,7 +495,32 @@ minor (new optional params on exported functions), `runtime` → patch, `bin/sv`
 
 ---
 
-#### 📋 3.18 — Plugin tool contracts (RFC 0047)
+#### ✅ 3.18 — Plugin tool contracts (RFC 0047)
+
+**Correction note (post-implementation):**
+
+- The confirmation-token flow reuses the existing OAuth-state-token/signed-
+  storage-URL HMAC pattern (`runtime/src/connections.ts`/`storage.ts`) —
+  `runtime/src/tool-confirmation.ts` — rather than a new token format, plus
+  an added `inputHash` binding neither precedent needed.
+- `sdk.tools.provide()` is `async` (unlike `sdk.data.provide()`) so it can
+  derive the provider's own plugin id from request headers and namespace
+  the in-process registry as `<providerId>:<name>` — closing a real gap in
+  RFC 0002's own resolver registry (keyed by bare contract name, no
+  per-provider collision guard), confirmed by reading the actual
+  implementation before building on it, not assumed from the RFC text.
+- Input-schema validation against the manifest's `inputSchema` is a
+  deliberately minimal JSON Schema subset
+  (`type`/`properties`/`required`/`items`/`enum`,
+  `runtime/src/tool-schema.ts`), not a full validator library — RFC 0047's
+  own open question #2 on schema flavor was unresolved; adding a dependency
+  to answer an open question wasn't warranted.
+- Confirmation UI is caller-owned (RFC 0047 open question #3, resolved) —
+  no Account or runtime-modal UI was built. `plugins/account` was never
+  touched despite being named in the RFC's original `scope:` line; that
+  line has been corrected.
+- `tools:provide`/`tools:call` are new manifest permission enum values —
+  no such permissions existed before this task.
 
 **Goal:** Add platform-mediated tool contracts so plugins can expose structured, permissioned, auditable actions to trusted callers such as assistant or automation layers.
 

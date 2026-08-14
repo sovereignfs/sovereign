@@ -43,9 +43,12 @@ export interface PluginRouteInfo {
    * with no glue/mapping step in the middleware.
    */
   handoffs?: { receives?: readonly PluginHandoffReceiverInfo[] };
+  /** Minimum progressive verification level required to reach this plugin's routes (RFC 0035). Absent/0 = no gate. */
+  minVerificationLevel?: 0 | 1 | 2 | 3;
 }
 
-export type RouteDecision = 'ok' | 'not-found' | 'forbidden' | 'paywall' | 'unavailable-surface';
+export type RouteDecision =
+  'ok' | 'not-found' | 'forbidden' | 'verification-required' | 'paywall' | 'unavailable-surface';
 
 /** Whether a request path falls under a plugin's routePrefix. */
 export function underPrefix(pathname: string, routePrefix: string): boolean {
@@ -61,6 +64,11 @@ export function underPrefix(pathname: string, routePrefix: string): boolean {
  * - under an adminOnly plugin's prefix without console:access → 'forbidden'
  *   (403, SRS §3.4/PLT-03; RFC 0021 capability gate — a static manifest flag,
  *   independent of the operator-set access policy above)
+ * - under a plugin declaring `minVerificationLevel` the current user's level
+ *   doesn't meet → 'verification-required' (RFC 0035 §5.7/§5.8, epic task
+ *   1.9 — checked after adminOnly since identity-strength is a structural
+ *   gate like capability, not a payment/presentation concern like the two
+ *   checks below it)
  * - under a paid plugin's prefix with no active entitlement → 'paywall'
  *   (redirect to /paywall/<pluginId>, RFC 0003)
  * - under a plugin that declares `surfaces` and doesn't list the current
@@ -71,7 +79,8 @@ export function underPrefix(pathname: string, routePrefix: string): boolean {
  *   fires once every actual access-control check has already passed)
  * - otherwise → 'ok'
  * Disabled and access-policy denial both win over adminOnly, which wins over
- * paywall, which wins over surface availability.
+ * verification-required, which wins over paywall, which wins over surface
+ * availability.
  */
 export function decidePluginRoute(
   pathname: string,
@@ -81,12 +90,16 @@ export function decidePluginRoute(
   paywallIds?: ReadonlySet<string>,
   restrictedIds?: ReadonlySet<string>,
   currentSurface?: Surface,
+  userVerificationLevel?: 0 | 1 | 2 | 3,
 ): RouteDecision {
   const matched = plugins.find((plugin) => underPrefix(pathname, plugin.routePrefix));
   if (!matched) return 'ok';
   if (disabledIds.has(matched.id)) return 'not-found';
   if (restrictedIds?.has(matched.id)) return 'not-found';
   if (matched.adminOnly && !hasCapability(userRole, 'console:access')) return 'forbidden';
+  if (matched.minVerificationLevel && (userVerificationLevel ?? 0) < matched.minVerificationLevel) {
+    return 'verification-required';
+  }
   if (paywallIds?.has(matched.id)) return 'paywall';
   if (currentSurface && matched.surfaces && !matched.surfaces.includes(currentSurface)) {
     return 'unavailable-surface';

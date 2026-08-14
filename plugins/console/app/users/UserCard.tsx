@@ -7,7 +7,9 @@ import {
   changeRoleAction,
   deleteUserAction,
   resetMfaAction,
+  revokeVouchAction,
   toggleActiveAction,
+  vouchAction,
 } from './actions';
 import { CapabilitiesButton } from './CapabilitiesButton';
 import styles from '../console.module.css';
@@ -19,11 +21,20 @@ interface MemberRow {
   role: string | null;
   status: 'active' | 'deactivated' | 'invited';
   isTestUser?: boolean;
+  verificationLevel: 0 | 1 | 2 | 3;
   createdAt: string;
   expiresAt: string | null;
 }
 
-type ConfirmType = 'deactivate' | 'reactivate' | 'reset-mfa' | 'delete' | 'cancel-invite' | null;
+type ConfirmType =
+  | 'deactivate'
+  | 'reactivate'
+  | 'reset-mfa'
+  | 'vouch'
+  | 'revoke-vouch'
+  | 'delete'
+  | 'cancel-invite'
+  | null;
 
 function roleName(role: string | null) {
   if (role === 'platform:owner') return 'Owner';
@@ -111,6 +122,9 @@ export function UserCard({
             ? [{ label: 'Reactivate', onSelect: () => setConfirm('reactivate') }]
             : []),
           { label: 'Reset MFA', onSelect: () => setConfirm('reset-mfa') },
+          member.verificationLevel === 3
+            ? { label: 'Revoke vouch', onSelect: () => setConfirm('revoke-vouch') }
+            : { label: 'Vouch', onSelect: () => setConfirm('vouch') },
           { type: 'separator' as const },
           { label: 'Delete user', destructive: true, onSelect: () => setConfirm('delete') },
         ] satisfies MenuEntry[])
@@ -216,6 +230,33 @@ export function UserCard({
           const fd = new FormData();
           fd.set('userId', userId);
           runAction(() => resetMfaAction(fd));
+        }}
+      />
+      <ConfirmDialog
+        open={confirm === 'vouch'}
+        onClose={() => setConfirm(null)}
+        title="Vouch for user"
+        message={`Vouch for ${member.name || member.email}? This grants full trust (verification level 3).`}
+        confirmLabel="Vouch"
+        onConfirm={() => {
+          setConfirm(null);
+          const fd = new FormData();
+          fd.set('userId', userId);
+          runAction(() => vouchAction(fd));
+        }}
+      />
+      <ConfirmDialog
+        open={confirm === 'revoke-vouch'}
+        onClose={() => setConfirm(null)}
+        title="Revoke vouch"
+        message={`Revoke the vouch for ${member.name || member.email}? Their verification level drops to 2.`}
+        confirmLabel="Revoke vouch"
+        destructive
+        onConfirm={() => {
+          setConfirm(null);
+          const fd = new FormData();
+          fd.set('userId', userId);
+          runAction(() => revokeVouchAction(fd));
         }}
       />
       <ConfirmDialog

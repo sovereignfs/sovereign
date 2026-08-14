@@ -1,10 +1,10 @@
 ---
 rfc: 0047
 title: Plugin tool contracts
-status: Draft
+status: Implemented
 date: June 2026
 author: kasunben
-scope: packages/sdk, packages/manifest, runtime, plugins/account, docs; builds on RFC 0002, RFC 0005, RFC 0022, RFC 0035, RFC 0040
+scope: packages/sdk, packages/manifest, runtime, docs; builds on RFC 0002, RFC 0005, RFC 0022, RFC 0035, RFC 0040
 incorporated_into_plan: 'Yes — epic task 3.18'
 ---
 
@@ -178,12 +178,35 @@ arbitrary code.
 
 ## Open questions
 
-1. Should tools be versioned like data contracts?
-2. Should tool input schemas use JSON Schema, Zod-derived JSON Schema, or a
-   smaller platform schema?
-3. Should confirmation UI live in Account, a runtime modal, or caller-owned UI?
-4. Should tools support dry-run diffs for complex mutations?
-5. Should external tools require stronger user verification by default?
+Resolved pragmatically at implementation time (epic task 3.18, workstream
+0015 leg 4) — decisions below, not left open:
+
+1. **Tool versioning:** not implemented. RFC 0002's own data contracts are
+   the versioning precedent this question asked to mirror, but nothing in
+   epic task 3.18's deliverables or review checklist requires it, and a
+   provider can simply register a new tool `name` for a breaking change
+   (the same escape hatch a versioned contract would need anyway on a major
+   bump). Revisit if a real provider needs in-place breaking changes.
+2. **Input schema flavor:** a deliberately minimal JSON Schema subset
+   (`type`/`properties`/`required`/`items`/`enum`), hand-validated in
+   `runtime/src/tool-schema.ts` — not a full JSON Schema engine (e.g. ajv).
+   Covers this RFC's own example; extend it if a real provider needs a
+   keyword it doesn't support.
+3. **Confirmation UI location: caller-owned.** The lowest-scope-creep of
+   the three options, and the only one with no new UI component to build.
+   `sdk.tools.preview()` returns `summary`/`details`/`confirmationToken`;
+   rendering the "are you sure?" prompt from those is the calling plugin's
+   own responsibility. No Account or runtime-modal UI was added — RFC 0047's
+   original `scope:` line named `plugins/account`; that's now inaccurate and
+   has been corrected above.
+4. **Dry-run diffs:** not implemented. `preview()`'s structured
+   `summary`/`details` is judged sufficient for v1; a provider can put
+   whatever diff shape it wants in `details`.
+5. **Stronger default verification for external tools:** no implicit floor.
+   `minVerificationLevel` is opt-in per-tool, consistent with progressive
+   verification's "additive, opt-in" design throughout workstream 0017 —
+   a platform-wide default would be a policy decision for a future RFC, not
+   inferred silently here.
 
 ## Adoption path
 
@@ -195,6 +218,7 @@ arbitrary code.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | June 2026 | Initial draft |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | June 2026   | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 0.2     | August 2026 | Implemented (epic task 3.18, workstream 0015 leg 4). Confirmation-token mechanism modeled directly on the existing OAuth-state-token/signed-storage-URL pattern (`runtime/src/connections.ts`/`storage.ts`) rather than a new format — HMAC-SHA256 over base64url JSON, single-use via an in-memory `Map`, plus a new `inputHash` binding this RFC needed that neither precedent had. `sdk.tools.provide()` is `async` (unlike `sdk.data.provide()`) so it can read `x-sovereign-plugin-id` itself and namespace the in-process registry as `<providerId>:<name>` — closing a real gap RFC 0002's own resolver registry has (keyed by bare contract name, no per-provider collision guard). All five open questions resolved pragmatically rather than left blocking — see that section above for each decision and why; the most consequential is open question #3 (confirmation UI is caller-owned, so `plugins/account` was never actually touched despite being named in this RFC's original `scope:` line). |

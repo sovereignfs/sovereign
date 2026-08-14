@@ -17,6 +17,16 @@ export interface AuthEnv {
    * var defaults to required.
    */
   requireEmailVerification: boolean;
+  /**
+   * When true, a user's verification level cannot reach 2 without enrolling
+   * TOTP or a passkey — i.e. the platform *requires* MFA for Level 2, rather
+   * than merely offering it. Off by default (opt-in, unlike email
+   * verification): unlike `requireEmailVerification`, this has no runtime
+   * enforcement point in Phase 1 (RFC 0035 Task 1.8) — Phase 2 (Task 1.9)
+   * wires a capability gate that actually consults it. Phase 1 exposes it
+   * only for `min_verification_level`-gated plugins/routes to read.
+   */
+  requireMfa: boolean;
   /** Public base URL of the auth server. */
   baseUrl: string;
   /** Shared secret for runtime→auth admin API calls. No default — must be set. */
@@ -100,6 +110,7 @@ export function getEnv(): AuthEnv {
     secret: required('AUTH_SECRET'),
     inviteOnly: process.env.AUTH_INVITE_ONLY === 'true',
     requireEmailVerification: process.env.AUTH_REQUIRE_EMAIL_VERIFICATION !== 'false',
+    requireMfa: process.env.AUTH_REQUIRE_MFA === 'true',
     // `||` (not `??`): Docker Compose interpolates an unset `${AUTH_BASE_URL}`
     // to an empty string, which `??` would not catch — leaving better-auth with
     // an empty baseURL and failing the CSRF origin check on login. Treat empty

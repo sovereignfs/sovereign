@@ -1,5 +1,5 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
-import { APIError } from 'better-auth/api';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { nextCookies } from 'better-auth/next-js';
 import { twoFactor } from 'better-auth/plugins/two-factor';
 import { jwt } from 'better-auth/plugins/jwt';
@@ -14,6 +14,7 @@ import { resolveInvitePluginGrants } from './invite-plugin-grants';
 import { isMailerConfigured, sendAuthPlatformEmail } from './platform-email';
 import { readInviteOnlySetting, resolveInviteOnly } from './settings';
 import { runtimePublicUrl } from './runtime-url';
+import { recomputeVerificationLevel, userHasMfa } from './verification';
 
 function buildOptions(): BetterAuthOptions {
   const env = getEnv();
@@ -162,6 +163,24 @@ function buildOptions(): BetterAuthOptions {
           required: false,
           input: true,
         },
+        // Progressive verification (RFC 0035): 0 registered, 1 email_verified,
+        // 2 mfa_enrolled, 3 admin_vouched. Not user-settable — only ever
+        // written by the create hook (initial grant), the databaseHooks.user
+        // .update.after / passkey after-hooks below (self-healing recompute),
+        // or the admin vouch route (Level 3).
+        verificationLevel: {
+          type: 'number',
+          required: false,
+          defaultValue: 0,
+          input: false,
+        },
+        // JSON-encoded array of { type, at, by? } — an append-only audit
+        // trail of level transitions, capped at 20 entries. Not user-settable.
+        verificationEvents: {
+          type: 'string',
+          required: false,
+          input: false,
+        },
       },
     },
     databaseHooks: {
@@ -205,8 +224,18 @@ function buildOptions(): BetterAuthOptions {
               ]);
             }
 
-            // First user becomes the platform owner (RFC 0021).
-            return { data: { ...user, role: isFirst ? 'platform:owner' : 'platform:user' } };
+            // First user becomes the platform owner (RFC 0021). Verification
+            // Level 1 is auto-granted at creation when email verification
+            // isn't required — there's no verify-email event to promote it
+            // later in that case (RFC 0035, review checklist: "false
+            // auto-promotes to Level 1 with no email sent").
+            return {
+              data: {
+                ...user,
+                role: isFirst ? 'platform:owner' : 'platform:user',
+                verificationLevel: env.requireEmailVerification ? 0 : 1,
+              },
+            };
           },
           after: async (user) => {
             await sendAuthPlatformEmail({
@@ -227,7 +256,69 @@ function buildOptions(): BetterAuthOptions {
             await resolveInvitePluginGrants({ id: user.id, email: user.email });
           },
         },
+        update: {
+          // Self-healing recompute (RFC 0035 §5.4), not an edge diff: fires
+          // on every `user` row update — including the email-verification
+          // flow's updateUserByEmail({ emailVerified: true }) and the
+          // two-factor plugin's updateUser({ twoFactorEnabled }) — and
+          // recomputes the level from whatever the row says right now.
+          // Passkey creation/deletion writes a separate `passkey` table, so
+          // it can't reach this hook; the top-level `hooks.after` below
+          // covers that case with the same recompute call.
+          after: async (user) => {
+            const row = user as Record<string, unknown>;
+            const emailVerified = row.emailVerified === true;
+            const twoFactorEnabled = row.twoFactorEnabled === true;
+            const currentLevel = Number(row.verificationLevel ?? 0);
+            const currentEvents =
+              typeof row.verificationEvents === 'string' ? row.verificationEvents : null;
+            const hasMfa = await userHasMfa(user.id, twoFactorEnabled);
+            await recomputeVerificationLevel(user.id, currentLevel, currentEvents, {
+              emailVerified,
+              hasMfa,
+            });
+          },
+        },
       },
+    },
+    // Reacts to passkey creation/deletion, which writes better-auth's
+    // separate `passkey` table — invisible to `databaseHooks.user.*` above.
+    // Confirmed against @better-auth/passkey@1.6.25's compiled source: both
+    // endpoints run through `sessionMiddleware`/`freshSessionMiddleware`, so
+    // `ctx.context.session.user.id` is populated by the time this `after`
+    // hook runs (same value the endpoint handlers themselves read).
+    hooks: {
+      after: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== '/passkey/verify-registration' && ctx.path !== '/passkey/delete-passkey') {
+          return;
+        }
+        const userId = ctx.context.session?.user?.id;
+        if (!userId) return;
+
+        const row = await authGet<{
+          verificationLevel: number | string | null;
+          verificationEvents: string | null;
+          emailVerified: number | boolean | null;
+          twoFactorEnabled: number | boolean | null;
+        }>(
+          'SELECT "verificationLevel", "verificationEvents", "emailVerified", "twoFactorEnabled" FROM "user" WHERE id = ?',
+          [userId],
+        );
+        if (!row) return;
+
+        const emailVerified = row.emailVerified === 1 || row.emailVerified === true;
+        const twoFactorEnabled = row.twoFactorEnabled === 1 || row.twoFactorEnabled === true;
+        const hasMfa = await userHasMfa(userId, twoFactorEnabled);
+        await recomputeVerificationLevel(
+          userId,
+          Number(row.verificationLevel ?? 0),
+          row.verificationEvents,
+          {
+            emailVerified,
+            hasMfa,
+          },
+        );
+      }),
     },
     plugins: [
       twoFactor({

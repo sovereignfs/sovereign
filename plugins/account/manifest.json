@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "fs.sovereign.account",
   "name": "Account",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Personal profile, preferences, and credential management.",
   "type": "platform",
   "runtime": "native",

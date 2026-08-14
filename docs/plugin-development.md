@@ -151,41 +151,43 @@ serves at `/tasks/lists`.
 `manifest.json` is validated at build time against a strict schema
 (`packages/manifest`); unknown keys fail the build. Every field:
 
-| Field           | Type                                                    | Required                             | Description                                                                                                                                                                                                                                                                                                |
-| --------------- | ------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schemaVersion` | integer                                                 | yes                                  | Manifest format version. Currently `1`.                                                                                                                                                                                                                                                                    |
-| `id`            | string                                                  | yes                                  | Globally-unique reverse-DNS id, e.g. `io.example.tasks`. Also the install directory name.                                                                                                                                                                                                                  |
-| `name`          | string                                                  | yes                                  | Human-readable name shown in the sidebar and Launcher.                                                                                                                                                                                                                                                     |
-| `version`       | string                                                  | yes                                  | Plugin version (semver recommended). This is the **only** version the platform reads — the runtime, registry, and export/portability code all key off it. Your `package.json`'s `version` field is unrelated tooling metadata; leave it at `"0.0.0"` and never bump it.                                    |
-| `description`   | string                                                  | no                                   | Short description.                                                                                                                                                                                                                                                                                         |
-| `type`          | `platform` \| `sovereign` \| `community`                | yes                                  | Origin/trust tier (see below).                                                                                                                                                                                                                                                                             |
-| `runtime`       | `native`                                                | yes                                  | Execution model. v1 plugins use `native`. Other runtime models are planned but are not accepted manifest values until implemented.                                                                                                                                                                         |
-| `routePrefix`   | string starting with `/`                                | yes                                  | URL prefix the plugin serves under, e.g. `/tasks`. The single source of truth for the plugin's URL.                                                                                                                                                                                                        |
-| `permissions`   | array of permission strings                             | yes (may be `[]`)                    | SDK capabilities the plugin declares (see below).                                                                                                                                                                                                                                                          |
-| `shell`         | `default` \| `minimal` \| `overlay`                     | no                                   | Presentation mode. `default` = full page under the platform sidebar; `overlay` = dialog over the current page (see below); `minimal` = chrome-free, full-bleed (see below).                                                                                                                                |
-| `shellConfig`   | object (see below)                                      | no                                   | Per-shell tuning. Holds `overlaySize` (`sm` \| `md` \| `lg`, default `lg`) for `shell: overlay` plugins, and `mobileHeader`/`mobileFooter` (booleans, default `true`) for `shell: default` plugins (RFC 0075). Each field is only valid for its own `shell` value.                                         |
-| `adminOnly`     | boolean                                                 | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                                                                                    |
-| `apiProvider`   | boolean                                                 | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                                                                                              |
-| `publicRoutes`  | array (see below)                                       | no                                   | Manifest-declared public page routes (RFC 0042). Each entry exempts a path prefix — relative to `routePrefix` — from the session-redirect gate; the plugin owns authorization for the exempted paths.                                                                                                      |
-| `webhooks`      | array (see below)                                       | no                                   | Manifest-declared public webhook endpoints (RFC 0050) — unauthenticated machine-to-machine ingress, distinct from `publicRoutes`' human-facing pages. Each entry is one exact endpoint with method/body-size limits enforced before your handler runs.                                                     |
-| `public`        | boolean                                                 | no (default `false`)                 | Marks the whole plugin as public — no auth requirement at all (RFC 0089). Requires `shell: "minimal"` explicitly; cannot combine with `adminOnly`, a paid `monetization.model`, or `publicRoutes`. See below.                                                                                              |
-| `offline`       | boolean (see below)                                     | no (default `false`)                 | Marks the plugin's bare `routePrefix` page as its one offline-capable entry point (RFC 0074, flattened by RFC 0078 from the original `offline.routes[]`/`offline.root` object shape). Grants no auth exemption; the route must render a user-neutral shell and hydrate data client-side via `sdk.offline`. |
-| `installable`   | boolean (see below)                                     | no (default `false`)                 | Lets the plugin be installed from a browser as its own home-screen app, scoped to `routePrefix`, via a dedicated manifest at `/api/manifest/<id>` (RFC 0081). Deliberately independent of `offline` — see below.                                                                                           |
-| `icons`         | object (see below)                                      | no                                   | Author-supplied raster icon set (RFC 0081) — overrides the platform's auto-generated icons for `installable: true`, per variant (`png192`/`png512`/`maskable512`), for a glyph that rasterizes poorly. `installable: true` requires `icon` or `icons`.                                                     |
-| `surfaces`      | array of `browser` \| `mobile` \| `desktop` (see below) | no (default: every surface)          | Surfaces this plugin is available on (RFC 0080). Filters Launcher/sidebar/mobile-drawer presentation only — not a security boundary.                                                                                                                                                                       |
-| `example`       | boolean                                                 | no (default `false`)                 | Marks the plugin as a bundled reference/example. Classification only — no effect on routing or permissions. Example plugins are hidden by default and shown via the Console → Settings → Example plugins toggle; each can also be toggled individually on the Plugins page.                                |
-| `development`   | boolean                                                 | no (default `false`)                 | Marks the plugin as still under active development — not yet ready for production use. Classification only, like `example`: no effect on routing, access policy, or the enable/disable default. Surfaced as a warning badge on the Console Plugins page and on the plugin's Launcher tile.                 |
-| `icon`          | string                                                  | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                                                                                                                                                                                                                       |
-| `compatibility` | object (see below)                                      | yes                                  | Platform version constraints. Hard-gates install/boot on `minPlatformVersion`; surfaces an advisory warning in Console/health when the platform exceeds the optional `maxPlatformVersion`.                                                                                                                 |
-| `data`          | object (see below)                                      | no                                   | Cross-plugin data sharing declarations (RFC 0002). Declare the contracts this plugin exposes (`data.provides`) and the ones it reads (`data.consumes`). Requires the matching `data:provide` / `data:consume` permissions.                                                                                 |
-| `env`           | object (see below)                                      | no                                   | Plugin-scoped environment variable declarations (RFC 0018). Keys are auto-namespaced to `SV_PLUGIN_<SLUG>_<KEY>`; read them via `sdk.env.get('KEY')` in server code.                                                                                                                                       |
-| `capabilities`  | object (see below)                                      | no                                   | Plugin-declared capabilities (RFC 0022). Each key is a local name auto-namespaced to `<pluginId>:<capName>`; enforce access inside the plugin via `sdk.auth.hasCapability`.                                                                                                                                |
-| `schedules`     | array (see below)                                       | no                                   | Recurring background schedules (RFC 0046 Phase 1). Each entry names a server-side handler module inside `app/` that the platform's in-process scheduler invokes every `intervalMinutes` while the plugin is enabled.                                                                                       |
-| `jobs`          | array (see below)                                       | no                                   | Background job type declarations (RFC 0046). Each entry names a server-side handler module inside `app/` that the platform's job worker invokes whenever a `sdk.jobs.enqueue()`/`schedule()` call for that `type` becomes due. Coexists with `schedules` — see below for when to use each.                 |
-| `events`        | array (see below)                                       | no                                   | Realtime channel authorization declarations for `sdk.events` (RFC 0045). Each entry names a server-side handler module inside `app/` that decides whether a subscribing user may receive events on a matching channel pattern.                                                                             |
-| `connections`   | object (see below)                                      | no                                   | External provider connection declarations (RFC 0049). Lists OAuth/connect-account providers and callback paths for platform-visible connection metadata.                                                                                                                                                   |
-| `monetization`  | object (see below)                                      | no                                   | Monetization model (RFC 0003). Declares the billing model, tiers, and the author's Ed25519 public key for offline license verification. Only `sovereign`/`community` plugins may declare this.                                                                                                             |
-| `repository`    | string (URL)                                            | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                                                                                  |
+| Field                  | Type                                                    | Required                             | Description                                                                                                                                                                                                                                                                                                |
+| ---------------------- | ------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion`        | integer                                                 | yes                                  | Manifest format version. Currently `1`.                                                                                                                                                                                                                                                                    |
+| `id`                   | string                                                  | yes                                  | Globally-unique reverse-DNS id, e.g. `io.example.tasks`. Also the install directory name.                                                                                                                                                                                                                  |
+| `name`                 | string                                                  | yes                                  | Human-readable name shown in the sidebar and Launcher.                                                                                                                                                                                                                                                     |
+| `version`              | string                                                  | yes                                  | Plugin version (semver recommended). This is the **only** version the platform reads — the runtime, registry, and export/portability code all key off it. Your `package.json`'s `version` field is unrelated tooling metadata; leave it at `"0.0.0"` and never bump it.                                    |
+| `description`          | string                                                  | no                                   | Short description.                                                                                                                                                                                                                                                                                         |
+| `type`                 | `platform` \| `sovereign` \| `community`                | yes                                  | Origin/trust tier (see below).                                                                                                                                                                                                                                                                             |
+| `runtime`              | `native`                                                | yes                                  | Execution model. v1 plugins use `native`. Other runtime models are planned but are not accepted manifest values until implemented.                                                                                                                                                                         |
+| `routePrefix`          | string starting with `/`                                | yes                                  | URL prefix the plugin serves under, e.g. `/tasks`. The single source of truth for the plugin's URL.                                                                                                                                                                                                        |
+| `permissions`          | array of permission strings                             | yes (may be `[]`)                    | SDK capabilities the plugin declares (see below).                                                                                                                                                                                                                                                          |
+| `shell`                | `default` \| `minimal` \| `overlay`                     | no                                   | Presentation mode. `default` = full page under the platform sidebar; `overlay` = dialog over the current page (see below); `minimal` = chrome-free, full-bleed (see below).                                                                                                                                |
+| `shellConfig`          | object (see below)                                      | no                                   | Per-shell tuning. Holds `overlaySize` (`sm` \| `md` \| `lg`, default `lg`) for `shell: overlay` plugins, and `mobileHeader`/`mobileFooter` (booleans, default `true`) for `shell: default` plugins (RFC 0075). Each field is only valid for its own `shell` value.                                         |
+| `adminOnly`            | boolean                                                 | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                                                                                    |
+| `minVerificationLevel` | `0` \| `1` \| `2` \| `3`                                | no (default `0`)                     | Minimum progressive verification level (RFC 0035) a user needs to reach this plugin's routes: `0` registered, `1` email_verified, `2` mfa_enrolled, `3` admin_vouched. Enforced at the plugin route boundary — see the worked example below.                                                               |
+| `apiProvider`          | boolean                                                 | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                                                                                              |
+| `publicRoutes`         | array (see below)                                       | no                                   | Manifest-declared public page routes (RFC 0042). Each entry exempts a path prefix — relative to `routePrefix` — from the session-redirect gate; the plugin owns authorization for the exempted paths.                                                                                                      |
+| `webhooks`             | array (see below)                                       | no                                   | Manifest-declared public webhook endpoints (RFC 0050) — unauthenticated machine-to-machine ingress, distinct from `publicRoutes`' human-facing pages. Each entry is one exact endpoint with method/body-size limits enforced before your handler runs.                                                     |
+| `public`               | boolean                                                 | no (default `false`)                 | Marks the whole plugin as public — no auth requirement at all (RFC 0089). Requires `shell: "minimal"` explicitly; cannot combine with `adminOnly`, a paid `monetization.model`, or `publicRoutes`. See below.                                                                                              |
+| `offline`              | boolean (see below)                                     | no (default `false`)                 | Marks the plugin's bare `routePrefix` page as its one offline-capable entry point (RFC 0074, flattened by RFC 0078 from the original `offline.routes[]`/`offline.root` object shape). Grants no auth exemption; the route must render a user-neutral shell and hydrate data client-side via `sdk.offline`. |
+| `installable`          | boolean (see below)                                     | no (default `false`)                 | Lets the plugin be installed from a browser as its own home-screen app, scoped to `routePrefix`, via a dedicated manifest at `/api/manifest/<id>` (RFC 0081). Deliberately independent of `offline` — see below.                                                                                           |
+| `icons`                | object (see below)                                      | no                                   | Author-supplied raster icon set (RFC 0081) — overrides the platform's auto-generated icons for `installable: true`, per variant (`png192`/`png512`/`maskable512`), for a glyph that rasterizes poorly. `installable: true` requires `icon` or `icons`.                                                     |
+| `surfaces`             | array of `browser` \| `mobile` \| `desktop` (see below) | no (default: every surface)          | Surfaces this plugin is available on (RFC 0080). Filters Launcher/sidebar/mobile-drawer presentation only — not a security boundary.                                                                                                                                                                       |
+| `example`              | boolean                                                 | no (default `false`)                 | Marks the plugin as a bundled reference/example. Classification only — no effect on routing or permissions. Example plugins are hidden by default and shown via the Console → Settings → Example plugins toggle; each can also be toggled individually on the Plugins page.                                |
+| `development`          | boolean                                                 | no (default `false`)                 | Marks the plugin as still under active development — not yet ready for production use. Classification only, like `example`: no effect on routing, access policy, or the enable/disable default. Surfaced as a warning badge on the Console Plugins page and on the plugin's Launcher tile.                 |
+| `icon`                 | string                                                  | no                                   | Path to an SVG icon relative to the plugin root. A monogram is generated if omitted.                                                                                                                                                                                                                       |
+| `compatibility`        | object (see below)                                      | yes                                  | Platform version constraints. Hard-gates install/boot on `minPlatformVersion`; surfaces an advisory warning in Console/health when the platform exceeds the optional `maxPlatformVersion`.                                                                                                                 |
+| `data`                 | object (see below)                                      | no                                   | Cross-plugin data sharing declarations (RFC 0002). Declare the contracts this plugin exposes (`data.provides`) and the ones it reads (`data.consumes`). Requires the matching `data:provide` / `data:consume` permissions.                                                                                 |
+| `tools`                | array (see below)                                       | no                                   | Platform-mediated tool contracts (RFC 0047) — the write/action counterpart to `data`. Each entry declares a name, effect class, and input schema; the actual `preview`/`execute` handlers are registered at runtime via `sdk.tools.provide()`. Requires the `tools:provide` permission.                    |
+| `env`                  | object (see below)                                      | no                                   | Plugin-scoped environment variable declarations (RFC 0018). Keys are auto-namespaced to `SV_PLUGIN_<SLUG>_<KEY>`; read them via `sdk.env.get('KEY')` in server code.                                                                                                                                       |
+| `capabilities`         | object (see below)                                      | no                                   | Plugin-declared capabilities (RFC 0022). Each key is a local name auto-namespaced to `<pluginId>:<capName>`; enforce access inside the plugin via `sdk.auth.hasCapability`.                                                                                                                                |
+| `schedules`            | array (see below)                                       | no                                   | Recurring background schedules (RFC 0046 Phase 1). Each entry names a server-side handler module inside `app/` that the platform's in-process scheduler invokes every `intervalMinutes` while the plugin is enabled.                                                                                       |
+| `jobs`                 | array (see below)                                       | no                                   | Background job type declarations (RFC 0046). Each entry names a server-side handler module inside `app/` that the platform's job worker invokes whenever a `sdk.jobs.enqueue()`/`schedule()` call for that `type` becomes due. Coexists with `schedules` — see below for when to use each.                 |
+| `events`               | array (see below)                                       | no                                   | Realtime channel authorization declarations for `sdk.events` (RFC 0045). Each entry names a server-side handler module inside `app/` that decides whether a subscribing user may receive events on a matching channel pattern.                                                                             |
+| `connections`          | object (see below)                                      | no                                   | External provider connection declarations (RFC 0049). Lists OAuth/connect-account providers and callback paths for platform-visible connection metadata.                                                                                                                                                   |
+| `monetization`         | object (see below)                                      | no                                   | Monetization model (RFC 0003). Declares the billing model, tiers, and the author's Ed25519 public key for offline license verification. Only `sovereign`/`community` plugins may declare this.                                                                                                             |
+| `repository`           | string (URL)                                            | required for `sovereign`/`community` | Git repository URL. Required unless `type` is `platform`.                                                                                                                                                                                                                                                  |
 
 ### Future runtime models
 
@@ -244,6 +246,10 @@ Declared SDK capabilities. The v1-functional ones:
 | `handoffs:send` | Create a signed handoff token addressed to another plugin's declared receiver via `sdk.handoffs.create()` (RFC 0053). |
 
 | `handoffs:receive` | Declare `handoffs.receives[]` entries and consume tokens addressed to them via `sdk.handoffs.consume()` (RFC 0053). |
+
+| `tools:provide` | Expose tool contracts other plugins can preview/execute via `sdk.tools.provide()` (RFC 0047). |
+
+| `tools:call` | Preview/execute another plugin's declared tools via `sdk.tools.preview()`/`sdk.tools.execute()` (RFC 0047). |
 
 Reserved (declaring them is allowed; the backing surfaces throw `NotImplementedError` until
 implemented): `device:secureStorage`. `e2ee:use` (client-side encryption,
@@ -386,6 +392,53 @@ one only exempts paths under its own `routePrefix`.
 {
   "routePrefix": "/notes",
   "publicRoutes": [{ "prefix": "/p", "description": "Token-protected public read-only pages." }]
+}
+```
+
+### `minVerificationLevel` — gating on progressive verification (RFC 0035)
+
+A plugin that handles sensitive data can require a stronger proof of identity
+than "logged in" before any of its routes render, without implementing its
+own check:
+
+```json
+{
+  "routePrefix": "/vault",
+  "minVerificationLevel": 1
+}
+```
+
+`0` (the default) means no gate. `1` requires a verified email, `2` requires
+TOTP or a passkey enrolled, `3` requires an admin to have explicitly vouched
+for the account (Console → Users → Vouch — no self-service path exists for
+Level 3 by design). The runtime enforces this at the plugin route boundary —
+the same place it enforces `adminOnly` and the `capabilities` manifest field
+(RFC 0022) — so a plugin never needs to restate the check in its own route
+handlers.
+
+An under-leveled request never reaches the plugin's own code:
+
+- **Page routes** get a `303` redirect to a nudge page
+  (`/verification-required/<pluginId>?level=<n>`) explaining what's needed and
+  linking to the right place to fix it (`/verify-email`, Account → Security,
+  or — for Level 3 — nothing, since there's no self-service path).
+- **API routes** (anything under the plugin's `routePrefix` starting with
+  `/api/`) get a `403` with a machine-readable body instead of a redirect:
+
+```json
+{ "error": "verification_required", "requiredLevel": 1 }
+```
+
+A plugin's own client-side error boundary can check for this shape to show a
+tailored message instead of a generic failure state:
+
+```ts
+const res = await fetch('/vault/api/documents');
+if (res.status === 403) {
+  const body = (await res.json()) as { error?: string; requiredLevel?: number };
+  if (body.error === 'verification_required') {
+    // Show a "verify your email" / "enable MFA" prompt instead of a generic error.
+  }
 }
 ```
 
@@ -1407,6 +1460,124 @@ Route Handler) that executes when the plugin is first loaded. Consumers can only
 query after the provider has registered — if you receive a resolver-not-found
 error, the provider plugin has not yet served a request in the current process.
 
+### `tools` — plugin tool contracts (RFC 0047)
+
+The write/action counterpart to `data` above: structured, permissioned,
+auditable actions a plugin exposes to another trusted caller (an
+assistant/automation layer, or another plugin) — rather than a raw
+cross-plugin DB write or an undiscoverable server action. A tool's
+fully-qualified id is `<pluginId>:<name>`.
+
+**Entry fields:**
+
+| Field                  | Type                            | Required | Description                                                                                                                                  |
+| ---------------------- | ------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                 | string (kebab-case)             | yes      | Local tool name, unique within the plugin. Namespaced to `<pluginId>:<name>` by the platform.                                                |
+| `title`                | string                          | yes      | Human-readable name shown in confirmation UI.                                                                                                |
+| `description`          | string                          | no       | Human-readable description of what the tool does.                                                                                            |
+| `effect`               | `read` \| `write` \| `external` | yes      | `read` — no mutation. `write` — mutates plugin-owned data. `external` — network, email, model providers, or any effect beyond the instance.  |
+| `requiresConfirmation` | boolean                         | no       | Overrides the effect-class default: `false` for `read`, `true` for `write`/`external`.                                                       |
+| `inputSchema`          | object (JSON Schema subset)     | yes      | Validated by the platform before every `preview()`/`execute()` reaches your handler. Supports `type`/`properties`/`required`/`items`/`enum`. |
+| `minVerificationLevel` | `0` \| `1` \| `2` \| `3`        | no       | Minimum progressive verification level (RFC 0035) the calling user must hold. Absent/0 = no gate.                                            |
+
+**Provider** — declare a tool and register its handlers:
+
+```json
+"permissions": ["db:readWrite", "tools:provide"],
+"tools": [
+  {
+    "name": "create-record",
+    "title": "Create record",
+    "description": "Create a new record in this plugin.",
+    "effect": "write",
+    "inputSchema": {
+      "type": "object",
+      "properties": { "title": { "type": "string" } },
+      "required": ["title"]
+    }
+  }
+]
+```
+
+```ts
+// In a Server Component or route handler that runs when the plugin loads:
+await sdk.tools.provide('create-record', {
+  // Must be genuinely non-mutating — called freely, with no confirmation gate.
+  preview: async (input: { title: string }) => ({
+    summary: `Create "${input.title}"`,
+    details: input,
+  }),
+  // Only reached after confirmation-token verification (this tool's effect
+  // is "write", so requiresConfirmation defaults to true).
+  execute: async (input: { title: string }) => createRecord(input),
+});
+```
+
+**Caller** — declare `tools:call`, preview, then execute with the returned
+confirmation token:
+
+```json
+"permissions": ["tools:call"]
+```
+
+```ts
+const ref = { providerId: 'com.example.tasks', tool: 'create-record' };
+const input = { title: 'Ship the release notes' };
+
+const preview = await sdk.tools.preview(ref, input);
+// preview.summary / preview.details -> render your own confirmation UI
+// (RFC 0047 leaves this caller-owned; there is no platform confirmation
+// modal). preview.confirmationToken is present because "write" tools
+// require confirmation by default.
+
+const result = await sdk.tools.execute(ref, input, {
+  confirmationToken: preview.confirmationToken,
+});
+```
+
+A `read` tool (confirmation optional) skips the token entirely — `preview()`
+returns no `confirmationToken`, and `execute()` needs none:
+
+```ts
+const summary = await sdk.tools.preview(
+  { providerId: 'com.example.finance', tool: 'summarize-month' },
+  { month: '2026-08' },
+);
+const report = await sdk.tools.execute(
+  { providerId: 'com.example.finance', tool: 'summarize-month' },
+  { month: '2026-08' },
+);
+```
+
+An `external` tool (e.g. sending an email, calling a third-party API) is
+declared and called identically to a `write` tool — only `effect: "external"`
+differs, which changes nothing about the caller's code, only the confirmation
+default and the audit-log `effect` field.
+
+**Confirmation tokens are single-use and input-bound.** Changing `input`
+between `preview()` and `execute()` invalidates the token — request a fresh
+preview. A token also expires (a few minutes) and cannot be replayed.
+
+**Authorization**, checked before your handler ever runs: the provider must
+be installed, enabled, and hold `tools:provide`; the caller must be
+installed, enabled, and hold `tools:call`; the current user's verification
+level must meet `minVerificationLevel` if declared; a `write`/`external`
+(or explicitly `requiresConfirmation: true`) tool needs a valid confirmation
+token. Any failure throws before `preview`/`execute` is called — your
+provider code never has to re-check these.
+
+**Auditing:** every execution attempt (success or failure) is written to the
+platform activity log — provider id, caller id, tool name, effect class,
+actor user id, and outcome. Raw tool `input`/results are never logged (they
+may contain sensitive data) — if a provider needs its own detailed history,
+store it in its own tables via `sdk.db`.
+
+**Handler registration timing:** same as `sdk.data.provide()` — in-process,
+resets on server restart. Call `sdk.tools.provide()` from a server-side
+handler that executes when the plugin is first loaded; a caller reaches a
+"no handlers registered" error if the provider hasn't served a request yet
+in the current process.
+
 ### `integrations` — optional sibling-plugin integrations (RFC 0051)
 
 Purely informational metadata for install/discovery UX (Console, Account,
@@ -2396,8 +2567,15 @@ The SDK surface (`sdk.*`):
 
   ```ts
   const session = await sdk.auth.requireSession();
-  // session.user: { id, email, name, image, role, tenantId, capabilities }
+  // session.user: { id, email, name, image, role, tenantId, capabilities, verificationLevel }
   const { user } = session;
+
+  // user.verificationLevel: 0 | 1 | 2 | 3 (RFC 0035) — 0 registered,
+  // 1 email_verified, 2 mfa_enrolled, 3 admin_vouched. Cached the same
+  // ~300s window as role/capabilities. Enforced by the platform on the
+  // `user:manage` (level 1) and `role:assign` (level 2) capabilities, and
+  // on any plugin declaring `minVerificationLevel` — see that field above.
+  // A plugin may also read this directly for its own finer-grained gating.
 
   // Prefer capability checks over role comparison:
   if (sdk.auth.hasCapability(session, 'user:manage')) {

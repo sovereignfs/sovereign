@@ -42,6 +42,8 @@ export const permissionSchema = z.enum([
   'device:secureStorage',
   'handoffs:send',
   'handoffs:receive',
+  'tools:provide',
+  'tools:call',
 ]);
 
 /**
@@ -137,6 +139,18 @@ const manifestObjectSchema = z
       .strict()
       .optional(),
     adminOnly: z.boolean().optional(),
+    /**
+     * Minimum progressive verification level (RFC 0035) a user needs to
+     * reach this plugin's routes: 0 registered, 1 email_verified, 2
+     * mfa_enrolled, 3 admin_vouched. Defaults to 0 (no gate) — Phase 1
+     * (workstream 0017 leg 1) only defines and validates the field; the
+     * capability gate that actually enforces it is Phase 2 (leg 2, epic task
+     * 1.9). camelCase per this schema's existing convention (`adminOnly`,
+     * `apiProvider`, `shellConfig`), not the epic text's `min_verification_level`.
+     */
+    minVerificationLevel: z
+      .union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)])
+      .optional(),
     apiProvider: z.boolean().optional(),
     /**
      * Manifest-declared public page routes (RFC 0042). Each entry exempts a
@@ -500,6 +514,69 @@ const manifestObjectSchema = z
           .optional(),
       })
       .strict()
+      .optional(),
+    /**
+     * Platform-mediated tool contracts (RFC 0047) — structured, permissioned,
+     * auditable actions this plugin exposes to another trusted caller (e.g.
+     * an assistant/automation layer, or another plugin). The write/action
+     * counterpart to `data` above. Requires the `tools:provide` permission.
+     *
+     * Declarative metadata only — the actual `preview`/`execute` handlers are
+     * registered at runtime via `sdk.tools.provide()` (in-process, like
+     * `sdk.data.provide()`), not a build-time `entry` file like `schedules`
+     * above. A tool's fully-qualified id is `<pluginId>:<name>`.
+     */
+    tools: z
+      .array(
+        z
+          .object({
+            /** Stable tool identifier, unique within the plugin (lowercase kebab-case). */
+            name: z
+              .string()
+              .regex(
+                /^[a-z][a-z0-9-]*$/,
+                'tool name must start with a lowercase letter and contain only lowercase letters, digits, and hyphens',
+              ),
+            /** Human-readable name shown in confirmation UI. */
+            title: z.string().min(1),
+            /** Human-readable description of what the tool does. */
+            description: z.string().optional(),
+            /**
+             * `read` — computes or previews without mutation (confirmation optional).
+             * `write` — mutates plugin-owned data (confirmation required by default).
+             * `external` — calls out beyond the instance: network, email, model
+             * providers, or any other external side effect (confirmation required
+             * by default).
+             */
+            effect: z.enum(['read', 'write', 'external']),
+            /**
+             * Whether execution requires a confirmation token obtained from a
+             * prior `preview()` call. Defaults to `false` for `read` tools and
+             * `true` for `write`/`external` tools when omitted — set explicitly
+             * to override either default.
+             */
+            requiresConfirmation: z.boolean().optional(),
+            /**
+             * JSON Schema describing the tool's input, validated by the platform
+             * before every `preview()`/`execute()` call reaches the provider's
+             * handler. A plain object map, not further typed here — see RFC
+             * 0047's open question on schema flavor.
+             */
+            inputSchema: z.record(z.string(), z.unknown()),
+            /**
+             * Minimum progressive verification level (RFC 0035) the calling
+             * user must hold to preview or execute this tool. Absent/0 = no gate.
+             */
+            minVerificationLevel: z
+              .union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)])
+              .optional(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .refine((arr) => new Set(arr.map((t) => t.name)).size === arr.length, {
+        message: 'tool names must be unique within the plugin',
+      })
       .optional(),
     repository: z.string().url().optional(),
     /**

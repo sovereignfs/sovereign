@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { headers } from 'next/headers';
+import { Badge, Button } from '@sovereignfs/ui';
 import { sdk } from '@sovereignfs/sdk';
 import { DeviceStorageKeySection } from '../_components/DeviceStorageKeySection';
 import { EncryptionSection } from '../_components/EncryptionSection';
@@ -17,8 +19,15 @@ interface Passkey {
   deviceType?: string | null;
 }
 
+const VERIFICATION_LABEL: Record<0 | 1 | 2 | 3, string> = {
+  0: 'Registered',
+  1: 'Email verified',
+  2: 'MFA enrolled',
+  3: 'Admin vouched',
+};
+
 export default async function SecurityPage() {
-  await sdk.auth.requireSession();
+  const session = await sdk.auth.requireSession();
 
   const h = await headers();
   const cookie = h.get('cookie') ?? '';
@@ -48,8 +57,39 @@ export default async function SecurityPage() {
     sdk.e2ee.listDevices(),
   ]);
 
+  const level = session.user.verificationLevel;
+
   return (
     <div className={styles.sections}>
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Account verification</h2>
+          <p className={styles.sectionSubtitle}>
+            Some plugins and features require a verified email or enrolled MFA (RFC 0035).
+          </p>
+        </div>
+        <div className={styles.totpCard}>
+          <div className={styles.totpCardInfo}>
+            <span className={styles.totpCardTitle}>Verification level</span>
+            <span className={styles.totpCardStatus}>
+              <Badge variant="status" status={level >= 1 ? 'active' : 'pending'}>
+                {VERIFICATION_LABEL[level]}
+              </Badge>
+            </span>
+          </div>
+          {level < 1 && (
+            <Link href="/verify-email">
+              <Button>Verify email</Button>
+            </Link>
+          )}
+          {level === 1 && (
+            <span className={styles.help}>
+              Enroll TOTP or a passkey below to reach the next level.
+            </span>
+          )}
+        </div>
+      </section>
+
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Client-side encryption</h2>

@@ -8,6 +8,8 @@ import {
   DeactivateButton,
   DeleteButton,
   ResetMfaButton,
+  RevokeVouchButton,
+  VouchButton,
 } from './UserActionButtons';
 import { RoleSelect } from './RoleSelect';
 import { UserCard } from './UserCard';
@@ -23,6 +25,7 @@ interface MemberRow {
   role: string | null;
   status: 'active' | 'deactivated' | 'invited';
   isTestUser?: boolean;
+  verificationLevel: 0 | 1 | 2 | 3;
   createdAt: string;
   expiresAt: string | null;
 }
@@ -204,6 +207,15 @@ export default async function UsersPage({
                             )}
 
                             <ResetMfaButton userId={member.id} name={member.name ?? member.email} />
+
+                            {member.verificationLevel === 3 ? (
+                              <RevokeVouchButton
+                                userId={member.id}
+                                name={member.name ?? member.email}
+                              />
+                            ) : (
+                              <VouchButton userId={member.id} name={member.name ?? member.email} />
+                            )}
 
                             <CapabilitiesButton
                               userId={member.id}

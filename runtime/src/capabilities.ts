@@ -117,34 +117,76 @@ export const ROLE_PRESETS: Readonly<Record<PlatformRole, ReadonlySet<Capability>
 };
 
 // ---------------------------------------------------------------------------
+// Progressive verification gate (RFC 0035 §5.7, epic task 1.9)
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimum progressive verification level (RFC 0035) required to exercise a
+ * capability, on top of whatever the role preset already grants. Absent =
+ * no gate (the default — every capability not listed here is unaffected).
+ *
+ * A capability-definition object type (`{ minVerificationLevel, ... }` per
+ * capability) would be the more "textbook" shape, but `ROLE_PRESETS` above
+ * is bare `Set<Capability>` membership with no per-capability metadata
+ * structure today — this lookup is additive to that shape rather than a
+ * structural rework, same semantic either way. Only the two capabilities
+ * the epic names explicitly are gated; do not add more without a
+ * corresponding product decision.
+ */
+export const CAPABILITY_MIN_VERIFICATION_LEVEL: Partial<Record<Capability, 0 | 1 | 2 | 3>> = {
+  'user:manage': 1,
+  'role:assign': 2,
+};
+
+// ---------------------------------------------------------------------------
 // Resolvers
 // ---------------------------------------------------------------------------
 
 /**
- * Return the capabilities granted to `role` by the v1 hardcoded presets.
+ * Return the capabilities granted to `role` by the v1 hardcoded presets,
+ * minus any gated by `CAPABILITY_MIN_VERIFICATION_LEVEL` that `userLevel`
+ * doesn't meet. Omitting `userLevel` skips the gate entirely (every
+ * capability the role preset grants is returned, matching pre-leg-1.9
+ * behavior) — used by callers that haven't been updated to pass a level yet.
  * Unknown roles (e.g. old `platform:admin` strings in a stale cookie that
  * haven't been re-verified yet) fall back to the user preset (least privilege).
  */
-export function capabilitiesForRole(role: string): Capability[] {
-  const preset = ROLE_PRESETS[role as PlatformRole];
-  return preset ? [...preset] : [...USER_CAPS];
+export function capabilitiesForRole(role: string, userLevel?: 0 | 1 | 2 | 3): Capability[] {
+  const preset = ROLE_PRESETS[role as PlatformRole] ?? USER_CAPS;
+  if (userLevel === undefined) return [...preset];
+  return [...preset].filter((cap) => {
+    const minLevel = CAPABILITY_MIN_VERIFICATION_LEVEL[cap];
+    return minLevel === undefined || userLevel >= minLevel;
+  });
 }
 
 /**
- * Return true if `role` grants `cap`.
+ * Return true if `role` grants `cap`. When `userLevel` is supplied and `cap`
+ * has a `CAPABILITY_MIN_VERIFICATION_LEVEL` entry, also requires
+ * `userLevel >= minLevel` — regardless of role. Omitting `userLevel` skips
+ * this check entirely (backward-compatible: every existing 2-arg call site
+ * keeps its pre-leg-1.9 behavior unchanged).
  *
  * Used in the Edge middleware (offline, no DB) and in runtime route handlers.
  */
-export function hasCapability(role: string, cap: Capability): boolean {
-  return (ROLE_PRESETS[role as PlatformRole] ?? USER_CAPS).has(cap);
+export function hasCapability(role: string, cap: Capability, userLevel?: 0 | 1 | 2 | 3): boolean {
+  if (!(ROLE_PRESETS[role as PlatformRole] ?? USER_CAPS).has(cap)) return false;
+  if (userLevel === undefined) return true;
+  const minLevel = CAPABILITY_MIN_VERIFICATION_LEVEL[cap];
+  return minLevel === undefined || userLevel >= minLevel;
 }
 
 /**
- * Throw a `403` response if the role lacks the required capability.
+ * Throw a `403` response if the role (and, when `userLevel` is supplied, the
+ * verification level) lacks the required capability.
  * Intended for use in Node-runtime route handlers (not Edge middleware).
  */
-export function requireCapabilityOrForbidden(role: string, cap: Capability): void {
-  if (!hasCapability(role, cap)) {
+export function requireCapabilityOrForbidden(
+  role: string,
+  cap: Capability,
+  userLevel?: 0 | 1 | 2 | 3,
+): void {
+  if (!hasCapability(role, cap, userLevel)) {
     // The caller should catch this and return it as a Response.
     throw new CapabilityError(cap, role);
   }

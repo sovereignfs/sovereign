@@ -193,6 +193,157 @@ describe('decidePluginRoute — surfaces (RFC 0080)', () => {
   });
 });
 
+describe('decidePluginRoute — minVerificationLevel (RFC 0035 §5.8, epic task 1.9)', () => {
+  const gatedLevel1: PluginRouteInfo = {
+    id: 'com.example.gated1',
+    routePrefix: '/gated1',
+    minVerificationLevel: 1,
+  };
+  const gatedLevel2: PluginRouteInfo = {
+    id: 'com.example.gated2',
+    routePrefix: '/gated2',
+    minVerificationLevel: 2,
+  };
+  const withGated = [console, launcher, gatedLevel1, gatedLevel2];
+  const none = new Set<string>();
+
+  it('returns verification-required when the level is below the gate', () => {
+    expect(
+      decidePluginRoute(
+        '/gated1',
+        withGated,
+        none,
+        'platform:user',
+        undefined,
+        undefined,
+        undefined,
+        0,
+      ),
+    ).toBe('verification-required');
+  });
+
+  it('allows the route once the level meets the gate', () => {
+    expect(
+      decidePluginRoute(
+        '/gated1',
+        withGated,
+        none,
+        'platform:user',
+        undefined,
+        undefined,
+        undefined,
+        1,
+      ),
+    ).toBe('ok');
+  });
+
+  it('treats an omitted userLevel as 0 (least privilege), not as a skipped check', () => {
+    expect(decidePluginRoute('/gated1', withGated, none, 'platform:user')).toBe(
+      'verification-required',
+    );
+  });
+
+  it('gates independently per plugin (level 1 passes gated1 but not gated2)', () => {
+    expect(
+      decidePluginRoute(
+        '/gated2',
+        withGated,
+        none,
+        'platform:user',
+        undefined,
+        undefined,
+        undefined,
+        1,
+      ),
+    ).toBe('verification-required');
+    expect(
+      decidePluginRoute(
+        '/gated2',
+        withGated,
+        none,
+        'platform:user',
+        undefined,
+        undefined,
+        undefined,
+        2,
+      ),
+    ).toBe('ok');
+  });
+
+  it('a plugin with no minVerificationLevel declared is unaffected at any level, including 0', () => {
+    expect(
+      decidePluginRoute(
+        '/launcher',
+        withGated,
+        none,
+        'platform:user',
+        undefined,
+        undefined,
+        undefined,
+        0,
+      ),
+    ).toBe('ok');
+  });
+
+  it('adminOnly still wins over verification-required', () => {
+    const adminAndGated: PluginRouteInfo = {
+      id: 'com.example.admingated',
+      routePrefix: '/admingated',
+      adminOnly: true,
+      minVerificationLevel: 1,
+    };
+    expect(
+      decidePluginRoute(
+        '/admingated',
+        [adminAndGated],
+        none,
+        'platform:user',
+        undefined,
+        undefined,
+        undefined,
+        0,
+      ),
+    ).toBe('forbidden');
+  });
+
+  it('verification-required wins over paywall', () => {
+    const paidAndGated: PluginRouteInfo = {
+      id: 'com.example.paidgated',
+      routePrefix: '/paidgated',
+      minVerificationLevel: 1,
+    };
+    const paywalled = new Set(['com.example.paidgated']);
+    expect(
+      decidePluginRoute(
+        '/paidgated',
+        [paidAndGated],
+        none,
+        'platform:user',
+        paywalled,
+        undefined,
+        undefined,
+        0,
+      ),
+    ).toBe('verification-required');
+  });
+
+  it('disabled still wins over verification-required', () => {
+    const disabled = new Set(['com.example.gated1']);
+    expect(
+      decidePluginRoute(
+        '/gated1',
+        withGated,
+        disabled,
+        'platform:user',
+        undefined,
+        undefined,
+        undefined,
+        0,
+      ),
+    ).toBe('not-found');
+  });
+});
+
 describe('matchedPublicPluginRouteId', () => {
   const blog: PluginRouteInfo = {
     id: 'com.example.blog',

@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.90.0 · **Last updated:** 2026-08-14
+**Version:** 0.91.0 · **Last updated:** 2026-08-14
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 
@@ -247,8 +247,8 @@ doc — but not yet assigned a roadmap slot. Promoted to a phase table once prio
 | —       | Remediate known dependency vulnerabilities                                                            | 📋     | [0.18](docs/epics/infrastructure.md#-018--remediate-known-dependency-vulnerabilities)                                                            |
 | —       | Publish a sovereign-tools image (RFC 0071 incident follow-up)                                         | ✅     | [0.19](docs/epics/infrastructure.md#-019--publish-a-sovereign-tools-image)                                                                       |
 | —       | `libSQL`/`sqld` container spike (Research 0003, workstream 0009)                                      | ✅     | [0.20](docs/epics/infrastructure.md#-020--libsqlsqld-container-spike-research-0003-workstream-0009-leg-2)                                        |
-| —       | Progressive user verification, Phase 1 — Infrastructure (RFC 0035) — workstream 0017 leg 1            | 📋     | [1.8](docs/epics/users-auth.md#-18--progressive-user-verification-phase-1--infrastructure-rfc-0035)                                              |
-| —       | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035) — workstream 0017 leg 2         | 📋     | [1.9](docs/epics/users-auth.md#-19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035)                                           |
+| 0.91.0  | Progressive user verification, Phase 1 — Infrastructure (RFC 0035) — workstream 0017 leg 1            | ✅     | [1.8](docs/epics/users-auth.md#-18--progressive-user-verification-phase-1--infrastructure-rfc-0035)                                              |
+| 0.91.0  | Progressive user verification, Phase 2 — Capability opt-in (RFC 0035) — workstream 0017 leg 2         | ✅     | [1.9](docs/epics/users-auth.md#-19--progressive-user-verification-phase-2--capability-opt-in-rfc-0035)                                           |
 | —       | Subtle Sovereign attribution (RFC 0027)                                                               | ❌     | [9.13](docs/epics/design-system.md#-913--subtle-sovereign-attribution-rfc-0027--rejected)                                                        |
 | 0.88.0  | Local visual regression testing (RFC 0059) — workstream 0013 leg 2                                    | ✅     | [9.14](docs/epics/design-system.md#-914--local-visual-regression-testing-rfc-0059)                                                               |
 | 0.88.0  | NavTabs Link support + PageHeader heading level — workstream 0013 leg 1                               | ✅     | [9.15](docs/epics/design-system.md#-915--navtabs-link-support--pageheader-heading-level)                                                         |
@@ -285,7 +285,7 @@ doc — but not yet assigned a roadmap slot. Promoted to a phase table once prio
 | 0.87.0  | Public plugin webhooks (RFC 0050) — workstream 0015 leg 3                                             | ✅     | [2.15](docs/epics/platform-shell.md#-215--public-plugin-webhooks-rfc-0050)                                                                       |
 | —       | Error-page digital-rights quote rotation                                                              | ❌     | [2.20](docs/epics/platform-shell.md#-220--error-page-digital-rights-quote-rotation--rejected)                                                    |
 | 0.87.0  | Plugin events and realtime channels (RFC 0045) — workstream 0015 leg 2                                | ✅     | [3.17](docs/epics/plugins-runtime.md#-317--plugin-events-and-realtime-channels-rfc-0045)                                                         |
-| —       | Plugin tool contracts (RFC 0047) — workstream 0015 leg 4 (gated on workstream 0017)                   | 📋     | [3.18](docs/epics/plugins-runtime.md#-318--plugin-tool-contracts-rfc-0047)                                                                       |
+| 0.91.0  | Plugin tool contracts (RFC 0047) — workstream 0015 leg 4 (gated on workstream 0017)                   | ✅     | [3.18](docs/epics/plugins-runtime.md#-318--plugin-tool-contracts-rfc-0047)                                                                       |
 | 0.87.0  | Plugin flow handoffs (RFC 0053) — workstream 0015 leg 5                                               | ✅     | [3.21](docs/epics/plugins-runtime.md#-321--plugin-flow-handoffs-rfc-0053)                                                                        |
 | —       | Email channel for broadcasts and messages (RFC 0062) — workstream 0018 leg 2                          | 📋     | [4.5](docs/epics/notification-center.md#-45--email-channel-for-broadcasts-and-messages-rfc-0062)                                                 |
 | —       | Sovereign Harness platform plugin (RFC 0040)                                                          | 📋     | [18.1](docs/epics/sovereign-harness.md#-181--sovereign-harness-platform-plugin-rfc-0040)                                                         |

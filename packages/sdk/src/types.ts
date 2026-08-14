@@ -7,6 +7,13 @@ export interface SessionUser {
   role: string;
   /** Effective capability strings derived from the role preset (RFC 0021). */
   capabilities: readonly string[];
+  /**
+   * Progressive verification level (RFC 0035): 0 registered, 1 email_verified,
+   * 2 mfa_enrolled, 3 admin_vouched. Cached the same 300s window as `role`/
+   * `capabilities` — a promotion or admin revocation can lag by up to that
+   * long, matching existing precedent rather than adding a live-fetch path.
+   */
+  verificationLevel: 0 | 1 | 2 | 3;
 }
 
 export interface Session {
@@ -730,3 +737,64 @@ export interface JobContext {
  * job, that occurrence) is marked failed.
  */
 export type JobHandler = (ctx: JobContext, payload: unknown) => Promise<void>;
+
+// ---------------------------------------------------------------------------
+// Plugin tool contracts (RFC 0047)
+// ---------------------------------------------------------------------------
+
+/** Risk tier a tool declares in its manifest entry — drives the confirmation default. */
+export type ToolEffect = 'read' | 'write' | 'external';
+
+/** A reference to a tool exposed by a *provider* plugin, used by a *caller* to preview/execute it. */
+export interface ToolRef {
+  /** The provider plugin's manifest `id`. */
+  providerId: string;
+  /** The tool's local name (as declared in the provider's manifest `tools[]`). */
+  tool: string;
+}
+
+/** The structured summary a provider's `preview()` returns for confirmation UI. */
+export interface ToolPreviewResult<TDetails = unknown> {
+  /** Human-readable one-line summary of what execution would do. */
+  summary: string;
+  /** Optional structured detail for a richer confirmation UI. */
+  details?: TDetails;
+}
+
+/** `preview()`'s full response — carries a confirmation token when the tool requires one. */
+export interface ToolPreviewResponse<TDetails = unknown> extends ToolPreviewResult<TDetails> {
+  /**
+   * Present only when the tool requires confirmation (RFC 0047 effect-class
+   * default, or an explicit manifest override). Bound to this exact input —
+   * pass unchanged to `execute()`; changing the input invalidates it.
+   */
+  confirmationToken?: string;
+}
+
+/** The provider-side implementation registered via `sdk.tools.provide()`. */
+export interface ToolProviderHandlers<TInput = unknown, TResult = unknown, TDetails = unknown> {
+  /** Must be genuinely non-mutating — called freely, with no confirmation gate. */
+  preview: (input: TInput) => Promise<ToolPreviewResult<TDetails>>;
+  /** Performs the actual effect. Only reached after confirmation-token verification when required. */
+  execute: (input: TInput) => Promise<TResult>;
+}
+
+/** Options accepted by `sdk.tools.execute()`. */
+export interface ToolExecuteOptions {
+  /** Required when the target tool's effective `requiresConfirmation` is `true`. */
+  confirmationToken?: string;
+}
+
+/**
+ * Runtime-injected context for a tool preview/execute call — derived from
+ * verified request headers, never plugin-supplied, so a caller cannot forge
+ * its own identity or the acting user's verification level.
+ */
+export interface ToolContext {
+  tenantId: string;
+  /** The *calling* plugin's manifest id — distinct from `ToolRef.providerId`. */
+  callerPluginId: string;
+  userId: string | null;
+  /** RFC 0035 — 0 registered .. 3 admin_vouched. */
+  verificationLevel: 0 | 1 | 2 | 3;
+}

@@ -45,6 +45,11 @@ import type {
   StorageContext,
   StorageObject,
   StoragePutInput,
+  ToolContext,
+  ToolExecuteOptions,
+  ToolPreviewResponse,
+  ToolProviderHandlers,
+  ToolRef,
   UpdateConnectionInput,
   ConsumeHandoffOptions,
   CreateHandoffInput,
@@ -302,6 +307,24 @@ export interface SdkHost {
     createOAuthState(input: OAuthStateInput, context: ConnectionContext): Promise<string>;
     verifyOAuthState(state: string, context: ConnectionContext): Promise<ConnectionOAuthState>;
     getProviderConfig(provider: string, context: ConnectionContext): Promise<ProviderConfig>;
+  };
+  tools: {
+    /** Register a provider plugin's preview/execute handlers for one of its declared tools. */
+    provide(providerId: string, name: string, handlers: ToolProviderHandlers): void;
+    /**
+     * Preview a tool call — must not mutate. Returns a confirmation token
+     * when the tool's effective `requiresConfirmation` is `true`.
+     */
+    preview(ref: ToolRef, input: unknown, context: ToolContext): Promise<ToolPreviewResponse>;
+    /**
+     * Execute a tool call. `context.confirmationToken` is required and
+     * verified against the exact `input` when the tool requires confirmation.
+     */
+    execute(
+      ref: ToolRef,
+      input: unknown,
+      context: ToolContext & ToolExecuteOptions,
+    ): Promise<unknown>;
   };
 }
 

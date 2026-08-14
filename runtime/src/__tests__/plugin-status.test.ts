@@ -1,7 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const { listPluginStatus, getPlatformSetting, getHardDisabledPluginIds } = vi.hoisted(() => ({
+  listPluginStatus: vi.fn(async () => []),
+  getPlatformSetting: vi.fn(async () => null),
+  getHardDisabledPluginIds: vi.fn(() => [] as string[]),
+}));
+vi.mock('@sovereignfs/db', () => ({ listPluginStatus, getPlatformSetting }));
+vi.mock('../registry', () => ({
+  getExamplePluginIds: () => [],
+  getDevelopmentPluginIds: () => [],
+  getHardDisabledPluginIds,
+}));
+
 import {
   bypassPluginVisibilityInDev,
   computeDisabledPluginIds,
+  getDisabledPluginIds,
   resolveExamplesEnabled,
 } from '../plugin-status';
 
@@ -119,5 +133,64 @@ describe('computeDisabledPluginIds', () => {
       true,
     );
     expect(disabled.filter((id) => id === 'dev-a')).toHaveLength(1);
+  });
+
+  const HARD_DISABLED = ['warden'];
+
+  it('leaves hard-disabled plugins out when the list is empty (default)', () => {
+    expect(computeDisabledPluginIds([], [], true)).toEqual([]);
+  });
+
+  it('disables every manifest hard-disabled plugin unconditionally, no flag needed', () => {
+    const disabled = computeDisabledPluginIds([], [], true, [], false, HARD_DISABLED);
+    expect(disabled).toEqual(['warden']);
+  });
+
+  it('an explicit enable row does NOT override a manifest hard disable', () => {
+    const disabled = computeDisabledPluginIds(
+      [{ pluginId: 'warden', enabled: true }],
+      [],
+      true,
+      [],
+      false,
+      HARD_DISABLED,
+    );
+    expect(disabled).toEqual(['warden']);
+  });
+
+  it('does not double-count a hard-disabled plugin that is also explicitly disabled', () => {
+    const disabled = computeDisabledPluginIds(
+      [{ pluginId: 'warden', enabled: false }],
+      [],
+      true,
+      [],
+      false,
+      HARD_DISABLED,
+    );
+    expect(disabled.filter((id) => id === 'warden')).toHaveLength(1);
+  });
+});
+
+describe('getDisabledPluginIds', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    getHardDisabledPluginIds.mockReset();
+    getHardDisabledPluginIds.mockReturnValue([]);
+    listPluginStatus.mockClear();
+  });
+
+  it('includes manifest hard-disabled ids even under the dev bypass, and skips DB work entirely', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    getHardDisabledPluginIds.mockReturnValue(['warden']);
+    const result = await getDisabledPluginIds({} as never);
+    expect(result).toEqual(['warden']);
+    expect(listPluginStatus).not.toHaveBeenCalled();
+  });
+
+  it('merges manifest hard-disabled ids with the DB-computed set outside dev', async () => {
+    listPluginStatus.mockResolvedValueOnce([]);
+    getHardDisabledPluginIds.mockReturnValue(['warden']);
+    const result = await getDisabledPluginIds({} as never);
+    expect(result).toEqual(['warden']);
   });
 });

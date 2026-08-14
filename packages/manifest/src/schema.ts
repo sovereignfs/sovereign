@@ -443,6 +443,19 @@ const manifestObjectSchema = z
      * effect on routing, access policy, or the enable/disable default.
      */
     development: z.boolean().optional(),
+    /**
+     * Hard-disables this plugin unconditionally — a build-time author
+     * declaration, distinct from the runtime/Console-controlled
+     * `plugin_status` enable toggle (RFC 0065), which no admin action can
+     * override. Unlike `development` (hideable only via
+     * `SOVEREIGN_HIDE_DEVELOPMENT_PLUGINS`), this needs no env var: the
+     * manifest itself is the gate, and it is never bypassed in dev either.
+     * Routes remain built (unchanged registry composition) but are
+     * unreachable, migrations are skipped, and Console cannot activate it.
+     * Use to take a shipped plugin fully out of reach without deleting its
+     * code.
+     */
+    disabled: z.boolean().optional(),
     icon: z.string().optional(),
     /**
      * An author-supplied raster icon set (RFC 0081), for a plugin whose

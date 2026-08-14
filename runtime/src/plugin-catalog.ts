@@ -29,6 +29,7 @@ import type { PlatformDb } from '@sovereignfs/db';
 import { createPluginStatusRowIfAbsent } from '@sovereignfs/db';
 import type { SovereignManifest } from '@sovereignfs/manifest';
 import { CHROME_PLUGIN_IDS } from './launcher-plugins';
+import { getInstalledPlugins } from './registry';
 
 export interface PluginCatalogEntry {
   id: string;
@@ -60,18 +61,29 @@ export function getPluginCatalog(
 }
 
 export type ActivatePluginResult =
-  { activated: true } | { activated: false; reason: 'already-active' };
+  | { activated: true }
+  | { activated: false; reason: 'already-active' }
+  | { activated: false; reason: 'hard-disabled' };
 
 /**
  * Activate a cataloged-but-inactive plugin: create its `plugin_status` row
  * with `access_policy = 'disabled'` (the operator sets a real policy from
  * Console next — Task 13.7). No-op if already active. Chrome plugins are
  * always active by construction and cannot be activated through this path.
+ *
+ * A manifest hard-disabled plugin (`disabled: true`) can never be activated
+ * — without this guard an admin could create a `plugin_status` row that
+ * looks "active" in the catalog while `getDisabledPluginIds()` still makes
+ * it fully unreachable everywhere else, a confusing state with no way to
+ * resolve itself.
  */
 export async function activatePlugin(
   pdb: PlatformDb,
   pluginId: string,
 ): Promise<ActivatePluginResult> {
+  const manifest = getInstalledPlugins().find((m) => m.id === pluginId);
+  if (manifest?.disabled) return { activated: false, reason: 'hard-disabled' };
+
   const inserted = await createPluginStatusRowIfAbsent(pdb, pluginId, {
     enabled: true,
     accessPolicy: 'disabled',

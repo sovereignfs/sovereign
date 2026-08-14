@@ -94,7 +94,13 @@ export async function activatePluginAction(
     const body = (await res.json().catch(() => null)) as { error?: string } | null;
     return { success: false, error: body?.error ?? `Failed to activate plugin: ${res.status}` };
   }
-  const body = (await res.json()) as { activated: boolean };
+  const body = (await res.json()) as { activated: boolean; reason?: string };
+  if (body.reason === 'hard-disabled') {
+    return {
+      success: false,
+      error: 'This plugin is hard-disabled by its manifest and cannot be activated.',
+    };
+  }
   revalidatePath('/console/plugins');
   return { success: true, alreadyActive: !body.activated };
 }

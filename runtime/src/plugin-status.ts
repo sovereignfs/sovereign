@@ -1,5 +1,5 @@
 import { type PlatformDb, getPlatformSetting, listPluginStatus } from '@sovereignfs/db';
-import { getDevelopmentPluginIds, getExamplePluginIds } from './registry';
+import { getDevelopmentPluginIds, getExamplePluginIds, getHardDisabledPluginIds } from './registry';
 
 /** Platform-settings key that persists the Console "Show example apps" toggle. */
 export const EXAMPLES_ENABLED_SETTING = 'examples_enabled';
@@ -66,6 +66,11 @@ export function resolveExamplesEnabled(setting: string | null, envDefault: boole
  * `hideDevelopment` is true, every id in `developmentIds` is disabled
  * regardless of any `plugin_status` row — see `hideDevelopmentPluginsByEnv`'s
  * doc comment for why this one has no override.
+ *
+ * `hardDisabledIds` (manifest `disabled: true`) is always merged in, with no
+ * flag gating it at all — stronger than the development rule, which at
+ * least needs an env var. A manifest hard-disable is the plugin author's own
+ * declaration; nothing at runtime can override it.
  */
 export function computeDisabledPluginIds(
   statusRows: { pluginId: string; enabled: boolean }[],
@@ -73,6 +78,7 @@ export function computeDisabledPluginIds(
   examplesEnabled: boolean,
   developmentIds: string[] = [],
   hideDevelopment: boolean = false,
+  hardDisabledIds: string[] = [],
 ): string[] {
   const statusMap = new Map(statusRows.map((r) => [r.pluginId, r.enabled]));
   const disabled = new Set<string>();
@@ -87,6 +93,7 @@ export function computeDisabledPluginIds(
   if (hideDevelopment) {
     for (const id of developmentIds) disabled.add(id);
   }
+  for (const id of hardDisabledIds) disabled.add(id);
   return [...disabled];
 }
 
@@ -108,9 +115,16 @@ export async function getExamplesEnabledFlag(pdb: PlatformDb): Promise<boolean> 
  * middleware route gate, the launcher, root-plugin selection, and portability.
  * Wraps the DB-level `plugin_status` rows with the example/env default rule
  * and the unconditional `SOVEREIGN_HIDE_DEVELOPMENT_PLUGINS` gate.
+ *
+ * Manifest hard-disabled ids (`disabled: true`) are computed first and
+ * returned even when `bypassPluginVisibilityInDev()` short-circuits
+ * everything else — unlike ordinary disabled state, a hard disable is
+ * explicit author intent, not a missing-DB-row default a local dev session
+ * should see through.
  */
 export async function getDisabledPluginIds(pdb: PlatformDb): Promise<string[]> {
-  if (bypassPluginVisibilityInDev()) return [];
+  const hardDisabledIds = getHardDisabledPluginIds();
+  if (bypassPluginVisibilityInDev()) return hardDisabledIds;
   const [statusRows, examplesEnabled] = await Promise.all([
     listPluginStatus(pdb),
     getExamplesEnabledFlag(pdb),
@@ -121,5 +135,6 @@ export async function getDisabledPluginIds(pdb: PlatformDb): Promise<string[]> {
     examplesEnabled,
     getDevelopmentPluginIds(),
     hideDevelopmentPluginsByEnv(),
+    hardDisabledIds,
   );
 }

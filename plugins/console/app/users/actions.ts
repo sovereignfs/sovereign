@@ -205,6 +205,74 @@ export async function resetMfaAction(formData: FormData): Promise<void> {
   revalidatePath('/console/users');
 }
 
+export async function vouchAction(formData: FormData): Promise<void> {
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'user:manage')) {
+    throw new Error('Insufficient privileges to manage users.');
+  }
+  const userId = formData.get('userId') as string;
+  const res = await adminFetch(`/api/admin/users/${userId}/vouch`, {
+    method: 'POST',
+    body: JSON.stringify({ vouchedBy: session.user.id }),
+  });
+  if (!res.ok) throw new Error(`Failed to vouch for user: ${res.status}`);
+  const updated = (await res.json()) as { id: string; email: string };
+  void sendAdminEmail({
+    templateId: 'console.vouched',
+    toUserId: updated.id,
+    toEmail: updated.email,
+    actorUserId: session.user.id,
+    subject: 'You were vouched for on Sovereign',
+    text: 'An administrator vouched for your account, granting it full trust.',
+    html: '<p>An administrator vouched for your account, granting it full trust.</p>',
+  });
+  void logActivity({
+    actorId: await actorId(),
+    actorType: 'user',
+    action: 'user.vouched',
+    subjectUserId: userId,
+    targetType: 'user',
+    targetId: userId,
+    visibility: 'user',
+    summary: 'Vouched by admin (verification level 3)',
+  });
+  revalidatePath('/console/users');
+}
+
+export async function revokeVouchAction(formData: FormData): Promise<void> {
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'user:manage')) {
+    throw new Error('Insufficient privileges to manage users.');
+  }
+  const userId = formData.get('userId') as string;
+  const res = await adminFetch(`/api/admin/users/${userId}/vouch`, {
+    method: 'DELETE',
+    body: JSON.stringify({ vouchedBy: session.user.id }),
+  });
+  if (!res.ok) throw new Error(`Failed to revoke vouch: ${res.status}`);
+  const updated = (await res.json()) as { id: string; email: string };
+  void sendAdminEmail({
+    templateId: 'console.vouch_revoked',
+    toUserId: updated.id,
+    toEmail: updated.email,
+    actorUserId: session.user.id,
+    subject: 'Your Sovereign vouch status was revoked',
+    text: 'An administrator revoked the vouch on your account.',
+    html: '<p>An administrator revoked the vouch on your account.</p>',
+  });
+  void logActivity({
+    actorId: await actorId(),
+    actorType: 'user',
+    action: 'user.vouch_revoked',
+    subjectUserId: userId,
+    targetType: 'user',
+    targetId: userId,
+    visibility: 'user',
+    summary: 'Vouch revoked by admin (verification level 2)',
+  });
+  revalidatePath('/console/users');
+}
+
 export async function deleteUserAction(formData: FormData): Promise<void> {
   const session = await sdk.auth.requireSession();
   if (!sdk.auth.hasCapability(session, 'user:manage')) {

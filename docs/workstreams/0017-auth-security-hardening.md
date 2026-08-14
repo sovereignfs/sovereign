@@ -1,6 +1,7 @@
 # Workstream 0017 — Auth and security hardening
 
-**Status:** 📋 Planned\
+**Status:** 🔄 In progress — legs 1–2 done (task 1.8, RFC 0035 Phase 1
+infrastructure; task 1.9, Phase 2 capability opt-in); legs 3–5 not started\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -26,13 +27,16 @@ protection is correct under horizontal scaling.
 
 ## Definition of done
 
-- [ ] `1.8` — `verification_level` exists on `users`, better-auth hooks
+- [x] `1.8` — `verification_level` exists on `users`, better-auth hooks
       promote/demote it on email verification and MFA enrollment/removal,
-      and it propagates through the session header chain.
-- [ ] `1.9` — `hasCapability()` accepts a verification-level check;
+      and it propagates through the session header chain. (Lands on the
+      auth database's `user` table via `additionalFields`, not a
+      `packages/db` migration — see the epic task's correction note.)
+- [x] `1.9` — `hasCapability()` accepts a verification-level check;
       `minVerificationLevel` is annotated on applicable capabilities;
-      plugin routes enforce `min_verification_level` from the manifest with
-      a `verification_required` 403 and a shell nudge banner.
+      plugin routes enforce `minVerificationLevel` from the manifest with a
+      `verification_required` 403 (API routes) or a redirect to a nudge page
+      (page routes) — see the epic task's correction note.
 - [ ] `1.13` — plugins can declare role presets and resource-scoped grants
       without granting platform-level access automatically; grant
       create/revoke/change is audited; export/import/delete flows through
@@ -128,6 +132,14 @@ leg 2 makes it functional.
 doesn't hold under test — existing capability checks silently changing
 behavior because of this leg would be a platform-wide authorization
 regression, not a scoped bug.
+
+**Done.** Backwards-compatibility verified by grepping every existing
+`hasCapability`/`capabilitiesForRole`/`requireCapabilityOrForbidden` call
+site before implementing (none checked `user:manage`/`role:assign`, so zero
+behavior change for any 2-arg caller) plus a regression test asserting the
+omitted-third-arg case explicitly. Landed as a dedicated nudge page
+(`/verification-required/[pluginId]`), not an inline shell banner — see the
+epic task's correction note for why.
 
 ### Leg 3 — Plugin-scoped roles and grants
 

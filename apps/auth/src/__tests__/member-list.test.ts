@@ -122,4 +122,23 @@ describe('buildMemberList', () => {
     const rows = buildMemberList([], [invite()]);
     expect(rows[0]?.isTestUser).toBe(false);
   });
+
+  it('normalizes verificationLevel (number, bigint-as-string, and absent) to 0-3', () => {
+    const rows = buildMemberList(
+      [
+        user({ id: 'u1', email: 'a@x.com', verificationLevel: 2 }),
+        user({ id: 'u2', email: 'b@x.com', verificationLevel: '3' }),
+        user({ id: 'u3', email: 'c@x.com', verificationLevel: null }),
+        user({ id: 'u4', email: 'd@x.com' }),
+        user({ id: 'u5', email: 'e@x.com', verificationLevel: 99 }),
+      ],
+      [],
+    );
+    expect(rows.map((r) => r.verificationLevel)).toEqual([2, 3, 0, 0, 3]);
+  });
+
+  it('sets verificationLevel to 0 on invite rows', () => {
+    const rows = buildMemberList([], [invite()]);
+    expect(rows[0]?.verificationLevel).toBe(0);
+  });
 });

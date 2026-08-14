@@ -55,9 +55,16 @@ import {
 } from '@sovereignfs/db';
 import { getPlatformDb } from './db';
 import { createMailer } from '@sovereignfs/mailer';
-import { manifestDatabaseIsolation } from '@sovereignfs/manifest';
+import {
+  effectiveRequiresConfirmation,
+  manifestDatabaseIsolation,
+  pluginToolName,
+  type ToolDeclaration,
+} from '@sovereignfs/manifest';
 import { ConsentRequiredError, provideHost } from '@sovereignfs/sdk';
 import { registry } from '../generated/registry';
+import { createToolConfirmationToken, verifyToolConfirmationToken } from './tool-confirmation';
+import { validateToolInput } from './tool-schema';
 import type {
   ActivityLogEntry,
   ConnectionContext,
@@ -93,6 +100,11 @@ import type {
   ProviderConfig,
   PublishEventInput,
   StorageObject,
+  ToolContext,
+  ToolExecuteOptions,
+  ToolPreviewResponse,
+  ToolProviderHandlers,
+  ToolRef,
 } from '@sovereignfs/sdk';
 import { requireJobsPluginContext } from './jobs';
 import type { EventEnvelope } from './event-broker';
@@ -225,6 +237,16 @@ const _mailer = createMailer();
  */
 const _resolverRegistry = new Map<string, DataContractResolver>();
 
+/**
+ * In-process registry for plugin tool provider handlers (RFC 0047). Keyed
+ * by `<providerId>:<toolName>` (`pluginToolName`) — unlike
+ * `_resolverRegistry` above, explicitly namespaced by provider so two
+ * plugins can never collide on the same local tool name. Populated by
+ * provider plugins calling `sdk.tools.provide('tool-name', handlers)`.
+ * Resets on server restart.
+ */
+const _toolRegistry = new Map<string, ToolProviderHandlers>();
+
 /** Build one plugin's discovery status (RFC 0051) from precomputed eligibility sets. */
 function toPluginAvailability(
   manifest: (typeof registry)[number],
@@ -344,6 +366,99 @@ async function auditHandoffOperation(action: string, row: PluginHandoffRow): Pro
     visibility: row.mode === 'authenticated' ? 'user' : 'admin',
     summary: `Handoff ${action.split('.').at(-1) ?? 'changed'}: ${row.sourcePluginId} -> ${row.providerId}:${row.name}`,
     metadata: { sourcePluginId: row.sourcePluginId, mode: row.mode },
+  });
+}
+
+/**
+ * Resolve and authorize a tool call (RFC 0047's "Authorization" + "Security
+ * requirements" sections): provider plugin installed, enabled, and holds
+ * `tools:provide`, and actually declares `ref.tool`; caller plugin
+ * installed, enabled, and holds `tools:call`; current user meets the tool's
+ * `minVerificationLevel` if declared. Throws (fails closed) on any gap,
+ * including a provider that isn't installed at all — never silently no-ops.
+ *
+ * Deliberately does NOT replicate `decidePluginRoute`'s paywall/RFC-0065
+ * access-policy checks — RFC 0047's own explicit "Security requirements"
+ * list names installed+enabled, permissions, confirmation, and
+ * verification level, not paywall/access-policy parity with page routes.
+ * Out of scope for this leg; not an oversight (see epic task 3.18's
+ * correction note).
+ */
+async function resolveToolOrThrow(ref: ToolRef, context: ToolContext): Promise<ToolDeclaration> {
+  const providerManifest = registry.find((m) => m.id === ref.providerId);
+  if (!providerManifest) {
+    throw new Error(`sdk.tools: provider plugin "${ref.providerId}" is not installed.`);
+  }
+  if (!providerManifest.permissions.includes('tools:provide')) {
+    throw new Error(`Plugin "${ref.providerId}" does not have the "tools:provide" permission.`);
+  }
+  const tool = providerManifest.tools?.find((t) => t.name === ref.tool);
+  if (!tool) {
+    throw new Error(`sdk.tools: "${ref.providerId}" does not declare a tool named "${ref.tool}".`);
+  }
+
+  const callerManifest = registry.find((m) => m.id === context.callerPluginId);
+  if (!callerManifest) {
+    throw new Error(`sdk.tools: caller plugin "${context.callerPluginId}" is not installed.`);
+  }
+  if (!callerManifest.permissions.includes('tools:call')) {
+    throw new Error(
+      `Plugin "${context.callerPluginId}" does not have the "tools:call" permission.`,
+    );
+  }
+
+  const disabledIds = new Set(await getDisabledPluginIds(await getPlatformDb()));
+  if (disabledIds.has(ref.providerId)) {
+    throw new Error(`sdk.tools: provider plugin "${ref.providerId}" is disabled.`);
+  }
+  if (disabledIds.has(context.callerPluginId)) {
+    throw new Error(`sdk.tools: caller plugin "${context.callerPluginId}" is disabled.`);
+  }
+
+  if (tool.minVerificationLevel && context.verificationLevel < tool.minVerificationLevel) {
+    throw new Error(
+      `sdk.tools: "${ref.providerId}:${ref.tool}" requires verification level ${String(tool.minVerificationLevel)}.`,
+    );
+  }
+
+  return tool;
+}
+
+/**
+ * Audit one tool execution attempt (RFC 0047: "provider plugin ID; caller
+ * plugin ID; tool name; effect class; actor user ID; target resource ID
+ * when provided; success/failure; timestamp"). Deliberately never receives
+ * or logs the raw `input`/result — the RFC explicitly warns these may
+ * contain sensitive data.
+ */
+async function auditToolExecution(input: {
+  providerId: string;
+  callerPluginId: string;
+  tool: string;
+  effect: ToolDeclaration['effect'];
+  actorUserId: string | null;
+  targetId?: string | null;
+  success: boolean;
+  errorMessage?: string;
+}): Promise<void> {
+  const pdb = await getPlatformDb();
+  await recordActivity(pdb, {
+    id: randomUUID(),
+    actorId: input.actorUserId,
+    actorType: input.actorUserId ? 'user' : 'plugin',
+    action: pluginToolName(input.providerId, input.tool),
+    subjectUserId: null,
+    targetType: 'plugin_tool',
+    targetId: input.targetId ?? null,
+    pluginId: input.providerId,
+    visibility: 'admin',
+    summary: `Tool ${input.success ? 'executed' : 'execution failed'}: ${pluginToolName(input.providerId, input.tool)}`,
+    metadata: {
+      callerPluginId: input.callerPluginId,
+      effect: input.effect,
+      success: input.success,
+      ...(input.errorMessage ? { errorMessage: input.errorMessage.slice(0, 500) } : {}),
+    },
   });
 }
 
@@ -1299,6 +1414,100 @@ provideHost({
         ...sdkConfig
       } = effective;
       return sdkConfig;
+    },
+  },
+  tools: {
+    provide(providerId: string, name: string, handlers: ToolProviderHandlers): void {
+      _toolRegistry.set(pluginToolName(providerId, name), handlers);
+    },
+
+    async preview(
+      ref: ToolRef,
+      input: unknown,
+      context: ToolContext,
+    ): Promise<ToolPreviewResponse> {
+      const tool = await resolveToolOrThrow(ref, context);
+      const validation = validateToolInput(tool.inputSchema, input);
+      if (!validation.valid) {
+        throw new Error(`sdk.tools.preview(): invalid input — ${validation.errors.join('; ')}`);
+      }
+      const handlers = _toolRegistry.get(pluginToolName(ref.providerId, ref.tool));
+      if (!handlers) {
+        throw new Error(
+          `sdk.tools.preview(): no handlers registered for "${ref.providerId}:${ref.tool}". ` +
+            `The provider plugin must call sdk.tools.provide() before it can be previewed.`,
+        );
+      }
+      const result = await handlers.preview(input);
+      if (!effectiveRequiresConfirmation(tool)) return result;
+      if (!context.userId) {
+        throw new Error('sdk.tools.preview() requires an authenticated user for this tool.');
+      }
+      const confirmationToken = createToolConfirmationToken({
+        actorUserId: context.userId,
+        callerPluginId: context.callerPluginId,
+        providerId: ref.providerId,
+        tool: ref.tool,
+        input,
+      });
+      return { ...result, confirmationToken };
+    },
+
+    async execute(
+      ref: ToolRef,
+      input: unknown,
+      context: ToolContext & ToolExecuteOptions,
+    ): Promise<unknown> {
+      const tool = await resolveToolOrThrow(ref, context);
+      const validation = validateToolInput(tool.inputSchema, input);
+      if (!validation.valid) {
+        throw new Error(`sdk.tools.execute(): invalid input — ${validation.errors.join('; ')}`);
+      }
+      if (effectiveRequiresConfirmation(tool)) {
+        if (!context.userId) {
+          throw new Error('sdk.tools.execute() requires an authenticated user for this tool.');
+        }
+        if (!context.confirmationToken) {
+          throw new Error('sdk.tools.execute(): a confirmationToken is required for this tool.');
+        }
+        verifyToolConfirmationToken(context.confirmationToken, {
+          actorUserId: context.userId,
+          callerPluginId: context.callerPluginId,
+          providerId: ref.providerId,
+          tool: ref.tool,
+          input,
+        });
+      }
+      const handlers = _toolRegistry.get(pluginToolName(ref.providerId, ref.tool));
+      if (!handlers) {
+        throw new Error(
+          `sdk.tools.execute(): no handlers registered for "${ref.providerId}:${ref.tool}". ` +
+            `The provider plugin must call sdk.tools.provide() before it can be executed.`,
+        );
+      }
+      try {
+        const result = await handlers.execute(input);
+        await auditToolExecution({
+          providerId: ref.providerId,
+          callerPluginId: context.callerPluginId,
+          tool: ref.tool,
+          effect: tool.effect,
+          actorUserId: context.userId,
+          success: true,
+        });
+        return result;
+      } catch (err) {
+        await auditToolExecution({
+          providerId: ref.providerId,
+          callerPluginId: context.callerPluginId,
+          tool: ref.tool,
+          effect: tool.effect,
+          actorUserId: context.userId,
+          success: false,
+          errorMessage: err instanceof Error ? err.message : 'Unknown error',
+        });
+        throw err;
+      }
     },
   },
 });

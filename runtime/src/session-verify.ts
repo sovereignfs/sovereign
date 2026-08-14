@@ -18,6 +18,8 @@ export interface VerifiedUser {
   role: string;
   /** IANA timezone captured at registration (additionalField), null when unset. */
   timezone: string | null;
+  /** Progressive verification level, RFC 0035: 0 registered .. 3 admin_vouched. */
+  verificationLevel: 0 | 1 | 2 | 3;
 }
 
 export interface VerifiedSession {
@@ -37,6 +39,7 @@ export interface CachedSessionData {
     role?: string | null;
     active?: boolean | null;
     timezone?: string | null;
+    verificationLevel?: number | string | null;
   } | null;
 }
 
@@ -85,9 +88,19 @@ export function verifiedUserFromCache(
       image: user.image ?? null,
       role: user.role ?? 'platform:user',
       timezone: user.timezone ?? null,
+      verificationLevel: normalizeVerificationLevel(user.verificationLevel),
     },
     expiresAt: Math.floor(expiresAtMs / 1000),
   };
+}
+
+/** Clamp a raw cache value (number, bigint-as-string on pg, or absent) to 0-3. */
+function normalizeVerificationLevel(raw: number | string | null | undefined): 0 | 1 | 2 | 3 {
+  const n = Number(raw ?? 0);
+  if (n >= 3) return 3;
+  if (n === 2) return 2;
+  if (n === 1) return 1;
+  return 0;
 }
 
 /** Coerce an ISO string / epoch ms / Date to epoch milliseconds, or null. */

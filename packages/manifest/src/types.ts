@@ -22,3 +22,6 @@ export type RegistryEntry = z.infer<typeof registryEntrySchema>;
 export type HandoffReceiverDeclaration = NonNullable<
   NonNullable<SovereignManifest['handoffs']>['receives']
 >[number];
+
+/** One manifest-declared plugin tool contract (RFC 0047). */
+export type ToolDeclaration = NonNullable<SovereignManifest['tools']>[number];

@@ -19,6 +19,7 @@ import { plugins } from './plugins';
 import { portability } from './portability';
 import { secrets } from './secrets';
 import { storage } from './storage';
+import { tools } from './tools';
 import { billing } from './unimplemented';
 import { webhooks } from './webhooks';
 
@@ -47,16 +48,19 @@ import { webhooks } from './webhooks';
  * authenticated or public/anonymous, RFC 0053), `jobs` (background jobs and
  * schedules, RFC 0046), `events` (ephemeral realtime channels, RFC 0045 —
  * `publish()` only; subscribing is a runtime route, not an SDK call, see
- * `docs/plugin-development.md`), `billing` (plugin monetization /
- * entitlement gating, RFC 0003), `device` (surface detection —
- * `browser`/`mobile`/`desktop` — RFC 0080; a presentation hint only, never
- * a security boundary; capability probes and invocation live in
- * `@sovereignfs/sdk/device-client` and the future device bridge, RFC 0083).
+ * `docs/plugin-development.md`), `tools` (platform-mediated plugin tool
+ * contracts — structured, permissioned, auditable cross-plugin actions with
+ * a confirmation-token flow for mutating/external effects, RFC 0047),
+ * `billing` (plugin monetization / entitlement gating, RFC 0003), `device`
+ * (surface detection — `browser`/`mobile`/`desktop` — RFC 0080; a
+ * presentation hint only, never a security boundary; capability probes and
+ * invocation live in `@sovereignfs/sdk/device-client` and the future device
+ * bridge, RFC 0083).
  * `data`, `activity`, `portability`, `env`, `notifications`, `directory`,
  * `secrets`, `crypto`, `storage`, `connections`, `e2ee`, `plugins`, `email`,
- * `webhooks`, `handoffs`, `jobs`, `events`, and `device` are implemented;
- * `billing` throws `NotImplementedError` until its backing mechanism
- * ships. Their shape may change before they stabilise.
+ * `webhooks`, `handoffs`, `jobs`, `events`, `tools`, and `device` are
+ * implemented; `billing` throws `NotImplementedError` until its backing
+ * mechanism ships. Their shape may change before they stabilise.
  */
 export const sdk = {
   // Stable (v1.0.0).
@@ -84,6 +88,7 @@ export const sdk = {
   env,
   email,
   billing,
+  tools,
 };
 
 export { SENSITIVITY_CLASSES, FIELD_DATA_PREFIX, FIELD_PASSTHROUGH_PREFIX } from './types';
@@ -220,4 +225,11 @@ export type {
   ConsumeHandoffOptions,
   HandoffContext,
   HandoffRequestContext,
+  ToolContext,
+  ToolEffect,
+  ToolExecuteOptions,
+  ToolPreviewResponse,
+  ToolPreviewResult,
+  ToolProviderHandlers,
+  ToolRef,
 } from './types';

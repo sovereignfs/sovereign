@@ -51,6 +51,22 @@ describe('verifiedUserFromCache', () => {
     expect(withoutTz?.user.timezone).toBeNull();
   });
 
+  it('normalizes verificationLevel (number, bigint-as-string, and absent) to 0-3', () => {
+    expect(
+      verifiedUserFromCache(cache({ user: { verificationLevel: 2 } }))?.user.verificationLevel,
+    ).toBe(2);
+    expect(
+      verifiedUserFromCache(cache({ user: { verificationLevel: '3' } }))?.user.verificationLevel,
+    ).toBe(3);
+    expect(
+      verifiedUserFromCache(cache({ user: { verificationLevel: undefined } }))?.user
+        .verificationLevel,
+    ).toBe(0);
+    expect(
+      verifiedUserFromCache(cache({ user: { verificationLevel: 99 } }))?.user.verificationLevel,
+    ).toBe(3);
+  });
+
   it('rejects payloads without a user id', () => {
     expect(verifiedUserFromCache({ session: { expiresAt: FUTURE }, user: {} })).toBeNull();
     expect(verifiedUserFromCache(null)).toBeNull();

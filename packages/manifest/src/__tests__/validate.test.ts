@@ -94,6 +94,99 @@ describe('validateManifest', () => {
     expect(res.valid).toBe(true);
   });
 
+  it('accepts a manifest without minVerificationLevel (defaults to no gate, RFC 0035)', () => {
+    const res = validateManifest(base);
+    expect(res.valid).toBe(true);
+  });
+
+  it.each([0, 1, 2, 3])('accepts minVerificationLevel: %i (RFC 0035)', (level) => {
+    const res = validateManifest({ ...base, minVerificationLevel: level });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects an out-of-range minVerificationLevel', () => {
+    const res = validateManifest({ ...base, minVerificationLevel: 4 });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('minVerificationLevel');
+    }
+  });
+
+  const readTool = {
+    name: 'summarize',
+    title: 'Summarize',
+    effect: 'read' as const,
+    inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+  };
+
+  it('accepts a manifest declaring a single read tool (RFC 0047)', () => {
+    const res = validateManifest({ ...base, tools: [readTool] });
+    expect(res.valid).toBe(true);
+  });
+
+  it('accepts a write tool with explicit requiresConfirmation and minVerificationLevel', () => {
+    const res = validateManifest({
+      ...base,
+      tools: [
+        {
+          ...readTool,
+          name: 'create-record',
+          effect: 'write',
+          requiresConfirmation: true,
+          minVerificationLevel: 1,
+        },
+      ],
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects an empty tools array', () => {
+    const res = validateManifest({ ...base, tools: [] });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects duplicate tool names within a plugin', () => {
+    const res = validateManifest({ ...base, tools: [readTool, readTool] });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('unique');
+    }
+  });
+
+  it('rejects an invalid tool name', () => {
+    const res = validateManifest({ ...base, tools: [{ ...readTool, name: 'Not_Valid' }] });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects an invalid effect class', () => {
+    const res = validateManifest({ ...base, tools: [{ ...readTool, effect: 'delete' }] });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects a tool with no inputSchema', () => {
+    const { inputSchema: _inputSchema, ...withoutSchema } = readTool;
+    const res = validateManifest({ ...base, tools: [withoutSchema] });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects an out-of-range tool minVerificationLevel', () => {
+    const res = validateManifest({ ...base, tools: [{ ...readTool, minVerificationLevel: 9 }] });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects an unknown key on a tool entry (strict)', () => {
+    const res = validateManifest({ ...base, tools: [{ ...readTool, bogus: true }] });
+    expect(res.valid).toBe(false);
+  });
+
+  it('accepts a manifest declaring tools:provide and tools:call permissions', () => {
+    const res = validateManifest({
+      ...base,
+      permissions: [...base.permissions, 'tools:provide', 'tools:call'],
+    });
+    expect(res.valid).toBe(true);
+  });
+
   it('accepts a manifest that declares publicRoutes (RFC 0042)', () => {
     const res = validateManifest({
       ...base,

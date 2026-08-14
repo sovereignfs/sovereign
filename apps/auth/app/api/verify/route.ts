@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getAuth } from '@/src/auth';
 
+/** Clamp a raw session value (number, bigint-as-string on pg, or absent) to 0-3. */
+function normalizeVerificationLevel(raw: number | string | null | undefined): 0 | 1 | 2 | 3 {
+  const n = Number(raw ?? 0);
+  if (n >= 3) return 3;
+  if (n === 2) return 2;
+  if (n === 1) return 1;
+  return 0;
+}
+
 /**
  * Session verification for the runtime. Returns the authenticated user or 401.
  * Consumed by the runtime middleware as the fallback when local cookie-cache
@@ -26,6 +35,7 @@ export async function GET(request: Request): Promise<Response> {
     role?: string;
     active?: boolean;
     timezone?: string | null;
+    verificationLevel?: number | string | null;
   };
 
   if (user.active === false) {
@@ -42,6 +52,7 @@ export async function GET(request: Request): Promise<Response> {
         image: user.image ?? null,
         role: user.role ?? 'platform:user',
         timezone: user.timezone ?? null,
+        verificationLevel: normalizeVerificationLevel(user.verificationLevel),
       },
       expiresAt: Math.floor(new Date(session.session.expiresAt).getTime() / 1000),
     },

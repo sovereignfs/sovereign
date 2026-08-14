@@ -21,9 +21,10 @@ export async function GET(request: Request): Promise<Response> {
     role: string;
     active: number | boolean | null;
     isTestUser?: number | boolean | null;
+    verificationLevel?: number | string | null;
     createdAt: string | Date;
   }>(
-    'SELECT id, email, name, role, active, "isTestUser", "createdAt" FROM "user" ORDER BY "createdAt" ASC',
+    'SELECT id, email, name, role, active, "isTestUser", "verificationLevel", "createdAt" FROM "user" ORDER BY "createdAt" ASC',
   );
   const users: AuthUserRow[] = userRows.map((u) => ({ ...u, createdAt: toIso(u.createdAt) }));
 

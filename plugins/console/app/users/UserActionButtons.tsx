@@ -5,6 +5,8 @@ import { ConfirmDialog } from '@sovereignfs/ui';
 import {
   toggleActiveAction,
   resetMfaAction,
+  vouchAction,
+  revokeVouchAction,
   deleteUserAction,
   cancelInviteAction,
 } from './actions';
@@ -145,6 +147,98 @@ export function ResetMfaButton({ userId, name }: { userId: string; name: string 
         }}
       />
       <form ref={formRef} action={resetMfaAction} style={{ display: 'none' }}>
+        <input type="hidden" name="userId" value={userId} />
+      </form>
+    </>
+  );
+}
+
+export function VouchButton({ userId, name }: { userId: string; name: string }) {
+  const [open, setOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  return (
+    <>
+      <button
+        type="button"
+        className={styles.iconBtn}
+        title="Vouch — grants verification level 3 (admin_vouched)"
+        onClick={() => setOpen(true)}
+      >
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M9 12l2 2 4-4" />
+          <circle cx="12" cy="12" r="10" />
+        </svg>
+      </button>
+      <ConfirmDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Vouch for user"
+        message={`Vouch for ${name || userId}? This grants full trust (verification level 3).`}
+        confirmLabel="Vouch"
+        onConfirm={() => {
+          setOpen(false);
+          formRef.current?.requestSubmit();
+        }}
+      />
+      <form ref={formRef} action={vouchAction} style={{ display: 'none' }}>
+        <input type="hidden" name="userId" value={userId} />
+      </form>
+    </>
+  );
+}
+
+export function RevokeVouchButton({ userId, name }: { userId: string; name: string }) {
+  const [open, setOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  return (
+    <>
+      <button
+        type="button"
+        className={styles.iconBtn}
+        title="Revoke vouch — drops back to verification level 2"
+        onClick={() => setOpen(true)}
+      >
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="9" y1="9" x2="15" y2="15" />
+          <line x1="15" y1="9" x2="9" y2="15" />
+        </svg>
+      </button>
+      <ConfirmDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Revoke vouch"
+        message={`Revoke the vouch for ${name || userId}? Their verification level drops to 2.`}
+        confirmLabel="Revoke vouch"
+        destructive
+        onConfirm={() => {
+          setOpen(false);
+          formRef.current?.requestSubmit();
+        }}
+      />
+      <form ref={formRef} action={revokeVouchAction} style={{ display: 'none' }}>
         <input type="hidden" name="userId" value={userId} />
       </form>
     </>

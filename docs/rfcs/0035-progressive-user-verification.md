@@ -1,7 +1,7 @@
 ---
 rfc: 0035
 title: Progressive user verification
-status: Accepted
+status: Implemented
 date: June 2026
 author: kasunben
 scope: >
@@ -65,9 +65,11 @@ the one `platform.ts` describes — `apps/auth` intentionally does not depend on
 verification flow only — no `verification_level`/MFA/admin-vouch machinery) shipped using
 better-auth's native `emailAndPassword.requireEmailVerification` +
 `emailVerification.sendVerificationEmail` support directly, gated by `AUTH_REQUIRE_EMAIL_VERIFICATION`
-(default `true`) — see `apps/auth/src/auth.ts` and `docs/security.md`. A future implementer of epic
-task 1.8 should build the `verification_level` ladder on top of this existing enforcement rather than
-duplicating the email-send/verify wiring.
+(default `true`) — see `apps/auth/src/auth.ts` and `docs/security.md`.
+
+**Update (v0.2):** epic task 1.8 (Phase 1) has since shipped the `verificationLevel` ladder on top
+of this existing enforcement, without duplicating the email-send/verify wiring — see
+`apps/auth/src/verification.ts` and the Changelog entry above.
 
 ### MFA state is readable but not propagated to session headers
 
@@ -430,10 +432,10 @@ Packages affected: `@sovereignfs/db` (patch), `@sovereignfs/sdk` (minor — new 
 `@sovereignfs/manifest` (patch — new optional field), `runtime` (minor), `plugins/account` (minor —
 security page reflects level), `plugins/console` (minor — vouch action in Users table).
 
-**Phase 2 — Capability opt-in (separate task):**
-Individual capability definitions gain `minVerificationLevel` where appropriate. Plugin manifest
-enforcement gate is activated. Operators who have enabled `REQUIRE_EMAIL_VERIFICATION` see
-functional gates for the first time.
+**Phase 2 — Capability opt-in (epic task 1.9, workstream 0017 leg 2 — shipped):**
+`user:manage` (level 1) and `role:assign` (level 2) now gate on verification level in addition to
+role. The plugin manifest's `minVerificationLevel` enforcement gate is active at the route boundary.
+Operators who have enabled `AUTH_REQUIRE_EMAIL_VERIFICATION` see functional gates for the first time.
 
 **Phase 3 — Federation (post-v1):**
 `verification_level` is included in the cross-instance user identity payload. Receiving instances
@@ -443,6 +445,8 @@ can choose to accept or re-verify based on the sending instance's trust policy.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | June 2026 | Initial draft |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | June 2026   | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 0.2     | August 2026 | Phase 1 (epic task 1.8, workstream 0017 leg 1) shipped. Several §5.2/§5.4 mechanism details in the original draft turned out to be wrong once checked against the actual codebase and the installed `better-auth@1.6.25`/`@better-auth/passkey@1.6.25` — implemented as corrected, see `docs/epics/users-auth.md` task 1.8's correction note for the full account: `verification_level`/`verification_events` live as `additionalFields` on the **auth** database's `user` table (camelCase `verificationLevel`/`verificationEvents`), not a `packages/db` migration; the proposed hook names (`onEmailVerification` etc.) don't exist — implemented as a self-healing `databaseHooks.user.update.after` recompute plus a top-level `hooks.after` for the two passkey endpoints; `AUTH_REQUIRE_EMAIL_VERIFICATION` already covered §5.3, reused rather than duplicated; only `AUTH_REQUIRE_MFA` is genuinely new. §5.8's manifest field is `minVerificationLevel` (camelCase, matching the schema's existing convention), not `min_verification_level`.                                                                                                                                                           |
+| 0.3     | August 2026 | Phase 2 (epic task 1.9, workstream 0017 leg 2) shipped — RFC fully implemented. §5.7's assumed `CapabilityDefinition` object type doesn't exist in `runtime/src/capabilities.ts` (capabilities are bare `Set<Capability>` membership, no per-capability metadata structure); implemented as an additive `CAPABILITY_MIN_VERIFICATION_LEVEL` lookup instead, gating exactly `user:manage` (level 1) and `role:assign` (level 2) per the epic's own named examples. `hasCapability`'s new third `userLevel?` argument is skip-the-check-when-omitted (true backward compatibility), matching every existing 2-arg call site's behavior unchanged — confirmed by grep before implementing, not assumed. `AUTH_REQUIRE_MFA` remains deliberately unwired: nothing in epic task 1.9's own deliverables names an enforcement point for it, so none was invented. §5.8's manifest route-boundary enforcement landed as a new `'verification-required'` `RouteDecision` in `runtime/src/route-guard.ts` (ordered after `adminOnly`, before `paywall`) — `/api/*` paths get `403 { error: "verification_required", requiredLevel }`, page routes redirect to a new `/verification-required/[pluginId]?level=n` nudge page. |

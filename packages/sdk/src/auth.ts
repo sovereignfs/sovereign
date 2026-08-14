@@ -28,9 +28,19 @@ export async function getSession(): Promise<Session | null> {
       image: h.get('x-sovereign-user-image') ?? null,
       role,
       capabilities,
+      verificationLevel: normalizeVerificationLevel(h.get('x-sovereign-verification-level')),
     },
     expiresAt: Number(h.get('x-sovereign-session-expires-at') ?? 0),
   };
+}
+
+/** Clamp the raw header value (absent for a session predating this leg) to 0-3. */
+function normalizeVerificationLevel(raw: string | null): 0 | 1 | 2 | 3 {
+  const n = Number(raw ?? 0);
+  if (n >= 3) return 3;
+  if (n === 2) return 2;
+  if (n === 1) return 1;
+  return 0;
 }
 
 /**

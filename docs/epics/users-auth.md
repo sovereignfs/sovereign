@@ -227,7 +227,57 @@ Task 0.6.01 (capabilities — `user:manage` gate on the admin route)
 
 ---
 
-#### 📋 1.8 — Progressive user verification, Phase 1 — Infrastructure (RFC 0035)
+#### ✅ 1.8 — Progressive user verification, Phase 1 — Infrastructure (RFC 0035)
+
+**Correction note (post-implementation):** several of this task's deliverables as
+originally written turned out to be inaccurate once checked against the actual
+codebase and the installed `better-auth@1.6.25`/`@better-auth/passkey@1.6.25` —
+implemented as corrected, not as originally written:
+
+- `verification_level`/`verification_events` live as `additionalFields` on
+  better-auth's own `"user"` table in the **auth** database
+  (`apps/auth/src/auth.ts`, `apps/auth/src/verification.ts`), not as a
+  `packages/db` migration on the platform `users` table — `apps/auth`
+  deliberately doesn't depend on `@sovereignfs/db` (see `apps/auth/src/db.ts`).
+  `@sovereignfs/db` needed no changes and no version bump for this task.
+- Both fields (and the manifest's new field, below) are camelCase
+  (`verificationLevel`, `verificationEvents`, `minVerificationLevel`), matching
+  every existing convention in both the `user.additionalFields` block and the
+  manifest schema — not the snake_case originally written here.
+- The hook names `onUserCreated`/`onEmailVerification`/`onTwoFactorEnabled`/
+  `onPasskeyCreated`/`onTwoFactorDisabled` do not exist in the installed
+  better-auth version. The real surface is `databaseHooks.user.update.after`
+  (fires for both the email-verification and two-factor-toggle flows, since
+  both write to the `user` table) plus a top-level `hooks.after` middleware
+  matching `ctx.path === '/passkey/verify-registration' | '/passkey/delete-passkey'`
+  (passkeys live in their own table, invisible to `databaseHooks.user.*`).
+  Implemented as a **self-healing recompute** (`computeVerificationRecompute`
+  in `apps/auth/src/verification.ts`) that derives the level from the row's
+  _current_ `emailVerified`/`twoFactorEnabled`/passkey-count signals on every
+  fire, rather than diffing which field just changed — better-auth hands the
+  hook only the post-write row, with no automatic before/after diff.
+- `REQUIRE_EMAIL_VERIFICATION` is not a new env var — it already shipped as
+  `AUTH_REQUIRE_EMAIL_VERIFICATION` (default `true`), which this task's
+  hooks build on rather than duplicate. Only `AUTH_REQUIRE_MFA` (default
+  `false`, `AUTH_*`-prefixed for consistency with every other var in
+  `apps/auth/src/env.ts`) is genuinely new — and it has no live enforcement
+  point yet in Phase 1 (that's Phase 2, Task 1.9); Phase 1 only reads it for
+  future `minVerificationLevel`-gated code to consult.
+- The vouch/revoke-vouch routes live in `apps/auth/app/api/admin/users/[id]/vouch/route.ts`,
+  not `runtime` — matching the existing `PATCH /api/admin/users/[id]`
+  precedent (role change, deactivate, MFA reset), where the runtime's Console
+  server action calls apps/auth's admin API rather than writing to the auth
+  database directly.
+- `/verify-email` (`runtime/app/(platform)/verify-email/page.tsx`) is _not_ a
+  middleware-forced redirect target in this task — Phase 1 is additive
+  infrastructure only. It's unreachable with a session at level 0 while
+  `AUTH_REQUIRE_EMAIL_VERIFICATION=true`, since better-auth blocks sign-in
+  itself with `EMAIL_NOT_VERIFIED` in that case (handled entirely by
+  `apps/auth`'s own login form, which already had a pre-session check-inbox/
+  resend flow — this task doesn't duplicate it). The runtime page is reachable
+  today via a direct link (the Account → Security nudge) for the
+  `AUTH_REQUIRE_EMAIL_VERIFICATION=false`-but-still-unverified case, and
+  exists as Phase 2's future redirect target for `minVerificationLevel` gates.
 
 **Goal:** Wire up the dormant `emailVerified` field into a live email confirmation flow; introduce
 the four-level trust model (`registered → email_verified → mfa_enrolled → admin_vouched`); and
@@ -289,7 +339,35 @@ on vouch routes), Task 1.7 (session-verify pattern to extend with the new field)
 
 ---
 
-#### 📋 1.9 — Progressive user verification, Phase 2 — Capability opt-in (RFC 0035)
+#### ✅ 1.9 — Progressive user verification, Phase 2 — Capability opt-in (RFC 0035)
+
+**Correction note (post-implementation):**
+
+- RFC 0035 §5.7's assumed `CapabilityDefinition` object type ("existing fields
+  …") doesn't exist in `runtime/src/capabilities.ts` — capabilities are bare
+  `Set<Capability>` membership per role preset, no per-capability metadata
+  structure at all. Implemented as an additive
+  `CAPABILITY_MIN_VERIFICATION_LEVEL: Partial<Record<Capability, 0|1|2|3>>`
+  lookup instead, gating exactly the two capabilities this task names —
+  `user:manage` (1) and `role:assign` (2) — and no others.
+- `hasCapability(role, cap, userLevel?)`'s third argument is _skip-the-check-
+  when-omitted_, not "treat as level 0" — confirmed by grepping every
+  existing call site before implementing: none of them currently check
+  `user:manage` or `role:assign`, so this task causes zero behavior change
+  for any 2-arg caller regardless of which capability they check.
+  `runtime/src/route-guard.ts`'s new `decidePluginRoute` parameter is the
+  opposite on purpose — it's a brand-new parameter with no legacy callers to
+  preserve, so an omitted level defaults to 0 (fail-closed) for any plugin
+  that _has_ declared `minVerificationLevel`.
+- The manifest field is `minVerificationLevel` (camelCase, per leg 1's own
+  correction), not `min_verification_level`.
+- `AUTH_REQUIRE_MFA` (shipped inert in leg 1) stays unwired — nothing in this
+  task's own deliverables names a concrete enforcement point for it. Not an
+  oversight: inventing one wasn't asked for.
+- The nudge is a dedicated page
+  (`runtime/app/(platform)/verification-required/[pluginId]/page.tsx`),
+  mirroring the existing `/paywall/[pluginId]`/`/forbidden` redirect pattern,
+  not an inline shell banner.
 
 **Goal:** Activate `minVerificationLevel` gates on individual platform capabilities and at the
 plugin manifest route boundary. Phase 1 laid the infrastructure; this task makes it functional

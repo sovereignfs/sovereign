@@ -148,6 +148,18 @@ const handoffPlugin = {
   },
 } as SovereignManifest;
 
+const verificationGatedPlugin = {
+  id: 'fs.example.verified-only',
+  routePrefix: '/verified-only',
+  minVerificationLevel: 1,
+} as SovereignManifest;
+
+const verificationGatedApiPlugin = {
+  id: 'fs.example.verified-api',
+  routePrefix: '/api/plugins/verified-api',
+  minVerificationLevel: 2,
+} as SovereignManifest;
+
 function session(role: string = 'platform:owner'): VerifiedSession {
   return {
     user: {
@@ -157,6 +169,7 @@ function session(role: string = 'platform:owner'): VerifiedSession {
       image: null,
       role,
       timezone: null,
+      verificationLevel: 0,
     },
     expiresAt: 4_102_444_800,
   };
@@ -244,6 +257,8 @@ describe('runtime middleware regressions', () => {
       mobileOnlyPlugin,
       mobileOnlyApiShapedPlugin,
       installablePlugin,
+      verificationGatedPlugin,
+      verificationGatedApiPlugin,
     ];
     fetchState = {
       session: session(),
@@ -465,6 +480,37 @@ describe('runtime middleware regressions', () => {
 
     expect(response.status).toBe(402);
     expect(await response.text()).toBe('Payment Required');
+  });
+
+  describe('minVerificationLevel plugin gate (RFC 0035 §5.8, epic task 1.9)', () => {
+    it('redirects an under-leveled user to the verification-required nudge page', async () => {
+      // Default session() is verificationLevel: 0; the plugin requires 1.
+      const response = await middleware(request('/verified-only/dashboard'));
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe(
+        'http://runtime.test/verification-required/fs.example.verified-only?level=1',
+      );
+    });
+
+    it('allows the route once the session meets the required level', async () => {
+      fetchState.session = {
+        ...session(),
+        user: { ...session().user, verificationLevel: 1 },
+      };
+
+      const response = await middleware(request('/verified-only/dashboard'));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('location')).toBeNull();
+    });
+
+    it('returns 403 with a verification_required JSON body for gated API-shaped routes', async () => {
+      const response = await middleware(request('/api/plugins/verified-api/run'));
+
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ error: 'verification_required', requiredLevel: 2 });
+    });
   });
 
   it('rewrites unauthenticated GET / to /login instead of redirecting (iOS PWA splash)', async () => {

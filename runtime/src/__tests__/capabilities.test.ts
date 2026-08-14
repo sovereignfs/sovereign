@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CAPABILITY_MIN_VERIFICATION_LEVEL,
   CapabilityError,
   GRANTABLE_CAPABILITIES,
   PLATFORM_ROLES,
@@ -94,6 +95,47 @@ describe('hasCapability', () => {
   });
 });
 
+describe('hasCapability — verification level gate (RFC 0035 §5.7)', () => {
+  it('omitting userLevel skips the gate entirely (backward-compatible)', () => {
+    // platform:admin has user:manage (gated to level 1) — the 2-arg form
+    // must behave exactly as it did before this leg, regardless of level.
+    expect(hasCapability('platform:admin', 'user:manage')).toBe(true);
+  });
+
+  it('denies a role-granted, level-gated capability below the required level', () => {
+    // platform:admin has user:manage (gated to level 1) but the caller is at level 0.
+    expect(hasCapability('platform:admin', 'user:manage', 0)).toBe(false);
+  });
+
+  it('allows a role-granted, level-gated capability at or above the required level', () => {
+    expect(hasCapability('platform:admin', 'user:manage', 1)).toBe(true);
+    expect(hasCapability('platform:admin', 'user:manage', 2)).toBe(true);
+  });
+
+  it('role:assign requires level 2, even for platform:owner', () => {
+    expect(hasCapability('platform:owner', 'role:assign', 0)).toBe(false);
+    expect(hasCapability('platform:owner', 'role:assign', 1)).toBe(false);
+    expect(hasCapability('platform:owner', 'role:assign', 2)).toBe(true);
+  });
+
+  it('a role that never had the capability stays denied regardless of level', () => {
+    expect(hasCapability('platform:user', 'user:manage', 3)).toBe(false);
+  });
+
+  it('an ungated capability is unaffected by any level, including 0', () => {
+    expect(hasCapability('platform:user', 'plugin:access', 0)).toBe(true);
+  });
+});
+
+describe('CAPABILITY_MIN_VERIFICATION_LEVEL', () => {
+  it('gates exactly user:manage (1) and role:assign (2) — no more, no fewer', () => {
+    expect(CAPABILITY_MIN_VERIFICATION_LEVEL).toEqual({
+      'user:manage': 1,
+      'role:assign': 2,
+    });
+  });
+});
+
 describe('capabilitiesForRole', () => {
   it('returns an array matching the preset', () => {
     const caps = capabilitiesForRole('platform:auditor');
@@ -107,6 +149,27 @@ describe('capabilitiesForRole', () => {
     expect(caps).toContain('plugin:access');
     expect(caps).not.toContain('console:access');
   });
+
+  it('omitting userLevel returns every role-granted capability, gate or not', () => {
+    const caps = capabilitiesForRole('platform:admin');
+    expect(caps).toContain('user:manage');
+  });
+
+  it('filters out level-gated capabilities the level does not meet', () => {
+    const caps = capabilitiesForRole('platform:admin', 0);
+    expect(caps).not.toContain('user:manage');
+    expect(caps).toContain('console:access'); // ungated, unaffected
+  });
+
+  it('includes a level-gated capability once the level is met', () => {
+    const caps = capabilitiesForRole('platform:admin', 1);
+    expect(caps).toContain('user:manage');
+  });
+
+  it('owner loses role:assign below level 2, keeps it at level 2', () => {
+    expect(capabilitiesForRole('platform:owner', 1)).not.toContain('role:assign');
+    expect(capabilitiesForRole('platform:owner', 2)).toContain('role:assign');
+  });
 });
 
 describe('requireCapabilityOrForbidden', () => {
@@ -118,6 +181,16 @@ describe('requireCapabilityOrForbidden', () => {
     expect(() => requireCapabilityOrForbidden('platform:admin', 'role:assign')).toThrow(
       CapabilityError,
     );
+  });
+
+  it('throws when the role has the capability but the level does not meet the gate', () => {
+    expect(() => requireCapabilityOrForbidden('platform:admin', 'user:manage', 0)).toThrow(
+      CapabilityError,
+    );
+  });
+
+  it('does not throw when the role has the capability and the level meets the gate', () => {
+    expect(() => requireCapabilityOrForbidden('platform:admin', 'user:manage', 1)).not.toThrow();
   });
 
   it('CapabilityError carries the cap and role and status 403', () => {

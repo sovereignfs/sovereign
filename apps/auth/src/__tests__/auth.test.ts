@@ -52,6 +52,30 @@ describe('email verification config', () => {
   });
 });
 
+describe('progressive verification config (RFC 0035, workstream 0017 leg 1)', () => {
+  it('registers verificationLevel and verificationEvents as non-input additionalFields', async () => {
+    const { getAuthOptions } = await import('../auth');
+    const level = getAuthOptions().user?.additionalFields?.verificationLevel;
+    expect(level?.type).toBe('number');
+    expect(level?.input).toBe(false);
+    expect(level?.defaultValue).toBe(0);
+
+    const events = getAuthOptions().user?.additionalFields?.verificationEvents;
+    expect(events?.type).toBe('string');
+    expect(events?.input).toBe(false);
+  });
+
+  it('registers a user.update.after databaseHook for the self-healing recompute', async () => {
+    const { getAuthOptions } = await import('../auth');
+    expect(typeof getAuthOptions().databaseHooks?.user?.update?.after).toBe('function');
+  });
+
+  it('registers a top-level hooks.after for the passkey create/delete paths', async () => {
+    const { getAuthOptions } = await import('../auth');
+    expect(typeof getAuthOptions().hooks?.after).toBe('function');
+  });
+});
+
 describe('registration timezone field (Task 1.20)', () => {
   it('registers the timezone additionalField as client-input', async () => {
     const { getAuthOptions } = await import('../auth');

@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { provideHost } from '../host';
 import { ConsentRequiredError, NotAuthenticatedError, sdk } from '../index';
 
@@ -272,6 +272,17 @@ beforeAll(() => {
         };
       },
     },
+    tools: {
+      provide() {
+        /* no-op */
+      },
+      async preview() {
+        return { summary: 'preview' };
+      },
+      async execute() {
+        return null;
+      },
+    },
     storage: {
       async put(input) {
         return {
@@ -340,6 +351,64 @@ beforeAll(() => {
   });
 });
 
+function mockHeaders(values: Record<string, string>): void {
+  vi.doMock('next/headers', () => ({
+    headers: async () => new Headers(values),
+  }));
+}
+
+describe('getSession() verificationLevel (RFC 0035)', () => {
+  const baseHeaders = { 'x-sovereign-user-id': 'u1', 'x-sovereign-user-role': 'platform:user' };
+
+  it('normalizes the header (number-as-string) into 0-3', async () => {
+    vi.resetModules();
+    mockHeaders({ ...baseHeaders, 'x-sovereign-verification-level': '2' });
+    const { getSession } = await import('../auth');
+    const session = await getSession();
+    expect(session?.user.verificationLevel).toBe(2);
+  });
+
+  it('defaults to 0 when the header is absent (session predates this leg)', async () => {
+    vi.resetModules();
+    mockHeaders(baseHeaders);
+    const { getSession } = await import('../auth');
+    const session = await getSession();
+    expect(session?.user.verificationLevel).toBe(0);
+  });
+
+  it('clamps an out-of-range value to 3', async () => {
+    vi.resetModules();
+    mockHeaders({ ...baseHeaders, 'x-sovereign-verification-level': '99' });
+    const { getSession } = await import('../auth');
+    const session = await getSession();
+    expect(session?.user.verificationLevel).toBe(3);
+  });
+});
+
+describe('sdk.tools context derivation (RFC 0047)', () => {
+  it('provide() throws without a plugin route context', async () => {
+    vi.resetModules();
+    mockHeaders({});
+    const { tools } = await import('../tools');
+    await expect(
+      tools.provide('t', { preview: async () => ({ summary: '' }), execute: async () => null }),
+    ).rejects.toThrow(/plugin route context/);
+  });
+
+  it('preview()/execute() throw NotAuthenticatedError with no user id', async () => {
+    vi.resetModules();
+    mockHeaders({ 'x-sovereign-plugin-id': 'com.example.caller' });
+    const { tools } = await import('../tools');
+    const { NotAuthenticatedError } = await import('../errors');
+    await expect(
+      tools.preview({ providerId: 'com.example.provider', tool: 't' }, {}),
+    ).rejects.toThrow(NotAuthenticatedError);
+    await expect(
+      tools.execute({ providerId: 'com.example.provider', tool: 't' }, {}),
+    ).rejects.toThrow(NotAuthenticatedError);
+  });
+});
+
 describe('sdk surface', () => {
   it('exposes the full v1 stable surface', () => {
     expect(typeof sdk.auth.getSession).toBe('function');
@@ -375,6 +444,12 @@ describe('sdk surface', () => {
   it('exposes the handoffs surface (RFC 0053)', () => {
     expect(typeof sdk.handoffs.create).toBe('function');
     expect(typeof sdk.handoffs.consume).toBe('function');
+  });
+
+  it('exposes the tools surface (RFC 0047)', () => {
+    expect(typeof sdk.tools.provide).toBe('function');
+    expect(typeof sdk.tools.preview).toBe('function');
+    expect(typeof sdk.tools.execute).toBe('function');
   });
 
   it('exposes the portability surface (RFC 0007)', () => {

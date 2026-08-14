@@ -51,6 +51,7 @@ const SOVEREIGN_TRUST_HEADERS = [
   'x-sovereign-user-image',
   'x-sovereign-session-expires-at',
   'x-sovereign-plugin-id',
+  'x-sovereign-verification-level',
 ] as const;
 
 /** Clone the inbound request headers with every platform-trust header stripped. */
@@ -458,13 +459,14 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       headers.set('x-sovereign-user-id', user.id);
       headers.set('x-sovereign-user-email', user.email);
       headers.set('x-sovereign-user-role', user.role);
-      const platformCaps = capabilitiesForRole(user.role);
+      const platformCaps = capabilitiesForRole(user.role, user.verificationLevel);
       const allCaps =
         ALL_GRANTED_PLUGIN_CAPS.length > 0
           ? [...platformCaps, ...ALL_GRANTED_PLUGIN_CAPS]
           : platformCaps;
       headers.set('x-sovereign-user-capabilities', JSON.stringify(allCaps));
       headers.set('x-sovereign-session-expires-at', String(expiresAt));
+      headers.set('x-sovereign-verification-level', String(user.verificationLevel));
       if (user.name != null) headers.set('x-sovereign-user-name', user.name);
       if (user.image != null) headers.set('x-sovereign-user-image', user.image);
     }
@@ -623,6 +625,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       paywallIds,
       restrictedIds,
       currentSurface,
+      user.verificationLevel,
     );
     if (decision === 'not-found') {
       if (pathname.startsWith('/api/')) {
@@ -643,6 +646,33 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       // authInterrupts API, at the cost of the final page load reporting 200.
       return applyCsp(
         withCookies(NextResponse.redirect(new URL('/forbidden', request.url), { status: 303 })),
+      );
+    }
+    if (decision === 'verification-required') {
+      const pluginId = matchedPluginId(pathname, installedPlugins) ?? '';
+      const requiredLevel =
+        installedPlugins.find((p) => p.id === pluginId)?.minVerificationLevel ?? 0;
+      // API routes get 403 with a machine-readable body (RFC 0035 §5.8) so a
+      // plugin's own error boundary can distinguish this from a plain
+      // capability 403; page routes redirect to a nudge page, same pattern
+      // as the paywall/forbidden gates above.
+      if (pathname.startsWith('/api/')) {
+        return applyCsp(
+          withCookies(
+            NextResponse.json({ error: 'verification_required', requiredLevel }, { status: 403 }),
+          ),
+        );
+      }
+      return applyCsp(
+        withCookies(
+          NextResponse.redirect(
+            new URL(
+              `/verification-required/${encodeURIComponent(pluginId)}?level=${requiredLevel}`,
+              request.url,
+            ),
+            { status: 303 },
+          ),
+        ),
       );
     }
     if (decision === 'paywall') {
@@ -711,13 +741,14 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   headers.set('x-sovereign-user-id', user.id);
   headers.set('x-sovereign-user-email', user.email);
   headers.set('x-sovereign-user-role', user.role);
-  const platformCaps = capabilitiesForRole(user.role);
+  const platformCaps = capabilitiesForRole(user.role, user.verificationLevel);
   const allCaps =
     ALL_GRANTED_PLUGIN_CAPS.length > 0
       ? [...platformCaps, ...ALL_GRANTED_PLUGIN_CAPS]
       : platformCaps;
   headers.set('x-sovereign-user-capabilities', JSON.stringify(allCaps));
   headers.set('x-sovereign-session-expires-at', String(expiresAt));
+  headers.set('x-sovereign-verification-level', String(user.verificationLevel));
   if (user.name != null) headers.set('x-sovereign-user-name', user.name);
   if (user.image != null) headers.set('x-sovereign-user-image', user.image);
 

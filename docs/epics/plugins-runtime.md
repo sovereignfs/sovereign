@@ -688,7 +688,28 @@ environment variables), Task 3.6 (icon system).
 
 ---
 
-#### 📋 3.23 — Generate script decomposition
+#### ✅ 3.23 — Generate script decomposition
+
+**Status (August 2026): shipped — workstream 0012 leg 4.** Split the
+1282-line `scripts/generate-registry.ts` into nine focused modules under
+`scripts/generate/`: `paths.ts` (shared path constants and
+`readPlatformVersion`, not separately named in the original deliverable
+list but needed once path constants have more than one consumer module),
+`types.ts` (`PluginEntry`), `read-plugins.ts`, `compose-routes.ts`,
+`plugin-icons.ts`, `plugin-env.ts`, `plugin-capabilities.ts`, plus
+`plugin-schedules.ts`, `plugin-jobs.ts`, and `plugin-events.ts` — three
+modules beyond the original 6-module list, added because the source file
+turned out to have three more generated-output concerns (RFC 0046
+schedules/jobs, RFC 0045 event authorizers) than the deliverable list
+named, each following the exact same collect/render/write shape as
+`plugin-capabilities.ts`. `write-registry.ts` rounds out the split.
+`scripts/generate-registry.ts` stays the CLI entrypoint: `generate()`
+orchestration, `--watch` mode, and re-exports of every module's public
+symbols so the pre-existing `scripts/__tests__/generate-registry.test.ts`
+(all 55 tests, from Task 3.22) keeps importing from `'../generate-registry'`
+unchanged — verified byte-identical `pnpm generate` output for the current
+plugin set (diffed `runtime/generated/*` before/after) and a clean
+`pnpm build`.
 
 **Goal:** Make plugin composition safer to evolve as shell modes, manifest
 fields, and registry behavior grow.
@@ -702,6 +723,11 @@ fields, and registry behavior grow.
   - `plugin-icons.ts`: static icon copy and pruning.
   - `plugin-env.ts`: plugin-scoped env declaration processing and output.
   - `plugin-capabilities.ts`: generated capability declaration output.
+  - `plugin-schedules.ts` / `plugin-jobs.ts` / `plugin-events.ts`: the
+    schedules (RFC 0046), jobs (RFC 0046), and event-authorizer (RFC 0045)
+    generated-output modules — same collect/render/write shape as
+    `plugin-capabilities.ts`, found during implementation and added for
+    consistency rather than left bundled in the entrypoint.
   - `write-registry.ts`: generated registry output.
 - Keep `scripts/generate-registry.ts` as the CLI entrypoint.
 - Preserve generated output format on the first refactor to minimize blast

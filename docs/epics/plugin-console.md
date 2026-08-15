@@ -172,7 +172,80 @@ plugin config), Task 9.8 (instance identity rename), Task 1.10
 
 ---
 
-#### 📋 13.6 — Console primitive migration, Phase 2
+#### ✅ 13.6 — Console primitive migration, Phase 2
+
+**Status (August 2026): shipped — workstream 0012 leg 7, scoped.** Of the
+four deliverables below, three were in scope for that leg (see its own
+Decisions locked entry, which formally narrowed this task's obligations for
+leg 7 before work started); the nav/header item was explicitly deferred to a
+follow-up even though its blocker has since shipped — see that item's own
+note below for why. Same "workstream-scoped ✅, tracked follow-up for the
+rest" pattern leg 3 used for Task 0.14 (packages-only typecheck
+performance).
+
+- Confirm-dialog migration: **already done** before this leg started — every
+  confirm prompt in the plugin (`RemovePluginButton.tsx`,
+  `UserActionButtons.tsx`, `UserCard.tsx`) already used `@sovereignfs/ui`'s
+  `ConfirmDialog`; `console.module.css` already carried a comment recording
+  this. `RevokeSessionButton.tsx`/`PluginInstallPanel.tsx`, named in this
+  deliverable's original text, no longer exist under those names — folded
+  into the components above during earlier work not tracked against this
+  task. No code change needed; this bullet is closed by inspection.
+- Table styling: **stays bespoke, documented in code**
+  (`console.module.css`, the comment above `.tableCard`) rather than
+  migrated. `@sovereignfs/ui`'s `Table`/`TableHeaderCell`/`TableCell` exist,
+  but `TableHeaderCell`/`TableCell` don't merge an incoming `className` with
+  their own base style (they spread `...rest` — including `className` —
+  _after_ their own hardcoded class on the same element, so a caller's
+  className fully replaces the primitive's th/td styling instead of layering
+  on it). Adopting them as-is would mean losing this table's specific
+  uppercase/tracked header treatment; adopting them with a full override
+  would mean re-declaring everything the primitive already sets. This is
+  also the single highest-traffic admin-destructive surface in Console
+  (deactivate/delete/reset-MFA/revoke-vouch/delete render inside these
+  cells) — not the place to trade a cosmetic unification for layout-shift
+  risk on those controls.
+- Icon-only/text+icon action button consolidation: **done**, as a
+  documented local pattern (the deliverable's own second option, not a new
+  `Button` variant — adding one to the published, NFR-04-constrained
+  `@sovereignfs/ui` package for a Console-only need was disproportionate).
+  `.iconBtn`/`.iconBtnReactivate`/`.iconBtnDanger` (30×30 bordered,
+  three tones) and `.pluginCardBtnToggle`/`.pluginCardBtnRemove` (padded
+  text+icon, two tones) each collapsed from full near-duplicate
+  declarations to one shared base class + tone-only overrides via CSS
+  Modules `composes` (the same convention `apps/auth/app/auth.module.css`'s
+  `.linkButton` already uses) — zero TSX changes, every call site still
+  imports the same `styles.iconBtn`/etc. names. `.copyButton`, named in the
+  original deliverable text, was already dead code (no definition, no
+  usage) — nothing to consolidate. `.userCardMenuBtn` stays outside this
+  family on purpose (documented in code): a borderless 32×32 menu trigger,
+  not a bordered discrete action button — a different control that only
+  superficially looks similar. Verified the CSS Modules `composes` output
+  is correct by inspecting the compiled bundle directly, not just trusting
+  the source: `styles.iconBtnDanger` resolves to
+  `"console_iconBtnDanger__<hash> console_iconBtnBase__<hash>"`, both
+  classes applied together as `composes` requires.
+- Nav (`NavTabs`) / page header (`PageHeader`) migration: **deferred, not
+  done in this leg.** The epic text above names Task 9.13 as the blocker —
+  that reference is itself stale doc drift: 9.13 is "Subtle Sovereign
+  attribution (RFC 0027)," ❌ rejected, unrelated. The actual blocker was
+  Task **9.15** ("NavTabs Link support + PageHeader heading level"), ✅
+  shipped since this epic text was written. Workstream 0012's own scoping
+  (locked before this leg started, see `docs/workstreams/0012-engineering-
+hygiene.md`'s Decisions locked table) explicitly left this item out of
+  leg 7 regardless, to keep that leg's diff to the three items above — not
+  re-litigated here. Tracked as a follow-up, not silently dropped.
+
+Live browser verification of the admin-destructive flows this touches
+(deactivation, deletion, MFA reset, plugin install/remove) was not possible
+in this environment — no working credentials for the local dev database's
+existing (real, non-test) accounts, and `sv seed` correctly refused to plant
+known-password test accounts over them. Verified instead by: `pnpm build`
+succeeding, `pnpm lint`/`pnpm format:check` clean, `pnpm design:tokens:check`
+clean, all 36 existing Console tests passing unchanged, and direct
+inspection of the compiled CSS/JS output described above. This is a real gap
+against the review checklist's "manual re-verification, not just
+typecheck/lint" bar — flagged explicitly rather than silently claimed.
 
 **Goal:** Finish adopting `@sovereignfs/ui` primitives for the higher-risk
 Console patterns deliberately deferred by Task 9.12 (design system
@@ -196,13 +269,15 @@ change as the broader stabilization work.
   either a new icon-button variant on `Button` or a documented local pattern.
 - Migrate Console's section nav (`layout.tsx`, `.nav`/`.navLink`) to
   `NavTabs`, and the per-page `.pageHeader`/`.pageTitle` markup to
-  `PageHeader` — both **blocked on Task 9.13** (NavTabs needs Next `<Link>`
+  `PageHeader` — both **blocked on Task 9.15** (NavTabs needs Next `<Link>`
   support; PageHeader needs a configurable heading level) landing first.
 - `.rolePill`/`.rolePills` (Console-specific role-assignment control) stay
   local — not a generic primitive candidate.
 
-**Dependencies:** Task 9.12 (design system stabilization) ✅, Task 9.13
-(NavTabs Link support + PageHeader heading level) for the nav/header items.
+**Dependencies:** Task 9.12 (design system stabilization) ✅, Task 9.15
+(NavTabs Link support + PageHeader heading level) ✅ for the nav/header
+items — shipped since this task was written, but not pulled into workstream
+0012 leg 7's scope; see that leg's own status note above.
 
 **Review checklist:**
 

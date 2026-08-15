@@ -121,7 +121,23 @@
   color: var(--sv-color-text-muted);
 }
 
-/* ── Table ──────────────────────────────────────────────────────────────── */
+/* ── Table (Task 13.6: stays bespoke, documented per that task's own
+   "migrate or document why it stays bespoke" deliverable) ─────────────────
+   @sovereignfs/ui's Table/TableHeaderCell/TableCell exist but don't fit
+   without a visual or component-API compromise: the top-level `Table`
+   merges an incoming `className` with its own base style, but
+   `TableHeaderCell`/`TableCell` don't — they spread `...rest` (including
+   `className`) *after* their own hardcoded class on the same element, so
+   passing a className there fully replaces the primitive's th/td styling
+   rather than layering on top of it. Adopting the primitive as-is would
+   mean losing this table's specific uppercase/tracked header treatment;
+   adopting it with a full className override would mean re-declaring
+   every property the primitive already sets, which isn't really "using"
+   it. This is also the single highest-traffic admin-destructive surface
+   in Console (deactivate/delete/reset-MFA/revoke-vouch/delete render
+   inside these cells) — not the place to trade a cosmetic unification for
+   layout-shift risk on those controls. Revisit if TableHeaderCell/TableCell
+   ever grow className merging. */
 
 .tableCard {
   border: 1px solid var(--sv-color-border);
@@ -239,9 +255,18 @@
   opacity: 1;
 }
 
-/* ── Icon-only action buttons ───────────────────────────────────────────── */
-
-.iconBtn {
+/* ── Icon-only action buttons (Task 13.6) ───────────────────────────────────
+   .iconBtn/.iconBtnReactivate/.iconBtnDanger are one 30×30 bordered
+   icon-only control with three tones (default/success/danger), consolidated
+   here via CSS Modules `composes` (same convention as apps/auth's
+   .linkButton) so the three near-duplicate rules collapse to one shared
+   base + tone-only overrides — call sites are unchanged, still import
+   styles.iconBtn / styles.iconBtnReactivate / styles.iconBtnDanger.
+   .userCardMenuBtn below is deliberately NOT part of this family: it's a
+   borderless 32×32 kebab-menu trigger (different shape, no border, larger
+   glyph), not a bordered discrete action button — documented there rather
+   than forced into this pattern. */
+.iconBtnBase {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -254,6 +279,10 @@
   cursor: pointer;
   flex-shrink: 0;
   padding: 0;
+}
+
+.iconBtn {
+  composes: iconBtnBase;
 }
 
 .iconBtn:hover {
@@ -262,18 +291,7 @@
 }
 
 .iconBtnReactivate {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-sm);
-  background-color: transparent;
-  color: var(--sv-color-text-muted);
-  cursor: pointer;
-  flex-shrink: 0;
-  padding: 0;
+  composes: iconBtnBase;
 }
 
 .iconBtnReactivate:hover {
@@ -282,18 +300,9 @@
 }
 
 .iconBtnDanger {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: 1px solid var(--sv-red-700);
-  border-radius: var(--sv-radius-sm);
-  background-color: transparent;
+  composes: iconBtnBase;
+  border-color: var(--sv-red-700);
   color: var(--sv-red-700);
-  cursor: pointer;
-  flex-shrink: 0;
-  padding: 0;
 }
 
 .iconBtnDanger:hover {
@@ -958,19 +967,27 @@
   padding-top: var(--sv-space-1);
 }
 
-.pluginCardBtnToggle {
+/* Shared base for the plugin-card text+icon action buttons (Task 13.6) —
+   .pluginCardBtnToggle and .pluginCardBtnRemove differ only in border/text
+   tone and hover, consolidated via `composes` like the icon-only family
+   above. Call sites unchanged. */
+.pluginCardBtnBase {
   display: inline-flex;
   align-items: center;
-  gap: var(--sv-space-2);
   padding: var(--sv-space-1) var(--sv-space-3);
-  border: 1px solid var(--sv-color-border-strong);
   border-radius: var(--sv-radius-md);
   background: transparent;
-  color: var(--sv-color-text-primary);
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-medium);
   cursor: pointer;
   white-space: nowrap;
+}
+
+.pluginCardBtnToggle {
+  composes: pluginCardBtnBase;
+  gap: var(--sv-space-2);
+  border: 1px solid var(--sv-color-border-strong);
+  color: var(--sv-color-text-primary);
 }
 
 .pluginCardBtnToggle:hover {
@@ -978,17 +995,9 @@
 }
 
 .pluginCardBtnRemove {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--sv-space-1) var(--sv-space-3);
+  composes: pluginCardBtnBase;
   border: 1px solid var(--sv-color-error-border);
-  border-radius: var(--sv-radius-md);
-  background: transparent;
   color: var(--sv-color-error-text);
-  font-size: var(--sv-font-size-sm);
-  font-weight: var(--sv-font-weight-medium);
-  cursor: pointer;
-  white-space: nowrap;
 }
 
 .pluginCardBtnRemove:hover {
@@ -1168,7 +1177,9 @@
 /* ⋯ action menu trigger — the menu panel itself (options, dividers, danger
    items) is now @sovereignfs/ui's Menu (Popover on desktop, Drawer on
    mobile), which owns that chrome; only the trigger button styling stays
-   plugin-local. */
+   plugin-local. Deliberately not part of the .iconBtn* family above (Task
+   13.6) — borderless, larger (32×32 vs 30×30), no tone variants — a
+   different control (menu trigger) that happens to also be square/icon-ish. */
 .userCardMenuBtn {
   display: flex;
   align-items: center;

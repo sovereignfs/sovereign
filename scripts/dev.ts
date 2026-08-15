@@ -19,13 +19,17 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { syncLocalPluginDeps } from '../bin/plugin-deps';
 import { loadRootEnv } from './load-root-env';
 
 const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(SCRIPTS_DIR, '..');
 const RUNTIME_DIR = join(ROOT, 'runtime');
+const PLUGINS_DIR = join(ROOT, 'plugins');
 const GENERATE = join(SCRIPTS_DIR, 'generate-registry.ts');
 const INSTALL_PLUGINS = join(SCRIPTS_DIR, 'install-plugins.ts');
+const RUNTIME_PKG = join(RUNTIME_DIR, 'package.json');
+const PLUGIN_DEPS_LEDGER = join(ROOT, 'runtime', 'generated', 'plugin-deps.json');
 loadRootEnv(ROOT);
 
 const RUNTIME_PORT = process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000';
@@ -68,6 +72,21 @@ if (install.status !== 0) {
   console.warn(
     '[dev] install-plugins did not complete — continuing without the declared external plugins.',
   );
+}
+
+// 0.5. Self-heal .local plugin dependencies (RFC 0057) — .local plugins
+// bypass `sv plugin add`/`remove` entirely, so nothing else keeps
+// runtime/package.json and the plugin-deps.json ledger in sync with them.
+// Cheap to check (a handful of small JSON reads) every boot; only runs
+// `pnpm install` when something actually changed.
+const depsSync = syncLocalPluginDeps({
+  pluginsDir: PLUGINS_DIR,
+  runtimePkgPath: RUNTIME_PKG,
+  ledgerPath: PLUGIN_DEPS_LEDGER,
+  root: ROOT,
+});
+if (depsSync.changed) {
+  console.log(`[dev] .local plugin dependencies changed — ${depsSync.summary.join('; ')}.`);
 }
 
 // 1. Compose plugins once, before Next's first route scan.

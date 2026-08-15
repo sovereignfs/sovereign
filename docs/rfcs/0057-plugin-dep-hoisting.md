@@ -1,7 +1,7 @@
 ---
 rfc: 0057
 title: Plugin external dependency resolution — automatic runtime dep hoisting on plugin add/remove
-status: Draft
+status: Implemented
 date: July 2026
 author: kasunben
 scope: >
@@ -192,17 +192,23 @@ It also doesn't work for third-party plugins whose package names aren't
 
 ## Open questions
 
-1. Should the ledger file be committed or gitignored? Committing it makes
-   review transparent (you can see what a new plugin adds). Gitignoring it
-   means it's always regenerated. Leaning toward committed.
-2. Should version conflict warnings be blocking (error + exit) or advisory?
-   Advisory seems right — SemVer ranges often resolve safely.
-3. Should `sv plugin migrate` (the DB migration command from the same sprint)
-   and this dep-hoisting step be combined into a single `sv plugin sync` command
-   that brings a plugin fully up to date after a manifest or schema change?
-4. Does the dev-startup sync in `scripts/dev.ts` add too much latency? If
-   `pnpm install` is triggered on every `pnpm dev` even when nothing changed,
-   it should be gated on a hash/mtime check of the plugin `package.json`.
+Resolved during implementation (workstream 0012 leg 8, epic task 3.25):
+
+1. **Committed.** `runtime/generated/plugin-deps.json` is the one deliberate
+   exception carved out of that directory's blanket `.gitignore` rule.
+2. **Advisory.** A version conflict keeps the newer range
+   (`semver.minVersion()` comparison) and prints a `consola.warn` — it never
+   blocks the command.
+3. Not addressed by this task — `sv plugin migrate` and dep-hoisting stay
+   separate commands/steps for now. Left for a future RFC if the combined
+   `sv plugin sync` idea gets picked up.
+4. **Gated by a direct diff, not a separate hash file.** `syncLocalPluginDeps`
+   recomputes each `.local` plugin's external deps and compares the result
+   against the ledger on every `pnpm dev` boot — cheap (a handful of small
+   JSON reads) — and only runs `pnpm install` when that comparison finds an
+   actual difference. A separate mtime/hash cache file was considered
+   unnecessary complexity: the comparison itself _is_ the cheap operation
+   the hash check would have gated the same expensive step behind.
 
 ## Adoption path
 
@@ -222,6 +228,7 @@ changes are required.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | July 2026 | Initial draft |
+| Version | Date        | Change                                              |
+| ------- | ----------- | --------------------------------------------------- |
+| 0.1     | July 2026   | Initial draft                                       |
+| 1.0     | August 2026 | Implemented — workstream 0012 leg 8, epic task 3.25 |

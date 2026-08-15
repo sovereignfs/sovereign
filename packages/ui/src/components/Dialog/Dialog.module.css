@@ -1,13 +1,20 @@
 /* Dialog — scrim + centered panel. Tokens only (z-index is structural, not a
  * theming value, so it has no token).
  *
- * Each size is a FIXED box (width AND height) — the panel never grows or
- * shrinks with its content, so switching views inside it (e.g. overlay-plugin
- * tabs) keeps the dialog the exact same size. Overflow scrolls inside `.content`
- * while the panel and its close button stay put. The scrim's padding is the
- * fixed margin `lg` leaves around the viewport; `sm`/`md` are centered and cap
- * to that available space on short screens. On mobile every size becomes a
- * full-screen sheet.
+ * `sm`/`md` are a fixed WIDTH but a content-driven height, capped at a
+ * per-size max-height: the panel grows to fit its content and shrinks when
+ * content is sparse, only hitting the cap (and scrolling internally, inside
+ * `.content`) once content actually exceeds it. Before this, height was
+ * fixed too, which left short-content consumers (e.g. a two-field form in
+ * console/plugins/PluginAccessDialog.tsx) looking like a near-empty
+ * skeleton — see docs/architecture-rules.md. `lg`/`full` remain a true fixed
+ * box (100%/100% of the scrim's available area): those sizes are what
+ * overlay-shell plugins (Account, Console) render into, where the panel
+ * must hold still while the plugin switches between its own internal views.
+ * The close button stays pinned top-right regardless. The scrim's padding is
+ * the fixed margin `lg` leaves around the viewport; `sm`/`md` are centered
+ * and cap to that available space on short screens too. On mobile every
+ * size becomes a full-screen sheet.
  *
  * `--sv-dialog-inset-left` lets a host inset the scrim past a fixed left nav
  * rail (e.g. the platform sidebar) so the overlay's left margin is measured
@@ -101,22 +108,26 @@
   overscroll-behavior: none;
 }
 
-/* Fixed sizes. `max-*: 100%` caps to the scrim's content box (viewport minus
- * margin) so a size never overflows a small viewport. */
+/* `sm`/`md`: fixed width, content-driven height up to the size's own cap
+ * (28rem/42rem — the box's old fixed heights, now a ceiling rather than a
+ * floor). `min(<cap>, 100%)` also still caps to the scrim's content box
+ * (viewport minus margin) so a size never overflows a short viewport. No
+ * explicit `height` — the panel's flex column sizes to `.content`'s natural
+ * height on its own; see the file-level comment above. */
 .sm {
   width: 24rem;
-  height: 28rem;
   max-width: 100%;
-  max-height: 100%;
+  max-height: min(28rem, 100%);
 }
 
 .md {
   width: 36rem;
-  height: 42rem;
   max-width: 100%;
-  max-height: 100%;
+  max-height: min(42rem, 100%);
 }
 
+/* `lg`/`full`: a true fixed box, unaffected by the above — see the
+ * file-level comment. */
 .lg,
 .full {
   width: 100%;

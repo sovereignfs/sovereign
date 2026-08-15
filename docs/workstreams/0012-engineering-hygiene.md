@@ -1,6 +1,6 @@
 # Workstream 0012 — Engineering hygiene
 
-**Status:** ⏳ In progress — legs 1–3 done. Leg 1: tasks 14.2, 13.5, 15.2,
+**Status:** ⏳ In progress — legs 1–4 done. Leg 1: tasks 14.2, 13.5, 15.2,
 additive test coverage across Account/Console/Launcher. Leg 2: task 3.24,
 SDK boundary and runtime contract tests — found and closed a real gap in
 the boundary rule itself (the `@/` alias reaching `runtime/src` unflagged),
@@ -8,9 +8,14 @@ formalized as a scoped, documented exception for `plugins/console` only.
 Leg 3: task 0.14, typecheck performance — opt-in incremental project
 references for the 7 core library packages; caught and avoided a real
 regression where the first approach broke `tsup`'s build; Next.js apps
-evaluated and excluded with concrete reasons. Legs 4–8 not started; legs
-4, 5, 7, 8 have no blocking dependency and can proceed in any order —
-only leg 6 waits on leg 5\
+evaluated and excluded with concrete reasons. Leg 4: task 3.23, generate
+script decomposition — nine modules under `scripts/generate/`, three more
+than the epic's original list (schedules/jobs/events generated-output
+concerns found during implementation); `pnpm generate` output verified
+byte-identical, all 55 existing regression tests pass unchanged via the
+entrypoint's re-export barrel. Legs 5–8 not started; legs 5, 7, 8 have no
+blocking dependency and can proceed in any order — only leg 6 waits on
+leg 5\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -57,9 +62,11 @@ this backlog as unowned.
       core packages — `pnpm typecheck` itself is unchanged and was
       re-verified 31/31 passing; Next.js apps evaluated and excluded with
       concrete technical reasons, not enabled. See leg 3's own status note.)
-- [ ] `3.23` — `scripts/generate-registry.ts` is decomposed into
+- [x] `3.23` — `scripts/generate-registry.ts` is decomposed into
       `scripts/generate/*` per the epic's module list; `pnpm generate` output
-      is byte-identical for the current plugin set.
+      is byte-identical for the current plugin set. (Nine modules, not six —
+      three more generated-output concerns turned up during implementation;
+      see leg 4's own status note.)
 - [ ] `2.17` — `runtime/middleware.ts` is decomposed into
       `runtime/src/middleware/{response,session,plugin-gate}.ts`; fail-open
       and fail-closed semantics are unchanged, verified by Task 2.16's
@@ -104,7 +111,7 @@ deferred nav/header migration can be re-added.
 | 1   | Plugin workflow test coverage ✅              | 14.2, 13.5, 15.2 | 13, 14, 15 | No    | Account, Console, and Launcher workflows named in each task have regression coverage; no behavior change |
 | 2   | SDK boundary and runtime contract tests ✅    | 3.24             | 3          | No    | Import-boundary rule and SDK host behaviors are test-covered, not just configured                        |
 | 3   | Typecheck performance ✅                      | 0.14             | 0          | No    | Recorded `pnpm typecheck` speedup; Turbo caching and Next.js typechecking unaffected                     |
-| 4   | Generate script decomposition                 | 3.23             | 3          | No    | `scripts/generate/*` modules exist; `pnpm generate` output unchanged                                     |
+| 4   | Generate script decomposition ✅              | 3.23             | 3          | No    | `scripts/generate/*` modules exist; `pnpm generate` output unchanged                                     |
 | 5   | Middleware decomposition                      | 2.17             | 2          | No    | `runtime/src/middleware/*` modules exist; fail-open/fail-closed semantics unchanged                      |
 | 6   | Middleware internal fetch caching review      | 2.18             | 2          | No    | Self-fetch counts measured; any cache added has documented invalidation                                  |
 | 7   | Console primitive migration, Phase 2 (scoped) | 13.6             | 13         | No    | Confirm-dialog, table, and icon-button patterns migrated; admin-destructive flows manually re-verified   |
@@ -216,9 +223,28 @@ concrete reasons (not just caution) — see the epic entry.
 makes Turbo caching behave incorrectly — ship the packages-only improvement
 and leave the apps out, rather than force it.
 
-### Leg 4 — Generate script decomposition
+### Leg 4 — Generate script decomposition ✅
 
 **Epic tasks:** 3.23
+
+**Status (August 2026): shipped.** Full account in the epic doc
+(`docs/epics/plugins-runtime.md`). Split into nine modules under
+`scripts/generate/` — the epic's six (`read-plugins`, `compose-routes`,
+`plugin-icons`, `plugin-env`, `plugin-capabilities`, `write-registry`) plus
+`paths.ts` and `types.ts` (shared constants/types once more than one module
+needed them) and three more discovered during implementation:
+`plugin-schedules.ts`, `plugin-jobs.ts`, `plugin-events.ts` — the source file
+had three more generated-output concerns than the deliverable list named
+(RFC 0046 schedules/jobs, RFC 0045 event authorizers), each following
+`plugin-capabilities.ts`'s exact collect/render/write shape.
+`scripts/generate-registry.ts` stays the CLI entrypoint (`generate()`
+orchestration, `--watch` mode) and re-exports every module's public API so
+Task 3.22's existing 55-test regression suite keeps importing from
+`'../generate-registry'` unchanged — all 55 pass against the decomposed
+modules with zero test-file edits. `pnpm generate` output verified
+byte-identical for the current plugin set (diffed `runtime/generated/*`
+before/after); full `pnpm test` (2411 passed) and `pnpm build` also
+verified green, given leg 3's tsup regression lesson.
 
 **Technical notes:**
 

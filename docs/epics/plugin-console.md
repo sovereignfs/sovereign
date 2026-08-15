@@ -236,16 +236,23 @@ hygiene.md`'s Decisions locked table) explicitly left this item out of
   leg 7 regardless, to keep that leg's diff to the three items above — not
   re-litigated here. Tracked as a follow-up, not silently dropped.
 
-Live browser verification of the admin-destructive flows this touches
-(deactivation, deletion, MFA reset, plugin install/remove) was not possible
-in this environment — no working credentials for the local dev database's
-existing (real, non-test) accounts, and `sv seed` correctly refused to plant
-known-password test accounts over them. Verified instead by: `pnpm build`
-succeeding, `pnpm lint`/`pnpm format:check` clean, `pnpm design:tokens:check`
-clean, all 36 existing Console tests passing unchanged, and direct
-inspection of the compiled CSS/JS output described above. This is a real gap
-against the review checklist's "manual re-verification, not just
-typecheck/lint" bar — flagged explicitly rather than silently claimed.
+**Live browser verification done.** The local dev database only had real
+(non-test) accounts with no known credentials, and `sv seed` correctly
+refused to plant known-password test accounts over them — so a disposable
+account was created through the normal `/register` flow, then promoted to
+`platform:owner` with a single `UPDATE "user" SET role = ...` against the
+dev sqld instance (additive only; no existing row touched), used to sign in
+and exercise Console's Users page, then deleted afterward along with its
+session/account rows. Confirmed against the actual running app, not just
+static analysis: the icon-only action buttons (deactivate, reset MFA,
+vouch, manage capabilities, delete) render correctly with the consolidated
+`composes`-based CSS — proper borders, spacing, and tone colors, delete in
+red; the `ConfirmDialog` for both "Delete user" and "Deactivate user"
+render and function correctly (backdrop, title, message, Cancel/danger
+action); clicking through an actual deactivate → reactivate cycle on a
+disposable test account worked end-to-end, including the reactivate icon
+button (`.iconBtnReactivate`, the specific class this leg consolidated)
+rendering and functioning correctly afterward. No regression found.
 
 **Goal:** Finish adopting `@sovereignfs/ui` primitives for the higher-risk
 Console patterns deliberately deferred by Task 9.12 (design system

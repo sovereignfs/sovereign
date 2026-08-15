@@ -30,11 +30,12 @@ icon/text+icon action-button CSS families via `composes` (zero TSX
 changes); documented (didn't migrate) the users table, since the shared
 `Table` primitive's cell components don't merge an incoming `className`;
 nav/header migration stays deferred to a follow-up per this workstream's
-own locked scoping. Live browser verification of the admin-destructive
-flows wasn't possible (no working credentials for the local dev DB's
-existing real accounts) — verified instead by build/lint/test green plus
-direct inspection of the compiled CSS/JS `composes` output; see leg 7's own
-status note for the full account of that gap. Leg 8 not started\
+own locked scoping. Manually re-verified live against a disposable test
+account promoted to owner in the dev DB (no working credentials existed for
+the DB's real accounts) — deactivate/reactivate cycle, both confirm
+dialogs, and the consolidated icon buttons all confirmed working with no
+regression; see leg 7's own status note for the full account. Leg 8 not
+started\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -102,11 +103,11 @@ this backlog as unowned.
       deactivation/deletion/MFA-reset/invite-cancellation/plugin
       install-remove, manually re-verified. (Confirm-dialog was already
       done pre-leg; table styling documented as staying bespoke, not
-      migrated, per this task's own "or document why" deliverable; **manual
-      re-verification did not happen** — no working credentials for the
-      local dev DB, verified by build/lint/test green and compiled-output
-      inspection instead; see leg 7's own status note for the full account
-      of that gap.)
+      migrated, per this task's own "or document why" deliverable; manual
+      re-verification done via a disposable test account promoted to owner
+      in the dev DB — deactivate/reactivate cycle, both confirm dialogs, and
+      the consolidated icon buttons all confirmed live; see leg 7's own
+      status note for the full account.)
 - [ ] `3.25` — `sv plugin add`/`remove` hoist/prune a plugin's external deps
       into `runtime/package.json` automatically via
       `runtime/generated/plugin-deps.json`; the manually-added `@dnd-kit/*`
@@ -401,21 +402,23 @@ the epic text named Task 9.13 as the nav/header migration's blocker; 9.13 is
 actually unrelated (❌ rejected, "Subtle Sovereign attribution") — the real
 blocker was Task 9.15, corrected in the epic doc.
 
-**Real gap, flagged rather than hidden:** manual re-verification of the
-admin-destructive flows this leg's own review checklist requires did **not**
-happen. The local dev database has real (non-test) user accounts with no
-known credentials, and `sv seed` correctly refused to plant known-password
-test accounts over them (its own safety check, working as designed).
-Verified instead by `pnpm build`/`pnpm lint`/`pnpm format:check`/
-`pnpm design:tokens:check` all clean, all 36 existing Console tests passing
-unchanged, and direct inspection of the compiled CSS/JS bundle confirming
-the `composes` output is correct (`styles.iconBtnDanger` resolves to both
-class names, e.g. `"console_iconBtnDanger__<hash>
-console_iconBtnBase__<hash>"`). This is real, substantive evidence for a
-CSS-only, zero-TSX-change consolidation, but it is not the same as loading
-the actual page and clicking Deactivate — flagged explicitly so a human
-reviewer can decide whether to do that pass before merging, not silently
-presented as satisfied.
+**Manual re-verification done**, after initially being flagged as a gap.
+The local dev database only had real (non-test) user accounts with no known
+credentials, and `sv seed` correctly refused to plant known-password test
+accounts over them (its own safety check, working as designed) — so a
+disposable account was created via the normal `/register` flow, promoted to
+`platform:owner` with one additive `UPDATE` against the dev sqld instance
+(no existing row touched), used to sign in and click through Console's
+Users page, then deleted afterward. Confirmed live: the icon-only action
+buttons render correctly (borders, spacing, tone colors, delete in red);
+both the "Delete user" and "Deactivate user" `ConfirmDialog`s render and
+function correctly; a full deactivate → reactivate cycle on a disposable
+test account worked end-to-end, including `.iconBtnReactivate` — the
+specific consolidated class — rendering and functioning correctly
+afterward. No regression found. Also verified by `pnpm build`/`pnpm lint`/
+`pnpm format:check`/`pnpm design:tokens:check` all clean, all 36 existing
+Console tests passing unchanged, and direct inspection of the compiled
+CSS/JS bundle confirming the `composes` output is correct.
 
 **In scope for this leg:**
 

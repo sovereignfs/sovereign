@@ -3,6 +3,15 @@
 All notable changes to `@sovereignfs/create-plugin` are documented here.
 The package follows [Semantic Versioning](https://semver.org).
 
+## 0.1.3
+
+- The scaffolded page now wraps its content in `@sovereignfs/ui`'s
+  `PageContainer` instead of a bare `<div>`, and the scaffolded CSS module no
+  longer sets `padding`/`max-width` on the page's root class. The runtime
+  shell stopped padding plugin content in `@sovereignfs/ui` 0.55.0
+  (task 9.25); a plugin scaffolded before this change would otherwise render
+  double-padded on old platform versions and edge-to-edge on current ones.
+
 ## 0.1.2
 
 - Scaffolded `package.json` now pins `"version": "0.0.0"` instead of `"0.1.0"`.

@@ -1,10 +1,10 @@
+/* No padding or max-width here — both come from the PageContainer this class
+   is applied to (see page.tsx). A plugin declaring its own page gutter on top
+   of that double-pads it, which is exactly what this file used to do. */
 .page {
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-6);
-  max-width: 640px;
-  margin: 0 auto;
-  padding: var(--sv-space-6) var(--sv-space-4);
 }
 
 .title {

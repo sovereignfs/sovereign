@@ -1221,3 +1221,122 @@ title-rendering fix; no public API change.
 - `pnpm typecheck`, `pnpm lint`, and `pnpm test` pass across `runtime`;
   `ActivePluginTitle.tsx`/`.module.css` no longer exist and nothing else
   references them.
+
+---
+
+#### 🚧 9.25 — Plugin-owned page padding: `PageContainer` gains the gutter, the shell gives it up
+
+**Goal:** Move the plugin content gutter out of the runtime shell and into
+`PageContainer`, so a plugin's page inset is declared in the plugin's own
+code rather than imposed from outside it. Task 9.18 established
+`PageContainer` as the shared width primitive and documented "the shell pads,
+you don't" — but left the shell owning padding for content it knows nothing
+about, and never fixed the two scaffolders, which still emit the exact
+`padding` + `max-width` root rule the docs forbid. Every example plugin is
+consequently double-padded (shell 32px + its own 32/24px), which is the
+visible bug this task fixes.
+
+**Deliverables:**
+
+- `PageContainer` gains `padding?: 'none' | 'sm' | 'md' | 'lg'` (default
+  `'md'`), responsive at the established 768px breakpoint:
+
+  | `padding` | Desktop                | ≤768px                |
+  | --------- | ---------------------- | --------------------- |
+  | `none`    | 0                      | 0                     |
+  | `sm`      | `--sv-space-4` (16px)  | `--sv-space-3` (12px) |
+  | `md`      | `--sv-space-8` (32px)  | `--sv-space-4` (16px) |
+  | `lg`      | `--sv-space-12` (48px) | `--sv-space-6` (24px) |
+
+  `md` is deliberately the shell's current values, so a bare
+  `<PageContainer>` reproduces today's rendering exactly. A fixed enum, not a
+  free-form value — the consistency review behind task 9.18 found four
+  different ad-hoc padding combinations, and a free-form prop would just
+  relocate that mess from CSS modules into JSX.
+
+- `PageContainer`'s `maxWidth` default flips `'md'` → `'full'`. A container
+  that silently clamps to 960px is a surprising default; narrowing should be
+  opt-in. All five existing call sites pass `maxWidth` explicitly, so no
+  in-repo caller changes behavior — but this is a public API semantic change
+  to a published package (NFR-04), so it needs the migration note.
+- `runtime/app/(platform)/shell.module.css` drops `.content`'s gutter
+  (`--sv-space-8` desktop / `--sv-space-4` mobile) and **keeps the two
+  clearances**, which are shell facts a plugin cannot compute: the offline
+  banner's `--sv-offline-banner-height` reservation (with its 200ms
+  transition) and the mobile footer's `--sv-shell-footer-height`. The
+  `:has([data-plugin-fullbleed])` rules stay — they now suppress those
+  clearances rather than the gutter, which the existing mobile comment at
+  `shell.module.css:326` explains is still required — as does the separate
+  desktop height-lock, which never had anything to do with padding.
+- **Breaking for out-of-repo plugins.** Once the gutter is gone, any plugin
+  not wrapped in a padded `PageContainer` renders edge-to-edge. That is
+  every externally-maintained plugin (`sovereign-ledger`, `-wallet`,
+  `-healthlog`, `-tritext`, `-plainwrite`, `-docs`, `-tally`), each of which
+  needs its own PR in its own repository. Accepted deliberately: those
+  plugins are slated for a rewrite pass, the failure mode is cosmetic rather
+  than broken, and the alternative (a transitional opt-out attribute plus a
+  later flag day) buys coordination we do not need. Recorded in
+  `docs/upgrade.md`.
+- Both scaffolders stop emitting the anti-pattern — `bin/helpers.ts:338` and
+  `packages/create-plugin/src/index.ts:209` currently generate
+  `.page { padding: var(--sv-space-8) var(--sv-space-6); max-width: 640px; }`,
+  which is why every scaffolded plugin, in-repo and third-party, starts life
+  double-padded. They emit a `PageContainer` wrapper instead. This is the
+  deliverable that stops the problem regenerating.
+- Migrate every plugin that ships with the platform: `plugins/launcher`,
+  `plugins/account`, `plugins/console`, and `example-plugins/example-{api,
+basic,monetized,device-only,encrypted,minimal,mobile}`. `plugins/warden`
+  and `example-plugins/example-mobile-poc` are `data-plugin-fullbleed` and
+  are excluded by design. `example-minimal` is a `shell: "minimal"` plugin
+  that has always hand-rolled its own padding because nothing shared existed
+  for it; it gains the same primitive as everything else.
+- The three `example-overlay-*` plugins are the one non-mechanical case:
+  they render from one component tree into two hosts, and correctly carry no
+  padding today because `Dialog` already pads `--sv-space-6`
+  (`Dialog.module.css:89`) in the modal case while the shell padded the
+  full-page fallback. Wrapping the plugin itself would double-pad the modal.
+  The wrapper therefore goes in the **generated fallback copy**
+  (`scripts/generate-registry.ts:345` already composes overlay plugins into
+  both locations), keeping the plugins' existing padding-free contract intact
+  and leaving each host responsible for its own inset.
+- Regression guard: a unit test asserting the scaffolder output contains no
+  root `padding`/`max-width`. Scoped to the templates deliberately — a
+  repo-wide CSS lint cannot statically know which class is a given plugin's
+  root, and a heuristic that pretends otherwise is worse than none.
+- Docs: `docs/design-system.md`'s "Page layout" section currently states the
+  inverse rule and must be rewritten; `docs/plugin-development.md`,
+  `docs/architecture-rules.md`, and `docs/upgrade.md` follow. Storybook
+  stories for the new `padding` prop plus the `DesignSystemOverview` gallery
+  entry, per the per-PR Storybook hygiene rule.
+
+**Dependencies:** Task 9.18 (the `PageContainer` component this changes).
+
+**SRS reference:** [RFC 0079](../rfcs/0079-mobile-pwa-layout-overlay-gesture-consistency.md)
+— extends its `PageContainer` design; RFC 0079 §"1. `PageContainer`"
+explicitly deferred padding to the shell, and this task reverses that
+specific decision while keeping the rest of the component's contract.
+
+**Version impact:** platform → **minor** (`0.94.0`); `@sovereignfs/ui` →
+**minor** (new prop + changed `maxWidth` default; NFR-04 forbids shipping
+either in a patch); `@sovereignfs/create-plugin` → **patch**.
+
+**Review checklist:**
+
+- Every migrated plugin renders with the same insets as the Launcher does
+  today, at desktop and at the 768px breakpoint — verify the four-sided
+  padding visually, not just the left edge.
+- No plugin is double-padded: computed styles show padding coming from
+  `PageContainer` only, with `.content` contributing nothing but the two
+  clearances.
+- The offline banner still pushes content down without overlaying it, and
+  mobile content still clears the footer — both with the banner visible and
+  hidden.
+- Fullbleed plugins (`warden`, `example-mobile-poc`) are pixel-identical,
+  including the desktop viewport height-lock.
+- `example-overlay-*` render correctly in **both** hosts: padded once inside
+  the modal, padded once on the hard-navigated full-page fallback.
+- `sv plugin new` and `npm create @sovereignfs/plugin` both produce a plugin
+  that renders correctly padded on first run, with no `padding`/`max-width`
+  in its generated CSS module.
+- `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm format:check`, and
+  `pnpm design:tokens:check` pass; Storybook builds.

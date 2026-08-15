@@ -119,6 +119,42 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.86.1 → v0.87.0
+
+- **Breaking for plugin developers: the runtime shell no longer pads plugin
+  content.** Previously `runtime/app/(platform)/shell.module.css` applied
+  `var(--sv-space-8)` (32px desktop) / `var(--sv-space-4)` (16px mobile) to
+  every non-`data-plugin-fullbleed` plugin's content region. That gutter is
+  gone; the shell now contributes only clearance for chrome it alone can
+  measure (offline banner height while visible, mobile footer height). A
+  plugin's padding and max-width instead come from `@sovereignfs/ui`'s
+  `PageContainer`, wrapping the plugin's page or root layout — see
+  `docs/design-system.md`'s "Page layout" section and `docs/plugin-development.md`.
+  `@sovereignfs/ui` bumped to `0.55.0` with this change: `PageContainer`
+  gained a `padding` prop (`'none' | 'sm' | 'md' | 'lg'`, default `'md'` —
+  `'md'` reproduces the exact gutter the shell used to apply, so
+  `<PageContainer>{children}</PageContainer>` with no props is the
+  equivalent replacement for a plugin that previously relied on the shell)
+  and `maxWidth`'s default flipped from `'md'` to `'full'` (all in-repo
+  callers already passed `maxWidth` explicitly, so this default change was
+  invisible in this repo, but is a behavior change for any external caller
+  relying on the old default).
+  - **Action required — plugin developers:** wrap every page (or your root
+    `app/layout.tsx`) in `PageContainer`. Until you do, your plugin renders
+    edge-to-edge. If your plugin already had its own `padding`/`max-width`
+    in `app/layout.tsx` or a page CSS module, keep that CSS but additionally
+    check `docs/design-system.md` — declaring padding in both places
+    double-pads; move it onto `PageContainer`'s props instead.
+  - **Action required — instance operators:** none. This is a plugin-authoring
+    contract change, not a runtime configuration, schema, or data change.
+    Every plugin shipped with the platform (`plugins/launcher`,
+    `plugins/account`, `plugins/console`, and every `example-plugins/*`
+    reference plugin) was migrated in the same change and renders correctly
+    with no action needed.
+  - See `docs/epics/design-system.md` task 9.25 and `docs/architecture-rules.md`
+    for the full rationale, including how overlay-shell (`shell: "overlay"`)
+    plugins avoid double-padding inside their `Dialog` automatically.
+
 ### v0.75.1 → v0.75.2
 
 - **Fix: offline navigation to a non-cached page now shows the `/offline`

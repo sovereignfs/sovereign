@@ -2990,10 +2990,9 @@ A short "do not" list:
 
 #### Page layout
 
-The runtime shell already pads your plugin's main content (32px desktop /
-16px mobile) — don't add your own outer `padding` or `max-width` in your
-`app/layout.tsx` or page CSS. If you want to additionally constrain content to
-a readable width, wrap it in `PageContainer` instead of local container CSS:
+The runtime shell applies no padding to your plugin's content — wrap every
+page (or your root `app/layout.tsx`) in `PageContainer` instead of local
+container CSS; it's where your padding and max-width both come from:
 
 ```tsx
 import { PageContainer } from '@sovereignfs/ui';
@@ -3003,9 +3002,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 }
 ```
 
-See `docs/design-system.md`'s ["Page layout"](./design-system.md#page-layout--pagecontainer)
-section for the full `maxWidth` scale and the `data-plugin-fullbleed` opt-out
-for plugins that manage their own full-bleed layout.
+Both props default to the common case (`maxWidth="full"`, `padding="md"` —
+32px desktop / 16px mobile), so a bare `<PageContainer>{children}</PageContainer>`
+is a safe starting point. Don't add your own outer `padding` or `max-width`
+in `app/layout.tsx` or page-level CSS — declaring it in both places stacks
+the two insets. See `docs/design-system.md`'s
+["Page layout"](./design-system.md#page-layout--pagecontainer) section for
+the full `maxWidth`/`padding` scales, the `data-plugin-fullbleed` opt-out for
+plugins that manage their own full-bleed layout, and how an overlay plugin
+avoids double-padding inside its `Dialog`.
 
 #### Using icons
 

@@ -38,7 +38,10 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
   const insideOverlay = useOverlaySecondRow(tabStrip);
 
   return (
-    <div className={styles.account}>
+    // PageContainer is the plugin's root, not just a wrapper around the body:
+    // it supplies this page's four-sided gutter (the runtime shell no longer
+    // does — task 9.25), so the header has to sit inside it too.
+    <PageContainer maxWidth="full" className={styles.account}>
       <header
         className={[styles.header, insideOverlay ? styles.headerHiddenOnMobile : '']
           .filter(Boolean)
@@ -47,14 +50,17 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
         <h1 className={styles.title}>Account</h1>
         {tabStrip}
       </header>
-      <PageContainer maxWidth="full">
+      {/* Plain wrapper, deliberately: OfflineGate renders a fragment while
+          online, so without this each page's own children would become
+          separate flex items under .account's column gap. */}
+      <div>
         {/* Account is the platform's settings surface — security, billing,
             and data pages reflect a point-in-time snapshot with no way to
             signal a cached copy may be stale (research 0012, epic task 2.32).
             Block the body, not the nav, so it's still clear where you are
             while reconnecting. */}
         <OfflineGate surfaceName="Account">{children}</OfflineGate>
-      </PageContainer>
-    </div>
+      </div>
+    </PageContainer>
   );
 }

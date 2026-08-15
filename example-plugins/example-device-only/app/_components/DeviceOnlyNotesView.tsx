@@ -3,7 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import Link from 'next/link';
-import { Button, DeviceOnlyGate, DeviceStorageKeyGate, Input, Textarea } from '@sovereignfs/ui';
+import {
+  Button,
+  DeviceOnlyGate,
+  DeviceStorageKeyGate,
+  Input,
+  PageContainer,
+  Textarea,
+} from '@sovereignfs/ui';
 import type { DeviceStorageKeyGateStatus } from '@sovereignfs/ui';
 import { isDeviceOnlyTierAvailable, supports } from '@sovereignfs/sdk/device-client';
 import { getDeviceStorageKeyStatus } from '@sovereignfs/sdk/device-only-storage';
@@ -75,7 +82,7 @@ export function DeviceOnlyNotesView() {
   }, []);
 
   return (
-    <div className={styles.page}>
+    <PageContainer maxWidth="sm" className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Example: Device-only notes</h1>
         <p className={styles.lead}>
@@ -101,7 +108,7 @@ export function DeviceOnlyNotesView() {
           </DeviceStorageKeyGate>
         )}
       </DeviceOnlyGate>
-    </div>
+    </PageContainer>
   );
 }
 

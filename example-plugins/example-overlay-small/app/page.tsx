@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { sdk } from '@sovereignfs/sdk';
-import { Button } from '@sovereignfs/ui';
+import { Button, PageContainer } from '@sovereignfs/ui';
 import styles from './example-overlay-small.module.css';
 
 export default async function ExampleOverlaySmallPage() {
   const session = await sdk.auth.getSession();
 
   return (
-    <div className={styles.page}>
+    <PageContainer maxWidth="md" className={styles.page}>
       <header className={styles.headerBlock}>
         <div className={styles.header}>
           <p className={styles.eyebrow}>Overlay size</p>
@@ -39,6 +39,6 @@ export default async function ExampleOverlaySmallPage() {
           Medium overlay
         </Link>
       </div>
-    </div>
+    </PageContainer>
   );
 }

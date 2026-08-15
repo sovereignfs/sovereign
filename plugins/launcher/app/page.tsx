@@ -1,3 +1,4 @@
+import { PageContainer } from '@sovereignfs/ui';
 import { LauncherOfflineView } from './_components/LauncherOfflineView';
 
 /**
@@ -11,5 +12,13 @@ import { LauncherOfflineView } from './_components/LauncherOfflineView';
  * root — the default) and replay with no network on a shared device.
  */
 export default function LauncherPage() {
-  return <LauncherOfflineView />;
+  // Wrapped here rather than inside LauncherOfflineView, which returns the
+  // gutter from four separate branches (loading, offline, empty, loaded) —
+  // one root is one place to get it right. PageContainer is static markup,
+  // so it stays safe to precache with this route's neutral shell.
+  return (
+    <PageContainer maxWidth="full">
+      <LauncherOfflineView />
+    </PageContainer>
+  );
 }

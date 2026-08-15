@@ -50,7 +50,10 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
   const insideOverlay = useOverlaySecondRow(navStrip);
 
   return (
-    <div className={styles.console}>
+    // PageContainer is the plugin's root, not just a wrapper around the body:
+    // it supplies this page's four-sided gutter (the runtime shell no longer
+    // does — task 9.25), so the header has to sit inside it too.
+    <PageContainer maxWidth="full" className={styles.console}>
       <header
         className={[styles.header, insideOverlay ? styles.headerHiddenOnMobile : '']
           .filter(Boolean)
@@ -59,13 +62,13 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
         <h1 className={styles.title}>Console</h1>
         {navStrip}
       </header>
-      <PageContainer maxWidth="full" className={styles.body}>
+      <div className={styles.body}>
         {/* Console is an administrative surface — a cached page here reflects
             a point-in-time snapshot with no way to signal it may be stale
             (research 0012, epic task 2.32). Block the body, not the nav, so
             it's still clear where you are while reconnecting. */}
         <OfflineGate surfaceName="Console">{children}</OfflineGate>
-      </PageContainer>
-    </div>
+      </div>
+    </PageContainer>
   );
 }

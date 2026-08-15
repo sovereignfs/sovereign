@@ -1168,18 +1168,17 @@ and the CSS transition duration must agree, or the component stays mounted
 
 ### Page layout — `PageContainer`
 
-The runtime shell already pads every plugin's main content —
-`var(--sv-space-8)` (32px) on desktop, `var(--sv-space-4)` (16px) on mobile —
-applied in `runtime/app/(platform)/shell.module.css` to the `#main-scroll`
-content region, unless the plugin's root element carries
-`data-plugin-fullbleed` (`sovereign-tasks`, `sovereign-shopper` — plugins that
-manage their own full-bleed shell/sidebar/content grid).
+**As of task 9.25, the runtime shell applies no padding to plugin content at
+all.** (Earlier versions of this doc — and of the shell — said the opposite:
+the shell padded every plugin and `PageContainer` only constrained width.
+That's no longer true; see `docs/upgrade.md` if you're updating a plugin
+written against the old contract.) The shell still reserves _clearance_ for
+chrome a plugin cannot measure itself — space below the offline banner while
+it's visible, space above the mobile footer — but contributes no inset of its
+own. A plugin that renders no `PageContainer` sits edge-to-edge.
 
-**Do not add your own outer `padding` or `max-width` in a plugin's
-`app/layout.tsx` or page-level CSS module.** That duplicates the shell's job
-and, worse, stacks on top of it (a real bug this fixed: a plugin ended up
-padded by both the shell and its own layout CSS). Use `PageContainer` instead,
-only when you want to additionally constrain content to a readable width:
+**Wrap every plugin page (or its root layout) in `PageContainer`.** It is
+the single place a plugin's padding and max-width come from — nowhere else:
 
 ```tsx
 import { PageContainer } from '@sovereignfs/ui';
@@ -1189,19 +1188,52 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 }
 ```
 
-`PageContainer` centers (`margin-inline: auto`) and constrains width — it adds
-**no padding of its own**, since the shell already provides it.
+Both props default to the common case — a full-width page with the shell's
+former gutter — so a bare `<PageContainer>{children}</PageContainer>` is a
+safe starting point for any plugin.
 
 | `maxWidth` | Pixel value | Use when                                                     |
 | ---------- | ----------- | ------------------------------------------------------------ |
 | `sm`       | 640px       | A narrow single-column form or document (e.g. a text editor) |
-| `md`       | 960px       | The common case — most plugin pages (default)                |
+| `md`       | 960px       | A readable-width content page                                |
 | `lg`       | 1200px      | Wide list/table-heavy screens                                |
-| `full`     | none        | No width constraint — content fills the shell's padded area  |
+| `full`     | none        | No width constraint — the common case (**default**)          |
 
-Plugins that opt out of shell padding via `data-plugin-fullbleed`
-(`sovereign-tasks`, `sovereign-shopper`) manage their own layout entirely and
-should not use `PageContainer`.
+`maxWidth` bounds the whole box, padding included — `PageContainer` is
+`border-box`, so `maxWidth="md"` with the default `padding="md"` yields a
+960px box with 896px of content, not 1024px.
+
+| `padding` | Desktop                | ≤768px                | Use when                                                          |
+| --------- | ---------------------- | --------------------- | ----------------------------------------------------------------- |
+| `none`    | 0                      | 0                     | An ancestor already pads this content, or a fullbleed layout      |
+| `sm`      | `--sv-space-4` (16px)  | `--sv-space-3` (12px) | A dense, chrome-like page                                         |
+| `md`      | `--sv-space-8` (32px)  | `--sv-space-4` (16px) | The common case (**default**) — matches the shell's former gutter |
+| `lg`      | `--sv-space-12` (48px) | `--sv-space-6` (24px) | A spacious marketing-style layout                                 |
+
+A fixed four-step scale, deliberately — not a free-form value. A consistency
+review (the one that motivated `PageContainer` in the first place, task 9.18)
+found four different ad-hoc padding combinations across plugins; a free-form
+prop would just relocate that inconsistency from CSS modules into JSX. **Do
+not add your own outer `padding` or `max-width` in a plugin's
+`app/layout.tsx` or page-level CSS module** — declare it through
+`PageContainer`'s props instead. Adding both stacks the two insets (a real
+bug this fixed: every example plugin under `example-plugins/` was
+double-padded until task 9.25).
+
+Plugins that manage their own full-bleed shell/sidebar/content grid opt out
+via `data-plugin-fullbleed` on their root element (`sovereign-tasks`,
+`sovereign-shopper`) and should not use `PageContainer` — it has nothing to
+add once a plugin owns its layout entirely.
+
+**Inside an overlay (`shell: "overlay"`).** An overlay plugin's page renders
+into two different hosts from one component tree — the `Dialog` on a soft
+navigation, the runtime shell's full-page fallback on a hard one — and
+`Dialog`'s own content region is already padded. Wrap the page in
+`PageContainer` as usual; a `Dialog` ancestor sets `--sv-page-gutter: 0` on
+its content region, which `PageContainer` reads as a stand-down signal and
+renders with no padding of its own, so the same tree is correctly padded
+exactly once in both hosts. This is automatic — no prop, no per-context
+branching in plugin code.
 
 ### `MobileHeader` and `MobileFooter` components (RFC 0088)
 

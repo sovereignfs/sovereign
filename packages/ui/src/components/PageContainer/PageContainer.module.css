@@ -1,7 +1,19 @@
 .container {
   width: 100%;
   margin-inline: auto;
+  /* Declared explicitly rather than inherited from a host reset: `maxWidth`
+     and `padding` land on this same element, so whether the max-width bound
+     includes the padding must not depend on whether the consuming app ships
+     a global `box-sizing` reset. @sovereignfs/ui is usable standalone
+     (task 9.17), where no such reset is guaranteed. Same reason Input,
+     Select, Combobox, DatePicker, and FileDropzone each set it locally. */
+  box-sizing: border-box;
 }
+
+/* ── Max width ──────────────────────────────────────────────────────────── */
+
+/* Outer bound, padding included (see box-sizing above): `md` + `padding="md"`
+   yields a 960px box with 896px of content, not 1024px. */
 
 .sm {
   max-width: 640px;
@@ -17,4 +29,54 @@
 
 .full {
   max-width: none;
+}
+
+/* ── Padding ────────────────────────────────────────────────────────────── */
+
+/* The page gutter, owned by the plugin rather than the runtime shell
+   (task 9.25). `md` reproduces the exact values the shell used to apply
+   (--sv-space-8 desktop / --sv-space-4 mobile), so a bare <PageContainer>
+   renders identically to a pre-9.25 plugin that relied on the shell.
+
+   A fixed four-step scale, deliberately: the review behind task 9.18 found
+   four different ad-hoc padding combinations across plugins, and a free-form
+   value would relocate that inconsistency from CSS modules into JSX.
+
+   --sv-page-gutter is the stand-down hook for an ancestor that *already*
+   supplies the gutter: Dialog sets it to 0 on its content region, so an
+   overlay plugin whose page is one tree rendered into two hosts — the
+   Dialog on soft navigation, the runtime shell on a hard load — is padded
+   exactly once in both, with no prop threading and no knowledge of which
+   host it is in. Setting it to anything other than 0 defeats the fixed
+   scale above and is not a supported use. */
+
+.padNone {
+  padding: 0;
+}
+
+.padSm {
+  padding: var(--sv-page-gutter, var(--sv-space-4));
+}
+
+.padMd {
+  padding: var(--sv-page-gutter, var(--sv-space-8));
+}
+
+.padLg {
+  padding: var(--sv-page-gutter, var(--sv-space-12));
+}
+
+/* Matches the breakpoint Dialog, MobileHeader, and MobileFooter already use. */
+@media (max-width: 768px) {
+  .padSm {
+    padding: var(--sv-page-gutter, var(--sv-space-3));
+  }
+
+  .padMd {
+    padding: var(--sv-page-gutter, var(--sv-space-4));
+  }
+
+  .padLg {
+    padding: var(--sv-page-gutter, var(--sv-space-6));
+  }
 }

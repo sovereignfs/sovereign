@@ -87,6 +87,11 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--sv-space-6);
+  /* This region already supplies the page gutter, so a PageContainer rendered
+     inside it stands its own down (see PageContainer.module.css). Without
+     this, an overlay plugin — one page tree rendered into both the Dialog and
+     the full-page shell fallback — would be padded twice here. */
+  --sv-page-gutter: 0px;
   /* Disable elastic overscroll within the dialog: `none` stops both scroll-
      chaining to the parent and the iOS rubber-band bounce inside the panel.
      `contain` only prevents chaining — the panel itself still bounces, which

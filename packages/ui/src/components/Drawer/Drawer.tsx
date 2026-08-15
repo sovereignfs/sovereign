@@ -169,7 +169,7 @@ export function Drawer({
           onPointerCancel={(e) => releaseDrag(e, false)}
         />
         {title && <OverlayHeader title={title} onClose={onClose} />}
-        {children}
+        <div className={styles.body}>{children}</div>
       </div>
     </div>
   );

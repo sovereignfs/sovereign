@@ -17,6 +17,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "turbo typecheck",
+    "typecheck:packages:incremental": "tsc -b tsconfig.packages.json",
+    "typecheck:packages:incremental:clean": "tsc -b tsconfig.packages.json --clean",
     "design:tokens:check": "tsx scripts/design-tokens-check.ts",
     "docs:check-links": "tsx scripts/check-doc-links.ts",
     "verify:push": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm design:tokens:check && pnpm test",

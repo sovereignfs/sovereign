@@ -3,6 +3,11 @@ node_modules/
 
 # Build output
 dist/
+# TypeScript project-reference build cache (packages/tsconfig/library.json's
+# "composite"/"incremental" — Task 0.14) — a throwaway .d.ts + .tsbuildinfo
+# cache for `tsc -b`, deliberately separate from tsup's own "dist/" so
+# incremental typechecking can never interfere with the real published output.
+dist-tsc/
 .next/
 .turbo/
 # TypeScript incremental build cache (packages/tsconfig/nextjs.json sets

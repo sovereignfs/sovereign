@@ -1,6 +1,6 @@
 # Workstream 0012 — Engineering hygiene
 
-**Status:** ⏳ In progress — legs 1–4 done. Leg 1: tasks 14.2, 13.5, 15.2,
+**Status:** ⏳ In progress — legs 1–5 done. Leg 1: tasks 14.2, 13.5, 15.2,
 additive test coverage across Account/Console/Launcher. Leg 2: task 3.24,
 SDK boundary and runtime contract tests — found and closed a real gap in
 the boundary rule itself (the `@/` alias reaching `runtime/src` unflagged),
@@ -13,9 +13,14 @@ script decomposition — nine modules under `scripts/generate/`, three more
 than the epic's original list (schedules/jobs/events generated-output
 concerns found during implementation); `pnpm generate` output verified
 byte-identical, all 55 existing regression tests pass unchanged via the
-entrypoint's re-export barrel. Legs 5–8 not started; legs 5, 7, 8 have no
-blocking dependency and can proceed in any order — only leg 6 waits on
-leg 5\
+entrypoint's re-export barrel. Leg 5: task 2.17, middleware decomposition
+(the highest blast-radius leg in this workstream) — three modules under
+`runtime/src/middleware/` exactly per the epic's list, plus a new
+`verifySession()` consolidating three duplicated cookie-cache-then-fallback
+call sites into one typed result; the existing 115-test regression suite
+(Task 2.16) passes completely unchanged, plus 22 new focused unit tests
+across the three modules. Legs 6–8 not started; legs 7, 8 have no blocking
+dependency; leg 6 was waiting on leg 5, now unblocked\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -67,10 +72,11 @@ this backlog as unowned.
       is byte-identical for the current plugin set. (Nine modules, not six —
       three more generated-output concerns turned up during implementation;
       see leg 4's own status note.)
-- [ ] `2.17` — `runtime/middleware.ts` is decomposed into
+- [x] `2.17` — `runtime/middleware.ts` is decomposed into
       `runtime/src/middleware/{response,session,plugin-gate}.ts`; fail-open
       and fail-closed semantics are unchanged, verified by Task 2.16's
-      existing regression suite.
+      existing regression suite. (All 115 existing tests pass unchanged;
+      22 new focused unit tests added; see leg 5's own status note.)
 - [ ] `2.18` — middleware self-fetch counts are measured before/after; any
       caching added has a documented invalidation window and does not weaken
       auth or entitlement correctness.
@@ -112,7 +118,7 @@ deferred nav/header migration can be re-added.
 | 2   | SDK boundary and runtime contract tests ✅    | 3.24             | 3          | No    | Import-boundary rule and SDK host behaviors are test-covered, not just configured                        |
 | 3   | Typecheck performance ✅                      | 0.14             | 0          | No    | Recorded `pnpm typecheck` speedup; Turbo caching and Next.js typechecking unaffected                     |
 | 4   | Generate script decomposition ✅              | 3.23             | 3          | No    | `scripts/generate/*` modules exist; `pnpm generate` output unchanged                                     |
-| 5   | Middleware decomposition                      | 2.17             | 2          | No    | `runtime/src/middleware/*` modules exist; fail-open/fail-closed semantics unchanged                      |
+| 5   | Middleware decomposition ✅                   | 2.17             | 2          | No    | `runtime/src/middleware/*` modules exist; fail-open/fail-closed semantics unchanged                      |
 | 6   | Middleware internal fetch caching review      | 2.18             | 2          | No    | Self-fetch counts measured; any cache added has documented invalidation                                  |
 | 7   | Console primitive migration, Phase 2 (scoped) | 13.6             | 13         | No    | Confirm-dialog, table, and icon-button patterns migrated; admin-destructive flows manually re-verified   |
 | 8   | Plugin external dependency resolution         | 3.25             | 3          | No    | `sv plugin add`/`remove` hoist/prune deps automatically; `@dnd-kit/*` entries re-derived from the ledger |
@@ -257,9 +263,30 @@ plugin-env,plugin-capabilities,write-registry}.ts` per the epic; keep
 **Do not proceed if:** N/A — this is a structural refactor with an existing
 regression suite (Task 3.22) to verify against.
 
-### Leg 5 — Middleware decomposition
+### Leg 5 — Middleware decomposition ✅
 
 **Epic tasks:** 2.17
+
+**Status (August 2026): shipped.** Full account in the epic doc
+(`docs/epics/platform-shell.md`). Split the 891-line `runtime/middleware.ts`
+into `runtime/src/middleware/{response,session,plugin-gate}.ts` exactly per
+the epic's list. `verifySession()` in `session.ts` is the "typed result
+carrying the verified session and forwarded cookies" the deliverable asked
+for — it consolidates three previously-duplicated cookie-cache-then-fallback
+blocks (public plugin routes, public handoffs, the main session gate) into
+one call, with each site keeping its own pre-existing behavior on a null
+result (the two public branches proceed anonymously; the main gate calls
+the new `buildLoginRedirect()` and returns). `fetchRootPluginPrefix` landed
+in `plugin-gate.ts` alongside the three lookups the epic did name, since
+it's the same "Edge can't reach the DB, ask the Node-runtime admin API,
+fail open" shape. The `applyCsp`/`withCookies`/`withDevMode` response
+helpers stayed as thin per-request closures in `middleware()` delegating to
+the new module functions, specifically so their ~15 existing call sites
+across the file needed zero edits — the closure body is the only diff.
+Verified against Task 2.16's existing 115-test regression suite (unmodified,
+all passing) plus 22 new focused unit tests across the three new modules;
+full `pnpm test` (2433 passed), `pnpm typecheck`, `pnpm lint`, and
+`pnpm build` all green, Edge middleware bundle size unchanged (86.5 kB).
 
 **Why this leg needs care:** `runtime/middleware.ts` gates auth, routing,
 CSP, paywall, and root-plugin behavior for every request — the highest

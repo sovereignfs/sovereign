@@ -79,6 +79,7 @@ describe('SwipableMobileCarousel', () => {
     const onSettle = vi.fn();
     render(<FiveSlides activeIndex={0} onSettle={onSettle} />);
     const scroller = screen.getByRole('region', { name: 'Test slides' });
+    fireEvent.touchStart(scroller);
     setLayout(scroller, 300, 300); // scrollLeft 300 / width 300 -> index 1
     fireEvent.scroll(scroller);
     act(() => void vi.advanceTimersByTime(120));

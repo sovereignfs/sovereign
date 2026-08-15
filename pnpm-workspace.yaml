@@ -90,10 +90,10 @@ catalogs:
   # Storybook — used exclusively by packages/ui. All addon versions must
   # stay in lock-step with the storybook core version.
   storybook:
-    storybook: ^10.5.5
-    '@storybook/react-vite': ^10.5.5
-    '@storybook/addon-a11y': ^10.5.5
-    '@storybook/addon-themes': ^10.5.5
+    storybook: ^10.5.7
+    '@storybook/react-vite': ^10.5.7
+    '@storybook/addon-a11y': ^10.5.7
+    '@storybook/addon-themes': ^10.5.7
     # @storybook/addon-viewport was absorbed into the storybook core package in v9+.
     # Use parameters.viewport in preview.ts; no separate addon needed.
     # @storybook/test was similarly absorbed; import from 'storybook/test' instead.

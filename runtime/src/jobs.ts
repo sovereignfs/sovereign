@@ -10,6 +10,7 @@ import {
 } from '@sovereignfs/db';
 import type { PluginJobDecl } from '../generated/plugin-jobs';
 import { PLUGIN_JOBS } from '../generated/plugin-jobs';
+import { runWithBackgroundPlugin } from './background-plugin-context';
 import { getPlatformDb } from './db';
 import { logger } from './logger';
 import { getDisabledPluginIds } from './plugin-status';
@@ -168,7 +169,7 @@ export async function runClaimedJob(
   };
 
   try {
-    await decl.handler(ctx, payload);
+    await runWithBackgroundPlugin(job.pluginId, () => decl.handler(ctx, payload));
     await deps.completeJobSuccess(job);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

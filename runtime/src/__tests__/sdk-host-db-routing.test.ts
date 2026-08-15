@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { runWithBackgroundPlugin } from '../background-plugin-context';
 
 const provisionPluginDb = vi.fn();
 const getPluginDb = vi.fn();
@@ -111,6 +112,25 @@ describe('sdk-host db.getClient — platform DB outside plugin route context', (
 
     expect(client).toBe(PLATFORM_CLIENT);
     expect(provisionPluginDb).not.toHaveBeenCalled();
+  });
+});
+
+describe('sdk-host db.getClient — background (schedule/job) plugin context fallback', () => {
+  it("routes to an isolated plugin's own database when running inside runWithBackgroundPlugin, with no request header", async () => {
+    const client = await runWithBackgroundPlugin(ISOLATED_PLUGIN_ID, () => getClientAs(null));
+
+    expect(client).toBe(PLUGIN_CLIENT);
+    expect(provisionPluginDb).toHaveBeenCalledWith(ISOLATED_PLUGIN_ID);
+  });
+
+  it('prefers the request header over the background context when both are present', async () => {
+    const client = await runWithBackgroundPlugin(PLATFORM_PLUGIN_ID, () =>
+      getClientAs(ISOLATED_PLUGIN_ID),
+    );
+
+    expect(client).toBe(PLUGIN_CLIENT);
+    expect(provisionPluginDb).toHaveBeenCalledWith(ISOLATED_PLUGIN_ID);
+    expect(provisionPluginDb).not.toHaveBeenCalledWith(PLATFORM_PLUGIN_ID);
   });
 });
 

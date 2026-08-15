@@ -1,6 +1,7 @@
 import type { CompleteJobFailureResult, PluginJobRow } from '@sovereignfs/db';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PluginJobDecl } from '../../generated/plugin-jobs';
+import { getBackgroundPluginContext } from '../background-plugin-context';
 import {
   buildJobHandlerIndex,
   jobWorkerDisabled,
@@ -101,6 +102,25 @@ describe('runClaimedJob', () => {
     });
     await runClaimedJob(job(), buildJobHandlerIndex([decl]), deps());
     expect(seenHeaders?.get('x-sovereign-plugin-id')).toBe('com.example.notes');
+  });
+
+  it('makes the plugin id available via getBackgroundPluginContext() during the handler, and clears it after', async () => {
+    let seenDuring: string | undefined;
+    const decl = jobDecl({
+      pluginId: 'fs.sovereign.tasks',
+      handler: async () => {
+        seenDuring = getBackgroundPluginContext();
+      },
+    });
+
+    expect(getBackgroundPluginContext()).toBeUndefined();
+    await runClaimedJob(
+      job({ pluginId: 'fs.sovereign.tasks' }),
+      buildJobHandlerIndex([decl]),
+      deps(),
+    );
+    expect(seenDuring).toBe('fs.sovereign.tasks');
+    expect(getBackgroundPluginContext()).toBeUndefined();
   });
 
   it('forwards ctx.reportProgress to deps.reportProgress with the job id', async () => {

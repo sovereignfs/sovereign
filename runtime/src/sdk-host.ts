@@ -107,6 +107,7 @@ import type {
   ToolRef,
 } from '@sovereignfs/sdk';
 import { requireJobsPluginContext } from './jobs';
+import { getBackgroundPluginContext } from './background-plugin-context';
 import type { EventEnvelope } from './event-broker';
 import { getDisabledPluginIds } from './plugin-status';
 import { getPortabilityPluginContext } from './portability/plugin-context';
@@ -486,7 +487,8 @@ provideHost({
       // Fall back to whichever plugin the portability assembler/restorer is
       // currently running a resolver for — otherwise an isolated-database
       // plugin's own exporter/importer would silently read the platform DB.
-      const effectivePluginId = pluginId ?? getPortabilityPluginContext() ?? null;
+      const effectivePluginId =
+        pluginId ?? getPortabilityPluginContext() ?? getBackgroundPluginContext() ?? null;
       if (effectivePluginId) {
         const manifest = registry.find((m) => m.id === effectivePluginId);
         if (manifest && manifestDatabaseIsolation(manifest.type) === 'isolated') {

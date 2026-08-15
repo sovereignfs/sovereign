@@ -75,17 +75,65 @@ export default tseslint.config(
   // workspace-internal packages. This is load-bearing — never disable it.
   // Covers example-plugins/ too — a reference plugin demonstrating the wrong
   // boundary would be actively misleading.
+  //
+  // `plugins/console` is the one documented exception: it reaches
+  // `runtime/src` directly via the `@/` alias (a platform-type plugin, not a
+  // third-party one — see docs/architecture-rules.md) but still respects the
+  // second pattern below (@sovereignfs/db/manifest/mailer stay forbidden even
+  // there — see the comment in plugins/console/app/users/actions.ts). It gets
+  // its own, narrower rule block below instead of being excluded outright,
+  // so it doesn't silently lose that second restriction too.
   {
     files: ['plugins/**/*.{ts,tsx}', 'example-plugins/**/*.{ts,tsx}'],
+    ignores: ['plugins/console/**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'error',
         {
           patterns: [
             {
+              // `@/...` is runtime/tsconfig.json's own alias for the same
+              // location `**/runtime/src` already blocks below — without
+              // this, `@/src/whatever` reaches runtime internals completely
+              // unflagged, since no-restricted-imports matches the literal
+              // specifier text, not the resolved file path.
+              group: ['@/*', '@/src', '@/src/*'],
+              message: 'Plugins must not import runtime internals. Use @sovereignfs/sdk instead.',
+            },
+            {
               group: ['**/runtime/src', '**/runtime/src/*'],
               message: 'Plugins must not import runtime internals. Use @sovereignfs/sdk instead.',
             },
+            {
+              group: [
+                '@sovereignfs/db',
+                '@sovereignfs/db/*',
+                '@sovereignfs/manifest',
+                '@sovereignfs/manifest/*',
+                '@sovereignfs/mailer',
+                '@sovereignfs/mailer/*',
+              ],
+              message:
+                'Plugins may only use @sovereignfs/sdk and @sovereignfs/ui, not internal platform packages.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // plugins/console's narrower boundary: still a platform-type plugin, not a
+  // free pass — @sovereignfs/db/manifest/mailer stay forbidden (it goes
+  // through runtime API routes for those, same as any other plugin would);
+  // only the runtime/src (and its `@/` alias) restriction is lifted, since
+  // Console is built and shipped as part of this same monorepo.
+  {
+    files: ['plugins/console/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
             {
               group: [
                 '@sovereignfs/db',

@@ -722,7 +722,40 @@ fields, and registry behavior grow.
 
 ---
 
-#### 📋 3.24 — SDK boundary and runtime contract tests
+#### ✅ 3.24 — SDK boundary and runtime contract tests
+
+**Status (August 2026): shipped — workstream 0012 leg 2.** Added
+`__tests__/eslint-plugin-boundary.test.ts` (a real `ESLint.lintText()` run
+against fixture source, not a config snapshot),
+`runtime/src/__tests__/sdk-host-db-routing.test.ts` (isolated-DB routing,
+platform-DB-outside-plugin-context, and the identity-forging guarantee —
+`sdk.db.getClient()` takes no arguments at all, so there's no parameter a
+plugin could pass to claim a different identity), and
+`packages/sdk/src/__tests__/host.test.ts` (`requireHost()`'s missing-host
+error). Docs already matched tested usage — no fix needed there.
+
+**A real, undocumented gap in the SDK boundary rule itself was found and
+fixed while writing the lint fixture test — not invented as a test
+scenario.** `docs/architecture-rules.md` states the rule as absolute:
+"plugins must not import from `runtime/src`." But the ESLint rule
+(`@typescript-eslint/no-restricted-imports`) only pattern-matched import
+specifiers containing the literal string `runtime/src` — it never caught
+the `@/` alias, which `runtime/tsconfig.json` maps to the exact same
+location (`"@/*": ["./*"]`). `plugins/console/app/users/actions.ts` (real,
+shipped code) already imports `@/src/activity`, `@/src/capabilities`,
+`@/src/launcher-plugins`, `@/src/registry`, and `@/src/user-deletion` —
+completely unflagged. Since every plugin (not just the three platform ones)
+gets composed into `runtime/app/(platform)/(plugins)/<id>/` at build time,
+where `@/` genuinely resolves, any third-party plugin could have used the
+same trick to reach runtime internals undetected. Confirmed with the
+developer this was meant as a platform-plugin exception, not a design
+mistake to unwind — `eslint.config.ts` now has two rule blocks: the general
+one blocks `@/*`/`@/src`/`@/src/*` alongside the existing patterns for every
+plugin except `plugins/console/**`, and a narrower block for Console alone
+that keeps the `@sovereignfs/db`/`manifest`/`mailer` restriction (Console
+already voluntarily respects that one — see its own code comment) while
+lifting only the `runtime/src` restriction. Launcher and Account get no
+exception; neither uses the alias today.
 
 **Goal:** Prevent accidental platform leakage into plugin code and keep the SDK
 contract honest.

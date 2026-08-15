@@ -12,8 +12,19 @@ Full reference for load-bearing constraints enforced by ESLint, CI, or runtime b
 ---
 
 - **SDK is the only plugin↔platform contract.** Plugins MUST NOT import from
-  `runtime/src`. ESLint enforces this (established in Task 0.3.3, verified in
-  Task 0.3.8). Plugins use `packages/sdk` only.
+  `runtime/src`, including via the `@/` alias (`runtime/tsconfig.json`'s
+  `"@/*": ["./*"]` resolves to the same location — closed as an ESLint gap
+  in Task 3.24, workstream 0012 leg 2, after `plugins/console` was found
+  using it unflagged). ESLint enforces this (established in Task 0.3.3,
+  verified in Task 0.3.8; the `@/`-alias gap closed in Task 3.24). Plugins
+  use `packages/sdk` only. **`plugins/console` is the one documented
+  exception** to the `runtime/src`/`@/` restriction specifically — it is a
+  platform-type plugin built and shipped as part of this same monorepo, not
+  a third-party one, and its `@sovereignfs/db`/`manifest`/`mailer`
+  restriction still fully applies (`eslint.config.ts` gives it its own,
+  narrower rule block, not a blanket exclusion). Do not extend this
+  exception to Launcher, Account, or any other plugin without the same
+  deliberate, documented reasoning.
 - **Reusable UI/UX capability ships from the design system, not from plugins.**
   Interaction hooks, overlay surfaces, secondary headers, motion, and controls
   belong in `packages/ui` (or the runtime shell when they are shell chrome);

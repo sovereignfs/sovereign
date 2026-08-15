@@ -1,9 +1,12 @@
 # Workstream 0012 — Engineering hygiene
 
-**Status:** ⏳ In progress — leg 1 done (tasks 14.2, 13.5, 15.2, additive test
-coverage across Account/Console/Launcher). Legs 2–8 not started; legs 2, 3,
-4, 5, 7, 8 have no blocking dependency and can proceed in any order — only
-leg 6 waits on leg 5\
+**Status:** ⏳ In progress — legs 1–2 done. Leg 1: tasks 14.2, 13.5, 15.2,
+additive test coverage across Account/Console/Launcher. Leg 2: task 3.24,
+SDK boundary and runtime contract tests — found and closed a real gap in
+the boundary rule itself (the `@/` alias reaching `runtime/src` unflagged),
+formalized as a scoped, documented exception for `plugins/console` only.
+Legs 3–8 not started; legs 3, 4, 5, 7, 8 have no blocking dependency and
+can proceed in any order — only leg 6 waits on leg 5\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -38,9 +41,12 @@ this backlog as unowned.
       along the way — see leg 1's own status note; none were pre-existing
       _tested_ behavior, so this doesn't count as a behavior change made to
       enable testing.)
-- [ ] `3.24` — the plugin import-boundary ESLint rule has a fixture test
+- [x] `3.24` — the plugin import-boundary ESLint rule has a fixture test
       proving it rejects a forbidden import, and the four listed SDK host
-      behaviors have regression coverage.
+      behaviors have regression coverage. (Found and closed a real gap in
+      the rule itself along the way — the `@/` alias to `runtime/src` was
+      never pattern-matched, and `plugins/console` was already using it
+      unflagged; see leg 2's own status note.)
 - [ ] `0.14` — `pnpm typecheck` has a recorded before/after timing
       improvement; Turbo caching and Next.js app typechecking are confirmed
       unaffected.
@@ -89,7 +95,7 @@ deferred nav/header migration can be re-added.
 | Leg | Name                                          | Epic tasks       | Epics      | Gate? | Done when                                                                                                |
 | --- | --------------------------------------------- | ---------------- | ---------- | ----- | -------------------------------------------------------------------------------------------------------- |
 | 1   | Plugin workflow test coverage ✅              | 14.2, 13.5, 15.2 | 13, 14, 15 | No    | Account, Console, and Launcher workflows named in each task have regression coverage; no behavior change |
-| 2   | SDK boundary and runtime contract tests       | 3.24             | 3          | No    | Import-boundary rule and SDK host behaviors are test-covered, not just configured                        |
+| 2   | SDK boundary and runtime contract tests ✅    | 3.24             | 3          | No    | Import-boundary rule and SDK host behaviors are test-covered, not just configured                        |
 | 3   | Typecheck performance                         | 0.14             | 0          | No    | Recorded `pnpm typecheck` speedup; Turbo caching and Next.js typechecking unaffected                     |
 | 4   | Generate script decomposition                 | 3.23             | 3          | No    | `scripts/generate/*` modules exist; `pnpm generate` output unchanged                                     |
 | 5   | Middleware decomposition                      | 2.17             | 2          | No    | `runtime/src/middleware/*` modules exist; fail-open/fail-closed semantics unchanged                      |
@@ -150,9 +156,17 @@ way to shrink the backlog's task count.
 user-facing behavior to make it testable — flag and stop rather than quietly
 changing behavior under a "test coverage" leg.
 
-### Leg 2 — SDK boundary and runtime contract tests
+### Leg 2 — SDK boundary and runtime contract tests ✅
 
 **Epic tasks:** 3.24
+
+**Status (August 2026): shipped.** Full account in `docs/epics/plugins-runtime.md`'s
+task 3.24 entry. Writing the lint fixture test surfaced a real, undocumented
+gap in the SDK boundary rule itself — it never caught the `@/` alias reaching
+`runtime/src`, and `plugins/console` was already using exactly that,
+unflagged. Confirmed with the developer this should become a formal,
+scoped exception rather than be unwound; `eslint.config.ts` and
+`docs/architecture-rules.md` both updated in the same PR.
 
 **Technical notes:**
 
@@ -331,7 +345,8 @@ of the backlog and are independently valuable.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| ------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft — 10 tasks, excludes Task 2.20 (rejected) and the Pre-v1 stabilization-gate cluster (0.13, 0.15, 0.16, 0.18, deferred to a future workstream)                                                                                                                                                                                                                                                                                                                                                                        |
-| 0.2     | August 2026 | Leg 1 shipped (tasks 14.2, 13.5, 15.2). Found and fixed two live authorization gaps in Console (missing capability checks on `resetMfaAction` and nearly every settings/branding action) and one search-matching bug in Launcher (`SearchableGrid` filtering against an un-trimmed query) — full account in each task's own epic doc. Also fixed `plugins/account`'s missing `qrcode` dependency declaration and added a `@/` alias to `vitest.config.ts` for platform-plugin source-tree tests that reach `runtime/src` directly. |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft — 10 tasks, excludes Task 2.20 (rejected) and the Pre-v1 stabilization-gate cluster (0.13, 0.15, 0.16, 0.18, deferred to a future workstream)                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 0.2     | August 2026 | Leg 1 shipped (tasks 14.2, 13.5, 15.2). Found and fixed two live authorization gaps in Console (missing capability checks on `resetMfaAction` and nearly every settings/branding action) and one search-matching bug in Launcher (`SearchableGrid` filtering against an un-trimmed query) — full account in each task's own epic doc. Also fixed `plugins/account`'s missing `qrcode` dependency declaration and added a `@/` alias to `vitest.config.ts` for platform-plugin source-tree tests that reach `runtime/src` directly.                                                                                |
+| 0.3     | August 2026 | Leg 2 shipped (task 3.24). Found and closed a real gap in the SDK boundary rule itself while writing the lint fixture test: the ESLint `no-restricted-imports` pattern never matched the `@/` alias to `runtime/src` (only the literal path string), and `plugins/console` was already using it, unflagged. Confirmed with the developer this should become a formal, scoped exception (Console only, and only for `runtime/src` — the `@sovereignfs/db`/`manifest`/`mailer` restriction still applies there) rather than be unwound. `eslint.config.ts` and `docs/architecture-rules.md` updated in the same PR. |

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
 export interface UseSnapCarouselOptions {
@@ -14,6 +14,14 @@ export interface UseSnapCarouselOptions {
    *  extracted from. Debounced rather than keyed to the `scrollend` event,
    *  which pre-17.4 iOS Safari/WKWebView doesn't support. */
   debounceMs?: number;
+  /** The index to seed `liveIndex` with before any scroll event has fired —
+   *  must match whatever the caller initially scrolls/renders to (typically
+   *  the same value used for `SwipableMobileCarousel`'s `activeIndex`).
+   *  Without this, `liveIndex` would start at 0 regardless of where the
+   *  carousel actually opens (e.g. a deep link straight to slide 8),
+   *  briefly unmounting every slide except the first few until the first
+   *  scroll event arrives to correct it. */
+  initialIndex?: number;
 }
 
 export interface UseSnapCarouselResult {
@@ -21,6 +29,11 @@ export interface UseSnapCarouselResult {
   scrollRef: RefObject<HTMLDivElement | null>;
   /** Imperatively scrolls the container to a slide index. */
   scrollToIndex: (index: number, behavior?: ScrollBehavior) => void;
+  /** The slide index nearest the container's *current* scroll position,
+   *  updated synchronously on every `scroll` event — not debounced, and not
+   *  the same thing as the last-reported `onSettle` index. See its own
+   *  assignment below for why a consumer needs both. */
+  liveIndex: number;
 }
 
 /**
@@ -35,10 +48,27 @@ export function useSnapCarousel({
   itemCount,
   onSettle,
   debounceMs = 120,
+  initialIndex = 0,
 }: UseSnapCarouselOptions): UseSnapCarouselResult {
   const scrollRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastIndexRef = useRef<number | null>(null);
+  // Real-time (synchronous, not debounced) read of "which slide is the
+  // container's scroll position nearest right now." A fast flick can carry
+  // native scroll-snap momentum straight past an intermediate slide to one
+  // two or more away in a single continuous gesture — the settle-detection
+  // above deliberately still waits out the full debounce window before
+  // reporting that via onSettle (so it can tell a real settle from drift,
+  // see chainTrustedRef's own comment). But `SwipableMobileCarousel`'s mount
+  // window is keyed off the *settled* index, so during that debounce window
+  // the slide the container had already scrolled to — visually, right now —
+  // was never in the mount window and had never been rendered at all: a
+  // real, reproduced-on-video gap where the carousel shows nothing (not even
+  // a loading skeleton) for the length of one full debounce cycle after a
+  // multi-slide flick. `liveIndex` exists so the mount window can track
+  // wherever the container currently visually is, independent of whether
+  // that position has been confirmed as a real settle yet.
+  const [liveIndex, setLiveIndex] = useState(initialIndex);
   // Kept in a ref so the scroll listener always calls the latest callback
   // without needing to be torn down and re-attached on every render.
   const onSettleRef = useRef(onSettle);
@@ -100,7 +130,25 @@ export function useSnapCarousel({
       // Ignore hover — only a held button (mouse drag) counts as input.
       if (event.buttons) noteGesture();
     }
+    function updateLiveIndexNow() {
+      const current = scrollRef.current;
+      if (!current) return;
+      const width = current.clientWidth;
+      if (!width) return;
+      const idx = Math.max(0, Math.min(itemCount - 1, Math.round(current.scrollLeft / width)));
+      // Bails out (same reference, no re-render) when the index hasn't
+      // actually changed — a scroll container fires many `scroll` events
+      // while passing through the same slide's territory, not just at its
+      // boundaries. Synchronous rather than rAF-throttled: jsdom (this
+      // hook's own test environment) doesn't reliably run
+      // requestAnimationFrame callbacks under fake timers, and browsers
+      // already coalesce native scroll events to roughly once per frame on
+      // their own, so a second throttle here bought nothing but test
+      // fragility.
+      setLiveIndex((prev) => (prev === idx ? prev : idx));
+    }
     function handleScroll() {
+      updateLiveIndexNow();
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       } else {
@@ -145,12 +193,29 @@ export function useSnapCarousel({
     };
   }, [itemCount, debounceMs]);
 
-  function scrollToIndex(index: number, behavior: ScrollBehavior = 'smooth') {
+  // Memoized so its reference stays stable across renders — SwipableMobile
+  // Carousel depends on it in a useEffect deps array alongside
+  // clampedActiveIndex, and an unmemoized function recreated on every
+  // render (e.g. every time liveIndex itself changes below) would make that
+  // effect re-fire on every scroll, calling scrollToIndex again and — since
+  // it also resets liveIndex to whatever index it was told to scroll to —
+  // immediately stomping the very liveIndex update that triggered the
+  // re-render in the first place. Caught by this hook's own test suite
+  // (a live-index test that failed until this was memoized), not just
+  // reasoned about — worth keeping as a regression guard, not just a
+  // performance nicety.
+  const scrollToIndex = useCallback((index: number, behavior: ScrollBehavior = 'smooth') => {
     const el = scrollRef.current;
     if (!el) return;
     lastIndexRef.current = index;
+    // Belt-and-suspenders: a real scrollTo() also fires its own 'scroll'
+    // event, which updates liveIndex synchronously too — but jsdom's mocked
+    // scrollTo (this hook's own test environment) doesn't, and the initial
+    // mount scroll / reorder-jump fix both need the target slide mounted
+    // immediately regardless.
+    setLiveIndex(index);
     el.scrollTo({ left: index * el.clientWidth, behavior });
-  }
+  }, []);
 
-  return { scrollRef, scrollToIndex };
+  return { scrollRef, scrollToIndex, liveIndex };
 }

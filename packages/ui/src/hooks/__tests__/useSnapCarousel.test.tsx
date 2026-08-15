@@ -36,6 +36,7 @@ describe('useSnapCarousel', () => {
     const onSettle = vi.fn();
     const { getByTestId } = render(<Harness itemCount={3} onSettle={onSettle} debounceMs={120} />);
     const el = getByTestId('scroller');
+    fireEvent.touchStart(el);
     setLayout(el, 300, 300); // scrollLeft 300 / width 300 -> index 1
     fireEvent.scroll(el);
     expect(onSettle).not.toHaveBeenCalled();
@@ -47,6 +48,7 @@ describe('useSnapCarousel', () => {
     const onSettle = vi.fn();
     const { getByTestId } = render(<Harness itemCount={3} onSettle={onSettle} debounceMs={120} />);
     const el = getByTestId('scroller');
+    fireEvent.touchStart(el);
     setLayout(el, 300, 0);
     fireEvent.scroll(el);
     act(() => void vi.advanceTimersByTime(60));
@@ -61,9 +63,11 @@ describe('useSnapCarousel', () => {
     const onSettle = vi.fn();
     const { getByTestId } = render(<Harness itemCount={3} onSettle={onSettle} debounceMs={120} />);
     const el = getByTestId('scroller');
+    fireEvent.touchStart(el);
     setLayout(el, 300, 300);
     fireEvent.scroll(el);
     act(() => void vi.advanceTimersByTime(120));
+    fireEvent.touchStart(el);
     fireEvent.scroll(el);
     act(() => void vi.advanceTimersByTime(120));
     expect(onSettle).toHaveBeenCalledOnce();
@@ -73,10 +77,54 @@ describe('useSnapCarousel', () => {
     const onSettle = vi.fn();
     const { getByTestId } = render(<Harness itemCount={2} onSettle={onSettle} debounceMs={120} />);
     const el = getByTestId('scroller');
+    fireEvent.touchStart(el);
     setLayout(el, 300, 900); // rounds to index 3, clamps to itemCount - 1 = 1
     fireEvent.scroll(el);
     act(() => void vi.advanceTimersByTime(120));
     expect(onSettle).toHaveBeenCalledWith(1);
+  });
+
+  it('ignores a scroll event with no active gesture (drift, not a settle)', () => {
+    // Regression test: reproduced live via a user screen recording — a
+    // slide's content changing size while still loading can nudge
+    // scrollLeft enough to round to a different index. Previously any such
+    // stray `scroll` event was enough to fire a second, contradicting
+    // onSettle, silently "auto-swiping" the carousel back to the wrong
+    // slide with no further touch input.
+    const onSettle = vi.fn();
+    const { getByTestId } = render(<Harness itemCount={10} onSettle={onSettle} debounceMs={120} />);
+    const el = getByTestId('scroller');
+    fireEvent.touchStart(el);
+    setLayout(el, 300, 1800); // settles cleanly on index 6
+    fireEvent.scroll(el);
+    act(() => void vi.advanceTimersByTime(120));
+    expect(onSettle).toHaveBeenCalledExactlyOnceWith(6);
+
+    // Well outside the grace window and no further touch/wheel/pointer
+    // activity — this scroll event is drift, not a resettle.
+    act(() => void vi.advanceTimersByTime(1000));
+    setLayout(el, 300, 1620); // would round to index 5
+    fireEvent.scroll(el);
+    act(() => void vi.advanceTimersByTime(120));
+    expect(onSettle).toHaveBeenCalledExactlyOnceWith(6);
+  });
+
+  it('still settles on the browser momentum/snap-correction scroll after touchend', () => {
+    const onSettle = vi.fn();
+    const { getByTestId } = render(<Harness itemCount={10} onSettle={onSettle} debounceMs={120} />);
+    const el = getByTestId('scroller');
+    fireEvent.touchStart(el);
+    setLayout(el, 300, 1750);
+    fireEvent.scroll(el);
+    fireEvent.touchEnd(el);
+    // The finger lifted, but the browser's own momentum/snap-correction
+    // continues settling shortly after — within the grace window, so this
+    // must still count.
+    act(() => void vi.advanceTimersByTime(60));
+    setLayout(el, 300, 1800);
+    fireEvent.scroll(el);
+    act(() => void vi.advanceTimersByTime(120));
+    expect(onSettle).toHaveBeenCalledWith(6);
   });
 
   it('scrollToIndex scrolls the container to the target slide', () => {

@@ -1,6 +1,6 @@
 # Workstream 0012 — Engineering hygiene
 
-**Status:** ⏳ In progress — legs 1–5 done. Leg 1: tasks 14.2, 13.5, 15.2,
+**Status:** ⏳ In progress — legs 1–6 done. Leg 1: tasks 14.2, 13.5, 15.2,
 additive test coverage across Account/Console/Launcher. Leg 2: task 3.24,
 SDK boundary and runtime contract tests — found and closed a real gap in
 the boundary rule itself (the `@/` alias reaching `runtime/src` unflagged),
@@ -19,8 +19,13 @@ entrypoint's re-export barrel. Leg 5: task 2.17, middleware decomposition
 `verifySession()` consolidating three duplicated cookie-cache-then-fallback
 call sites into one typed result; the existing 115-test regression suite
 (Task 2.16) passes completely unchanged, plus 22 new focused unit tests
-across the three modules. Legs 6–8 not started; legs 7, 8 have no blocking
-dependency; leg 6 was waiting on leg 5, now unblocked\
+across the three modules. Leg 6: task 2.18, middleware internal fetch
+caching review — measured real self-fetch counts by path type as a live
+test (0/3/1/1 for normal page/plugin route/root/public-api), added a 3s
+in-process TTL cache for exactly the two lookups the deliverable named
+(disabled-plugin IDs, root-plugin prefix), left entitlement/access-policy
+lookups uncached per the epic's own guidance. Legs 7–8 not started, no
+blocking dependency between them\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -77,9 +82,11 @@ this backlog as unowned.
       and fail-closed semantics are unchanged, verified by Task 2.16's
       existing regression suite. (All 115 existing tests pass unchanged;
       22 new focused unit tests added; see leg 5's own status note.)
-- [ ] `2.18` — middleware self-fetch counts are measured before/after; any
+- [x] `2.18` — middleware self-fetch counts are measured before/after; any
       caching added has a documented invalidation window and does not weaken
-      auth or entitlement correctness.
+      auth or entitlement correctness. (Measured as a live test, not just a
+      note; cached only disabled-plugin IDs and root-plugin prefix, left
+      entitlement/access-policy lookups uncached; see leg 6's own status note.)
 - [ ] `13.6` (scoped — see Decisions locked) — Console's confirm-dialog
       pattern, table styling, and icon-only action buttons are migrated to
       shared primitives; no behavioral regression on user
@@ -119,7 +126,7 @@ deferred nav/header migration can be re-added.
 | 3   | Typecheck performance ✅                      | 0.14             | 0          | No    | Recorded `pnpm typecheck` speedup; Turbo caching and Next.js typechecking unaffected                     |
 | 4   | Generate script decomposition ✅              | 3.23             | 3          | No    | `scripts/generate/*` modules exist; `pnpm generate` output unchanged                                     |
 | 5   | Middleware decomposition ✅                   | 2.17             | 2          | No    | `runtime/src/middleware/*` modules exist; fail-open/fail-closed semantics unchanged                      |
-| 6   | Middleware internal fetch caching review      | 2.18             | 2          | No    | Self-fetch counts measured; any cache added has documented invalidation                                  |
+| 6   | Middleware internal fetch caching review ✅   | 2.18             | 2          | No    | Self-fetch counts measured; any cache added has documented invalidation                                  |
 | 7   | Console primitive migration, Phase 2 (scoped) | 13.6             | 13         | No    | Confirm-dialog, table, and icon-button patterns migrated; admin-destructive flows manually re-verified   |
 | 8   | Plugin external dependency resolution         | 3.25             | 3          | No    | `sv plugin add`/`remove` hoist/prune deps automatically; `@dnd-kit/*` entries re-derived from the ledger |
 
@@ -307,9 +314,33 @@ blast-radius file touched in this workstream.
 actually cover one of the fail-open/fail-closed paths above — add coverage
 for that path first rather than decomposing code the suite can't verify.
 
-### Leg 6 — Middleware internal fetch caching review
+### Leg 6 — Middleware internal fetch caching review ✅
 
 **Epic tasks:** 2.18
+
+**Status (August 2026): shipped.** Full account in the epic doc
+(`docs/epics/platform-shell.md`). Measured real counts (0 for a normal page
+outside any plugin prefix, 3 concurrent for a plugin route, 1 for root `/`,
+1 for public `/api/*`) as an enforced test rather than a one-time note, so a
+future branch change has to consciously update the asserted count. Added a
+3-second in-process TTL cache for exactly the two lookups the deliverable
+named — `fetchDisabledPluginIds` (one global entry) and
+`fetchRootPluginPrefix` (per `userId:role`, since root-plugin resolution is
+entitlement/policy-dependent) — left `fetchPaywalledPluginIds` and
+`fetchRestrictedPluginIds` fully uncached per the epic's own conservative
+guidance for entitlement/access-policy correctness. No explicit
+invalidation on the admin toggle mutation (judged impractical without
+coupling the Node-runtime admin route to Edge middleware's in-process
+state); used the epic's documented TTL fallback instead. Fail-open extends
+to the cache deliberately — a failure's safe fail-open result is itself
+cached, so an outage doesn't turn into a retry-every-request loop for the
+rest of the window. Added a `resetPluginGateCacheForTests()` hook (same
+convention as `rate-limit.ts`'s), wired into the existing regression suite's
+`beforeEach` so cache state can't leak stale mocked values across test
+cases. All 115 existing regression tests pass unchanged, plus 4 measurement
+tests and 4 cache-behavior tests; full `pnpm test` (2446 passed),
+`pnpm typecheck`, `pnpm lint`, `pnpm build` all green (Edge middleware
+bundle +0.2 kB).
 
 **Technical notes:**
 

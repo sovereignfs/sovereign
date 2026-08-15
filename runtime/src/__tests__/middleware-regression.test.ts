@@ -1,6 +1,7 @@
 import type { SovereignManifest } from '@sovereignfs/manifest';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetPluginGateCacheForTests } from '../middleware/plugin-gate';
 import { resetGlobalRateLimitForTests } from '../rate-limit';
 import type { VerifiedSession } from '../session-verify';
 
@@ -270,6 +271,7 @@ describe('runtime middleware regressions', () => {
     };
     installFetchMock(fetchState);
     resetGlobalRateLimitForTests();
+    resetPluginGateCacheForTests();
   });
 
   afterEach(() => {
@@ -1278,6 +1280,57 @@ describe('runtime middleware regressions', () => {
       const response = await middleware(request('/console', { headers: focusedOnPaid }));
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe('http://runtime.test/paid');
+    });
+  });
+
+  // Task 2.18's "measure current middleware internal fetch count by path
+  // type" deliverable — kept as a live, enforced measurement rather than a
+  // one-time note in the epic doc, so a future change to any of these
+  // branches has to consciously update the asserted count instead of
+  // silently drifting from what's documented. Counts are of self-fetches to
+  // the runtime's own Node-runtime admin API (`fetchDisabledPluginIds`,
+  // `fetchPaywalledPluginIds`, `fetchRestrictedPluginIds`,
+  // `fetchRootPluginPrefix`) — not the separate `/api/verify` auth-server
+  // fallback, which `verifySession()`'s cookie-cache-first strategy already
+  // avoids on a cache hit and isn't part of this task's caching scope.
+  describe('middleware internal fetch counts by path type (Task 2.18 measurement)', () => {
+    const selfFetchCalls = () => fetchState.calls.filter((url) => url.includes('/api/admin/'));
+
+    it('a normal platform page not under any plugin prefix makes zero self-fetches', async () => {
+      fetchState.calls = [];
+      const response = await middleware(request('/account'));
+      expect(response.status).toBe(200);
+      expect(selfFetchCalls()).toEqual([]);
+    });
+
+    it('a plugin route makes 3 concurrent self-fetches: disabled, paywalled, restricted', async () => {
+      fetchState.calls = [];
+      const response = await middleware(request('/launcher'));
+      expect(response.status).toBe(200);
+      const calls = selfFetchCalls();
+      expect(calls).toHaveLength(3);
+      expect(calls.some((url) => url.includes('/api/admin/plugins/disabled'))).toBe(true);
+      expect(calls.some((url) => url.includes('/api/admin/entitlements'))).toBe(true);
+      expect(calls.some((url) => url.includes('/api/admin/plugins/access'))).toBe(true);
+    });
+
+    it('root "/" makes exactly 1 self-fetch: root-plugin resolution', async () => {
+      fetchState.calls = [];
+      const response = await middleware(request('/'));
+      expect(response.status).toBe(200);
+      const calls = selfFetchCalls();
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toContain('/api/admin/root-plugin');
+    });
+
+    it('public /api/* makes exactly 1 self-fetch: disabled-plugin lookup, before session verification', async () => {
+      fetchState.calls = [];
+      const response = await middleware(request('/api/blog/posts/1'));
+      expect(response.status).toBe(200);
+      const calls = selfFetchCalls();
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toContain('/api/admin/plugins/disabled');
+      expect(fetchState.calls.some((url) => url.includes('/api/verify'))).toBe(false);
     });
   });
 });

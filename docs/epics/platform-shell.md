@@ -514,7 +514,46 @@ risk of future auth, routing, CSP, paywall, and root-plugin changes.
 
 ---
 
-#### 📋 2.18 — Middleware internal fetch caching review
+#### ✅ 2.18 — Middleware internal fetch caching review
+
+**Status (August 2026): shipped — workstream 0012 leg 6.** Measured actual
+self-fetch counts by path type as a live, enforced test (not just a one-time
+note) —
+`runtime/src/__tests__/middleware-regression.test.ts`'s "middleware internal
+fetch counts by path type" describe block: a normal platform page not under
+any plugin prefix makes **0** self-fetches; a plugin route makes **3**
+concurrent ones (disabled, paywalled, restricted, via `Promise.all`); root
+`/` makes **1** (root-plugin resolution); public `/api/*` makes **1**
+(disabled-plugin check, before session verification even runs). Added a
+short-lived (3s) in-process TTL cache in `runtime/src/middleware/plugin-gate.ts`
+for exactly the two lookups the deliverable named — `fetchDisabledPluginIds`
+(one global cache entry) and `fetchRootPluginPrefix` (keyed per
+`userId:role`, since RFC 0065 root-plugin resolution depends on the caller's
+own entitlements/access policy) — leaving `fetchPaywalledPluginIds` and
+`fetchRestrictedPluginIds` fully uncached per the deliverable's explicit
+guidance, since entitlement/access-policy correctness is more sensitive to
+staleness than "is this plugin off" and measurement showed no distinct
+pressure on those two beyond the same per-request baseline already expected.
+No explicit invalidation on the admin toggle mutation — judged impractical
+without coupling an unrelated Node-runtime admin route handler to Edge
+middleware's in-process module state (fragile, and would silently stop
+working if Edge middleware ever ran as a genuinely separate isolate/process,
+which self-hosted Sovereign's "single Next server" deployment today happens
+not to be, but isn't guaranteed to stay that way) — used the epic's own
+fallback instead, a flat, documented TTL. Fail-open behavior extends to the
+cache deliberately: a fetch failure's safe empty/null result is cached like
+any other value, so a transient outage doesn't turn into a fetch-and-fail
+loop on every request for the rest of the TTL window — this only extends
+how long an already-fail-open window lasts, it doesn't introduce a new kind
+of exposure. Both caches have a test-only reset hook
+(`resetPluginGateCacheForTests()`, same convention as `rate-limit.ts`'s
+`resetGlobalRateLimitForTests()`) wired into the regression suite's
+`beforeEach`, since module-level cache state would otherwise leak stale
+mocked-fetch values across test cases. Verified: the existing 115-test
+regression suite (Task 2.16) passes completely unchanged, plus 4 new
+measurement tests and 4 new cache-behavior tests (TTL hit/expiry, fail-open
+caching, per-user keying); full `pnpm test` (2446 passed), `pnpm typecheck`,
+`pnpm lint`, and `pnpm build` all green — Edge middleware bundle size +0.2 kB.
 
 **Goal:** Reduce repeated middleware self-fetches without weakening correctness
 or making admin changes feel stale.

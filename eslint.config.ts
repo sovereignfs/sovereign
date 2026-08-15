@@ -10,6 +10,7 @@ export default tseslint.config(
     ignores: [
       '**/node_modules/**',
       '**/dist/**',
+      '**/dist-tsc/**', // tsc -b project-reference build cache (Task 0.14) — see .gitignore
       '**/.next/**',
       '**/.turbo/**',
       '.remember/**', // remember plugin's per-machine scratch state (git-ignored)

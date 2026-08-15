@@ -1,12 +1,16 @@
 # Workstream 0012 — Engineering hygiene
 
-**Status:** ⏳ In progress — legs 1–2 done. Leg 1: tasks 14.2, 13.5, 15.2,
+**Status:** ⏳ In progress — legs 1–3 done. Leg 1: tasks 14.2, 13.5, 15.2,
 additive test coverage across Account/Console/Launcher. Leg 2: task 3.24,
 SDK boundary and runtime contract tests — found and closed a real gap in
 the boundary rule itself (the `@/` alias reaching `runtime/src` unflagged),
 formalized as a scoped, documented exception for `plugins/console` only.
-Legs 3–8 not started; legs 3, 4, 5, 7, 8 have no blocking dependency and
-can proceed in any order — only leg 6 waits on leg 5\
+Leg 3: task 0.14, typecheck performance — opt-in incremental project
+references for the 7 core library packages; caught and avoided a real
+regression where the first approach broke `tsup`'s build; Next.js apps
+evaluated and excluded with concrete reasons. Legs 4–8 not started; legs
+4, 5, 7, 8 have no blocking dependency and can proceed in any order —
+only leg 6 waits on leg 5\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -47,9 +51,12 @@ this backlog as unowned.
       the rule itself along the way — the `@/` alias to `runtime/src` was
       never pattern-matched, and `plugins/console` was already using it
       unflagged; see leg 2's own status note.)
-- [ ] `0.14` — `pnpm typecheck` has a recorded before/after timing
+- [x] `0.14` — `pnpm typecheck` has a recorded before/after timing
       improvement; Turbo caching and Next.js app typechecking are confirmed
-      unaffected.
+      unaffected. (The "improvement" is an opt-in incremental path for the 7
+      core packages — `pnpm typecheck` itself is unchanged and was
+      re-verified 31/31 passing; Next.js apps evaluated and excluded with
+      concrete technical reasons, not enabled. See leg 3's own status note.)
 - [ ] `3.23` — `scripts/generate-registry.ts` is decomposed into
       `scripts/generate/*` per the epic's module list; `pnpm generate` output
       is byte-identical for the current plugin set.
@@ -96,7 +103,7 @@ deferred nav/header migration can be re-added.
 | --- | --------------------------------------------- | ---------------- | ---------- | ----- | -------------------------------------------------------------------------------------------------------- |
 | 1   | Plugin workflow test coverage ✅              | 14.2, 13.5, 15.2 | 13, 14, 15 | No    | Account, Console, and Launcher workflows named in each task have regression coverage; no behavior change |
 | 2   | SDK boundary and runtime contract tests ✅    | 3.24             | 3          | No    | Import-boundary rule and SDK host behaviors are test-covered, not just configured                        |
-| 3   | Typecheck performance                         | 0.14             | 0          | No    | Recorded `pnpm typecheck` speedup; Turbo caching and Next.js typechecking unaffected                     |
+| 3   | Typecheck performance ✅                      | 0.14             | 0          | No    | Recorded `pnpm typecheck` speedup; Turbo caching and Next.js typechecking unaffected                     |
 | 4   | Generate script decomposition                 | 3.23             | 3          | No    | `scripts/generate/*` modules exist; `pnpm generate` output unchanged                                     |
 | 5   | Middleware decomposition                      | 2.17             | 2          | No    | `runtime/src/middleware/*` modules exist; fail-open/fail-closed semantics unchanged                      |
 | 6   | Middleware internal fetch caching review      | 2.18             | 2          | No    | Self-fetch counts measured; any cache added has documented invalidation                                  |
@@ -180,9 +187,21 @@ scoped exception rather than be unwound; `eslint.config.ts` and
 **Do not proceed if:** N/A — this is additive test coverage against an
 already-shipped contract.
 
-### Leg 3 — Typecheck performance
+### Leg 3 — Typecheck performance ✅
 
 **Epic tasks:** 0.14
+
+**Status (August 2026): shipped, packages only.** Full account in
+`docs/epics/infrastructure.md`'s task 0.14 entry — including a real
+regression found and avoided: the first attempt put `composite: true`
+directly in the shared `packages/tsconfig/library.json`, which broke
+`tsup`'s DTS build (`pnpm build` failure on `packages/ui`), since tsup
+reads the same tsconfig and doesn't tolerate composite mode's stricter
+file-list validation. Fixed by isolating the new machinery into a
+dedicated `tsconfig.build-refs.json` per package, leaving every
+package's real `tsconfig.json` (and `tsup`, and the existing `tsc
+--noEmit` script) untouched. Next.js apps evaluated and excluded with
+concrete reasons (not just caution) — see the epic entry.
 
 **Technical notes:**
 
@@ -345,8 +364,9 @@ of the backlog and are independently valuable.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft — 10 tasks, excludes Task 2.20 (rejected) and the Pre-v1 stabilization-gate cluster (0.13, 0.15, 0.16, 0.18, deferred to a future workstream)                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| 0.2     | August 2026 | Leg 1 shipped (tasks 14.2, 13.5, 15.2). Found and fixed two live authorization gaps in Console (missing capability checks on `resetMfaAction` and nearly every settings/branding action) and one search-matching bug in Launcher (`SearchableGrid` filtering against an un-trimmed query) — full account in each task's own epic doc. Also fixed `plugins/account`'s missing `qrcode` dependency declaration and added a `@/` alias to `vitest.config.ts` for platform-plugin source-tree tests that reach `runtime/src` directly.                                                                                |
-| 0.3     | August 2026 | Leg 2 shipped (task 3.24). Found and closed a real gap in the SDK boundary rule itself while writing the lint fixture test: the ESLint `no-restricted-imports` pattern never matched the `@/` alias to `runtime/src` (only the literal path string), and `plugins/console` was already using it, unflagged. Confirmed with the developer this should become a formal, scoped exception (Console only, and only for `runtime/src` — the `@sovereignfs/db`/`manifest`/`mailer` restriction still applies there) rather than be unwound. `eslint.config.ts` and `docs/architecture-rules.md` updated in the same PR. |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft — 10 tasks, excludes Task 2.20 (rejected) and the Pre-v1 stabilization-gate cluster (0.13, 0.15, 0.16, 0.18, deferred to a future workstream)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 0.2     | August 2026 | Leg 1 shipped (tasks 14.2, 13.5, 15.2). Found and fixed two live authorization gaps in Console (missing capability checks on `resetMfaAction` and nearly every settings/branding action) and one search-matching bug in Launcher (`SearchableGrid` filtering against an un-trimmed query) — full account in each task's own epic doc. Also fixed `plugins/account`'s missing `qrcode` dependency declaration and added a `@/` alias to `vitest.config.ts` for platform-plugin source-tree tests that reach `runtime/src` directly.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 0.3     | August 2026 | Leg 2 shipped (task 3.24). Found and closed a real gap in the SDK boundary rule itself while writing the lint fixture test: the ESLint `no-restricted-imports` pattern never matched the `@/` alias to `runtime/src` (only the literal path string), and `plugins/console` was already using it, unflagged. Confirmed with the developer this should become a formal, scoped exception (Console only, and only for `runtime/src` — the `@sovereignfs/db`/`manifest`/`mailer` restriction still applies there) rather than be unwound. `eslint.config.ts` and `docs/architecture-rules.md` updated in the same PR.                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 0.4     | August 2026 | Leg 3 shipped (task 0.14), packages only. Found and avoided a real regression: putting `composite: true` in the shared `packages/tsconfig/library.json` broke `tsup`'s DTS build (`pnpm build` failure), since tsup reads the same tsconfig and doesn't tolerate composite mode's stricter file-list validation. Fixed by isolating the new machinery into a dedicated `tsconfig.build-refs.json` per package — every package's real `tsconfig.json`, `tsup`, and the existing `pnpm typecheck` are completely untouched. New opt-in `pnpm typecheck:packages:incremental` script for the 7 core packages via `tsc -b`. Measured: existing `pnpm typecheck` cold ~83s (unchanged); new path cold ~7.8s, no-op ~0.44s, single-file-touch ~0.5s. Next.js apps evaluated and excluded with concrete reasons (`.next/types` is a dynamically-regenerated set, a poor fit for composite's static file-list requirement, and the tsup-class regression risk applies equally to `next build`'s own internal type-checking). |

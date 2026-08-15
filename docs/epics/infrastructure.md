@@ -430,10 +430,75 @@ in place)
 
 ---
 
-#### 📋 0.14 — Typecheck performance and project references
+#### ✅ 0.14 — Typecheck performance and project references
 
-**Goal:** Improve contributor feedback time as the monorepo grows, without
-making Next.js app typechecking or Turbo caching more fragile.
+**Status (August 2026): shipped — workstream 0012 leg 3, packages only.**
+Audited the inheritance graph: 7 library packages under `packages/`
+(`bridge`, `create-plugin`, `db`, `mailer`, `manifest`, `sdk`, `ui`) all
+extend `packages/tsconfig/library.json` → `base.json`; the internal
+dependency graph among them is shallow — only `bridge` depends on another
+package (`sdk`). Four Next.js-family apps (`runtime`, `apps/auth`,
+`apps/harness`, `apps/relay`) extend `nextjs.json`.
+
+**A real regression was found and avoided, not just a risk noted.** The
+first attempt added `composite: true` directly to the shared
+`library.json` (and each package's own `tsconfig.json`) — that broke
+`tsup`'s DTS build outright (`pnpm build` failed on `packages/ui` with
+`error TS6307: File '...' is not listed within the file list of project`),
+because tsup's internal DTS bundler reads the same tsconfig and doesn't
+handle composite mode's stricter file-list validation the way real
+`tsc -b` does. This would have broken the platform's actual production
+build, not just typechecking. Fixed by isolating the new machinery into
+a dedicated `tsconfig.build-refs.json` per package (extending the
+package's own `tsconfig.json`, adding `composite`/`incremental`/a
+throwaway `dist-tsc/` output dir there instead) — each package's real
+`tsconfig.json` (read by both `tsup` and the existing `tsc --noEmit`
+script) is completely untouched. `packages/mailer` separately needed its
+JSON locale imports added to `include` — composite mode requires every
+reachable file to be explicitly covered, `--noEmit` mode does not.
+
+**A root `tsconfig.packages.json` solution file** references all 7
+packages' `tsconfig.build-refs.json` (`bridge`'s references `sdk`'s,
+matching the one real internal dependency), exposed via two new,
+opt-in root scripts — `pnpm typecheck:packages:incremental` (`tsc -b
+tsconfig.packages.json`) and `...:clean` — for local iterative
+development. **Not wired into `pnpm typecheck`, CI, or `pnpm build`** —
+those are entirely unchanged and were re-verified green after this leg
+(`pnpm typecheck`: 31/31 passing; `pnpm build`: 12/12 passing; full test
+suite: 2411 passing).
+
+**Timings, measured, not estimated:**
+
+- Existing `pnpm typecheck` (Turbo-orchestrated `tsc --noEmit`, all 31
+  projects), fully cold: ~83s. Turbo's own warm-cache rerun (nothing
+  changed): ~4.6s. **Unchanged by this leg** — the existing command and
+  its Turbo task config were not touched.
+- New `pnpm typecheck:packages:incremental` (7 core packages via
+  `tsc -b`), cold: ~7.8s. No-op rerun: ~0.44s. After touching one file
+  in `packages/ui`: ~0.5s to detect and reprocess.
+
+The real win isn't the cold number (Turbo's hash-based caching already
+makes a fully-unchanged full run fast) — it's that `tsc --noEmit` has
+zero memory between invocations (`--noEmit` suppresses the
+`.tsbuildinfo` write entirely), so today any single-file edit inside a
+package forces a full from-scratch re-check of that whole package on
+the next `pnpm typecheck` cache miss. The new path gives these 7
+packages genuine sub-package-granularity incrementality for local
+iteration, underneath Turbo's existing per-package caching, without
+touching what CI or `pnpm build` actually run.
+
+**Next.js apps evaluated, explicitly excluded — with concrete reasons,
+not just caution.** `nextjs.json` already declares `incremental: true`,
+but it's equally dead config today for the same reason (`--noEmit`
+everywhere). Composite mode's requirement that every reachable file be
+explicitly `include`-covered is a poor fit for apps whose tsconfig
+includes `.next/types/**/*.ts` — a set Next.js regenerates dynamically
+per build, not a static file list. Given the tsup regression just found
+came from the exact same failure class (a bundler's own internal
+type-checking reading the same tsconfig composite mode was added to),
+and Next's blast radius (`next build`/`next dev` for the whole platform)
+is far larger than one package's DTS build, this wasn't attempted. Ships
+as a documented "not viable in this pass" rather than a silent gap.
 
 **Deliverables:**
 

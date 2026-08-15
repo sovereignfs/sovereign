@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Packages solution (Task 0.14)",
+  "files": [],
+  "references": [
+    { "path": "packages/bridge/tsconfig.build-refs.json" },
+    { "path": "packages/create-plugin/tsconfig.build-refs.json" },
+    { "path": "packages/db/tsconfig.build-refs.json" },
+    { "path": "packages/mailer/tsconfig.build-refs.json" },
+    { "path": "packages/manifest/tsconfig.build-refs.json" },
+    { "path": "packages/sdk/tsconfig.build-refs.json" },
+    { "path": "packages/ui/tsconfig.build-refs.json" }
+  ]
+}

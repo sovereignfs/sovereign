@@ -40,25 +40,29 @@ vi.mock('next/headers', () => ({
 }));
 
 /**
- * Importing sdk-host.ts registers the real host via provideHost() as a
- * module-load side effect (same as runtime/instrumentation.ts does in
- * production). Calling through sdk.db.getClient() (packages/sdk/src/db.ts)
- * rather than reaching for the host directly exercises the real,
- * plugin-facing call path end to end: header → SDK wrapper → host routing —
- * the same path both the isolated-DB routing and the identity-forging
- * guarantee (sdk.db.getClient() takes no pluginId argument at all) actually
- * depend on.
+ * Import sdk-host.ts exactly once, at module load — it registers the real
+ * host via provideHost() as a side effect (same as
+ * runtime/instrumentation.ts does in production). Deliberately NOT using
+ * vi.resetModules() + a fresh dynamic import per test: that pattern relies
+ * on Vitest's module graph being invalidated and rebuilt identically across
+ * every pool/worker configuration, which proved flaky under CI's
+ * Postgres-backed test run (passed consistently locally, failed
+ * intermittently in CI) — a single, stable registration this file's own
+ * mocks fully control is more robust than re-deriving "fresh" module state
+ * per call. `sdk.db.getClient()` still reads `headerPluginId` fresh on every
+ * call via the mocked `headers()` above, so each test's header value is
+ * still exactly what that test sets.
  */
+const sdkHostModule = await import('@sovereignfs/sdk');
+await import('../sdk-host');
+
 async function getClientAs(pluginId: string | null) {
   headerPluginId = pluginId;
-  await import('../sdk-host');
-  const { sdk } = await import('@sovereignfs/sdk');
-  return sdk.db.getClient();
+  return sdkHostModule.sdk.db.getClient();
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.resetModules();
   headerPluginId = null;
 });
 
@@ -98,12 +102,12 @@ describe('sdk-host db.getClient — platform DB outside plugin route context', (
 });
 
 describe('sdk-host db.getClient — identity cannot be forged through SDK arguments', () => {
-  it('sdk.db.getClient() takes no arguments — the plugin identity used for routing comes only from the injected request header, never from caller-supplied input', async () => {
+  it('sdk.db.getClient() takes no arguments — the plugin identity used for routing comes only from the injected request header, never from caller-supplied input', () => {
     // sdk.db.getClient() has an empty parameter list (packages/sdk/src/db.ts)
     // — there is no argument a plugin could pass to claim a different
     // identity. This asserts that structurally, not just behaviorally: a
     // plugin cannot even attempt to call getClient('some-other-plugin-id').
-    expect((await import('@sovereignfs/sdk')).sdk.db.getClient.length).toBe(0);
+    expect(sdkHostModule.sdk.db.getClient.length).toBe(0);
   });
 
   it('always resolves the plugin identity from the request header, even when called from code that could otherwise pass anything', async () => {

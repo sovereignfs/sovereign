@@ -5,6 +5,12 @@
   gap: var(--sv-space-2);
 }
 
+/* Opt-in — see the `density` prop doc comment. Only the gap changes; each
+   dot's own 20px hit target is untouched. */
+.dotsCompact {
+  gap: var(--sv-space-1);
+}
+
 .dot {
   /* A 6px visible dot is too small a hit target on its own — the button's
      real box is larger (20px) with the dot itself painted by ::before and

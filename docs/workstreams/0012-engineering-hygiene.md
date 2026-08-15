@@ -1,6 +1,6 @@
 # Workstream 0012 — Engineering hygiene
 
-**Status:** ⏳ In progress — legs 1–7 done. Leg 1: tasks 14.2, 13.5, 15.2,
+**Status:** ✅ Complete — all 8 legs done. Leg 1: tasks 14.2, 13.5, 15.2,
 additive test coverage across Account/Console/Launcher. Leg 2: task 3.24,
 SDK boundary and runtime contract tests — found and closed a real gap in
 the boundary rule itself (the `@/` alias reaching `runtime/src` unflagged),
@@ -34,8 +34,17 @@ own locked scoping. Manually re-verified live against a disposable test
 account promoted to owner in the dev DB (no working credentials existed for
 the DB's real accounts) — deactivate/reactivate cycle, both confirm
 dialogs, and the consolidated icon buttons all confirmed working with no
-regression; see leg 7's own status note for the full account. Leg 8 not
-started\
+regression; see leg 7's own status note for the full account. Leg 8: task
+3.25 (RFC 0057), plugin external dependency resolution — `bin/plugin-deps.ts`
+hoists/prunes a plugin's external npm deps into `runtime/package.json` on
+`sv plugin add`/`remove` and self-heals `.local` plugin deps on every `pnpm
+dev` boot, backed by a committed `runtime/generated/plugin-deps.json` ledger
+(the one deliberate exception to that directory's blanket `.gitignore`
+rule) and 27 unit tests; verified live against this environment's four real
+`.local` dev plugins before reverting the resulting (correctly generated,
+but not meant for this PR) `runtime/package.json` changes. All ten tasks
+across all 8 legs are now ✅; `ROADMAP.md`'s Non-prioritised section no
+longer carries this backlog as unowned.\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -108,10 +117,13 @@ this backlog as unowned.
       in the dev DB — deactivate/reactivate cycle, both confirm dialogs, and
       the consolidated icon buttons all confirmed live; see leg 7's own
       status note for the full account.)
-- [ ] `3.25` — `sv plugin add`/`remove` hoist/prune a plugin's external deps
+- [x] `3.25` — `sv plugin add`/`remove` hoist/prune a plugin's external deps
       into `runtime/package.json` automatically via
       `runtime/generated/plugin-deps.json`; the manually-added `@dnd-kit/*`
-      entries are removed and re-derived from the ledger.
+      entries are removed and re-derived from the ledger. (The `@dnd-kit/*`
+      entries were already absent — nothing to remove; verified live against
+      this environment's real `.local` dev plugins; see leg 8's own status
+      note.)
 
 ## Decisions locked
 
@@ -144,7 +156,7 @@ deferred nav/header migration can be re-added.
 | 5   | Middleware decomposition ✅                      | 2.17             | 2          | No    | `runtime/src/middleware/*` modules exist; fail-open/fail-closed semantics unchanged                      |
 | 6   | Middleware internal fetch caching review ✅      | 2.18             | 2          | No    | Self-fetch counts measured; any cache added has documented invalidation                                  |
 | 7   | Console primitive migration, Phase 2 (scoped) ✅ | 13.6             | 13         | No    | Confirm-dialog, table, and icon-button patterns migrated; admin-destructive flows manually re-verified   |
-| 8   | Plugin external dependency resolution            | 3.25             | 3          | No    | `sv plugin add`/`remove` hoist/prune deps automatically; `@dnd-kit/*` entries re-derived from the ledger |
+| 8   | Plugin external dependency resolution ✅         | 3.25             | 3          | No    | `sv plugin add`/`remove` hoist/prune deps automatically; `@dnd-kit/*` entries re-derived from the ledger |
 
 Legs 1–4 and 8 are mutually independent and may be reordered or parallelized
 across engineers. Leg 6 must follow leg 5. Leg 7 is independent of the rest
@@ -451,9 +463,37 @@ behavior on any admin-destructive action (deactivation, deletion, MFA reset,
 invite cancellation, plugin install/remove) — stop and get manual sign-off
 before merging, per this epic's own checklist.
 
-### Leg 8 — Plugin external dependency resolution
+### Leg 8 — Plugin external dependency resolution ✅
 
 **Epic tasks:** 3.25
+
+**Status (August 2026): shipped.** Full account in the epic doc
+(`docs/epics/plugins-runtime.md`) and RFC 0057 (now `Implemented`). The
+decision logic — what counts as an external dep, how a version conflict
+resolves, what survives a remove — lives as pure, unit-tested functions in
+`bin/plugin-deps.ts` (`extractExternalDeps`, `computePlatformPeerNames`,
+`mergePluginDeps`, `prunePluginDeps`); only the thin orchestrators
+(`hoistDepsForPlugin`, `pruneDepsForPlugin`, `syncLocalPluginDeps`) touch
+disk or spawn `pnpm install`, specifically so this leg's own "do not
+proceed if" risk could be verified without a real filesystem or network. 27
+new tests. `runtime/generated/plugin-deps.json` is committed — the one
+carve-out from that directory's blanket `.gitignore` rule, via
+`runtime/generated/*` + a negation (a directory-anchored pattern would have
+made the negation impossible). The `@dnd-kit/*` cleanup deliverable turned
+out to already be satisfied — those entries were already absent from
+`runtime/package.json`; the initial ledger is `{}`, matching reality.
+Verified live against this environment's four real `.local` dev plugins
+(Tasks, Shopper, Plainwrite, Wallet — genuine external deps including
+`@dnd-kit/*`, `rrule`, `@tiptap/*`), confirming extraction, platform-peer
+filtering, and cross-plugin dep sharing all resolve correctly, then
+deliberately reverted the resulting `runtime/package.json`/lockfile
+changes before committing anything (those four plugins are personal
+gitignored dev clones, not part of this repo's committed plugin set — the
+dev-startup sync will still make this same change for real automatically
+the next time `pnpm dev` runs with them present, which is the intended
+behavior, just not part of this PR's diff). `pnpm test` (2473 passed),
+`pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `pnpm build` all
+green.
 
 **Technical notes:**
 

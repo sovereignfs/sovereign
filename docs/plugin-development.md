@@ -130,7 +130,7 @@ A plugin lives in one directory. Minimal shape (modelled on the built-in
 ```
 my-plugin/
   manifest.json          # required — identity, routing, capabilities, version (see below)
-  package.json           # name, deps (react, @sovereignfs/sdk, @sovereignfs/ui) — version stays "0.0.0", unused
+  package.json           # name, deps (react, @sovereignfs/sdk, @sovereignfs/ui, any external libs — see below) — version stays "0.0.0", unused
   icon.svg               # optional — sidebar/launcher icon (monogram generated if absent)
   app/                   # composed into the runtime at your routePrefix
     page.tsx             #   → <routePrefix>/
@@ -147,6 +147,27 @@ my-plugin/
 Anything under `app/` that isn't an underscore-prefixed folder becomes a route
 relative to your `routePrefix`. `routePrefix: "/tasks"` + `app/lists/page.tsx`
 serves at `/tasks/lists`.
+
+### External dependencies (RFC 0057)
+
+Declare any external npm package your plugin needs directly in your own
+`package.json`'s `dependencies` — a date library, a charting library, a
+drag-and-drop library, whatever your plugin's UI needs. There is no manual
+platform-side step: `sv plugin add`/`sv plugin remove` automatically hoist
+your declared external deps into the runtime's own `node_modules` (and
+prune them again on remove, once no other installed plugin still needs
+them) via a generated ledger, `runtime/generated/plugin-deps.json`. For a
+`.local` dev plugin — cloned or edited directly under `plugins/`, bypassing
+`sv plugin add` — the same sync runs automatically at the start of every
+`pnpm dev`, so adding a dependency to your local plugin's `package.json` is
+picked up on your next `pnpm dev` with no extra step.
+
+A dep only counts as "external" if it isn't `@sovereignfs/*` (those resolve
+via pnpm workspaces already) and isn't already a platform dependency (React,
+Next.js, etc.) — declare those as `dependencies` too, for accurate types and
+so your plugin also works if it's ever built standalone, but the hoisting
+step skips them since the runtime already provides them. `devDependencies`
+are never hoisted — they're not needed at runtime.
 
 ## Manifest reference
 

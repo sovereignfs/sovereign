@@ -811,7 +811,62 @@ and plugin isolation boundary), Task 3.13 (per-plugin database).
 
 ---
 
-#### 📋 3.25 — Plugin external dependency resolution (RFC 0057)
+#### ✅ 3.25 — Plugin external dependency resolution (RFC 0057)
+
+**Status (August 2026): shipped — workstream 0012 leg 8, the last leg in that
+workstream.** New `bin/plugin-deps.ts` holds the decision logic as pure,
+unit-tested functions (`extractExternalDeps`, `computePlatformPeerNames`,
+`mergePluginDeps`, `prunePluginDeps`) plus thin orchestrators
+(`hoistDepsForPlugin`, `pruneDepsForPlugin`, `syncLocalPluginDeps`) that are
+the only parts touching disk or spawning `pnpm install` — split specifically
+so the "do not proceed if the hoist/prune logic can't reliably distinguish a
+genuine external dep from a transitive one" risk this leg's own workstream
+entry flagged could be verified without a real filesystem or network. 27
+unit tests cover every branch, including the version-conflict resolution
+(newer `semver.minVersion()` wins) and the no-op/no-install paths.
+
+`computePlatformPeerNames` treats "platform peer" dynamically rather than a
+hardcoded list (`next`, `react`, …): anything already in
+`runtime/package.json` that the ledger doesn't attribute to any plugin. This
+also means a dep hand-added outside this mechanism is safely treated as a
+peer (never mistakenly pruned) rather than causing a hard failure.
+
+Wired into `bin/sv.ts`'s `plugin add`/`plugin remove` (after the registry
+regenerates, per the RFC) and into `scripts/dev.ts` as a `.local`-plugin
+self-heal step that runs every `pnpm dev` boot — cheap to check, only
+installs when something actually changed. `runtime/generated/plugin-deps.json`
+is the one deliberate exception to that whole directory's blanket
+`.gitignore` rule (`runtime/generated/*` + a `!plugin-deps.json` negation —
+a directory-anchored `runtime/generated/` pattern would have made the
+negation impossible; documented in `.gitignore` itself), since unlike
+everything else generated there it's not checkout-specific derived output —
+it's the authoritative, meaningful-to-diff record of which committed plugin
+contributed which runtime dependency, like a lockfile.
+
+The `@dnd-kit/*` manual-workaround entries this task's deliverable said to
+remove from `runtime/package.json` turned out to already be absent — some
+earlier, untracked cleanup already removed them (Tasks, the plugin that
+needed them, only exists as a `.local` dev clone, never committed). The
+initial committed ledger is therefore `{}`, matching reality: no plugin
+currently contributes a hoisted dep. Verified this isn't just a paper
+exercise: ran `syncLocalPluginDeps` live against the four real `.local` dev
+plugins in this environment (Tasks, Shopper, Plainwrite, Wallet), which
+between them declare real external deps (`@dnd-kit/*`, `rrule`, `@tiptap/*`,
+`gray-matter`, `jsbarcode`, …) — confirmed the extraction, platform-peer
+filtering (`drizzle-orm`, already a runtime dep, correctly excluded), and
+cross-plugin dep sharing (a dep two `.local` plugins both declare is only
+counted "new" for the first one processed, but the ledger still records it
+as a full contributor for both, so a later removal of either one correctly
+keeps the shared dep) all resolved correctly. Deliberately reverted the
+resulting `runtime/package.json`/lockfile changes before committing
+anything, though — those four plugins are personal `.local` dev clones
+(gitignored, never committed), not part of this repo's own plugin set, so
+their hoisted deps have no business in this PR's diff or the committed
+ledger baseline. The dev-startup sync itself stays exactly as designed: it
+_will_ make this same change for real, automatically, the next time anyone
+with these clones present runs `pnpm dev` after this merges — that's the
+intended self-heal behavior, not something being worked around.
+`docs/plugin-development.md` gained a new "External dependencies" section.
 
 **Goal:** Automatically hoist a plugin's external npm dependencies into the
 runtime's module scope when the plugin is installed or removed, so plugin

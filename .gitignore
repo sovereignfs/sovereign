@@ -26,7 +26,16 @@ dist-tsc/
 # a function of whichever plugins happen to be installed in a given checkout
 # (community plugins, `.local` dev plugins), so it's inherently
 # machine/session-specific — never a meaningful diff to review or commit.
-runtime/generated/
+#
+# plugin-deps.json (RFC 0057, Task 3.25) is the one deliberate exception:
+# unlike everything else in this directory it isn't checkout-specific
+# derived output, it's the authoritative record of which committed plugin
+# added which runtime dependency — reviewable and meaningful to diff, like
+# a lockfile. `runtime/generated/*` (not a trailing-slash directory pattern)
+# so the later negation can still see inside the directory; a `dir/` pattern
+# would make git refuse to re-include anything under it.
+runtime/generated/*
+!runtime/generated/plugin-deps.json
 
 # Database files (SQLite) — data/ dirs are created next to each app's cwd
 # (root, runtime/, apps/auth/), so match at any depth.

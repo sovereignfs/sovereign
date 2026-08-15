@@ -37,6 +37,7 @@ import {
   resolvePluginIdFromManifest,
   scaffoldPlugin,
 } from './helpers';
+import { hoistDepsForPlugin, pruneDepsForPlugin } from './plugin-deps';
 import { resolveToken, withGitCredentials } from '../scripts/install-plugins';
 import { loadRootEnv } from '../scripts/load-root-env';
 
@@ -45,6 +46,8 @@ const SCRIPTS_DIR = join(ROOT, 'scripts');
 const PLUGINS_DIR = join(ROOT, 'plugins');
 const GENERATE = join(SCRIPTS_DIR, 'generate-registry.ts');
 const INSTALL = join(SCRIPTS_DIR, 'install-plugins.ts');
+const RUNTIME_PKG = join(ROOT, 'runtime', 'package.json');
+const PLUGIN_DEPS_LEDGER = join(ROOT, 'runtime', 'generated', 'plugin-deps.json');
 
 // Load the root `.env` before any command runs — mirrors `scripts/dev.ts`.
 // `sv` commands (seed, db encrypt/decrypt, user reset-mfa, …) previously read
@@ -69,6 +72,32 @@ function run(command: string, args: string[]): void {
     process.exit(1);
   }
   if (result.status !== 0) process.exit(result.status ?? 1);
+}
+
+/** Prints `sv plugin add`'s dependency-hoisting summary (RFC 0057 §3). */
+function reportHoistResult(pluginId: string, result: ReturnType<typeof hoistDepsForPlugin>): void {
+  if (!result) return;
+  if (result.added.length > 0) {
+    consola.success(
+      `Added ${result.added.length} runtime dep(s) for "${pluginId}": ${result.added.join(', ')}.`,
+    );
+  }
+  for (const conflict of result.conflicts) {
+    consola.warn(
+      `"${pluginId}" wants ${conflict.name}@${conflict.incoming}, runtime already has ` +
+        `${conflict.existing} (from another plugin) — kept ${conflict.kept}.`,
+    );
+  }
+}
+
+/** Prints `sv plugin remove`'s dependency-pruning summary (RFC 0057 §4). */
+function reportPruneResult(pluginId: string, result: ReturnType<typeof pruneDepsForPlugin>): void {
+  if (!result) return;
+  if (result.removed.length === 0 && result.kept.length === 0) return;
+  const keptNote = result.kept.length > 0 ? ` (${result.kept.length} still needed, kept)` : '';
+  consola.success(
+    `Removed ${result.removed.length} runtime dep(s) contributed by "${pluginId}"${keptNote}.`,
+  );
 }
 
 /**
@@ -303,6 +332,16 @@ const pluginAdd = defineCommand({
     renameSync(tmp, dest);
     consola.success(`Installed "${id}" into plugins/${id}.`);
     run('tsx', [GENERATE]);
+    reportHoistResult(
+      id,
+      hoistDepsForPlugin({
+        pluginId: id,
+        pluginPkgPath: join(dest, 'package.json'),
+        runtimePkgPath: RUNTIME_PKG,
+        ledgerPath: PLUGIN_DEPS_LEDGER,
+        root: ROOT,
+      }),
+    );
   },
 });
 
@@ -389,6 +428,24 @@ const pluginRemove = defineCommand({
     }
 
     run('tsx', [GENERATE]);
+
+    if (manifestPluginId) {
+      reportPruneResult(
+        manifestPluginId,
+        pruneDepsForPlugin({
+          pluginId: manifestPluginId,
+          runtimePkgPath: RUNTIME_PKG,
+          ledgerPath: PLUGIN_DEPS_LEDGER,
+          root: ROOT,
+        }),
+      );
+    } else {
+      consola.warn(
+        `Could not read "${id}"'s manifest id before removal — skipping runtime dependency ` +
+          'cleanup. Check runtime/generated/plugin-deps.json manually if this plugin had ' +
+          'external deps.',
+      );
+    }
   },
 });
 

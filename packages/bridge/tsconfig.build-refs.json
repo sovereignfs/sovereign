@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "incremental": true,
+    "outDir": "dist-tsc",
+    "tsBuildInfoFile": "dist-tsc/.tsbuildinfo"
+  },
+  "references": [{ "path": "../sdk/tsconfig.build-refs.json" }]
+}

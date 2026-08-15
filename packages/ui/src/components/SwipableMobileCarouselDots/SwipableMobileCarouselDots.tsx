@@ -12,6 +12,13 @@ export interface SwipableMobileCarouselDotsProps {
   /** Labels the whole group — required, no generic fallback (mirrors
    *  SwipableMobileCarousel's own required aria-label). */
   'aria-label': string;
+  /** `'compact'` halves the gap between dots (`--sv-space-2` → `--sv-space-1`)
+   *  — for a carousel with enough slides that the default spacing reads as
+   *  long/cramped on a narrow viewport (e.g. a many-list mobile app). Leaves
+   *  each dot's own 20px hit target untouched; only the gap changes. Defaults
+   *  to `'default'` — every existing consumer's spacing is unaffected unless
+   *  it opts in. */
+  density?: 'default' | 'compact';
   className?: string;
 }
 
@@ -34,13 +41,16 @@ export function SwipableMobileCarouselDots({
   onJump,
   labels,
   'aria-label': ariaLabel,
+  density = 'default',
   className,
 }: SwipableMobileCarouselDotsProps) {
   return (
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={[styles.dots, className].filter(Boolean).join(' ')}
+      className={[styles.dots, density === 'compact' ? styles.dotsCompact : '', className]
+        .filter(Boolean)
+        .join(' ')}
     >
       {Array.from({ length: count }, (_, i) => {
         const active = i === activeIndex;

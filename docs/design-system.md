@@ -1092,12 +1092,19 @@ shows immediately while only the body shows a brief loading state, instead of
 blanking the whole slide (title included) behind one boolean until the fetch
 resolves.
 
-**`SwipableMobileCarouselDots({ count, activeIndex, onJump, labels?, 'aria-label' })`**
+**`SwipableMobileCarouselDots({ count, activeIndex, onJump, labels?, 'aria-label', density? })`**
 A real, tappable, labeled slide indicator (`role="tablist"`/`role="tab"`,
 keyboard-focusable) — standalone and reusable outside a carousel too (e.g. an
 image gallery), and also `SwipableMobileCarousel`'s default `renderIndicator`.
 Pass `renderIndicator={null}` to render no indicator, or a render function to
-substitute a custom one.
+substitute a custom one. `density?: 'default' | 'compact'` (default
+`'default'`) halves the gap between dots for a carousel with enough slides
+that the default spacing reads as long/cramped on a narrow viewport — opt-in,
+every existing consumer's spacing is unchanged unless it passes this prop.
+Only the gap changes; each dot keeps its own 20px hit target. To use it on
+`SwipableMobileCarousel`'s own default indicator (rather than standalone),
+supply a `renderIndicator` that forwards it:
+`renderIndicator={(props) => <SwipableMobileCarouselDots {...props} density="compact" />}`.
 
 **`useCarouselRouteSync({ indexForPathname, pathForIndex, pathname, onNavigate })`**
 Router-agnostic pathname↔slide-index sync — this package has zero runtime

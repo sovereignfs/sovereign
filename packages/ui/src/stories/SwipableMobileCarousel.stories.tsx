@@ -234,6 +234,40 @@ function DotsStandaloneDemo() {
   );
 }
 
+// Matches the real scenario `density="compact"` was added for: a many-list
+// mobile task manager whose default-spacing dot row reads as long/cramped in
+// a 375px viewport — see docs/design-system.md's carousel section.
+const MANY_LABELS = [
+  'Lists',
+  'Starred',
+  'List 1',
+  'Groceries',
+  'Work',
+  'List 2',
+  'List 3',
+  'List 4',
+  'List 5',
+  'List 6',
+  'List 7',
+  'List 8',
+];
+
+function DotsManyDemo({ density }: { density?: 'default' | 'compact' }) {
+  const [activeIndex, setActiveIndex] = useState(2);
+  return (
+    <div style={{ maxWidth: 375, margin: '0 auto' }}>
+      <SwipableMobileCarouselDots
+        count={MANY_LABELS.length}
+        activeIndex={activeIndex}
+        onJump={setActiveIndex}
+        labels={MANY_LABELS}
+        aria-label="Task lists"
+        density={density}
+      />
+    </div>
+  );
+}
+
 const meta = {
   title: 'Components/SwipableMobileCarousel',
   component: SwipableMobileCarousel,
@@ -298,6 +332,30 @@ export const DotsStandalone: Story = {
       description: {
         story:
           'SwipableMobileCarouselDots used on its own, outside a carousel — a real role="tablist"/role="tab" component (tappable, labeled, focusable), unlike the aria-hidden decorative dots both sovereign-tasks and sovereign-shopper currently hand-roll.',
+      },
+    },
+  },
+};
+
+export const DotsManyDefault: Story = {
+  render: () => <DotsManyDemo />,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Default density with 12 slides in a 375px viewport — the row reads as long/cramped once an instance has more than a handful of lists. Compare to DotsManyCompact.',
+      },
+    },
+  },
+};
+
+export const DotsManyCompact: Story = {
+  render: () => <DotsManyDemo density="compact" />,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'density="compact" halves the gap between dots (only the gap — each dot keeps its own 20px hit target). Opt-in: every existing consumer\'s spacing is unchanged unless it passes this prop.',
       },
     },
   },

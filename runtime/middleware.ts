@@ -1,4 +1,3 @@
-import { getCookieCache } from 'better-auth/cookies';
 import { type NextRequest, NextResponse } from 'next/server';
 import { decideApiNamespace, isPublicApiPath } from '@/src/api-namespace';
 import { capabilitiesForRole } from '@/src/capabilities';
@@ -9,6 +8,21 @@ import {
   validateDevModeSecret,
 } from '@/src/dev-mode';
 import { ALL_GRANTED_PLUGIN_CAPS } from '@/generated/plugin-capabilities';
+import {
+  applyCsp as applyCspToResponse,
+  buildLoginRedirect,
+  buildPaywallRedirect,
+  strippedRequestHeaders,
+  withCookies as withCookiesOnResponse,
+  withDevMode as withDevModeOnResponse,
+} from '@/src/middleware/response';
+import {
+  fetchDisabledPluginIds,
+  fetchPaywalledPluginIds,
+  fetchRestrictedPluginIds,
+  fetchRootPluginPrefix,
+} from '@/src/middleware/plugin-gate';
+import { AUTH_URL, verifySession } from '@/src/middleware/session';
 import { getInstalledPlugins, getOfflineRoutePrefixes } from '@/src/registry';
 import {
   decidePluginRoute,
@@ -22,44 +36,6 @@ import { checkGlobalRateLimit, clientIp, isGlobalRateLimitDisabled } from '@/src
 import { decideFocusRoute } from '@/src/route-lock';
 import { buildContentSecurityPolicy, generateNonce } from '@/src/security';
 import { applySurfaceHeaders, resolveSurface } from '@/src/surface';
-import {
-  type CachedSessionData,
-  type VerifiedSession,
-  resolveAuthSecret,
-  verifiedUserFromCache,
-} from '@/src/session-verify';
-
-const AUTH_URL =
-  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
-
-/**
- * Headers this middleware treats as platform-computed and injects itself —
- * never legitimate input from a caller. Every branch that forwards a request
- * (rewrite or `next()`) must strip these from the *inbound* clone before
- * conditionally re-setting any of them, so an unauthenticated or anonymous
- * path can never let a caller-supplied value (e.g. `curl -H
- * "x-sovereign-user-role: platform:owner"`) survive into a plugin route —
- * downstream code (e.g. `runtime/app/api/instance/logo/route.ts`) trusts
- * these headers directly for authorization.
- */
-const SOVEREIGN_TRUST_HEADERS = [
-  'x-sovereign-user-id',
-  'x-sovereign-user-email',
-  'x-sovereign-user-role',
-  'x-sovereign-user-capabilities',
-  'x-sovereign-user-name',
-  'x-sovereign-user-image',
-  'x-sovereign-session-expires-at',
-  'x-sovereign-plugin-id',
-  'x-sovereign-verification-level',
-] as const;
-
-/** Clone the inbound request headers with every platform-trust header stripped. */
-function strippedRequestHeaders(request: NextRequest): Headers {
-  const headers = new Headers(request.headers);
-  for (const name of SOVEREIGN_TRUST_HEADERS) headers.delete(name);
-  return headers;
-}
 
 /**
  * Runtime API routes that must be readable with no session — the login page
@@ -71,7 +47,7 @@ function strippedRequestHeaders(request: NextRequest): Headers {
  * path, gated by `request.headers.get('x-sovereign-user-role')` in the route
  * handler. That header is trustworthy only because middleware strips any
  * caller-supplied copy and re-injects it from a verified session (see
- * `SOVEREIGN_TRUST_HEADERS` above) — a guarantee that holds solely for paths
+ * `SOVEREIGN_TRUST_HEADERS` in `@/src/middleware/response`) — a guarantee that holds solely for paths
  * the middleware actually runs on. This path was previously excluded from
  * the matcher entirely (GET *and* POST/DELETE), which meant middleware never
  * ran and the header check trusted a caller-supplied value outright: `curl
@@ -87,12 +63,6 @@ const PUBLIC_INSTANCE_GET_PATHS: ReadonlySet<string> = new Set([
   '/api/instance/favicon',
 ]);
 
-// Self-fetch address for the runtime's own Node-runtime API routes. The server
-// always listens on :3000 (scripts/dev.ts and the start script both pin it),
-// so localhost is reliable in every environment — unlike the public URL, which
-// may sit behind a reverse proxy the container cannot hairpin through.
-const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? process.env.PORT ?? '3000'}`;
-
 /**
  * The browser-facing auth origin (scheme + host + port) for the CSP form-action
  * allowance — same value the /login and logout routes redirect to. Returns
@@ -104,138 +74,6 @@ function authPublicOrigin(): string | undefined {
     return new URL(url).origin;
   } catch {
     return undefined;
-  }
-}
-
-/**
- * Middleware runs on the Edge runtime, which cannot open the SQLite database.
- * Plugin enabled/disabled state is fetched from the runtime's own
- * /api/admin/plugins/disabled route (Node runtime, excluded from this
- * middleware's matcher) — same round-trip pattern as the auth /api/verify
- * check. Fails open: if the status fetch errors, the route stays reachable
- * (disable is an admin convenience, not a security boundary — adminOnly
- * gating below is independent of it).
- */
-async function fetchDisabledPluginIds(): Promise<Set<string>> {
-  try {
-    const res = await fetch(`${SELF_URL}/api/admin/plugins/disabled`, {
-      headers: { authorization: `Bearer ${process.env.SOVEREIGN_ADMIN_KEY ?? ''}` },
-    });
-    if (!res.ok) return new Set();
-    const { disabled } = (await res.json()) as { disabled: string[] };
-    return new Set(disabled);
-  } catch {
-    return new Set();
-  }
-}
-
-/**
- * Returns the set of paid plugin IDs for which the given user has no active
- * entitlement (RFC 0003). Fails open — if the fetch errors, no plugin is
- * paywalled (same conservative approach as disabled-plugin gating).
- */
-async function fetchPaywalledPluginIds(userId: string): Promise<Set<string>> {
-  try {
-    const res = await fetch(
-      `${SELF_URL}/api/admin/entitlements?userId=${encodeURIComponent(userId)}`,
-      { headers: { authorization: `Bearer ${process.env.SOVEREIGN_ADMIN_KEY ?? ''}` } },
-    );
-    if (!res.ok) return new Set();
-    const { paywalled } = (await res.json()) as { paywalled: string[] };
-    return new Set(paywalled);
-  } catch {
-    return new Set();
-  }
-}
-
-/**
- * Returns the set of plugin IDs the given user is denied by access policy
- * (RFC 0065) — independent of the disabled-plugin set. Fails open — if the
- * fetch errors, nothing is restricted (same conservative approach as disabled
- * and paywall gating; access policy is an operator convenience layered on top
- * of, not a replacement for, adminOnly/paywall enforcement).
- */
-async function fetchRestrictedPluginIds(userId: string, role: string): Promise<Set<string>> {
-  try {
-    const res = await fetch(
-      `${SELF_URL}/api/admin/plugins/access?userId=${encodeURIComponent(userId)}&role=${encodeURIComponent(role)}`,
-      { headers: { authorization: `Bearer ${process.env.SOVEREIGN_ADMIN_KEY ?? ''}` } },
-    );
-    if (!res.ok) return new Set();
-    const { restricted } = (await res.json()) as { restricted: string[] };
-    return new Set(restricted);
-  } catch {
-    return new Set();
-  }
-}
-
-/**
- * The `routePrefix` that should serve `/` in place (PLT-14) — the configured
- * root plugin's prefix when valid for this user, else the Launcher fallback,
- * else null (RFC 0065; resolved server-side by the Node-runtime route, which
- * has DB access Edge middleware doesn't). Returns null on any failure, so `/`
- * falls through to the placeholder home page rather than erroring.
- */
-async function fetchRootPluginPrefix(userId: string, role: string): Promise<string | null> {
-  try {
-    const res = await fetch(
-      `${SELF_URL}/api/admin/root-plugin?userId=${encodeURIComponent(userId)}&role=${encodeURIComponent(role)}`,
-      { headers: { authorization: `Bearer ${process.env.SOVEREIGN_ADMIN_KEY ?? ''}` } },
-    );
-    if (!res.ok) return null;
-    const { routePrefix } = (await res.json()) as { routePrefix: string | null };
-    return routePrefix;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Verify the request's session **locally** from better-auth's signed
- * `session_data` cookie cache — no network call (SRS AUTH-05). The cookie is
- * HMAC-signed with the shared auth secret, so a forged one cannot pass. Returns
- * null when no secret is configured or no valid cache cookie is present, so the
- * caller falls back to `/api/verify`. The cookie name carries the `__Secure-`
- * prefix in production; try both so the read works in dev and prod regardless of
- * NODE_ENV drift.
- */
-async function verifyFromCookieCache(request: NextRequest): Promise<VerifiedSession | null> {
-  const secret = resolveAuthSecret();
-  if (!secret) return null;
-  for (const isSecure of [undefined, true, false] as const) {
-    const cached = (await getCookieCache(request, {
-      secret,
-      ...(isSecure === undefined ? {} : { isSecure }),
-    }).catch(() => null)) as CachedSessionData | null;
-    const session = verifiedUserFromCache(cached);
-    if (session) return session;
-  }
-  return null;
-}
-
-/**
- * Verify the request against the auth server's /api/verify (AUTH-06) — the
- * fallback when local verification has no cookie to read (e.g. a session that
- * predates cookie-cache rollout, or just past the cache window). Returns the
- * session plus better-auth's Set-Cookie headers, which the caller forwards so
- * the `session_data` cache (re)installs and subsequent requests verify locally.
- *
- * Fails closed: a non-OK response *or* an unreachable auth server (fetch
- * throws) returns null, so the caller redirects to /login rather than crashing
- * the request with a 500.
- */
-async function verifyViaAuthServer(
-  request: NextRequest,
-): Promise<{ session: VerifiedSession; setCookies: string[] } | null> {
-  try {
-    const verify = await fetch(`${AUTH_URL}/api/verify`, {
-      headers: { cookie: request.headers.get('cookie') ?? '' },
-    });
-    if (!verify.ok) return null;
-    const payload = (await verify.json()) as VerifiedSession;
-    return { session: payload, setCookies: verify.headers.getSetCookie() };
-  } catch {
-    return null;
   }
 }
 
@@ -262,10 +100,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     // app remains browser-reachable during the route migration.
     authFormActionOrigin: authPublicOrigin(),
   });
-  const applyCsp = (response: NextResponse): NextResponse => {
-    response.headers.set('content-security-policy', csp);
-    return response;
-  };
+  const applyCsp = (response: NextResponse): NextResponse => applyCspToResponse(response, csp);
 
   // General per-IP request-flood protection (runtime/src/rate-limit.ts) —
   // deliberately the very first check, before the public-API-namespace branch
@@ -411,17 +246,11 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       return applyCsp(new NextResponse('Not Found', { status: 404 }));
     }
 
-    let publicSession = await verifyFromCookieCache(request);
-    let publicSetCookies: string[] = [];
-    if (!publicSession) {
-      const fallback = await verifyViaAuthServer(request);
-      if (fallback) {
-        publicSession = fallback.session;
-        publicSetCookies = fallback.setCookies;
-      }
-      // Unlike the normal gate below, a failed verification does not redirect
-      // to /login — the request proceeds anonymously and the plugin decides.
-    }
+    // Unlike the normal gate below, a failed verification does not redirect
+    // to /login — the request proceeds anonymously and the plugin decides.
+    const publicResult = await verifySession(request);
+    const publicSession = publicResult?.session ?? null;
+    const publicSetCookies = publicResult?.setCookies ?? [];
 
     // With a session, defer to the entitlements API exactly like the normal
     // paywall gate below. Without one, we cannot ask the entitlements API (it
@@ -436,12 +265,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         ? (await fetchPaywalledPluginIds(publicSession.user.id)).has(publicRoutePluginId)
         : true;
       if (isPaywalled) {
-        return applyCsp(
-          NextResponse.redirect(
-            new URL(`/paywall/${encodeURIComponent(publicRoutePluginId)}`, request.url),
-            { status: 303 },
-          ),
-        );
+        return applyCsp(buildPaywallRedirect(request, publicRoutePluginId));
       }
     }
 
@@ -494,17 +318,11 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       return applyCsp(new NextResponse('Not Found', { status: 404 }));
     }
 
-    let handoffSession = await verifyFromCookieCache(request);
-    let handoffSetCookies: string[] = [];
-    if (!handoffSession) {
-      const fallback = await verifyViaAuthServer(request);
-      if (fallback) {
-        handoffSession = fallback.session;
-        handoffSetCookies = fallback.setCookies;
-      }
-      // No redirect to /login on failure — proceed anonymously, same as the
-      // public-page-route branch above.
-    }
+    // No redirect to /login on failure — proceed anonymously, same as the
+    // public-page-route branch above.
+    const handoffResult = await verifySession(request);
+    const handoffSession = handoffResult?.session ?? null;
+    const handoffSetCookies = handoffResult?.setCookies ?? [];
 
     const headers = strippedRequestHeaders(request);
     applySurfaceHeaders(headers, request.headers.get('user-agent'));
@@ -532,82 +350,29 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return applyCsp(response);
   }
 
-  let session = await verifyFromCookieCache(request);
-  let setCookies: string[] = [];
-  if (!session) {
-    const fallback = await verifyViaAuthServer(request);
-    if (!fallback) {
-      // `/` is the PWA manifest's start_url (RFC 0013). iOS resolves an
-      // installed app's launch/splash image from the *direct* response to
-      // start_url and does not follow an HTTP redirect to find one. A 303
-      // redirect has no body/head at all, so a cold launch with no session
-      // yet (fresh "Add to Home Screen", or right after Safari site data is
-      // cleared) shows a blank white screen instead of the splash — even
-      // though /login itself carries every apple-touch-startup-image link
-      // correctly. Rewrite instead of redirecting so `/` returns the real
-      // /login document (200, full <head>) at the same URL, same as the
-      // authenticated root-plugin rewrite below. GET only: a rewrite
-      // preserves the request method, and /login only handles GET.
-      //
-      // An `installable` plugin's own bare `routePrefix` (RFC 0081) needs
-      // exactly the same treatment for exactly the same reason: it's that
-      // plugin's *own* PWA `start_url` once installed standalone, with its
-      // own scope — a 303 to /login would either leave the installed app's
-      // scope entirely or show the same blank-flash bug `/` already avoids.
-      // Exact match against the bare prefix only (not `underPrefix()`) — a
-      // nested path like `/tally/groups/42` is an ordinary session-gated
-      // page, not the app's installed entry point.
-      const installablePlugin = installedPlugins.find(
-        (plugin) => plugin.installable === true && plugin.routePrefix === pathname,
-      );
-      if ((pathname === '/' || installablePlugin) && request.method === 'GET') {
-        const rewriteUrl = new URL('/login', request.url);
-        // Only the plugin case needs `returnUrl` — post-login must return
-        // *into the installed app's scope*, not out to `/`. The `/` case
-        // stays exactly as it always has: no param, defaults to `/` itself.
-        // This is set on the *rewrite target* URL, not the browser's visible
-        // address bar (a rewrite never changes that). `runtime/app/login/page.tsx`
-        // reads it server-side via its `searchParams` prop rather than
-        // `LoginForm`'s own `useSearchParams()` client hook — that
-        // distinction is load-bearing, not stylistic: a client hook reads
-        // `window.location`, which a rewrite never updates, so it silently
-        // sees no query string at all here. Confirmed live (not assumed):
-        // the client-hook version landed post-login at `/` instead of the
-        // plugin route every time, until page.tsx was changed to read this
-        // server-side instead. See that file's comment for the full account.
-        if (installablePlugin) rewriteUrl.searchParams.set('returnUrl', pathname);
-        return applyCsp(NextResponse.rewrite(rewriteUrl));
-      }
-      // 303 (See Other), not the NextResponse.redirect default of 307. A 307
-      // preserves the request method, so an unauthenticated POST to a gated
-      // route (e.g. the logout form once the session has lapsed, or any plugin
-      // form submit) would redirect as POST /login — and /login only handles
-      // GET, returning 405. 303 forces the browser to GET /login instead.
-      const loginUrl = new URL('/login', request.url);
-      if (pathname !== '/') {
-        loginUrl.searchParams.set('returnUrl', pathname + request.nextUrl.search);
-      }
-      return applyCsp(NextResponse.redirect(loginUrl, 303));
-    }
-    session = fallback.session;
-    setCookies = fallback.setCookies;
+  // Both local cookie-cache verification and the auth-server fallback are
+  // tried by `verifySession`; a null result here fails closed (unlike the
+  // public-route and handoff branches above, which proceed anonymously) —
+  // see `buildLoginRedirect`'s own doc comment in `@/src/middleware/response`
+  // for why this is a rewrite (not a redirect) for `/` and an `installable`
+  // plugin's own bare `routePrefix`, and a 303 (not 307) redirect otherwise.
+  const gateResult = await verifySession(request);
+  if (!gateResult) {
+    return applyCsp(buildLoginRedirect(request, installedPlugins));
   }
+  const { session, setCookies } = gateResult;
   const { user, expiresAt } = session;
 
   // Forward any Set-Cookie from the fallback so the signed cookie cache
   // (re)installs — subsequent requests then verify locally without a round-trip.
-  const withCookies = (response: NextResponse): NextResponse => {
-    for (const cookie of setCookies) response.headers.append('set-cookie', cookie);
-    return response;
-  };
+  const withCookies = (response: NextResponse): NextResponse =>
+    withCookiesOnResponse(response, setCookies);
 
   // Attach a visible response header so clients (curl, browser devtools) can
   // confirm dev-mode is active — a guardrail against mistaking mock data for
   // real (RFC 0020 "visibly flagged" requirement).
-  const withDevMode = (response: NextResponse): NextResponse => {
-    if (devModeActive) response.headers.set('x-sovereign-dev-mode', 'active');
-    return response;
-  };
+  const withDevMode = (response: NextResponse): NextResponse =>
+    withDevModeOnResponse(response, devModeActive);
 
   // Only consult plugin status when the path is actually under a plugin prefix.
   const underPlugin = installedPlugins.some((plugin) => underPrefix(pathname, plugin.routePrefix));
@@ -681,13 +446,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       if (pathname.startsWith('/api/')) {
         return applyCsp(withCookies(new NextResponse('Payment Required', { status: 402 })));
       }
-      return applyCsp(
-        withCookies(
-          NextResponse.redirect(new URL(`/paywall/${encodeURIComponent(pluginId)}`, request.url), {
-            status: 303,
-          }),
-        ),
-      );
+      return applyCsp(withCookies(buildPaywallRedirect(request, pluginId)));
     }
     if (decision === 'unavailable-surface') {
       // RFC 0080 — presentation only, not a security boundary (see the hard

@@ -446,7 +446,37 @@ test suite).
 
 ---
 
-#### 📋 2.17 — Middleware decomposition
+#### ✅ 2.17 — Middleware decomposition
+
+**Status (August 2026): shipped — workstream 0012 leg 5.** Split the
+891-line `runtime/middleware.ts` into three modules under
+`runtime/src/middleware/`, exactly per the epic's list: `response.ts`
+(CSP application, forwarded-cookie/dev-mode response stamping,
+`strippedRequestHeaders`/`SOVEREIGN_TRUST_HEADERS`, and the login/paywall
+redirect builders), `session.ts` (local cookie-cache verification, the
+auth-server fallback, and a new `verifySession()` combining both into one
+typed `SessionVerificationResult | null` — the "typed result carrying the
+verified session and forwarded cookies" the deliverable asked for), and
+`plugin-gate.ts` (the disabled/paywall/access-policy lookups, plus
+`fetchRootPluginPrefix` — not literally named in the deliverable list but
+bundled in anyway since it's the same "Edge can't reach the DB, ask the
+Node-runtime admin API, fail open" shape as the other three). Consolidated
+the three duplicated cookie-cache-then-fallback call sites (public plugin
+routes, public handoffs, the main session gate) onto the single
+`verifySession()` helper — same behavior, less duplication: the two
+anonymous-fallback branches already treated a null result as "proceed
+without a session," and the main gate's null case now calls the new
+`buildLoginRedirect()` helper instead of inlining the redirect/rewrite
+logic. `runtime/middleware.ts` itself dropped to a decision-only
+orchestration layer — the response-forwarding closures (`applyCsp`,
+`withCookies`, `withDevMode`) stayed as thin per-request closures over the
+new module functions so every one of their ~15 call sites needed no edits
+beyond the two-line closure definitions. Verified against the existing
+115-test regression suite (Task 2.16, unmodified, all passing) plus 22 new
+focused unit tests across the three new modules (fail-open/fail-closed
+paths, the installable-plugin login rewrite, paywall redirect encoding);
+full `pnpm test` (2433 passed), `pnpm typecheck`, `pnpm lint`, and
+`pnpm build` (Edge middleware bundle size unchanged, 86.5 kB) all green.
 
 **Goal:** Keep `runtime/middleware.ts` behavior identical while reducing the
 risk of future auth, routing, CSP, paywall, and root-plugin changes.

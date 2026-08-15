@@ -4,7 +4,7 @@ export { Markdown } from './components/Markdown/Markdown';
 export type { MarkdownProps } from './components/Markdown/Markdown';
 export { Badge } from './components/Badge/Badge';
 export type { BadgeProps, BadgeVariant, BadgeStatus } from './components/Badge/Badge';
-export { Icon } from './components/Icon/Icon';
+export { Icon, ICON_NAMES } from './components/Icon/Icon';
 export { Toggle } from './components/Toggle/Toggle';
 export type { ToggleProps } from './components/Toggle/Toggle';
 export { SegmentedControl } from './components/SegmentedControl/SegmentedControl';

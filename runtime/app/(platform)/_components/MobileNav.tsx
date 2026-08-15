@@ -3,7 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Drawer, Icon, MobileFooter, useOfflineTileState } from '@sovereignfs/ui';
+import {
+  Drawer,
+  ICON_NAMES,
+  Icon,
+  MobileFooter,
+  useOfflineTileState,
+  type IconName,
+} from '@sovereignfs/ui';
 import { isDeviceOnlyTierAvailable } from '@sovereignfs/sdk/device-client';
 import styles from './MobileNav.module.css';
 import { MobileSearch } from './MobileSearch';
@@ -66,11 +73,27 @@ function monogram(name: string): string {
   return initials.toUpperCase();
 }
 
+/** A manifest's `shellConfig.mobileFooterLeftAction.icon` is a plain string
+ *  (JSON can't be typed as `IconName` at authoring time) — fall back to a
+ *  safe default rather than risk an undefined `Svg` render crash from an
+ *  unrecognized name, and warn loudly in dev so the typo gets caught. */
+function resolveIconName(icon: string): IconName {
+  if ((ICON_NAMES as string[]).includes(icon)) return icon as IconName;
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(
+      `MobileNav: "${icon}" is not a recognized @sovereignfs/ui icon name ` +
+        '(shellConfig.mobileFooterLeftAction.icon) — falling back to "house".',
+    );
+  }
+  return 'house';
+}
+
 export function MobileNav({
   plugins,
   launcherIconUrl,
   isAdmin,
   hydrate,
+  footerLeftAction,
 }: {
   /** Server-rendered plugin list — see `hydrate`'s doc comment for why this
    *  is empty on an offline route's neutral shell. */
@@ -82,6 +105,12 @@ export function MobileNav({
   /** Restores the real plugin list and admin status client-side for a live
    *  tab on an offline route — see `useSidebarHydration`'s doc comment. */
   hydrate: boolean;
+  /** The active plugin's `shellConfig.mobileFooterLeftAction` (resolved
+   *  server-side in `layout.tsx` from the per-request header middleware
+   *  sets). When present, replaces the footer's default "Home" left icon —
+   *  see this component's own doc comment for what happens to Home in that
+   *  case. */
+  footerLeftAction?: { icon: string; label: string; href: string };
 }) {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -119,15 +148,24 @@ export function MobileNav({
           ) : undefined
         }
         leftIcons={[
-          {
-            // A plain onClick + router.push (rather than FooterIcon's `href`,
-            // which renders a bare <a>) preserves next/link's client-side
-            // navigation instead of a full page reload.
-            icon: <Icon name="house" size="md" aria-hidden />,
-            label: 'Home',
-            active: isHome,
-            onClick: () => router.push('/'),
-          },
+          footerLeftAction
+            ? {
+                // Same client-side-nav reasoning as the default Home icon
+                // below — onClick + router.push, not a bare href/<a>.
+                icon: <Icon name={resolveIconName(footerLeftAction.icon)} size="md" aria-hidden />,
+                label: footerLeftAction.label,
+                active: pathname === footerLeftAction.href,
+                onClick: () => router.push(footerLeftAction.href),
+              }
+            : {
+                // A plain onClick + router.push (rather than FooterIcon's `href`,
+                // which renders a bare <a>) preserves next/link's client-side
+                // navigation instead of a full page reload.
+                icon: <Icon name="house" size="md" aria-hidden />,
+                label: 'Home',
+                active: isHome,
+                onClick: () => router.push('/'),
+              },
         ]}
         rightIcons={[
           {
@@ -148,6 +186,24 @@ export function MobileNav({
       <Drawer open={open} onClose={() => setOpen(false)} aria-label="App navigation">
         <nav aria-label="Installed plugins">
           <ul className={styles.drawerGrid}>
+            {/* Only present when the footer's own left icon no longer points
+                home (footerLeftAction active) — every other plugin already
+                has one tap to Home via the footer, so adding this
+                unconditionally would be a redundant, unrequested nav item
+                for plugins that never touch this feature. */}
+            {footerLeftAction && (
+              <li>
+                <Link href="/" className={styles.drawerGridItem} onClick={() => setOpen(false)}>
+                  <span
+                    className={`${styles.drawerGridIcon} ${styles.drawerGridIconSettings}`}
+                    aria-hidden="true"
+                  >
+                    <Icon name="house" size="md" aria-hidden />
+                  </span>
+                  <span className={styles.drawerGridName}>Home</span>
+                </Link>
+              </li>
+            )}
             {effectivePlugins.map((plugin) => (
               <li key={plugin.id}>
                 <DrawerGridItem plugin={plugin} onClose={() => setOpen(false)} />

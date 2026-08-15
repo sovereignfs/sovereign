@@ -6,6 +6,15 @@
 **Scope:** `packages/manifest` (schema), `runtime/src/registry.ts`, `runtime/src/mobile-chrome.ts`, `runtime/middleware.ts`, `runtime/app/(platform)/layout.tsx`, `runtime/app/(platform)/shell.module.css`, `runtime/app/(platform)/_components/ClientShell.tsx`, `runtime/app/(platform)/_components/MobileNav.module.css`, `docs/plugin-development.md`, `docs/architecture-rules.md`; builds on RFC 0001 (shell modes), RFC 0013 (mobile responsiveness & PWA), RFC 0014 (minimal shell mode), RFC 0074 (offline-capable plugins — the neutral-shell precedent this reuses)\
 **Incorporated into plan:** No roadmap slot — unplanned/urgent work, implemented directly on `feat/mobile-chrome-toggle` rather than scheduled through the roadmap queue.
 
+> **Extended (`0.95.0`):** a third `shellConfig` field, `mobileFooterLeftAction`,
+> was added on top of this RFC's original two visibility booleans — it lets a
+> plugin override what the footer's left icon _does_ (not just whether the
+> footer shows at all), following the exact same middleware→header→layout
+> resolution path described below. Not re-documented here in full; see
+> `docs/plugin-development.md`'s "Mobile footer left-icon override" section
+> for the current field and `CLAUDE.md`'s `0.94.1` → `0.95.0` version note for
+> why it was added.
+
 ---
 
 ## Summary

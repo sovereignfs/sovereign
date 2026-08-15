@@ -97,6 +97,21 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   const showMobileHeader = h.get('x-sovereign-mobile-header') !== '0';
   const showMobileFooter = h.get('x-sovereign-mobile-footer') !== '0';
 
+  // Per-plugin mobile footer left-icon override
+  // (shellConfig.mobileFooterLeftAction). A malformed header must never
+  // crash the shell — middleware only ever sets this from a validated
+  // manifest field, but parse defensively anyway rather than trust the
+  // header's shape blindly.
+  let footerLeftAction: { icon: string; label: string; href: string } | undefined;
+  const footerLeftActionHeader = h.get('x-sovereign-mobile-footer-left-action');
+  if (footerLeftActionHeader) {
+    try {
+      footerLeftAction = JSON.parse(footerLeftActionHeader);
+    } catch {
+      footerLeftAction = undefined;
+    }
+  }
+
   // RFC 0080: filters the sidebar/mobile-drawer plugin list below to plugins
   // available on this surface. Presentation only — see the hard rule in
   // docs/architecture-rules.md.
@@ -319,6 +334,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
                 launcherIconUrl={launcher?.icon ? `/plugin-icons/${launcher.id}.svg` : undefined}
                 isAdmin={isAdmin}
                 hydrate={isOfflineRoute}
+                footerLeftAction={footerLeftAction}
               />
             )}
           </div>

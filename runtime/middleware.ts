@@ -527,6 +527,17 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (currentPlugin?.shellConfig?.mobileFooter === false) {
     headers.set('x-sovereign-mobile-footer', '0');
   }
+  // Flag a per-plugin mobile footer left-icon override
+  // (`shellConfig.mobileFooterLeftAction`) so `(platform)/layout.tsx` can
+  // pass it to `MobileNav`, replacing the default Home icon while this
+  // plugin is active. Same absent-header-means-default convention as the
+  // two flags above.
+  if (currentPlugin?.shellConfig?.mobileFooterLeftAction) {
+    headers.set(
+      'x-sovereign-mobile-footer-left-action',
+      JSON.stringify(currentPlugin.shellConfig.mobileFooterLeftAction),
+    );
+  }
 
   // Flag a manifest-declared offline-enabled plugin's bare routePrefix (RFC
   // 0078) so `(platform)/layout.tsx` can render a user-neutral shell for it —

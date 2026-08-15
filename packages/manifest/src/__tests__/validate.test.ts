@@ -782,6 +782,40 @@ describe('validateManifest', () => {
     }
   });
 
+  it('accepts shellConfig.mobileFooterLeftAction when shell is "default"', () => {
+    const res = validateManifest({
+      ...base,
+      shell: 'default',
+      shellConfig: {
+        mobileFooterLeftAction: { icon: 'menu', label: 'Lists', href: '/tasks?view=lists' },
+      },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects shellConfig.mobileFooterLeftAction when shell is "minimal"', () => {
+    const res = validateManifest({
+      ...base,
+      shell: 'minimal',
+      shellConfig: {
+        mobileFooterLeftAction: { icon: 'menu', label: 'Lists', href: '/tasks?view=lists' },
+      },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('mobileFooterLeftAction');
+    }
+  });
+
+  it('rejects shellConfig.mobileFooterLeftAction missing a required sub-field', () => {
+    const res = validateManifest({
+      ...base,
+      shell: 'default',
+      shellConfig: { mobileFooterLeftAction: { icon: 'menu', label: 'Lists' } },
+    });
+    expect(res.valid).toBe(false);
+  });
+
   it('accepts the crypto:use permission (RFC 0092)', () => {
     const res = validateManifest({
       ...base,

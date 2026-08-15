@@ -1,4 +1,4 @@
-import type { MobileChromeOverride } from './registry';
+import type { MobileChromeOverride, MobileFooterLeftAction } from './registry';
 import { underPrefix } from './route-guard';
 
 /** Resolve a pathname's mobile header visibility against the plugin overrides
@@ -13,4 +13,15 @@ export function mobileHeaderVisible(pathname: string, config: MobileChromeOverri
 /** Resolve a pathname's mobile footer visibility — see `mobileHeaderVisible`. */
 export function mobileFooterVisible(pathname: string, config: MobileChromeOverride[]): boolean {
   return config.find((c) => underPrefix(pathname, c.routePrefix))?.mobileFooter ?? true;
+}
+
+/** Resolve a pathname's mobile footer left-icon override
+ *  (`shellConfig.mobileFooterLeftAction`) — `null` when the active plugin
+ *  (if any) doesn't declare one, meaning "use the default Home icon." See
+ *  `mobileHeaderVisible`. */
+export function mobileFooterLeftAction(
+  pathname: string,
+  config: MobileChromeOverride[],
+): MobileFooterLeftAction | null {
+  return config.find((c) => underPrefix(pathname, c.routePrefix))?.footerLeftAction ?? null;
 }

@@ -186,7 +186,7 @@ are never hoisted — they're not needed at runtime.
 | `routePrefix`          | string starting with `/`                                | yes                                  | URL prefix the plugin serves under, e.g. `/tasks`. The single source of truth for the plugin's URL.                                                                                                                                                                                                                                                                                                                |
 | `permissions`          | array of permission strings                             | yes (may be `[]`)                    | SDK capabilities the plugin declares (see below).                                                                                                                                                                                                                                                                                                                                                                  |
 | `shell`                | `default` \| `minimal` \| `overlay`                     | no                                   | Presentation mode. `default` = full page under the platform sidebar; `overlay` = dialog over the current page (see below); `minimal` = chrome-free, full-bleed (see below).                                                                                                                                                                                                                                        |
-| `shellConfig`          | object (see below)                                      | no                                   | Per-shell tuning. Holds `overlaySize` (`sm` \| `md` \| `lg`, default `lg`) for `shell: overlay` plugins, and `mobileHeader`/`mobileFooter` (booleans, default `true`) for `shell: default` plugins (RFC 0075). Each field is only valid for its own `shell` value.                                                                                                                                                 |
+| `shellConfig`          | object (see below)                                      | no                                   | Per-shell tuning. Holds `overlaySize` (`sm` \| `md` \| `lg`, default `lg`) for `shell: overlay` plugins, and `mobileHeader`/`mobileFooter` (booleans, default `true`) plus `mobileFooterLeftAction` (`{icon, label, href}`, see below) for `shell: default` plugins (RFC 0075). Each field is only valid for its own `shell` value.                                                                                |
 | `adminOnly`            | boolean                                                 | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                                                                                                                                                                                            |
 | `minVerificationLevel` | `0` \| `1` \| `2` \| `3`                                | no (default `0`)                     | Minimum progressive verification level (RFC 0035) a user needs to reach this plugin's routes: `0` registered, `1` email_verified, `2` mfa_enrolled, `3` admin_vouched. Enforced at the plugin route boundary — see the worked example below.                                                                                                                                                                       |
 | `apiProvider`          | boolean                                                 | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                                                                                                                                                                                                      |
@@ -1418,6 +1418,47 @@ minimal`: your plugin is responsible for providing its own way back (e.g. a
   plugin's `routePrefix` gets the same header/footer visibility. A plugin that
   needs per-screen variation (e.g. list view keeps the footer, detail view
   doesn't) is a `shell: minimal` candidate instead.
+
+### Mobile footer left-icon override
+
+A `shell: default` plugin can also override what the mobile footer's **left
+icon** does while the plugin is active — the icon default is "Home"
+(navigates to `/`). Useful when a plugin has its own more relevant one-tap
+destination than the platform Launcher — e.g. a swipeable-lists mobile UI
+whose left icon should jump back to its own list index instead of leaving the
+plugin entirely.
+
+```json
+{
+  "shell": "default",
+  "shellConfig": {
+    "mobileFooterLeftAction": {
+      "icon": "menu",
+      "label": "Lists",
+      "href": "/tasks?view=lists"
+    }
+  }
+}
+```
+
+- `icon` is any name from `@sovereignfs/ui`'s curated icon set
+  (`ICON_NAMES`/`IconName`) — an unrecognized name doesn't fail manifest
+  validation (the schema only requires a non-empty string), but falls back to
+  a default icon at render time with a dev-mode console warning, so double
+  check it against the design system's actual set.
+- `label` is the icon's accessible name (screen readers, the pressed/active
+  state) — keep it short, it isn't shown as visible text.
+- `href` is entirely plugin-owned. It's read with plain client-side
+  navigation (not a full page reload), so it can point anywhere — typically
+  a route within your own `routePrefix`.
+- **Home moves into your plugin's own Apps Drawer, as its first item**,
+  automatically — declaring this field doesn't strand users; it relocates
+  the one-tap path home rather than removing it. This only happens for a
+  plugin that actually overrides the left icon; every other plugin's drawer
+  is unaffected.
+- Same rules as the header/footer visibility toggle above: mobile-only
+  (desktop sidebar unaffected), only valid when `shell` is `default`, and a
+  per-plugin setting rather than per-route.
 
 ### `compatibility` (RFC 0024)
 

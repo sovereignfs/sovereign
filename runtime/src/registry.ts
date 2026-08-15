@@ -84,19 +84,31 @@ export function getOfflineRoutePrefixes(plugins: SovereignManifest[] = registry)
   return launcherIsOfflineFirst ? ['/', ...prefixes] : prefixes;
 }
 
-/** A `shell: default` plugin's resolved mobile chrome visibility (RFC 0075). */
+/** A `shell: default` plugin's resolved mobile footer left-icon override
+ *  (`shellConfig.mobileFooterLeftAction`). See `MobileChromeOverride`. */
+export interface MobileFooterLeftAction {
+  icon: string;
+  label: string;
+  href: string;
+}
+
+/** A `shell: default` plugin's resolved mobile chrome visibility (RFC 0075)
+ *  and footer left-icon override. */
 export interface MobileChromeOverride {
   routePrefix: string;
   mobileHeader: boolean;
   mobileFooter: boolean;
+  footerLeftAction?: MobileFooterLeftAction;
 }
 
 /**
  * Mobile header/footer visibility overrides (`shellConfig.mobileHeader` /
- * `shellConfig.mobileFooter`, RFC 0075) for every plugin that deviates from
- * the default (both `true`). Only deviating plugins are included so callers
- * can treat "not present" as "show both" without a lookup miss vs. an
- * explicit `true` needing to be distinguished.
+ * `shellConfig.mobileFooter`, RFC 0075) and footer left-icon overrides
+ * (`shellConfig.mobileFooterLeftAction`) for every plugin that deviates from
+ * the defaults (both visibility flags `true`, no left-icon override). Only
+ * deviating plugins are included so callers can treat "not present" as
+ * "show both, default left icon" without a lookup miss vs. an explicit
+ * `true` needing to be distinguished.
  */
 export function getMobileChromeConfig(
   plugins: SovereignManifest[] = registry,
@@ -105,11 +117,13 @@ export function getMobileChromeConfig(
     .filter(
       (manifest) =>
         manifest.shellConfig?.mobileHeader === false ||
-        manifest.shellConfig?.mobileFooter === false,
+        manifest.shellConfig?.mobileFooter === false ||
+        manifest.shellConfig?.mobileFooterLeftAction !== undefined,
     )
     .map((manifest) => ({
       routePrefix: manifest.routePrefix,
       mobileHeader: manifest.shellConfig?.mobileHeader ?? true,
       mobileFooter: manifest.shellConfig?.mobileFooter ?? true,
+      footerLeftAction: manifest.shellConfig?.mobileFooterLeftAction,
     }));
 }

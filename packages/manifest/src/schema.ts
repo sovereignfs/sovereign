@@ -135,6 +135,24 @@ const manifestObjectSchema = z
         mobileHeader: z.boolean().optional(),
         /** Show the mobile footer for `shell: default` plugins (default `true`). */
         mobileFooter: z.boolean().optional(),
+        /**
+         * Overrides the shared mobile footer's left icon (default: "Home",
+         * navigates to `/`) for `shell: default` plugins while this plugin
+         * is active. `icon` is validated against `@sovereignfs/ui`'s
+         * `ICON_NAMES` at render time, not here — this schema package stays
+         * free of a `packages/ui` dependency, so an unrecognized name falls
+         * back to a safe default with a dev-mode warning instead of failing
+         * manifest validation. `href` is plugin-owned and can point anywhere
+         * within (or outside) the plugin's own `routePrefix`.
+         */
+        mobileFooterLeftAction: z
+          .object({
+            icon: z.string().min(1),
+            label: z.string().min(1),
+            href: z.string().min(1).startsWith('/'),
+          })
+          .strict()
+          .optional(),
       })
       .strict()
       .optional(),
@@ -991,6 +1009,16 @@ export const manifestSchema = manifestObjectSchema
     {
       message: 'shellConfig.mobileFooter is only valid when shell is "default"',
       path: ['shellConfig', 'mobileFooter'],
+    },
+  )
+  .refine(
+    (m) =>
+      m.shellConfig?.mobileFooterLeftAction === undefined ||
+      m.shell === undefined ||
+      m.shell === 'default',
+    {
+      message: 'shellConfig.mobileFooterLeftAction is only valid when shell is "default"',
+      path: ['shellConfig', 'mobileFooterLeftAction'],
     },
   )
   .refine((m) => m.type !== 'platform' || m.monetization === undefined, {

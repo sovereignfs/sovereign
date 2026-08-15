@@ -8,7 +8,11 @@ import { offline } from '@sovereignfs/sdk/offline';
 import { underPrefix } from '@/src/route-guard';
 import { computeViewportHeight } from '@/src/viewport-height';
 import type { MobileChromeOverride } from '@/src/registry';
-import { mobileFooterVisible, mobileHeaderVisible } from '@/src/mobile-chrome';
+import {
+  mobileFooterLeftAction,
+  mobileFooterVisible,
+  mobileHeaderVisible,
+} from '@/src/mobile-chrome';
 
 /**
  * Registers the device bridge (RFC 0083 §1, workstream 0003 leg 1) once,
@@ -126,10 +130,16 @@ export function ClientShell({
     const isOffline = (p: string) => offlineRoutePrefixes.some((prefix) => underPrefix(p, prefix));
     const headerVisible = mobileHeaderVisible(pathname, mobileChromeConfig);
     const footerVisible = mobileFooterVisible(pathname, mobileChromeConfig);
+    const leftAction = mobileFooterLeftAction(pathname, mobileChromeConfig);
     if (
       isOffline(previousPathname) !== isOffline(pathname) ||
       headerVisible !== mobileHeaderVisible(previousPathname, mobileChromeConfig) ||
-      footerVisible !== mobileFooterVisible(previousPathname, mobileChromeConfig)
+      footerVisible !== mobileFooterVisible(previousPathname, mobileChromeConfig) ||
+      // Plain reference/shape compare via JSON — these are small, plugin-
+      // authored objects (icon/label/href strings), not worth a deep-equal
+      // helper just for this one comparison.
+      JSON.stringify(leftAction) !==
+        JSON.stringify(mobileFooterLeftAction(previousPathname, mobileChromeConfig))
     ) {
       router.refresh();
     }

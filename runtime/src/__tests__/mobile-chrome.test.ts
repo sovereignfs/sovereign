@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MobileChromeOverride } from '../registry';
-import { mobileFooterVisible, mobileHeaderVisible } from '../mobile-chrome';
+import { mobileFooterLeftAction, mobileFooterVisible, mobileHeaderVisible } from '../mobile-chrome';
 
 /**
  * Direct coverage for the pure route-resolution logic `ClientShell` uses to
@@ -14,6 +14,12 @@ import { mobileFooterVisible, mobileHeaderVisible } from '../mobile-chrome';
 const config: MobileChromeOverride[] = [
   { routePrefix: '/canvas', mobileHeader: false, mobileFooter: false },
   { routePrefix: '/chat', mobileHeader: true, mobileFooter: false },
+  {
+    routePrefix: '/tasks',
+    mobileHeader: true,
+    mobileFooter: true,
+    footerLeftAction: { icon: 'menu', label: 'Lists', href: '/tasks?view=lists' },
+  },
 ];
 
 describe('mobileHeaderVisible', () => {
@@ -45,5 +51,31 @@ describe('mobileFooterVisible', () => {
 
   it('resolves false for a plugin that hides both', () => {
     expect(mobileFooterVisible('/canvas', config)).toBe(false);
+  });
+});
+
+describe('mobileFooterLeftAction', () => {
+  it('returns null for a plugin with no override', () => {
+    expect(mobileFooterLeftAction('/launcher', config)).toBeNull();
+  });
+
+  it('returns null for a plugin whose override omits footerLeftAction', () => {
+    expect(mobileFooterLeftAction('/chat', config)).toBeNull();
+  });
+
+  it('resolves the override for a plugin that declares one', () => {
+    expect(mobileFooterLeftAction('/tasks', config)).toEqual({
+      icon: 'menu',
+      label: 'Lists',
+      href: '/tasks?view=lists',
+    });
+  });
+
+  it('resolves for a nested route under the plugin prefix', () => {
+    expect(mobileFooterLeftAction('/tasks/abc123', config)).toEqual({
+      icon: 'menu',
+      label: 'Lists',
+      href: '/tasks?view=lists',
+    });
   });
 });

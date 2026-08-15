@@ -3,6 +3,13 @@ import styles from './Icon.module.css';
 
 export type { IconName };
 
+/** Every valid `IconName`, for runtime validation of a dynamically-sourced
+ *  icon name (e.g. a manifest-declared string) before rendering it — a
+ *  plugin manifest is plain JSON and can't be typed as `IconName` at
+ *  authoring time. Not itself the generated `icons/index.ts` (kept out of
+ *  that file's "do not edit" boundary), just a derived view of it. */
+export const ICON_NAMES = Object.keys(ICONS) as IconName[];
+
 /** Decorative icon — visually meaningful but described by surrounding text. */
 type DecorativeProps = { 'aria-hidden': true; 'aria-label'?: never };
 /** Meaningful icon — standalone affordance that requires a label for screen readers. */

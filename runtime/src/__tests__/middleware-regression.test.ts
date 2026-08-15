@@ -115,6 +115,14 @@ const mobileChromePlugin = {
   shellConfig: { mobileHeader: false, mobileFooter: false },
 } as SovereignManifest;
 
+const mobileFooterLeftActionPlugin = {
+  id: 'com.example.notes',
+  routePrefix: '/notes',
+  shellConfig: {
+    mobileFooterLeftAction: { icon: 'menu', label: 'Lists', href: '/notes?view=lists' },
+  },
+} as SovereignManifest;
+
 const paidPublicRoutePlugin = {
   id: 'com.example.paid-blog',
   routePrefix: '/paid-blog',
@@ -255,6 +263,7 @@ describe('runtime middleware regressions', () => {
       handoffPlugin,
       offlineRoutePlugin,
       mobileChromePlugin,
+      mobileFooterLeftActionPlugin,
       mobileOnlyPlugin,
       mobileOnlyApiShapedPlugin,
       installablePlugin,
@@ -687,6 +696,36 @@ describe('runtime middleware regressions', () => {
 
       expect(response.headers.get('x-middleware-request-x-sovereign-mobile-header')).toBeNull();
       expect(response.headers.get('x-middleware-request-x-sovereign-mobile-footer')).toBeNull();
+    });
+
+    it('sets the footer left-action header (JSON) for a plugin declaring one', async () => {
+      const response = await middleware(request('/notes'));
+
+      expect(
+        JSON.parse(
+          response.headers.get('x-middleware-request-x-sovereign-mobile-footer-left-action') ??
+            'null',
+        ),
+      ).toEqual({ icon: 'menu', label: 'Lists', href: '/notes?view=lists' });
+    });
+
+    it('flags a nested route under the plugin prefix the same way for footer left-action', async () => {
+      const response = await middleware(request('/notes/abc123'));
+
+      expect(
+        JSON.parse(
+          response.headers.get('x-middleware-request-x-sovereign-mobile-footer-left-action') ??
+            'null',
+        ),
+      ).toEqual({ icon: 'menu', label: 'Lists', href: '/notes?view=lists' });
+    });
+
+    it('does not set the footer left-action header for a plugin with no override', async () => {
+      const response = await middleware(request('/launcher'));
+
+      expect(
+        response.headers.get('x-middleware-request-x-sovereign-mobile-footer-left-action'),
+      ).toBeNull();
     });
   });
 

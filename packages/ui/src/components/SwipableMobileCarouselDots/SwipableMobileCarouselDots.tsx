@@ -13,11 +13,12 @@ export interface SwipableMobileCarouselDotsProps {
    *  SwipableMobileCarousel's own required aria-label). */
   'aria-label': string;
   /** `'compact'` halves the gap between dots (`--sv-space-2` → `--sv-space-1`)
-   *  — for a carousel with enough slides that the default spacing reads as
-   *  long/cramped on a narrow viewport (e.g. a many-list mobile app). Leaves
-   *  each dot's own 20px hit target untouched; only the gap changes. Defaults
-   *  to `'default'` — every existing consumer's spacing is unaffected unless
-   *  it opts in. */
+   *  and shrinks each dot's own hit target (20px → 16px) — for a carousel
+   *  with enough slides that even the reduced gap alone still reads as too
+   *  wide on a narrow viewport (e.g. a many-list mobile app). The visible
+   *  6px dot itself is unchanged; only its surrounding tap-target box
+   *  shrinks. Defaults to `'default'` — every existing consumer's spacing is
+   *  unaffected unless it opts in. */
   density?: 'default' | 'compact';
   className?: string;
 }

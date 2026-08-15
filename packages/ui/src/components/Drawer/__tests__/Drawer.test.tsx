@@ -120,6 +120,25 @@ describe('Drawer', () => {
     expect(screen.getAllByRole('button')).toHaveLength(1);
   });
 
+  it('renders children inside a scrollable body, separate from the grab handle', () => {
+    // Regression test: the panel used to be the sole scroll container
+    // (overflow-y: auto on .panel itself), so a tall drawer scrolled the
+    // grab handle out of view along with the content. The handle must stay
+    // a sibling of the scrollable region, not a descendant of it.
+    render(
+      <Drawer open onClose={() => {}} aria-label="Nav">
+        <button type="button">Own action</button>
+      </Drawer>,
+    );
+    const panel = screen.getByRole('dialog');
+    const handle = panel.firstElementChild as HTMLElement;
+    const button = screen.getByRole('button', { name: 'Own action' });
+    const body = button.parentElement as HTMLElement;
+    expect(body).not.toBe(panel);
+    expect(body.contains(handle)).toBe(false);
+    expect(panel.contains(body)).toBe(true);
+  });
+
   it('renders OverlayHeader (title + close) when title is provided', () => {
     const onClose = vi.fn();
     render(

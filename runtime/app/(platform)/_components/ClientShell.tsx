@@ -124,29 +124,50 @@ export function ClientShell({
     previousPathnameRef.current = pathname;
     if (previousPathname === pathname) return;
     const isOffline = (p: string) => offlineRoutePrefixes.some((prefix) => underPrefix(p, prefix));
-    const headerVisible = mobileHeaderVisible(pathname, mobileChromeConfig);
-    const footerVisible = mobileFooterVisible(pathname, mobileChromeConfig);
-    if (
-      isOffline(previousPathname) !== isOffline(pathname) ||
-      headerVisible !== mobileHeaderVisible(previousPathname, mobileChromeConfig) ||
-      footerVisible !== mobileFooterVisible(previousPathname, mobileChromeConfig)
-    ) {
+    // Header/footer visibility itself no longer needs a refresh — MobileHeaderGate/
+    // MobileFooterGate (rendered by (platform)/layout.tsx) derive it straight from
+    // usePathname(), which updates synchronously on every client-side navigation
+    // with no network round trip. It used to be driven by a router.refresh() here,
+    // but that refetch could be cancelled by a second navigation firing shortly
+    // after the first (e.g. a plugin's own route-sync `router.replace()` on mount)
+    // — App Router drops a superseded in-flight RSC fetch, so the cancelled
+    // refresh never reached the client and the previous route's header/footer
+    // stayed mounted indefinitely. Only the offline-route neutral-shell content
+    // (personalized sidebar/name/avatar vs. the fixed neutral shell, RFC 0074)
+    // still genuinely requires a server refetch, since it's real content, not
+    // just presence/absence.
+    if (isOffline(previousPathname) !== isOffline(pathname)) {
       router.refresh();
     }
-    // The mobile header's rendered height only varies (today) by whether it's
-    // present at all — every default-shell plugin shares identical header
-    // markup otherwise — so this doesn't need a re-measurement, just an
-    // immediate, DOM-independent correction: syncViewport()'s mount-time
+    const headerVisible = mobileHeaderVisible(pathname, mobileChromeConfig);
+    const footerVisible = mobileFooterVisible(pathname, mobileChromeConfig);
+    // The mobile header/footer's rendered height only varies (today) by whether
+    // it's present at all — every default-shell plugin shares identical
+    // header/footer markup otherwise — so this doesn't need a re-measurement,
+    // just an immediate, DOM-independent correction: syncViewport()'s mount-time
     // measurement never re-runs on a plain pathname change (its effect has an
-    // empty dependency array), so without this, --sv-dialog-inset-top would
-    // keep the previous route's stale px value across a header-visibility
-    // transition instead of picking up the CSS-cascaded 0px (header hidden)
-    // or the standard formula (header shown) that shell.module.css now
-    // derives from data-mobile-header-hidden.
+    // empty dependency array), so without this, --sv-dialog-inset-top and
+    // --sv-shell-footer-height would keep the previous route's stale value
+    // across a header/footer-visibility transition instead of picking up the
+    // CSS-cascaded 0px (hidden) or the standard formula (shown) that
+    // shell.module.css derives from data-mobile-header-hidden/
+    // data-mobile-footer-hidden — attributes this same shared-layout staleness
+    // gap also leaves stale, since they're rendered by the server layout, not
+    // MobileHeaderGate/MobileFooterGate. Setting the custom property directly on
+    // the shell element always wins the cascade over the stylesheet's rule,
+    // regardless of that stale attribute.
+    const shell = document.getElementById('sv-app-shell');
     if (!headerVisible) {
       document.documentElement.style.setProperty('--sv-dialog-inset-top', '0px');
+      shell?.style.setProperty('--sv-shell-header-height', '0px');
     } else {
       document.documentElement.style.removeProperty('--sv-dialog-inset-top');
+      shell?.style.removeProperty('--sv-shell-header-height');
+    }
+    if (!footerVisible) {
+      shell?.style.setProperty('--sv-shell-footer-height', '0px');
+    } else {
+      shell?.style.removeProperty('--sv-shell-footer-height');
     }
   }, [pathname, router, offlineRoutePrefixes, mobileChromeConfig]);
 

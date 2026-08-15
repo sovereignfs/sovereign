@@ -20,6 +20,7 @@ import { InstanceProvider } from '@/src/instance-provider';
 import { AccountMenu } from './_components/AccountMenu';
 import { AdminConsoleIcon } from './_components/AdminConsoleIcon';
 import { ClientShell } from './_components/ClientShell';
+import { MobileFooterGate, MobileHeaderGate } from './_components/MobileChromeGate';
 import { NavIcon } from './_components/NavIcon';
 import { MobileNav } from './_components/MobileNav';
 import { NotificationBell } from './_components/NotificationBell';
@@ -233,6 +234,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
           mobileChromeConfig={mobileChromeConfig}
         >
           <div
+            id="sv-app-shell"
             className={styles.shell}
             data-mobile-header-hidden={showMobileHeader ? undefined : ''}
             data-mobile-footer-hidden={showMobileFooter ? undefined : ''}
@@ -273,7 +275,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
                 Console is a tile in the Apps drawer for admins (no sidebar on mobile).
                 Omitted entirely (not CSS-hidden) when the current plugin's
                 shellConfig.mobileHeader is false (RFC 0075). */}
-            {showMobileHeader && (
+            <MobileHeaderGate mobileChromeConfig={mobileChromeConfig}>
               <MobileHeader
                 className={styles.mobileHeader}
                 data-mobile-header
@@ -303,7 +305,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
                   />
                 }
               />
-            )}
+            </MobileHeaderGate>
 
             <main id="main-scroll" className={styles.content}>
               {children}
@@ -313,14 +315,14 @@ export default async function PlatformLayout({ children }: { children: ReactNode
                 Replaces the persistent icon strip which clutters small viewports.
                 Omitted entirely (not CSS-hidden) when the current plugin's
                 shellConfig.mobileFooter is false (RFC 0075). */}
-            {showMobileFooter && (
+            <MobileFooterGate mobileChromeConfig={mobileChromeConfig}>
               <MobileNav
                 plugins={pluginList}
                 launcherIconUrl={launcher?.icon ? `/plugin-icons/${launcher.id}.svg` : undefined}
                 isAdmin={isAdmin}
                 hydrate={isOfflineRoute}
               />
-            )}
+            </MobileFooterGate>
           </div>
         </ClientShell>
       )}

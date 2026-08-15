@@ -109,22 +109,56 @@ describe('useSnapCarousel', () => {
     expect(onSettle).toHaveBeenCalledExactlyOnceWith(6);
   });
 
-  it('still settles on the browser momentum/snap-correction scroll after touchend', () => {
+  it('still settles on long-running momentum/snap-correction scroll with no further touch input', () => {
+    // Regression test for a bug in the FIRST version of the drift fix above:
+    // gating on "was there a touch/wheel/pointer event within a fixed
+    // debounceMs * 2 slack of settle-check time" dropped real settles once
+    // native momentum/snap-correction ran longer than that slack — which it
+    // routinely does for a fast flick. That left activeIndex stuck on the
+    // old slide while the container had already scrolled to the new one,
+    // and since the mount window is keyed off activeIndex, the slide the
+    // user was actually looking at could get unmounted — a blank carousel,
+    // worse than the bug being fixed. The chain stays trusted for as long as
+    // scroll events keep arriving without a debounceMs-or-longer gap,
+    // regardless of how long that run lasts or how few touch events back it.
     const onSettle = vi.fn();
     const { getByTestId } = render(<Harness itemCount={10} onSettle={onSettle} debounceMs={120} />);
     const el = getByTestId('scroller');
     fireEvent.touchStart(el);
-    setLayout(el, 300, 1750);
-    fireEvent.scroll(el);
+    setLayout(el, 300, 1700);
+    fireEvent.scroll(el); // starts the run — trusted (touchstart just happened)
     fireEvent.touchEnd(el);
-    // The finger lifted, but the browser's own momentum/snap-correction
-    // continues settling shortly after — within the grace window, so this
-    // must still count.
-    act(() => void vi.advanceTimersByTime(60));
-    setLayout(el, 300, 1800);
+    // Momentum keeps producing scroll events, each within debounceMs of the
+    // last (so the run never goes quiet), for far longer than any fixed
+    // slack window would tolerate — no further touch input at all.
+    for (const scrollLeft of [1720, 1740, 1760, 1780, 1800]) {
+      act(() => void vi.advanceTimersByTime(80));
+      setLayout(el, 300, scrollLeft);
+      fireEvent.scroll(el);
+    }
+    act(() => void vi.advanceTimersByTime(120));
+    expect(onSettle).toHaveBeenCalledExactlyOnceWith(6);
+  });
+
+  it('settles correctly on two independent real swipes fired back-to-back', () => {
+    // Regression test: two genuine swipes with essentially no gap between
+    // them (an impatient fast double-swipe) must not corrupt or drop either
+    // settle — each is its own trusted run.
+    const onSettle = vi.fn();
+    const { getByTestId } = render(<Harness itemCount={10} onSettle={onSettle} debounceMs={120} />);
+    const el = getByTestId('scroller');
+    fireEvent.touchStart(el);
+    setLayout(el, 300, 300);
     fireEvent.scroll(el);
     act(() => void vi.advanceTimersByTime(120));
-    expect(onSettle).toHaveBeenCalledWith(6);
+    expect(onSettle).toHaveBeenCalledExactlyOnceWith(1);
+
+    fireEvent.touchStart(el);
+    setLayout(el, 300, 600);
+    fireEvent.scroll(el);
+    act(() => void vi.advanceTimersByTime(120));
+    expect(onSettle).toHaveBeenCalledTimes(2);
+    expect(onSettle).toHaveBeenLastCalledWith(2);
   });
 
   it('scrollToIndex scrolls the container to the target slide', () => {

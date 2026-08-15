@@ -186,18 +186,22 @@ async function main(): Promise<void> {
     dir,
     'app/page.tsx',
     `import { sdk } from '@sovereignfs/sdk';
+import { PageContainer } from '@sovereignfs/ui';
 import styles from './${slug}.module.css';
 
 export default async function ${toPascalCase(slug)}Page() {
   const session = await sdk.auth.getSession();
 
+  // PageContainer supplies this page's gutter and width. Declare padding and
+  // max-width through it, not in the CSS module — see the "Page layout"
+  // section of docs/design-system.md.
   return (
-    <div className={styles.page}>
+    <PageContainer maxWidth="md" className={styles.page}>
       <h1 className={styles.title}>${name}</h1>
       <p className={styles.lead}>
         {session ? \`Hello, \${session.user.name}!\` : 'Hello, world!'}
       </p>
-    </div>
+    </PageContainer>
   );
 }
 `,
@@ -207,9 +211,9 @@ export default async function ${toPascalCase(slug)}Page() {
   scaffoldFile(
     dir,
     `app/${slug}.module.css`,
-    `.page {
-  padding: var(--sv-space-8) var(--sv-space-6);
-  max-width: 640px;
+    `/* No padding or max-width here — both belong on the PageContainer in
+   page.tsx. Declaring them here too double-pads the page. */
+.page {
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-6);

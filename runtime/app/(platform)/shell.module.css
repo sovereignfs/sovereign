@@ -141,14 +141,19 @@
   filter: invert(1);
 }
 
+/* The shell contributes *clearance only* — space for chrome that overlays or
+   abuts the content area, which a plugin has no way to measure. It applies no
+   gutter of its own: the page inset is the plugin's to declare, via
+   @sovereignfs/ui's PageContainer (task 9.25). A plugin that renders no
+   PageContainer therefore sits edge-to-edge, by design.
+
+   OfflineBanner (position: fixed) sets --sv-offline-banner-height on :root
+   while visible so content reserves space below it instead of the banner
+   overlaying the top of the page — see that component's own doc comment. The
+   transition matches the banner's own 200ms slideDown so the content reflow
+   reads as one smooth motion, not a separate abrupt jump. */
 .content {
-  padding: var(--sv-space-8);
-  /* OfflineBanner (position: fixed) sets --sv-offline-banner-height on
-     :root while visible so content reserves space below it instead of the
-     banner overlaying the top of the page — see that component's own doc
-     comment. Transition matches the banner's own 200ms slideDown so the
-     content reflow reads as one smooth motion, not a separate abrupt jump. */
-  padding-top: calc(var(--sv-space-8) + var(--sv-offline-banner-height, 0px));
+  padding-top: var(--sv-offline-banner-height, 0px);
   transition: padding-top 200ms ease-out;
 }
 
@@ -159,9 +164,12 @@
 }
 
 /* Full-bleed opt-in: a plugin that owns its own internal layout (columns,
-   scroll, flanking panes) can mark its root with [data-plugin-fullbleed] to
-   drop the shell's content padding and render edge-to-edge. Scoped via :has()
-   so only opted-in plugins are affected — every other plugin keeps its padding. */
+   scroll, flanking panes) marks its root with [data-plugin-fullbleed]. Since
+   task 9.25 the shell no longer applies a gutter to anyone, so this drops the
+   remaining *clearances* — a fullbleed plugin positions itself against the
+   banner and footer on its own terms. It also unlocks the desktop
+   height-locking below, which is a separate concern from padding entirely.
+   Scoped via :has() so only opted-in plugins are affected. */
 .content:has([data-plugin-fullbleed]) {
   padding: 0;
 }
@@ -292,14 +300,10 @@
        sibling would otherwise re-number the remaining rows via CSS Grid's
        default row-major auto-placement. */
     grid-row: 2;
-    padding: var(--sv-space-4);
-    /* Overrides the shorthand's own padding-top above with the same
-       banner-height reservation as the desktop rule (see the base .content
-       rule's doc comment) — mobile is where OfflineBanner's fixed
-       positioning is most likely to crowd content, since --sv-space-4 (16px)
-       is noticeably tighter than the banner's own 32px height. */
-    padding-top: calc(var(--sv-space-4) + var(--sv-offline-banner-height, 0px));
-    padding-bottom: calc(var(--sv-shell-footer-height, 60px) + var(--sv-space-4));
+    /* Clearance only, no gutter — see the base .content rule's doc comment.
+       The banner reservation is inherited from that rule; the footer
+       reservation is mobile-only. */
+    padding-bottom: var(--sv-shell-footer-height, 60px);
     /* Content cell scrolls within the fixed-height shell grid. */
     overflow-y: auto;
     /* Grid children default to min-width: auto, which lets nowrap content (e.g.

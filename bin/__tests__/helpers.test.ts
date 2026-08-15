@@ -176,6 +176,42 @@ describe('scaffoldPlugin', () => {
     expect(pkg.dependencies['@sovereignfs/sdk']).toBe('latest');
   });
 
+  // The scaffolder shipped a `.page { padding: ...; max-width: ... }` root
+  // rule for its whole life, which meant every plugin ever scaffolded — in
+  // this repo and third-party — started out padded twice: once by that rule
+  // and once by whatever host rendered it. Task 9.25 made PageContainer the
+  // single source of a page's gutter; these two tests keep the template from
+  // quietly regrowing its own.
+  it('scaffolds a page wrapped in PageContainer', () => {
+    const dir = scaffoldPlugin({
+      id: 'io.example.pc-plugin',
+      name: 'PC Plugin',
+      description: '',
+      routePrefix: '/pc-plugin',
+      outDir: tmpDir,
+    });
+
+    const page = readFileSync(join(dir, 'app', 'page.tsx'), 'utf8');
+    expect(page).toContain("import { PageContainer } from '@sovereignfs/ui';");
+    expect(page).toContain('<PageContainer');
+    expect(page).not.toContain('<div className={styles.page}>');
+  });
+
+  it('scaffolds a CSS module with no root padding or max-width', () => {
+    const dir = scaffoldPlugin({
+      id: 'io.example.css-plugin',
+      name: 'CSS Plugin',
+      description: '',
+      routePrefix: '/css-plugin',
+      outDir: tmpDir,
+    });
+
+    const css = readFileSync(join(dir, 'app', 'css-plugin.module.css'), 'utf8');
+    const rootRule = css.slice(css.indexOf('.page {'), css.indexOf('}', css.indexOf('.page {')));
+    expect(rootRule).not.toMatch(/\bpadding\s*:/);
+    expect(rootRule).not.toMatch(/\bmax-width\s*:/);
+  });
+
   it('throws when the output directory already exists', () => {
     scaffoldPlugin({
       id: 'io.example.dup-plugin',

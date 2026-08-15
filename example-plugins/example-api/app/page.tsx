@@ -1,11 +1,12 @@
 import { sdk } from '@sovereignfs/sdk';
+import { PageContainer } from '@sovereignfs/ui';
 import styles from './example-api.module.css';
 
 export default async function ExampleApiPage() {
   const session = await sdk.auth.getSession();
 
   return (
-    <div className={styles.page}>
+    <PageContainer maxWidth="md" className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Example: API Provider</h1>
         <p className={styles.lead}>
@@ -73,6 +74,6 @@ export default async function ExampleApiPage() {
           Signed in as <strong>{session.user.name}</strong>.
         </p>
       )}
-    </div>
+    </PageContainer>
   );
 }

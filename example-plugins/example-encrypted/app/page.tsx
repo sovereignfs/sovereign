@@ -1,5 +1,5 @@
 import { sdk } from '@sovereignfs/sdk';
-import { Card, EmptyState } from '@sovereignfs/ui';
+import { Card, EmptyState, PageContainer } from '@sovereignfs/ui';
 import { findNotesByLabel, listNotes, type NoteView } from './_lib/data';
 import { NoteForm } from './NoteForm';
 import styles from './example-encrypted.module.css';
@@ -30,7 +30,7 @@ export default async function ExampleEncryptedPage({
     : await listNotes(session.user.id);
 
   return (
-    <div className={styles.page}>
+    <PageContainer maxWidth="sm" className={styles.page}>
       <header>
         <h1 className={styles.title}>Encrypted notes</h1>
         <p className={styles.subtitle}>
@@ -72,6 +72,6 @@ export default async function ExampleEncryptedPage({
           ))}
         </ul>
       )}
-    </div>
+    </PageContainer>
   );
 }

@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { sdk } from '@sovereignfs/sdk';
-import { Button } from '@sovereignfs/ui';
+import { Button, PageContainer } from '@sovereignfs/ui';
 import styles from './example-overlay-large.module.css';
 
 export default async function ExampleOverlayLargePage() {
   const session = await sdk.auth.getSession();
 
   return (
-    <div className={styles.page}>
+    <PageContainer maxWidth="md" className={styles.page}>
       <header className={styles.headerBlock}>
         <div className={styles.header}>
           <div>
@@ -59,6 +59,6 @@ export default async function ExampleOverlayLargePage() {
           Confirm
         </Button>
       </div>
-    </div>
+    </PageContainer>
   );
 }

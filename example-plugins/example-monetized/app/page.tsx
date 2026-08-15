@@ -1,6 +1,6 @@
 import { sdk } from '@sovereignfs/sdk';
 import { sql } from 'drizzle-orm';
-import { Button } from '@sovereignfs/ui';
+import { Button, PageContainer } from '@sovereignfs/ui';
 import styles from './example-monetized.module.css';
 
 // ─── Demo keypair ────────────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ export default async function ExampleMonetizedPage() {
   const badgeLabel = tierName ? `${tierName} tier active` : 'License active';
 
   return (
-    <div className={styles.page}>
+    <PageContainer maxWidth="md" className={styles.page}>
       <header className={styles.headerBlock}>
         <div className={styles.header}>
           <h1 className={styles.title}>Example: Monetized Plugin</h1>
@@ -246,6 +246,6 @@ console.log('Private key (secret):',  d);
           </Button>
         </form>
       </div>
-    </div>
+    </PageContainer>
   );
 }

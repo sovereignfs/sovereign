@@ -1,11 +1,9 @@
-/* No padding of its own, in either the full-page fallback or the modal —
-   matching every other overlay-capable platform plugin (plugins/launcher
-   .launcher, plugins/account .account, plugins/console .console all do the
-   same). The inset comes entirely from whichever ancestor renders this page:
-   the runtime shell's own .content in the full-page fallback
-   (runtime/app/(platform)/shell.module.css), or the Dialog's .content in the
-   modal (packages/ui Dialog.module.css). Adding padding here on top of
-   either would double up the inset for no reason. */
+/* No padding of its own: the gutter comes from the PageContainer this class
+   is applied to (see page.tsx), which is padded exactly once in both hosts
+   this page renders into. On the full-page fallback it supplies the gutter
+   itself; inside the modal, Dialog's own content region sets
+   --sv-page-gutter: 0 and PageContainer stands down, since the Dialog is
+   already padded. */
 .page {
   min-height: 100%;
   display: flex;

@@ -2163,10 +2163,10 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="PageContainer"
               importLine="import { PageContainer } from '@sovereignfs/ui';"
-              usage="Constrains and centers a plugin's main content width (sm/md/lg/full). Adds no padding of its own — the runtime shell already pads plugin content. Use instead of local container CSS in a plugin's layout."
+              usage="The wrapper every plugin page renders through. Supplies the page gutter (padding: none/sm/md/lg, default md — the runtime shell no longer pads plugin content) and constrains width (maxWidth: sm/md/lg/full, default full). Use instead of declaring padding or max-width in a plugin's own CSS."
             >
               <div style={{ width: '100%', background: 'var(--sv-color-surface-sunken)' }}>
-                <PageContainer maxWidth="sm">
+                <PageContainer maxWidth="sm" padding="md">
                   <div
                     style={{
                       background: 'var(--sv-color-surface-raised)',
@@ -2175,7 +2175,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                       padding: 'var(--sv-space-4)',
                     }}
                   >
-                    maxWidth=&quot;sm&quot;
+                    maxWidth=&quot;sm&quot; padding=&quot;md&quot;
                   </div>
                 </PageContainer>
               </div>

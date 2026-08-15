@@ -1,5 +1,5 @@
 import { sdk } from '@sovereignfs/sdk';
-import { Button } from '@sovereignfs/ui';
+import { Button, PageContainer } from '@sovereignfs/ui';
 import styles from './example-basic.module.css';
 
 // The platform auto-namespaces plugin capabilities to `<pluginId>:<capName>`.
@@ -16,7 +16,7 @@ export default async function ExampleBasicPage() {
   const canViewAdvanced = sdk.auth.hasCapability(session, CAP_VIEW_ADVANCED);
 
   return (
-    <div className={styles.page}>
+    <PageContainer maxWidth="md" className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Example Plugin</h1>
         <p className={styles.lead}>
@@ -64,6 +64,6 @@ export default async function ExampleBasicPage() {
           Design system Button
         </Button>
       </div>
-    </div>
+    </PageContainer>
   );
 }

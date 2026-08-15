@@ -655,3 +655,26 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   rename to a fixed final filename — any reader (including a separate
   sidecar container polling for the file) only ever observes either nothing
   or a fully-verified file, never a partial download.
+- **A plugin's page padding and max-width come from `@sovereignfs/ui`'s
+  `PageContainer`, never from local `padding`/`max-width` in
+  `app/layout.tsx` or a page-level CSS module (task 9.25).** The runtime
+  shell (`runtime/app/(platform)/shell.module.css`) applies no gutter of
+  its own to plugin content — only clearance for chrome it alone can
+  measure (the offline banner's reserved height while visible, the mobile
+  footer's height). A plugin that skips `PageContainer` renders
+  edge-to-edge; a plugin that pads itself **and** wraps in `PageContainer`
+  double-pads (the exact bug this rule exists to prevent — every plugin
+  under `example-plugins/` was double-padded until task 9.25 fixed both the
+  plugins and the two scaffolders, `bin/helpers.ts` and
+  `packages/create-plugin/src/index.ts`, that had been generating the
+  anti-pattern into every new plugin). The one case that needs no manual
+  handling: an overlay-shell (`shell: "overlay"`) plugin renders the same
+  page tree into both `Dialog` (soft navigation) and the shell's full-page
+  fallback (hard navigation) — `Dialog`'s content region sets
+  `--sv-page-gutter: 0`, which `PageContainer` reads automatically to stand
+  its own padding down, so the tree is padded correctly in both hosts with
+  no per-context branching in plugin code. Plugins that opt out of the
+  shell entirely via `data-plugin-fullbleed` (`sovereign-tasks`,
+  `sovereign-shopper`) manage their own layout and don't use
+  `PageContainer` at all. Full detail: `docs/design-system.md`'s "Page
+  layout" section.

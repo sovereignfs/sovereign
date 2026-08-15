@@ -75,6 +75,12 @@ function definedTokens(): Set<string> {
     // standalone use. See docs/design-system.md "--sv-dialog-inset-top".
     join(ROOT, 'runtime/app/globals.css'),
     join(ROOT, 'runtime/app/(platform)/shell.module.css'),
+    // --sv-page-gutter: an ancestor's stand-down signal to PageContainer
+    // (task 9.25), same second-namespace pattern as --sv-shell-*/
+    // --sv-dialog-inset-* above — declared by the one component that needs
+    // to suppress a descendant PageContainer's own padding, not by the
+    // static token contract.
+    join(ROOT, 'packages/ui/src/components/Dialog/Dialog.module.css'),
   ];
   const tokens = new Set<string>(TOKEN_ALLOWLIST);
   for (const file of files) {

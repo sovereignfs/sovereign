@@ -1,5 +1,6 @@
 import type { PluginScheduleDecl } from '../generated/plugin-schedules';
 import { PLUGIN_SCHEDULES } from '../generated/plugin-schedules';
+import { runWithBackgroundPlugin } from './background-plugin-context';
 import { getPlatformDb } from './db';
 import { logger } from './logger';
 import { getDisabledPluginIds } from './plugin-status';
@@ -81,13 +82,15 @@ export async function tickOnce(
     state.lastRun = now;
     state.running = true;
     try {
-      await decl.handler({
-        pluginId: decl.pluginId,
-        scheduleId: decl.scheduleId,
-        // Synthetic request headers so SDK surfaces that attribute by header
-        // (sdk.notifications.send) see the correct plugin identity.
-        headers: new Headers({ 'x-sovereign-plugin-id': decl.pluginId }),
-      });
+      await runWithBackgroundPlugin(decl.pluginId, () =>
+        decl.handler({
+          pluginId: decl.pluginId,
+          scheduleId: decl.scheduleId,
+          // Synthetic request headers so SDK surfaces that attribute by header
+          // (sdk.notifications.send) see the correct plugin identity.
+          headers: new Headers({ 'x-sovereign-plugin-id': decl.pluginId }),
+        }),
+      );
     } catch (err) {
       logger.error('scheduler: schedule handler failed', {
         pluginId: decl.pluginId,

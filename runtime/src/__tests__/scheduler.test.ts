@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PluginScheduleDecl } from '../../generated/plugin-schedules';
+import { getBackgroundPluginContext } from '../background-plugin-context';
 import {
   schedulerDisabled,
   startScheduler,
@@ -51,6 +52,19 @@ describe('tickOnce', () => {
     expect(seen?.pluginId).toBe('com.example.notes');
     expect(seen?.scheduleId).toBe('sync');
     expect(seen?.headers.get('x-sovereign-plugin-id')).toBe('com.example.notes');
+  });
+
+  it('makes the plugin id available via getBackgroundPluginContext() during the handler, and clears it after', async () => {
+    let seenDuring: string | undefined;
+    const handler = async () => {
+      seenDuring = getBackgroundPluginContext();
+    };
+    const states = toStates([decl({ pluginId: 'fs.sovereign.tasks', handler })]);
+
+    expect(getBackgroundPluginContext()).toBeUndefined();
+    await tickOnce(states, deps());
+    expect(seenDuring).toBe('fs.sovereign.tasks');
+    expect(getBackgroundPluginContext()).toBeUndefined();
   });
 
   it('does not re-invoke before intervalMinutes has elapsed', async () => {

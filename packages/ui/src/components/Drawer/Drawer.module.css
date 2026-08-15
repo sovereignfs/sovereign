@@ -27,19 +27,46 @@
 .panel {
   width: 100%;
   max-height: 80dvh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  /* The panel itself no longer scrolls — see .body below. display: flex
+     (column) lets .handle (and OverlayHeader, when title is set) stay
+     fixed while .body's own overflow-y handles content taller than the
+     80dvh cap, the same fixed-header/scrollable-body split Sheet.module.css
+     already establishes (its .panel/.content pair). Before this, the whole
+     .panel scrolled as one block, so a tall drawer (e.g. many installed
+     plugins in the Apps grid) scrolled the grab handle itself out of view
+     along with the content — reachable in the DOM, invisible on screen. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--sv-color-surface-raised);
   border-top: 1px solid var(--sv-color-border);
   border-radius: var(--sv-radius-3xl) var(--sv-radius-3xl) 0 0;
   box-shadow: var(--sv-shadow-overlay);
-  /* Pull content above the home indicator / bottom bar in standalone mode. */
-  padding-bottom: env(safe-area-inset-bottom);
   outline: none;
   /* Slide up from below the viewport. Always a bottom sheet, so unlike Dialog
      there's no desktop-vs-mobile fork here. */
   transform: translateY(100%);
   transition: transform var(--sv-motion-duration-base) var(--sv-motion-ease-out);
+}
+
+/* The scroll container — everything below the fixed handle/OverlayHeader.
+   Scrollbar hidden (not overflow removed) the same way Tabs.module.css's
+   .tablist already does for this design system; scroll-driven UI here reads
+   as a native swipe list, not a document needing a visible scroll affordance. */
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  /* Pull content above the home indicator / bottom bar in standalone mode —
+     moved here from .panel now that this is the element whose bottom edge
+     is the actual scrollable content boundary. */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.body::-webkit-scrollbar {
+  display: none;
 }
 
 .panelOpen {

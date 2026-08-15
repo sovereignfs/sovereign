@@ -107,11 +107,20 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   intra-overlay navigation. **Dialog size is plugin-declared** via the optional
   manifest `shellConfig.overlaySize` (`sm` | `md` | `lg`, default `lg`); the
   `@modal/layout.tsx` resolves it from the selected interception segment
-  (`overlaySizeForSegment` in `runtime/src/overlay.ts`). The `@sovereignfs/ui`
-  `Dialog` renders **fixed-size boxes** (each size sets width AND height, content
-  scrolls inside) so the dialog never resizes as its content changes between
-  tabs — `lg` fills the viewport minus a fixed margin, `md`/`sm` are fixed and
-  centred; on mobile every size is a full-screen sheet. The `Dialog` scrim is
+  (`overlaySizeForSegment` in `runtime/src/overlay.ts`). Only `lg`/`full` are
+  a **fixed-size box** (width AND height set, content scrolls inside) — the
+  size overlay-shell plugins (Account, Console) render into, so the dialog
+  never resizes as the plugin switches between its own internal tabs/views.
+  `sm`/`md` are fixed-width but content-driven height, capped at a per-size
+  max-height (28rem/42rem) beyond which content scrolls internally rather
+  than the panel growing further — changed from also-fixed-height because a
+  short-content consumer (`plugins/console/app/plugins/PluginAccessDialog.tsx`'s
+  own nested "Access" dialog, `size="sm"`) rendered as a mostly-empty box:
+  measured live, its content filled 191px of a 448px fixed panel, and a
+  sibling nested dialog (`CapabilitiesButton.tsx`, one grantable capability
+  today) filled only 52px of 430px. `lg` fills the viewport minus a fixed
+  margin, and is centred and capped the same way `md`/`sm` are; on mobile
+  every size is a full-screen sheet. The `Dialog` scrim is
   full-viewport by default but offsets its left edge by the
   `--sv-dialog-inset-left` CSS var (default `0`); the shell sets it to the
   sidebar width (`--sv-shell-sidebar-width`, reset to `0` on mobile) on `.shell`

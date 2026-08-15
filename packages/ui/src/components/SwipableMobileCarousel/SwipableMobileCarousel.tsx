@@ -131,17 +131,18 @@ export function SwipableMobileCarousel({
   const count = slides.length;
   const clampedActiveIndex = count === 0 ? 0 : Math.max(0, Math.min(count - 1, activeIndex));
 
-  const { scrollRef, scrollToIndex } = useSnapCarousel({
-    itemCount: count,
-    onSettle,
-    debounceMs: settleDebounceMs,
-  });
-
   // Initial scroll position, once — subsequent activeIndex changes come
   // either from the user's own swipe (already reflected in DOM scroll
   // position; re-syncing to the same index below is a harmless no-op) or an
   // external navigation, which the effect below scrolls to explicitly.
   const initialActiveIndexRef = useRef(clampedActiveIndex);
+
+  const { scrollRef, scrollToIndex, liveIndex } = useSnapCarousel({
+    itemCount: count,
+    onSettle,
+    debounceMs: settleDebounceMs,
+    initialIndex: initialActiveIndexRef.current,
+  });
   useLayoutEffect(() => {
     scrollToIndex(initialActiveIndexRef.current, 'instant');
     // Runs once on mount only, matching both existing plugins' identical pattern.
@@ -213,7 +214,20 @@ export function SwipableMobileCarousel({
         {slides.map((slide, i) => (
           <div className={styles.slide} key={slide.key}>
             <CarouselSlideMountContext.Provider
-              value={{ isMounted: Math.abs(i - clampedActiveIndex) <= prefetchDistance }}
+              value={{
+                // Union of the settled index and the live (real-time,
+                // pre-settle) scroll position — see useSnapCarousel's own
+                // liveIndex doc comment. A single fast flick can carry
+                // native scroll-snap momentum past an intermediate slide to
+                // one two-or-more away before settle-detection's debounce
+                // window ever reports it; without also checking liveIndex,
+                // the slide the container had already visually scrolled to
+                // stays unmounted (rendering nothing at all, not even a
+                // loading skeleton) for that entire window.
+                isMounted:
+                  Math.abs(i - clampedActiveIndex) <= prefetchDistance ||
+                  Math.abs(i - liveIndex) <= prefetchDistance,
+              }}
             >
               {slide.element}
             </CarouselSlideMountContext.Provider>

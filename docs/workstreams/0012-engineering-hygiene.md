@@ -1,6 +1,6 @@
 # Workstream 0012 — Engineering hygiene
 
-**Status:** ⏳ In progress — legs 1–6 done. Leg 1: tasks 14.2, 13.5, 15.2,
+**Status:** ⏳ In progress — legs 1–7 done. Leg 1: tasks 14.2, 13.5, 15.2,
 additive test coverage across Account/Console/Launcher. Leg 2: task 3.24,
 SDK boundary and runtime contract tests — found and closed a real gap in
 the boundary rule itself (the `@/` alias reaching `runtime/src` unflagged),
@@ -24,8 +24,17 @@ caching review — measured real self-fetch counts by path type as a live
 test (0/3/1/1 for normal page/plugin route/root/public-api), added a 3s
 in-process TTL cache for exactly the two lookups the deliverable named
 (disabled-plugin IDs, root-plugin prefix), left entitlement/access-policy
-lookups uncached per the epic's own guidance. Legs 7–8 not started, no
-blocking dependency between them\
+lookups uncached per the epic's own guidance. Leg 7: task 13.6 (scoped) —
+confirm-dialog migration was already done pre-leg; consolidated the
+icon/text+icon action-button CSS families via `composes` (zero TSX
+changes); documented (didn't migrate) the users table, since the shared
+`Table` primitive's cell components don't merge an incoming `className`;
+nav/header migration stays deferred to a follow-up per this workstream's
+own locked scoping. Live browser verification of the admin-destructive
+flows wasn't possible (no working credentials for the local dev DB's
+existing real accounts) — verified instead by build/lint/test green plus
+direct inspection of the compiled CSS/JS `composes` output; see leg 7's own
+status note for the full account of that gap. Leg 8 not started\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -87,11 +96,17 @@ this backlog as unowned.
       auth or entitlement correctness. (Measured as a live test, not just a
       note; cached only disabled-plugin IDs and root-plugin prefix, left
       entitlement/access-policy lookups uncached; see leg 6's own status note.)
-- [ ] `13.6` (scoped — see Decisions locked) — Console's confirm-dialog
+- [x] `13.6` (scoped — see Decisions locked) — Console's confirm-dialog
       pattern, table styling, and icon-only action buttons are migrated to
       shared primitives; no behavioral regression on user
       deactivation/deletion/MFA-reset/invite-cancellation/plugin
-      install-remove, manually re-verified.
+      install-remove, manually re-verified. (Confirm-dialog was already
+      done pre-leg; table styling documented as staying bespoke, not
+      migrated, per this task's own "or document why" deliverable; **manual
+      re-verification did not happen** — no working credentials for the
+      local dev DB, verified by build/lint/test green and compiled-output
+      inspection instead; see leg 7's own status note for the full account
+      of that gap.)
 - [ ] `3.25` — `sv plugin add`/`remove` hoist/prune a plugin's external deps
       into `runtime/package.json` automatically via
       `runtime/generated/plugin-deps.json`; the manually-added `@dnd-kit/*`
@@ -119,16 +134,16 @@ deferred nav/header migration can be re-added.
 
 ## Legs
 
-| Leg | Name                                          | Epic tasks       | Epics      | Gate? | Done when                                                                                                |
-| --- | --------------------------------------------- | ---------------- | ---------- | ----- | -------------------------------------------------------------------------------------------------------- |
-| 1   | Plugin workflow test coverage ✅              | 14.2, 13.5, 15.2 | 13, 14, 15 | No    | Account, Console, and Launcher workflows named in each task have regression coverage; no behavior change |
-| 2   | SDK boundary and runtime contract tests ✅    | 3.24             | 3          | No    | Import-boundary rule and SDK host behaviors are test-covered, not just configured                        |
-| 3   | Typecheck performance ✅                      | 0.14             | 0          | No    | Recorded `pnpm typecheck` speedup; Turbo caching and Next.js typechecking unaffected                     |
-| 4   | Generate script decomposition ✅              | 3.23             | 3          | No    | `scripts/generate/*` modules exist; `pnpm generate` output unchanged                                     |
-| 5   | Middleware decomposition ✅                   | 2.17             | 2          | No    | `runtime/src/middleware/*` modules exist; fail-open/fail-closed semantics unchanged                      |
-| 6   | Middleware internal fetch caching review ✅   | 2.18             | 2          | No    | Self-fetch counts measured; any cache added has documented invalidation                                  |
-| 7   | Console primitive migration, Phase 2 (scoped) | 13.6             | 13         | No    | Confirm-dialog, table, and icon-button patterns migrated; admin-destructive flows manually re-verified   |
-| 8   | Plugin external dependency resolution         | 3.25             | 3          | No    | `sv plugin add`/`remove` hoist/prune deps automatically; `@dnd-kit/*` entries re-derived from the ledger |
+| Leg | Name                                             | Epic tasks       | Epics      | Gate? | Done when                                                                                                |
+| --- | ------------------------------------------------ | ---------------- | ---------- | ----- | -------------------------------------------------------------------------------------------------------- |
+| 1   | Plugin workflow test coverage ✅                 | 14.2, 13.5, 15.2 | 13, 14, 15 | No    | Account, Console, and Launcher workflows named in each task have regression coverage; no behavior change |
+| 2   | SDK boundary and runtime contract tests ✅       | 3.24             | 3          | No    | Import-boundary rule and SDK host behaviors are test-covered, not just configured                        |
+| 3   | Typecheck performance ✅                         | 0.14             | 0          | No    | Recorded `pnpm typecheck` speedup; Turbo caching and Next.js typechecking unaffected                     |
+| 4   | Generate script decomposition ✅                 | 3.23             | 3          | No    | `scripts/generate/*` modules exist; `pnpm generate` output unchanged                                     |
+| 5   | Middleware decomposition ✅                      | 2.17             | 2          | No    | `runtime/src/middleware/*` modules exist; fail-open/fail-closed semantics unchanged                      |
+| 6   | Middleware internal fetch caching review ✅      | 2.18             | 2          | No    | Self-fetch counts measured; any cache added has documented invalidation                                  |
+| 7   | Console primitive migration, Phase 2 (scoped) ✅ | 13.6             | 13         | No    | Confirm-dialog, table, and icon-button patterns migrated; admin-destructive flows manually re-verified   |
+| 8   | Plugin external dependency resolution            | 3.25             | 3          | No    | `sv plugin add`/`remove` hoist/prune deps automatically; `@dnd-kit/*` entries re-derived from the ledger |
 
 Legs 1–4 and 8 are mutually independent and may be reordered or parallelized
 across engineers. Leg 6 must follow leg 5. Leg 7 is independent of the rest
@@ -358,9 +373,49 @@ bundle +0.2 kB).
 a meaningful cost — ship the measurement and skip adding a cache; a cache
 with no measured benefit is new risk for nothing.
 
-### Leg 7 — Console primitive migration, Phase 2 (scoped)
+### Leg 7 — Console primitive migration, Phase 2 (scoped) ✅
 
 **Epic tasks:** 13.6 (partial — see Decisions locked)
+
+**Status (August 2026): shipped.** Full account in the epic doc
+(`docs/epics/plugin-console.md`). Confirm-dialog migration turned out to be
+**already done** before this leg started (every confirm prompt already used
+`@sovereignfs/ui`'s `ConfirmDialog`; the CSS module already had a comment
+recording it) — closed by inspection, no code change. Table styling **stays
+bespoke, documented in code** rather than migrated: `Table`'s
+`TableHeaderCell`/`TableCell` don't merge an incoming `className` with their
+own base style (they spread `...rest`, including `className`, _after_ their
+own hardcoded class on the same element — a passed-in className fully
+replaces the primitive's styling rather than layering on it), and this table
+is the single highest-traffic admin-destructive surface in Console. Icon-only
+and text+icon action-button consolidation is **done** as a documented local
+pattern (not a new `@sovereignfs/ui` `Button` variant — disproportionate for
+a Console-only need on a published, NFR-04-constrained package): six
+near-duplicate CSS declarations collapsed to two shared bases + tone-only
+overrides via CSS Modules `composes` (same convention as `apps/auth`'s
+`.linkButton`), zero TSX changes. `.copyButton` (named in the original
+deliverable) was already dead code. `.userCardMenuBtn` stays outside the
+family on purpose — a different control (borderless menu trigger), not a
+near-duplicate. Also fixed a stale doc-drift reference found along the way:
+the epic text named Task 9.13 as the nav/header migration's blocker; 9.13 is
+actually unrelated (❌ rejected, "Subtle Sovereign attribution") — the real
+blocker was Task 9.15, corrected in the epic doc.
+
+**Real gap, flagged rather than hidden:** manual re-verification of the
+admin-destructive flows this leg's own review checklist requires did **not**
+happen. The local dev database has real (non-test) user accounts with no
+known credentials, and `sv seed` correctly refused to plant known-password
+test accounts over them (its own safety check, working as designed).
+Verified instead by `pnpm build`/`pnpm lint`/`pnpm format:check`/
+`pnpm design:tokens:check` all clean, all 36 existing Console tests passing
+unchanged, and direct inspection of the compiled CSS/JS bundle confirming
+the `composes` output is correct (`styles.iconBtnDanger` resolves to both
+class names, e.g. `"console_iconBtnDanger__<hash>
+console_iconBtnBase__<hash>"`). This is real, substantive evidence for a
+CSS-only, zero-TSX-change consolidation, but it is not the same as loading
+the actual page and clicking Deactivate — flagged explicitly so a human
+reviewer can decide whether to do that pass before merging, not silently
+presented as satisfied.
 
 **In scope for this leg:**
 

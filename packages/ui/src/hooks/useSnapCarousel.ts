@@ -46,12 +46,26 @@ export function useSnapCarousel({
   // Timestamp (Date.now()) of the most recent real input (touch, wheel/
   // trackpad, or a mouse drag) — see the doc comment above `noteGesture`
   // below for why settle-detection is gated on this instead of firing for
-  // any `scroll` event. Compared by elapsed time at settle-check time
-  // rather than via a second parallel timer: two independently-scheduled
-  // timers with the same delay racing to fire first is exactly the kind of
-  // ordering-dependent bug this fix exists to eliminate, not something to
-  // introduce a second copy of.
+  // any `scroll` event.
   const lastGestureAtRef = useRef(0);
+  // Whether the *current* run of scroll events (since the last time the
+  // container went quiet for debounceMs) was kicked off by real input. Set
+  // at the start of each run by checking lastGestureAtRef, then held for the
+  // whole run regardless of how long it continues — see `handleScroll`'s own
+  // comment for why this can't just be "was there a gesture event within the
+  // last debounceMs" re-checked at settle time: native momentum/snap-
+  // correction after a real swipe can keep producing scroll events for
+  // longer than any fixed slack window without a single further touch event,
+  // and a first version of this fix that compared elapsed time against a
+  // fixed `debounceMs * 2` slack dropped exactly those settles — silently
+  // leaving activeIndex stuck on the old slide while the container had
+  // already visually scrolled to the new one, which is worse than the bug
+  // being fixed (the mount window then unmounts whatever's actually on
+  // screen, since it's keyed off the now-stale index — a blank, un-
+  // recoverable-without-reload carousel). `noteGesture` can also upgrade
+  // trust mid-run, for a real gesture that starts while an untrusted run's
+  // debounce timer is still pending.
+  const chainTrustedRef = useRef(false);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -76,19 +90,33 @@ export function useSnapCarousel({
     // contradicting `onSettle` call.
     function noteGesture() {
       lastGestureAtRef.current = Date.now();
+      // Upgrades the currently in-flight run too, not just the next one —
+      // covers a real gesture starting while an untrusted run's debounce
+      // timer (started by an earlier, unrelated drift scroll event) is
+      // still pending.
+      chainTrustedRef.current = true;
     }
     function handlePointerMove(event: PointerEvent) {
       // Ignore hover — only a held button (mouse drag) counts as input.
       if (event.buttons) noteGesture();
     }
     function handleScroll() {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      } else {
+        // No debounce timer pending means the container had been fully
+        // quiet — this scroll event starts a new run. Trust it only if real
+        // input happened recently; once granted, trust holds for the whole
+        // run (see chainTrustedRef's own doc comment above) no matter how
+        // long momentum/snap-correction keeps producing scroll events after
+        // this point with no further input.
+        chainTrustedRef.current = Date.now() - lastGestureAtRef.current <= debounceMs;
+      }
       timerRef.current = setTimeout(() => {
-        // Allow a little slack beyond debounceMs for the browser's own
-        // momentum/snap-correction to keep settling shortly after the last
-        // touchend/gesture event, without requiring touchmove to have kept
-        // firing right up to the moment the container actually stops.
-        if (Date.now() - lastGestureAtRef.current > debounceMs * 2) return;
+        timerRef.current = null;
+        const trusted = chainTrustedRef.current;
+        chainTrustedRef.current = false;
+        if (!trusted) return;
         const current = scrollRef.current;
         if (!current) return;
         const width = current.clientWidth;

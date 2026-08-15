@@ -199,7 +199,6 @@ export function SwipableMobileCarousel({
       renderIndicator({ count, activeIndex: clampedActiveIndex, labels, onJump: handleJump })
     ) : (
       <SwipableMobileCarouselDots
-        className={styles.dots}
         count={count}
         activeIndex={clampedActiveIndex}
         labels={labels}
@@ -221,7 +220,10 @@ export function SwipableMobileCarousel({
           </div>
         ))}
       </div>
-      {indicator}
+      {/* Positioning (overlay the bottom of .wrap) lives here, applied around
+          whatever renderIndicator returns — see .indicatorSlot's own doc
+          comment for why this can't be delegated to the indicator itself. */}
+      {indicator && <div className={styles.indicatorSlot}>{indicator}</div>}
     </div>
   );
 }

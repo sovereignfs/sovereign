@@ -39,10 +39,19 @@
   flex-direction: column;
 }
 
-.dots {
+.indicatorSlot {
   /* Overlays the bottom of .wrap rather than taking its own layout row —
      matches both sovereign-tasks' and sovereign-shopper's existing dots
-     placement. */
+     placement. Applied by the carousel itself around WHATEVER
+     renderIndicator returns (the default SwipableMobileCarouselDots or a
+     caller-supplied override) — a custom renderIndicator has no way to
+     import this module's locally-scoped class itself (CSS Modules classnames
+     aren't cross-file importable), so positioning must live here, not be
+     something each indicator implementation opts into. Previously this class
+     was only ever applied to the *default* indicator branch, which silently
+     left any custom renderIndicator unpositioned — a static, in-flow sibling
+     pushed below the full-height .scroller and clipped out of view instead
+     of overlaid on top of it. */
   position: absolute;
   left: 0;
   right: 0;
@@ -50,6 +59,6 @@
   pointer-events: none;
 }
 
-.dots > * {
+.indicatorSlot > * {
   pointer-events: auto;
 }

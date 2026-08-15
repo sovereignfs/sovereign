@@ -96,6 +96,43 @@ describe('SwipableMobileCarousel', () => {
     expect(onSettle).toHaveBeenCalledWith(3);
   });
 
+  it('positions both the default and a custom renderIndicator inside the same overlay slot', () => {
+    // Regression test: the overlay-positioning class used to be applied
+    // directly to the default SwipableMobileCarouselDots instance, so any
+    // caller-supplied renderIndicator rendered as a plain static element
+    // instead — pushed out of view below the full-height scroller. The
+    // carousel must own positioning for whatever renderIndicator returns.
+    const { unmount } = render(<FiveSlides activeIndex={0} onSettle={() => {}} />);
+    const defaultTablist = screen.getByRole('tablist');
+    expect(defaultTablist.parentElement?.className).toMatch(/indicatorSlot/);
+    unmount();
+
+    render(
+      <SwipableMobileCarousel
+        activeIndex={0}
+        onSettle={() => {}}
+        aria-label="Test slides"
+        renderIndicator={({ count, activeIndex, onJump }) => (
+          <div role="tablist" aria-label="Custom">
+            {Array.from({ length: count }, (_, i) => (
+              <button key={i} type="button" role="tab" onClick={() => onJump(i)}>
+                {i === activeIndex ? 'active' : 'inactive'}
+              </button>
+            ))}
+          </div>
+        )}
+      >
+        {KEYS.map((key) => (
+          <SwipableMobileCarouselSlide key={key} slideKey={key} label={key}>
+            {`slide-${key}`}
+          </SwipableMobileCarouselSlide>
+        ))}
+      </SwipableMobileCarousel>,
+    );
+    const customTablist = screen.getByRole('tablist', { name: 'Custom' });
+    expect(customTablist.parentElement?.className).toMatch(/indicatorSlot/);
+  });
+
   it('re-snaps and reports the new index when the active slide moves position (reorder-jump fix)', () => {
     function Reorderable({ order, onSettle }: { order: string[]; onSettle: (i: number) => void }) {
       return (

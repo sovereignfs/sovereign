@@ -42,9 +42,9 @@ import type { RefObject } from 'react';
  * and reliably in both environments instead.
  *
  * No-ops safely wherever `#sv-app-shell` doesn't exist (Storybook, a unit
- * test, or any host other than the platform's own runtime shell) — the CSS
- * consumers all read this variable with a `60px` fallback (`var(--sv-shell-
- * footer-height, 60px)`), so an absent override is harmless.
+ * test, or any host other than the platform's own runtime shell) — every CSS
+ * consumer reads these variables with a `60px` fallback, so an absent
+ * override is harmless.
  */
 export function usePublishShellChromeHeight(
   ref: RefObject<HTMLElement | null>,

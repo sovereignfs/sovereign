@@ -1285,13 +1285,18 @@ padding, sticky positioning, and a 768px max-width (so neither stretches
 full-bleed if mounted outside an actual mobile viewport) — matching the
 runtime shell's own hand-rolled mobile header/footer markup exactly, since
 these components are meant to eventually replace it. A consumer that
-disables the shell's own header/footer for its route
-(`manifest.json`'s `shellConfig.mobileHeader`/`mobileFooter: false`, RFC 0075) to render these itself must also re-declare
-`--sv-shell-header-height`/`--sv-shell-footer-height` (zeroed by the shell
-when that chrome is off) to match what it actually renders — `Drawer`,
-`Dialog`, and `Sheet` all read those variables to know how much screen edge
-to clear, and without them they render straight to the true viewport edges,
-underneath the consumer's own chrome.
+disables the shell's own header/footer for its route (`manifest.json`'s
+`shellConfig.mobileHeader`/`mobileFooter: false`, RFC 0075) to render these
+itself gets `--sv-shell-header-height`/`--sv-shell-footer-height` re-declared
+automatically — both components measure their own rendered height and
+publish it on the shell root (`usePublishShellChromeHeight`; the shell zeroes
+the variable when that chrome is off, and this overrides that zero back to
+the real value) — no manual re-declaration needed. `Drawer`, `Dialog`, and
+`Sheet` all read those variables to know how much screen edge to clear; this
+is what stops them rendering straight to the true viewport edges, underneath
+the consumer's own self-rendered chrome. See `docs/architecture-rules.md`
+for the incident this closes (found live in `sovereign-tasks`, generic to
+any plugin using this pattern).
 
 This extraction is deliberately scoped as groundwork, not a plugin-facing
 override mechanism — see [RFC 0088](./rfcs/0088-mobile-header-footer-design-system-components.md)

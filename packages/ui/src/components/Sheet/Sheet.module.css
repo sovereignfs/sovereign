@@ -1,6 +1,9 @@
 /* Sheet — fills the same rect as a plugin's content area (between the shell's
  * sticky header and footer nav — see --sv-shell-header-height /
- * --sv-shell-footer-height, set by the shell), sliding in from an edge
+ * --sv-shell-footer-height, set by the platform shell or, for a plugin that
+ * self-renders MobileHeader/MobileFooter instead (shellConfig.mobileHeader/
+ * mobileFooter: false), by that component itself — see
+ * usePublishShellChromeHeight), sliding in from an edge
  * instead of Dialog's centered box or Drawer's partial-height sheet-over-
  * scrim. z-index matches Dialog/Drawer's scrim so it layers consistently
  * with any other overlay. No scrim of its own — see the component doc

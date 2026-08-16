@@ -3,6 +3,16 @@
   top: 0;
   /* Sits above sidebar rail (z-index ~10) but below dialogs/overlays (z-index 100) */
   z-index: 50;
+  /* WebKit momentum-scroll re-tiling quirk: a position: sticky element with
+     no compositing layer of its own can go stale/blank for a stretch of
+     frames during a fast scroll on iOS Safari instead of repainting at its
+     stuck position. translateZ(0) promotes it to its own layer, rasterized
+     independently of the scroller's tile grid. See
+     docs/architecture-rules.md — found and fixed across three sticky
+     elements in sovereign-tasks, applied here proactively since this
+     component is exactly the same pattern (sticky, inside scrolling
+     content). */
+  transform: translateZ(0);
   display: flex;
   align-items: center;
   justify-content: center;

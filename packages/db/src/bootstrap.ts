@@ -477,5 +477,25 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
        ON plugin_jobs (status, run_at)`,
     `CREATE INDEX IF NOT EXISTS plugin_jobs_plugin_dedupe_idx
        ON plugin_jobs (plugin_id, dedupe_key)`,
+    // RFC 0084 — Backup job infrastructure
+    `CREATE TABLE IF NOT EXISTS backup_jobs (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      scope TEXT NOT NULL,
+      requested_by_user_id TEXT,
+      status TEXT NOT NULL,
+      options_json TEXT,
+      archive_path TEXT NOT NULL,
+      size_bytes ${ts} NOT NULL,
+      error_message TEXT,
+      created_at ${ts} NOT NULL,
+      started_at ${ts},
+      completed_at ${ts},
+      expires_at ${ts} NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS backup_jobs_status_idx
+       ON backup_jobs (status)`,
+    `CREATE INDEX IF NOT EXISTS backup_jobs_tenant_scope_idx
+       ON backup_jobs (tenant_id, scope)`,
   ];
 }

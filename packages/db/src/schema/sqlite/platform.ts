@@ -872,3 +872,40 @@ export const pluginJobs = sqliteTable(
 
 export type PluginJob = typeof pluginJobs.$inferSelect;
 export type NewPluginJob = typeof pluginJobs.$inferInsert;
+
+/**
+ * Platform-owned backup job records (RFC 0084, epic task 8.16). Tenant-scoped;
+`scope` distinguishes instance-level (`'instance'`) from user-level (`'user'`)
+backups. `status` tracks queued → running → complete/failed lifecycle; `optionsJson`
+holds CLI flags (e.g. `--exclude-plugin`), `archivePath` is relative to
+`data/backups/`, `sizeBytes` is the physical archive size, and `errorMessage`
+holds the failure reason if `status = 'failed'`. `expiresAt` bounds how long an
+archive file survives before the worker sweeps it. The worker claims jobs via
+`UPDATE ... WHERE status = 'queued' RETURNING` and marks `complete`/`failed`
+with timestamps; expired jobs' archives are removed from disk.
+ */
+export const backupJobs = sqliteTable(
+  'backup_jobs',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenant_id').notNull(),
+    scope: text('scope').notNull(), // 'instance' | 'user'
+    requestedByUserId: text('requested_by_user_id'),
+    status: text('status').notNull(), // 'queued' | 'running' | 'complete' | 'failed'
+    optionsJson: text('options_json'),
+    archivePath: text('archive_path').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    errorMessage: text('error_message'),
+    createdAt: integer('created_at').notNull(),
+    startedAt: integer('started_at'),
+    completedAt: integer('completed_at'),
+    expiresAt: integer('expires_at').notNull(),
+  },
+  (table) => [
+    index('backup_jobs_status_idx').on(table.status),
+    index('backup_jobs_tenant_scope_idx').on(table.tenantId, table.scope),
+  ],
+);
+
+export type BackupJob = typeof backupJobs.$inferSelect;
+export type NewBackupJob = typeof backupJobs.$inferInsert;

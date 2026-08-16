@@ -599,3 +599,40 @@ export const pluginJobs = pgTable(
     index('plugin_jobs_plugin_dedupe_idx').on(table.pluginId, table.dedupeKey),
   ],
 );
+
+/**
+ * Platform-owned backup job records (RFC 0084, epic task 8.16). Tenant-scoped;
+`scope` distinguishes instance-level (`'instance'`) from user-level (`'user'`)
+backups. `status` tracks queued → running → complete/failed lifecycle; `optionsJson`
+holds CLI flags (e.g. `--exclude-plugin`), `archivePath` is relative to
+`data/backups/`, `sizeBytes` is the physical archive size, and `errorMessage`
+holds the failure reason if `status = 'failed'`. `expiresAt` bounds how long an
+archive file survives before the worker sweeps it. The worker claims jobs via
+`UPDATE ... WHERE status = 'queued' RETURNING` and marks `complete`/`failed`
+with timestamps; expired jobs' archives are removed from disk.
+ */
+export const backupJobs = pgTable(
+  'backup_jobs',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenant_id').notNull(),
+    scope: text('scope').notNull(), // 'instance' | 'user'
+    requestedByUserId: text('requested_by_user_id'),
+    status: text('status').notNull(), // 'queued' | 'running' | 'complete' | 'failed'
+    optionsJson: text('options_json'),
+    archivePath: text('archive_path').notNull(),
+    sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull(),
+    errorMessage: text('error_message'),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+    startedAt: bigint('started_at', { mode: 'number' }),
+    completedAt: bigint('completed_at', { mode: 'number' }),
+    expiresAt: bigint('expires_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [
+    index('backup_jobs_status_idx').on(table.status),
+    index('backup_jobs_tenant_scope_idx').on(table.tenantId, table.scope),
+  ],
+);
+
+export type BackupJob = typeof backupJobs.$inferSelect;
+export type NewBackupJob = typeof backupJobs.$inferInsert;

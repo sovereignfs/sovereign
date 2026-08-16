@@ -1,6 +1,12 @@
 # Workstream 0002 — Native mobile app release (whole-instance)
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In progress — legs 2–3 done (task 20.2 shipped at `0.57.0`;
+task 10.2, in-app text-size control, shipped August 2026 — see changelog
+0.2). Leg 1's spike ran as shared with workstream 0001 (its one residual
+item — `WKWebsiteDataStore` eviction under storage pressure — is tracked
+there). Leg 4 (task 20.1, `sovereign-mobile`) is substantially implemented
+but not yet signed off (real-device verification and Android back-navigation
+reliability still open); leg 5 (task 20.4) not started\
 **Date:** July 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -313,7 +319,8 @@ same repository, subject to the usual per-repo leg ordering.
 
 ## Changelog
 
-| Version | Date        | Change                                              |
-| ------- | ----------- | --------------------------------------------------- |
-| 0.1     | July 2026   | Initial draft                                       |
-| 0.2     | August 2026 | Leg 3 (task 10.2, in-app text-size control) shipped |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | July 2026   | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 0.2     | August 2026 | Leg 3 (task 10.2, in-app text-size control) shipped                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 0.3     | August 2026 | Status correction: header still read 📋 Planned after legs 2–3 had shipped (task 20.2 at `0.57.0`; task 10.2 per entry 0.2). Leg 1's spike ran as shared with workstream 0001 (research 0008); leg 4 (task 20.1) is substantially implemented in `sovereign-mobile` but not yet signed off (real-device verification and Android back-navigation reliability still open); leg 5 (task 20.4) not started — store accounts and physical devices still required |

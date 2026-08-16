@@ -7,8 +7,10 @@
 .scrim {
   position: fixed;
   inset: 0;
-  /* When the shell declares --sv-shell-footer-height (mobile nav bar), stop the
-     scrim above the footer so the panel never hides behind it. */
+  /* When --sv-shell-footer-height is set (mobile nav bar — by the platform
+     shell, or by a self-rendered MobileFooter via usePublishShellChromeHeight
+     for a shellConfig.mobileFooter: false plugin), stop the scrim above the
+     footer so the panel never hides behind it. */
   bottom: var(--sv-shell-footer-height, 0);
   z-index: 100;
   display: flex;

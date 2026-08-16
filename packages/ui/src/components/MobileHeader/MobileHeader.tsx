@@ -1,4 +1,7 @@
-import type { HTMLAttributes, ReactNode } from 'react';
+'use client';
+
+import { useRef, type HTMLAttributes, type ReactNode } from 'react';
+import { usePublishShellChromeHeight } from '../../hooks/usePublishShellChromeHeight';
 import styles from './MobileHeader.module.css';
 
 export interface MobileHeaderProps extends HTMLAttributes<HTMLDivElement> {
@@ -51,6 +54,13 @@ function DefaultLogo() {
  * consumer's responsibility, matching the reference implementation in the
  * runtime shell). See RFC 0088 for the immutable/overridable boundary this
  * enforces.
+ *
+ * Self-measures its own rendered height and publishes it as
+ * `--sv-shell-header-height` on the shell root — see
+ * `usePublishShellChromeHeight`'s own doc comment for why this exists (it's
+ * what makes a self-rendered header, the `shellConfig.mobileHeader: false`
+ * pattern, correctly position `Dialog`'s inset and any other consumer of
+ * that variable instead of being overlapped by it).
  */
 export function MobileHeader({
   logo,
@@ -60,10 +70,13 @@ export function MobileHeader({
   className,
   ...rest
 }: MobileHeaderProps) {
+  const headerRef = useRef<HTMLDivElement>(null);
+  usePublishShellChromeHeight(headerRef, '--sv-shell-header-height');
+
   const cls = [styles.header, className].filter(Boolean).join(' ');
 
   return (
-    <div className={cls} {...rest}>
+    <div className={cls} {...rest} ref={headerRef}>
       <div className={styles.brandGroup}>
         {logo ?? <DefaultLogo />}
         {title && <span className={styles.title}>{title}</span>}

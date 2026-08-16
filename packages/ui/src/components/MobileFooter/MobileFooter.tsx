@@ -1,5 +1,8 @@
-import type { HTMLAttributes, ReactNode } from 'react';
+'use client';
+
+import { useRef, type HTMLAttributes, type ReactNode } from 'react';
 import { Icon } from '../Icon/Icon';
+import { usePublishShellChromeHeight } from '../../hooks/usePublishShellChromeHeight';
 import styles from './MobileFooter.module.css';
 
 export interface FooterIcon {
@@ -60,6 +63,13 @@ function FooterNavItem({ icon, label, href, onClick, active }: FooterIcon) {
  * Presentational only — no data fetching; the consumer owns the
  * drawer/overlay `onOpenApps` opens. See RFC 0088 for the
  * immutable/overridable boundary this enforces.
+ *
+ * Self-measures its own rendered height and publishes it as
+ * `--sv-shell-footer-height` on the shell root — see
+ * `usePublishShellChromeHeight`'s own doc comment for why this exists (it's
+ * what makes a self-rendered footer, the `shellConfig.mobileFooter: false`
+ * pattern, correctly clear `Sheet`/`Drawer`/`Dialog` instead of being
+ * overlapped by them).
  */
 export function MobileFooter({
   onOpenApps,
@@ -77,6 +87,9 @@ export function MobileFooter({
     );
   }
 
+  const navRef = useRef<HTMLElement>(null);
+  usePublishShellChromeHeight(navRef, '--sv-shell-footer-height');
+
   const cls = [styles.footer, className].filter(Boolean).join(' ');
   const launcherClassName = [
     styles.navItem,
@@ -87,7 +100,7 @@ export function MobileFooter({
     .join(' ');
 
   return (
-    <nav {...rest} className={cls} aria-label="App navigation">
+    <nav {...rest} ref={navRef} className={cls} aria-label="App navigation">
       {leftIcons.map((item) => (
         <FooterNavItem key={item.label} {...item} />
       ))}

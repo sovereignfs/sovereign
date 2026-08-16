@@ -687,3 +687,81 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   `sovereign-shopper`) manage their own layout and don't use
   `PageContainer` at all. Full detail: `docs/design-system.md`'s "Page
   layout" section.
+- **A `position: sticky` element with no compositing layer of its own can go
+  stale/blank for a stretch of frames during a fast scroll on iOS Safari**,
+  instead of repainting at its stuck position — a WebKit momentum-scroll
+  re-tiling quirk, not a stacking-order or z-index bug (`overflow: hidden`
+  alone does not fix it: that clips the element's own painted content but
+  doesn't stop a stale raster tile from the scrolling ancestor showing
+  through underneath it for a frame). Fix: `transform: translateZ(0)` on the
+  sticky element, promoting it to its own compositing layer rasterized
+  independently of the scroller's tile grid. This is a generic CSS gotcha,
+  not specific to any one plugin — apply it to **any** `position: sticky`
+  element that lives inside a container real users will fast-scroll on a
+  touch device (a sticky list/section header, a sticky bottom action bar, a
+  sticky detail-pane header). Skip it on `position: sticky` elements that are
+  desktop/pointer-only (e.g. the runtime shell's own desktop sidebar,
+  `shell.module.css`'s `.sidebar`) — the bug is a touch-momentum artifact,
+  and an unnecessary compositing layer has its own cost (a new stacking
+  context, extra GPU memory). Not reliably reproducible in this repo's own
+  Chromium-based browser-preview tooling — confirming it requires a real
+  iOS Safari session (device or Simulator) with a genuinely fast flick, not
+  a scripted/synthetic gesture; a fix's correctness can only be verified by
+  confirming the CSS rule itself is live (`getComputedStyle` resolves the
+  `transform`), not by reproducing the underlying flash in this tooling.
+  Found live (`sovereign-tasks`, via `ffmpeg` frame-by-frame analysis of a
+  user-supplied screen recording, after several rounds of synthetic-gesture
+  reproduction attempts failed) across four separate elements — a task row's
+  swipe-actions container, a sticky list header, a sticky task-detail header,
+  and a sticky bulk-action bar — then applied proactively at the platform
+  level to every other `position: sticky` element found to be at real risk
+  (mobile, inside scrolling content): `@sovereignfs/ui`'s `MobileHeader` and
+  `SystemBanner`, and the `account`/`console` platform plugins' own mobile
+  tab-strip headers. Since plugins outside this monorepo are not something
+  this codebase controls or can audit, the two shared-chrome cases
+  (`MobileHeader`, `SystemBanner`) matter most — fixing them once here
+  protects every plugin that renders them, present and future, without
+  requiring any plugin author to know this rule exists.
+- **A self-rendered `MobileHeader`/`MobileFooter` (`@sovereignfs/ui`, the
+  `shellConfig.mobileHeader`/`mobileFooter: false` pattern, RFC 0075/0088)
+  publishes its own measured height as `--sv-shell-header-height`/
+  `--sv-shell-footer-height` on `#sv-app-shell` automatically** — both
+  components call `usePublishShellChromeHeight` internally
+  (`packages/ui/src/hooks/usePublishShellChromeHeight.ts`) and need no
+  wiring from the consumer. Before this existed, only the _platform's own_
+  header/footer had its height accounted for — a plugin opting out to render
+  this chrome itself (a sanctioned pattern, not a workaround) had no way to
+  tell the shell what its real height was, and silently inherited the
+  shell's own `0px` override (`shell.module.css`'s
+  `data-mobile-header-hidden`/`data-mobile-footer-hidden`, which assumes "no
+  chrome at all," not "chrome the shell doesn't know the size of"). `Sheet`,
+  `Drawer`, and `Dialog` all size themselves against these two variables to
+  stop above/below the chrome instead of sliding underneath it; with the
+  variable stuck at `0px`, they extended full-height, and since the
+  header/footer's own `z-index` (101) beats an overlay's (100), the chrome
+  visibly covered the overlay's last ~60px. Reported live as "Drawer has
+  broken" / "task edit screen content not scrollable" (`sovereign-tasks` —
+  the Delete button and Apps-drawer bottom row were unreachable, not
+  actually a scroll bug) before being root-caused and fixed once here so
+  every current and future consumer of these two components gets it for
+  free. If you touch either component or these three overlays, preserve the
+  contract: the measured value must always win over the shell's own `0px`
+  collapse, and must be removed (not just left stale) on unmount so
+  navigating away restores the shell's own cascade. Do not hand-roll this
+  measurement in a plugin again — if `MobileHeader`/`MobileFooter` ever stop
+  covering a real layout, extend the shared hook, not the plugin.
+- **Prefer a synchronous `getBoundingClientRect()` read (in `useLayoutEffect`,
+  re-run on a `window` `resize` listener) over `ResizeObserver` for measuring
+  an already-rendered element's size.** In live testing, a freshly created
+  `ResizeObserver` never fired its callback even once for an already-mounted,
+  stably-sized, non-zero element — reproduced in both this repo's own
+  Chromium-based browser-preview tooling and a real WebKit iOS Simulator
+  session, cause not fully root-caused. This is not a universal claim that
+  `ResizeObserver` is broken — only that it has been observed to silently
+  fail in exactly this scenario in this codebase's own tooling, and a
+  `getBoundingClientRect()`-based measurement worked immediately and
+  reliably as a drop-in replacement both times it was tried. If a
+  `ResizeObserver`-based measurement isn't firing and the element is
+  provably rendered with a stable, non-zero size, don't spend time adding
+  more `ResizeObserver` debugging — switch to this pattern first.
+  `usePublishShellChromeHeight` (above) uses it.

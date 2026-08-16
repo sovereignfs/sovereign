@@ -48,6 +48,15 @@
     /* Breathing room between the strip's bottom border and the first content
        section — otherwise the section heading sits cramped against the line. */
     margin-bottom: var(--sv-space-4);
+    /* WebKit momentum-scroll re-tiling quirk: a position: sticky element with
+       no compositing layer of its own can go stale/blank for a stretch of
+       frames during a fast scroll on iOS Safari instead of repainting at its
+       stuck position. translateZ(0) promotes it to its own layer, rasterized
+       independently of the scroller's tile grid. See
+       docs/architecture-rules.md — found and fixed across three sticky
+       elements in sovereign-tasks, applied here proactively since this is
+       the same pattern (sticky, inside a mobile scroll container). */
+    transform: translateZ(0);
   }
 
   .tabs {

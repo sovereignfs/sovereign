@@ -3773,6 +3773,56 @@ export interface PluginJobRow {
   cancelledAt: number | null;
 }
 
+export interface BackupJobRow {
+  id: string;
+  tenantId: string;
+  scope: 'instance' | 'user';
+  requestedByUserId: string | null;
+  status: 'queued' | 'running' | 'complete' | 'failed';
+  optionsJson: string | null;
+  archivePath: string;
+  sizeBytes: number;
+  errorMessage: string | null;
+  createdAt: number;
+  startedAt: number | null;
+  completedAt: number | null;
+  expiresAt: number;
+}
+
+interface RawBackupJobRow {
+  id: string;
+  tenantId: string;
+  scope: string;
+  requestedByUserId: string | null;
+  status: string;
+  optionsJson: string | null;
+  archivePath: string;
+  sizeBytes: number | string;
+  errorMessage: string | null;
+  createdAt: number | string;
+  startedAt: number | string | null;
+  completedAt: number | string | null;
+  expiresAt: number | string;
+}
+
+function coerceBackupJobRow(row: RawBackupJobRow): BackupJobRow {
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    scope: row.scope as 'instance' | 'user',
+    requestedByUserId: row.requestedByUserId,
+    status: row.status as 'queued' | 'running' | 'complete' | 'failed',
+    optionsJson: row.optionsJson,
+    archivePath: row.archivePath,
+    sizeBytes: Number(row.sizeBytes),
+    errorMessage: row.errorMessage,
+    createdAt: Number(row.createdAt),
+    startedAt: row.startedAt ? Number(row.startedAt) : null,
+    completedAt: row.completedAt ? Number(row.completedAt) : null,
+    expiresAt: Number(row.expiresAt),
+  };
+}
+
 interface RawPluginJobRow {
   id: string;
   tenantId: string;
@@ -4217,4 +4267,21 @@ export async function getJobHealthSummary(pdb: PlatformDb): Promise<JobHealthSum
     failedLast24h: coerceNum(failedRow?.count ?? 0),
     recentFailures: recent.map((r) => ({ ...r, updatedAt: coerceNum(r.updatedAt) })),
   };
+}
+
+export async function getBackupJob(
+  pdb: PlatformDb,
+  jobId: string,
+): Promise<BackupJobRow | undefined> {
+  const row = await dbGet<RawBackupJobRow>(
+    pdb,
+    sql`SELECT id, tenant_id AS "tenantId", scope, requested_by_user_id AS "requestedByUserId",
+               status, options_json AS "optionsJson", archive_path AS "archivePath",
+               size_bytes AS "sizeBytes", error_message AS "errorMessage",
+               created_at AS "createdAt", started_at AS "startedAt",
+               completed_at AS "completedAt", expires_at AS "expiresAt"
+        FROM backup_jobs
+        WHERE id = ${jobId}`,
+  );
+  return row ? coerceBackupJobRow(row) : undefined;
 }

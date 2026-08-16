@@ -434,14 +434,26 @@ describe('camera.photo', () => {
     vi.resetModules();
     const { camera } = await import('../device-client');
 
-    void camera.photo('camera');
+    const resultPromise = camera.photo('camera');
     const input = document.body.querySelector('input[type="file"]') as HTMLInputElement;
     expect(input.capture).toBe('environment');
 
-    // Unblock the pending promise so it doesn't leak a dangling handler into the next test.
+    // Await the pending promise (not just dispatch the event and move on) so
+    // the FileReader it triggers resolves inside this test's own async
+    // boundary, not as a dangling handler that fires after the test —  and
+    // Vitest's module/DOM cleanup — has already moved on. Previously fired
+    // fire-and-forget: harmless when it happened to resolve before the test
+    // runner tore anything down, but a real jsdom FileReader completion is
+    // scheduled via setImmediate, and losing that race intermittently threw
+    // an unhandled "Expected an Uint8Array" from jsdom's own FileReader
+    // internals deep in test-runner plumbing, unrelated to anything this
+    // test itself asserts — see test above for the identical
+    // File→dispatchEvent→await pattern that never had this problem.
     const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
     Object.defineProperty(input, 'files', { value: [file] });
     input.dispatchEvent(new Event('change'));
+
+    await resultPromise;
   });
 });
 

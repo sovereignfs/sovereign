@@ -10,13 +10,22 @@ beforeAll(() => {
 });
 
 describe('auth options', () => {
+  // Explicit 15s timeout: this is the first test in the file to import
+  // ../auth, so it pays the full cold-import cost of better-auth's own
+  // plugin graph (better-auth, @better-auth/passkey,
+  // @better-auth/oauth-provider, @sovereignfs/mailer, …) — measured at
+  // ~8.5s standalone (well past vitest's 5000ms default), with no single
+  // slow culprit, just cumulative cold-parse/transform weight across
+  // several sizable packages. Every other test in this file imports the
+  // same already-cached module and is effectively instant, so this timeout
+  // is scoped to just this one test, not the whole suite.
   it('disables the fresh-session gate (freshAge: 0) so /list-sessions never 403s on age', async () => {
     // Regression guard: better-auth's freshSessionMiddleware returns
     // 403 SESSION_NOT_FRESH for sessions older than freshAge (default 1 day),
     // which broke sdk.auth.listSessions for day-old sessions. Must stay 0.
     const { getAuthOptions } = await import('../auth');
     expect(getAuthOptions().session?.freshAge).toBe(0);
-  });
+  }, 15_000);
 });
 
 describe('password reset config', () => {

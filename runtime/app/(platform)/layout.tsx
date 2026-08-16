@@ -291,9 +291,10 @@ export default async function PlatformLayout({ children }: { children: ReactNode
                     <span className={styles.mobileBrandName}>{instanceName}</span>
                   </Link>
                 }
-                bell={<NotificationBell />}
+                bell={<NotificationBell key="bell" />}
                 avatarMenu={
                   <AccountMenu
+                    key="avatar-menu"
                     avatar={accountAvatar}
                     avatarImageClassName={styles.avatarImage}
                     triggerClassName={styles.avatar}

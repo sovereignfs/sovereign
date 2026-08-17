@@ -1,3 +1,15 @@
+import { existsSync, rmSync } from 'node:fs';
+import {
+  claimNextBackupJob as dbClaimNextBackupJob,
+  completeBackupJobFailure as dbCompleteBackupJobFailure,
+  completeBackupJobSuccess as dbCompleteBackupJobSuccess,
+  listExpiredBackupJobs as dbListExpiredBackupJobs,
+  reclaimStuckBackupJobs as dbReclaimStuckBackupJobs,
+  type BackupJobRow,
+} from '@sovereignfs/db';
+import { resolveBackupArchivePath } from './backup-download';
+import { notifyBackupCompletion } from './backup-notification';
+import { runInstanceBackup } from './backup-run';
 import { getPlatformDb } from './db';
 import { logger } from './logger';
 
@@ -5,33 +17,33 @@ import { logger } from './logger';
  * Minimal in-process backup job worker — the platform primitive for async
  * backup jobs (RFC 0084, epic task 8.16).
  *
- * One ~60s tick claims one queued job, runs it, marks complete/failed, and
- * sweeps expired archive files. Uses the same interval-tick +
- * conditional-UPDATE-claim idempotency pattern as `scheduler.ts`.
+ * One ~60s tick sweeps expired archive files, then claims and runs one
+ * queued job. Uses the same interval-tick + conditional-UPDATE-claim
+ * idempotency pattern as `scheduler.ts`/`jobs.ts`.
  *
- * Jobs survive a mid-job process restart: on next boot, any `running` jobs
- * are swept back to `failed` (not left stuck `running` forever).
+ * Unlike `plugin_jobs` (which deliberately never auto-reclaims a `running`
+ * job — see `jobs.ts`), a `running` backup job found at startup is always
+ * reclaimed back to `failed`: this worker runs at most one job at a time to
+ * completion within a single tick, so a `running` row at boot can only be
+ * orphaned by a prior process's crash/restart mid-job.
  *
- * The worker does not handle encryption/decryption or archive creation —
- * those are separate CLI commands (`sv backup` / `sv restore`) invoked as
- * subprocesses. The worker's job is orchestration: claim, run, record,
- * sweep.
+ * All persistence (and archive creation, `runBackup`) is behind
+ * `BackupWorkerDeps` — DI, not module mocking, same convention as
+ * `SchedulerDeps`/`JobWorkerDeps` in the sibling workers.
  */
 
-export interface BackupJobState {
-  id: string;
-  scope: 'instance' | 'user';
-  requestedByUserId?: string;
-  optionsJson?: string;
-  archivePath: string;
-  expiresAt: number;
-}
-
 export interface BackupWorkerDeps {
-  getPlatformDb: () => Promise<import('@sovereignfs/db').PlatformDb>;
+  /** Epoch seconds (matches `backup_jobs`' columns — NOT milliseconds). */
   now: () => number;
-  runBackup: (job: BackupJobState) => Promise<{ sizeBytes: number }>;
-  runRestore: (job: BackupJobState) => Promise<void>;
+  claimNextBackupJob: (now: number) => Promise<BackupJobRow | undefined>;
+  completeBackupJobSuccess: (
+    jobId: string,
+    result: { archivePath: string; sizeBytes: number },
+  ) => Promise<void>;
+  completeBackupJobFailure: (jobId: string, errorMessage: string) => Promise<void>;
+  listExpiredBackupJobs: (now: number) => Promise<BackupJobRow[]>;
+  reclaimStuckBackupJobs: (errorMessage: string) => Promise<number>;
+  runBackup: (job: BackupJobRow) => Promise<{ archivePath: string; sizeBytes: number }>;
 }
 
 const TICK_MS = 60_000;
@@ -43,37 +55,99 @@ export function backupWorkerDisabled(): boolean {
   return v === '1' || v === 'true';
 }
 
-/** Sweep expired archive files and mark their jobs as failed. */
-async function sweepExpiredJobs(
-  _pdb: import('@sovereignfs/db').PlatformDb,
-  _now: number,
-): Promise<void> {
-  // TODO: Implement sweep using dbGet/dbRun once the API is settled
-  // For now, this is a placeholder
-  logger.info('backup-worker: sweep expired jobs not yet implemented');
-}
-
-/** Claim one queued job atomically and run it. */
-async function claimAndRunJob(
-  _pdb: import('@sovereignfs/db').PlatformDb,
-  _deps: BackupWorkerDeps,
-): Promise<void> {
-  // TODO: Implement claim using dbGet/dbRun once the API is settled
-  // For now, this is a placeholder
-  logger.info('backup-worker: claim and run job not yet implemented');
+function errorMessageOf(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
 
 /**
- * Run one tick of the backup worker: sweep expired jobs, claim and run one
- * queued job. Exported for unit tests; production use goes through
+ * Delete the archive file for every `complete`/`failed` job past its
+ * `expiresAt`. Deliberately doesn't track "already swept" separately —
+ * `rmSync(..., { force: true })` on an already-deleted file is a no-op, so
+ * re-selecting the same old rows on a later tick is harmless, just a wasted
+ * `existsSync` check.
+ */
+export async function sweepExpiredJobs(deps: BackupWorkerDeps, now: number): Promise<void> {
+  const expired = await deps.listExpiredBackupJobs(now);
+  for (const job of expired) {
+    const resolved = resolveBackupArchivePath(job.archivePath);
+    if (!resolved) {
+      logger.error('backup-worker: refusing to sweep an archive path outside backupsDir()', {
+        jobId: job.id,
+        archivePath: job.archivePath,
+      });
+      continue;
+    }
+    if (existsSync(resolved)) {
+      rmSync(resolved, { force: true });
+      logger.info('backup-worker: swept expired archive', { jobId: job.id });
+    }
+  }
+}
+
+/** Claim one queued job atomically and run it to completion. */
+export async function claimAndRunJob(deps: BackupWorkerDeps): Promise<void> {
+  const job = await deps.claimNextBackupJob(deps.now());
+  if (!job) return;
+
+  try {
+    const result = await deps.runBackup(job);
+    await deps.completeBackupJobSuccess(job.id, result);
+    await notifyBackupCompletion({ jobId: job.id, scope: job.scope, status: 'complete' });
+  } catch (err) {
+    const message = errorMessageOf(err);
+    logger.error('backup-worker: job failed', { jobId: job.id, scope: job.scope, err: message });
+    await deps.completeBackupJobFailure(job.id, message);
+    await notifyBackupCompletion({
+      jobId: job.id,
+      scope: job.scope,
+      status: 'failed',
+      errorMessage: message,
+    });
+  }
+}
+
+/**
+ * Run one tick of the backup worker: sweep expired jobs, then claim and run
+ * one queued job. Exported for unit tests; production use goes through
  * `startBackupWorker`'s interval.
  */
 export async function backupWorkerTickOnce(deps: BackupWorkerDeps): Promise<void> {
-  const pdb = await deps.getPlatformDb();
   const now = deps.now();
+  await sweepExpiredJobs(deps, now);
+  await claimAndRunJob(deps);
+}
 
-  await sweepExpiredJobs(pdb, now);
-  await claimAndRunJob(pdb, deps);
+/** One-time startup sweep — reclaims any job left `running` by a prior process. */
+async function reclaimStuckJobsOnBoot(deps: BackupWorkerDeps): Promise<void> {
+  try {
+    const count = await deps.reclaimStuckBackupJobs(
+      'Backup worker restarted while this job was running.',
+    );
+    if (count > 0) {
+      logger.warn(
+        `backup-worker: reclaimed ${String(count)} job(s) stuck "running" from a prior process`,
+      );
+    }
+  } catch (err) {
+    logger.error('backup-worker: failed to reclaim stuck jobs on boot', {
+      err: errorMessageOf(err),
+    });
+  }
+}
+
+function productionDeps(): BackupWorkerDeps {
+  return {
+    now: () => Math.floor(Date.now() / 1000),
+    claimNextBackupJob: async (now) => dbClaimNextBackupJob(await getPlatformDb(), now),
+    completeBackupJobSuccess: async (jobId, result) =>
+      dbCompleteBackupJobSuccess(await getPlatformDb(), jobId, result),
+    completeBackupJobFailure: async (jobId, errorMessage) =>
+      dbCompleteBackupJobFailure(await getPlatformDb(), jobId, errorMessage),
+    listExpiredBackupJobs: async (now) => dbListExpiredBackupJobs(await getPlatformDb(), now),
+    reclaimStuckBackupJobs: async (errorMessage) =>
+      dbReclaimStuckBackupJobs(await getPlatformDb(), errorMessage),
+    runBackup: runInstanceBackup,
+  };
 }
 
 /**
@@ -81,18 +155,7 @@ export async function backupWorkerTickOnce(deps: BackupWorkerDeps): Promise<void
  * at server startup. No-ops when disabled via env var.
  */
 export function startBackupWorker(
-  deps: BackupWorkerDeps = {
-    getPlatformDb,
-    now: Date.now,
-    runBackup: async () => {
-      // Placeholder — actual implementation will be wired in a follow-up
-      throw new Error('Backup worker not fully implemented');
-    },
-    runRestore: async () => {
-      // Placeholder — actual implementation will be wired in a follow-up
-      throw new Error('Backup worker not fully implemented');
-    },
-  },
+  deps: BackupWorkerDeps = productionDeps(),
   tickMs: number = TICK_MS,
 ): void {
   if (timer) return;
@@ -103,13 +166,15 @@ export function startBackupWorker(
 
   logger.info('backup-worker: started');
 
+  void reclaimStuckJobsOnBoot(deps);
+
   timer = setInterval(() => {
     void backupWorkerTickOnce(deps);
   }, tickMs);
   timer.unref();
 }
 
-/** Stop the tick loop (SIGTERM). In-flight jobs finish on their own. */
+/** Stop the tick loop (SIGTERM). An in-flight job finishes on its own. */
 export function stopBackupWorker(): void {
   if (timer) {
     clearInterval(timer);

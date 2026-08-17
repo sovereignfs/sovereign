@@ -48,10 +48,6 @@ export function decrypt(ciphertextBase64: string, passphrase: string): Buffer {
   const ciphertext = combined.subarray(SALT_LENGTH + IV_LENGTH, combined.length - TAG_LENGTH);
   const authTag = combined.subarray(combined.length - TAG_LENGTH);
 
-  if (ciphertext.length === 0) {
-    throw new Error('Invalid ciphertext: empty');
-  }
-
   const key = deriveKey(passphrase, salt);
   const decipher = createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(authTag);

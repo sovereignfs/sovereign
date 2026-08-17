@@ -220,6 +220,11 @@ services:
       # Shared with the auth service — both resolve relative SQLite paths
       # against /app (the cwd), so both DBs and avatars land in this volume.
       - sovereign_data:/app/data
+      # Same host ./backups dir the tools service below writes archives into
+      # (RFC 0084, epic task 8.16) — the backup-jobs download route reads
+      # from here. Read-only: runtime only ever serves archives, it never
+      # produces them (only `tools`/`sv backup` does).
+      - ./backups:/app/backups:ro
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/api/health']
       interval: 30s

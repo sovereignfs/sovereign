@@ -11,7 +11,8 @@
  * 5. Initialise the notification broker (RFC 0034).
  * 6. Start the minimal plugin scheduler (RFC 0046 Phase 1).
  * 7. Start the plugin job worker (RFC 0046).
- * 8. Initialise the realtime event broker (RFC 0045).
+ * 8. Start the backup job worker (RFC 0084).
+ * 9. Initialise the realtime event broker (RFC 0045).
  *
  * (There used to be a step here that eagerly created a `plugin_status` row
  * for every non-chrome plugin on first boot — removed 2026-07-19, see
@@ -87,6 +88,12 @@ export async function register(): Promise<void> {
     const { startJobWorker, stopJobWorker } = await import('./src/jobs');
     startJobWorker();
 
+    // Backup job worker (RFC 0084, epic task 8.16) — claims and runs queued
+    // backup_jobs rows, and sweeps expired archives. No-op (well, still
+    // reclaims/sweeps) when nothing has enqueued a job yet.
+    const { startBackupWorker, stopBackupWorker } = await import('./src/backup-worker');
+    startBackupWorker();
+
     // Realtime event broker (RFC 0045) — independent of the notification
     // broker above (separate env var, separate keyspace); see
     // event-broker.ts's doc comment for why. Unlike the notification broker,
@@ -118,6 +125,7 @@ export async function register(): Promise<void> {
     process.on('SIGTERM', () => {
       stopScheduler();
       stopJobWorker();
+      stopBackupWorker();
       void closeBroker();
       void closeEventBroker();
     });

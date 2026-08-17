@@ -570,6 +570,40 @@ pure platform primitive; nothing user-facing ships in this task.
   is required separately.
 - Expired jobs' archive files are actually removed from disk by the sweep.
 
+**Progress note (in progress, not yet complete — kept at 📋):** the schema,
+worker orchestration (claim/run/mark/sweep, boot-time reclaim of orphaned
+`running` jobs), encryption helper, and download route all exist and are
+tested — the encryption helper and the claim/complete/sweep DB primitives
+against a live sqld instance, the worker's orchestration logic against
+injected fakes. Two deliverables are still genuinely incomplete, not just
+untested:
+
+- **Instance-scope jobs cannot succeed in the documented production Docker
+  deployment yet.** `runInstanceBackup` (`runtime/src/backup-run.ts`) spawns
+  `pnpm sv backup` as designed, but the `runtime` service's production image
+  has no `bin/`/`scripts/`/`tsx` to spawn at all (only the separate, on-demand
+  `tools` image does) — see `docs/architecture-rules.md`'s new entry for the
+  full account. A claimed job fails cleanly with an actionable error in this
+  topology today; none actually succeed until this is resolved. Works
+  correctly in a native `pnpm dev` checkout, which is how the worker logic
+  itself was verified.
+- **Notification-on-completion is still a no-op stub**
+  (`runtime/src/backup-notification.ts`) — the call site is wired into the
+  worker's success/failure path, but the actual platform-level integration
+  point this task's deliverables call for was never implemented, only
+  scaffolded.
+
+User-scope jobs (`assembleExport()`) are correctly out of scope here per the
+RFC's own adoption path (task 8.18) — `runInstanceBackup` rejects a
+`scope: 'user'` job with a clear "not implemented yet" error rather than
+attempting a partial integration; there is no enqueue path at all yet for
+either scope (Console/Account UI is 8.17/8.18). Encryption is deliberately
+not wired into job execution: the requester's passphrase must never be
+persisted, and no mechanism yet carries it from wherever a job is enqueued
+through to whichever later tick actually claims and runs it — unresolved
+design work for whichever of 8.17/8.18 builds the first real enqueue path,
+not a coding gap in this task.
+
 ---
 
 #### 📋 8.17 — Console: instance backup & restore UI (owner/admin) (RFC 0084)

@@ -764,4 +764,41 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   `ResizeObserver`-based measurement isn't firing and the element is
   provably rendered with a stable, non-zero size, don't spend time adding
   more `ResizeObserver` debugging — switch to this pattern first.
+- **A signed-download route's token lives in its own `[token]` path segment,
+  never in `params` without a matching folder and never read off `params` at
+  all if the route was only ever given a `[jobId]`-shaped directory.** Found
+  in `runtime/app/api/backup-jobs/[jobId]/download/route.ts` (RFC 0084, epic
+  task 8.16): the handler destructured `token` from `params`, but the route's
+  own directory only had a `[jobId]` segment — no `[token]` folder existed,
+  so `token` was always `undefined` and every request 404'd unconditionally,
+  even with a correctly-signed token, from the moment the route shipped.
+  Fixed by moving the file to `[jobId]/download/[token]/route.ts`, matching
+  the existing, working precedent this route was already supposed to mirror:
+  `runtime/app/api/storage/[token]/route.ts` (RFC 0044). When adding a new
+  signed-URL download route, copy that file's shape — dynamic segment per
+  path element the handler reads from `params`, verified by checking the
+  actual `app/api/**` directory tree, not just the doc comment describing it.
+- **The production `runner` Docker image cannot invoke `bin/sv.ts` (the `sv`
+  CLI) at all** — `Dockerfile`'s `runner` stage is a fresh minimal
+  `node:24-alpine` image containing only the traced Next.js standalone
+  output (`runtime/.next/standalone`), not `bin/`, `scripts/`, `tsx`, or a
+  full `node_modules`. Only the separate `tools` stage (`FROM builder`, the
+  full monorepo checkout) can run `pnpm sv <command>`, and `tools` is an
+  on-demand, `--rm` container (`docker-compose.prod.yml`'s `tools` profile),
+  not the persistent process any `runtime`-hosted background worker actually
+  runs in. Any future in-process worker that needs to shell out to `sv`
+  (`runtime/src/backup-run.ts`'s `runInstanceBackup`, RFC 0084 epic task
+  8.16, is the first case) will fail cleanly with `ENOENT` in this topology
+  today — a real, currently-unresolved gap, not a bug in the worker's own
+  claim/run/sweep logic, which is dialect- and topology-agnostic and works
+  correctly wherever the subprocess itself is reachable (verified against a
+  native `pnpm dev` checkout). Resolving it means either bundling the needed
+  CLI surface into `runner`, or moving that worker's execution into a
+  `tools`-capable process — a deliberate infrastructure decision, not
+  something to silently work around with a broader image. Separately, `sv
+backup`'s own Postgres path additionally requires `pg_dump`, not installed
+  in any current image (`apk add` never lists `postgresql-client`), and its
+  SQLite (sqld) path is explicitly unimplemented in the CLI itself
+  (`bin/sv.ts`'s own `backup`/`restore` error messages) — both pre-existing
+  CLI gaps, independent of the container-topology one above.
   `usePublishShellChromeHeight` (above) uses it.

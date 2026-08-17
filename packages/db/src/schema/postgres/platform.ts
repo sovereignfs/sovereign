@@ -602,14 +602,17 @@ export const pluginJobs = pgTable(
 
 /**
  * Platform-owned backup job records (RFC 0084, epic task 8.16). Tenant-scoped;
-`scope` distinguishes instance-level (`'instance'`) from user-level (`'user'`)
-backups. `status` tracks queued → running → complete/failed lifecycle; `optionsJson`
-holds CLI flags (e.g. `--exclude-plugin`), `archivePath` is relative to
-`data/backups/`, `sizeBytes` is the physical archive size, and `errorMessage`
-holds the failure reason if `status = 'failed'`. `expiresAt` bounds how long an
-archive file survives before the worker sweeps it. The worker claims jobs via
-`UPDATE ... WHERE status = 'queued' RETURNING` and marks `complete`/`failed`
-with timestamps; expired jobs' archives are removed from disk.
+ * `scope` distinguishes instance-level (`'instance'`) from user-level (`'user'`)
+ * backups. `status` tracks queued → running → complete/failed lifecycle;
+ * `optionsJson` holds CLI flags (e.g. `--exclude-plugin`); `archivePath` is the
+ * absolute filesystem path to the archive (matches `bin/helpers.ts`'s
+ * `<workspace root>/backups/sovereign-backup-...` — deliberately not under
+ * `data/`, which is the SQLite/avatar volume, not the backups one); `sizeBytes`
+ * is the physical archive size; `errorMessage` holds the failure reason if
+ * `status = 'failed'`. `expiresAt` bounds how long an archive file survives
+ * before the worker sweeps it. The worker claims jobs via
+ * `UPDATE ... WHERE status = 'queued' RETURNING` and marks `complete`/`failed`
+ * with timestamps; expired jobs' archives are removed from disk.
  */
 export const backupJobs = pgTable(
   'backup_jobs',

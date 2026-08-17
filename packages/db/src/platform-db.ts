@@ -4269,19 +4269,163 @@ export async function getJobHealthSummary(pdb: PlatformDb): Promise<JobHealthSum
   };
 }
 
+const BACKUP_JOB_COLUMNS_SQL = `id, tenant_id AS "tenantId", scope, requested_by_user_id AS "requestedByUserId",
+  status, options_json AS "optionsJson", archive_path AS "archivePath", size_bytes AS "sizeBytes",
+  error_message AS "errorMessage", created_at AS "createdAt", started_at AS "startedAt",
+  completed_at AS "completedAt", expires_at AS "expiresAt"`;
+
+const BACKUP_JOB_SELECT = sql.raw(`SELECT ${BACKUP_JOB_COLUMNS_SQL} FROM backup_jobs`);
+const BACKUP_JOB_RETURNING = sql.raw(`RETURNING ${BACKUP_JOB_COLUMNS_SQL}`);
+
+const DEFAULT_BACKUP_JOB_TTL_SECONDS = 48 * 60 * 60;
+
 export async function getBackupJob(
   pdb: PlatformDb,
   jobId: string,
 ): Promise<BackupJobRow | undefined> {
+  const row = await dbGet<RawBackupJobRow>(pdb, sql`${BACKUP_JOB_SELECT} WHERE id = ${jobId}`);
+  return row ? coerceBackupJobRow(row) : undefined;
+}
+
+export interface EnqueueBackupJobInput {
+  id: string;
+  tenantId: string;
+  scope: 'instance' | 'user';
+  requestedByUserId?: string | null;
+  /** Absolute filesystem path the archive will be written to once the job runs. */
+  archivePath: string;
+  optionsJson?: string | null;
+  expiresInSeconds?: number;
+}
+
+/**
+ * Queue a backup job (RFC 0084, epic task 8.16). `archivePath` is decided by
+ * the caller up front (deterministic from `id`, e.g.
+ * `backupArchivePathForJob(id)`) rather than left null until the job runs, so
+ * the row is always a complete, valid record — `archive_path` is `NOT NULL`
+ * in the schema and nothing currently distinguishes "not started yet" from
+ * "ran but produced no path".
+ */
+export async function enqueueBackupJob(
+  pdb: PlatformDb,
+  input: EnqueueBackupJobInput,
+): Promise<BackupJobRow> {
+  const now = Math.floor(Date.now() / 1000);
+  const expiresAt = now + (input.expiresInSeconds ?? DEFAULT_BACKUP_JOB_TTL_SECONDS);
   const row = await dbGet<RawBackupJobRow>(
     pdb,
-    sql`SELECT id, tenant_id AS "tenantId", scope, requested_by_user_id AS "requestedByUserId",
-               status, options_json AS "optionsJson", archive_path AS "archivePath",
-               size_bytes AS "sizeBytes", error_message AS "errorMessage",
-               created_at AS "createdAt", started_at AS "startedAt",
-               completed_at AS "completedAt", expires_at AS "expiresAt"
-        FROM backup_jobs
-        WHERE id = ${jobId}`,
+    sql`INSERT INTO backup_jobs
+          (id, tenant_id, scope, requested_by_user_id, status, options_json,
+           archive_path, size_bytes, created_at, expires_at)
+        VALUES (${input.id}, ${input.tenantId}, ${input.scope}, ${input.requestedByUserId ?? null},
+                'queued', ${input.optionsJson ?? null}, ${input.archivePath}, 0, ${now}, ${expiresAt})
+        ${BACKUP_JOB_RETURNING}`,
+  );
+  if (!row) throw new Error('Failed to enqueue backup job.');
+  return coerceBackupJobRow(row);
+}
+
+/**
+ * Atomically claim the oldest queued backup job and transition it to
+ * `running`. Multi-node safe on Postgres via `FOR UPDATE SKIP LOCKED`
+ * (mirrors `claimNextJob`'s identical reasoning above); SQLite deployments
+ * run single-node, where the simpler `WHERE id = (SELECT ...)` form is safe
+ * without row locking.
+ */
+export async function claimNextBackupJob(
+  pdb: PlatformDb,
+  now: number,
+): Promise<BackupJobRow | undefined> {
+  if (pdb.dialect === 'sqlite') {
+    const row = await dbGet<RawBackupJobRow>(
+      pdb,
+      sql`UPDATE backup_jobs
+          SET status = 'running', started_at = ${now}
+          WHERE id = (
+            SELECT id FROM backup_jobs WHERE status = 'queued' ORDER BY created_at ASC LIMIT 1
+          )
+          ${BACKUP_JOB_RETURNING}`,
+    );
+    return row ? coerceBackupJobRow(row) : undefined;
+  }
+
+  const row = await dbGet<RawBackupJobRow>(
+    pdb,
+    sql`UPDATE backup_jobs
+        SET status = 'running', started_at = ${now}
+        WHERE id IN (
+          SELECT id FROM backup_jobs WHERE status = 'queued' ORDER BY created_at ASC LIMIT 1
+          FOR UPDATE SKIP LOCKED
+        )
+        ${BACKUP_JOB_RETURNING}`,
   );
   return row ? coerceBackupJobRow(row) : undefined;
+}
+
+/** Mark a claimed (`running`) backup job `complete`, recording the final archive size. */
+export async function completeBackupJobSuccess(
+  pdb: PlatformDb,
+  jobId: string,
+  result: { archivePath: string; sizeBytes: number },
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE backup_jobs
+        SET status = 'complete', archive_path = ${result.archivePath},
+            size_bytes = ${result.sizeBytes}, completed_at = ${now}
+        WHERE id = ${jobId} AND status = 'running'`,
+  );
+}
+
+/** Mark a claimed (`running`) backup job `failed`, recording why. Terminal — no retry. */
+export async function completeBackupJobFailure(
+  pdb: PlatformDb,
+  jobId: string,
+  errorMessage: string,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE backup_jobs
+        SET status = 'failed', error_message = ${errorMessage}, completed_at = ${now}
+        WHERE id = ${jobId} AND status = 'running'`,
+  );
+}
+
+/**
+ * Jobs whose archive has passed `expiresAt` and is due for the sweep to
+ * delete it from disk. Only `complete`/`failed` jobs are eligible — a
+ * `running` job never has an archive to clean up yet, and `queued` jobs
+ * haven't started their TTL clock in any meaningful sense.
+ */
+export async function listExpiredBackupJobs(pdb: PlatformDb, now: number): Promise<BackupJobRow[]> {
+  const rows = await dbAll<RawBackupJobRow>(
+    pdb,
+    sql`${BACKUP_JOB_SELECT} WHERE status IN ('complete', 'failed') AND expires_at <= ${now}`,
+  );
+  return rows.map(coerceBackupJobRow);
+}
+
+/**
+ * Sweep every `running` backup job back to `failed` — called once at worker
+ * startup (unlike `plugin_jobs`, which deliberately never auto-reclaims, see
+ * `runtime/src/jobs.ts`). Safe because this worker only ever runs one job at
+ * a time to completion within a single tick before claiming the next, so any
+ * row still `running` when the process boots can only be orphaned by a prior
+ * process's crash/restart mid-job, never a job legitimately in flight.
+ */
+export async function reclaimStuckBackupJobs(
+  pdb: PlatformDb,
+  errorMessage: string,
+): Promise<number> {
+  const now = Math.floor(Date.now() / 1000);
+  const rows = await dbAll<{ id: string }>(
+    pdb,
+    sql`UPDATE backup_jobs
+        SET status = 'failed', error_message = ${errorMessage}, completed_at = ${now}
+        WHERE status = 'running'
+        RETURNING id`,
+  );
+  return rows.length;
 }

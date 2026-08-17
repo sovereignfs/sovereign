@@ -1333,6 +1333,7 @@ the release you are running.
 | 0.72.0          | Desktop native push scaffold — widen push device tokens to macOS/Windows, workstream 0010 leg 1 (RFC 0087 addendum, epic task 4.8)      |
 | 0.73.0          | Retire the `database.isolation`/`"shared"` manifest option — every plugin unconditionally isolated (epic task 8.28)                     |
 | 0.74.0          | Tiered plugin offline model — manifest `offline` enum + tier states, workstream 0008 leg 3 (Research 0012, epic tasks 3.36, 2.33)       |
+| 0.87.1          | Fix `/api/admin/{connections,data-grants,email-templates/preview}` authorizing off the spoofable `x-sovereign-user-role` header         |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

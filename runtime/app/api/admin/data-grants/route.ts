@@ -1,14 +1,21 @@
 import { NextResponse } from 'next/server';
 import { listAllConsentGrants } from '@sovereignfs/db';
-import { hasCapability } from '@/src/capabilities';
+import { checkAdminKey } from '@/src/admin-guard';
 import { getPlatformDb } from '@/src/db';
 
-/** List all active consent grants across all users (admin, RFC 0002). */
+/**
+ * List all active consent grants across all users (admin, RFC 0002).
+ *
+ * Authorized by the internal admin key (`checkAdminKey`), like every other
+ * `/api/admin/*` route. It must NOT authorize off `x-sovereign-user-role`: the
+ * middleware matcher deliberately excludes `/api/admin`, so on this path that
+ * header is never platform-injected and never stripped — a caller can forge it
+ * and it would be trusted outright, exposing every user's consent grants.
+ * Console reaches this route server-side with the admin key.
+ */
 export async function GET(request: Request): Promise<Response> {
-  const role = request.headers.get('x-sovereign-user-role') ?? '';
-  if (!hasCapability(role, 'user:view')) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  }
+  const denied = checkAdminKey(request);
+  if (denied) return denied;
   const grants = await listAllConsentGrants(await getPlatformDb());
   return NextResponse.json({ grants });
 }

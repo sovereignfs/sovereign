@@ -1,7 +1,7 @@
 import type { BackupJobRow } from '@sovereignfs/db';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  backupWorkerDisabled,
+  backupWorkerEnabled,
   backupWorkerTickOnce,
   claimAndRunJob,
   startBackupWorker,
@@ -49,7 +49,7 @@ function deps(overrides: Partial<BackupWorkerDeps> = {}): BackupWorkerDeps {
 afterEach(() => {
   stopBackupWorker();
   vi.useRealTimers();
-  delete process.env.SOVEREIGN_BACKUP_WORKER_DISABLED;
+  delete process.env.SOVEREIGN_BACKUP_WORKER_ENABLED;
 });
 
 describe('claimAndRunJob', () => {
@@ -148,31 +148,33 @@ describe('backupWorkerTickOnce', () => {
   });
 });
 
-describe('backupWorkerDisabled', () => {
-  it('is false by default', () => {
-    delete process.env.SOVEREIGN_BACKUP_WORKER_DISABLED;
-    expect(backupWorkerDisabled()).toBe(false);
+describe('backupWorkerEnabled', () => {
+  it('is false by default — opt-in, not opt-out', () => {
+    delete process.env.SOVEREIGN_BACKUP_WORKER_ENABLED;
+    expect(backupWorkerEnabled()).toBe(false);
   });
 
   it('is true for "1" or "true"', () => {
-    process.env.SOVEREIGN_BACKUP_WORKER_DISABLED = '1';
-    expect(backupWorkerDisabled()).toBe(true);
-    process.env.SOVEREIGN_BACKUP_WORKER_DISABLED = 'true';
-    expect(backupWorkerDisabled()).toBe(true);
+    process.env.SOVEREIGN_BACKUP_WORKER_ENABLED = '1';
+    expect(backupWorkerEnabled()).toBe(true);
+    process.env.SOVEREIGN_BACKUP_WORKER_ENABLED = 'true';
+    expect(backupWorkerEnabled()).toBe(true);
   });
 });
 
 describe('startBackupWorker / stopBackupWorker', () => {
-  it('does not start a tick loop when disabled', () => {
-    process.env.SOVEREIGN_BACKUP_WORKER_DISABLED = '1';
+  it('does not start a tick loop or touch the DB by default (not enabled)', async () => {
+    delete process.env.SOVEREIGN_BACKUP_WORKER_ENABLED;
     vi.useFakeTimers();
     const d = deps();
     startBackupWorker(d, 1000);
-    vi.advanceTimersByTime(5000);
+    await vi.advanceTimersByTimeAsync(5000);
     expect(d.claimNextBackupJob).not.toHaveBeenCalled();
+    expect(d.reclaimStuckBackupJobs).not.toHaveBeenCalled();
   });
 
-  it('reclaims stuck jobs once at startup', async () => {
+  it('reclaims stuck jobs once at startup when enabled', async () => {
+    process.env.SOVEREIGN_BACKUP_WORKER_ENABLED = '1';
     const d = deps({ reclaimStuckBackupJobs: vi.fn(async () => 2) });
     startBackupWorker(d, 60_000);
     // reclaimStuckJobsOnBoot is fire-and-forget — flush microtasks.
@@ -181,7 +183,8 @@ describe('startBackupWorker / stopBackupWorker', () => {
     expect(d.reclaimStuckBackupJobs).toHaveBeenCalledTimes(1);
   });
 
-  it('ticks on the configured interval and stops cleanly', async () => {
+  it('ticks on the configured interval and stops cleanly when enabled', async () => {
+    process.env.SOVEREIGN_BACKUP_WORKER_ENABLED = '1';
     vi.useFakeTimers();
     const d = deps();
     startBackupWorker(d, 1000);
@@ -196,6 +199,7 @@ describe('startBackupWorker / stopBackupWorker', () => {
   });
 
   it('calling start twice does not double the tick loop', async () => {
+    process.env.SOVEREIGN_BACKUP_WORKER_ENABLED = '1';
     vi.useFakeTimers();
     const d = deps();
     startBackupWorker(d, 1000);

@@ -89,8 +89,10 @@ export async function register(): Promise<void> {
     startJobWorker();
 
     // Backup job worker (RFC 0084, epic task 8.16) — claims and runs queued
-    // backup_jobs rows, and sweeps expired archives. No-op (well, still
-    // reclaims/sweeps) when nothing has enqueued a job yet.
+    // backup_jobs rows, and sweeps expired archives. Off by default (opt-in
+    // via SOVEREIGN_BACKUP_WORKER_ENABLED, see backup-worker.ts's doc
+    // comment) — there's no enqueue path yet, so ticking would just be a
+    // wasted DB query on every instance.
     const { startBackupWorker, stopBackupWorker } = await import('./src/backup-worker');
     startBackupWorker();
 

@@ -30,6 +30,16 @@ import { logger } from './logger';
  * All persistence (and archive creation, `runBackup`) is behind
  * `BackupWorkerDeps` — DI, not module mocking, same convention as
  * `SchedulerDeps`/`JobWorkerDeps` in the sibling workers.
+ *
+ * **Off by default** (`SOVEREIGN_BACKUP_WORKER_ENABLED`, opt-in — same
+ * pattern as `SOVEREIGN_DEV_MODE_ENABLED`), unlike the scheduler/job worker
+ * it mirrors: there is no enqueue path yet (epic tasks 8.17/8.18 haven't
+ * shipped, so nothing can ever create a `backup_jobs` row), and instance-scope
+ * jobs cannot succeed in the documented production Docker deployment yet
+ * (`backup-run.ts`'s doc comment). Ticking every 60s in that state — a DB
+ * round trip that will only ever find zero rows — is pure overhead on every
+ * existing self-hosted instance for a feature no one can reach. Flip it on
+ * only once 8.17/8.18 provide a real enqueue path.
  */
 
 export interface BackupWorkerDeps {
@@ -50,8 +60,9 @@ const TICK_MS = 60_000;
 
 let timer: NodeJS.Timeout | null = null;
 
-export function backupWorkerDisabled(): boolean {
-  const v = process.env.SOVEREIGN_BACKUP_WORKER_DISABLED;
+/** Opt-in — the feature does not run at all unless explicitly enabled. */
+export function backupWorkerEnabled(): boolean {
+  const v = process.env.SOVEREIGN_BACKUP_WORKER_ENABLED;
   return v === '1' || v === 'true';
 }
 
@@ -152,15 +163,17 @@ function productionDeps(): BackupWorkerDeps {
 
 /**
  * Start the backup worker tick loop. Called once from `runtime/instrumentation.ts`
- * at server startup. No-ops when disabled via env var.
+ * at server startup. No-ops (no timer, no DB call at all) unless
+ * `SOVEREIGN_BACKUP_WORKER_ENABLED` is explicitly set — see this file's doc
+ * comment for why the default is off.
  */
 export function startBackupWorker(
   deps: BackupWorkerDeps = productionDeps(),
   tickMs: number = TICK_MS,
 ): void {
   if (timer) return;
-  if (backupWorkerDisabled()) {
-    logger.info('backup-worker: disabled via SOVEREIGN_BACKUP_WORKER_DISABLED');
+  if (!backupWorkerEnabled()) {
+    logger.info('backup-worker: not started — set SOVEREIGN_BACKUP_WORKER_ENABLED=1 to enable');
     return;
   }
 

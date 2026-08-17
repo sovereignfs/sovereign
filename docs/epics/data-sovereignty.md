@@ -604,6 +604,13 @@ through to whichever later tick actually claims and runs it — unresolved
 design work for whichever of 8.17/8.18 builds the first real enqueue path,
 not a coding gap in this task.
 
+Given both gaps above, the worker is gated behind `SOVEREIGN_BACKUP_WORKER_ENABLED`
+(opt-in, off by default — see `runtime/src/backup-worker.ts`'s doc comment),
+unlike the scheduler/plugin-job-worker it mirrors. With no enqueue path yet,
+a running worker would only ever tick over an empty table — pure DB-query
+overhead on every existing self-hosted instance for a feature nobody can
+reach. Flip it on once 8.17/8.18 land.
+
 ---
 
 #### 📋 8.17 — Console: instance backup & restore UI (owner/admin) (RFC 0084)

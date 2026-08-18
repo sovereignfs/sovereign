@@ -1,6 +1,7 @@
 # RFC 0086 — Shared-store rate limiting for multi-instance deployments
 
-**Status:** Draft\
+**Status:** Partially implemented (task 1.19 shipped; task 2.29 paused before
+implementation — Edge-runtime/`ioredis` conflict, see Open questions below)\
 **Date:** August 2026\
 **Author:** kasunben\
 **Scope:** `apps/auth/src/auth.ts`, `runtime/src/rate-limit.ts`, `runtime/src/brokers/redis.ts` (pattern reused, not modified), `.env.example`, `docs/security.md`, `docs/self-hosting.md`\
@@ -192,6 +193,52 @@ its own shared-store need.
 
 ## Open questions
 
+- **Blocking, found during implementation (workstream 0017 leg 5):**
+  `runtime/middleware.ts` executes in Next.js's **Edge runtime**, not the
+  Node runtime — confirmed by the file's own existing comment at the
+  dev-mode check ("Edge runtime cannot write to the DB, so audit logging is
+  done via `console.log`"), and by the fact that `RedisBroker`
+  (`runtime/src/brokers/redis.ts`) is only ever instantiated from Node-runtime
+  route handlers (`runtime/app/api/admin/health/route.ts`), never from
+  middleware. `ioredis` depends on Node's `net`/`tls` built-ins for raw TCP
+  sockets (confirmed in its own source,
+  `ioredis/built/connectors/StandaloneConnector.js`), which the Edge runtime
+  does not provide. The "same lazy `require('ioredis')` pattern as
+  `RedisBroker`" proposed above therefore cannot work as written — that
+  pattern is only valid from a Node-runtime call site, and
+  `checkGlobalRateLimit`/`clientIp` are called directly from middleware. This
+  RFC did not anticipate the runtime split when originally drafted.
+
+  Three ways to close this gap, none free:
+  1. **Enable Next.js Node.js Middleware** (`experimental.nodeMiddleware` +
+     `export const runtime = 'nodejs'` on `middleware.ts`) so `ioredis` can
+     load. Correct long-term fix, but changes the runtime for the _entire_
+     middleware file, not just the rate limiter — every existing
+     Edge-specific accommodation (the DB-write avoidance, the
+     `console.log`-only dev-mode audit path, CSP/nonce handling) would need
+     re-verification under the new runtime. This is platform-wide blast
+     radius that deserves its own task and review, not a side effect of a
+     "small, low-risk" rate-limiting leg.
+  2. **A fetch/HTTP-based Redis client** (e.g. Upstash's REST protocol)
+     usable from Edge. Rejected as the default path: it's a different
+     protocol from plain `REDIS_URL`, and the self-hosted Redis this
+     platform already documents (the Docker Compose service backing
+     `NOTIFICATION_TRANSPORT=redis`) doesn't expose a REST endpoint —
+     adopting this would mean a second, incompatible Redis integration
+     story instead of the "reuse `REDIS_URL`, no second connection string"
+     goal stated above.
+  3. **Route the check through an internal Node-runtime call** from
+     middleware. Adds a network hop to nearly every request this limiter
+     covers (the whole middleware matcher), a real latency cost for what's
+     meant to be a lightweight flood-protection floor.
+
+  **Not resolved by this RFC.** Task 2.29 is paused pending a deliberate
+  choice among the above (most likely option 1, scoped as its own task with
+  its own review, given its blast radius) — see the epic task's correction
+  note in `docs/epics/platform-shell.md`. Task 1.19 (`apps/auth`) has no such
+  issue — better-auth's `storage: 'database'` runs in the Node runtime
+  already and is unaffected.
+
 - Exact atomicity mechanism for the Redis-backed general limiter (`INCR` +
   conditional `PEXPIRE` vs. a small Lua script) — a leg-detail item, not a
   design blocker; better-auth's own `secondary-storage` branch
@@ -214,10 +261,13 @@ scheduled:
 
 1. `apps/auth`'s `storage: 'database'` flip — smaller of the two, no new
    dependency, could ship alone ahead of the Redis-backed `runtime` change
-   if prioritized separately.
+   if prioritized separately. **Shipped** (workstream 0017 leg 4, task 1.19).
 2. `runtime`'s `SOVEREIGN_RATE_LIMIT_STORE` option — adds a new sibling
    module and one new env var; `.env.example`/`docs/self-hosting.md` need
-   the docs-parity updates the existing convention requires.
+   the docs-parity updates the existing convention requires. **Paused**
+   (workstream 0017 leg 5, task 2.29) — blocked on the Edge-runtime/`ioredis`
+   conflict above; needs a scoped follow-up decision before implementation
+   resumes.
 
 No SDK, manifest, or published-package surface changes. No breaking change
 to either limiter's default behavior — `memory` stays the default for
@@ -227,6 +277,7 @@ live.
 
 ## Changelog
 
-| Version | Date        | Change        |
-| ------- | ----------- | ------------- |
-| 0.1     | August 2026 | Initial draft |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                        |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                 |
+| 0.2     | August 2026 | Task 1.19 shipped (`apps/auth` `storage: 'database'`). Task 2.29 paused before implementation: `runtime/middleware.ts` runs in the Edge runtime, which cannot load `ioredis` (Node `net`/`tls`-dependent) — a design gap this RFC's original Redis proposal didn't account for. Added to Open questions; adoption path updated. No code shipped for 2.29 yet. |

@@ -2,9 +2,8 @@
 
 **Status:** ⏳ In progress — legs 1–2 done (task 1.8, RFC 0035 Phase 1
 infrastructure; task 1.9, Phase 2 capability opt-in); legs 3 (task 1.13) and
-4 (task 1.19) implemented locally, not yet committed; leg 5 (task 2.29)
-paused before implementation on a design gap found in RFC 0086 (see its
-correction note)\
+4 (task 1.19) implemented; leg 5 (task 2.29) paused before 
+implementation on a design gap found in RFC 0086 (see its correction note)\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -45,7 +44,7 @@ protection is correct under horizontal scaling.
       create/revoke/change is audited; export/import/delete flows through
       the existing portability hooks; platform-owner override is explicit,
       narrow, and audited.
-- [ ] `1.19` — `apps/auth`'s rate limiter uses `storage: 'database'`
+- [x] `1.19` — `apps/auth`'s rate limiter uses `storage: 'database'`
       instead of per-process memory; `docs/security.md`'s stale
       single-instance caveat is corrected.
 - [ ] `2.29` — the general per-IP limiter supports
@@ -219,11 +218,29 @@ Vitest suite (2320 passed) all green.
 design; the whole point is that the fix already exists in better-auth's own
 option surface.
 
+**Done.** Verified live against the real dev database rather than trusting
+the config flip alone: confirmed the `rateLimit` table auto-creates via
+`runAuthMigrations()`, then confirmed the actual bug this closes — two
+independent `betterAuth()` instances (simulating separate `apps/auth`
+processes) built from the same options shared rate-limit counters through
+the database, with a 4th sign-in attempt split across the two instances
+returning `429`.
+
 ### Leg 5 — Redis-backed rate-limit store, runtime
 
 **Epic tasks:** 2.29
 
-**Technical notes:**
+**Status: paused before implementation.** `runtime/middleware.ts` runs in
+Next.js's Edge runtime, which cannot load `ioredis` (it needs Node's
+`net`/`tls` built-ins) — so the "reuse `RedisBroker`'s lazy
+`require('ioredis')` pattern" plan below cannot work as written from
+`checkGlobalRateLimit`/`clientIp`'s actual call site in middleware. Full
+writeup: RFC 0086's "Open questions" section and task 2.29's own correction
+note in `docs/epics/platform-shell.md`. This was not caught until this leg's
+own implementation attempt — the original technical notes below are kept
+for reference but are no longer a validated plan.
+
+**Technical notes (original plan, now blocked — see status above):**
 
 - `SOVEREIGN_RATE_LIMIT_STORE` mirrors `NOTIFICATION_TRANSPORT`'s existing
   shape (`memory` default, `redis` opt-in) — reuse that pattern rather than
@@ -239,6 +256,11 @@ option surface.
 **Do not proceed if:** the startup failure on misconfiguration doesn't
 actually trigger in testing — a limiter that silently degrades to `memory`
 under a Redis outage or misconfiguration defeats this leg's entire purpose.
+**Also do not proceed** with any implementation until the Edge-runtime
+question above is resolved as its own deliberate, scoped decision — most
+likely candidate is enabling Next.js Node.js Middleware for the whole file,
+which has platform-wide blast radius and needs its own review, not a
+workaround folded quietly into this leg.
 
 ## Risks
 

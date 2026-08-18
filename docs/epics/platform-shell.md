@@ -1060,6 +1060,28 @@ Task 1.19 (the `apps/auth` side of the same RFC); either can ship first.
   (docs-parity test passes).
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` — all pass.
 
+> **Correction note (pre-implementation, workstream 0017 leg 5):** paused
+> before any code was written. `runtime/middleware.ts` runs in Next.js's
+> **Edge runtime**, not the Node runtime — its own existing comment at the
+> dev-mode check says as much ("Edge runtime cannot write to the DB, so audit
+> logging is done via `console.log`"), and `RedisBroker` is only ever
+> instantiated from Node-runtime route handlers, never from middleware.
+> `ioredis` requires Node's `net`/`tls` built-ins (confirmed in its own
+> source), which Edge doesn't provide — so the "lazy `require('ioredis')`
+> pattern" this task's deliverables describe cannot work from
+> `checkGlobalRateLimit`/`clientIp`'s actual call site in middleware. RFC
+> 0086 didn't anticipate this when drafted; see its "Open questions" section
+> for the three options considered (enable Next.js Node.js Middleware for the
+> whole file; an Edge-compatible fetch/REST Redis client, off the platform's
+> existing `REDIS_URL`-based pattern; or an internal Node-runtime hop with a
+> per-request latency cost) and why none is a drop-in fix. Most likely
+> resolution is enabling Node.js Middleware, but that's a platform-wide
+> runtime change for `middleware.ts` with its own blast radius — it needs to
+> be scoped and reviewed as its own task, not folded into this one under the
+> assumption (documented above, and no longer accurate) that this leg
+> "follows an existing pattern closely." Task 1.19 shipped unaffected — its
+> `storage: 'database'` runs entirely in the Node runtime already.
+
 ---
 
 #### ✅ 2.30 — Fully public plugins (RFC 0089)

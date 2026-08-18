@@ -2,7 +2,7 @@
 
 **Status:** ⏳ In progress — legs 1–2 done (task 1.8, RFC 0035 Phase 1
 infrastructure; task 1.9, Phase 2 capability opt-in); legs 3 (task 1.13) and
-4 (task 1.19) implemented; leg 5 (task 2.29) paused before 
+4 (task 1.19) implemented; leg 5 (task 2.29) paused before
 implementation on a design gap found in RFC 0086 (see its correction note)\
 **Date:** August 2026\
 **Author:** kasunben\

@@ -2108,6 +2108,152 @@ In this example, `com.acme.myapp:create-item` is granted to all users
 automatically; `com.acme.myapp:admin-panel` is not granted by default and the
 plugin must manage who receives it.
 
+### `roles` and `sdk.authz` — plugin-scoped roles and grants (RFC 0054)
+
+`capabilities` above answers "can this user do X in the plugin at all?".
+`roles` and `sdk.authz` answer the next question many serious plugins need:
+"can this user do X **on this specific resource**?" — a project owner vs.
+editor vs. viewer, a shared inbox's owner vs. agent, a billing profile's
+accountant vs. viewer. These are **plugin-domain roles**, not platform roles
+(`platform:owner`/`platform:admin`/`platform:auditor`/`platform:user`) — a
+`platform:user` may be a project owner in one plugin and a viewer in
+another, and a `platform:admin` does not automatically gain access to every
+plugin's private resources. Platform-role checks stay on
+`sdk.auth.hasCapability`; this section is entirely separate.
+
+**Manifest `roles` field** — declares vocabulary only. Declaring a role
+grants no one access:
+
+| Sub-field      | Type                       | Required | Description                                                                                                                          |
+| -------------- | -------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `description`  | string                     | no       | Human-readable description of what the role grants.                                                                                  |
+| `capabilities` | string[]                   | yes      | Local capability names this role bundles. Must already be declared in the manifest's `capabilities` object.                          |
+| `scope`        | `'plugin'` \| `'resource'` | yes      | `'plugin'` — applies to the whole plugin for a user. `'resource'` — applies to one plugin-owned resource (most plugin-domain roles). |
+
+```json
+"capabilities": {
+  "project-view": { "description": "View a project." },
+  "project-edit": { "description": "Edit a project." },
+  "project-manage-members": { "description": "Manage project members." }
+},
+"roles": {
+  "project-owner": {
+    "description": "Full control of a project.",
+    "capabilities": ["project-view", "project-edit", "project-manage-members"],
+    "scope": "resource"
+  },
+  "project-editor": {
+    "capabilities": ["project-view", "project-edit"],
+    "scope": "resource"
+  },
+  "project-viewer": {
+    "capabilities": ["project-view"],
+    "scope": "resource"
+  }
+}
+```
+
+Role names are namespaced the same way capabilities are:
+`<pluginId>:<roleName>` for display and audit.
+
+**Storage: plugin-owned, not a platform table.** Grants (who actually holds
+`project-owner` on which project) live in the plugin's own database tables —
+the platform only standardizes the check shape via `sdk.authz`, since it
+doesn't understand any plugin's resource model well enough to validate
+membership or last-owner rules safely. There is no platform grant registry
+to migrate to or read from.
+
+**`sdk.authz` — provider side.** Register one resolver per plugin (typically
+at the top of a route handler or server component that runs when the plugin
+loads) that answers every `hasGrant()`/`requireGrant()` call routed to it:
+
+```ts
+// server-side only
+import { sdk } from '@sovereignfs/sdk';
+
+await sdk.authz.provide(async (userId, check) => {
+  if (!check.resource) return false; // this plugin only has resource-scoped roles
+  return hasProjectRole(userId, check.resource.id, check.capability);
+});
+```
+
+`userId` is supplied by the platform from the current session — never a
+caller-suppliable argument — so a resolver cannot be tricked into checking
+grants "on behalf of" another user.
+
+**`sdk.authz` — consumer side.** A plugin only ever checks its own grants —
+there is no cross-plugin grant query, unlike `sdk.data.query()`:
+
+```ts
+if (
+  await sdk.authz.hasGrant({
+    capability: 'project-edit',
+    resource: { type: 'project', id: projectId },
+  })
+) {
+  // ...
+}
+
+// Or, to guard a route/action and throw instead:
+await sdk.authz.requireGrant({
+  capability: 'project-manage-members',
+  resource: { type: 'project', id: projectId },
+}); // throws GrantRequiredError if the check fails
+```
+
+**Fails closed.** With no resolver registered for the calling plugin (or no
+plugin/session context at all), `hasGrant()` returns `false` and
+`requireGrant()` throws `GrantRequiredError` — never a default-allow. A
+plugin that declares `roles` but never calls `sdk.authz.provide()` grants no
+one anything.
+
+**Session headers stay unaffected.** Resource-scoped grants are never
+injected into the global session capability header (unlike
+`capabilities`' `defaultGrant: 'all'`) — middleware has no plugin resource
+context to resolve them against, they can be numerous and change often, and
+routing decisions never depend on them. A grant check only ever happens
+inside the plugin's own server code, with the resource already in scope.
+
+**Assignment, revocation, and last-owner protection are plugin-owned.**
+Typical flow: a project owner (someone who already holds the
+`manage-members`-bundling role) opens a members panel, picks another
+Sovereign user via `sdk.directory`, and assigns them a role — the plugin
+writes the grant to its own table. Rules to follow:
+
+- Only a user who already holds the plugin's relevant "manage members"
+  capability may grant or revoke a resource-scoped role.
+- **Last-owner protection is required wherever lockout is possible** — e.g.
+  a project must always keep at least one owner; block removing/downgrading
+  the last one rather than leaving the resource unmanageable.
+- Log every grant/revoke/role-change/ownership-transfer via
+  `sdk.activity.log()` — these are audit-relevant events, not silent writes.
+- Grants may optionally expire (`expiresAt` on your own grant record).
+
+**Platform-owner override: no silent access.** A platform owner/admin must
+not be able to bypass a plugin's private resource permissions invisibly. If
+your plugin ever adds an emergency-access path, it must be: disabled by
+default (or gated by explicit instance policy), visible to the affected
+plugin/resource owner, require a stated reason, read-only by default, and
+audited like any other grant change. Most plugins need no override at all —
+build one only if your domain genuinely requires emergency access.
+
+**Export/import/delete flow through the existing portability hooks (RFC 0052) — no separate grant export path.** Include grants for exported
+resources in your `sdk.portability.provideExport()` section's `data`
+payload, alongside the resources they apply to. On import
+(`sdk.portability.provideImport()`), restore a grant only when the
+referenced user can be safely matched on the target instance (e.g. by
+email, or via `ctx.remapId` for resources exported from the same instance);
+otherwise keep it as inert metadata with a warning rather than guessing.
+Deleting a user should remove or revoke their grants in your
+`sdk.portability.provideDelete()` handler; deleting a plugin resource should
+remove its scoped grants as part of your normal resource-deletion code.
+
+**No Console/Account UI for this today.** The plugin that owns the resource
+is the right place for assignment UI — Console does not become a generic
+grant-management surface, and Account does not aggregate "resources shared
+with me" across plugins. Both may be added later once real plugins have
+proven the pattern.
+
 ### `notifications` — Notification Center (RFC 0015)
 
 Plugins can send in-app notifications to users by declaring the `notifications:send` permission

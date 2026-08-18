@@ -45,6 +45,21 @@ export class EntitlementRequiredError extends Error {
 }
 
 /**
+ * Thrown by `sdk.authz.requireGrant()` (RFC 0054) when the current user holds
+ * no plugin-scoped grant for the requested capability/resource — either no
+ * resolver is registered for the calling plugin, or the registered resolver
+ * returned `false`. `hasGrant()` returns `false` in the same situations
+ * instead of throwing; `requireGrant()` is the assert-and-throw convenience
+ * for route/action guards.
+ */
+export class GrantRequiredError extends Error {
+  constructor(message = 'A plugin-scoped grant is required to access this resource.') {
+    super(message);
+    this.name = 'GrantRequiredError';
+  }
+}
+
+/**
  * Thrown by `sdk.events.publish()` when a serialized event payload exceeds
  * the platform's size cap (RFC 0045 security requirement: "payload size is
  * capped"). Events have no durable storage to absorb an oversized payload,

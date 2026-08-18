@@ -78,6 +78,8 @@ import type {
   EmailSendResult,
   EnqueueJobInput,
   ExportResolver,
+  GrantCheck,
+  GrantResolver,
   ImportHandler,
   JobRef,
   PluginAvailability,
@@ -112,6 +114,7 @@ import type { EventEnvelope } from './event-broker';
 import { getDisabledPluginIds } from './plugin-status';
 import { getPortabilityPluginContext } from './portability/plugin-context';
 import { registerDeleter, registerExporter, registerImporter } from './portability/registry';
+import { getGrantResolver, registerGrantResolver } from './authz-registry';
 import { fanOutPushToUser } from './push';
 import { getBroker } from './notification-broker';
 import { getEventBroker } from './event-broker';
@@ -676,6 +679,16 @@ provideHost({
     },
     provideDelete(pluginId: string, handler: DeletionHandler): void {
       registerDeleter(pluginId, handler);
+    },
+  },
+  authz: {
+    provide(pluginId: string, resolver: GrantResolver): void {
+      registerGrantResolver(pluginId, resolver);
+    },
+    async hasGrant(pluginId: string, userId: string, check: GrantCheck): Promise<boolean> {
+      const resolver = getGrantResolver(pluginId);
+      if (!resolver) return false;
+      return resolver(userId, check);
     },
   },
   plugins: {

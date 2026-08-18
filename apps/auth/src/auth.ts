@@ -125,7 +125,10 @@ function buildOptions(): BetterAuthOptions {
     // consistency.
     rateLimit: {
       enabled: process.env.NODE_ENV !== 'test',
-      storage: 'memory',
+      // 'database' (not 'memory') so counters are shared across every
+      // apps/auth process/container — multi-instance deployments would
+      // otherwise get up to N× the intended attempt limit, silently.
+      storage: 'database',
     },
     user: {
       additionalFields: {

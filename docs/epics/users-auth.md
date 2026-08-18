@@ -858,7 +858,7 @@ open question.
 
 ---
 
-#### 📋 1.19 — Database-backed rate-limit storage for `apps/auth` (RFC 0086)
+#### ✅ 1.19 — Database-backed rate-limit storage for `apps/auth` (RFC 0086)
 
 **Goal:** Close the multi-instance gap in the auth server's brute-force/
 credential-stuffing protection — today's `storage: 'memory'` limiter
@@ -901,6 +901,24 @@ either can ship first.
   against a real multi-process setup, not just unit tests.
 - `docs/security.md` no longer describes rate limiting as single-instance-only.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` — all pass.
+
+**Correction note (post-implementation):** shipped exactly as scoped — a
+one-line `rateLimit.storage: 'memory'` → `'database'` flip in
+`apps/auth/src/auth.ts` plus the `docs/security.md` wording fix, no new
+schema or migration code (better-auth's own migrator picks up the `rateLimit`
+table automatically). Verified live against the real local dev database
+before committing: `runAuthMigrations()` creates the `rateLimit` table, and
+two independent `betterAuth()` instances built from the same options
+(simulating separate `apps/auth` processes) share rate-limit counters through
+it — a 4th sign-in attempt split across the two instances returned `429`.
+**Verification scope note:** this was run against SQLite (the local dev
+dialect) only, not Postgres — the checklist above asks for both dialects, but
+no Postgres environment was available in this session. The mechanism itself
+is dialect-agnostic (better-auth's migrator generates schema for whichever
+driver `getAuthOptions()` resolves to, the same path every other
+`user`/`session`/`account` table already goes through on both dialects), so
+this is a low-risk gap, not a known-broken path — but it hasn't been
+independently confirmed on Postgres.
 
 ---
 

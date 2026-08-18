@@ -121,9 +121,11 @@ the RFC 0060 adoption notes) — not something that broadens automatically.
   auth server enforces 3 sign-in attempts per 10 seconds per IP address and 3
   password-reset requests per 60 seconds per IP (via better-auth's built-in
   per-path rate limiter). Responses above the limit return `429 Too Many Requests`
-  with an `X-Retry-After` header. Rate limiting is stored in-memory per process
-  (sufficient for single-instance deployments); a shared secondary storage (e.g.
-  Redis) would be needed for multi-instance setups.
+  with an `X-Retry-After` header. Rate-limit counters are stored in the auth
+  database (better-auth's `rateLimit` table, populated by the same migrator
+  that runs on every startup), so they are shared across every `apps/auth`
+  process or container — a multi-instance deployment does not get a
+  multiplied effective attempt limit.
 - **Email verification is required by default** (`AUTH_REQUIRE_EMAIL_VERIFICATION=true`).
   A new account must click an emailed link before it can sign in; registration
   does not grant a session until then. Operators can disable this

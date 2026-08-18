@@ -15,6 +15,9 @@ const mockConfig = {
 const mockDataResolvers = new Map<string, (...args: unknown[]) => Promise<unknown[]>>();
 const mockExporters = new Map<string, unknown>();
 const mockImporters = new Map<string, unknown>();
+const mockGrantResolvers = new Map<string, unknown>();
+let mockGrantResult = false;
+const capturedGrantCalls: { pluginId: string; userId: string; check: unknown }[] = [];
 
 beforeAll(() => {
   provideHost({
@@ -68,6 +71,15 @@ beforeAll(() => {
       },
       provideDelete(_pluginId, _handler) {
         /* no-op */
+      },
+    },
+    authz: {
+      provide(pluginId, resolver) {
+        mockGrantResolvers.set(pluginId, resolver);
+      },
+      async hasGrant(pluginId, userId, check) {
+        capturedGrantCalls.push({ pluginId, userId, check });
+        return mockGrantResult;
       },
     },
     plugins: {
@@ -409,6 +421,70 @@ describe('sdk.tools context derivation (RFC 0047)', () => {
   });
 });
 
+describe('sdk.authz (RFC 0054)', () => {
+  it('provide() throws without a plugin route context', async () => {
+    vi.resetModules();
+    mockHeaders({});
+    const { authz } = await import('../authz');
+    await expect(authz.provide(async () => true)).rejects.toThrow(/plugin route context/);
+  });
+
+  it('provide() registers under the calling plugin id', async () => {
+    vi.resetModules();
+    mockHeaders({ 'x-sovereign-plugin-id': 'com.example.projects' });
+    const { authz } = await import('../authz');
+    const resolver = async () => true;
+    await authz.provide(resolver);
+    expect(mockGrantResolvers.get('com.example.projects')).toBe(resolver);
+  });
+
+  it('hasGrant() returns false with no plugin route context (no plugin-id header)', async () => {
+    vi.resetModules();
+    mockHeaders({ 'x-sovereign-user-id': 'u1' });
+    const { authz } = await import('../authz');
+    await expect(authz.hasGrant({ capability: 'project-edit' })).resolves.toBe(false);
+  });
+
+  it('hasGrant() returns false with no authenticated user (no user-id header)', async () => {
+    vi.resetModules();
+    mockHeaders({ 'x-sovereign-plugin-id': 'com.example.projects' });
+    const { authz } = await import('../authz');
+    await expect(authz.hasGrant({ capability: 'project-edit' })).resolves.toBe(false);
+  });
+
+  it('hasGrant() delegates pluginId/userId/check to the host, unchanged', async () => {
+    vi.resetModules();
+    capturedGrantCalls.length = 0;
+    mockGrantResult = true;
+    mockHeaders({ 'x-sovereign-plugin-id': 'com.example.projects', 'x-sovereign-user-id': 'u1' });
+    const { authz } = await import('../authz');
+    const check = { capability: 'project-edit', resource: { type: 'project', id: 'p1' } };
+    await expect(authz.hasGrant(check)).resolves.toBe(true);
+    expect(capturedGrantCalls).toEqual([{ pluginId: 'com.example.projects', userId: 'u1', check }]);
+    mockGrantResult = false;
+  });
+
+  it('requireGrant() throws GrantRequiredError when hasGrant resolves false', async () => {
+    vi.resetModules();
+    mockGrantResult = false;
+    mockHeaders({ 'x-sovereign-plugin-id': 'com.example.projects', 'x-sovereign-user-id': 'u1' });
+    const { authz } = await import('../authz');
+    const { GrantRequiredError } = await import('../errors');
+    await expect(authz.requireGrant({ capability: 'project-edit' })).rejects.toThrow(
+      GrantRequiredError,
+    );
+  });
+
+  it('requireGrant() resolves silently when hasGrant resolves true', async () => {
+    vi.resetModules();
+    mockGrantResult = true;
+    mockHeaders({ 'x-sovereign-plugin-id': 'com.example.projects', 'x-sovereign-user-id': 'u1' });
+    const { authz } = await import('../authz');
+    await expect(authz.requireGrant({ capability: 'project-edit' })).resolves.toBeUndefined();
+    mockGrantResult = false;
+  });
+});
+
 describe('sdk surface', () => {
   it('exposes the full v1 stable surface', () => {
     expect(typeof sdk.auth.getSession).toBe('function');
@@ -455,6 +531,12 @@ describe('sdk surface', () => {
   it('exposes the portability surface (RFC 0007)', () => {
     expect(typeof sdk.portability.provideExport).toBe('function');
     expect(typeof sdk.portability.provideImport).toBe('function');
+  });
+
+  it('exposes the authz surface (RFC 0054)', () => {
+    expect(typeof sdk.authz.provide).toBe('function');
+    expect(typeof sdk.authz.hasGrant).toBe('function');
+    expect(typeof sdk.authz.requireGrant).toBe('function');
   });
 
   it('exposes the plugins discovery surface (RFC 0051)', () => {

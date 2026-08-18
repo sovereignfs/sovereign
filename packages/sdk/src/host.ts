@@ -1,3 +1,4 @@
+import type { GrantCheck, GrantResolver } from './authz';
 import type { DataContractRef, DataContractResolver } from './data';
 import type { FieldTableMetadata } from './field-schema';
 import type { DeletionHandler, ExportResolver, ImportHandler } from './portability';
@@ -148,6 +149,15 @@ export interface SdkHost {
     provideImport(pluginId: string, handler: ImportHandler): void;
     /** Register a plugin's deletion handler (RFC 0033), keyed by `pluginId`. */
     provideDelete(pluginId: string, handler: DeletionHandler): void;
+  };
+  authz: {
+    /** Register a plugin's grant resolver (RFC 0054), keyed by `pluginId`. */
+    provide(pluginId: string, resolver: GrantResolver): void;
+    /**
+     * Check `check` for `userId` against the resolver registered for
+     * `pluginId`. `false` when no resolver is registered — fails closed.
+     */
+    hasGrant(pluginId: string, userId: string, check: GrantCheck): Promise<boolean>;
   };
   plugins: {
     /** Discover one installed plugin's status (RFC 0051), scoped to the given user. */

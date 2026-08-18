@@ -90,6 +90,14 @@ describe('sdk.jobs — header resolution', () => {
           /* no-op */
         },
       },
+      authz: {
+        provide() {
+          /* no-op */
+        },
+        async hasGrant() {
+          return false;
+        },
+      },
       plugins: {
         async get() {
           return null;

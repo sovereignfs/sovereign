@@ -560,7 +560,7 @@ Task 0.5.24 (RFC 0019 — test seeding infrastructure this extends)
 
 ---
 
-#### 📋 1.13 — Plugin-scoped roles and grants (RFC 0054)
+#### ✅ 1.13 — Plugin-scoped roles and grants (RFC 0054)
 
 **Goal:** Add a standard authorization model for plugins that need plugin-local roles, capability bundles, and resource-scoped grants without turning them into platform roles.
 
@@ -585,6 +585,28 @@ Task 0.5.24 (RFC 0019 — test seeding infrastructure this extends)
 - A plugin can check a user capability against a specific plugin-owned resource.
 - Resource-scoped grants do not bloat session headers or affect middleware routing.
 - Grant changes are audited and participate in export/delete semantics.
+
+**Correction note (post-implementation):** shipped as designed, following RFC
+0054 §4's own recommendation rather than inventing a new pattern —
+`sdk.authz.provide()` mirrors `sdk.portability.provideExport/Import/Delete`
+exactly (same `requireHost()` + `x-sovereign-plugin-id` header registration,
+same `Symbol.for`-on-`globalThis` in-process registry shape as
+`runtime/src/portability/registry.ts`). No platform grant tables were added —
+grants are entirely plugin-owned, as RFC 0054 §4 recommends. Resolved the
+RFC's open questions using its own stated defaults rather than the
+developer's input: kebab-case role/capability names (not the RFC's dotted
+`project.edit` example — consistency with every other capability name in the
+codebase, enforced via a manifest schema `.refine()` that also requires every
+role's `capabilities` to already be declared in the manifest's top-level
+`capabilities` object); no platform-owner emergency override in v1 (RFC §7
+explicitly defers this); no Account/Console "resources shared with me" UI
+(RFC's own adoption path defers this until a real plugin uses the pattern).
+`hasGrant()`/`requireGrant()` fail closed (`false`/`GrantRequiredError`) with
+no plugin/session context or no registered resolver — never a default-allow.
+Grant export/import/delete is documented guidance routed through the
+existing portability hooks (Task 8.8), not new platform code — see
+`docs/plugin-development.md`'s "`roles` and `sdk.authz`" section for the full
+assignment/revocation/last-owner-protection/override-policy writeup.
 
 ---
 

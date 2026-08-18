@@ -1029,6 +1029,113 @@ describe('validateManifest', () => {
     expect(res.valid).toBe(false);
   });
 
+  // RFC 0054 — plugin-scoped roles and grants
+  it('accepts a manifest with role presets bundling declared capabilities', () => {
+    const res = validateManifest({
+      ...base,
+      capabilities: {
+        'project-view': { description: 'View a project.' },
+        'project-edit': { description: 'Edit a project.' },
+      },
+      roles: {
+        'project-owner': {
+          description: 'Full control of a project.',
+          capabilities: ['project-view', 'project-edit'],
+          scope: 'resource',
+        },
+        'project-viewer': {
+          capabilities: ['project-view'],
+          scope: 'resource',
+        },
+      },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it('rejects a defaultGrant field on a role (roles are vocabulary only, never auto-assigned)', () => {
+    const res = validateManifest({
+      ...base,
+      capabilities: { 'project-view': {} },
+      roles: {
+        'project-viewer': {
+          capabilities: ['project-view'],
+          scope: 'resource',
+          defaultGrant: 'all',
+        },
+      },
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects a role capability not declared in the manifest capabilities object', () => {
+    const res = validateManifest({
+      ...base,
+      capabilities: { 'project-view': {} },
+      roles: {
+        'project-owner': { capabilities: ['project-view', 'project-delete'], scope: 'resource' },
+      },
+    });
+    expect(res.valid).toBe(false);
+    if (!res.valid) {
+      expect(res.errors.join(' ')).toContain('roles');
+    }
+  });
+
+  it('rejects a role with no capabilities array entries', () => {
+    const res = validateManifest({
+      ...base,
+      capabilities: { 'project-view': {} },
+      roles: {
+        'project-owner': { capabilities: [], scope: 'resource' },
+      },
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects role names that are not kebab-case lowercase', () => {
+    const res = validateManifest({
+      ...base,
+      capabilities: { 'project-view': {} },
+      roles: {
+        ProjectOwner: { capabilities: ['project-view'], scope: 'resource' },
+      },
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects a role with an invalid scope value', () => {
+    const res = validateManifest({
+      ...base,
+      capabilities: { 'project-view': {} },
+      roles: {
+        'project-owner': { capabilities: ['project-view'], scope: 'global' },
+      },
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects a role missing scope', () => {
+    const res = validateManifest({
+      ...base,
+      capabilities: { 'project-view': {} },
+      roles: {
+        'project-owner': { capabilities: ['project-view'] },
+      },
+    });
+    expect(res.valid).toBe(false);
+  });
+
+  it('rejects unknown fields inside a role declaration', () => {
+    const res = validateManifest({
+      ...base,
+      capabilities: { 'project-view': {} },
+      roles: {
+        'project-owner': { capabilities: ['project-view'], scope: 'resource', bogus: true },
+      },
+    });
+    expect(res.valid).toBe(false);
+  });
+
   it('accepts a valid schedules declaration (RFC 0046 Phase 1)', () => {
     const res = validateManifest({
       ...base,

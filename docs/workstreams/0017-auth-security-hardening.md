@@ -1,7 +1,10 @@
 # Workstream 0017 — Auth and security hardening
 
 **Status:** ⏳ In progress — legs 1–2 done (task 1.8, RFC 0035 Phase 1
-infrastructure; task 1.9, Phase 2 capability opt-in); legs 3–5 not started\
+infrastructure; task 1.9, Phase 2 capability opt-in); legs 3 (task 1.13) and
+4 (task 1.19) implemented locally, not yet committed; leg 5 (task 2.29)
+paused before implementation on a design gap found in RFC 0086 (see its
+correction note)\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -166,6 +169,36 @@ access to plugin-scoped resources without being audited and visible to the
 plugin/resource owner — that's the "no silent access" line this task cannot
 cross.
 
+**Implemented locally, not yet committed.** Resolved RFC 0054's open
+questions using existing codebase precedent rather than inventing new
+patterns: no platform grant tables (plugin-owned storage only — SDK
+provides types + a `provide()`-style resolver registration mirroring
+`sdk.portability.provideExport/Import/Delete` exactly, same
+`requireHost()` + `x-sovereign-plugin-id` header pattern, in-process
+`Symbol.for` registry on `globalThis`); `roles` added to the manifest
+schema now, reusing the existing kebab-case capability-name regex rather
+than the RFC's dotted example, plus a cross-field `.refine()` requiring
+every role's `capabilities` to already be declared in the manifest's
+`capabilities` object; no platform-owner emergency override in v1 (RFC §7
+explicitly defers this); no Account/Console "resources shared with me" UI
+(RFC's adoption path defers this too); grant export/import/delete
+documented as flowing through the existing portability hooks (Task 8.8)
+with no new platform code, matching RFC §9's safe-match-or-inert-metadata
+rule. Shipped: `packages/manifest/src/schema.ts` (`roles` field + subset
+validation), `packages/sdk/src/authz.ts` (`PluginGrant`, `GrantScope`,
+`GrantCheck`, `GrantResolver`, `sdk.authz.provide/hasGrant/requireGrant`,
+fails closed with no resolver registered), `packages/sdk/src/errors.ts`
+(`GrantRequiredError`), `runtime/src/authz-registry.ts` (registry, mirrors
+`runtime/src/portability/registry.ts`), `runtime/src/sdk-host.ts` (wiring),
+`docs/plugin-development.md` (new "`roles` and `sdk.authz`" section —
+manifest field, provider/consumer usage, fail-closed behavior, session
+header exemption, assignment/revocation/last-owner-protection rules,
+override policy, portability guidance). Tests: 9 new manifest validation
+cases, an `authz-registry` unit suite, and an `sdk.authz` behavior suite
+(provide/hasGrant/requireGrant, default-deny, header resolution) — full
+repo-wide `pnpm format:check && pnpm lint && pnpm typecheck` and the full
+Vitest suite (2320 passed) all green.
+
 ### Leg 4 — Database-backed rate-limit storage, `apps/auth`
 
 **Epic tasks:** 1.19
@@ -233,3 +266,4 @@ own follow-up rather than holding the whole workstream open.
 | ------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | August 2026 | Initial draft — 5 tasks (1.8, 1.9, 1.13, 1.19, 2.29) across three independent sub-groups                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 0.2     | August 2026 | Legs 1–2 shipped (tasks 1.8, 1.9, RFC 0035), merged to `main` as PR #455 at root `0.91.0` (2026-08-14) — bundled with workstream 0015's leg 4 (3.18, RFC 0047) in the same branch/PR, since RFC 0047 gates mutating/external tool execution on the verification level RFC 0035 introduces (a hard dependency, not a soft one). 1.8: `verificationLevel` (0–3) lands as a better-auth `additionalField` on the auth DB's `user` table (not a `packages/db` migration), recomputed whenever email verification, MFA, or admin-vouching state changes, and propagates through the session capability header. 1.9: `hasCapability()` gains a backwards-compatible third parameter (verified by grepping every existing call site plus a regression test asserting the omitted-third-arg case); manifest `minVerificationLevel` enforced with a `verification_required` 403 on API routes and a redirect to a dedicated nudge page (`/verification-required/[pluginId]`) on page routes, not an inline shell banner. |
+| 0.3     | August 2026 | Leg 3 (task 1.13, RFC 0054) implemented locally, on its own branch (`feat/plugin-scoped-roles-grants`), separate from legs 4/5's branch(es) — see leg 3's own detail section above for the full shipped-file list and design-decision writeup. Not yet committed within this session; the developer will reconcile this changelog's numbering with legs 4/5's own entry when the leg branches are merged in whatever order they land.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |

@@ -56,6 +56,12 @@ describe('sdk.mailer / sdk.email — plugin ID resolution (RFC 0062)', () => {
       },
       activity: { async log() {} },
       portability: { provideExport() {}, provideImport() {}, provideDelete() {} },
+      authz: {
+        provide() {},
+        async hasGrant() {
+          return false;
+        },
+      },
       plugins: {
         async get() {
           return null;

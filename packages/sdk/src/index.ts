@@ -1,5 +1,6 @@
 import * as auth from './auth';
 import { activity } from './activity';
+import { authz } from './authz';
 import { connections } from './connections';
 import { crypto } from './crypto';
 import { data } from './data';
@@ -55,11 +56,13 @@ import { webhooks } from './webhooks';
  * (surface detection — `browser`/`mobile`/`desktop` — RFC 0080; a
  * presentation hint only, never a security boundary; capability probes and
  * invocation live in `@sovereignfs/sdk/device-client` and the future device
- * bridge, RFC 0083).
+ * bridge, RFC 0083), `authz` (plugin-scoped roles and resource-scoped
+ * grants — authorization below the platform role layer, never injected into
+ * the session capability header, RFC 0054).
  * `data`, `activity`, `portability`, `env`, `notifications`, `directory`,
  * `secrets`, `crypto`, `storage`, `connections`, `e2ee`, `plugins`, `email`,
- * `webhooks`, `handoffs`, `jobs`, `events`, `tools`, and `device` are
- * implemented; `billing` throws `NotImplementedError` until its backing
+ * `webhooks`, `handoffs`, `jobs`, `events`, `tools`, `authz`, and `device`
+ * are implemented; `billing` throws `NotImplementedError` until its backing
  * mechanism ships. Their shape may change before they stabilise.
  */
 export const sdk = {
@@ -89,6 +92,7 @@ export const sdk = {
   email,
   billing,
   tools,
+  authz,
 };
 
 export { SENSITIVITY_CLASSES, FIELD_DATA_PREFIX, FIELD_PASSTHROUGH_PREFIX } from './types';
@@ -133,7 +137,9 @@ export {
   ConsentRequiredError,
   EntitlementRequiredError,
   EventPayloadTooLargeError,
+  GrantRequiredError,
 } from './errors';
+export type { PluginGrant, GrantScope, GrantCheck, GrantResolver } from './authz';
 export type { DataContractRef, DataContractResolver } from './data';
 export type {
   ExportContext,

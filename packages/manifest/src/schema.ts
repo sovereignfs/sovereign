@@ -627,6 +627,50 @@ const manifestObjectSchema = z
       )
       .optional(),
     /**
+     * Plugin-scoped role presets (RFC 0054). Each key is a local role name
+     * (same kebab-case rule as `capabilities`); the platform auto-namespaces
+     * it to `<pluginId>:<roleName>` for display and audit, matching
+     * `capabilities`' namespacing. A role bundles capabilities the plugin
+     * already declares under `capabilities` above — `capabilities` here must
+     * be a subset of that object's keys (checked in `validate.ts`, not
+     * expressible in this schema alone since it's a cross-field constraint).
+     *
+     * Declaring a role grants no one access — it's vocabulary only. Actual
+     * assignment (who holds `project-owner` on which project) is a
+     * plugin-owned grant, checked via `sdk.authz.hasGrant()`/`requireGrant()`,
+     * never a platform table or session header.
+     */
+    roles: z
+      .record(
+        z
+          .string()
+          .regex(
+            /^[a-z][a-z0-9-]*$/,
+            'role name must start with a lowercase letter and contain only lowercase letters, digits, and hyphens',
+          ),
+        z
+          .object({
+            /** Human-readable description of what the role grants. */
+            description: z.string().optional(),
+            /**
+             * The plugin capability names (declared in `capabilities` above)
+             * this role bundles. At least one required — a role with no
+             * capabilities grants nothing and isn't meaningful to assign.
+             */
+            capabilities: z.array(z.string()).min(1),
+            /**
+             * `'plugin'`   — the role applies to the whole plugin for a user
+             *                (e.g. a shared-inbox-wide agent role).
+             * `'resource'` — the role applies to one plugin-owned resource
+             *                (e.g. `project-owner` on a specific project).
+             *                Most plugin-domain roles are resource-scoped.
+             */
+            scope: z.enum(['plugin', 'resource']),
+          })
+          .strict(),
+      )
+      .optional(),
+    /**
      * Plugin-scoped environment variables (RFC 0018). Each key must be
      * UPPER_CASE_WITH_UNDERSCORES. The platform namespaces them automatically:
      * `scope: 'runtime'` → `SV_PLUGIN_<SLUG>_<KEY>`;
@@ -1021,7 +1065,21 @@ export const manifestSchema = manifestObjectSchema
     message:
       'installable: true requires an icon (auto-rasterized) or an author-supplied icons set (RFC 0081)',
     path: ['installable'],
-  });
+  })
+  .refine(
+    (m) => {
+      if (!m.roles) return true;
+      const declared = new Set(Object.keys(m.capabilities ?? {}));
+      return Object.values(m.roles).every((role) =>
+        role.capabilities.every((cap) => declared.has(cap)),
+      );
+    },
+    {
+      message:
+        'roles[].capabilities must only reference capability names already declared in the manifest\'s top-level "capabilities" object (RFC 0054)',
+      path: ['roles'],
+    },
+  );
 
 /**
  * Manifest field names, sourced from the schema so docs and tooling share one

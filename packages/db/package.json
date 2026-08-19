@@ -14,16 +14,16 @@
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts && drizzle-kit generate --config=drizzle.config.pg.ts"
   },
   "dependencies": {
-    "@libsql/client": "^0.15.0",
+    "@libsql/client": "^0.17.4",
     "better-sqlite3-multiple-ciphers": "catalog:",
-    "cron-parser": "^5.8.1",
+    "cron-parser": "^5.10.0",
     "drizzle-orm": "^0.45.2",
-    "pg": "^8.22.0"
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/pg": "^8.20.0",
+    "@types/pg": "^8.21.0",
     "drizzle-kit": "^0.31.10",
     "tsup": "catalog:",
     "typescript": "catalog:"

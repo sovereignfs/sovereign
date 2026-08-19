@@ -12,6 +12,22 @@
  * Run: `pnpm generate:icons`
  * Add icon: add the name to `scripts/icon-list.ts`, then re-run.
  *
+ * `lucide` (root `package.json`) is pinned to an exact version, deliberately
+ * not a `^` range — a real incident: a workspace-wide `pnpm update -r`
+ * (unrelated prep work, adding CI dependency scanning) silently bumped it
+ * `1.21.0` → `1.28.0`. Nobody re-ran this script afterward, since a bump to
+ * a devDependency doesn't read like something that changes checked-in
+ * output — but `lucide`'s own icon *designs* change between versions, so
+ * two committed icons (`calendar`, `carrot`) silently kept rendering
+ * `1.21.0`'s paths while every other lucide-derived thing in the repo moved
+ * on to `1.28.0`. An exact pin means every `pnpm install` resolves the same
+ * `lucide` regardless of when it runs, so this script's output stays
+ * reproducible — but it does NOT protect against a future *intentional*
+ * `lucide` bump skipping the re-run this script exists for; there's no CI
+ * check that fails when committed icons have drifted from what this script
+ * would currently produce. Bumping `lucide` on purpose: re-run this script
+ * and review the full diff, not just the icons you meant to touch.
+ *
  * Lucide license: ISC — see `packages/ui/NOTICE`.
  */
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';

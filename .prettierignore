@@ -8,6 +8,7 @@ pnpm-lock.yaml
 # Claude Code memory (remember plugin) — git-ignored, per-machine scratch state.
 .remember
 runtime/app/(platform)/(plugins)
+runtime/app/(minimal)
 runtime/generated
 runtime/public/sw.js
 runtime/public/workbox-*.js

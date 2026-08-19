@@ -17,6 +17,7 @@ import { PencilIcon } from './pencil';
 import { RotateCcwIcon } from './rotate-ccw';
 import { SearchIcon } from './search';
 import { UserIcon } from './user';
+import { UserRoundPlusIcon } from './user-round-plus';
 import { ShieldIcon } from './shield';
 import { LockIcon } from './lock';
 import { EyeIcon } from './eye';
@@ -75,6 +76,7 @@ export type IconName =
   | 'rotate-ccw'
   | 'search'
   | 'user'
+  | 'user-round-plus'
   | 'shield'
   | 'lock'
   | 'eye'
@@ -135,6 +137,7 @@ export const ICONS: Record<IconName, IconComponent> = {
   'rotate-ccw': RotateCcwIcon,
   search: SearchIcon,
   user: UserIcon,
+  'user-round-plus': UserRoundPlusIcon,
   shield: ShieldIcon,
   lock: LockIcon,
   eye: EyeIcon,
@@ -193,6 +196,7 @@ export { PencilIcon } from './pencil';
 export { RotateCcwIcon } from './rotate-ccw';
 export { SearchIcon } from './search';
 export { UserIcon } from './user';
+export { UserRoundPlusIcon } from './user-round-plus';
 export { ShieldIcon } from './shield';
 export { LockIcon } from './lock';
 export { EyeIcon } from './eye';

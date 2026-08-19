@@ -28,6 +28,7 @@ export const ICON_LIST = [
   'search',
   // User / security
   'user',
+  'user-round-plus',
   'shield',
   'lock',
   'eye',

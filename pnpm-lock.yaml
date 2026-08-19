@@ -127,7 +127,7 @@ importers:
         specifier: ^17.2.0
         version: 17.2.0
       lucide:
-        specifier: ^1.28.0
+        specifier: 1.28.0
         version: 1.28.0
       prettier:
         specifier: ^3.9.6

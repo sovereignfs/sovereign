@@ -252,6 +252,8 @@ const COLOR_GROUPS: Array<{
       { token: '--sv-color-text-on-accent', name: 'text-on-accent' },
       { token: '--sv-color-text-on-error', name: 'text-on-error' },
       { token: '--sv-color-text-on-success', name: 'text-on-success' },
+      { token: '--sv-color-text-on-light-fill', name: 'text-on-light-fill' },
+      { token: '--sv-color-text-on-dark-fill', name: 'text-on-dark-fill' },
     ],
   },
   {

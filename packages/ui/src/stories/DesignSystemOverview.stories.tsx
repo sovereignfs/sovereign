@@ -15,6 +15,7 @@ import { FormField } from '../components/FormField/FormField';
 import { Icon } from '../components/Icon/Icon';
 import type { IconName } from '../components/Icon/Icon';
 import { IconPicker } from '../components/IconPicker/IconPicker';
+import { ColorPicker } from '../components/ColorPicker/ColorPicker';
 import { QuantityStepper } from '../components/QuantityStepper/QuantityStepper';
 import { CheckableListRow } from '../components/CheckableListRow/CheckableListRow';
 import { Input } from '../components/Input/Input';
@@ -1077,6 +1078,26 @@ function IconPickerDemo() {
   );
 }
 
+function ColorPickerDemo() {
+  const [value, setValue] = useState<string | null>('#b5c9e8');
+  const swatches = [
+    { label: 'Sky', value: '#b5c9e8' },
+    { label: 'Sage', value: '#c9e0c4' },
+    { label: 'Sand', value: '#e8d3b5' },
+    { label: 'Clay', value: '#e0c4c4' },
+    { label: 'Lilac', value: '#d8c4e0' },
+  ];
+  return (
+    <ColorPicker
+      swatches={swatches}
+      value={value}
+      onChange={setValue}
+      allowNone
+      aria-label="Board color"
+    />
+  );
+}
+
 function SuggestionInputDemo() {
   const [value, setValue] = useState('ban');
   const options = ['Bananas', 'Banana bread mix']
@@ -1852,6 +1873,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Trigger button + Popover grid for a curated, bounded icon set (e.g. a plugin's category icons) — not the full icon library."
             >
               <IconPickerDemo />
+            </ComponentCard>
+
+            {/* ColorPicker */}
+            <ComponentCard
+              name="ColorPicker"
+              importLine="import { ColorPicker } from '@sovereignfs/ui';"
+              usage="Curated swatch suggestions plus a native color-input trigger for picking any color — not just the curated set."
+            >
+              <ColorPickerDemo />
             </ComponentCard>
 
             {/* QuantityStepper */}

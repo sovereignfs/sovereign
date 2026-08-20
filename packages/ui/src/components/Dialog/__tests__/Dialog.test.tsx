@@ -94,6 +94,15 @@ describe('Dialog', () => {
     expect(screen.getByRole('dialog').className).toContain('sm');
   });
 
+  it('supports the xl size', () => {
+    render(
+      <Dialog open onClose={() => {}} size="xl" aria-label="Extra large">
+        Body
+      </Dialog>,
+    );
+    expect(screen.getByRole('dialog').className).toContain('xl');
+  });
+
   it('renders a descendant-supplied secondRow via useOverlaySecondRow', () => {
     function TabStrip() {
       useOverlaySecondRow(<nav>Tab strip</nav>);

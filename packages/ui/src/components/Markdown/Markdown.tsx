@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Typography } from '../Typography/Typography';
 import styles from './Markdown.module.css';
 
@@ -10,6 +10,20 @@ export interface MarkdownProps {
    * list item. Not a general-purpose CommonMark parser — no tables,
    * images, ordered lists, or nested blocks. */
   content: string;
+  /** Renders every line within a paragraph on its own visual line (a
+   * `<br>` between them) instead of the default CommonMark-style soft-wrap
+   * (consecutive lines joined with a single space, requiring a blank line
+   * for a new paragraph). Off by default — the soft-wrap behavior is
+   * correct for this component's primary use (long-form, first-party
+   * content authored *as* markdown, where a hard line break is a
+   * deliberate `\`  ` or blank-line choice). Turn this on when rendering
+   * plain, user-typed multi-line text that happens to be passed through
+   * this component (e.g. a card description or comment body edited in an
+   * ordinary `<textarea>`) — there, every Enter press is a real,
+   * intentional line break the user typed, and silently collapsing it
+   * into one run-on paragraph reads as broken, not as "markdown
+   * formatting applied." */
+  preserveLineBreaks?: boolean;
   className?: string;
 }
 
@@ -66,7 +80,7 @@ const endsParagraph = (l: string) => l.trim() === '' || isHeading(l) || isQuote(
  * would then never advance, looping forever. */
 const endsList = (l: string) => l.trim() === '' || isHeading(l) || isQuote(l);
 
-function parseBlocks(content: string): ReactNode[] {
+function parseBlocks(content: string, preserveLineBreaks: boolean): ReactNode[] {
   const lines = content.replace(/\r\n/g, '\n').split('\n');
   const blocks: ReactNode[] = [];
   let i = 0;
@@ -147,7 +161,14 @@ function parseBlocks(content: string): ReactNode[] {
     blocks.push(
       <div key={blockKey++} className={styles.block}>
         <Typography variant="body" as="p">
-          {parseInline(paraLines.join(' '))}
+          {preserveLineBreaks
+            ? paraLines.map((paraLine, lineIdx) => (
+                <Fragment key={lineIdx}>
+                  {lineIdx > 0 && <br />}
+                  {parseInline(paraLine)}
+                </Fragment>
+              ))
+            : parseInline(paraLines.join(' '))}
         </Typography>
       </div>,
     );
@@ -157,12 +178,18 @@ function parseBlocks(content: string): ReactNode[] {
 }
 
 /** Renders a constrained markdown subset (see MarkdownProps) as styled React
- * elements built from Typography — no HTML string injection. Meant for
- * long-form, first-party content pages (privacy policy, terms of service)
- * sourced from a single markdown file, not for rendering arbitrary or
- * user-supplied markdown. */
-export function Markdown({ content, className }: MarkdownProps) {
+ * elements built from Typography — no HTML string injection. Primarily
+ * meant for long-form, first-party content pages (privacy policy, terms of
+ * service) sourced from a single markdown file — not a general-purpose
+ * CommonMark renderer for arbitrary markdown. Also fine for plain,
+ * user-typed multi-line text (a card description, a comment body) edited
+ * in an ordinary `<textarea>` and passed through unchanged, as long as
+ * `preserveLineBreaks` is set — see that prop's own doc comment for why it
+ * isn't the default. */
+export function Markdown({ content, preserveLineBreaks = false, className }: MarkdownProps) {
   return (
-    <div className={[styles.root, className].filter(Boolean).join(' ')}>{parseBlocks(content)}</div>
+    <div className={[styles.root, className].filter(Boolean).join(' ')}>
+      {parseBlocks(content, preserveLineBreaks)}
+    </div>
   );
 }

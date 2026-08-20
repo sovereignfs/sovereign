@@ -1,0 +1,105 @@
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sv-space-2);
+}
+
+.swatch {
+  width: var(--sv-space-8);
+  height: var(--sv-space-8);
+  border-radius: var(--sv-radius-md);
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.swatch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.swatchSelected {
+  border-color: var(--sv-color-accent);
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 1px;
+}
+
+/* Dashed/outlined rather than filled — there's no real color value to paint
+   for "no color". */
+.swatchNone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--sv-color-surface-sunken);
+  border: 2px dashed var(--sv-color-border-strong);
+  color: var(--sv-color-text-muted);
+}
+
+.swatchNone.swatchSelected {
+  border-style: solid;
+}
+
+/* Wraps the native color input so a decorative pencil badge can sit in its
+   corner (a native `<input type="color">` can't have DOM children of its
+   own) and so the same `.swatchSelected` ring used above can be applied to
+   the wrapper without fighting the input's own default focus/border
+   rendering. */
+.customWrapper {
+  position: relative;
+  display: inline-flex;
+  width: var(--sv-space-8);
+  height: var(--sv-space-8);
+  border-radius: var(--sv-radius-md);
+}
+
+.customWrapper.swatchSelected {
+  /* Same visual treatment as .swatchSelected, but scoped to the wrapper —
+     the input itself is styled borderless below, so this is the only
+     border/outline actually rendered for the custom trigger. */
+  border-color: var(--sv-color-accent);
+}
+
+/* Reset the native control to a plain color swatch matching the curated
+   ones above — browsers default `<input type="color">` to its own chrome
+   (a bordered box with visible padding around the swatch). */
+.customInput {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-radius: var(--sv-radius-md);
+  cursor: pointer;
+  background: none;
+}
+
+.customInput:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.customInput::-webkit-color-swatch-wrapper {
+  padding: 0;
+  border-radius: var(--sv-radius-md);
+}
+
+.customInput::-webkit-color-swatch {
+  border: none;
+  border-radius: var(--sv-radius-md);
+}
+
+.customInput::-moz-color-swatch {
+  border: none;
+  border-radius: var(--sv-radius-md);
+}
+
+.customIcon {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  padding: 2px;
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-surface-raised);
+  color: var(--sv-color-text-primary);
+  box-shadow: 0 0 0 1px var(--sv-color-border);
+  pointer-events: none;
+}

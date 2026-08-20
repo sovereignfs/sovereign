@@ -185,6 +185,8 @@ export type {
 } from './components/SuggestionInput/SuggestionInput';
 export { IconPicker } from './components/IconPicker/IconPicker';
 export type { IconPickerProps } from './components/IconPicker/IconPicker';
+export { ColorPicker } from './components/ColorPicker/ColorPicker';
+export type { ColorPickerProps, ColorPickerSwatch } from './components/ColorPicker/ColorPicker';
 export { QuantityStepper } from './components/QuantityStepper/QuantityStepper';
 export type { QuantityStepperProps } from './components/QuantityStepper/QuantityStepper';
 export { CheckableListRow } from './components/CheckableListRow/CheckableListRow';

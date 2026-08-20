@@ -173,7 +173,18 @@
   position: absolute;
   top: var(--sv-space-3);
   right: var(--sv-space-3);
-  z-index: 1;
+  /* 2, not 1: a plugin's own sticky in-body header (e.g. a card detail
+     modal's title row) needs to paint above ordinary scrolling content, so
+     it sits at z-index: 1 — if `.close` also sat at 1, tree order would
+     decide the tie, and `.close` (rendered earlier in this component's own
+     JSX, before `.content` and everything a plugin nests inside it) would
+     lose to the plugin's later-in-tree header, disappearing underneath it
+     once they overlap on scroll. 2 keeps `.close` unambiguously on top
+     without relying on a tie-break plugin authors have no visibility into.
+     Found live in `sovereign-plugin-kanban`'s card detail modal — see that
+     repo's `kanban.module.css` `.cardHeader` comment for the matching half
+     of this fix and the Popover-stacking bug that motivated it. */
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;

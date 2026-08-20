@@ -37,3 +37,11 @@
   cursor: not-allowed;
   resize: none;
 }
+
+/* Height is driven by the `autoGrow` layout effect (Textarea.tsx), not the
+   user — resize: none avoids a drag handle that would fight it; overflow
+   hidden avoids a scrollbar flashing on between the old and new height. */
+.textareaAutoGrow {
+  overflow: hidden;
+  resize: none;
+}

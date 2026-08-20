@@ -49,3 +49,15 @@ export const CustomRows: Story = {
 export const Disabled: Story = {
   render: (_args) => <Labeled label="Read-only field" defaultValue="Cannot be changed" disabled />,
 };
+
+export const AutoGrow: Story = {
+  render: (_args) => (
+    <Labeled
+      label="Title (grows with content)"
+      autoGrow
+      rows={1}
+      defaultValue="A short title"
+      placeholder="Add a title…"
+    />
+  ),
+};

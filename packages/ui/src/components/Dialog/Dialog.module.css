@@ -93,6 +93,15 @@
   flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Same slim, token-colored scrollbar as `ScrollArea`/`MessageScroller` —
+     without this, a `sm`/`md` dialog whose content exceeds its max-height
+     cap (e.g. on a short viewport where the cap itself shrinks to fit) gets
+     the browser's default OS scrollbar, which on non-overlay-scrollbar
+     platforms is wide enough to visually cut into `.panel`'s rounded
+     corner right where `.content` starts, reading as a layout bug rather
+     than an intentional scroll affordance. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--sv-color-border-strong) transparent;
   padding: var(--sv-space-6);
   /* This region already supplies the page gutter, so a PageContainer rendered
      inside it stands its own down (see PageContainer.module.css). Without
@@ -106,6 +115,19 @@
      strip on iOS PWA. A dialog is a bounded surface where bounce is a visual
      bug, not a feature. */
   overscroll-behavior: none;
+}
+
+.content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.content::-webkit-scrollbar-thumb {
+  background: var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-full);
 }
 
 /* `sm`/`md`: fixed width, content-driven height up to the size's own cap
@@ -124,6 +146,19 @@
   width: 36rem;
   max-width: 100%;
   max-height: min(42rem, 100%);
+}
+
+/* A step between `md` and `lg` — `lg` jumps straight to a true fixed
+ * 100%/100% box (the overlay-shell plugin size, meant to hold still while
+ * Account/Console switch internal views), which reads as a near-full-screen
+ * takeover for a dialog that's really just "a form with a lot in it" (a
+ * card detail modal with labels/due-date/assignees/description/checklist/
+ * comments, the case that motivated adding this size). Same content-driven-
+ * height behavior as `sm`/`md` — grows to fit, capped rather than fixed. */
+.xl {
+  width: 48rem;
+  max-width: 100%;
+  max-height: min(48rem, 100%);
 }
 
 /* `lg`/`full`: a true fixed box, unaffected by the above — see the
@@ -148,8 +183,6 @@
   border-radius: var(--sv-radius-md);
   background: transparent;
   color: var(--sv-color-text-muted);
-  font-size: var(--sv-font-size-xl);
-  line-height: 1;
   cursor: pointer;
 }
 
@@ -192,6 +225,7 @@
   .panel,
   .sm,
   .md,
+  .xl,
   .lg,
   .full {
     width: 100%;

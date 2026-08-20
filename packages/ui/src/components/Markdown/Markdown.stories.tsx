@@ -28,3 +28,13 @@ type Story = StoryObj<typeof meta>;
 // ---------------------------------------------------------------------------
 
 export const Default: Story = {};
+
+/** `preserveLineBreaks` — for plain, user-typed multi-line text (a card
+ * description, a comment body) rather than authored long-form markdown.
+ * Without it, every line below would collapse into one run-on paragraph. */
+export const PreserveLineBreaks: Story = {
+  args: {
+    content: 'Line one.\nLine two.\nLine three — each stays on its own line.',
+    preserveLineBreaks: true,
+  },
+};

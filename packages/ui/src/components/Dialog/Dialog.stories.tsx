@@ -9,7 +9,7 @@ function DialogDemo({
   size = 'lg',
   label = 'Example dialog',
 }: {
-  size?: 'sm' | 'md' | 'lg' | 'full';
+  size?: 'sm' | 'md' | 'xl' | 'lg' | 'full';
   label?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -48,7 +48,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Modal surface (scrim + panel). Router-agnostic — caller provides `onClose`. Supports Esc, scrim-click, focus trap and focus restoration. Sizes: `sm` / `md` / `lg` / `full`. Mobile always renders as a full-screen sheet.',
+          'Modal surface (scrim + panel). Router-agnostic — caller provides `onClose`. Supports Esc, scrim-click, focus trap and focus restoration. Sizes: `sm` / `md` / `xl` / `lg` / `full`. Mobile always renders as a full-screen sheet.',
       },
     },
   },
@@ -67,6 +67,11 @@ export const Small: Story = {
 export const Medium: Story = {
   args: { open: false, onClose: () => {}, children: null },
   render: (_args) => <DialogDemo size="md" label="Medium dialog" />,
+};
+
+export const ExtraLarge: Story = {
+  args: { open: false, onClose: () => {}, children: null },
+  render: (_args) => <DialogDemo size="xl" label="Extra-large dialog" />,
 };
 
 export const Large: Story = {

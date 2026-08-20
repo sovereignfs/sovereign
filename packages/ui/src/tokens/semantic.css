@@ -19,6 +19,17 @@
   --sv-color-text-muted: var(--sv-grey-500);
   --sv-color-text-subtle: var(--sv-grey-400);
   --sv-color-text-on-accent: var(--sv-white);
+  /* Guaranteed-contrast text pair for content painted directly on a
+     plugin-supplied literal background colour (data, not a design-system
+     token — e.g. a kanban board's own canvas colour). A consumer picks
+     whichever member actually contrasts with its own literal background;
+     neither can be theme-reactive the way --sv-color-text-primary is,
+     since the background itself doesn't react to the app's theme either.
+     Intentionally NOT overridden under [data-theme='dark'] below — same
+     "reads the same regardless of overall page theme" reasoning as
+     --sv-color-text-on-error/-success. */
+  --sv-color-text-on-light-fill: var(--sv-grey-950);
+  --sv-color-text-on-dark-fill: var(--sv-grey-50);
 
   --sv-color-border: var(--sv-grey-200);
   --sv-color-border-strong: var(--sv-grey-300);

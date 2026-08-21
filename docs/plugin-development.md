@@ -131,6 +131,8 @@ A plugin lives in one directory. Minimal shape (modelled on the built-in
 my-plugin/
   manifest.json          # required — identity, routing, capabilities, version (see below)
   package.json           # name, deps (react, @sovereignfs/sdk, @sovereignfs/ui, any external libs — see below) — version stays "0.0.0", unused
+  AGENTS.md              # canonical, agent-agnostic guidance for coding agents working in this plugin repo
+  CLAUDE.md              # thin pointer to AGENTS.md, so Claude Code picks it up automatically
   icon.svg               # optional — sidebar/launcher icon (monogram generated if absent)
   app/                   # composed into the runtime at your routePrefix
     page.tsx             #   → <routePrefix>/

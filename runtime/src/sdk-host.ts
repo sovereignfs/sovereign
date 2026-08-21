@@ -54,7 +54,6 @@ import {
   type PluginJobRow,
 } from '@sovereignfs/db';
 import { getPlatformDb } from './db';
-import { createMailer } from '@sovereignfs/mailer';
 import {
   effectiveRequiresConfirmation,
   manifestDatabaseIsolation,
@@ -208,7 +207,7 @@ function toJobRef(row: PluginJobRow): JobRef {
     updatedAt: row.updatedAt,
   };
 }
-import { sendPlatformEmail } from './platform-email';
+import { sendPlatformEmail, sendPluginRawEmail } from './platform-email';
 import { instancePublicUrl } from './instance-url';
 
 let _version: string | undefined;
@@ -231,8 +230,6 @@ function getPlatformVersion(): string {
   }
   return _version;
 }
-
-const _mailer = createMailer();
 
 /**
  * In-process registry for cross-plugin data resolvers (RFC 0002).
@@ -515,7 +512,14 @@ provideHost({
             `Retry after ${String(limited.retryAfterSeconds ?? 60)} seconds.`,
         );
       }
-      return _mailer.send(options);
+      return sendPluginRawEmail({
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+        from: options.from,
+        pluginId,
+      });
     },
   },
   email: {

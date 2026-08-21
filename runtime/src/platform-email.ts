@@ -33,7 +33,7 @@ export interface PlatformEmailResult {
  * until `sendMail()`), so this isn't worth caching for a transactional-email
  * volume path.
  */
-async function getMailer(): Promise<Mailer> {
+export async function getMailer(): Promise<Mailer> {
   const pdb = await getPlatformDb();
   const config = await resolveEffectiveMailerConfig(pdb);
   return createMailer(config);
@@ -119,5 +119,70 @@ export async function sendPlatformEmail(input: PlatformEmailInput): Promise<Plat
     await recordEmailDelivery(pdb, { ...baseLog, status: 'failed', errorCode: code });
     await logDeliveryOutcome(input, 'failed', code);
     return { status: 'failed', errorCode: code };
+  }
+}
+
+export interface PluginRawEmailInput {
+  /** Raw recipient address(es) supplied directly by the plugin. */
+  to: string | string[];
+  subject: string;
+  html?: string;
+  text?: string;
+  from?: string;
+  pluginId: string;
+}
+
+/**
+ * `sdk.mailer.send()`'s delivery path (RFC 0062's low-level, direct-recipient
+ * escape hatch) — resolves the mailer fresh from Console-effective config
+ * (same as `sendPlatformEmail`, never a memoized instance) and records one
+ * `email_delivery_log` row per recipient, so a raw plugin send picks up a
+ * live Console SMTP change immediately and shows up in the same audit trail
+ * as every other platform email, matching `docs/plugin-development.md`'s
+ * "same delivery machinery" contract.
+ */
+export async function sendPluginRawEmail(input: PluginRawEmailInput): Promise<void> {
+  const pdb = await getPlatformDb();
+  const mailer = await getMailer();
+  const recipients = Array.isArray(input.to) ? input.to : [input.to];
+  const baseLog = {
+    deliveryClass: 'communication' as const,
+    templateId: 'plugin:external-send',
+    source: 'plugin' as const,
+    recipientUserId: null,
+    actorUserId: null,
+    metadata: { pluginId: input.pluginId },
+  };
+
+  const recordFor = (status: 'skipped' | 'sent' | 'failed', errorCode?: string) =>
+    Promise.all(
+      recipients.map((email) =>
+        recordEmailDelivery(pdb, {
+          id: randomUUID(),
+          ...baseLog,
+          recipientEmailHash: recipientHash(email),
+          status,
+          errorCode,
+        }),
+      ),
+    );
+
+  if (!mailer.configured) {
+    await recordFor('skipped', 'SMTP_NOT_CONFIGURED');
+    return;
+  }
+
+  try {
+    await mailer.send({
+      to: input.to,
+      subject: input.subject,
+      html: input.html,
+      text: input.text,
+      from: input.from,
+    });
+    await recordFor('sent');
+  } catch (err) {
+    await recordFor('failed', errorCode(err));
+    throw err;
   }
 }

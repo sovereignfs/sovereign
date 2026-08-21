@@ -49,8 +49,6 @@ vi.mock('../db', () => ({
   },
 }));
 
-vi.mock('@sovereignfs/mailer', () => ({ createMailer: () => ({ send: vi.fn() }) }));
-
 let headerPluginId: string | null = null;
 vi.mock('next/headers', () => ({
   headers: () =>

@@ -2465,16 +2465,28 @@ export async function getEmailDeliveryDiagnostics(
 }
 
 /**
+ * Escape LIKE wildcards (`%`, `_`) in free-text search input so a user's
+ * literal input can't be mistaken for a pattern, then wrap it for a
+ * substring match. Paired with `ESCAPE '\'` in the query.
+ */
+function likeContainsPattern(q: string): string {
+  return `%${q.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
+}
+
+/**
  * Personal activity feed — events where the given user is actor or subject,
  * visibility = 'user'. Newest-first, limited to `limit` rows starting at
- * `offset` (0-based, for page-based UI: page N → offset N*limit).
+ * `offset` (0-based, for page-based UI: page N → offset N*limit). Optionally
+ * filtered by a free-text `q` against `summary`/`action` (case-insensitive).
  */
 export async function listUserActivity(
   pdb: PlatformDb,
   userId: string,
-  limit = 50,
-  offset = 0,
+  options: { q?: string; limit?: number; offset?: number } = {},
 ): Promise<ActivityLogRow[]> {
+  const limit = options.limit ?? 50;
+  const offset = options.offset ?? 0;
+  const qPattern = options.q ? likeContainsPattern(options.q) : null;
   const rows = await dbAll<ActivityLogRow>(
     pdb,
     sql`SELECT id, tenant_id AS "tenantId", actor_id AS "actorId",
@@ -2486,6 +2498,11 @@ export async function listUserActivity(
         WHERE tenant_id = ${DEFAULT_TENANT_ID}
           AND visibility = 'user'
           AND (actor_id = ${userId} OR subject_user_id = ${userId})
+          AND (
+            CAST(${qPattern} AS TEXT) IS NULL
+            OR LOWER(summary) LIKE LOWER(${qPattern}) ESCAPE '\\'
+            OR LOWER(action) LIKE LOWER(${qPattern}) ESCAPE '\\'
+          )
         ORDER BY created_at DESC
         LIMIT ${limit} OFFSET ${offset}`,
   );
@@ -2493,13 +2510,23 @@ export async function listUserActivity(
 }
 
 /** Total count of personal activity rows for the given user (for pagination). */
-export async function countUserActivity(pdb: PlatformDb, userId: string): Promise<number> {
+export async function countUserActivity(
+  pdb: PlatformDb,
+  userId: string,
+  options: { q?: string } = {},
+): Promise<number> {
+  const qPattern = options.q ? likeContainsPattern(options.q) : null;
   const row = await dbGet<{ c: number | string }>(
     pdb,
     sql`SELECT COUNT(*) AS c FROM activity_log
         WHERE tenant_id = ${DEFAULT_TENANT_ID}
           AND visibility = 'user'
-          AND (actor_id = ${userId} OR subject_user_id = ${userId})`,
+          AND (actor_id = ${userId} OR subject_user_id = ${userId})
+          AND (
+            CAST(${qPattern} AS TEXT) IS NULL
+            OR LOWER(summary) LIKE LOWER(${qPattern}) ESCAPE '\\'
+            OR LOWER(action) LIKE LOWER(${qPattern}) ESCAPE '\\'
+          )`,
   );
   return Number(row?.c ?? 0);
 }
@@ -2507,16 +2534,18 @@ export async function countUserActivity(pdb: PlatformDb, userId: string): Promis
 /**
  * Admin (platform-wide) activity feed — all rows for the tenant, newest-first,
  * limited to `limit` rows starting at `offset`. Optionally filtered by
- * `actorId` or `action`.
+ * `actorId` or `action`, and/or a free-text `q` against `summary`/`action`
+ * (case-insensitive).
  */
 export async function listAdminActivity(
   pdb: PlatformDb,
-  options: { actorId?: string; action?: string; limit?: number; offset?: number } = {},
+  options: { actorId?: string; action?: string; q?: string; limit?: number; offset?: number } = {},
 ): Promise<ActivityLogRow[]> {
   const limit = options.limit ?? 100;
   const offset = options.offset ?? 0;
   const actorFilter = options.actorId ?? null;
   const actionFilter = options.action ?? null;
+  const qPattern = options.q ? likeContainsPattern(options.q) : null;
   const rows = await dbAll<ActivityLogRow>(
     pdb,
     sql`SELECT id, tenant_id AS "tenantId", actor_id AS "actorId",
@@ -2528,6 +2557,11 @@ export async function listAdminActivity(
         WHERE tenant_id = ${DEFAULT_TENANT_ID}
           AND (CAST(${actorFilter} AS TEXT) IS NULL OR actor_id = ${actorFilter})
           AND (CAST(${actionFilter} AS TEXT) IS NULL OR action = ${actionFilter})
+          AND (
+            CAST(${qPattern} AS TEXT) IS NULL
+            OR LOWER(summary) LIKE LOWER(${qPattern}) ESCAPE '\\'
+            OR LOWER(action) LIKE LOWER(${qPattern}) ESCAPE '\\'
+          )
         ORDER BY created_at DESC
         LIMIT ${limit} OFFSET ${offset}`,
   );
@@ -2537,16 +2571,22 @@ export async function listAdminActivity(
 /** Total count of admin-visible activity rows (for pagination). */
 export async function countAdminActivity(
   pdb: PlatformDb,
-  options: { actorId?: string; action?: string } = {},
+  options: { actorId?: string; action?: string; q?: string } = {},
 ): Promise<number> {
   const actorFilter = options.actorId ?? null;
   const actionFilter = options.action ?? null;
+  const qPattern = options.q ? likeContainsPattern(options.q) : null;
   const row = await dbGet<{ c: number | string }>(
     pdb,
     sql`SELECT COUNT(*) AS c FROM activity_log
         WHERE tenant_id = ${DEFAULT_TENANT_ID}
           AND (CAST(${actorFilter} AS TEXT) IS NULL OR actor_id = ${actorFilter})
-          AND (CAST(${actionFilter} AS TEXT) IS NULL OR action = ${actionFilter})`,
+          AND (CAST(${actionFilter} AS TEXT) IS NULL OR action = ${actionFilter})
+          AND (
+            CAST(${qPattern} AS TEXT) IS NULL
+            OR LOWER(summary) LIKE LOWER(${qPattern}) ESCAPE '\\'
+            OR LOWER(action) LIKE LOWER(${qPattern}) ESCAPE '\\'
+          )`,
   );
   return Number(row?.c ?? 0);
 }

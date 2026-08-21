@@ -45,7 +45,7 @@
   color: inherit;
   cursor: pointer;
   opacity: 0.7;
-  transition: opacity 0.12s ease;
+  transition: opacity var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
 }
 
 @media (hover: hover) {
@@ -76,4 +76,10 @@
   background: var(--sv-color-error-surface);
   color: var(--sv-color-error-text);
   border-bottom-color: var(--sv-color-error-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dismiss {
+    transition: none;
+  }
 }

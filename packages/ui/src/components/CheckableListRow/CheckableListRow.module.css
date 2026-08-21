@@ -31,8 +31,8 @@
   border: 1.5px solid var(--sv-color-border-strong);
   background: var(--sv-color-surface);
   transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease;
+    background-color var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out),
+    border-color var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -65,7 +65,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: color 0.15s ease;
+  transition: color var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
   position: relative;
 }
 
@@ -79,7 +79,7 @@
   background: var(--sv-color-text-muted);
   transform: scaleX(0);
   transform-origin: left center;
-  transition: transform 0.2s ease;
+  transition: transform var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
 }
 
 .struck {
@@ -88,6 +88,12 @@
 
 .struck::after {
   transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .label::after {
+    transition: none;
+  }
 }
 
 .trailing {

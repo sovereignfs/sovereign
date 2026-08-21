@@ -10,8 +10,8 @@
   background-color: var(--sv-color-surface-raised);
   cursor: pointer;
   transition:
-    background-color 0.12s ease,
-    border-color 0.12s ease;
+    background-color var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out),
+    border-color var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
 }
 
 @media (hover: hover) {

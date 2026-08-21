@@ -27,7 +27,7 @@
   cursor: pointer;
   text-decoration: none;
   display: block;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
 }
 
 @media (hover: hover) {

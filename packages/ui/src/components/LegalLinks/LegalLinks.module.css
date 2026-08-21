@@ -15,8 +15,10 @@
   text-decoration-color: var(--sv-color-border);
 }
 
-.link:hover {
-  color: var(--sv-color-text-primary);
+@media (hover: hover) {
+  .link:hover {
+    color: var(--sv-color-text-primary);
+  }
 }
 
 .dot {

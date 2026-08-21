@@ -26,9 +26,9 @@
   line-height: 1;
   cursor: pointer;
   transition:
-    background-color 0.12s ease,
-    color 0.12s ease,
-    box-shadow 0.12s ease;
+    background-color var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out),
+    color var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out),
+    box-shadow var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
   white-space: nowrap;
 }
 

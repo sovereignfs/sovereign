@@ -22,13 +22,29 @@
   cursor: pointer;
 }
 
-.button:hover:not(:disabled) {
-  background: var(--sv-color-surface);
+@media (hover: hover) {
+  .button:hover:not(:disabled) {
+    background: var(--sv-color-surface);
+  }
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
 }
 
 .button:disabled {
   color: var(--sv-color-text-subtle);
   cursor: not-allowed;
+}
+
+/* Touch target: gated to (pointer: coarse) — the *primary* pointer — so a
+   touchscreen laptop with mouse/trackpad as primary keeps desktop density. */
+@media (pointer: coarse) {
+  .button {
+    min-width: var(--sv-touch-target-min, 44px);
+    min-height: var(--sv-touch-target-min, 44px);
+  }
 }
 
 .input {

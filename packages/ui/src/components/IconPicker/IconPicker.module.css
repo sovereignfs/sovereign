@@ -10,8 +10,10 @@
   cursor: pointer;
 }
 
-.trigger:hover {
-  background: var(--sv-color-surface-sunken);
+@media (hover: hover) {
+  .trigger:hover {
+    background: var(--sv-color-surface-sunken);
+  }
 }
 
 .trigger:disabled {
@@ -54,8 +56,10 @@
   cursor: pointer;
 }
 
-.option:hover {
-  background: var(--sv-color-surface-sunken);
+@media (hover: hover) {
+  .option:hover {
+    background: var(--sv-color-surface-sunken);
+  }
 }
 
 .optionSelected {

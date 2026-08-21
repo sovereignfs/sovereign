@@ -48,4 +48,14 @@ describe('OverlayHeader', () => {
     render(<OverlayHeader title="Account" onClose={() => {}} secondRow={<nav>Tab strip</nav>} />);
     expect(screen.getByText('Tab strip')).toBeTruthy();
   });
+
+  it('hides the close button when showCloseButton is false', () => {
+    render(<OverlayHeader title="Account" onClose={() => {}} showCloseButton={false} />);
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+  });
+
+  it('shows the close button by default', () => {
+    render(<OverlayHeader title="Account" onClose={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy();
+  });
 });

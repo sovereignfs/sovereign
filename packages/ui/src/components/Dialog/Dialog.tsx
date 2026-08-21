@@ -1,6 +1,15 @@
 'use client';
 
-import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from 'react';
+import {
+  Children,
+  createContext,
+  isValidElement,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useMountTransition, usePrefersReducedMotion } from '../../motion';
 import {
   useOverlayFocusCapture,
@@ -9,7 +18,52 @@ import {
 } from '../../overlay-shell';
 import { Icon } from '../Icon/Icon';
 import { OverlayHeader } from '../OverlayHeader/OverlayHeader';
+import { DialogBody } from './DialogBody';
+import { DialogFooter } from './DialogFooter';
+import { DialogHeader } from './DialogHeader';
 import styles from './Dialog.module.css';
+
+/**
+ * Splits `children` into `DialogHeader`/`DialogBody`/`DialogFooter` (found by
+ * element type, wherever they appear as top-level children) plus whatever's
+ * left over. `DialogHeader` and `DialogFooter` are optional, fixed
+ * (non-scrolling) flex regions; the rest of the content — an explicit
+ * `DialogBody`, or, if none was given, everything not recognized as one of
+ * the three parts — always becomes the single scrollable region, so a plain,
+ * unstructured `children` (no `DialogHeader`/`DialogBody`/`DialogFooter` at
+ * all) renders exactly as it always has, just derived here instead of via a
+ * separate render branch. `hasHeader` is what gates the built-in close
+ * button — see `Dialog`'s own `showCloseButton` doc.
+ */
+function partitionDialogChildren(children: ReactNode) {
+  let header: ReactNode = null;
+  let explicitBody: ReactNode = null;
+  let footer: ReactNode = null;
+  const rest: ReactNode[] = [];
+
+  Children.forEach(children, (child) => {
+    if (isValidElement(child)) {
+      if (child.type === DialogHeader) {
+        header = child;
+        return;
+      }
+      if (child.type === DialogBody) {
+        explicitBody = child;
+        return;
+      }
+      if (child.type === DialogFooter) {
+        footer = child;
+        return;
+      }
+    }
+    rest.push(child);
+  });
+
+  const body =
+    explicitBody ?? (rest.length > 0 ? <div className={styles.content}>{rest}</div> : null);
+
+  return { header, body, footer, hasHeader: header !== null };
+}
 
 // Matches --sv-motion-duration-base (Dialog.module.css) — kept as a plain JS
 // constant rather than read from the CSS custom property so the unmount timer
@@ -25,13 +79,32 @@ const OverlaySecondRowContext = createContext<((node: ReactNode | null) => void)
 );
 
 /**
+ * Registration channels for `DialogTitle`/`DialogDescription`'s generated
+ * `id`s, so the panel's `aria-labelledby`/`aria-describedby` can reference
+ * them — same "descendant registers itself with the nearest Dialog ancestor"
+ * shape as `OverlaySecondRowContext` above, and for the same reason: both
+ * components are typically nested inside `DialogHeader`, not a direct child
+ * of `Dialog` itself, so a children-partition check (like
+ * `partitionDialogChildren`'s) can't find them. Not exported from the
+ * package's public API — `DialogTitle`/`DialogDescription` are the only
+ * intended consumers.
+ */
+export const DialogTitleIdContext = createContext<((id: string | null) => void) | undefined>(
+  undefined,
+);
+export const DialogDescriptionIdContext = createContext<((id: string | null) => void) | undefined>(
+  undefined,
+);
+
+/**
  * Lets content deep inside a `Dialog` (e.g. a plugin's own route layout,
  * rendered several levels below wherever the `Dialog` itself is
- * instantiated) supply the second-row content of the Dialog's mobile
- * `OverlayHeader` — typically a tab strip. Solves the "double header"
- * problem: without this, a plugin's own tab strip has no way to reach the
- * Dialog's header and ends up rendered a second time, as its own sticky bar,
- * inside the scrolling content area.
+ * instantiated) supply the second-row content of the Dialog's mobile-only,
+ * legacy `title`-driven header bar — typically a tab strip. Only relevant to
+ * that legacy path (no `DialogHeader` composed): once a `Dialog` has a real
+ * `DialogHeader`, that header renders at every breakpoint on its own and this
+ * hook's content has nowhere to go — nest the tab strip inside `DialogHeader`
+ * directly instead for a composed Dialog.
  *
  * A no-op when there is no enclosing `Dialog` (e.g. the same plugin layout
  * also rendered on a plain, non-overlay route) — safe to call unconditionally.
@@ -57,20 +130,61 @@ export function useOverlaySecondRow(node: ReactNode | null): boolean {
   return setSecondRow !== undefined;
 }
 
-export type DialogSize = 'sm' | 'md' | 'xl' | 'lg' | 'full';
+export type DialogSize = 'sm' | 'md' | 'xl' | 'lg' | 'full' | 'auto';
 
 export interface DialogProps {
   /** Whether the dialog is shown. When false, nothing renders. */
   open: boolean;
   /** Called on Esc, scrim click, or the close button. */
   onClose: () => void;
-  /** Panel size on desktop. Mobile always renders as a full-screen sheet. */
+  /**
+   * Panel size on desktop. `sm`/`md`/`xl`/`lg`/`full` are fixed widths (see
+   * each size's own comment in Dialog.module.css); `auto` sizes both
+   * dimensions to content instead, for a dialog whose size is genuinely
+   * driven by what's inside it rather than a fixed preset — still capped so
+   * it can't blow out past a reasonable width/height or the viewport. Mobile
+   * always renders as a full-screen sheet regardless of `size`.
+   */
   size?: DialogSize;
-  /** Accessible name for the dialog (sets `aria-label` on the panel). */
+  /**
+   * Accessible name for the dialog. Ignored — in favor of `aria-labelledby`
+   * pointing at it — when a `DialogTitle` is present anywhere among
+   * `children`; falls back to `title` when neither is given. Only needed at
+   * all when using the original plain-children API or the mobile top bar
+   * (see `title` below) without a `DialogTitle`.
+   */
   'aria-label'?: string;
-  /** On mobile: shown in the top bar alongside the close button so the title
-   *  and dismiss affordance occupy the same row instead of stacking. */
+  /**
+   * Legacy: shown in a mobile-only top bar alongside the close button (see
+   * `useOverlaySecondRow`), for a `Dialog` that doesn't compose a
+   * `DialogHeader`. Superseded by `DialogHeader`/`DialogTitle` for any new
+   * usage — those render at every breakpoint and are what
+   * `showCloseButton`'s default now keys off. Has no effect on the desktop
+   * accessible name when a `DialogTitle` is present — that always wins over
+   * both `title` and `aria-label` for `aria-labelledby`.
+   */
   title?: string;
+  /**
+   * Whether to render the built-in close affordance (a bare "×"). Three-state:
+   * left unset (the default), it shows **only when a `DialogHeader` is
+   * present** among `children` — a `Dialog` with no header has nothing to
+   * hang a close affordance on, so it relies on Esc/scrim-click/a footer
+   * action instead. Pass `true`/`false` explicitly to override that default
+   * in either direction — e.g. `true` for a `Dialog` that supplies its own
+   * per-breakpoint header treatment without a literal `DialogHeader` (the
+   * legacy `title` prop path), or `false` to suppress it even with a
+   * `DialogHeader` present (the caller provides its own dismiss action).
+   */
+  showCloseButton?: boolean;
+  /**
+   * A composition of `DialogHeader` (optional), `DialogBody`, and
+   * `DialogFooter` (optional), or plain content — see `DialogHeader`'s doc
+   * comment for the full contract. Plain content (no `DialogHeader`/
+   * `DialogBody`/`DialogFooter` at all) still renders as a single scrollable
+   * region, unchanged from the original API — but see `showCloseButton`:
+   * without a `DialogHeader`, that region no longer gets a close button by
+   * default.
+   */
   children: ReactNode;
 }
 
@@ -96,12 +210,15 @@ export function Dialog({
   size = 'lg',
   'aria-label': ariaLabel,
   title,
+  showCloseButton,
   children,
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
   const { mounted, phase } = useMountTransition(open, reducedMotion ? 0 : MOTION_DURATION_MS);
   const [secondRow, setSecondRow] = useState<ReactNode | null>(null);
+  const [titleId, setTitleId] = useState<string | null>(null);
+  const [descriptionId, setDescriptionId] = useState<string | null>(null);
 
   useOverlayScrollLock(mounted);
   useOverlayFocusCapture(panelRef, open);
@@ -109,6 +226,9 @@ export function Dialog({
 
   if (!mounted) return null;
   const isOpenPhase = phase === 'open';
+  const { header, body, footer, hasHeader } = partitionDialogChildren(children);
+  // See DialogProps.showCloseButton: unset follows hasHeader; true/false overrides it.
+  const closeButtonVisible = showCloseButton ?? hasHeader;
 
   return (
     // role="presentation" removes the scrim from the AT (it is purely visual).
@@ -127,40 +247,53 @@ export function Dialog({
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label={ariaLabel ?? title}
+        aria-labelledby={titleId ?? undefined}
+        aria-label={titleId ? undefined : (ariaLabel ?? title)}
+        aria-describedby={descriptionId ?? undefined}
         tabIndex={-1}
         className={[styles.panel, styles[size], isOpenPhase ? styles.panelOpen : '']
           .filter(Boolean)
           .join(' ')}
       >
-        {/* Mobile: shared OverlayHeader (title + close in one row, hidden on
-            desktop via CSS — see .mobileHeader). secondRow is populated by a
-            descendant's useOverlaySecondRow call, e.g. a plugin's own tab
-            strip — see that hook's doc comment for why. */}
-        <OverlayHeader
-          title={title}
-          onClose={onClose}
-          secondRow={secondRow}
-          className={styles.mobileHeader}
-        />
-        {/* Desktop: absolute close button (hidden on mobile via CSS).
-            `circle-x`, not a bare "×" glyph — developer-requested, a real
-            icon reads as a more deliberate close affordance than a plain
-            text character sized up via `font-size`. Platform-wide: every
-            `Dialog` consumer gets this, not just the one it was requested
-            against — `Dialog` has no per-instance override for its own
-            close button. */}
-        <button type="button" className={styles.close} aria-label="Close" onClick={onClose}>
-          <Icon name="circle-x" size="md" aria-hidden={true} />
-        </button>
-        {/* The panel is a fixed-size box; only this region scrolls, so the
-            panel never resizes with its content and the close button stays
-            pinned. */}
-        <div className={styles.content}>
-          <OverlaySecondRowContext.Provider value={setSecondRow}>
-            {children}
-          </OverlaySecondRowContext.Provider>
-        </div>
+        {/* Legacy mobile-only bar (title/secondRow, no DialogHeader): once a
+            real DialogHeader is composed, it already renders at every
+            breakpoint on its own, so this bar would be a redundant second
+            header — skip it entirely in that case. */}
+        {!hasHeader && (
+          <OverlayHeader
+            title={title}
+            onClose={onClose}
+            showCloseButton={closeButtonVisible}
+            secondRow={secondRow}
+            className={styles.mobileHeader}
+          />
+        )}
+        {/* The close affordance (bare "×"). Floats top-right on desktop
+            always; on mobile it's hidden only in the legacy (!hasHeader)
+            case, where OverlayHeader's own close button (row above) already
+            covers mobile — a composed DialogHeader has no mobile-specific
+            substitute, so this same button stays visible there too. */}
+        {closeButtonVisible && (
+          <button
+            type="button"
+            className={[styles.close, !hasHeader ? styles.closeHiddenOnLegacyMobileBar : '']
+              .filter(Boolean)
+              .join(' ')}
+            aria-label="Close"
+            onClick={onClose}
+          >
+            <Icon name="x" size="md" aria-hidden={true} />
+          </button>
+        )}
+        <OverlaySecondRowContext.Provider value={setSecondRow}>
+          <DialogTitleIdContext.Provider value={setTitleId}>
+            <DialogDescriptionIdContext.Provider value={setDescriptionId}>
+              {header}
+              {body}
+              {footer}
+            </DialogDescriptionIdContext.Provider>
+          </DialogTitleIdContext.Provider>
+        </OverlaySecondRowContext.Provider>
       </div>
     </div>
   );

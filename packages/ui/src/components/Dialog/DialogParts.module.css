@@ -1,0 +1,87 @@
+/* padding-right leaves room for Dialog's own floating close button
+   (top-right, desktop only) so header content doesn't run under it — matches
+   .close's own box + inset in Dialog.module.css (32px box, space-4 inset =
+   48px occupied; space-4 + space-8 clears that exactly, + space-2 for a
+   small breathing gap so text doesn't run flush against the button). No
+   border-bottom: unlike .footer, the header flows directly into the body
+   with no divider — see the reference design's own header→body transition.
+   Top padding (space-4) matches .close's own top inset (space-4,
+   Dialog.module.css) exactly, so DialogTitle's own line-box vertically
+   aligns with the close button instead of sitting visibly lower than it.
+   Horizontal padding (space-4) matches .body's and .footer's own — all
+   three regions share one left/right margin so their content lines up in a
+   single column instead of each region insetting by a different amount. */
+.header {
+  flex: 0 0 auto;
+  padding: var(--sv-space-4) var(--sv-space-4) var(--sv-space-1);
+  padding-right: calc(var(--sv-space-4) + var(--sv-space-8) + var(--sv-space-2));
+}
+
+.title {
+  margin: 0;
+  /* --sv-font-size-2xl, not -xl: design-system.md's typography hierarchy
+     table specifies 2xl for every page/overlay <h1> — this is that heading
+     for a Dialog, so it follows the same rule as everywhere else. */
+  font-size: var(--sv-font-size-2xl);
+  font-weight: var(--sv-font-weight-bold);
+  color: var(--sv-color-text-primary);
+}
+
+.description {
+  margin: var(--sv-space-1) 0 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Same slim, token-colored scrollbar as Dialog's own .content (ScrollArea/
+     MessageScroller precedent) — see Dialog.module.css's comment. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--sv-color-border-strong) transparent;
+  padding: var(--sv-space-4);
+  --sv-page-gutter: 0px;
+  overscroll-behavior: none;
+}
+
+/* Only when a DialogHeader immediately precedes this body: .header already
+   contributes its own bottom padding (space-1) right above here, so the base
+   rule's own top padding (space-4) would stack with it into a gap bigger
+   than either looks like on its own, with no divider to justify it — this
+   keeps the header→body transition to one deliberate size instead of two
+   paddings silently adding up. A DialogBody with no preceding header (the
+   "footer only" / "body only" compositions) keeps the base top padding, same
+   as its other three sides. */
+.header + .body {
+  padding-top: var(--sv-space-2);
+}
+
+.body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.body::-webkit-scrollbar-thumb {
+  background: var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-full);
+}
+
+.footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sv-space-2);
+  /* Horizontal padding matches .header's and .body's own (space-4) — all
+     three regions share one left/right margin, so the action buttons line
+     up with the body content's edge above them instead of sitting inset by
+     a different amount. */
+  padding: var(--sv-space-4);
+  border-top: 1px solid var(--sv-color-border);
+}

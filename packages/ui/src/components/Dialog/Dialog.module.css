@@ -11,10 +11,13 @@
  * box (100%/100% of the scrim's available area): those sizes are what
  * overlay-shell plugins (Account, Console) render into, where the panel
  * must hold still while the plugin switches between its own internal views.
- * The close button stays pinned top-right regardless. The scrim's padding is
- * the fixed margin `lg` leaves around the viewport; `sm`/`md` are centered
- * and cap to that available space on short screens too. On mobile every
- * size becomes a full-screen sheet.
+ * `auto` sizes both axes to content instead of any fixed preset (still
+ * capped — see its own comment below). The close button, when shown (see
+ * Dialog.tsx's `showCloseButton`/`hasHeader` logic), stays pinned top-right
+ * regardless of size. The scrim's padding is the fixed margin `lg` leaves
+ * around the viewport; `sm`/`md`/`auto` are centered and cap to that
+ * available space on short screens too. On mobile every size becomes a
+ * full-screen sheet.
  *
  * `--sv-dialog-inset-left` lets a host inset the scrim past a fixed left nav
  * rail (e.g. the platform sidebar) so the overlay's left margin is measured
@@ -169,10 +172,26 @@
   height: 100%;
 }
 
+/* `auto`: sizes to content on both axes instead of a fixed preset — for a
+ * dialog whose size is genuinely driven by what's inside it. Still capped
+ * (same width/height ceiling as `md`) so it can't blow out past a reasonable
+ * size or the viewport; `min-width` keeps sparse content from collapsing to
+ * an oddly narrow box. */
+.auto {
+  width: max-content;
+  min-width: 20rem;
+  max-width: min(36rem, 100%);
+  max-height: min(42rem, 100%);
+}
+
 .close {
   position: absolute;
-  top: var(--sv-space-3);
-  right: var(--sv-space-3);
+  /* Matches DialogHeader's own top padding (space-4, DialogParts.module.css)
+     exactly, so a composed DialogTitle's line-box vertically aligns with
+     this button instead of sitting visibly lower than it — see that file's
+     comment for the full reasoning. */
+  top: var(--sv-space-4);
+  right: var(--sv-space-4);
   /* 2, not 1: a plugin's own sticky in-body header (e.g. a card detail
      modal's title row) needs to paint above ordinary scrolling content, so
      it sits at z-index: 1 — if `.close` also sat at 1, tree order would
@@ -209,6 +228,18 @@
   outline-offset: 2px;
 }
 
+/* Applied only in the legacy (no DialogHeader) case — see Dialog.tsx.
+ * OverlayHeader's own mobile bar already renders a close button there, so
+ * this one hides on mobile to avoid a redundant second close affordance. A
+ * composed DialogHeader has no such mobile substitute (it renders at every
+ * breakpoint itself, with no close button of its own), so this class is
+ * never applied in that case — this same button stays visible on mobile too. */
+@media (max-width: 768px) {
+  .closeHiddenOnLegacyMobileBar {
+    display: none;
+  }
+}
+
 /* Hidden on desktop; shown only on mobile where it replaces the close button.
  * OverlayHeader owns its own background/border/padding — this wrapper class
  * only toggles visibility per breakpoint. */
@@ -238,7 +269,8 @@
   .md,
   .xl,
   .lg,
-  .full {
+  .full,
+  .auto {
     width: 100%;
     height: 100%;
     max-width: none;
@@ -260,11 +292,6 @@
 
   .panelOpen {
     transform: translateY(0);
-  }
-
-  /* Desktop close button is replaced by OverlayHeader on mobile. */
-  .close {
-    display: none;
   }
 
   /* Title + close button in one solid row, via the shared OverlayHeader

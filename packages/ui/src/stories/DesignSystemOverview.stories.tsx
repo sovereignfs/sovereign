@@ -1982,8 +1982,8 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             {/* Dialog */}
             <ComponentCard
               name="Dialog"
-              importLine="import { Dialog } from '@sovereignfs/ui';"
-              usage="Modal surface (scrim + panel). Esc, scrim-click, focus trap. Sizes: sm, md, lg, full. Mobile renders fullscreen."
+              importLine="import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from '@sovereignfs/ui';"
+              usage="Modal surface (scrim + panel). Esc, scrim-click, focus trap. Sizes: sm, md, lg, full. Mobile renders fullscreen. Optionally compose from DialogHeader (optional, holding DialogTitle/DialogDescription — auto-wired to aria-labelledby/aria-describedby), DialogBody (required to opt in), and DialogFooter (optional) for a fixed-header/scrollable-body/fixed-footer layout instead of one scrollable region; showCloseButton controls the built-in close affordance."
             >
               <DialogDemo />
             </ComponentCard>

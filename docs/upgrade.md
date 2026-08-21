@@ -1246,6 +1246,52 @@ it directly onto any `@sovereignfs/ui` form control or a native element.
 
 **New: `Textarea` component** — additive, no migration required.
 
+### `@sovereignfs/ui` 0.63.0 → 0.64.0
+
+**Breaking: `Dialog`'s built-in close button no longer shows by default —
+it now shows only when a `DialogHeader` is composed among `children`.**
+Previously `showCloseButton` defaulted to `true` unconditionally. A `Dialog`
+using the original plain-children API (no `DialogHeader`/`DialogBody`/
+`DialogFooter`) now renders **no** close button unless you either add a
+`DialogHeader` or pass `showCloseButton` explicitly:
+
+```tsx
+// Before — close button showed automatically
+<Dialog open={open} onClose={onClose} title="Edit list">
+  ...
+</Dialog>
+
+// After — compose a DialogHeader to get the close button back
+<Dialog open={open} onClose={onClose}>
+  <DialogHeader>
+    <DialogTitle>Edit list</DialogTitle>
+  </DialogHeader>
+  <DialogBody>...</DialogBody>
+</Dialog>
+
+// Or opt out of the new default explicitly, keeping the old plain-children shape:
+<Dialog open={open} onClose={onClose} title="Edit list" showCloseButton>
+  ...
+</Dialog>
+```
+
+`showCloseButton` is now three-state: left unset, it follows whether a
+`DialogHeader` is present; pass `true`/`false` to force it either way
+regardless of `DialogHeader`. Esc and scrim-click still dismiss a Dialog with
+no close button either way.
+
+**New: `size="auto"`** — sizes both width and height to content instead of a
+fixed `sm`/`md`/`xl`/`lg`/`full` preset (still capped to a sensible ceiling).
+Additive, no migration required.
+
+**New: `DialogHeader`, `DialogBody`, `DialogFooter`, `DialogTitle`,
+`DialogDescription`** — compositional sub-components for `Dialog`. `DialogBody`
+is required to opt into the fixed-header/scrollable-body/fixed-footer layout;
+`DialogHeader`/`DialogFooter` are optional. `DialogTitle`/`DialogDescription`
+auto-wire the panel's `aria-labelledby`/`aria-describedby`. Additive — the
+original plain-children API is unaffected apart from the close-button default
+above. See `Overview/Dialogs` in Storybook for full usage.
+
 ---
 
 ## Runtime version map

@@ -1,7 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Dialog } from '@sovereignfs/ui';
+import {
+  Button,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@sovereignfs/ui';
 import { GRANTABLE_CAPABILITIES, type GrantableCapability } from '@/src/capabilities';
 import styles from '../console.module.css';
 import {
@@ -70,51 +77,51 @@ export function CapabilitiesButton({ userId, name }: { userId: string; name: str
         </svg>
       </button>
 
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        size="sm"
-        title={`Capabilities for ${name}`}
-      >
-        <p className={styles.lede}>
-          Grant this user one additional capability their role preset doesn&apos;t include. This
-          does not change their role.
-        </p>
-        {grants === null ? (
-          <p className={styles.textMuted}>Loading…</p>
-        ) : (
-          <ul
-            className={styles.cards}
-            style={{ gridTemplateColumns: '1fr', gap: 'var(--sv-space-2)' }}
-          >
-            {GRANTABLE_CAPABILITIES.map((cap) => {
-              const granted = grants.includes(cap);
-              return (
-                <li
-                  key={cap}
-                  className={styles.card}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: 'var(--sv-space-3)',
-                  }}
-                >
-                  <span>{LABELS[cap]}</span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={pending === cap}
-                    onClick={() => toggle(cap, granted)}
+      <Dialog open={open} onClose={() => setOpen(false)} size="sm">
+        <DialogHeader>
+          <DialogTitle>Capabilities for {name}</DialogTitle>
+          <DialogDescription>
+            Grant this user one additional capability their role preset doesn&apos;t include. This
+            does not change their role.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          {grants === null ? (
+            <p className={styles.textMuted}>Loading…</p>
+          ) : (
+            <ul
+              className={styles.cards}
+              style={{ gridTemplateColumns: '1fr', gap: 'var(--sv-space-2)' }}
+            >
+              {GRANTABLE_CAPABILITIES.map((cap) => {
+                const granted = grants.includes(cap);
+                return (
+                  <li
+                    key={cap}
+                    className={styles.card}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: 'var(--sv-space-3)',
+                    }}
                   >
-                    {granted ? 'Revoke' : 'Grant'}
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                    <span>{LABELS[cap]}</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={pending === cap}
+                      onClick={() => toggle(cap, granted)}
+                    >
+                      {granted ? 'Revoke' : 'Grant'}
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </DialogBody>
       </Dialog>
     </>
   );

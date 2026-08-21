@@ -1,7 +1,15 @@
 'use client';
 
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Dialog, FormField, Input } from '@sovereignfs/ui';
+import {
+  Button,
+  Dialog,
+  DialogBody,
+  DialogHeader,
+  DialogTitle,
+  FormField,
+  Input,
+} from '@sovereignfs/ui';
 import type { DirectoryUser } from '@sovereignfs/sdk';
 import {
   addGroupMemberAction,
@@ -200,72 +208,78 @@ export function ManageGroupDialog({ group }: { group: GroupSummary }) {
         Manage
       </Button>
 
-      <Dialog open={open} onClose={() => setOpen(false)} size="md" title={`Manage "${group.name}"`}>
-        <div className={styles.settingsSections}>
-          <section className={styles.settingsSection}>
-            <h3 className={styles.sectionTitle}>Details</h3>
-            <form action={updateGroupAction} className={styles.inviteForm}>
-              <input type="hidden" name="id" value={group.id} />
-              <FormField label="Name" id={`group-name-${group.id}`}>
-                {(field) => <Input {...field} name="name" defaultValue={group.name} />}
-              </FormField>
-              <FormField label="Description" id={`group-description-${group.id}`}>
-                {(field) => (
-                  <Input {...field} name="description" defaultValue={group.description ?? ''} />
-                )}
-              </FormField>
-              <Button type="submit" size="sm">
-                Save
-              </Button>
-            </form>
-          </section>
+      <Dialog open={open} onClose={() => setOpen(false)} size="md">
+        <DialogHeader>
+          <DialogTitle>Manage &quot;{group.name}&quot;</DialogTitle>
+        </DialogHeader>
+        <DialogBody>
+          <div className={styles.settingsSections}>
+            <section className={styles.settingsSection}>
+              <h3 className={styles.sectionTitle}>Details</h3>
+              <form action={updateGroupAction} className={styles.inviteForm}>
+                <input type="hidden" name="id" value={group.id} />
+                <FormField label="Name" id={`group-name-${group.id}`}>
+                  {(field) => <Input {...field} name="name" defaultValue={group.name} />}
+                </FormField>
+                <FormField label="Description" id={`group-description-${group.id}`}>
+                  {(field) => (
+                    <Input {...field} name="description" defaultValue={group.description ?? ''} />
+                  )}
+                </FormField>
+                <Button type="submit" size="sm">
+                  Save
+                </Button>
+              </form>
+            </section>
 
-          <section className={styles.settingsSection}>
-            <h3 className={styles.sectionTitle}>Members</h3>
-            {members === null ? (
-              <p className={styles.textMuted}>Loading…</p>
-            ) : (
-              <MemberList groupId={group.id} members={members} onChanged={refreshMembers} />
-            )}
-            <MemberPicker groupId={group.id} onChanged={refreshMembers} />
-          </section>
+            <section className={styles.settingsSection}>
+              <h3 className={styles.sectionTitle}>Members</h3>
+              {members === null ? (
+                <p className={styles.textMuted}>Loading…</p>
+              ) : (
+                <MemberList groupId={group.id} members={members} onChanged={refreshMembers} />
+              )}
+              <MemberPicker groupId={group.id} onChanged={refreshMembers} />
+            </section>
 
-          <section className={styles.settingsSection}>
-            <h3 className={styles.sectionTitle}>Danger zone</h3>
-            {!confirmingDelete ? (
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={() => setConfirmingDelete(true)}
-              >
-                Delete group
-              </Button>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sv-space-3)' }}>
-                <p className={styles.errorText}>
-                  Deleting removes the group and its membership. This cannot be undone. If the group
-                  is used by a plugin access policy, deletion is blocked until you confirm again.
-                </p>
-                <div style={{ display: 'flex', gap: 'var(--sv-space-2)' }}>
-                  <form action={deleteGroupAction}>
-                    <input type="hidden" name="id" value={group.id} />
-                    <Button type="submit" variant="destructive" size="sm">
-                      Confirm delete
-                    </Button>
-                  </form>
-                  <form action={deleteGroupAction}>
-                    <input type="hidden" name="id" value={group.id} />
-                    <input type="hidden" name="force" value="true" />
-                    <Button type="submit" variant="destructive" size="sm">
-                      Delete anyway (force)
-                    </Button>
-                  </form>
+            <section className={styles.settingsSection}>
+              <h3 className={styles.sectionTitle}>Danger zone</h3>
+              {!confirmingDelete ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setConfirmingDelete(true)}
+                >
+                  Delete group
+                </Button>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sv-space-3)' }}>
+                  <p className={styles.errorText}>
+                    Deleting removes the group and its membership. This cannot be undone. If the
+                    group is used by a plugin access policy, deletion is blocked until you confirm
+                    again.
+                  </p>
+                  <div style={{ display: 'flex', gap: 'var(--sv-space-2)' }}>
+                    <form action={deleteGroupAction}>
+                      <input type="hidden" name="id" value={group.id} />
+                      <Button type="submit" variant="destructive" size="sm">
+                        Confirm delete
+                      </Button>
+                    </form>
+                    <form action={deleteGroupAction}>
+                      <input type="hidden" name="id" value={group.id} />
+                      <input type="hidden" name="force" value="true" />
+                      <Button type="submit" variant="destructive" size="sm">
+                        Delete anyway (force)
+                      </Button>
+                    </form>
+                  </div>
                 </div>
-              </div>
-            )}
-          </section>
-        </div>
+              )}
+            </section>
+          </div>
+        </DialogBody>
       </Dialog>
     </>
   );

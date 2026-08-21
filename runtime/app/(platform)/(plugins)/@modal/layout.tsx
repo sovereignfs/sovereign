@@ -41,7 +41,15 @@ export default function ModalSlotLayout({ children }: { children: ReactNode }) {
   const title = plugin?.name;
 
   return (
-    <Dialog open onClose={() => router.back()} size={size} title={title}>
+    // showCloseButton: explicit override — Dialog's default close-button rule
+    // now keys off a composed DialogHeader, which this slot doesn't render
+    // (children is an entire routed plugin subtree — AccountLayout/
+    // ConsoleLayout — that already renders its own inline <h1>+tabs on
+    // desktop, and hands its tab strip up via useOverlaySecondRow for
+    // Dialog's legacy mobile-only title bar). That per-breakpoint header
+    // treatment predates DialogHeader and still needs the close button;
+    // `true` preserves it without forcing a redundant second title row.
+    <Dialog open onClose={() => router.back()} size={size} title={title} showCloseButton>
       {children}
     </Dialog>
   );

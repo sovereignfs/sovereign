@@ -10,11 +10,12 @@ export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const limit = Math.min(Number(url.searchParams.get('limit') ?? '50'), 200);
   const offset = Math.max(0, Number(url.searchParams.get('offset') ?? '0'));
+  const q = url.searchParams.get('q') ?? undefined;
 
   const pdb = await getPlatformDb();
   const [rows, total] = await Promise.all([
-    listUserActivity(pdb, userId, limit, offset),
-    countUserActivity(pdb, userId),
+    listUserActivity(pdb, userId, { q, limit, offset }),
+    countUserActivity(pdb, userId, { q }),
   ]);
   return NextResponse.json({ events: rows, total, limit, offset });
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from '../account.module.css';
 
 const PAGE_SIZE = 8;
@@ -27,13 +27,18 @@ export default function ActivityPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [q, setQ] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const load = useCallback(async (targetPage: number) => {
+  const load = useCallback(async (targetPage: number, query: string) => {
     setLoading(true);
     setError(null);
     const offset = (targetPage - 1) * PAGE_SIZE;
+    const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
+    if (query) params.set('q', query);
     try {
-      const res = await fetch(`/api/account/activity?limit=${PAGE_SIZE}&offset=${offset}`, {
+      const res = await fetch(`/api/account/activity?${params.toString()}`, {
         cache: 'no-store',
       });
       if (!res.ok) throw new Error(`Failed to load activity: ${res.status}`);
@@ -49,8 +54,15 @@ export default function ActivityPage() {
   }, []);
 
   useEffect(() => {
-    void load(1);
-  }, [load]);
+    void load(1, q);
+  }, [load, q]);
+
+  function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value;
+    setSearchInput(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setQ(value), 300);
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const rangeStart = (page - 1) * PAGE_SIZE + 1;
@@ -61,12 +73,40 @@ export default function ActivityPage() {
       <section className={styles.section}>
         <div className={styles.activityHeader}>
           <p className={styles.sectionSubtitle}>Your recent account activity.</p>
-          {total > 0 && <span className={styles.activityCount}>{total} events</span>}
+        </div>
+
+        <div className={styles.activitySearchBar}>
+          <svg
+            className={styles.activitySearchIcon}
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="search"
+            placeholder="Search events or descriptions…"
+            value={searchInput}
+            onChange={handleSearchChange}
+            className={styles.activitySearchInput}
+            aria-label="Search activity events"
+          />
+          <span className={styles.activityCount}>{total} events</span>
         </div>
 
         {loading && <p className={styles.help}>Loading&hellip;</p>}
         {error && <p style={{ color: 'var(--sv-color-error-text)' }}>{error}</p>}
-        {!loading && events.length === 0 && <p className={styles.help}>No activity yet.</p>}
+        {!loading && events.length === 0 && (
+          <p className={styles.help}>{q ? 'No matching activity.' : 'No activity yet.'}</p>
+        )}
 
         {events.length > 0 && (
           <>
@@ -98,7 +138,7 @@ export default function ActivityPage() {
               <div className={styles.paginationControls}>
                 <button
                   type="button"
-                  onClick={() => void load(page - 1)}
+                  onClick={() => void load(page - 1, q)}
                   disabled={page <= 1 || loading}
                   className={styles.paginationButton}
                 >
@@ -109,7 +149,7 @@ export default function ActivityPage() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => void load(page + 1)}
+                  onClick={() => void load(page + 1, q)}
                   disabled={page >= totalPages || loading}
                   className={styles.paginationButton}
                 >

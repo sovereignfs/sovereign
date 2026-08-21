@@ -1,7 +1,15 @@
 'use client';
 
 import { useActionState, useEffect, useRef, useState } from 'react';
-import { Button, Dialog, FormField, Input } from '@sovereignfs/ui';
+import {
+  Button,
+  Dialog,
+  DialogBody,
+  DialogHeader,
+  DialogTitle,
+  FormField,
+  Input,
+} from '@sovereignfs/ui';
 import { createGroupAction, type GroupActionState } from './actions';
 import styles from '../console.module.css';
 
@@ -26,29 +34,34 @@ export function CreateGroupDialog() {
         + New group
       </Button>
 
-      <Dialog open={open} onClose={() => setOpen(false)} size="sm" title="New group">
-        <form ref={formRef} action={formAction} className={styles.inviteForm}>
-          {state && !state.success && <p className={styles.errorText}>{state.error}</p>}
+      <Dialog open={open} onClose={() => setOpen(false)} size="sm">
+        <DialogHeader>
+          <DialogTitle>New group</DialogTitle>
+        </DialogHeader>
+        <DialogBody>
+          <form ref={formRef} action={formAction} className={styles.inviteForm}>
+            {state && !state.success && <p className={styles.errorText}>{state.error}</p>}
 
-          <FormField label="Name" id="group-name" required>
-            {(field) => <Input {...field} name="name" placeholder="Finance" autoComplete="off" />}
-          </FormField>
+            <FormField label="Name" id="group-name" required>
+              {(field) => <Input {...field} name="name" placeholder="Finance" autoComplete="off" />}
+            </FormField>
 
-          <FormField label="Description (optional)" id="group-description">
-            {(field) => (
-              <Input
-                {...field}
-                name="description"
-                placeholder="Finance and accounting staff"
-                autoComplete="off"
-              />
-            )}
-          </FormField>
+            <FormField label="Description (optional)" id="group-description">
+              {(field) => (
+                <Input
+                  {...field}
+                  name="description"
+                  placeholder="Finance and accounting staff"
+                  autoComplete="off"
+                />
+              )}
+            </FormField>
 
-          <Button type="submit" disabled={pending}>
-            {pending ? 'Creating…' : 'Create group'}
-          </Button>
-        </form>
+            <Button type="submit" disabled={pending}>
+              {pending ? 'Creating…' : 'Create group'}
+            </Button>
+          </form>
+        </DialogBody>
       </Dialog>
     </>
   );

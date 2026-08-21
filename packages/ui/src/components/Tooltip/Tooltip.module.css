@@ -17,7 +17,7 @@
   font-family: var(--sv-font-family);
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.1s ease;
+  transition: opacity var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
 }
 
 @media (hover: hover) {
@@ -53,4 +53,10 @@
   left: calc(100% + var(--sv-space-2));
   top: 50%;
   transform: translateY(-50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tip {
+    transition: none;
+  }
 }

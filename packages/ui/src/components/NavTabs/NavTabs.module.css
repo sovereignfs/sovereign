@@ -14,7 +14,7 @@
   color: var(--sv-color-text-muted);
   text-decoration: none;
   white-space: nowrap;
-  transition: color 0.1s ease;
+  transition: color var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
 }
 
 @media (hover: hover) {

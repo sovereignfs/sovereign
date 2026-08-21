@@ -7,8 +7,12 @@ export interface OverlayHeaderProps {
    *  slots. Optional — some consumers (e.g. `Dialog`'s mobile bar) need the
    *  row's close button present even when no title applies. */
   title?: string;
-  /** Always renders a close button; called on click. */
+  /** Called on click of the close button. */
   onClose: () => void;
+  /** Whether to render the close button. Defaults to `true`. Set `false` when
+   *  the consumer provides its own dismiss affordance (or none at all) and
+   *  doesn't want this row's own close button alongside it. */
+  showCloseButton?: boolean;
   /** When provided, renders a back-chevron button before the title (for
    *  hierarchical navigation within a single overlay — going back without
    *  fully closing it). Omit for a flat overlay that only ever closes. */
@@ -37,6 +41,7 @@ export interface OverlayHeaderProps {
 export function OverlayHeader({
   title,
   onClose,
+  showCloseButton = true,
   onBack,
   action,
   secondRow,
@@ -52,9 +57,11 @@ export function OverlayHeader({
         )}
         <span className={styles.title}>{title}</span>
         {action && <div className={styles.action}>{action}</div>}
-        <button type="button" className={styles.closeButton} aria-label="Close" onClick={onClose}>
-          <Icon name="x" size="sm" aria-hidden />
-        </button>
+        {showCloseButton && (
+          <button type="button" className={styles.closeButton} aria-label="Close" onClick={onClose}>
+            <Icon name="x" size="sm" aria-hidden />
+          </button>
+        )}
       </div>
       {secondRow && <div className={styles.secondRow}>{secondRow}</div>}
     </div>

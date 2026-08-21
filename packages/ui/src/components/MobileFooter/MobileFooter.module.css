@@ -30,7 +30,7 @@
   cursor: pointer;
   text-decoration: none;
   border-radius: var(--sv-radius-md);
-  transition: color 0.1s;
+  transition: color var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
   outline: none;
 }
 

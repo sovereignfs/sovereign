@@ -68,7 +68,7 @@
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);
-  transition: background 0.1s;
+  transition: background var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
 }
 
 .gridName {

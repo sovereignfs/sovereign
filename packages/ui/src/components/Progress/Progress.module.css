@@ -10,7 +10,7 @@
   height: 100%;
   border-radius: var(--sv-radius-full);
   background: var(--sv-color-accent);
-  transition: width 0.2s ease;
+  transition: width var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
 }
 
 @media (prefers-reduced-motion: reduce) {

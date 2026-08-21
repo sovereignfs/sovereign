@@ -31,7 +31,7 @@
   color: var(--sv-color-text-muted);
   cursor: grab;
   opacity: 1;
-  transition: opacity 0.1s ease;
+  transition: opacity var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
 }
 
 .handle:focus-visible {
@@ -54,4 +54,10 @@
 
 .dragging {
   opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .handle {
+    transition: none;
+  }
 }

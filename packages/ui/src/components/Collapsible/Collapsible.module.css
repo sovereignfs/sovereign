@@ -32,7 +32,7 @@
 .chevron {
   flex-shrink: 0;
   color: var(--sv-color-text-muted);
-  transition: transform 0.2s ease;
+  transition: transform var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
 }
 
 .chevronOpen {
@@ -45,7 +45,7 @@
 .contentWrapper {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.2s ease;
+  transition: grid-template-rows var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
 }
 
 .contentWrapper[data-open='true'] {

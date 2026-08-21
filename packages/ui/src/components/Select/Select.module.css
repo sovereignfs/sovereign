@@ -24,8 +24,8 @@
   /* Remove native OS chevron */
   appearance: none;
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out),
+    box-shadow var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
 }
 
 /* sm — compact for table cells and inline controls. 32px height. */

@@ -22,7 +22,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   /* Slide in from slightly above */
-  animation: sv-popover-in 0.12s ease;
+  animation: sv-popover-in var(--sv-motion-duration-fast) var(--sv-motion-ease-out);
 }
 
 @keyframes sv-popover-in {

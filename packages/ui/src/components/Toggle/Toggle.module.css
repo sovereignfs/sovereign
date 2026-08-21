@@ -14,7 +14,7 @@
   padding: 0;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background-color 0.15s ease;
+  transition: background-color var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
   position: relative;
 }
 
@@ -43,7 +43,7 @@
   height: 18px;
   border-radius: var(--sv-radius-full);
   background: var(--sv-white);
-  transition: transform 0.15s ease;
+  transition: transform var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
   left: 2px;
   box-shadow: var(--sv-shadow-control);
 }
@@ -54,4 +54,10 @@
 
 .off .thumb {
   transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb {
+    transition: none;
+  }
 }

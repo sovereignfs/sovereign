@@ -1,7 +1,17 @@
 'use client';
 
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Dialog, FormField, Icon, Input, Select } from '@sovereignfs/ui';
+import {
+  Button,
+  Dialog,
+  DialogBody,
+  DialogHeader,
+  DialogTitle,
+  FormField,
+  Icon,
+  Input,
+  Select,
+} from '@sovereignfs/ui';
 import type { DirectoryUser } from '@sovereignfs/sdk';
 import {
   getPluginAccessState,
@@ -371,91 +381,95 @@ export function PluginAccessDialog({
         // richer selected_users/selected_groups content scrolls internally
         // rather than clipping if it ever exceeds the size's max-height.
         size="sm"
-        title={`Access for "${pluginName}"`}
       >
-        <div className={styles.settingsSections}>
-          <section className={styles.settingsSection}>
-            <h3 className={styles.sectionTitle}>Policy</h3>
-            <p className={styles.help}>
-              Managing a plugin here does not automatically grant you app access — Console
-              management and plugin app access are separate.
-            </p>
-            <FormField label="Who can open this plugin" id={`plugin-access-policy-${pluginId}`}>
-              {() => (
-                <Select
-                  size="sm"
-                  value={policy}
-                  disabled={saving}
-                  onChange={(e) =>
-                    savePolicy(e.target.value as PluginAccessPolicyValue, selfService)
-                  }
-                >
-                  {POLICY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </FormField>
-            {policy === 'disabled' && (
+        <DialogHeader>
+          <DialogTitle>Access for &quot;{pluginName}&quot;</DialogTitle>
+        </DialogHeader>
+        <DialogBody>
+          <div className={styles.settingsSections}>
+            <section className={styles.settingsSection}>
+              <h3 className={styles.sectionTitle}>Policy</h3>
               <p className={styles.help}>
-                Disabled is the strongest state — no one can open this plugin, even admins/owners or
-                a user/group already granted access. It remains installed and manageable.
+                Managing a plugin here does not automatically grant you app access — Console
+                management and plugin app access are separate.
               </p>
-            )}
-            {showSelfService && (
-              <FormField label="" id={`plugin-access-self-service-${pluginId}`}>
+              <FormField label="Who can open this plugin" id={`plugin-access-policy-${pluginId}`}>
                 {() => (
-                  <label
-                    style={{ display: 'flex', alignItems: 'center', gap: 'var(--sv-space-2)' }}
+                  <Select
+                    size="sm"
+                    value={policy}
+                    disabled={saving}
+                    onChange={(e) =>
+                      savePolicy(e.target.value as PluginAccessPolicyValue, selfService)
+                    }
                   >
-                    <input
-                      type="checkbox"
-                      checked={selfService}
-                      disabled={saving}
-                      onChange={(e) => savePolicy(policy, e.target.checked)}
-                    />
-                    <span>
-                      Allow eligible users to self-service enable/disable this plugin (requires the{' '}
-                      <code>plugins:self-manage</code> capability)
-                    </span>
-                  </label>
+                    {POLICY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </Select>
                 )}
               </FormField>
-            )}
-            {emptyGrantWarning && (
-              <p className={styles.errorText}>
-                No {showUserPicker ? 'users' : 'groups'} are granted yet — nobody can open this
-                plugin until you grant at least one.
-              </p>
-            )}
-          </section>
-
-          {showUserPicker && (
-            <section className={styles.settingsSection}>
-              <h3 className={styles.sectionTitle}>Selected users</h3>
-              {users === null ? (
-                <p className={styles.textMuted}>Loading…</p>
-              ) : (
-                <UserGrantList pluginId={pluginId} users={users} onChanged={refresh} />
+              {policy === 'disabled' && (
+                <p className={styles.help}>
+                  Disabled is the strongest state — no one can open this plugin, even admins/owners
+                  or a user/group already granted access. It remains installed and manageable.
+                </p>
               )}
-              <UserPicker pluginId={pluginId} onChanged={refresh} />
-            </section>
-          )}
-
-          {showGroupPicker && (
-            <section className={styles.settingsSection}>
-              <h3 className={styles.sectionTitle}>Selected groups</h3>
-              {groups === null ? (
-                <p className={styles.textMuted}>Loading…</p>
-              ) : (
-                <GroupGrantList pluginId={pluginId} groups={groups} onChanged={refresh} />
+              {showSelfService && (
+                <FormField label="" id={`plugin-access-self-service-${pluginId}`}>
+                  {() => (
+                    <label
+                      style={{ display: 'flex', alignItems: 'center', gap: 'var(--sv-space-2)' }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selfService}
+                        disabled={saving}
+                        onChange={(e) => savePolicy(policy, e.target.checked)}
+                      />
+                      <span>
+                        Allow eligible users to self-service enable/disable this plugin (requires
+                        the <code>plugins:self-manage</code> capability)
+                      </span>
+                    </label>
+                  )}
+                </FormField>
               )}
-              <GroupPicker pluginId={pluginId} groupOptions={groupOptions} onChanged={refresh} />
+              {emptyGrantWarning && (
+                <p className={styles.errorText}>
+                  No {showUserPicker ? 'users' : 'groups'} are granted yet — nobody can open this
+                  plugin until you grant at least one.
+                </p>
+              )}
             </section>
-          )}
-        </div>
+
+            {showUserPicker && (
+              <section className={styles.settingsSection}>
+                <h3 className={styles.sectionTitle}>Selected users</h3>
+                {users === null ? (
+                  <p className={styles.textMuted}>Loading…</p>
+                ) : (
+                  <UserGrantList pluginId={pluginId} users={users} onChanged={refresh} />
+                )}
+                <UserPicker pluginId={pluginId} onChanged={refresh} />
+              </section>
+            )}
+
+            {showGroupPicker && (
+              <section className={styles.settingsSection}>
+                <h3 className={styles.sectionTitle}>Selected groups</h3>
+                {groups === null ? (
+                  <p className={styles.textMuted}>Loading…</p>
+                ) : (
+                  <GroupGrantList pluginId={pluginId} groups={groups} onChanged={refresh} />
+                )}
+                <GroupPicker pluginId={pluginId} groupOptions={groupOptions} onChanged={refresh} />
+              </section>
+            )}
+          </div>
+        </DialogBody>
       </Dialog>
     </>
   );

@@ -21,8 +21,8 @@
   border-radius: var(--sv-radius-md);
   cursor: pointer;
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out),
+    box-shadow var(--sv-motion-duration-fast) var(--sv-motion-ease-in-out);
 }
 
 /* Same iOS auto-zoom fix as Input — see its own module.css for why. */

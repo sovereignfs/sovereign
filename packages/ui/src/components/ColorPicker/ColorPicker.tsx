@@ -47,6 +47,13 @@ function normalize(hex: string): string {
  * swatch highlights that swatch; a hex matching none of them highlights the
  * custom trigger instead (its own dial shows that color); `null` (only
  * meaningful with `allowNone`) highlights the "no color" option.
+ *
+ * The custom trigger shows a plain "+" on a neutral dashed box until a
+ * genuinely custom color is active — it never previews an arbitrary dial
+ * color the user hasn't actually chosen. The underlying native color input
+ * still needs *some* real hex to hold internally at all times (it has no
+ * true empty state), so that starting value stays invisible (`opacity: 0`
+ * on the input itself) rather than painted as this trigger's own swatch.
  */
 export function ColorPicker({
   swatches,
@@ -109,7 +116,10 @@ export function ColorPicker({
         />
       ))}
       <span
-        className={[styles.customWrapper, isCustomActive ? styles.swatchSelected : '']
+        className={[
+          styles.customWrapper,
+          isCustomActive ? styles.swatchSelected : styles.customWrapperEmpty,
+        ]
           .filter(Boolean)
           .join(' ')}
       >
@@ -122,7 +132,9 @@ export function ColorPicker({
           value={customDialValue}
           onChange={(e) => onChange(e.target.value)}
         />
-        <Icon name="pencil" size="xs" aria-hidden={true} className={styles.customIcon} />
+        {!isCustomActive && (
+          <Icon name="plus" size="sm" aria-hidden={true} className={styles.customPlusIcon} />
+        )}
       </span>
     </div>
   );

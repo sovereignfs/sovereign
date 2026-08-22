@@ -8,6 +8,7 @@ import { ChevronRightIcon } from './chevron-right';
 import { ChevronLeftIcon } from './chevron-left';
 import { ChevronDownIcon } from './chevron-down';
 import { ChevronUpIcon } from './chevron-up';
+import { CircleChevronLeftIcon } from './circle-chevron-left';
 import { MenuIcon } from './menu';
 import { XIcon } from './x';
 import { CheckIcon } from './check';
@@ -16,6 +17,7 @@ import { Trash2Icon } from './trash-2';
 import { PencilIcon } from './pencil';
 import { RotateCcwIcon } from './rotate-ccw';
 import { SearchIcon } from './search';
+import { CopyIcon } from './copy';
 import { UserIcon } from './user';
 import { UserRoundPlusIcon } from './user-round-plus';
 import { ShieldIcon } from './shield';
@@ -24,9 +26,12 @@ import { EyeIcon } from './eye';
 import { EyeOffIcon } from './eye-off';
 import { MailIcon } from './mail';
 import { BellIcon } from './bell';
+import { InboxIcon } from './inbox';
 import { ActivityIcon } from './activity';
 import { PackageIcon } from './package';
+import { LayersIcon } from './layers';
 import { Grid2x2Icon } from './grid-2x2';
+import { LayoutDashboardIcon } from './layout-dashboard';
 import { InfoIcon } from './info';
 import { AlertTriangleIcon } from './alert-triangle';
 import { CircleCheckIcon } from './circle-check';
@@ -34,6 +39,7 @@ import { CircleXIcon } from './circle-x';
 import { CalendarIcon } from './calendar';
 import { SlidersHorizontalIcon } from './sliders-horizontal';
 import { EllipsisVerticalIcon } from './ellipsis-vertical';
+import { RectangleEllipsisIcon } from './rectangle-ellipsis';
 import { FileIcon } from './file';
 import { UploadIcon } from './upload';
 import { ExternalLinkIcon } from './external-link';
@@ -67,6 +73,7 @@ export type IconName =
   | 'chevron-left'
   | 'chevron-down'
   | 'chevron-up'
+  | 'circle-chevron-left'
   | 'menu'
   | 'x'
   | 'check'
@@ -75,6 +82,7 @@ export type IconName =
   | 'pencil'
   | 'rotate-ccw'
   | 'search'
+  | 'copy'
   | 'user'
   | 'user-round-plus'
   | 'shield'
@@ -83,9 +91,12 @@ export type IconName =
   | 'eye-off'
   | 'mail'
   | 'bell'
+  | 'inbox'
   | 'activity'
   | 'package'
+  | 'layers'
   | 'grid-2x2'
+  | 'layout-dashboard'
   | 'info'
   | 'alert-triangle'
   | 'circle-check'
@@ -93,6 +104,7 @@ export type IconName =
   | 'calendar'
   | 'sliders-horizontal'
   | 'ellipsis-vertical'
+  | 'rectangle-ellipsis'
   | 'file'
   | 'upload'
   | 'external-link'
@@ -128,6 +140,7 @@ export const ICONS: Record<IconName, IconComponent> = {
   'chevron-left': ChevronLeftIcon,
   'chevron-down': ChevronDownIcon,
   'chevron-up': ChevronUpIcon,
+  'circle-chevron-left': CircleChevronLeftIcon,
   menu: MenuIcon,
   x: XIcon,
   check: CheckIcon,
@@ -136,6 +149,7 @@ export const ICONS: Record<IconName, IconComponent> = {
   pencil: PencilIcon,
   'rotate-ccw': RotateCcwIcon,
   search: SearchIcon,
+  copy: CopyIcon,
   user: UserIcon,
   'user-round-plus': UserRoundPlusIcon,
   shield: ShieldIcon,
@@ -144,9 +158,12 @@ export const ICONS: Record<IconName, IconComponent> = {
   'eye-off': EyeOffIcon,
   mail: MailIcon,
   bell: BellIcon,
+  inbox: InboxIcon,
   activity: ActivityIcon,
   package: PackageIcon,
+  layers: LayersIcon,
   'grid-2x2': Grid2x2Icon,
+  'layout-dashboard': LayoutDashboardIcon,
   info: InfoIcon,
   'alert-triangle': AlertTriangleIcon,
   'circle-check': CircleCheckIcon,
@@ -154,6 +171,7 @@ export const ICONS: Record<IconName, IconComponent> = {
   calendar: CalendarIcon,
   'sliders-horizontal': SlidersHorizontalIcon,
   'ellipsis-vertical': EllipsisVerticalIcon,
+  'rectangle-ellipsis': RectangleEllipsisIcon,
   file: FileIcon,
   upload: UploadIcon,
   'external-link': ExternalLinkIcon,
@@ -187,6 +205,7 @@ export { ChevronRightIcon } from './chevron-right';
 export { ChevronLeftIcon } from './chevron-left';
 export { ChevronDownIcon } from './chevron-down';
 export { ChevronUpIcon } from './chevron-up';
+export { CircleChevronLeftIcon } from './circle-chevron-left';
 export { MenuIcon } from './menu';
 export { XIcon } from './x';
 export { CheckIcon } from './check';
@@ -195,6 +214,7 @@ export { Trash2Icon } from './trash-2';
 export { PencilIcon } from './pencil';
 export { RotateCcwIcon } from './rotate-ccw';
 export { SearchIcon } from './search';
+export { CopyIcon } from './copy';
 export { UserIcon } from './user';
 export { UserRoundPlusIcon } from './user-round-plus';
 export { ShieldIcon } from './shield';
@@ -203,9 +223,12 @@ export { EyeIcon } from './eye';
 export { EyeOffIcon } from './eye-off';
 export { MailIcon } from './mail';
 export { BellIcon } from './bell';
+export { InboxIcon } from './inbox';
 export { ActivityIcon } from './activity';
 export { PackageIcon } from './package';
+export { LayersIcon } from './layers';
 export { Grid2x2Icon } from './grid-2x2';
+export { LayoutDashboardIcon } from './layout-dashboard';
 export { InfoIcon } from './info';
 export { AlertTriangleIcon } from './alert-triangle';
 export { CircleCheckIcon } from './circle-check';
@@ -213,6 +236,7 @@ export { CircleXIcon } from './circle-x';
 export { CalendarIcon } from './calendar';
 export { SlidersHorizontalIcon } from './sliders-horizontal';
 export { EllipsisVerticalIcon } from './ellipsis-vertical';
+export { RectangleEllipsisIcon } from './rectangle-ellipsis';
 export { FileIcon } from './file';
 export { UploadIcon } from './upload';
 export { ExternalLinkIcon } from './external-link';

@@ -2839,6 +2839,25 @@ export async function dismissNotification(
   );
 }
 
+/**
+ * Dismiss every non-dismissed notification for a user in one statement
+ * (mirrors `markAllNotificationsRead`'s shape) — added for `sdk.notifications
+ * .dismissAll()`; the existing REST route's own "Clear all" instead issues
+ * one `dismissNotification` call per row, which this doesn't replace.
+ */
+export async function dismissAllNotifications(pdb: PlatformDb, userId: string): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE notifications
+        SET dismissed_at = ${now},
+            read_at = COALESCE(read_at, ${now})
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND recipient_user_id = ${userId}
+          AND dismissed_at IS NULL`,
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Notification prefs (RFC 0015)
 // ─────────────────────────────────────────────────────────────────────────────

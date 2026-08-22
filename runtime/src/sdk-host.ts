@@ -5,6 +5,7 @@ import {
   DEFAULT_TENANT_ID,
   checkWebhookReplay,
   consumePluginHandoff,
+  countUnreadNotifications,
   createE2eeDeviceEnrollment,
   createE2eeProfile,
   type E2eeProfileRow,
@@ -18,6 +19,8 @@ import {
   deletePluginSecret,
   deleteStorageObject,
   disconnectPluginConnection,
+  dismissAllNotifications,
+  dismissNotification,
   enqueueJob,
   findWorkspaceRoot,
   getConsentGrant,
@@ -38,7 +41,10 @@ import {
   listPluginConnections,
   listPluginSecrets,
   listStorageObjects,
+  listUserNotifications,
   logDataAccess,
+  markAllNotificationsRead,
+  markNotificationRead,
   markPluginConnectionError,
   markPluginConnectionUsed,
   markPluginSecretUsed,
@@ -108,6 +114,7 @@ import type {
   ToolRef,
 } from '@sovereignfs/sdk';
 import { requireJobsPluginContext } from './jobs';
+import { requireNotificationsPluginContext } from './notification-permissions';
 import { getBackgroundPluginContext } from './background-plugin-context';
 import type { EventEnvelope } from './event-broker';
 import { getDisabledPluginIds } from './plugin-status';
@@ -795,6 +802,54 @@ provideHost({
         icon: input.icon,
         source: pluginId,
       });
+    },
+    async list(
+      userId: string,
+      options: { includeDismissed?: boolean; limit?: number },
+      pluginId: string,
+    ) {
+      requireNotificationsPluginContext(
+        pluginId,
+        registry.find((m) => m.id === pluginId),
+      );
+      const pdb = await getPlatformDb();
+      const [items, unreadCount] = await Promise.all([
+        listUserNotifications(pdb, userId, options),
+        countUnreadNotifications(pdb, userId),
+      ]);
+      return { items, unreadCount };
+    },
+    async markRead(id: string, userId: string, pluginId: string): Promise<void> {
+      requireNotificationsPluginContext(
+        pluginId,
+        registry.find((m) => m.id === pluginId),
+      );
+      const pdb = await getPlatformDb();
+      await markNotificationRead(pdb, id, userId);
+    },
+    async markAllRead(userId: string, pluginId: string): Promise<void> {
+      requireNotificationsPluginContext(
+        pluginId,
+        registry.find((m) => m.id === pluginId),
+      );
+      const pdb = await getPlatformDb();
+      await markAllNotificationsRead(pdb, userId);
+    },
+    async dismiss(id: string, userId: string, pluginId: string): Promise<void> {
+      requireNotificationsPluginContext(
+        pluginId,
+        registry.find((m) => m.id === pluginId),
+      );
+      const pdb = await getPlatformDb();
+      await dismissNotification(pdb, id, userId);
+    },
+    async dismissAll(userId: string, pluginId: string): Promise<void> {
+      requireNotificationsPluginContext(
+        pluginId,
+        registry.find((m) => m.id === pluginId),
+      );
+      const pdb = await getPlatformDb();
+      await dismissAllNotifications(pdb, userId);
     },
   },
   webhooks: {

@@ -106,6 +106,21 @@ beforeAll(() => {
       async send(_input, _pluginId) {
         /* no-op */
       },
+      async list() {
+        return { items: [], unreadCount: 0 };
+      },
+      async markRead() {
+        /* no-op */
+      },
+      async markAllRead() {
+        /* no-op */
+      },
+      async dismiss() {
+        /* no-op */
+      },
+      async dismissAll() {
+        /* no-op */
+      },
     },
     webhooks: {
       async verifyHmac(_input, _pluginId) {

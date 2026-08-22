@@ -19,6 +19,7 @@ export {
   createPluginStatusRowIfAbsent,
   createUserGroup,
   deleteUserGroup,
+  dismissAllNotifications,
   dismissNotification,
   getAccountPrefs,
   getPluginAccessPolicy,

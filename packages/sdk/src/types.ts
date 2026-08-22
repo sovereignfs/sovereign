@@ -183,6 +183,44 @@ export interface SendNotificationInput {
 }
 
 /**
+ * One notification in the current user's own Notification Center inbox
+ * (`sdk.notifications.list()`) — the read counterpart to `SendNotificationInput`.
+ * Mirrors `@sovereignfs/db`'s `NotificationRow` minus `tenantId` (never
+ * leaked to plugins elsewhere in the SDK layer).
+ */
+export interface NotificationItem {
+  id: string;
+  /** Plugin id, `'platform'`, or `'admin'` that sent it. */
+  source: string;
+  /** `'plugin'` | `'platform'` | `'admin'`. */
+  sourceType: string;
+  title: string;
+  body: string | null;
+  url: string | null;
+  category: string;
+  icon: string | null;
+  /** Unix seconds the current user read it; `null` = unread. */
+  readAt: number | null;
+  /** Unix seconds the current user dismissed it; `null` = not dismissed. */
+  dismissedAt: number | null;
+  createdAt: number;
+}
+
+/** Options for `sdk.notifications.list()`. */
+export interface NotificationListOptions {
+  /** Include already-dismissed rows. Default `false`. */
+  includeDismissed?: boolean;
+  /** Capped at 100 host-side. Default 50. */
+  limit?: number;
+}
+
+/** Result of `sdk.notifications.list()` — same pair the real Notification Center bell reads. */
+export interface NotificationListResult {
+  items: NotificationItem[];
+  unreadCount: number;
+}
+
+/**
  * `sdk.webhooks.verifyHmac()` input (RFC 0050). `body` is the raw request
  * bytes exactly as received — read them with a bounded-size reader before
  * any JSON parsing, since parsing first would defeat the point of verifying

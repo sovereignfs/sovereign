@@ -1,0 +1,96 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  color: var(--sv-color-text-primary);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .trigger:hover {
+    background: var(--sv-color-surface-sunken);
+  }
+}
+
+.header {
+  padding: var(--sv-space-4) var(--sv-space-3) var(--sv-space-1);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--sv-space-6);
+}
+
+.error {
+  margin: 0;
+  padding: 0 var(--sv-space-3) var(--sv-space-3);
+  color: var(--sv-color-error-text);
+  font-size: var(--sv-font-size-sm);
+}
+
+.grid {
+  display: grid;
+  /* minmax(0, 1fr), not a plain 1fr — a plain 1fr track can grow past the
+     grid's own available width to fit a tile name's min-content size
+     (nowrap), blowing the grid out past the popover's own width instead of
+     letting the name truncate with ellipsis as intended. */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sv-space-1);
+  padding: var(--sv-space-2);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sv-space-2);
+  padding: var(--sv-space-2);
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  text-decoration: none;
+  color: var(--sv-color-text-primary);
+  text-align: center;
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .tile:hover {
+    background: var(--sv-color-surface-sunken);
+  }
+}
+
+.tileIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface-sunken);
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-semibold);
+  overflow: hidden;
+}
+
+.tileName {
+  font-size: var(--sv-font-size-caption);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}

@@ -92,6 +92,16 @@ export function Popover({
   // when the panel is taller than that — null leaves it at its natural
   // height, unconstrained, for the common case where it already fits.
   const [maxHeight, setMaxHeight] = useState<number | null>(null);
+  // Horizontal viewport clamp, as a `left` override (container-relative px)
+  // that replaces the `align`-driven `left: 0` / `right: 0` class rule —
+  // null leaves alignment at its natural, class-driven position, for the
+  // common case where the panel already fits. Needed because a fixed-width
+  // panel anchored to one edge of a trigger near the *opposite* edge of a
+  // narrow viewport (e.g. a 340px panel under a bell sitting near the right
+  // edge of a 375px mobile screen) has nowhere to go but off-screen — the
+  // existing vertical flip only ever solves the above/below axis, never
+  // this one.
+  const [horizontalOffset, setHorizontalOffset] = useState<number | null>(null);
 
   // width="trigger": measure the trigger's own rendered width and keep the
   // panel matching it, including live resizes (e.g. rotating the device, or
@@ -127,6 +137,7 @@ export function Popover({
     if (!open) {
       setOpenUpward(false);
       setMaxHeight(null);
+      setHorizontalOffset(null);
       return;
     }
     const container = containerRef.current;
@@ -155,10 +166,37 @@ export function Popover({
     setOpenUpward(upward);
     const available = upward ? spaceAbove : spaceBelow;
     setMaxHeight(panelHeight > available ? Math.max(available, 0) : null);
+
+    // Horizontal clamp. Deliberately computed from `containerRect` (the
+    // trigger's own position, never affected by anything this effect does)
+    // and the panel's rendered *width* (also offset-independent) rather than
+    // reading the panel's current `left`/`right` off the DOM — those reflect
+    // whatever `horizontalOffset` a *previous* run of this same effect may
+    // already have applied. Measuring the rendered position directly is not
+    // idempotent: re-running this effect after it already nudged the panel
+    // on-screen would see an already-corrected rect that looks like it never
+    // needed correcting, and clear the very offset it just set (confirmed
+    // live — React StrictMode's dev-only double-invoke of layout effects hit
+    // exactly this: the second pass measured the first pass's fix as "fits
+    // fine" and reset `horizontalOffset` back to null before first paint).
+    // Rebuilding the *natural*, un-offset position analytically from the
+    // same `align`-driven rule the CSS class itself encodes (`right: 0` /
+    // `left: 0` relative to the container) sidesteps that entirely — the
+    // same inputs always produce the same output, however many times this
+    // runs.
+    const containerRect = container.getBoundingClientRect();
+    const panelWidth = panel.getBoundingClientRect().width;
+    const naturalLeft = align === 'right' ? containerRect.right - panelWidth : containerRect.left;
+    const clampedLeft = Math.min(
+      Math.max(naturalLeft, VIEWPORT_MARGIN),
+      window.innerWidth - VIEWPORT_MARGIN - panelWidth,
+    );
+    setHorizontalOffset(clampedLeft !== naturalLeft ? clampedLeft - containerRect.left : null);
     // children included: content that changes the panel's height (e.g. a
     // calendar switching months to a row with fewer/more weeks) should
     // re-run this measurement, not just the open/close transition itself.
-  }, [open, children]);
+    // align included: the horizontal clamp above reads it directly.
+  }, [open, children, align]);
 
   // Outside-click dismissal
   useEffect(() => {
@@ -197,6 +235,7 @@ export function Popover({
           style={{
             width: width === 'trigger' ? (triggerWidth ?? undefined) : width,
             maxHeight: maxHeight ?? undefined,
+            ...(horizontalOffset != null ? { left: horizontalOffset, right: 'auto' } : {}),
             ...panelStyle,
           }}
         >

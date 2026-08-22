@@ -18,6 +18,15 @@ export interface OverlayHeaderProps {
   /** A second row below the title row — e.g. a tab strip. */
   secondRow?: ReactNode;
   className?: string;
+  /** Override the title row's own className (e.g. tighter padding to match
+   *  a consumer's own compact header elsewhere in the same surface) — the
+   *  row keeps its standard title/back/action/close layout, just restyled.
+   *  For a genuinely different shape, don't use `OverlayHeader` at all (see
+   *  this component's own doc comment). */
+  rowClassName?: string;
+  /** Override the title text's own className (e.g. a smaller font size to
+   *  match a consumer's own compact header elsewhere in the same surface). */
+  titleClassName?: string;
 }
 
 /**
@@ -41,16 +50,18 @@ export function OverlayHeader({
   action,
   secondRow,
   className,
+  rowClassName,
+  titleClassName,
 }: OverlayHeaderProps) {
   return (
     <div className={[styles.header, className].filter(Boolean).join(' ')}>
-      <div className={styles.row}>
+      <div className={[styles.row, rowClassName].filter(Boolean).join(' ')}>
         {onBack && (
           <button type="button" className={styles.backButton} aria-label="Back" onClick={onBack}>
             <Icon name="chevron-left" size="md" aria-hidden />
           </button>
         )}
-        <span className={styles.title}>{title}</span>
+        <span className={[styles.title, titleClassName].filter(Boolean).join(' ')}>{title}</span>
         {action && <div className={styles.action}>{action}</div>}
         <button type="button" className={styles.closeButton} aria-label="Close" onClick={onClose}>
           <Icon name="x" size="sm" aria-hidden />

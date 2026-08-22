@@ -1,0 +1,90 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--sv-color-accent);
+  border-radius: var(--sv-radius-full);
+  background-color: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-semibold);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* The compact `Header` top-bar context's own avatar size. */
+.triggerSm {
+  width: 32px;
+  height: 32px;
+}
+
+.triggerImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.panelHeader {
+  padding: var(--sv-space-1) var(--sv-space-1) 0;
+}
+
+.userHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-2) var(--sv-space-3);
+}
+
+.menuAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--sv-radius-full);
+  background-color: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
+  overflow: hidden;
+}
+
+.menuAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.userName {
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userEmail {
+  font-size: var(--sv-font-size-caption);
+  color: var(--sv-color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.divider {
+  margin: var(--sv-space-1) 0 0;
+  border: none;
+  border-top: 1px solid var(--sv-color-border);
+}

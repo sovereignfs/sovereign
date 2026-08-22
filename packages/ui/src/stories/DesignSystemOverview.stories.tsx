@@ -25,13 +25,17 @@ import { StatusBadge } from '../components/StatusBadge/StatusBadge';
 import { SplitPane } from '../components/SplitPane/SplitPane';
 import { TagInput } from '../components/TagInput/TagInput';
 import { SuggestionInput } from '../components/SuggestionInput/SuggestionInput';
+import { AppsLauncher } from '../components/AppsLauncher/AppsLauncher';
+import { Header } from '../components/Header/Header';
 import { MobileAppsDrawer } from '../components/MobileAppsDrawer/MobileAppsDrawer';
 import { MobileFooter } from '../components/MobileFooter/MobileFooter';
 import { MobileHeader } from '../components/MobileHeader/MobileHeader';
 import { NavTabs } from '../components/NavTabs/NavTabs';
+import { NotificationsPanel } from '../components/NotificationsPanel/NotificationsPanel';
 import { PageHeader } from '../components/PageHeader/PageHeader';
 import { PageContainer } from '../components/PageContainer/PageContainer';
 import { Popover } from '../components/Popover/Popover';
+import { UserMenu } from '../components/UserMenu/UserMenu';
 import { ResponsiveSurface } from '../components/ResponsiveSurface/ResponsiveSurface';
 import { SwipableMobileCarousel } from '../components/SwipableMobileCarousel/SwipableMobileCarousel';
 import { SwipableMobileCarouselSlide } from '../components/SwipableMobileCarousel/SwipableMobileCarouselSlide';
@@ -2211,6 +2215,144 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   </div>
                 </PageContainer>
               </div>
+            </ComponentCard>
+
+            {/* Header */}
+            <ComponentCard
+              name="Header"
+              importLine="import { Header } from '@sovereignfs/ui';"
+              usage="The web top-bar header for shell: minimal plugins that own their whole viewport (no platform sidebar). Brand badge + optional active plugin on the left; launcher (AppsLauncher), notifications (NotificationsPanel), and avatarMenu (UserMenu) on the right — all real, shared, independently clickable components. Presentational only — see Components/Header for the mobile counterpart (MobileHeader) shown side by side."
+            >
+              <Header
+                instanceName="Sovereign"
+                homeHref="/launcher"
+                plugin={{
+                  // The plugin icon is 28px — the same size as the brand
+                  // badge next to it, not a smaller inline glyph.
+                  name: 'Notes',
+                  icon: (
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 28,
+                        height: 28,
+                      }}
+                    >
+                      <span style={{ display: 'inline-flex', transform: 'scale(1.15)' }}>
+                        <Icon name="file" size="lg" aria-hidden />
+                      </span>
+                    </span>
+                  ),
+                  href: '/notes',
+                }}
+                launcher={
+                  <AppsLauncher
+                    items={[
+                      {
+                        key: 'home',
+                        icon: <Icon name="house" size="md" aria-hidden />,
+                        label: 'Home',
+                        href: '/launcher',
+                      },
+                      {
+                        key: 'notes',
+                        icon: <Icon name="file" size="md" aria-hidden />,
+                        label: 'Notes',
+                        href: '/notes',
+                      },
+                    ]}
+                  />
+                }
+                notifications={<NotificationsPanel items={[]} unreadCount={0} />}
+                avatarMenu={
+                  <UserMenu
+                    name="Kasun Benthara"
+                    email="kasun@openfs.io"
+                    items={[
+                      { label: 'Account', icon: 'user', href: '/account' },
+                      { label: 'Sign out', icon: 'log-out', destructive: true, onSelect: () => {} },
+                    ]}
+                    size="sm"
+                  />
+                }
+              />
+            </ComponentCard>
+
+            {/* AppsLauncher */}
+            <ComponentCard
+              name="AppsLauncher"
+              importLine="import { AppsLauncher } from '@sovereignfs/ui';"
+              usage="The desktop 'Apps' switcher — a 28px grid trigger opening a Popover tile grid. The desktop counterpart to MobileAppsDrawer: same items shape (key/icon/label/href/onClick), different chrome. Presentational only — items are supplied already resolved; loading/error are separate props."
+            >
+              <AppsLauncher
+                items={[
+                  {
+                    key: 'home',
+                    icon: <Icon name="house" size="md" aria-hidden />,
+                    label: 'Home',
+                    href: '/launcher',
+                  },
+                  {
+                    key: 'console',
+                    icon: <Icon name="layout-dashboard" size="md" aria-hidden />,
+                    label: 'Console',
+                    href: '/console',
+                  },
+                  {
+                    key: 'notes',
+                    icon: <Icon name="file" size="md" aria-hidden />,
+                    label: 'Notes',
+                    href: '/notes',
+                  },
+                ]}
+              />
+            </ComponentCard>
+
+            {/* NotificationsPanel */}
+            <ComponentCard
+              name="NotificationsPanel"
+              importLine="import { NotificationsPanel } from '@sovereignfs/ui';"
+              usage="The bell trigger + dropdown, generalized from the runtime shell's own NotificationBell — title/Mark all read/Clear all/close, then category-icon + title + time + unread-dot + dismiss rows. Pure presentation: no fetch/SSE/mark-read logic of its own; the consumer supplies already-resolved items and wires onOpen/onDismiss/onMarkAllRead/onClearAll."
+            >
+              <NotificationsPanel
+                items={[
+                  {
+                    id: '1',
+                    icon: <Icon name="layers" size="sm" aria-hidden />,
+                    title: 'Added to a project',
+                    timeLabel: '2d ago',
+                    read: false,
+                    onDismiss: () => {},
+                  },
+                ]}
+                unreadCount={1}
+                onMarkAllRead={() => {}}
+                onClearAll={() => {}}
+              />
+            </ComponentCard>
+
+            {/* UserMenu */}
+            <ComponentCard
+              name="UserMenu"
+              importLine="import { UserMenu } from '@sovereignfs/ui';"
+              usage="The account avatar trigger + dropdown, generalized from the runtime shell's own AccountMenu — accent-filled avatar, a name/email header block, then a plain item list. Presentational only: no auth/session logic — items carry their own onSelect and/or href (e.g. a real 'Sign out' item just does whatever the consuming app's sign-out requires)."
+            >
+              <UserMenu
+                name="Kasun Benthara"
+                email="kasun@openfs.io"
+                items={[
+                  { label: 'Account', icon: 'user', href: '/account' },
+                  {
+                    label: 'Preferences',
+                    icon: 'sliders-horizontal',
+                    href: '/account/preferences',
+                  },
+                  { label: 'Sign out', icon: 'log-out', destructive: true, onSelect: () => {} },
+                ]}
+              />
             </ComponentCard>
 
             {/* MobileHeader */}

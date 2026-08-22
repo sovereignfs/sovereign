@@ -32,7 +32,7 @@ export function Menubar({ menus, 'aria-label': ariaLabel = 'Menu bar' }: Menubar
             items={menu.items}
             onSelect={(entry) => {
               close();
-              entry.onSelect();
+              entry.onSelect?.();
             }}
           />
         ),

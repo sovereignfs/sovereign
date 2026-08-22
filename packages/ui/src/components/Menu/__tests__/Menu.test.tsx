@@ -194,4 +194,34 @@ describe('Menu', () => {
     expect(onSelect).toHaveBeenCalledOnce();
     expect(onClose).toHaveBeenCalledOnce();
   });
+
+  it('renders an item with href as a link, not a button', () => {
+    render(
+      <Menu
+        trigger={<button type="button">Open menu</button>}
+        open
+        onClose={() => {}}
+        items={[{ label: 'Account', href: '/account' }]}
+        aria-label="List actions"
+      />,
+    );
+    const link = screen.getByRole('menuitem', { name: 'Account' });
+    expect(link.tagName).toBe('A');
+    expect(link.getAttribute('href')).toBe('/account');
+  });
+
+  it('closes on click of an href item even with no onSelect', () => {
+    const onClose = vi.fn();
+    render(
+      <Menu
+        trigger={<button type="button">Open menu</button>}
+        open
+        onClose={onClose}
+        items={[{ label: 'Account', href: '/account' }]}
+        aria-label="List actions"
+      />,
+    );
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Account' }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
 });

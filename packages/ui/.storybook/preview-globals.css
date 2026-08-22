@@ -1,5 +1,26 @@
+/* Matches runtime/app/globals.css's own reset — without this, Storybook
+   renders every component's padding/border ON TOP OF a min-height/height
+   instead of within it (the browser default is content-box), so anything
+   sized against a real px budget (Header's 48px bar, Popover's calc() math,
+   etc.) renders taller/wider in Storybook than in the real, production app
+   that actually has this reset. Found via a live height mismatch: Header's
+   own CSS was byte-for-byte identical to its real KanbanHeader.tsx
+   reference, yet rendered visibly taller in Storybook — this box-sizing gap
+   was the actual cause, not a padding/sizing bug in the component itself. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 /* Apply the design system's base typography to the Storybook canvas,
    matching what the runtime shell sets globally in production. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
 body {
   font-family: var(--sv-font-family);
   color: var(--sv-color-text-primary);

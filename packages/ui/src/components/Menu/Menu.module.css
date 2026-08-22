@@ -33,6 +33,7 @@
   font: inherit;
   font-size: var(--sv-font-size-sm);
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
 }
 

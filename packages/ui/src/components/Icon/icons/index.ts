@@ -32,6 +32,7 @@ import { PackageIcon } from './package';
 import { LayersIcon } from './layers';
 import { Grid2x2Icon } from './grid-2x2';
 import { LayoutDashboardIcon } from './layout-dashboard';
+import { SquareKanbanIcon } from './square-kanban';
 import { InfoIcon } from './info';
 import { AlertTriangleIcon } from './alert-triangle';
 import { CircleCheckIcon } from './circle-check';
@@ -97,6 +98,7 @@ export type IconName =
   | 'layers'
   | 'grid-2x2'
   | 'layout-dashboard'
+  | 'square-kanban'
   | 'info'
   | 'alert-triangle'
   | 'circle-check'
@@ -164,6 +166,7 @@ export const ICONS: Record<IconName, IconComponent> = {
   layers: LayersIcon,
   'grid-2x2': Grid2x2Icon,
   'layout-dashboard': LayoutDashboardIcon,
+  'square-kanban': SquareKanbanIcon,
   info: InfoIcon,
   'alert-triangle': AlertTriangleIcon,
   'circle-check': CircleCheckIcon,
@@ -229,6 +232,7 @@ export { PackageIcon } from './package';
 export { LayersIcon } from './layers';
 export { Grid2x2Icon } from './grid-2x2';
 export { LayoutDashboardIcon } from './layout-dashboard';
+export { SquareKanbanIcon } from './square-kanban';
 export { InfoIcon } from './info';
 export { AlertTriangleIcon } from './alert-triangle';
 export { CircleCheckIcon } from './circle-check';

@@ -44,6 +44,7 @@ export const ICON_LIST = [
   'layers',
   'grid-2x2',
   'layout-dashboard',
+  'square-kanban',
   'info',
   'alert-triangle',
   'circle-check',

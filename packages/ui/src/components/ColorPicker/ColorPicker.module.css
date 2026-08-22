@@ -39,17 +39,20 @@
   border-style: solid;
 }
 
-/* Wraps the native color input so a decorative pencil badge can sit in its
-   corner (a native `<input type="color">` can't have DOM children of its
-   own) and so the same `.swatchSelected` ring used above can be applied to
-   the wrapper without fighting the input's own default focus/border
-   rendering. */
+/* Wraps the native color input so a decorative "+" glyph can sit on top of
+   it while it's empty (a native `<input type="color">` can't have DOM
+   children of its own) and so the same `.swatchSelected` ring used above can
+   be applied to the wrapper without fighting the input's own default
+   focus/border rendering. */
 .customWrapper {
   position: relative;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: var(--sv-space-8);
   height: var(--sv-space-8);
   border-radius: var(--sv-radius-md);
+  border: 2px solid transparent;
 }
 
 .customWrapper.swatchSelected {
@@ -57,6 +60,14 @@
      the input itself is styled borderless below, so this is the only
      border/outline actually rendered for the custom trigger. */
   border-color: var(--sv-color-accent);
+}
+
+/* Before a custom color is actually chosen — same dashed/outlined treatment
+   as .swatchNone, since there's equally no real color value to paint yet. */
+.customWrapperEmpty {
+  background-color: var(--sv-color-surface-sunken);
+  border-style: dashed;
+  border-color: var(--sv-color-border-strong);
 }
 
 /* Reset the native control to a plain color swatch matching the curated
@@ -72,9 +83,22 @@
   background: none;
 }
 
+/* Invisible but still clickable/focusable while empty — the input always
+   holds *some* real hex internally (no true empty state), but that value
+   was never actually chosen by the user, so it must never render as this
+   trigger's own swatch color. Becomes visible again the moment a real
+   choice makes it into `value` (`.customWrapperEmpty` stops applying). */
+.customWrapperEmpty .customInput {
+  opacity: 0;
+}
+
 .customInput:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.customWrapperEmpty .customInput:disabled {
+  opacity: 0;
 }
 
 .customInput::-webkit-color-swatch-wrapper {
@@ -92,14 +116,17 @@
   border-radius: var(--sv-radius-md);
 }
 
-.customIcon {
+/* `inset: 0` alone doesn't center this — the icon already has an explicit
+   width/height (its own size class), so an absolutely positioned box with
+   all four insets pinned to 0 resolves against top/left rather than
+   stretching to let flex centering do anything, landing the glyph in the
+   corner instead of the middle. `top/left: 50%` + `translate(-50%, -50%)`
+   centers a fixed-size element regardless of its own dimensions. */
+.customPlusIcon {
   position: absolute;
-  right: -4px;
-  bottom: -4px;
-  padding: 2px;
-  border-radius: var(--sv-radius-full);
-  background: var(--sv-color-surface-raised);
-  color: var(--sv-color-text-primary);
-  box-shadow: 0 0 0 1px var(--sv-color-border);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--sv-color-text-muted);
   pointer-events: none;
 }

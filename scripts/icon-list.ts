@@ -17,6 +17,7 @@ export const ICON_LIST = [
   'chevron-left',
   'chevron-down',
   'chevron-up',
+  'circle-chevron-left',
   'menu',
   'x',
   // Actions
@@ -26,6 +27,7 @@ export const ICON_LIST = [
   'pencil',
   'rotate-ccw',
   'search',
+  'copy',
   // User / security
   'user',
   'user-round-plus',
@@ -36,9 +38,12 @@ export const ICON_LIST = [
   // Content / status
   'mail',
   'bell',
+  'inbox',
   'activity',
   'package',
+  'layers',
   'grid-2x2',
+  'layout-dashboard',
   'info',
   'alert-triangle',
   'circle-check',
@@ -46,6 +51,7 @@ export const ICON_LIST = [
   'calendar',
   'sliders-horizontal',
   'ellipsis-vertical',
+  'rectangle-ellipsis',
   'file',
   'upload',
   'external-link',

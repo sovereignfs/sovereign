@@ -12,9 +12,6 @@
   },
   "dependencies": {
     "@better-auth/passkey": "^1.6.25",
-    "@dnd-kit/core": "^6.3.1",
-    "@dnd-kit/sortable": "^10.0.0",
-    "@dnd-kit/utilities": "^3.2.2",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@next/env": "^16.2.12",
     "@sovereignfs/bridge": "workspace:*",
@@ -27,7 +24,6 @@
     "better-sqlite3-multiple-ciphers": "catalog:",
     "drizzle-orm": "^0.45.2",
     "fflate": "^0.8.3",
-    "nanoid": "^5.0.9",
     "next": "catalog:",
     "qrcode": "^1.5.4",
     "react": "catalog:",

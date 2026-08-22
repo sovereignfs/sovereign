@@ -10,6 +10,12 @@ function Harness() {
   return <div ref={ref} />;
 }
 
+function HeaderHarness() {
+  const ref = useRef<HTMLDivElement>(null);
+  usePublishShellChromeHeight(ref, '--sv-shell-header-height');
+  return <div ref={ref} />;
+}
+
 function stubHeight(height: number) {
   return vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
     height,
@@ -72,5 +78,41 @@ describe('usePublishShellChromeHeight', () => {
   it('is a no-op when #sv-app-shell does not exist', () => {
     stubHeight(50);
     expect(() => render(<Harness />)).not.toThrow();
+  });
+
+  it('also mirrors --sv-shell-header-height onto --sv-dialog-inset-top on :root', () => {
+    const shell = document.createElement('div');
+    shell.id = 'sv-app-shell';
+    document.body.appendChild(shell);
+    stubHeight(69);
+
+    render(<HeaderHarness />);
+
+    expect(shell.style.getPropertyValue('--sv-shell-header-height')).toBe('69px');
+    expect(document.documentElement.style.getPropertyValue('--sv-dialog-inset-top')).toBe('69px');
+  });
+
+  it('removes --sv-dialog-inset-top from :root on unmount', () => {
+    const shell = document.createElement('div');
+    shell.id = 'sv-app-shell';
+    document.body.appendChild(shell);
+    stubHeight(69);
+
+    const { unmount } = render(<HeaderHarness />);
+    expect(document.documentElement.style.getPropertyValue('--sv-dialog-inset-top')).toBe('69px');
+
+    unmount();
+    expect(document.documentElement.style.getPropertyValue('--sv-dialog-inset-top')).toBe('');
+  });
+
+  it('never touches --sv-dialog-inset-top for the footer variable', () => {
+    const shell = document.createElement('div');
+    shell.id = 'sv-app-shell';
+    document.body.appendChild(shell);
+    stubHeight(50);
+
+    render(<Harness />);
+
+    expect(document.documentElement.style.getPropertyValue('--sv-dialog-inset-top')).toBe('');
   });
 });

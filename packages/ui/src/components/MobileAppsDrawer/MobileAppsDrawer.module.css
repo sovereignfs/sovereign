@@ -8,15 +8,16 @@
 .grid {
   list-style: none;
   margin: 0;
-  /* Drawer's own grab handle already reserves a 44px touch target above this
-     — no extra top padding needed beyond a touch of breathing room. Bottom
-     gets noticeably more: with no header row to separate the grid from the
-     handle, a tight top/bottom balance read as top-heavy (grid crowding the
-     handle isn't the issue; the *last* row crowding the panel's bottom
-     edge/safe-area is). Drawer's own panel already adds
-     env(safe-area-inset-bottom) below everything, so this is on top of that,
-     not instead of it. */
-  padding: var(--sv-space-1) var(--sv-space-4) var(--sv-space-10);
+  /* Matches the reference `.drawerGrid`'s own padding exactly — its
+     surrounding `Drawer` also has no header row (no `title` passed either),
+     so "no header row" can't actually explain padding this component used
+     to carry well past the reference's own (`--sv-space-1`/`--sv-space-10`
+     vs the reference's `--sv-space-2`/`--sv-space-6`) — found live, this
+     component's grid visibly read as more tightly hugging the handle and
+     noticeably more padded at the bottom than the reference's side by side.
+     Drawer's own panel already adds env(safe-area-inset-bottom) below
+     everything, so this is on top of that, not instead of it. */
+  padding: var(--sv-space-2) var(--sv-space-4) var(--sv-space-6);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   row-gap: var(--sv-space-5);

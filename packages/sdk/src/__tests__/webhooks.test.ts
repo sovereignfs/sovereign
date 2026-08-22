@@ -96,7 +96,16 @@ describe('sdk.webhooks — header resolution', () => {
           return 'not_granted';
         },
       },
-      notifications: { async send() {} },
+      notifications: {
+        async send() {},
+        async list() {
+          return { items: [], unreadCount: 0 };
+        },
+        async markRead() {},
+        async markAllRead() {},
+        async dismiss() {},
+        async dismissAll() {},
+      },
       webhooks: {
         async verifyHmac(input, pluginId) {
           seenHmacInput = input;

@@ -73,7 +73,16 @@ describe('sdk.mailer / sdk.email — plugin ID resolution (RFC 0062)', () => {
           return 'not_granted';
         },
       },
-      notifications: { async send() {} },
+      notifications: {
+        async send() {},
+        async list() {
+          return { items: [], unreadCount: 0 };
+        },
+        async markRead() {},
+        async markAllRead() {},
+        async dismiss() {},
+        async dismissAll() {},
+      },
       webhooks: {
         async verifyHmac() {
           return false;

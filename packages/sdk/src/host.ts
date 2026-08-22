@@ -9,6 +9,8 @@ import type {
   DrizzleClient,
   EmailSendResult,
   MailOptions,
+  NotificationListOptions,
+  NotificationListResult,
   PlatformConfig,
   ProviderConfig,
   ResolveUsersInput,
@@ -186,6 +188,26 @@ export interface SdkHost {
      * supplies the payload fields.
      */
     send(input: SendNotificationInput, pluginId: string): Promise<void>;
+    /**
+     * Read the CALLING USER's own Notification Center inbox — the same real,
+     * cross-plugin list the platform's own bell shows, never scoped to the
+     * calling plugin. `userId` is always the current session's own id,
+     * resolved by the SDK client from request context, never plugin input —
+     * a plugin can only ever read its own signed-in user's notifications.
+     */
+    list(
+      userId: string,
+      options: NotificationListOptions,
+      pluginId: string,
+    ): Promise<NotificationListResult>;
+    /** Mark one of the calling user's own notifications read. No-op if not theirs or already read. */
+    markRead(id: string, userId: string, pluginId: string): Promise<void>;
+    /** Mark all of the calling user's own unread notifications read. */
+    markAllRead(userId: string, pluginId: string): Promise<void>;
+    /** Dismiss one of the calling user's own notifications. No-op if not theirs. */
+    dismiss(id: string, userId: string, pluginId: string): Promise<void>;
+    /** Dismiss all of the calling user's own non-dismissed notifications. */
+    dismissAll(userId: string, pluginId: string): Promise<void>;
   };
   webhooks: {
     /** Verify an HMAC signature against a plugin-scoped secret (RFC 0050). */

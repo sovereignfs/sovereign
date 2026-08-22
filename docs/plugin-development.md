@@ -249,7 +249,7 @@ Declared SDK capabilities. The v1-functional ones:
 
 | `activity:write` | Record activity-log events via `sdk.activity.log()` (RFC 0005). |
 
-| `notifications:send` | Send notifications to users via `sdk.notifications.send()` (RFC 0015). |
+| `notifications:send` | Send notifications to users via `sdk.notifications.send()`, and read/manage the calling user's own cross-plugin Notification Center inbox via `sdk.notifications.list()/markRead()/markAllRead()/dismiss()/dismissAll()` — not scoped to notifications the calling plugin itself sent (RFC 0015). |
 
 | `jobs:write` | Enqueue/schedule/cancel/read background jobs via `sdk.jobs` (RFC 0046). |
 
@@ -2306,6 +2306,37 @@ recipient — on top of the in-app bell delivery. Plugins call the same `sdk.not
 API regardless; the push fan-out is invisible and requires no plugin changes. Users opt in and
 out per-device via **Account → Notifications → Enable push notifications**.
 
+**Reading the current user's own inbox.** A plugin that renders its own bell/notification UI
+(e.g. because it can't reach the platform shell's real one — a `shell: minimal` plugin has no
+chrome at all) reads and manages the signed-in user's own Notification Center inbox with
+`sdk.notifications.list()`/`markRead()`/`markAllRead()`/`dismiss()`/`dismissAll()` — the exact
+same real, cross-plugin data the platform's own bell shows, never a plugin-scoped subset. These
+methods also require the `notifications:send` permission (reused rather than a separate
+`notifications:read` permission — a plugin building its own bell UI needs both). `userId` is
+always the calling session's own id, resolved server-side from request context — there is no way
+to pass a target user id, so a plugin can only ever read/manage its own signed-in user's inbox,
+never another user's.
+
+```ts
+// Inside a plugin server action (server-side only):
+import { sdk } from '@sovereignfs/sdk';
+
+const { items, unreadCount } = await sdk.notifications.list();
+// items: NotificationItem[] — id, source, sourceType, title, body, url,
+// category, icon, readAt, dismissedAt, createdAt (all fields the row has).
+
+await sdk.notifications.markRead(id);
+await sdk.notifications.markAllRead();
+await sdk.notifications.dismiss(id);
+await sdk.notifications.dismissAll();
+```
+
+These five methods only cover polling-style reads and mutations — there is no SDK equivalent for
+the platform's live SSE push stream (`/api/account/notifications/stream`), since a persistent
+server-sent-events connection isn't naturally modeled as a request/response SDK call. A plugin
+that wants live updates polls `list()` on an interval instead (the platform's own bell does the
+same thing as its fallback transport when SSE isn't available).
+
 ### `schedules` — recurring background jobs (RFC 0046 Phase 1)
 
 Plugins can declare recurring server-side jobs that run without any browser
@@ -3013,7 +3044,10 @@ version?)` (sync, `false` until the handshake resolves — capabilities are
   permission. The runtime injects `source` (plugin ID) and `sourceType` automatically —
   plugins supply `recipientUserId`, `title`, and optionally `body`, `url`, `category`,
   and `icon`. Users can mute categories (except `security`) in their Account Notifications
-  tab. See [notifications (RFC 0015)](#notifications-rfc-0015) below.
+  tab. `sdk.notifications.list()/markRead()/markAllRead()/dismiss()/dismissAll()` read and
+  manage the _current user's own_ inbox — the same real cross-plugin data the platform's own
+  bell shows, always self-scoped (no target-user parameter exists). See
+  [notifications (RFC 0015)](#notifications-rfc-0015) below.
 - **`billing`** — plugin monetization / entitlement gating (RFC 0003).
   `sdk.billing.getEntitlement(headers)` returns the current user's active
   entitlement for the calling plugin (tier + expiry), or `null` if none exists.

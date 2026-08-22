@@ -71,6 +71,14 @@ export interface DialogProps {
   /** On mobile: shown in the top bar alongside the close button so the title
    *  and dismiss affordance occupy the same row instead of stacking. */
   title?: string;
+  /** Forwarded to the mobile `OverlayHeader`'s own `rowClassName` — restyle
+   *  the title row (e.g. tighter padding to match a consumer's own compact
+   *  header elsewhere) without changing its title/close layout. */
+  rowClassName?: string;
+  /** Forwarded to the mobile `OverlayHeader`'s own `titleClassName` —
+   *  restyle the title text (e.g. a smaller font size to match a consumer's
+   *  own compact header elsewhere). */
+  titleClassName?: string;
   children: ReactNode;
 }
 
@@ -96,6 +104,8 @@ export function Dialog({
   size = 'lg',
   'aria-label': ariaLabel,
   title,
+  rowClassName,
+  titleClassName,
   children,
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -142,6 +152,8 @@ export function Dialog({
           onClose={onClose}
           secondRow={secondRow}
           className={styles.mobileHeader}
+          rowClassName={rowClassName}
+          titleClassName={titleClassName}
         />
         {/* Desktop: absolute close button (hidden on mobile via CSS).
             `circle-x`, not a bare "×" glyph — developer-requested, a real

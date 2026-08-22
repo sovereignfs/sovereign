@@ -53,6 +53,15 @@ export type {
   MenuSeparator,
   MenuEntry,
 } from './components/Menu/Menu';
+export { UserMenu } from './components/UserMenu/UserMenu';
+export type { UserMenuProps, UserMenuItem } from './components/UserMenu/UserMenu';
+export { AppsLauncher } from './components/AppsLauncher/AppsLauncher';
+export type { AppsLauncherProps, AppsLauncherItem } from './components/AppsLauncher/AppsLauncher';
+export { NotificationsPanel } from './components/NotificationsPanel/NotificationsPanel';
+export type {
+  NotificationsPanelProps,
+  NotificationsPanelItem,
+} from './components/NotificationsPanel/NotificationsPanel';
 export { ToastProvider, useToast } from './components/Toast/Toast';
 export type { ToastItem, ToastContextValue } from './components/Toast/Toast';
 export { Card } from './components/Card/Card';
@@ -63,6 +72,8 @@ export { PageHeader } from './components/PageHeader/PageHeader';
 export type { PageHeaderProps } from './components/PageHeader/PageHeader';
 export { PageContainer } from './components/PageContainer/PageContainer';
 export type { PageContainerProps } from './components/PageContainer/PageContainer';
+export { Header } from './components/Header/Header';
+export type { HeaderProps, HeaderPlugin } from './components/Header/Header';
 export { MobileHeader } from './components/MobileHeader/MobileHeader';
 export type { MobileHeaderProps } from './components/MobileHeader/MobileHeader';
 export { MobileFooter } from './components/MobileFooter/MobileFooter';

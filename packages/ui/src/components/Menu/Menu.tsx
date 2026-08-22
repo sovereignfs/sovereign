@@ -10,7 +10,16 @@ import styles from './Menu.module.css';
 export interface MenuItem {
   type?: 'item';
   label: string;
-  onSelect: () => void;
+  /** Optional when `href` is provided (a pure navigation entry needs no
+   *  extra callback) — required otherwise. Called before the surface closes
+   *  is the caller's job to avoid; `Menu`'s own wiring always closes first,
+   *  then calls this. */
+  onSelect?: () => void;
+  /** Renders the entry as a link (`<a href>`, `role="menuitem"`) instead of
+   *  a `<button>` — same href-vs-onClick convention as `MobileAppsDrawer`'s
+   *  items. Framework-agnostic (a plain anchor, not `next/link`), matching
+   *  every other `packages/ui` href slot. */
+  href?: string;
   icon?: IconName;
   /** Styles the item as a destructive action (e.g. "Delete list"). */
   destructive?: boolean;
@@ -100,26 +109,43 @@ export function MenuEntries({
           );
         }
         const isCheckable = entry.checked !== undefined;
+        const className = [styles.item, entry.destructive ? styles.itemDestructive : '']
+          .filter(Boolean)
+          .join(' ');
+        const content = (
+          <>
+            {isCheckable && (
+              <span className={styles.check} aria-hidden>
+                {entry.checked && <Icon name="check" size="sm" aria-hidden />}
+              </span>
+            )}
+            {entry.icon && <Icon name={entry.icon} size="sm" aria-hidden />}
+            {entry.label}
+          </>
+        );
         return (
           <li key={index} role="none">
-            <button
-              role={isCheckable ? 'menuitemradio' : 'menuitem'}
-              aria-checked={isCheckable ? entry.checked : undefined}
-              type="button"
-              className={[styles.item, entry.destructive ? styles.itemDestructive : '']
-                .filter(Boolean)
-                .join(' ')}
-              disabled={entry.disabled}
-              onClick={() => onSelect(entry)}
-            >
-              {isCheckable && (
-                <span className={styles.check} aria-hidden>
-                  {entry.checked && <Icon name="check" size="sm" aria-hidden />}
-                </span>
-              )}
-              {entry.icon && <Icon name={entry.icon} size="sm" aria-hidden />}
-              {entry.label}
-            </button>
+            {entry.href ? (
+              <a
+                role="menuitem"
+                href={entry.href}
+                className={className}
+                onClick={() => onSelect(entry)}
+              >
+                {content}
+              </a>
+            ) : (
+              <button
+                role={isCheckable ? 'menuitemradio' : 'menuitem'}
+                aria-checked={isCheckable ? entry.checked : undefined}
+                type="button"
+                className={className}
+                disabled={entry.disabled}
+                onClick={() => onSelect(entry)}
+              >
+                {content}
+              </button>
+            )}
           </li>
         );
       })}
@@ -135,7 +161,7 @@ export function Menu({ trigger, open, onClose, items, 'aria-label': ariaLabel, a
       items={items}
       onSelect={(entry) => {
         onClose();
-        entry.onSelect();
+        entry.onSelect?.();
       }}
     />
   );

@@ -64,7 +64,7 @@ export function ContextMenu({ children, items, 'aria-label': ariaLabel }: Contex
       items={items}
       onSelect={(entry: MenuItem) => {
         setOpen(false);
-        entry.onSelect();
+        entry.onSelect?.();
       }}
     />
   );

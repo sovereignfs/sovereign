@@ -268,3 +268,5 @@ export { HeaderFooterLayout } from './components/HeaderFooterLayout/HeaderFooter
 export type { HeaderFooterLayoutProps } from './components/HeaderFooterLayout/HeaderFooterLayout';
 export { RootLayout } from './components/RootLayout/RootLayout';
 export type { RootLayoutProps, RootLayoutVariant } from './components/RootLayout/RootLayout';
+export { PageLayout } from './components/PageLayout/PageLayout';
+export type { PageLayoutProps, PageLayoutPadding } from './components/PageLayout/PageLayout';

@@ -23,6 +23,7 @@ import { CodeTextarea } from '../components/CodeTextarea/CodeTextarea';
 import { Textarea } from '../components/Textarea/Textarea';
 import { StatusBadge } from '../components/StatusBadge/StatusBadge';
 import { SplitPane } from '../components/SplitPane/SplitPane';
+import { ThreeColumnLayout } from '../components/ThreeColumnLayout/ThreeColumnLayout';
 import { TagInput } from '../components/TagInput/TagInput';
 import { SuggestionInput } from '../components/SuggestionInput/SuggestionInput';
 import { AppsLauncher } from '../components/AppsLauncher/AppsLauncher';
@@ -2178,6 +2179,48 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   </div>
                 }
               />
+            </ComponentCard>
+
+            {/* ThreeColumnLayout */}
+            <ComponentCard
+              name="ThreeColumnLayout"
+              importLine="import { ThreeColumnLayout } from '@sovereignfs/ui';"
+              usage="Sidebar + main + optional detail column, for list-app shells (Tasks, Shopper). Purely positional — pass 2 children for sidebar+main, or 3 for sidebar+main+detail; the third is simply omitted when nothing is selected."
+            >
+              <div style={{ width: '100%', height: '220px' }}>
+                <ThreeColumnLayout sidebarWidth={120} detailWidth={140}>
+                  <div
+                    style={{
+                      padding: 'var(--sv-space-3)',
+                      fontFamily: ffm,
+                      fontSize: 'var(--sv-font-size-xs)',
+                      color: 'var(--sv-color-text-primary)',
+                    }}
+                  >
+                    Sidebar
+                  </div>
+                  <div
+                    style={{
+                      padding: 'var(--sv-space-3)',
+                      fontFamily: ffm,
+                      fontSize: 'var(--sv-font-size-xs)',
+                      color: 'var(--sv-color-text-primary)',
+                    }}
+                  >
+                    Main
+                  </div>
+                  <div
+                    style={{
+                      padding: 'var(--sv-space-3)',
+                      fontFamily: ffm,
+                      fontSize: 'var(--sv-font-size-xs)',
+                      color: 'var(--sv-color-text-primary)',
+                    }}
+                  >
+                    Detail
+                  </div>
+                </ThreeColumnLayout>
+              </div>
             </ComponentCard>
 
             {/* PageHeader */}

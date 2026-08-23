@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "fs.sovereign.example-layouts",
+  "name": "Example: Layouts",
+  "version": "0.1.0",
+  "description": "Reference plugin demonstrating @sovereignfs/ui's page-layout primitives — starting with ThreeColumnLayout (sidebar + main + optional detail column).",
+  "type": "platform",
+  "runtime": "native",
+  "routePrefix": "/example-layouts",
+  "shell": "default",
+  "icon": "icon.svg",
+  "example": true,
+  "permissions": [],
+  "compatibility": {
+    "minPlatformVersion": "0.97.1"
+  }
+}

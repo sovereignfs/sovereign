@@ -262,3 +262,5 @@ export { SwipableMobileCarouselSlideBody } from './components/SwipableMobileCaro
 export type { SwipableMobileCarouselSlideBodyProps } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlideBody';
 export { SwipableMobileCarouselSlideFooter } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlideFooter';
 export type { SwipableMobileCarouselSlideFooterProps } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlideFooter';
+export { ThreeColumnLayout } from './components/ThreeColumnLayout/ThreeColumnLayout';
+export type { ThreeColumnLayoutProps } from './components/ThreeColumnLayout/ThreeColumnLayout';

@@ -2081,7 +2081,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="Toast"
               importLine="import { ToastProvider, useToast } from '@sovereignfs/ui';"
-              usage="Fixed top-right notification stack. Wrap app in ToastProvider; call useToast().show() imperatively. Six categories."
+              usage="Fixed top-right on desktop, bottom-center on mobile. Wrap app in ToastProvider; call useToast().show() imperatively. Six categories."
             >
               <ToastProvider>
                 <ToastDemo />

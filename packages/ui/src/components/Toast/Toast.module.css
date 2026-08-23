@@ -1,7 +1,9 @@
 /* Toast — transient notification snackbar.
  *
- * Fixed top-right, 320px. Slides in from above. Each toast auto-dismisses
- * after `duration` ms. Leading status icon reinforces category at a glance.
+ * Desktop: fixed top-right, 320px, slides in from above. Mobile floats
+ * bottom-center instead (see the media query near the bottom of this file
+ * for why). Each toast auto-dismisses after `duration` ms. Leading status
+ * icon reinforces category at a glance.
  *
  * Category variants map to the semantic status tokens (info/success/warning/
  * error) so the visual language is consistent with banners and badges.
@@ -121,6 +123,63 @@
   to {
     opacity: 0;
     transform: translateY(-8px);
+  }
+}
+
+/* Mobile (<=768px, the design system's canonical breakpoint): float
+ * bottom-center instead of top-right. Clears any mobile footer/tab bar
+ * (--sv-shell-footer-height) and the home-indicator safe area, plus extra
+ * breathing room so it visibly floats above the edge rather than sitting
+ * flush against it — matches the platform convention (Android Toast,
+ * Material 3's "floating" Snackbar). Deliberately not threaded through
+ * --sv-shell-header-height instead: a toast can appear on a page with or
+ * without a self-rendered mobile header, and bottom-anchoring sidesteps that
+ * entirely rather than requiring every call site to account for it.
+ * Each toast is centered and content-sized (capped at 360px) rather than
+ * stretched to the region's full width, and slides up from below instead of
+ * down from above to match its new anchor. */
+@media (max-width: 768px) {
+  .region {
+    top: auto;
+    left: var(--sv-space-4);
+    right: var(--sv-space-4);
+    bottom: calc(
+      var(--sv-shell-footer-height, 0px) + env(safe-area-inset-bottom, 0px) + var(--sv-space-4)
+    );
+    width: auto;
+    align-items: center;
+  }
+
+  .toast {
+    width: 100%;
+    max-width: 360px;
+    animation-name: toastInMobile;
+  }
+
+  .toast.exiting {
+    animation-name: toastOutMobile;
+  }
+}
+
+@keyframes toastInMobile {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toastOutMobile {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
   }
 }
 

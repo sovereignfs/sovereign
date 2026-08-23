@@ -556,14 +556,17 @@ permission gates are added.
 
 ### 3.7 Database Layer
 
-**Default:** SQLite via better-sqlite3, file stored at `data/sovereign.db`.
+**Default:** SQLite, sqld-backed only (RFC 0091) — served by a separate `sqld`
+container over HTTP, not a plain on-disk file; the DB lives in the
+`sovereign_sqld_data` volume, not `data/`. Mandatory as of workstream 0009,
+no plain-file fallback.
 
-**Production:** PostgreSQL. Switching requires only changing `DATABASE_URL` in environment config and a dialect flag. No application code changes.
+**Production:** PostgreSQL. Switching requires only changing `DB_DIALECT`/`POSTGRES_DB_URL` in environment config. No application code changes.
 
 **Plugin schema isolation:** Plugins choose between two isolation models via the manifest `database` field:
 
 - **`shared` (default):** Plugin tables live in the platform database, namespaced by slug prefix (e.g. `tasks_lists`, `tasks_items`). One connection, simple deployment.
-- **`isolated` (opt-in, RFC 0004):** The plugin gets its own dedicated store — a separate SQLite file (`data/plugins/<pluginId>.db`) or a Postgres schema (`plugin_<slug>`, provisioned with `CREATE SCHEMA IF NOT EXISTS`). The store is provisioned lazily on first `sdk.db.getClient()` call, and dropped entirely on uninstall. Migrations run against the dedicated store at startup. No slug prefix is required inside an isolated store. `sdk.db.getClient()` is transparent to the caller — isolation is handled by the runtime.
+- **`isolated` (opt-in, RFC 0004):** The plugin gets its own dedicated store — a separate sqld **namespace** (SQLite dialect) or a Postgres schema (`plugin_<slug>`, provisioned with `CREATE SCHEMA IF NOT EXISTS`). The store is provisioned lazily on first `sdk.db.getClient()` call, and dropped entirely on uninstall. Migrations run against the dedicated store at startup. No slug prefix is required inside an isolated store. `sdk.db.getClient()` is transparent to the caller — isolation is handled by the runtime.
 
 **Migrations:** Each plugin maintains its own migration files under `plugins/[id]/migrations/`. The `packages/db` migration runner aggregates and applies all plugin migrations in deterministic order at startup. Platform migrations (users, tenants, sessions) run first, then plugins in alphabetical order.
 

@@ -11,8 +11,34 @@
 > Draft/blocked pending a decision on that gap; workstream 0009 leg 3 cannot
 > proceed until it resolves. The file-storage and orchestration sections below
 > are unaffected.
+>
+> **Update (August 2026):** the encryption gap above was resolved — RFC 0091
+> shipped with a narrow encryption carve-out (workstream 0009, all 4 legs
+> done) and is now **Implemented**. `sqld` is mandatory for every SQLite-dialect
+> instance; the platform/auth/plugin databases live in their own
+> `sovereign_sqld_data` Docker volume, not `/app/data`. This also **narrows
+> section 2 below**: `/app/data` no longer includes any database file, only
+> avatars and plugin-uploaded storage objects (`sdk.storage`, RFC 0044) — the
+> database horizontal-scaling problem this doc raised in section 1 is already
+> solved by sqld being a real network service every replica connects to, not
+> something `/app/data`'s shared-volume fix needs to cover.
+>
+> **File storage recommendation implemented (August 2026):** section 2's
+> shared-NFS-volume recommendation shipped directly from this doc via the
+> ["Research-as-design" exception](../documentation-structure.md) — rejected
+> alternatives were already recorded here (S3 ruled out on data-sovereignty
+> grounds, MinIO deferred as a documented future upgrade path, not a silent
+> gap), so a restating RFC would have added a review cycle without adding a
+> decision. Shipped as `docker-compose.nfs.yml` (an opt-in overlay — the
+> zero-config single-container default is unchanged) plus
+> `docs/self-hosting.md`'s "Shared storage for multiple runtime replicas"
+> section. No epic task/workstream was opened for this: it's an optional,
+> non-blocking operator-facing deployment path, not new application
+> functionality gating other roadmap work, so the usual epic-tracking
+> machinery would have been pure overhead for a two-file change. MinIO and the
+> orchestration manifests (section 3) remain open — not part of this pass.
 
-**Status:** Exploratory\
+**Status:** Exploratory (database section superseded by RFC 0091/Implemented; file storage section Implemented directly; orchestration section still open)\
 **Date:** July 2026\
 **Author:** Claude Code\
 **Scope:** `packages/db`, avatar/file storage (`runtime/src/storage.ts`,
@@ -87,9 +113,12 @@ horizontal scaling without moving to Postgres.
 
 ### 2. File storage — a CDN and shared storage solve different problems
 
-Avatars currently live on local disk (`/app/data/avatars`) and are served by
-reading that path directly — fine for one container, broken the moment there
-are two runtime replicas, since replica B can't see files replica A wrote.
+Avatars and plugin-uploaded storage objects (`sdk.storage`, RFC 0044) live on
+local disk (`/app/data/avatars`, `/app/data/plugins/<id>/storage/`) and are
+served by reading that path directly — fine for one container, broken the
+moment there are two runtime replicas, since replica B can't see files
+replica A wrote. (The database is not part of this problem — see the update
+banner above.)
 
 A CDN caches/serves content close to _readers_; it does not give multiple
 writers a shared place to write. If replica A saves an avatar to its local
@@ -119,6 +148,16 @@ the shared-mount model becomes a bottleneck. A CDN/edge-cache layer can be
 added later purely as a read-latency optimization _in front of_ whichever
 origin is chosen — additive, not a substitute for shared storage.
 
+**Implemented (August 2026, NFS only):** `docker-compose.nfs.yml` (opt-in
+overlay on `docker-compose.prod.yml`) redeclares the `sovereign_data` volume
+with `driver: local` / `driver_opts` pointed at an NFS export, gated on
+required `NFS_SERVER`/`NFS_EXPORT_PATH` env vars. `docs/self-hosting.md`'s
+"Shared storage for multiple runtime replicas" section documents usage.
+SMB/CIFS is the same `local`-driver pattern (`type: cifs`) but wasn't built —
+NFS was picked as the single default to keep the overlay minimal; add a CIFS
+variant if an operator actually needs it. MinIO and the CDN/edge-cache layer
+remain undone, per the recommendation above.
+
 ### 3. Orchestration — Compose can't do this alone
 
 `docker-compose.yml`/`docker-compose.prod.yml` are single-container-per-service
@@ -131,26 +170,28 @@ chart or Nomad job spec), not a change to the existing Compose files.
 
 ## Recommendation summary
 
-| Layer               | Fix                                                                | App code change?                  |
-| ------------------- | ------------------------------------------------------------------ | --------------------------------- |
-| Database (SQLite)   | Adopt libSQL/`sqld` as opt-in scaled-SQLite dialect                | Yes — new driver in `packages/db` |
-| Database (Postgres) | Already scalable via managed HA/pooler                             | No                                |
-| File storage        | Shared NFS/SMB volume as default; MinIO as documented upgrade path | No (NFS) / Yes (MinIO)            |
-| Orchestration       | Reference k8s/Nomad manifests above Compose                        | No                                |
+| Layer               | Fix                                                                             | App code change?                  | Status                                                       |
+| ------------------- | ------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------ |
+| Database (SQLite)   | ~~Adopt libSQL/`sqld` as opt-in scaled-SQLite dialect~~ — mandatory, not opt-in | Yes — new driver in `packages/db` | Implemented — [RFC 0091](../rfcs/0091-libsql-sqld-driver.md) |
+| Database (Postgres) | Already scalable via managed HA/pooler                                          | No                                | N/A — already true                                           |
+| File storage        | Shared NFS volume as default; MinIO as documented upgrade path                  | No (NFS) / Yes (MinIO)            | NFS implemented (Aug 2026); MinIO not started                |
+| Orchestration       | Reference k8s/Nomad manifests above Compose                                     | No                                | Not started                                                  |
 
 ## Open questions
 
-- Does the libSQL driver swap want its own RFC before implementation, or ship
-  as a phased addition to the existing per-dialect schema pattern?
+- ~~Does the libSQL driver swap want its own RFC before implementation~~ —
+  resolved: RFC 0091, Implemented.
 - At what file volume does the NFS shared-mount model stop being adequate,
-  and should that threshold be documented for operators?
+  and should that threshold be documented for operators? Still open.
+- Is SMB/CIFS worth a second overlay, or is NFS-only sufficient for the
+  operators who actually reach for this? Still open — no CIFS overlay built.
 
 ## Next steps
 
-Graduate to two RFCs once scoped:
-
-1. **libSQL/`sqld` as a scaled-SQLite dialect** — driver, schema/migration
-   compatibility, and deployment shape (embedded replica vs. remote-only).
-2. **Shared file storage reference topology** — NFS/SMB as default, MinIO as
-   documented upgrade path, plus the orchestration manifests (k8s/Nomad) this
-   depends on.
+1. ~~libSQL/`sqld` as a scaled-SQLite dialect~~ — done, see RFC 0091.
+2. ~~Shared file storage reference topology~~ — NFS default done directly
+   (research-as-design exception, see update banner above); MinIO upgrade
+   path still needs scoping if/when NFS stops being adequate.
+3. **Orchestration manifests (k8s/Nomad)** — still unscoped; needed before
+   "multiple `runtime` replicas" is actually deployable, since Compose alone
+   doesn't run replicas.

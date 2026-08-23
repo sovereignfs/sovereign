@@ -1,0 +1,39 @@
+# Shared NFS-backed storage overlay for the production stack.
+#
+# `sovereign_data` (avatars + plugin storage objects, docs/self-hosting.md's
+# "Data persistence" section) is a local Docker volume by default — fine for
+# one `runtime` container, but multiple replicas each on their own local
+# volume can't see each other's writes. Layer this file on top of
+# docker-compose.prod.yml to back that volume with an NFS export instead, so
+# every replica reads/writes the same physical storage. No application code
+# changes: runtime/src/avatars.ts and runtime/src/storage.ts already just do
+# plain disk reads/writes against this path — it's still "a path on disk",
+# now a shared one.
+#
+# Only `sovereign_data` needs this. SQLite is sqld-backed (a network service
+# every replica already talks to over HTTP) and Postgres is already a network
+# service — neither has a local-disk sharing problem. See docs/research/0003
+# (horizontal scaling strategy) for the full comparison, including why S3 was
+# ruled out (data-sovereignty) and MinIO documented as a future upgrade path
+# (not built yet) if file volume outgrows NFS.
+#
+# This overlay only matters once you're actually running more than one
+# `runtime` replica. Compose alone does not do that (`deploy.replicas`
+# requires Swarm mode) — it's meant to be layered in alongside an external
+# orchestrator (Swarm/Nomad/Kubernetes) that runs multiple replicas across
+# hosts sharing one NFS export, not used by default.
+#
+# Requires an NFS server reachable from every host that runs `runtime`/`auth`,
+# exporting a directory those containers can read/write as the image's
+# non-root `nextjs` user (see Dockerfile).
+#
+# Usage:
+#   NFS_SERVER=nfs.example.internal NFS_EXPORT_PATH=/exports/sovereign-data \
+#     docker compose -f docker-compose.prod.yml -f docker-compose.nfs.yml up --build -d
+volumes:
+  sovereign_data:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: 'addr=${NFS_SERVER:?set NFS_SERVER — the NFS server host/IP — in your environment},rw,nolock,soft,timeo=100'
+      device: ':${NFS_EXPORT_PATH:?set NFS_EXPORT_PATH — the exported directory path on the NFS server — in your environment}'

@@ -313,7 +313,8 @@ Where data lives depends on the dialect:
 
 ```
 data/
-  avatars/            # User avatar uploads
+  avatars/                       # User avatar uploads
+  plugins/<pluginId>/storage/    # Plugin-uploaded files (sdk.storage)
 ```
 
 How that directory is persisted depends on the compose file:
@@ -330,6 +331,36 @@ How that directory is persisted depends on the compose file:
   docker run --rm -v sovereign_data:/data -v "$PWD":/backup alpine \
     tar czf /backup/sovereign-data.tgz -C /data .
   ```
+
+### Shared storage for multiple runtime replicas
+
+`sovereign_data` is a local Docker volume by default — fine for one `runtime`
+container, but multiple replicas each writing to their own local volume can't
+see each other's avatar/plugin-storage writes. **Database data does not have
+this problem**: SQLite is sqld-backed (a real network service every replica
+already connects to over HTTP) and Postgres is already a network service, so
+neither needs anything below. Only `data/` (avatars + plugin storage objects)
+does.
+
+Layer `docker-compose.nfs.yml` on top of `docker-compose.prod.yml` to back
+`sovereign_data` with an NFS export instead of local disk — no application
+code changes, since the existing disk read/write code
+(`runtime/src/avatars.ts`, `runtime/src/storage.ts`) keeps working unmodified
+against what is now a network mount:
+
+```bash
+NFS_SERVER=nfs.example.internal NFS_EXPORT_PATH=/exports/sovereign-data \
+  docker compose -f docker-compose.prod.yml -f docker-compose.nfs.yml up --build -d
+```
+
+This only matters once you're actually running more than one `runtime`
+replica — Compose alone doesn't do that (`deploy.replicas` requires Swarm
+mode); it's meant to be layered in alongside an external orchestrator
+(Swarm/Nomad/Kubernetes) that runs multiple replicas across hosts sharing one
+NFS export. Self-hosted MinIO is a documented future upgrade path if file
+volume outgrows NFS, but isn't built yet — see
+[research 0003](research/0003-horizontal-scaling-strategy.md) for the full
+comparison (cloud S3 was ruled out on data-sovereignty grounds).
 
 ---
 
@@ -672,9 +703,12 @@ Create a writable data directory before starting:
 mkdir -p /opt/sovereign/data
 ```
 
-SQLite databases land in `data/` automatically (same behaviour as Docker) —
-resolved as `<workspace-root>/data`, with no env var to relocate it. Avatars
-are stored at `data/avatars/`.
+This directory holds avatars (`data/avatars/`) and plugin storage objects
+(`data/plugins/<pluginId>/storage/`) — resolved as `<workspace-root>/data`,
+with no env var to relocate it. It does **not** hold the database: the
+SQLite dialect is sqld-backed only (RFC 0091), so `sqld` needs its own
+persistent directory (`--db-path`) separate from `data/` — see the sqld
+section above for running it outside Docker.
 
 ### Upgrade procedure (non-Docker)
 

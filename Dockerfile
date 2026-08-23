@@ -182,9 +182,12 @@ COPY --from=app-builder --chown=nextjs:nodejs /app/package.json ./package.json
 COPY --from=app-builder --chown=nextjs:nodejs /app/PRIVACY.md ./PRIVACY.md
 COPY --from=app-builder --chown=nextjs:nodejs /app/TOS.md ./TOS.md
 
-# SQLite + avatars persist here (mounted as a volume). The relative DB path
-# resolves against the cwd (/app) at runtime, so it must be writable by the
-# non-root runner.
+# Avatars + plugin storage objects persist here (mounted as a volume) — must
+# be writable by the non-root runner. The SQLite dialect is sqld-backed only
+# (RFC 0091, mandatory): the DB itself lives in the separate sovereign_sqld_data
+# volume, not here. This dir still needs to exist for the `tools` image's
+# one-time `sv db migrate-to-sqld`/`migrate-to-postgres` tooling, which reads
+# any pre-cutover plain-file SQLite left over from before that migration ran.
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
 USER nextjs

@@ -1,0 +1,26 @@
+.shell {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.sidebar {
+  flex-shrink: 0;
+  overflow-y: auto;
+  background: var(--sv-color-surface-raised);
+  border-right: 1px solid var(--sv-color-border);
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  background: var(--sv-color-surface);
+}
+
+.detail {
+  flex-shrink: 0;
+  overflow-y: auto;
+  background: var(--sv-color-surface-raised);
+  border-left: 1px solid var(--sv-color-border);
+}

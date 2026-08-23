@@ -266,3 +266,5 @@ export { ThreeColumnLayout } from './components/ThreeColumnLayout/ThreeColumnLay
 export type { ThreeColumnLayoutProps } from './components/ThreeColumnLayout/ThreeColumnLayout';
 export { HeaderFooterLayout } from './components/HeaderFooterLayout/HeaderFooterLayout';
 export type { HeaderFooterLayoutProps } from './components/HeaderFooterLayout/HeaderFooterLayout';
+export { RootLayout } from './components/RootLayout/RootLayout';
+export type { RootLayoutProps, RootLayoutVariant } from './components/RootLayout/RootLayout';

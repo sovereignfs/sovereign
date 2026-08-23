@@ -16,6 +16,12 @@ const LAYOUT_DEMOS: LayoutDemo[] = [
     name: 'ThreeColumnLayout',
     summary: 'Sidebar + main + optional detail column — the list-app shell used by Tasks.',
   },
+  {
+    slug: 'header-footer',
+    name: 'HeaderFooterLayout',
+    summary:
+      'Fixed-height header + scrollable main + fixed-height footer, both independently optional.',
+  },
 ];
 
 export default function ExampleLayoutsPage() {

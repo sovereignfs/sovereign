@@ -264,3 +264,5 @@ export { SwipableMobileCarouselSlideFooter } from './components/SwipableMobileCa
 export type { SwipableMobileCarouselSlideFooterProps } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlideFooter';
 export { ThreeColumnLayout } from './components/ThreeColumnLayout/ThreeColumnLayout';
 export type { ThreeColumnLayoutProps } from './components/ThreeColumnLayout/ThreeColumnLayout';
+export { HeaderFooterLayout } from './components/HeaderFooterLayout/HeaderFooterLayout';
+export type { HeaderFooterLayoutProps } from './components/HeaderFooterLayout/HeaderFooterLayout';

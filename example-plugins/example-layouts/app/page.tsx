@@ -28,6 +28,12 @@ const LAYOUT_DEMOS: LayoutDemo[] = [
     summary:
       "The root-level layout a plugin's page tree sits in — plain, sidebar (web-only), header (both breakpoints), or shell (mobile-only header+footer).",
   },
+  {
+    slug: 'page-layout',
+    name: 'PageLayout',
+    summary:
+      "A single page's content area nested inside RootLayout's main slot — no padding by default, plus an optional page-specific header.",
+  },
 ];
 
 export default function ExampleLayoutsPage() {

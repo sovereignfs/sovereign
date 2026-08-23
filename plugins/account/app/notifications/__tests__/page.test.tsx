@@ -6,15 +6,20 @@ import NotificationsPage from '../page';
 const PREFS = { mutedCategories: ['announcement'], pollIntervalSecs: 30 };
 const PUSH = { pushEnabled: false, subscribed: false, publicKey: null };
 
-function mockFetch(overrides?: { patchPrefs?: Record<string, unknown> }) {
+function mockFetch(overrides?: { patchPrefs?: Record<string, unknown>; pollingActive?: boolean }) {
+  const pollingActive = overrides?.pollingActive ?? true;
   return vi.fn((url: string, init?: RequestInit) => {
     if (url.includes('/notification-prefs') && init?.method === 'PATCH') {
       const body = JSON.parse(init.body as string) as Partial<typeof PREFS>;
       const merged = { ...PREFS, ...overrides?.patchPrefs, ...body };
-      return Promise.resolve(new Response(JSON.stringify({ prefs: merged }), { status: 200 }));
+      return Promise.resolve(
+        new Response(JSON.stringify({ prefs: merged, pollingActive }), { status: 200 }),
+      );
     }
     if (url.includes('/notification-prefs')) {
-      return Promise.resolve(new Response(JSON.stringify({ prefs: PREFS }), { status: 200 }));
+      return Promise.resolve(
+        new Response(JSON.stringify({ prefs: PREFS, pollingActive }), { status: 200 }),
+      );
     }
     if (url.includes('/push-subscription')) {
       return Promise.resolve(new Response(JSON.stringify(PUSH), { status: 200 }));
@@ -78,5 +83,22 @@ describe('NotificationsPage — preference update behavior', () => {
         mutedCategories: ['announcement', 'info'],
       });
     });
+  });
+});
+
+describe('NotificationsPage — poll interval visibility', () => {
+  it('shows the poll interval control when the server is actually polling', async () => {
+    vi.stubGlobal('fetch', mockFetch({ pollingActive: true }));
+    render(<NotificationsPage />);
+
+    expect(await screen.findByLabelText('Notification poll interval')).toBeDefined();
+  });
+
+  it('hides the poll interval control when notifications are pushed (sse/redis)', async () => {
+    vi.stubGlobal('fetch', mockFetch({ pollingActive: false }));
+    render(<NotificationsPage />);
+
+    await screen.findByRole('checkbox', { name: /Announcements/ });
+    expect(screen.queryByLabelText('Notification poll interval')).toBeNull();
   });
 });

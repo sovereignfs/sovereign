@@ -33,6 +33,7 @@ const POLL_OPTIONS = [
 
 export default function NotificationsPage() {
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
+  const [pollingActive, setPollingActive] = useState(false);
   const [push, setPush] = useState<PushState | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -45,8 +46,12 @@ export default function NotificationsPage() {
       fetch('/api/account/push-subscription', { credentials: 'same-origin' }),
     ]);
     if (prefsRes.ok) {
-      const data = (await prefsRes.json()) as { prefs: NotificationPrefs };
+      const data = (await prefsRes.json()) as {
+        prefs: NotificationPrefs;
+        pollingActive: boolean;
+      };
       setPrefs(data.prefs);
+      setPollingActive(data.pollingActive);
     }
     if (pushRes.ok) {
       setPush((await pushRes.json()) as PushState);
@@ -224,29 +229,32 @@ export default function NotificationsPage() {
         </ul>
       </section>
 
-      {/* Poll interval ────────────────────────────────────────────────────── */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Poll interval</h2>
-        <p className={styles.help}>How often the browser checks for new notifications.</p>
-        <Select
-          className={notifStyles.selectField}
-          value={prefs.pollIntervalSecs}
-          onChange={(e) => void save({ pollIntervalSecs: Number(e.target.value) })}
-          disabled={saving}
-          aria-label="Notification poll interval"
-        >
-          {POLL_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        {saved && (
-          <p className={notifStyles.savedMsg} role="status">
-            Saved.
-          </p>
-        )}
-      </section>
+      {/* Poll interval — only meaningful when the server is actually polling;
+          in sse/redis mode the browser gets a live push and this pref is a no-op. */}
+      {pollingActive && (
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Poll interval</h2>
+          <p className={styles.help}>How often the browser checks for new notifications.</p>
+          <Select
+            className={notifStyles.selectField}
+            value={prefs.pollIntervalSecs}
+            onChange={(e) => void save({ pollIntervalSecs: Number(e.target.value) })}
+            disabled={saving}
+            aria-label="Notification poll interval"
+          >
+            {POLL_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </Select>
+          {saved && (
+            <p className={notifStyles.savedMsg} role="status">
+              Saved.
+            </p>
+          )}
+        </section>
+      )}
     </div>
   );
 }

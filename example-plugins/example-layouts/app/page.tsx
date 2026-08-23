@@ -22,6 +22,12 @@ const LAYOUT_DEMOS: LayoutDemo[] = [
     summary:
       'Fixed-height header + scrollable main + fixed-height footer, both independently optional.',
   },
+  {
+    slug: 'root-layout',
+    name: 'RootLayout',
+    summary:
+      "The root-level layout a plugin's page tree sits in — plain, sidebar (web-only), header (both breakpoints), or shell (mobile-only header+footer).",
+  },
 ];
 
 export default function ExampleLayoutsPage() {

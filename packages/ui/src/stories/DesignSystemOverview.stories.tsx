@@ -25,6 +25,7 @@ import { StatusBadge } from '../components/StatusBadge/StatusBadge';
 import { SplitPane } from '../components/SplitPane/SplitPane';
 import { ThreeColumnLayout } from '../components/ThreeColumnLayout/ThreeColumnLayout';
 import { HeaderFooterLayout } from '../components/HeaderFooterLayout/HeaderFooterLayout';
+import { RootLayout } from '../components/RootLayout/RootLayout';
 import { TagInput } from '../components/TagInput/TagInput';
 import { SuggestionInput } from '../components/SuggestionInput/SuggestionInput';
 import { AppsLauncher } from '../components/AppsLauncher/AppsLauncher';
@@ -2276,6 +2277,41 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                     Main (scrolls)
                   </div>
                 </HeaderFooterLayout>
+              </div>
+            </ComponentCard>
+
+            {/* RootLayout */}
+            <ComponentCard
+              name="RootLayout"
+              importLine="import { RootLayout } from '@sovereignfs/ui';"
+              usage="The root-level layout a plugin's page tree sits in. variant='sidebar' is web-only (sidebar + main); variant='shell' is mobile-only (header + main + footer) — same children, different fork per breakpoint via ResponsiveSurface. Shown here: variant='header', identical on both breakpoints."
+            >
+              <div style={{ width: '100%', height: '160px' }}>
+                <RootLayout variant="header" headerHeight={32}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '100%',
+                      fontFamily: ffm,
+                      fontSize: 'var(--sv-font-size-xs)',
+                      color: 'var(--sv-color-text-primary)',
+                    }}
+                  >
+                    Header
+                  </div>
+                  <div
+                    style={{
+                      padding: 'var(--sv-space-3)',
+                      fontFamily: ffm,
+                      fontSize: 'var(--sv-font-size-xs)',
+                      color: 'var(--sv-color-text-primary)',
+                    }}
+                  >
+                    Main
+                  </div>
+                </RootLayout>
               </div>
             </ComponentCard>
 

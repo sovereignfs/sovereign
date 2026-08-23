@@ -1,0 +1,12 @@
+/* A definite height, not min-height: ThreeColumnLayout/HeaderFooterLayout's
+   own .shell use height: 100% internally (fixed box, independently-
+   scrolling children via overflow-y: auto) — a percentage height only
+   resolves against an ancestor with a definite (not min-constrained)
+   height, so min-height here would leave their .shell unable to resolve
+   and collapse to content size. This doesn't clip taller content on its
+   own — nothing here sets overflow: hidden, so content taller than the
+   box simply overflows past it rather than being cut off. */
+.root {
+  width: 100%;
+  height: 100%;
+}

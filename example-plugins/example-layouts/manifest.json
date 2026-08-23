@@ -8,6 +8,10 @@
   "runtime": "native",
   "routePrefix": "/example-layouts",
   "shell": "default",
+  "shellConfig": {
+    "mobileHeader": false,
+    "mobileFooter": false
+  },
   "icon": "icon.svg",
   "example": true,
   "permissions": [],

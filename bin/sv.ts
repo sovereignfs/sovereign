@@ -31,6 +31,7 @@ import {
   assertRemovablePlugin,
   authHealthUrl,
   defaultArchivePath,
+  migrationBackupGuidance,
   pollUntilHealthy,
   readPlatformVersion,
   renderPm2Config,
@@ -101,12 +102,16 @@ function reportPruneResult(pluginId: string, result: ReturnType<typeof pruneDeps
 }
 
 /**
- * Archive `dataDir` to `archivePath` (SQLite path only — see the `backup`
- * command for the Postgres branch, not needed by `sv db encrypt`/`decrypt`,
- * which are SQLite-only per RFC 0071). Paths inside the archive are relative
- * to `dataDir` — see `backup`'s own comment for why. Returns whether it
- * succeeded rather than exiting, so callers (both `backup` and `db
- * encrypt`/`decrypt`) can decide what "backup failed" means for them.
+ * Archive `dataDir` to `archivePath` by tarring plain files on disk. Only
+ * valid where `dataDir` genuinely holds plain-file SQLite databases: legacy
+ * pre-cutover state (`db migrate-to-sqld`, RFC 0091) or a legacy per-plugin
+ * `.db` file predating that plugin's migration (`db migrate-to-postgres`).
+ * Not valid for the live sqld-backed SQLite dialect — sqld's data lives in
+ * the `sovereign_sqld_data` Docker volume, not a local directory this
+ * function can tar (see `migrationBackupGuidance` / the `backup` command's
+ * own sqld branch). Paths inside the archive are relative to `dataDir`.
+ * Returns whether it succeeded rather than exiting, so callers can decide
+ * what "backup failed" means for them.
  */
 function runSqliteBackup(dataDir: string, archivePath: string): boolean {
   mkdirSync(dirname(archivePath), { recursive: true });
@@ -598,10 +603,11 @@ const pluginMigrateToIsolated = defineCommand({
       type: 'boolean',
       default: false,
       description:
-        'Skip the pre-migration backup. On a SQLite platform this skips the automatic ' +
-        'data/ archive (not recommended). On a Postgres platform there is no automated ' +
-        'backup here yet (task 8.16) — this flag is REQUIRED to proceed at all, as ' +
-        "confirmation you've already taken your own `pg_dump` backup.",
+        'Acknowledge that no automated backup exists and proceed anyway. Required to proceed ' +
+        'on both dialects: SQLite is sqld-backed (data lives in the sovereign_sqld_data Docker ' +
+        'volume, not a local directory this CLI can tar) and Postgres has no automated backup ' +
+        "here yet (task 8.16) — confirmation you've already taken your own volume-level " +
+        '(SQLite) or `pg_dump` (Postgres) backup.',
     },
   },
   async run({ args }) {
@@ -678,29 +684,12 @@ const pluginMigrateToIsolated = defineCommand({
       return;
     }
 
-    if (dialect === 'sqlite') {
-      if (args['skip-backup']) {
-        consola.warn('Skipping the pre-migration backup (--skip-backup). This is not recommended.');
-      } else {
-        const version = readPlatformVersion(ROOT);
-        const archivePath = defaultArchivePath(ROOT, version);
-        consola.start(`Creating a safety backup before migrating → ${archivePath}`);
-        if (!runSqliteBackup(join(ROOT, 'data'), archivePath)) {
-          consola.error('Backup failed — aborting before touching any database.');
-          process.exit(1);
-        }
-        consola.success(`Backup saved → ${archivePath}`);
-      }
-    } else if (!args['skip-backup']) {
-      consola.error(
-        'There is no automated Postgres backup in this CLI yet (task 8.16). Take a manual ' +
-          'backup first, e.g.:\n' +
-          '  pg_dump "$POSTGRES_DB_URL" > pre-migration-backup.sql\n' +
-          'then re-run with --skip-backup to confirm you have one.',
-      );
+    const backupGuidance = migrationBackupGuidance(dialect);
+    if (!args['skip-backup']) {
+      consola.error(backupGuidance.refuseMessage);
       process.exit(1);
     } else {
-      consola.warn('--skip-backup passed — proceeding on the assumption a Postgres backup exists.');
+      consola.warn(backupGuidance.proceedWarning);
     }
 
     consola.warn('Make sure the server is stopped before continuing.');

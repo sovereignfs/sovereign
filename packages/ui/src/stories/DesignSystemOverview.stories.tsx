@@ -26,6 +26,7 @@ import { SplitPane } from '../components/SplitPane/SplitPane';
 import { ThreeColumnLayout } from '../components/ThreeColumnLayout/ThreeColumnLayout';
 import { HeaderFooterLayout } from '../components/HeaderFooterLayout/HeaderFooterLayout';
 import { RootLayout } from '../components/RootLayout/RootLayout';
+import { PageLayout } from '../components/PageLayout/PageLayout';
 import { TagInput } from '../components/TagInput/TagInput';
 import { SuggestionInput } from '../components/SuggestionInput/SuggestionInput';
 import { AppsLauncher } from '../components/AppsLauncher/AppsLauncher';
@@ -2312,6 +2313,49 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                     Main
                   </div>
                 </RootLayout>
+              </div>
+            </ComponentCard>
+
+            {/* PageLayout */}
+            <ComponentCard
+              name="PageLayout"
+              importLine="import { PageLayout } from '@sovereignfs/ui';"
+              usage="A single page's content area, nested inside RootLayout's main slot. No padding by default (opt in via padding, same scale as PageContainer). The optional header is page-specific — a board title/toolbar, not the app-level header."
+            >
+              <div
+                style={{
+                  width: '100%',
+                  height: '160px',
+                  border: '1px solid var(--sv-color-border)',
+                }}
+              >
+                <PageLayout
+                  padding="sm"
+                  header={
+                    <div
+                      style={{
+                        padding: 'var(--sv-space-2) var(--sv-space-3)',
+                        borderBottom: '1px solid var(--sv-color-border)',
+                        fontFamily: ffm,
+                        fontSize: 'var(--sv-font-size-xs)',
+                        fontWeight: 600,
+                        color: 'var(--sv-color-text-primary)',
+                      }}
+                    >
+                      Page header
+                    </div>
+                  }
+                >
+                  <div
+                    style={{
+                      fontFamily: ffm,
+                      fontSize: 'var(--sv-font-size-xs)',
+                      color: 'var(--sv-color-text-primary)',
+                    }}
+                  >
+                    Page content
+                  </div>
+                </PageLayout>
               </div>
             </ComponentCard>
 

@@ -1,0 +1,51 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.header {
+  flex-shrink: 0;
+}
+
+.content {
+  flex: 1;
+}
+
+/* ── Padding ────────────────────────────────────────────────────────────── */
+/* Same four-step scale and --sv-page-gutter stand-down hook as
+   PageContainer (see that component's own CSS comment for the full
+   rationale) — kept identical so this can absorb PageContainer's role
+   later without a behavior change for existing consumers. */
+
+.padNone {
+  padding: 0;
+}
+
+.padSm {
+  padding: var(--sv-page-gutter, var(--sv-space-4));
+}
+
+.padMd {
+  padding: var(--sv-page-gutter, var(--sv-space-8));
+}
+
+.padLg {
+  padding: var(--sv-page-gutter, var(--sv-space-12));
+}
+
+/* Matches the breakpoint Dialog, MobileHeader, and MobileFooter already use. */
+@media (max-width: 768px) {
+  .padSm {
+    padding: var(--sv-page-gutter, var(--sv-space-3));
+  }
+
+  .padMd {
+    padding: var(--sv-page-gutter, var(--sv-space-4));
+  }
+
+  .padLg {
+    padding: var(--sv-page-gutter, var(--sv-space-6));
+  }
+}

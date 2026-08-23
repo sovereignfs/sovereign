@@ -122,6 +122,44 @@ export function defaultArchivePath(workspaceRoot: string, version: string): stri
 }
 
 /**
+ * `sv plugin migrate-to-isolated`'s pre-migration backup guidance, per
+ * dialect. Neither dialect has an automated backup path from this CLI: SQLite
+ * is sqld-backed only (RFC 0091) — its data lives in the `sovereign_sqld_data`
+ * Docker volume, not a local directory this CLI can tar, so (unlike this
+ * command's pre-RFC-0091 behavior) there is nothing under `data/` worth
+ * archiving here. Postgres has no automated backup here yet (task 8.16).
+ * Both require `--skip-backup` as explicit acknowledgment that the operator
+ * already has their own backup, mirroring `sv backup`'s own refusal for the
+ * sqld-backed SQLite dialect.
+ */
+export function migrationBackupGuidance(dialect: 'sqlite' | 'postgres'): {
+  refuseMessage: string;
+  proceedWarning: string;
+} {
+  if (dialect === 'sqlite') {
+    return {
+      refuseMessage:
+        'There is no automated backup for the SQLite (sqld) dialect in this CLI — sqld data ' +
+        'lives in the `sovereign_sqld_data` Docker volume, not a local directory this CLI can ' +
+        'tar. Back that volume up first, e.g.:\n' +
+        '  docker run --rm -v sovereign_sqld_data:/data -v "$PWD":/backup alpine ' +
+        'tar -czf /backup/sqld-backup.tar.gz -C /data .\n' +
+        'then re-run with --skip-backup to confirm you have one.',
+      proceedWarning:
+        '--skip-backup passed — proceeding on the assumption an sqld volume backup exists.',
+    };
+  }
+  return {
+    refuseMessage:
+      'There is no automated Postgres backup in this CLI yet (task 8.16). Take a manual ' +
+      'backup first, e.g.:\n' +
+      '  pg_dump "$POSTGRES_DB_URL" > pre-migration-backup.sql\n' +
+      'then re-run with --skip-backup to confirm you have one.',
+    proceedWarning: '--skip-backup passed — proceeding on the assumption a Postgres backup exists.',
+  };
+}
+
+/**
  * Directory names of the platform plugins that ship inside this monorepo. They
  * are committed (gitignore-allowlisted) and load-bearing — `sv plugin remove`
  * refuses to delete them. Matches the allowlist in the root `.gitignore`.

@@ -8,6 +8,7 @@ import {
   assertRemovablePlugin,
   authHealthUrl,
   defaultArchivePath,
+  migrationBackupGuidance,
   pollUntilHealthy,
   readPlatformVersion,
   renderPm2Config,
@@ -23,6 +24,35 @@ describe('defaultArchivePath', () => {
     expect(p).toMatch(
       /\/srv\/sovereign\/backups\/sovereign-backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-v1\.2\.3\.tar\.gz$/,
     );
+  });
+});
+
+describe('migrationBackupGuidance', () => {
+  // Regression test: `sv plugin migrate-to-isolated` used to run
+  // `runSqliteBackup(data/)` for the SQLite dialect, which — since RFC 0091
+  // made sqld mandatory — silently archived avatars/plugin-storage files
+  // instead of the actual database being migrated, giving a false sense of
+  // safety before an irreversible operation. It must instead refuse, like
+  // `sv backup`'s own sqld branch, and never claim data/ is a real backup.
+  it('SQLite: refuse message points at the sqld Docker volume, not data/', () => {
+    const { refuseMessage } = migrationBackupGuidance('sqlite');
+    expect(refuseMessage).toMatch(/sovereign_sqld_data/);
+    expect(refuseMessage).not.toMatch(/tar.*data\//);
+  });
+
+  it('SQLite: proceed warning mentions the sqld volume, not a data/ archive', () => {
+    const { proceedWarning } = migrationBackupGuidance('sqlite');
+    expect(proceedWarning).toMatch(/sqld/);
+  });
+
+  it('Postgres: refuse message points at pg_dump', () => {
+    const { refuseMessage } = migrationBackupGuidance('postgres');
+    expect(refuseMessage).toMatch(/pg_dump/);
+  });
+
+  it('Postgres: proceed warning assumes a Postgres backup', () => {
+    const { proceedWarning } = migrationBackupGuidance('postgres');
+    expect(proceedWarning).toMatch(/Postgres backup/);
   });
 });
 

@@ -42,7 +42,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Plain: Story = {
+/** variant="plain" is the prop's own default — a single child, no chrome. */
+export const Default: Story = {
   render: () => (
     <div style={{ height: '100vh' }}>
       <RootLayout variant="plain">

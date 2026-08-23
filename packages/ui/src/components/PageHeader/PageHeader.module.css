@@ -30,3 +30,41 @@
 .action {
   flex-shrink: 0;
 }
+
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+/* A compact single row — back (optional) + title + action (optional) —
+   generalized from Kanban's own hand-rolled MobileBoardHeader. Deliberately
+   no description handling and no border; stays consistent with .header's
+   own minimal, borderless treatment, just tighter. */
+
+.mobileHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  margin-bottom: var(--sv-space-3);
+}
+
+.mobileBack {
+  flex-shrink: 0;
+}
+
+.mobileTitle {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--sv-font-size-md);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+  line-height: 1.2;
+}
+
+.mobileAction {
+  flex-shrink: 0;
+}
+
+.mobileMenu {
+  flex-shrink: 0;
+}

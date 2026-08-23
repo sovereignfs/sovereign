@@ -2363,7 +2363,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="PageHeader"
               importLine="import { PageHeader } from '@sovereignfs/ui';"
-              usage="Plugin page top section. Title + optional description + right-side action slot. Replaces the hand-rolled .pageHeader pattern in every plugin."
+              usage="Plugin page top section. Title + optional description + right-side action slot. Replaces the hand-rolled .pageHeader pattern in every plugin. On mobile, description drops out and onBack/onMenuClick add an optional back button and vertical-ellipsis menu trigger."
             >
               <div style={{ width: '100%' }}>
                 <PageHeader

@@ -6,6 +6,9 @@ import { MobileFooter } from '../components/MobileFooter/MobileFooter';
 import { MobileHeader } from '../components/MobileHeader/MobileHeader';
 import { NotificationsPanel } from '../components/NotificationsPanel/NotificationsPanel';
 import { OverlayHeader } from '../components/OverlayHeader/OverlayHeader';
+import { PageHeader } from '../components/PageHeader/PageHeader';
+import { PageLayout } from '../components/PageLayout/PageLayout';
+import { RootLayout } from '../components/RootLayout/RootLayout';
 import { UserMenu } from '../components/UserMenu/UserMenu';
 
 // ---------------------------------------------------------------------------
@@ -437,6 +440,50 @@ function MobileSecondaryDialogHeader() {
 }
 
 // ---------------------------------------------------------------------------
+// 6. Structural Layout Primitives
+// ---------------------------------------------------------------------------
+
+function StructuralLayoutPrimitives() {
+  return (
+    <Frame>
+      <div style={{ height: 320 }}>
+        <RootLayout variant="sidebar">
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              background: 'var(--sv-color-surface)',
+              borderRight: '1px solid var(--sv-color-border)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 'var(--sv-space-3)',
+              padding: 'var(--sv-space-3) 0',
+            }}
+          >
+            <BrandBadge />
+            <IconButton name="house" label="Home" />
+            <IconButton name="layers" label="Boards" />
+          </div>
+          <PageLayout
+            padding="md"
+            header={
+              <PageHeader
+                title="Boards"
+                description="Everything you're tracking."
+                action={<IconButton name="search" label="Search" />}
+              />
+            }
+          >
+            <ContentPlaceholder label="Page content" />
+          </PageLayout>
+        </RootLayout>
+      </div>
+    </Frame>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main story component
 // ---------------------------------------------------------------------------
 
@@ -454,10 +501,12 @@ function LayoutSystemDoc() {
       <div style={{ marginBottom: 'var(--sv-space-8)' }}>
         <Heading level={1}>Layout System</Heading>
         <Body>
-          The shell-chrome archetypes in use across the platform and its plugins today. Each section
-          shows the actual anatomy shipping in the code, cites its source, and flags where the
+          The shell-chrome archetypes in use across the platform and its plugins today. Sections 1–5
+          each show the actual anatomy shipping in the code, cite their source, and flag where the
           pattern is a shared design-system component versus a per-plugin reimplementation still
-          waiting to be extracted.
+          waiting to be extracted. Section 6 introduces a newer, general-purpose layer built on top
+          of that: structural layout primitives any plugin can compose directly, rather than
+          reimplementing shell chrome from scratch.
         </Body>
       </div>
 
@@ -470,7 +519,12 @@ function LayoutSystemDoc() {
         <WebWithSidebar />
         <Callout type="warn">
           Hand-rolled directly in the runtime shell — never extracted into <code>packages/ui</code>,
-          unlike <code>MobileHeader</code>/<code>MobileFooter</code> (RFC 0088).
+          unlike <code>MobileHeader</code>/<code>MobileFooter</code> (RFC 0088). A general-purpose
+          version of this exact shape now exists as <code>RootLayout</code>'s{' '}
+          <code>variant=&quot;sidebar&quot;</code> (see Section 6 and{' '}
+          <code>Components/RootLayout</code>) — the runtime shell itself hasn't been migrated onto
+          it yet, so this section still documents its own hand-rolled markup as the source of truth
+          for what's actually shipping.
         </Callout>
       </section>
 
@@ -512,10 +566,13 @@ function LayoutSystemDoc() {
           source="A real shell: minimal plugin's own bespoke board-detail header"
         />
         <MobileSecondaryPageHeader />
-        <Callout type="warn">
-          Bespoke per plugin — can't reuse the shared <code>OverlayHeader</code> here because it
-          always renders a trailing close (×) button with no way to swap in a single leading back
-          button instead. Flagged in that plugin's own doc comment as a real API gap.
+        <Callout type="tip">
+          The API gap flagged here is now closed: <code>PageHeader</code>'s mobile fork (
+          <code>onBack</code> + <code>onMenuClick</code>, see <code>Components/PageHeader</code>)
+          was generalized directly from this plugin's own <code>MobileBoardHeader</code> and renders
+          this exact back + title + ellipsis-vertical shape. The plugin itself hasn't been migrated
+          onto it yet — its own hand-rolled version, shown above, is still what's actually shipping
+          — but any new mobile secondary header no longer needs to reimplement this from scratch.
         </Callout>
       </section>
 
@@ -530,6 +587,28 @@ function LayoutSystemDoc() {
           Already a shared pattern — <code>useOverlaySecondRow</code> hands a plugin's own nav strip
           up into <code>Dialog</code>'s <code>OverlayHeader.secondRow</code> whenever the plugin is
           opened as an overlay, with no duplicated markup.
+        </Callout>
+      </section>
+
+      <section style={{ marginBottom: 'var(--sv-space-10)' }}>
+        <SectionHeader
+          title="6. Structural Layout Primitives"
+          subtitle="RootLayout + PageLayout + PageHeader composed together — the sidebar shape from Section 1, with a page-level header and content area nested inside."
+          source="@sovereignfs/ui — RootLayout, ThreeColumnLayout, HeaderFooterLayout, PageLayout, PageHeader"
+        />
+        <StructuralLayoutPrimitives />
+        <Callout type="tip">
+          Unlike sections 1–5, these aren't documenting one specific plugin's shipped code — they're
+          general-purpose primitives any plugin can adopt directly today. <code>RootLayout</code> is
+          the root a plugin's page tree sits in (<code>variant</code>: plain, sidebar, header, or
+          shell — each a fixed web+mobile pairing); <code>ThreeColumnLayout</code> and{' '}
+          <code>HeaderFooterLayout</code> are the positional primitives it composes internally, also
+          usable standalone for a list-app's own nested split view; <code>PageLayout</code> is a
+          single page's content area nested inside <code>RootLayout</code>'s main slot, intended to
+          eventually replace <code>PageContainer</code> entirely; <code>PageHeader</code> is that
+          page's title section, with its own web/mobile fork (see the Section 1 and 4 callouts above
+          for exactly which real shell-chrome gaps it closes). Each has its own interactive
+          Storybook page under <code>Components/</code> with the full prop playground.
         </Callout>
       </section>
     </div>

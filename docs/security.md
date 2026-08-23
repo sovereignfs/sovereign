@@ -175,8 +175,11 @@ the RFC 0060 adoption notes) — not something that broadens automatically.
       default on either dialect, so this is your baseline protection for a
       stolen disk or snapshot. (Whole-database, single-key SQLite at-rest
       encryption — RFC 0071 — was tried and later retired after repeated
-      hardening passes; there is no dialect-wide at-rest option today.) For
-      protecting specific sensitive fields regardless of disk encryption, see
+      hardening passes; there is no dialect-wide at-rest option today.) See
+      [Disk-level encryption](self-hosting.md#disk-level-encryption) for
+      concrete instructions (cloud-provider encrypted volumes, self-managed
+      LUKS, FileVault/BitLocker). For protecting specific sensitive fields
+      regardless of disk encryption, see
       [Field encryption](self-hosting.md#field-encryption-rfc-0092) (RFC 0092,
       `SOVEREIGN_ENCRYPT_CLASSES` / `SOVEREIGN_FIELD_KEK`) — opt-in, per-field,
       works on both dialects. Either way, back up any encryption key
@@ -192,7 +195,9 @@ the RFC 0060 adoption notes) — not something that broadens automatically.
 - [ ] **Configure `SMTP_HOST`** if you keep `AUTH_REQUIRE_EMAIL_VERIFICATION` at
       its default (`true`) — without SMTP, new registrations fail closed rather
       than issuing an unverifiable account.
-- [ ] **Keep backups encrypted and off-host**, and test restores.
+- [ ] **Keep backups encrypted and off-host**, and test restores. See
+      [Disk-level encryption § Backups](self-hosting.md#backups) for a
+      concrete `age`/GPG recipe.
 - [ ] **Update regularly** and watch the repository's security advisories.
 
 ## Reporting a vulnerability

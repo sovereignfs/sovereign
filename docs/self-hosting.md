@@ -364,12 +364,126 @@ comparison (cloud S3 was ruled out on data-sovereignty grounds).
 
 ---
 
+## Disk-level encryption
+
+Nothing above is encrypted at rest by the platform itself. Whole-database,
+single-key SQLite at-rest encryption (RFC 0071) was tried and later retired
+after repeated hardening passes found it had an above-average bug surface —
+see [docs/upgrade.md's v0.75 entry](upgrade.md#v074--v075-root-packagejson-0761--0770)
+if you're upgrading an instance that had it enabled. **Neither dialect has an
+application-level at-rest option today.** Host-level disk/volume encryption
+is the baseline protection against a stolen disk, a leaked backup, or an
+exposed VPS/cloud snapshot — it's on you as the operator, same as it would be
+for any other self-hosted service. (For protecting specific sensitive plugin
+fields regardless of disk encryption — e.g. against a live, unencrypted
+database connection — see [Field encryption](#field-encryption-rfc-0092)
+below; the two are complementary, not alternatives. See
+[security.md](security.md#self-hoster-hardening-checklist) for the full
+threat model.)
+
+**What this does and doesn't protect against.** Disk encryption protects data
+that is powered off, unmounted, or physically removed — a stolen drive, a
+decommissioned server, a cloud snapshot that leaks. It does **not** protect
+data from anything with access to the running, mounted system: a compromised
+host, a malicious admin with root, or the application itself. Don't treat it
+as a substitute for the other items in the
+[hardening checklist](security.md#self-hoster-hardening-checklist).
+
+### Cloud-hosted (recommended default)
+
+If you're on AWS, GCP, Azure, Hetzner, DigitalOcean, or similar, encrypt the
+volume at provisioning time — every major provider offers this as a
+checkbox or a one-line flag (e.g. AWS EBS "Encrypted" on volume creation,
+`gcloud compute disks create --kms-key=...`, Hetzner/DigitalOcean encrypted
+volumes). This covers everything Docker writes — `sovereign_data`,
+`sovereign_sqld_data`, Postgres's data directory if you run it alongside, and
+any local backup archives — with zero Sovereign-specific configuration,
+since it happens below the filesystem Docker sees. Do this before your first
+`docker compose up`; most providers don't let you encrypt a volume after
+data already exists on it without recreating it.
+
+### Self-managed Linux (LUKS)
+
+Without provider-level encryption — bare metal, or a VPS provider that
+doesn't offer it — encrypt the block device Docker's data lives on directly
+with LUKS, then point Docker at it. On a fresh host, before installing
+Docker or running Sovereign for the first time:
+
+```bash
+# Format an unused disk/partition (destroys any existing data on it)
+sudo cryptsetup luksFormat /dev/sdX
+sudo cryptsetup open /dev/sdX sovereign_encrypted
+sudo mkfs.ext4 /dev/mapper/sovereign_encrypted
+sudo mkdir -p /mnt/sovereign-encrypted
+sudo mount /dev/mapper/sovereign_encrypted /mnt/sovereign-encrypted
+```
+
+Point Docker's data root at the mounted, decrypted device — this is where
+every named volume (`sovereign_data`, `sovereign_sqld_data`, etc.) actually
+lives on disk:
+
+```json
+// /etc/docker/daemon.json
+{ "data-root": "/mnt/sovereign-encrypted/docker" }
+```
+
+```bash
+sudo systemctl restart docker
+```
+
+**Unlocking on boot is a real tradeoff, not a detail to skip past.**
+`cryptsetup open` above prompts for a passphrase interactively — the most
+secure option, but it means Sovereign won't come back up unattended after a
+reboot until someone runs that command. The common alternative, an
+auto-unlock keyfile referenced from `/etc/crypttab`, trades that away: if the
+keyfile lives on the same (unencrypted) boot disk, anyone who can read that
+disk can also unlock the data volume, so it protects against the data disk
+being stolen or a cloud snapshot of _just that volume_ leaking, but not
+against the whole machine being taken. Choose based on which of those two
+threats you're actually defending against; don't assume a keyfile gives you
+the same guarantee as a passphrase.
+
+Migrating an **existing, already-populated** unencrypted deployment onto this
+setup means stopping the stack, backing up every named volume (commands
+above, under [Data persistence](#data-persistence)), copying the data into
+the new encrypted mount, repointing `data-root`, and restoring — plan a
+maintenance window rather than doing it live.
+
+### macOS / non-Docker (FileVault)
+
+For a non-Docker deployment (`sv serve`/PM2, see
+[Non-Docker deployment](#non-docker-deployment)) on macOS, enable FileVault
+on the volume holding your `data/` directory (System Settings → Privacy &
+Security → FileVault). On Windows, the equivalent is BitLocker. Both encrypt
+the whole disk/volume the same way cloud-provider encryption does — no
+Sovereign-specific configuration.
+
+### Backups
+
+A backup archive carries the same sensitive data as the live volume, and
+often leaves the encrypted host entirely (off-site storage, downloaded to a
+laptop) — encrypt it independently rather than relying on it inheriting the
+host's disk encryption. After running any of the `tar`-based backup commands
+under [Data persistence](#data-persistence) (or `sv backup` for Postgres),
+encrypt the resulting archive before it leaves the host, e.g. with
+[`age`](https://github.com/FiloSottile/age) (simpler, recommended) or GPG:
+
+```bash
+age -p -o sovereign-backup.tgz.age sovereign-backup.tgz
+# or: gpg --symmetric --cipher-algo AES256 sovereign-backup.tgz
+```
+
+Store the passphrase/key separately from the backup itself — an encrypted
+backup next to its own key is not encrypted in any way that matters.
+
+---
+
 ## sqld (libSQL server, RFC 0091)
 
 With `DB_DIALECT=sqlite`, every SQLite-dialect database is served by a
 separate **sqld** container rather than a plain on-disk file — mandatory, not
 opt-in, and unconditional (no carve-out for any case, including at-rest
-encryption — see [At-rest encryption](#at-rest-encryption) above). Each
+encryption — see [Disk-level encryption](#disk-level-encryption) above). Each
 isolated plugin gets its own sqld **namespace** (sqld's own isolation
 mechanism, analogous to a Postgres schema); the platform gets sqld's default
 namespace; auth gets its own dedicated namespace (`sovereign_auth`).

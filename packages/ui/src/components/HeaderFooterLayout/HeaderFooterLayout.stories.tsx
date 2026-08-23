@@ -54,7 +54,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const HeaderMainFooter: Story = {
+/** The canonical usage — header + main + footer, all three present. */
+export const Default: Story = {
   render: () => (
     <div style={{ height: '480px' }}>
       <HeaderFooterLayout header={<Bar label="Header" />} footer={<Bar label="Footer" />}>

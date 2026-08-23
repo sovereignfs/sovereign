@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Fixed top-right notification stack. Use `<ToastProvider>` at the app root and `useToast()` to imperatively show toasts. Each toast has a leading status icon matched to its category.',
+          'Fixed top-right notification stack on desktop; floats bottom-center on mobile (<=768px), clearing any mobile footer/tab bar and the home-indicator safe area. Use `<ToastProvider>` at the app root and `useToast()` to imperatively show toasts. Each toast has a leading status icon matched to its category. Switch the viewport toolbar to a mobile width to see the bottom-center placement.',
       },
     },
   },

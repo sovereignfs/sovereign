@@ -53,7 +53,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const TwoColumns: Story = {
+/** The canonical two-child usage — sidebar + main, no detail column. */
+export const Default: Story = {
   render: () => (
     <div style={{ height: '480px' }}>
       <ThreeColumnLayout>

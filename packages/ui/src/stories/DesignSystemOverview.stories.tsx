@@ -24,6 +24,7 @@ import { Textarea } from '../components/Textarea/Textarea';
 import { StatusBadge } from '../components/StatusBadge/StatusBadge';
 import { SplitPane } from '../components/SplitPane/SplitPane';
 import { ThreeColumnLayout } from '../components/ThreeColumnLayout/ThreeColumnLayout';
+import { HeaderFooterLayout } from '../components/HeaderFooterLayout/HeaderFooterLayout';
 import { TagInput } from '../components/TagInput/TagInput';
 import { SuggestionInput } from '../components/SuggestionInput/SuggestionInput';
 import { AppsLauncher } from '../components/AppsLauncher/AppsLauncher';
@@ -2220,6 +2221,61 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                     Detail
                   </div>
                 </ThreeColumnLayout>
+              </div>
+            </ComponentCard>
+
+            {/* HeaderFooterLayout */}
+            <ComponentCard
+              name="HeaderFooterLayout"
+              importLine="import { HeaderFooterLayout } from '@sovereignfs/ui';"
+              usage="Header + main + optional footer, both fixed-height and independently optional; main always claims the remaining height. The vertical counterpart to ThreeColumnLayout."
+            >
+              <div style={{ width: '100%', height: '220px' }}>
+                <HeaderFooterLayout
+                  headerHeight={36}
+                  footerHeight={36}
+                  header={
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        fontFamily: ffm,
+                        fontSize: 'var(--sv-font-size-xs)',
+                        color: 'var(--sv-color-text-primary)',
+                      }}
+                    >
+                      Header
+                    </div>
+                  }
+                  footer={
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        fontFamily: ffm,
+                        fontSize: 'var(--sv-font-size-xs)',
+                        color: 'var(--sv-color-text-primary)',
+                      }}
+                    >
+                      Footer
+                    </div>
+                  }
+                >
+                  <div
+                    style={{
+                      padding: 'var(--sv-space-3)',
+                      fontFamily: ffm,
+                      fontSize: 'var(--sv-font-size-xs)',
+                      color: 'var(--sv-color-text-primary)',
+                    }}
+                  >
+                    Main (scrolls)
+                  </div>
+                </HeaderFooterLayout>
               </div>
             </ComponentCard>
 

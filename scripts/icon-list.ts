@@ -55,8 +55,23 @@ export const ICON_LIST = [
   'ellipsis-vertical',
   'rectangle-ellipsis',
   'file',
+  'folder',
   'upload',
+  'download',
   'external-link',
+  // Rich-text editor formatting (Docs/Plainwrite RichTextEditor toolbar)
+  'list',
+  'list-ordered',
+  'link',
+  'code',
+  'rotate-cw',
+  // Docs document-page overflow menu (Sync to Git / Revisions)
+  'refresh-cw',
+  'history',
+  // Rich-text editor: insert horizontal rule
+  'minus',
+  // Rich-text editor: table menu trigger (insert/row/column controls)
+  'table',
   // Grocery item / category (Sovereign Shopper, SHP-05) — a curated set
   // covering common items directly plus a representative icon per category
   // as the fallback when no item-level match exists. See

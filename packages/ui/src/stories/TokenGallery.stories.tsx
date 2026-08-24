@@ -111,6 +111,7 @@ const FONT_SIZE_TOKENS = [
   '--sv-font-size-lg',
   '--sv-font-size-xl',
   '--sv-font-size-2xl',
+  '--sv-font-size-3xl',
 ];
 
 // Task 10.2 — in-app text-size control. --sv-text-size-scale is theme-stable

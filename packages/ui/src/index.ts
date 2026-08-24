@@ -66,6 +66,13 @@ export { ToastProvider, useToast } from './components/Toast/Toast';
 export type { ToastItem, ToastContextValue } from './components/Toast/Toast';
 export { Card } from './components/Card/Card';
 export type { CardProps } from './components/Card/Card';
+
+export { CardTile, CardTileGrid, NewCardTile } from './components/CardTile/CardTile';
+export type {
+  CardTileProps,
+  CardTileGridProps,
+  NewCardTileProps,
+} from './components/CardTile/CardTile';
 export { FormField } from './components/FormField/FormField';
 export type { FormFieldProps, FormFieldRenderProps } from './components/FormField/FormField';
 export { PageHeader } from './components/PageHeader/PageHeader';

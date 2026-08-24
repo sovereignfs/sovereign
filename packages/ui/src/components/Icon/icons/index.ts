@@ -43,8 +43,19 @@ import { SlidersHorizontalIcon } from './sliders-horizontal';
 import { EllipsisVerticalIcon } from './ellipsis-vertical';
 import { RectangleEllipsisIcon } from './rectangle-ellipsis';
 import { FileIcon } from './file';
+import { FolderIcon } from './folder';
 import { UploadIcon } from './upload';
+import { DownloadIcon } from './download';
 import { ExternalLinkIcon } from './external-link';
+import { ListIcon } from './list';
+import { ListOrderedIcon } from './list-ordered';
+import { LinkIcon } from './link';
+import { CodeIcon } from './code';
+import { RotateCwIcon } from './rotate-cw';
+import { RefreshCwIcon } from './refresh-cw';
+import { HistoryIcon } from './history';
+import { MinusIcon } from './minus';
+import { TableIcon } from './table';
 import { BananaIcon } from './banana';
 import { AppleIcon } from './apple';
 import { CarrotIcon } from './carrot';
@@ -110,8 +121,19 @@ export type IconName =
   | 'ellipsis-vertical'
   | 'rectangle-ellipsis'
   | 'file'
+  | 'folder'
   | 'upload'
+  | 'download'
   | 'external-link'
+  | 'list'
+  | 'list-ordered'
+  | 'link'
+  | 'code'
+  | 'rotate-cw'
+  | 'refresh-cw'
+  | 'history'
+  | 'minus'
+  | 'table'
   | 'banana'
   | 'apple'
   | 'carrot'
@@ -179,8 +201,19 @@ export const ICONS: Record<IconName, IconComponent> = {
   'ellipsis-vertical': EllipsisVerticalIcon,
   'rectangle-ellipsis': RectangleEllipsisIcon,
   file: FileIcon,
+  folder: FolderIcon,
   upload: UploadIcon,
+  download: DownloadIcon,
   'external-link': ExternalLinkIcon,
+  list: ListIcon,
+  'list-ordered': ListOrderedIcon,
+  link: LinkIcon,
+  code: CodeIcon,
+  'rotate-cw': RotateCwIcon,
+  'refresh-cw': RefreshCwIcon,
+  history: HistoryIcon,
+  minus: MinusIcon,
+  table: TableIcon,
   banana: BananaIcon,
   apple: AppleIcon,
   carrot: CarrotIcon,
@@ -246,8 +279,19 @@ export { SlidersHorizontalIcon } from './sliders-horizontal';
 export { EllipsisVerticalIcon } from './ellipsis-vertical';
 export { RectangleEllipsisIcon } from './rectangle-ellipsis';
 export { FileIcon } from './file';
+export { FolderIcon } from './folder';
 export { UploadIcon } from './upload';
+export { DownloadIcon } from './download';
 export { ExternalLinkIcon } from './external-link';
+export { ListIcon } from './list';
+export { ListOrderedIcon } from './list-ordered';
+export { LinkIcon } from './link';
+export { CodeIcon } from './code';
+export { RotateCwIcon } from './rotate-cw';
+export { RefreshCwIcon } from './refresh-cw';
+export { HistoryIcon } from './history';
+export { MinusIcon } from './minus';
+export { TableIcon } from './table';
 export { BananaIcon } from './banana';
 export { AppleIcon } from './apple';
 export { CarrotIcon } from './carrot';

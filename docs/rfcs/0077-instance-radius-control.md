@@ -1,10 +1,10 @@
 # RFC 0077 — Instance-level corner radius control
 
-**Status:** Draft\
+**Status:** Implemented\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** `packages/ui`, `packages/db`, `runtime`, `plugins/console`, `.env.example`, docs; extends RFC 0027 / RFC 0032 (instance identity theming)\
-**Incorporated into plan:** No — documentation-first, pending scheduling.
+**Incorporated into plan:** Yes — every step in this RFC's Adoption path has shipped: `--sv-radius-scale` and the `calc()`-based radius tokens in `packages/ui/src/tokens/primitives.css`; the `brand_radius`/`instanceRadius` column and migration in both `packages/db` schemas (sqlite `migrations/sqlite/0018_odd_jigsaw.sql`, postgres `migrations/postgres/0018_melodic_leopardon.sql`); the `RADIUS_SCALE` lookup and emission in `runtime/src/instance-style.ts`; the Console `Select` control in `plugins/console/app/settings/SettingsForms.tsx`; the `INSTANCE_RADIUS` env var and its `docs/self-hosting.md` entry; the `docs/design-system.md` token-architecture exception note; and all five presets in `packages/ui/src/stories/TokenGallery.stories.tsx`. Open question #2 (SegmentedControl vs. Select) resolved as `Select`. Open question #3 (a live-updating preview in Console) was never built — it was filed as a non-blocking nice-to-have, not an adoption-path step, so its absence doesn't change this RFC's status.
 
 ---
 
@@ -291,6 +291,7 @@ contract; ships as a minor bump per the repo's `feat/` convention.
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | July 2026 | Initial draft |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                  |
+| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | July 2026   | Initial draft                                                                                                                                                                                                                                                                                                           |
+| 0.2     | August 2026 | Status corrected from Draft to Implemented — the feature shipped without this RFC's status line being updated at the time. Verified against the live code (token layer, both DB migrations, Console form, env var/doc parity, Storybook Token Gallery) rather than assumed from the design; no functional changes made. |

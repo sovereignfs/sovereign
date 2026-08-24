@@ -802,3 +802,26 @@ backup`'s own Postgres path additionally requires `pg_dump`, not installed
   (`bin/sv.ts`'s own `backup`/`restore` error messages) — both pre-existing
   CLI gaps, independent of the container-topology one above.
   `usePublishShellChromeHeight` (above) uses it.
+- **`packages/db/src/bootstrap.ts` is a second, hand-written schema
+  definition for at least `instance_config` and `backup_jobs`, and it does
+  not automatically stay in sync with `schema/{sqlite,postgres}/platform.ts`
+  or the generated Drizzle migrations.** Its own doc comment calls it an
+  "interim DDL bootstrap... replaced by drizzle-kit migrations later
+  (0.5.05+)" — that replacement never fully happened for every table, so
+  `platformBootstrapStatements()`'s `CREATE TABLE IF NOT EXISTS` DDL is
+  still what actually creates these tables' columns wherever migrations
+  aren't run first (found live: CI's Postgres-dialect test job spins up a
+  bare `postgres:16` container and calls `bootstrapPlatformDb()` directly,
+  never `drizzle-kit migrate` — `packages/db/src/__tests__/platform-db.pg.test.ts`
+  is gated behind `describe.skipIf(!PG_URL)`, so this path only executes
+  where `TEST_DATABASE_URL` is set, which is true in CI but not in a typical
+  local run, letting the gap through code review and a clean local
+  `pnpm exec vitest run`). Adding a real column to one of these tables (RFC
+  0095's `instance_config.theme_preset`, mirroring RFC 0077's `brand_radius`
+  precedent) means updating three places, not two: both dialect schema
+  files, the generated migration, **and** this file's matching
+  `CREATE TABLE IF NOT EXISTS` statement — verified by reproducing the exact
+  CI failure locally (`docker run postgres:16` with matching credentials,
+  `TEST_DATABASE_URL=... pnpm exec vitest run packages/db/src/__tests__/platform-db.pg.test.ts`)
+  before and after the bootstrap.ts fix, not just inferred from the error
+  message.

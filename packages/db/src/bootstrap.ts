@@ -383,6 +383,7 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       brand_favicon TEXT,
       brand_primary TEXT,
       brand_radius TEXT,
+      brand_theme_preset TEXT,
       email_from_name TEXT,
       email_logo TEXT,
       updated_at ${ts} NOT NULL

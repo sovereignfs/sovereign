@@ -41,7 +41,7 @@
   font-size: var(--sv-font-size-xs);
   color: var(--sv-color-error-text);
   padding: var(--sv-space-2) var(--sv-space-3);
-  border: 1px solid var(--sv-color-error-border);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-error-border);
   border-radius: var(--sv-radius-sm);
   background-color: var(--sv-color-error-surface);
 }
@@ -70,7 +70,7 @@
      Button). Matches Button's md padding, updated alongside it (10px,
      36px rendered height). */
   padding: 10px var(--sv-space-4);
-  border: 1px solid transparent;
+  border: var(--sv-border-width-hairline) solid transparent;
   border-radius: var(--sv-radius-md);
   font-family: var(--sv-font-family);
   font-size: var(--sv-font-size-sm);

@@ -19,7 +19,7 @@
 /* role — neutral fill, border */
 .role {
   background: var(--sv-color-surface-sunken);
-  border: 1px solid var(--sv-color-border);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border);
   color: var(--sv-color-text-primary);
   font-weight: var(--sv-font-weight-semibold);
 }
@@ -31,32 +31,32 @@
 
 .chipGreen {
   background: var(--sv-color-success-surface);
-  border: 1px solid var(--sv-color-success-border);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-success-border);
   color: var(--sv-color-success-text);
 }
 
 .chipAmber {
   background: var(--sv-color-warning-surface);
-  border: 1px solid var(--sv-color-warning-border);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-warning-border);
   color: var(--sv-color-warning-text);
 }
 
 .chipRed {
   background: var(--sv-color-error-surface);
-  border: 1px solid var(--sv-color-error-border);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-error-border);
   color: var(--sv-color-error-text);
 }
 
 .chipNeutral {
   background: var(--sv-color-surface-sunken);
-  border: 1px solid var(--sv-color-border);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border);
   color: var(--sv-color-text-muted);
 }
 
 /* mono — monospace font, neutral surface, for type tags / versions */
 .mono {
   background: var(--sv-color-surface-sunken);
-  border: 1px solid var(--sv-color-border);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border);
   color: var(--sv-color-text-muted);
   font-family: var(--sv-font-family-mono);
 }

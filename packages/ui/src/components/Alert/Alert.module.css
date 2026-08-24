@@ -3,7 +3,7 @@
   align-items: flex-start;
   gap: var(--sv-space-2);
   padding: var(--sv-space-3) var(--sv-space-4);
-  border: 1px solid transparent;
+  border: var(--sv-border-width-hairline) solid transparent;
   border-radius: var(--sv-radius-md);
   font-size: var(--sv-font-size-sm);
 }

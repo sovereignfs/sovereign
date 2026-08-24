@@ -13,7 +13,7 @@
   flex-shrink: 0;
   width: 100%;
   border: none;
-  border-bottom: 1px solid var(--sv-color-border);
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
   background: transparent;
   color: var(--sv-color-text-primary);
   font: inherit;

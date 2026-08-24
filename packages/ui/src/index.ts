@@ -270,3 +270,10 @@ export { RootLayout } from './components/RootLayout/RootLayout';
 export type { RootLayoutProps, RootLayoutVariant } from './components/RootLayout/RootLayout';
 export { PageLayout } from './components/PageLayout/PageLayout';
 export type { PageLayoutProps, PageLayoutPadding } from './components/PageLayout/PageLayout';
+
+// Theme presets (RFC 0094) — the closed, built-in preset data. Consumed
+// directly by runtime/src/instance-style.ts (RFC 0095); Storybook and
+// standalone consumers instead import the generated
+// '@sovereignfs/ui/tokens/theme-presets.css'.
+export { THEME_PRESETS, THEME_PRESET_NAMES } from './tokens/theme-presets';
+export type { ThemePresetName, ThemePresetTokens } from './tokens/theme-presets';

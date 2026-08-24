@@ -6,7 +6,7 @@
   width: 36px;
   height: 36px;
   padding: 0;
-  border: 1px solid var(--sv-color-accent);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-accent);
   border-radius: var(--sv-radius-full);
   background-color: var(--sv-color-accent);
   color: var(--sv-color-text-on-accent);
@@ -86,5 +86,5 @@
 .divider {
   margin: var(--sv-space-1) 0 0;
   border: none;
-  border-top: 1px solid var(--sv-color-border);
+  border-top: var(--sv-border-width-hairline) solid var(--sv-color-border);
 }

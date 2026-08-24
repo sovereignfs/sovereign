@@ -2,7 +2,7 @@
   display: inline-flex;
   background: var(--sv-color-surface-sunken);
   border-radius: var(--sv-radius-full);
-  border: 1px solid var(--sv-color-border);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border);
   padding: 2px;
   gap: 2px;
 }

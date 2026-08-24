@@ -3,7 +3,9 @@ import type { Decorator, Preview } from '@storybook/react-vite';
 import { withThemeByDataAttribute } from '@storybook/addon-themes';
 import '../src/tokens/primitives.css';
 import '../src/tokens/semantic.css';
+import '../src/tokens/theme-presets.css';
 import './preview-globals.css';
+import { THEME_PRESETS, type ThemePresetName } from '../src/tokens/theme-presets';
 
 // RFC 0077 corner-radius presets. Mirrors runtime/src/instance-style.ts's
 // RADIUS_SCALE table — that's the canonical, production lookup (driven by
@@ -25,13 +27,46 @@ const RADIUS_SCALE: Record<string, number> = {
 // wrapper further down (confirmed while building the Token Gallery's own
 // preset demo — see its comment for the full explanation), so this can't be
 // a story-scoped decorator wrapper; it has to reach all the way to :root.
+//
+// RFC 0094 interaction: a theme preset (below) can ALSO define
+// --sv-radius-scale, delivered via theme-presets.css's
+// [data-theme-preset='...'] stylesheet rule. An inline style (what this
+// decorator sets) always beats any stylesheet rule for the same property,
+// regardless of selector specificity — so if this effect always ran
+// unconditionally, it would permanently shadow the preset's own radius
+// override and the Radius toolbar's last value would silently win instead,
+// even while previewing a preset that's supposed to control it. When the
+// active preset owns --sv-radius-scale, this decorator clears its own
+// inline override instead, so the preset's stylesheet rule actually applies.
 const withRadius: Decorator = (Story, context) => {
   const preset = (context.globals.radius as string | undefined) ?? 'm';
+  const themePreset = (context.globals.themePreset as ThemePresetName | undefined) ?? 'default';
+  const presetOwnsRadius = '--sv-radius-scale' in THEME_PRESETS[themePreset].light;
   useEffect(() => {
+    if (presetOwnsRadius) {
+      document.documentElement.style.removeProperty('--sv-radius-scale');
+      return;
+    }
     document.documentElement.style.setProperty(
       '--sv-radius-scale',
       String(RADIUS_SCALE[preset] ?? 1),
     );
+  }, [preset, presetOwnsRadius]);
+  return Story();
+};
+
+// RFC 0094 theme presets. Sets data-theme-preset on the preview iframe's
+// <html> — the same document-root node data-theme is set on, and required
+// for the same calc()-chain reason withRadius's comment above explains,
+// since the neobrutalism preset overrides --sv-radius-scale too.
+const withThemePreset: Decorator = (Story, context) => {
+  const preset = (context.globals.themePreset as ThemePresetName | undefined) ?? 'default';
+  useEffect(() => {
+    if (preset === 'default') {
+      document.documentElement.removeAttribute('data-theme-preset');
+    } else {
+      document.documentElement.setAttribute('data-theme-preset', preset);
+    }
   }, [preset]);
   return Story();
 };
@@ -54,9 +89,23 @@ const preview: Preview = {
         dynamicTitle: true,
       },
     },
+    themePreset: {
+      description: 'RFC 0094 theme preset',
+      defaultValue: 'default',
+      toolbar: {
+        title: 'Theme preset',
+        icon: 'paintbrush',
+        items: [
+          { value: 'default', title: 'Default' },
+          { value: 'neobrutalism', title: 'Neobrutalism' },
+        ],
+        dynamicTitle: true,
+      },
+    },
   },
   decorators: [
     withRadius,
+    withThemePreset,
     withThemeByDataAttribute({
       themes: {
         light: '',

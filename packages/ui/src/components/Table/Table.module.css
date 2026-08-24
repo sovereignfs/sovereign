@@ -20,11 +20,11 @@
 }
 
 .head .row {
-  border-bottom: 1px solid var(--sv-color-border-strong);
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border-strong);
 }
 
 .body .row {
-  border-bottom: 1px solid var(--sv-color-border);
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
 }
 
 .body .row:last-child {

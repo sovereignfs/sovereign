@@ -16,7 +16,7 @@
   padding-right: max(var(--sv-space-4), env(safe-area-inset-right));
   padding-left: max(var(--sv-space-4), env(safe-area-inset-left));
   background-color: var(--sv-color-surface);
-  border-bottom: 1px solid var(--sv-color-border);
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
   position: sticky;
   top: 0;
   z-index: 101;

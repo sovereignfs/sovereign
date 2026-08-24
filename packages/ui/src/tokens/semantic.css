@@ -86,6 +86,17 @@
   --sv-shadow-overlay: 0 10px 38px rgba(0, 0, 0, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
   --sv-shadow-control: 0 1px 3px rgba(0, 0, 0, 0.2); /* small interactive-control shadows, e.g. Toggle thumb */
 
+  /* Button press-interaction tokens (RFC 0094). Consumed unconditionally by
+     Button.module.css's :active rule — these defaults (none/0/0) make that
+     rule a no-op for today's default look. A theme preset (e.g.
+     neobrutalism) sets non-zero values to get a tactile "press into shadow"
+     effect. Not overridden under [data-theme='dark'] below — like the
+     shadow tokens above, a theme preset's own light/dark variants set these
+     directly rather than this file deriving a dark-mode default for them. */
+  --sv-button-shadow: none;
+  --sv-button-press-x: 0;
+  --sv-button-press-y: 0;
+
   /*
    * Instance identity tokens (RFC 0027 / RFC 0032 rename). Distinct namespace from --sv-color-*:
    * these hold URLs (not colours) and are set once by the operator, not swapped

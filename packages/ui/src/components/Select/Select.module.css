@@ -18,7 +18,7 @@
   line-height: 1.5;
   color: var(--sv-color-text-primary);
   background-color: var(--sv-color-surface);
-  border: 1px solid var(--sv-color-border-strong);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border-strong);
   border-radius: var(--sv-radius-md);
   cursor: pointer;
   /* Remove native OS chevron */

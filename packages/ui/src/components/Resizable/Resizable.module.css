@@ -4,7 +4,7 @@
   width: 100%;
   height: 100%;
   min-height: 320px;
-  border: 1px solid var(--sv-color-border);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border);
   border-radius: var(--sv-radius-lg);
   overflow: hidden;
   background: var(--sv-color-surface);
@@ -27,7 +27,7 @@
   width: 12px;
   padding: 0;
   border: 0;
-  border-inline: 1px solid var(--sv-color-border);
+  border-inline: var(--sv-border-width-hairline) solid var(--sv-color-border);
   cursor: col-resize;
   background: var(--sv-color-surface-sunken);
 }
@@ -36,7 +36,7 @@
   width: 100%;
   height: 12px;
   border-inline: 0;
-  border-block: 1px solid var(--sv-color-border);
+  border-block: var(--sv-border-width-hairline) solid var(--sv-color-border);
   cursor: row-resize;
 }
 

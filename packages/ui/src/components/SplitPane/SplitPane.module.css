@@ -5,7 +5,7 @@
     minmax(0, calc(100% - var(--split-pane-primary-size, 50%)));
   width: 100%;
   min-height: 320px;
-  border: 1px solid var(--sv-color-border);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border);
   border-radius: var(--sv-radius-lg);
   overflow: hidden;
   background: var(--sv-color-surface);
@@ -25,7 +25,7 @@
 }
 
 .pane + .pane {
-  border-left: 1px solid var(--sv-color-border);
+  border-left: var(--sv-border-width-hairline) solid var(--sv-color-border);
 }
 
 .handle {
@@ -34,7 +34,7 @@
   min-width: 12px;
   padding: 0;
   border: 0;
-  border-inline: 1px solid var(--sv-color-border);
+  border-inline: var(--sv-border-width-hairline) solid var(--sv-color-border);
   cursor: col-resize;
   background: var(--sv-color-surface-sunken);
 }
@@ -79,7 +79,7 @@
   }
 
   .pane + .pane {
-    border-top: 1px solid var(--sv-color-border);
+    border-top: var(--sv-border-width-hairline) solid var(--sv-color-border);
     border-left: 0;
   }
 }

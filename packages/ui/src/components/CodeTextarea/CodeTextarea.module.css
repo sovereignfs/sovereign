@@ -13,7 +13,7 @@
   overflow: auto;
   resize: vertical;
   background: var(--sv-color-surface);
-  border: 1px solid var(--sv-color-border-strong);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border-strong);
   border-radius: var(--sv-radius-md);
   transition:
     border-color 0.15s ease,

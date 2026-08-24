@@ -4,7 +4,7 @@
   justify-content: space-between;
   min-height: 48px;
   padding: var(--sv-space-2) var(--sv-space-4);
-  border-bottom: 1px solid var(--sv-color-border);
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
   background-color: var(--sv-color-surface);
 }
 

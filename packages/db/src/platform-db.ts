@@ -3243,6 +3243,14 @@ function isRadiusPreset(value: string): value is RadiusPreset {
   return (RADIUS_PRESETS as readonly string[]).includes(value);
 }
 
+/** Closed set of built-in theme presets (RFC 0094/0095). 'default' is today's look, byte-identical. */
+export type ThemePreset = 'default' | 'neobrutalism';
+const THEME_PRESETS: readonly ThemePreset[] = ['default', 'neobrutalism'];
+
+function isThemePreset(value: string): value is ThemePreset {
+  return (THEME_PRESETS as readonly string[]).includes(value);
+}
+
 export interface InstanceConfig {
   instanceName: string;
   instanceLogo: string | null;
@@ -3250,6 +3258,7 @@ export interface InstanceConfig {
   instanceFavicon: string | null;
   instancePrimary: string | null;
   instanceRadius: RadiusPreset | null;
+  instanceThemePreset: ThemePreset | null;
   emailFromName: string | null;
   emailLogo: string | null;
 }
@@ -3280,6 +3289,7 @@ export async function getInstanceConfig(
     instanceFavicon: string | null;
     instancePrimary: string | null;
     instanceRadius: string | null;
+    instanceThemePreset: string | null;
     emailFromName: string | null;
     emailLogo: string | null;
   }>(
@@ -3290,11 +3300,13 @@ export async function getInstanceConfig(
                brand_favicon AS "instanceFavicon",
                brand_primary AS "instancePrimary",
                brand_radius AS "instanceRadius",
+               brand_theme_preset AS "instanceThemePreset",
                email_from_name AS "emailFromName",
                email_logo AS "emailLogo"
         FROM instance_config WHERE tenant_id = ${tenantId}`,
   );
   const radiusCandidate = row?.instanceRadius ?? process.env.INSTANCE_RADIUS ?? '';
+  const themePresetCandidate = row?.instanceThemePreset ?? process.env.INSTANCE_THEME_PRESET ?? '';
   return {
     instanceName: resolveConfiguredInstanceName(row?.instanceName, process.env.INSTANCE_NAME),
     instanceLogo: row?.instanceLogo ?? process.env.INSTANCE_LOGO ?? null,
@@ -3306,6 +3318,7 @@ export async function getInstanceConfig(
         ? (row?.instancePrimary ?? process.env.INSTANCE_PRIMARY_COLOR ?? null)
         : null,
     instanceRadius: isRadiusPreset(radiusCandidate) ? radiusCandidate : null,
+    instanceThemePreset: isThemePreset(themePresetCandidate) ? themePresetCandidate : null,
     emailFromName: row?.emailFromName ?? process.env.INSTANCE_EMAIL_FROM_NAME ?? null,
     emailLogo: row?.emailLogo ?? process.env.INSTANCE_EMAIL_LOGO ?? null,
   };
@@ -3335,26 +3348,32 @@ export async function setInstanceConfig(
       `Invalid instanceRadius: "${values.instanceRadius}". Must be one of ${RADIUS_PRESETS.join(', ')}.`,
     );
   }
+  if (values.instanceThemePreset !== null && !isThemePreset(values.instanceThemePreset)) {
+    throw new Error(
+      `Invalid instanceThemePreset: "${values.instanceThemePreset}". Must be one of ${THEME_PRESETS.join(', ')}.`,
+    );
+  }
   const now = Math.floor(Date.now() / 1000);
   await dbRun(
     pdb,
     sql`INSERT INTO instance_config
           (tenant_id, brand_name, brand_logo, brand_logo_dark, brand_favicon,
-           brand_primary, brand_radius, email_from_name, email_logo, updated_at)
+           brand_primary, brand_radius, brand_theme_preset, email_from_name, email_logo, updated_at)
         VALUES
           (${tenantId}, ${values.instanceName}, ${values.instanceLogo}, ${values.instanceLogoDark},
            ${values.instanceFavicon}, ${values.instancePrimary}, ${values.instanceRadius},
-           ${values.emailFromName}, ${values.emailLogo}, ${now})
+           ${values.instanceThemePreset}, ${values.emailFromName}, ${values.emailLogo}, ${now})
         ON CONFLICT (tenant_id) DO UPDATE SET
-          brand_name      = excluded.brand_name,
-          brand_logo      = excluded.brand_logo,
-          brand_logo_dark = excluded.brand_logo_dark,
-          brand_favicon   = excluded.brand_favicon,
-          brand_primary   = excluded.brand_primary,
-          brand_radius    = excluded.brand_radius,
-          email_from_name = excluded.email_from_name,
-          email_logo      = excluded.email_logo,
-          updated_at      = excluded.updated_at`,
+          brand_name         = excluded.brand_name,
+          brand_logo         = excluded.brand_logo,
+          brand_logo_dark    = excluded.brand_logo_dark,
+          brand_favicon      = excluded.brand_favicon,
+          brand_primary      = excluded.brand_primary,
+          brand_radius       = excluded.brand_radius,
+          brand_theme_preset = excluded.brand_theme_preset,
+          email_from_name    = excluded.email_from_name,
+          email_logo         = excluded.email_logo,
+          updated_at         = excluded.updated_at`,
   );
 }
 

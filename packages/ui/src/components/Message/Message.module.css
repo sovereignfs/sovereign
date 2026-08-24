@@ -32,7 +32,7 @@
 
 .assistant .bubble {
   background: var(--sv-color-surface-raised);
-  border: 1px solid var(--sv-color-border);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border);
   color: var(--sv-color-text-primary);
   border-bottom-left-radius: var(--sv-radius-sm);
 }

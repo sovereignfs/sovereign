@@ -4,6 +4,7 @@ import {
   getInstanceConfig,
   setInstanceConfig,
   type RadiusPreset,
+  type ThemePreset,
 } from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
 import { logActivity } from '@/src/activity';
@@ -42,6 +43,7 @@ export async function PATCH(request: Request): Promise<Response> {
     instanceFavicon: string | null;
     instancePrimary: string | null;
     instanceRadius: RadiusPreset | null;
+    instanceThemePreset: ThemePreset | null;
     emailFromName: string | null;
     emailLogo: string | null;
   }>;
@@ -61,6 +63,10 @@ export async function PATCH(request: Request): Promise<Response> {
         'instancePrimary' in body ? (body.instancePrimary ?? null) : current.instancePrimary,
       instanceRadius:
         'instanceRadius' in body ? (body.instanceRadius ?? null) : current.instanceRadius,
+      instanceThemePreset:
+        'instanceThemePreset' in body
+          ? (body.instanceThemePreset ?? null)
+          : current.instanceThemePreset,
       emailFromName: 'emailFromName' in body ? (body.emailFromName ?? null) : current.emailFromName,
       emailLogo: 'emailLogo' in body ? (body.emailLogo ?? null) : current.emailLogo,
     });

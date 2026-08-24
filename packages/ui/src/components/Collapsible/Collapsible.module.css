@@ -1,5 +1,5 @@
 .root {
-  border-bottom: 1px solid var(--sv-color-border);
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
 }
 
 .trigger {

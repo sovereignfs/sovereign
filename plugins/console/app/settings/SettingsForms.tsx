@@ -234,6 +234,7 @@ export interface InstanceValues {
   instanceFavicon: string | null;
   instancePrimary: string | null;
   instanceRadius: string | null;
+  instanceThemePreset: string | null;
   emailFromName: string | null;
   emailLogo: string | null;
 }
@@ -245,6 +246,13 @@ const RADIUS_OPTIONS = [
   { value: 's', label: 'S' },
   { value: 'm', label: 'M — today’s look' },
   { value: 'l', label: 'L — full curvy UI' },
+];
+
+// RFC 0094/0095 — closed, built-in set. Adding a preset here requires it to
+// already exist in @sovereignfs/ui's THEME_PRESETS (packages/ui/src/tokens/theme-presets.ts).
+const THEME_PRESET_OPTIONS = [
+  { value: '', label: 'Default' },
+  { value: 'neobrutalism', label: 'Neobrutalism' },
 ];
 
 export function InstanceForm({ initialValues }: { initialValues: InstanceValues }) {
@@ -314,6 +322,26 @@ export function InstanceForm({ initialValues }: { initialValues: InstanceValues 
             defaultValue={initialValues.instanceRadius ?? ''}
           >
             {RADIUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        )}
+      </FormField>
+
+      <FormField
+        label="Theme"
+        id="instanceThemePreset"
+        hint="A closed, built-in set of full visual identities — border width, shadow shape, and corner radius all move together. Your primary colour and corner radius above still take precedence over the preset's own defaults."
+      >
+        {(field) => (
+          <Select
+            {...field}
+            name="instanceThemePreset"
+            defaultValue={initialValues.instanceThemePreset ?? ''}
+          >
+            {THEME_PRESET_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

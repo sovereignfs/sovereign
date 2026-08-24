@@ -1,0 +1,1 @@
+ALTER TABLE `instance_config` ADD `brand_theme_preset` text;

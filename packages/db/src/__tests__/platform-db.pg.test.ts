@@ -235,6 +235,7 @@ describe.skipIf(!PG_URL)('instance config helpers', () => {
         instanceFavicon: null,
         instancePrimary: null,
         instanceRadius: null,
+        instanceThemePreset: null,
         emailFromName: null,
         emailLogo: null,
       });
@@ -254,6 +255,7 @@ describe.skipIf(!PG_URL)('instance config helpers', () => {
       instanceFavicon: null,
       instancePrimary: null,
       instanceRadius: 'l',
+      instanceThemePreset: null,
       emailFromName: null,
       emailLogo: null,
     });
@@ -272,6 +274,7 @@ describe.skipIf(!PG_URL)('instance config helpers', () => {
         instancePrimary: null,
         // @ts-expect-error — deliberately invalid to verify the runtime guard
         instanceRadius: 'xxl',
+        instanceThemePreset: null,
         emailFromName: null,
         emailLogo: null,
       }),

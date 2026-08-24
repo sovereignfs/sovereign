@@ -3463,6 +3463,10 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                 <li>
                   Use <code style={{ fontFamily: ffm }}>--sv-shadow-*</code> for elevation
                 </li>
+                <li>
+                  Use <code style={{ fontFamily: ffm }}>--sv-border-width-hairline</code> instead of
+                  a literal border width (RFC 0094)
+                </li>
               </ul>
             </div>
             <div

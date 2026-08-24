@@ -3,7 +3,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--sv-space-2);
-  border: 1px solid transparent;
+  border: var(--sv-border-width-hairline) solid transparent;
   border-radius: var(--sv-radius-md);
   font-family: var(--sv-font-family);
   font-weight: var(--sv-font-weight-medium);
@@ -12,10 +12,15 @@
   /* Removes the ~300ms double-tap-to-zoom delay on touch — this is a tap
      target, never a pinch-zoom surface. */
   touch-action: manipulation;
+  /* --sv-button-shadow defaults to `none` (semantic.css) — this box-shadow
+     line is a no-op for every theme that doesn't set it (RFC 0094). */
+  box-shadow: var(--sv-button-shadow);
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
-    color 0.15s ease;
+    color 0.15s ease,
+    transform 0.1s ease,
+    box-shadow 0.1s ease;
 }
 
 .button:focus-visible {
@@ -26,6 +31,17 @@
 .button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* --sv-button-press-x/-y default to 0 (semantic.css) — translate(0, 0) is a
+   no-op, so this rule only produces a visible "press into shadow" effect
+   for a theme preset that sets non-zero values (RFC 0094). Unguarded by
+   (hover: hover) deliberately: :active press feedback is wanted on every
+   input type, the same reasoning documented for Button's existing
+   color-mix() :active background changes below. */
+.button:active:not(:disabled) {
+  transform: translate(var(--sv-button-press-x), var(--sv-button-press-y));
+  box-shadow: none;
 }
 
 /* Touch target: gated to (pointer: coarse) — the *primary* pointer, not

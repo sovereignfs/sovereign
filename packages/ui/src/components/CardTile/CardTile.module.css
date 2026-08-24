@@ -1,0 +1,69 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--sv-card-tile-min-width, 200px), 1fr));
+  gap: var(--sv-space-4);
+}
+
+/* Chrome (border/radius/shadow/background) lives on this outer box, same
+   tokens `Card` itself uses — but padding-free, so `.banner` below can
+   bleed all the way to the edges, which `Card`'s single padded box can't
+   do. */
+.tile {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+  background: var(--sv-color-surface-raised);
+  box-shadow: var(--sv-shadow-card);
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  color: var(--sv-color-text-subtle);
+  /* Neutral default when no `bannerColor` is supplied — an inline style
+     on the element overrides this. */
+  background-color: var(--sv-color-surface-sunken);
+}
+
+.footer {
+  padding: var(--sv-space-3) var(--sv-space-4);
+}
+
+/* Plain centered placeholder — no banner strip, so a ghost "add new" tile
+   reads as an empty slot rather than mimicking a real tile's anatomy.
+   `min-height` matches a real `.tile`'s own natural height (banner +
+   single-line footer) so the two read as the same size. */
+.newTile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sv-space-2);
+  min-height: 87px;
+  width: 100%;
+  height: 100%;
+  color: var(--sv-color-text-muted);
+  border: 1px dashed var(--sv-color-border-strong);
+  border-radius: var(--sv-radius-lg);
+  background: none;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+@media (hover: hover) {
+  .newTile:hover {
+    border-color: var(--sv-color-text-muted);
+    color: var(--sv-color-text-primary);
+  }
+}
+
+.newTile:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}

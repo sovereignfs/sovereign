@@ -5,6 +5,7 @@ import { Avatar } from '../components/Avatar/Avatar';
 import { Badge } from '../components/Badge/Badge';
 import { Button } from '../components/Button/Button';
 import { Card } from '../components/Card/Card';
+import { CardTile, CardTileGrid, NewCardTile } from '../components/CardTile/CardTile';
 import { Dialog } from '../components/Dialog/Dialog';
 import { Drawer } from '../components/Drawer/Drawer';
 import { EmptyState } from '../components/EmptyState/EmptyState';
@@ -401,6 +402,7 @@ function ColorGroup({
 // ---------------------------------------------------------------------------
 
 const TYPE_SCALE: Array<{ token: string; label: string; note: string }> = [
+  { token: '--sv-font-size-3xl', label: '3xl — 32px', note: 'Document title style' },
   { token: '--sv-font-size-2xl', label: '2xl — 24px', note: 'Page titles' },
   { token: '--sv-font-size-xl', label: 'xl — 20px', note: 'Section headings' },
   { token: '--sv-font-size-lg', label: 'lg — 18px', note: 'Sub-headings' },
@@ -1759,7 +1761,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
         <section style={{ marginBottom: 'var(--sv-space-12)' }}>
           <SectionHeader
             title="Component gallery"
-            subtitle="All 74 components — click each story in the sidebar for the full API, variants, and controls."
+            subtitle="All 75 components — click each story in the sidebar for the full API, variants, and controls."
           />
 
           <div style={{ marginBottom: 'var(--sv-space-6)' }}>
@@ -2104,6 +2106,21 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   Interactive card — hover me
                 </Card>
               </div>
+            </ComponentCard>
+
+            {/* CardTile */}
+            <ComponentCard
+              name="CardTile"
+              importLine="import { CardTile, CardTileGrid, NewCardTile } from '@sovereignfs/ui';"
+              usage="A colored/iconed banner over a footer label, for a grid of navigable top-level entities (projects, boards). Card can't express this — its padding always wraps the whole box, with no bleed slot for a full-width banner. Not link-aware; wrap each tile in the host router's own link component. Pair with NewCardTile for the grid's 'add new' affordance."
+            >
+              <CardTileGrid minTileWidth={140}>
+                <CardTile banner={<Icon name="folder" size="lg" aria-hidden={true} />}>
+                  Q4 Planning
+                </CardTile>
+                <CardTile bannerColor="#c7d8ff">Marketing site</CardTile>
+                <NewCardTile label="New project" />
+              </CardTileGrid>
             </ComponentCard>
 
             {/* FormField */}

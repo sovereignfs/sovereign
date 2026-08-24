@@ -72,6 +72,10 @@
   --sv-font-size-lg: 1.125rem; /* 18px */
   --sv-font-size-xl: 1.25rem; /* 20px */
   --sv-font-size-2xl: 1.5rem; /* 24px */
+  --sv-font-size-3xl: 2rem; /* 32px — document title style (RichTextEditor "Title" paragraph style). A
+     modest step above 2xl reads too close to Heading 1 at a glance (both
+     bold, only 4px apart) — this keeps roughly the same ~1.3x jump Google
+     Docs itself uses between its own Title and Heading 1 sizes. */
   --sv-font-weight-regular: 400;
   --sv-font-weight-medium: 500;
   --sv-font-weight-semibold: 600;

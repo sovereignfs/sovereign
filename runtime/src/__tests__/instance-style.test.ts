@@ -70,7 +70,7 @@ describe('buildInstanceStyle — theme presets (RFC 0094/0095)', () => {
     const style = buildInstanceStyle(config({ instanceThemePreset: 'neobrutalism' }));
     expect(style).toContain('--sv-radius-scale: 0;');
     expect(style).toContain('--sv-border-width-hairline: 2px;');
-    expect(style).toContain('--sv-button-shadow: 4px 4px 0 0 var(--sv-color-border-strong);');
+    expect(style).toContain('--sv-button-shadow: 4px 4px 0 0 var(--sv-color-shadow-strong);');
   });
 
   it("emits the neobrutalism preset dark tokens inside a [data-theme='dark'] block", () => {

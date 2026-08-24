@@ -258,10 +258,46 @@ gets a row in `DesignSystemOverview.stories.tsx`'s design-rules section.
 
 ## Open questions
 
-1. **Exact neobrutalism values are illustrative, not final** — same caveat
-   RFC 0077 flagged for its own scale factors: needs a visual QA pass across
-   `Button`, `Card`, `Input`, `Dialog`, and the rest of the component catalog
-   in Storybook before being considered final.
+1. ~~**Exact neobrutalism values are illustrative, not final**~~ —
+   **resolved.** Visual QA pass completed in Storybook (light and dark,
+   toolbar-toggled) across the full component catalog: the "Design System
+   Overview" gallery (~90 components, both color schemes), every overlay
+   component individually triggered into its actual open state (`Dialog`,
+   `Drawer`, `Popover`, `ContextMenu`, `Toast` — `ConfirmDialog` has no
+   standalone story; it's a thin `Dialog` wrapper, already covered), and
+   every form control (`Input`, `Select`, `Textarea`, `Combobox`,
+   `DatePicker`, `TagInput`), including focus-visible state. Verified via
+   `getComputedStyle()` on the actual rendered elements, not just visual
+   inspection. Findings:
+   - The mechanism is correct everywhere checked: square corners
+     (`border-radius: 0px`), 2px hairline borders, and hard offset
+     `box-shadow`s (e.g. `8px 8px 0px 0px` on `Dialog`/`Toast`, `4px 4px 0px
+0px` on the shared popover-style panel used by `Popover`/`ContextMenu`/
+     `Combobox`) apply consistently. No clipping or z-index issues in any
+     overlay's open state.
+   - Focus rings (`box-shadow: 0 0 0 2px var(--sv-color-focus-ring)`, no
+     offset, no hardcoded radius) automatically inherit the square corners
+     from `--sv-radius-scale: 0` — nothing theme-specific needed there.
+   - `--sv-radius-full` elements (`TagInput` tag pills, avatars, toggles)
+     correctly stay rounded under the preset — the RFC 0077-documented
+     exemption working as designed, not a bug.
+   - One real aesthetic finding, not a defect: every neobrutalism shadow
+     resolved to `--sv-color-border-strong`, a soft mid-grey
+     (`rgb(212, 212, 216)` in light mode) rather than the bolder, higher-
+     contrast (often pure black) shadow "authentic" neobrutalism references
+     use. **Fixed**: added a new semantic token, `--sv-color-shadow-strong`
+     (`semantic.css`; `--sv-grey-950` in light, `--sv-grey-50` in dark — the
+     same near-black/near-white pairing `--sv-color-accent` and
+     `--sv-color-focus-ring` already use, kept as its own token rather than
+     reusing `--sv-color-border-strong` since a hard offset shadow needs
+     more contrast than a border does), and repointed all six
+     shadow-related properties in `theme-presets.ts`'s neobrutalism preset
+     (`--sv-shadow-card/-hover/-popover/-overlay/-control`,
+     `--sv-button-shadow`) at it — borders are untouched, still on
+     `--sv-color-border`/`-border-strong`. Verified via `getComputedStyle()`
+     in both themes (`rgb(9, 9, 11) 8px 8px 0px 0px` light,
+     `rgb(250, 250, 250) 8px 8px 0px 0px` dark) and live in the Token
+     Gallery's "Theme presets" demo.
 2. **Should the `Button` press-interaction tokens be considered
    neobrutalism-specific, or a generally available enhancement** any future
    theme (or even the default theme, eventually) could opt into? Leaning
@@ -289,7 +325,8 @@ conclusion RFC 0077 reached for the identical shape of change.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| 0.2     | August 2026 | Implemented. Found and documented two correctness constraints during implementation, both now fixed in code: (1) `--sv-radius-scale` overrides must land on the actual `:root` element (§2), not a scoped wrapper — added to Proposed design. (2) Storybook's pre-existing `withRadius` decorator's inline-style override was silently shadowing the preset's own stylesheet-based radius override — fixed by making it defer to the active preset when one owns `--sv-radius-scale` (§4). No change to the design's public shape (token names, selector, `THEME_PRESETS` structure all as originally proposed). |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | August 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 0.2     | August 2026 | Implemented. Found and documented two correctness constraints during implementation, both now fixed in code: (1) `--sv-radius-scale` overrides must land on the actual `:root` element (§2), not a scoped wrapper — added to Proposed design. (2) Storybook's pre-existing `withRadius` decorator's inline-style override was silently shadowing the preset's own stylesheet-based radius override — fixed by making it defer to the active preset when one owns `--sv-radius-scale` (§4). No change to the design's public shape (token names, selector, `THEME_PRESETS` structure all as originally proposed).                                             |
+| 0.3     | August 2026 | Open question 1 resolved: full visual QA pass completed in Storybook (Overview gallery in light/dark, every overlay component triggered open, every form control incl. focus state). Mechanism confirmed correct everywhere. One aesthetic finding — neobrutalism shadows used `--sv-color-border-strong` (soft grey) instead of a bolder/higher-contrast color — fixed in the same pass: added `--sv-color-shadow-strong` (`semantic.css`, near-black light / near-white dark) and repointed the six shadow-related neobrutalism properties at it; borders unchanged. `packages/ui` bumped `0.68.0` → `0.69.0`. See Open questions §1 for the full account. |

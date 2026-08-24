@@ -273,6 +273,12 @@ const COLOR_GROUPS: Array<{
     ],
   },
   {
+    label: 'Shadow',
+    usage:
+      'High-contrast shadow color for theme presets with hard offset shadows (RFC 0094). Unused by the default theme.',
+    tokens: [{ token: '--sv-color-shadow-strong', name: 'shadow-strong' }],
+  },
+  {
     label: 'Accent',
     usage:
       'Primary interactive color. Monochrome by default; instance admins override with their brand color.',

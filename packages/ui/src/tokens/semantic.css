@@ -79,6 +79,14 @@
      elevation shadow. Composed rgba layers, like --sv-shadow-card. */
   --sv-color-scrim: rgba(0, 0, 0, 0.5);
 
+  /* High-contrast shadow colour (RFC 0094). Distinct from --sv-color-border-strong
+     even though they resolve to the same monochrome scale — a theme preset's
+     hard offset shadows (e.g. neobrutalism) need a bolder, more saturated value
+     than a border does to read as "authentic," so this is its own token rather
+     than reusing border-strong. Unused by the default theme's soft rgba()
+     shadows above; only a preset that opts in (theme-presets.ts) references it. */
+  --sv-color-shadow-strong: var(--sv-grey-950);
+
   --sv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
   --sv-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.08); /* e1 — card hover lift */
   --sv-shadow-popover:
@@ -143,6 +151,8 @@
   --sv-color-info-border: var(--sv-blue-800);
 
   --sv-color-scrim: rgba(0, 0, 0, 0.65);
+
+  --sv-color-shadow-strong: var(--sv-grey-50);
 
   --sv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.5);
   --sv-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.3);

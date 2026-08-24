@@ -43,6 +43,9 @@ const TOKEN_ALLOWLIST: ReadonlySet<string> = new Set([
   // reserve space below it — a JS-computed value (banner is conditionally
   // rendered, not always present), never a CSS literal.
   '--sv-offline-banner-height',
+  // Set by CardTileGrid's inline style from its minTileWidth prop — a
+  // caller-configurable number, never a CSS literal.
+  '--sv-card-tile-min-width',
 ]);
 
 // file:line entries permitted to hardcode a colour literal in the scanned dirs

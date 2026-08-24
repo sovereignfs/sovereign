@@ -116,6 +116,12 @@
   ); /* 20px @ scale 1 — bottom sheet (Drawer top corners) */
   --sv-radius-full: 9999px; /* pill / avatar — unaffected by --sv-radius-scale */
 
+  /* Border width (RFC 0094). Theme-stable like the other scale tokens above —
+     a theme preset can override it (e.g. neobrutalism's thicker outline), but
+     it has no separate semantic tier. Every component references this by
+     name instead of a literal `1px`, the way --sv-radius-* etc. do. */
+  --sv-border-width-hairline: 1px;
+
   /* Touch targets — minimum hit-area dimension for interactive controls.
      44px follows the WCAG 2.5.5 / Apple HIG / Material guideline for reliable
      touch without a pointing device. Applied to icon-only controls on mobile

@@ -5,7 +5,7 @@
   min-height: 24px;
   gap: var(--sv-space-1);
   padding: 2px var(--sv-space-2);
-  border: 1px solid var(--sv-color-border);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border);
   border-radius: var(--sv-radius-full);
   font-family: var(--sv-font-family);
   font-size: var(--sv-font-size-xs);

@@ -1,4 +1,5 @@
 import type { InstanceConfig, RadiusPreset } from '@sovereignfs/db';
+import { THEME_PRESETS } from '@sovereignfs/ui';
 
 /** Fixed lightness delta used to derive --sv-color-accent-hover from the instance accent. */
 const ACCENT_HOVER_LIGHTNESS_DELTA = 8;
@@ -48,6 +49,23 @@ function hexToHsl(hex: string): [number, number, number] {
  */
 export function buildInstanceStyle(config: InstanceConfig): string {
   const lines: string[] = [];
+  const darkLines: string[] = [];
+
+  // Theme preset (RFC 0094/0095) lines go FIRST — an operator's explicit
+  // accent-colour/radius choice (pushed below) then wins by ordinary "last
+  // declaration in the same block wins" CSS rules, no special-case
+  // precedence logic needed. Imports RFC 0094's THEME_PRESETS directly
+  // rather than re-deriving these values here, so there is exactly one
+  // place they're authored (see that RFC's "Alternatives considered").
+  if (config.instanceThemePreset) {
+    const preset = THEME_PRESETS[config.instanceThemePreset];
+    for (const [token, value] of Object.entries(preset.light)) {
+      lines.push(`  ${token}: ${value};`);
+    }
+    for (const [token, value] of Object.entries(preset.dark)) {
+      darkLines.push(`  ${token}: ${value};`);
+    }
+  }
 
   if (config.instanceLogo) {
     lines.push(`  --sv-instance-logo: url(${JSON.stringify(config.instanceLogo)});`);
@@ -71,12 +89,16 @@ export function buildInstanceStyle(config: InstanceConfig): string {
     lines.push(`  --sv-color-accent: hsl(${h}, ${s}%, ${l}%);`);
     lines.push(`  --sv-color-accent-hover: hsl(${h}, ${s}%, ${hoverLLight}%);`);
     // On dark theme the accent-hover lightens instead of darkens.
-    // We append a [data-theme='dark'] block separately.
-    return (
-      `:root {\n${lines.join('\n')}\n}` +
-      `\n[data-theme='dark'] {\n  --sv-color-accent-hover: hsl(${h}, ${s}%, ${hoverLDark}%);\n}`
-    );
+    darkLines.push(`  --sv-color-accent-hover: hsl(${h}, ${s}%, ${hoverLDark}%);`);
   }
 
-  return lines.length > 0 ? `:root {\n${lines.join('\n')}\n}` : '';
+  // Both blocks are built from the same merged lines/darkLines arrays (not an
+  // early return from inside the instancePrimary branch, unlike the RFC
+  // 0027-era version of this function) — a theme preset's own dark overrides
+  // and the accent's derived dark-hover line need to land in the SAME
+  // [data-theme='dark'] block, not two competing ones.
+  const rootBlock = lines.length > 0 ? `:root {\n${lines.join('\n')}\n}` : '';
+  const darkBlock =
+    darkLines.length > 0 ? `\n[data-theme='dark'] {\n${darkLines.join('\n')}\n}` : '';
+  return rootBlock + darkBlock;
 }

@@ -15,7 +15,7 @@
   line-height: 1.5;
   color: var(--sv-color-text-primary);
   background-color: var(--sv-color-surface);
-  border: 1px solid var(--sv-color-border-strong);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border-strong);
   border-radius: var(--sv-radius-md);
   cursor: pointer;
   transition:
@@ -61,7 +61,7 @@
   flex-shrink: 0;
   width: 100%;
   border: none;
-  border-bottom: 1px solid var(--sv-color-border);
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
   background: transparent;
   color: var(--sv-color-text-primary);
   font: inherit;

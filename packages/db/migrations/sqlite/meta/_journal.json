@@ -190,6 +190,20 @@
       "when": 1786657340114,
       "tag": "0026_curious_marten_broadcloak",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1787575596720,
+      "tag": "0027_lush_princess_powerful",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1787575597970,
+      "tag": "0028_tiny_masque",
+      "breakpoints": true
     }
   ]
 }

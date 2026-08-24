@@ -1,6 +1,6 @@
 .tablist {
   display: flex;
-  border-bottom: 1px solid var(--sv-color-border);
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
   /* Horizontal scroll on mobile — scrollbar hidden for clean appearance */
   overflow-x: auto;
   scrollbar-width: none;

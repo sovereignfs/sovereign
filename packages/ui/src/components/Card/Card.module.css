@@ -6,7 +6,7 @@
    exists. */
 .card {
   background: var(--sv-color-surface-raised);
-  border: 1px solid var(--sv-color-border);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border);
   border-radius: var(--sv-radius-lg);
   box-shadow: var(--sv-shadow-card);
 }

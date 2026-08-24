@@ -15,7 +15,7 @@
   padding: 5px var(--sv-space-2);
   color: var(--sv-color-text-primary);
   background: var(--sv-color-surface);
-  border: 1px solid var(--sv-color-border-strong);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border-strong);
   border-radius: var(--sv-radius-md);
   transition:
     border-color 0.15s ease,
@@ -50,7 +50,7 @@
   padding-inline: var(--sv-space-2) 2px;
   color: var(--sv-color-text-primary);
   background: var(--sv-color-surface-sunken);
-  border: 1px solid var(--sv-color-border);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border);
   border-radius: var(--sv-radius-full);
   font-family: var(--sv-font-family);
   font-size: var(--sv-font-size-xs);

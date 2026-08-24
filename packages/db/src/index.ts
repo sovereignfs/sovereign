@@ -192,6 +192,7 @@ export {
   type EntitlementRow,
   type InstanceConfig,
   type RadiusPreset,
+  type ThemePreset,
   type EmailTemplateId,
   type NotificationPrefsValue,
   type NotificationRow,

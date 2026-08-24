@@ -632,6 +632,8 @@ export const instanceConfig = sqliteTable('instance_config', {
   instancePrimary: text('brand_primary'),
   /** Corner-radius intensity preset overriding --sv-radius-scale (RFC 0077). One of 'none' | 'xs' | 's' | 'm' | 'l'. */
   instanceRadius: text('brand_radius'),
+  /** Theme preset overriding the design system's full token bundle (RFC 0094/0095). One of 'default' | 'neobrutalism'. Null = 'default'. */
+  instanceThemePreset: text('brand_theme_preset'),
   /** Sender display name for outbound email, e.g. "Acme Support". */
   emailFromName: text('email_from_name'),
   /** Publicly reachable URL for the instance logo used in HTML email bodies. */

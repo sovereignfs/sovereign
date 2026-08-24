@@ -1336,6 +1336,7 @@ the release you are running.
 | 0.87.1          | Fix `/api/admin/{connections,data-grants,email-templates/preview}` authorizing off the spoofable `x-sovereign-user-role` header                                                            |
 | 0.89.0          | Plugin-scoped roles and grants — `sdk.authz` provider/consumer wiring (RFC 0054, workstream 0017 leg 3, epic task 1.13)                                                                    |
 | 0.90.0          | Notification Center read/manage SDK surface — `sdk.notifications.list/markRead/markAllRead/dismiss/dismissAll` (RFC 0015 extension), gated by the existing `notifications:send` permission |
+| 0.91.0          | Instance-level theme preset selection — `instanceThemePreset`, `instance-style.ts` delivery (RFC 0095), extending RFC 0094's `packages/ui` theme-preset mechanism                          |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

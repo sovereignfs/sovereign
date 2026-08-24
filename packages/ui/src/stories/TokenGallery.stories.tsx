@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Button } from '../components/Button/Button';
+import { Card } from '../components/Card/Card';
 
 // ---------------------------------------------------------------------------
 // Token Gallery — live rendering of every CSS custom property tier.
@@ -139,6 +141,10 @@ const SHADOW_TOKENS = [
   '--sv-shadow-overlay',
   '--sv-shadow-control',
 ];
+
+// RFC 0094 — theme-stable like the other scale tokens; a theme preset can
+// override it (e.g. neobrutalism's thicker outline).
+const BORDER_WIDTH_TOKENS = ['--sv-border-width-hairline'];
 
 // Realistic duration+easing pairings, not every combination — matches how
 // Dialog/Drawer actually use these tokens (see motion.ts).
@@ -530,6 +536,45 @@ function TokenGalleryComponent() {
         {RADIUS_PRESETS.map((p) => (
           <RadiusPresetRow key={p.preset} preset={p.preset} scale={p.scale} />
         ))}
+      </Section>
+
+      <Section title="Border width">
+        {BORDER_WIDTH_TOKENS.map((t) => (
+          <ScaleRow
+            key={t}
+            token={t}
+            renderPreview={(_v) => (
+              <div
+                style={{
+                  width: 48,
+                  height: 28,
+                  background: 'var(--sv-color-surface-raised)',
+                  border: `var(${t}) solid var(--sv-color-border-strong)`,
+                  flexShrink: 0,
+                }}
+              />
+            )}
+          />
+        ))}
+      </Section>
+
+      <Section title="Theme presets (RFC 0094)">
+        <p style={{ color: 'var(--sv-color-text-muted)', fontSize: 13, marginBottom: 12 }}>
+          A closed, built-in set of full-identity presets — border width, shadow shape, corner
+          radius, and the <code>Button</code> press interaction (<code>--sv-button-shadow</code>,{' '}
+          <code>--sv-button-press-x/-y</code>) all move together. Use the{' '}
+          <strong>Theme preset</strong> toolbar above (next to Radius) to switch — these are live
+          components, not a static swatch, so they respond immediately.
+        </p>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <Button variant="primary">Primary button</Button>
+          <Button variant="secondary">Secondary button</Button>
+          <Card padding="md" style={{ width: 220 }}>
+            <p style={{ margin: 0, color: 'var(--sv-color-text-primary)', fontSize: 14 }}>
+              Card content
+            </p>
+          </Card>
+        </div>
       </Section>
 
       <Section title="Icon sizes">

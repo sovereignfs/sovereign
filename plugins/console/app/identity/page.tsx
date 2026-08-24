@@ -15,6 +15,7 @@ const DEFAULT_INSTANCE: InstanceValues = {
   instanceFavicon: null,
   instancePrimary: null,
   instanceRadius: null,
+  instanceThemePreset: null,
   emailFromName: null,
   emailLogo: null,
 };

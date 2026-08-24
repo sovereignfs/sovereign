@@ -10,6 +10,7 @@ function config(overrides: Partial<InstanceConfig> = {}): InstanceConfig {
     instanceFavicon: null,
     instancePrimary: null,
     instanceRadius: null,
+    instanceThemePreset: null,
     emailFromName: null,
     emailLogo: null,
     ...overrides,

@@ -113,6 +113,7 @@ variables are available globally to every plugin.
 | Font size     | `--sv-font-size-label` (11px), `-xs` (12px), `-caption` (13px), `-sm` (14px), `-md` (16px), `-lg` (18px), `-xl` (20px), `-2xl` (24px) |
 | Font weight   | `--sv-font-weight-regular` (400), `-medium` (500), `-semibold` (600), `-bold` (700)                                                   |
 | Radius        | `--sv-radius-sm` (6px), `-md` (8px), `-lg` (11px), `-xl` (12px), `-2xl` (14px), `-3xl` (20px), `-full`                                |
+| Border width  | `--sv-border-width-hairline` (1px) — RFC 0094, referenced instead of a literal border width                                           |
 | Icon size     | `--sv-icon-size-xs` (12px), `-sm` (16px), `-md` (20px), `-lg` (24px)                                                                  |
 
 **Font families:** `--sv-font-family` names Hanken Grotesk as the preferred body font
@@ -170,6 +171,9 @@ hierarchy regression, not a fix.
 | `--sv-shadow-popover`       | composed shadow        | composed shadow        | Floating panels (e2)                                                      |
 | `--sv-shadow-overlay`       | composed shadow        | composed shadow        | Dialog / overlay elevation                                                |
 | `--sv-shadow-control`       | composed shadow        | composed shadow        | Small interactive-control shadows, e.g. Toggle thumb                      |
+| `--sv-button-shadow`        | `none`                 | `none`                 | RFC 0094 — `Button`'s own shadow; a no-op default, set by a theme preset  |
+| `--sv-button-press-x`       | `0`                    | `0`                    | RFC 0094 — `Button`'s `:active` press-offset X; a no-op default           |
+| `--sv-button-press-y`       | `0`                    | `0`                    | RFC 0094 — `Button`'s `:active` press-offset Y; a no-op default           |
 
 ### Status colours
 
@@ -417,6 +421,30 @@ tokens at `:root` (for example, giving Sovereign a brand colour by setting
 `--sv-color-accent`). Primitives stay fixed; only the semantic layer is
 overridden. Because every component references the semantic layer, a theme is
 purely a set of CSS variable values — no component or build changes required.
+
+**Theme presets** (RFC 0094/0095) generalize this into a closed, built-in set
+of full visual identities — `default` (today's look, byte-identical) and
+`neobrutalism` — each bundling border width, shadow shape, and corner radius
+together, defined once in `packages/ui/src/tokens/theme-presets.ts` and
+consumed both as generated CSS (`[data-theme-preset='neobrutalism']`, for
+Storybook and standalone use) and as a plain TS object (imported directly by
+`runtime/src/instance-style.ts` for live-instance delivery via the same
+`InstanceProvider` `:root`-injection pipe accent colour and radius already
+use — never as an `<html>` attribute in production). An operator picks a
+preset via Console → Instance identity or `INSTANCE_THEME_PRESET`; their
+already-configured accent colour and radius preset continue to override the
+chosen preset's own defaults for those specific tokens.
+
+**Important — `--sv-radius-scale` and any future preset token that composes
+into another token via `calc()` can only be overridden at the actual `:root`
+element (`<html>`), never a scoped/nested wrapper.** `--sv-radius-sm` through
+`-3xl` are each `calc(var(--sv-radius-scale) * ...)`, declared once at
+`:root` in `primitives.css` — a custom property referenced inside another
+custom property's `calc()` resolves using the value cascaded at the element
+where the _outer_ property is declared, not re-resolved per descendant. See
+`.storybook/preview.ts`'s `withRadius`/`withThemePreset` decorators for the
+reference implementation of this constraint. Leaf tokens (e.g.
+`--sv-border-width-hairline`, `--sv-button-shadow`) have no such restriction.
 
 ---
 

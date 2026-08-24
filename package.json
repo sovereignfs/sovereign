@@ -1,6 +1,6 @@
 {
   "name": "sovereign",
-  "version": "0.97.4",
+  "version": "0.98.0",
   "private": true,
   "type": "module",
   "description": "Sovereign — a modular, self-hostable workspace runtime.",
@@ -34,6 +34,7 @@
     "generate": "tsx scripts/generate-registry.ts",
     "generate:icons": "tsx scripts/generate-icons.ts",
     "generate:splash": "tsx scripts/generate-splash.ts",
+    "generate:theme-presets": "tsx scripts/generate-theme-presets-css.ts",
     "install:plugins": "tsx scripts/install-plugins.ts",
     "registry:validate": "tsx scripts/validate-registry.ts",
     "registry:check": "tsx scripts/validate-registry.ts --check",

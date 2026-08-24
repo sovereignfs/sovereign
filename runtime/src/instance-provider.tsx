@@ -17,6 +17,7 @@ const ENV_FALLBACK_CONFIG: InstanceConfig = {
   instanceFavicon: process.env.INSTANCE_FAVICON ?? null,
   instancePrimary: null,
   instanceRadius: null,
+  instanceThemePreset: null,
   emailFromName: null,
   emailLogo: null,
 };

@@ -15,9 +15,9 @@
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "18de9da191a3e2df6d59b648d886cb82f93228fd",
-        "contentHash": "sha256:96509bbe139f34d2383c066d2a1535955b2673bb5193e374f817fb8439b58605",
-        "validatedAt": "2026-08-01T13:12:11.937Z"
+        "commit": "ea3a69420c842fa020fedf948f8f4a60e7e9ac7b",
+        "contentHash": "sha256:44a29c211189f893d85194d8d6d3ebfdbd0078c152e0eac3d0eb0a66f5351aae",
+        "validatedAt": "2026-08-25T20:23:47.258Z"
       }
     },
     {
@@ -65,7 +65,7 @@
         "url": "https://github.com/kasunben/sovereign-plugin-papertrail"
       },
       "name": "PaperTrail",
-      "description": "Evidence-mapping canvas \u2014 map your evidence, follow the story.",
+      "description": "Evidence-mapping canvas — map your evidence, follow the story.",
       "author": {
         "name": "kasunben",
         "email": "sovereign@rohr.openfs.io"
@@ -74,7 +74,7 @@
       "provenance": {
         "commit": "28863e5ba3a61a90a81a298bfc9a5acd23d8f57d",
         "contentHash": "sha256:98b0a976a1ad542fd0ba9da64bb216160bd5d7f33732a9989e633bce0417e9f4",
-        "validatedAt": "2026-08-01T13:12:14.752Z"
+        "validatedAt": "2026-08-25T20:23:50.362Z"
       }
     },
     {
@@ -91,9 +91,9 @@
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "33b9666432e1f5a413181d9e1be4ff4e3b4993e6",
-        "contentHash": "sha256:2e13ff560a2b28a8243550d36f34ab50c8749913200f35b3309474675d48250e",
-        "validatedAt": "2026-08-01T13:12:15.535Z"
+        "commit": "a427ff06a5618f1c18cb32119c77dc7c8e620f93",
+        "contentHash": "sha256:27d5527b42c52d4e6d76e2928249794ac2d4819955d92b87047571d9d4eb0cca",
+        "validatedAt": "2026-08-25T20:23:51.463Z"
       }
     },
     {
@@ -110,9 +110,9 @@
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "5333b779f5966567655427f25690967f3986637a",
-        "contentHash": "sha256:242d3c30f9be7a727bea8ecccc293f75309ba171f099d15fb886ce4dc30e9db3",
-        "validatedAt": "2026-08-01T13:12:16.285Z"
+        "commit": "221fb80843dde340e0de32cefc3ceb01ce8c57bc",
+        "contentHash": "sha256:68caf375b63dee1cef7c1fe30bbdb9c9225564ad3738d3172de8da8fe75a7136",
+        "validatedAt": "2026-08-25T20:23:52.412Z"
       }
     },
     {
@@ -129,9 +129,9 @@
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "bef538f1448cbdcac44f3fad6c226f10a096d52d",
-        "contentHash": "sha256:12daa71e5e99381f70a3ec15cce7b882fce482fa79866f79fa69ba7be2288df6",
-        "validatedAt": "2026-08-01T13:12:17.011Z"
+        "commit": "752cd5fadcd5254a4beb4cf14b6efe6b301a4d89",
+        "contentHash": "sha256:c209c8e202ca9166a6ec148f34e5b0087e610ac2c81d7c8692067432529d9d21",
+        "validatedAt": "2026-08-25T20:23:53.288Z"
       }
     },
     {
@@ -150,7 +150,7 @@
       "provenance": {
         "commit": "924db3197394892d06cc5e42ba45e31abd895ee8",
         "contentHash": "sha256:fc2e5a102dec5075c5e339a9026966378adc1d2d8093eaa0ad24f3f23ecf7e1a",
-        "validatedAt": "2026-08-01T13:12:17.775Z"
+        "validatedAt": "2026-08-25T20:23:54.310Z"
       }
     },
     {
@@ -167,9 +167,9 @@
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "1ce86e66fe664cda0f73eaf8b8772e8e395e818e",
-        "contentHash": "sha256:862d613dc280131606b981fdfb6d7374fe4cc7261b2701abd8302dff719dbc86",
-        "validatedAt": "2026-08-01T13:12:18.576Z"
+        "commit": "685fe8fdf3e3f278e4e57fe1c9f0f652b6a74775",
+        "contentHash": "sha256:98b709af00ded42ba12dde167846ffe2701b7aa00d36b5dfb7ebe28c04ddf281",
+        "validatedAt": "2026-08-25T20:23:55.580Z"
       }
     },
     {
@@ -205,9 +205,9 @@
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "79d0c45914ade1b733b04f65f581008bb888b929",
-        "contentHash": "sha256:b6d2e4511427db0d339c8ca4408d980be6e7797c3d7572ff5b0dde814a7456f6",
-        "validatedAt": "2026-08-01T13:12:20.097Z"
+        "commit": "ffa1beb4ab2c3306622de6dbf791abc2818db75d",
+        "contentHash": "sha256:abf36786915b64b832cbd2293b3e258c39d2709678b404fb15d2c85357fe939d",
+        "validatedAt": "2026-08-25T20:23:57.422Z"
       }
     }
   ]

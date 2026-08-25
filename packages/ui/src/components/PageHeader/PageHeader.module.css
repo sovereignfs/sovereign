@@ -13,6 +13,17 @@
   min-width: 0;
 }
 
+/* Wraps the optional icon + `.title` so the icon sizes/aligns itself
+   without touching `.title`'s own rules — every existing icon-less usage
+   renders identically, since a single flex child behaves the same as a
+   non-flex one. */
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  color: var(--sv-color-text-primary);
+}
+
 .title {
   margin: 0;
   font-size: var(--sv-font-size-2xl);
@@ -46,6 +57,11 @@
 
 .mobileBack {
   flex-shrink: 0;
+}
+
+.mobileTitleIcon {
+  flex-shrink: 0;
+  color: var(--sv-color-text-primary);
 }
 
 .mobileTitle {

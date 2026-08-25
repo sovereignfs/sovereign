@@ -4,6 +4,30 @@
   gap: var(--sv-space-4);
 }
 
+/* A fixed column width (not `1fr`, and — as important — not `max-content`
+   either) — every real consumer of `dense` mode (Docs' folder/document
+   tiles, this file's own Storybook gallery) pairs it with `variant="icon"`
+   tiles carrying a name of unpredictable length that must ellipsis-truncate
+   past a point. `max-content` was tried first, on the reasoning that "a
+   tile keeps its own natural width instead of stretching to fill leftover
+   row space, so the empty area around a small icon tile stays roughly
+   square" — but `max-content` track sizing through this grid's nested
+   grid → flex → block(/inline-block) → text chain did not reliably account
+   for a descendant label's true content width in practice: measured live,
+   a 110px-wide label landed in a track that resolved to 97px, silently
+   overflowing with no ellipsis ever triggering (not the intended "grows to
+   fit," and not truncated either — just broken). A uniform fixed width
+   sidesteps that whole class of bug: every tile in a `dense` grid is
+   exactly `--sv-card-tile-min-width` wide, full stop, and the descendant
+   label (an `overflow: hidden; text-overflow: ellipsis` `inline-block` with
+   `max-width: 100%`) truncates reliably against that always-known width —
+   short names still read as compact/square, long ones truncate cleanly
+   instead of bleeding past their tile. Tighter gap to match. */
+.gridDense {
+  grid-template-columns: repeat(auto-fill, var(--sv-card-tile-min-width, 200px));
+  gap: var(--sv-space-2);
+}
+
 /* Chrome (border/radius/shadow/background) lives on this outer box, same
    tokens `Card` itself uses — but padding-free, so `.banner` below can
    bleed all the way to the edges, which `Card`'s single padded box can't
@@ -32,6 +56,63 @@
 
 .footer {
   padding: var(--sv-space-3) var(--sv-space-4);
+}
+
+/* `variant="icon"` modifier — a plain "Finder icon" tile: no card chrome,
+   just a large centered icon with a label beneath it. `.banner`/`.footer`
+   are the same two elements the card variant uses, restyled here rather
+   than duplicated, so both variants stay structurally identical. */
+.tileIcon {
+  align-items: center;
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background: none;
+  box-shadow: none;
+  padding: var(--sv-space-3) var(--sv-space-2);
+}
+
+@media (hover: hover) {
+  .tileIcon:hover {
+    background: var(--sv-color-surface-sunken);
+  }
+}
+
+.tileIcon .banner {
+  height: auto;
+  background: none;
+  color: var(--sv-color-text-muted);
+}
+
+.tileIcon .banner svg {
+  width: 48px;
+  height: 48px;
+}
+
+/* `width: 100%` is load-bearing, not decorative — `.tile` sets
+   `align-items: center` (so the icon banner centers itself horizontally),
+   and cross-axis `center` alignment sizes a flex item to its own preferred
+   (content-based) width and centers *that* within the container, rather
+   than clamping it to the container's width the way `stretch` would.
+   Without an explicit width here, a `nowrap` + `text-overflow: ellipsis`
+   label inside (a consumer's own truncation CSS) keeps its full
+   content-driven preferred width and gets centered straddling both edges of
+   `.tile` — `overflow: hidden` on `.tile` doesn't help, since this child's
+   box is genuinely laid out wider than its own container, not merely
+   painting past an already-settled one. `min-width: 0` alone (the more
+   common flex-truncation fix) does NOT fix this specific case: that only
+   lifts the auto-min-size floor that blocks *shrinking under stretch*, and
+   this axis was never being stretched to begin with. Confirmed live at a
+   viewport narrow enough that `.tile`'s own resolved width is well under
+   the label's preferred width — only `width: 100%` actually constrains it;
+   a wider test viewport had accidentally masked the bug by giving `.tile`
+   enough natural room that the oversized `.footer` fit anyway. */
+.tileIcon .footer {
+  width: 100%;
+  min-width: 0;
+  padding: var(--sv-space-2) 0 0;
+  color: var(--sv-color-text-primary);
+  text-align: center;
+  text-decoration: none;
 }
 
 /* Plain centered placeholder — no banner strip, so a ghost "add new" tile
@@ -66,4 +147,24 @@
 .newTile:focus-visible {
   outline: 2px solid var(--sv-color-focus-ring);
   outline-offset: 2px;
+}
+
+/* `variant="icon"` modifier — matches a `variant="icon"` `CardTile`'s own
+   footprint (`min-height`-driven sizing rather than `.newTile`'s
+   `width/height: 100%`) so a ghost tile sits naturally alongside
+   icon-variant tiles in a `dense` grid instead of stretching into a wide
+   horizontal pill. Icon-only, no visible label (see `NewCardTile`'s own
+   doc comment) — a plain "+" at the DS's own `size="md"` (unlike
+   `.tileIcon .banner svg`'s real-content 48px override, deliberately not
+   repeated here) reads as self-explanatory once every sibling tile in the
+   grid is already an unlabeled icon. */
+.newTileIcon {
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  padding: var(--sv-space-3) var(--sv-space-2);
+  border-radius: var(--sv-radius-md);
 }

@@ -2118,7 +2118,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="CardTile"
               importLine="import { CardTile, CardTileGrid, NewCardTile } from '@sovereignfs/ui';"
-              usage="A colored/iconed banner over a footer label, for a grid of navigable top-level entities (projects, boards). Card can't express this — its padding always wraps the whole box, with no bleed slot for a full-width banner. Not link-aware; wrap each tile in the host router's own link component. Pair with NewCardTile for the grid's 'add new' affordance."
+              usage="A colored/iconed banner over a footer label, for a grid of navigable top-level entities (projects, boards). Card can't express this — its padding always wraps the whole box, with no bleed slot for a full-width banner. Not link-aware; wrap each tile in the host router's own link component. Pair with NewCardTile for the grid's 'add new' affordance. The icon variant below swaps the card chrome for a plain Finder-style icon + label, for entities that read as a single glyph + name (e.g. a folder)."
             >
               <CardTileGrid minTileWidth={140}>
                 <CardTile banner={<Icon name="folder" size="lg" aria-hidden={true} />}>
@@ -2127,6 +2127,23 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                 <CardTile bannerColor="#c7d8ff">Marketing site</CardTile>
                 <NewCardTile label="New project" />
               </CardTileGrid>
+              <div style={{ marginTop: 'var(--sv-space-4)' }}>
+                <CardTileGrid dense minTileWidth={100}>
+                  <CardTile
+                    variant="icon"
+                    banner={<Icon name="folder-closed" size="lg" aria-hidden={true} />}
+                  >
+                    Handbook
+                  </CardTile>
+                  <CardTile
+                    variant="icon"
+                    banner={<Icon name="folder-closed" size="lg" aria-hidden={true} />}
+                  >
+                    Q4 Planning
+                  </CardTile>
+                  <NewCardTile variant="icon" label="New" />
+                </CardTileGrid>
+              </div>
             </ComponentCard>
 
             {/* FormField */}
@@ -2386,7 +2403,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="PageHeader"
               importLine="import { PageHeader } from '@sovereignfs/ui';"
-              usage="Plugin page top section. Title + optional description + right-side action slot. Replaces the hand-rolled .pageHeader pattern in every plugin. On mobile, description drops out and onBack/onMenuClick add an optional back button and vertical-ellipsis menu trigger."
+              usage="Plugin page top section. Title + optional description + right-side action slot. Replaces the hand-rolled .pageHeader pattern in every plugin. An optional `icon` renders before the title text on both breakpoints. On mobile, description drops out and onBack/onMenuClick add an optional back button and vertical-ellipsis menu trigger."
             >
               <div style={{ width: '100%' }}>
                 <PageHeader

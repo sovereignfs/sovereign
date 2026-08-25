@@ -3,12 +3,15 @@
 import type { ReactNode } from 'react';
 import { Button } from '../Button/Button';
 import { Icon } from '../Icon/Icon';
+import type { IconName } from '../Icon/Icon';
 import { ResponsiveSurface } from '../ResponsiveSurface/ResponsiveSurface';
 import styles from './PageHeader.module.css';
 
 export interface PageHeaderProps {
   title: string;
   description?: string;
+  /** Optional icon rendered inline before the title text, on both breakpoints — e.g. `folder-open` next to a folder's name. */
+  icon?: IconName;
   /**
    * Page-level controls — anywhere from one button to a whole toolbar.
    * Renders on both breakpoints unchanged; if it needs to look different on
@@ -41,6 +44,7 @@ const HEADING_TAG = { 1: 'h1', 2: 'h2', 3: 'h3' } as const;
 interface PageHeaderWebProps {
   title: string;
   description?: string;
+  icon?: IconName;
   action?: ReactNode;
   headingLevel: 1 | 2 | 3;
   className?: string;
@@ -50,6 +54,7 @@ interface PageHeaderWebProps {
 function PageHeaderWeb({
   title,
   description,
+  icon,
   action,
   headingLevel,
   className,
@@ -58,7 +63,10 @@ function PageHeaderWeb({
   return (
     <header className={[styles.header, className].filter(Boolean).join(' ')}>
       <div className={styles.text}>
-        <Heading className={styles.title}>{title}</Heading>
+        <div className={styles.titleRow}>
+          {icon && <Icon name={icon} size="lg" aria-hidden={true} />}
+          <Heading className={styles.title}>{title}</Heading>
+        </div>
         {description && <p className={styles.description}>{description}</p>}
       </div>
       {action && <div className={styles.action}>{action}</div>}
@@ -68,6 +76,7 @@ function PageHeaderWeb({
 
 interface PageHeaderMobileProps {
   title: string;
+  icon?: IconName;
   action?: ReactNode;
   headingLevel: 1 | 2 | 3;
   onBack?: () => void;
@@ -83,6 +92,7 @@ interface PageHeaderMobileProps {
 // design system rather than a variable-height two-line header.
 function PageHeaderMobile({
   title,
+  icon,
   action,
   headingLevel,
   onBack,
@@ -103,6 +113,7 @@ function PageHeaderMobile({
           <Icon name="circle-chevron-left" size="md" aria-hidden />
         </Button>
       )}
+      {icon && <Icon name={icon} size="md" aria-hidden={true} className={styles.mobileTitleIcon} />}
       <Heading className={styles.mobileTitle}>{title}</Heading>
       {action && <div className={styles.mobileAction}>{action}</div>}
       {onMenuClick && (
@@ -130,6 +141,7 @@ function PageHeaderMobile({
 export function PageHeader({
   title,
   description,
+  icon,
   action,
   className,
   headingLevel = 1,
@@ -142,6 +154,7 @@ export function PageHeader({
         <PageHeaderWeb
           title={title}
           description={description}
+          icon={icon}
           action={action}
           headingLevel={headingLevel}
           className={className}
@@ -150,6 +163,7 @@ export function PageHeader({
       mobile={
         <PageHeaderMobile
           title={title}
+          icon={icon}
           action={action}
           headingLevel={headingLevel}
           onBack={onBack}

@@ -56,6 +56,11 @@ import { RefreshCwIcon } from './refresh-cw';
 import { HistoryIcon } from './history';
 import { MinusIcon } from './minus';
 import { TableIcon } from './table';
+import { FoldersIcon } from './folders';
+import { FolderClosedIcon } from './folder-closed';
+import { FileTextIcon } from './file-text';
+import { FolderOpenIcon } from './folder-open';
+import { Share2Icon } from './share-2';
 import { BananaIcon } from './banana';
 import { AppleIcon } from './apple';
 import { CarrotIcon } from './carrot';
@@ -134,6 +139,11 @@ export type IconName =
   | 'history'
   | 'minus'
   | 'table'
+  | 'folders'
+  | 'folder-closed'
+  | 'file-text'
+  | 'folder-open'
+  | 'share-2'
   | 'banana'
   | 'apple'
   | 'carrot'
@@ -214,6 +224,11 @@ export const ICONS: Record<IconName, IconComponent> = {
   history: HistoryIcon,
   minus: MinusIcon,
   table: TableIcon,
+  folders: FoldersIcon,
+  'folder-closed': FolderClosedIcon,
+  'file-text': FileTextIcon,
+  'folder-open': FolderOpenIcon,
+  'share-2': Share2Icon,
   banana: BananaIcon,
   apple: AppleIcon,
   carrot: CarrotIcon,
@@ -292,6 +307,11 @@ export { RefreshCwIcon } from './refresh-cw';
 export { HistoryIcon } from './history';
 export { MinusIcon } from './minus';
 export { TableIcon } from './table';
+export { FoldersIcon } from './folders';
+export { FolderClosedIcon } from './folder-closed';
+export { FileTextIcon } from './file-text';
+export { FolderOpenIcon } from './folder-open';
+export { Share2Icon } from './share-2';
 export { BananaIcon } from './banana';
 export { AppleIcon } from './apple';
 export { CarrotIcon } from './carrot';

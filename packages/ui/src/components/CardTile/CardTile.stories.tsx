@@ -49,6 +49,38 @@ export const Grid: Story = {
   ),
 };
 
+/** `variant="icon"` — a plain "Finder icon" tile: no card chrome, just a large centered icon with a label beneath it. */
+export const IconVariant: Story = {
+  args: {
+    variant: 'icon',
+    banner: <Icon name="folder-closed" size="lg" aria-hidden={true} />,
+    children: 'Handbook',
+  },
+};
+
+/** `dense` — natural-width tiles (no stretch-to-fill) with a tighter gap, the pairing `variant="icon"` tiles normally want. `NewCardTile`'s own `variant="icon"` matches the same footprint, so the "add new" tile sits naturally alongside the rest instead of stretching into a wide pill. */
+export const IconVariantGrid: Story = {
+  render: () => (
+    <CardTileGrid dense minTileWidth={100}>
+      <CardTile variant="icon" banner={<Icon name="folder-closed" size="lg" aria-hidden={true} />}>
+        Handbook
+      </CardTile>
+      <CardTile variant="icon" banner={<Icon name="folder-closed" size="lg" aria-hidden={true} />}>
+        Q4 Planning
+      </CardTile>
+      <CardTile variant="icon" banner={<Icon name="folder-closed" size="lg" aria-hidden={true} />}>
+        Design reviews
+      </CardTile>
+      <NewCardTile variant="icon" label="New" />
+    </CardTileGrid>
+  ),
+};
+
 export const NewTile: StoryObj<typeof NewCardTile> = {
   render: () => <NewCardTile label="New document" />,
+};
+
+/** `variant="icon"` — matches a `variant="icon"` `CardTile`'s footprint (icon above a short label) instead of the default horizontal pill. */
+export const NewTileIconVariant: StoryObj<typeof NewCardTile> = {
+  render: () => <NewCardTile variant="icon" label="New" />,
 };

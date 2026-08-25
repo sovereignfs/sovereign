@@ -38,6 +38,16 @@ export const WithAction: Story = {
   },
 };
 
+/** A leading icon before the title text, on both breakpoints — e.g. a
+ * folder-detail page pairing `folder-open` with the folder's own name. */
+export const WithIcon: Story = {
+  args: {
+    title: 'Handbook',
+    icon: 'folder-open',
+    action: <Button size="sm">Share</Button>,
+  },
+};
+
 /** For use under a shell/plugin that already renders its own `<h1>` — e.g.
  * Console's per-page headers sitting below `<h1>Console</h1>`. Visually
  * identical to the default story; only the rendered tag changes. */

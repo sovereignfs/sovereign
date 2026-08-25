@@ -72,6 +72,13 @@ export const ICON_LIST = [
   'minus',
   // Rich-text editor: table menu trigger (insert/row/column controls)
   'table',
+  // Docs plugin: ThreeColumnLayout sidebar nav + folder/document tiles
+  'folders',
+  'folder-closed',
+  'file-text',
+  'folder-open',
+  // Docs document-page toolbar (Share button)
+  'share-2',
   // Grocery item / category (Sovereign Shopper, SHP-05) — a curated set
   // covering common items directly plus a representative icon per category
   // as the fallback when no item-level match exists. See

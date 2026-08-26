@@ -6,7 +6,7 @@ benchmark, 22.2 `apps/harness` scaffold, 22.3 Warden basic chat)\
 architecture)\
 **Author:** kasunben\
 **Goal owner:** kasunben\
-**RFCs:** [0063](../rfcs/0063-core-assistant-jarvis.md) (Accepted, August
+**RFCs:** [0063](../rfcs/0063-core-assistant-warden.md) (Accepted, August
 2026 rewrite)\
 **Research:** [0015](../research/0015-harness-engine-benchmark.md) (leg 1
 resolves this)\

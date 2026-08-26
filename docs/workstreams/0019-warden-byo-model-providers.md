@@ -4,7 +4,7 @@
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
-**RFCs:** [0063](../rfcs/0063-core-assistant-jarvis.md) (Accepted, second
+**RFCs:** [0063](../rfcs/0063-core-assistant-warden.md) (Accepted, second
 rewrite, August 2026)\
 **Epics touched:** 22 (Warden / Core Assistant)
 

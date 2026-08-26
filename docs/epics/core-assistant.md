@@ -2,7 +2,7 @@
 
 > Phase 1 foundation for Sovereign's built-in assistant: a first-party
 > platform plugin (Warden, formerly "Jarvis"). See
-> [RFC 0063](../rfcs/0063-core-assistant-jarvis.md) for the full design.
+> [RFC 0063](../rfcs/0063-core-assistant-warden.md) for the full design.
 > Tasks 22.1-22.3 shipped RFC 0063's **first** rewrite (local-engine-only
 > chat, backed by a dedicated `apps/harness` service) and were then
 > deliberately disabled — hardware-constrained, see task 22.3's completion
@@ -84,7 +84,7 @@ part of this epic.
 
 **Dependencies:** None.
 
-**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-jarvis.md)
+**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-warden.md)
 
 **Review checklist:**
 
@@ -141,7 +141,7 @@ pattern rather than a loosely-coupled sidecar.
 
 **Dependencies:** Task 22.1 (engine decision).
 
-**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-jarvis.md)
+**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-warden.md)
 
 **Review checklist:**
 
@@ -203,7 +203,7 @@ basic ephemeral chat, wired to `apps/harness`, with zero tool execution.
 **Dependencies:** Task 22.2 (`apps/harness` must exist and expose its
 internal chat API before Warden can call it).
 
-**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-jarvis.md)
+**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-warden.md)
 
 **Review checklist:**
 
@@ -296,7 +296,7 @@ provider(s) and see a merged, live model list — their providers plus
 **Dependencies:** None new — `sdk.secrets` (RFC 0043) and `apps/harness`
 (task 22.2) already exist.
 
-**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-jarvis.md)
+**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-warden.md)
 
 **Review checklist:**
 
@@ -344,7 +344,7 @@ the original ephemeral behavior as an opt-in, and re-enable the plugin.
 **Dependencies:** Task 22.4 (a provider/model must be selectable before a
 conversation about it can persist).
 
-**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-jarvis.md)
+**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-warden.md)
 
 **Review checklist:**
 
@@ -394,7 +394,7 @@ given epic task IDs until a future scheduling pass:
 
 ## Related RFCs
 
-- [RFC 0063 — Warden: core assistant platform plugin and harness engine](../rfcs/0063-core-assistant-jarvis.md)
+- [RFC 0063 — Warden: core assistant platform plugin and harness engine](../rfcs/0063-core-assistant-warden.md)
 - [RFC 0043 — Plugin secret vault](../rfcs/0043-plugin-secret-vault.md) — the storage mechanism for provider API keys (task 22.4)
 - [RFC 0040 — Sovereign Harness](../rfcs/0040-sovereign-harness.md) (pending revisit)
 - [RFC 0055 — Sovereign Council](../rfcs/0055-sovereign-council.md)

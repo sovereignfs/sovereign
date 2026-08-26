@@ -1395,7 +1395,7 @@ reference and `docs/architecture-rules.md`), unrelated to and stronger than
 the `harness` Compose profile below. Even with `apps/harness` running,
 Warden itself stays unreachable until that manifest flag is removed. This
 section is left in place for when the plugin is re-enabled — see
-[RFC 0063](rfcs/0063-core-assistant-jarvis.md) for background.
+[RFC 0063](rfcs/0063-core-assistant-warden.md) for background.
 
 ### Enabling it
 

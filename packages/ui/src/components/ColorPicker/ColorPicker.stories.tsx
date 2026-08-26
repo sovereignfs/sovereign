@@ -18,6 +18,7 @@ const meta = {
     swatches: [],
     value: null,
     onChange: () => {},
+    onSelectionComplete: () => {},
     'aria-label': 'Color',
   },
 } satisfies Meta<typeof ColorPicker>;

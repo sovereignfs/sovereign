@@ -72,6 +72,8 @@ export const ICON_LIST = [
   'minus',
   // Rich-text editor: table menu trigger (insert/row/column controls)
   'table',
+  // Sheets plugin: nav item + workbook/inbox tile icon
+  'sheet',
   // Docs plugin: ThreeColumnLayout sidebar nav + folder/document tiles
   'folders',
   'folder-closed',
@@ -79,6 +81,14 @@ export const ICON_LIST = [
   'folder-open',
   // Docs document-page toolbar (Share button)
   'share-2',
+  // Sheets plugin: cell formatting toolbar (Bold/Italic/Fill color) —
+  // italic previously rendered as a plain font-style-italic "I", which at
+  // toolbar size reads as an unlabeled slash; the dedicated icon disambiguates
+  // independent of font rendering. Bold switched alongside it for visual
+  // consistency between the two toggle buttons.
+  'bold',
+  'italic',
+  'paint-bucket',
   // Grocery item / category (Sovereign Shopper, SHP-05) — a curated set
   // covering common items directly plus a representative icon per category
   // as the fallback when no item-level match exists. See

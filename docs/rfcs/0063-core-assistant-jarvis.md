@@ -2,474 +2,499 @@
 rfc: 0063
 title: Warden — core assistant platform plugin and harness engine (formerly "Jarvis")
 status: >
-  Implemented (phase 1 — epic tasks 22.1-22.3 all done, workstream 0014; tool
-  execution/task handoff/floating button/voice are a future, not-yet-scheduled
-  phase per this RFC's own Adoption path, not part of incorporated_into_plan)
-date: August 2026 (rewritten; originally drafted July 2026)
+  Accepted (second rewrite — phase 1's foundation revamped to bring-your-own
+  model providers; the first rewrite's local-engine-only design shipped in
+  full as epic tasks 22.1-22.3, workstream 0014, and was then deliberately
+  disabled — see Motivation. This revision's own design is not yet
+  implemented; tool execution/task handoff/floating button/voice/multi-thread
+  UI remain a future, not-yet-scheduled phase per this RFC's own Adoption
+  path, not part of incorporated_into_plan)
+date: August 2026 (second rewrite; originally drafted July 2026, first rewrite August 2026)
 author: kasunben
 scope: >
-  apps/harness (new), plugins/warden (new), docker-compose.yml,
-  docker-compose.prod.yml, docs/self-hosting.md, docs/architecture-rules.md;
-  builds on RFC 0005, RFC 0021, RFC 0034, RFC 0047, RFC 0055; RFC 0040
-  (Sovereign Harness) is flagged pending revisit — see "Relationship to the
-  Harness roadmap" below
-incorporated_into_plan: 'Yes - epic tasks 22.1-22.3'
+  plugins/warden (rewritten); no code changes required to apps/harness,
+  packages/sdk, or packages/manifest; builds on RFC 0043 (plugin secret
+  vault, reused unchanged for provider API keys), RFC 0040 (Sovereign
+  Harness — this RFC resolves its deferred "user-supplied API keys" open
+  question), RFC 0092 (app-level field encryption, considered and
+  deliberately not used — see Alternatives); supersedes this RFC's own first
+  rewrite's local-engine-only design
+incorporated_into_plan: 'Not yet — pending epic task assignment (would follow epic 22, next available task numbers)'
 ---
 
 # RFC 0063 - Warden: core assistant platform plugin and harness engine
 
-> **This RFC was substantially rewritten in August 2026.** The original
-> version (July 2026, "Jarvis") proposed a runtime-owned, non-plugin
-> implementation with an optional `apps/inference` sidecar. That design is
-> superseded — see "Alternatives considered" for what changed and why. This
-> revision reflects a direct architectural decision from the developer
-> (kasunben), accepted in the same change that produced this rewrite.
+> **This RFC was rewritten a second time, August 2026.** The first rewrite
+> (also August 2026) replaced the original runtime-owned "Jarvis" design with
+> a first-party plugin (`plugins/warden`) backed by a dedicated local-engine
+> service (`apps/harness`, wrapping llama.cpp). That design shipped in full —
+> epic tasks 22.1-22.3, workstream 0014, verified end to end against a real
+> engine — and was then deliberately disabled
+> (`plugins/warden/manifest.json`'s `disabled: true`) because it was
+> hardware-constrained: [Research 0015](../research/0015-harness-engine-benchmark.md)'s
+> own benchmark shows even the smaller `qwen3:0.6b` model straining on
+> representative self-hosting hardware (2 vCPU / 3.7GB RAM, no GPU). This
+> second rewrite reflects a direct architectural decision from the developer
+> (kasunben): keep the local engine as an optional bonus, and make
+> bring-your-own OpenAI-API-compatible model providers the primary path. See
+> the Changelog for what changed and "Alternatives considered" for what was
+> weighed.
 
 ## Summary
 
-Add **Warden**, a first-party platform plugin providing Sovereign's built-in
-workspace assistant — its own routed space, basic conversational chat, no
-persisted history by default. Warden is backed by a new dedicated service,
-**`apps/harness`**, built on the same architectural pattern as `apps/auth`
-and `apps/relay`: a standalone first-party app with its own Dockerfile,
-health checks, and a signed trust boundary to the rest of the platform —
-wrapping a local inference engine (llama.cpp or Ollama; the choice is
-gated on a real benchmark, see [Research 0015](../research/0015-harness-engine-benchmark.md)).
+Revamp Warden's phase 1 foundation: instead of requiring a bundled local
+inference engine, each user configures their own model provider(s) — any
+endpoint compatible with the OpenAI chat completions API, with an API key
+(OpenRouter, a direct provider, or the user's own self-hosted server).
+Warden fetches and caches each provider's model list. If the existing
+`apps/harness` local-engine service (unchanged, from the first rewrite) is
+reachable and has a model ready, its model is folded into the same list
+automatically — no configuration needed, and its absence is not an error.
 
-**This RFC's scope is phase 1 only: the foundation.** No tool execution, no
-task handoff, no floating quick-access button, no voice — those are explicit
-future phases, listed but not designed in detail here. Phase 1 ships a
-working chat surface and nothing more, on the developer's own instruction to
-"focus on the foundation" before extending capability.
+Chat becomes a single, persisted conversation per user (not yet
+multi-threaded — that's future work), reversing the original phase 1's
+ephemeral-only decision. An **incognito** toggle preserves the original
+ephemeral behavior as an opt-in escape hatch: while on, nothing is written
+to durable storage.
 
-No model weights are bundled into any image. The engine is unexposed to the
-public internet by default.
+Tool execution, task handoff, a floating quick-access button, voice, and
+multi-threaded conversations remain explicit future phases — unchanged from
+the first rewrite's discipline of shipping foundation only.
+
+No new secret-storage mechanism is introduced. Provider API keys are stored
+via the existing plugin secret vault (`sdk.secrets`, RFC 0043) — the same
+mechanism every other plugin already uses for per-user OAuth tokens and API
+keys.
 
 ## Motivation
 
-Sovereign is a self-hostable workspace runtime. Even before any tool
-execution or orchestration exists, users benefit from a small always-available
-assistant that can hold a basic conversation inside their own instance,
-served entirely by infrastructure the operator controls.
+The first rewrite's phase 1 shipped completely and worked — workstream
+0014's leg 3 outcome was verified end-to-end against a real
+`apps/harness`/`harness-engine` pair. It was disabled anyway, because
+[Research 0015](../research/0015-harness-engine-benchmark.md)'s decisive
+finding — llama.cpp's ability to disable Qwen3's "thinking" mode — was a
+comparison between two constrained options on real self-hosting hardware,
+not a comparison that produced a genuinely good one. Running any useful
+local model needs resources most self-hosted instances (a modest VPS) don't
+have, and building Sovereign's own model-download/verification/GPU story
+further before a single real user had asked to use it was the wrong place
+to keep spending effort.
 
-Warden is deliberately named to claim the direction Sovereign's assistant
-roadmap is heading: `apps/harness` is meant to become the technical
-foundation the **Sovereign Harness** product direction (RFC 0040) eventually
-runs on, not a differently-named thing that happens to sit next to it. RFC
-0040 itself needs a revisit in light of this RFC's architecture — see
-"Relationship to the Harness roadmap" below. This RFC does not attempt that
-revisit; it only flags it.
+Bring-your-own-provider removes Sovereign from the inference-hosting
+business entirely, for phase 1's purposes. It also happens to be work this
+codebase already anticipated and then punted on:
+[RFC 0040](../rfcs/0040-sovereign-harness.md) §3-5 describes almost exactly
+this design — an `openrouter` / `openai-compatible` / `local` provider
+abstraction, explicit external-model disclosure, and a consent gate for
+sending data externally — but deferred "user-supplied API keys per user"
+specifically because it needed "a secure secret store... likely field-level
+encryption" that didn't exist at the time. That gap has since closed:
+[RFC 0043](../rfcs/0043-plugin-secret-vault.md) (`sdk.secrets`) shipped
+afterward and is the documented, canonical mechanism for exactly this case —
+"per-user API keys" is one of its own worked examples in
+`docs/plugin-development.md`. This RFC is the first real consumer of that
+combination.
 
-This design keeps Sovereign's privacy-first posture. The engine runs on the
-operator's own server. No external provider is enabled by default, and no
-model weights are bundled into any image.
+This is not a retreat from Sovereign's privacy-first posture — it's an
+explicit, disclosed, user-controlled tradeoff, not a silent one. The user
+chooses which provider(s) see their conversation, that choice is visible and
+revocable at any time (deleting a provider deletes its key with it, via
+`sdk.secrets.delete`), and a user who wants zero third-party data flow can
+still point Warden at their own self-hosted OpenAI-compatible server — that
+path costs the same one row of configuration as OpenRouter does. What
+Sovereign no longer does is bundle, host, or manage that inference itself.
+Everything else — conversation history, provider configuration, and the
+memory layer this is ultimately meant to grow into — stays in the
+operator's own database, under the same ownership model as every other
+plugin's data.
 
 ## Current state
 
-- `apps/auth` and `apps/relay` are the existing precedent for a standalone,
-  first-party Next.js service with its own `Dockerfile`, health checks, and
-  a signed trust boundary to the rest of the platform
-  (`apps/relay/src/enrollment.ts` implements an HMAC-signed enrollment-token
-  pattern for exactly this kind of internal service-to-service trust — the
-  template to reuse for `apps/harness` rather than inventing a new
-  mechanism).
-- `plugins/account`, `plugins/console`, and `plugins/launcher` are the
-  existing precedent for a first-party platform plugin: a `manifest.json`,
-  an `app/` routed page tree, install/enable through the existing plugin
-  system, no bespoke runtime-owned config or settings UI needed. Warden
-  follows this pattern rather than the original draft's runtime-owned
-  `runtime/src/assistant/` design.
-- Plugins must not import runtime internals; the SDK is the only
-  plugin-to-platform contract (`docs/architecture-rules.md:7`). Warden's
-  server-side code reaches `apps/harness` over the internal Docker network
-  the same way any first-party app reaches another — not through the SDK,
-  and not by importing runtime internals. The exact sanctioned mechanism for
-  a plugin calling another first-party `apps/*` service directly is new
-  territory (existing plugins only ever call through the SDK) — see "Open
-  questions."
-- Docker development currently runs `mailpit`, `auth`, and `runtime` on the
-  shared `sovereign_net` network (`docker-compose.yml:12`). `apps/harness`
-  joins the same network and stays unexposed to browsers by default, same
-  posture as the original draft's `apps/inference` sidecar.
-- `sovereign-edge` (fully offline mobile AI app) and `sovereign-os`
-  (Raspberry Pi appliance OS) — both separate repos in this workspace — are
-  the two that actually run local inference, both on `llama.cpp`.
-  `sovereign-mobile` and `sovereign-desktop` are unrelated thin
-  Capacitor/Tauri shells around a self-hosted instance's web UI; neither
-  runs any local model. `sovereign-os` in particular already ran a real,
-  decided llama.cpp-vs-Ollama benchmark for its own (differently
-  constrained) target — see
-  [Research 0015](../research/0015-harness-engine-benchmark.md) for the
-  specifics and why that result doesn't transfer automatically to a
-  general self-hosted server deployment.
-- Ollama exposes OpenAI-compatible `/v1/chat/completions` endpoints with
-  streaming, JSON mode, and tool support
-  ([OpenAI compatibility docs](https://docs.ollama.com/api/openai-compatibility)),
-  and the `qwen3:1.7b`/`qwen3:0.6b` model pair remains a reasonable small
-  default profile regardless of which engine wraps them
-  ([qwen3 library](https://ollama.com/library/qwen3)).
-- llama.cpp server provides a lightweight, OpenAI-compatible chat server
-  with JSON/schema-constrained output and function/tool support
-  ([llama.cpp server](https://github.com/ggml-org/llama.cpp/tree/master/tools/server)),
-  making either engine viable as `apps/harness`'s wrapped implementation.
+- The first rewrite's design fully shipped and still works: `plugins/warden`
+  (chat UI, streaming Route Handler) and `apps/harness` (llama.cpp wrapper,
+  enrollment trust boundary, lazy model download, Compose profile) — none of
+  it is abandoned code. `manifest.json` has `disabled: true`
+  (`docs/architecture-rules.md`'s hard-disable primitive), set specifically
+  to take the shipped result out of reach until re-prioritized. This RFC is
+  that re-prioritization.
+- **`apps/harness` needs no code changes for this revision.** It keeps doing
+  exactly what it does today: wrap one local engine, expose an internal-only
+  chat API, stay unreachable from the public internet, authenticate Warden's
+  server code via the enrollment-token pattern. What changes is only how
+  Warden's server code _treats_ it — as one optional entry in a merged model
+  list instead of the only backend, degrading to "not offered" rather than
+  "unavailable" when it's unreachable.
+- **`sdk.secrets` (RFC 0043) already exists and fits exactly.** `scope:
+'user'` secrets, AES-256-GCM envelope (`runtime/src/secrets.ts`), AAD bound
+  to `{tenantId, pluginId, scope, userId}`, metadata-only listing, hard
+  deletion on account deletion, never exported or shown in Account UI. No
+  manifest permission is required for `user`-scoped secrets (only
+  `instance`-scoped secrets require `instance:configure`) — Warden's
+  manifest needs no new permission for this.
+- **RFC 0092 (`sdk.crypto` field encryption) also exists, but is the wrong
+  tool here** — see "Alternatives considered."
+- **RFC 0047 (plugin tool contracts) is Implemented but has zero real
+  consumers today.** It remains the sanctioned mechanism for the deferred
+  tool-execution phase; this RFC does not touch it.
+- **RFC 0040 (Sovereign Harness) is still `Draft`, "pending revisit."** This
+  RFC materially advances that revisit — it resolves RFC 0040's own deferred
+  "user-supplied API keys" open question — but does not attempt the full
+  revisit RFC 0040 itself still needs (whether Harness ends up _being_ this
+  foundation extended with orchestration, or a separate later product). That
+  remains open.
 
 ## Proposed design
 
 ### 1. Naming and boundaries
 
-| Layer            | Name                         | Meaning                                                                                                                                           |
-| ---------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Plugin / product | **Warden**                   | User-facing platform plugin: chat UI, its own routed space. Formerly "Jarvis."                                                                    |
-| Engine service   | **`apps/harness`**           | Dedicated backend service wrapping the local inference engine. Deliberately named after the Sovereign Harness product direction — see Motivation. |
-| Broader roadmap  | Sovereign Harness (RFC 0040) | The future advanced orchestration product `apps/harness` is meant to grow into. Pending revisit.                                                  |
+Unchanged from the first rewrite: Warden is the plugin, `apps/harness` is
+the local-engine service. What changes is `apps/harness`'s standing: it was
+"the" backend; it is now one optional provider among several, with no
+special status in the UI beyond "free, no API key needed, only available if
+the operator runs it."
 
-Code paths:
+### 2. Product scope — phase 1 (this rewrite)
 
-```text
-apps/harness/
-  package.json
-  Dockerfile
-  src/
-    engine/           # llama.cpp or Ollama wrapper — see Research 0015
-    enrollment.ts      # trust boundary with plugins/warden, relay-pattern HMAC
-    api/               # internal-only chat completion endpoint
-plugins/warden/
-  manifest.json
-  icon.svg
-  app/
-    page.tsx           # Warden's own routed space
-    _components/
-```
+Warden v1 (revised) supports:
 
-Do not reuse `assistant`/`Jarvis` naming anywhere in new code — this
-revision replaces both. `agent` remains reserved for advanced AI systems
-(the eventual Harness/Council direction), matching the original draft's
-reasoning on that point, which still holds.
+- per-user model provider configuration — label, base URL, API key — added
+  through a first-run setup flow and editable later;
+- fetching and caching each configured provider's model list
+  (`GET {baseUrl}/models`, OpenAI-compatible shape);
+- folding `apps/harness`'s local model into the same list automatically
+  when it's reachable and has a model ready — zero configuration, silently
+  absent otherwise;
+- explicit model selection per conversation (a default, changeable);
+- a single, persisted conversation per user — not yet multiple named
+  threads (see Open questions);
+- an **incognito** toggle: while on, no message is written to durable
+  storage — the original phase 1's ephemeral behavior, now opt-in rather
+  than the default;
+- health/unavailable/auth-failure states per provider, and a clear
+  first-run empty state when no provider is configured yet;
+- install/enable through the existing plugin system, unchanged;
+- **no privileged runtime access beyond an ordinary plugin** — unchanged
+  from the first rewrite. Warden still has no tools to call, so there's
+  nothing to be privileged about yet.
 
-### 2. Product scope — phase 1 (this RFC)
+Warden v1 (revised) still explicitly does **not** support, unchanged from
+the first rewrite:
 
-Warden v1 (phase 1) supports:
-
-- basic conversational chat with short, ephemeral context;
-- Warden's own routed plugin page (not a shell-chrome drawer or overlay —
-  that's a future-phase decision, see Open questions);
-- install/enable through the existing plugin system — no bespoke
-  `ASSISTANT_ENABLED`-style env gate; ordinary plugin install/entitlement
-  mechanics apply;
-- health/unavailable states when `apps/harness` is unreachable or
-  misconfigured.
-
-Warden v1 explicitly does **not** support, on the developer's direct
-instruction to keep this phase foundation-only:
-
-- tool selection or tool execution of any kind;
+- tool selection or execution of any kind;
 - task handoff to other plugins;
-- a floating quick-access action button reachable from any screen;
+- a floating quick-access action button;
 - voice input or output;
-- durable chat history by default (same non-goal as the original draft —
-  ephemeral context only, no persistence without a later opt-in design);
 - per-user preferences beyond ordinary plugin visibility rules;
-- external model providers by default.
+- automatic/silent fallback between providers or models — switching is
+  always an explicit user action, the same principle RFC 0040 §5 already
+  established for local-vs-external ("must never silently fall back"),
+  extended here to apply between any two configured providers;
+- multiple named conversation threads (the sidebar/thread-switcher a
+  ChatGPT/Claude-style UI usually has) — phase 1 ships one continuous
+  thread per user; the data model doesn't block adding more later (see
+  Data model), but the UI to manage them is future work.
 
-All of the above are real, intended future phases — listed under "Adoption
-path" below — not rejected ideas. They are out of scope for what this RFC
-commits to building now.
+All of the above are real, intended future phases, not rejected ideas —
+listed under "Adoption path."
 
-### 3. Warden platform plugin
+### 3. Data model
 
-Warden is a first-party plugin, not runtime-owned code — a direct reversal
-of the original draft's design (see "Alternatives considered"). It follows
-the `plugins/account`/`plugins/console`/`plugins/launcher` shape: a
-manifest, an `app/` route tree, and installation/enablement through the
-existing plugin system rather than a parallel runtime-owned settings
-surface.
+Three plugin-owned tables, `sdk.db`-scoped like any other plugin (tenant +
+user scoped, following `docs/architecture-rules.md`'s "plugin tables are
+slug-prefixed" rule):
 
-Warden's server-side route/action code calls `apps/harness` directly over
-the internal network — it does not go through the SDK for this, since the
-SDK is the plugin-to-_platform_ contract and `apps/harness` is a sibling
-first-party service, not a platform capability. The client (browser) side
-of Warden never talks to `apps/harness` directly; every request is proxied
-through Warden's own server-side code, matching how no plugin's client code
-talks to `apps/relay` or `apps/auth` directly either.
+```ts
+warden_providers {
+  id: text primary key
+  tenantId: text not null
+  userId: text not null
+  label: text not null            // user-facing name, e.g. "OpenRouter"
+  baseUrl: text not null
+  secretRefId: text not null      // sdk.secrets ref — the API key itself
+                                   // never lives in this table
+  createdAt, updatedAt
+}
 
-Warden gets **no privileged runtime access beyond an ordinary plugin** in
-this phase — it has no tools to call, so there is nothing to be privileged
-about yet. When phase 2 (tool selection) is designed, the intended answer is
-that Warden becomes the first, flagship consumer of RFC 0047's plugin tool
-contracts like any other plugin would — not a runtime-level bypass. This is
-a locked decision for this RFC even though the tool-selection design itself
-is out of scope; it exists to keep phase 2 from quietly reopening a
-privilege-escalation question phase 1 already answered.
+warden_conversation {
+  id: text primary key
+  tenantId: text not null
+  userId: text not null
+  createdAt
+}
+// Exactly one row per user in phase 1 — modeled as a real entity now so
+// multi-thread later is "add more rows plus a picker," not a migration.
 
-### 4. `apps/harness` engine service
-
-A standalone first-party Next.js service, structurally identical to
-`apps/auth`/`apps/relay`: own `package.json`, own `Dockerfile`, own health
-endpoint, joins `sovereign_net`, never exposed to the public internet by
-default.
-
-It wraps exactly one local inference engine — **llama.cpp or Ollama, decided
-by [Research 0015](../research/0015-harness-engine-benchmark.md)'s
-benchmark**, not preordained by this RFC. Whichever engine wins, `apps/harness`
-exposes an internal-only chat completion API to Warden's server-side code.
-Whether that internal API is literally OpenAI-compatible (as the original
-draft specified) or a narrower purpose-built contract is left to the
-implementation task, since `apps/harness` has exactly one consumer (Warden)
-in this phase, unlike the original design's "any OpenAI-compatible endpoint,
-any consumer" framing.
-
-Trust boundary: `apps/harness` and Warden's server-side code authenticate
-each other using the same signed-enrollment-token pattern `apps/relay`
-already implements (`apps/relay/src/enrollment.ts`) — reused, not
-reinvented.
-
-Default model profile follows the original draft's recommendation
-regardless of engine choice:
-
-```jsonc
-{
-  "model": "qwen3:1.7b",
-  "fallbackModel": "qwen3:0.6b",
-  "purpose": "Warden default local chat profile",
-  "notes": [
-    "Small enough for low-resource self-hosting.",
-    "Model weights are pulled by the operator or the harness engine at boot — see Open questions.",
-  ],
+warden_messages {
+  id: text primary key
+  conversationId: text not null   // fk -> warden_conversation
+  role: text not null             // 'user' | 'assistant'
+  content: text not null
+  providerId: text                // fk -> warden_providers, null for local
+  model: text not null
+  createdAt
 }
 ```
 
-### 5. Docker and deployment
+Incognito messages never reach `warden_messages` — the request/response
+round-trips the in-progress transcript directly, exactly like the original
+phase 1's ephemeral design (`plugins/warden/app/_lib/harness-client.ts`'s
+existing shape already does this; it's reused, not rebuilt).
 
-The baseline Sovereign stack must remain unchanged when Warden/`apps/harness`
-isn't in use. Development Compose adds an optional profile:
+The API key itself is never a column in `warden_providers` — only the
+`sdk.secrets` ref id is. Deleting a provider row also deletes its secret
+(`sdk.secrets.delete(ref.id)`) in the same action, so nothing outlives its
+owning row.
 
-```yaml
-services:
-  harness:
-    profiles: ['harness']
-    build:
-      context: .
-      dockerfile: apps/harness/Dockerfile
-    container_name: sovereign-harness
-    volumes:
-      - sovereign_harness_models:/models
-    networks:
-      - sovereign_net
-```
+### 4. Model discovery and merge
 
-Production Compose offers the same optional profile, with no port exposed
-to the public internet by default — if an operator exposes one for
-debugging, docs must warn against public reachability, matching the
-original draft's stance.
+Warden's server-side code resolves the model list on demand (cached, short
+TTL — an implementation detail, not architecture):
 
-Non-Docker deployments should be able to run `apps/harness` as its own
-process, same as `apps/auth` already supports today.
+1. For each `warden_providers` row the user has configured: fetch
+   `GET {baseUrl}/models` using the `sdk.secrets`-retrieved key. A fetch
+   failure marks that provider "unreachable" in the UI; it does not fail
+   the whole list.
+2. Independently, check `apps/harness`'s existing health/model endpoint. If
+   reachable and a model is ready, add it as a distinct, clearly-labeled
+   "local" entry — no key, no user configuration.
+3. Present the merged list. The user's last-used (or explicitly set
+   default) model is preselected; switching is manual.
 
-### 6. Failure modes and limits
+### 5. Request routing
 
-| State                                        | Expected behavior                                             |
-| -------------------------------------------- | ------------------------------------------------------------- |
-| Warden not installed                         | No entry point exists — ordinary plugin-uninstalled behavior. |
-| Warden installed, `apps/harness` unreachable | Chat page shows an unavailable state; no infinite retry loop. |
-| Model missing on the engine                  | Health state surfaces a clear "model not pulled" message.     |
-| Engine timeout                               | Request fails with a retry affordance.                        |
+- **Local model selected:** Warden's server code calls `apps/harness` over
+  the internal network, authenticated via the existing enrollment-token
+  pattern — completely unchanged from the first rewrite.
+- **External provider selected:** Warden's server code calls that
+  provider's `baseUrl` directly (chat completions, streaming), using the
+  key retrieved from `sdk.secrets` for that request only — never cached in
+  application memory beyond the request's lifetime, never sent to the
+  browser.
 
-Runtime limits carried forward unchanged from the original draft's
-reasoning: request timeout, max input characters, max output tokens, max
-recent turns, a concurrency cap. CI must not download or run a real model —
-a deterministic fake engine response is required for tests, same principle
-as the original draft's fake-provider requirement.
+The browser never talks to any provider directly, local or external — same
+non-negotiable as the first rewrite: every request is proxied through
+Warden's own server-side code, matching how no plugin's client code talks
+to `apps/relay`/`apps/auth` directly either.
 
-### 7. Relationship to the Harness roadmap
+`apps/harness` is not a proxy for external providers — it has no reason to
+sit in that path, and adding one would introduce a dependency (and
+reimplement a trust boundary already solved elsewhere) that buys nothing.
+It keeps doing exactly one job: wrap the local engine.
 
-This is the one section where this RFC deliberately does **not** resolve
-everything, and says so:
+### 6. Incognito mode
 
-- RFC 0040 (Sovereign Harness) currently describes Harness as a plugin
-  living in "a separate first-party repository" and names RFC 0063's
-  original runtime-owned design as its prerequisite "first runtime phase."
-  Both of those statements are now stale: this RFC's Warden is a plugin
-  living **in this monorepo** (`plugins/warden`), not runtime-owned code,
-  and not a separate repo.
-- Whether Sovereign Harness (RFC 0040) ends up **being** `apps/harness` +
-  Warden extended with memory/orchestration/tool-routing, or whether it
-  remains a genuinely separate, later product built on top of this
-  foundation, is an open design question RFC 0040 needs to answer on its
-  own revisit — not decided here.
-- A short pending-revisit note has been added to RFC 0040 itself pointing
-  back here. The actual revisit is future work, out of this RFC's scope.
+A visible toggle in Warden's chat UI. While on:
 
-### 8. Packages and shared code
+- the conversation is a fresh, separate scratch context — not a "pause" of
+  the persisted thread — so there's no ambiguity about which messages
+  count as saved;
+- nothing is written to `warden_messages`;
+- turning it off (or navigating away, or reloading) discards it entirely;
+  there is no "recover my incognito session" path, by design — the same
+  posture as a browser's own incognito window.
 
-Same conservative stance as the original draft: keep everything inside
-`apps/harness` and `plugins/warden` for phase 1. Don't extract a
-`packages/*` shared contract until at least a second consumer needs the same
-abstraction — premature extraction was already a rejected pattern in the
-original draft and remains one here.
+### 7. Docker and deployment
+
+Unchanged from the first rewrite. `apps/harness`'s Compose profile
+(`profiles: ['harness']`, never started by a plain `up`, no port exposed to
+the public internet by default) is untouched — it was already fully
+optional infrastructure before this revision, and stays exactly that
+afterward. This revision only changes how "the profile isn't running" is
+perceived: from "Warden is unavailable" to "the local option isn't offered
+today, everything else still works."
+
+### 8. Failure modes and limits
+
+| State                                           | Expected behavior                                                              |
+| ----------------------------------------------- | ------------------------------------------------------------------------------ |
+| No provider configured, local unreachable       | First-run setup screen — not a broken chat UI.                                 |
+| A configured provider unreachable or auth-fails | That provider shows an error and retry in the picker; others unaffected.       |
+| Local `apps/harness` unreachable                | Silently absent from the model list — not an error state.                      |
+| Selected provider fails mid-conversation        | Request fails with a retry affordance; no silent fallback to another provider. |
+| Provider deleted while it's the active model    | Falls back to prompting for a new selection, not a crash.                      |
+
+Limits carried forward unchanged from the first rewrite's reasoning: request
+timeout, max input characters, max output tokens, a concurrency cap — plus,
+new for persisted history, **max recent turns replayed as context** on each
+request, since a thread with no length cap will eventually exceed any
+model's context window. Phase 1 uses simple recency-based truncation; real
+memory/summarization is future work (see Open questions).
+
+### 9. Data deletion and export
+
+`warden_providers`, `warden_conversation`, and `warden_messages` participate
+in the existing plugin portability hooks
+(`sdk.portability.provideExport`/`provideDelete`) like any other plugin's
+data — a user's account deletion or data export must include (or
+deliberately, visibly exclude) chat history, same as any other plugin is
+expected to wire up. Deleting a provider deletes its `sdk.secrets` row in
+the same action (see Data model).
 
 ## UI flows
 
-### Basic user chat
+### First run
 
-1. User navigates to Warden's own routed page (installed plugin, ordinary
-   plugin visibility rules apply).
-2. Warden starts with no durable history.
-3. User asks a question.
-4. Warden's server-side code calls `apps/harness` over the internal
-   network, authenticated via the enrollment-token pattern.
-5. Warden displays the response, or an unavailable/timeout state if
-   `apps/harness` can't be reached.
+1. User installs/opens Warden. No provider is configured and `apps/harness`
+   isn't reachable (or is, but that's just one more option).
+2. Setup screen: add a provider (label, base URL, API key) or, if a local
+   model is available, start chatting with that immediately.
+3. Once at least one option exists, the ordinary chat view opens.
+
+### Ongoing chat
+
+1. User opens Warden, sees their persisted conversation continue where it
+   left off.
+2. User picks a model (defaults to last-used), asks a question.
+3. Warden's server code routes to the right provider (§5), persists both
+   sides of the exchange, and streams the response.
+
+### Incognito
+
+1. User toggles incognito.
+2. A fresh, unsaved scratch context starts; the persisted thread underneath
+   is untouched.
+3. Toggling off (or leaving) discards the incognito context permanently.
 
 ## Alternatives considered
 
-### Keep the assistant runtime-owned, not a plugin (the original v1 design)
+### Keep the bundled local engine as the only option (status quo)
 
-**Superseded, August 2026.** The original draft kept the assistant inside
-`runtime/src/assistant/` specifically because it worried a plugin
-implementation would either weaken the SDK boundary or require special
-runtime privileges no other plugin has. Revisited on explicit developer
-direction: Sovereign already has a working precedent for privileged
-first-party plugins (Console, Account, Launcher) that get their own routed
-space without runtime-embedded code, and building Warden as a plugin lets
-it reuse the existing manifest/install/entitlement machinery instead of
-inventing parallel runtime-owned config and settings UI. The specific
-concern that motivated the original decision — privileged access ordinary
-plugins don't have — is addressed differently now: phase 1 ships with zero
-tool/cross-plugin access, and phase 2's eventual tool access is designed
-(if not yet built) to go through RFC 0047's tool-contract model like any
-other plugin, not a runtime bypass.
+**Rejected.** This is the design being replaced — see Motivation.
+Hardware-constrained per Research 0015; the plugin has been `disabled: true`
+since it shipped for exactly this reason.
 
-### Optional `apps/inference` sidecar, any OpenAI-compatible endpoint
+### Route external-provider traffic through `apps/harness` too
 
-**Superseded, August 2026.** The original draft made the engine a
-loosely-coupled, swappable sidecar any operator could point the runtime at.
-This revision makes `apps/harness` a dedicated, purpose-built service with
-exactly one consumer (Warden), following the `apps/auth`/`apps/relay`
-pattern instead — trading the original's "any compatible endpoint" openness
-for the tighter operational and trust-boundary story a dedicated first-party
-service gives. Operators who want a different engine/endpoint entirely are
-no longer a phase-1 consideration; that flexibility could return in a later
-phase if real demand appears.
+**Rejected.** `apps/harness` exists to wrap the local engine and nothing
+else. Making it a generic outbound proxy for arbitrary external endpoints
+would add a hop and a service dependency to the common case (a user running
+no local engine at all) for no benefit — Warden's own server-side code can
+call an external HTTPS endpoint directly with the same trust properties
+(browser never involved) that `apps/harness`'s dedicated internal API gives
+for the local case.
 
-### Use `Jarvis` / `assistant` naming
+### Instance-wide (admin-configured) provider config instead of per-user
 
-**Superseded, August 2026.** Renamed to Warden per direct developer
-instruction. The original draft's reasoning for keeping a stable
-architecture name separate from a configurable display name doesn't need to
-carry forward as strongly now, since Warden is a plugin name, not a
-runtime-internal architecture label — but the practice of not reusing
-"agent" for this feature still holds, unchanged.
+**Considered, rejected per direct developer instruction.** RFC 0040's
+original sketch used instance-level env vars specifically because per-user
+secret storage didn't exist yet. It does now (`sdk.secrets`). Given
+Warden's framing as a _personal_ assistant, per-user configuration (each
+person's own key, own usage/billing) fits better than one shared
+instance-wide credential — an operator wanting a shared default for
+everyone remains a possible future addition, not designed here.
 
-### Use llama.cpp server as the first official engine
+### New field-level encryption classification (`sdk.crypto`, RFC 0092) for the keys
 
-Deferred to [Research 0015](../research/0015-harness-engine-benchmark.md).
-The original draft deferred in Ollama's favor based on operator-experience
-reasoning alone, without a real benchmark. This revision explicitly does
-not preordain an answer — the developer asked for a measured comparison
-before locking the engine choice.
+**Considered, rejected.** RFC 0092's classification/policy model is built
+for structured or free-text _data_ columns (health notes, financial
+records) with fuzzy-search tradeoffs and an operator-controlled policy that
+can be off by default. Provider API keys are exactly the runtime-created,
+per-user, individually revocable credential that `sdk.secrets` (RFC 0043)
+was purpose-built for — using it means zero new mechanism, zero new
+manifest permission, and the same code path every other connection-style
+plugin already exercises
+([RFC 0049](../rfcs/0049-plugin-external-connections.md) builds on
+`sdk.secrets` the same way).
+
+### Multi-threaded conversations now
+
+**Rejected for this phase, revisited later.** A thread list/switcher is
+real, expected work for a Claude/ChatGPT-style UI, but it's UI-layer scope,
+not foundation — the data model already avoids blocking it (see Data
+model), so building it later isn't wasted effort, just sequenced after this
+foundation proves out. Consistent with the first rewrite's own discipline
+of shipping foundation before extending capability.
 
 ### Persist chat history by default
 
-Not revisited — still rejected for phase 1, same reasoning as the original
-draft: durable history introduces storage, deletion, export, encryption,
-and moderation questions phase 1 doesn't need to answer yet.
+**Reversed from the first rewrite.** The original phase 1 rejected
+persistence to avoid opening storage/deletion/export/moderation questions
+before they were needed. Revisited here because a Claude/ChatGPT-style
+assistant with no memory of the conversation so far isn't really the
+product being asked for, and the actual new surface area is smaller than it
+looked in the abstract: personal chat logs, deletable per the existing
+portability hook pattern every plugin already implements, with incognito as
+an explicit, low-effort escape hatch for anyone who wants the old
+ephemeral-only behavior for a given session.
 
-### Allow tool execution or task handoff in phase 1
+### Allow tool execution or task handoff in this revision
 
-Not revisited — still rejected, and more firmly so than the original draft
-(which still wanted one low-risk write tool in its own phase 4). The
-developer's explicit instruction for this rewrite was to ship foundation
-only: chat, nothing else, in phase 1.
+**Not revisited — still rejected**, for the same reason the first rewrite
+gave: shipping foundation and capability in the same change is exactly the
+scope creep this plugin's own workstream previously flagged as its biggest
+risk. OpenAI-compatible chat APIs already carry `tools`/`tool_calls` at the
+wire level, so nothing about this design blocks wiring RFC 0047's tool
+contracts in later — it's deferred by choice, not by architecture.
 
 ## Open questions
 
-Carried forward from the original draft, resolved where this rewrite's
-architecture already answers them, left open where it doesn't:
-
-- ~~Should the assistant be visible to all users once enabled, or gated by
-  a new capability?~~ **Resolved by the plugin model** — ordinary plugin
-  install/visibility rules apply; no new capability needed for phase 1.
-- ~~Should the first UI be a sidebar drawer, command palette, or overlay
-  route?~~ **Resolved** — phase 1 is Warden's own routed plugin page, per
-  the developer's explicit "own space" instruction. A shell-chrome
-  quick-access surface (drawer/floating button) is a real future-phase
-  question, not resolved here.
-- Should `apps/harness` auto-pull the configured model on first boot, or
-  should operators run an explicit pull/setup command? **Still open** —
-  should be answered during the `apps/harness` scaffold task or folded into
-  Research 0015.
-- **New:** what is the exact sanctioned mechanism for `plugins/warden`'s
-  server-side code to call `apps/harness` directly? No existing plugin
-  calls another first-party `apps/*` service today — every existing
-  cross-service call goes through the SDK or is between two `apps/*`
-  services with no plugin involved (e.g. runtime→relay). This is genuinely
-  new territory and should be nailed down concretely during the
-  `apps/harness` scaffold task, reusing `apps/relay`'s enrollment pattern
-  as the starting point rather than designing from scratch.
-- **New:** is `apps/harness` required infrastructure the moment Warden is
-  installed, or must Warden degrade gracefully to "installed but
-  unreachable"? This RFC assumes graceful degradation (see Failure modes)
-  but the operational default (does installing Warden imply
-  `docker compose --profile harness up`, or is that a separate operator
-  step?) isn't fully specified.
-- **New:** is GPU passthrough in scope for any planned phase? Not phase 1;
-  explicitly deferred, but worth a placeholder note since it materially
-  changes `apps/harness`'s container topology if it's ever needed.
-
-Dropped from the original draft as no longer applicable to phase 1's scope
-(they were tool-execution and audit questions; phase 1 has no tools to
-execute or audit):
-
-- What is the first useful platform-owned write tool?
-- Should audit events reuse the activity log or a dedicated table?
-- Where does the health endpoint live?
+- **Multi-thread scaling.** `warden_conversation` is modeled as a real
+  entity specifically so a future thread list doesn't require a migration —
+  but the actual UI/UX for creating, naming, and switching threads is
+  undesigned. Future phase.
+- **Real memory beyond recency truncation.** Phase 1's context-window
+  handling is "replay the last N turns." Whether Warden eventually needs
+  summarization or a proper memory layer — the "multi-agentic harness"
+  direction this plugin is ultimately meant to grow into — is real, and
+  explicitly out of scope here.
+- **Provider "test connection" UX.** Should saving a new provider validate
+  it (a live `/models` call) before accepting it, or save first and surface
+  errors on first use? An implementation detail, not resolved here.
+- **Model list cache TTL / manual refresh.** Left to implementation.
+- **Should Warden ever offer a shared, admin-configured default provider**
+  for users who don't want to bring their own key? Not designed here — see
+  "Alternatives considered."
+- **RFC 0040's full revisit remains open.** This RFC resolves RFC 0040's
+  specific deferred "user-supplied API keys" question but not its larger
+  one: whether Sovereign Harness ends up being this foundation extended
+  with orchestration/memory, or a separate later product built on top of
+  it.
 
 ## Adoption path
 
-Phase 0 — RFC and docs (this rewrite):
+Phase 1 (this rewrite) — foundation revamp:
 
-- Accept this RFC (done, in the same change as this rewrite).
-- Flag RFC 0040 (Sovereign Harness) as pending revisit.
-- Add Research 0015 (engine benchmark) as an open research doc, to be
-  resolved by an epic task, not by this RFC.
+- Provider registry: `warden_providers` table, `sdk.secrets`-backed
+  create/edit/delete, first-run setup UI, empty state.
+- Model discovery: per-provider `/models` fetch, `apps/harness` health
+  check folded into the same merged list, explicit model selection.
+- Persisted chat: `warden_conversation`/`warden_messages`, updated chat UI
+  (single thread, no sidebar yet), request-limit carryover including the
+  new max-recent-turns context guard.
+- Incognito toggle, reusing the existing ephemeral request/response shape.
+- Data deletion/export wiring via the existing portability hooks.
+- Re-enable the plugin (`manifest.json`'s `disabled: true` removed) once
+  the above is verified end to end.
 
-**Phase 1 — Foundation (epic 22, this RFC's actual scope):**
+No epic tasks are assigned yet — this RFC precedes that scheduling pass,
+same as the original draft did. `apps/harness` and `packages/sdk` need no
+changes; this revision is scoped entirely to `plugins/warden`.
 
-- Task 22.1 — Resolve [Research 0015](../research/0015-harness-engine-benchmark.md):
-  benchmark llama.cpp vs. Ollama, lock the engine decision.
-- Task 22.2 — `apps/harness` scaffold: the chosen engine wrapped in a
-  standalone first-party service, Dockerfile, Compose profile,
-  enrollment-token trust boundary reused from `apps/relay`.
-- Task 22.3 — Warden plugin: manifest, routed page, basic ephemeral chat
-  wired to `apps/harness` through Warden's own server-side code only. No
-  tool execution, no persisted history.
+Phase 2+ — unchanged from the first rewrite, still future and unscheduled:
 
-Phase 2+ — Future, not yet scheduled as epic tasks:
-
-- Tool selection and execution, via RFC 0047's plugin tool contracts —
-  Warden as the first flagship consumer, not a privileged bypass.
-- A floating quick-access action button reachable from any screen — needs
-  a new shell-chrome extension point that doesn't exist today; a small
-  design question of its own, not solved by this RFC.
+- Tool selection and execution via RFC 0047.
+- A floating quick-access action button.
 - Voice input/output.
-- Opt-in persisted chat history, with export/deletion semantics.
+- Multi-threaded conversations (thread list/switcher).
 - Per-user preferences beyond plugin-level visibility.
-- The RFC 0040 (Sovereign Harness) revisit: whether Harness becomes this
-  foundation extended with memory/orchestration, or a separate later
-  product built on top of it.
+- The RFC 0040 (Sovereign Harness) full revisit.
 
 Semver impact:
 
-- `apps/harness` and `plugins/warden` are new, additive workspace members —
-  no breaking change to existing `@sovereignfs/sdk`/`@sovereignfs/ui`
-  surfaces for phase 1.
-- Docker and operator docs must be updated in the same implementation PR
-  that adds the `harness` Compose profile.
+- `apps/harness`: **no change** — it keeps its existing internal API and
+  version; this RFC changes only how Warden treats it.
+- `packages/sdk` / `packages/manifest`: **no change** — `sdk.secrets` (RFC 0043) already covers everything this design needs; no new permission, no
+  new SDK surface.
+- `plugins/warden`: manifest `version` bump at implementation time (plugins
+  version only their own manifest, never `package.json`); `disabled: true`
+  removed once this phase ships and is verified.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | July 2026   | Initial draft — "Jarvis," runtime-owned, optional `apps/inference` sidecar, any OpenAI-compatible endpoint                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| 0.2     | August 2026 | Rewritten and accepted — renamed to Warden; architecture reversed from runtime-owned to a first-party platform plugin (`plugins/warden`) backed by a dedicated `apps/harness` engine service (auth/relay pattern, not a loosely-coupled sidecar); engine choice (llama.cpp vs. Ollama) deferred to a real benchmark (Research 0015) instead of preordained; tool execution, task handoff, floating quick-access button, and voice moved to explicit, undesigned future phases; phase 1 scoped to exactly 3 tasks (engine benchmark, `apps/harness` scaffold, Warden plugin with basic chat) per direct developer instruction to ship foundation only; RFC 0040 (Sovereign Harness) flagged pending revisit, not resolved here |
-| 0.3     | August 2026 | Corrected "Current state": `sovereign-mobile`/`sovereign-desktop` do not run local inference (they're thin Capacitor/Tauri shells around a self-hosted instance's web UI) — the real local-inference precedents are `sovereign-edge` and `sovereign-os`, the latter having already run and decided a real llama.cpp-vs-Ollama benchmark for its own (differently constrained) target. Developer-caught error in this doc's own first draft                                                                                                                                                                                                                                                                                    |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | July 2026   | Initial draft — "Jarvis," runtime-owned, optional `apps/inference` sidecar, any OpenAI-compatible endpoint                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 0.2     | August 2026 | First rewrite — renamed to Warden; architecture reversed from runtime-owned to a first-party platform plugin (`plugins/warden`) backed by a dedicated `apps/harness` engine service (auth/relay pattern); engine choice (llama.cpp vs. Ollama) deferred to a real benchmark (Research 0015); tool execution, task handoff, floating quick-access button, and voice moved to explicit, undesigned future phases; phase 1 scoped to exactly 3 tasks per direct developer instruction to ship foundation only                                                                                                             |
+| 0.3     | August 2026 | Corrected "Current state": `sovereign-mobile`/`sovereign-desktop` don't run local inference — `sovereign-edge` and `sovereign-os` are the real local-inference precedents, the latter having already run its own llama.cpp-vs-Ollama benchmark for a differently constrained target                                                                                                                                                                                                                                                                                                                                    |
+| 0.4     | August 2026 | Phase 1 shipped in full (epic tasks 22.1-22.3, workstream 0014), verified end to end, then deliberately disabled — hardware-constrained per Research 0015's own benchmark data                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 0.5     | August 2026 | **Second rewrite.** Revamped to bring-your-own OpenAI-API-compatible model providers per user, with the existing local `apps/harness` engine folded in as one optional entry rather than the required backend; persisted single-threaded conversation history (reversing the first rewrite's ephemeral-only decision) with an incognito toggle preserving that behavior as an opt-in; provider API keys stored via the existing `sdk.secrets` vault (RFC 0043), no new secret-storage mechanism; no code changes required to `apps/harness`, `packages/sdk`, or `packages/manifest`. Not yet implemented or scheduled. |

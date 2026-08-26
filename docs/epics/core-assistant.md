@@ -1,11 +1,17 @@
 # Epic: Warden (Core Assistant)
 
 > Phase 1 foundation for Sovereign's built-in assistant: a first-party
-> platform plugin (Warden, formerly "Jarvis") backed by a dedicated
-> `apps/harness` engine service. See
-> [RFC 0063](../rfcs/0063-core-assistant-jarvis.md) for the full design and
-> its August 2026 rewrite — this epic reflects that rewrite, not the
-> original draft.
+> platform plugin (Warden, formerly "Jarvis"). See
+> [RFC 0063](../rfcs/0063-core-assistant-jarvis.md) for the full design.
+> Tasks 22.1-22.3 shipped RFC 0063's **first** rewrite (local-engine-only
+> chat, backed by a dedicated `apps/harness` service) and were then
+> deliberately disabled — hardware-constrained, see task 22.3's completion
+> note and Research 0015. Tasks 22.4-22.5 implement RFC 0063's **second**
+> rewrite: bring-your-own OpenAI-API-compatible model providers per user,
+> with the local engine folded in as one optional, auto-detected entry
+> instead of the required backend, plus persisted chat and an incognito
+> toggle. This epic file reflects the second rewrite; read RFC 0063 itself
+> for the full reasoning behind the change.
 
 ## Status
 
@@ -15,17 +21,24 @@
 
 Warden is Sovereign's built-in workspace assistant: a first-party platform
 plugin (`plugins/warden`) with its own routed space, providing basic
-conversational chat. It's backed by `apps/harness`, a new dedicated
-first-party service — structurally the same as `apps/auth`/`apps/relay` —
-wrapping a local inference engine (llama.cpp or Ollama; the choice is
-benchmark-gated, see [Research 0015](../research/0015-harness-engine-benchmark.md)).
+conversational chat. Each user configures their own model provider(s) — any
+OpenAI-API-compatible endpoint (OpenRouter, a direct provider, or a
+self-hosted server) with an API key stored via the existing plugin secret
+vault (`sdk.secrets`, RFC 0043). If `apps/harness` — the dedicated
+first-party service from the first rewrite, structurally the same as
+`apps/auth`/`apps/relay`, wrapping a local llama.cpp engine (the choice was
+benchmark-gated, see [Research 0015](../research/0015-harness-engine-benchmark.md))
+— is reachable and has a model ready, it's folded into the same model list
+automatically, with no special status beyond "free, no key needed." Neither
+`apps/harness` nor `packages/sdk` needs any code change for this; see RFC
+0063 §Current state.
 
-**This epic is phase 1 only: the foundation.** Three tasks, no tool
-execution, no task handoff, no floating quick-access button, no voice — all
-of those are real future phases, listed in RFC 0063's Adoption path but
-deliberately not scheduled as epic tasks here. The instruction behind this
-scope was explicit: ship a working chat surface first, extend capability
-later.
+**This epic is phase 1 only: the foundation.** No tool execution, no task
+handoff, no floating quick-access button, no voice, no multi-threaded
+conversation UI — all of those are real future phases, listed in RFC 0063's
+Adoption path but deliberately not scheduled as epic tasks here. The
+instruction behind this scope was explicit both times: ship a working chat
+surface first, extend capability later.
 
 Warden gets no privileged runtime access beyond an ordinary plugin in this
 phase — there's nothing to call privileges on yet, since there's no tool
@@ -251,6 +264,102 @@ isolated `node_modules` layout was missing a symlink even after the raw
 package files landed) — fixed in
 [PR #456](https://github.com/sovereignfs/sovereign/pull/456).
 
+---
+
+#### 📋 22.4 — Warden model provider registry and discovery
+
+**Goal:** Let a user configure their own OpenAI-API-compatible model
+provider(s) and see a merged, live model list — their providers plus
+`apps/harness`'s local model when it's reachable — with nothing beyond
+`sdk.secrets` as the storage mechanism for keys.
+
+**Deliverables:**
+
+- `warden_providers` table (`sdk.db`, tenant + user scoped): label, base
+  URL, and an `sdk.secrets` ref id. The raw API key is never a column in
+  this table — only the ref.
+- Provider CRUD using `sdk.secrets.create({ scope: 'user', ... })` /
+  `.get()` / `.update()` / `.delete()` (RFC 0043) — no manifest permission
+  needed for `user`-scoped secrets, no new secret-storage mechanism.
+- Model discovery: `GET {baseUrl}/models` per configured provider
+  (OpenAI-compatible shape), with a per-provider unreachable/auth-failure
+  state that doesn't fail the whole list.
+- Fold in `apps/harness`'s existing health/model-ready check as a
+  distinct, clearly-labeled "local" entry when available — reuse the
+  existing enrollment-token client (`harness-client.ts`); no changes to
+  `apps/harness` itself.
+- First-run setup UI: an empty state when no provider is configured and no
+  local model is available, distinct from an ordinary chat view.
+- Explicit model selection (a default, changeable) — no automatic/silent
+  fallback between providers or models.
+
+**Dependencies:** None new — `sdk.secrets` (RFC 0043) and `apps/harness`
+(task 22.2) already exist.
+
+**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-jarvis.md)
+
+**Review checklist:**
+
+- A provider's API key is never present in a client-visible payload, prop,
+  or log line — verified by checking, not assumed from the code path.
+- Deleting a provider also deletes its `sdk.secrets` row in the same
+  action; nothing outlives its owning row.
+- A single unreachable/misconfigured provider degrades only that
+  provider's entry — it does not break the rest of the model list or the
+  local-engine entry.
+- `apps/harness` being unreachable results in "local option not offered,"
+  not an error state.
+
+---
+
+#### 📋 22.5 — Warden persisted chat, incognito mode, and re-enable
+
+**Goal:** Move Warden from ephemeral-only to a single persisted
+conversation per user by default, add an incognito toggle that preserves
+the original ephemeral behavior as an opt-in, and re-enable the plugin.
+
+**Deliverables:**
+
+- `warden_conversation`/`warden_messages` tables (RFC 0063 §3) — one
+  conversation row per user in this phase, modeled as a real entity so a
+  future multi-thread UI doesn't require a migration.
+- Chat persists by default: both sides of each exchange are written to
+  `warden_messages`, tagged with the provider/model used.
+- Incognito toggle: a fresh, separate, never-persisted scratch context —
+  not a pause of the persisted thread — reusing the existing ephemeral
+  request/response shape (`harness-client.ts`'s current behavior)
+  unchanged.
+- Request limits carried forward from the first rewrite (max input
+  characters, max output tokens, concurrency cap), plus a new max-recent-
+  turns context guard so a persisted thread with no length cap doesn't
+  exceed a model's context window.
+- `warden_providers`/`warden_conversation`/`warden_messages` wired into the
+  existing plugin portability hooks
+  (`sdk.portability.provideExport`/`provideDelete`) so account export/
+  deletion covers chat history like any other plugin's data.
+- Remove `plugins/warden/manifest.json`'s `disabled: true` once the above
+  is verified end to end against a real configured provider — not just
+  the fake-engine/mock test path.
+
+**Dependencies:** Task 22.4 (a provider/model must be selectable before a
+conversation about it can persist).
+
+**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-jarvis.md)
+
+**Review checklist:**
+
+- A user can close the browser, come back, and see their prior
+  conversation — against a real provider, not just a mock.
+- Toggling incognito on, chatting, and toggling it off (or reloading)
+  leaves zero trace in `warden_messages`.
+- No tool call, task handoff, or cross-plugin action is reachable from
+  Warden after re-enabling — same scope-creep check task 22.3 already
+  established; verify by trying to find one, not just by reading the diff.
+- Account data export/deletion covers Warden's conversation data, or
+  deliberately and visibly excludes it — not silently missing it.
+- `disabled: true` is removed only after a real end-to-end pass, not
+  merely a green CI run.
+
 ## Future phases (not yet scheduled)
 
 Real, intended work — listed per RFC 0063's Adoption path, deliberately not
@@ -263,7 +372,9 @@ given epic task IDs until a future scheduling pass:
   needs a new shell-chrome extension point that doesn't exist today; a
   small design question of its own.
 - **Voice input/output.**
-- **Opt-in persisted chat history**, with export/deletion semantics.
+- **Multi-threaded conversations** (a thread list/switcher) — task 22.5
+  ships one persisted thread per user; the data model doesn't block adding
+  more, but the UI to manage them is undesigned.
 - **Per-user preferences** beyond plugin-level visibility.
 - **The RFC 0040 (Sovereign Harness) revisit** — whether Harness becomes
   this foundation extended with memory/orchestration/tool-routing, or a
@@ -277,10 +388,14 @@ given epic task IDs until a future scheduling pass:
   plugin or Council — it's a self-contained plugin + service pair.
 - Any future `packages/*` extraction waits for at least two real
   consumers, matching this repo's standing convention.
+- Provider credentials always route through `sdk.secrets` — never a
+  plugin-local secret column, never `sdk.crypto` field encryption (RFC
+  0063's Alternatives already settled why).
 
 ## Related RFCs
 
 - [RFC 0063 — Warden: core assistant platform plugin and harness engine](../rfcs/0063-core-assistant-jarvis.md)
+- [RFC 0043 — Plugin secret vault](../rfcs/0043-plugin-secret-vault.md) — the storage mechanism for provider API keys (task 22.4)
 - [RFC 0040 — Sovereign Harness](../rfcs/0040-sovereign-harness.md) (pending revisit)
 - [RFC 0055 — Sovereign Council](../rfcs/0055-sovereign-council.md)
 - [RFC 0047 — Plugin tool contracts](../rfcs/0047-plugin-tools.md)

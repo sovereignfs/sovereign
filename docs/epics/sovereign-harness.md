@@ -62,7 +62,7 @@ tool execution.
 ## Related RFCs
 
 - [RFC 0040 — Sovereign Harness](../rfcs/0040-sovereign-harness.md)
-- [RFC 0063 — Core Assistant, Jarvis UI, and Local Inference Sidecar](../rfcs/0063-core-assistant-jarvis.md)
+- [RFC 0063 — Core Assistant, Jarvis UI, and Local Inference Sidecar](../rfcs/0063-core-assistant-warden.md)
 - [RFC 0043 — Plugin secret vault](../rfcs/0043-plugin-secret-vault.md)
 - [RFC 0046 — Plugin background jobs and schedules](../rfcs/0046-plugin-jobs.md)
 - [RFC 0047 — Plugin tool contracts](../rfcs/0047-plugin-tools.md)

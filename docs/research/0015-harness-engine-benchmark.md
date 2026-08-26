@@ -4,7 +4,7 @@
 **Date:** August 2026\
 **Author:** kasunben\
 **Scope:** `apps/harness` (new)\
-**Related:** [RFC 0063](../rfcs/0063-core-assistant-jarvis.md) (Warden, the
+**Related:** [RFC 0063](../rfcs/0063-core-assistant-warden.md) (Warden, the
 consumer of this decision), epic task 22.1; `sovereign-os`'s
 `docs/research/local-ai-options.md` and
 `docs/adrs/0013-initial-inference-runner-and-model-selection.md` (separate

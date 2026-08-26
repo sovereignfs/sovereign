@@ -150,20 +150,31 @@
 }
 
 /* `variant="icon"` modifier — matches a `variant="icon"` `CardTile`'s own
-   footprint (`min-height`-driven sizing rather than `.newTile`'s
-   `width/height: 100%`) so a ghost tile sits naturally alongside
-   icon-variant tiles in a `dense` grid instead of stretching into a wide
-   horizontal pill. Icon-only, no visible label (see `NewCardTile`'s own
-   doc comment) — a plain "+" at the DS's own `size="md"` (unlike
+   footprint. Icon-only, no visible label (see `NewCardTile`'s own doc
+   comment) — a plain "+" at the DS's own `size="md"` (unlike
    `.tileIcon .banner svg`'s real-content 48px override, deliberately not
    repeated here) reads as self-explanatory once every sibling tile in the
-   grid is already an unlabeled icon. */
+   grid is already an unlabeled icon.
+   `width`/`height: 100%` (not `auto`, despite this being a "shrink to
+   content" variant conceptually) — a real `CardTile` sibling in the same
+   `dense` grid fills its grid cell via the grid's own item-stretch, which
+   only reaches an `auto`-sized *direct* grid child; wrapping this trigger
+   in a `Menu`/`Popover` (`HomeWorkbooksList.tsx`'s "add workbook" tile)
+   inserts an intermediate `display: inline-flex` container between this
+   button and the grid, and a flex container's default cross/main-axis
+   sizing does not itself relay grid-stretch through to a `width: auto`
+   flex child — confirmed live: the button rendered full-height but only
+   as wide as its own icon+padding (~38px) inside a 160px cell. Explicit
+   100% percentages resolve against whichever immediate parent box is
+   sized to the grid cell — the grid track directly, or the intermediate
+   flex container once IT has already been stretched to that width — so
+   this works correctly either way, unlike relying on stretch alone. */
 .newTileIcon {
   flex-direction: column;
   justify-content: center;
   gap: 0;
-  width: auto;
-  height: auto;
+  width: 100%;
+  height: 100%;
   min-height: 0;
   padding: var(--sv-space-3) var(--sv-space-2);
   border-radius: var(--sv-radius-md);

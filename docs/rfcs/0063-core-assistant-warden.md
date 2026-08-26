@@ -2,13 +2,16 @@
 rfc: 0063
 title: Warden — core assistant platform plugin and harness engine (formerly "Jarvis")
 status: >
-  Accepted (second rewrite — phase 1's foundation revamped to bring-your-own
-  model providers; the first rewrite's local-engine-only design shipped in
-  full as epic tasks 22.1-22.3, workstream 0014, and was then deliberately
-  disabled — see Motivation. This revision's own design is not yet
-  implemented; tool execution/task handoff/floating button/voice/multi-thread
-  UI remain a future, not-yet-scheduled phase per this RFC's own Adoption
-  path, not part of incorporated_into_plan)
+  Partially implemented (second rewrite — phase 1's foundation revamped to
+  bring-your-own model providers; the first rewrite's local-engine-only
+  design shipped in full as epic tasks 22.1-22.3, workstream 0014, and was
+  then deliberately disabled — see Motivation. Of this revision's own scope,
+  epic task 22.4 (workstream 0019 leg 1 — provider registry and model
+  discovery on sdk.connections/sdk.secrets) is done; task 22.5 (persisted
+  chat, incognito, re-enable) is in progress. Tool execution/task
+  handoff/floating button/voice/multi-thread UI remain a future,
+  not-yet-scheduled phase per this RFC's own Adoption path, not part of
+  incorporated_into_plan)
 date: August 2026 (second rewrite; originally drafted July 2026, first rewrite August 2026)
 author: kasunben
 scope: >
@@ -19,7 +22,7 @@ scope: >
   question), RFC 0092 (app-level field encryption, considered and
   deliberately not used — see Alternatives); supersedes this RFC's own first
   rewrite's local-engine-only design
-incorporated_into_plan: 'Not yet — pending epic task assignment (would follow epic 22, next available task numbers)'
+incorporated_into_plan: 'Yes — epic tasks 22.4-22.5 (workstream 0019)'
 ---
 
 # RFC 0063 - Warden: core assistant platform plugin and harness engine

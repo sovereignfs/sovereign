@@ -24,6 +24,49 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe('checkHarnessHealth', () => {
+  it('reports ready when the model status is ready', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse({ status: 'ok', modelStatus: 'ready' })),
+    );
+    const { checkHarnessHealth } = await import('../harness-client');
+    expect(await checkHarnessHealth()).toEqual({ kind: 'ready' });
+  });
+
+  it('reports not_ready with the model status when the model is not ready', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse({ status: 'ok', modelStatus: 'downloading' })),
+    );
+    const { checkHarnessHealth } = await import('../harness-client');
+    expect(await checkHarnessHealth()).toEqual({ kind: 'not_ready', modelStatus: 'downloading' });
+  });
+
+  it('reports unreachable when the fetch itself fails, without throwing', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')));
+    const { checkHarnessHealth } = await import('../harness-client');
+    expect(await checkHarnessHealth()).toEqual({ kind: 'unreachable' });
+  });
+
+  it('reports unreachable on a non-2xx response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({}, 500)));
+    const { checkHarnessHealth } = await import('../harness-client');
+    expect(await checkHarnessHealth()).toEqual({ kind: 'unreachable' });
+  });
+
+  it('never requires an enrollment token — no /api/enroll call happens', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ status: 'ok', modelStatus: 'ready' }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { checkHarnessHealth } = await import('../harness-client');
+    await checkHarnessHealth();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/health');
+  });
+});
+
 describe('requestHarnessChat', () => {
   it('enrolls once, then reuses the cached token across calls', async () => {
     const fetchMock = vi

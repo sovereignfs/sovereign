@@ -13,6 +13,17 @@
   flex-direction: column;
 }
 
+.chatHeader {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--sv-space-3) var(--sv-space-4) 0;
+}
+
+.manageProvidersLink {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-secondary);
+}
+
 .scrollArea {
   flex: 1;
   min-height: 0;
@@ -46,4 +57,30 @@
 .inputRow textarea {
   flex: 1;
   resize: none;
+}
+
+.errorCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sv-space-3);
+  max-width: 32rem;
+  padding: var(--sv-space-6);
+}
+
+.errorEyebrow {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-secondary);
+}
+
+.errorMessage {
+  margin: 0;
+  font-size: var(--sv-font-size-xl);
+  color: var(--sv-color-text-primary);
+}
+
+.errorDetail {
+  margin: 0;
+  color: var(--sv-color-text-secondary);
 }

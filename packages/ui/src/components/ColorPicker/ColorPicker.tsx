@@ -18,6 +18,15 @@ export interface ColorPickerProps {
    *  the active "custom" selection instead. */
   value: string | null;
   onChange: (value: string | null) => void;
+  /**
+   * Fires once after a discrete, complete pick — a swatch click or the "no
+   * color" click. Optional; most callers don't need it. Deliberately NOT
+   * fired from the native custom-color `<input type="color">`'s `onChange`
+   * — that can fire repeatedly while the user is still dragging inside the
+   * browser's own color dialog, so a caller using this to auto-close a
+   * wrapping `Popover` would otherwise slam it shut mid-adjustment.
+   */
+  onSelectionComplete?: () => void;
   /** Shows a leading "no color" option. Off by default — most consumers
    *  (anything painting a fixed-size chip) always need a real color; only
    *  a board canvas-style consumer typically wants "none" as a real choice. */
@@ -59,6 +68,7 @@ export function ColorPicker({
   swatches,
   value,
   onChange,
+  onSelectionComplete,
   allowNone = false,
   noneLabel = 'No color',
   customLabel = 'Custom color',
@@ -91,7 +101,10 @@ export function ColorPicker({
           className={[styles.swatch, styles.swatchNone, value === null ? styles.swatchSelected : '']
             .filter(Boolean)
             .join(' ')}
-          onClick={() => onChange(null)}
+          onClick={() => {
+            onChange(null);
+            onSelectionComplete?.();
+          }}
         >
           <Icon name="x" size="sm" aria-hidden={true} />
         </button>
@@ -112,7 +125,10 @@ export function ColorPicker({
             .filter(Boolean)
             .join(' ')}
           style={{ backgroundColor: s.value }}
-          onClick={() => onChange(s.value)}
+          onClick={() => {
+            onChange(s.value);
+            onSelectionComplete?.();
+          }}
         />
       ))}
       <span

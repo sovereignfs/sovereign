@@ -1,0 +1,77 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-6);
+}
+
+.localStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-4);
+  flex-wrap: wrap;
+}
+
+.helpText {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-secondary);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+}
+
+.providerCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+}
+
+.providerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sv-space-4);
+}
+
+.providerLabel {
+  margin: 0;
+  font-weight: 600;
+  color: var(--sv-color-text-primary);
+}
+
+.providerMeta {
+  margin: var(--sv-space-1) 0 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-secondary);
+  word-break: break-all;
+}
+
+.providerActions {
+  display: flex;
+  gap: var(--sv-space-2);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+}
+
+.formActions {
+  display: flex;
+  gap: var(--sv-space-2);
+}
+
+.feedbackError {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border-radius: var(--sv-radius-md);
+  border: 1px solid var(--sv-color-error-border);
+  background-color: var(--sv-color-error-surface);
+  color: var(--sv-color-error-text);
+}

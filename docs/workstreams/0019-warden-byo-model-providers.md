@@ -1,6 +1,6 @@
 # Workstream 0019 — Warden: bring-your-own model providers
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In Progress — leg 1 done, leg 2 in progress\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -24,7 +24,7 @@ zero new secret-storage mechanism and zero `apps/harness` code changes.
 
 ## Definition of done
 
-- [ ] `22.4` — a user can configure one or more model providers (label,
+- [x] `22.4` — a user can configure one or more model providers (label,
       base URL, API key via `sdk.secrets`), see a merged model list that
       also includes `apps/harness`'s local model when reachable, and
       select a model to chat with.
@@ -54,7 +54,7 @@ registry and request-routing existing.
 
 | Leg | Name                                     | Epic tasks | Epics | Gate? | Done when                                                                                                                                                                        |
 | --- | ---------------------------------------- | ---------- | ----- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Provider registry and model discovery    | 22.4       | 22    | No    | A user can add/edit/delete a provider and see a merged model list (their providers + local `apps/harness` if reachable), with per-provider health/auth-failure states            |
+| 1   | Provider registry and model discovery ✅ | 22.4       | 22    | No    | A user can add/edit/delete a provider and see a merged model list (their providers + local `apps/harness` if reachable), with per-provider health/auth-failure states            |
 | 2   | Persisted chat, incognito, and re-enable | 22.5       | 22    | No    | Chat persists by default, incognito works as a non-persisted scratch mode, request/context limits are enforced server-side, and the plugin is re-enabled and verified end to end |
 
 Neither leg is marked a gate — unlike workstream 0014's engine benchmark,
@@ -74,8 +74,8 @@ local model exists and can be selected.
 
 **Technical notes:**
 
-- `warden_providers` table (`sdk.db`, tenant + user scoped): label, base
-  URL, and an `sdk.secrets` ref id — never the raw key. See RFC 0063 §3.
+- ~~`warden_providers` table (`sdk.db`, tenant + user scoped)~~ — **superseded
+  during implementation, see Leg outcome below.** `sdk.connections` (RFC 0049) already stores exactly this shape; no new table was needed.
 - Use `sdk.secrets.create({ scope: 'user', ... })` for the API key;
   `sdk.secrets.delete()` when a provider row is deleted, in the same
   action — nothing should outlive its owning row.
@@ -92,6 +92,28 @@ local model exists and can be selected.
 outside server-side code (browser payload, client-visible props, logs) —
 that's a security regression, not a minor bug, given this is the first
 plugin to store third-party billing credentials via `sdk.secrets`.
+
+**Leg outcome:** shipped without touching `sdk.db` at all — discovered
+during implementation that `sdk.connections` (RFC 0049) already provides
+exactly the shape this leg needs (per-user, labeled, secret-referencing
+external connection with built-in health tracking:
+`status`/`lastError`/`lastCheckedAt`), and its own Motivation section
+literally names "connecting model providers or self-hosted AI endpoints" as
+a worked use case. `deleteProvider()` calls `sdk.connections.disconnect()`,
+verified (in `runtime/src/platform-db.ts`) to already atomically delete the
+linked `sdk.secrets` row — the "do not proceed if" condition above is
+satisfied by an existing platform guarantee, not new code. Added one thing
+not in the original plan: `app/_lib/url-safety.ts`, an SSRF guard blocking
+loopback/link-local/cloud-metadata addresses and this repo's own internal
+Compose service hostnames (deliberately _not_ general private-IP ranges, to
+keep "point Warden at your own LAN server" working) — a direct consequence
+of accepting a user-supplied outbound URL that wasn't called out in the
+epic task's own review checklist. Verified end to end in a live browser
+session (create → live 404 status against a real unreachable endpoint →
+edit → remove), not just unit tests; caught and fixed one real bug that
+way — `ProviderRow`'s delete confirmation calling the `useActionState`
+dispatch function outside a transition — with a regression test added
+afterward. Full detail in the epic file's task 22.4 completion note.
 
 ### Leg 2 — Persisted chat, incognito, and re-enable
 
@@ -158,6 +180,7 @@ action in leg 2, not a foregone conclusion.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                        |
-| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft, sequencing RFC 0063's second rewrite (bring-your-own model providers, persisted chat, incognito) into two legs |
+| Version | Date        | Change                                                                                                                                                                                                                                                                           |
+| ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft, sequencing RFC 0063's second rewrite (bring-your-own model providers, persisted chat, incognito) into two legs                                                                                                                                                    |
+| 0.2     | August 2026 | Leg 1 (task 22.4) done — provider registry and model discovery shipped on `sdk.connections`/`sdk.secrets` with no new DB table (superseding the original `warden_providers` plan), plus an SSRF guard for user-supplied provider URLs. Verified live end to end. Leg 2 unblocked |

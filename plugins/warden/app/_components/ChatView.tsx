@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
+import Link from 'next/link';
 import { Button, EmptyState, Message, MessageScroller, Textarea } from '@sovereignfs/ui';
 import styles from '../warden.module.css';
 
@@ -156,6 +157,11 @@ export function ChatView() {
 
   return (
     <div className={styles.chat}>
+      <div className={styles.chatHeader}>
+        <Link href="/warden/providers" className={styles.manageProvidersLink}>
+          Manage providers
+        </Link>
+      </div>
       <div className={styles.scrollArea}>
         <MessageScroller>
           {turns.length === 0 && pendingText === null && (

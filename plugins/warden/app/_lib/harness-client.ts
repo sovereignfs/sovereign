@@ -62,6 +62,31 @@ async function postChat(token: string, messages: ChatMessage[], maxTokens?: numb
   });
 }
 
+export type HarnessHealth =
+  { kind: 'ready' } | { kind: 'not_ready'; modelStatus: string } | { kind: 'unreachable' };
+
+/**
+ * Checks whether the local `apps/harness` engine is reachable and has a
+ * model ready to serve (epic task 22.4) — used to fold a "local" entry into
+ * Warden's merged model list. Calls `apps/harness`'s existing, deliberately
+ * unauthenticated `GET /api/health` (RFC 0063 §4/§7) directly; no enrollment
+ * token needed, and no change to `apps/harness` itself. Never throws — an
+ * unreachable local engine is a normal, expected state (it's entirely
+ * optional infrastructure), not an error to propagate.
+ */
+export async function checkHarnessHealth(): Promise<HarnessHealth> {
+  let response: Response;
+  try {
+    response = await fetch(`${HARNESS_URL}/api/health`);
+  } catch {
+    return { kind: 'unreachable' };
+  }
+  if (!response.ok) return { kind: 'unreachable' };
+  const body = await response.json().catch(() => null);
+  if (body?.modelStatus === 'ready') return { kind: 'ready' };
+  return { kind: 'not_ready', modelStatus: body?.modelStatus ?? 'unknown' };
+}
+
 /**
  * Requests a chat completion from `apps/harness`. On success, returns the
  * raw streaming `Response` for the caller (the route handler) to proxy

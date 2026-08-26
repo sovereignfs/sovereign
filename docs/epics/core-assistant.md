@@ -266,7 +266,7 @@ package files landed) — fixed in
 
 ---
 
-#### 📋 22.4 — Warden model provider registry and discovery
+#### ✅ 22.4 — Warden model provider registry and discovery
 
 **Goal:** Let a user configure their own OpenAI-API-compatible model
 provider(s) and see a merged, live model list — their providers plus
@@ -309,6 +309,36 @@ provider(s) and see a merged, live model list — their providers plus
   local-engine entry.
 - `apps/harness` being unreachable results in "local option not offered,"
   not an error state.
+
+**Result:** shipped entirely on top of existing platform mechanisms — no new
+DB table, no migrations, no new manifest permission. `app/_lib/providers.ts`
+is a thin wrapper over `sdk.connections` (RFC 0049, `provider:
+'openai-compatible'`, `scope: 'user'`) and `sdk.secrets` (RFC 0043) for the
+key; deleting a provider calls `sdk.connections.disconnect()`, which was
+verified (via `runtime/src/platform-db.ts`'s `disconnectPluginConnection`)
+to already atomically delete the linked secret. `app/_lib/model-discovery.ts`
+merges each provider's live `GET {baseUrl}/models` with `apps/harness`'s
+existing health check into one list, writing the result back onto the
+connection (`markProviderHealthy`/`markProviderError`) so the UI always
+reflects the most recent real attempt. Added `app/_lib/url-safety.ts`, an
+SSRF guard not called out in this task's own text but a direct consequence
+of letting a user supply an outbound base URL server-side: resolves the
+hostname and blocks loopback/link-local/cloud-metadata addresses and this
+repo's own known internal Compose service names, while deliberately _not_
+blocking general private-IP ranges so a real self-hosted LAN server keeps
+working — verified live against a real dev server by pointing a provider at
+`http://harness:3003` and confirming the rejection. Full CRUD (add/edit/
+remove) and the first-run empty state (`/warden` shows a setup prompt only
+when no provider is configured and no local model is reachable) were
+verified end to end in a live browser session, not just unit tests: create
+→ live 404 status from a real unreachable endpoint → edit → remove, with
+the API key confirmed absent from the DOM/response at every step. Caught and
+fixed one real bug along the way, found only by driving the UI live (a
+`fireEvent`-based component test was added afterward so it can't regress
+silently): `ProviderRow`'s delete-confirmation called the `useActionState`
+dispatch function directly (`deleteAction(new FormData())`) from
+`ConfirmDialog`'s `onConfirm`, which React flags as "called outside of a
+transition" — fixed by wrapping it in `startTransition`.
 
 ---
 

@@ -324,7 +324,7 @@ doc — but not yet assigned a roadmap slot. Promoted to a phase table once prio
 | —       | Chat cross-instance federation and trust policy (RFC 0066)                                             | 📋     | [23.10](docs/epics/p2p-chat.md#-2310--cross-instance-federation-and-trust-policy)                                                                |
 | —       | Chat group messaging and membership security (RFC 0066)                                                | 📋     | [23.11](docs/epics/p2p-chat.md#-2311--group-messaging-and-membership-security)                                                                   |
 | —       | Chat native transport and background delivery adapters (RFC 0066)                                      | 📋     | [23.12](docs/epics/p2p-chat.md#-2312--native-transport-and-background-delivery-adapters)                                                         |
-| 0.94.0  | Plugin-owned page padding via `PageContainer` (RFC 0079)                                               | 🚧     | [9.25](docs/epics/design-system.md#-925--plugin-owned-page-padding-pagecontainer-gains-the-gutter-the-shell-gives-it-up)                         |
+| 0.94.0  | Plugin-owned page padding via `PageContainer` (RFC 0079)                                               | ✅     | [9.25](docs/epics/design-system.md#-925--plugin-owned-page-padding-pagecontainer-gains-the-gutter-the-shell-gives-it-up)                         |
 
 ---
 

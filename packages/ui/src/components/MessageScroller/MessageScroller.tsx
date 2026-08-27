@@ -19,6 +19,17 @@ const NEAR_BOTTOM_THRESHOLD_PX = 80;
  * content does not yank them back down — a "New messages" button appears
  * instead, matching the pattern every chat product (Slack, Discord,
  * ChatGPT) already uses.
+ *
+ * A short conversation is bottom-anchored, not left floating at the top of
+ * the container with empty space below it — a leading flex-grow spacer
+ * absorbs the leftover space and collapses to nothing once messages
+ * overflow. Deliberately not `justify-content: flex-end` on the scroll
+ * container itself: Chromium miscomputes `scrollHeight` as equal to
+ * `clientHeight` for an overflowing flex-end-packed column, which makes the
+ * container look fully scrolled to the bottom and permanently hides the
+ * start of a long conversation (confirmed live before choosing this
+ * approach). The spacer keeps `justify-content` at its default, so overflow
+ * scrolling is unaffected.
  */
 export function MessageScroller({ children, className }: MessageScrollerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -60,6 +71,7 @@ export function MessageScroller({ children, className }: MessageScrollerProps) {
   return (
     <div className={[styles.root, className].filter(Boolean).join(' ')}>
       <div className={styles.scrollContainer} ref={containerRef} onScroll={handleScroll}>
+        <div className={styles.spacer} aria-hidden="true" />
         {children}
       </div>
       {hasNewMessages && (

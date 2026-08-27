@@ -342,7 +342,7 @@ transition" — fixed by wrapping it in `startTransition`.
 
 ---
 
-#### 📋 22.5 — Warden persisted chat, incognito mode, and re-enable
+#### ✅ 22.5 — Warden persisted chat, incognito mode, and re-enable
 
 **Goal:** Move Warden from ephemeral-only to a single persisted
 conversation per user by default, add an incognito toggle that preserves
@@ -389,6 +389,65 @@ conversation about it can persist).
   deliberately and visibly excludes it — not silently missing it.
 - `disabled: true` is removed only after a real end-to-end pass, not
   merely a green CI run.
+
+**Result:** `warden_conversation`/`warden_messages` added as real isolated
+tables (`plugins/warden/app/_db/schema{,.postgres}.ts` + drizzle migrations),
+which required changing the manifest's `type` from `platform` to `sovereign`
+(the former routes `sdk.db` to the shared, unisolated schema) and adding a
+`repository` field the schema requires for that type — a change not
+anticipated when task 22.4 shipped. `app/_lib/conversations.ts` is a single
+conversation per user (`getOrCreateConversation`), read back oldest-first for
+display and newest-`MAX_RECENT_TURNS`-then-reversed for building model
+context. Found and fixed one real bug while writing its test: message
+timestamps used `Math.floor(Date.now()/1000)` (second precision), so two
+messages appended within the same second — plausible in real usage, not just
+a test artifact — sorted ambiguously; switched to millisecond `Date.now()`.
+`app/_lib/provider-chat.ts` normalizes an upstream OpenAI-compatible SSE
+stream into the same `{type:'token'|'done'|'error', ...}` frame shape
+`apps/harness`'s local path already produces, so `app/api/chat/route.ts`
+and `ChatView` don't need to know which kind of provider answered.
+Persistence is non-blocking: `stream-capture.ts`'s `teeAndCapture` tees the
+response so the client-facing stream is untouched while a background branch
+accumulates the full reply and writes it to `warden_messages` once done —
+the user's turn is also written immediately, before the reply streams back.
+Incognito is a genuinely separate, always-empty-on-entry scratch context
+(`ChatView`'s `incognitoTurns` state), not a pause of the persisted thread —
+turning it on always discards any prior scratch content, matching a
+browser's own incognito window; its request shape sends the client's own
+transcript and never calls `appendMessage`, reusing the original phase-1
+ephemeral contract unchanged. Portability (`app/_lib/portability.ts`)
+registers `provideExport`/`provideDelete` — deliberately does not touch
+provider connections/secrets, both because `sdk.connections`/`sdk.secrets`
+throw outside a real plugin request (no portability-context fallback the way
+`sdk.db.getClient()` has) and because the platform's own account-deletion
+cascade already deletes every plugin's `plugin_connections`/`plugin_secrets`
+rows for the deleted user unconditionally, so a plugin-specific handler
+duplicating that would be redundant, not more thorough.
+
+Verified live end to end against a real dev instance (not just the 118
+passing unit tests across 12 files): a locally-run OpenAI-compatible mock
+HTTP server, bound to the machine's real LAN address (not `localhost` —
+blocked by `url-safety.ts`'s loopback guard, correctly, since a real remote
+provider would never resolve there) rather than an actual hosted vendor —
+added as a provider, selected as the active model, and used to confirm (1) a
+sent message and its reply persist and reappear after a full page reload,
+including a second message whose request body was confirmed server-side to
+carry the full prior exchange as context; (2) turning incognito on starts a
+genuinely empty scratch thread, a message sent there gets a reply, and
+turning incognito back off (or reloading) shows only the original persisted
+thread with zero trace of the incognito exchange; (3) the local-model entry
+is correctly absent from the model list while this dev environment's own
+`apps/harness` reports `modelStatus: "error"` (a pre-existing native-dev
+path issue unrelated to this branch), confirming task 22.4's health-check
+integration degrades correctly rather than silently offering a broken
+option. Zero browser console or dev-server errors across the whole session.
+**Not independently verified**: an actual hosted OpenAI-compatible vendor
+(OpenRouter, etc.) — doing so would need a real account/API key, which
+wasn't available in this session; the mock server exercises the identical
+code path (`assertSafeProviderBaseUrl` → `fetch` → SSE frame parsing →
+`Authorization: Bearer` header) a real vendor would hit, but a vendor's own
+response-shape quirks are unverified. `disabled: true` removed in this same
+change based on the above.
 
 ## Future phases (not yet scheduled)
 

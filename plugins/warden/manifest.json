@@ -3,15 +3,16 @@
   "id": "fs.sovereign.warden",
   "name": "Warden",
   "development": true,
-  "disabled": true,
-  "version": "0.2.0",
-  "description": "Basic local chat, powered entirely by infrastructure you control.",
-  "type": "platform",
+  "disabled": false,
+  "version": "0.3.0",
+  "description": "A personal AI chat assistant, powered by a model provider you choose.",
+  "type": "sovereign",
+  "repository": "https://github.com/sovereignfs/sovereign/tree/main/plugins/warden",
   "runtime": "native",
   "routePrefix": "/warden",
   "shell": "default",
   "icon": "icon.svg",
-  "permissions": ["auth:session"],
+  "permissions": ["auth:session", "db:readWrite", "data:export", "data:import"],
   "compatibility": {
     "minPlatformVersion": "0.87.0"
   }

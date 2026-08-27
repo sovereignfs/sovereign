@@ -6,6 +6,7 @@
   "dependencies": {
     "@sovereignfs/sdk": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
+    "drizzle-orm": "^0.45.2",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
@@ -16,6 +17,10 @@
     "@testing-library/react": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "drizzle-kit": "^0.31.10",
     "typescript": "catalog:"
+  },
+  "scripts": {
+    "db:generate": "drizzle-kit generate --config=drizzle.config.ts && drizzle-kit generate --config=drizzle.config.pg.ts"
   }
 }

@@ -8,6 +8,13 @@
       "when": 1787782744826,
       "tag": "0000_clever_venom",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1787822029608,
+      "tag": "0001_cheerful_patriot",
+      "breakpoints": true
     }
   ]
 }

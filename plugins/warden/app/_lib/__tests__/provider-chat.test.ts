@@ -130,6 +130,26 @@ describe('requestProviderChat', () => {
     expect(result).toEqual({ kind: 'unavailable', message: 'This provider is unreachable.' });
   });
 
+  it('serializes multimodal (array-shaped) content through to the request body unchanged', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(upstreamStream([]), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const imageContent = [
+      { type: 'text', text: 'what is this' },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,AQID' } },
+    ];
+    await requestProviderChat({
+      baseUrl: 'https://openrouter.ai/api/v1',
+      apiKey: 'sk-1',
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: imageContent }],
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.messages[0].content).toEqual(imageContent);
+  });
+
   it('surfaces the upstream error message for a non-2xx, non-auth response', async () => {
     vi.stubGlobal(
       'fetch',

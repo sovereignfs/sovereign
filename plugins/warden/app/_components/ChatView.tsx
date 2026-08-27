@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import type { FormEvent, KeyboardEvent } from 'react';
+import { useRef, useState } from 'react';
+import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react';
 import Link from 'next/link';
 import {
+  Badge,
   Button,
   EmptyState,
+  Icon,
   Message,
   MessageScroller,
   Select,
@@ -14,6 +16,12 @@ import {
 } from '@sovereignfs/ui';
 import type { DiscoveredModel } from '../_lib/model-discovery';
 import type { MessageView } from '../_lib/conversations';
+import {
+  classifyAttachmentType,
+  describeDocumentPlaceholder,
+  describeImageForHistory,
+  MAX_ATTACHMENT_BYTES,
+} from '../_lib/limits';
 import styles from '../warden.module.css';
 
 interface ChatTurn {
@@ -44,18 +52,30 @@ function toChatTurn(message: MessageView): ChatTurn {
  * (`incognitoTurns`), not a pause of the persisted thread — switching it on
  * always starts fresh, matching a browser's own incognito window. Nothing
  * about an incognito turn is ever sent in the persisted request shape.
+ * Attachments are persisted-mode only — the attach control is disabled
+ * while incognito is on, rather than teaching the incognito wire shape
+ * to carry a file too.
  *
- * Explicitly no tool call, task handoff, floating button, or voice input
- * anywhere in this component or its dependencies.
+ * Explicitly no tool call, task handoff, or voice input anywhere in this
+ * component or its dependencies. File attachment is user-supplied message
+ * content (an image or document the user is asking about), not agentic
+ * tool execution, so it doesn't relax that boundary — same for the
+ * web-search toggle below, which is a disabled placeholder with no
+ * request-time effect at all.
  */
 export function ChatView({
   initialMessages,
   models,
   defaultModelKey,
+  allModelsHidden = false,
 }: {
   initialMessages: MessageView[];
   models: DiscoveredModel[];
   defaultModelKey: string;
+  /** True when at least one model was discovered but every one of them is
+   *  hidden by this user's own visibility settings — distinct from "nothing
+   *  reachable at all," which needs a different message. */
+  allModelsHidden?: boolean;
 }) {
   const [persistedTurns, setPersistedTurns] = useState<ChatTurn[]>(() =>
     initialMessages.map(toChatTurn),
@@ -67,6 +87,9 @@ export function ChatView({
   const [pendingText, setPendingText] = useState<string | null>(null);
   const [state, setState] = useState<ViewState>({ kind: 'idle' });
   const [banner, setBanner] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const turns = incognito ? incognitoTurns : persistedTurns;
   const setTurns = incognito ? setIncognitoTurns : setPersistedTurns;
@@ -77,29 +100,77 @@ export function ChatView({
     setBanner(null);
   }
 
+  function clearAttachment() {
+    setAttachment(null);
+    setAttachmentError(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = ''; // allow re-selecting the same file later
+    if (!file) return;
+
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setAttachmentError(
+        `Attachments are limited to ${Math.floor(MAX_ATTACHMENT_BYTES / (1024 * 1024))} MB.`,
+      );
+      return;
+    }
+    const kind = classifyAttachmentType(file.type, file.name);
+    if (!kind) {
+      setAttachmentError('That file type isn’t supported. Try an image, a PDF, or a text file.');
+      return;
+    }
+    if (kind === 'image' && modelKey === 'local') {
+      setAttachmentError(
+        'The local model is text-only and doesn’t support images. Choose a different model first.',
+      );
+      return;
+    }
+
+    setAttachmentError(null);
+    setAttachment(file);
+  }
+
   async function send() {
     const content = input.trim();
-    if (!content || !modelKey || state.kind === 'streaming') return;
+    if ((!content && !attachment) || !modelKey || state.kind === 'streaming') return;
+    if (!content) return; // a caption is required for every send, attachment or not
 
     const hadPriorConversation = turns.length > 0;
-    const nextTurns = [...turns, { role: 'user' as const, content }];
+    const optimisticContent = attachment
+      ? attachment.type.startsWith('image/')
+        ? describeImageForHistory(content, attachment.name)
+        : describeDocumentPlaceholder(content, attachment.name)
+      : content;
+    const nextTurns = [...turns, { role: 'user' as const, content: optimisticContent }];
     setTurns(nextTurns);
     setInput('');
     setBanner(null);
     setPendingText('');
     setState({ kind: 'streaming' });
-
-    const requestBody = incognito
-      ? { modelKey, incognito: true, messages: nextTurns }
-      : { modelKey, content };
+    const sentAttachment = attachment;
+    clearAttachment();
 
     let response: Response;
     try {
-      response = await fetch('/warden/api/chat', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
+      if (sentAttachment) {
+        const formData = new FormData();
+        formData.append('modelKey', modelKey);
+        formData.append('content', content);
+        formData.append('file', sentAttachment);
+        response = await fetch('/warden/api/chat', { method: 'POST', body: formData });
+      } else {
+        const requestBody = incognito
+          ? { modelKey, incognito: true, messages: nextTurns }
+          : { modelKey, content };
+        response = await fetch('/warden/api/chat', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+      }
     } catch {
       setPendingText(null);
       failRequest(hadPriorConversation, 'Warden could not reach its chat engine.');
@@ -203,44 +274,46 @@ export function ChatView({
   return (
     <div className={styles.chat}>
       <div className={styles.chatHeader}>
-        <div className={styles.chatHeaderControls}>
-          <Select
-            value={modelKey}
-            onChange={(event) => setModelKey(event.target.value)}
-            aria-label="Model"
-            size="sm"
-            disabled={models.length === 0}
-          >
-            {models.length === 0 && <option value="">No model reachable</option>}
-            {models.map((model) => (
-              <option key={model.key} value={model.key}>
-                {model.label}
-              </option>
-            ))}
-          </Select>
-          <span className={styles.incognitoLabel}>
-            <Toggle
-              checked={incognito}
-              onChange={handleIncognitoToggle}
-              aria-label="Incognito — don't save this conversation"
-            />
-            Incognito
-          </span>
+        <span className={styles.toggleLabel}>
+          <Toggle
+            checked={incognito}
+            onChange={handleIncognitoToggle}
+            aria-label="Incognito — don't save this conversation"
+          />
+          Incognito
+        </span>
+        <div className={styles.manageLinks}>
+          <Link href="/warden/providers" className={styles.manageLink}>
+            Manage providers
+          </Link>
+          <Link href="/warden/models" className={styles.manageLink}>
+            Manage models
+          </Link>
         </div>
-        <Link href="/warden/providers" className={styles.manageProvidersLink}>
-          Manage providers
-        </Link>
       </div>
       <div className={styles.scrollArea}>
         <MessageScroller>
           {turns.length === 0 && pendingText === null && (
             <div className={styles.emptyState}>
               <EmptyState
-                heading={incognito ? 'Incognito chat' : 'Ask Warden anything'}
+                heading={
+                  incognito
+                    ? 'Incognito chat'
+                    : allModelsHidden
+                      ? 'Turn on a model to get started'
+                      : 'Ask Warden anything'
+                }
                 description={
                   incognito
                     ? 'Nothing in this conversation is saved. Turning incognito off (or leaving) discards it for good.'
-                    : 'Chat with the model you selected above — saved to this conversation by default.'
+                    : allModelsHidden
+                      ? "Provider models stay off until you choose which ones to use — that's what keeps a big catalog from cluttering this list."
+                      : 'Chat with the model you selected below — saved to this conversation by default.'
+                }
+                action={
+                  allModelsHidden && !incognito ? (
+                    <Link href="/warden/models">Manage models</Link>
+                  ) : undefined
                 }
               />
             </div>
@@ -262,7 +335,26 @@ export function ChatView({
           {banner}
         </p>
       )}
-      <form className={styles.inputRow} onSubmit={handleSubmit}>
+      <form className={styles.composer} onSubmit={handleSubmit}>
+        {attachment && (
+          <div className={styles.attachmentChip}>
+            <Icon name="file-text" size="sm" aria-hidden />
+            <span>{attachment.name}</span>
+            <button
+              type="button"
+              className={styles.attachmentChipRemove}
+              onClick={clearAttachment}
+              aria-label="Remove attachment"
+            >
+              <Icon name="x" size="xs" aria-hidden />
+            </button>
+          </div>
+        )}
+        {attachmentError && (
+          <p className={styles.attachmentError} role="alert">
+            {attachmentError}
+          </p>
+        )}
         <Textarea
           value={input}
           onChange={(event) => setInput(event.target.value)}
@@ -271,14 +363,71 @@ export function ChatView({
           rows={2}
           disabled={state.kind === 'streaming'}
           aria-label="Message Warden"
+          className={styles.composerTextarea}
         />
-        <Button
-          type="submit"
-          disabled={!input.trim() || !modelKey || state.kind === 'streaming'}
-          loading={state.kind === 'streaming'}
-        >
-          Send
-        </Button>
+        <div className={styles.composerToolbar}>
+          <div className={styles.composerToolbarStart}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className={styles.hiddenFileInput}
+              accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,text/markdown,.md,.txt"
+              onChange={handleFileChange}
+              disabled={incognito}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label="Attach a file"
+              disabled={incognito || state.kind === 'streaming'}
+              title={incognito ? 'Attachments are not available in incognito mode' : undefined}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Icon name="plus" size="sm" aria-hidden />
+            </Button>
+            <span className={styles.toggleLabel} title="Web search isn’t available yet">
+              <Toggle
+                checked={false}
+                onChange={() => {}}
+                disabled
+                aria-label="Web search (coming soon)"
+              />
+              <Icon name="search" size="sm" aria-hidden />
+              Web search
+              <Badge variant="mono" uppercase={false} size="sm">
+                Soon
+              </Badge>
+            </span>
+          </div>
+          <div className={styles.composerToolbarEnd}>
+            <Select
+              value={modelKey}
+              onChange={(event) => setModelKey(event.target.value)}
+              aria-label="Model"
+              size="sm"
+              disabled={models.length === 0}
+            >
+              {models.length === 0 && (
+                <option value="">
+                  {allModelsHidden ? 'No models shown' : 'No model reachable'}
+                </option>
+              )}
+              {models.map((model) => (
+                <option key={model.key} value={model.key}>
+                  {model.label}
+                </option>
+              ))}
+            </Select>
+            <Button
+              type="submit"
+              disabled={!input.trim() || !modelKey || state.kind === 'streaming'}
+              loading={state.kind === 'streaming'}
+            >
+              Send
+            </Button>
+          </div>
+        </div>
       </form>
     </div>
   );

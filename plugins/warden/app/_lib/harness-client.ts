@@ -9,9 +9,19 @@
 const HARNESS_URL =
   process.env.SOVEREIGN_HARNESS_URL ?? `http://localhost:${process.env.HARNESS_PORT ?? '3003'}`;
 
+/** OpenAI-compatible multimodal content part — only ever appears in the
+ *  current turn's outgoing message (an attached image), never in history
+ *  loaded from `warden_messages` (always plain strings there) or sent to
+ *  `apps/harness` (text-only, gated before it would ever receive one). */
+export interface ChatMessageContentPart {
+  type: 'text' | 'image_url';
+  text?: string;
+  image_url?: { url: string };
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
-  content: string;
+  content: string | ChatMessageContentPart[];
 }
 
 export type HarnessChatResult =

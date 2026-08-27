@@ -22,3 +22,11 @@ export const wardenMessages = pgTable('warden_messages', {
   model: text('model').notNull(),
   createdAt: bigint('created_at', { mode: 'number' }).notNull(),
 });
+
+export const wardenModelVisibilityOverrides = pgTable('warden_model_visibility_overrides', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  modelKey: text('model_key').notNull(),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+});

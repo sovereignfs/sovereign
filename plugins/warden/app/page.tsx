@@ -3,6 +3,7 @@ import { ChatView } from './_components/ChatView';
 import { SetupPrompt } from './_components/SetupPrompt';
 import { listMessages } from './_lib/conversations';
 import { discoverModels } from './_lib/model-discovery';
+import { isModelVisible, listVisibilityOverrides } from './_lib/model-visibility';
 import styles from './warden.module.css';
 
 /**
@@ -34,14 +35,22 @@ export default async function WardenPage() {
     );
   }
 
-  const initialMessages = await listMessages(session.user.id, session.user.tenantId);
+  const [initialMessages, visibilityOverrides] = await Promise.all([
+    listMessages(session.user.id, session.user.tenantId),
+    listVisibilityOverrides(session.user.id, session.user.tenantId),
+  ]);
+  const visibleModels = discovery.models.filter((model) =>
+    isModelVisible(model.key, visibilityOverrides),
+  );
+  const allModelsHidden = discovery.models.length > 0 && visibleModels.length === 0;
 
   return (
     <div className={styles.page} data-plugin-fullbleed>
       <ChatView
         initialMessages={initialMessages}
-        models={discovery.models}
-        defaultModelKey={discovery.models[0]?.key ?? ''}
+        models={visibleModels}
+        defaultModelKey={visibleModels[0]?.key ?? ''}
+        allModelsHidden={allModelsHidden}
       />
     </div>
   );

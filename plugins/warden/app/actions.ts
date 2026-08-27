@@ -77,8 +77,19 @@ export async function createProviderAction(
   }
 }
 
-/** Bind `id` first (`updateProviderAction.bind(null, provider.id)`) so the
- *  remaining `(prevState, formData)` shape still fits `useActionState`. */
+/**
+ * Bind `id` first (`updateProviderAction.bind(null, provider.id)`) so the
+ * remaining `(prevState, formData)` shape still fits `useActionState`.
+ *
+ * `label`/`baseUrl` are required on every call, unlike `apiKey` — the one
+ * caller (`ProviderRow`'s edit form) always submits all three fields
+ * pre-filled with the current values, so an empty one only ever means the
+ * user deliberately cleared it, not "field omitted, leave unchanged". Only
+ * `apiKey` has real partial-update semantics, matching its own UI hint
+ * ("Leave blank to keep the current key"). Silently keeping the old
+ * label/baseUrl on blank — the previous behavior — reported a misleading
+ * "was updated" success while discarding what the user visibly cleared.
+ */
 export async function updateProviderAction(
   id: string,
   _prevState: ActionResult | null,
@@ -89,11 +100,9 @@ export async function updateProviderAction(
     const label = stringField(formData, 'label');
     const baseUrl = stringField(formData, 'baseUrl');
     const apiKey = stringField(formData, 'apiKey');
-    const provider = await updateProvider(id, {
-      label: label || undefined,
-      baseUrl: baseUrl || undefined,
-      apiKey: apiKey || undefined,
-    });
+    if (!label) return { ok: false, error: 'Give this provider a name.' };
+    if (!baseUrl) return { ok: false, error: 'A base URL is required.' };
+    const provider = await updateProvider(id, { label, baseUrl, apiKey: apiKey || undefined });
     return { ok: true, message: `${provider.label} was updated.` };
   } catch (error) {
     return {

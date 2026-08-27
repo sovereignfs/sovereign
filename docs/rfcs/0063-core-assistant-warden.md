@@ -2,16 +2,16 @@
 rfc: 0063
 title: Warden — core assistant platform plugin and harness engine (formerly "Jarvis")
 status: >
-  Partially implemented (second rewrite — phase 1's foundation revamped to
+  Implemented (second rewrite — phase 1's foundation revamped to
   bring-your-own model providers; the first rewrite's local-engine-only
   design shipped in full as epic tasks 22.1-22.3, workstream 0014, and was
-  then deliberately disabled — see Motivation. Of this revision's own scope,
-  epic task 22.4 (workstream 0019 leg 1 — provider registry and model
-  discovery on sdk.connections/sdk.secrets) is done; task 22.5 (persisted
-  chat, incognito, re-enable) is in progress. Tool execution/task
-  handoff/floating button/voice/multi-thread UI remain a future,
-  not-yet-scheduled phase per this RFC's own Adoption path, not part of
-  incorporated_into_plan)
+  then deliberately disabled — see Motivation. This revision's own scope,
+  epic tasks 22.4 (workstream 0019 leg 1 — provider registry and model
+  discovery on sdk.connections/sdk.secrets) and 22.5 (leg 2 — persisted
+  chat, incognito, re-enable), are both done; the plugin is re-enabled.
+  Tool execution/task handoff/floating button/voice/multi-thread UI remain a
+  future, not-yet-scheduled phase per this RFC's own Adoption path, not part
+  of incorporated_into_plan)
 date: August 2026 (second rewrite; originally drafted July 2026, first rewrite August 2026)
 author: kasunben
 scope: >

@@ -27,10 +27,69 @@ function sendMessage(text: string) {
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 }
 
-describe('ChatView', () => {
+const models = [
+  { key: 'local', label: 'Local model (this server)' },
+  { key: 'conn-1:gpt-4o-mini', label: 'OpenRouter — gpt-4o-mini' },
+];
+
+function renderChatView(overrides: Partial<Parameters<typeof ChatView>[0]> = {}) {
+  return render(
+    <ChatView initialMessages={[]} models={models} defaultModelKey="local" {...overrides} />,
+  );
+}
+
+describe('ChatView — persisted mode (default)', () => {
   it('shows the empty state before any message is sent', () => {
-    render(<ChatView />);
+    renderChatView();
     expect(screen.getByText('Ask Warden anything')).toBeDefined();
+  });
+
+  it('seeds the thread from initialMessages', () => {
+    renderChatView({
+      initialMessages: [
+        {
+          id: '1',
+          role: 'user',
+          content: 'earlier',
+          providerId: null,
+          model: 'local',
+          createdAt: 1,
+        },
+        {
+          id: '2',
+          role: 'assistant',
+          content: 'earlier reply',
+          providerId: null,
+          model: 'local',
+          createdAt: 2,
+        },
+      ],
+    });
+    expect(screen.getByText('earlier')).toBeDefined();
+    expect(screen.getByText('earlier reply')).toBeDefined();
+  });
+
+  it('sends {modelKey, content} — not the whole transcript — for a new message', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse([{ type: 'done' }]));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderChatView({
+      initialMessages: [
+        {
+          id: '1',
+          role: 'user',
+          content: 'earlier',
+          providerId: null,
+          model: 'local',
+          createdAt: 1,
+        },
+      ],
+    });
+    sendMessage('new message');
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body).toEqual({ modelKey: 'local', content: 'new message' });
   });
 
   it('sends a message, streams the response, and appends both turns', async () => {
@@ -45,7 +104,7 @@ describe('ChatView', () => {
       ),
     );
 
-    render(<ChatView />);
+    renderChatView();
     sendMessage('hi there');
 
     expect(await screen.findByText('hi there')).toBeDefined();
@@ -62,7 +121,7 @@ describe('ChatView', () => {
       ),
     );
 
-    render(<ChatView />);
+    renderChatView();
     sendMessage('hi');
 
     expect(await screen.findByText('Warden is unavailable')).toBeDefined();
@@ -79,15 +138,12 @@ describe('ChatView', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<ChatView />);
-
+    renderChatView();
     sendMessage('first');
     await waitFor(() => expect(screen.getByText('hi!')).toBeDefined());
-
     sendMessage('second');
 
     expect(await screen.findByText('boom')).toBeDefined();
-    // First conversation turns are still visible — not replaced by a blocking state.
     expect(screen.getByText('first')).toBeDefined();
     expect(screen.getByText('hi!')).toBeDefined();
     expect(screen.queryByText('Warden is unavailable')).toBeNull();
@@ -103,12 +159,115 @@ describe('ChatView', () => {
         ),
     );
 
-    render(<ChatView />);
+    renderChatView();
     sendMessage('hi');
     await screen.findByText('Warden is unavailable');
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(screen.queryByText('Warden is unavailable')).toBeNull();
     expect(screen.getByLabelText('Message Warden')).toBeDefined();
+  });
+});
+
+describe('ChatView — no reachable model', () => {
+  it('disables the model picker and Send when the models list is empty', () => {
+    renderChatView({ models: [], defaultModelKey: '' });
+    expect(screen.getByRole('combobox', { name: 'Model' })).toHaveProperty('disabled', true);
+    fireEvent.change(screen.getByLabelText('Message Warden'), { target: { value: 'hi' } });
+    expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', true);
+  });
+});
+
+describe('ChatView — incognito', () => {
+  it('starts as a fresh, empty scratch context, distinct from the persisted thread', () => {
+    renderChatView({
+      initialMessages: [
+        {
+          id: '1',
+          role: 'user',
+          content: 'persisted message',
+          providerId: null,
+          model: 'local',
+          createdAt: 1,
+        },
+      ],
+    });
+    expect(screen.getByText('persisted message')).toBeDefined();
+
+    fireEvent.click(
+      screen.getByRole('switch', { name: "Incognito — don't save this conversation" }),
+    );
+
+    expect(screen.queryByText('persisted message')).toBeNull();
+    expect(screen.getByText('Incognito chat')).toBeDefined();
+  });
+
+  it('sends {modelKey, incognito: true, messages} instead of the persisted shape', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse([{ type: 'done' }]));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderChatView();
+    fireEvent.click(
+      screen.getByRole('switch', { name: "Incognito — don't save this conversation" }),
+    );
+    sendMessage('off the record');
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body).toEqual({
+      modelKey: 'local',
+      incognito: true,
+      messages: [{ role: 'user', content: 'off the record' }],
+    });
+  });
+
+  it('discards the incognito context and restores the persisted thread when turned off', () => {
+    renderChatView({
+      initialMessages: [
+        {
+          id: '1',
+          role: 'user',
+          content: 'persisted message',
+          providerId: null,
+          model: 'local',
+          createdAt: 1,
+        },
+      ],
+    });
+    const toggle = screen.getByRole('switch', { name: "Incognito — don't save this conversation" });
+    fireEvent.click(toggle);
+    fireEvent.click(toggle);
+    expect(screen.getByText('persisted message')).toBeDefined();
+  });
+
+  it('starts fresh again every time it is turned back on, never resuming a prior incognito turn', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(sseResponse([{ type: 'done' }])));
+    renderChatView();
+    const toggle = screen.getByRole('switch', { name: "Incognito — don't save this conversation" });
+
+    fireEvent.click(toggle); // on
+    sendMessage('first incognito message');
+    await screen.findByText('first incognito message');
+
+    fireEvent.click(toggle); // off
+    fireEvent.click(toggle); // on again
+    expect(screen.queryByText('first incognito message')).toBeNull();
+  });
+});
+
+describe('ChatView — model selection', () => {
+  it('sends the selected model key', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse([{ type: 'done' }]));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderChatView();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Model' }), {
+      target: { value: 'conn-1:gpt-4o-mini' },
+    });
+    sendMessage('hi');
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.modelKey).toBe('conn-1:gpt-4o-mini');
   });
 });

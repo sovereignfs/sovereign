@@ -23,11 +23,20 @@ vi.mock('../_lib/providers', () => ({
   deleteProvider: (...args: unknown[]) => deleteProvider(...args),
 }));
 
+const setModelVisibility = vi.fn();
+vi.mock('../_lib/model-visibility', () => ({
+  setModelVisibility: (...args: unknown[]) => setModelVisibility(...args),
+}));
+
 class UnsafeProviderUrlError extends Error {}
 vi.mock('../_lib/url-safety', () => ({ UnsafeProviderUrlError }));
 
-const { createProviderAction, deleteProviderAction, updateProviderAction } =
-  await import('../actions');
+const {
+  createProviderAction,
+  deleteProviderAction,
+  setModelVisibilityAction,
+  updateProviderAction,
+} = await import('../actions');
 
 function formData(entries: Record<string, string>): FormData {
   const fd = new FormData();
@@ -37,7 +46,7 @@ function formData(entries: Record<string, string>): FormData {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  requireSession.mockResolvedValue({ user: { id: 'user-1' } });
+  requireSession.mockResolvedValue({ user: { id: 'user-1', tenantId: 'tenant-1' } });
 });
 
 describe('createProviderAction', () => {
@@ -138,5 +147,35 @@ describe('deleteProviderAction', () => {
       error: 'You must be signed in to manage Warden providers.',
     });
     expect(deleteProvider).not.toHaveBeenCalled();
+  });
+});
+
+describe('setModelVisibilityAction', () => {
+  it('hides a model, scoped to the calling user', async () => {
+    const result = await setModelVisibilityAction('conn-1:gpt-4o', false);
+    expect(setModelVisibility).toHaveBeenCalledWith('user-1', 'tenant-1', 'conn-1:gpt-4o', false);
+    expect(result).toEqual({ ok: true, message: 'Model hidden from chat.' });
+  });
+
+  it('shows a model, scoped to the calling user', async () => {
+    const result = await setModelVisibilityAction('conn-1:gpt-4o', true);
+    expect(setModelVisibility).toHaveBeenCalledWith('user-1', 'tenant-1', 'conn-1:gpt-4o', true);
+    expect(result).toEqual({ ok: true, message: 'Model shown in chat.' });
+  });
+
+  it('rejects when not signed in, without touching visibility', async () => {
+    requireSession.mockRejectedValue(new NotAuthenticatedError());
+    const result = await setModelVisibilityAction('local', true);
+    expect(result).toEqual({
+      ok: false,
+      error: 'You must be signed in to manage Warden providers.',
+    });
+    expect(setModelVisibility).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a generic message for an unrecognized failure', async () => {
+    setModelVisibility.mockRejectedValue(new Error('db down'));
+    const result = await setModelVisibilityAction('local', false);
+    expect(result).toEqual({ ok: false, error: 'Could not update this model.' });
   });
 });

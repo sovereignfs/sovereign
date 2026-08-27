@@ -113,7 +113,10 @@ describe('discoverModels', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockImplementation(async (url: string) => {
-        if (url.startsWith('https://bad.example.com')) throw new Error('ECONNREFUSED');
+        const parsed = new URL(url);
+        if (parsed.protocol === 'https:' && parsed.hostname === 'bad.example.com') {
+          throw new Error('ECONNREFUSED');
+        }
         return jsonResponse({ data: [{ id: 'model-a' }] });
       }),
     );

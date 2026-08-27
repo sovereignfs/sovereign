@@ -19,6 +19,7 @@ import { RotateCcwIcon } from './rotate-ccw';
 import { SearchIcon } from './search';
 import { CopyIcon } from './copy';
 import { UserIcon } from './user';
+import { UsersIcon } from './users';
 import { UserRoundPlusIcon } from './user-round-plus';
 import { ShieldIcon } from './shield';
 import { LockIcon } from './lock';
@@ -47,6 +48,8 @@ import { FolderIcon } from './folder';
 import { UploadIcon } from './upload';
 import { DownloadIcon } from './download';
 import { ExternalLinkIcon } from './external-link';
+import { ArrowLeftRightIcon } from './arrow-left-right';
+import { SendIcon } from './send';
 import { ListIcon } from './list';
 import { ListOrderedIcon } from './list-ordered';
 import { LinkIcon } from './link';
@@ -106,6 +109,7 @@ export type IconName =
   | 'search'
   | 'copy'
   | 'user'
+  | 'users'
   | 'user-round-plus'
   | 'shield'
   | 'lock'
@@ -134,6 +138,8 @@ export type IconName =
   | 'upload'
   | 'download'
   | 'external-link'
+  | 'arrow-left-right'
+  | 'send'
   | 'list'
   | 'list-ordered'
   | 'link'
@@ -195,6 +201,7 @@ export const ICONS: Record<IconName, IconComponent> = {
   search: SearchIcon,
   copy: CopyIcon,
   user: UserIcon,
+  users: UsersIcon,
   'user-round-plus': UserRoundPlusIcon,
   shield: ShieldIcon,
   lock: LockIcon,
@@ -223,6 +230,8 @@ export const ICONS: Record<IconName, IconComponent> = {
   upload: UploadIcon,
   download: DownloadIcon,
   'external-link': ExternalLinkIcon,
+  'arrow-left-right': ArrowLeftRightIcon,
+  send: SendIcon,
   list: ListIcon,
   'list-ordered': ListOrderedIcon,
   link: LinkIcon,
@@ -282,6 +291,7 @@ export { RotateCcwIcon } from './rotate-ccw';
 export { SearchIcon } from './search';
 export { CopyIcon } from './copy';
 export { UserIcon } from './user';
+export { UsersIcon } from './users';
 export { UserRoundPlusIcon } from './user-round-plus';
 export { ShieldIcon } from './shield';
 export { LockIcon } from './lock';
@@ -310,6 +320,8 @@ export { FolderIcon } from './folder';
 export { UploadIcon } from './upload';
 export { DownloadIcon } from './download';
 export { ExternalLinkIcon } from './external-link';
+export { ArrowLeftRightIcon } from './arrow-left-right';
+export { SendIcon } from './send';
 export { ListIcon } from './list';
 export { ListOrderedIcon } from './list-ordered';
 export { LinkIcon } from './link';

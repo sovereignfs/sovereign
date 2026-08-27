@@ -30,6 +30,7 @@ export const ICON_LIST = [
   'copy',
   // User / security
   'user',
+  'users',
   'user-round-plus',
   'shield',
   'lock',
@@ -59,6 +60,8 @@ export const ICON_LIST = [
   'upload',
   'download',
   'external-link',
+  'arrow-left-right',
+  'send',
   // Rich-text editor formatting (Docs/Plainwrite RichTextEditor toolbar)
   'list',
   'list-ordered',

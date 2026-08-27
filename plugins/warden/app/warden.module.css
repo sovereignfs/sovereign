@@ -15,8 +15,25 @@
 
 .chatHeader {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-3);
+  flex-wrap: wrap;
   padding: var(--sv-space-3) var(--sv-space-4) 0;
+}
+
+.chatHeaderControls {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+}
+
+.incognitoLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-secondary);
 }
 
 .manageProvidersLink {

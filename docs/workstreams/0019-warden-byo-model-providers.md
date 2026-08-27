@@ -1,6 +1,6 @@
 # Workstream 0019 — Warden: bring-your-own model providers
 
-**Status:** ⏳ In Progress — leg 1 done, leg 2 in progress\
+**Status:** ✅ Done — both legs shipped\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -28,7 +28,7 @@ zero new secret-storage mechanism and zero `apps/harness` code changes.
       base URL, API key via `sdk.secrets`), see a merged model list that
       also includes `apps/harness`'s local model when reachable, and
       select a model to chat with.
-- [ ] `22.5` — chat is persisted by default (single conversation per user),
+- [x] `22.5` — chat is persisted by default (single conversation per user),
       an incognito toggle provides a non-persisted scratch mode, request
       limits (including a max-recent-turns context guard) are enforced
       server-side, and the plugin's `disabled: true` is removed.
@@ -52,10 +52,10 @@ registry and request-routing existing.
 
 ## Legs
 
-| Leg | Name                                     | Epic tasks | Epics | Gate? | Done when                                                                                                                                                                        |
-| --- | ---------------------------------------- | ---------- | ----- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Provider registry and model discovery ✅ | 22.4       | 22    | No    | A user can add/edit/delete a provider and see a merged model list (their providers + local `apps/harness` if reachable), with per-provider health/auth-failure states            |
-| 2   | Persisted chat, incognito, and re-enable | 22.5       | 22    | No    | Chat persists by default, incognito works as a non-persisted scratch mode, request/context limits are enforced server-side, and the plugin is re-enabled and verified end to end |
+| Leg | Name                                        | Epic tasks | Epics | Gate? | Done when                                                                                                                                                                        |
+| --- | ------------------------------------------- | ---------- | ----- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Provider registry and model discovery ✅    | 22.4       | 22    | No    | A user can add/edit/delete a provider and see a merged model list (their providers + local `apps/harness` if reachable), with per-provider health/auth-failure states            |
+| 2   | Persisted chat, incognito, and re-enable ✅ | 22.5       | 22    | No    | Chat persists by default, incognito works as a non-persisted scratch mode, request/context limits are enforced server-side, and the plugin is re-enabled and verified end to end |
 
 Neither leg is marked a gate — unlike workstream 0014's engine benchmark,
 there's no upstream unknown here that could redirect leg 2's scope. Leg 1's
@@ -148,6 +148,33 @@ call, task handoff, or cross-plugin action — same scope-creep tripwire
 workstream 0014 already established; check by trying to find one, not just
 by reading the diff.
 
+**Leg outcome:** `warden_conversation`/`warden_messages` shipped as real
+isolated tables, which required flipping the manifest's `type` from
+`platform` to `sovereign` (the former routes `sdk.db` to the shared,
+unisolated schema) and adding the `repository` field that type requires —
+not anticipated in this leg's original technical notes. Persistence is
+non-blocking: `stream-capture.ts` tees the SSE response so the client stream
+is untouched while a background branch accumulates the full reply and
+writes it once done. Incognito reused the original ephemeral request/
+response shape exactly as planned, and never calls the persistence path.
+Portability wired as planned, deliberately excluding provider connections/
+secrets — `sdk.connections`/`sdk.secrets` have no fallback for calls outside
+a real plugin request (unlike `sdk.db.getClient()`), and the platform's own
+account-deletion cascade already deletes those rows unconditionally for
+every plugin. Found and fixed one real bug while writing tests, not from a
+live report: message timestamps used second-precision `Date.now()`, making
+same-second messages sort ambiguously — switched to millisecond precision.
+Verified end to end in a live browser session against a self-hosted
+OpenAI-compatible mock HTTP server (bound to a real LAN address, since
+`url-safety.ts` correctly blocks `localhost`) — confirmed persistence across
+a full page reload, context correctly built from prior history, and
+incognito leaving zero trace after toggling off or reloading. **Not
+verified against an actual hosted vendor** (OpenRouter, etc.) — no test
+credentials were available this session; the mock exercises the identical
+code path a real vendor would hit, but vendor-specific response quirks are
+unconfirmed. `disabled: true` removed as the final step. Full detail in the
+epic file's task 22.5 completion note.
+
 ## Risks
 
 - **First real consumer of `sdk.secrets` for third-party billing
@@ -180,7 +207,8 @@ action in leg 2, not a foregone conclusion.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                           |
-| ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft, sequencing RFC 0063's second rewrite (bring-your-own model providers, persisted chat, incognito) into two legs                                                                                                                                                    |
-| 0.2     | August 2026 | Leg 1 (task 22.4) done — provider registry and model discovery shipped on `sdk.connections`/`sdk.secrets` with no new DB table (superseding the original `warden_providers` plan), plus an SSRF guard for user-supplied provider URLs. Verified live end to end. Leg 2 unblocked |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft, sequencing RFC 0063's second rewrite (bring-your-own model providers, persisted chat, incognito) into two legs                                                                                                                                                                                                                                                                           |
+| 0.2     | August 2026 | Leg 1 (task 22.4) done — provider registry and model discovery shipped on `sdk.connections`/`sdk.secrets` with no new DB table (superseding the original `warden_providers` plan), plus an SSRF guard for user-supplied provider URLs. Verified live end to end. Leg 2 unblocked                                                                                                                        |
+| 0.3     | August 2026 | Leg 2 (task 22.5) done — persisted single-threaded chat, incognito scratch mode, and portability hooks shipped on new isolated `warden_conversation`/`warden_messages` tables (manifest `type` changed `platform` → `sovereign`). Verified live end to end against a self-hosted mock provider (not an actual hosted vendor — no test credentials available). `disabled: true` removed; workstream done |

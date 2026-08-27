@@ -1224,7 +1224,7 @@ title-rendering fix; no public API change.
 
 ---
 
-#### 🚧 9.25 — Plugin-owned page padding: `PageContainer` gains the gutter, the shell gives it up
+#### ✅ 9.25 — Plugin-owned page padding: `PageContainer` gains the gutter, the shell gives it up
 
 **Goal:** Move the plugin content gutter out of the runtime shell and into
 `PageContainer`, so a plugin's page inset is declared in the plugin's own

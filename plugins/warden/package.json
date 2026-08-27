@@ -9,7 +9,8 @@
     "drizzle-orm": "^0.45.2",
     "next": "catalog:",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "unpdf": "^1.8.1"
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",

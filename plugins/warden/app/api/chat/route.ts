@@ -1,11 +1,22 @@
 import { NextResponse } from 'next/server';
 import { NotAuthenticatedError, sdk } from '@sovereignfs/sdk';
+import { composeDocumentContent, processAttachment } from '../../_lib/attachments';
 import { appendMessage, getRecentMessagesForContext } from '../../_lib/conversations';
-import { requestHarnessChat, type ChatMessage } from '../../_lib/harness-client';
-import { MAX_INPUT_CHARS, MAX_OUTPUT_TOKENS, MAX_RECENT_TURNS } from '../../_lib/limits';
+import {
+  requestHarnessChat,
+  type ChatMessage,
+  type ChatMessageContentPart,
+} from '../../_lib/harness-client';
+import {
+  describeImageForHistory,
+  MAX_INPUT_CHARS,
+  MAX_OUTPUT_TOKENS,
+  MAX_RECENT_TURNS,
+} from '../../_lib/limits';
 import { getProviderApiKey, listProviders } from '../../_lib/providers';
-import { requestProviderChat } from '../../_lib/provider-chat';
+import { requestProviderChat, type ProviderChatResult } from '../../_lib/provider-chat';
 import { teeAndCapture } from '../../_lib/stream-capture';
+import type { HarnessChatResult } from '../../_lib/harness-client';
 
 /**
  * Warden's chat completion endpoint (RFC 0063 §4/§5, epic tasks 22.3-22.5).
@@ -14,18 +25,32 @@ import { teeAndCapture } from '../../_lib/stream-capture';
  * explicitly (`docs/architecture-rules.md`: middleware path gating alone
  * is not enough).
  *
- * Two request shapes, both requiring `modelKey` (`'local'`, or
+ * Deliberately no `export const runtime = 'edge'` here, and never add one:
+ * `unpdf`'s PDF extraction (`attachments.ts`) needs the Node runtime, and
+ * `request.formData()` for a multi-megabyte attachment needs it too. This
+ * route gets Node by default today — keep it that way.
+ *
+ * Three request shapes, all requiring `modelKey` (`'local'`, or
  * `<connectionId>:<modelId>` from `discoverModels()`):
  *
- * - **Persisted (default):** `{ modelKey, content }` — the new user
+ * - **Persisted (default):** JSON `{ modelKey, content }` — the new user
  *   message only. The server is the source of truth for history: it loads
  *   the last `MAX_RECENT_TURNS` from `warden_messages`, appends the user's
  *   message, and persists the assistant's reply once streaming completes
  *   (via `teeAndCapture` — the client is never blocked on this).
- * - **Incognito:** `{ modelKey, incognito: true, messages }` — the
+ * - **Incognito:** JSON `{ modelKey, incognito: true, messages }` — the
  *   client's own scratch transcript so far, exactly like the original
- *   phase-1 ephemeral design (`harness-client.ts`'s shape, unchanged nothing
- *   is ever written to `warden_messages`.
+ *   phase-1 ephemeral design. Never combined with an attachment — the
+ *   client hides/disables the attach control while incognito is on, and
+ *   this route rejects the combination defensively.
+ * - **Persisted + attachment:** `multipart/form-data` with `modelKey`,
+ *   `content`, and a `file` field (an image or a PDF/text document).
+ *   Images are sent to the model as multimodal content for this one turn
+ *   only and are never persisted — history shows a text placeholder
+ *   instead (`describeImageForHistory`). Documents are extracted to plain
+ *   text server-side and folded into the message as ordinary text, so they
+ *   work identically to a persisted-mode text message from that point on
+ *   (no gating, no special persistence handling).
  *
  * On success this is a transparent proxy either way: both the local
  * (`apps/harness`) and external-provider paths already produce the same
@@ -76,84 +101,91 @@ async function resolveModelSelection(modelKey: string): Promise<ModelSelection> 
   return { kind: 'provider', providerId, model, baseUrl: provider.baseUrl, apiKey };
 }
 
-export async function POST(request: Request): Promise<Response> {
-  let session: Awaited<ReturnType<typeof sdk.auth.requireSession>>;
-  try {
-    session = await sdk.auth.requireSession();
-  } catch (error) {
-    if (error instanceof NotAuthenticatedError) {
-      return NextResponse.json(
-        { status: 'error', message: 'You must be signed in to use Warden.' },
-        { status: 401 },
-      );
+/** A discriminated union (not a flat interface) so the compiler proves
+ *  `messages` and `userTypedText`/`file` can never be confused for one
+ *  another — the incognito path never carries an attachment, by type, not
+ *  just by convention. */
+type ParsedRequest = { modelKey: string } & (
+  | { incognito: true; messages: ChatMessage[] }
+  | { incognito: false; userTypedText: string; file: File | null }
+);
+
+type ParseResult = { ok: true; parsed: ParsedRequest } | { ok: false; response: Response };
+
+function badRequest(message: string): Response {
+  return NextResponse.json({ status: 'error', message }, { status: 400 });
+}
+
+async function parseRequest(request: Request): Promise<ParseResult> {
+  const contentType = request.headers.get('content-type') ?? '';
+
+  if (contentType.toLowerCase().includes('multipart/form-data')) {
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return { ok: false, response: badRequest('Could not read the uploaded file.') };
     }
-    throw error;
+    if (formData.get('incognito')) {
+      return {
+        ok: false,
+        response: badRequest('Attachments are not available in incognito mode.'),
+      };
+    }
+    const file = formData.get('file');
+    if (!(file instanceof File)) {
+      return { ok: false, response: badRequest('An attachment is required for this request.') };
+    }
+    const modelKeyField = formData.get('modelKey');
+    return {
+      ok: true,
+      parsed: {
+        modelKey: typeof modelKeyField === 'string' ? modelKeyField : '',
+        incognito: false,
+        userTypedText: String(formData.get('content') ?? '').trim(),
+        file,
+      },
+    };
   }
 
   let body: ChatRequestBody;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json(
-      { status: 'error', message: 'Request body must be valid JSON.' },
-      { status: 400 },
-    );
+    return { ok: false, response: badRequest('Request body must be valid JSON.') };
   }
 
   const modelKey = typeof body.modelKey === 'string' ? body.modelKey : '';
-  if (!modelKey) {
-    return NextResponse.json(
-      { status: 'error', message: 'A model selection is required.' },
-      { status: 400 },
-    );
-  }
 
-  const incognito = body.incognito === true;
-  let messages: ChatMessage[];
-  let userContent: string | null = null;
-
-  if (incognito) {
+  if (body.incognito === true) {
     if (!isValidMessages(body.messages)) {
-      return NextResponse.json(
-        { status: 'error', message: 'messages must be a non-empty array of {role, content}.' },
-        { status: 400 },
-      );
+      return {
+        ok: false,
+        response: badRequest('messages must be a non-empty array of {role, content}.'),
+      };
     }
-    messages = body.messages;
-  } else {
-    const content = typeof body.content === 'string' ? body.content.trim() : '';
-    if (!content) {
-      return NextResponse.json(
-        { status: 'error', message: 'A message is required.' },
-        { status: 400 },
-      );
-    }
-    userContent = content;
-    const recent = await getRecentMessagesForContext(
-      session.user.id,
-      session.user.tenantId,
-      MAX_RECENT_TURNS,
-    );
-    messages = [
-      ...recent.map((m) => ({ role: m.role, content: m.content })),
-      { role: 'user', content },
-    ];
+    return { ok: true, parsed: { modelKey, incognito: true, messages: body.messages } };
   }
 
-  const latestContent = messages[messages.length - 1]?.content ?? '';
-  if (latestContent.length > MAX_INPUT_CHARS) {
-    return NextResponse.json(
-      { status: 'error', message: `Messages are limited to ${MAX_INPUT_CHARS} characters.` },
-      { status: 400 },
-    );
-  }
+  const content = typeof body.content === 'string' ? body.content.trim() : '';
+  return { ok: true, parsed: { modelKey, incognito: false, userTypedText: content, file: null } };
+}
 
-  const selection = await resolveModelSelection(modelKey);
-  if (selection.kind === 'invalid') {
-    return NextResponse.json({ status: 'error', message: selection.message }, { status: 400 });
-  }
-
-  const result =
+/** Shared dispatch + SSE/error-mapping tail for both request shapes.
+ *  `persist` is `null` for incognito — nothing is ever written to
+ *  `warden_messages` in that mode. */
+async function dispatchAndRespond(
+  selection: Exclude<ModelSelection, { kind: 'invalid' }>,
+  messages: ChatMessage[],
+  persist: {
+    userId: string;
+    tenantId: string;
+    providerId: string | null;
+    model: string;
+    contentForPersistence: string;
+  } | null,
+): Promise<Response> {
+  const result: HarnessChatResult | ProviderChatResult =
     selection.kind === 'local'
       ? await requestHarnessChat(messages, MAX_OUTPUT_TOKENS)
       : await requestProviderChat({
@@ -173,27 +205,25 @@ export async function POST(request: Request): Promise<Response> {
       },
     });
 
-    if (!incognito && userContent !== null) {
-      const providerId = selection.kind === 'provider' ? selection.providerId : null;
-      const model = selection.kind === 'provider' ? selection.model : 'local';
+    if (persist) {
       // Persist the user's side immediately — it's already known, no need
       // to wait for the reply. The assistant's side is persisted once
       // `teeAndCapture` finishes accumulating it; the client is never
       // blocked on either write.
-      void appendMessage(session.user.id, session.user.tenantId, {
+      void appendMessage(persist.userId, persist.tenantId, {
         role: 'user',
-        content: userContent,
-        providerId,
-        model,
+        content: persist.contentForPersistence,
+        providerId: persist.providerId,
+        model: persist.model,
       }).catch((error) => console.error('[warden] failed to persist user message:', error));
 
       response = teeAndCapture(response, ({ text }) => {
         if (!text) return;
-        void appendMessage(session.user.id, session.user.tenantId, {
+        void appendMessage(persist.userId, persist.tenantId, {
           role: 'assistant',
           content: text,
-          providerId,
-          model,
+          providerId: persist.providerId,
+          model: persist.model,
         }).catch((error) => console.error('[warden] failed to persist assistant message:', error));
       });
     }
@@ -218,4 +248,92 @@ export async function POST(request: Request): Promise<Response> {
     case 'error':
       return NextResponse.json({ status: 'error', message: result.message }, { status: 502 });
   }
+}
+
+export async function POST(request: Request): Promise<Response> {
+  let session: Awaited<ReturnType<typeof sdk.auth.requireSession>>;
+  try {
+    session = await sdk.auth.requireSession();
+  } catch (error) {
+    if (error instanceof NotAuthenticatedError) {
+      return NextResponse.json(
+        { status: 'error', message: 'You must be signed in to use Warden.' },
+        { status: 401 },
+      );
+    }
+    throw error;
+  }
+
+  const parseResult = await parseRequest(request);
+  if (!parseResult.ok) return parseResult.response;
+  const parsed = parseResult.parsed;
+
+  if (!parsed.modelKey) return badRequest('A model selection is required.');
+
+  if (parsed.incognito) {
+    const lastContent = parsed.messages[parsed.messages.length - 1]?.content;
+    if (typeof lastContent === 'string' && lastContent.length > MAX_INPUT_CHARS) {
+      return badRequest(`Messages are limited to ${MAX_INPUT_CHARS} characters.`);
+    }
+
+    const selection = await resolveModelSelection(parsed.modelKey);
+    if (selection.kind === 'invalid') return badRequest(selection.message);
+
+    return dispatchAndRespond(selection, parsed.messages, null);
+  }
+
+  if (!parsed.userTypedText) return badRequest('A message is required.');
+  if (parsed.userTypedText.length > MAX_INPUT_CHARS) {
+    return badRequest(`Messages are limited to ${MAX_INPUT_CHARS} characters.`);
+  }
+
+  const processedAttachment = parsed.file ? await processAttachment(parsed.file) : null;
+  if (processedAttachment && !processedAttachment.ok) {
+    return badRequest(processedAttachment.error);
+  }
+  const attachment = processedAttachment?.ok ? processedAttachment.attachment : null;
+
+  const selection = await resolveModelSelection(parsed.modelKey);
+  if (selection.kind === 'invalid') return badRequest(selection.message);
+
+  if (selection.kind === 'local' && attachment?.kind === 'image') {
+    return badRequest(
+      'The local model is text-only and doesn’t support images. Choose a different model or remove the attachment.',
+    );
+  }
+
+  let contentForModel: string | ChatMessageContentPart[];
+  let contentForPersistence: string;
+
+  if (!attachment) {
+    contentForModel = parsed.userTypedText;
+    contentForPersistence = parsed.userTypedText;
+  } else if (attachment.kind === 'image') {
+    contentForModel = [
+      { type: 'text', text: parsed.userTypedText },
+      { type: 'image_url', image_url: { url: attachment.dataUrl } },
+    ];
+    contentForPersistence = describeImageForHistory(parsed.userTypedText, attachment.filename);
+  } else {
+    contentForModel = composeDocumentContent(parsed.userTypedText, attachment);
+    contentForPersistence = contentForModel;
+  }
+
+  const recent = await getRecentMessagesForContext(
+    session.user.id,
+    session.user.tenantId,
+    MAX_RECENT_TURNS,
+  );
+  const messages: ChatMessage[] = [
+    ...recent.map((m) => ({ role: m.role, content: m.content })),
+    { role: 'user' as const, content: contentForModel },
+  ];
+
+  return dispatchAndRespond(selection, messages, {
+    userId: session.user.id,
+    tenantId: session.user.tenantId,
+    providerId: selection.kind === 'provider' ? selection.providerId : null,
+    model: selection.kind === 'provider' ? selection.model : 'local',
+    contentForPersistence,
+  });
 }

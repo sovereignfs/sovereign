@@ -2,6 +2,7 @@
 
 import { NotAuthenticatedError, sdk } from '@sovereignfs/sdk';
 import { createProvider, deleteProvider, updateProvider } from './_lib/providers';
+import { setModelVisibility } from './_lib/model-visibility';
 import { UnsafeProviderUrlError } from './_lib/url-safety';
 
 /**
@@ -116,6 +117,28 @@ export async function deleteProviderAction(
     return {
       ok: false,
       error: messageFor(error, 'Could not remove this provider.', 'deleteProviderAction'),
+    };
+  }
+}
+
+/**
+ * Called directly (not via `useActionState`) from a `Toggle`'s `onChange` —
+ * there's no form input to preserve on failure here, just a boolean to flip
+ * back if the write fails. Needs the session itself (not just proof one
+ * exists) to scope the visibility row to this user.
+ */
+export async function setModelVisibilityAction(
+  modelKey: string,
+  visible: boolean,
+): Promise<ActionResult> {
+  try {
+    const session = await sdk.auth.requireSession();
+    await setModelVisibility(session.user.id, session.user.tenantId, modelKey, visible);
+    return { ok: true, message: visible ? 'Model shown in chat.' : 'Model hidden from chat.' };
+  } catch (error) {
+    return {
+      ok: false,
+      error: messageFor(error, 'Could not update this model.', 'setModelVisibilityAction'),
     };
   }
 }

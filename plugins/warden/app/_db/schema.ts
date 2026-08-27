@@ -32,5 +32,30 @@ export const wardenMessages = sqliteTable('warden_messages', {
   createdAt: integer('created_at').notNull(),
 });
 
+/**
+ * Per-user model visibility (provider/model curation). Every model key has
+ * a *computed default* — `isVisibleByDefault()` in `model-visibility.ts`
+ * (currently: `'local'` is visible by default, every provider-sourced model
+ * is hidden by default, since a single provider's catalog can easily run
+ * into the hundreds). A row here means "flip this key away from its own
+ * computed default for this user" — for `'local'` a row means hidden, for a
+ * provider model a row means shown. This keeps the table an exceptions-only
+ * table either way: a newly discovered model (a provider just added, or an
+ * existing provider's catalog grew) needs zero bookkeeping, since its
+ * default already applies until a user explicitly overrides it.
+ *
+ * `modelKey` matches `DiscoveredModel.key` from `model-discovery.ts` exactly
+ * (`'local'`, or `${providerId}:${modelId}`) — reusing that format means
+ * overriding never needs to parse or reconstruct a provider/model pair.
+ */
+export const wardenModelVisibilityOverrides = sqliteTable('warden_model_visibility_overrides', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  modelKey: text('model_key').notNull(),
+  createdAt: integer('created_at').notNull(),
+});
+
 export type WardenConversationRow = typeof wardenConversation.$inferSelect;
 export type WardenMessageRow = typeof wardenMessages.$inferSelect;
+export type WardenModelVisibilityOverrideRow = typeof wardenModelVisibilityOverrides.$inferSelect;

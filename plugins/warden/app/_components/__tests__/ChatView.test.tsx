@@ -176,6 +176,24 @@ describe('ChatView — no reachable model', () => {
     fireEvent.change(screen.getByLabelText('Message Warden'), { target: { value: 'hi' } });
     expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', true);
   });
+
+  it('shows "No model reachable" when nothing was discovered at all', () => {
+    renderChatView({ models: [], defaultModelKey: '' });
+    expect(screen.getByText('No model reachable')).toBeDefined();
+  });
+});
+
+describe('ChatView — every model hidden by the user', () => {
+  it('shows a distinct message from "unreachable", pointing at Manage models', () => {
+    renderChatView({ models: [], defaultModelKey: '', allModelsHidden: true });
+    expect(screen.getByText('Turn on a model to get started')).toBeDefined();
+    expect(screen.getAllByText('No models shown').length).toBeGreaterThan(0);
+    expect(screen.queryByText('No model reachable')).toBeNull();
+    // Two "Manage models" links exist in this state: the always-present
+    // header nav link, and the empty-state's own action pointing at the
+    // same place.
+    expect(screen.getAllByRole('link', { name: 'Manage models' }).length).toBe(2);
+  });
 });
 
 describe('ChatView — incognito', () => {
@@ -252,6 +270,130 @@ describe('ChatView — incognito', () => {
     fireEvent.click(toggle); // off
     fireEvent.click(toggle); // on again
     expect(screen.queryByText('first incognito message')).toBeNull();
+  });
+});
+
+describe('ChatView — attachments', () => {
+  function fileInput(container: HTMLElement): HTMLInputElement {
+    const input = container.querySelector('input[type="file"]');
+    if (!input) throw new Error('expected a file input');
+    return input as HTMLInputElement;
+  }
+
+  function selectFile(container: HTMLElement, file: File) {
+    fireEvent.change(fileInput(container), { target: { files: [file] } });
+  }
+
+  it('attach button is disabled with an explanatory title when Incognito is on', () => {
+    renderChatView();
+    const attachButton = screen.getByRole('button', { name: 'Attach a file' });
+    expect(attachButton).toHaveProperty('disabled', false);
+
+    fireEvent.click(
+      screen.getByRole('switch', { name: "Incognito — don't save this conversation" }),
+    );
+
+    expect(attachButton).toHaveProperty('disabled', true);
+    expect(attachButton.title).toBe('Attachments are not available in incognito mode');
+  });
+
+  it('rejects an oversized file with a visible error, no chip added', () => {
+    const { container } = renderChatView();
+    const oversized = new File([new Uint8Array(9 * 1024 * 1024)], 'big.png', {
+      type: 'image/png',
+    });
+
+    selectFile(container, oversized);
+
+    expect(screen.getByText('Attachments are limited to 8 MB.')).toBeDefined();
+    expect(screen.queryByText('big.png')).toBeNull();
+  });
+
+  it('rejects an unsupported file type', () => {
+    const { container } = renderChatView();
+    const zip = new File([new Uint8Array([1])], 'archive.zip', { type: 'application/zip' });
+
+    selectFile(container, zip);
+
+    expect(
+      screen.getByText('That file type isn’t supported. Try an image, a PDF, or a text file.'),
+    ).toBeDefined();
+  });
+
+  it('rejects an image while the local model is selected, without attempting a fetch', () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const { container } = renderChatView({ defaultModelKey: 'local' });
+    const image = new File([new Uint8Array([1])], 'photo.png', { type: 'image/png' });
+
+    selectFile(container, image);
+
+    expect(
+      screen.getByText(
+        'The local model is text-only and doesn’t support images. Choose a different model first.',
+      ),
+    ).toBeDefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('renders an attachment chip for a valid file, removable via its own button', () => {
+    const { container } = renderChatView({ defaultModelKey: 'conn-1:gpt-4o-mini' });
+    const image = new File([new Uint8Array([1])], 'photo.png', { type: 'image/png' });
+
+    selectFile(container, image);
+    expect(screen.getByText('photo.png')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove attachment' }));
+    expect(screen.queryByText('photo.png')).toBeNull();
+    expect(fileInput(container).value).toBe('');
+  });
+
+  it('sends an attachment as FormData, not JSON, with no explicit content-type header', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse([{ type: 'done' }]));
+    vi.stubGlobal('fetch', fetchMock);
+    const { container } = renderChatView({ defaultModelKey: 'conn-1:gpt-4o-mini' });
+    const image = new File([new Uint8Array([1])], 'photo.png', { type: 'image/png' });
+
+    selectFile(container, image);
+    sendMessage('what is this');
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.body).toBeInstanceOf(FormData);
+    expect(init.headers).toBeUndefined();
+    expect(init.body.get('modelKey')).toBe('conn-1:gpt-4o-mini');
+    expect(init.body.get('content')).toBe('what is this');
+    expect(init.body.get('file')).toBe(image);
+  });
+
+  it('clears the attachment chip after sending', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(sseResponse([{ type: 'done' }])));
+    const { container } = renderChatView({ defaultModelKey: 'conn-1:gpt-4o-mini' });
+    const image = new File([new Uint8Array([1])], 'photo.png', { type: 'image/png' });
+
+    selectFile(container, image);
+    sendMessage('what is this');
+
+    await waitFor(() => expect(screen.queryByText('photo.png')).toBeNull());
+  });
+
+  it('Send stays disabled when an attachment is present but the textarea is empty', () => {
+    const { container } = renderChatView({ defaultModelKey: 'conn-1:gpt-4o-mini' });
+    const image = new File([new Uint8Array([1])], 'photo.png', { type: 'image/png' });
+
+    selectFile(container, image);
+
+    expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', true);
+  });
+
+  it('renders the disabled "Soon" Web-search toggle as a no-op', () => {
+    renderChatView();
+    const toggle = screen.getByRole('switch', { name: 'Web search (coming soon)' });
+    expect(toggle).toHaveProperty('disabled', true);
+    expect(screen.getByText('Soon')).toBeDefined();
+
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
   });
 });
 

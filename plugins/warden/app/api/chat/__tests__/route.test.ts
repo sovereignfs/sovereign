@@ -34,7 +34,33 @@ vi.mock('../../../_lib/conversations', () => ({
   getRecentMessagesForContext: (...args: unknown[]) => getRecentMessagesForContext(...args),
 }));
 
+const processAttachment = vi.fn();
+vi.mock('../../../_lib/attachments', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../_lib/attachments')>();
+  return {
+    ...actual,
+    // composeDocumentContent stays real (pure, already unit-tested) —
+    // only the unpdf/base64-touching processAttachment is mocked here.
+    processAttachment: (...args: unknown[]) => processAttachment(...args),
+  };
+});
+
 const { POST } = await import('../route');
+
+function multipartRequest(fields: Record<string, string>, file?: File): Request {
+  const formData = new FormData();
+  for (const [key, value] of Object.entries(fields)) formData.set(key, value);
+  if (file) formData.set('file', file);
+  return new Request('http://localhost/warden/api/chat', { method: 'POST', body: formData });
+}
+
+function fakeImageFile(name = 'photo.png'): File {
+  return new File([new Uint8Array([1, 2, 3])], name, { type: 'image/png' });
+}
+
+function fakeDocFile(name = 'notes.txt'): File {
+  return new File([new Uint8Array([1, 2, 3])], name, { type: 'text/plain' });
+}
 
 function chatRequest(body: unknown): Request {
   return new Request('http://localhost/warden/api/chat', {
@@ -297,5 +323,167 @@ describe('POST /warden/api/chat — error mapping', () => {
     requestHarnessChat.mockResolvedValue({ kind: 'error', message: 'boom' });
     const res = await POST(chatRequest({ modelKey: 'local', content: 'hi' }));
     expect(res.status).toBe(502);
+  });
+});
+
+describe('POST /warden/api/chat — file attachments', () => {
+  it('rejects an image attached with the local model, before dispatching anywhere', async () => {
+    processAttachment.mockResolvedValue({
+      ok: true,
+      attachment: { kind: 'image', filename: 'photo.png', dataUrl: 'data:image/png;base64,AQID' },
+    });
+
+    const res = await POST(
+      multipartRequest({ modelKey: 'local', content: 'what is this' }, fakeImageFile()),
+    );
+
+    expect(res.status).toBe(400);
+    expect(requestHarnessChat).not.toHaveBeenCalled();
+    expect(requestProviderChat).not.toHaveBeenCalled();
+  });
+
+  it('sends an image to an external provider as multimodal content, persisting a placeholder', async () => {
+    listProviders.mockResolvedValue([
+      { id: 'conn-1', label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
+    ]);
+    getProviderApiKey.mockResolvedValue('sk-1');
+    processAttachment.mockResolvedValue({
+      ok: true,
+      attachment: { kind: 'image', filename: 'photo.png', dataUrl: 'data:image/png;base64,AQID' },
+    });
+    requestProviderChat.mockResolvedValue(
+      streamResult([{ type: 'token', text: 'A cat.' }, { type: 'done' }]),
+    );
+
+    const res = await POST(
+      multipartRequest({ modelKey: 'conn-1:gpt-4o', content: 'what is this' }, fakeImageFile()),
+    );
+    await drain(res);
+    await waitForBackgroundPersist();
+
+    expect(requestProviderChat).toHaveBeenCalledWith({
+      baseUrl: 'https://openrouter.ai/api/v1',
+      apiKey: 'sk-1',
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'what is this' },
+            { type: 'image_url', image_url: { url: 'data:image/png;base64,AQID' } },
+          ],
+        },
+      ],
+    });
+    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', {
+      role: 'user',
+      content: 'what is this\n\n[Image attached: photo.png]',
+      providerId: 'conn-1',
+      model: 'gpt-4o',
+    });
+  });
+
+  it('composes a document attachment into plain text, identical for the model and for persistence', async () => {
+    listProviders.mockResolvedValue([
+      { id: 'conn-1', label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
+    ]);
+    getProviderApiKey.mockResolvedValue('sk-1');
+    processAttachment.mockResolvedValue({
+      ok: true,
+      attachment: {
+        kind: 'document',
+        filename: 'notes.txt',
+        extractedText: 'Line one.',
+        truncated: false,
+      },
+    });
+    requestProviderChat.mockResolvedValue(streamResult([{ type: 'done' }]));
+
+    const res = await POST(
+      multipartRequest({ modelKey: 'conn-1:gpt-4o', content: 'summarize' }, fakeDocFile()),
+    );
+    await drain(res);
+    await waitForBackgroundPersist();
+
+    const expectedContent = 'summarize\n\n--- Attached: notes.txt ---\nLine one.';
+    expect(requestProviderChat).toHaveBeenCalledWith(
+      expect.objectContaining({ messages: [{ role: 'user', content: expectedContent }] }),
+    );
+    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', {
+      role: 'user',
+      content: expectedContent,
+      providerId: 'conn-1',
+      model: 'gpt-4o',
+    });
+  });
+
+  it('a document attachment works with the local model too (no vision gating)', async () => {
+    processAttachment.mockResolvedValue({
+      ok: true,
+      attachment: {
+        kind: 'document',
+        filename: 'notes.txt',
+        extractedText: 'Some notes.',
+        truncated: false,
+      },
+    });
+    requestHarnessChat.mockResolvedValue(streamResult([{ type: 'done' }]));
+
+    const res = await POST(
+      multipartRequest({ modelKey: 'local', content: 'summarize' }, fakeDocFile()),
+    );
+
+    expect(res.status).toBe(200);
+    expect(requestHarnessChat).toHaveBeenCalled();
+  });
+
+  it('rejects an attachment combined with incognito', async () => {
+    const formData = new FormData();
+    formData.set('modelKey', 'local');
+    formData.set('content', 'hi');
+    formData.set('incognito', 'true');
+    formData.set('file', fakeImageFile());
+    const res = await POST(
+      new Request('http://localhost/warden/api/chat', { method: 'POST', body: formData }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(requestHarnessChat).not.toHaveBeenCalled();
+    expect(requestProviderChat).not.toHaveBeenCalled();
+  });
+
+  it('rejects a multipart request with no file field', async () => {
+    const res = await POST(multipartRequest({ modelKey: 'local', content: 'hi' }));
+    expect(res.status).toBe(400);
+  });
+
+  it("surfaces processAttachment's rejection before any provider/DB call", async () => {
+    processAttachment.mockResolvedValue({ ok: false, error: 'Attachments are limited to 8 MB.' });
+
+    const res = await POST(multipartRequest({ modelKey: 'local', content: 'hi' }, fakeImageFile()));
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).message).toBe('Attachments are limited to 8 MB.');
+    expect(requestHarnessChat).not.toHaveBeenCalled();
+    expect(appendMessage).not.toHaveBeenCalled();
+  });
+
+  it('checks MAX_INPUT_CHARS against the caption, not the composed/extracted content', async () => {
+    processAttachment.mockResolvedValue({
+      ok: true,
+      attachment: {
+        kind: 'document',
+        filename: 'huge.txt',
+        extractedText: 'x'.repeat(19_000), // well past MAX_INPUT_CHARS (4000) on its own
+        truncated: false,
+      },
+    });
+    requestHarnessChat.mockResolvedValue(streamResult([{ type: 'done' }]));
+
+    const res = await POST(
+      multipartRequest({ modelKey: 'local', content: 'short caption' }, fakeDocFile()),
+    );
+
+    expect(res.status).toBe(200);
   });
 });

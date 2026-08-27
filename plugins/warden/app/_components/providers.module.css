@@ -4,6 +4,12 @@
   gap: var(--sv-space-6);
 }
 
+.headerLink {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-secondary);
+  white-space: nowrap;
+}
+
 .localStatus {
   display: flex;
   align-items: center;

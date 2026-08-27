@@ -111,21 +111,55 @@ describe('createProviderAction', () => {
 });
 
 describe('updateProviderAction', () => {
-  it('is bindable to an id and passes only the provided fields through', async () => {
+  it('is bindable to an id and leaves the API key untouched when left blank', async () => {
     updateProvider.mockResolvedValue({ label: 'Renamed' });
     const bound = updateProviderAction.bind(null, 'conn-1');
-    const result = await bound(null, formData({ label: 'Renamed' }));
+    const result = await bound(
+      null,
+      formData({ label: 'Renamed', baseUrl: 'https://x.example.com' }),
+    );
     expect(updateProvider).toHaveBeenCalledWith('conn-1', {
       label: 'Renamed',
-      baseUrl: undefined,
+      baseUrl: 'https://x.example.com',
       apiKey: undefined,
     });
     expect(result).toEqual({ ok: true, message: 'Renamed was updated.' });
   });
 
+  it.each([
+    ['label', { baseUrl: 'https://x.example.com' }, 'Give this provider a name.'],
+    ['baseUrl', { label: 'X' }, 'A base URL is required.'],
+  ])(
+    'rejects a cleared %s instead of silently keeping the old value',
+    async (_field, fields, expectedError) => {
+      const bound = updateProviderAction.bind(null, 'conn-1');
+      const result = await bound(null, formData(fields));
+      expect(result).toEqual({ ok: false, error: expectedError });
+      expect(updateProvider).not.toHaveBeenCalled();
+    },
+  );
+
+  it('passes a non-blank API key through unchanged', async () => {
+    updateProvider.mockResolvedValue({ label: 'Renamed' });
+    const bound = updateProviderAction.bind(null, 'conn-1');
+    await bound(
+      null,
+      formData({ label: 'Renamed', baseUrl: 'https://x.example.com', apiKey: 'sk-new' }),
+    );
+    expect(updateProvider).toHaveBeenCalledWith('conn-1', {
+      label: 'Renamed',
+      baseUrl: 'https://x.example.com',
+      apiKey: 'sk-new',
+    });
+  });
+
   it('surfaces "Provider not found." for a stale/foreign id', async () => {
     updateProvider.mockRejectedValue(new Error('Provider not found.'));
-    const result = await updateProviderAction('missing', null, formData({ label: 'X' }));
+    const result = await updateProviderAction(
+      'missing',
+      null,
+      formData({ label: 'X', baseUrl: 'https://x.example.com' }),
+    );
     expect(result).toEqual({ ok: false, error: 'Provider not found.' });
   });
 });

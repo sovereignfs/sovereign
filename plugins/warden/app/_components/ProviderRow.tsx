@@ -1,6 +1,7 @@
 'use client';
 
 import { startTransition, useActionState, useEffect, useState } from 'react';
+import type { ChangeEvent } from 'react';
 import {
   Button,
   Card,
@@ -47,7 +48,25 @@ export function ProviderRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // Controlled, not `defaultValue`-driven: React resets a `<form
+  // action={...}>`'s uncontrolled fields after every action call that
+  // doesn't throw, including one that resolves with a validation error —
+  // an uncontrolled field would revert to `defaultValue` (the pre-edit
+  // value) the moment any field failed validation, silently discarding the
+  // in-progress edit. Re-seeded from `provider` in `startEditing`, not a
+  // `useState` initializer, so re-opening edit after a server refresh
+  // reflects the current value rather than a stale one from a prior session.
+  const [label, setLabel] = useState(provider.label);
+  const [baseUrl, setBaseUrl] = useState(provider.baseUrl);
+  const [apiKey, setApiKey] = useState('');
   const toast = useToast();
+
+  function startEditing() {
+    setLabel(provider.label);
+    setBaseUrl(provider.baseUrl);
+    setApiKey('');
+    setEditing(true);
+  }
 
   const [updateState, updateAction, updatePending] = useActionState<ActionResult | null, FormData>(
     updateProviderAction.bind(null, provider.id),
@@ -81,11 +100,25 @@ export function ProviderRow({
       <Card padding="md" className={styles.providerCard}>
         <form action={updateAction} className={styles.form}>
           <FormField label="Name" id={`label-${provider.id}`}>
-            {(field) => <Input {...field} name="label" type="text" defaultValue={provider.label} />}
+            {(field) => (
+              <Input
+                {...field}
+                name="label"
+                type="text"
+                value={label}
+                onChange={(event: ChangeEvent<HTMLInputElement>) => setLabel(event.target.value)}
+              />
+            )}
           </FormField>
           <FormField label="Base URL" id={`baseUrl-${provider.id}`}>
             {(field) => (
-              <Input {...field} name="baseUrl" type="text" defaultValue={provider.baseUrl} />
+              <Input
+                {...field}
+                name="baseUrl"
+                type="text"
+                value={baseUrl}
+                onChange={(event: ChangeEvent<HTMLInputElement>) => setBaseUrl(event.target.value)}
+              />
             )}
           </FormField>
           <FormField
@@ -100,6 +133,8 @@ export function ProviderRow({
                 type="password"
                 autoComplete="new-password"
                 placeholder="Configured — leave blank to keep"
+                value={apiKey}
+                onChange={(event: ChangeEvent<HTMLInputElement>) => setApiKey(event.target.value)}
               />
             )}
           </FormField>
@@ -127,7 +162,7 @@ export function ProviderRow({
         <StatusBadge status={badge.status}>{badge.label}</StatusBadge>
       </div>
       <div className={styles.providerActions}>
-        <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
+        <Button size="sm" variant="secondary" onClick={startEditing}>
           Edit
         </Button>
         <Button size="sm" variant="secondary" onClick={() => setConfirmingDelete(true)}>

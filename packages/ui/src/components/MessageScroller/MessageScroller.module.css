@@ -25,6 +25,17 @@
   border-radius: var(--sv-radius-full);
 }
 
+/* Bottom-anchors a conversation that doesn't fill the container: this
+   leading item claims all leftover main-axis space, pushing the real
+   messages down to the bottom edge. Once messages overflow, it has no
+   free space left to grow into and collapses to 0 — normal top-to-bottom
+   scrolling is unaffected either way, since `justify-content` never
+   changes from its default `flex-start`. */
+.spacer {
+  flex: 1 0 0%;
+  min-height: 0;
+}
+
 .jumpButton {
   position: absolute;
   bottom: var(--sv-space-3);

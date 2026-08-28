@@ -1064,6 +1064,27 @@ follows the documented `DeviceOnlyGate`/`DeviceStorageKeyGate` pattern — it
 now correctly lets users onto a `device-only` plugin from a capable browser
 tab instead of only from a native shell.
 
+### `@sovereignfs/sdk` 1.46.0 → 1.47.0
+
+**`sdk.env.get()` now works from a job/schedule handler.** Previously, any
+`sdk.env.get()` call made from an `sdk.jobs`/`sdk.schedules` handler (rather
+than a real Next.js request) threw, since `env.get()` called `next/headers()`
+directly with no fallback for a background invocation — the identical gap
+`1.46.0` closed for `sdk.storage`, just never generalized to `env`. Found
+implementing `sovereign-plugin-travellog`'s T.20 (RFC 0018/0046).
+
+**Breaking for host implementers only** — plugin authors calling
+`sdk.env.get(key)` see no signature or return-type change. `SdkHost` gains a
+new required `env.get(key, pluginId)` member: a custom host implementation
+that constructs a `provideHost()` argument without an `env` property will
+fail to type-check. The platform's own `runtime/src/sdk-host.ts` already
+implements it, falling back through the same portability/background-plugin
+`AsyncLocalStorage` contexts `sdk.db.getClient()`/`sdk.storage` use. Unlike
+`sdk.storage`, `sdk.env.get()` still returns `null` (never throws) when no
+plugin id is resolvable from any of those sources — its existing "outside a
+plugin route context → `null`" contract is preserved, just with two more
+sources checked before giving up.
+
 ### `@sovereignfs/sdk` 1.45.0 → 1.46.0
 
 **`sdk.storage` now works from a job/schedule handler.** Previously, any
@@ -1366,6 +1387,7 @@ the release you are running.
 | 0.90.0          | Notification Center read/manage SDK surface — `sdk.notifications.list/markRead/markAllRead/dismiss/dismissAll` (RFC 0015 extension), gated by the existing `notifications:send` permission |
 | 0.91.0          | Instance-level theme preset selection — `instanceThemePreset`, `instance-style.ts` delivery (RFC 0095), extending RFC 0094's `packages/ui` theme-preset mechanism                          |
 | 0.91.1          | `sdk.storage` background-invocation fix — `resolveStorageContext()` falls back to the background-plugin context for job/schedule handlers (`@sovereignfs/sdk` 1.46.0)                      |
+| 0.91.2          | `sdk.env.get()` background-invocation fix — `resolveEnvPluginId()` falls back to the same background-plugin context for job/schedule handlers (`@sovereignfs/sdk` 1.47.0)                  |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

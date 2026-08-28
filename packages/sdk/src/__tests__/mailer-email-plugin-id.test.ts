@@ -24,6 +24,11 @@ describe('sdk.mailer / sdk.email — plugin ID resolution (RFC 0062)', () => {
           return {};
         },
       },
+      env: {
+        async get() {
+          return null;
+        },
+      },
       mailer: {
         async send(_options, pluginId) {
           capturedMailerPluginId = pluginId;

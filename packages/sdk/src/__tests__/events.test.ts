@@ -24,6 +24,11 @@ describe('sdk.events.publish — header resolution', () => {
           return {};
         },
       },
+      env: {
+        async get() {
+          return null;
+        },
+      },
       mailer: {
         async send() {
           /* no-op */

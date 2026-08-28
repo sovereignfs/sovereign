@@ -191,13 +191,12 @@ genuinely open, unrelated to whether or how this hook gets built:
 
 ## Next steps
 
-Ready to graduate into an RFC extending RFC 0033 (an amendment, not a rewrite —
-RFC 0033 stays "Implemented" for what it already covers). With the three gating
-questions decided, the RFC's job is to pin down the concrete wire-level details the
-Decision section above sketches but doesn't fully specify: the exact
-`DeletionCheckContext`/`DeletionCheckResult` shapes, the manifest permission's exact
-name and scope, the deletion-check route's URL convention and its own
-authentication (the runtime calling into a plugin, not a user calling in), the
-audit-log schema addition for a logged override, and the single shared call site
-both deletion routes use. Tally's own `SPEC.md` §7 continues to document "warn,
-don't block" as the only buildable-today mitigation until this RFC ships and lands.
+Graduated: [RFC 0096](../rfcs/0096-plugin-deletion-veto-hook.md) (Draft, August 2026)
+designs the hook precisely — request/response shape, the single shared call site both
+deletion routes use (replacing today's duplicated sole-owner check), and the
+manifest-declared + route-based mechanism decision 3 settled on, including the
+runtime→plugin authentication question that surfaced only while drafting that RFC (see
+its own "Proposed design" → "Authenticating the runtime's call" and "Security
+considerations"). Tally's own `SPEC.md` §7 can now design against a concrete SDK
+surface once RFC 0096 is accepted and implemented; until then it continues to document
+"warn, don't block" as the only buildable-today mitigation.

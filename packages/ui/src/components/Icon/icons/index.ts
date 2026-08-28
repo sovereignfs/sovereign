@@ -65,6 +65,9 @@ import { FolderClosedIcon } from './folder-closed';
 import { FileTextIcon } from './file-text';
 import { FolderOpenIcon } from './folder-open';
 import { Share2Icon } from './share-2';
+import { LuggageIcon } from './luggage';
+import { MapPinIcon } from './map-pin';
+import { RouteIcon } from './route';
 import { BoldIcon } from './bold';
 import { ItalicIcon } from './italic';
 import { PaintBucketIcon } from './paint-bucket';
@@ -155,6 +158,9 @@ export type IconName =
   | 'file-text'
   | 'folder-open'
   | 'share-2'
+  | 'luggage'
+  | 'map-pin'
+  | 'route'
   | 'bold'
   | 'italic'
   | 'paint-bucket'
@@ -247,6 +253,9 @@ export const ICONS: Record<IconName, IconComponent> = {
   'file-text': FileTextIcon,
   'folder-open': FolderOpenIcon,
   'share-2': Share2Icon,
+  luggage: LuggageIcon,
+  'map-pin': MapPinIcon,
+  route: RouteIcon,
   bold: BoldIcon,
   italic: ItalicIcon,
   'paint-bucket': PaintBucketIcon,
@@ -337,6 +346,9 @@ export { FolderClosedIcon } from './folder-closed';
 export { FileTextIcon } from './file-text';
 export { FolderOpenIcon } from './folder-open';
 export { Share2Icon } from './share-2';
+export { LuggageIcon } from './luggage';
+export { MapPinIcon } from './map-pin';
+export { RouteIcon } from './route';
 export { BoldIcon } from './bold';
 export { ItalicIcon } from './italic';
 export { PaintBucketIcon } from './paint-bucket';

@@ -190,6 +190,8 @@ export { Combobox } from './components/Combobox/Combobox';
 export type { ComboboxProps, ComboboxOption } from './components/Combobox/Combobox';
 export { DragHandleRow } from './components/DragHandleRow/DragHandleRow';
 export type { DragHandleRowProps } from './components/DragHandleRow/DragHandleRow';
+export { StepStrip } from './components/StepStrip/StepStrip';
+export type { StepStripProps, StepStripItem } from './components/StepStrip/StepStrip';
 export { FileDropzone } from './components/FileDropzone/FileDropzone';
 export type { FileDropzoneProps } from './components/FileDropzone/FileDropzone';
 export { Calendar } from './components/Calendar/Calendar';

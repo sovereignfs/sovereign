@@ -11,16 +11,17 @@ export interface ScheduleDecl {
   intervalMinutes: number;
   /**
    * Module specifier relative to `runtime/generated/` (POSIX separators, no
-   * `.ts` extension) pointing at the schedule's composed entry module inside
-   * the runtime route tree.
+   * `.ts` extension) pointing at the schedule's real entry module in the
+   * plugin's own source tree (not its composed route-tree copy/symlink —
+   * see the importPath comment in collectPluginSchedules for why).
    */
   importPath: string;
 }
 
 /**
  * Resolve every installed plugin's `schedules` declarations (RFC 0046 Phase 1)
- * to composed-route-tree import paths for `renderPluginSchedules`. Exits with
- * a clear error when a declared entry module does not exist in the plugin
+ * to real-source import paths for `renderPluginSchedules`. Exits with a
+ * clear error when a declared entry module does not exist in the plugin
  * source — a schedule that silently never runs is worse than a failed build.
  */
 export function collectPluginSchedules(
@@ -33,11 +34,11 @@ export function collectPluginSchedules(
 
   for (const { dir, manifest, baseDir } of plugins) {
     if (!manifest.schedules) continue;
+    // Validates the manifest's shell/routePrefix combination (e.g. overlay +
+    // multi-segment routePrefix) — the composed target path itself is no
+    // longer used below; see the importPath comment for why.
     const targets = resolveComposeTargets(manifest);
     if (!targets.ok) return { decls: [], error: targets.error };
-    // targets[0] is the plugin's primary composed app dir at every shell
-    // (default/overlay → the (plugins) group; minimal → the (minimal) group).
-    const baseTarget = targets.targets[0];
     for (const sched of manifest.schedules) {
       const srcFile = join(baseDir ?? pluginsDir, dir, sched.entry);
       if (!existsSync(srcFile)) {
@@ -49,11 +50,21 @@ export function collectPluginSchedules(
             `"${sched.entry}" but that file does not exist in ${dirLabel}/${dir}/.`,
         };
       }
-      const composedFile = join(baseTarget, sched.entry.replace(/^app\//, ''));
-      const importPath = relative(generatedDir, composedFile)
-        .split(sep)
-        .join('/')
-        .replace(/\.ts$/, '');
+      // Import the plugin's own real source file, not its composed
+      // route-tree copy/symlink. A composed plugin dir is a *symlink* in
+      // production (compose-routes.ts); TypeScript resolves a symlinked
+      // file's own relative imports (e.g. a sibling `_lib/ids.ts`'s
+      // `import 'nanoid'`) against the symlink's *apparent* location when
+      // the file is reached via a relative path from outside the symlinked
+      // tree — as this generated file's import always is — not the real
+      // target directory the way Next's own route-file discovery does.
+      // That silently breaks resolution of any node_modules package the
+      // handler (transitively) imports that isn't independently redeclared
+      // in runtime/package.json — found via a real production build failure
+      // on the first plugin to combine a schedule with such an import. The
+      // plugin's real source file has no such problem: it resolves exactly
+      // like `pnpm --filter <plugin> typecheck` already does.
+      const importPath = relative(generatedDir, srcFile).split(sep).join('/').replace(/\.ts$/, '');
       decls.push({
         pluginId: manifest.id,
         scheduleId: sched.id,

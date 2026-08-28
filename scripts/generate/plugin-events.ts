@@ -10,15 +10,17 @@ export interface EventAuthorizerDecl {
   pattern: string;
   /**
    * Module specifier relative to `runtime/generated/` (POSIX separators, no
-   * `.ts` extension) pointing at the authorizer's composed entry module
-   * inside the runtime route tree.
+   * `.ts` extension) pointing at the authorizer's real entry module in the
+   * plugin's own source tree (not its composed route-tree copy/symlink —
+   * see the importPath comment in `plugin-schedules.ts`'s
+   * `collectPluginSchedules` for why).
    */
   importPath: string;
 }
 
 /**
  * Resolve every installed plugin's `events` declarations (RFC 0045) to
- * composed-route-tree import paths for `renderPluginEvents`. Exits with a
+ * real-source import paths for `renderPluginEvents`. Exits with a
  * clear error when a declared entry module does not exist in the plugin
  * source — an authorizer that silently never runs is worse than a failed
  * build (and would otherwise fail closed silently at request time instead).
@@ -33,9 +35,11 @@ export function collectPluginEvents(
 
   for (const { dir, manifest, baseDir } of plugins) {
     if (!manifest.events) continue;
+    // Validates the manifest's shell/routePrefix combination — the composed
+    // target path itself is no longer used below; see the importPath
+    // comment in plugin-schedules.ts's collectPluginSchedules for why.
     const targets = resolveComposeTargets(manifest);
     if (!targets.ok) return { decls: [], error: targets.error };
-    const baseTarget = targets.targets[0];
     for (const evt of manifest.events) {
       const srcFile = join(baseDir ?? pluginsDir, dir, evt.entry);
       if (!existsSync(srcFile)) {
@@ -47,11 +51,12 @@ export function collectPluginEvents(
             `"${evt.entry}" but that file does not exist in ${dirLabel}/${dir}/.`,
         };
       }
-      const composedFile = join(baseTarget, evt.entry.replace(/^app\//, ''));
-      const importPath = relative(generatedDir, composedFile)
-        .split(sep)
-        .join('/')
-        .replace(/\.ts$/, '');
+      // Import the plugin's own real source file, not its composed
+      // route-tree copy/symlink — see collectPluginSchedules's identical
+      // fix for the full explanation (a symlinked file's own relative
+      // imports resolve against the symlink's apparent location, not its
+      // real target, when reached from outside the symlinked tree).
+      const importPath = relative(generatedDir, srcFile).split(sep).join('/').replace(/\.ts$/, '');
       decls.push({
         pluginId: manifest.id,
         pattern: evt.pattern,

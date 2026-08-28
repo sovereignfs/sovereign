@@ -4,7 +4,7 @@ import { resolveComposeTargets } from './compose-routes';
 import { EXAMPLE_PLUGINS_DIR, GENERATED_DIR, PLUGINS_DIR, PLUGIN_JOBS_FILE } from './paths';
 import type { PluginEntry } from './types';
 
-/** One manifest-declared job type, resolved to an importable composed path. */
+/** One manifest-declared job type, resolved to an importable real-source path. */
 export interface JobDecl {
   pluginId: string;
   type: string;
@@ -15,7 +15,7 @@ export interface JobDecl {
 
 /**
  * Resolve every installed plugin's `jobs` declarations (RFC 0046) to
- * composed-route-tree import paths for `renderPluginJobs`. Exits with a
+ * real-source import paths for `renderPluginJobs`. Exits with a
  * clear error when a declared entry module does not exist in the plugin
  * source — a job type with no reachable handler is worse than a failed
  * build, since it would silently fail every claimed job at runtime instead.
@@ -30,9 +30,11 @@ export function collectPluginJobs(
 
   for (const { dir, manifest, baseDir } of plugins) {
     if (!manifest.jobs) continue;
+    // Validates the manifest's shell/routePrefix combination — the composed
+    // target path itself is no longer used below; see the importPath
+    // comment in plugin-schedules.ts's collectPluginSchedules for why.
     const targets = resolveComposeTargets(manifest);
     if (!targets.ok) return { decls: [], error: targets.error };
-    const baseTarget = targets.targets[0];
     for (const job of manifest.jobs) {
       const srcFile = join(baseDir ?? pluginsDir, dir, job.entry);
       if (!existsSync(srcFile)) {
@@ -44,11 +46,12 @@ export function collectPluginJobs(
             `"${job.entry}" but that file does not exist in ${dirLabel}/${dir}/.`,
         };
       }
-      const composedFile = join(baseTarget, job.entry.replace(/^app\//, ''));
-      const importPath = relative(generatedDir, composedFile)
-        .split(sep)
-        .join('/')
-        .replace(/\.ts$/, '');
+      // Import the plugin's own real source file, not its composed
+      // route-tree copy/symlink — see collectPluginSchedules's identical
+      // fix for the full explanation (a symlinked file's own relative
+      // imports resolve against the symlink's apparent location, not its
+      // real target, when reached from outside the symlinked tree).
+      const importPath = relative(generatedDir, srcFile).split(sep).join('/').replace(/\.ts$/, '');
       decls.push({
         pluginId: manifest.id,
         type: job.type,

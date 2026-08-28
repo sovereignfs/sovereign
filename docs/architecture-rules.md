@@ -852,3 +852,60 @@ backup`'s own Postgres path additionally requires `pg_dump`, not installed
   present (verified via a raw table dump on the same DB connection,
   bypassing Drizzle), yet every import job failed with "no longer available
   in storage" until `ownerUserId` was dropped from that one `put()` call.
+- **A plugin's `schedules`/`jobs`/`events` handler must be imported from its
+  real source file, never its composed route-tree copy** — found via a real
+  production deployment failure reported directly (image build succeeded,
+  deploy failed), not live-testing. `scripts/generate/plugin-schedules.ts`,
+  `plugin-jobs.ts`, and `plugin-events.ts` each generate one static
+  `import handlerN from "<path>"` per manifest-declared handler into
+  `runtime/generated/plugin-{schedules,jobs,events}.ts`. All three
+  previously computed `<path>` from `resolveComposeTargets(manifest)`'s
+  `targets[0]` — the plugin's _composed_ app directory
+  (`runtime/app/(platform)/(plugins)/<id>/...` or `(minimal)/<id>/...`),
+  which `compose-routes.ts`'s `linkOrCopyTarget` makes a real `symlinkSync`
+  in production (`isProd = NODE_ENV === 'production'`), not a physical copy.
+  `runtime/tsconfig.json`'s own `exclude` list — `app/(platform)/(plugins)/**`,
+  `app/(minimal)/**` — deliberately keeps composed plugin directories out of
+  the project's normal type-check scope, but `runtime/generated/*.ts` is
+  _not_ excluded (it's covered by the `include` glob `generated/**/*.ts`),
+  so a generated handler import reaches into the symlinked tree from
+  outside it. TypeScript resolves that file's own further relative imports
+  (e.g. a sibling `_lib/ids.ts`'s `import 'nanoid'`) against the _symlink's
+  apparent location_ when the file is reached this way — walking up through
+  `runtime/`'s own `node_modules` — instead of following the symlink to its
+  real target the way Next's own App Router route-file discovery does.
+  `runtime/package.json` doesn't declare every package an arbitrary plugin
+  might import (it does directly redeclare `drizzle-orm`, since every
+  plugin's schema/queries need it, but had never needed to redeclare
+  `nanoid`), so resolution silently fails with `TS2307: Cannot find module`
+  — but only for a plugin whose schedule/job/event handler (transitively)
+  imports something not on that list, which is why this went unnoticed:
+  `sovereign-plugin-ledger` was the first plugin ever to combine a manifest
+  `schedules` declaration with such an import; `sovereign-plugin-tasks` (the
+  only other schedule-declaring plugin) never hit it because its own job
+  handler doesn't happen to import anything `runtime` doesn't already have.
+  Root-caused via an isolated `git worktree` reproduction of the exact
+  failing CI build — deliberately not run against the live dev server
+  sharing the actual working directory, and not run with `NODE_ENV=production`
+  there either, both to avoid disrupting it — that reproduced the identical
+  error byte-for-byte, then proved it wasn't a general `nanoid`-resolution
+  problem by deleting just the one plugin's import and watching every other
+  `nanoid`-importing plugin (Kanban, Docs, Sheets — identical import
+  pattern) compile successfully in the same build; `tsc -p tsconfig.json
+--traceResolution` on the generated file's own transitive import chain
+  then confirmed the exact symlink-vs-real-path mechanism, module by module.
+  Fixed at the generator, not with a `runtime/package.json` redeclaration
+  band-aid (which does also work and was verified independently, but only
+  patches this one instance — any future plugin combining a schedule/job/event
+  with a not-yet-redeclared dependency would hit the identical failure):
+  all three `collectPlugin{Schedules,Jobs,Events}` functions now import from
+  `srcFile` (the plugin's real source path, already computed for the
+  existence check just above) instead of a `composedFile` built from
+  `targets[0]`. The `resolveComposeTargets` call itself stays — it still
+  performs real validation (rejecting a multi-segment `routePrefix` on an
+  `overlay`-shell plugin) — only its `targets[0]` result is no longer used
+  for the import path. Verified via the same isolated-worktree reproduction
+  with the fix applied (the full production build succeeds, `/ledger`'s
+  route compiles into real server output), the three generators' updated
+  unit tests (`scripts/__tests__/generate-registry.test.ts`), and the full
+  existing test suite.

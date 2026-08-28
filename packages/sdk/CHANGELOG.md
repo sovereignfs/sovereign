@@ -5,6 +5,28 @@ follows [Semantic Versioning](https://semver.org); see
 [`docs/sdk-stability.md`](../../docs/sdk-stability.md) for the stability policy
 and which parts of the surface the guarantee covers.
 
+## 1.47.0
+
+**`sdk.env.get()` now works from a job/schedule handler**, found implementing
+`sovereign-plugin-travellog`'s T.20 (RFC 0018/0046) — the identical
+background-invocation gap `1.46.0`'s `sdk.storage` fix closed, just never
+generalized to `env`. Previously, calling `sdk.env.get()` outside a real
+Next.js request (i.e. from an `sdk.jobs`/`sdk.schedules` handler) threw,
+because `env.get()` called `next/headers()` directly with no fallback.
+
+- **Breaking for host implementers only** (not for plugin authors calling
+  `sdk.env.get()`, whose call signature and return type are unchanged): the
+  `SdkHost` interface gains a new required `env.get(key, pluginId)` member.
+  A custom host implementation that constructs a `provideHost()` argument
+  without an `env` property will fail to type-check. The platform's own
+  `runtime/src/sdk-host.ts` already implements it, falling back through the
+  same portability/background-plugin contexts `sdk.db.getClient()`/
+  `sdk.storage` use.
+- Unlike `sdk.storage`, `sdk.env.get()` still returns `null` (rather than
+  throwing) when no plugin id is resolvable from the request header, the
+  portability context, or the background-invocation context — preserving
+  its existing documented "outside a plugin route context → `null`" contract.
+
 ## 1.46.0
 
 **`sdk.storage` now works from a job/schedule handler**, found and fixed

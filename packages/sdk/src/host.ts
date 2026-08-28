@@ -75,6 +75,19 @@ export interface SdkHost {
      */
     getClient(pluginId: string | null): Promise<DrizzleClient>;
   };
+  env: {
+    /**
+     * Resolve `SV_PLUGIN_<SLUG>_<KEY>` for the calling plugin (RFC 0018).
+     * `pluginId` is the calling plugin's manifest id, read from the
+     * `x-sovereign-plugin-id` request header by the SDK; `null` means the
+     * call happened outside a plugin route context (e.g. a background
+     * job/schedule handler) — the host falls back to its own
+     * background-invocation context, the same way `db.getClient` and
+     * `storage.*` do. Returns `null` when the variable is absent or no
+     * plugin id is resolvable from either source.
+     */
+    get(key: string, pluginId: string | null): Promise<string | null>;
+  };
   mailer: {
     /**
      * Low-level, direct-recipient email send (RFC 0062). `pluginId` is

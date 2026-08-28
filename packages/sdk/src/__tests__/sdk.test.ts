@@ -26,6 +26,11 @@ beforeAll(() => {
         return mockDbClient;
       },
     },
+    env: {
+      async get() {
+        return null;
+      },
+    },
     mailer: {
       async send() {
         /* no-op */

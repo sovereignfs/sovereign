@@ -509,6 +509,19 @@ function resolveStorageContext(context: StorageContext): {
   return { tenantId: context.tenantId, pluginId, userId: context.userId };
 }
 
+/**
+ * Resolves `sdk.env.get()`'s effective plugin id the same way
+ * `resolveStorageContext`/`db.getClient` do: falls back through the
+ * portability and background-invocation contexts when there's no
+ * request-header-derived id. Unlike `resolveStorageContext`, returns `null`
+ * instead of throwing when no source has an answer — `sdk.env.get()`'s
+ * documented contract is to return `null` outside a plugin context, not to
+ * throw.
+ */
+function resolveEnvPluginId(pluginId: string | null): string | null {
+  return pluginId ?? getPortabilityPluginContext() ?? getBackgroundPluginContext() ?? null;
+}
+
 provideHost({
   db: {
     async getClient(pluginId: string | null) {
@@ -529,6 +542,14 @@ provideHost({
         }
       }
       return (await getPlatformDb()).db;
+    },
+  },
+  env: {
+    async get(key: string, pluginId: string | null): Promise<string | null> {
+      const effectivePluginId = resolveEnvPluginId(pluginId);
+      if (!effectivePluginId) return null;
+      const slug = effectivePluginId.replace(/[.-]/g, '_').toUpperCase();
+      return process.env[`SV_PLUGIN_${slug}_${key}`] ?? null;
     },
   },
   mailer: {

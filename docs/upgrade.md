@@ -1064,6 +1064,34 @@ follows the documented `DeviceOnlyGate`/`DeviceStorageKeyGate` pattern — it
 now correctly lets users onto a `device-only` plugin from a capable browser
 tab instead of only from a native shell.
 
+### `@sovereignfs/sdk` 1.45.0 → 1.46.0
+
+**`sdk.storage` now works from a job/schedule handler.** Previously, any
+`sdk.storage.*` call made from an `sdk.jobs`/`sdk.schedules` handler (rather
+than a real Next.js request) threw, since `storageContext()` called
+`next/headers()` directly with no fallback for a background invocation —
+`sdk.db.getClient()` already had this fallback, `sdk.storage` didn't. Found
+and fixed building `sovereign-plugin-travellog`'s Swarm importer (RFC
+0044/0046).
+
+**Breaking for host implementers only** — plugin authors calling
+`sdk.storage.*` see no signature change. `StorageContext.pluginId` widens
+from `string` to `string | null`: a custom `HostImplementations.storage`
+implementation that assumed `context.pluginId` is always a string must now
+handle `null`. The platform's own `runtime/src/sdk-host.ts` already does —
+falling back to the same background-plugin `AsyncLocalStorage` context
+`sdk.db.getClient()` uses, and throwing a clear error if no plugin id is
+resolvable at all (outside both a request and a background-plugin context).
+
+**Still a gap, by design, not by oversight:** `sdk.storage.put()`'s
+`ownerUserId` ownership check has no equivalent fallback for _user_
+identity — `JobContext` carries a plugin id, never a user id, since a job
+is plugin-scoped, not inherently user-scoped. An object uploaded with
+`ownerUserId` set remains unreadable from a job/schedule handler; omit
+`ownerUserId` on any object a background handler will read back. See
+`docs/architecture-rules.md`'s matching entry for the full guidance and the
+account-deletion-sweep tradeoff that omitting it carries.
+
 ### `@sovereignfs/sdk` 1.22.0 → 1.23.0
 
 **`StorageObject` gains a `metadata` field** (RFC 0044/0060). `sdk.storage.put()`
@@ -1337,6 +1365,7 @@ the release you are running.
 | 0.89.0          | Plugin-scoped roles and grants — `sdk.authz` provider/consumer wiring (RFC 0054, workstream 0017 leg 3, epic task 1.13)                                                                    |
 | 0.90.0          | Notification Center read/manage SDK surface — `sdk.notifications.list/markRead/markAllRead/dismiss/dismissAll` (RFC 0015 extension), gated by the existing `notifications:send` permission |
 | 0.91.0          | Instance-level theme preset selection — `instanceThemePreset`, `instance-style.ts` delivery (RFC 0095), extending RFC 0094's `packages/ui` theme-preset mechanism                          |
+| 0.91.1          | `sdk.storage` background-invocation fix — `resolveStorageContext()` falls back to the background-plugin context for job/schedule handlers (`@sovereignfs/sdk` 1.46.0)                      |
 
 **`runtime@0.33.0` — activity event name changed:**
 The `settings.tenant_name_changed` activity log action has been renamed to

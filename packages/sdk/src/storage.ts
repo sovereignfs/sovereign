@@ -5,18 +5,20 @@ import type { StorageContext, StorageObject, StoragePutInput } from './types';
 const DEFAULT_TENANT_ID = 'default';
 
 async function storageContext(): Promise<StorageContext> {
-  const h = await headers();
-  const pluginId = h.get('x-sovereign-plugin-id');
-  if (!pluginId) {
-    throw new Error(
-      'sdk.storage requires a plugin route context (x-sovereign-plugin-id header missing).',
-    );
+  let pluginId: string | null = null;
+  let userId: string | null = null;
+  try {
+    const h = await headers();
+    pluginId = h.get('x-sovereign-plugin-id');
+    userId = h.get('x-sovereign-user-id');
+  } catch {
+    // Outside a Next.js request context (e.g. a background job handler) —
+    // no header-derived plugin id available. The host falls back to the
+    // background-invocation context (same pattern as sdk.db.getClient());
+    // it throws if that fallback also comes up empty, matching db.ts's
+    // "outside a plugin route context" behavior.
   }
-  return {
-    tenantId: DEFAULT_TENANT_ID,
-    pluginId,
-    userId: h.get('x-sovereign-user-id'),
-  };
+  return { tenantId: DEFAULT_TENANT_ID, pluginId, userId };
 }
 
 /** Plugin-scoped file storage (RFC 0044). Requires the `storage:readWrite` manifest permission. */

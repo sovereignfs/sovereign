@@ -5,6 +5,30 @@ follows [Semantic Versioning](https://semver.org); see
 [`docs/sdk-stability.md`](../../docs/sdk-stability.md) for the stability policy
 and which parts of the surface the guarantee covers.
 
+## 1.46.0
+
+**`sdk.storage` now works from a job/schedule handler**, found and fixed
+building `sovereign-plugin-travellog`'s Swarm importer (RFC 0044/0046).
+Previously, calling any `sdk.storage.*` method outside a real Next.js
+request (i.e. from an `sdk.jobs`/`sdk.schedules` handler) threw, because
+`storageContext()` called `next/headers()` directly with no fallback —
+`sdk.db.getClient()` already had this fallback via a background-invocation
+context; `sdk.storage` didn't.
+
+- **Breaking for host implementers only** (not for plugin authors calling
+  `sdk.storage.*`, whose call signatures are unchanged): `StorageContext.pluginId`
+  widens from `string` to `string | null`. A custom `HostImplementations.storage`
+  implementation that assumed `context.pluginId` is always a string must now
+  handle `null` (the platform's own `runtime/src/sdk-host.ts` already does,
+  resolving it via the same background-plugin fallback `sdk.db.getClient()`
+  uses, and throwing its own clear error if no plugin id is resolvable at all).
+- `sdk.storage.put()`'s `ownerUserId` ownership check still has no
+  background-context fallback for user identity — `JobContext` carries a
+  plugin id, never a user id, so an object uploaded with `ownerUserId` set
+  remains unreadable from a job/schedule handler. See
+  `docs/architecture-rules.md` (platform repo) for the full guidance: omit
+  `ownerUserId` on any object a background handler will read back.
+
 ## 1.17.0
 
 **Provider config read helper** (Task 3.27). Experimental.

@@ -106,6 +106,7 @@ import type {
   HandoffToken,
   ProviderConfig,
   PublishEventInput,
+  StorageContext,
   StorageObject,
   ToolContext,
   ToolExecuteOptions,
@@ -483,6 +484,29 @@ async function fetchDirectoryUsers(body: Record<string, unknown>): Promise<Direc
     throw new Error(`Directory lookup failed (${String(res.status)}).`);
   }
   return toDirectoryUsers((await res.json().catch(() => [])) as unknown[]);
+}
+
+/**
+ * Resolves `sdk.storage`'s effective plugin id the same way `db.getClient`
+ * already does: `context.pluginId` is `null` whenever `storageContext()`
+ * (SDK-side) called `next/headers()` outside a real request — a background
+ * job handler, or (mirroring the identical, already-fixed gap for
+ * `db.getClient`) a portability export/import resolver. Falls back to
+ * whichever plugin the portability assembler is currently running a
+ * resolver for, then to the background-job/schedule invocation context.
+ * Throws only when none of the three sources has an answer.
+ */
+function resolveStorageContext(context: StorageContext): {
+  tenantId: string;
+  pluginId: string;
+  userId: string | null;
+} {
+  const pluginId =
+    context.pluginId ?? getPortabilityPluginContext() ?? getBackgroundPluginContext() ?? null;
+  if (!pluginId) {
+    throw new Error('sdk.storage requires a plugin route context (no plugin id available).');
+  }
+  return { tenantId: context.tenantId, pluginId, userId: context.userId };
 }
 
 provideHost({
@@ -1134,6 +1158,7 @@ provideHost({
   },
   storage: {
     async put(input, context): Promise<StorageObject> {
+      const resolved = resolveStorageContext(context);
       const bytes = await toBuffer(input.body);
       if (bytes.length > maxObjectBytes()) {
         throw new StorageQuotaExceededError(
@@ -1141,7 +1166,7 @@ provideHost({
         );
       }
       const pdb = await getPlatformDb();
-      const currentTotal = await sumPluginStorageBytes(pdb, context.tenantId, context.pluginId);
+      const currentTotal = await sumPluginStorageBytes(pdb, resolved.tenantId, resolved.pluginId);
       if (currentTotal + bytes.length > maxPluginBytes()) {
         throw new StorageQuotaExceededError(
           `Plugin storage quota of ${String(maxPluginBytes())} bytes would be exceeded.`,
@@ -1149,12 +1174,12 @@ provideHost({
       }
 
       const id = randomUUID();
-      writeObjectBytes(context.pluginId, id, bytes);
+      writeObjectBytes(resolved.pluginId, id, bytes);
       try {
         const row = await createStorageObject(pdb, {
           id,
-          tenantId: context.tenantId,
-          pluginId: context.pluginId,
+          tenantId: resolved.tenantId,
+          pluginId: resolved.pluginId,
           ownerUserId: input.ownerUserId ?? null,
           key: input.key,
           contentType: input.contentType,
@@ -1165,41 +1190,45 @@ provideHost({
         return toStorageObject(row);
       } catch (err) {
         // Metadata row failed — don't leave an orphaned physical object behind.
-        deleteObjectBytes(context.pluginId, id);
+        deleteObjectBytes(resolved.pluginId, id);
         throw err;
       }
     },
 
     async get(key, context): Promise<(StorageObject & { body: ReadableStream }) | null> {
+      const resolved = resolveStorageContext(context);
       const pdb = await getPlatformDb();
-      const row = await getStorageObjectByKey(pdb, key, context);
+      const row = await getStorageObjectByKey(pdb, key, resolved);
       if (!row) return null;
-      const bytes = readObjectBytes(context.pluginId, row.id);
+      const bytes = readObjectBytes(resolved.pluginId, row.id);
       if (!bytes) return null;
       return { ...toStorageObject(row), body: new Blob([new Uint8Array(bytes)]).stream() };
     },
 
     async delete(key, context): Promise<void> {
+      const resolved = resolveStorageContext(context);
       const pdb = await getPlatformDb();
-      const row = await getStorageObjectByKey(pdb, key, context);
+      const row = await getStorageObjectByKey(pdb, key, resolved);
       if (!row) return;
-      const deleted = await deleteStorageObject(pdb, row.id, context);
-      if (deleted) deleteObjectBytes(context.pluginId, deleted.id);
+      const deleted = await deleteStorageObject(pdb, row.id, resolved);
+      if (deleted) deleteObjectBytes(resolved.pluginId, deleted.id);
     },
 
     async list(prefix, context): Promise<StorageObject[]> {
+      const resolved = resolveStorageContext(context);
       const pdb = await getPlatformDb();
-      const rows = await listStorageObjects(pdb, context, prefix);
+      const rows = await listStorageObjects(pdb, resolved, prefix);
       return rows.map(toStorageObject);
     },
 
     async getSignedUrl(key, options, context): Promise<string> {
+      const resolved = resolveStorageContext(context);
       const pdb = await getPlatformDb();
-      const row = await getStorageObjectByKey(pdb, key, context);
+      const row = await getStorageObjectByKey(pdb, key, resolved);
       if (!row) throw new Error(`Storage object not found for key "${key}".`);
       const token = createStorageToken({
-        tenantId: context.tenantId,
-        pluginId: context.pluginId,
+        tenantId: resolved.tenantId,
+        pluginId: resolved.pluginId,
         objectId: row.id,
         expiresInSeconds: options?.expiresInSeconds,
       });

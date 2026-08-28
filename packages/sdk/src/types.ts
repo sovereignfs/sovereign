@@ -322,7 +322,14 @@ export interface StoragePutInput {
 
 export interface StorageContext {
   tenantId: string;
-  pluginId: string;
+  /**
+   * `null` when constructed outside a real Next.js request (e.g. a
+   * background job handler, where `next/headers()` throws) — the host
+   * resolves the effective plugin id via its own background-invocation
+   * context in that case. See `packages/sdk/src/storage.ts`'s
+   * `storageContext()`.
+   */
+  pluginId: string | null;
   userId: string | null;
 }
 

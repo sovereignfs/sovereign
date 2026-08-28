@@ -825,3 +825,30 @@ backup`'s own Postgres path additionally requires `pg_dump`, not installed
   `TEST_DATABASE_URL=... pnpm exec vitest run packages/db/src/__tests__/platform-db.pg.test.ts`)
   before and after the bootstrap.ts fix, not just inferred from the error
   message.
+- **A storage object uploaded with `ownerUserId` set is unreadable from any
+  job/schedule handler, and there is no background-context fallback that
+  fixes this** (found live building `sovereign-plugin-travellog`'s Swarm
+  importer, RFC 0044/0046). `packages/db`'s `canAccessStorageObject` denies
+  read access whenever `ownerUserId` is set and the reading context's
+  `userId` doesn't match — including `null` — and a job/schedule handler's
+  `userId` always resolves to `null`: `JobContext`
+  (`packages/sdk/src/types.ts`) carries a plugin id, never a user id, so
+  unlike `sdk.db.getClient()`'s `pluginId` (which falls back to
+  `getBackgroundPluginContext()`, an `AsyncLocalStorage` populated by
+  `runtime/src/jobs.ts`/`scheduler.ts`), there is no equivalent identity to
+  fall back to for `userId` — a job is plugin-scoped, not inherently
+  user-scoped, so the platform has nothing trustworthy to populate it with
+  even if it wanted to. `sdk.storage.put()` a plugin intends to read back
+  from a job/schedule handler (as opposed to from a real request, e.g.
+  `getSignedUrl` calls issued to render a page) must omit `ownerUserId`
+  entirely; the plugin's own DB rows (tenant/user-scoped) remain the actual
+  access-control boundary for who can ever learn that storage key, same as
+  every other per-user resource. The tradeoff: an unowned object is invisible
+  to `hardDeleteUserStorageObjects` (RFC 0033's cross-plugin
+  `owner_user_id` sweep on account deletion) and will not be automatically
+  cleaned up by it — a plugin relying on this pattern needs its own deletion
+  path (e.g. a `sdk.portability.provideDelete` handler) for those keys.
+  Confirmed live: the upload succeeded and the row/bytes were both genuinely
+  present (verified via a raw table dump on the same DB connection,
+  bypassing Drizzle), yet every import job failed with "no longer available
+  in storage" until `ownerUserId` was dropped from that one `put()` call.

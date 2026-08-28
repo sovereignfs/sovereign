@@ -1,6 +1,6 @@
 # Research 0020 — A pre-deletion veto/check hook extending RFC 0033
 
-**Status:** Exploratory\
+**Status:** Decided\
 **Date:** August 2026\
 **Author:** Claude Code\
 **Scope:** `packages/sdk`, `runtime/src/user-deletion.ts`, `runtime/app/api/account/route.ts`, `runtime/app/api/admin/users/[id]/route.ts`, plugin `provideDelete` handlers\
@@ -131,58 +131,73 @@ SDK registration — a plugin declares a permission (e.g. `deletion:veto`) in
   (`provideExport`/`provideImport`/`provideDelete`) for no reason other than this
   one hook's own robustness need.
 
-## Recommendation
+## Decision
 
-Option 1 (a synchronous pre-check veto hook) as the core mechanism, complemented by
-option 2's UI-surfaced warning sourced from the _same_ handler's returned reason —
-not a second, separate hook. Keep the existing in-process SDK-registration model
-(matching `provideExport`/`provideImport`/`provideDelete`) rather than jumping to
-option 4's manifest+route model, for consistency with the three hooks it sits beside
-— but treat the registry's reset-on-restart gap as a real, must-resolve design
-question for this specific hook (see Open questions), not a pre-existing quirk to
-quietly inherit, given how much higher the stakes are here than for export/import.
+**Decided in conversation with the developer (kasunben), August 2026**, resolving
+the three gating questions this doc originally left open:
+
+1. **Admin override — explicit second flag, logged.** An admin can override a
+   plugin's veto only via a second, explicit flag alongside `?deleteData=true`
+   (e.g. `&overridePluginVetoes=true`) — never silently, and never via
+   `?deleteData=true` alone. The override is recorded in the audit trail (the
+   existing `account.deleted` activity entry gains an `overriddenVetoes` field, or
+   an equivalent). **Self-service deletion (`DELETE /api/account`) never gets an
+   override** — a user cannot bypass their own veto, since that would make the
+   veto meaningless. This mirrors the existing sole-owner check's own precedent
+   (no silent bypass) while adding the escape hatch that check deliberately lacks,
+   needed for cases like a legally-mandated erasure request against an account
+   that will never resolve its own objection (e.g. settle a balance) on its own.
+2. **Fail-closed on handler error or timeout.** If a plugin's veto-check handler
+   throws or exceeds the timeout, the deletion is **blocked**, not allowed through
+   — reusing the same 30s-per-handler timeout already established for
+   `provideDelete`'s own cleanup handlers (`runtime/src/user-deletion.ts:83-99`).
+   The failure is surfaced clearly (not folded into a generic error) so an admin
+   can diagnose the plugin or, once confirmed safe, use the override from decision
+   1 rather than the deletion silently proceeding as if nothing objected. Fail-open
+   was rejected specifically because it would make a broken veto indistinguishable
+   from no veto at all — reintroducing the exact problem this hook exists to solve.
+3. **Manifest-declared + route-based, not in-process SDK registration.** This hook
+   deliberately does **not** reuse the `provideExport`/`provideImport`/
+   `provideDelete` in-process registration pattern
+   (`runtime/src/portability/registry.ts:1-30`), despite the consistency cost. A
+   plugin declares a manifest permission (e.g. `deletion:veto`); the runtime always
+   knows about it (no "hasn't served a request since restart" gap) and calls a
+   fixed route on the plugin (e.g. `POST /<routePrefix>/api/deletion-check`)
+   instead of an in-process function. Justified by the asymmetry in failure modes:
+   for export/import/cleanup, a missed registration means an incomplete-but-fixable
+   result; for a veto, it means a deletion that should have been blocked went
+   through anyway, and RFC 0033 already establishes deletion has **no undo**.
 
 Refactor the platform's own sole-owner check to use the new hook once it exists,
-rather than leaving it as a third, permanently-separate mechanism. This both
-dogfoods the new hook against a real, already-shipped case and removes the existing
-duplication between the two route handlers.
+rather than leaving it as a fourth, permanently-separate mechanism — this both
+dogfoods the hook against a real, already-shipped case and removes the existing
+duplication between the two route handlers
+(`runtime/app/api/account/route.ts:51-65` and
+`runtime/app/api/admin/users/[id]/route.ts:39-54`).
 
-This is a recommendation, not a decision — nobody has signed off on building this
-yet.
+Option 2 (a soft, UI-only warning) is still adopted **as a complement**, sourced
+from the same handler's returned reason text — not a separate hook — so the
+confirmation dialog can show _why_ before the user even attempts deletion.
 
 ## Open questions
 
-1. **Admin override semantics.** Does `?deleteData=true` bypass a plugin veto
-   silently, require a second explicit flag, or never bypass at all (only the
-   plugin's own data owner, e.g. reassigning ownership, can clear the veto)? Needs a
-   real product decision, not just an API shape.
-2. **Fail-open vs. fail-closed on handler error/timeout.** A broken or slow plugin
-   check could either let deletions through unchecked (fail-open — quietly reintroduces
-   the corruption risk this hook exists to prevent) or block every deletion on the
-   instance (fail-closed — a real availability risk for an unrelated plugin bug).
-   Needs a resolution before this ships, likely with an admin-visible signal either
-   way (a broken veto should be loud, not silent in either direction).
-3. **Registry timing.** Does this hook stay in-process/registration-based (matching
-   the existing three) and accept the reset-on-restart gap with some mitigation
-   (e.g. the runtime warms every installed plugin's registration once at startup by
-   hitting a known route?), or does it need the more robust manifest+route model
-   (option 4) specifically _because_ the stakes of a silently-missing veto are
-   higher than for export/import? This is the one question most likely to change
-   the hook's fundamental shape, not just its parameters.
-4. **Docs' existing gap.** The sole-owner-folder-cascades-into-others'-documents case
-   found during this research is a real, already-shipped bug, independent of whether
-   this hook ever gets built. Worth its own fix regardless — not this research doc's
-   scope, flagged here so it isn't lost.
+The three gating questions above are resolved (see Decision). One item remains
+genuinely open, unrelated to whether or how this hook gets built:
+
+1. **Docs' existing gap.** The sole-owner-folder-cascades-into-others'-documents
+   case found during this research (`plugins/sovereign-plugin-docs.local/app/_lib/portability.ts:519-546`)
+   is a real, already-shipped bug, independent of this hook. Worth its own fix
+   regardless — not this research doc's scope, flagged here so it isn't lost.
 
 ## Next steps
 
-Graduates into an RFC extending RFC 0033 (an amendment, not a rewrite — RFC 0033
-stays "Implemented" for what it already covers) once open questions 1-3 have real
-answers, since they change the wire-level hook signature and the runtime's call
-sequence. The one thing that RFC needs to design precisely: the exact hook signature
-(request/response shape), the single shared call site both deletion routes use
-(replacing today's duplicated sole-owner check), and the resolution to the
-registry-timing question above. Until then, Tally's own `SPEC.md` §7 continues to
-document "warn, don't block" as the only buildable-today mitigation, and even that
-turned out to need no SDK support that exists yet either — both remain blocked on
-this graduating into a real RFC.
+Ready to graduate into an RFC extending RFC 0033 (an amendment, not a rewrite —
+RFC 0033 stays "Implemented" for what it already covers). With the three gating
+questions decided, the RFC's job is to pin down the concrete wire-level details the
+Decision section above sketches but doesn't fully specify: the exact
+`DeletionCheckContext`/`DeletionCheckResult` shapes, the manifest permission's exact
+name and scope, the deletion-check route's URL convention and its own
+authentication (the runtime calling into a plugin, not a user calling in), the
+audit-log schema addition for a logged override, and the single shared call site
+both deletion routes use. Tally's own `SPEC.md` §7 continues to document "warn,
+don't block" as the only buildable-today mitigation until this RFC ships and lands.

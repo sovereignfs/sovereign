@@ -97,6 +97,7 @@ import { NavigationMenu } from '../components/NavigationMenu/NavigationMenu';
 import { Menubar } from '../components/Menubar/Menubar';
 import { Collapsible } from '../components/Collapsible/Collapsible';
 import { DragHandleRow } from '../components/DragHandleRow/DragHandleRow';
+import { StepStrip, type StepStripItem } from '../components/StepStrip/StepStrip';
 import { FileDropzone } from '../components/FileDropzone/FileDropzone';
 import { OverlayHeader } from '../components/OverlayHeader/OverlayHeader';
 import { Sheet } from '../components/Sheet/Sheet';
@@ -974,6 +975,51 @@ function FileDropzoneDemo() {
         onFileSelect={setFile}
       />
     </div>
+  );
+}
+
+interface StepStripDemoStop extends StepStripItem {
+  label: string;
+  sublabel: string;
+}
+
+const STEP_STRIP_DEMO_STOPS: StepStripDemoStop[] = [
+  { id: 'lisbon', label: 'Lisbon', sublabel: 'Aug 26 – 28' },
+  { id: 'porto', label: 'Porto', sublabel: 'Aug 28 – 30' },
+];
+
+function StepStripDemo() {
+  const [activeId, setActiveId] = useState('lisbon');
+  return (
+    <StepStrip
+      items={STEP_STRIP_DEMO_STOPS}
+      activeId={activeId}
+      aria-label="Trip stops"
+      onAdd={() => undefined}
+      addLabel="Add a stop"
+      renderItem={(stop, { isActive }) => (
+        <button
+          type="button"
+          onClick={() => setActiveId(stop.id)}
+          style={{
+            boxSizing: 'border-box',
+            minWidth: '150px',
+            padding: 'var(--sv-space-3) var(--sv-space-4)',
+            borderRadius: 'var(--sv-radius-lg)',
+            border: `1px solid ${isActive ? 'var(--sv-color-text-primary)' : 'var(--sv-color-border)'}`,
+            background: isActive
+              ? 'var(--sv-color-text-primary)'
+              : 'var(--sv-color-surface-raised)',
+            color: isActive ? 'var(--sv-color-surface)' : 'var(--sv-color-text-primary)',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <div style={{ fontWeight: 600, fontSize: 'var(--sv-font-size-sm)' }}>{stop.label}</div>
+          <div style={{ fontSize: 'var(--sv-font-size-xs)', opacity: 0.8 }}>{stop.sublabel}</div>
+        </button>
+      )}
+    />
   );
 }
 
@@ -3353,6 +3399,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   </DragHandleRow>
                 ))}
               </div>
+            </ComponentCard>
+
+            {/* StepStrip */}
+            <ComponentCard
+              name="StepStrip"
+              importLine="import { StepStrip } from '@sovereignfs/ui';"
+              usage="Horizontal connected-chip strip (a route/itinerary sequence) with an optional trailing add chip. Purely presentational — renderItem owns each chip's content, click handling, and any drag-reorder wiring (attach dnd-kit's useSortable the same way DragHandleRow's handleProps expects it)."
+            >
+              <StepStripDemo />
             </ComponentCard>
 
             {/* FileDropzone */}

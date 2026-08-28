@@ -84,6 +84,10 @@ export const ICON_LIST = [
   'folder-open',
   // Docs document-page toolbar (Share button)
   'share-2',
+  // Travellog plugin: ThreeColumnLayout sidebar nav (Trips/Check-ins/Planner)
+  'luggage',
+  'map-pin',
+  'route',
   // Sheets plugin: cell formatting toolbar (Bold/Italic/Fill color) —
   // italic previously rendered as a plain font-style-italic "I", which at
   // toolbar size reads as an unlabeled slash; the dedicated icon disambiguates

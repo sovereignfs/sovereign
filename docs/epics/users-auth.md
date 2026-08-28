@@ -1313,6 +1313,52 @@ user-facing capability yet.
 
 ---
 
+#### 📋 1.25 — Plugin pre-deletion veto hook (RFC 0096)
+
+**Goal:** Give a plugin a way to block account deletion before it starts —
+not just clean up after, which is all `provideDelete` (task 1.7, RFC 0033)
+supports today. Closes a real, recurring gap: 3 of the 6 plugins registering
+a deletion handler already touch joint/shared data they have no way to
+protect today (Research 0020's survey), and Docs already shipped a real, if
+narrow, corruption case from working around the missing capability — a
+sole-owner folder with no other members cascade-deletes documents even when
+owned by a different user.
+
+**Deliverables (per [RFC 0096](../rfcs/0096-plugin-deletion-veto-hook.md)):**
+
+- New `deletion:veto` manifest permission
+  (`packages/manifest/src/schema.ts`'s `permissionSchema`) and a
+  plugin-implemented `POST <routePrefix>/api/deletion-check` route,
+  reusing the same route-composition mechanism Warden's `app/api/chat`
+  already proves works.
+- `runtime/src/user-deletion.ts` gains a single shared
+  `runPreDeletionChecks()` call site, run first inside `deleteUser()`,
+  replacing the sole-`platform:owner` check currently hand-duplicated
+  between `runtime/app/api/account/route.ts` and
+  `runtime/app/api/admin/users/[id]/route.ts`.
+- Fails closed on a plugin check that errors or times out (reusing the
+  existing 30s `DELETION_TIMEOUT_MS`), with an admin-only, explicit,
+  audit-logged override flag (`overridePluginVetoes`) — never available to
+  self-service deletion.
+- New SDK surface: `DeletionCheckRequest`/`DeletionCheckResult` types
+  (`packages/sdk/src/portability.ts`) and
+  `sdk.auth.verifyPlatformCall()` (`packages/sdk/src/auth.ts`) so a
+  plugin's route can verify the call really came from the runtime's own
+  same-process bearer check, without importing `runtime/src` directly.
+- Console (admin override UI) and Account (blocked-deletion message) UI
+  updates — see the RFC's own "UI flows".
+
+**Blocked on:** RFC 0096 review/acceptance. This task exists so the design
+isn't lost track of; it is not yet a commitment to a build order or
+roadmap slot (see ROADMAP.md's "Non-prioritised tasks").
+
+**Dependencies:** RFC 0033 (task 1.7, Implemented) — this amends it, not
+replaces it.
+
+**SRS reference:** [RFC 0096](../rfcs/0096-plugin-deletion-veto-hook.md)
+
+---
+
 ## Related RFCs
 
 - [RFC 0012 — Passkeys & TOTP MFA](../rfcs/0012-passkeys-and-mfa.md)
@@ -1326,6 +1372,7 @@ user-facing capability yet.
 - [RFC 0062 — Email delivery coverage](../rfcs/0062-email-delivery-coverage.md)
 - [RFC 0072 — External OAuth/OIDC provider for non-plugin apps](../rfcs/0072-external-oauth-provider.md)
 - [RFC 0086 — Shared-store rate limiting for multi-instance deployments](../rfcs/0086-shared-store-rate-limiting.md)
+- [RFC 0096 — Plugin pre-deletion veto hook (amends RFC 0033)](../rfcs/0096-plugin-deletion-veto-hook.md)
 
 ## Related Docs
 

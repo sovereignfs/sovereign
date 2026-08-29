@@ -65,6 +65,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } 
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { hoistDepsForPlugin, type HoistResult } from '../bin/plugin-deps';
 
 export interface PluginEntry {
   id: string;
@@ -91,6 +92,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIG_PATH = join(ROOT, 'sovereign.plugins.json');
 const DEFAULT_CONFIG_PATH = join(ROOT, 'sovereign.plugins.default.json');
 const PLUGINS_DIR = join(ROOT, 'plugins');
+const RUNTIME_PKG = join(ROOT, 'runtime', 'package.json');
+const PLUGIN_DEPS_LEDGER = join(ROOT, 'runtime', 'generated', 'plugin-deps.json');
 
 /** Parse and validate `sovereign.plugins.json` content. Throws on malformed input. */
 export function parsePluginsConfig(raw: string): PluginsConfig {
@@ -320,6 +323,60 @@ export function isPluginInstalled(id: string, pluginsDir: string = PLUGINS_DIR):
   return existsSync(join(pluginsDir, id)) || existsSync(join(pluginsDir, `${id}.local`));
 }
 
+/**
+ * Prints `hoistDepsForPlugin`'s summary (RFC 0057 §3) — mirrors
+ * `bin/sv.ts`'s `reportHoistResult` for `sv plugin add`, since this is the
+ * same operation run in bulk here instead of for one interactively-added
+ * plugin.
+ */
+export function reportHoistResult(pluginId: string, result: HoistResult | null): void {
+  if (!result) return;
+  if (result.added.length > 0) {
+    console.log(
+      `[install-plugins] added ${String(result.added.length)} runtime dep(s) for "${pluginId}": ` +
+        `${result.added.join(', ')}.`,
+    );
+  }
+  for (const conflict of result.conflicts) {
+    console.warn(
+      `[install-plugins] "${pluginId}" wants ${conflict.name}@${conflict.incoming}, runtime ` +
+        `already has ${conflict.existing} (from another plugin) — kept ${conflict.kept}.`,
+    );
+  }
+}
+
+export interface HoistPaths {
+  pluginsDir: string;
+  runtimePkgPath: string;
+  ledgerPath: string;
+  root: string;
+}
+
+/**
+ * RFC 0057: a cloned plugin's external npm deps must be resolvable from the
+ * runtime's own node_modules (its source is composed straight into the
+ * runtime's module graph — see `bin/plugin-deps.ts`'s own doc comment). `sv
+ * plugin add` and `pnpm dev`'s local-plugin sync already hoist deps for the
+ * single-plugin and local-dev-plugin cases respectively; this is the same
+ * step for the bulk `sovereign.plugins.json` install path, which is what a
+ * real deployment's Docker build actually runs. Each call updates the
+ * operator's own `runtime/package.json` and `plugin-deps.json` in place and
+ * installs — never anything committed back to the upstream platform repo.
+ */
+export function hoistDepsForClonedPlugins(clonedIds: string[], paths: HoistPaths): void {
+  const { pluginsDir, runtimePkgPath, ledgerPath, root } = paths;
+  for (const id of clonedIds) {
+    const result = hoistDepsForPlugin({
+      pluginId: id,
+      pluginPkgPath: join(pluginsDir, id, 'package.json'),
+      runtimePkgPath,
+      ledgerPath,
+      root,
+    });
+    reportHoistResult(id, result);
+  }
+}
+
 function main(): void {
   // `sovereign.plugins.json` is a local, gitignored file — declaring plugins
   // there is how a developer or operator opts into a larger set (community
@@ -353,7 +410,7 @@ function main(): void {
     console.log(`[install-plugins] ${entry.id} already present — skipping.`);
   }
 
-  let cloned = 0;
+  const clonedIds: string[] = [];
   for (const group of groupClones(toClone)) {
     // Single whole-repo plugin → clone straight into place (keeps .git).
     const [firstEntry] = group.entries;
@@ -370,7 +427,7 @@ function main(): void {
         );
         process.exit(1);
       }
-      cloned += 1;
+      clonedIds.push(entry.id);
       continue;
     }
 
@@ -387,7 +444,7 @@ function main(): void {
       cloneInto(group.repository, group.ref, tmp, token);
       for (const entry of group.entries) {
         copyCheckout(tmp, entry.subdir, join(PLUGINS_DIR, entry.id));
-        cloned += 1;
+        clonedIds.push(entry.id);
       }
     } catch (error) {
       console.error(
@@ -400,13 +457,20 @@ function main(): void {
     }
   }
 
-  if (cloned > 0) {
+  if (clonedIds.length > 0) {
     console.log('[install-plugins] composing plugins (pnpm generate) …');
     execFileSync('pnpm', ['generate'], { cwd: ROOT, stdio: 'inherit' });
   }
 
+  hoistDepsForClonedPlugins(clonedIds, {
+    pluginsDir: PLUGINS_DIR,
+    runtimePkgPath: RUNTIME_PKG,
+    ledgerPath: PLUGIN_DEPS_LEDGER,
+    root: ROOT,
+  });
+
   console.log(
-    `[install-plugins] done — ${String(cloned)} installed, ${String(toSkip.length)} already present.`,
+    `[install-plugins] done — ${String(clonedIds.length)} installed, ${String(toSkip.length)} already present.`,
   );
 }
 

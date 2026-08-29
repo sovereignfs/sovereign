@@ -1,9 +1,28 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const spawnSyncMock = vi.hoisted(() =>
+  vi.fn((_command: string, _args?: readonly string[]) => ({ status: 0 })),
+);
+const execFileSyncMock = vi.hoisted(() => vi.fn());
+vi.mock('node:child_process', () => ({
+  spawnSync: spawnSyncMock,
+  execFileSync: execFileSyncMock,
+}));
+
 import {
   groupClones,
+  hoistDepsForClonedPlugins,
   isPluginInstalled,
   parsePluginsConfig,
   planInstall,
@@ -264,5 +283,137 @@ describe('isPluginInstalled', () => {
   it('is true when only plugins/<id>.local exists', () => {
     mkdirSync(join(pluginsDir, 'sovereign-tasks.local'));
     expect(isPluginInstalled('sovereign-tasks', pluginsDir)).toBe(true);
+  });
+});
+
+// RFC 0057: install-plugins.ts's bulk clone path (what `pnpm install:plugins`
+// / a real Docker build runs) previously never hoisted a cloned plugin's
+// external deps into runtime/package.json, unlike `sv plugin add` and `pnpm
+// dev`'s local-plugin sync — the gap that let sovereign-plugin-travellog ship
+// without nanoid/tz-lookup/@dnd-kit declared anywhere the build could see.
+describe('hoistDepsForClonedPlugins', () => {
+  let root: string;
+  let pluginsDir: string;
+  let runtimePkgPath: string;
+  let ledgerPath: string;
+  let logSpy: ReturnType<typeof vi.spyOn>;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'install-plugins-hoist-root-'));
+    pluginsDir = join(root, 'plugins');
+    mkdirSync(pluginsDir, { recursive: true });
+    mkdirSync(join(root, 'runtime'), { recursive: true });
+    runtimePkgPath = join(root, 'runtime', 'package.json');
+    ledgerPath = join(root, 'runtime', 'generated', 'plugin-deps.json');
+    writeFileSync(
+      runtimePkgPath,
+      JSON.stringify({ name: 'runtime', dependencies: { next: 'catalog:' } }, null, 2),
+    );
+    spawnSyncMock.mockClear();
+    logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+    logSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  const paths = () => ({ pluginsDir, runtimePkgPath, ledgerPath, root });
+
+  it('is a no-op when no plugins were cloned', () => {
+    hoistDepsForClonedPlugins([], paths());
+    expect(spawnSyncMock).not.toHaveBeenCalled();
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(existsSync(ledgerPath)).toBe(false);
+  });
+
+  it('hoists a cloned plugin declaring an external dep into runtime/package.json and the ledger', () => {
+    mkdirSync(join(pluginsDir, 'fs.example.tasks'), { recursive: true });
+    writeFileSync(
+      join(pluginsDir, 'fs.example.tasks', 'package.json'),
+      JSON.stringify({ dependencies: { 'date-fns': '^3.0.0', next: 'catalog:' } }),
+    );
+
+    hoistDepsForClonedPlugins(['fs.example.tasks'], paths());
+
+    const runtimePkg = JSON.parse(readFileSync(runtimePkgPath, 'utf8')) as {
+      dependencies: Record<string, string>;
+    };
+    expect(runtimePkg.dependencies['date-fns']).toBe('^3.0.0');
+    expect(JSON.parse(readFileSync(ledgerPath, 'utf8'))).toEqual({
+      'fs.example.tasks': { 'date-fns': '^3.0.0' },
+    });
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('date-fns'));
+
+    const installCall = spawnSyncMock.mock.calls.find(
+      (call) => call[0] === 'pnpm' && (call[1] as string[]).includes('install'),
+    );
+    expect(installCall?.[1]).toEqual(['install', '--filter', 'runtime']);
+  });
+
+  it('skips a cloned plugin with no external deps (no ledger entry, no console output)', () => {
+    mkdirSync(join(pluginsDir, 'fs.example.noop'), { recursive: true });
+    writeFileSync(
+      join(pluginsDir, 'fs.example.noop', 'package.json'),
+      JSON.stringify({ dependencies: { next: 'catalog:', '@sovereignfs/sdk': 'workspace:*' } }),
+    );
+
+    hoistDepsForClonedPlugins(['fs.example.noop'], paths());
+
+    expect(spawnSyncMock).not.toHaveBeenCalled();
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(existsSync(ledgerPath)).toBe(false);
+  });
+
+  it('hoists deps for several cloned plugins independently in one pass', () => {
+    mkdirSync(join(pluginsDir, 'fs.example.a'), { recursive: true });
+    writeFileSync(
+      join(pluginsDir, 'fs.example.a', 'package.json'),
+      JSON.stringify({ dependencies: { 'date-fns': '^3.0.0' } }),
+    );
+    mkdirSync(join(pluginsDir, 'fs.example.b'), { recursive: true });
+    writeFileSync(
+      join(pluginsDir, 'fs.example.b', 'package.json'),
+      JSON.stringify({ dependencies: { nanoid: '^5.0.9' } }),
+    );
+
+    hoistDepsForClonedPlugins(['fs.example.a', 'fs.example.b'], paths());
+
+    expect(JSON.parse(readFileSync(ledgerPath, 'utf8'))).toEqual({
+      'fs.example.a': { 'date-fns': '^3.0.0' },
+      'fs.example.b': { nanoid: '^5.0.9' },
+    });
+    const runtimePkg = JSON.parse(readFileSync(runtimePkgPath, 'utf8')) as {
+      dependencies: Record<string, string>;
+    };
+    expect(runtimePkg.dependencies['date-fns']).toBe('^3.0.0');
+    expect(runtimePkg.dependencies['nanoid']).toBe('^5.0.9');
+  });
+
+  it('warns on a version conflict but keeps the newer range, mirroring sv plugin add', () => {
+    mkdirSync(join(root, 'runtime', 'generated'), { recursive: true });
+    writeFileSync(ledgerPath, JSON.stringify({ 'fs.example.a': { 'date-fns': '^2.0.0' } }));
+    const runtimePkg = JSON.parse(readFileSync(runtimePkgPath, 'utf8')) as {
+      dependencies: Record<string, string>;
+    };
+    runtimePkg.dependencies['date-fns'] = '^2.0.0';
+    writeFileSync(runtimePkgPath, JSON.stringify(runtimePkg));
+
+    mkdirSync(join(pluginsDir, 'fs.example.b'), { recursive: true });
+    writeFileSync(
+      join(pluginsDir, 'fs.example.b', 'package.json'),
+      JSON.stringify({ dependencies: { 'date-fns': '^3.0.0' } }),
+    );
+
+    hoistDepsForClonedPlugins(['fs.example.b'], paths());
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('date-fns'));
+    const finalRuntimePkg = JSON.parse(readFileSync(runtimePkgPath, 'utf8')) as {
+      dependencies: Record<string, string>;
+    };
+    expect(finalRuntimePkg.dependencies['date-fns']).toBe('^3.0.0');
   });
 });

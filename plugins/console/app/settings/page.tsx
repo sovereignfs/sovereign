@@ -14,6 +14,7 @@ interface Settings {
   tenantName: string;
   inviteOnly: boolean;
   examplesEnabled: boolean;
+  hasExamplePlugins: boolean;
   rootPluginId: string;
   smtp: SmtpSettingsView;
   fieldEncryption: FieldEncryptionView;
@@ -55,6 +56,7 @@ const DEFAULT_SETTINGS: Settings = {
   tenantName: 'Sovereign',
   inviteOnly: false,
   examplesEnabled: false,
+  hasExamplePlugins: false,
   rootPluginId: '',
   smtp: { host: null, port: null, user: null, from: null, hasPassword: false, source: 'env' },
   fieldEncryption: {
@@ -103,10 +105,12 @@ export default async function SettingsPage() {
         <InviteOnlyForm initialValue={settings.inviteOnly} />
       </section>
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Example plugins</h2>
-        <ExampleAppsForm initialValue={settings.examplesEnabled} />
-      </section>
+      {settings.hasExamplePlugins && (
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Example plugins</h2>
+          <ExampleAppsForm initialValue={settings.examplesEnabled} />
+        </section>
+      )}
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Root plugin</h2>

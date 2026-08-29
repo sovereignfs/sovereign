@@ -19,7 +19,7 @@ import {
   getDisabledPluginIds,
   getExamplesEnabledFlag,
 } from '@/src/plugin-status';
-import { getInstalledPlugins } from '@/src/registry';
+import { getExamplePluginIds, getInstalledPlugins } from '@/src/registry';
 import { DEFAULT_RELAY_URL, RELAY_DISABLED_SETTING, RELAY_URL_SETTING } from '@/src/relay';
 import { validateRootPlugin } from '@/src/root-plugin';
 import { readStoredSmtpSettings, writeStoredSmtpSettings } from '@/src/smtp-settings';
@@ -96,6 +96,12 @@ async function readSettings() {
     inviteOnly: inviteOnly === 'true',
     rootPluginId: rootPluginId ?? DEFAULT_ROOT_PLUGIN_ID,
     examplesEnabled,
+    // Whether any bundled example plugin was actually composed into this build
+    // (SOVEREIGN_EXAMPLES_ENABLED at build time) — distinct from `examplesEnabled`,
+    // which is the persisted visibility toggle. A build with examples off never has
+    // any `example: true` manifest in the registry, so Console hides the toggle
+    // entirely rather than showing a control with nothing to reveal.
+    hasExamplePlugins: getExamplePluginIds(getInstalledPlugins()).length > 0,
     smtp: { ...smtp, source: smtpSource(smtp) },
     fieldEncryption,
     pushRelay: {

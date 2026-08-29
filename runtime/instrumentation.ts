@@ -79,14 +79,46 @@ export async function register(): Promise<void> {
     // Minimal plugin scheduler (RFC 0046 Phase 1) — invokes the
     // manifest-declared schedule handlers composed into
     // generated/plugin-schedules.ts. No-op when nothing declares a schedule.
-    const { startScheduler, stopScheduler } = await import('./src/scheduler');
-    startScheduler();
+    //
+    // Wrapped in try/catch: this dynamic import statically resolves every
+    // declared plugin's schedule handler — and that handler's own full
+    // transitive import graph — as part of loading
+    // generated/plugin-schedules.ts. A fault anywhere in that graph (a
+    // plugin dependency missing from runtime/package.json, a syntax error,
+    // anything) throws here, and this was previously uncaught: it aborted
+    // this whole async register() before startJobWorker/the event broker/etc.
+    // below ever ran, taking the entire platform down at boot over one
+    // plugin's schedule handler. Mirrors runAllPluginMigrations()'s own
+    // per-plugin isolation (added after the RFC 0071 incident — see
+    // docs/incidents/) in spirit, though coarser here: PLUGIN_SCHEDULES is
+    // one statically-imported array, not a per-plugin call site, so a
+    // broken handler disables the whole scheduler subsystem for this
+    // process rather than just its own plugin's schedule. Coarser but far
+    // better than the alternative — every other plugin's pages/actions, the
+    // job worker below, and the rest of boot all still complete normally.
+    let stopScheduler: () => void = () => {};
+    try {
+      const scheduler = await import('./src/scheduler');
+      stopScheduler = scheduler.stopScheduler;
+      scheduler.startScheduler();
+    } catch (err) {
+      logger.error('Failed to start plugin scheduler — no schedules will run this process', {
+        err,
+      });
+    }
 
     // Plugin job worker (RFC 0046) — claims and runs jobs enqueued/scheduled
     // via sdk.jobs, composed into generated/plugin-jobs.ts. No-op when
-    // nothing declares a job type.
-    const { startJobWorker, stopJobWorker } = await import('./src/jobs');
-    startJobWorker();
+    // nothing declares a job type. Same import-time fault isolation as the
+    // scheduler above, and for the same reason — see that block's comment.
+    let stopJobWorker: () => void = () => {};
+    try {
+      const jobs = await import('./src/jobs');
+      stopJobWorker = jobs.stopJobWorker;
+      jobs.startJobWorker();
+    } catch (err) {
+      logger.error('Failed to start plugin job worker — no jobs will run this process', { err });
+    }
 
     // Backup job worker (RFC 0084, epic task 8.16) — claims and runs queued
     // backup_jobs rows, and sweeps expired archives. Off by default (opt-in

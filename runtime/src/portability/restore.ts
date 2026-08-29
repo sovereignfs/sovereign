@@ -116,7 +116,7 @@ export async function applyImport(args: ApplyImportArgs): Promise<ImportSummary>
       // may store them, but the platform never dereferences them here.
       references: meta.references,
     };
-    await runWithPortabilityPlugin(meta.pluginId, () =>
+    await runWithPortabilityPlugin(meta.pluginId, args.userId, () =>
       importer(section, { userId: args.userId, tenantId: args.tenantId, remapId }),
     );
     results.push({ pluginId: meta.pluginId, status: 'imported' });

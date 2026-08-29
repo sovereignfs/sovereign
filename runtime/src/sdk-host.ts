@@ -119,7 +119,10 @@ import { requireNotificationsPluginContext } from './notification-permissions';
 import { getBackgroundPluginContext } from './background-plugin-context';
 import type { EventEnvelope } from './event-broker';
 import { getDisabledPluginIds } from './plugin-status';
-import { getPortabilityPluginContext } from './portability/plugin-context';
+import {
+  getPortabilityPluginContext,
+  getPortabilityUserContext,
+} from './portability/plugin-context';
 import { registerDeleter, registerExporter, registerImporter } from './portability/registry';
 import { getGrantResolver, registerGrantResolver } from './authz-registry';
 import { fanOutPushToUser } from './push';
@@ -495,6 +498,18 @@ async function fetchDirectoryUsers(body: Record<string, unknown>): Promise<Direc
  * whichever plugin the portability assembler is currently running a
  * resolver for, then to the background-job/schedule invocation context.
  * Throws only when none of the three sources has an answer.
+ *
+ * `userId` gets the same portability-context fallback (added alongside
+ * `pluginId`'s existing one — a background job/schedule context never
+ * carries a userId, so there's nothing to fall back to there). Without it,
+ * a plugin's export resolver reading back a user-owned object (e.g.
+ * `ownerUserId` set at upload) via `sdk.storage.get()` always resolved
+ * `userId: null` — `canAccessStorageObject` denies whenever `ownerUserId`
+ * is set and the reading context's `userId` doesn't match, including
+ * `null` — so the read silently returned `null` instead of the object, no
+ * error surfaced. Found building `sovereign-plugin-travellog`'s T.23
+ * (portability hooks): its export resolver needs to read back visit-photo
+ * and attachment bytes, both uploaded with `ownerUserId` set.
  */
 function resolveStorageContext(context: StorageContext): {
   tenantId: string;
@@ -506,7 +521,8 @@ function resolveStorageContext(context: StorageContext): {
   if (!pluginId) {
     throw new Error('sdk.storage requires a plugin route context (no plugin id available).');
   }
-  return { tenantId: context.tenantId, pluginId, userId: context.userId };
+  const userId = context.userId ?? getPortabilityUserContext() ?? null;
+  return { tenantId: context.tenantId, pluginId, userId };
 }
 
 /**

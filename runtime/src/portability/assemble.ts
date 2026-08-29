@@ -126,7 +126,7 @@ export async function assembleExport(args: AssembleArgs): Promise<Uint8Array> {
 
     let section: PluginExportSection;
     try {
-      section = await runWithPortabilityPlugin(pluginId, () =>
+      section = await runWithPortabilityPlugin(pluginId, args.userId, () =>
         exporter({ userId: args.userId, tenantId: args.tenantId, options }),
       );
     } catch (e) {

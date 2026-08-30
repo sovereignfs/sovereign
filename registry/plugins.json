@@ -15,28 +15,28 @@
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "18de9da191a3e2df6d59b648d886cb82f93228fd",
-        "contentHash": "sha256:96509bbe139f34d2383c066d2a1535955b2673bb5193e374f817fb8439b58605",
-        "validatedAt": "2026-08-01T13:12:11.937Z"
+        "commit": "1cf1e1be19b1b4977d629563486e0c0865ea5b78",
+        "contentHash": "sha256:3d5ff52d2e948df359f61a4faf040e372074d5c2431014649268a35234352bd4",
+        "validatedAt": "2026-08-30T21:33:34.172Z"
       }
     },
     {
-      "id": "fs.sovereign.healthlog",
+      "id": "fs.sovereign.kanban",
       "repository": {
         "type": "git",
-        "url": "https://github.com/sovereignfs/sovereign-plugin-healthlog"
+        "url": "https://github.com/sovereignfs/sovereign-plugin-kanban"
       },
-      "name": "HealthLog",
-      "description": "A private personal health profile, measurements, labs, medications, and notes tracker.",
+      "name": "Kanban",
+      "description": "A minimalist, sovereign alternative to Trello — projects, boards, lists, and cards.",
       "author": {
         "name": "kasunben",
         "email": "sovereign@rohr.openfs.io"
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "72f84765bcdd6d4612b58cc43aaf205c94c9cf7a",
-        "contentHash": "sha256:6915ccd0cf6f285f9ab692c1b51b5b6ec9d4204ae96987f6329f314b21986563",
-        "validatedAt": "2026-08-01T13:12:12.755Z"
+        "commit": "310aca27a282fe6edacf4e99ead15dd1c7f32e70",
+        "contentHash": "sha256:de86a30006fcf2c228907dfc3e83d844a9869259f9522363c3bf1a4e0b02a49f",
+        "validatedAt": "2026-08-30T21:33:35.174Z"
       }
     },
     {
@@ -53,28 +53,9 @@
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "d50625ad8898df0a88797d5492ae6d1479aea325",
-        "contentHash": "sha256:97d92a9886f40a34dc46a83ce82d252dea4c42ee37b5f873dbde76bab093461d",
-        "validatedAt": "2026-08-01T13:12:13.555Z"
-      }
-    },
-    {
-      "id": "io.openfs.papertrail",
-      "repository": {
-        "type": "git",
-        "url": "https://github.com/kasunben/sovereign-plugin-papertrail"
-      },
-      "name": "PaperTrail",
-      "description": "Evidence-mapping canvas \u2014 map your evidence, follow the story.",
-      "author": {
-        "name": "kasunben",
-        "email": "sovereign@rohr.openfs.io"
-      },
-      "license": "AGPL-3.0-or-later",
-      "provenance": {
-        "commit": "28863e5ba3a61a90a81a298bfc9a5acd23d8f57d",
-        "contentHash": "sha256:98b0a976a1ad542fd0ba9da64bb216160bd5d7f33732a9989e633bce0417e9f4",
-        "validatedAt": "2026-08-01T13:12:14.752Z"
+        "commit": "c091addd5670cdc378ebf2d4d8d114fb78cfe716",
+        "contentHash": "sha256:11fd9a6a57ddc3b4215851da72866cdb12e5209ab58c16c3eb63b4722880ad88",
+        "validatedAt": "2026-08-30T21:33:36.046Z"
       }
     },
     {
@@ -91,9 +72,9 @@
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "33b9666432e1f5a413181d9e1be4ff4e3b4993e6",
-        "contentHash": "sha256:2e13ff560a2b28a8243550d36f34ab50c8749913200f35b3309474675d48250e",
-        "validatedAt": "2026-08-01T13:12:15.535Z"
+        "commit": "a427ff06a5618f1c18cb32119c77dc7c8e620f93",
+        "contentHash": "sha256:27d5527b42c52d4e6d76e2928249794ac2d4819955d92b87047571d9d4eb0cca",
+        "validatedAt": "2026-08-30T21:33:37.118Z"
       }
     },
     {
@@ -110,9 +91,9 @@
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "5333b779f5966567655427f25690967f3986637a",
-        "contentHash": "sha256:242d3c30f9be7a727bea8ecccc293f75309ba171f099d15fb886ce4dc30e9db3",
-        "validatedAt": "2026-08-01T13:12:16.285Z"
+        "commit": "87c4b106509db864bc7f197f745b7290a698e850",
+        "contentHash": "sha256:cb998c6a873c26e50f2fe3be67a993b196f4187e2d185c2be680d628b63201df",
+        "validatedAt": "2026-08-30T21:33:38.082Z"
       }
     },
     {
@@ -129,9 +110,9 @@
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "bef538f1448cbdcac44f3fad6c226f10a096d52d",
-        "contentHash": "sha256:12daa71e5e99381f70a3ec15cce7b882fce482fa79866f79fa69ba7be2288df6",
-        "validatedAt": "2026-08-01T13:12:17.011Z"
+        "commit": "752cd5fadcd5254a4beb4cf14b6efe6b301a4d89",
+        "contentHash": "sha256:c209c8e202ca9166a6ec148f34e5b0087e610ac2c81d7c8692067432529d9d21",
+        "validatedAt": "2026-08-30T21:33:39.018Z"
       }
     },
     {
@@ -148,9 +129,9 @@
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "924db3197394892d06cc5e42ba45e31abd895ee8",
-        "contentHash": "sha256:fc2e5a102dec5075c5e339a9026966378adc1d2d8093eaa0ad24f3f23ecf7e1a",
-        "validatedAt": "2026-08-01T13:12:17.775Z"
+        "commit": "2fa287f5c7eae27d7f97418f10b64c8a567baef0",
+        "contentHash": "sha256:7b158e403a0af23c4e3990909996ef0198f43104fdb52943db53e237beda4a85",
+        "validatedAt": "2026-08-30T21:33:39.943Z"
       }
     },
     {
@@ -167,28 +148,28 @@
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "1ce86e66fe664cda0f73eaf8b8772e8e395e818e",
-        "contentHash": "sha256:862d613dc280131606b981fdfb6d7374fe4cc7261b2701abd8302dff719dbc86",
-        "validatedAt": "2026-08-01T13:12:18.576Z"
+        "commit": "685fe8fdf3e3f278e4e57fe1c9f0f652b6a74775",
+        "contentHash": "sha256:98b709af00ded42ba12dde167846ffe2701b7aa00d36b5dfb7ebe28c04ddf281",
+        "validatedAt": "2026-08-30T21:33:41.023Z"
       }
     },
     {
-      "id": "com.mooniak.tritext",
+      "id": "fs.sovereign.travellog",
       "repository": {
         "type": "git",
-        "url": "https://github.com/sovereignfs/sovereign-plugin-tritext"
+        "url": "https://github.com/sovereignfs/sovereign-plugin-travellog"
       },
-      "name": "Tritext",
-      "description": "Trilingual content and translation management.",
+      "name": "Travellog",
+      "description": "A private, self-hosted trip planner and personal place check-in log.",
       "author": {
         "name": "kasunben",
         "email": "sovereign@rohr.openfs.io"
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "8dc08eb6608ae371947a189d79eac6f198e23ba2",
-        "contentHash": "sha256:9e8e8a7b7d3a6e3be2ffb81b15bfef70c6c94f1e90626a39dc8b0ddac66976e5",
-        "validatedAt": "2026-08-01T13:12:19.322Z"
+        "commit": "23e19b7228981f7c5e5ce604570f1be147c2f768",
+        "contentHash": "sha256:7f0433e717334baeba9323244242dd9cfc250d23b51056b2be18cf1b7e88a589",
+        "validatedAt": "2026-08-30T21:33:42.094Z"
       }
     },
     {
@@ -205,9 +186,9 @@
       },
       "license": "AGPL-3.0-or-later",
       "provenance": {
-        "commit": "79d0c45914ade1b733b04f65f581008bb888b929",
-        "contentHash": "sha256:b6d2e4511427db0d339c8ca4408d980be6e7797c3d7572ff5b0dde814a7456f6",
-        "validatedAt": "2026-08-01T13:12:20.097Z"
+        "commit": "ffa1beb4ab2c3306622de6dbf791abc2818db75d",
+        "contentHash": "sha256:abf36786915b64b832cbd2293b3e258c39d2709678b404fb15d2c85357fe939d",
+        "validatedAt": "2026-08-30T21:33:43.099Z"
       }
     }
   ]

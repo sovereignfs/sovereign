@@ -224,7 +224,24 @@ describe.skipIf(!PG_URL)(
     }
 
     afterEach(async () => {
-      await pool.query(`DROP SCHEMA IF EXISTS "drizzle" CASCADE`);
+      // Scoped to just the two fixed table names this block's tests use
+      // (both derived from the hardcoded pluginId 'fs.sovereign.tasks') —
+      // never a blanket `DROP SCHEMA "drizzle" CASCADE`. Drizzle's Postgres
+      // migrator always tracks applied migrations in that one fixed schema
+      // regardless of search_path (see migrate.ts's own doc comment), so
+      // every other concurrently-running .pg.test.ts file also keeps real
+      // tables there under its own distinct name — a blanket CASCADE drop
+      // here raced them, deleting another file's in-use migrations table
+      // mid-run. Reproduced live: running the full suite together threw
+      // "relation ... does not exist" from migrate.pg.test.ts, whose own
+      // migrations table this exact DROP SCHEMA had just deleted out from
+      // under it. Mirrors migrate.pg.test.ts's own afterEach, which already
+      // learned this lesson for its own describe block.
+      const pluginId = 'fs.sovereign.tasks';
+      await pool.query(`DROP TABLE IF EXISTS "drizzle"."${pluginMigrationsTableName(pluginId)}"`);
+      await pool.query(
+        `DROP TABLE IF EXISTS "drizzle"."${sharedToIsolatedMigrationsTableName(pluginId)}"`,
+      );
     });
 
     it('reproduces the incident: reusing pluginMigrationsTableName for the isolated transition sees prior shared-mode history as already applied and skips table creation', async () => {

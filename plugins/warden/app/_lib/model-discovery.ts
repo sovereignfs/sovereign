@@ -1,11 +1,16 @@
 import { checkHarnessHealth } from './harness-client';
+import { pinnedFetch } from './pinned-fetch';
 import {
   getProviderApiKey,
   listProviders,
   markProviderError,
   markProviderHealthy,
 } from './providers';
-import { assertSafeProviderBaseUrl, UnsafeProviderUrlError } from './url-safety';
+import {
+  assertSafeProviderBaseUrl,
+  UnsafeProviderUrlError,
+  type SafeProviderUrl,
+} from './url-safety';
 
 const MODEL_FETCH_TIMEOUT_MS = 8000;
 
@@ -39,11 +44,14 @@ type ProviderFetchResult =
   { ok: true; modelIds: string[] } | { ok: false; authFailed: boolean; message: string };
 
 async function fetchProviderModels(baseUrl: string, apiKey: string): Promise<ProviderFetchResult> {
-  let safeUrl: URL;
+  let safe: SafeProviderUrl;
   try {
-    // Re-validated here, not just at save time — defense in depth against a
-    // TTL-based DNS rebind between when the provider was configured and now.
-    safeUrl = await assertSafeProviderBaseUrl(baseUrl);
+    // Re-validated here, not just at save time. The actual request below
+    // connects to `safe.pinnedAddress` directly (pinnedFetch), not a fresh
+    // fetch(url) that would let a second, independent DNS lookup answer
+    // differently from this one — see url-safety.ts's own doc comment for
+    // why "validate immediately before" alone isn't enough.
+    safe = await assertSafeProviderBaseUrl(baseUrl);
   } catch (error) {
     return {
       ok: false,
@@ -53,10 +61,10 @@ async function fetchProviderModels(baseUrl: string, apiKey: string): Promise<Pro
     };
   }
 
-  const endpoint = `${safeUrl.toString().replace(/\/$/, '')}/models`;
+  const endpoint = new URL(`${safe.url.toString().replace(/\/$/, '')}/models`);
   let response: Response;
   try {
-    response = await fetch(endpoint, {
+    response = await pinnedFetch(endpoint, safe.pinnedAddress, safe.pinnedFamily, {
       headers: { authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(MODEL_FETCH_TIMEOUT_MS),
     });

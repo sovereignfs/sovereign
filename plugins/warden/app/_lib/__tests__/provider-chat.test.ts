@@ -1,9 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const assertSafeProviderBaseUrl = vi.fn();
 vi.mock('../url-safety', () => ({
   assertSafeProviderBaseUrl: (...args: unknown[]) => assertSafeProviderBaseUrl(...args),
   UnsafeProviderUrlError: class UnsafeProviderUrlError extends Error {},
+}));
+
+const pinnedFetch = vi.fn();
+vi.mock('../pinned-fetch', () => ({
+  pinnedFetch: (...args: unknown[]) => pinnedFetch(...args),
 }));
 
 const { requestProviderChat } = await import('../provider-chat');
@@ -39,22 +44,17 @@ async function drain(response: Response): Promise<string> {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  assertSafeProviderBaseUrl.mockImplementation(async (url: string) => new URL(url));
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
+  assertSafeProviderBaseUrl.mockImplementation(async (url: string) => ({
+    url: new URL(url),
+    pinnedAddress: '203.0.113.10',
+    pinnedFamily: 4,
+  }));
 });
 
 describe('requestProviderChat', () => {
   it('normalizes an OpenAI-style SSE stream into Warden frames', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi
-        .fn()
-        .mockResolvedValue(
-          new Response(upstreamStream([sseChunk('Hel'), sseChunk('lo')]), { status: 200 }),
-        ),
+    pinnedFetch.mockResolvedValue(
+      new Response(upstreamStream([sseChunk('Hel'), sseChunk('lo')]), { status: 200 }),
     );
 
     const result = await requestProviderChat({
@@ -73,9 +73,8 @@ describe('requestProviderChat', () => {
     expect(text).not.toContain('[DONE]');
   });
 
-  it('sends the model, messages, and max_tokens to the right endpoint with the key as a Bearer token', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(upstreamStream([]), { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
+  it('sends the model, messages, and max_tokens to the right endpoint with the key as a Bearer token, pinned to the validated address', async () => {
+    pinnedFetch.mockResolvedValue(new Response(upstreamStream([]), { status: 200 }));
 
     await requestProviderChat({
       baseUrl: 'https://openrouter.ai/api/v1',
@@ -84,8 +83,10 @@ describe('requestProviderChat', () => {
       messages: [{ role: 'user', content: 'hi' }],
     });
 
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('https://openrouter.ai/api/v1/chat/completions');
+    const [url, pinnedAddress, pinnedFamily, init] = pinnedFetch.mock.calls[0];
+    expect((url as URL).toString()).toBe('https://openrouter.ai/api/v1/chat/completions');
+    expect(pinnedAddress).toBe('203.0.113.10');
+    expect(pinnedFamily).toBe(4);
     expect(init.headers.authorization).toBe('Bearer sk-secret');
     const body = JSON.parse(init.body);
     expect(body).toMatchObject({ model: 'gpt-4o-mini', stream: true });
@@ -94,8 +95,6 @@ describe('requestProviderChat', () => {
 
   it('rejects an unsafe base URL before making any network call', async () => {
     assertSafeProviderBaseUrl.mockRejectedValue(new UnsafeProviderUrlError('blocked'));
-    const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
 
     const result = await requestProviderChat({
       baseUrl: 'http://harness:3003',
@@ -105,11 +104,11 @@ describe('requestProviderChat', () => {
     });
 
     expect(result).toEqual({ kind: 'unavailable', message: 'blocked' });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(pinnedFetch).not.toHaveBeenCalled();
   });
 
   it('maps a 401/403 to auth_failed', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 401 })));
+    pinnedFetch.mockResolvedValue(new Response('{}', { status: 401 }));
     const result = await requestProviderChat({
       baseUrl: 'https://openrouter.ai/api/v1',
       apiKey: 'bad-key',
@@ -120,7 +119,7 @@ describe('requestProviderChat', () => {
   });
 
   it('maps a network failure to unavailable', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')));
+    pinnedFetch.mockRejectedValue(new Error('ECONNREFUSED'));
     const result = await requestProviderChat({
       baseUrl: 'https://openrouter.ai/api/v1',
       apiKey: 'k',
@@ -131,8 +130,7 @@ describe('requestProviderChat', () => {
   });
 
   it('serializes multimodal (array-shaped) content through to the request body unchanged', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(upstreamStream([]), { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
+    pinnedFetch.mockResolvedValue(new Response(upstreamStream([]), { status: 200 }));
 
     const imageContent = [
       { type: 'text', text: 'what is this' },
@@ -145,19 +143,14 @@ describe('requestProviderChat', () => {
       messages: [{ role: 'user', content: imageContent }],
     });
 
-    const [, init] = fetchMock.mock.calls[0];
+    const [, , , init] = pinnedFetch.mock.calls[0];
     const body = JSON.parse(init.body);
     expect(body.messages[0].content).toEqual(imageContent);
   });
 
   it('surfaces the upstream error message for a non-2xx, non-auth response', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi
-        .fn()
-        .mockResolvedValue(
-          new Response(JSON.stringify({ error: { message: 'model not found' } }), { status: 404 }),
-        ),
+    pinnedFetch.mockResolvedValue(
+      new Response(JSON.stringify({ error: { message: 'model not found' } }), { status: 404 }),
     );
     const result = await requestProviderChat({
       baseUrl: 'https://openrouter.ai/api/v1',

@@ -65,7 +65,11 @@ function connectionRef(overrides: Partial<Record<string, unknown>> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  assertSafeProviderBaseUrl.mockImplementation(async (url: string) => new URL(url));
+  assertSafeProviderBaseUrl.mockImplementation(async (url: string) => ({
+    url: new URL(url),
+    pinnedAddress: '203.0.113.10',
+    pinnedFamily: 4,
+  }));
 });
 
 describe('listProviders', () => {

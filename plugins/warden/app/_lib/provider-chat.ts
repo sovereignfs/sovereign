@@ -1,4 +1,9 @@
-import { assertSafeProviderBaseUrl, UnsafeProviderUrlError } from './url-safety';
+import {
+  assertSafeProviderBaseUrl,
+  UnsafeProviderUrlError,
+  type SafeProviderUrl,
+} from './url-safety';
+import { pinnedFetch } from './pinned-fetch';
 import { MAX_OUTPUT_TOKENS, REQUEST_TIMEOUT_MS } from './limits';
 import type { ChatMessage } from './harness-client';
 
@@ -70,9 +75,10 @@ function toWardenFrames(upstream: ReadableStream<Uint8Array>): ReadableStream<Ui
 /**
  * Requests a chat completion from a user-configured external provider
  * (RFC 0063 §5, epic task 22.5). Re-validates the base URL immediately
- * before the request — defense in depth against a TTL-based DNS rebind
- * between when the provider was saved and now, same reasoning as
- * `model-discovery.ts`.
+ * before the request, then connects to the validated address directly
+ * (`pinnedFetch`) rather than a fresh `fetch(url)` — closes the DNS-rebind
+ * window a second, independent DNS lookup would otherwise leave open, same
+ * reasoning as `model-discovery.ts`.
  */
 export async function requestProviderChat(input: {
   baseUrl: string;
@@ -80,9 +86,9 @@ export async function requestProviderChat(input: {
   model: string;
   messages: ChatMessage[];
 }): Promise<ProviderChatResult> {
-  let safeUrl: URL;
+  let safe: SafeProviderUrl;
   try {
-    safeUrl = await assertSafeProviderBaseUrl(input.baseUrl);
+    safe = await assertSafeProviderBaseUrl(input.baseUrl);
   } catch (error) {
     return {
       kind: 'unavailable',
@@ -91,10 +97,10 @@ export async function requestProviderChat(input: {
     };
   }
 
-  const endpoint = `${safeUrl.toString().replace(/\/$/, '')}/chat/completions`;
+  const endpoint = new URL(`${safe.url.toString().replace(/\/$/, '')}/chat/completions`);
   let upstream: Response;
   try {
-    upstream = await fetch(endpoint, {
+    upstream = await pinnedFetch(endpoint, safe.pinnedAddress, safe.pinnedFamily, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${input.apiKey}` },
       body: JSON.stringify({

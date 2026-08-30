@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const checkHarnessHealth = vi.fn();
 vi.mock('../harness-client', () => ({
@@ -22,6 +22,11 @@ vi.mock('../url-safety', () => ({
   UnsafeProviderUrlError: class UnsafeProviderUrlError extends Error {},
 }));
 
+const pinnedFetch = vi.fn();
+vi.mock('../pinned-fetch', () => ({
+  pinnedFetch: (...args: unknown[]) => pinnedFetch(...args),
+}));
+
 const { discoverModels } = await import('../model-discovery');
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -42,12 +47,12 @@ const provider = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  assertSafeProviderBaseUrl.mockImplementation(async (url: string) => new URL(url));
+  assertSafeProviderBaseUrl.mockImplementation(async (url: string) => ({
+    url: new URL(url),
+    pinnedAddress: '203.0.113.10',
+    pinnedFamily: 4,
+  }));
   getProviderApiKey.mockResolvedValue('sk-test');
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
 });
 
 describe('discoverModels', () => {
@@ -81,9 +86,8 @@ describe('discoverModels', () => {
   it("lists a healthy provider's models and marks it healthy", async () => {
     checkHarnessHealth.mockResolvedValue({ kind: 'unreachable' });
     listProviders.mockResolvedValue([provider]);
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(jsonResponse({ data: [{ id: 'gpt-4o-mini' }, { id: 'gpt-4o' }] })),
+    pinnedFetch.mockResolvedValue(
+      jsonResponse({ data: [{ id: 'gpt-4o-mini' }, { id: 'gpt-4o' }] }),
     );
 
     const result = await discoverModels();
@@ -110,16 +114,12 @@ describe('discoverModels', () => {
     const good = { ...provider, id: 'conn-good' };
     const bad = { ...provider, id: 'conn-bad', baseUrl: 'https://bad.example.com' };
     listProviders.mockResolvedValue([good, bad]);
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockImplementation(async (url: string) => {
-        const parsed = new URL(url);
-        if (parsed.protocol === 'https:' && parsed.hostname === 'bad.example.com') {
-          throw new Error('ECONNREFUSED');
-        }
-        return jsonResponse({ data: [{ id: 'model-a' }] });
-      }),
-    );
+    pinnedFetch.mockImplementation(async (url: URL) => {
+      if (url.hostname === 'bad.example.com') {
+        throw new Error('ECONNREFUSED');
+      }
+      return jsonResponse({ data: [{ id: 'model-a' }] });
+    });
 
     const result = await discoverModels();
     expect(result.local.available).toBe(true);
@@ -144,7 +144,7 @@ describe('discoverModels', () => {
   it('marks a 401/403 response as an auth failure', async () => {
     checkHarnessHealth.mockResolvedValue({ kind: 'unreachable' });
     listProviders.mockResolvedValue([provider]);
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ error: 'unauthorized' }, 401)));
+    pinnedFetch.mockResolvedValue(jsonResponse({ error: 'unauthorized' }, 401));
 
     const result = await discoverModels();
     expect(result.providers[0]).toMatchObject({
@@ -162,12 +162,10 @@ describe('discoverModels', () => {
     checkHarnessHealth.mockResolvedValue({ kind: 'unreachable' });
     listProviders.mockResolvedValue([provider]);
     getProviderApiKey.mockResolvedValue(null);
-    const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
 
     const result = await discoverModels();
     expect(result.providers[0]).toMatchObject({ ok: false, message: 'Missing API key.' });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(pinnedFetch).not.toHaveBeenCalled();
     expect(markProviderError).toHaveBeenCalledWith(
       'conn-1',
       'This provider has no stored API key.',
@@ -177,7 +175,7 @@ describe('discoverModels', () => {
   it('treats a non-array/malformed model list as zero models, not a failure', async () => {
     checkHarnessHealth.mockResolvedValue({ kind: 'unreachable' });
     listProviders.mockResolvedValue([provider]);
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({})));
+    pinnedFetch.mockResolvedValue(jsonResponse({}));
 
     const result = await discoverModels();
     expect(result.providers[0]).toMatchObject({ ok: true, modelCount: 0 });

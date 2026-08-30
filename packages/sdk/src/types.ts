@@ -447,7 +447,14 @@ export interface UpdateSecretInput {
 
 export interface SecretContext {
   tenantId: string;
-  pluginId: string;
+  /**
+   * `null` when constructed outside a real Next.js request (e.g. a
+   * background job handler, where `next/headers()` throws) — the host
+   * resolves the effective plugin id via its own background-invocation
+   * context in that case. See `packages/sdk/src/secrets.ts`'s
+   * `secretContext()`.
+   */
+  pluginId: string | null;
   userId: string | null;
   capabilities: readonly string[];
 }
@@ -599,7 +606,14 @@ export interface ProviderConfig {
 
 export interface ConnectionContext {
   tenantId: string;
-  pluginId: string;
+  /**
+   * `null` when constructed outside a real Next.js request (e.g. a
+   * background job handler, where `next/headers()` throws) — the host
+   * resolves the effective plugin id via its own background-invocation
+   * context in that case. See `packages/sdk/src/connections.ts`'s
+   * `connectionContext()`.
+   */
+  pluginId: string | null;
   userId: string | null;
   capabilities: readonly string[];
 }
@@ -689,8 +703,15 @@ export interface HandoffContext<TPayload = unknown> {
 /** Runtime-injected context for a handoff create/consume call — derived from verified request headers. */
 export interface HandoffRequestContext {
   tenantId: string;
-  /** The plugin making the call — the *source* on create, the *provider* on consume. */
-  pluginId: string;
+  /**
+   * The plugin making the call — the *source* on create, the *provider* on
+   * consume. `null` when constructed outside a real Next.js request (e.g. a
+   * background job handler, where `next/headers()` throws) — the host
+   * resolves the effective plugin id via its own background-invocation
+   * context in that case. See `packages/sdk/src/handoffs.ts`'s
+   * `handoffContext()`.
+   */
+  pluginId: string | null;
   actorUserId: string | null;
 }
 /**
@@ -837,8 +858,14 @@ export interface ToolExecuteOptions {
  */
 export interface ToolContext {
   tenantId: string;
-  /** The *calling* plugin's manifest id — distinct from `ToolRef.providerId`. */
-  callerPluginId: string;
+  /**
+   * The *calling* plugin's manifest id — distinct from `ToolRef.providerId`.
+   * `null` when constructed outside a real Next.js request (e.g. a
+   * background job handler, where `next/headers()` throws) — the host
+   * resolves the effective plugin id via its own background-invocation
+   * context in that case. See `packages/sdk/src/tools.ts`'s `toolContext()`.
+   */
+  callerPluginId: string | null;
   userId: string | null;
   /** RFC 0035 — 0 registered .. 3 admin_vouched. */
   verificationLevel: 0 | 1 | 2 | 3;

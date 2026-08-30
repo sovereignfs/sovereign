@@ -1093,6 +1093,36 @@ implements the new signature. `manifest.json`'s `data.provides[].contract`
 no longer needs to be globally unique — only unique within your own plugin's
 `provides` array — since the platform namespaces it internally.
 
+### `@sovereignfs/sdk` 1.48.0 → 1.49.0
+
+**`sdk.connections.*`, `sdk.secrets.*`, `sdk.handoffs.*`,
+`sdk.tools.preview()`/`execute()`, and `sdk.activity.log()` now work from a
+job/schedule handler.** Same gap `1.46.0`/`1.47.0` closed for `sdk.storage`/
+`sdk.env` — each of these called `next/headers()` directly with no fallback,
+so any call from an `sdk.jobs`/`sdk.schedules` handler (no real Next.js
+request) threw instead of resolving the calling plugin's identity from the
+handler's own background-invocation context. Found in a codebase audit,
+generalizing a bug class this repo had already independently rediscovered
+and fixed four times. `sdk.notifications.*` (except `send`),
+`sdk.plugins.get()`/`list()`/`getConsentStatus()`, `sdk.auth.getSession()`,
+`sdk.authz.hasGrant()`, `sdk.directory.*`, `sdk.e2ee.*`, and
+`sdk.data.query()` were reviewed too but left unchanged — each is inherently
+tied to a live user's own session/consent with no background-context
+equivalent to fall back to, so they now just fail gracefully (return their
+documented empty/false/null value) instead of throwing a raw
+`next/headers()` error, without gaining a plugin-identity fallback.
+
+**Breaking for host implementers only** — plugin authors see no signature or
+return-type change for any of these calls. `ConnectionContext.pluginId`,
+`SecretContext.pluginId`, and `HandoffRequestContext.pluginId` widen from
+`string` to `string | null`; `ToolContext.callerPluginId` widens the same
+way — a custom `SdkHost` implementation reading these fields as guaranteed
+non-null will fail to type-check. The platform's own `runtime/src/sdk-host.ts`
+already implements the fallback, mirroring `resolveStorageContext`'s exact
+shape for each: falls back through the portability and background-invocation
+`AsyncLocalStorage` contexts, throwing `"requires a plugin route context"`
+only if every source comes up empty.
+
 ### `@sovereignfs/sdk` 1.46.0 → 1.47.0
 
 **`sdk.env.get()` now works from a job/schedule handler.** Previously, any

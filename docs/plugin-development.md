@@ -2383,9 +2383,35 @@ act when the claim succeeded. Thrown errors are caught and logged; the failed
 schedule waits out its own interval before running again.
 
 **No originating request.** There is no session and no user in scope —
-handlers run as the plugin itself. `ctx.headers` carries the plugin's identity
-for SDK surfaces that attribute by request headers (`sdk.notifications.send`).
-Query the users to act for from your own tables (always scoped by `tenant_id`).
+handlers run as the plugin itself. Query the users to act for from your own
+tables (always scoped by `tenant_id`).
+
+Two separate mechanisms carry plugin identity into a handler, and most `sdk.*`
+calls need neither — every schedule/job handler invocation already runs
+inside a background-invocation context the runtime establishes automatically,
+so most SDK surfaces resolve the calling plugin's identity on their own with
+no extra work:
+
+- **Automatic (no `ctx.headers` needed):** `sdk.db.getClient()`, `sdk.storage.*`,
+  `sdk.env.get()`, `sdk.crypto.*`, `sdk.connections.*`, `sdk.secrets.*`,
+  `sdk.handoffs.*`, `sdk.tools.preview()`/`execute()`, `sdk.activity.log()` —
+  call these exactly as you would from a route handler; they detect the
+  missing request and fall back to the handler's own background-invocation
+  plugin context. (`sdk.tools.provide()`/`sdk.data.provide()`/`sdk.authz.provide()`/
+  `sdk.portability.provide*()` are the exception among "provider" calls —
+  registration is meant to happen once at real route load time, so these
+  still require a live request and throw outside one, by design.)
+- **Explicit passthrough (`ctx.headers` required):** `sdk.jobs.enqueue()`/
+  `schedule()`/`cancel()`, `sdk.mailer.send()`, `sdk.email.sendToUser()` —
+  these take `requestHeaders` as an explicit parameter rather than reading
+  `next/headers()` internally, so pass `ctx.headers` (or `await headers()`
+  from a real route) yourself: `sdk.mailer.send(options, ctx.headers)`.
+
+`sdk.auth.getSession()`, `sdk.directory.*`, `sdk.e2ee.*`, and `sdk.data.query()`
+are inherently tied to a live user's own request (a session, a search, device
+enrollment, consent) — they return their documented "no session" value
+(`null`/`false`/throw, per method) rather than falling back to anything,
+since there is no live user to fall back to in a background invocation.
 
 **Dev-mode caveat:** schedule handlers are composed into the runtime at
 generate time and imported at server startup — editing a handler requires a
@@ -2476,10 +2502,10 @@ re-arms the schedule rather than killing it permanently). A thrown error
 retries with exponential backoff up to the job's `maxAttempts` before the
 job (or, for a recurring job, that occurrence) is marked failed.
 
-**No originating request**, same as `schedules`: `ctx.headers` carries the
-plugin's identity for SDK surfaces that attribute by request headers.
-Payloads must be JSON-serializable and small — large inputs belong in
-`sdk.storage`, referenced by id.
+**No originating request**, same as `schedules` — see that section's list of
+which `sdk.*` surfaces resolve plugin identity automatically versus which
+need `ctx.headers` passed explicitly. Payloads must be JSON-serializable and
+small — large inputs belong in `sdk.storage`, referenced by id.
 
 **Dev-mode caveat:** job handlers are composed into the runtime at generate
 time and imported at server startup — editing a handler requires a

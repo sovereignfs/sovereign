@@ -9,9 +9,20 @@ import type { ActiveSession, ChangePasswordInput, Session } from './types';
 const AUTH_URL =
   process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 
-/** Returns the current user session from runtime-injected headers, or null if unauthenticated. */
+/**
+ * Returns the current user session from runtime-injected headers, or null if
+ * unauthenticated. Also null outside a real Next.js request (e.g. called
+ * from a background job/schedule handler) — there is no session to resolve
+ * there, so this returns null rather than throwing the way `headers()`
+ * itself would.
+ */
 export async function getSession(): Promise<Session | null> {
-  const h = await headers();
+  let h: Headers;
+  try {
+    h = await headers();
+  } catch {
+    return null;
+  }
   const id = h.get('x-sovereign-user-id');
   if (!id) return null;
   const role = h.get('x-sovereign-user-role') ?? 'platform:user';

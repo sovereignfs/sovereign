@@ -120,10 +120,16 @@ export const authz = {
    * Consumer: check whether the current user holds a grant for `check`
    * against the calling plugin's own resolver. Returns `false` (never
    * throws) when there is no session, no plugin context, or no registered
-   * resolver.
+   * resolver — including when called outside a real Next.js request (e.g. a
+   * background job/schedule handler), where `headers()` itself would throw.
    */
   async hasGrant(check: GrantCheck): Promise<boolean> {
-    const h = await headers();
+    let h: Headers;
+    try {
+      h = await headers();
+    } catch {
+      return false;
+    }
     const pluginId = h.get('x-sovereign-plugin-id');
     const userId = h.get('x-sovereign-user-id');
     if (!pluginId || !userId) return false;

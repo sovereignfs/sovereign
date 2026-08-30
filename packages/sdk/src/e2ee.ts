@@ -13,8 +13,20 @@ import type {
 
 const DEFAULT_TENANT_ID = 'default';
 
+/**
+ * Throws `NotAuthenticatedError` when there is no current user — including
+ * outside a real Next.js request (e.g. a background job/schedule handler,
+ * where `headers()` itself throws). E2EE enrollment is inherently tied to a
+ * live user's own device/session; there is no background-context equivalent
+ * to fall back to.
+ */
 async function e2eeContext(): Promise<E2eeContext> {
-  const h = await headers();
+  let h: Headers;
+  try {
+    h = await headers();
+  } catch {
+    throw new NotAuthenticatedError();
+  }
   const userId = h.get('x-sovereign-user-id');
   if (!userId) throw new NotAuthenticatedError();
   return { tenantId: DEFAULT_TENANT_ID, userId };

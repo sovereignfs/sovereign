@@ -20,18 +20,27 @@ function normalizeVerificationLevel(raw: string | null): 0 | 1 | 2 | 3 {
 }
 
 async function toolContext(): Promise<ToolContext> {
-  const h = await headers();
-  const callerPluginId = h.get('x-sovereign-plugin-id');
-  if (!callerPluginId) {
-    throw new Error(
-      'sdk.tools requires a plugin route context (x-sovereign-plugin-id header missing).',
-    );
+  let callerPluginId: string | null = null;
+  let userId: string | null = null;
+  let verificationLevel: 0 | 1 | 2 | 3 = 0;
+  try {
+    const h = await headers();
+    callerPluginId = h.get('x-sovereign-plugin-id');
+    userId = h.get('x-sovereign-user-id');
+    verificationLevel = normalizeVerificationLevel(h.get('x-sovereign-verification-level'));
+  } catch {
+    // Outside a Next.js request context (e.g. a scheduled automation calling
+    // another plugin's tool) — no header-derived plugin id available. The
+    // host falls back to the background-invocation context (same pattern as
+    // sdk.storage/sdk.db.getClient()); it throws if that fallback also comes
+    // up empty. userId/verificationLevel stay at their safe defaults (no
+    // live user in a background invocation).
   }
   return {
     tenantId: DEFAULT_TENANT_ID,
     callerPluginId,
-    userId: h.get('x-sovereign-user-id'),
-    verificationLevel: normalizeVerificationLevel(h.get('x-sovereign-verification-level')),
+    userId,
+    verificationLevel,
   };
 }
 

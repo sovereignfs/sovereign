@@ -18,19 +18,22 @@ function parseCapabilities(raw: string | null): readonly string[] {
 }
 
 async function secretContext(): Promise<SecretContext> {
-  const h = await headers();
-  const pluginId = h.get('x-sovereign-plugin-id');
-  if (!pluginId) {
-    throw new Error(
-      'sdk.secrets requires a plugin route context (x-sovereign-plugin-id header missing).',
-    );
+  let pluginId: string | null = null;
+  let userId: string | null = null;
+  let capabilities: readonly string[] = [];
+  try {
+    const h = await headers();
+    pluginId = h.get('x-sovereign-plugin-id');
+    userId = h.get('x-sovereign-user-id');
+    capabilities = parseCapabilities(h.get('x-sovereign-user-capabilities'));
+  } catch {
+    // Outside a Next.js request context (e.g. a background job/schedule
+    // handler) — no header-derived plugin id available. The host falls back
+    // to the background-invocation context (same pattern as
+    // sdk.storage/sdk.db.getClient()); it throws if that fallback also
+    // comes up empty.
   }
-  return {
-    tenantId: DEFAULT_TENANT_ID,
-    pluginId,
-    userId: h.get('x-sovereign-user-id'),
-    capabilities: parseCapabilities(h.get('x-sovereign-user-capabilities')),
-  };
+  return { tenantId: DEFAULT_TENANT_ID, pluginId, userId, capabilities };
 }
 
 function requireUserForUserScope(scope: SecretScope, userId: string | null): void {

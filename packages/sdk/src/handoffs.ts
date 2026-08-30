@@ -12,18 +12,21 @@ import type {
 const DEFAULT_TENANT_ID = 'default';
 
 async function handoffContext(): Promise<HandoffRequestContext> {
-  const h = await headers();
-  const pluginId = h.get('x-sovereign-plugin-id');
-  if (!pluginId) {
-    throw new Error(
-      'sdk.handoffs requires a plugin route context (x-sovereign-plugin-id header missing).',
-    );
+  let pluginId: string | null = null;
+  let actorUserId: string | null = null;
+  try {
+    const h = await headers();
+    pluginId = h.get('x-sovereign-plugin-id');
+    actorUserId = h.get('x-sovereign-user-id');
+  } catch {
+    // Outside a Next.js request context (e.g. a background job/schedule
+    // handler creating a handoff link to embed in a notification) — no
+    // header-derived plugin id available. The host falls back to the
+    // background-invocation context (same pattern as
+    // sdk.storage/sdk.db.getClient()); it throws if that fallback also
+    // comes up empty.
   }
-  return {
-    tenantId: DEFAULT_TENANT_ID,
-    pluginId,
-    actorUserId: h.get('x-sovereign-user-id'),
-  };
+  return { tenantId: DEFAULT_TENANT_ID, pluginId, actorUserId };
 }
 
 /**

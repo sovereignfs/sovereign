@@ -342,6 +342,9 @@ export async function sendInviteAction(
   formData: FormData,
 ): Promise<InviteState> {
   const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'user:manage')) {
+    return { success: false, error: 'Insufficient privileges to manage users.' };
+  }
 
   const email = (formData.get('email') as string | null)?.trim();
   const expiresInDaysRaw = formData.get('expiresInDays') as string | null;

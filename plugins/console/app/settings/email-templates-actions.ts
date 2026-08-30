@@ -25,7 +25,10 @@ export async function getEmailTemplateCopyAction(
   templateId: EmailTemplateId,
   locale: string,
 ): Promise<{ ok: true; copy: Record<string, string> } | { ok: false; error: string }> {
-  await sdk.auth.requireSession();
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'instance:configure')) {
+    return { ok: false, error: 'Insufficient privileges to view email templates.' };
+  }
   const res = await adminFetch(
     `/api/admin/email-templates?templateId=${templateId}&locale=${locale}`,
   );
@@ -74,6 +77,9 @@ export async function testSendEmailTemplateAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'instance:configure')) {
+    return { ok: false, error: 'Insufficient privileges to send a test email.' };
+  }
   const templateId = formData.get('templateId') as EmailTemplateId | null;
   const locale = formData.get('locale') as string | null;
   if (!templateId || !locale) return { ok: false, error: 'templateId and locale are required.' };

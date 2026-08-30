@@ -55,8 +55,11 @@ beforeAll(() => {
       },
     },
     data: {
-      provide(contract, resolver) {
-        mockDataResolvers.set(contract, resolver as (...args: unknown[]) => Promise<unknown[]>);
+      provide(providerId, contract, resolver) {
+        mockDataResolvers.set(
+          `${providerId}:${contract}`,
+          resolver as (...args: unknown[]) => Promise<unknown[]>,
+        );
       },
       async query(_ref, _consumerId, _userId, _tenantId, _params) {
         return [];
@@ -441,6 +444,26 @@ describe('sdk.tools context derivation (RFC 0047)', () => {
   });
 });
 
+describe('sdk.data.provide (RFC 0002)', () => {
+  it('throws without a plugin route context', async () => {
+    vi.resetModules();
+    mockHeaders({});
+    const { data } = await import('../data');
+    await expect(data.provide('test-contract', async () => [])).rejects.toThrow(
+      /plugin route context/,
+    );
+  });
+
+  it('registers under the calling plugin id, namespaced by providerId:contract', async () => {
+    vi.resetModules();
+    mockHeaders({ 'x-sovereign-plugin-id': 'com.example.finance' });
+    const { data } = await import('../data');
+    const resolver = async () => [{ id: 1 }];
+    await data.provide('test-contract', resolver);
+    expect(mockDataResolvers.get('com.example.finance:test-contract')).toBe(resolver);
+  });
+});
+
 describe('sdk.authz (RFC 0054)', () => {
   it('provide() throws without a plugin route context', async () => {
     vi.resetModules();
@@ -641,12 +664,6 @@ describe('sdk — experimental surfaces', () => {
     await expect(
       sdk.events.publish({ channel: 'list:1', type: 'item.checked', payload: {} }),
     ).resolves.toBeUndefined();
-  });
-
-  it('data.provide delegates to the registered host (RFC 0002)', () => {
-    const resolver = async () => [{ id: 1 }];
-    sdk.data.provide('test-contract', resolver);
-    expect(mockDataResolvers.get('test-contract')).toBe(resolver);
   });
 
   it('activity.log is implemented (RFC 0005)', () => {

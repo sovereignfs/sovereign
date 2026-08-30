@@ -63,6 +63,7 @@ import { getPlatformDb } from './db';
 import {
   effectiveRequiresConfirmation,
   manifestDatabaseIsolation,
+  pluginContractName,
   pluginToolName,
   type ToolDeclaration,
 } from '@sovereignfs/manifest';
@@ -243,18 +244,19 @@ function getPlatformVersion(): string {
 }
 
 /**
- * In-process registry for cross-plugin data resolvers (RFC 0002).
- * Keyed by contract name. Populated by provider plugins calling
+ * In-process registry for cross-plugin data resolvers (RFC 0002). Keyed by
+ * `<providerId>:<contract>` (`pluginContractName`) — namespaced by provider
+ * so two plugins can never collide on the same local contract name, mirroring
+ * `_toolRegistry` below. Populated by provider plugins calling
  * `sdk.data.provide('contract', resolver)`. Resets on server restart.
  */
 const _resolverRegistry = new Map<string, DataContractResolver>();
 
 /**
  * In-process registry for plugin tool provider handlers (RFC 0047). Keyed
- * by `<providerId>:<toolName>` (`pluginToolName`) — unlike
- * `_resolverRegistry` above, explicitly namespaced by provider so two
- * plugins can never collide on the same local tool name. Populated by
- * provider plugins calling `sdk.tools.provide('tool-name', handlers)`.
+ * by `<providerId>:<toolName>` (`pluginToolName`) — explicitly namespaced by
+ * provider so two plugins can never collide on the same local tool name.
+ * Populated by provider plugins calling `sdk.tools.provide('tool-name', handlers)`.
  * Resets on server restart.
  */
 const _toolRegistry = new Map<string, ToolProviderHandlers>();
@@ -672,8 +674,8 @@ provideHost({
     },
   },
   data: {
-    provide(contract: string, resolver: DataContractResolver): void {
-      _resolverRegistry.set(contract, resolver);
+    provide(providerId: string, contract: string, resolver: DataContractResolver): void {
+      _resolverRegistry.set(pluginContractName(providerId, contract), resolver);
     },
     async query(
       ref: DataContractRef,
@@ -700,7 +702,7 @@ provideHost({
       );
       if (!grant) throw new ConsentRequiredError();
 
-      const resolver = _resolverRegistry.get(ref.contract);
+      const resolver = _resolverRegistry.get(pluginContractName(ref.providerId, ref.contract));
       if (!resolver) {
         throw new Error(
           `sdk.data.query(): no resolver registered for contract "${ref.contract}". ` +

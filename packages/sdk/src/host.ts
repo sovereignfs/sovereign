@@ -132,8 +132,13 @@ export interface SdkHost {
     ): Promise<DirectoryUser[]>;
   };
   data: {
-    /** Register a resolver for a contract this plugin provides. */
-    provide(contract: string, resolver: DataContractResolver): void;
+    /**
+     * Register a resolver for a contract this plugin provides. `providerId`
+     * is threaded through from the caller's own plugin id (read from request
+     * headers by the SDK caller) so the host can namespace the registration
+     * and never collide with another plugin's same-named local contract.
+     */
+    provide(providerId: string, contract: string, resolver: DataContractResolver): void;
     /**
      * Query a provider plugin's contract for the current user.
      * `consumerId` and `userId` are read from request headers by the SDK caller.

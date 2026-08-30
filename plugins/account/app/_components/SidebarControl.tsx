@@ -10,9 +10,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useState, useTransition } from 'react';
-import { Button, Toggle } from '@sovereignfs/ui';
+import { Button, GripIcon, Toggle, useReorderSensors } from '@sovereignfs/ui';
 import { updateSidebarPluginsAction } from '../actions';
-import { useReorderSensors } from '../_lib/dndSensors';
 import styles from '../account.module.css';
 
 interface PluginInfo {
@@ -59,7 +58,7 @@ export function SidebarControl({ plugins, initial }: Props) {
   // MouseSensor (handle-initiated, desktop) + TouchSensor (long-press lift,
   // mobile — fixes reordering being unusable on iOS PWA/Safari, which never
   // implements the native HTML5 Drag-and-Drop API for touch) + KeyboardSensor.
-  // See _lib/dndSensors.ts.
+  // See @sovereignfs/ui's useReorderSensors.
   const sensors = useReorderSensors();
 
   const infoMap = new Map(plugins.map((p) => [p.id, p]));
@@ -152,7 +151,7 @@ function SidebarRow({
         {...attributes}
         {...listeners}
       >
-        ⠿
+        <GripIcon />
       </button>
       <span className={styles.sidebarPluginIcon}>
         {info.iconUrl ? (

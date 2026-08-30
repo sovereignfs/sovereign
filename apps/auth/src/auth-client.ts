@@ -27,3 +27,26 @@ export const authClient = createAuthClient({
     passkeyClient() as unknown as BetterAuthClientPlugin,
   ],
 });
+
+// `authClient`'s inferred type loses `twoFactorClient`/`passkeyClient`'s own
+// method signatures because passkeyClient() above is itself cast to silence
+// a peer-version mismatch — every call site that reaches `signIn.passkey()`
+// or `twoFactor.*` would otherwise need its own untyped `as any` cast to
+// compile. Fixed once here instead: the intersection adds only the methods
+// missing from the inferred type, so every other member of `authClient`
+// (signIn.email, sendVerificationEmail, ...) keeps its real inferred type.
+export type AuthClientWithPlugins = typeof authClient & {
+  signIn: {
+    passkey: () => Promise<{ data: unknown; error: { message?: string } | null }>;
+  };
+  twoFactor: {
+    verifyTotp: (opts: {
+      code: string;
+    }) => Promise<{ data: unknown; error: { message?: string } | null }>;
+    verifyBackupCode: (opts: {
+      code: string;
+    }) => Promise<{ data: unknown; error: { message?: string } | null }>;
+  };
+};
+
+export const typedAuthClient = authClient as AuthClientWithPlugins;

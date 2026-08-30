@@ -1,4 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react';
+import { GripIcon } from '../GripIcon/GripIcon';
 import styles from './DragHandleRow.module.css';
 
 export interface DragHandleRowProps extends HTMLAttributes<HTMLDivElement> {
@@ -33,29 +34,9 @@ export function DragHandleRow({
         tabIndex={-1}
         {...handleProps}
       >
-        <DragIcon />
+        <GripIcon className={styles.icon} />
       </button>
       <div className={styles.content}>{children}</div>
     </div>
-  );
-}
-
-function DragIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="none"
-      aria-hidden="true"
-      className={styles.icon}
-    >
-      {/* Two columns of three dots */}
-      {[3, 7, 11].map((cy) =>
-        [4, 10].map((cx) => (
-          <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={1.2} fill="currentColor" />
-        )),
-      )}
-    </svg>
   );
 }

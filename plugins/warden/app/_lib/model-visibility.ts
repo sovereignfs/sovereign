@@ -23,8 +23,8 @@ import { isVisibleByDefault } from './model-visibility-policy';
  */
 export { isModelVisible, isVisibleByDefault } from './model-visibility-policy';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Db = BaseSQLiteDatabase<'async', any, any>;
+// No `any` needed — see conversations.ts's `Db` for why `unknown` suffices.
+type Db = BaseSQLiteDatabase<'async', unknown>;
 
 async function db(): Promise<Db> {
   return (await sdk.db.getClient()) as Db;

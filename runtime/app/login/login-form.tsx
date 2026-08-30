@@ -4,7 +4,7 @@ import { type FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Button, Icon, Input, useIsOffline } from '@sovereignfs/ui';
-import { authClient } from '@/src/auth-client';
+import { authClient, typedAuthClient } from '@/src/auth-client';
 import { completeSignIn } from '@/src/complete-sign-in';
 import { ViewportHeightSync } from './ViewportHeightSync';
 import styles from '../auth-page.module.css';
@@ -69,8 +69,7 @@ export function LoginForm({
   async function onPasskeySignIn() {
     setPasskeyLoading(true);
     setError(null);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (authClient.signIn as any).passkey();
+    const result = await typedAuthClient.signIn.passkey();
     setPasskeyLoading(false);
     if (result?.error) {
       const msg = result.error.message ?? '';

@@ -854,9 +854,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 24px;
   color: var(--sv-color-text-muted);
-  font-size: var(--sv-font-size-lg);
-  line-height: 1;
   user-select: none;
   flex-shrink: 0;
   background: none;

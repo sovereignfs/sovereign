@@ -959,3 +959,19 @@ search_path`/session GUCs meant to persist across statements, temp
   `pg_try_advisory_lock` from a completely separate connection after
   `runMigrations()` returns, confirmed to fail against the pre-fix code by
   temporarily reverting the fix.
+- **`checkAdminKey()` (`runtime/src/admin-guard.ts`, `apps/auth/src/admin-guard.ts`)
+  compares the `SOVEREIGN_ADMIN_KEY` bearer token with `crypto.timingSafeEqual`
+  on length-checked buffers, never plain `!==`.** This is the sole
+  authorization boundary for the entire `/api/admin/*` surface on both
+  services — `runtime/middleware.ts`'s matcher deliberately excludes this
+  path (self-authenticated by design), so a plain string comparison is also
+  a timing side-channel with nothing else standing in front of it. A
+  dedicated per-IP rate limiter (`admin-rate-limit.ts`, one instance per
+  service, duplicated rather than shared across the service boundary) backs
+  the comparison: it counts only failed comparisons, never successful ones
+  — `checkAdminKey` is the single call point behind every `/api/admin/*`
+  route (e.g. Console's `adminFetch`, called with the correct key on every
+  admin action), so counting successes too would throttle legitimate
+  traffic instead of just repeated bad-key guesses. Once an IP trips the
+  limiter, every request from it returns `429` until the window resets,
+  including one presenting the correct key.

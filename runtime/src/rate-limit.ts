@@ -1,5 +1,3 @@
-import type { NextRequest } from 'next/server';
-
 /**
  * General-purpose, IP-keyed request-flood protection for `runtime/middleware.ts`
  * — every path the middleware matcher covers (session-gated pages/API, the
@@ -96,8 +94,13 @@ export function resetGlobalRateLimitForTests(): void {
  * proxy to correct a forged header, and IP-based limiting can be bypassed —
  * the same class of trust boundary already implicit in how this platform
  * relies on the proxy for TLS termination.
+ *
+ * Typed for the plain `Request` all three built-in fetch-API types satisfy
+ * (`NextRequest extends Request`) — only `.headers.get()` is used, so this
+ * also works from `admin-guard.ts`'s route handlers, which receive a plain
+ * `Request`, not a `NextRequest`.
  */
-export function clientIp(request: NextRequest): string {
+export function clientIp(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for');
   if (forwarded) {
     const hops = forwarded

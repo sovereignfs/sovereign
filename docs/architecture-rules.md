@@ -909,3 +909,53 @@ backup`'s own Postgres path additionally requires `pg_dump`, not installed
   route compiles into real server output), the three generators' updated
   unit tests (`scripts/__tests__/generate-registry.test.ts`), and the full
   existing test suite.
+- **A Postgres session-level advisory lock (`pg_advisory_lock`/
+  `pg_advisory_unlock`) must be acquired and released on the exact same
+  physical connection, or the unlock silently no-ops and the lock leaks
+  forever.** `packages/db/src/migrate.ts`'s `runMigrations()` used to route
+  the lock and unlock through two independent `dbGet(pdb, ...)` calls;
+  since `pdb.db` (Postgres) is backed by a `pg.Pool`, each call is free to
+  be served by a different physical connection, and `pg_advisory_unlock`
+  only releases a lock held by the calling session — issued from the wrong
+  connection, it does nothing, with no error. This caused a real production
+  outage: a stale lock from one boot (an unrelated redeploy's restart lost
+  the pool's race) hung every subsequent `runMigrations()` call — i.e.
+  every later container restart — indefinitely, taking the entire app down
+  on every request, since Next.js never finishes preparing the server.
+  Diagnosed live via `pg_stat_activity`/`pg_locks` against the affected
+  production database; resolved immediately by terminating the stuck
+  holder session (`pg_terminate_backend`). Fixed by checking out one
+  dedicated client for the whole lock→migrate→unlock window
+  (`pdb.db.$client.connect()` — `$client` is drizzle-orm's own exposed raw
+  `Pool`, confirmed via its `.d.ts`) instead of letting the pool route each
+  statement independently; `migratePg`/`seedPlatformData` keep using the
+  shared pool as before, since only the lock/unlock pair needs session
+  affinity. The general lesson extends beyond this one call site: any
+  session-scoped Postgres primitive (advisory locks, `SET
+search_path`/session GUCs meant to persist across statements, temp
+  tables, `pg_backend_pid()`-keyed state) is unsafe to use against a
+  `pg.Pool`-backed Drizzle client without explicitly pinning a single
+  checked-out client for the whole sequence — a bare `db.execute()`/
+  `db.query()` call gives no such guarantee, silently, even though it looks
+  identical to a normal one-shot query. Verifying the fix under
+  CI-representative conditions (the full `.pg.test.ts` suite run together,
+  matching CI's one shared Postgres `services:` container) surfaced two
+  more, independent, pre-existing test-fixture bugs in the same area,
+  fixed alongside it: `migrate.pg.test.ts` derived `migrationsTable` names
+  by concatenating a fixed prefix onto a full 36-char UUID-based schema
+  name, silently overflowing Postgres's 63-byte `NAMEDATALEN` identifier
+  limit into truncated, colliding names once several tests ran
+  concurrently; and `plugin-isolation-migration.pg.test.ts`'s `afterEach`
+  ran a blanket `DROP SCHEMA "drizzle" CASCADE` — the one fixed schema
+  Postgres's migrator always tracks applied migrations in, regardless of
+  any connection's `search_path` — which raced and deleted _other_
+  concurrently-running test files' own in-use migrations tables mid-run.
+  Both are instances of the same underlying hazard `migrate.ts`'s own doc
+  comment already flagged for one describe block in that file (a blanket
+  schema-wide `DROP`/`CASCADE` against the shared `drizzle` schema is never
+  safe when other `.pg.test.ts` files run concurrently against it) but that
+  had not been generalized to every file using that schema. Regression
+  coverage: a new test independently probes the lock via
+  `pg_try_advisory_lock` from a completely separate connection after
+  `runMigrations()` returns, confirmed to fail against the pre-fix code by
+  temporarily reverting the fix.

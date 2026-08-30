@@ -2380,7 +2380,12 @@ in memory, so a restarted instance re-arms every schedule, and each replica of
 a multi-node deployment ticks independently — claim work with conditional
 updates (e.g. `UPDATE … WHERE sent_at IS NULL`) before acting on it, and only
 act when the claim succeeded. Thrown errors are caught and logged; the failed
-schedule waits out its own interval before running again.
+schedule waits out its own interval before running again. A handler running
+longer than 30 seconds is treated the same way for tick-loop purposes — the
+platform stops waiting on it and moves on to other due schedules — but this
+cannot cancel the handler's own execution (there is no cancellation signal),
+so its async work may keep running in the background after the tick loop has
+stopped waiting on it. Design handlers to finish well within that window.
 
 **No originating request.** There is no session and no user in scope —
 handlers run as the plugin itself. Query the users to act for from your own

@@ -4,6 +4,7 @@ import {
   checkGlobalRateLimit,
   clientIp,
   isGlobalRateLimitDisabled,
+  rateLimitBucketCountForTests,
   resetGlobalRateLimitForTests,
 } from '../rate-limit';
 
@@ -60,6 +61,47 @@ describe('rate-limit', () => {
     it('treats a non-numeric env override as unset rather than crashing', () => {
       process.env.SOVEREIGN_RATE_LIMIT_MAX_REQUESTS = 'not-a-number';
       expect(checkGlobalRateLimit('1.2.3.4', 1_000).allowed).toBe(true);
+    });
+  });
+
+  describe('lazy eviction', () => {
+    it('evicts expired entries once both the window and the eviction interval have elapsed, leaving a still-active key untouched', () => {
+      checkGlobalRateLimit('key-a', 1_000);
+      checkGlobalRateLimit('key-b', 1_000);
+      checkGlobalRateLimit('key-c', 1_000);
+      expect(rateLimitBucketCountForTests()).toBe(3);
+
+      // Window elapsed (default 60_000ms) but eviction interval (5min) has
+      // not -- a call here must not shrink the map yet.
+      checkGlobalRateLimit('key-d', 61_500);
+      expect(rateLimitBucketCountForTests()).toBe(4);
+
+      // Eviction interval elapsed (5min since lastSweepAt, which starts at
+      // 0) -- this call sweeps every entry whose window has expired
+      // (key-a/b/c/d all qualify by now) before adding its own new key.
+      checkGlobalRateLimit('key-e', 400_000);
+      expect(rateLimitBucketCountForTests()).toBe(1);
+    });
+
+    it('sweeps at most once per eviction interval, not on every call', () => {
+      checkGlobalRateLimit('key-a', 1_000);
+
+      // Crosses the eviction-interval threshold -- sweeps key-a away and
+      // resets lastSweepAt to 300_000.
+      checkGlobalRateLimit('key-b', 300_000);
+      expect(rateLimitBucketCountForTests()).toBe(1);
+
+      // key-b's own window (60_000ms) has now elapsed, but this call sits
+      // well within EVICTION_INTERVAL_MS of the last sweep (300_000) -- the
+      // gate must block a re-sweep, so key-b survives despite being expired.
+      checkGlobalRateLimit('key-c', 360_500);
+      expect(rateLimitBucketCountForTests()).toBe(2); // key-b (expired, unswept) + key-c
+
+      // A full interval past the last real sweep (300_000) -- now it fires
+      // again and removes every entry expired by this point (key-b and key-c
+      // both are).
+      checkGlobalRateLimit('key-d', 600_000);
+      expect(rateLimitBucketCountForTests()).toBe(1);
     });
   });
 

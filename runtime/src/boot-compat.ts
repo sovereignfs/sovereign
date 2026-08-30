@@ -18,19 +18,34 @@ export async function checkBootCompatibility(): Promise<void> {
   const pdb = await getPlatformDb();
 
   for (const manifest of getInstalledPlugins()) {
-    const result = checkCompatibility(manifest, platformVersion);
+    // Per-plugin isolation, mirroring runAllPluginMigrations()'s pattern
+    // (plugin-migrations.ts): a single manifest's checkCompatibility() throw
+    // (e.g. semver.gt() on a malformed minPlatformVersion/maxPlatformVersion
+    // string) or setPluginEnabled() rejection must not stop every subsequent
+    // manifest in getInstalledPlugins()'s iteration order from being
+    // evaluated. A caught fault here is NOT treated as "compatible" -- the
+    // plugin simply isn't marked incompatible or warned about this boot; it
+    // is not silently allowed past a check that would have caught it.
+    try {
+      const result = checkCompatibility(manifest, platformVersion);
 
-    if (!result.compatible && result.reason) {
-      console.warn(
-        `[boot-compat] Disabling incompatible plugin "${manifest.id}": ${result.reason}`,
-      );
-      markIncompatible(manifest.id, result.reason);
-      await setPluginEnabled(pdb, manifest.id, false);
-    } else {
-      recordWarnings(manifest.id, result.warnings);
-      for (const w of result.warnings) {
-        console.warn(`[boot-compat] ${w}`);
+      if (!result.compatible && result.reason) {
+        console.warn(
+          `[boot-compat] Disabling incompatible plugin "${manifest.id}": ${result.reason}`,
+        );
+        markIncompatible(manifest.id, result.reason);
+        await setPluginEnabled(pdb, manifest.id, false);
+      } else {
+        recordWarnings(manifest.id, result.warnings);
+        for (const w of result.warnings) {
+          console.warn(`[boot-compat] ${w}`);
+        }
       }
+    } catch (err) {
+      console.error(
+        `[boot-compat] Failed to check compatibility for plugin "${manifest.id}":`,
+        err,
+      );
     }
   }
 }

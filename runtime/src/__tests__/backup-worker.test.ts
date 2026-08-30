@@ -9,6 +9,7 @@ import {
   sweepExpiredJobs,
   type BackupWorkerDeps,
 } from '../backup-worker';
+import { notifyBackupCompletion } from '../backup-notification';
 
 vi.mock('../backup-notification', () => ({
   notifyBackupCompletion: vi.fn(async () => undefined),
@@ -62,7 +63,7 @@ describe('claimAndRunJob', () => {
   });
 
   it('runs a claimed job and marks it complete on success', async () => {
-    const claimed = job();
+    const claimed = job({ requestedByUserId: 'user-1' });
     const d = deps({
       claimNextBackupJob: vi.fn(async () => claimed),
       runBackup: vi.fn(async () => ({ archivePath: claimed.archivePath, sizeBytes: 999 })),
@@ -76,10 +77,16 @@ describe('claimAndRunJob', () => {
       sizeBytes: 999,
     });
     expect(d.completeBackupJobFailure).not.toHaveBeenCalled();
+    expect(notifyBackupCompletion).toHaveBeenCalledWith({
+      jobId: 'job-1',
+      scope: 'instance',
+      status: 'complete',
+      recipientUserId: claimed.requestedByUserId,
+    });
   });
 
   it('marks a job failed when runBackup throws, recording the error message', async () => {
-    const claimed = job();
+    const claimed = job({ requestedByUserId: 'user-1' });
     const d = deps({
       claimNextBackupJob: vi.fn(async () => claimed),
       runBackup: vi.fn(async () => {
@@ -94,6 +101,13 @@ describe('claimAndRunJob', () => {
       'sv backup exited with code 1',
     );
     expect(d.completeBackupJobSuccess).not.toHaveBeenCalled();
+    expect(notifyBackupCompletion).toHaveBeenCalledWith({
+      jobId: 'job-1',
+      scope: 'instance',
+      status: 'failed',
+      errorMessage: 'sv backup exited with code 1',
+      recipientUserId: claimed.requestedByUserId,
+    });
   });
 
   it('marks a job failed with a stringified error when runBackup throws a non-Error', async () => {

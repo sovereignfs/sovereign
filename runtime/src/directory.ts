@@ -6,12 +6,28 @@ export const DIRECTORY_MAX_LIMIT = 50;
 export const DIRECTORY_RATE_LIMIT_WINDOW_MS = 60_000;
 export const DIRECTORY_RATE_LIMIT_MAX_REQUESTS = 60;
 
+/** How often a call opportunistically sweeps expired entries — not a timer;
+ *  see `rate-limit.ts`'s identical constant for why (this module duplicates
+ *  the bucket shape rather than sharing one, per its own existing pattern). */
+const EVICTION_INTERVAL_MS = 5 * 60_000;
+
 interface RateLimitBucket {
   resetAt: number;
   count: number;
 }
 
 const buckets = new Map<string, RateLimitBucket>();
+let lastSweepAt = 0;
+
+/** Delete every entry whose window has already expired. Gated to run at
+ *  most once per `EVICTION_INTERVAL_MS`, not on every call. */
+function sweepExpired(now: number): void {
+  if (now - lastSweepAt < EVICTION_INTERVAL_MS) return;
+  lastSweepAt = now;
+  for (const [key, bucket] of buckets) {
+    if (bucket.resetAt <= now) buckets.delete(key);
+  }
+}
 
 export interface DirectoryRateLimitResult {
   allowed: boolean;
@@ -19,6 +35,7 @@ export interface DirectoryRateLimitResult {
 }
 
 export function checkDirectoryRateLimit(key: string, now = Date.now()): DirectoryRateLimitResult {
+  sweepExpired(now);
   const existing = buckets.get(key);
   if (!existing || existing.resetAt <= now) {
     buckets.set(key, { resetAt: now + DIRECTORY_RATE_LIMIT_WINDOW_MS, count: 1 });
@@ -38,6 +55,12 @@ export function checkDirectoryRateLimit(key: string, now = Date.now()): Director
 
 export function resetDirectoryRateLimitForTests(): void {
   buckets.clear();
+  lastSweepAt = 0;
+}
+
+/** Test-only: the number of live entries in the bucket Map. */
+export function directoryRateLimitBucketCountForTests(): number {
+  return buckets.size;
 }
 
 function boundedLimit(limit: unknown): number {

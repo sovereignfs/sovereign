@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   countUnreadNotifications,
+  dismissAllNotifications,
   dismissNotification,
   listUserNotifications,
   markAllNotificationsRead,
@@ -51,6 +52,11 @@ export async function POST(request: Request): Promise<Response> {
 
   if (body.action === 'dismiss' && body.id) {
     await dismissNotification(pdb, body.id, userId);
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === 'dismiss-all') {
+    await dismissAllNotifications(pdb, userId);
     return NextResponse.json({ ok: true });
   }
 

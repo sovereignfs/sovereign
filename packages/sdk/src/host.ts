@@ -268,7 +268,11 @@ export interface SdkHost {
       context: StorageContext,
     ): Promise<(StorageObject & { body: ReadableStream }) | null>;
     delete(key: string, context: StorageContext): Promise<void>;
-    list(prefix: string | undefined, context: StorageContext): Promise<StorageObject[]>;
+    list(
+      prefix: string | undefined,
+      options: { limit?: number; offset?: number } | undefined,
+      context: StorageContext,
+    ): Promise<StorageObject[]>;
     getSignedUrl(
       key: string,
       options: { expiresInSeconds?: number } | undefined,

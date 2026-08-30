@@ -1141,12 +1141,24 @@ export async function getStorageObjectByKey(
   return canAccessStorageObject(mapped, context) ? mapped : undefined;
 }
 
-/** List accessible storage objects, optionally filtered by key prefix. */
+/**
+ * List accessible storage objects, optionally filtered by key prefix.
+ * Newest-first (by `updated_at`), paginated via `limit`/`offset` — default
+ * 200, hard-clamped to 500 regardless of what the caller passes. Ownership
+ * and prefix filtering happen in the SQL `WHERE` clause, not after the
+ * query, so `LIMIT`/`OFFSET` paginate the real accessible/matching row set
+ * — filtering after `LIMIT` would silently return fewer than `limit` rows
+ * even when more matches exist beyond the fetched page.
+ */
 export async function listStorageObjects(
   pdb: PlatformDb,
   context: StorageAccessContext,
   prefix?: string,
+  options: { limit?: number; offset?: number } = {},
 ): Promise<PluginStorageObjectRow[]> {
+  const limit = Math.min(options.limit ?? 200, 500);
+  const offset = options.offset ?? 0;
+  const prefixPattern = prefix ? likePrefixPattern(prefix) : null;
   const rows = await dbAll<PluginStorageObjectRow>(
     pdb,
     sql`SELECT id, tenant_id AS "tenantId", plugin_id AS "pluginId",
@@ -1156,12 +1168,15 @@ export async function listStorageObjects(
         FROM plugin_storage_objects
         WHERE tenant_id = ${context.tenantId}
           AND plugin_id = ${context.pluginId}
-        ORDER BY updated_at DESC`,
+          AND (owner_user_id IS NULL OR owner_user_id = ${context.userId})
+          AND (
+            CAST(${prefixPattern} AS TEXT) IS NULL
+            OR key LIKE ${prefixPattern} ESCAPE '\\'
+          )
+        ORDER BY updated_at DESC
+        LIMIT ${limit} OFFSET ${offset}`,
   );
-  return rows
-    .map(mapStorageObjectRow)
-    .filter((row) => canAccessStorageObject(row, context))
-    .filter((row) => (prefix ? row.key.startsWith(prefix) : true));
+  return rows.map(mapStorageObjectRow);
 }
 
 /** Hard-delete one accessible storage object's metadata row. Returns the row so the caller can delete its physical bytes. */
@@ -2474,6 +2489,14 @@ function likeContainsPattern(q: string): string {
 }
 
 /**
+ * Same escaping as `likeContainsPattern`, but for a key-prefix match: only a
+ * trailing wildcard, no leading one. Paired with `ESCAPE '\'` in the query.
+ */
+function likePrefixPattern(prefix: string): string {
+  return `${prefix.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
+}
+
+/**
  * Personal activity feed — events where the given user is actor or subject,
  * visibility = 'user'. Newest-first, limited to `limit` rows starting at
  * `offset` (0-based, for page-based UI: page N → offset N*limit). Optionally
@@ -2841,9 +2864,11 @@ export async function dismissNotification(
 
 /**
  * Dismiss every non-dismissed notification for a user in one statement
- * (mirrors `markAllNotificationsRead`'s shape) — added for `sdk.notifications
- * .dismissAll()`; the existing REST route's own "Clear all" instead issues
- * one `dismissNotification` call per row, which this doesn't replace.
+ * (mirrors `markAllNotificationsRead`'s shape). Backs both
+ * `sdk.notifications.dismissAll()` and the REST route's own `dismiss-all`
+ * action (`runtime/app/api/account/notifications/route.ts`), which
+ * `NotificationBell.tsx`'s "Clear all" button calls instead of fanning out
+ * one `dismiss` POST per visible row.
  */
 export async function dismissAllNotifications(pdb: PlatformDb, userId: string): Promise<void> {
   const now = Math.floor(Date.now() / 1000);

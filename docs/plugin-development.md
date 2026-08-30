@@ -3350,7 +3350,11 @@ const object = await sdk.storage.put({
 const found = await sdk.storage.get('receipts/2026-01.pdf'); // StorageObject & { body: ReadableStream } | null
 found?.metadata; // { source: 'import' } — round-tripped back exactly as passed to put()
 await sdk.storage.delete('receipts/2026-01.pdf');
-const all = await sdk.storage.list('receipts/'); // optional key prefix filter
+const page = await sdk.storage.list('receipts/'); // optional key prefix filter
+// Paginated: options.limit defaults to 200, hard-clamped to 500 server-side
+// regardless of what's passed; options.offset defaults to 0. Page N via
+// `offset: N * limit`.
+const nextPage = await sdk.storage.list('receipts/', { limit: 100, offset: 100 });
 
 // Short-lived, read-only download URL (default 5 min, max 1 hour):
 const url = await sdk.storage.getSignedUrl('receipts/2026-01.pdf', { expiresInSeconds: 600 });

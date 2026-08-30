@@ -227,16 +227,12 @@ async function dismissShared(id: string): Promise<void> {
 }
 
 async function clearAllShared(): Promise<void> {
-  await Promise.all(
-    store.items.map((item) =>
-      fetch('/api/account/notifications', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'dismiss', id: item.id }),
-      }),
-    ),
-  );
+  await fetch('/api/account/notifications', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'dismiss-all' }),
+  });
   setStore({ items: [], unreadCount: 0 });
 }
 

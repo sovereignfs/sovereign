@@ -64,6 +64,7 @@ describe('sdk-host storage.list — plugin id routing', () => {
       { db: PLATFORM_CLIENT },
       { tenantId: 'default', pluginId: 'fs.example.widget', userId: null },
       undefined,
+      undefined,
     );
   });
 
@@ -78,6 +79,7 @@ describe('sdk-host storage.list — plugin id routing', () => {
       { db: PLATFORM_CLIENT },
       { tenantId: 'default', pluginId: 'fs.example.widget', userId: null },
       undefined,
+      undefined,
     );
   });
 
@@ -87,6 +89,18 @@ describe('sdk-host storage.list — plugin id routing', () => {
       { db: PLATFORM_CLIENT },
       { tenantId: 'default', pluginId: 'fs.example.request', userId: null },
       undefined,
+      undefined,
+    );
+  });
+
+  it('clamps a caller-supplied limit above 500 before reaching listStorageObjects', async () => {
+    headerPluginId = 'fs.example.widget';
+    await sdkHostModule.sdk.storage.list(undefined, { limit: 10_000, offset: 20 });
+    expect(listStorageObjects).toHaveBeenCalledWith(
+      { db: PLATFORM_CLIENT },
+      { tenantId: 'default', pluginId: 'fs.example.widget', userId: null },
+      undefined,
+      { limit: 500, offset: 20 },
     );
   });
 });

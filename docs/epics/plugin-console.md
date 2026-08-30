@@ -666,7 +666,7 @@ Subsequent tasks added Console sections as part of other epics:
 
 ---
 
-#### 📋 13.14 — Sweep Console's user-facing copy from "plugin" to "app"
+#### ✅ 13.14 — Sweep Console's user-facing copy from "plugin" to "app"
 
 **Goal:** Close the naming-convention violation CLAUDE.md calls out by name: "plugin" must never appear in a string the end user reads, yet Console's own copy says it pervasively — the Apps table's heading, search box, empty state, and column header; the entitlements section's heading, body copy, and column header; the settings page's "Example plugins"/"Root plugin" headings and forms; the groups lede; the plugin-access dialog's labels, help text, and warnings; the delete-user confirmations' "plugin data" phrasing; a capability display label; the license generator's error text and selector label; the external-clients page's lede; and the Console home tiles and sub-nav label that all still say "Plugins" instead of "Apps". The sibling `plugins/launcher/app/_components/LauncherOfflineView.tsx` already gets this right ("Your installed apps and tools.", "No apps installed yet"), proving the convention is known and applied elsewhere — it just never made it into Console. Fix by sweeping every `.tsx` file under `plugins/console/app/` for "plugin(s)" in rendered JSX text, `placeholder`, `aria-label`, `title`, and `label` strings, replacing with "app(s)" to match Launcher, while leaving code identifiers (`pluginId`, `PluginRow`, `PluginAccessDialog`, `RemovePluginButton`), the `/console/plugins` route path, the `plugins:self-manage` capability id, and developer-facing comments untouched, per CLAUDE.md's own plugin-vs-app scope table.
 
@@ -706,7 +706,7 @@ Subsequent tasks added Console sections as part of other epics:
 
 ---
 
-#### 📋 13.15 — Convert togglePluginAction to the ActionResult/useActionState convention
+#### ✅ 13.15 — Convert togglePluginAction to the ActionResult/useActionState convention
 
 **Goal:** Goal: `togglePluginAction` (`plugins/console/app/plugins/actions.ts:51-61`) is the enable/disable control wired to both the desktop icon-button and mobile card toggle on the Apps page — one of the most frequently used controls in Console — and it still throws a raw `Error` on a non-ok admin-API response (`throw new Error(`Failed to toggle plugin: ${res.status}`)`, line 59) instead of returning the shared `{success, error?}` `ActionResult` shape this file already uses for its sibling actions (`ActivatePluginActionState`, `PluginAccessActionState`). Both call sites (`PluginsTable.tsx:231` desktop, `PluginsTable.tsx:372` mobile) invoke it via a bare `<form action={togglePluginAction}>` with no `useActionState`, no pending state, and no inline error rendering — a failed toggle currently has no visible failure mode at all beyond Next.js's generic default error page, since `plugins/console/app` has no `error.tsx`/`global-error.tsx` (confirmed: none exists under that tree) to even give it plugin-scoped copy. The fix pattern already exists one function away in the same file/component: `activatePluginAction` returns `ActivatePluginActionState`, and `PluginsTable.tsx`'s `useActivate` hook (lines 145-161) plus `PluginAccessDialog.tsx`'s `UserPicker`/group-picker forms (lines 37, 68, 121-123) both show the real, already-adopted convention — `useActionState<T | null, FormData>(action, null)`, a `pending` flag driving the button's disabled/label state, and `{state && !state.success && <p className={styles.errorText}>{state.error}</p>}` for the inline error. This task converts `togglePluginAction` to that same shape and wires both row/card UIs through it, and adds the missing plugin-scoped `error.tsx` boundary so an unexpected throw (e.g. the `requirePluginManage()` authorization check, which correctly keeps throwing per the sv-ui-design error-UX convention) degrades to plain copy instead of the bare platform 500.
 
@@ -737,7 +737,7 @@ Subsequent tasks added Console sections as part of other epics:
 
 ---
 
-#### 📋 13.16 — Fix Console's Activity log empty-state/error-state handling
+#### ✅ 13.16 — Fix Console's Activity log empty-state/error-state handling
 
 **Goal:** Fix `plugins/console/app/activity/page.tsx`'s `getActivity()` (lines 30-48), which catches both a non-OK `GET /api/admin/activity` response and a thrown fetch error, logs each only via server-side `console.error` (invisible in the browser), and returns `{ events: [], total: 0, limit: PAGE_SIZE, offset }` in both cases — a shape indistinguishable from a genuinely empty activity log. `ActivityPage` (lines 97-104) then renders one unconditional "No activity recorded yet." message whenever `events.length === 0`, so an admin hitting a real backend failure (misconfigured `SOVEREIGN_ADMIN_KEY`, `GET /api/admin/activity` erroring, a network blip) sees no error at all — just a misleading claim that the instance has no activity history. The same message also displays unchanged when a search query (`q`) legitimately returns zero matches, which the codebase already has a filter-aware pattern for elsewhere (`PluginsTable.tsx:580`'s "No plugins match your filters.") that this page doesn't follow.
 

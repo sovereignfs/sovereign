@@ -11,6 +11,7 @@
     "@sovereignfs/sdk": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
     "better-auth": "^1.6.25",
+    "fflate": "^0.8.3",
     "next": "catalog:",
     "qrcode": "^1.5.4",
     "react": "catalog:",

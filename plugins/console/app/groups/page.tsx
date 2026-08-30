@@ -45,8 +45,8 @@ export default async function GroupsPage() {
       </div>
 
       <p className={styles.lede}>
-        Groups are reusable audiences for plugin access policies and future operator workflows — not
-        plugin-scoped roles.
+        Groups are reusable audiences for app access policies and future operator workflows — not
+        app-scoped roles.
       </p>
 
       {groups.length === 0 ? (

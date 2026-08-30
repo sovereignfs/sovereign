@@ -17,7 +17,7 @@ const sections = [
   { href: '/console', label: 'Overview' },
   { href: '/console/users', label: 'Users' },
   { href: '/console/groups', label: 'Groups' },
-  { href: '/console/plugins', label: 'Plugins' },
+  { href: '/console/plugins', label: 'Apps' },
   { href: '/console/entitlements', label: 'Entitlements' },
   { href: '/console/oauth-clients', label: 'External clients' },
   { href: '/console/settings', label: 'Settings' },

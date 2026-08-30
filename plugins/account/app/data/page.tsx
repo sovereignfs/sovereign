@@ -58,6 +58,10 @@ export default function DataPage() {
   const [connections, setConnections] = useState<ExternalConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [grantError, setGrantError] = useState<string | null>(null);
+  const [deviceGrantError, setDeviceGrantError] = useState<string | null>(null);
+  const [secretError, setSecretError] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,31 +101,65 @@ export default function DataPage() {
   }, [load]);
 
   const revoke = async (id: string) => {
-    const res = await fetch(`/api/account/data-grants/${id}`, { method: 'DELETE' });
-    if (res.ok) setGrants((prev) => prev.filter((g) => g.id !== id));
+    setGrantError(null);
+    try {
+      const res = await fetch(`/api/account/data-grants/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        setGrantError('Could not revoke this consent — please try again.');
+        return;
+      }
+      setGrants((prev) => prev.filter((g) => g.id !== id));
+    } catch (e) {
+      setGrantError(e instanceof Error ? e.message : 'Could not revoke this consent.');
+    }
   };
 
   const revokeDeviceGrant = async (pluginId: string, capability: string) => {
-    const res = await fetch('/api/account/device-grants', {
-      method: 'DELETE',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ pluginId, capability }),
-    });
-    if (res.ok) {
+    setDeviceGrantError(null);
+    try {
+      const res = await fetch('/api/account/device-grants', {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ pluginId, capability }),
+      });
+      if (!res.ok) {
+        setDeviceGrantError('Could not revoke this permission — please try again.');
+        return;
+      }
       setDeviceGrants((prev) =>
         prev.filter((g) => !(g.pluginId === pluginId && g.capability === capability)),
       );
+    } catch (e) {
+      setDeviceGrantError(e instanceof Error ? e.message : 'Could not revoke this permission.');
     }
   };
 
   const revokeSecret = async (id: string) => {
-    const res = await fetch(`/api/account/secrets/${id}`, { method: 'DELETE' });
-    if (res.ok) setSecrets((prev) => prev.filter((secret) => secret.id !== id));
+    setSecretError(null);
+    try {
+      const res = await fetch(`/api/account/secrets/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        setSecretError('Could not revoke this credential — please try again.');
+        return;
+      }
+      setSecrets((prev) => prev.filter((secret) => secret.id !== id));
+    } catch (e) {
+      setSecretError(e instanceof Error ? e.message : 'Could not revoke this credential.');
+    }
   };
 
   const disconnectConnection = async (id: string) => {
-    const res = await fetch(`/api/account/connections/${id}`, { method: 'DELETE' });
-    if (res.ok) setConnections((prev) => prev.filter((conn) => conn.id !== id));
+    setConnectionError(null);
+    try {
+      const res = await fetch(`/api/account/connections/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        setConnectionError('Could not disconnect this account — please try again.');
+        return;
+      }
+      setConnections((prev) => prev.filter((conn) => conn.id !== id));
+    } catch (e) {
+      setConnectionError(e instanceof Error ? e.message : 'Could not disconnect this account.');
+    }
   };
 
   return (
@@ -130,13 +168,17 @@ export default function DataPage() {
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Data access consents</h2>
           <p className={styles.sectionSubtitle}>
-            These plugins can read your data from other plugins. Revoke any consent you no longer
-            want.
+            These apps can read your data from other apps. Revoke any consent you no longer want.
           </p>
         </div>
 
         {loading && <p className={styles.help}>Loading&hellip;</p>}
         {error && <p style={{ color: 'var(--sv-color-error-text, red)' }}>{error}</p>}
+        {grantError && (
+          <p className={styles.error} role="alert">
+            {grantError}
+          </p>
+        )}
 
         {!loading && grants.length === 0 && <p className={styles.help}>No active data consents.</p>}
 
@@ -172,6 +214,11 @@ export default function DataPage() {
         </div>
 
         {loading && <p className={styles.help}>Loading&hellip;</p>}
+        {deviceGrantError && (
+          <p className={styles.error} role="alert">
+            {deviceGrantError}
+          </p>
+        )}
         {!loading && deviceGrants.length === 0 && (
           <p className={styles.help}>No device permissions granted.</p>
         )}
@@ -210,6 +257,11 @@ export default function DataPage() {
         </div>
 
         {loading && <p className={styles.help}>Loading&hellip;</p>}
+        {connectionError && (
+          <p className={styles.error} role="alert">
+            {connectionError}
+          </p>
+        )}
         {!loading && connections.length === 0 && (
           <p className={styles.help}>No connected external accounts.</p>
         )}
@@ -248,6 +300,11 @@ export default function DataPage() {
         </div>
 
         {loading && <p className={styles.help}>Loading&hellip;</p>}
+        {secretError && (
+          <p className={styles.error} role="alert">
+            {secretError}
+          </p>
+        )}
         {!loading && secrets.length === 0 && (
           <p className={styles.help}>No saved app credentials.</p>
         )}
@@ -356,8 +413,8 @@ function DeleteAccountSection() {
           <>
             <p className={styles.confirmMessage}>
               All your data will be permanently removed, including your profile, preferences,
-              activity history, notifications, and any data held by installed plugins. This cannot
-              be undone.
+              activity history, notifications, and any data held by installed apps. This cannot be
+              undone.
             </p>
             <FormField label="Confirm with your password" id="delete-account-password">
               {(field) => (

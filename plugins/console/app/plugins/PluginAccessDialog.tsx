@@ -377,10 +377,10 @@ export function PluginAccessDialog({
           <section className={styles.settingsSection}>
             <h3 className={styles.sectionTitle}>Policy</h3>
             <p className={styles.help}>
-              Managing a plugin here does not automatically grant you app access — Console
-              management and plugin app access are separate.
+              Managing an app here does not automatically grant you app access — Console management
+              and app access are separate.
             </p>
-            <FormField label="Who can open this plugin" id={`plugin-access-policy-${pluginId}`}>
+            <FormField label="Who can open this app" id={`plugin-access-policy-${pluginId}`}>
               {() => (
                 <Select
                   size="sm"
@@ -400,8 +400,8 @@ export function PluginAccessDialog({
             </FormField>
             {policy === 'disabled' && (
               <p className={styles.help}>
-                Disabled is the strongest state — no one can open this plugin, even admins/owners or
-                a user/group already granted access. It remains installed and manageable.
+                Disabled is the strongest state — no one can open this app, even admins/owners or a
+                user/group already granted access. It remains installed and manageable.
               </p>
             )}
             {showSelfService && (
@@ -417,7 +417,7 @@ export function PluginAccessDialog({
                       onChange={(e) => savePolicy(policy, e.target.checked)}
                     />
                     <span>
-                      Allow eligible users to self-service enable/disable this plugin (requires the{' '}
+                      Allow eligible users to self-service enable/disable this app (requires the{' '}
                       <code>plugins:self-manage</code> capability)
                     </span>
                   </label>
@@ -426,8 +426,8 @@ export function PluginAccessDialog({
             )}
             {emptyGrantWarning && (
               <p className={styles.errorText}>
-                No {showUserPicker ? 'users' : 'groups'} are granted yet — nobody can open this
-                plugin until you grant at least one.
+                No {showUserPicker ? 'users' : 'groups'} are granted yet — nobody can open this app
+                until you grant at least one.
               </p>
             )}
           </section>

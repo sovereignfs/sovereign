@@ -112,8 +112,8 @@ export default async function PreferencesPage() {
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Sidebar</h2>
           <p className={styles.help}>
-            Drag to reorder plugin icons. Toggle to show or hide individual plugins. The home icon
-            and platform controls are always visible.
+            Drag to reorder app icons. Toggle to show or hide individual apps. The home icon and
+            platform controls are always visible.
           </p>
         </div>
         <div style={{ maxWidth: 400, width: '100%' }}>

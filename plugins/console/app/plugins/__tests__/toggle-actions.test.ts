@@ -37,7 +37,7 @@ describe('togglePluginAction — enable/disable', () => {
     vi.stubGlobal('fetch', vi.fn());
 
     await expect(
-      togglePluginAction(formData({ pluginId: 'tasks', enabled: 'false' })),
+      togglePluginAction(null, formData({ pluginId: 'tasks', enabled: 'false' })),
     ).rejects.toThrow('Insufficient privileges to manage apps.');
     expect(fetch).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
@@ -49,7 +49,7 @@ describe('togglePluginAction — enable/disable', () => {
       vi.fn(() => Promise.resolve(new Response('{}', { status: 200 }))),
     );
 
-    await togglePluginAction(formData({ pluginId: 'tasks', enabled: 'false' }));
+    await togglePluginAction(null, formData({ pluginId: 'tasks', enabled: 'false' }));
 
     expect(hasCapability).toHaveBeenCalledWith(expect.anything(), 'plugin:manage');
     vi.unstubAllGlobals();
@@ -59,7 +59,7 @@ describe('togglePluginAction — enable/disable', () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response('{}', { status: 200 })));
     vi.stubGlobal('fetch', fetchMock);
 
-    await togglePluginAction(formData({ pluginId: 'tasks', enabled: 'false' }));
+    await togglePluginAction(null, formData({ pluginId: 'tasks', enabled: 'false' }));
 
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/api/admin/plugins/tasks'),
@@ -72,7 +72,7 @@ describe('togglePluginAction — enable/disable', () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response('{}', { status: 200 })));
     vi.stubGlobal('fetch', fetchMock);
 
-    await togglePluginAction(formData({ pluginId: 'tasks', enabled: 'true' }));
+    await togglePluginAction(null, formData({ pluginId: 'tasks', enabled: 'true' }));
 
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/api/admin/plugins/tasks'),
@@ -81,15 +81,15 @@ describe('togglePluginAction — enable/disable', () => {
     vi.unstubAllGlobals();
   });
 
-  it('throws on a non-ok response rather than silently succeeding', async () => {
+  it('returns a failure result on a non-ok response rather than silently succeeding', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() => Promise.resolve(new Response('{}', { status: 500 }))),
     );
 
     await expect(
-      togglePluginAction(formData({ pluginId: 'tasks', enabled: 'false' })),
-    ).rejects.toThrow('Failed to toggle plugin: 500');
+      togglePluginAction(null, formData({ pluginId: 'tasks', enabled: 'false' })),
+    ).resolves.toEqual({ success: false, error: 'Failed to toggle plugin: 500' });
     vi.unstubAllGlobals();
   });
 });

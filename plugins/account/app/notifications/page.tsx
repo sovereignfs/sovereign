@@ -17,7 +17,7 @@ interface PushState {
 }
 
 const KNOWN_CATEGORIES = [
-  { id: 'info', label: 'Info', description: 'General informational notifications from plugins.' },
+  { id: 'info', label: 'Info', description: 'General informational notifications from apps.' },
   {
     id: 'announcement',
     label: 'Announcements',

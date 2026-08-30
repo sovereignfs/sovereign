@@ -114,7 +114,7 @@ export function PortabilityPanel() {
         <h2 className={styles.sectionTitle}>Export my data</h2>
         <p className={styles.help}>
           Download a copy of your account data — profile, preferences, avatar, and any participating
-          plugins — as a ZIP archive you can keep or import elsewhere.
+          apps — as a ZIP archive you can keep or import elsewhere.
         </p>
         <div style={{ marginBottom: 'var(--sv-space-3)' }}>
           <Checkbox

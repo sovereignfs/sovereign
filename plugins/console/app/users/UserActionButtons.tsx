@@ -92,7 +92,7 @@ export function DeleteButton({ userId, name }: { userId: string; name: string })
         open={open}
         onClose={() => setOpen(false)}
         title={`Delete user: ${name || userId}?`}
-        message="This will permanently remove all their data from this instance, including their profile, activity history, plugin data, and files. This cannot be undone."
+        message="This will permanently remove all their data from this instance, including their profile, activity history, app data, and files. This cannot be undone."
         confirmLabel="Delete permanently"
         destructive
         onConfirm={() => {

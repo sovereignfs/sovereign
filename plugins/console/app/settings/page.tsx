@@ -107,13 +107,13 @@ export default async function SettingsPage() {
 
       {settings.hasExamplePlugins && (
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Example plugins</h2>
+          <h2 className={styles.sectionTitle}>Example apps</h2>
           <ExampleAppsForm initialValue={settings.examplesEnabled} />
         </section>
       )}
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Root plugin</h2>
+        <h2 className={styles.sectionTitle}>Root app</h2>
         <RootPluginForm
           candidates={rootCandidates.map((p) => ({ id: p.id, name: p.name }))}
           currentId={settings.rootPluginId}

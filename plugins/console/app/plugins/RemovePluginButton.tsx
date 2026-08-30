@@ -80,7 +80,7 @@ export function RemovePluginButton({
       <ConfirmDialog
         open={open}
         onClose={() => setOpen(false)}
-        title="Remove plugin"
+        title="Remove app"
         message={
           <>
             Remove <strong>{pluginName}</strong>? Its files will be deleted from the server. This

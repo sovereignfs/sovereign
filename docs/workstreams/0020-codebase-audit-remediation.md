@@ -1,0 +1,384 @@
+# Workstream 0020 — Codebase audit remediation
+
+**Status:** 📋 Planned\
+**Date:** August 2026\
+**Author:** kasunben\
+**Goal owner:** kasunben\
+**RFCs:** None — this workstream remediates findings from a completed
+codebase audit (architecture, security, performance, product, code quality,
+documentation). Every task follows a pattern already established elsewhere
+in this codebase; none introduces new product design, matching the precedent
+set by workstream [0006](0006-rfc-0071-incident-followups.md) (incident
+follow-ups, no RFC) and workstream [0012](0012-engineering-hygiene.md)
+(maintainability backlog, no RFC for 7 of its 8 legs).\
+**Epics touched:** 0 (Infrastructure), 2 (Platform Shell), 3 (Plugins
+Runtime), 8 (Data Sovereignty), 9 (Design System), 13 (Plugin — Console), 14
+(Plugin — Accounts), 22 (Warden / Core Assistant)
+
+---
+
+## Goal
+
+Close the 29 codebase-audit findings that need coordinated, reviewable code
+changes — cross-plugin data isolation, SSRF/timing/rate-limit security gaps,
+plugin route-composition integrity, notification/storage query performance,
+background-process fault isolation, database connection and rotation
+hygiene, admin-route test coverage, terminology/error-handling consistency
+in Console and Account, and a small cluster of code-duplication/lint
+cleanup. At the end: all 29 tasks are ✅ across their 8 epic docs, and none
+of the findings this workstream covers remain open in the audit report.
+
+This workstream deliberately does **not** cover every finding from the
+audit. Three classes were scoped out during planning (see Decisions locked):
+a handful of urgent, one-line security fixes shipped same-day as standalone
+hotfixes outside any workstream; a cluster of pure documentation corrections
+with no design decision behind them, shipped as plain `docs/` PRs; and two
+findings (an SSRF gap in `sovereign-plugin-travellog.local` and a ReDoS bug
+in `sovereign-plugin-plainwrite.local`) that belong to those plugins' own,
+separately-tracked repos, not this one.
+
+## Definition of done
+
+- [ ] `3.39` — Namespace sdk.data's resolver registry by (providerId, contract)
+- [ ] `3.40` — Sweep sdk.* surfaces for the headers()-outside-request bug class
+- [ ] `3.41` — Enforce sdk.device.getSurface()'s documented no-throw guarantee
+- [ ] `22.6` — Pin the resolved IP for Warden's provider-URL SSRF guard (close the DNS-rebind race)
+- [ ] `0.21` — Harden checkAdminKey: timing-safe comparison + rate limiting on /api/admin
+- [ ] `3.42` — Recursively prune stale composed plugin route directories
+- [ ] `3.43` — Add a cross-plugin routePrefix collision check at generate time
+- [ ] `2.34` — Index the notifications table and switch "Clear all" to the existing bulk-dismiss helper
+- [ ] `2.35` — Add pagination to sdk.storage.list()
+- [ ] `0.22` — Evict expired entries from the three in-memory rate-limit maps; fix the stale peer-comparison comment
+- [ ] `0.23` — Add a per-tick cap and handler timeout to the schedule tick loop
+- [ ] `0.24` — Isolate checkBootCompatibility() from boot-abort faults; add test coverage
+- [ ] `0.25` — Finish or explicitly stub backup-completion notifications; add real test coverage
+- [ ] `8.35` — Bound isolated Postgres plugin pool size; expose a pool-size env var
+- [ ] `8.36` — Batch field-reseal's per-row UPDATE into multi-row statements
+- [ ] `22.7` — Fix Warden's account-deletion N+1 query pattern
+- [ ] `13.10` — Add route-level test coverage for every runtime/app/api/admin/* handler
+- [ ] `13.11` — Extend users/actions.test.ts to cover every exported action's capability gating
+- [ ] `13.12` — Add test coverage for email-templates-actions.ts
+- [ ] `13.13` — Add test coverage for groups/actions.ts and entitlements/actions.ts
+- [ ] `13.14` — Sweep Console's user-facing copy from "plugin" to "app"
+- [ ] `13.15` — Convert togglePluginAction to the ActionResult/useActionState convention
+- [ ] `13.16` — Fix Console's Activity log empty-state/error-state handling
+- [ ] `14.3` — Sweep Account's user-facing copy from "plugin" to "app"
+- [ ] `14.4` — Add error feedback to Account's Data & Privacy revoke/disconnect handlers
+- [ ] `9.26` — Extract shared drag-reorder sensors + GripIcon into packages/ui; migrate plugins/account
+- [ ] `9.27` — Add a sideEffects declaration to packages/ui/package.json
+- [ ] `3.44` — Standardize BaseSQLiteDatabase typing in platform-owned plugin code
+- [ ] `0.26` — Add explanations to the login/2FA eslint-disable casts, or replace them with a typed helper
+
+## Decisions locked
+
+| Decision                                                                             | Choice                                                                                                                                                                                                                                                | Rejected alternative and why                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Governing design doc                                                                 | None — this is remediation, not new design, matching workstream 0006/0012's precedent                                                                                                                                                                 | Writing a new RFC first — rejected because every task follows a pattern already established elsewhere in this codebase (namespaced registries, timing-safe comparisons, bounded tick loops, the ActionResult convention); there is no open design question to settle                                                                                                                                |
+| Workstream shape                                                                     | One workstream, 9 legs                                                                                                                                                                                                                                | Splitting into two workstreams by urgency tier (security/reliability vs. polish) — rejected in favor of the workstream 0012 precedent (one multi-epic hygiene backlog, single document to track); legs already isolate review scope, so a second document would add index overhead without changing what gets reviewed together                                                                     |
+| Scope: urgent one-line security fixes                                                | Shipped same-day as standalone `fix/` PRs, outside this workstream — the missing-capability-check cluster in `plugins/console/app/users/actions.ts` and `email-templates-actions.ts`, and the `design-tokens-check.ts` git-pathspec bug               | Routing them through this workstream's leg process — rejected because they are live, exploitable-today gaps (a privilege-escalation bug, and a CI safety net that has never actually run) where the cost of workstream-planning latency outweighs the benefit of leg-level review ceremony; this mirrors how every real incident fix in this repo's own history shipped, per CLAUDE.md's Status log |
+| Scope: pure documentation corrections                                                | Shipped as plain `docs/` PRs, no epic task ID, outside this workstream — product-doc accuracy (Warden/apps.md/onboarding/Wallet-status) and docs-corpus hygiene (RFC status drift, `adhoc/` note, incident backfill, `multi-agent.md` reconciliation) | Giving each a formal epic task — rejected because none has a design decision or a code change behind it; CLAUDE.md's own convention is that `docs/`/`chore/` branches skip version-bump and task ceremony unless a public API changed                                                                                                                                                               |
+| Scope: `.local` plugin findings                                                      | Excluded entirely — SSRF in `sovereign-plugin-travellog.local`, ReDoS in `sovereign-plugin-plainwrite.local` — written up separately for those plugins' own maintainers                                                                               | Fixing them directly in this repo — rejected because those two plugins each carry their own `CLAUDE.md`/`roadmap.md`, confirmed by direct inspection; they are not tracked by this repo's epics/ROADMAP.md the way `plugins/{account,console,launcher,warden}` are                                                                                                                                  |
+| Scope: code-duplication tasks (`9.26`, `3.44`) touching `.local`-duplicated patterns | Platform-owned files only (e.g. `plugins/account`, `plugins/warden`, `example-plugins/example-encrypted`)                                                                                                                                             | Also migrating the `.local` plugins' own duplicate copies (Shopper, Tasks, Kanban) onto the new shared primitive — rejected for the same repo-boundary reason above; noted in each task's own Deliverables as a follow-up those plugins' own maintainers own once the platform-side extraction ships                                                                                                |
+| Task ID assignment                                                                   | New epic task IDs appended sequentially to each target epic doc, past its current highest task                                                                                                                                                        | Reusing/renumbering an existing 📋 task — rejected; none of the 8 target epics had an existing open task matching any of these findings                                                                                                                                                                                                                                                             |
+
+## Prerequisites
+
+- **Leg 7 (`13.10`–`13.13`) requires the standalone invite/capability-check
+  hotfix to be merged first.** As of this workstream's drafting (repo HEAD
+  `57e587c7`), `sendInviteAction` and two `email-templates-actions.ts`
+  actions are still missing their `hasCapability` check. Tasks `13.11`/
+  `13.12` lock in the _corrected_ behavior with regression tests — starting
+  them before the hotfix lands would mean writing a test that encodes the
+  current bug as expected behavior, the exact trap workstream 0012 leg 1
+  named explicitly for a prior, similar case. No other leg has this
+  dependency — legs 1–6, 8, and 9 have no prerequisite beyond an
+  up-to-date `main`.
+- No prerequisite is owned outside this repo.
+
+## Legs
+
+| Leg | Name                                       | Epic tasks                                | Epics   | Gate? | Done when                                                                                |
+| --- | ------------------------------------------ | ----------------------------------------- | ------- | ----- | ---------------------------------------------------------------------------------------- |
+| 1   | SDK & plugin correctness hardening         | `3.39`, `3.40`, `3.41`, `22.6`            | 3, 22   | No    | All of 3.39, 3.40, 3.41, 22.6 marked ✅ in their epic docs, reviewed and merged          |
+| 2   | Admin-surface security                     | `0.21`                                    | 0       | No    | All of 0.21 marked ✅ in their epic docs, reviewed and merged                            |
+| 3   | Plugin-route composition integrity         | `3.42`, `3.43`                            | 3       | No    | All of 3.42, 3.43 marked ✅ in their epic docs, reviewed and merged                      |
+| 4   | Notification & storage query performance   | `2.34`, `2.35`                            | 2       | No    | All of 2.34, 2.35 marked ✅ in their epic docs, reviewed and merged                      |
+| 5   | Background-process reliability             | `0.22`, `0.23`, `0.24`, `0.25`            | 0       | No    | All of 0.22, 0.23, 0.24, 0.25 marked ✅ in their epic docs, reviewed and merged          |
+| 6   | DB connection & rotation hygiene           | `8.35`, `8.36`, `22.7`                    | 8, 22   | No    | All of 8.35, 8.36, 22.7 marked ✅ in their epic docs, reviewed and merged                |
+| 7   | Admin-route & capability test coverage     | `13.10`, `13.11`, `13.12`, `13.13`        | 13      | No    | All of 13.10, 13.11, 13.12, 13.13 marked ✅ in their epic docs, reviewed and merged      |
+| 8   | App/plugin terminology & silent-failure UX | `13.14`, `13.15`, `13.16`, `14.3`, `14.4` | 13, 14  | No    | All of 13.14, 13.15, 13.16, 14.3, 14.4 marked ✅ in their epic docs, reviewed and merged |
+| 9   | Code duplication & lint hygiene            | `9.26`, `9.27`, `3.44`, `0.26`            | 9, 3, 0 | No    | All of 9.26, 9.27, 3.44, 0.26 marked ✅ in their epic docs, reviewed and merged          |
+
+Legs 1–6, 8, and 9 are fully independent of each other and of any
+prerequisite beyond an up-to-date `main` — they may run in any order, or in
+parallel across different sessions/agents, without re-sequencing this table.
+Leg 7 additionally requires the hotfix named in Prerequisites. Sequencing
+above reflects priority (security and reliability first, polish last), not
+a dependency chain — see each leg's own "Why this leg runs here" for the
+specific reasoning.
+
+## Leg detail
+
+### Leg 1 — SDK & plugin correctness hardening
+
+**Epic tasks:** `3.39`, `3.40`, `3.41`, `22.6`
+
+**Why this leg runs here:** Runs first because these are the audit's highest-blast-radius findings — a cross-plugin data hijack (3.39), a bug class already independently rediscovered and patched 3–4 times (3.40/3.41), and an active SSRF race (22.6) — and the fix surface is fully self-contained to runtime/src/sdk-host.ts, packages/sdk/src/_.ts, and plugins/warden/app/\_lib/_.ts, with no dependency on any other leg's output.
+
+**Technical notes:**
+
+Shared files: runtime/src/sdk-host.ts is touched by 3.39 (registry keying + query() dispatch) and potentially 3.40/3.41 (host-side fallback wiring, if the sweep finds gaps). packages/sdk/src/data.ts is touched by both 3.39 and 3.40.
+
+3.39 — `provide(contract, resolver)` in packages/sdk/src/data.ts currently reads no headers at all, unlike `query()` a few lines below it, which already reads `x-sovereign-plugin-id` for `consumerId`. Namespacing by (providerId, contract) means `provide()` needs that same header read to capture the registering plugin's id; `_resolverRegistry` in runtime/src/sdk-host.ts (currently `Map<string, DataContractResolver>`, ~L250) keys on a composite `${providerId}:${contract}`, and `query()`'s lookup (currently `_resolverRegistry.get(ref.contract)`, ~L703) switches to the same composite key built from `ref.providerId`. The sibling `_toolRegistry` (~L1560) already namespaces exactly this way via `pluginToolName(providerId, name)` — reuse that helper/pattern rather than inventing a new key format. Only in-repo caller of `sdk.data.provide()` is plugins/sovereign-plugin-plainwrite.local/app/_lib/data-contracts.ts, invoked from app/layout.tsx (real request context) — confirms a headers() read is safe there, but isn't exhaustive proof for other plugins.
+
+3.40 — sweep scope is every file under packages/sdk/src/*.ts that imports next/headers: activity.ts, auth.ts, authz.ts, connections.ts, data.ts, device.ts, directory.ts, e2ee.ts, email.ts, env.ts, handoffs.ts, jobs.ts, mailer.ts, notifications.ts, plugins.ts, portability.ts, secrets.ts, storage.ts, tools.ts (device-client.ts is browser-side, out of scope). db.ts, env.ts, storage.ts, crypto.ts already carry the fix — treat env.ts's `get()` (try/catch around headers(), falls back to a null pluginId, never throws) as the template to cite, not storage.ts's throw-on-failure RPC style — device.ts's own doc comment already claims to match env.ts's discipline specifically.
+
+Sequencing within the leg: do 3.39 before 3.40 — 3.39 adds a brand-new headers() call site to data.ts's provide(); running 3.40 afterward means that site gets covered by the same sweep instead of being missed as "added after the audit." Do 3.41 before (or fold into) 3.40 — 3.41 is a fully-scoped instance of exactly what 3.40 is sweeping for; landing it first means 3.40 should find device.ts already fixed rather than both tasks editing the same three methods (getSurface/getShellVersion/isNativeShell) independently.
+
+Established pattern for 3.40/3.41: runtime/src/background-plugin-context.ts's AsyncLocalStorage + runWithBackgroundPlugin()/getBackgroundPluginContext(), and sdk-host.ts's existing fallback chain shape (e.g. ~L520: `context.pluginId ?? getPortabilityPluginContext() ?? getBackgroundPluginContext() ?? null`). device.ts's fix is simpler than db/storage/env's — it resolves no plugin id at all (surface/shell-version are global, not plugin-scoped), so it only needs a try/catch per headers() call returning the already-defined safe default (`'browser'` / `null`), no new host-side fallback member required.
+
+22.6 — no file overlap with 3.39–3.41, fully independent. assertSafeProviderBaseUrl() (plugins/warden/app/_lib/url-safety.ts) already resolves and validates via `lookup(hostname, { all: true, verbatim: true })` but returns only the original URL (hostname intact, not the resolved address). The two request-time callers — provider-chat.ts:97 and model-discovery.ts:59 — then call plain `fetch(endpoint)` against that same hostname string, so fetch's own independent DNS resolution re-resolves it: that gap is the rebind window. providers.ts's two save-time calls (L73, L118) are validate-only (nothing fetched immediately after) and don't need IP pinning — only the two request-time call sites do. Any fix must preserve correct TLS SNI/Host for https:// providers (can't just substitute the resolved IP into the URL string) — check whether Node's global fetch (undici) has a supported way to pin the connection address before assuming a new HTTP client dependency is needed.
+
+**Do not proceed if:** 3.39 turns out to need a public signature change to sdk.data.provide() (params beyond contract/resolver) rather than an internal headers() read mirroring query()'s existing consumerId capture — that's an SDK contract change under NFR-04 (minor bump + migration note), bigger scope than "namespace an internal Map."
+
+A real sdk.data.provide() call site (plainwrite.local or elsewhere) turns out to run outside a request context (no x-sovereign-plugin-id header available at call time) — 3.39 then needs the full background-context fallback wiring 3.40/3.41 are doing, not a one-line header read, and the two tasks' scopes need re-splitting before continuing.
+
+3.40's sweep finds a headers() call site with no plugin-id-shaped value available to fall back to via getBackgroundPluginContext()/getPortabilityPluginContext() at all — that's a new fallback mechanism, not pattern reuse; carve it out as its own task rather than improvising a new design mid-leg.
+
+Closing 22.6's rebind race turns out to require a new outbound-HTTP dependency (e.g. swapping fetch for an undici Agent/custom dispatcher) because Node's global fetch has no supported way to pin a resolved address while keeping TLS SNI/Host correct for https:// providers — flag and stop rather than add new dependency surface in a fixes-only leg with no governing RFC.
+
+### Leg 2 — Admin-surface security
+
+**Epic tasks:** `0.21`
+
+**Why this leg runs here:** Second, immediately after leg 1 and independent of it: this leg closes a live timing side-channel (`!==` on the bearer token in `checkAdminKey()`) and a total absence of abuse protection on `/api/admin`, the platform's single highest-privilege surface — every route under it is gated only by `SOVEREIGN_ADMIN_KEY`, with no session, no capability check, and (unlike the rest of the app) no request-flood protection at all. Nothing in leg 1 touches these files, so there's no sequencing dependency between the two legs.
+
+**Technical notes:**
+
+Two twin files, both in scope, both must change together: `runtime/src/admin-guard.ts` and `apps/auth/src/admin-guard.ts`. They are _not_ byte-identical despite both being called `checkAdminKey()` — don't diff-and-copy blindly: runtime's version reads `process.env.SOVEREIGN_ADMIN_KEY` directly and has an extra 503 branch for an unconfigured key; apps/auth's reads `getEnv().adminKey`, which is already `required()`-enforced at boot (`apps/auth/src/env.ts:119`) so it can never be unconfigured at call time and has no equivalent branch. Preserve that asymmetry — it's correct, not drift.
+
+**Timing-safe comparison**: there is no shared crypto-compare helper in this codebase to import — the `Buffer.from(a)`/`Buffer.from(b)`/length-check/`timingSafeEqual` idiom is duplicated per-file at `runtime/src/connections.ts:46-49` (`safeEqual`), `runtime/src/handoff-token.ts:42-45`, `runtime/src/webhook-hmac.ts:23-26`, `runtime/src/storage.ts:134`, `runtime/src/backup-download.ts:29`, `runtime/src/tool-confirmation.ts:65`, and `apps/harness/src/enrollment.ts:60-62`/`apps/relay/src/enrollment.ts:66-68`. Follow that established precedent — a local `safeEqual` in each `admin-guard.ts` — rather than introducing a new shared module; the length check must come first since `timingSafeEqual` throws (not returns false) on mismatched-length buffers, per every existing usage's own comment.
+
+**Rate limiting — this cannot be "add `/api/admin` back into the middleware matcher."** `runtime/middleware.ts`'s matcher (line ~648) explicitly excludes `api/admin` via negative lookahead, and `apps/auth/middleware.ts` (line 31) excludes all of `api/` — so the general per-IP flood protection already live at `runtime/src/rate-limit.ts` (`checkGlobalRateLimit`/`clientIp`, wired into `middleware.ts:110-120`) never runs for these routes today, by design: admin routes use a bearer-key model, not the session-cookie path middleware exists to gate. Pulling admin into that matcher would reintroduce session-verification/CSP machinery this surface deliberately doesn't use — out of scope for this task. Instead, rate-limit at the `checkAdminKey()` call site itself, following the narrower, feature-specific limiter pattern that already exists for exactly this reason — `runtime/src/directory.ts`'s `checkDirectoryRateLimit` (in-memory `Map<string, {resetAt, count}>` fixed-window bucket, an exported check function plus a `resetDirectoryRateLimitForTests()` export for test isolation) and `runtime/src/plugin-mailer.ts`'s `checkPluginMailerRateLimit` are the two existing instances of this same shape. Note `checkAdminKey(request: Request)` takes a plain `Request`, not `NextRequest` — `clientIp()` in `rate-limit.ts` is typed for `NextRequest`, so admin-guard's own IP derivation needs its own small helper (same header-reading logic, `Request.headers.get` is identical) rather than a naive import that fails to typecheck.
+
+Runtime and apps/auth are separate Node processes — each gets its own independent in-memory bucket, matching the already-accepted per-process/no-cross-instance limitation documented in `rate-limit.ts`'s own module comment for the global and directory limiters; don't try to share state between them.
+
+Both existing test files — `runtime/src/__tests__/admin-guard.test.ts` and `apps/auth/src/__tests__/admin-guard.test.ts` — assert today's exact status-code contract (403 wrong/missing key, runtime-only 503 unconfigured key) and will need new cases for the rate-limit-exceeded path (429) plus a `resetAdminRateLimitForTests()`-style export used in `beforeEach`, mirroring `directory.ts`'s test pattern. Decide explicitly whether the runtime 503 (unconfigured key) path should also consume the rate-limit bucket — it's a config error, not caller abuse, so the established pattern elsewhere (e.g. `checkGlobalRateLimit` runs before any other branch) argues for checking the key first, rate-limiting second, so a misconfigured instance doesn't also start 429ing legitimate callers.
+
+**Do not proceed if:** Stop and escalate, don't push through, if: (1) hardening the comparison would require changing `checkAdminKey()`'s public signature or return contract in a way that isn't a drop-in swap — it's called from ~35+ route files under `runtime/app/api/admin/**` and `apps/auth/app/api/admin/**`, all expecting `NextResponse | null`; (2) the rate-limit fix can't be implemented without touching `runtime/middleware.ts`'s or `apps/auth/middleware.ts`'s matcher to pull `/api/admin`/`api/` back into the general middleware path — that's a materially larger architectural change (reintroducing session-gating/CSP onto a bearer-key surface) than this task scopes, and needs its own review; (3) preserving the existing 503-vs-403 status-code distinction for an unconfigured vs. wrong admin key turns out not to be possible alongside the new rate-limit branch — that distinction is asserted by the current test suite and is a documented contract, not incidental; (4) a rate-limit threshold tight enough to matter against brute-force would also throttle legitimate Console admin traffic — Console's own `adminFetch` fires from 15+ call sites and a single Console page load can issue several admin requests in quick succession, so the limit needs sizing against real observed call volume, not picked arbitrarily.
+
+### Leg 3 — Plugin-route composition integrity
+
+**Epic tasks:** `3.42`, `3.43`
+
+**Why this leg runs here:** Third: with plugin routing already loaded from leg 1, this leg closes the composition-time gap where a stale or colliding route can still reach the filesystem before any runtime access check runs. It touches the same subsystem as leg 1 (Plugins Runtime) but a different file — `compose-routes.ts`/`read-plugins.ts` vs. `sdk-host.ts` — so it has no code overlap with leg 1 and is independently reviewable.
+
+**Technical notes:**
+
+Both tasks live under `scripts/generate/` but touch different files with no line-level overlap, so they can be implemented and reviewed in either order within the leg:
+
+- **3.42** touches `compose-routes.ts`: `pruneGeneratedEntries()` (line ~165) and its three call sites at the end of `composePlugins()` (lines 209/213/214). Today `composePlugins()` tracks only the first path segment of each active destination (`firstSeg()`, line 196, via `relative(base, dest).split(sep)[0]`) and `pruneGeneratedEntries()` does one `readdirSync(dir)` with no recursion. For a multi-segment `routePrefix` (e.g. `/kiosk/display` renamed to `/kiosk/panel`), the top segment `kiosk` stays in the active set and the whole directory is skipped — the stale `kiosk/display` never gets inspected, let alone removed.
+  - The fix must track full multi-segment relative destination paths, not just the top segment, and recurse — but recursion must stop at the boundary of an active leaf destination. Everything under a leaf (the plugin's own `page.tsx`, nested route segments, `_components`, etc., copied or symlinked in by `linkOrCopyTarget`) is the plugin's own legitimate content, not a generated route-prefix segment, and must never be walked or pruned as if it were one.
+  - In prod, a leaf destination is itself a symlink (`symlinkSync`, `linkOrCopyTarget`). Any recursive walk must `lstatSync` and skip symlinks rather than following them into the plugin's real `app/` source — mirror the stale-symlink guard already in `syncDir()` (lines ~104-108).
+  - `pruneGeneratedEntries()` is called three times with different `keep`/`onlyPrefix` options (`PLUGINS_DIR_KEEP`, `onlyPrefix: '(.)'` for `MODAL_DIR`, `MINIMAL_DIR_KEEP`) — a recursive version must preserve these semantics at every level it recurses into, not just at the top.
+- **3.43** touches `read-plugins.ts`: reuse the existing pattern at lines 48-60 (`duplicatePluginIds`) and 34-36/146-154 (`duplicateApiProviders` + its `readPlugins()` check) exactly — a `Map<routePrefix, string[]>` keyed the same way, a fail-loud `console.error` + `process.exit(1)` wired into `readPlugins()` alongside the two existing checks (lines 128-154), same error-message shape (one `console.error` line per colliding id).
+  - Normalize the comparison key exactly the way `compose-routes.ts`'s `resolveComposeTargets()` does (`routePrefix.replace(/^\/+/, '')`, line ~51) so the check can never disagree with what actually gets composed.
+  - Decide scope explicitly before landing: `resolveComposeTargets()` sends `shell: 'minimal'` to `MINIMAL_DIR` but `default`/`overlay` both fall back to `PLATFORM_PLUGINS_DIR` — two plugins sharing a `routePrefix` string but split across `minimal` vs. `default`/`overlay` land in different physical directories and don't collide on disk the way two `default` plugins would. Pick a single, stated rule (e.g. flag any same-prefix pair regardless of shell, since it's still an ambiguous/duplicate URL either way) rather than leaving this implicit.
+- Both tasks are exercised by the same regression file: `scripts/__tests__/generate-registry.test.ts` (currently covers `duplicatePluginIds`/`duplicateApiProviders`/pruning via the `scripts/generate/*` re-export barrel per task 3.23's decomposition). Extend it in place rather than adding a parallel test file.
+- Neither task changes `resolveComposeTargets()`'s existing overlay single-segment validation — leave that error path untouched.
+
+**Do not proceed if:** Stop and escalate if either fix can't be made without touching plugin behavior outside its own task: for 3.42, if a recursive prune implementation can't cleanly distinguish "stale intermediate route-prefix segment" from "content inside an active plugin's own composed leaf directory" — i.e. any test run shows it deleting or touching files under a currently-active plugin's leaf (including through a followed symlink in prod) — the recursion boundary is wrong and must not ship as-is. For 3.43, stop if the collision check as implemented would flag two plugins that don't actually write to the same physical destination (e.g. one `shell: minimal`, one `shell: default`, same `routePrefix` string) without that scope decision having been made and stated explicitly — a false-positive build failure on a legitimately non-colliding config is worse than the bug being fixed. For both: stop if `pnpm generate`'s output for the current real plugin set (`plugins/*`, `example-plugins/*` when enabled) changes in any way other than the intended new pruning/error behavior — output must stay byte-identical for every non-colliding, non-stale configuration, matching the byte-identical bar task 3.23's decomposition already established for this pipeline.
+
+### Leg 4 — Notification & storage query performance
+
+**Epic tasks:** `2.34`, `2.35`
+
+**Why this leg runs here:** Fourth because both tasks are concrete, low-risk performance fixes — an index, a bulk-dismiss wire-up, a pagination parameter — that follow patterns already established elsewhere in this codebase (`plugin_jobs_status_run_at_idx`, `sdk.notifications.list`'s `limit` option), not new designs. They touch `packages/db` schema/migrations, `runtime/app/api`, and `packages/sdk`, none of which the security legs above (auth, capability checks, header trust) modify, so there's no dependency or file collision forcing this leg later — it's ordered last only because it's the least urgent, not because anything blocks it.
+
+**Technical notes:**
+
+**2.34** and **2.35** touch disjoint files — no shared file, no ordering constraint between them within the leg.
+
+2.34, concrete findings to build from:
+
+- `packages/db/src/bootstrap.ts` (~line 314–332) already creates `notifications_user_feed ON notifications (tenant_id, recipient_user_id, created_at DESC)` and `notifications_unread ON notifications (tenant_id, recipient_user_id, read_at)` as raw `CREATE INDEX IF NOT EXISTS` — but only bootstrap.ts's fresh-container path runs this SQL. The drizzle schema files (`packages/db/src/schema/{postgres,sqlite}/platform.ts`) and every generated migration snapshot (`packages/db/migrations/{postgres,sqlite}/meta/*.json`, checked through `0028_*`) show `"indexes": {}`/`[]` for `notifications` in all of them. So a CI-bootstrapped DB (bare `postgres:16`, no migrations — see this repo's own Status entry on `bootstrap.ts` drift) already has these indexes; a real deployment that runs `runMigrations()` against an existing DB never gets them. This is the same schema/bootstrap divergence class the "critical violations" list already warns about for `instance_config`/`backup_jobs`, just running in the opposite direction here (bootstrap has the index, schema+migration don't) — task is to port bootstrap.ts's exact two index definitions into `index()` calls in both dialect schema files (same names, same column order, mirroring `plugin_jobs_status_run_at_idx`'s `(table) => [index(...).on(...)]` shape at platform.ts:599), then run `pnpm --filter @sovereignfs/db db:generate` to produce the matching migration pair. Keep the two indexes' names/columns identical to bootstrap.ts's so a fresh-bootstrapped DB and a migrated DB converge on the same index set instead of accumulating a second, differently-named one.
+- "Clear all" wiring: `dismissAllNotifications(pdb, userId)` already exists in `packages/db/src/platform-db.ts` (added earlier for `sdk.notifications.dismissAll()`, per its own doc comment) but is unused by the REST path. `runtime/app/api/account/notifications/route.ts`'s `POST` handler currently only branches on `'read-all' | 'read' | 'dismiss'`; add a `'dismiss-all'` branch calling `dismissAllNotifications`. `runtime/app/(platform)/_components/NotificationBell.tsx`'s `clearAllShared()` (~line 229) currently `Promise.all`s one `dismiss` POST per visible item — switch it to a single `dismiss-all` POST plus the existing local `setStore({ items: [], unreadCount: 0 })`.
+
+2.35, concrete findings to build from:
+
+- Call chain to change, all four layers: `packages/sdk/src/storage.ts`'s `storage.list(prefix?)` → `packages/sdk/src/host.ts`'s `SdkHost.storage.list(prefix, context)` → `runtime/src/sdk-host.ts`'s implementation (~line 1254) → `packages/db/src/platform-db.ts`'s `listStorageObjects(pdb, context, prefix)` (~line 1145), which has no `LIMIT`/`OFFSET` and does ownership + prefix filtering in JS after loading every row for the tenant+plugin.
+- Reuse `sdk.notifications.list`'s existing options-object + server-side cap pattern (`{ includeDismissed?, limit? }`, capped at 100 via `Math.min(options.limit ?? 50, 100)` in `listUserNotifications`) rather than inventing a new shape — same repo, same kind of unbounded-list problem, already solved once.
+- `StorageContext` (`packages/sdk/src/types.ts:323`) and `StorageObject` are the two existing types in this path; a new pagination option belongs alongside them, not as a bare positional parameter, to leave room for a cursor later.
+- `docs/plugin-development.md:3327` documents `sdk.storage.list('receipts/')` — update the example once the signature changes. The docs-parity test (`runtime/src/__tests__/docs-parity.test.ts`) won't catch this since no SDK _key_ is being added, only an existing method's parameters — don't rely on CI to flag a stale doc here.
+
+**Do not proceed if:** Stop and escalate, don't push through, if: (a) `pnpm --filter @sovereignfs/db db:generate` produces a migration touching a table other than `notifications`, or produces a destructive statement (column drop/rewrite) instead of a plain `CREATE INDEX` — drizzle-kit diffing the whole schema can pick up unrelated drift beyond what this leg intends to touch; (b) the two index names/definitions can't be made to match `bootstrap.ts`'s existing `notifications_user_feed`/`notifications_unread` exactly (e.g. drizzle's naming convention collides or truncates) — a divergent name would leave bootstrap-created and migration-created databases with two different index sets instead of converging; (c) `listStorageObjects`'s in-JS ownership filter (`canAccessStorageObject`) can't be pushed into the SQL `WHERE` clause without changing its access semantics — pagination applied before that filter would return short pages with fewer accessible rows than the requested limit, which is a correctness regression, not a performance one, and needs its own decision rather than shipping silently.
+
+### Leg 5 — Background-process reliability
+
+**Epic tasks:** `0.22`, `0.23`, `0.24`, `0.25`
+
+**Why this leg runs here:** Runs fifth because it targets the exact failure class this codebase has already taken a full production outage from twice — 0.101.8's uncaught scheduler/job-worker dynamic-import fault and 0.101.9's leaked Postgres migration advisory lock, both "one component's fault cascades into every request failing" incidents, not scoped to the component itself. It has no dependency on legs 1-4 (none share a file or code path with this leg's four tasks) — fifth reflects priority ordering, not a blocking relationship.
+
+**Technical notes:**
+
+The four tasks touch four disjoint areas with no shared file and no ordering dependency between them — safe to implement in any order or in parallel within the leg:
+
+- 0.22 (runtime/src/rate-limit.ts, directory.ts, plugin-mailer.ts): all three files share the identical `{resetAt, count}` fixed-window bucket shape — rate-limit.ts's `buckets` (checked before almost everything else in middleware.ts), directory.ts's `buckets`, and plugin-mailer.ts's `pluginBuckets`/`recipientBuckets` (already funneled through one shared `checkBucket()` helper, so a fix there covers both of its maps at once). This module runs in the Edge runtime (middleware.ts) — there is no instrumentation.ts boot hook here and no background setInterval sweep available the way scheduler.ts/jobs.ts/backup-worker.ts have (those are gated `NEXT_RUNTIME === 'nodejs'` only); eviction has to be opportunistic (e.g. swept on access), not a new timer. Do not fold in cross-instance/shared-storage correctness — that's a distinct, already-tracked problem (docs/workstreams/0017-auth-security-hardening.md leg 5 / task 2.29, currently paused on an Edge-runtime `ioredis` blocker); this task is "stop leaking memory within one process," not "make limits correct across processes."
+- 0.23 (runtime/src/scheduler.ts): jobs.ts's `tickOnce` already has the cap half of this pattern (`JOBS_PER_TICK = 20`, a bounded for loop) — reuse that shape. The handler-timeout half has no existing precedent anywhere in this codebase (jobs.ts's own `runClaimedJob` has no timeout either), so that part is new work, not a copy. Whatever timeout lands must interact correctly with `ScheduleState.running`: an in-flight async handler can't actually be cancelled, so a "timeout" can only stop waiting on it. Decide explicitly whether `running` clears when the timeout fires (risking the overlapping-invocation bug the flag exists to prevent, per the doc comment on `tickOnce`) or stays true until the original promise actually settles.
+- 0.24 (runtime/instrumentation.ts + runtime/src/boot-compat.ts): two separate gaps in one feature. instrumentation.ts:38-39 calls `await checkBootCompatibility()` with no try/catch — add one, mirroring the two try/catch blocks immediately below it for the scheduler/job-worker imports (the 0.101.8 pattern, same file). Separately, boot-compat.ts's own for-loop over `getInstalledPlugins()` has no per-plugin try/catch, so today one plugin's `checkCompatibility()` throw or `setPluginEnabled()` DB failure aborts every plugin after it in iteration order, not just itself. The per-plugin isolation pattern to mirror for that second half is `runAllPluginMigrations()` in plugin-migrations.ts (try/catch inside the loop body, added after the RFC 0071 incident). No `boot-compat.test.ts` exists yet — new file.
+- 0.25 (runtime/src/backup-notification.ts + runtime/src/backup-worker.ts): `notifyBackupCompletion`'s payload currently carries only `jobId`/`scope`/`status`/`errorMessage` — no recipient. `BackupJobRow` (packages/db/src/platform-db.ts) already has `requestedByUserId`; backup-worker.ts's two call sites in `claimAndRunJob` need to thread it through. The send pattern to mirror is sdk-host.ts's `notifications.send`: write via `sendNotification(pdb, {...})`, then `broker.publish(...)` for realtime — same broker already imported in backup-notification.ts. Gap: the file's own doc comment says instance-scope backups notify "all admins," but no existing helper enumerates admin user ids — `users.role` is a real column on both dialect schemas, but platform-db.ts has no query for it today; this piece is new, not copy-paste. No `backup-notification.test.ts` exists yet — new file.
+
+**Do not proceed if:** - 0.22: if closing the leak turns into moving limiter state out of module-scope memory into a shared/persistent store — that's task 2.29 (workstream 0017 leg 5, already scoped and separately paused), not this task. Stop and flag rather than absorbing it here.
+
+- 0.23: if the timeout mechanism can only work by clearing `ScheduleState.running` while the original handler promise is still executing — that reopens the exact overlapping-invocation bug the `running` guard exists to prevent. Stop and get explicit sign-off on that tradeoff rather than shipping it silently.
+- 0.24: if making `checkBootCompatibility()` fault-tolerant means a caught compatibility-check error gets treated as "plugin is compatible" — i.e. a manifest that should have been disabled stays enabled because the check that would have caught it threw. Boot must survive the fault, but silently defaulting to "allow" inverts a security-relevant gate; this is not the same shape of fix 0.101.8 made for the scheduler/job-worker imports, which don't gate access.
+- 0.25: if satisfying the documented "instance-scope backups notify all admins" behavior requires adding a general-purpose admin-role query or a broader DB read path than a scoped, backup-notification-local lookup. Stop and confirm scope before adding new cross-cutting DB access under an audit-remediation task with no governing RFC.
+
+### Leg 6 — DB connection & rotation hygiene
+
+**Epic tasks:** `8.35`, `8.36`, `22.7`
+
+**Why this leg runs here:** Sixth because these three fixes — bounding an unbounded Postgres pool default, batching per-row UPDATEs into multi-row statements, and collapsing an N+1 select/delete loop — are all "how the platform talks to the database" connection- and query-shape fixes with no urgency dependency on legs 1–5; grouped together purely by that shared theme, not by any execution dependency between them.
+
+**Technical notes:**
+
+Three independent files, no shared code path — 8.35 touches `packages/db/src/plugin-client.ts` (`getPluginDb()`) plus its caller `runtime/src/plugin-migrations.ts` (`runAllPluginMigrations()`); 8.36 touches only `runtime/src/field-reseal.ts` (`walkOneTable()`); 22.7 touches only `plugins/warden/app/_lib/portability.ts` (`provideDelete`). Any order within the leg is fine; they can also ship as separate commits on the same branch without coordination.
+
+8.35: `getPluginDb()`'s Postgres branch (`plugin-client.ts:121-125`) opens `new Pool({ connectionString, ssl, options: '-c search_path=...' })` with no `max`, so node-postgres's default of 10 applies per isolated plugin, and the client is cached forever in the process-lifetime `_registry` Map (`plugin-client.ts:36`) — never closed except via `dropPluginDb()` on uninstall. The real exposure is steady-state connection count, not a migration-time spike: `runAllPluginMigrations()` (`plugin-migrations.ts:56-104`) calls `getPluginDb()` per isolated plugin inside a sequential `for...of` loop (not `Promise.all`), so migrations don't open pools concurrently — but every pool it opens stays open and counted against the server's `max_connections` for the rest of the process's life, since the same cached client serves normal request traffic afterward. With enough isolated Postgres plugins installed, N × (new max) can exceed Postgres's own `max_connections` before any single plugin is under load. There is no existing pool-size env var to extend — the platform's own primary pool (`packages/db/src/client.ts`, same `new Pool({ connectionString, ssl })` shape, no `max`) also has none. Adding one is a new env var: per this repo's docs-parity convention, it must be declared in `.env.example` and documented in `docs/self-hosting.md`'s env var table in the same PR, or the `docs-parity.test.ts` CI check (env-var direction is enforced one-way, .env.example → self-hosting.md) plus the human convention for the reverse direction both apply.
+
+8.36: `walkOneTable()`'s batch loop (`field-reseal.ts:236-249`) already selects rows 100 at a time (`BATCH_SIZE`, line 37) via one SELECT — batching only needs to happen on the UPDATE side. The per-row `updates` object can have a _different set of changed columns per row_ (backfill transform selectively re-seals only fields whose stored representation actually changed, `field-reseal.ts:96-149`), so a naive single multi-row UPDATE isn't a straight drop-in — either group rows within the batch by identical update-column-sets before emitting one statement per group, or use a `CASE pk WHEN ... THEN ... END` per column across the whole batch (both dialects support this via the existing `sql`/`sql.raw` template pattern already in use — keep identifiers validated through `q()` and values as bound params, exactly as now). Preserve the existing `pdb.dialect === 'sqlite' ? pdb.db.run(...) : pdb.db.execute(...)` branch and the checkpoint behavior: `cursor` must still advance to the batch's last row's pk and `upsertResealCheckpoint` must still fire once per batch (line 250-256), regardless of how many UPDATE statements the batch now issues.
+
+22.7: `provideDelete`'s current shape (`portability.ts:31-58`) is 2N+1 queries for N conversations — SELECT all conversations, then per-conversation SELECT message ids (for the count) + DELETE messages, then a final DELETE conversations. Collapse to: one SELECT of conversation ids for the user, one SELECT COUNT of messages scoped to those conversation ids (or a join), one DELETE of messages scoped to those conversation ids, one DELETE of conversations by `userId`. The `deleted` return value (messages + conversations count) must stay numerically identical — this return value isn't just internal bookkeeping, it's part of the `sdk.portability.provideDelete` contract surfaced to the account-deletion flow. `ctx.db` is Warden's opaque Drizzle client (`BaseSQLiteDatabase<'async', any, any>` per the existing cast and its adjacent eslint-disable comment) — keep counting via a separate `select()` rather than `.returning()` on the DELETE, per the existing comment explaining not every driver behind `sdk.db.getClient()` supports `.returning()` identically.
+
+**Do not proceed if:** 8.35: stop and confirm the new env var's name/default with the developer before implementing if `packages/db/src/client.ts`'s platform pool turns out to need the identical fix in the same pass — don't let scope silently grow from "bound the isolated-plugin pool" to "bound every pool in the package" without that being an explicit decision, since the platform pool is shared by every request rather than opened per-plugin. 8.36: stop if a table registered for reseal turns out to have update-batching correctness edge cases beyond ordinary UPDATEs — e.g. a blind-index column whose new value must be computed from a row's _own_ just-written encrypted column within the same batch (read-after-write ordering inside one batch) — since `CASE`-batching assumes all rows' update values are computed independently before any of them execute; verify against `backfillTransform`'s actual per-field dependencies (`field-reseal.ts:96-149`) before batching, don't assume independence. 22.7: stop if Warden's schema has any FK or trigger between `wardenMessages` and `wardenConversation` beyond the plain `conversationId` reference already used here (e.g. `ON DELETE CASCADE` already doing this deletion implicitly) — check `plugins/warden/app/_db/schema.ts` first, since if cascade delete already exists, the fix is closer to "delete conversations only, count messages via one query" rather than adding a redundant explicit message DELETE.
+
+### Leg 7 — Admin-route & capability test coverage
+
+**Epic tasks:** `13.10`, `13.11`, `13.12`, `13.13`
+
+**Why this leg runs here:** Seventh: this leg is pure additive test coverage with no production-behavior change, so it carries no design risk and can run last. It must follow leg 2 (admin-surface security) because 13.10 asserts against the already-hardened `checkAdminKey()`, not the pre-hardening version, and it must follow the invite/capability-gate hotfix (shipped outside this workstream) because 13.11/13.12 are meant to lock in the corrected `hasCapability` checks on `sendInviteAction` and the email-template actions, not encode the missing-check bug as expected behavior.
+
+**Technical notes:**
+
+Four disjoint file trees, no file touched by more than one task — the tasks can run in any order within the leg or in parallel, only the leg-level prerequisite below is shared.
+
+- **13.10** — `runtime/app/api/admin/*` has 36 `route.ts` files. 35 start with `checkAdminKey(request)` as their sole authorization boundary (middleware's matcher deliberately excludes `/api/admin`). The one exception is `runtime/app/api/admin/email-templates/preview/route.ts`, which authorizes via `verifySession()` (`@/src/middleware/session`) + `hasCapability(session, 'instance:configure')` instead — it's an `<iframe src>` target that can't carry an `Authorization` header, and its own doc comment explains why. A route-coverage test loop must special-case this one rather than assert `checkAdminKey` for it. Reuse `runtime/src/__tests__/admin-guard.test.ts`'s `requestWithAuth(header)` helper for the Bearer-token cases; each route still needs its own collaborator mocks (`@sovereignfs/db` calls, etc.) since this is route-level coverage, not just re-testing the guard function itself (already covered by `admin-guard.test.ts`).
+- **13.11** — extend `plugins/console/app/users/__tests__/actions.test.ts` in place (don't fork a new file); it currently imports only `sendInviteAction`, `cancelInviteAction`, `changeRoleAction`, `toggleActiveAction`, `resetMfaAction`, `deleteUserAction` out of the file's exported actions. Add `vouchAction`, `revokeVouchAction`, `grantCapabilityAction`, `revokeCapabilityAction`, and `listUserCapabilitiesAction`, following the file's own established per-action "refuses a session without `<capability>`" pattern and the `resetMfaAction` regression block's doc-comment convention for recording gaps found along the way.
+- **13.12** — new sibling file `plugins/console/app/settings/__tests__/email-templates-actions.test.ts` (the existing `actions.test.ts` in that dir covers only `settings/actions.ts`, a different module). Mirror `actions.test.ts`'s existing mock scaffolding for `@sovereignfs/sdk` (`requireSession`/`hasCapability`) and `next/cache`. Cover all three exports: `getEmailTemplateCopyAction`, `saveEmailTemplateCopyAction`, `testSendEmailTemplateAction`.
+- **13.13** — two new directories, `plugins/console/app/groups/__tests__/` and `plugins/console/app/entitlements/__tests__/`, both currently absent. `groups/actions.ts`'s 8 actions all route through one shared `requireGroupManageCapability(session)` (checks `user:manage`) — a single capability-rejection test can exercise it across actions rather than duplicating per-action assertions, though each action should still get at least a smoke test. `entitlements/actions.ts`'s 3 actions each inline their own `hasCapability(session, 'role:assign')` check independently (no shared guard) — these need one gate test per action, matching the pattern already used for `users/actions.ts`'s ungated siblings. Both files call out to the admin API via `fetch` (`adminFetch`/direct `fetch` to `RUNTIME_URL`/`SELF_URL`) — mock global `fetch`, don't call through.
+- The root `vitest.config.ts` already carries the `@/` → `runtime/src` alias added in workstream 0012 leg 1 for this exact SDK-boundary exception; reuse it, no new config needed.
+
+**Do not proceed if:** As of repo HEAD `57e587c7`, the invite/capability-gate hotfix this leg's ordering depends on has **not** landed: `sendInviteAction` (`plugins/console/app/users/actions.ts`) calls only `sdk.auth.requireSession()` with no `hasCapability` check, unlike every sibling action in that file (all gated on `user:manage`); and neither `getEmailTemplateCopyAction` nor `testSendEmailTemplateAction` (`plugins/console/app/settings/email-templates-actions.ts`) call `hasCapability` at all — only `saveEmailTemplateCopyAction` does (`instance:configure`). If this is still the state when the leg starts, stop before writing 13.11/13.12 — a test asserting the current (missing) behavior as correct would enshrine the bug this leg's own ordering rationale says it runs after fixing. This is the same trap workstream 0012 leg 1 named explicitly: do not add a `hasCapability` check yourself to make an action testable under a "test coverage" leg — that's production-behavior work outside this leg's scope, and belongs to the separate hotfix. Also stop if a 37th `runtime/app/api/admin/*` route appears with its own divergent auth pattern beyond the one documented `email-templates/preview` exception — confirm and document it inline (matching that route's own comment) rather than forcing a third pattern into the `checkAdminKey`-only test loop.
+
+### Leg 8 — App/plugin terminology & silent-failure UX
+
+**Epic tasks:** `13.14`, `13.15`, `13.16`, `14.3`, `14.4`
+
+**Why this leg runs here:** Runs eighth because it's independent of every earlier leg — pure user-facing copy and error-handling cleanup confined to two plugins (Console, Account), touching no runtime/db/plugin-system internals any prior leg changed. The two plugins are grouped into one leg because their four tasks are the same class of fix — bringing existing code up to a convention already established elsewhere in the codebase (CLAUDE.md's app/plugin naming rule, the ActionResult/useActionState pattern, the inline load-error pattern already used for these same pages' own initial fetches) — not new design work, so there's no benefit to spreading them across separate legs.
+
+**Technical notes:**
+
+Scope is bigger than each task's own file list. Repo-wide grep (`grep -rn '[Pp]lugin' plugins/console/app plugins/account/app --include='*.tsx'`, filtered to JSX text/attributes) confirms "plugin" leaks well past the files named in the task summaries — treat those summaries as illustrative, not exhaustive:
+
+- Console (13.14): `plugins/console/app/plugins/RemovePluginButton.tsx` (`ConfirmDialog title="Remove plugin"`), `PluginAccessDialog.tsx`/`PluginsTable.tsx` ("Who can open this plugin", "restricted by this plugin's access policy"), `entitlements/EntitlementsSection.tsx` ("Plugin entitlements" heading, "Plugin" column header), `settings/SettingsForms.tsx` ("Show example plugins" — the CON-12 toggle), `settings/page.tsx` ("Example plugins", "Root plugin").
+- Account (14.3): `billing/page.tsx` ("Plugin ID" field label, "No active plugin licenses."), `data/page.tsx` ("These plugins can read your data from other plugins.").
+  Re-grep each plugin's `app/` tree before calling the sweep done rather than stopping at the files named above.
+
+Scope boundary — don't touch code identifiers. The naming rule covers only strings the end user reads. Leave `pluginId`/`pluginName` variable and prop names, form-field names (`formData.get('pluginId')`), element ids (`id="billing-plugin-id"`, `id="sidebar-plugins-dnd"`), and CSS Module classes (`.pluginCard`, `.pluginStatusPill`, `.sidebarPluginIcon`, …) alone. Renaming a form field name in particular risks breaking the server action reading it by key, for no naming-convention benefit.
+
+Edit plugin source only, never the composed copy. `plugins/console/app/plugins/{PluginsTable.tsx,actions.ts}` and everything under `plugins/account/app/` are the real files. `runtime/app/(platform)/(plugins)/console/...` and its interception-route twin `.../@modal/(.)console/...` are compose-routes-generated and gitignored (`runtime/app/(platform)/(plugins)/.gitignore` explicitly lists `PluginsTable.tsx`) — confirmed identical duplicates exist there for both `PluginsTable.tsx` and `actions.ts`. Edits land via `pnpm generate` / the `pnpm dev` watcher, not hand-edits to the copy.
+
+Two genuine same-file overlaps inside this leg, both already resolved by the given task order — keep it:
+
+- 13.14 then 13.15, both touching `plugins/console/app/plugins/PluginsTable.tsx` in different regions (13.14: filter bar/heading/column-header text around lines 462–611; 13.15: the two `<form action={togglePluginAction}>` blocks at lines 231 and 372, plus the "restricted by this plugin's access policy" `title`). Doing the copy sweep first means the ActionResult conversion writes correct "app" copy into the rebuilt form the first time, instead of 13.14 having to revisit markup 13.15 just changed.
+- 14.3 then 14.4, both touching `plugins/account/app/data/page.tsx` — 14.3 the "Data access consents" section text, 14.4 the four handlers below it (`revoke`, `revokeDeviceGrant`, `revokeSecret`, `disconnectConnection`). Same reasoning: any new error copy 14.4 introduces should already default to "app" wording.
+
+13.15's target shape already exists twice in the same file it's editing: `activatePluginAction` and `grantPluginAccessUserAction`/`grantPluginAccessGroupAction` in `plugins/console/app/plugins/actions.ts` already take `(_prev, formData)` and return `{ success: true, ... } | { success: false, error: string }`. `PluginsTable.tsx`'s `useActivate()` hook (~line 145) is the existing `useActionState`-style caller to mirror for the toggle form — no new pattern to invent. Repo-wide grep confirms `togglePluginAction`'s only callers are those same two `<form>`s in `PluginsTable.tsx`, so widening its return type is safe within this leg.
+
+13.16: `@sovereignfs/ui`'s `Alert` component (`variant="error"`) is the DS-first way to render a distinct failure state instead of the page's current bare `<p>`. The real fix has to start upstream of the UI though — `getActivity()` currently collapses "fetch failed" and "fetch succeeded with zero rows" into the identical `{ events: [], total: 0, ... }` return, so the page has no signal to branch on yet; it needs a way to distinguish the two (e.g. an `ok: boolean` alongside the current shape) before the empty-state JSX can tell them apart.
+
+14.4: `data/page.tsx`'s own `load()` function (top of the same component) already has `error` state wired up and rendered per-section for the initial fetch — extend that same mechanism (or a per-action counterpart) from the four mutation handlers rather than inventing a new one. `DeleteAccountSection`, later in the same file, is a second local precedent: its own `error` state feeds `ConfirmDialog`'s `error` prop.
+
+**Do not proceed if:** Stop and re-scope rather than push through if any of these hold:
+
+- The copy sweep (13.14/14.3) can only reach "app" terminology by renaming a form-field name, route segment, manifest field, or anything read via `formData.get(...)`/`params` — that's an API change, not a copy fix; leave the identifier as `plugin*` and flag it instead of expanding into a rename.
+- `GET /api/admin/activity` turns out to have no way to distinguish a fetch failure from a genuinely empty result at the route level (i.e. the 13.16 fix would require changing the route's response contract beyond what `getActivity()` can infer client-side) — that's a route-level change outside this leg's UI-only scope; stop and flag rather than fabricating a distinction in the page.
+- Widening `togglePluginAction`'s signature for 13.15 surfaces a caller beyond the two `PluginsTable.tsx` forms (re-grep before merging, not just at the start) — the leg's plan assumes exactly those two call sites.
+- Any of the four Account handlers touched by 14.4 (`revoke`, `revokeDeviceGrant`, `revokeSecret`, `disconnectConnection`) turn out to be called from more than one component — the fix assumes one call site per handler inside `data/page.tsx`; a shared/exported handler needs its error contract designed once, not patched per call site.
+
+### Leg 9 — Code duplication & lint hygiene
+
+**Epic tasks:** `9.26`, `9.27`, `3.44`, `0.26`
+
+**Why this leg runs here:** Last — lowest urgency, pure code-quality cleanup with no user-facing or security impact. Running it after every other leg means the workstream's review bandwidth is fully free for 9.26 (the one task here touching packages/ui, a published/shared surface) instead of competing with higher-priority legs.
+
+**Technical notes:**
+
+Task-by-task grounding (verified against current tree):
+
+**9.26** — `plugins/account/app/_lib/dndSensors.ts` is the only platform-owned copy of the sensor pattern; near-identical copies also live in `plugins/sovereign-plugin-{tasks,kanban,shopper}.local/app/_lib/dndSensors.ts`, but those are externally-maintained `.local` plugin clones (gitignored, not part of this repo's release) — this leg migrates `plugins/account` only, it does not and cannot reach into those. `packages/ui/src/components/DragHandleRow/DragHandleRow.tsx` already ships an internal, unexported icon (`DragIcon`) doing the same job as `GripIcon.tsx` (currently duplicated under `runtime/app/(platform)/(plugins)/tasks/_components/GripIcon.tsx`, itself a composed/gitignored copy of the real source in the `.local` tasks plugin) — export/reuse that existing icon rather than adding a second implementation; the new hook (`useReorderSensors`) belongs in `packages/ui/src/hooks/` alongside `useLongPress.ts`/`useIsMobile.ts`, wired through `hooks/index.ts` and the top-level `src/index.ts` barrel, per existing convention.
+
+**9.26 → 9.27 ordering**: 9.26 adds new files under `packages/ui/src/{components,hooks}/` with their own top-level CSS Module imports (real side effects). If 9.27's `sideEffects` declaration is a hand-enumerated file list rather than a glob (e.g. `**/*.css`), land 9.26 first or write 9.27's list broad enough to already cover 9.26's new files — otherwise the new files ship untracked by the declaration.
+
+**9.27** — barrel is `packages/ui/src/index.ts`, current `packages/ui/package.json` has no `sideEffects` field at all. The correct fix is _not_ a bare `"sideEffects": false` — every component module's `import './X.module.css'` is a genuine side effect (it registers styles at import time), and a bundler that believes there are none will drop "unused" component imports' CSS along with them. The standard, correct shape is `false` for JS plus an explicit array/glob keeping `.css` (and any other side-effecting) files live.
+
+**3.44** — platform-owned files using the flagged `BaseSQLiteDatabase<'async', any, any>` pattern (confirmed in-tree): `plugins/warden/app/_lib/{conversations,portability,model-visibility}.ts`, `runtime/app/(platform)/(plugins)/tasks/_lib/{actions,portability}.ts`, `runtime/app/(platform)/(plugins)/tasks/_jobs/due-reminders.ts`, `example-plugins/example-encrypted/app/_lib/data.ts`. The clean pattern to copy is already live with zero `eslint-disable` in `packages/db/src/client.ts` (`SqliteDb = BaseSQLiteDatabase<'async', unknown, typeof sqliteSchema>`) — same shape works with the plugin-generic third param dropped/widened. `.local` plugin clones sharing the identical `any, any` pattern are explicitly out of scope (external, not shipped from this repo) — same boundary as 9.26.
+
+**0.26** — confirmed bare (`eslint-disable-next-line` with no trailing explanation) at `runtime/app/login/login-form.tsx:72`, `runtime/app/login/2fa/challenge-form.tsx:32,50`, and `plugins/account/app/_components/PasskeySection.tsx:121`. A fourth, sibling file — `plugins/account/app/_components/DeviceStorageKeySection.tsx:109` — already carries an explanation ("matches PasskeySection.tsx's cast for the same untyped plugin surface") and is a ready-made template for the "add explanation" route on the other four. If the "typed helper" route is chosen instead, one shared helper can cover all four call sites even though they're built from two different `authClient` instances (`runtime/app/login`'s own vs. `plugins/account`'s separately-constructed one) — pick one approach for all four, not a mix, since this is a single audit finding and a partial fix reproduces it for whatever's left unexplained.
+
+No other file overlap between these four tasks — otherwise fully independent within the leg.
+
+**Do not proceed if:** - 9.27: the chosen `sideEffects` declaration is (or reduces to) a bare `false` with no CSS carve-out — verify by actually bundling a consumer against the built output and confirming component styles still render, not just a green `pnpm typecheck`/`pnpm build` on packages/ui alone.
+
+- 9.26: the extraction changes plugins/account's actual drag-reorder behavior (activation distance/delay/tolerance values, `data-no-dnd` exclusion targets) — this must be a byte-for-byte-equivalent dedup, not a UX change riding along with it.
+- 3.44: scope creeps into `example-plugins/` beyond the one already-confirmed file, or into any `.local` plugin clone — both are explicitly out of scope per the task text.
+- 0.26: the four confirmed call sites end up in a mixed state (some explained, some still bare, or some wrapped in a helper and others not) — that inconsistency is the same class of finding this task exists to close.
+
+## Risks
+
+- **`3.39` changes `SdkHost.data.provide`'s signature** — a
+  host-implementer-facing breaking change under NFR-04, requiring a
+  `@sovereignfs/sdk` **minor** bump (not patch) and a `docs/upgrade.md`
+  migration note, per the same precedent as the `StorageContext.pluginId`/
+  `sdk.env` changes in this codebase's own history. Do not let this land as
+  a patch bump.
+- **`3.42`'s recursive route-pruning fix touches the plugin compose
+  pipeline directly** — the leg's own "do not proceed if" is explicit: any
+  implementation that cannot cleanly distinguish a stale route-prefix
+  segment from an active plugin's own leaf content (including through a
+  followed symlink in production) must not ship. Verify `pnpm generate`'s
+  output stays byte-identical for every non-colliding, non-stale
+  configuration before merging.
+- **Every task's file:line references and "current state" claims are a
+  snapshot from the audit and this workstream's drafting session (repo HEAD
+  `57e587c7`).** Code may have moved by the time a leg is actually executed.
+  Each task's Deliverables/Review checklist are a strong starting point, not
+  a substitute for re-reading the actual current source before implementing.
+- **Leg 5 and Leg 6 both touch database/connection-pool behavior in
+  adjacent but distinct ways** (`0.22`'s in-memory rate-limit maps vs.
+  `8.35`'s Postgres connection pools) — no code overlap, but worth reviewing
+  together if run close in sequence, since both are "long-lived process
+  state that was never bounded" fixes.
+- **This workstream has no governing RFC**, per its own Decisions-locked
+  scope. If executing any task surfaces a genuine open design question
+  (several leg details flag exactly this possibility — e.g. `3.39` needing a
+  larger SDK contract change, or `22.6`'s DNS-rebind fix needing a new
+  outbound-HTTP dependency) — stop per that leg's "do not proceed if" and
+  escalate rather than improvising a design decision mid-leg.
+
+## Kill criteria
+
+No leg gates another — every leg is independently shippable (see Legs
+table). If this workstream stops after N legs for any reason, the N
+completed legs' fixes stand on their own and do not need to be reverted or
+reworked; the remaining findings simply stay open in the audit report and
+can be picked up individually or resumed as this workstream later. There is
+no partial-feature risk here the way there is for a workstream building
+toward one product capability — each task closes one independent,
+already-scoped finding.
+
+## Changelog
+
+| Version | Date        | Change                                                                                                                                                                                                         |
+| ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft — 9 legs, 29 epic tasks across 8 epics, drafted from a 203-agent codebase audit (architecture/security/performance/product/quality/docs) plus a 38-agent drafting pass for task and leg content. |

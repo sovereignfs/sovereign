@@ -1726,6 +1726,63 @@ with).
 
 ---
 
+#### 📋 8.35 — Bound isolated Postgres plugin pool size; expose a pool-size env var
+
+**Goal:** Close an unbounded-connection-pool finding from a codebase audit: `packages/db/src/plugin-client.ts`'s `getPluginDb()` opens a `new Pool({connectionString, ssl, options})` per isolated Postgres plugin with no explicit `max`, so node-postgres's implicit default of 10 applies to every plugin pool; `packages/db/src/client.ts`'s platform pool and `apps/auth/src/db.ts`'s auth pool are two more independently unconfigured `Pool`s with the same implicit default. `runAllPluginMigrations()` (`runtime/src/plugin-migrations.ts`) calls `getPluginDb()` for every isolated plugin with a `migrations/postgres/` folder unconditionally at boot — this checkout currently has 11 such plugins (`docs.local`, `kanban.local`, `ledger.local`, `plainwrite.local`, `sheets.local`, `shopper.local`, `tally.local`, `tasks.local`, `travellog.local`, `wallet.local`, `warden`) — so on a Postgres-backed instance with all of them installed, boot alone can open up to 110 connections from plugin pools before counting the platform's or auth's own pool, against Postgres's out-of-the-box `max_connections = 100`. No env var in `.env.example`/`docs/self-hosting.md` currently tunes any of this. Fix: give each of the three long-lived pools an explicit, conservative default `max` and one shared, documented `POSTGRES_POOL_MAX` env var so an operator running many isolated Postgres plugins can size total connections against their server's real `max_connections` budget instead of discovering the ceiling in production.
+
+**Deliverables:**
+
+- Add a pure `postgresPoolMax(env: NodeJS.ProcessEnv = process.env): number` helper to `packages/db/src/client.ts` (exported alongside the existing `pgSslMode`) — reads `POSTGRES_POOL_MAX`, parses it as a positive integer, and falls back to a conservative default of `5` when unset, empty, non-numeric, zero, or negative.
+- `packages/db/src/client.ts`'s `createClient()` (platform pool, `client.ts:76`): pass `max: postgresPoolMax(process.env)` to the `new Pool({...})` call.
+- `packages/db/src/plugin-client.ts`'s `getPluginDb()` (the long-lived, cached, per-isolated-plugin Postgres pool, `plugin-client.ts:121`, also reused for ongoing `sdk.db.getClient()` calls via `runtime/src/sdk-host.ts:557`, not just migrations): import `postgresPoolMax` from `./client` (this file already imports `pgSslMode` from the same module) and pass `max: postgresPoolMax(process.env)` to its `new Pool({...})`.
+- `apps/auth/src/db.ts`'s `getAuthDb()` (the long-lived cached Postgres pool, `db.ts:141`): add a small local duplicate of the same parsing logic (mirrors this file's existing documented pattern of duplicating dialect/sqld resolution rather than importing `@sovereignfs/db`, for service-boundary independence) and pass `max` to its `new Pool({...})`.
+- Leave the three short-lived, immediately-`.end()`-ed pools untouched: `provisionPluginDb` (`plugin-client.ts:149`), `dropPluginDb` (`plugin-client.ts:195`), and `provisionAuthStore` (`apps/auth/src/db.ts:97`) each open exactly one connection for one query inside a `try { ... } finally { await pool.end() }` and `runAllPluginMigrations` (`runtime/src/plugin-migrations.ts`) awaits each plugin sequentially in its `for` loop — these never contribute to the sustained-connection budget `POSTGRES_POOL_MAX` is sizing, so bounding them adds no real protection.
+- `.env.example`: add a commented `# POSTGRES_POOL_MAX=5` line inside the existing Postgres block (next to `POSTGRES_DB_URL`/`PGSSLROOTCERT`, around line 179-184), documenting that it applies uniformly to the platform pool, the auth pool, and each isolated Postgres plugin's pool — not a single shared total.
+- `docs/self-hosting.md`: new table row next to the existing `PGSSLROOTCERT` row (around line 243) documenting `POSTGRES_POOL_MAX`, its default (`5`), and worked sizing guidance: `(number of isolated Postgres plugins installed x max) + platform pool max + auth pool max` must stay under the server's `max_connections` (Postgres's out-of-the-box default is 100).
+- Unit tests for `postgresPoolMax()` in `packages/db/src/__tests__/client.test.ts` (or a new adjacent file): unset -> 5, valid override (e.g. `'8'` -> 8), and each invalid case (`''`, `'0'`, `'-3'`, `'abc'`) falling back to 5.
+
+**Dependencies:** None. Independent of the other in-flight 8.3x (RFC 0092) tasks — touches only Pool construction in packages/db, apps/auth, and the two docs/env files; no schema or migration changes.
+
+**SRS reference:** None — this is operational remediation from a codebase audit (unbounded connection-pool sizing), not new product capability. Related, but not a formal dependency: the Postgres advisory-lock incident recorded in this file's own Status section (`0.101.9`) and its matching bullet in `docs/architecture-rules.md` — a different bug (session-scoped primitive on a pooled connection) in the same `packages/db` Postgres-pool surface, which is what prompted the audit this task's finding came out of.
+
+**Review checklist:**
+
+- `rg "new Pool\(" packages/db/src/client.ts packages/db/src/plugin-client.ts apps/auth/src/db.ts` shows `max: postgresPoolMax(...)` (or its local duplicate) on exactly the three long-lived pools (`client.ts:76` platform, `plugin-client.ts:121` isolated-plugin, `apps/auth/src/db.ts:141` auth); the three short-lived provision/drop pools (`plugin-client.ts:149`, `plugin-client.ts:195`, `apps/auth/src/db.ts:97`) are unchanged.
+- With `POSTGRES_POOL_MAX` unset, each of the three pools opens with `max: 5` — verified via the new `postgresPoolMax()` unit tests plus a live check (`pool.options.max` or `SELECT count(*) FROM pg_stat_activity` under concurrent load against a real Postgres instance).
+- `postgresPoolMax()`'s unit tests pass for unset, a valid override, and each invalid input (`''`, `'0'`, `'-3'`, `'abc'`) falling back to the default of 5.
+- `.env.example` documents `POSTGRES_POOL_MAX` (commented, with its default) and `docs/self-hosting.md`'s variable table has a matching row with the worked sizing math.
+- `pnpm exec vitest run runtime/src/__tests__/docs-parity.test.ts` passes (the new commented-out var must resolve in `self-hosting.md`).
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`, and `TEST_DATABASE_URL=... pnpm test` (including the `.pg.test.ts` suite) all pass.
+- `@sovereignfs/db` and `apps/auth` package versions bumped patch (behavior change is an additive, defaulted constructor option — not a breaking API change); root platform `package.json` bumped minor for this epic task's completion, per CLAUDE.md's version-bump convention.
+
+---
+
+#### 📋 8.36 — Batch field-reseal's per-row UPDATE into multi-row statements
+
+**Goal:** Task 8.36 — `walkOneTable`'s inner loop (`runtime/src/field-reseal.ts:236-249`), the shared machinery under both `sv db encrypt-fields` (backfill) and `sv keys rotate-blind-index` (RFC 0092 gate B, task 8.34), reads each `BATCH_SIZE` (100, `field-reseal.ts:37`) chunk with one `SELECT ... LIMIT 100` (lines 226-233), but for every row that `transform()` — the `backfillTransform`/`rotateIndexTransform` pair, lines 96-177 — flags as needing re-sealing, issues and awaits a separate `UPDATE ... WHERE <pk> = ...` (lines 239-247, dialect-branched at 244-245 into `pdb.db.run`/`pdb.db.execute`) before moving to the next row. A rotation or backfill against a classified table with many rows needing re-sealing therefore does one sequential network round trip per row against sqld or Postgres — wall-clock time scales with row count instead of batch count — even though the read side of the same loop already batches. `docs/self-hosting.md`'s "Field encryption (RFC 0092)" runbook (§1965) already tells operators to run both commands against real production data. This task closes the finding by batching the write side to match the read side, within the existing per-batch checkpoint boundary.
+
+**Deliverables:**
+
+- In `walkOneTable` (`runtime/src/field-reseal.ts:236-249`), collect every row's `transform()` result across the batch first — `transform()` itself stays a per-row call (it's CPU/crypto-bound decrypt+re-encrypt work on already-fetched rows, not a round trip) — then group the rows needing a write by their exact `Object.keys(updates)` shape (`backfillTransform`/`rotateIndexTransform`, lines 96-177, can each produce a different changed-column set per row — e.g. one row needs only its blind index recomputed while another also needs its ciphertext resealed) and flush each group as one multi-row `UPDATE`, replacing the current per-row `await pdb.db.run(update)` / `await pdb.db.execute(update)` pair (lines 244-245).
+- Build each dialect's multi-row statement at the same `pdb.dialect === 'sqlite'` branch point that already exists in this function (lines 230-233, 244-245) — e.g. `UPDATE <table> SET <col> = v.<col>, ... FROM (VALUES (pk, val, ...), ...) AS v(pk, <col>, ...) WHERE <table>.<pk> = v.pk` — using the file's existing `q()` identifier-quoting helper (lines 55-62) for every table/column name and the drizzle `sql`/`sql.join` template (already used for the per-row assignment list at lines 240-243) for every bound value; no manual string interpolation of row data.
+- Preserve current observable semantics unchanged: `result.updated` still counts individual rows written, not statements issued; `cursor` still advances to the last scanned row's pk in scan order (line 248) regardless of whether that row was written; the per-batch checkpoint upsert (lines 250-256, `upsertResealCheckpoint`) still fires exactly once per `BATCH_SIZE` chunk, not once per statement.
+- Add a regression test proving round-trip count no longer scales with row count — e.g. a batch of ~100 rows that all need resealing issues a small, bounded number of `UPDATE` statements (one per distinct changed-column shape present in the batch), not 100.
+- Add Postgres coverage for the walker: today only `runtime/src/__tests__/field-rotation-e2e.sqld.test.ts` (sqld/SQLite, `describe.skipIf(!LIVE)` gated on `TEST_SQLD_URL`/`TEST_SQLD_ADMIN_URL`) exercises `runReseal`/`walkOneTable` end-to-end — the new Postgres `UPDATE ... FROM (VALUES ...)` code path has no dialect coverage otherwise. Add `runtime/src/__tests__/field-reseal.pg.test.ts` gated on `TEST_DATABASE_URL` (mirroring `field-schema-e2e.pg.test.ts`'s existing setup), covering at minimum a multi-row backfill and a multi-row blind-index rotation.
+
+**Dependencies:** Task 8.34 (implemented `walkOneTable`/`runReseal`, the code this task modifies).
+
+**SRS reference:** [RFC 0092](../rfcs/0092-app-level-field-encryption.md) — hardens the gate-B operator tooling task 8.34 shipped under that RFC; not new design, and no dedicated performance NFR exists for this admin-only path.
+
+**Review checklist:**
+
+- `field-rotation-e2e.sqld.test.ts`'s two existing tests (dual-read continuity through a rotation window; checkpoint resume-not-restart) pass unmodified against a live sqld (`TEST_SQLD_URL`/`TEST_SQLD_ADMIN_URL` set).
+- The new `field-reseal.pg.test.ts` passes against a live Postgres (`TEST_DATABASE_URL` set), covering both a multi-row backfill and a multi-row rotation.
+- The new regression test demonstrates the number of `UPDATE` statements issued for a batch no longer grows 1:1 with the number of rows needing resealing in that batch.
+- `result.updated`, checkpoint cursor advancement, and per-batch checkpoint persistence in `runReseal`'s returned `ResealSummary` are identical to pre-change behavior for the same fixture data — no observable behavior change to callers of `sv db encrypt-fields`/`sv keys rotate-blind-index`.
+- `pnpm typecheck`, `pnpm lint`, and `pnpm format:check` all pass; a full `pnpm exec vitest run` is green.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)

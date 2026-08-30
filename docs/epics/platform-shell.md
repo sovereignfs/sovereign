@@ -1305,6 +1305,72 @@ not read as the same thing.
 - `pnpm design:tokens:check` passes; no hardcoded colours.
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
 
+---
+
+#### 📋 2.34 — Index the notifications table and switch "Clear all" to the existing bulk-dismiss helper
+
+**Goal:** Close a codebase-audit finding covering two related gaps in the notifications feature (RFC 0015). First, neither `packages/db/migrations/postgres/*.sql` nor `packages/db/migrations/sqlite/*.sql` puts any index on the `notifications` table — confirmed by grep and by the drizzle-kit snapshot (`packages/db/migrations/sqlite/meta/0028_snapshot.json`) showing `"indexes": {}` for it — despite every read path filtering on `recipient_user_id` (`listUserNotifications`, `countUnreadNotifications` in `packages/db/src/platform-db.ts:2762-2791`) and `NotificationBell.tsx` polling this table for every active user roughly every 30s by default: a full-table scan per active user per poll interval. Second, `clearAllShared()` in `runtime/app/(platform)/_components/NotificationBell.tsx:229-241` fans out one `fetch` + one `UPDATE` per notification currently in view (up to 200) on "Clear all," instead of calling `packages/db/src/platform-db.ts`'s `dismissAllNotifications()` (lines 2848-2859) — a single-statement bulk helper that already exists, is already wired into `sdk.notifications.dismissAll()`, and whose own doc comment already flags this exact gap ("the existing REST route's own \"Clear all\" instead issues one `dismissNotification` call per row, which this doesn't replace").
+
+**Deliverables:**
+
+- Convert the `notifications` table definition to the 3-arg `pgTable`/`sqliteTable` form and add a composite index on `(tenant_id, recipient_user_id, dismissed_at)` in both `packages/db/src/schema/postgres/platform.ts:218-232` and `packages/db/src/schema/sqlite/platform.ts:497-518`, matching the existing `plugin_jobs`/`backup_jobs` index pattern (e.g. `index('notifications_recipient_idx').on(table.tenantId, table.recipientUserId, table.dismissedAt)`) — this covers `listUserNotifications` and `countUnreadNotifications` (`packages/db/src/platform-db.ts:2762-2791`), both of which filter on exactly this triple plus `read_at`/`ORDER BY created_at`.
+- Run `pnpm db:generate` (per `packages/db/package.json`'s `db:generate` script) to emit the new migration pair (`packages/db/migrations/postgres/00NN_*.sql`, `packages/db/migrations/sqlite/00NN_*.sql`) and updated `meta/*_snapshot.json`/`_journal.json` — do not hand-write the SQL; confirm the generated snapshot's `notifications` entry now has a non-empty `indexes` map (currently `{}` per `packages/db/migrations/sqlite/meta/0028_snapshot.json`).
+- Add a `dismiss-all` action to the POST handler in `runtime/app/api/account/notifications/route.ts` (alongside the existing `read-all`/`read`/`dismiss` branches) that imports and calls `dismissAllNotifications(pdb, userId)` from `@sovereignfs/db` — already implemented at `packages/db/src/platform-db.ts:2848-2859` and already wired into `sdk.notifications.dismissAll()` via `runtime/src/sdk-host.ts:913`, but unused by this REST route.
+- Rewrite `clearAllShared()` in `runtime/app/(platform)/_components/NotificationBell.tsx:229-241` to issue a single `fetch('/api/account/notifications', { method: 'POST', body: JSON.stringify({ action: 'dismiss-all' }) })` instead of `Promise.all`-fanning-out one `dismiss` POST per item in `store.items` (up to 200, per the route's own `limit` cap at `runtime/app/api/account/notifications/route.ts:19`); keep the existing `setStore({ items: [], unreadCount: 0 })` optimistic-clear call.
+- Update the doc comment on `dismissAllNotifications` (`packages/db/src/platform-db.ts:2842-2847`) — it currently reads 'the existing REST route's own "Clear all" instead issues one `dismissNotification` call per row, which this doesn't replace'; correct it once the route is switched over.
+- Bump `packages/db`'s `package.json` version (currently `4.8.1`) as a patch (schema/index addition, no API surface change) and `runtime`'s `package.json` version (currently `0.91.5`) as a patch (route behavior fix, no new public surface), per this repo's `fix/` → patch convention.
+
+**Dependencies:** None.
+
+**SRS reference:** None — this is remediation of an audit finding, not new design. The notifications feature itself (schema, poll/SSE transport, `dismissAllNotifications`) is specified under RFC 0015 (`docs/rfcs/0015-notification-center.md`) and already shipped (epic task 4.1); this task only adds a missing index that design didn't call out and wires the existing "Clear all" UI to a bulk helper that already exists and is already used elsewhere (`sdk.notifications.dismissAll()`).
+
+**Review checklist:**
+
+- `pnpm db:generate` output shows a new migration in both `packages/db/migrations/postgres/` and `packages/db/migrations/sqlite/`, and the corresponding `meta/*_snapshot.json`'s `tables.notifications.indexes` (or dialect-equivalent path) is no longer `{}`.
+- A real `EXPLAIN`/`EXPLAIN QUERY PLAN` against `listUserNotifications`'s query on both dialects shows an index scan on the new index, not a sequential/full-table scan.
+- Clicking "Clear all" in `NotificationBell` with several unread notifications issues exactly one `POST /api/account/notifications` request (verified via browser network tab or a request-count assertion), not one per item.
+- `POST /api/account/notifications` with `{ "action": "dismiss-all" }` dismisses every non-dismissed notification for the calling user and returns `{ ok: true }`; a second call is a no-op (idempotent, matching `dismissAllNotifications`'s own `WHERE dismissed_at IS NULL` guard).
+- The stale doc comment on `dismissAllNotifications` (`packages/db/src/platform-db.ts:2842-2847`) no longer claims the REST route bypasses it.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` all pass.
+- `packages/db` and `runtime` `package.json` versions are bumped; `docs/upgrade.md` is untouched (no breaking change, no migration note needed).
+
+---
+
+#### 📋 2.35 — Add pagination to sdk.storage.list()
+
+**Goal:** Close an audit finding in `sdk.storage.list()` (RFC 0044): `listStorageObjects` (`packages/db/src/platform-db.ts:1145-1165`) runs `SELECT ... FROM plugin_storage_objects WHERE tenant_id = ... AND plugin_id = ... ORDER BY updated_at DESC` with no `LIMIT`/`OFFSET`, then applies ownership (`canAccessStorageObject`) and prefix (`row.key.startsWith(prefix)`) filtering in JavaScript only after every matching row has already been pulled into memory (`platform-db.ts:1161-1164`). The public contract, `sdk.storage.list(prefix?: string): Promise<StorageObject[]>` (`packages/sdk/src/storage.ts:41-44`, `SdkHost['storage'].list` at `packages/sdk/src/host.ts:266`, implemented in `runtime/src/sdk-host.ts:1254-1259`), has no `limit`/`offset` parameter at all, so a plugin author cannot page through results even if they wanted to. Every call is therefore a full table scan of that plugin's entire `plugin_storage_objects` row set, which only grows: deletion is opt-in and per-object (`sdk.storage.delete()`), so attachments, generated exports, thumbnails, and any other object a plugin ever `put()`s stay in that table for the life of the instance. A plugin that accumulates thousands of objects — an imports/exports history, per-user photo attachments — turns every `sdk.storage.list()` call into an unbounded query plus an unbounded in-memory filter/sort, with no way for the plugin or the platform to cap it.
+
+**Deliverables:**
+
+- `packages/db/src/platform-db.ts`'s `listStorageObjects` (currently `platform-db.ts:1145-1165`) gains a fourth parameter, `options: { limit?: number; offset?: number } = {}`, mirroring `listUserActivity`'s existing `limit`/`offset` convention (`platform-db.ts:2482-2510`) — default `limit` 200, hard-clamped server-side to a max of 500 regardless of what a caller passes, default `offset` 0.
+- Move the ownership check and prefix match out of the two post-query `.filter()` calls (`platform-db.ts:1161-1164`) and into the SQL `WHERE` clause — `AND (owner_user_id IS NULL OR owner_user_id = ${context.userId})` and a new `AND (CAST(${prefixPattern} AS TEXT) IS NULL OR key LIKE ${prefixPattern} ESCAPE '\\')` — so `LIMIT`/`OFFSET` paginate the real accessible/matching row set, not the full unfiltered table (filtering after a `LIMIT` would silently return fewer than `limit` rows even when more matches exist beyond the fetched page).
+- Add a `likePrefixPattern()` helper next to the existing `likeContainsPattern()` (`platform-db.ts:2472-2474`) that escapes `%`/`_` in a caller-supplied prefix and appends a trailing wildcard only (no leading `%`), reusing the same `ESCAPE '\\'` convention already used by `likeContainsPattern`.
+- `packages/sdk/src/storage.ts`'s `list()` (`storage.ts:41-44`) widens to `list(prefix?: string, options?: { limit?: number; offset?: number }): Promise<StorageObject[]>` — additive and backward compatible; every existing zero-arg or single-`prefix`-arg call site is unaffected.
+- `packages/sdk/src/host.ts`'s `SdkHost['storage'].list` (`host.ts:266`) widens to accept the same `options` parameter, threaded ahead of `context`.
+- `runtime/src/sdk-host.ts`'s `storage.list` implementation (`sdk-host.ts:1254-1259`) accepts and forwards `options` to `listStorageObjects(pdb, resolved, prefix, options)`, clamping any caller-supplied `limit` to the 500 hard cap before the call.
+- `docs/plugin-development.md`'s "Plugin file storage" section (the `sdk.storage.list('receipts/')` example at `plugin-development.md:3327`) documents the new `options` parameter, its default (200) and hard cap (500), and that pagination is offset-based (`offset + limit` for the next page).
+- Extend `runtime/src/__tests__/sdk-host-storage-routing.test.ts` and `sdk-host-storage-portability-routing.test.ts`'s `toHaveBeenCalledWith` assertions (currently asserting a 3-arg `listStorageObjects` call, e.g. lines 63-67/77-81/86-90) to cover the new 4th `options` argument, plus a new case asserting a caller-supplied `limit` above 500 is clamped before reaching `listStorageObjects`.
+- Extend `packages/db/src/__tests__/platform-db.pg.test.ts`'s "lists by key prefix and sums bytes for quota accounting" test (`platform-db.pg.test.ts:721-748`) with a pagination case: seed more than one page of objects, assert `limit`/`offset` returns the correct slice, and assert a mixed ownership + prefix + limit query still returns the correct accessible subset (not skewed by counting inaccessible or non-matching rows against the page).
+
+**Dependencies:** None.
+
+**SRS reference:** None — this is remediation from a codebase audit finding, not new design. The underlying feature being hardened is RFC 0044 (plugin file storage).
+
+**Review checklist:**
+
+- `sdk.storage.list()` and `sdk.storage.list(prefix)` (no options passed) continue to work unchanged for every existing caller, confirming the SDK signature change is additive, not breaking.
+- A plugin with more than 500 storage objects never gets more than the hard cap back from one `listStorageObjects`/`sdk.storage.list()` call, regardless of what `limit` the caller passes.
+- Passing `offset` past the end of the accessible/matching set returns `[]`, not an error.
+- A caller-supplied `prefix` combined with `limit` returns exactly `limit` matching rows when more than `limit` matches exist, not fewer — proves the prefix filter moved into SQL and is no longer applied to an already-truncated JS-side page.
+- An object owned by a different user is excluded before `LIMIT` is applied, so a full page of accessible results is still returned even when inaccessible rows exist ahead of it in `updated_at DESC` order.
+- `pnpm --filter @sovereignfs/db test` (including the `.pg.test.ts` suite against a real Postgres container) passes with the new pagination test cases.
+- `pnpm --filter runtime test` passes with the updated routing-test assertions in `sdk-host-storage-routing.test.ts` / `sdk-host-storage-portability-routing.test.ts`.
+- `pnpm typecheck && pnpm lint && pnpm format:check` pass across the repo.
+- `docs/plugin-development.md`'s storage section reflects the new `options` parameter and its default/cap — no stale example still showing `sdk.storage.list(prefix)` as the only supported call shape.
+- `@sovereignfs/sdk`'s `package.json` version bumped **minor** (additive, non-breaking per NFR-04) past its current `1.47.0`; `runtime`'s `package.json` bumped past its current `0.91.5`; `@sovereignfs/db`'s `package.json` bumped past its current `4.8.1`.
+
+---
+
 ## Related RFCs
 
 - [RFC 0001 — Overlay shell variant](../rfcs/0001-overlay-shell-variant.md)

@@ -449,6 +449,69 @@ code path (`assertSafeProviderBaseUrl` → `fetch` → SSE frame parsing →
 response-shape quirks are unverified. `disabled: true` removed in this same
 change based on the above.
 
+---
+
+#### 📋 22.6 — Pin the resolved IP for Warden's provider-URL SSRF guard (close the DNS-rebind race)
+
+**Goal:** Close the DNS-rebind race in Warden's provider-URL SSRF guard: `assertSafeProviderBaseUrl()` (`plugins/warden/app/_lib/url-safety.ts:88-116`) resolves the provider's hostname via its own `lookup(hostname, { all: true, verbatim: true })` call and rejects loopback/link-local/known-internal addresses, but discards the resolved IPs and returns only the original `URL`. Both call sites — `provider-chat.ts:94-107`'s `fetch(endpoint, ...)` and `model-discovery.ts:56-65`'s `fetch(endpoint, ...)` — then let the runtime's global `fetch` re-resolve the same hostname independently for the actual TCP connection. A user configuring a malicious external provider controls authoritative DNS for their own domain and can answer the validation lookup with a safe public address while answering the connection's own lookup with a loopback or internal address — a classic check-then-use race, not narrowed by re-running the same two-step validate-then-fetch closer together in time (both call sites' own doc comments already claim this closes a \"TTL-based DNS rebind,\" which is incorrect: it is still two independent DNS queries no matter how short the gap between them). The fix is to pin the exact IP address `assertSafeProviderBaseUrl` already validated for the connection itself — via a custom DNS-bypassing `lookup` on an undici `Agent` passed as the request's `dispatcher` — while still sending the original hostname via the `Host` header and TLS SNI, so the request remains indistinguishable to the upstream provider.
+
+**Deliverables:**
+
+- Change `assertSafeProviderBaseUrl()`'s return type in `plugins/warden/app/_lib/url-safety.ts:88` from `Promise<URL>` to `Promise<{ url: URL; addresses: { address: string; family: number }[] }>`, returning the exact `addresses` array already produced by the `lookup(hostname, { all: true, verbatim: true })` call at `url-safety.ts:105` instead of discarding it after the safety check.
+- Add `undici` as an explicit dependency of `plugins/warden/package.json` (already resolved transitively at `undici@7.29.0` per `pnpm-lock.yaml:7737`; pin it directly the same way `unpdf`/`drizzle-orm` already are in that file — not added to the shared `pnpm-workspace.yaml` catalog, since it's consumed by only this one package). Node's global `fetch` is undici-backed internally but doesn't expose a way to attach a custom `dispatcher`, so pinning a connection requires importing `Agent`/`fetch` from the `undici` package directly.
+- Add `plugins/warden/app/_lib/pinned-fetch.ts` exporting `fetchPinned(url: URL, addresses: { address: string; family: number }[], init: RequestInit): Promise<Response>`. It builds an undici `Agent` whose `connect.lookup` ignores the OS/`dns` resolver entirely and returns the caller-supplied `addresses` verbatim for any hostname, then calls undici's own `fetch(url, { ...init, dispatcher: agent })`. `url.hostname` is passed through unchanged, so the `Host` header and TLS SNI still match the original hostname — only the TCP-level connection target is pinned to the address `assertSafeProviderBaseUrl` already validated.
+- `plugins/warden/app/_lib/provider-chat.ts:83-107`: capture `{ url, addresses }` from `assertSafeProviderBaseUrl`, keep building `endpoint` from `url` as today, and replace the global `fetch(endpoint, ...)` call at line 97 with `fetchPinned(new URL(endpoint), addresses, { ...same init... })`, preserving the existing `AbortSignal.timeout(REQUEST_TIMEOUT_MS)` and header/body options unchanged.
+- `plugins/warden/app/_lib/model-discovery.ts:41-65`: same change in `fetchProviderModels()` — capture `addresses` from `assertSafeProviderBaseUrl`, replace the global `fetch(endpoint, ...)` call at line 59 with `fetchPinned(...)`, preserving `AbortSignal.timeout(MODEL_FETCH_TIMEOUT_MS)`.
+- Correct the now-inaccurate doc comments that describe re-validation as sufficient rebind protection: `url-safety.ts:80-87`'s "Call this both when saving a provider ... and immediately before every outbound request (defense in depth against a TTL-based DNS rebind between the two)", `provider-chat.ts:70-76`'s identical claim ("same reasoning as `model-discovery.ts`"), and `model-discovery.ts:43-46`'s inline comment ("defense in depth against a TTL-based DNS rebind between when the provider was configured and now") — replace all three with a description of the actual fix (the resolved address is pinned for the connection, not merely re-checked on a shorter timeline against a second independent lookup).
+- Add a regression test to `plugins/warden/app/_lib/__tests__/url-safety.test.ts` asserting `assertSafeProviderBaseUrl` returns the resolved `addresses` array alongside `url`, and update every existing test in that file that currently does `const url = await assertSafeProviderBaseUrl(...)` / `url.toString()`/`url.hostname` to destructure `{ url }` from the new return shape.
+- Add a regression test (new `plugins/warden/app/_lib/__tests__/pinned-fetch.test.ts`, or added to `provider-chat.test.ts`/`model-discovery.test.ts`) that simulates the actual rebind: mock `node:dns/promises`' `lookup` to return a safe public address on the validation call, then assert the outbound connection created by `fetchPinned` uses that exact pinned address — i.e. that no second `dns.lookup`/`lookup()` call for the same hostname occurs between validation and the request (spy call count stays at 1), closing the TOCTOU gap the audit finding describes.
+
+**Dependencies:** None. Tasks 22.4 and 22.5 (which introduced `url-safety.ts`, `provider-chat.ts`, and `model-discovery.ts`) have already shipped; this is pure remediation on top of completed code, with no forward blocker.
+
+**SRS reference:** [RFC 0063 — Warden: core assistant platform plugin and harness engine](../rfcs/0063-core-assistant-warden.md) §3/§4 — `url-safety.ts`'s own header comment cites this RFC and epic task 22.4 as the guard's origin, but the RFC itself never specified the check-then-fetch mechanics; this task is remediation of an implementation gap in that guard, not new design.
+
+**Review checklist:**
+
+- `pnpm exec vitest run plugins/warden` passes, including the new `pinned-fetch`/rebind regression test and the updated `url-safety.test.ts` assertions on the new `{ url, addresses }` return shape.
+- Neither `provider-chat.ts` nor `model-discovery.ts` calls the ambient global `fetch` for the upstream provider request anymore — `grep -n 'fetch(' plugins/warden/app/_lib/provider-chat.ts plugins/warden/app/_lib/model-discovery.ts` shows only `fetchPinned` calls (plus any unrelated `response.json()`/stream calls, which are not new outbound requests).
+- The rebind regression test fails against the pre-fix code (a second, independently-mockable `dns.lookup` call between validation and the request) and passes only once `fetchPinned` is wired in — confirm by temporarily reverting the `provider-chat.ts`/`model-discovery.ts` call sites to plain `fetch` and watching the new test fail, then restoring the fix.
+- The three stale "defense in depth against a TTL-based DNS rebind" doc comments (`url-safety.ts:80-87`, `provider-chat.ts:70-76`, `model-discovery.ts:43-46`) no longer claim re-validation alone closes the race; each accurately describes the pinned-connection fix instead.
+- A locally-run OpenAI-compatible mock provider (same technique task 22.5's own verification used — bound to a real LAN address, not `localhost`) still works end to end through both `discoverModels()` and `requestProviderChat()` after the `fetchPinned` change — confirms the pin doesn't break the legitimate self-hosted-provider case the module's own header comment calls out as an explicit design goal.
+- `pnpm typecheck`, `pnpm lint`, and `pnpm format:check` all pass.
+- `plugins/warden/package.json`'s new `undici` dependency version matches (or is compatible with) the `undici@7.29.0` already resolved transitively in `pnpm-lock.yaml`, and `pnpm install --frozen-lockfile` succeeds after the lockfile is regenerated for the new direct dependency.
+
+---
+
+#### 📋 22.7 — Fix Warden's account-deletion N+1 query pattern
+
+**Goal:** Close an N+1 query pattern found in `plugins/warden/app/_lib/portability.ts`'s `sdk.portability.provideDelete` handler (lines 33-61): it first selects every one of the user's `warden_conversation` rows, then loops over them serially awaiting a per-conversation `select` (to count `warden_messages` rows) plus a per-conversation `delete`, before finally deleting the conversation rows themselves — `2n + 2` sequential DB round trips for a user with `n` conversations, all inside the 30s per-plugin budget `runtime/src/user-deletion.ts`'s `DELETION_TIMEOUT_MS` enforces on every account-deletion handler. Every value the loop computes (the message count, and the delete scope) is derivable from the user's conversation ids directly via `inArray`, collapsing the handler to a fixed 4 queries regardless of conversation count. Impact today is bounded — this handler only runs once per account deletion, and only for Warden — but it scales linearly with a heavy chat user's conversation count and is worth closing before it's a real timeout risk."
+
+**Deliverables:**
+
+- Rewrite `plugins/warden/app/_lib/portability.ts`'s `provideDelete` handler (currently lines 33-61) to replace the per-conversation loop with a fixed, small number of queries independent of conversation count: one select of the user's conversation ids (`eq(wardenConversation.userId, ctx.userId)`), one select of matching message ids via `inArray(wardenMessages.conversationId, conversationIds)` for the count, one `delete(wardenMessages).where(inArray(wardenMessages.conversationId, conversationIds))`, and the existing final `delete(wardenConversation).where(eq(wardenConversation.userId, ctx.userId))` — 4 queries total regardless of how many conversations the user has, versus the current `2n + 2`.
+- Do not introduce `.delete().returning()` — keep the existing count-via-select-before-delete idiom (portability.ts:45-47's own comment, and the identical documented pattern in `plugins/sovereign-plugin-tasks.local/app/_lib/portability.ts:377-379`) rather than the audit's literal `RETURNING id` suggestion, since that comment records a deliberate prior decision that `.returning()` isn't guaranteed to behave identically across every driver behind `ctx.db` (sqld/libsql vs. node-postgres, per `packages/db/src/client.ts`), and this task is a targeted perf fix, not a re-litigation of that driver-compatibility call.
+- Import `inArray` from `drizzle-orm` alongside the existing `eq` import (portability.ts:1).
+- Update `plugins/warden/app/_lib/__tests__/portability.test.ts`'s `fakeDb()` helper (lines 38-72) to support an `inArray`-shaped predicate in `select().from().where()` and `delete().from().where()`, since its current `eq`-only mock (lines 24-33, 45-51, 58-67) can't express the new query shape.
+- Add a regression test with 3+ conversations (each with messages) for the same user, asserting: (a) the final `{ deleted: N }` count matches total messages + conversations exactly as before, (b) every conversation and its messages are gone afterward, and (c) the number of `database.select`/`database.delete` invocations is a fixed constant (not proportional to conversation count) — via a call-count spy on the `fakeDb()` mock's `select`/`delete` methods.
+- Keep the existing 3 tests (portability.test.ts:116-152 — single-conversation delete, cross-user isolation, zero-conversation case) passing unmodified in behavior, only adapting them to the updated `fakeDb()` shape if the mock's method signatures change.
+- Bump `plugins/warden/manifest.json`'s `version` field (plugins version only their manifest, never `package.json`, per this repo's convention).
+
+**Dependencies:** None.
+
+**SRS reference:** None — this is remediation of a bug found in code review (task 22.5's own shipped implementation), not new design. RFC 0063 (`docs/rfcs/0063-core-assistant-warden.md`) covers Warden generally but says nothing about deletion query shape.
+
+**Review checklist:**
+
+- `pnpm --filter warden exec vitest run app/_lib/__tests__/portability.test.ts` passes, including the new multi-conversation regression test.
+- The new multi-conversation test fails against the pre-fix code (revert the fix locally and confirm the call-count assertion breaks) before being considered a real regression guard, not just a test that happens to pass.
+- `provideDelete`'s handler body contains no loop (`for`/`.forEach`/`.map` awaited serially) over the conversations array — grep confirms it.
+- `grep -n "returning" plugins/warden/app/_lib/portability.ts` returns nothing — the fix does not introduce `.returning()`.
+- The handler still returns the exact same `{ deleted }` count as before for a user with N conversations and M total messages (N + M), verified by the existing single-conversation test plus the new multi-conversation one.
+- `pnpm typecheck` and `pnpm lint` pass for `plugins/warden`.
+- `plugins/warden/manifest.json`'s `version` field is bumped; `plugins/warden/package.json`'s `version` stays pinned at `0.0.0`.
+
+---
+
 ## Future phases (not yet scheduled)
 
 Real, intended work — listed per RFC 0063's Adoption path, deliberately not

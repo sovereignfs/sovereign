@@ -98,6 +98,69 @@ Subsequent tasks added Account sections as part of other epics:
 | 0.8.0  | New Subscriptions section — purchase, import license, manage renewals | [Monetization](monetization.md)               |
 | 1.7    | Data tab — "Delete your account" section                              | [Users & Auth](users-auth.md)                 |
 
+---
+
+#### 📋 14.3 — Sweep Account's user-facing copy from "plugin" to "app"
+
+**Goal:** Account (`plugins/account/`) is an unambiguous end-user surface, so every string it renders is user-facing copy and falls under CLAUDE.md's naming-conventions table row "User-facing UI strings, labels, placeholders, empty states → app". A grep audit (`grep -rniE '\bplugin' plugins/account/app --include='*.tsx'`) finds nine live occurrences of "plugin(s)" in copy actually rendered to users, spread across six files, distinct from the `pluginId`/`PluginInfo`/`PluginEntry` identifiers and better-auth's own `createAuthClient({ plugins: [...] })` option name that correctly stay "plugin" per the same table's code/types/APIs row. The clearest is `SidebarControl.tsx:91`'s `"No plugins installed."` empty state — the direct structural counterpart of CLAUDE.md's own canonical correct example (`"No apps found"`) and of Launcher's already-fixed reference pattern (`plugins/launcher/app/_components/LauncherOfflineView.tsx:147`, `"No apps installed yet"`). `PortabilityPanel.tsx` shows this has never been done as a deliberate pass: the same paragraph block already says "participating apps" (line 123) and "installed app{s}" (line 153) right next to a leftover "participating plugins" (line 117) — the file is mid-inconsistent, not untouched.
+
+**Deliverables:**
+
+- plugins/account/app/_components/SidebarControl.tsx:91 — change "No plugins installed." to "No apps installed."
+- plugins/account/app/billing/page.tsx:106 — change "No active plugin licenses." to "No active app licenses."
+- plugins/account/app/billing/page.tsx:142-144 — reword "Paste the signed license token you received from the plugin author or payment provider. When a paid plugin redirects you to its paywall page, you can also import the token directly from there." to use "app" (e.g. "...from the app's developer or payment provider... When a paid app redirects you to its paywall page...").
+- plugins/account/app/billing/page.tsx:147 — change the FormField label="Plugin ID" to label="App ID" (label text only — leave id="billing-plugin-id" and the importPluginId/pluginId POST field name untouched, since those are code identifiers, not copy).
+- plugins/account/app/data/page.tsx:133 — change "These plugins can read your data from other plugins. Revoke any consent you no longer want." to "These apps can read your data from other apps. Revoke any consent you no longer want."
+- plugins/account/app/data/page.tsx:359 — change "...activity history, notifications, and any data held by installed plugins. This cannot be undone." to "...any data held by installed apps. This cannot be undone."
+- plugins/account/app/preferences/page.tsx:115-116 — change "Drag to reorder plugin icons. Toggle to show or hide individual plugins. The home icon and platform controls are always visible." to "Drag to reorder app icons. Toggle to show or hide individual apps. The home icon and platform controls are always visible."
+- plugins/account/app/security/page.tsx:68 — change "Some plugins and features require a verified email or enrolled MFA (RFC 0035)." to "Some apps and features require a verified email or enrolled MFA (RFC 0035)."
+- plugins/account/app/notifications/page.tsx:20 — change the 'info' category description "General informational notifications from plugins." to "General informational notifications from apps."
+- plugins/account/app/_components/PortabilityPanel.tsx:115-117 — change "...profile, preferences, avatar, and any participating plugins — as a ZIP archive..." to "...and any participating apps — as a ZIP archive...", matching the "participating apps"/"installed app{s}" wording already used two lines below (line 123, 153) in the same component.
+- plugins/account/app/notifications/**tests**/page.test.tsx and plugins/account/app/_components/**tests**/DeviceStorageKeySection.test.tsx (or any other **tests** file under plugins/account/app) — update any test assertion that matches the old "plugin" copy strings by exact text (e.g. getByText/toHaveTextContent) so the suite doesn't regress; grep for the exact strings being changed before editing each test file.
+- Do not touch pluginId/PluginInfo/PluginEntry/importPluginId identifiers, the id="billing-plugin-id" DOM id, sidebar-plugins-dnd DndContext id, or better-auth's plugins: [...] client-option arrays in PasskeySection.tsx/DeviceStorageKeySection.tsx — these are code/API surface, not user-facing copy, and are out of scope per CLAUDE.md's naming table.
+
+**Dependencies:** None.
+
+**SRS reference:** none — this is remediation of a documented CLAUDE.md naming-convention rule (the plugin/app terminology split), not new design; Launcher's existing fix (plugins/launcher/app/_components/LauncherOfflineView.tsx) is the direct precedent this task extends to Account.
+
+**Review checklist:**
+
+- grep -rniE '\bplugins?\b' plugins/account/app --include='*.tsx' | grep -viE 'pluginId|PluginInfo|PluginEntry|pluginName|pluginCount|pluginNames|infoMap|importPluginId|createAuthClient|plugins: \[' returns no remaining user-facing copy matches (only code identifiers/comments).
+- pnpm --filter @sovereignfs/account-plugin test (or the repo-wide pnpm test -- plugins/account) passes, including any test files updated for the new copy strings.
+- Manually load /account/preferences, /account/billing, /account/data, /account/security, /account/notifications in a dev instance with zero and non-zero installed plugins, and confirm every empty state, label, and help/subtitle string reads "app"/"apps", never "plugin"/"plugins".
+- pnpm format:check and pnpm lint pass with no new violations introduced by the copy edits.
+- PortabilityPanel.tsx's export-summary paragraph (lines ~115-123) reads consistently — no sentence within it still says "plugin" while an adjacent one says "app".
+
+---
+
+#### 📋 14.4 — Add error feedback to Account's Data & Privacy revoke/disconnect handlers
+
+**Goal:** Close a UX gap found via code audit in `plugins/account/app/data/page.tsx`: the four mutation handlers on the Data & Privacy tab — `revoke` (lines 99–102, consent-grant DELETE), `revokeDeviceGrant` (104–115, device-consent DELETE), `revokeSecret` (117–120, vault-secret DELETE), and `disconnectConnection` (122–125, connection DELETE) — each check `if (res.ok)` before updating local state and do nothing at all in the failure branch: no `else`, no try/catch around the `fetch` call itself, no error state set. A user who clicks "Revoke"/"Disconnect" and hits a 401 (session expired — both `data-grants/[id]/route.ts` and `device-grants/route.ts` return `{ error: 'unauthenticated' }` on missing `x-sovereign-user-id`), a 500, or an offline network error (an uncaught `fetch` rejection, since `onClick={() => void revoke(...)}` discards the promise without a `.catch`) sees the row silently stay in the list, indistinguishable from a click that never registered. The same file's own `load()` (lines 62–93) demonstrates the established pattern — `try { ... } catch (e) { setError(...) }` — and `plugins/account/app/billing/page.tsx`'s `cancel()` (lines 50–63) shows the sibling per-row-mutation pattern: set an error state before the request, on `!res.ok` set a user-facing message via `<p className={billingStyles.error} role="alert">`, matching `billing.module.css`'s `.error` class. `plugins/account/app/account.module.css` already defines an equivalent `.error` class (lines 182–190), already used this way by every other `_components/*.tsx` file in the Account plugin (`AvatarUpload.tsx`, `EncryptionSection.tsx`, `PortabilityPanel.tsx`, `PasskeySection.tsx`, `TotpSection.tsx`, `DeviceStorageKeySection.tsx`, `PasswordChangeForm.tsx`) — `data/page.tsx` is the outlier that never adopted it for its own mutations, despite importing the same `styles` module and already using an inline error-colored `<p>` for `load()`'s failures at line 139.
+
+**Deliverables:**
+
+- In `plugins/account/app/data/page.tsx`, add four new `useState<string | null>(null)` variables — `grantError`, `deviceGrantError`, `secretError`, `connectionError` — one per section, distinct from the existing page-level `error` state (which is reserved for `load()` failures and only rendered under the first section).
+- Rewrite `revoke` (lines 99–102) to: clear `grantError` before the request, wrap the `fetch` + `res.ok` check in try/catch, and on failure — non-2xx response or thrown error (network failure, offline) — call `setGrantError(...)` with a message derived from the response status (mirroring `billing/page.tsx`'s `cancel()`), e.g. `'Could not revoke this consent — please try again.'` on `!res.ok`, or `e instanceof Error ? e.message : 'Could not revoke this consent.'` in the catch block. Do not touch `grants` state on failure.
+- Apply the identical try/catch + error-state pattern to `revokeDeviceGrant` (lines 104–115, sets `deviceGrantError`), `revokeSecret` (lines 117–120, sets `secretError`), and `disconnectConnection` (lines 122–125, sets `connectionError`) — same shape as `revoke`, one call site each.
+- Render `{grantError && <p className={styles.error} role="alert">{grantError}</p>}` inside the "Data access consents" section (after the existing `{error && ...}` block around line 139), and the equivalent `{deviceGrantError && ...}`, `{secretError && ...}`, `{connectionError && ...}` paragraphs inside the "Device app permissions" (around line 172), "Connected accounts" (around line 210), and "Saved app credentials" (around line 248) sections respectively — none of these three sections currently render any error paragraph at all.
+- Add `plugins/account/app/data/__tests__/page.test.tsx` (new file; no test file currently exists for this page), modeled on `plugins/account/app/notifications/__tests__/page.test.tsx`'s `@vitest-environment jsdom` + `vi.stubGlobal('fetch', ...)` + Testing Library pattern: mock the four GET endpoints (`/api/account/data-grants`, `/api/account/device-grants`, `/api/account/secrets`, `/api/account/connections`) to return one row each, then for each of the four DELETE endpoints assert (a) a `Response` with `ok: false` (e.g. 401 or 500) leaves the row rendered and shows the corresponding `role="alert"` error message, and (b) a rejected fetch (network error) is caught, not left as an unhandled rejection, and also surfaces the error text.
+
+**Dependencies:** None. Modifies `plugins/account/app/data/page.tsx`, which shipped across tasks 0.5.11 (consent grants), 0.5.15 (portability), and 1.7 (account deletion) per `docs/epics/plugin-accounts.md`'s task table — no new backend surface, no manifest/SDK change.
+
+**SRS reference:** None — this is remediation of a UX consistency gap found via code audit, not new design or an SRS-specified behavior. SRS §3.13 (RFC 0002, cross-plugin data sharing / consent grants) and §3.16 (RFC 0007, data portability) describe the underlying features whose revoke/disconnect UI this task hardens, but neither specifies mutation error-handling behavior.
+
+**Review checklist:**
+
+- Each of the four handlers (`revoke`, `revokeDeviceGrant`, `revokeSecret`, `disconnectConnection`) is wrapped in try/catch and sets its own section-scoped error state on both a non-2xx response and a thrown/rejected fetch — grep `plugins/account/app/data/page.tsx` confirms no handler still has a bare `if (res.ok) ...` with no else/catch branch.
+- Simulating a 401/500 response from any of the four DELETE endpoints (e.g. via a mocked `fetch` in a test, or by expiring the session and clicking Revoke in a real browser) leaves the row in the list and renders a visible `role="alert"` message in that row's own section — not silence, not a console-only error.
+- Simulating an offline/rejected `fetch` for any of the four handlers does not produce an unhandled promise rejection in the browser console and still surfaces a user-facing error message.
+- A subsequent successful retry (same row, same handler) clears the prior error message and removes the row as before.
+- `pnpm --filter @sovereignfs/plugin-account exec vitest run` passes, including the new `plugins/account/app/data/__tests__/page.test.tsx`.
+- `pnpm lint`, `pnpm format:check`, and `pnpm typecheck` pass.
+- No new hardcoded color literals introduced — `pnpm design:tokens:check` passes (the added error paragraphs reuse the existing `styles.error` class, not new inline styles like the pre-existing `style={{ color: 'var(--sv-color-error-text, red)' }}` at line 139, which this task does not need to touch).
+
+---
+
 ## Related Docs
 
 - [docs/plugins/account.md](../plugins/) (plugin spec)

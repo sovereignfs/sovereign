@@ -34,6 +34,12 @@ const {
   toggleActiveAction,
   resetMfaAction,
   deleteUserAction,
+  vouchAction,
+  revokeVouchAction,
+  grantCapabilityAction,
+  revokeCapabilityAction,
+  listUserCapabilitiesAction,
+  listInvitablePluginOptions,
 } = await import('../actions');
 
 function formData(entries: Record<string, string>): FormData {
@@ -235,7 +241,13 @@ describe('toggleActiveAction — admin-only behavior for a sensitive route', () 
  * authenticated non-admin user could reset MFA on any other account by
  * invoking the action directly (server actions are reachable by action id
  * independent of the Console page's adminOnly gate — see
- * docs/architecture-rules.md). Fixed alongside this test.
+ * docs/architecture-rules.md). Fixed alongside this test. This
+ * "refuses a session without <capability>" pattern is now applied
+ * uniformly across every one of this file's 12 exported actions (task
+ * 13.11, workstream 0020 leg 7) — not just this one — so a future regression
+ * on any sibling action can never again slip through undetected. The
+ * identical gap was independently found (and fixed the same way) in
+ * sendInviteAction and listUserCapabilitiesAction below.
  */
 describe('resetMfaAction — admin-only behavior (regression)', () => {
   it('refuses a session without user:manage, without calling the admin API', async () => {
@@ -314,5 +326,185 @@ describe('deleteUserAction — role guardrail (owner cannot be deleted)', () => 
     expect(fetch).not.toHaveBeenCalled();
     expect(deleteUser).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+});
+
+describe('vouchAction — trust escalation', () => {
+  it('refuses a session without user:manage', async () => {
+    hasCapability.mockReturnValue(false);
+    vi.stubGlobal('fetch', vi.fn());
+
+    await expect(vouchAction(formData({ userId: 'user-2' }))).rejects.toThrow(
+      'Insufficient privileges to manage users.',
+    );
+    expect(fetch).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('vouches for an authorized target user', async () => {
+    const fetchMock = mockAdminFetch({
+      'POST /api/admin/users/user-2/vouch': {
+        status: 200,
+        body: { id: 'user-2', email: 'u2@example.test' },
+      },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await vouchAction(formData({ userId: 'user-2' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/admin/users/user-2/vouch'),
+      expect.objectContaining({ method: 'POST' }),
+    );
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('revokeVouchAction — trust de-escalation', () => {
+  it('refuses a session without user:manage', async () => {
+    hasCapability.mockReturnValue(false);
+    vi.stubGlobal('fetch', vi.fn());
+
+    await expect(revokeVouchAction(formData({ userId: 'user-2' }))).rejects.toThrow(
+      'Insufficient privileges to manage users.',
+    );
+    expect(fetch).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('revokes the vouch for an authorized target user', async () => {
+    const fetchMock = mockAdminFetch({
+      'DELETE /api/admin/users/user-2/vouch': {
+        status: 200,
+        body: { id: 'user-2', email: 'u2@example.test' },
+      },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await revokeVouchAction(formData({ userId: 'user-2' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/admin/users/user-2/vouch'),
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('grantCapabilityAction — per-user capability grants (RFC 0070)', () => {
+  it('refuses a session without user:manage', async () => {
+    hasCapability.mockReturnValue(false);
+    vi.stubGlobal('fetch', vi.fn());
+
+    await expect(
+      grantCapabilityAction(formData({ userId: 'user-2', capability: 'user:manage' })),
+    ).rejects.toThrow('Insufficient privileges to grant capabilities.');
+    expect(fetch).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('grants a capability to an authorized target user', async () => {
+    const fetchMock = mockAdminFetch({
+      'POST /api/admin/users/user-2/capabilities': { status: 200 },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await grantCapabilityAction(formData({ userId: 'user-2', capability: 'user:manage' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/admin/users/user-2/capabilities'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ capability: 'user:manage' }),
+      }),
+    );
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('revokeCapabilityAction — per-user capability grants (RFC 0070)', () => {
+  it('refuses a session without user:manage', async () => {
+    hasCapability.mockReturnValue(false);
+    vi.stubGlobal('fetch', vi.fn());
+
+    await expect(
+      revokeCapabilityAction(formData({ userId: 'user-2', capability: 'user:manage' })),
+    ).rejects.toThrow('Insufficient privileges to revoke capabilities.');
+    expect(fetch).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('revokes a capability from an authorized target user', async () => {
+    const fetchMock = mockAdminFetch({
+      'DELETE /api/admin/users/user-2/capabilities/user%3Amanage': { status: 200 },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await revokeCapabilityAction(formData({ userId: 'user-2', capability: 'user:manage' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/admin/users/user-2/capabilities/user%3Amanage'),
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+    vi.unstubAllGlobals();
+  });
+});
+
+/**
+ * Regression coverage for the same class of gap resetMfaAction once had
+ * (see the block above): listUserCapabilitiesAction previously called only
+ * requireSession(), with no hasCapability check at all — unlike every
+ * sibling action in this file. Any authenticated non-admin user could read
+ * any other user's granted capabilities by invoking the action directly
+ * (server actions are reachable by action id independent of the Console
+ * page's adminOnly gate — see docs/architecture-rules.md). Fixed alongside
+ * this test. CapabilitiesButton.tsx's existing `.catch(() => setGrants([]))`
+ * already handles the resulting rejection gracefully, so no client-side
+ * change was needed.
+ */
+describe('listUserCapabilitiesAction — admin-only behavior (regression)', () => {
+  it('refuses a session without user:manage', async () => {
+    hasCapability.mockReturnValue(false);
+    vi.stubGlobal('fetch', vi.fn());
+
+    await expect(listUserCapabilitiesAction('user-2')).rejects.toThrow(
+      'Insufficient privileges to view capabilities.',
+    );
+    expect(fetch).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('maps the API response to a flat capability list for an authorized session', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockAdminFetch({
+        'GET /api/admin/users/user-2/capabilities': {
+          status: 200,
+          body: [{ capability: 'user:manage' }, { capability: 'role:assign' }],
+        },
+      }),
+    );
+
+    const result = await listUserCapabilitiesAction('user-2');
+
+    expect(result).toEqual(['user:manage', 'role:assign']);
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('listInvitablePluginOptions — invite multi-select options (RFC 0065)', () => {
+  it('filters out chrome plugins, keeping only invitable ones', async () => {
+    getInstalledPlugins.mockReturnValue([
+      { id: 'launcher', name: 'Launcher' },
+      { id: 'fs.example.notes', name: 'Notes' },
+      { id: 'fs.example.tasks', name: 'Tasks' },
+    ]);
+
+    const result = await listInvitablePluginOptions();
+
+    expect(result).toEqual([
+      { id: 'fs.example.notes', name: 'Notes' },
+      { id: 'fs.example.tasks', name: 'Tasks' },
+    ]);
   });
 });

@@ -77,15 +77,35 @@ function isLoopbackOrLinkLocal(address: string, family: number): boolean {
   return false;
 }
 
+/** A validated provider base URL, plus the exact address that validation resolved. */
+export interface SafeProviderUrl {
+  url: URL;
+  /**
+   * The specific IP address `assertSafeProviderBaseUrl` resolved and
+   * validated as safe. A caller that is about to make the real outbound
+   * request should connect to this address directly (`pinnedFetch`) instead
+   * of re-resolving the hostname — `fetch()`'s own independent DNS lookup
+   * is a second query an attacker who controls the domain's authoritative
+   * DNS server can answer differently from the first (classic DNS rebind),
+   * defeating this check even when it runs "immediately before" the
+   * request, since that is still two separate lookups, not one pinned
+   * connection.
+   */
+  pinnedAddress: string;
+  pinnedFamily: 4 | 6;
+}
+
 /**
  * Throws `UnsafeProviderUrlError` if `rawUrl` isn't a safe candidate for a
  * server-side outbound request. Resolves the hostname and checks the actual
  * IP (not just the literal string) so a DNS name that merely resolves to a
  * blocked address is caught too. Call this both when saving a provider (fast
- * feedback in the form) and immediately before every outbound request
- * (defense in depth against a TTL-based DNS rebind between the two).
+ * feedback in the form) and immediately before every outbound request —
+ * but for the request itself, connect via the returned `pinnedAddress`
+ * (`pinnedFetch`), not a fresh `fetch(url)`, to actually close the
+ * DNS-rebind window rather than just narrowing it.
  */
-export async function assertSafeProviderBaseUrl(rawUrl: string): Promise<URL> {
+export async function assertSafeProviderBaseUrl(rawUrl: string): Promise<SafeProviderUrl> {
   let url: URL;
   try {
     url = new URL(rawUrl);
@@ -112,5 +132,10 @@ export async function assertSafeProviderBaseUrl(rawUrl: string): Promise<URL> {
   ) {
     throw new UnsafeProviderUrlError('This base URL is not reachable as a model provider.');
   }
-  return url;
+  const [pinned] = addresses;
+  return {
+    url,
+    pinnedAddress: pinned.address,
+    pinnedFamily: pinned.family === 6 ? 6 : 4,
+  };
 }

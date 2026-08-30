@@ -70,7 +70,7 @@ export async function createProvider(input: {
   baseUrl: string;
   apiKey: string;
 }): Promise<ProviderView> {
-  const url = await assertSafeProviderBaseUrl(input.baseUrl);
+  const { url } = await assertSafeProviderBaseUrl(input.baseUrl);
   const secret = await sdk.secrets.create({
     scope: 'user',
     label: `Warden provider: ${input.label}`,
@@ -115,7 +115,7 @@ export async function updateProvider(
 
   let baseUrl = baseUrlFromMetadata(existing.metadata);
   if (input.baseUrl) {
-    const url = await assertSafeProviderBaseUrl(input.baseUrl);
+    const { url } = await assertSafeProviderBaseUrl(input.baseUrl);
     baseUrl = url.toString();
   }
 

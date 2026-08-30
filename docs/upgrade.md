@@ -1093,8 +1093,6 @@ implements the new signature. `manifest.json`'s `data.provides[].contract`
 no longer needs to be globally unique — only unique within your own plugin's
 `provides` array — since the platform namespaces it internally.
 
-### `@sovereignfs/sdk` 1.48.0 → 1.49.0
-
 **`sdk.connections.*`, `sdk.secrets.*`, `sdk.handoffs.*`,
 `sdk.tools.preview()`/`execute()`, and `sdk.activity.log()` now work from a
 job/schedule handler.** Same gap `1.46.0`/`1.47.0` closed for `sdk.storage`/

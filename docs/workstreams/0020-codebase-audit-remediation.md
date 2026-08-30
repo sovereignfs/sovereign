@@ -1,6 +1,6 @@
 # Workstream 0020 — Codebase audit remediation
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In Progress — Leg 1 done (`3.39`, `3.40`, `3.41`, `22.6`)\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -39,10 +39,10 @@ separately-tracked repos, not this one.
 
 ## Definition of done
 
-- [ ] `3.39` — Namespace sdk.data's resolver registry by (providerId, contract)
-- [ ] `3.40` — Sweep sdk.* surfaces for the headers()-outside-request bug class
-- [ ] `3.41` — Enforce sdk.device.getSurface()'s documented no-throw guarantee
-- [ ] `22.6` — Pin the resolved IP for Warden's provider-URL SSRF guard (close the DNS-rebind race)
+- [x] `3.39` — Namespace sdk.data's resolver registry by (providerId, contract)
+- [x] `3.40` — Sweep sdk.* surfaces for the headers()-outside-request bug class
+- [x] `3.41` — Enforce sdk.device.getSurface()'s documented no-throw guarantee
+- [x] `22.6` — Pin the resolved IP for Warden's provider-URL SSRF guard (close the DNS-rebind race)
 - [ ] `0.21` — Harden checkAdminKey: timing-safe comparison + rate limiting on /api/admin
 - [ ] `3.42` — Recursively prune stale composed plugin route directories
 - [ ] `3.43` — Add a cross-plugin routePrefix collision check at generate time
@@ -379,6 +379,7 @@ already-scoped finding.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                         |
-| ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft — 9 legs, 29 epic tasks across 8 epics, drafted from a 203-agent codebase audit (architecture/security/performance/product/quality/docs) plus a 38-agent drafting pass for task and leg content. |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft — 9 legs, 29 epic tasks across 8 epics, drafted from a 203-agent codebase audit (architecture/security/performance/product/quality/docs) plus a 38-agent drafting pass for task and leg content.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 0.2     | August 2026 | Leg 1 shipped (`3.39`, `3.40`, `3.41`, `22.6`) — `sdk.data`'s resolver registry namespaced by `(providerId, contract)`; the `headers()`-outside-request bug class swept across ~10 more `sdk.*` surfaces (`connections`/`secrets`/`handoffs`/`tools`/`activity` gain the full background-context fallback; `auth`/`authz`/`directory`/`e2ee`/`data.query` gain a safe catch with no fallback, since each is inherently session-scoped); `sdk.device.getSurface()`'s documented no-throw guarantee now actually enforced; Warden's provider-URL SSRF guard closed the DNS-rebind race via a new `pinnedFetch()` helper (Node core `http`/`https`, no new dependency). `@sovereignfs/sdk` 1.47.0 → 1.48.0, `@sovereignfs/manifest` 5.9.0 → 5.10.0, `runtime` 0.91.5 → 0.91.6, `plugins/warden` 0.5.0 → 0.5.1. |

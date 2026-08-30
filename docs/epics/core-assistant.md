@@ -451,7 +451,7 @@ change based on the above.
 
 ---
 
-#### 📋 22.6 — Pin the resolved IP for Warden's provider-URL SSRF guard (close the DNS-rebind race)
+#### ✅ 22.6 — Pin the resolved IP for Warden's provider-URL SSRF guard (close the DNS-rebind race)
 
 **Goal:** Close the DNS-rebind race in Warden's provider-URL SSRF guard: `assertSafeProviderBaseUrl()` (`plugins/warden/app/_lib/url-safety.ts:88-116`) resolves the provider's hostname via its own `lookup(hostname, { all: true, verbatim: true })` call and rejects loopback/link-local/known-internal addresses, but discards the resolved IPs and returns only the original `URL`. Both call sites — `provider-chat.ts:94-107`'s `fetch(endpoint, ...)` and `model-discovery.ts:56-65`'s `fetch(endpoint, ...)` — then let the runtime's global `fetch` re-resolve the same hostname independently for the actual TCP connection. A user configuring a malicious external provider controls authoritative DNS for their own domain and can answer the validation lookup with a safe public address while answering the connection's own lookup with a loopback or internal address — a classic check-then-use race, not narrowed by re-running the same two-step validate-then-fetch closer together in time (both call sites' own doc comments already claim this closes a \"TTL-based DNS rebind,\" which is incorrect: it is still two independent DNS queries no matter how short the gap between them). The fix is to pin the exact IP address `assertSafeProviderBaseUrl` already validated for the connection itself — via a custom DNS-bypassing `lookup` on an undici `Agent` passed as the request's `dispatcher` — while still sending the original hostname via the `Host` header and TLS SNI, so the request remains indistinguishable to the upstream provider.
 

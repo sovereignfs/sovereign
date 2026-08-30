@@ -7,6 +7,17 @@ function parseSurface(value: string | null): Surface {
   return value === 'mobile' || value === 'desktop' ? value : 'browser';
 }
 
+async function safeHeaders(): Promise<Headers | null> {
+  try {
+    return await headers();
+  } catch {
+    // Outside a Next.js request context (e.g. a background job/schedule
+    // handler, a unit test) — next/headers() throws. Callers fall back to
+    // their own documented safe default rather than propagating this.
+    return null;
+  }
+}
+
 /**
  * Server-side surface detection (RFC 0080).
  *
@@ -25,17 +36,17 @@ function parseSurface(value: string | null): Surface {
 export const device = {
   /** The current request's surface. */
   async getSurface(): Promise<Surface> {
-    const h = await headers();
-    return parseSurface(h.get('x-sovereign-surface'));
+    const h = await safeHeaders();
+    return parseSurface(h?.get('x-sovereign-surface') ?? null);
   },
   /** The native shell's version, or null outside a native shell. */
   async getShellVersion(): Promise<string | null> {
-    const h = await headers();
-    return h.get('x-sovereign-shell-version');
+    const h = await safeHeaders();
+    return h?.get('x-sovereign-shell-version') ?? null;
   },
   /** True when running inside any native shell (mobile or desktop). */
   async isNativeShell(): Promise<boolean> {
-    const h = await headers();
-    return parseSurface(h.get('x-sovereign-surface')) !== 'browser';
+    const h = await safeHeaders();
+    return parseSurface(h?.get('x-sovereign-surface') ?? null) !== 'browser';
   },
 };

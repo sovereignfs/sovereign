@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { sdk } from '@sovereignfs/sdk';
 import { wardenConversation, wardenMessages } from '../_db/schema';
@@ -36,27 +36,29 @@ export async function registerPortability(): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- required by BaseSQLiteDatabase's own generic signature
     const database = ctx.db as BaseSQLiteDatabase<'async', any, any>;
     const conversations = await database
-      .select()
+      .select({ id: wardenConversation.id })
       .from(wardenConversation)
       .where(eq(wardenConversation.userId, ctx.userId));
+    const conversationIds = conversations.map((c) => c.id);
 
-    let deleted = 0;
-    for (const conversation of conversations) {
-      // Count before deleting rather than `.returning()` — not every
-      // driver behind `sdk.db.getClient()` (sqld/libsql vs. node-postgres)
-      // is guaranteed to support it identically.
-      const messages = await database
-        .select({ id: wardenMessages.id })
-        .from(wardenMessages)
-        .where(eq(wardenMessages.conversationId, conversation.id));
-      await database
-        .delete(wardenMessages)
-        .where(eq(wardenMessages.conversationId, conversation.id));
-      deleted += messages.length;
-    }
+    // Count via a separate select before the delete rather than a
+    // delete-with-row-report clause — not every driver behind
+    // `sdk.db.getClient()` (sqld/libsql vs. node-postgres) is guaranteed to
+    // support that identically. Fixed at 4 queries regardless of
+    // conversation count (was 2n + 2) via inArray, instead of a
+    // per-conversation select+delete loop. inArray([]) is safe here —
+    // drizzle-orm generates a constant `false` condition for an empty array,
+    // not invalid `IN ()` SQL, so the zero-conversation case needs no
+    // special-casing.
+    const messages = await database
+      .select({ id: wardenMessages.id })
+      .from(wardenMessages)
+      .where(inArray(wardenMessages.conversationId, conversationIds));
+    await database
+      .delete(wardenMessages)
+      .where(inArray(wardenMessages.conversationId, conversationIds));
     await database.delete(wardenConversation).where(eq(wardenConversation.userId, ctx.userId));
-    deleted += conversations.length;
 
-    return { deleted };
+    return { deleted: messages.length + conversations.length };
   });
 }

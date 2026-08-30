@@ -73,8 +73,32 @@ export function createClient(config: DbConfig = {}): PlatformDb {
   // node-postgres: the pool connects lazily, so constructing it never blocks or
   // throws here — the first query establishes the connection. TLS is driven by
   // the connection string's `sslmode` (RFC 0008 Tier 1).
-  const pool = new Pool({ connectionString: resolved.url, ssl: pgSsl(resolved.url) });
+  const pool = new Pool({
+    connectionString: resolved.url,
+    ssl: pgSsl(resolved.url),
+    max: postgresPoolMax(process.env),
+  });
   return { dialect: 'postgres', db: drizzlePg(pool, { schema: pgSchema }) };
+}
+
+const DEFAULT_POSTGRES_POOL_MAX = 5;
+
+/**
+ * Max connections for a single long-lived Postgres pool (this file's
+ * platform pool, `plugin-client.ts`'s per-isolated-plugin pool, and
+ * `apps/auth/src/db.ts`'s auth pool — each independently constructs its own
+ * `new Pool({...})`, so this bounds each one individually, not a shared
+ * total). node-postgres's own implicit default is 10 per pool; with enough
+ * isolated Postgres plugins installed, N × (that default) can exceed a
+ * server's `max_connections` before any single plugin is under load — see
+ * `docs/self-hosting.md`'s `POSTGRES_POOL_MAX` row for sizing guidance.
+ * Falls back to a conservative default on unset/empty/non-numeric/zero/
+ * negative input rather than trusting an unparseable override.
+ */
+export function postgresPoolMax(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = env.POSTGRES_POOL_MAX;
+  const parsed = raw ? Number(raw) : NaN;
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_POSTGRES_POOL_MAX;
 }
 
 /**

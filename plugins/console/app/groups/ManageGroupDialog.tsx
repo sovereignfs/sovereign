@@ -245,7 +245,7 @@ export function ManageGroupDialog({ group }: { group: GroupSummary }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sv-space-3)' }}>
                 <p className={styles.errorText}>
                   Deleting removes the group and its membership. This cannot be undone. If the group
-                  is used by a plugin access policy, deletion is blocked until you confirm again.
+                  is used by an app access policy, deletion is blocked until you confirm again.
                 </p>
                 <div style={{ display: 'flex', gap: 'var(--sv-space-2)' }}>
                   <form action={deleteGroupAction}>

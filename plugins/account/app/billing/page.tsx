@@ -103,7 +103,7 @@ export default function BillingPage() {
         {loading ? (
           <p className={styles.help}>Loading…</p>
         ) : active.length === 0 ? (
-          <p className={styles.help}>No active plugin licenses.</p>
+          <p className={styles.help}>No active app licenses.</p>
         ) : (
           <ul className={billingStyles.list} aria-label="Active entitlements">
             {active.map((ent) => (
@@ -139,12 +139,12 @@ export default function BillingPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Import a license</h2>
         <p className={styles.help}>
-          Paste the signed license token you received from the plugin author or payment provider.
-          When a paid plugin redirects you to its paywall page, you can also import the token
-          directly from there.
+          Paste the signed license token you received from the app author or payment provider. When
+          a paid app redirects you to its paywall page, you can also import the token directly from
+          there.
         </p>
         <form onSubmit={(e) => void importLicense(e)} className={billingStyles.importForm}>
-          <FormField label="Plugin ID" id="billing-plugin-id" required>
+          <FormField label="App ID" id="billing-plugin-id" required>
             {(field) => (
               <Input
                 {...field}

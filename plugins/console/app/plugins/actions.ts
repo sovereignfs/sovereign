@@ -48,7 +48,12 @@ async function requirePluginManage(): Promise<void> {
   }
 }
 
-export async function togglePluginAction(formData: FormData): Promise<void> {
+export type PluginToggleActionState = { success: true } | { success: false; error: string };
+
+export async function togglePluginAction(
+  _prev: PluginToggleActionState | null,
+  formData: FormData,
+): Promise<PluginToggleActionState> {
   await requirePluginManage();
   const pluginId = formData.get('pluginId') as string;
   const enabled = formData.get('enabled') === 'true';
@@ -56,8 +61,9 @@ export async function togglePluginAction(formData: FormData): Promise<void> {
     method: 'PATCH',
     body: JSON.stringify({ enabled }),
   });
-  if (!res.ok) throw new Error(`Failed to toggle plugin: ${res.status}`);
+  if (!res.ok) return { success: false, error: `Failed to toggle plugin: ${res.status}` };
   revalidatePath('/console/plugins');
+  return { success: true };
 }
 
 // ─── Plugin catalog and activation (RFC 0065 Task 13.8) ──────────────────────

@@ -263,7 +263,7 @@ export function UserCard({
         open={confirm === 'delete'}
         onClose={() => setConfirm(null)}
         title={`Delete ${member.name || member.email}?`}
-        message="This permanently removes all their data — profile, activity, plugin data, and files. Cannot be undone."
+        message="This permanently removes all their data — profile, activity, app data, and files. Cannot be undone."
         confirmLabel="Delete permanently"
         destructive
         onConfirm={() => {

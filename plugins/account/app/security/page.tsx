@@ -65,7 +65,7 @@ export default async function SecurityPage() {
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Account verification</h2>
           <p className={styles.sectionSubtitle}>
-            Some plugins and features require a verified email or enrolled MFA (RFC 0035).
+            Some apps and features require a verified email or enrolled MFA (RFC 0035).
           </p>
         </div>
         <div className={styles.totpCard}>

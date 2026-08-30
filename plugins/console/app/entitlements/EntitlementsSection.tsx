@@ -52,7 +52,7 @@ function EmptyState() {
       </div>
       <p className={entStyles.emptyTitle}>No entitlements configured</p>
       <p className={entStyles.emptyDesc}>
-        Entitlements appear here when plugins use the monetization manifest field.
+        Entitlements appear here when apps use the monetization manifest field.
       </p>
     </div>
   );
@@ -84,9 +84,9 @@ export function EntitlementsSection({
     <section className={styles.section}>
       <div className={entStyles.sectionHeaderRow}>
         <div>
-          <h2 className={styles.sectionTitle}>Plugin entitlements</h2>
+          <h2 className={styles.sectionTitle}>App entitlements</h2>
           <p className={styles.help}>
-            Signed licenses imported by users for paid plugins.{' '}
+            Signed licenses imported by users for paid apps.{' '}
             {isOwner
               ? 'Generate and grant licenses below, or users can import them via Account → Billing.'
               : 'Users manage their own licenses via Account → Billing.'}
@@ -111,7 +111,7 @@ export function EntitlementsSection({
             <table className={styles.table} aria-label="Entitlements">
               <thead>
                 <tr>
-                  <th className={styles.th}>Plugin</th>
+                  <th className={styles.th}>App</th>
                   <th className={styles.th}>User ID</th>
                   <th className={styles.th}>Tier</th>
                   <th className={styles.th}>Status</th>

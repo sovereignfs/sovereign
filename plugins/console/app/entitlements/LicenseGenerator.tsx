@@ -235,7 +235,7 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
       return;
     }
     if (!selectedPlugin) {
-      setGenError('Selected plugin not found.');
+      setGenError('Selected app not found.');
       return;
     }
     setGenerating(true);
@@ -323,7 +323,7 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
           {/* Plugin selector */}
           <div className={styles.generatorRow}>
             <label htmlFor="gen-plugin" className={styles.generatorLabel}>
-              Plugin
+              App
             </label>
             <Select
               id="gen-plugin"

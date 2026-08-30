@@ -88,7 +88,7 @@ export function SidebarControl({ plugins, initial }: Props) {
   }
 
   if (plugins.length === 0) {
-    return <p className={styles.help}>No plugins installed.</p>;
+    return <p className={styles.help}>No apps installed.</p>;
   }
 
   return (

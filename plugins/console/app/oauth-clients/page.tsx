@@ -26,9 +26,9 @@ export default async function OAuthClientsPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>External OAuth clients</h2>
         <p className={styles.help}>
-          Let a standalone app on its own domain — not a Sovereign plugin — offer &ldquo;log in with
-          Sovereign&rdquo; against this instance. Client secrets are shown exactly once and stored
-          hashed; they cannot be recovered later, only rotated.
+          Let a standalone app on its own domain — not an app installed on this Sovereign instance —
+          offer &ldquo;log in with Sovereign&rdquo; against this instance. Client secrets are shown
+          exactly once and stored hashed; they cannot be recovered later, only rotated.
         </p>
         {canManage ? (
           <OAuthClientsClient />

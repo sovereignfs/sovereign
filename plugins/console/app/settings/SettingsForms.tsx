@@ -155,17 +155,17 @@ export function ExampleAppsForm({ initialValue }: { initialValue: boolean }) {
       <label className={styles.checkboxRow}>
         <input type="checkbox" name="examplesEnabled" defaultChecked={initialValue} />
         <span>
-          Show example plugins
+          Show example apps
           <span className={styles.helpText}>
-            The bundled reference/demo plugins ship hidden by default. Enable to show them in the
-            launcher and sidebar. You can still enable or disable individual example plugins from
-            the Plugins page.
+            The bundled reference/demo apps ship hidden by default. Enable to show them in the
+            launcher and sidebar. You can still enable or disable individual example apps from the
+            Apps page.
           </span>
         </span>
       </label>
       <Feedback result={state} />
       <Button type="submit" size="sm" disabled={pending}>
-        {pending ? 'Saving…' : 'Save example plugins'}
+        {pending ? 'Saving…' : 'Save example apps'}
       </Button>
     </form>
   );
@@ -189,12 +189,12 @@ export function RootPluginForm({
   useSaveResult(state);
   return (
     <form action={action} className={styles.settingsForm}>
-      <FormField label="Plugin served at /" id="rootPluginId">
+      <FormField label="App served at /" id="rootPluginId">
         {(field) =>
           candidates.length === 0 ? (
             <p className={styles.helpText}>
-              No eligible plugins installed yet. The Launcher (the default root) arrives with the
-              next platform task; until then <code className={styles.codeInline}>/</code> shows a
+              No eligible apps installed yet. The Launcher (the default root) arrives with the next
+              platform task; until then <code className={styles.codeInline}>/</code> shows a
               placeholder.
             </p>
           ) : (
@@ -220,7 +220,7 @@ export function RootPluginForm({
       <Feedback result={state} />
       {candidates.length > 0 && (
         <Button type="submit" size="sm" disabled={pending}>
-          {pending ? 'Saving…' : 'Save root plugin'}
+          {pending ? 'Saving…' : 'Save root app'}
         </Button>
       )}
     </form>

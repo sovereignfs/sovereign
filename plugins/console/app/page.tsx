@@ -10,17 +10,17 @@ const areas = [
   {
     href: '/console/groups',
     title: 'Groups',
-    description: 'Define reusable audiences for plugin access policies.',
+    description: 'Define reusable audiences for app access policies.',
   },
   {
     href: '/console/plugins',
-    title: 'Plugins',
-    description: 'View installed plugins and enable or disable them.',
+    title: 'Apps',
+    description: 'View installed apps and enable or disable them.',
   },
   {
     href: '/console/settings',
     title: 'Settings',
-    description: 'Tenant name, invite-only registration, and the root plugin.',
+    description: 'Tenant name, invite-only registration, and the root app.',
   },
   {
     href: '/console/health',
@@ -33,7 +33,7 @@ export default function ConsoleHome() {
   return (
     <div>
       <p className={styles.lede}>
-        Administer the platform — manage users, control installed plugins, and review system health.
+        Administer the platform — manage users, control installed apps, and review system health.
       </p>
       <ul className={styles.cards}>
         {areas.map((area) => (

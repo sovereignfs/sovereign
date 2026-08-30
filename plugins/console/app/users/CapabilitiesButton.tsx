@@ -11,7 +11,7 @@ import {
 } from './actions';
 
 const LABELS: Record<GrantableCapability, string> = {
-  'plugins:self-manage': 'Self-service plugin enable/disable',
+  'plugins:self-manage': 'Self-service app enable/disable',
 };
 
 export function CapabilitiesButton({ userId, name }: { userId: string; name: string }) {

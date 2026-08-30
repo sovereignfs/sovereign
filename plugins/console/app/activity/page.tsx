@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Badge } from '@sovereignfs/ui';
+import { Alert, Badge } from '@sovereignfs/ui';
 import { ActivitySearch } from '../_components/ActivitySearch';
 import styles from '../console.module.css';
 
@@ -25,6 +25,7 @@ interface ActivityResponse {
   total: number;
   limit: number;
   offset: number;
+  error: string | null;
 }
 
 async function getActivity(offset: number, q?: string): Promise<ActivityResponse> {
@@ -38,12 +39,25 @@ async function getActivity(offset: number, q?: string): Promise<ActivityResponse
     });
     if (!res.ok) {
       console.error(`[activity] fetch failed: ${res.status}`);
-      return { events: [], total: 0, limit: PAGE_SIZE, offset };
+      return {
+        events: [],
+        total: 0,
+        limit: PAGE_SIZE,
+        offset,
+        error: `Unable to load activity log (HTTP ${res.status}).`,
+      };
     }
-    return res.json() as Promise<ActivityResponse>;
+    const body = (await res.json()) as Omit<ActivityResponse, 'error'>;
+    return { ...body, error: null };
   } catch (err) {
     console.error('[activity] fetch error:', err instanceof Error ? err.message : err);
-    return { events: [], total: 0, limit: PAGE_SIZE, offset };
+    return {
+      events: [],
+      total: 0,
+      limit: PAGE_SIZE,
+      offset,
+      error: 'Unable to load activity log.',
+    };
   }
 }
 
@@ -88,7 +102,7 @@ export default async function ActivityPage({
   const page = Math.max(1, Number(pageParam ?? '1'));
   const offset = (page - 1) * PAGE_SIZE;
 
-  const { events, total } = await getActivity(offset, q || undefined);
+  const { events, total, error } = await getActivity(offset, q || undefined);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const rangeStart = (safePage - 1) * PAGE_SIZE + 1;
@@ -98,10 +112,16 @@ export default async function ActivityPage({
     <div>
       <ActivitySearch total={total} initialQ={q} />
 
+      {error && <Alert variant="error">{error}</Alert>}
+
       {events.length === 0 ? (
-        <div className={styles.tableCard}>
-          <p className={styles.emptyTableMsg}>No activity recorded yet.</p>
-        </div>
+        error ? null : (
+          <div className={styles.tableCard}>
+            <p className={styles.emptyTableMsg}>
+              {q ? 'No activity matches your search.' : 'No activity recorded yet.'}
+            </p>
+          </div>
+        )
       ) : (
         <>
           <div className={styles.tableCard}>

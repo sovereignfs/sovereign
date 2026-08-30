@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useActionState, useMemo, useState } from 'react';
 import { Badge, Button, FormField, Icon, Menu, Select, type MenuEntry } from '@sovereignfs/ui';
 import {
   activatePluginAction,
@@ -110,7 +110,7 @@ function ActivatedPolicyPrompt({
       <p className={styles.textMuted}>
         <strong>{pluginName}</strong> is now active but disabled — nobody can open it yet.
       </p>
-      <FormField label="Who can open this plugin" id={`activated-policy-${pluginId}`}>
+      <FormField label="Who can open this app" id={`activated-policy-${pluginId}`}>
         {() => (
           <Select
             size="sm"
@@ -160,9 +160,16 @@ function useActivate(row: PluginRow, onActivated: () => void) {
   return { activating, error, handleActivate };
 }
 
+function useToggle() {
+  const [state, action, pending] = useActionState(togglePluginAction, null);
+  const error = state && !state.success ? state.error : null;
+  return { action, pending, error };
+}
+
 function DesktopRow({ row, justActivated, onActivated, onDismissActivated }: RowProps) {
   const isPlatformType = row.type === 'platform';
   const { activating, error, handleActivate } = useActivate(row, onActivated);
+  const { action: toggleAction, pending: togglePending, error: toggleError } = useToggle();
 
   return (
     <tr className={styles.tr}>
@@ -228,7 +235,7 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated }: Row
           </div>
         ) : (
           <div className={styles.rowActions}>
-            <form action={togglePluginAction} style={{ display: 'inline-flex' }}>
+            <form action={toggleAction} style={{ display: 'inline-flex' }}>
               <input type="hidden" name="pluginId" value={row.id} />
               <input
                 type="hidden"
@@ -237,8 +244,9 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated }: Row
               />
               <button
                 type="submit"
+                disabled={togglePending}
                 className={row.status === 'enabled' ? styles.iconBtn : styles.iconBtnReactivate}
-                title={row.status === 'enabled' ? 'Disable plugin' : 'Enable plugin'}
+                title={row.status === 'enabled' ? 'Disable app' : 'Enable app'}
               >
                 {row.status === 'enabled' ? (
                   <svg
@@ -283,13 +291,14 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated }: Row
               <span
                 className={styles.iconBtn}
                 style={{ opacity: 0.5, cursor: 'not-allowed' }}
-                title="Open — restricted by this plugin's access policy"
+                title="Open — restricted by this app's access policy"
               >
                 <Icon name="external-link" size="sm" aria-hidden />
               </span>
             )}
 
             {!isPlatformType && <RemovePluginButton pluginId={row.id} pluginName={row.name} />}
+            {toggleError && <p className={styles.errorText}>{toggleError}</p>}
           </div>
         )}
       </td>
@@ -300,6 +309,7 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated }: Row
 function MobileCard({ row, justActivated, onActivated, onDismissActivated }: RowProps) {
   const isPlatformType = row.type === 'platform';
   const { activating, error, handleActivate } = useActivate(row, onActivated);
+  const { action: toggleAction, pending: togglePending, error: toggleError } = useToggle();
   const [menuOpen, setMenuOpen] = useState(false);
   const [accessOpen, setAccessOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
@@ -369,15 +379,15 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
         </div>
       ) : (
         <div className={styles.pluginCardActions}>
-          <form action={togglePluginAction}>
+          <form action={toggleAction}>
             <input type="hidden" name="pluginId" value={row.id} />
             <input
               type="hidden"
               name="enabled"
               value={row.status === 'enabled' ? 'false' : 'true'}
             />
-            <button type="submit" className={styles.pluginCardBtnToggle}>
-              {row.status === 'enabled' ? 'Disable' : 'Enable'}
+            <button type="submit" disabled={togglePending} className={styles.pluginCardBtnToggle}>
+              {togglePending ? '…' : row.status === 'enabled' ? 'Disable' : 'Enable'}
             </button>
           </form>
 
@@ -390,7 +400,7 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
             <span
               className={styles.pluginCardBtnToggle}
               style={{ opacity: 0.5, cursor: 'not-allowed' }}
-              title="You are not currently allowed to open this plugin under its access policy."
+              title="You are not currently allowed to open this app under its access policy."
             >
               <Icon name="external-link" size="sm" aria-hidden />
               Open
@@ -433,6 +443,7 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
               onOpenChange={setRemoveOpen}
             />
           )}
+          {toggleError && <p className={styles.errorText}>{toggleError}</p>}
         </div>
       )}
     </div>
@@ -464,11 +475,11 @@ function FilterBar({
         <Icon name="search" size="sm" aria-hidden />
         <input
           type="search"
-          placeholder="Search plugins…"
+          placeholder="Search apps…"
           value={query}
           onChange={(e) => onQuery(e.target.value)}
           className={styles.activitySearchInput}
-          aria-label="Search plugins"
+          aria-label="Search apps"
         />
         <span className={styles.activitySearchCount}>
           {shown} of {total}
@@ -563,7 +574,7 @@ export function PluginsTable({
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Plugins</h2>
+      <h2 className={styles.sectionTitle}>Apps</h2>
 
       <FilterBar
         query={query}
@@ -577,7 +588,7 @@ export function PluginsTable({
       />
 
       {filtered.length === 0 ? (
-        <p className={styles.textMuted}>No plugins match your filters.</p>
+        <p className={styles.textMuted}>No apps match your filters.</p>
       ) : (
         <>
           <div className={styles.tableCard}>
@@ -585,7 +596,7 @@ export function PluginsTable({
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th className={styles.th}>Plugin</th>
+                    <th className={styles.th}>App</th>
                     <th className={styles.th}>Version</th>
                     <th className={styles.th}>Type</th>
                     <th className={styles.th}>Route</th>

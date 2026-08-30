@@ -33,8 +33,7 @@ export async function registerPortability(): Promise<void> {
   await sdk.portability.provideDelete(async (ctx) => {
     // ctx.db is the plugin's own opaque Drizzle client (DeletionContext['db']: unknown),
     // same shape as sdk.db.getClient() — same generic-args pattern as conversations.ts's `Db`.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- required by BaseSQLiteDatabase's own generic signature
-    const database = ctx.db as BaseSQLiteDatabase<'async', any, any>;
+    const database = ctx.db as BaseSQLiteDatabase<'async', unknown>;
     const conversations = await database
       .select({ id: wardenConversation.id })
       .from(wardenConversation)

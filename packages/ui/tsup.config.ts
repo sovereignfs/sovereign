@@ -65,7 +65,7 @@ export default defineConfig({
   // when installed from npm) processes the CSS. `onSuccess` copies the .css into
   // dist/ so the published package's imports resolve; `publishConfig` (in
   // package.json) repoints exports at dist/ on publish.
-  external: [/\.css$/, 'react', 'react-dom', 'react/jsx-runtime'],
+  external: [/\.css$/, 'react', 'react-dom', 'react/jsx-runtime', /^@dnd-kit\//],
   esbuildOptions(options) {
     options.jsx = 'automatic';
   },

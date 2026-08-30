@@ -5,9 +5,11 @@ import { blindIndexMatch } from '@sovereignfs/sdk/drizzle';
 import { encryptedNotes, type EncryptedNoteRow } from '../_db/schema';
 
 // The SDK returns an opaque, dialect-agnostic client; plugins type it through
-// their own sqlite-core schema (works on either live dialect).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Db = BaseSQLiteDatabase<'async', any, any>;
+// their own sqlite-core schema (works on either live dialect). No `any`
+// needed — BaseSQLiteDatabase's second generic (TRunResult) has no `extends`
+// constraint, so `unknown` satisfies it exactly as well (same pattern as
+// packages/db/src/client.ts's SqliteDb).
+type Db = BaseSQLiteDatabase<'async', unknown>;
 
 async function db(): Promise<Db> {
   return (await sdk.db.getClient()) as Db;

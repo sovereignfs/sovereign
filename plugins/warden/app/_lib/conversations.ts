@@ -24,10 +24,11 @@ import type { WardenMessageRow } from '../_db/schema';
  */
 
 // The SDK returns an opaque, dialect-agnostic client; typed through this
-// plugin's own sqlite-core schema (works on either live dialect) — same
-// pattern as example-plugins/example-encrypted/app/_lib/data.ts.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Db = BaseSQLiteDatabase<'async', any, any>;
+// plugin's own sqlite-core schema (works on either live dialect). No `any`
+// needed — BaseSQLiteDatabase's second generic (TRunResult) has no `extends`
+// constraint, so `unknown` satisfies it exactly as well (same pattern as
+// packages/db/src/client.ts's SqliteDb).
+type Db = BaseSQLiteDatabase<'async', unknown>;
 
 async function db(): Promise<Db> {
   return (await sdk.db.getClient()) as Db;

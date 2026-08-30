@@ -3,7 +3,7 @@
 import { type FormEvent, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button, Input } from '@sovereignfs/ui';
-import { authClient } from '@/src/auth-client';
+import { typedAuthClient } from '@/src/auth-client';
 import { resolveRuntimeRedirect } from '@/src/post-login-redirect';
 import styles from '../../auth.module.css';
 
@@ -34,8 +34,7 @@ export function ChallengeForm({
     setLoading(true);
     setError(null);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const twoFactor = (authClient as any).twoFactor;
+    const twoFactor = typedAuthClient.twoFactor;
     const result =
       mode === 'totp'
         ? await twoFactor.verifyTotp({ code: totpCode })
@@ -52,8 +51,7 @@ export function ChallengeForm({
   async function onPasskeySignIn() {
     setPasskeyLoading(true);
     setError(null);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (authClient.signIn as any).passkey();
+    const result = await typedAuthClient.signIn.passkey();
     setPasskeyLoading(false);
     if (result?.error) {
       setError(result.error.message ?? 'Passkey verification failed.');

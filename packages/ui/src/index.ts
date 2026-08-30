@@ -190,6 +190,8 @@ export { Combobox } from './components/Combobox/Combobox';
 export type { ComboboxProps, ComboboxOption } from './components/Combobox/Combobox';
 export { DragHandleRow } from './components/DragHandleRow/DragHandleRow';
 export type { DragHandleRowProps } from './components/DragHandleRow/DragHandleRow';
+export { GripIcon } from './components/GripIcon/GripIcon';
+export type { GripIconProps } from './components/GripIcon/GripIcon';
 export { StepStrip } from './components/StepStrip/StepStrip';
 export type { StepStripProps, StepStripItem } from './components/StepStrip/StepStrip';
 export { FileDropzone } from './components/FileDropzone/FileDropzone';
@@ -237,6 +239,8 @@ export {
   useSnapCarousel,
   useResponsiveLayout,
   useCarouselRouteSync,
+  useReorderSensors,
+  shouldHandleDndEvent,
 } from './hooks';
 export type { OfflineTileState } from './hooks';
 export { MOBILE_BREAKPOINT_PX } from './hooks';
@@ -253,6 +257,7 @@ export type {
   UseResponsiveLayoutResult,
   UseCarouselRouteSyncOptions,
   UseCarouselRouteSyncResult,
+  UseReorderSensorsOptions,
 } from './hooks';
 export { ResponsiveSurface } from './components/ResponsiveSurface/ResponsiveSurface';
 export type { ResponsiveSurfaceProps } from './components/ResponsiveSurface/ResponsiveSurface';

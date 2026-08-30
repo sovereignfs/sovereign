@@ -1,3 +1,5 @@
+'use client';
+
 import {
   KeyboardSensor,
   MouseSensor as LibMouseSensor,
@@ -9,25 +11,32 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
 
 /** Plain pointer drag (desktop, handle-initiated). */
-const MOUSE_ACTIVATION_DISTANCE_PX = 8;
+const DEFAULT_MOUSE_ACTIVATION_DISTANCE_PX = 8;
 
 /** Long-press-to-lift on touch. `delay` is how long a still hold takes before
  *  the row lifts; `tolerance` is how far the finger may drift during that
  *  hold before it's treated as a scroll instead — a finger that moves further
  *  than this within the delay window cancels activation and the native
  *  vertical scroll wins. */
-const TOUCH_ACTIVATION_DELAY_MS = 300;
-const TOUCH_ACTIVATION_TOLERANCE_PX = 8;
+const DEFAULT_TOUCH_ACTIVATION_DELAY_MS = 300;
+const DEFAULT_TOUCH_ACTIVATION_TOLERANCE_PX = 8;
 
 /**
  * True when a drag should be allowed to start from `target`. Refused when
- * `target` sits inside an element marked `data-no-dnd` — the visibility
- * Toggle opts out so tapping it flips visibility instead of lifting the row.
- * Exported standalone so it's unit-testable without spinning up dnd-kit.
+ * `target` sits inside an element marked `data-no-dnd` — a nested control
+ * (e.g. a visibility toggle) opts out so tapping it fires its own handler
+ * instead of lifting the row. Exported standalone so it's unit-testable
+ * without spinning up dnd-kit.
  */
 export function shouldHandleDndEvent(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return true;
   return target.closest('[data-no-dnd]') === null;
+}
+
+export interface UseReorderSensorsOptions {
+  mouseActivationDistancePx?: number;
+  touchActivationDelayMs?: number;
+  touchActivationTolerancePx?: number;
 }
 
 // dnd-kit's documented pattern for scoping sensor activation to specific
@@ -54,19 +63,24 @@ class TouchSensor extends LibTouchSensor {
 }
 
 /**
- * Sensor set for the sidebar plugin-order list — MouseSensor for desktop's
- * handle-initiated drag, TouchSensor for mobile's long-press lift (fixes
- * reordering being unusable on iOS PWA/Safari, which never implements the
- * native HTML5 Drag-and-Drop API for touch input), KeyboardSensor unchanged.
- * Mirrors sovereign-tasks' and sovereign-shopper's identical helper.
+ * Sensor set for a `data-no-dnd`-aware drag-reorder list — MouseSensor for
+ * desktop's handle-initiated drag, TouchSensor for mobile's long-press lift
+ * (fixes reordering being unusable on iOS PWA/Safari, which never implements
+ * the native HTML5 Drag-and-Drop API for touch input), KeyboardSensor
+ * unchanged. A bare call keeps the historical 8px/300ms/8px defaults.
  */
-export function useReorderSensors() {
+export function useReorderSensors(options: UseReorderSensorsOptions = {}) {
+  const {
+    mouseActivationDistancePx = DEFAULT_MOUSE_ACTIVATION_DISTANCE_PX,
+    touchActivationDelayMs = DEFAULT_TOUCH_ACTIVATION_DELAY_MS,
+    touchActivationTolerancePx = DEFAULT_TOUCH_ACTIVATION_TOLERANCE_PX,
+  } = options;
   return useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: MOUSE_ACTIVATION_DISTANCE_PX } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: mouseActivationDistancePx } }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: TOUCH_ACTIVATION_DELAY_MS,
-        tolerance: TOUCH_ACTIVATION_TOLERANCE_PX,
+        delay: touchActivationDelayMs,
+        tolerance: touchActivationTolerancePx,
       },
     }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),

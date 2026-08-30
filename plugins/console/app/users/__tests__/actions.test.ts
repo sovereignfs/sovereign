@@ -74,6 +74,20 @@ beforeEach(() => {
 });
 
 describe('sendInviteAction — invite creation flow', () => {
+  it('refuses a session without user:manage', async () => {
+    hasCapability.mockReturnValue(false);
+    vi.stubGlobal('fetch', vi.fn());
+
+    const result = await sendInviteAction(null, formData({ email: 'new@example.test' }));
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Insufficient privileges to manage users.',
+    });
+    expect(fetch).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
   it('rejects a missing email without calling the admin API', async () => {
     vi.stubGlobal('fetch', vi.fn());
 

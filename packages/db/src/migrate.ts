@@ -85,13 +85,34 @@ export async function runMigrations(
 
   // Postgres: hold an advisory lock for the migration window so only one
   // process migrates even when multiple containers restart simultaneously.
+  // pg_advisory_lock/unlock are session-scoped, not query-scoped — a naive
+  // dbGet(pdb, ...) call for the lock and another for the unlock each
+  // independently ask pdb.db.execute() for a connection, and since pdb.db is
+  // backed by a pg.Pool (client.ts), the pool is free to serve those two
+  // calls from two *different* physical connections. pg_advisory_unlock is a
+  // silent no-op unless issued by the exact session that holds the lock, so
+  // that mismatch leaks the lock forever — every later runMigrations() call
+  // (i.e. every subsequent container restart) then blocks indefinitely
+  // trying to reacquire a lock nothing will ever release. Found live in
+  // production: a stale lock from a prior boot hung the entire app (every
+  // page load) after an unrelated redeploy triggered a restart that lost the
+  // pool's race. Pin one dedicated client for the whole lock→migrate→unlock
+  // window instead — pdb.db.$client is the raw Pool drizzle-orm was
+  // constructed with (typed by drizzle itself); migratePg/seedPlatformData
+  // keep using pdb.db (the pool) as before, since only the lock/unlock pair
+  // needs session affinity, not every migration statement.
   const LOCK_KEY = 3141592653; // arbitrary stable integer
-  await dbGet(pdb, sql`SELECT pg_advisory_lock(${LOCK_KEY})`);
+  const client = await pdb.db.$client.connect();
   try {
-    await migratePg(pdb.db, { migrationsFolder: folder, migrationsTable });
-    return seedPlatformData(pdb);
+    await client.query('SELECT pg_advisory_lock($1)', [LOCK_KEY]);
+    try {
+      await migratePg(pdb.db, { migrationsFolder: folder, migrationsTable });
+      return await seedPlatformData(pdb);
+    } finally {
+      await client.query('SELECT pg_advisory_unlock($1)', [LOCK_KEY]);
+    }
   } finally {
-    await dbGet(pdb, sql`SELECT pg_advisory_unlock(${LOCK_KEY})`);
+    client.release();
   }
 }
 

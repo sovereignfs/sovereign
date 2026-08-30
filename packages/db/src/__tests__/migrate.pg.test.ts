@@ -167,6 +167,12 @@ describe.skipIf(!PG_URL)(
 describe.skipIf(!PG_URL)('runMigrations — version tracking & downgrade guard', () => {
   let pool: Pool;
 
+  // Mirrors migrate.ts's own LOCK_KEY exactly (not exported — it's an
+  // implementation detail of the lock/unlock pair, not part of the module's
+  // public surface), so the leak-regression test below can independently
+  // probe the same lock from a fresh connection.
+  const LOCK_KEY = 3141592653;
+
   beforeAll(() => {
     pool = new Pool({ connectionString: PG_URL });
   });
@@ -202,7 +208,15 @@ describe.skipIf(!PG_URL)('runMigrations — version tracking & downgrade guard',
     });
     return {
       db: { dialect: 'postgres', db: drizzlePg(scopedPool) },
-      migrationsTable: `__drizzle_migrations_${schema}`,
+      // Postgres silently truncates identifiers over 63 bytes (NAMEDATALEN)
+      // with no error — concatenating this prefix onto the full 36-char
+      // `schema` name above produced a 78-char string, truncated to a prefix
+      // that collided with other tests' equally-truncated names once enough
+      // ran concurrently (exactly what CI's single-Postgres-instance suite
+      // does, and what running this file's full suite together reproduced
+      // locally). A short, independent random suffix keeps this well under
+      // the limit regardless of which prefix gets concatenated.
+      migrationsTable: `__drizzle_migrations_${randomUUID().slice(0, 8)}`,
     };
   }
 
@@ -243,6 +257,34 @@ describe.skipIf(!PG_URL)('runMigrations — version tracking & downgrade guard',
     // rather than being overwritten with the older running version.
     expect(await getPlatformSetting(db, 'platform_version')).toBe('999.0.0');
   }, 120000);
+
+  // Regression coverage for a real production incident: pg_advisory_lock/
+  // unlock are session-scoped, not query-scoped. Routing the lock and unlock
+  // calls through dbGet(pdb, ...) independently let the connection pool
+  // serve each from a *different* physical session, silently no-op'ing the
+  // unlock (Postgres only lets the owning session release its own advisory
+  // lock) and leaking the lock forever — every subsequent runMigrations()
+  // call (i.e. every later container restart) then hung indefinitely
+  // waiting to reacquire a lock nothing would ever release, taking down the
+  // entire app. Reproduced live in production before this fix; this proves
+  // the fix (a single client pinned for the whole lock→migrate→unlock
+  // window) actually closes the leak rather than just "looking right."
+  it('does not leak the migration advisory lock (regression: production hang)', async () => {
+    const { db, migrationsTable } = await freshPlatformDb();
+    await runMigrations(db, migrationsTable);
+
+    // A completely independent connection — not the pool runMigrations()
+    // used — proves the lock is genuinely released at the session level,
+    // not just "no longer awaited by this test's own pool instance."
+    const checker = new Pool({ connectionString: PG_URL });
+    try {
+      const acquired = await checker.query('SELECT pg_try_advisory_lock($1) AS ok', [LOCK_KEY]);
+      expect(acquired.rows[0].ok).toBe(true);
+      await checker.query('SELECT pg_advisory_unlock($1)', [LOCK_KEY]);
+    } finally {
+      await checker.end();
+    }
+  }, 120000);
 });
 
 describe.skipIf(!PG_URL)(
@@ -268,6 +310,7 @@ describe.skipIf(!PG_URL)(
       schema: string;
       db: PlatformDb;
       migrationsTable: string;
+      tableSuffix: string;
     }> {
       const schema = `test_migrate_shared_${randomUUID().replace(/-/g, '_')}`;
       await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
@@ -276,17 +319,25 @@ describe.skipIf(!PG_URL)(
         connectionString: PG_URL,
         options: `-c search_path="${schema}"`,
       });
+      // Short and independent of `schema` (a full 36-char UUID) — see the
+      // sibling describe block's identical comment on why concatenating a
+      // prefix onto the full schema name silently overflows Postgres's
+      // 63-byte identifier limit. Returned separately so callers deriving
+      // their own plugin-specific migrationsTable names (below) build on
+      // this short suffix instead of `schema` itself.
+      const tableSuffix = randomUUID().slice(0, 8);
       return {
         schema,
         db: { dialect: 'postgres', db: drizzlePg(scopedPool) },
-        migrationsTable: `__drizzle_migrations_${schema}`,
+        migrationsTable: `__drizzle_migrations_${tableSuffix}`,
+        tableSuffix,
       };
     }
 
     // Each test runs the platform's full, real migration set once — see the
     // sibling describe block's identical timeout comment.
     it('applies a plugin migration whose timestamp predates the platform migrations already in the shared DB', async () => {
-      const { schema, db, migrationsTable } = await freshPlatformDb();
+      const { schema, db, migrationsTable, tableSuffix } = await freshPlatformDb();
       // Platform migrations run first, exactly as instrumentation.ts orders it —
       // this populates the platform's own migrations table with 2026+ timestamps.
       await runMigrations(db, migrationsTable);
@@ -299,14 +350,15 @@ describe.skipIf(!PG_URL)(
       // Without a dedicated migrationsTable, Drizzle's migrator would compare
       // this migration's old `when` against the shared table's newest row
       // (the platform's) and skip it as "already applied" — reproducing the
-      // bug this test guards against. Suffixed with `schema` (unique per
-      // call) so repeat runs against the same long-lived test Postgres
-      // instance don't see a stale row from an earlier run and flake — same
-      // reasoning as `freshPlatformDb()`'s own migrationsTable above.
+      // bug this test guards against. Suffixed with `tableSuffix` (unique
+      // per call, and short — see freshPlatformDb()'s own doc comment on why
+      // `schema` itself is too long to concatenate here) so repeat runs
+      // against the same long-lived test Postgres instance don't see a stale
+      // row from an earlier run and flake.
       await runPluginMigrations(
         db as unknown as PluginDb,
         folder,
-        `__drizzle_migrations_plugin_x_${schema}`,
+        `__drizzle_migrations_plugin_x_${tableSuffix}`,
       );
 
       const row = await pool.query(`SELECT to_regclass('"${schema}".plugin_x_widgets') as t`);
@@ -314,7 +366,7 @@ describe.skipIf(!PG_URL)(
     }, 120000);
 
     it('keeps two plugins sharing the platform DB on independent migration histories', async () => {
-      const { schema, db, migrationsTable } = await freshPlatformDb();
+      const { schema, db, migrationsTable, tableSuffix } = await freshPlatformDb();
       await runMigrations(db, migrationsTable);
 
       const folderA = fixturePostgresMigrationsFolder(
@@ -326,17 +378,17 @@ describe.skipIf(!PG_URL)(
         946684800001,
       );
 
-      // Suffixed with `schema` (unique per call) — see the sibling test's
-      // identical comment.
+      // Suffixed with `tableSuffix` (unique per call, and short) — see the
+      // sibling test's identical comment.
       await runPluginMigrations(
         db as unknown as PluginDb,
         folderA,
-        `__drizzle_migrations_plugin_a_${schema}`,
+        `__drizzle_migrations_plugin_a_${tableSuffix}`,
       );
       await runPluginMigrations(
         db as unknown as PluginDb,
         folderB,
-        `__drizzle_migrations_plugin_b_${schema}`,
+        `__drizzle_migrations_plugin_b_${tableSuffix}`,
       );
 
       for (const table of ['plugin_a_things', 'plugin_b_things']) {

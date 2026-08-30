@@ -35,7 +35,7 @@ export interface DbConfig {
  */
 export type PlatformDb =
   | { dialect: 'sqlite'; db: LibSQLDatabase<typeof sqliteSchema> }
-  | { dialect: 'postgres'; db: NodePgDatabase<typeof pgSchema> };
+  | { dialect: 'postgres'; db: NodePgDatabase<typeof pgSchema> & { $client: Pool } };
 
 /**
  * A single-class view of `PlatformDb`/`PluginDb`'s sqlite branch, for call

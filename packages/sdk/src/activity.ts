@@ -11,9 +11,19 @@ import type { ActivityLogEntry } from './types';
  */
 export const activity = {
   async log(entry: ActivityLogEntry): Promise<void> {
-    const h = await headers();
-    const actorId = h.get('x-sovereign-user-id');
-    const pluginId = h.get('x-sovereign-plugin-id');
+    let actorId: string | null = null;
+    let pluginId: string | null = null;
+    try {
+      const h = await headers();
+      actorId = h.get('x-sovereign-user-id');
+      pluginId = h.get('x-sovereign-plugin-id');
+    } catch {
+      // Outside a Next.js request context (e.g. a background job/schedule
+      // handler logging a system action) — no header-derived actor/plugin
+      // id available. The host falls back to the background-invocation
+      // context for pluginId (same pattern as sdk.storage/sdk.db.getClient());
+      // actorId stays null — there is no live user in a background invocation.
+    }
     await requireHost().activity.log(entry, actorId, pluginId);
   },
 };

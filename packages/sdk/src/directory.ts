@@ -5,6 +5,25 @@ import type { DirectoryUser, ResolveUsersInput, SearchUsersInput } from './types
 
 const DEFAULT_TENANT_ID = 'default';
 
+/**
+ * The current user's id, or throws `NotAuthenticatedError` — including when
+ * called outside a real Next.js request (e.g. a background job/schedule
+ * handler, where `headers()` itself throws). There is no background-context
+ * equivalent of "the current user" for this surface, so unlike
+ * `sdk.storage`/`sdk.env`/etc. there is nothing to fall back to.
+ */
+async function currentUserId(): Promise<string> {
+  let h: Headers;
+  try {
+    h = await headers();
+  } catch {
+    throw new NotAuthenticatedError();
+  }
+  const userId = h.get('x-sovereign-user-id');
+  if (!userId) throw new NotAuthenticatedError();
+  return userId;
+}
+
 /** Privacy-preserving user directory for member selection and sharing flows. */
 export const directory = {
   /**
@@ -12,9 +31,7 @@ export const directory = {
    * Results include only display-safe profile fields.
    */
   async searchUsers(input: SearchUsersInput): Promise<DirectoryUser[]> {
-    const h = await headers();
-    const userId = h.get('x-sovereign-user-id');
-    if (!userId) throw new NotAuthenticatedError();
+    const userId = await currentUserId();
     return requireHost().directory.searchUsers(input, userId, DEFAULT_TENANT_ID);
   },
 
@@ -23,9 +40,7 @@ export const directory = {
    * profile rows for active users.
    */
   async resolveUsers(input: ResolveUsersInput): Promise<DirectoryUser[]> {
-    const h = await headers();
-    const userId = h.get('x-sovereign-user-id');
-    if (!userId) throw new NotAuthenticatedError();
+    const userId = await currentUserId();
     return requireHost().directory.resolveUsers(input, userId, DEFAULT_TENANT_ID);
   },
 };

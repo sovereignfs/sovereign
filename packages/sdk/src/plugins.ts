@@ -93,11 +93,18 @@ async function requestContext(): Promise<{
   userId: string | null;
   capabilities: readonly string[];
 }> {
-  const h = await headers();
-  return {
-    userId: h.get('x-sovereign-user-id'),
-    capabilities: parseCapabilities(h.get('x-sovereign-user-capabilities')),
-  };
+  try {
+    const h = await headers();
+    return {
+      userId: h.get('x-sovereign-user-id'),
+      capabilities: parseCapabilities(h.get('x-sovereign-user-capabilities')),
+    };
+  } catch {
+    // Outside a Next.js request context (e.g. a background job/schedule
+    // handler) — no live user to scope discovery to; the host already
+    // handles a null userId gracefully (availableToUser: false).
+    return { userId: null, capabilities: [] };
+  }
 }
 
 /**
@@ -135,9 +142,19 @@ export const plugins = {
     return requireHost().plugins.list(filter, userId, capabilities);
   },
 
-  /** Whether the current user has granted this plugin's requested data contract. */
+  /**
+   * Whether the current user has granted this plugin's requested data
+   * contract. Also `'not_granted'` outside a real Next.js request (e.g. a
+   * background job/schedule handler) — consent is inherently tied to a live
+   * user, so there is nothing to fall back to.
+   */
   async getConsentStatus(ref: DataContractRef): Promise<ConsentStatus> {
-    const h = await headers();
+    let h: Headers;
+    try {
+      h = await headers();
+    } catch {
+      return 'not_granted';
+    }
     const consumerId = h.get('x-sovereign-plugin-id');
     const userId = h.get('x-sovereign-user-id');
     if (!consumerId || !userId) return 'not_granted';

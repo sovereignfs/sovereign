@@ -398,7 +398,10 @@ async function auditHandoffOperation(action: string, row: PluginHandoffRow): Pro
  * Out of scope for this leg; not an oversight (see epic task 3.18's
  * correction note).
  */
-async function resolveToolOrThrow(ref: ToolRef, context: ToolContext): Promise<ToolDeclaration> {
+async function resolveToolOrThrow(
+  ref: ToolRef,
+  context: ToolContext & { callerPluginId: string },
+): Promise<ToolDeclaration> {
   const providerManifest = registry.find((m) => m.id === ref.providerId);
   if (!providerManifest) {
     throw new Error(`sdk.tools: provider plugin "${ref.providerId}" is not installed.`);
@@ -538,6 +541,70 @@ function resolveStorageContext(context: StorageContext): {
  */
 function resolveEnvPluginId(pluginId: string | null): string | null {
   return pluginId ?? getPortabilityPluginContext() ?? getBackgroundPluginContext() ?? null;
+}
+
+/**
+ * Resolves `sdk.connections.*`'s effective plugin id the same way
+ * `resolveStorageContext` does, for a job/schedule handler marking a
+ * connection used/errored after a background sync with no real request.
+ * Throws if no source has an answer, matching `resolveStorageContext`.
+ */
+function resolveConnectionContext(context: ConnectionContext): ConnectionContext & {
+  pluginId: string;
+} {
+  const pluginId =
+    context.pluginId ?? getPortabilityPluginContext() ?? getBackgroundPluginContext() ?? null;
+  if (!pluginId) {
+    throw new Error('sdk.connections requires a plugin route context (no plugin id available).');
+  }
+  return { ...context, pluginId };
+}
+
+/**
+ * Resolves `sdk.secrets.*`'s effective plugin id the same way
+ * `resolveStorageContext` does, for a job/schedule handler reading a
+ * credential during a background sync with no real request. Throws if no
+ * source has an answer, matching `resolveStorageContext`.
+ */
+function resolveSecretContext(context: SecretContext): SecretContext & { pluginId: string } {
+  const pluginId =
+    context.pluginId ?? getPortabilityPluginContext() ?? getBackgroundPluginContext() ?? null;
+  if (!pluginId) {
+    throw new Error('sdk.secrets requires a plugin route context (no plugin id available).');
+  }
+  return { ...context, pluginId };
+}
+
+/**
+ * Resolves `sdk.handoffs.*`'s effective plugin id the same way
+ * `resolveStorageContext` does, for a job/schedule handler creating a
+ * handoff link with no real request. Throws if no source has an answer,
+ * matching `resolveStorageContext`.
+ */
+function resolveHandoffContext(
+  context: HandoffRequestContext,
+): HandoffRequestContext & { pluginId: string } {
+  const pluginId =
+    context.pluginId ?? getPortabilityPluginContext() ?? getBackgroundPluginContext() ?? null;
+  if (!pluginId) {
+    throw new Error('sdk.handoffs requires a plugin route context (no plugin id available).');
+  }
+  return { ...context, pluginId };
+}
+
+/**
+ * Resolves `sdk.tools.preview()`/`execute()`'s effective caller plugin id
+ * the same way `resolveStorageContext` does, for a scheduled automation
+ * calling another plugin's tool with no real request. Throws if no source
+ * has an answer, matching `resolveStorageContext`.
+ */
+function resolveToolContext<T extends ToolContext>(context: T): T & { callerPluginId: string } {
+  const callerPluginId =
+    context.callerPluginId ?? getPortabilityPluginContext() ?? getBackgroundPluginContext() ?? null;
+  if (!callerPluginId) {
+    throw new Error('sdk.tools requires a plugin route context (no plugin id available).');
+  }
+  return { ...context, callerPluginId };
 }
 
 provideHost({
@@ -727,7 +794,12 @@ provideHost({
     },
   },
   activity: {
-    async log(entry: ActivityLogEntry, actorId: string | null, pluginId: string | null) {
+    async log(entry: ActivityLogEntry, actorId: string | null, pluginIdInput: string | null) {
+      // Falls back to the background-invocation context the same way
+      // sdk.storage/sdk.env do, so a job/schedule handler's log entry still
+      // attributes to the right plugin even with no request header.
+      const pluginId =
+        pluginIdInput ?? getPortabilityPluginContext() ?? getBackgroundPluginContext() ?? null;
       const pdb = await getPlatformDb();
       await recordActivity(pdb, {
         id: randomUUID(),
@@ -973,7 +1045,11 @@ provideHost({
     },
   },
   handoffs: {
-    async create(input: CreateHandoffInput, context: HandoffRequestContext): Promise<HandoffToken> {
+    async create(
+      input: CreateHandoffInput,
+      contextInput: HandoffRequestContext,
+    ): Promise<HandoffToken> {
+      const context = resolveHandoffContext(contextInput);
       const providerManifest = registry.find((m) => m.id === input.providerId);
       if (!providerManifest) {
         throw new Error(`sdk.handoffs: provider plugin "${input.providerId}" is not installed.`);
@@ -1057,8 +1133,9 @@ provideHost({
     async consume(
       token: string,
       options: ConsumeHandoffOptions,
-      context: HandoffRequestContext,
+      contextInput: HandoffRequestContext,
     ): Promise<HandoffContext> {
+      const context = resolveHandoffContext(contextInput);
       const { handoffId } = verifyHandoffToken(token, {
         providerId: context.pluginId,
         name: options.name,
@@ -1351,7 +1428,8 @@ provideHost({
     },
   },
   secrets: {
-    async create(input, context): Promise<SecretRef> {
+    async create(input, contextInput): Promise<SecretRef> {
+      const context = resolveSecretContext(contextInput);
       requireInstanceSecretCapability(input.scope, context);
       const label = normalizeSecretLabel(input.label);
       const scopedUserId = input.scope === 'user' ? context.userId : null;
@@ -1376,7 +1454,8 @@ provideHost({
       return ref;
     },
 
-    async get(id, context): Promise<string | null> {
+    async get(id, contextInput): Promise<string | null> {
+      const context = resolveSecretContext(contextInput);
       const pdb = await getPlatformDb();
       const row = await getPluginSecret(pdb, id, context);
       if (!row) return null;
@@ -1392,7 +1471,8 @@ provideHost({
       return value;
     },
 
-    async list(scope, context): Promise<SecretRef[]> {
+    async list(scope, contextInput): Promise<SecretRef[]> {
+      const context = resolveSecretContext(contextInput);
       if (scope) requireInstanceSecretCapability(scope, context);
       const rows = await listPluginSecrets(await getPlatformDb(), context, scope);
       return rows
@@ -1402,7 +1482,8 @@ provideHost({
         .map(toSecretRef);
     },
 
-    async update(id, value, context): Promise<SecretRef> {
+    async update(id, value, contextInput): Promise<SecretRef> {
+      const context = resolveSecretContext(contextInput);
       const pdb = await getPlatformDb();
       const row = await getPluginSecret(pdb, id, context);
       if (!row) throw new Error('Plugin secret not found.');
@@ -1420,7 +1501,8 @@ provideHost({
       return ref;
     },
 
-    async delete(id, context): Promise<void> {
+    async delete(id, contextInput): Promise<void> {
+      const context = resolveSecretContext(contextInput);
       const pdb = await getPlatformDb();
       const row = await getPluginSecret(pdb, id, context);
       if (!row) return;
@@ -1430,7 +1512,8 @@ provideHost({
     },
   },
   connections: {
-    async create(input, context): Promise<ConnectionRef> {
+    async create(input, contextInput): Promise<ConnectionRef> {
+      const context = resolveConnectionContext(contextInput);
       requireInstanceConnectionCapability(input.scope, context.capabilities);
       const row = await createPluginConnection(await getPlatformDb(), {
         id: randomUUID(),
@@ -1448,7 +1531,8 @@ provideHost({
       return ref;
     },
 
-    async list(filter, context): Promise<ConnectionRef[]> {
+    async list(filter, contextInput): Promise<ConnectionRef[]> {
+      const context = resolveConnectionContext(contextInput);
       if (filter?.scope) {
         requireInstanceConnectionCapability(filter.scope, context.capabilities);
       }
@@ -1463,14 +1547,16 @@ provideHost({
         .map(toConnectionRef);
     },
 
-    async get(id, context): Promise<ConnectionRef | null> {
+    async get(id, contextInput): Promise<ConnectionRef | null> {
+      const context = resolveConnectionContext(contextInput);
       const row = await getPluginConnection(await getPlatformDb(), id, context);
       if (!row) return null;
       requireInstanceConnectionCapability(row.scope, context.capabilities);
       return toConnectionRef(row);
     },
 
-    async update(id, input, context): Promise<ConnectionRef> {
+    async update(id, input, contextInput): Promise<ConnectionRef> {
+      const context = resolveConnectionContext(contextInput);
       const pdb = await getPlatformDb();
       const existing = await getPluginConnection(pdb, id, context);
       if (!existing) throw new Error('Plugin connection not found.');
@@ -1488,7 +1574,8 @@ provideHost({
       return toConnectionRef(updated);
     },
 
-    async disconnect(id, context): Promise<void> {
+    async disconnect(id, contextInput): Promise<void> {
+      const context = resolveConnectionContext(contextInput);
       const pdb = await getPlatformDb();
       const existing = await getPluginConnection(pdb, id, context);
       if (!existing) return;
@@ -1497,11 +1584,13 @@ provideHost({
       await auditConnectionOperation('plugin.connection.disconnected', context, existing);
     },
 
-    async markUsed(id, context): Promise<void> {
+    async markUsed(id, contextInput): Promise<void> {
+      const context = resolveConnectionContext(contextInput);
       await markPluginConnectionUsed(await getPlatformDb(), id, context);
     },
 
-    async markError(id, input, context): Promise<ConnectionRef> {
+    async markError(id, input, contextInput): Promise<ConnectionRef> {
+      const context = resolveConnectionContext(contextInput);
       const row = await markPluginConnectionError(
         await getPlatformDb(),
         id,
@@ -1514,7 +1603,8 @@ provideHost({
       return toConnectionRef(row);
     },
 
-    async createOAuthState(input, context): Promise<string> {
+    async createOAuthState(input, contextInput): Promise<string> {
+      const context = resolveConnectionContext(contextInput);
       if (!context.userId) throw new Error('OAuth state creation requires an authenticated user.');
       return createOAuthStateToken({
         pluginId: context.pluginId,
@@ -1527,14 +1617,16 @@ provideHost({
       });
     },
 
-    async verifyOAuthState(state, context) {
+    async verifyOAuthState(state, contextInput) {
+      const context = resolveConnectionContext(contextInput);
       return verifyOAuthStateToken(state, {
         pluginId: context.pluginId,
         userId: context.userId,
       });
     },
 
-    async getProviderConfig(provider, context): Promise<ProviderConfig> {
+    async getProviderConfig(provider, contextInput): Promise<ProviderConfig> {
+      const context = resolveConnectionContext(contextInput);
       const manifest = registry.find((candidate) => candidate.id === context.pluginId);
       if (!manifest) throw new Error('Calling plugin is not installed.');
       const providerId = normalizeProvider(provider);
@@ -1566,8 +1658,9 @@ provideHost({
     async preview(
       ref: ToolRef,
       input: unknown,
-      context: ToolContext,
+      contextInput: ToolContext,
     ): Promise<ToolPreviewResponse> {
+      const context = resolveToolContext(contextInput);
       const tool = await resolveToolOrThrow(ref, context);
       const validation = validateToolInput(tool.inputSchema, input);
       if (!validation.valid) {
@@ -1598,8 +1691,9 @@ provideHost({
     async execute(
       ref: ToolRef,
       input: unknown,
-      context: ToolContext & ToolExecuteOptions,
+      contextInput: ToolContext & ToolExecuteOptions,
     ): Promise<unknown> {
+      const context = resolveToolContext(contextInput);
       const tool = await resolveToolOrThrow(ref, context);
       const validation = validateToolInput(tool.inputSchema, input);
       if (!validation.valid) {

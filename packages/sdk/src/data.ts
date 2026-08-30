@@ -74,12 +74,23 @@ export const data = {
     requireHost().data.provide(providerId, contract, resolver as DataContractResolver);
   },
 
-  /** Consumer: read a provider plugin's contract for the current user (consent-gated). */
+  /**
+   * Consumer: read a provider plugin's contract for the current user
+   * (consent-gated). Consent is inherently tied to a live user, so this
+   * throws `ConsentRequiredError` outside a real Next.js request (e.g. a
+   * background job/schedule handler, where `headers()` itself would
+   * otherwise throw) the same as it does for any other missing-user case.
+   */
   async query<TParams = unknown, TRow = unknown>(
     ref: DataContractRef,
     params?: TParams,
   ): Promise<TRow[]> {
-    const h = await headers();
+    let h: Headers;
+    try {
+      h = await headers();
+    } catch {
+      throw new ConsentRequiredError();
+    }
     const consumerId = h.get('x-sovereign-plugin-id');
     const userId = h.get('x-sovereign-user-id');
     if (!userId) throw new ConsentRequiredError();

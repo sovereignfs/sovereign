@@ -22,3 +22,5 @@ export type {
   UseCarouselRouteSyncOptions,
   UseCarouselRouteSyncResult,
 } from './useCarouselRouteSync';
+export { useReorderSensors, shouldHandleDndEvent } from './useReorderSensors';
+export type { UseReorderSensorsOptions } from './useReorderSensors';

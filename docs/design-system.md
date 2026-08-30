@@ -1042,6 +1042,36 @@ const { scrollRef, scrollToIndex } = useSnapCarousel({
 </div>;
 ```
 
+**`useReorderSensors({ mouseActivationDistancePx?, touchActivationDelayMs?, touchActivationTolerancePx? })`**
+dnd-kit sensor set for a drag-reorder list, extracted from `plugins/account`'s
+sidebar-order UI after the identical pattern turned up duplicated
+byte-for-byte across three separate plugins. Returns dnd-kit's `sensors`
+value — pass straight to `<DndContext sensors={...}>`. Bundles a MouseSensor
+(handle-initiated, desktop) and a TouchSensor (long-press lift, mobile — dnd-
+kit's built-in pointer sensor never implements native HTML5 Drag-and-Drop for
+touch input, so this is what makes reordering usable on iOS PWA/Safari) with
+a shared exclusion rule: a drag started inside an element marked `data-no-dnd`
+is refused, so a nested interactive control (a visibility toggle, a delete
+button) fires its own handler instead of lifting the row. A bare call keeps
+the values `plugins/account` already shipped: 8px mouse activation distance,
+300ms touch long-press delay, 8px touch drift tolerance. The exclusion
+predicate is also exported standalone as `shouldHandleDndEvent(target)` for
+unit testing without spinning up dnd-kit.
+
+```tsx
+const sensors = useReorderSensors();
+<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+  <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+    {/* rows — a nested toggle/button opts out of drag via data-no-dnd */}
+  </SortableContext>
+</DndContext>;
+```
+
+`@dnd-kit/core`/`@dnd-kit/sortable` are optional peer dependencies of
+`@sovereignfs/ui` — a consumer must install them itself (the package never
+bundles dnd-kit, so exactly one shared `DndContext` module instance is used
+across the app).
+
 ### Mobile carousel & responsive fork
 
 Some views are route-based on web but want a genuinely different mobile UX —

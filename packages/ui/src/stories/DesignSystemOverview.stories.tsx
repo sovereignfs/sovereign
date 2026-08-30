@@ -97,6 +97,7 @@ import { NavigationMenu } from '../components/NavigationMenu/NavigationMenu';
 import { Menubar } from '../components/Menubar/Menubar';
 import { Collapsible } from '../components/Collapsible/Collapsible';
 import { DragHandleRow } from '../components/DragHandleRow/DragHandleRow';
+import { GripIcon } from '../components/GripIcon/GripIcon';
 import { StepStrip, type StepStripItem } from '../components/StepStrip/StepStrip';
 import { FileDropzone } from '../components/FileDropzone/FileDropzone';
 import { OverlayHeader } from '../components/OverlayHeader/OverlayHeader';
@@ -1813,7 +1814,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
         <section style={{ marginBottom: 'var(--sv-space-12)' }}>
           <SectionHeader
             title="Component gallery"
-            subtitle="All 75 components — click each story in the sidebar for the full API, variants, and controls."
+            subtitle="All 76 components — click each story in the sidebar for the full API, variants, and controls."
           />
 
           <div style={{ marginBottom: 'var(--sv-space-6)' }}>
@@ -3398,6 +3399,17 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                     </div>
                   </DragHandleRow>
                 ))}
+              </div>
+            </ComponentCard>
+
+            {/* GripIcon */}
+            <ComponentCard
+              name="GripIcon"
+              importLine="import { GripIcon } from '@sovereignfs/ui';"
+              usage="Six-dot drag-handle icon, sized via `size` (default 14). No baked-in pointer-events or color — DragHandleRow uses it internally; a floating, absolutely-positioned handle can use it directly."
+            >
+              <div style={{ color: 'var(--sv-color-text-muted)' }}>
+                <GripIcon />
               </div>
             </ComponentCard>
 

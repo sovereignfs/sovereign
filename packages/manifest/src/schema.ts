@@ -500,7 +500,12 @@ const manifestObjectSchema = z
           .array(
             z
               .object({
-                /** Stable contract name (e.g. `"expenses"`). Should be globally unique — prefix with your plugin slug. */
+                /**
+                 * Stable local contract name (e.g. `"expenses"`). The
+                 * platform namespaces this to `<pluginId>:<contract>`
+                 * internally, so it only needs to be unique within your own
+                 * plugin's `provides` array, not globally.
+                 */
                 contract: z.string().min(1),
                 /** Contract major version. Increment on breaking schema changes. */
                 version: z.number().int().positive(),

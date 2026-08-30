@@ -36,7 +36,7 @@ export type DataContractResolver<TParams = unknown, TRow = unknown> = (
  * `permissions`):
  *
  * ```ts
- * sdk.data.provide('expenses', async ({ since }) => getExpenses({ since }));
+ * await sdk.data.provide('expenses', async ({ since }) => getExpenses({ since }));
  * ```
  *
  * **Consumer** — query a provider's contract (declare the contract in the
@@ -60,11 +60,18 @@ export const data = {
    * of a route handler or server component that runs when the plugin is loaded.
    * Registrations are in-process and reset on server restart.
    */
-  provide<TParams = unknown, TRow = unknown>(
+  async provide<TParams = unknown, TRow = unknown>(
     contract: string,
     resolver: DataContractResolver<TParams, TRow>,
-  ): void {
-    requireHost().data.provide(contract, resolver as DataContractResolver);
+  ): Promise<void> {
+    const h = await headers();
+    const providerId = h.get('x-sovereign-plugin-id');
+    if (!providerId) {
+      throw new Error(
+        'sdk.data.provide() requires a plugin route context (x-sovereign-plugin-id header missing).',
+      );
+    }
+    requireHost().data.provide(providerId, contract, resolver as DataContractResolver);
   },
 
   /** Consumer: read a provider plugin's contract for the current user (consent-gated). */

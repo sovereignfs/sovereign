@@ -1483,7 +1483,7 @@ read a provider's data. Consent is managed in the **Account → Data** tab.
 
 ```ts
 // In a Server Component or route handler that runs when the plugin loads:
-sdk.data.provide('expenses', async ({ since }: { since?: string }) => {
+await sdk.data.provide('expenses', async ({ since }: { since?: string }) => {
   const db = await sdk.db.getClient();
   return db.query.expenses.findMany({
     where: (t, { gte }) => (since ? gte(t.date, since) : undefined),

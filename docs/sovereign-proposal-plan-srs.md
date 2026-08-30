@@ -529,7 +529,7 @@ sdk.platform.getConfig(): Promise<PlatformConfig>
 **Experimental / implemented but not yet part of the stable SDK guarantee:**
 
 ```typescript
-sdk.data.provide(contract: string, resolver: DataContractResolver): void
+sdk.data.provide(contract: string, resolver: DataContractResolver): Promise<void>
 sdk.data.query(ref: DataContractRef, params?: unknown): Promise<unknown[]>
 sdk.activity.log(entry: ActivityLogEntry): Promise<void>
 sdk.portability.provideExport(resolver: ExportResolver): void

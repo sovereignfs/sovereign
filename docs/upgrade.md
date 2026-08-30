@@ -1064,6 +1064,35 @@ follows the documented `DeviceOnlyGate`/`DeviceStorageKeyGate` pattern — it
 now correctly lets users onto a `device-only` plugin from a capable browser
 tab instead of only from a native shell.
 
+### `@sovereignfs/sdk` 1.47.0 → 1.48.0
+
+**`sdk.data.provide()` is now namespaced per-provider and returns a
+`Promise`.** Previously, `_resolverRegistry` (the host-side registry backing
+`sdk.data`) was keyed only by bare contract name — two unrelated plugins
+independently choosing the same local contract name (e.g. both naming a
+contract `"expenses"`) silently clobbered each other's registration, letting
+a consumer with a valid consent grant for provider A be served provider B's
+data. Found in a codebase audit; closed by namespacing the registry
+`<providerId>:<contract>`, mirroring how `sdk.tools`/`_toolRegistry` already
+avoided this exact class of collision.
+
+**Plugin-author-visible change:** `sdk.data.provide(contract, resolver)`'s
+call shape is unchanged, but it is now `async` — code calling it without
+`await` still runs (the call is fire-and-forget), but should add `await` to
+guarantee registration completes before any consumer might query it. It also
+now throws `'sdk.data.provide() requires a plugin route context...'` if
+called with no `x-sovereign-plugin-id` header available (i.e. outside a real
+plugin route, matching `sdk.tools.provide()`'s existing behavior) — this was
+previously silently accepted with an unnamespaced, collision-prone
+registration.
+
+**Breaking for host implementers only** — a custom `SdkHost` implementation's
+`data.provide` now takes `(providerId, contract, resolver)` instead of
+`(contract, resolver)`; the platform's own `runtime/src/sdk-host.ts` already
+implements the new signature. `manifest.json`'s `data.provides[].contract`
+no longer needs to be globally unique — only unique within your own plugin's
+`provides` array — since the platform namespaces it internally.
+
 ### `@sovereignfs/sdk` 1.46.0 → 1.47.0
 
 **`sdk.env.get()` now works from a job/schedule handler.** Previously, any

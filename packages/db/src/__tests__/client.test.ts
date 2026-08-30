@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createClient, pgSslMode } from '../client';
+import { createClient, pgSslMode, postgresPoolMax } from '../client';
 
 describe('pgSslMode', () => {
   it('returns null when sslmode is absent or disabled', () => {
@@ -19,6 +19,20 @@ describe('pgSslMode', () => {
 
   it('returns null for an unparseable url', () => {
     expect(pgSslMode('not a url')).toBeNull();
+  });
+});
+
+describe('postgresPoolMax', () => {
+  it('defaults to 5 when unset', () => {
+    expect(postgresPoolMax({})).toBe(5);
+  });
+
+  it('accepts a valid positive integer override', () => {
+    expect(postgresPoolMax({ POSTGRES_POOL_MAX: '8' })).toBe(8);
+  });
+
+  it.each(['', '0', '-3', 'abc'])('falls back to 5 for invalid input %j', (value) => {
+    expect(postgresPoolMax({ POSTGRES_POOL_MAX: value })).toBe(5);
   });
 });
 

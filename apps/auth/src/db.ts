@@ -83,6 +83,21 @@ function sqldAdminUrl(): string {
   return process.env.SQLD_ADMIN_URL ?? 'http://localhost:28081';
 }
 
+const DEFAULT_POSTGRES_POOL_MAX = 5;
+
+/**
+ * Max connections for this long-lived Postgres pool. Duplicates
+ * `@sovereignfs/db`'s `postgresPoolMax()` (same env var, same default, same
+ * fallback rule) rather than importing it — this file's own doc comment
+ * already explains why `apps/auth` duplicates dialect/sqld resolution logic
+ * instead of depending on `@sovereignfs/db`: service-boundary independence.
+ */
+function postgresPoolMax(): number {
+  const raw = process.env.POSTGRES_POOL_MAX;
+  const parsed = raw ? Number(raw) : NaN;
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_POSTGRES_POOL_MAX;
+}
+
 /**
  * Provision the auth store before first use — sqld namespaces don't
  * auto-vivify on first query (verified live: an unprovisioned namespace
@@ -141,6 +156,7 @@ function getAuthDb(): AuthDb {
       pool: new Pool({
         connectionString: postgresUrl(),
         options: `-c search_path="${AUTH_STORE_NAME}"`,
+        max: postgresPoolMax(),
       }),
     };
     return _db;

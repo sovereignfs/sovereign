@@ -482,7 +482,7 @@ change based on the above.
 
 ---
 
-#### 📋 22.7 — Fix Warden's account-deletion N+1 query pattern
+#### ✅ 22.7 — Fix Warden's account-deletion N+1 query pattern
 
 **Goal:** Close an N+1 query pattern found in `plugins/warden/app/_lib/portability.ts`'s `sdk.portability.provideDelete` handler (lines 33-61): it first selects every one of the user's `warden_conversation` rows, then loops over them serially awaiting a per-conversation `select` (to count `warden_messages` rows) plus a per-conversation `delete`, before finally deleting the conversation rows themselves — `2n + 2` sequential DB round trips for a user with `n` conversations, all inside the 30s per-plugin budget `runtime/src/user-deletion.ts`'s `DELETION_TIMEOUT_MS` enforces on every account-deletion handler. Every value the loop computes (the message count, and the delete scope) is derivable from the user's conversation ids directly via `inArray`, collapsing the handler to a fixed 4 queries regardless of conversation count. Impact today is bounded — this handler only runs once per account deletion, and only for Warden — but it scales linearly with a heavy chat user's conversation count and is worth closing before it's a real timeout risk."
 

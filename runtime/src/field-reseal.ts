@@ -61,6 +61,30 @@ function q(identifier: string): string {
   return `"${identifier}"`;
 }
 
+/**
+ * Build one multi-row `UPDATE` for a group of rows that all need the exact
+ * same set of columns re-sealed. Portable across both dialects via `CASE
+ * <pk> WHEN ... THEN ... END` per column and a `WHERE <pk> IN (...)` — no
+ * dialect-specific SQL, unlike a `VALUES (...) AS v(...)` join. Identifiers
+ * are validated via `q()`; every value (pk or column) travels as a bound
+ * parameter via the drizzle `sql` template, exactly as the prior per-row
+ * statement did.
+ */
+function buildGroupUpdate(
+  tableName: string,
+  pk: string,
+  columns: string[],
+  entries: { pkValue: unknown; updates: Record<string, string | null> }[],
+) {
+  const pkFragment = sql.raw(q(pk));
+  const setClauses = columns.map((col) => {
+    const whens = entries.map((e) => sql`WHEN ${e.pkValue} THEN ${e.updates[col] ?? null}`);
+    return sql`${sql.raw(q(col))} = CASE ${pkFragment} ${sql.join(whens, sql.raw(' '))} END`;
+  });
+  const pkValues = entries.map((e) => sql`${e.pkValue}`);
+  return sql`UPDATE ${sql.raw(q(tableName))} SET ${sql.join(setClauses, sql.raw(', '))} WHERE ${pkFragment} IN (${sql.join(pkValues, sql.raw(', '))})`;
+}
+
 function decodePassthrough(envelope: string): string {
   return Buffer.from(envelope.slice(FIELD_PASSTHROUGH_PREFIX.length + 1), 'base64url').toString(
     'utf8',
@@ -233,20 +257,44 @@ async function walkOneTable(
         : ((await pdb.db.execute(query)) as { rows: Record<string, unknown>[] }).rows;
 
     if (rows.length === 0) break;
+
+    // transform() is CPU/crypto-bound work on already-fetched rows, not a
+    // round trip -- stays a per-row call. Collect every row's result first,
+    // so the writes below can be grouped and batched instead of one round
+    // trip per row.
+    const pending: { pkValue: unknown; updates: Record<string, string | null> }[] = [];
     for (const row of rows) {
       result.scanned += 1;
       const updates = await transform(row, meta, ctx);
       if (updates) {
-        const assignments = Object.entries(updates).map(
-          ([col, value]) => sql`${sql.raw(q(col))} = ${value}`,
-        );
-        const update = sql`UPDATE ${sql.raw(q(meta.tableName))} SET ${sql.join(assignments, sql.raw(', '))} WHERE ${pkFragment} = ${row[pk]}`;
-        if (pdb.dialect === 'sqlite') await pdb.db.run(update);
-        else await pdb.db.execute(update);
+        pending.push({ pkValue: row[pk], updates });
         result.updated += 1;
       }
       cursor = String(row[pk]);
     }
+
+    // Rows needing different sets of resealed columns can't share one
+    // multi-row UPDATE (backfillTransform/rotateIndexTransform each produce
+    // a different changed-column set per row) -- group by the exact shape
+    // first, then flush one statement per group.
+    const groups = new Map<
+      string,
+      { columns: string[]; entries: { pkValue: unknown; updates: Record<string, string | null> }[] }
+    >();
+    for (const entry of pending) {
+      const columns = Object.keys(entry.updates).sort();
+      const key = columns.join(' ');
+      const group = groups.get(key);
+      if (group) group.entries.push(entry);
+      else groups.set(key, { columns, entries: [entry] });
+    }
+
+    for (const group of groups.values()) {
+      const update = buildGroupUpdate(meta.tableName, pk, group.columns, group.entries);
+      if (pdb.dialect === 'sqlite') await pdb.db.run(update);
+      else await pdb.db.execute(update);
+    }
+
     await upsertResealCheckpoint(
       pdb,
       job,

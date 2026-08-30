@@ -330,11 +330,19 @@ export async function startHmacRotation(
             updated_at = ${now}
         WHERE id = ${id} AND wrapped_hmac_key_previous IS NULL`,
   );
-  const row = await dbGet<{ started: number | null }>(
+  const row = await dbGet<{ started: number | string | null }>(
     pdb,
     sql`SELECT hmac_rotation_started_at AS started FROM field_encryption_keys WHERE id = ${id}`,
   );
-  return row?.started === now;
+  // node-postgres returns a bigint column as a string by default (to avoid
+  // precision loss outside JS's safe integer range) when read via a raw
+  // sql`` query rather than the typed query builder — Number(...) here
+  // mirrors platform-db.ts's coerceNum for the same reason. Comparing the
+  // raw string against `now` (always false) meant this always reported an
+  // opened rotation as failed on Postgres — never caught before because no
+  // Postgres test exercised this path (field-reseal.pg.test.ts, task 8.36,
+  // is the first).
+  return row?.started !== null && row?.started !== undefined && Number(row.started) === now;
 }
 
 /** Close a rotation window after a clean full re-seal — the old key is gone. */

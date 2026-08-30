@@ -29,45 +29,51 @@ vi.mock('drizzle-orm', async (importOriginal) => {
       columnName: toCamelCase(column.name),
       value,
     }),
+    inArray: (column: { name: string }, values: unknown[]) => ({
+      columnName: toCamelCase(column.name),
+      values,
+    }),
   };
 });
+
+type Predicate = { columnName: string; value: unknown } | { columnName: string; values: unknown[] };
+
+function matches(row: Record<string, unknown>, predicate: Predicate): boolean {
+  return 'values' in predicate
+    ? predicate.values.includes(row[predicate.columnName])
+    : row[predicate.columnName] === predicate.value;
+}
 
 let conversations: Array<{ id: string; userId: string }>;
 let messages: Array<{ id: string; conversationId: string }>;
 
 function fakeDb() {
   return {
-    select() {
-      return {
-        from(table: Table) {
-          const tableName = getTableName(table);
-          return {
-            where: async (predicate: { columnName: string; value: unknown }) => {
-              const rows = tableName === 'warden_conversation' ? conversations : messages;
-              return rows.filter(
-                (r) => (r as Record<string, unknown>)[predicate.columnName] === predicate.value,
-              );
-            },
-          };
-        },
-      };
-    },
-    delete(table: Table) {
+    select: vi.fn(() => ({
+      from(table: Table) {
+        const tableName = getTableName(table);
+        return {
+          where: async (predicate: Predicate) => {
+            const rows = tableName === 'warden_conversation' ? conversations : messages;
+            return rows.filter((r) => matches(r as Record<string, unknown>, predicate));
+          },
+        };
+      },
+    })),
+    delete: vi.fn((table: Table) => {
       const tableName = getTableName(table);
       return {
-        where: async (predicate: { columnName: string; value: unknown }) => {
+        where: async (predicate: Predicate) => {
           if (tableName === 'warden_messages') {
-            messages = messages.filter(
-              (m) => (m as Record<string, unknown>)[predicate.columnName] !== predicate.value,
-            );
+            messages = messages.filter((m) => !matches(m as Record<string, unknown>, predicate));
           } else {
             conversations = conversations.filter(
-              (c) => (c as Record<string, unknown>)[predicate.columnName] !== predicate.value,
+              (c) => !matches(c as Record<string, unknown>, predicate),
             );
           }
         },
       };
-    },
+    }),
   };
 }
 
@@ -149,5 +155,40 @@ describe('registerPortability — delete', () => {
     const handler = provideDelete.mock.calls[0][0];
     const result = await handler({ userId: 'user-1', tenantId: 'tenant-1', db: fakeDb() });
     expect(result).toEqual({ deleted: 0 });
+  });
+
+  it('deletes 3+ conversations and all their messages with a fixed, non-scaling number of database calls (task 22.7 regression guard)', async () => {
+    conversations = [
+      { id: 'conv-1', userId: 'user-1' },
+      { id: 'conv-2', userId: 'user-1' },
+      { id: 'conv-3', userId: 'user-1' },
+    ];
+    messages = [
+      { id: 'm1', conversationId: 'conv-1' },
+      { id: 'm2', conversationId: 'conv-1' },
+      { id: 'm3', conversationId: 'conv-2' },
+      { id: 'm4', conversationId: 'conv-3' },
+      { id: 'm5', conversationId: 'conv-3' },
+      { id: 'm6', conversationId: 'conv-3' },
+    ];
+
+    await registerPortability();
+    const handler = provideDelete.mock.calls[0][0];
+    const db = fakeDb();
+    const result = await handler({ userId: 'user-1', tenantId: 'tenant-1', db });
+
+    // 6 messages + 3 conversations, exactly as before the fix -- the return
+    // contract is unchanged, only the query shape is.
+    expect(result).toEqual({ deleted: 9 });
+    expect(conversations).toEqual([]);
+    expect(messages).toEqual([]);
+
+    // Fixed at 4 total database calls regardless of conversation count: one
+    // select (conversation ids), one select (message ids for the count),
+    // one delete (messages), one delete (conversations) -- not the old
+    // 2n + 2 (which for n=3 would be 8). This is what would fail against
+    // the pre-fix per-conversation loop, whose call count scales with n.
+    expect(db.select).toHaveBeenCalledTimes(2);
+    expect(db.delete).toHaveBeenCalledTimes(2);
   });
 });

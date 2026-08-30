@@ -5,7 +5,7 @@ import type { Client } from '@libsql/client';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { findWorkspaceRoot, pgSslMode } from './client';
+import { findWorkspaceRoot, pgSslMode, postgresPoolMax } from './client';
 import { resolveDialect, type Dialect } from './dialect';
 import {
   createSqldClient,
@@ -122,6 +122,7 @@ export function getPluginDb(pluginId: string): PluginDb {
     connectionString: resolved.url,
     ssl: pgSsl(resolved.url),
     options: `-c search_path="${schema}"`,
+    max: postgresPoolMax(process.env),
   });
   const pdb: PluginDb = { dialect: 'postgres', db: drizzlePg(pool) };
   _registry.set(cacheKey, pdb);

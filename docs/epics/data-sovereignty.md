@@ -1731,7 +1731,7 @@ with).
 
 ---
 
-#### 📋 8.35 — Bound isolated Postgres plugin pool size; expose a pool-size env var
+#### ✅ 8.35 — Bound isolated Postgres plugin pool size; expose a pool-size env var
 
 **Goal:** Close an unbounded-connection-pool finding from a codebase audit: `packages/db/src/plugin-client.ts`'s `getPluginDb()` opens a `new Pool({connectionString, ssl, options})` per isolated Postgres plugin with no explicit `max`, so node-postgres's implicit default of 10 applies to every plugin pool; `packages/db/src/client.ts`'s platform pool and `apps/auth/src/db.ts`'s auth pool are two more independently unconfigured `Pool`s with the same implicit default. `runAllPluginMigrations()` (`runtime/src/plugin-migrations.ts`) calls `getPluginDb()` for every isolated plugin with a `migrations/postgres/` folder unconditionally at boot — this checkout currently has 11 such plugins (`docs.local`, `kanban.local`, `ledger.local`, `plainwrite.local`, `sheets.local`, `shopper.local`, `tally.local`, `tasks.local`, `travellog.local`, `wallet.local`, `warden`) — so on a Postgres-backed instance with all of them installed, boot alone can open up to 110 connections from plugin pools before counting the platform's or auth's own pool, against Postgres's out-of-the-box `max_connections = 100`. No env var in `.env.example`/`docs/self-hosting.md` currently tunes any of this. Fix: give each of the three long-lived pools an explicit, conservative default `max` and one shared, documented `POSTGRES_POOL_MAX` env var so an operator running many isolated Postgres plugins can size total connections against their server's real `max_connections` budget instead of discovering the ceiling in production.
 
@@ -1762,7 +1762,7 @@ with).
 
 ---
 
-#### 📋 8.36 — Batch field-reseal's per-row UPDATE into multi-row statements
+#### ✅ 8.36 — Batch field-reseal's per-row UPDATE into multi-row statements
 
 **Goal:** Task 8.36 — `walkOneTable`'s inner loop (`runtime/src/field-reseal.ts:236-249`), the shared machinery under both `sv db encrypt-fields` (backfill) and `sv keys rotate-blind-index` (RFC 0092 gate B, task 8.34), reads each `BATCH_SIZE` (100, `field-reseal.ts:37`) chunk with one `SELECT ... LIMIT 100` (lines 226-233), but for every row that `transform()` — the `backfillTransform`/`rotateIndexTransform` pair, lines 96-177 — flags as needing re-sealing, issues and awaits a separate `UPDATE ... WHERE <pk> = ...` (lines 239-247, dialect-branched at 244-245 into `pdb.db.run`/`pdb.db.execute`) before moving to the next row. A rotation or backfill against a classified table with many rows needing re-sealing therefore does one sequential network round trip per row against sqld or Postgres — wall-clock time scales with row count instead of batch count — even though the read side of the same loop already batches. `docs/self-hosting.md`'s "Field encryption (RFC 0092)" runbook (§1965) already tells operators to run both commands against real production data. This task closes the finding by batching the write side to match the read side, within the existing per-batch checkpoint boundary.
 

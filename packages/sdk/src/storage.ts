@@ -38,9 +38,18 @@ export const storage = {
     return requireHost().storage.delete(key, context);
   },
 
-  async list(prefix?: string): Promise<StorageObject[]> {
+  /**
+   * List accessible storage objects, optionally filtered by key prefix.
+   * `options.limit` defaults to 200 and is hard-clamped to 500 server-side
+   * regardless of what's passed; `options.offset` defaults to 0 (page N via
+   * `offset: N * limit`).
+   */
+  async list(
+    prefix?: string,
+    options?: { limit?: number; offset?: number },
+  ): Promise<StorageObject[]> {
     const context = await storageContext();
-    return requireHost().storage.list(prefix, context);
+    return requireHost().storage.list(prefix, options, context);
   },
 
   /** Create a short-lived, read-only download URL for an object (default 5 minutes, max 1 hour). */

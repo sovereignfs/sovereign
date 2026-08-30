@@ -1,0 +1,2 @@
+CREATE INDEX "notifications_user_feed" ON "notifications" USING btree ("tenant_id","recipient_user_id","created_at" DESC NULLS LAST);--> statement-breakpoint
+CREATE INDEX "notifications_unread" ON "notifications" USING btree ("tenant_id","recipient_user_id","read_at");

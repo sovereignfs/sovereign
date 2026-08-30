@@ -1330,10 +1330,14 @@ provideHost({
       if (deleted) deleteObjectBytes(resolved.pluginId, deleted.id);
     },
 
-    async list(prefix, context): Promise<StorageObject[]> {
+    async list(prefix, options, context): Promise<StorageObject[]> {
       const resolved = resolveStorageContext(context);
       const pdb = await getPlatformDb();
-      const rows = await listStorageObjects(pdb, resolved, prefix);
+      const clamped =
+        options?.limit === undefined
+          ? options
+          : { ...options, limit: Math.min(options.limit, 500) };
+      const rows = await listStorageObjects(pdb, resolved, prefix, clamped);
       return rows.map(toStorageObject);
     },
 

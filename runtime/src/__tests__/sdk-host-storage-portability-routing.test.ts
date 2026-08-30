@@ -76,6 +76,7 @@ describe('sdk-host storage.list — portability context user id routing', () => 
       { db: PLATFORM_CLIENT },
       { tenantId: 'default', pluginId: 'fs.example.widget', userId: 'user-1' },
       undefined,
+      undefined,
     );
   });
 
@@ -85,6 +86,7 @@ describe('sdk-host storage.list — portability context user id routing', () => 
       { db: PLATFORM_CLIENT },
       { tenantId: 'default', pluginId: 'fs.example.widget', userId: 'user-1' },
       undefined,
+      undefined,
     );
   });
 
@@ -93,6 +95,7 @@ describe('sdk-host storage.list — portability context user id routing', () => 
     expect(listStorageObjects).toHaveBeenCalledWith(
       { db: PLATFORM_CLIENT },
       { tenantId: 'default', pluginId: 'fs.example.widget', userId: null },
+      undefined,
       undefined,
     );
   });
@@ -104,6 +107,7 @@ describe('sdk-host storage.list — portability context user id routing', () => 
     expect(listStorageObjects).toHaveBeenCalledWith(
       { db: PLATFORM_CLIENT },
       { tenantId: 'default', pluginId: 'fs.example.request', userId: 'user-request' },
+      undefined,
       undefined,
     );
   });

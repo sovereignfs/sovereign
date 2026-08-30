@@ -494,28 +494,39 @@ export type NewDeviceConsentGrant = typeof deviceConsentGrants.$inferInsert;
  *   (tenant_id, recipient_user_id, created_at DESC) — user inbox feed
  *   (tenant_id, recipient_user_id, read_at)         — unread count
  */
-export const notifications = sqliteTable('notifications', {
-  id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull(),
-  recipientUserId: text('recipient_user_id').notNull(),
-  /** Plugin id, `'platform'`, or `'admin'`. Set by the runtime, not forgeable by plugins. */
-  source: text('source').notNull(),
-  /** `'plugin'` | `'platform'` | `'admin'` */
-  sourceType: text('source_type').notNull(),
-  title: text('title').notNull(),
-  body: text('body'),
-  /** In-app route the user is taken to when they click the notification. */
-  url: text('url'),
-  /** Drives mute prefs: `'info'` | `'announcement'` | `'security'` | custom. */
-  category: text('category').notNull().default('info'),
-  /** Optional `<Icon>` name override. */
-  icon: text('icon'),
-  /** Unix seconds when the recipient read it; null = unread. */
-  readAt: integer('read_at'),
-  /** Unix seconds when the recipient dismissed it; null = not dismissed. */
-  dismissedAt: integer('dismissed_at'),
-  createdAt: integer('created_at').notNull(),
-});
+export const notifications = sqliteTable(
+  'notifications',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenant_id').notNull(),
+    recipientUserId: text('recipient_user_id').notNull(),
+    /** Plugin id, `'platform'`, or `'admin'`. Set by the runtime, not forgeable by plugins. */
+    source: text('source').notNull(),
+    /** `'plugin'` | `'platform'` | `'admin'` */
+    sourceType: text('source_type').notNull(),
+    title: text('title').notNull(),
+    body: text('body'),
+    /** In-app route the user is taken to when they click the notification. */
+    url: text('url'),
+    /** Drives mute prefs: `'info'` | `'announcement'` | `'security'` | custom. */
+    category: text('category').notNull().default('info'),
+    /** Optional `<Icon>` name override. */
+    icon: text('icon'),
+    /** Unix seconds when the recipient read it; null = unread. */
+    readAt: integer('read_at'),
+    /** Unix seconds when the recipient dismissed it; null = not dismissed. */
+    dismissedAt: integer('dismissed_at'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [
+    // SQLite's index() builder has no .desc() column modifier (unlike
+    // pg-core) -- a plain ascending index is scanned backward for free by
+    // SQLite's query planner, so this still fully covers the ORDER BY
+    // created_at DESC in listUserNotifications.
+    index('notifications_user_feed').on(table.tenantId, table.recipientUserId, table.createdAt),
+    index('notifications_unread').on(table.tenantId, table.recipientUserId, table.readAt),
+  ],
+);
 
 /**
  * Per-user notification preferences (RFC 0015).

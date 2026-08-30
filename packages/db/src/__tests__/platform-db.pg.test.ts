@@ -747,6 +747,98 @@ describe.skipIf(!PG_URL)('plugin storage object helpers (RFC 0044)', () => {
     expect(await sumPluginStorageBytes(db, DEFAULT_TENANT_ID, 'com.example.notes')).toBe(300);
   });
 
+  it('paginates via limit/offset, filtering ownership and prefix in SQL before the page is cut', async () => {
+    const db = await freshDb();
+    const context = { tenantId: DEFAULT_TENANT_ID, pluginId: 'com.example.notes', userId: 'u1' };
+    const { sql } = await import('drizzle-orm');
+    const { dbRun } = await import('../exec');
+    const baseTime = Math.floor(Date.now() / 1000);
+
+    // 5 objects owned by u1 matching the prefix, interleaved with 2 rows that
+    // must never count against u1's page: one owned by a different user, one
+    // outside the prefix. updated_at is forced to strictly increasing values
+    // (createStorageObject's own second-granularity `now` would tie every row
+    // inserted in the same wall-clock second, making ORDER BY updated_at DESC
+    // non-deterministic across separate LIMIT/OFFSET queries) so the sort --
+    // and therefore the pagination -- is deterministic: item-5 sorts first,
+    // item-1 sorts last.
+    for (let i = 1; i <= 5; i++) {
+      await createStorageObject(db, {
+        ...context,
+        id: `match-${String(i)}`,
+        ownerUserId: 'u1',
+        key: `imports/item-${String(i)}.csv`,
+        contentType: 'text/csv',
+        size: 10,
+        checksum: `c${String(i)}`,
+        metadata: null,
+      });
+      await dbRun(
+        db,
+        sql`UPDATE plugin_storage_objects SET updated_at = ${baseTime + i} WHERE id = ${`match-${String(i)}`}`,
+      );
+    }
+    await createStorageObject(db, {
+      ...context,
+      id: 'other-owner',
+      ownerUserId: 'u2',
+      key: 'imports/other-owner.csv',
+      contentType: 'text/csv',
+      size: 10,
+      checksum: 'co',
+      metadata: null,
+    });
+    await dbRun(
+      db,
+      sql`UPDATE plugin_storage_objects SET updated_at = ${baseTime + 100} WHERE id = 'other-owner'`,
+    );
+    await createStorageObject(db, {
+      ...context,
+      id: 'other-prefix',
+      ownerUserId: 'u1',
+      key: 'exports/other-prefix.csv',
+      contentType: 'text/csv',
+      size: 10,
+      checksum: 'cp',
+      metadata: null,
+    });
+    await dbRun(
+      db,
+      sql`UPDATE plugin_storage_objects SET updated_at = ${baseTime + 101} WHERE id = 'other-prefix'`,
+    );
+
+    const page1 = await listStorageObjects(db, context, 'imports/', { limit: 2, offset: 0 });
+    expect(page1.map((r) => r.id)).toEqual(['match-5', 'match-4']);
+
+    const page2 = await listStorageObjects(db, context, 'imports/', { limit: 2, offset: 2 });
+    expect(page2.map((r) => r.id)).toEqual(['match-3', 'match-2']);
+
+    const page3 = await listStorageObjects(db, context, 'imports/', { limit: 2, offset: 4 });
+    expect(page3.map((r) => r.id)).toEqual(['match-1']);
+
+    // A full page of 5 matching rows despite 2 non-matching rows sorting
+    // ahead in updated_at order -- proves ownership/prefix filtering moved
+    // into SQL, not applied to an already-truncated page.
+    const fullPage = await listStorageObjects(db, context, 'imports/', { limit: 5, offset: 0 });
+    expect(fullPage.map((r) => r.id)).toEqual([
+      'match-5',
+      'match-4',
+      'match-3',
+      'match-2',
+      'match-1',
+    ]);
+
+    // Past the end of the accessible/matching set -- empty, not an error.
+    expect(await listStorageObjects(db, context, 'imports/', { limit: 2, offset: 10 })).toEqual([]);
+
+    // A caller-supplied limit above 500 is the SDK/host layer's
+    // responsibility to clamp (sdk-host-storage-routing.test.ts) -- this
+    // layer just honors whatever limit it's given.
+    expect(
+      (await listStorageObjects(db, context, 'imports/', { limit: 1000, offset: 0 })).length,
+    ).toBe(5);
+  });
+
   it('deletes an accessible object and drops it from list/sum', async () => {
     const db = await freshDb();
     const context = { tenantId: DEFAULT_TENANT_ID, pluginId: 'com.example.notes', userId: 'u1' };

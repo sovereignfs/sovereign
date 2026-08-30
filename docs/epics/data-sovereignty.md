@@ -587,11 +587,16 @@ untested:
   topology today; none actually succeed until this is resolved. Works
   correctly in a native `pnpm dev` checkout, which is how the worker logic
   itself was verified.
-- **Notification-on-completion is still a no-op stub**
-  (`runtime/src/backup-notification.ts`) — the call site is wired into the
-  worker's success/failure path, but the actual platform-level integration
-  point this task's deliverables call for was never implemented, only
-  scaffolded.
+- **Notification-on-completion now sends when the requester is known**
+  (`runtime/src/backup-notification.ts`, closed by workstream 0020 task
+  `0.25`) — a completed/failed job writes a `notifications` row, publishes to
+  the broker, and fans out a push to `backup_jobs.requestedByUserId` when
+  set. The one remaining gap: an instance-scope job with no identifiable
+  requester has nowhere to send a notification, since no primitive anywhere
+  in `packages/db`/`runtime/src` enumerates admin user IDs (role data lives
+  in the separate `apps/auth` service). This case is explicit and logged
+  (`logger.warn`), not silently dropped — closing it fully needs a
+  cross-service admin-listing primitive, out of scope for `0.25`.
 
 User-scope jobs (`assembleExport()`) are correctly out of scope here per the
 RFC's own adoption path (task 8.18) — `runInstanceBackup` rejects a

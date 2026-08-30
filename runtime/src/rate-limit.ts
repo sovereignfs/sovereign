@@ -17,13 +17,21 @@
  * long-lived Node process for the life of the container, so module state
  * persists across requests exactly as it does for the Node-runtime limiters
  * above. It does not survive a restart and is not shared across multiple
- * instances behind a load balancer — the same accepted limitation already
- * documented for better-auth's own `storage: 'memory'` rate limiter
- * (`apps/auth/src/auth.ts`, `docs/security.md`).
+ * instances behind a load balancer — this in-memory, per-process design is
+ * now the one remaining single-instance rate-limiting gap (better-auth's own
+ * limiter moved to `storage: 'database'` per the `0.94.16` Status entry in
+ * `CLAUDE.md`), tracked by the paused Task 2.29 (`docs/epics/platform-shell.md`).
+ * The lazy eviction below bounds this module's own memory growth; it does not
+ * address the multi-instance/shared-store gap Task 2.29 covers.
  */
 
 const DEFAULT_WINDOW_MS = 60_000;
 const DEFAULT_MAX_REQUESTS = 300;
+
+/** How often a call opportunistically sweeps expired entries — not a timer;
+ *  the Edge runtime this module executes in has no background interval
+ *  available the way scheduler.ts/jobs.ts/backup-worker.ts do. */
+const EVICTION_INTERVAL_MS = 5 * 60_000;
 
 interface RateLimitBucket {
   resetAt: number;
@@ -31,6 +39,18 @@ interface RateLimitBucket {
 }
 
 const buckets = new Map<string, RateLimitBucket>();
+let lastSweepAt = 0;
+
+/** Delete every entry whose window has already expired. Gated to run at
+ *  most once per `EVICTION_INTERVAL_MS`, not on every call — a full-Map scan
+ *  on every request would defeat the point of bounding cost in a hot path. */
+function sweepExpired(now: number): void {
+  if (now - lastSweepAt < EVICTION_INTERVAL_MS) return;
+  lastSweepAt = now;
+  for (const [key, bucket] of buckets) {
+    if (bucket.resetAt <= now) buckets.delete(key);
+  }
+}
 
 export interface GlobalRateLimitResult {
   allowed: boolean;
@@ -57,6 +77,7 @@ export function isGlobalRateLimitDisabled(): boolean {
 }
 
 export function checkGlobalRateLimit(key: string, now = Date.now()): GlobalRateLimitResult {
+  sweepExpired(now);
   const existing = buckets.get(key);
   if (!existing || existing.resetAt <= now) {
     buckets.set(key, { resetAt: now + windowMs(), count: 1 });
@@ -76,6 +97,13 @@ export function checkGlobalRateLimit(key: string, now = Date.now()): GlobalRateL
 
 export function resetGlobalRateLimitForTests(): void {
   buckets.clear();
+  lastSweepAt = 0;
+}
+
+/** Test-only: the number of live entries in the bucket Map, to assert
+ *  eviction actually shrinks it — `buckets` itself is not exported. */
+export function rateLimitBucketCountForTests(): number {
+  return buckets.size;
 }
 
 /**

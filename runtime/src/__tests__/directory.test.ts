@@ -3,6 +3,7 @@ import {
   DIRECTORY_MAX_LIMIT,
   DIRECTORY_RATE_LIMIT_MAX_REQUESTS,
   checkDirectoryRateLimit,
+  directoryRateLimitBucketCountForTests,
   normalizeResolveUsersInput,
   normalizeSearchUsersInput,
   resetDirectoryRateLimitForTests,
@@ -59,5 +60,46 @@ describe('directory helpers', () => {
     expect(denied.allowed).toBe(false);
     expect(denied.retryAfterSeconds).toBeGreaterThan(0);
     expect(checkDirectoryRateLimit('u1:ip', 62_000).allowed).toBe(true);
+  });
+
+  describe('lazy eviction', () => {
+    it('evicts expired entries once both the window and the eviction interval have elapsed, leaving a still-active key untouched', () => {
+      resetDirectoryRateLimitForTests();
+      checkDirectoryRateLimit('key-a', 1_000);
+      checkDirectoryRateLimit('key-b', 1_000);
+      checkDirectoryRateLimit('key-c', 1_000);
+      expect(directoryRateLimitBucketCountForTests()).toBe(3);
+
+      // Window elapsed (60_000ms) but the eviction interval (5min) has not
+      // -- a call here must not shrink the map yet.
+      checkDirectoryRateLimit('key-d', 61_500);
+      expect(directoryRateLimitBucketCountForTests()).toBe(4);
+
+      // Eviction interval elapsed (5min since lastSweepAt, which starts at
+      // 0) -- this call sweeps every entry whose window has expired.
+      checkDirectoryRateLimit('key-e', 400_000);
+      expect(directoryRateLimitBucketCountForTests()).toBe(1);
+    });
+
+    it('sweeps at most once per eviction interval, not on every call', () => {
+      resetDirectoryRateLimitForTests();
+      checkDirectoryRateLimit('key-a', 1_000);
+
+      // Crosses the eviction-interval threshold -- sweeps key-a away and
+      // resets lastSweepAt to 300_000.
+      checkDirectoryRateLimit('key-b', 300_000);
+      expect(directoryRateLimitBucketCountForTests()).toBe(1);
+
+      // key-b's own window has now elapsed, but this call sits well within
+      // the eviction interval of the last sweep -- the gate must block a
+      // re-sweep, so key-b survives despite being expired.
+      checkDirectoryRateLimit('key-c', 360_500);
+      expect(directoryRateLimitBucketCountForTests()).toBe(2);
+
+      // A full interval past the last real sweep -- fires again and removes
+      // every entry expired by this point.
+      checkDirectoryRateLimit('key-d', 600_000);
+      expect(directoryRateLimitBucketCountForTests()).toBe(1);
+    });
   });
 });

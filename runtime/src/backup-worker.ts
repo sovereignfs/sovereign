@@ -103,7 +103,12 @@ export async function claimAndRunJob(deps: BackupWorkerDeps): Promise<void> {
   try {
     const result = await deps.runBackup(job);
     await deps.completeBackupJobSuccess(job.id, result);
-    await notifyBackupCompletion({ jobId: job.id, scope: job.scope, status: 'complete' });
+    await notifyBackupCompletion({
+      jobId: job.id,
+      scope: job.scope,
+      status: 'complete',
+      recipientUserId: job.requestedByUserId,
+    });
   } catch (err) {
     const message = errorMessageOf(err);
     logger.error('backup-worker: job failed', { jobId: job.id, scope: job.scope, err: message });
@@ -113,6 +118,7 @@ export async function claimAndRunJob(deps: BackupWorkerDeps): Promise<void> {
       scope: job.scope,
       status: 'failed',
       errorMessage: message,
+      recipientUserId: job.requestedByUserId,
     });
   }
 }

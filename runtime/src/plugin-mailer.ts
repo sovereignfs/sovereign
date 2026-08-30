@@ -9,6 +9,10 @@ export const PLUGIN_MAILER_RATE_LIMIT_WINDOW_MS = 60_000;
 export const PLUGIN_MAILER_RATE_LIMIT_MAX_PER_PLUGIN = 20;
 export const PLUGIN_MAILER_RATE_LIMIT_MAX_PER_RECIPIENT = 3;
 
+/** How often a call opportunistically sweeps expired entries — not a timer;
+ *  see `rate-limit.ts`'s identical constant for why. */
+const EVICTION_INTERVAL_MS = 5 * 60_000;
+
 interface RateLimitBucket {
   resetAt: number;
   count: number;
@@ -16,6 +20,24 @@ interface RateLimitBucket {
 
 const pluginBuckets = new Map<string, RateLimitBucket>();
 const recipientBuckets = new Map<string, RateLimitBucket>();
+let lastSweepAt = 0;
+
+/**
+ * Delete every expired entry from both `pluginBuckets` and `recipientBuckets`
+ * in one pass. Gated to run at most once per `EVICTION_INTERVAL_MS` — called
+ * once per `checkPluginMailerRateLimit` invocation, not once per `checkBucket`
+ * call (which would sweep twice per call for no benefit).
+ */
+function sweepExpired(now: number): void {
+  if (now - lastSweepAt < EVICTION_INTERVAL_MS) return;
+  lastSweepAt = now;
+  for (const [key, bucket] of pluginBuckets) {
+    if (bucket.resetAt <= now) pluginBuckets.delete(key);
+  }
+  for (const [key, bucket] of recipientBuckets) {
+    if (bucket.resetAt <= now) recipientBuckets.delete(key);
+  }
+}
 
 export interface PluginMailerRateLimitResult {
   allowed: boolean;
@@ -55,6 +77,7 @@ export function checkPluginMailerRateLimit(
   recipientKey: string,
   now = Date.now(),
 ): PluginMailerRateLimitResult {
+  sweepExpired(now);
   const pluginResult = checkBucket(
     pluginBuckets,
     pluginId,
@@ -77,6 +100,12 @@ export function checkPluginMailerRateLimit(
 export function resetPluginMailerRateLimitForTests(): void {
   pluginBuckets.clear();
   recipientBuckets.clear();
+  lastSweepAt = 0;
+}
+
+/** Test-only: the combined number of live entries across both bucket Maps. */
+export function pluginMailerRateLimitBucketCountForTests(): number {
+  return pluginBuckets.size + recipientBuckets.size;
 }
 
 export interface MailerPermissionManifest {

@@ -8,6 +8,11 @@
  *    shared (platform DB) — after platform migrations have already applied (RFC 0004).
  * 4. Check all installed plugins for platform-version compatibility, disable
  *    incompatible ones in the DB, and record reasons for health/admin routes.
+ *    Fault-isolated at two layers: the call site here is wrapped in
+ *    try/catch (a thrown/rejected checkBootCompatibility() is logged and
+ *    boot continues), and checkBootCompatibility() itself isolates each
+ *    plugin's own check so one plugin's fault doesn't stop the rest from
+ *    being evaluated.
  * 5. Initialise the notification broker (RFC 0034).
  * 6. Start the minimal plugin scheduler (RFC 0046 Phase 1).
  * 7. Start the plugin job worker (RFC 0046).
@@ -35,8 +40,24 @@ export async function register(): Promise<void> {
     await import('./src/sdk-host');
     const { runAllPluginMigrations } = await import('./src/plugin-migrations');
     await runAllPluginMigrations();
+    // Wrapped in try/catch, mirroring the scheduler/job-worker blocks below:
+    // checkBootCompatibility() calls getPlatformDb() and setPluginEnabled()
+    // (real DB calls that can throw, including the class of Postgres
+    // connectivity trouble this codebase's own incident history shows
+    // actually happens in production) and checkCompatibility(), whose
+    // semver.gt() calls throw on a malformed minPlatformVersion/
+    // maxPlatformVersion string. Uncaught, any of this previously aborted
+    // register() before the scheduler/job-worker/backup-worker/event-broker
+    // steps below ever ran -- reopening the "one fault kills all of boot"
+    // failure mode those steps' own try/catch blocks exist to prevent, one
+    // call earlier in the same function. console.error, not the structured
+    // logger, since logger's own dynamic import doesn't happen until below.
     const { checkBootCompatibility } = await import('./src/boot-compat');
-    await checkBootCompatibility();
+    try {
+      await checkBootCompatibility();
+    } catch (err) {
+      console.error('Failed to check plugin boot compatibility — continuing boot', err);
+    }
 
     // RFC 0092 gate B "never indefinite": surface abandoned blind-index
     // rotation windows (older than 7 days) on every boot.

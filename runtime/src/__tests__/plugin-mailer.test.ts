@@ -3,6 +3,7 @@ import {
   PLUGIN_MAILER_RATE_LIMIT_MAX_PER_PLUGIN,
   PLUGIN_MAILER_RATE_LIMIT_MAX_PER_RECIPIENT,
   checkPluginMailerRateLimit,
+  pluginMailerRateLimitBucketCountForTests,
   requireMailerPluginContext,
   resetPluginMailerRateLimitForTests,
 } from '../plugin-mailer';
@@ -80,5 +81,47 @@ describe('checkPluginMailerRateLimit (RFC 0062)', () => {
     }
     expect(checkPluginMailerRateLimit('com.example.notes', 'user-1', 1_000).allowed).toBe(false);
     expect(checkPluginMailerRateLimit('com.example.notes', 'user-1', 62_000).allowed).toBe(true);
+  });
+
+  describe('lazy eviction', () => {
+    it('evicts expired entries from both maps once both the window and the eviction interval have elapsed, leaving a still-active pair untouched', () => {
+      resetPluginMailerRateLimitForTests();
+      checkPluginMailerRateLimit('plugin-a', 'user-a', 1_000);
+      checkPluginMailerRateLimit('plugin-b', 'user-b', 1_000);
+      expect(pluginMailerRateLimitBucketCountForTests()).toBe(4); // 2 plugin + 2 recipient entries
+
+      // Window elapsed (60_000ms) but the eviction interval (5min) has not
+      // -- a call here must not shrink the combined count yet.
+      checkPluginMailerRateLimit('plugin-c', 'user-c', 61_500);
+      expect(pluginMailerRateLimitBucketCountForTests()).toBe(6);
+
+      // Eviction interval elapsed (5min since lastSweepAt, which starts at
+      // 0) -- sweeps every expired entry from both maps before adding its own.
+      checkPluginMailerRateLimit('plugin-d', 'user-d', 400_000);
+      expect(pluginMailerRateLimitBucketCountForTests()).toBe(2);
+    });
+
+    it('sweeps at most once per eviction interval, and the gate covers both checkBucket calls in a single invocation', () => {
+      resetPluginMailerRateLimitForTests();
+      checkPluginMailerRateLimit('plugin-a', 'user-a', 1_000);
+
+      // Crosses the eviction-interval threshold -- sweeps plugin-a's pair
+      // away and resets lastSweepAt to 300_000.
+      checkPluginMailerRateLimit('plugin-b', 'user-b', 300_000);
+      expect(pluginMailerRateLimitBucketCountForTests()).toBe(2);
+
+      // plugin-b's own window has now elapsed, but this call sits well
+      // within the eviction interval of the last sweep -- the gate must
+      // block a re-sweep (checked once per invocation, covering both the
+      // plugin-scope and recipient-scope checkBucket calls), so plugin-b's
+      // pair survives despite being expired.
+      checkPluginMailerRateLimit('plugin-c', 'user-c', 360_500);
+      expect(pluginMailerRateLimitBucketCountForTests()).toBe(4);
+
+      // A full interval past the last real sweep -- fires again and removes
+      // every entry expired by this point.
+      checkPluginMailerRateLimit('plugin-d', 'user-d', 600_000);
+      expect(pluginMailerRateLimitBucketCountForTests()).toBe(2);
+    });
   });
 });

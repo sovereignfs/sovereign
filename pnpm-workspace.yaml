@@ -46,7 +46,7 @@ supportedArchitectures:
 # package onto a different major. Add a dep here when it is used by more than one
 # package (the toolchain), not for package-specific deps (zod, drizzle, …).
 catalog:
-  typescript: ^5.9.3
+  typescript: ^6.0.3
   tsup: ^8.5.1
   '@playwright/test': ^1.62.1
   react: ^19.2.8

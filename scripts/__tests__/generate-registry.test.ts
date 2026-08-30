@@ -10,14 +10,16 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { SovereignManifest } from '@sovereignfs/manifest';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  assertNoOrphanedRouteDirectories,
   collectPluginEnv,
   collectPluginJobs,
   collectPluginEvents,
   collectPluginSchedules,
   duplicateApiProviders,
   duplicatePluginIds,
+  duplicateRoutePrefixes,
   examplesEnabledForBuild,
   linkOrCopyTarget,
   pruneGeneratedEntries,
@@ -156,6 +158,70 @@ describe('plugin generation guards', () => {
 
     expect(Object.fromEntries(duplicates)).toEqual({
       'fs.sovereign.example-basic': ['example-basic', 'example-basic'],
+    });
+  });
+
+  // Two different plugin ids resolving to the same composed destination --
+  // silent last-write-wins in production, a corrupted interleaved route
+  // tree in dev (see duplicateRoutePrefixes's own doc comment).
+  describe('duplicateRoutePrefixes', () => {
+    it('detects two default-shell plugins declaring the identical routePrefix', () => {
+      const duplicates = duplicateRoutePrefixes([
+        entry('a', { id: 'com.example.a', routePrefix: '/dashboard' }),
+        entry('b', { id: 'com.example.b', routePrefix: '/dashboard' }),
+      ]);
+
+      expect(duplicates.size).toBe(1);
+      const [ids] = [...duplicates.values()];
+      expect(ids).toEqual(['com.example.a', 'com.example.b']);
+    });
+
+    it('detects a default-shell and an overlay-shell plugin colliding on the shared fallback target', () => {
+      const duplicates = duplicateRoutePrefixes([
+        entry('a', { id: 'com.example.a', routePrefix: '/console' }),
+        entry('b', { id: 'com.example.b', shell: 'overlay', routePrefix: '/console' }),
+      ]);
+
+      expect(duplicates.size).toBeGreaterThan(0);
+      const collidingIds = [...duplicates.values()].flat();
+      expect(collidingIds).toContain('com.example.a');
+      expect(collidingIds).toContain('com.example.b');
+    });
+
+    it('does not flag two plugins sharing a route segment but landing under different shell destinations', () => {
+      const duplicates = duplicateRoutePrefixes([
+        entry('a', { id: 'com.example.a', shell: 'minimal', routePrefix: '/kiosk' }),
+        entry('b', { id: 'com.example.b', shell: 'default', routePrefix: '/kiosk' }),
+      ]);
+
+      expect(duplicates.size).toBe(0);
+    });
+
+    it('does not flag two overlay plugins with different routePrefix values, even though each writes two targets', () => {
+      const duplicates = duplicateRoutePrefixes([
+        entry('a', { id: 'com.example.a', shell: 'overlay', routePrefix: '/console' }),
+        entry('b', { id: 'com.example.b', shell: 'overlay', routePrefix: '/wallet' }),
+      ]);
+
+      expect(duplicates.size).toBe(0);
+    });
+
+    it('reports no duplicates for a set of entirely unique routePrefix values', () => {
+      const duplicates = duplicateRoutePrefixes([
+        entry('a', { id: 'com.example.a', routePrefix: '/a' }),
+        entry('b', { id: 'com.example.b', routePrefix: '/b' }),
+      ]);
+
+      expect(duplicates.size).toBe(0);
+    });
+
+    it('skips a manifest that already failed its own resolveComposeTargets check (e.g. overlay + multi-segment)', () => {
+      const duplicates = duplicateRoutePrefixes([
+        entry('a', { id: 'com.example.a', shell: 'overlay', routePrefix: '/admin/reports' }),
+        entry('b', { id: 'com.example.b', routePrefix: '/other' }),
+      ]);
+
+      expect(duplicates.size).toBe(0);
     });
   });
 });
@@ -430,6 +496,44 @@ describe('generated artifact pruning', () => {
     expect(existsSync(join(root, '(.)stale'))).toBe(false);
   });
 
+  // A multi-segment routePrefix (shell: minimal) plugin renamed from
+  // /kiosk/display to /kiosk/settings: the old first-segment-only tracking
+  // left the stale nested leaf on disk forever, since "kiosk" still matched
+  // an active entry. Full relative-path tracking must actually remove it.
+  it('recursively prunes a stale nested leaf when a multi-segment routePrefix plugin is renamed', () => {
+    mkdirSync(join(root, 'kiosk', 'display', 'inner'), { recursive: true });
+    writeFileSync(join(root, 'kiosk', 'display', 'page.tsx'), 'page');
+    writeFileSync(join(root, 'kiosk', 'display', 'inner', 'thing.ts'), 'x');
+    mkdirSync(join(root, 'kiosk', 'settings'), { recursive: true });
+    writeFileSync(join(root, 'kiosk', 'settings', 'page.tsx'), 'page');
+
+    pruneGeneratedEntries(root, new Set(['kiosk/settings']));
+
+    expect(existsSync(join(root, 'kiosk', 'display'))).toBe(false);
+    expect(existsSync(join(root, 'kiosk', 'settings'))).toBe(true);
+    expect(existsSync(join(root, 'kiosk'))).toBe(true);
+  });
+
+  it('removes the shared parent segment once every nested leaf under it is gone', () => {
+    mkdirSync(join(root, 'kiosk', 'display'), { recursive: true });
+    writeFileSync(join(root, 'kiosk', 'display', 'page.tsx'), 'page');
+
+    pruneGeneratedEntries(root, new Set());
+
+    expect(existsSync(join(root, 'kiosk'))).toBe(false);
+  });
+
+  it('leaves an active multi-segment leaf and its parent untouched alongside a stale sibling', () => {
+    mkdirSync(join(root, 'kiosk', 'display'), { recursive: true });
+    writeFileSync(join(root, 'kiosk', 'display', 'page.tsx'), 'page');
+    mkdirSync(join(root, 'stale-top'), { recursive: true });
+
+    pruneGeneratedEntries(root, new Set(['kiosk/display']));
+
+    expect(existsSync(join(root, 'kiosk', 'display', 'page.tsx'))).toBe(true);
+    expect(existsSync(join(root, 'stale-top'))).toBe(false);
+  });
+
   it('prunes stale generated plugin icons', () => {
     writeFileSync(join(root, 'com.example.active.svg'), '<svg />');
     writeFileSync(join(root, 'com.example.stale.svg'), '<svg />');
@@ -489,6 +593,99 @@ describe('generated artifact pruning', () => {
     pruneStalePluginIcons(root, new Set(['com.example.active'])); // no third arg
 
     expect(existsSync(join(root, 'com.example.active-192.png'))).toBe(true);
+  });
+
+  // Defense-in-depth: independent of whether pruneGeneratedEntries itself is
+  // correct, this must catch a composed leaf left on disk with no matching
+  // active registry entry and fail loudly rather than silently letting it
+  // keep serving with none of the runtime's access-control gating.
+  describe('assertNoOrphanedRouteDirectories', () => {
+    let exitSpy: ReturnType<typeof vi.spyOn>;
+    let errorSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+      errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      exitSpy.mockRestore();
+      errorSpy.mockRestore();
+    });
+
+    it('does nothing when every composed leaf has a matching active entry', () => {
+      mkdirSync(join(root, 'active'), { recursive: true });
+      writeFileSync(join(root, 'active', 'page.tsx'), 'page');
+
+      assertNoOrphanedRouteDirectories([{ dir: root, activeEntries: new Set(['active']) }]);
+
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it('detects and fails loudly on an orphaned leaf with no active entry', () => {
+      mkdirSync(join(root, 'orphan'), { recursive: true });
+      writeFileSync(join(root, 'orphan', 'page.tsx'), 'page');
+
+      assertNoOrphanedRouteDirectories([{ dir: root, activeEntries: new Set() }]);
+
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      const messages: string[] = errorSpy.mock.calls.map((call: unknown[]) => call.join(' '));
+      expect(messages.some((m) => m.includes('orphan'))).toBe(true);
+    });
+
+    it('detects an orphaned nested leaf even when its parent segment is not itself a route', () => {
+      mkdirSync(join(root, 'kiosk', 'orphan'), { recursive: true });
+      writeFileSync(join(root, 'kiosk', 'orphan', 'page.tsx'), 'page');
+
+      assertNoOrphanedRouteDirectories([{ dir: root, activeEntries: new Set(['kiosk/other']) }]);
+
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('does not descend into an active leaf, even if it contains nested directories', () => {
+      mkdirSync(join(root, 'active', 'inner'), { recursive: true });
+      writeFileSync(join(root, 'active', 'page.tsx'), 'page');
+      writeFileSync(
+        join(root, 'active', 'inner', 'page.tsx'),
+        "nested page, part of the plugin's own tree",
+      );
+
+      assertNoOrphanedRouteDirectories([{ dir: root, activeEntries: new Set(['active']) }]);
+
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it('respects onlyPrefix filtering at the root, matching pruneGeneratedEntries (a hand-written non-(.)  route dir is never flagged)', () => {
+      mkdirSync(join(root, '(.)active'), { recursive: true });
+      writeFileSync(join(root, '(.)active', 'page.tsx'), 'page');
+      // Hand-written modal chrome, not `(.)`-prefixed and not in any active
+      // set -- must be ignored by the onlyPrefix filter, not flagged as an
+      // orphan, the same way pruneGeneratedEntries's own onlyPrefix does.
+      mkdirSync(join(root, 'hand-written-dir'), { recursive: true });
+      writeFileSync(join(root, 'hand-written-dir', 'page.tsx'), 'page');
+
+      assertNoOrphanedRouteDirectories([
+        { dir: root, activeEntries: new Set(['(.)active']), onlyPrefix: '(.)' },
+      ]);
+
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it('respects keep filtering at the root, matching pruneGeneratedEntries', () => {
+      mkdirSync(join(root, 'active'), { recursive: true });
+      writeFileSync(join(root, 'active', 'page.tsx'), 'page');
+      // A kept directory (e.g. @modal) has its own separate consistency
+      // check elsewhere -- it must never be flagged here even though it's
+      // not in this base's own active set.
+      mkdirSync(join(root, '@modal'), { recursive: true });
+      writeFileSync(join(root, '@modal', 'page.tsx'), 'page');
+
+      assertNoOrphanedRouteDirectories([
+        { dir: root, activeEntries: new Set(['active']), keep: new Set(['@modal']) },
+      ]);
+
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
   });
 });
 

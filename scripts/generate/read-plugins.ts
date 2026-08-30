@@ -6,6 +6,7 @@ import {
   validateManifest,
   type SovereignManifest,
 } from '@sovereignfs/manifest';
+import { resolveComposeTargets } from './compose-routes';
 import { EXAMPLE_PLUGINS_DIR, PLUGINS_DIR, ROOT, readPlatformVersion } from './paths';
 import type { PluginEntry } from './types';
 
@@ -55,6 +56,40 @@ export function duplicatePluginIds(plugins: PluginEntry[]): Map<string, string[]
   const duplicates = new Map<string, string[]>();
   for (const [id, dirs] of dirsById) {
     if (dirs.length > 1) duplicates.set(id, dirs);
+  }
+  return duplicates;
+}
+
+/**
+ * Two different plugin ids whose manifests resolve to the same composed
+ * destination path — `resolveComposeTargets` computes a plugin's destination
+ * purely from `manifest.routePrefix` (plus `shell`), so two independently
+ * authored plugins with colliding prefixes both write to the identical
+ * directory. In production that's silent last-write-wins (`composePlugins`
+ * iterates alphabetically; whichever id sorts last overwrites the other's
+ * symlink with no error); in dev, `syncDir` can interleave both plugins'
+ * files into one corrupted route tree across successive `--watch` runs.
+ * Checks every target a manifest resolves to, not just the first, so an
+ * `overlay` plugin's two composed destinations (the full-page fallback and
+ * the `@modal` interception copy) are each an independent collision surface.
+ * Manifests that already failed `resolveComposeTargets` for their own reason
+ * (e.g. `overlay` with a multi-segment `routePrefix`) are skipped — that
+ * error is reported elsewhere, at `composeTargets()`'s own call site.
+ */
+export function duplicateRoutePrefixes(plugins: PluginEntry[]): Map<string, string[]> {
+  const idsByTarget = new Map<string, string[]>();
+  for (const { manifest } of plugins) {
+    const result = resolveComposeTargets(manifest);
+    if (!result.ok) continue;
+    for (const target of result.targets) {
+      const ids = idsByTarget.get(target) ?? [];
+      ids.push(manifest.id);
+      idsByTarget.set(target, ids);
+    }
+  }
+  const duplicates = new Map<string, string[]>();
+  for (const [target, ids] of idsByTarget) {
+    if (ids.length > 1) duplicates.set(target, ids);
   }
   return duplicates;
 }
@@ -138,6 +173,21 @@ export function readPlugins(): PluginEntry[] {
         'example-plugins/<id> should be removed in favor of the example, or the ' +
         'example left disabled via SOVEREIGN_EXAMPLES_ENABLED).',
     );
+    process.exit(1);
+  }
+
+  // Two different plugin ids resolving to the same composed destination —
+  // silent last-write-wins in production, a corrupted interleaved route
+  // tree in dev. Fail loudly rather than composing either.
+  const routePrefixDuplicates = duplicateRoutePrefixes(sortedPlugins);
+  if (routePrefixDuplicates.size > 0) {
+    console.error(
+      '[generate] more than one plugin resolves to the same composed route destination:',
+    );
+    for (const [target, ids] of routePrefixDuplicates) {
+      console.error(`  - "${target}": ${ids.join(', ')}`);
+    }
+    console.error('  Give each plugin a unique routePrefix (or shell mode) in its manifest.');
     process.exit(1);
   }
 

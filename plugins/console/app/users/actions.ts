@@ -423,7 +423,10 @@ export async function sendInviteAction(
 // import them directly from `@/src/capabilities` instead.
 
 export async function listUserCapabilitiesAction(userId: string): Promise<GrantableCapability[]> {
-  await sdk.auth.requireSession();
+  const session = await sdk.auth.requireSession();
+  if (!sdk.auth.hasCapability(session, 'user:manage')) {
+    throw new Error('Insufficient privileges to view capabilities.');
+  }
   const res = await selfAdminFetch(`/api/admin/users/${encodeURIComponent(userId)}/capabilities`);
   if (!res.ok) return [];
   const grants = (await res.json()) as { capability: GrantableCapability }[];

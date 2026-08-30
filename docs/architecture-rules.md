@@ -137,6 +137,23 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   platform nav, so the plugin must provide its own navigation back to `/launcher` or other
   routes if needed. Never reintroduce `process.exit(1)` for the minimal case in
   `generate-registry.ts` — it is wired.
+- **Composed route pruning is recursive to the leaf directory, not top-level-only** — a
+  multi-segment `routePrefix` (`shell: minimal` explicitly allows this, e.g.
+  `/kiosk/display`) that gets renamed or uninstalled must have its stale nested directory
+  actually removed from disk, not just orphaned in place with the shared parent segment
+  still matching an active entry. `pruneGeneratedEntriesAt`/`collectComposedLeaves`
+  (`scripts/generate/compose-routes.ts`) walk the full relative path against the active-entry
+  set at every depth, recursing into (and removing-if-empty) any directory that is an
+  ancestor of a currently active target, and removing outright anything that is neither
+  active nor an ancestor of something active. `composePlugins()` also runs
+  `assertNoOrphanedRouteDirectories()` after composing/pruning — a `generate`-time
+  consistency check that walks the composed tree a second, independent way (by presence of a
+  `page.tsx`/`layout.tsx`) and fails loudly if anything served by Next.js doesn't correspond
+  to a currently active plugin target. **The leaf-detection walk must check the active-entry
+  set before falling back to the `page.tsx`/`layout.tsx` heuristic** — checking the heuristic
+  first produces false-positive orphan reports on a plugin's own internal Next.js route
+  groups (e.g. `(home)`), which have no `routePrefix` mapping of their own but sit above a
+  real `page.tsx`.
 - **`shell: default` plugins can independently hide the mobile header and/or
   footer via `shellConfig.mobileHeader`/`shellConfig.mobileFooter` (RFC 0075,
   both boolean, default `true`) — this is a per-request runtime branch inside

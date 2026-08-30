@@ -97,10 +97,12 @@ export { renderPluginCapabilities } from './generate/plugin-capabilities';
 export {
   duplicateApiProviders,
   duplicatePluginIds,
+  duplicateRoutePrefixes,
   examplesEnabledForBuild,
   sortPluginEntries,
 } from './generate/read-plugins';
 export {
+  assertNoOrphanedRouteDirectories,
   linkOrCopyTarget,
   pruneGeneratedEntries,
   resolveComposeTargets,

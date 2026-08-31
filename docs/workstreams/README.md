@@ -153,6 +153,7 @@ Workstreams are internal planning documents and are not published (see
 | [0020](0020-codebase-audit-remediation.md)            | Close 29 findings from a codebase audit — SDK/plugin correctness, admin-surface security, route-composition integrity, notification/storage performance, background-process reliability, DB hygiene, admin test coverage, Console/Account terminology & UX | 📋 Planned                                             | none — remediation, not new design                                  |
 | [0021](0021-warden-multi-session-ui.md)               | Warden multi-session UI — collapsible sidebar with pinnable named sessions replacing the single conversation, consolidated Settings (General/Providers/Models), Claude-style composer redesign                                                             | 📋 Planned                                             | 0063 (third revision)                                               |
 | [0022](0022-console-shell-and-three-column-layout.md) | Console moves from `shell: "overlay"` to `shell: "default"`, adopts `ThreeColumnLayout` (sidebar nav + content + a selection-driven detail column on 4 pages), and gets a new mobile drill-down nav via a new `packages/ui` `NavList` component            | 📋 Planned                                             | none — plugin adopting existing platform primitives, not new design |
+| [0023](0023-age-encrypted-git-backup-destinations.md) | Any git server as an encrypted backup destination, operator and per-user, decryptable with zero dependency on Sovereign being installed or reachable — via `age` recipient-mode encryption                                                                 | 📋 Planned                                             | 0064, 0084 (amends 0004)                                            |
 
 Workstreams 0001 and 0002 share epic task 20.10 (the WKWebView offline spike) —
 run it once and let both consume the finding. Otherwise they are independent, and
@@ -171,6 +172,15 @@ Workstream 0009 is independent of the others. Its leg 2 gate produced
 legs are now done; the actual production SQLite→Postgres cutover this
 workstream planned for turned out not to apply, since the single production
 instance was already Postgres-dialect (epic task 8.25).
+
+Workstream 0023 depends on workstream 0004 reaching real ✅ (not just
+code-complete-and-disabled — see 0004's own task 8.16 progress note) before
+its legs can start; its per-user-scope legs (2–4) only need 0004 leg 3
+(task 8.18) specifically, while its operator-scope legs (5–6) additionally
+need 0004 leg 2's (task 8.17) production Docker `sv`-CLI-spawn blocker
+resolved first, per 0023's own Prerequisites section. It also makes one small
+amendment to 0004 itself (Leg 1's encryption implementation moves to `age`'s
+passphrase mode) — see 0004's own changelog.
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · ⏸️ Paused · ❌ Stopped_
 

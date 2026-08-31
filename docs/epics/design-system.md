@@ -1561,6 +1561,8 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 - Manual check in Storybook: open a nested confirm inside a `Dialog`, press Escape — only the confirm dismisses; a second Escape closes the outer `Dialog`. ✅ Verified live in a real browser end-to-end: with the confirm open, Escape left the outer Dialog's onClose count at 0; after dismissing the confirm (Cancel) and pressing Escape again, the outer Dialog's onClose fired (count 1). One caveat found during this check, unrelated to this task's own fix: the confirm's own native `<dialog>` Escape-to-close didn't visibly fire from this session's browser-automation tooling's synthetic key dispatch (closing it via the Cancel button instead worked immediately) — plausibly an automation-harness quirk with how trusted/native default actions propagate through remote key dispatch, not a regression, since real `<dialog>` Escape handling is unrelated code this task never touched; worth a real (non-automated) manual pass before merging if anyone wants extra confidence.
 - `pnpm --filter @sovereignfs/ui typecheck`, `test`, `lint` pass. ✅
 
+---
+
 #### ✅ 9.32 — `Dialog`: unify the close icon
 
 **Goal:** `Dialog`'s desktop close button uses the `circle-x` icon (`Dialog.tsx:166`, `size="md"`) while the mobile `OverlayHeader` close button — which `Dialog` itself renders for its own mobile mode — uses the plain lucide `x` icon (`OverlayHeader.tsx:67`, `size="sm"`). Same dismiss affordance, two different icons depending on breakpoint. Developer request: standardize on the lucide `x` icon everywhere. Note this reverses a specific, previously recorded decision — `Dialog.tsx:158-164`'s own comment: "`circle-x`, not a bare "×" glyph — developer-requested... platform-wide: every `Dialog` consumer gets this, not just the one it was requested against" — flagged here so the reversal is deliberate, not accidental.
@@ -1628,6 +1630,13 @@ touched either, confirming the scope boundary held.
 
 #### ✅ 9.34 — Retire or redefine `Dialog`'s dead `full` size
 
+> **Superseded by `9.38`.** This task's own resolution (keep `full`,
+> document it as a deliberate alias) held only until the developer
+> explicitly asked for a breaking revamp of the whole size scale — `9.38`
+> removes `full` (and `xl`) outright. The history below is kept accurate as
+> a record of what was decided _at the time_ and why; it no longer
+> describes the current `DialogSize`.
+
 **Goal:** `.lg` and `.full` are CSS-identical on desktop (`Dialog.module.css:166-170`, both `width:100%; height:100%`), and every size collapses to the same full-screen mobile treatment regardless of value (`Dialog.module.css:223-250`). The sole call site in the repo, `CardDetailOverlay.tsx:75`'s `size={isMobile ? 'full' : 'xl'}`, has no effect — mobile already renders full-screen no matter what `size` says, per `Dialog`'s own doc comment ("Mobile always renders as a full-screen sheet"). No Storybook story demonstrates `full` either. Low priority — dead-code cleanup, not a bug.
 
 **Deliverables:**
@@ -1646,6 +1655,13 @@ touched either, confirming the scope boundary held.
 ---
 
 #### ✅ 9.35 — Reconcile `Dialog`'s `xl`/`full` sizes with the manifest `overlaySize` schema
+
+> **Partially superseded by `9.38`.** `xl`/`full` no longer exist — `9.38`
+> replaced them with `auto`, which is now the one non-manifest-declarable
+> `DialogSize` value; the doc notes this task added (`runtime/src/overlay.ts`,
+> `docs/plugin-development.md`) were updated in place by `9.38` to say
+> `auto` instead of `xl`/`full`, rather than duplicated. The history below
+> describes the split as it stood at the time.
 
 **Goal:** `DialogSize` is `sm | md | xl | lg | full`, but `packages/manifest/src/schema.ts:133`'s `shellConfig.overlaySize` enum only allows `sm | md | lg` — `xl` (and `full`, see 9.34) exist on the component but are unreachable from any plugin manifest declaration; only runtime code calling `<Dialog>` directly (bypassing the manifest-driven `@modal` chrome) can use them. Not necessarily wrong, but undocumented as intentional.
 
@@ -1696,3 +1712,31 @@ touched either, confirming the scope boundary held.
 **Review checklist:** a new or existing `@modal/layout.tsx` test covers the plugin-not-found case, asserting a non-empty accessible name. **Not met as originally written** — no test exists, for the infrastructure reasons above, not for lack of trying. Verified instead via the isolated `tsc` check and manual review described above.
 
 ---
+
+#### ✅ 9.38 — Revamp `Dialog`'s size scale: drop `xl`/`full`, add `auto`
+
+**Goal:** developer feedback on the finished `9.28`–`9.37` work: the five-value `DialogSize` scale (`sm | md | xl | lg | full`) reads as inconsistent — it's really only two distinct behaviors (fixed-width-content-height for `sm`/`md`/`xl`, fixed-100%-box for `lg`/`full`) wearing five names, and `9.34` had already independently flagged `full` as a dead alias. Developer's explicit preference: `sm`, `md`, `lg`, plus a new variant that's content-driven on **both** width and height (not just height, as `sm`/`md` already are) — explicitly accepting this as a breaking change to `@sovereignfs/ui`, to be reconciled with any affected plugin separately before a production release, rather than preserved for backward compatibility the way `9.34` chose to.
+
+**Deliverables:**
+
+- `DialogSize` (`Dialog.tsx`) → `'sm' | 'md' | 'lg' | 'auto'`. `xl` and `full` removed outright (no alias, no deprecation period — superseding `9.34`'s "keep `full`" resolution now that the developer has explicitly authorized the breaking change).
+- `auto` (`Dialog.module.css`): `width: fit-content` (shrink-wraps to content, like a flex item centered in `.scrim` naturally would with no explicit width) with `min-width: min(24rem, 100%)` (floor, so sparse content doesn't read as an oddly narrow sliver — matches `sm`'s old fixed width) and `max-width: min(48rem, 100%)` / `max-height: min(48rem, 100%)` (ceiling on both axes — matches where the removed `xl` topped out). Mobile media query updated to include `.auto` (and drop `.xl`/`.full`) in the full-screen-sheet override, including resetting `min-width: 0` there (new — the fixed sizes never needed a mobile `min-width` reset since none of them declared one).
+- `Dialog.stories.tsx`: `ExtraLarge` story removed, new `AutoSize` story added (deliberately narrower content than `md`'s 36rem, to make the shrink-below-fixed-width behavior visible, not just theoretical) — `DialogDemo`'s local size type union updated to match.
+- `Dialog.test.tsx`: `"applies the size class"` switched from `size="full"` to `size="lg"`; `"supports the xl size"` replaced with `"supports the auto size"`.
+- Docs updated to match: `runtime/src/overlay.ts`'s `overlaySizeForSegment` doc comment and `docs/plugin-development.md`'s `overlaySize` bullet (both from `9.35`) now say `auto` instead of `xl`/`full`; `docs/design-system.md`'s two Dialog-size mentions (`Overlay surfaces` table, Storybook coverage table) updated from `sm/md/lg/full` to `sm/md/lg/auto`. `docs/upgrade.md` gets a new `@sovereignfs/ui` entry (migration: `full` → `lg`, `xl` → `auto` or `lg` depending on whether the content genuinely varies in size).
+- `9.34`/`9.35`'s own epic entries get a short pointer note to this task, without rewriting their historical narrative (an accurate record of what was decided at the time and why — including the real breaking-change tradeoff `9.34` weighed — stays more useful than silently overwriting it).
+
+**Known affected consumer, confirmed already in `9.34`'s own investigation, not re-migrated here:** `CardDetailOverlay.tsx`'s `size={isMobile ? 'full' : 'xl'}` — the only `xl`/`full` call site in the whole codebase — lives in `sovereign-plugin-kanban.local`, a gitignored `.local` plugin outside this repo's ownership. Per the developer's own framing ("it will break some plugins maybe, but we can address them separately"), this is an accepted, explicitly-scoped-out follow-up, not an oversight — written up as its own bullet in the `docs/upgrade.md` entry so it's discoverable by whoever next touches that plugin.
+
+**Dependencies:** Builds on `9.32`–`9.37` (same files). Directly revises `9.34`/`9.35`'s resolutions.
+
+**SRS reference:** None — developer-requested breaking revamp, not new design.
+
+**Review checklist:**
+
+- `pnpm --filter @sovereignfs/ui typecheck`, the full test suite, `lint` pass.
+- New/updated Storybook stories (`AutoSize`, `Small`/`Medium`/`Large` unchanged) exist; `pnpm --filter @sovereignfs/ui build-storybook` succeeds.
+- Manual check in Storybook: `auto` visibly shrinks below `md`'s fixed width for narrow content, and caps out (scrolls internally) for content wider/taller than its max.
+- `pnpm design:tokens:check` passes.
+- `packages/ui`'s `package.json` version bumped **minor** (breaking `DialogSize` change, per NFR-04's floor), with the `docs/upgrade.md` entry above satisfying the migration-note requirement.
+- No remaining `'xl'`/`'full'` references to `DialogSize` anywhere in `packages/ui`, `runtime/src`, or `docs/` (RFC bodies excepted — those are point-in-time design records, not living docs, and are never edited after the fact).

@@ -21,11 +21,13 @@ export function routeSegmentFromInterception(segment: string): string {
  *
  * The manifest's `overlaySize` enum (`packages/manifest/src/schema.ts`) only
  * accepts `sm | md | lg` — deliberately narrower than `@sovereignfs/ui`'s
- * full `DialogSize` (`sm | md | xl | lg | full`). `xl`/`full` exist for
- * runtime code that renders `<Dialog>` directly (e.g. `CardDetailOverlay`)
- * but are not reachable from any plugin manifest declaration. This is an
- * intentional gap, not an oversight — extend the manifest enum if a real
- * plugin use case for manifest-declared `xl`/`full` ever surfaces.
+ * full `DialogSize` (`sm | md | lg | auto`). `auto` (content-driven on both
+ * width and height, for a dialog whose natural footprint varies a lot)
+ * exists for runtime code that renders `<Dialog>` directly (e.g.
+ * `CardDetailOverlay`) but is not reachable from any plugin manifest
+ * declaration. This is an intentional gap, not an oversight — extend the
+ * manifest enum if a real plugin use case for manifest-declared `auto`
+ * ever surfaces.
  */
 export function overlaySizeForSegment(
   segment: string | null,

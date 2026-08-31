@@ -64,10 +64,21 @@ export async function DELETE(request: Request): Promise<Response> {
     }
   }
 
+  // actorId is intentionally null (actorType: 'system'), not the deleted
+  // user's own id — deleteUserData() below purges activity_log rows by
+  // actor_id = userId, and logging this entry under the deleted user's own
+  // id would mean the one record that a self-service deletion ever happened
+  // gets erased along with everything else. subjectUserId carries "who was
+  // deleted" instead, mirroring the admin-initiated deletion path
+  // (runtime/app/api/admin/users/[id]/route.ts), whose entry already
+  // survives for the same reason (its actorId is the admin, not the target).
   void logActivity({
-    actorId: userId,
-    actorType: 'user',
+    actorId: null,
+    actorType: 'system',
     action: 'account.self_deleted',
+    subjectUserId: userId,
+    targetType: 'user',
+    targetId: userId,
     visibility: 'admin',
     summary: 'User initiated account deletion',
     metadata: { userId },

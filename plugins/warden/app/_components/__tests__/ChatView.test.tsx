@@ -1,7 +1,16 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ChatView } from '../ChatView';
+
+const replace = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace }),
+}));
+
+beforeEach(() => {
+  replace.mockClear();
+});
 
 afterEach(() => {
   cleanup();
@@ -118,6 +127,8 @@ describe('ChatView — persisted mode (default)', () => {
       content: 'first message',
     });
 
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/warden?session=session-new'));
+
     sendMessage('second message');
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
@@ -125,6 +136,9 @@ describe('ChatView — persisted mode (default)', () => {
       sessionId: 'session-new',
       content: 'second message',
     });
+    // The session id didn't change on the second send — no redundant
+    // history entry for what the user experiences as the same conversation.
+    expect(replace).toHaveBeenCalledTimes(1);
   });
 
   it('sends a message, streams the response, and appends both turns', async () => {

@@ -30,6 +30,11 @@ async function db(): Promise<Db> {
  *  (RFC 0063 §10) — not silently auto-evicting the oldest pin. */
 export const MAX_PINNED_SESSIONS = 5;
 
+/** How many unpinned sessions `WardenSidebar`'s "Recent" group shows
+ *  (RFC 0063 §10) — older ones remain reachable only via retention cleanup
+ *  or pinning, never deleted just for falling outside this window. */
+export const SIDEBAR_RECENT_LIMIT = 10;
+
 const TITLE_MAX_CHARS = 60;
 
 export class SessionNotFoundError extends Error {

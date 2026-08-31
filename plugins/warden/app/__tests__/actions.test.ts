@@ -28,9 +28,32 @@ vi.mock('../_lib/model-visibility', () => ({
   setModelVisibility: (...args: unknown[]) => setModelVisibility(...args),
 }));
 
+class SessionNotFoundError extends Error {
+  constructor() {
+    super('Session not found.');
+    this.name = 'SessionNotFoundError';
+  }
+}
+class SessionPinLimitError extends Error {
+  constructor() {
+    super('You can pin up to 5 sessions — unpin one first.');
+    this.name = 'SessionPinLimitError';
+  }
+}
+
 const deleteInactiveSessions = vi.fn();
+const deleteSession = vi.fn();
+const pinSession = vi.fn();
+const renameSession = vi.fn();
+const unpinSession = vi.fn();
 vi.mock('../_lib/sessions', () => ({
   deleteInactiveSessions: (...args: unknown[]) => deleteInactiveSessions(...args),
+  deleteSession: (...args: unknown[]) => deleteSession(...args),
+  pinSession: (...args: unknown[]) => pinSession(...args),
+  renameSession: (...args: unknown[]) => renameSession(...args),
+  unpinSession: (...args: unknown[]) => unpinSession(...args),
+  SessionNotFoundError,
+  SessionPinLimitError,
 }));
 
 const setDefaultModelKey = vi.fn();
@@ -45,8 +68,12 @@ const {
   createProviderAction,
   deleteInactiveSessionsAction,
   deleteProviderAction,
+  deleteSessionAction,
+  pinSessionAction,
+  renameSessionAction,
   setDefaultModelAction,
   setModelVisibilityAction,
+  unpinSessionAction,
   updateProviderAction,
 } = await import('../actions');
 
@@ -290,5 +317,95 @@ describe('deleteInactiveSessionsAction', () => {
     deleteInactiveSessions.mockRejectedValue(new Error('db down'));
     const result = await deleteInactiveSessionsAction(30);
     expect(result).toEqual({ ok: false, error: 'Could not delete inactive sessions.' });
+  });
+});
+
+describe('renameSessionAction', () => {
+  it('renames and confirms with the new title', async () => {
+    renameSession.mockResolvedValue({ id: 's1', title: 'New title' });
+    const result = await renameSessionAction('s1', 'New title');
+    expect(renameSession).toHaveBeenCalledWith('user-1', 'tenant-1', 's1', 'New title');
+    expect(result).toEqual({ ok: true, message: 'Renamed to "New title".' });
+  });
+
+  it('confirms distinctly when the title is cleared to blank', async () => {
+    renameSession.mockResolvedValue({ id: 's1', title: null });
+    const result = await renameSessionAction('s1', '   ');
+    expect(result).toEqual({ ok: true, message: 'Session title cleared.' });
+  });
+
+  it('surfaces "Session not found." for a stale/foreign id', async () => {
+    renameSession.mockRejectedValue(new SessionNotFoundError());
+    const result = await renameSessionAction('missing', 'x');
+    expect(result).toEqual({ ok: false, error: 'Session not found.' });
+  });
+
+  it('rejects when not signed in', async () => {
+    requireSession.mockRejectedValue(new NotAuthenticatedError());
+    const result = await renameSessionAction('s1', 'x');
+    expect(result).toEqual({
+      ok: false,
+      error: 'You must be signed in to manage Warden providers.',
+    });
+    expect(renameSession).not.toHaveBeenCalled();
+  });
+});
+
+describe('pinSessionAction', () => {
+  it('pins and confirms', async () => {
+    const result = await pinSessionAction('s1');
+    expect(pinSession).toHaveBeenCalledWith('user-1', 'tenant-1', 's1');
+    expect(result).toEqual({ ok: true, message: 'Session pinned.' });
+  });
+
+  it('surfaces the pin-limit error message, not a generic fallback', async () => {
+    pinSession.mockRejectedValue(new SessionPinLimitError());
+    const result = await pinSessionAction('s1');
+    expect(result).toEqual({
+      ok: false,
+      error: 'You can pin up to 5 sessions — unpin one first.',
+    });
+  });
+
+  it('rejects when not signed in', async () => {
+    requireSession.mockRejectedValue(new NotAuthenticatedError());
+    const result = await pinSessionAction('s1');
+    expect(result).toEqual({
+      ok: false,
+      error: 'You must be signed in to manage Warden providers.',
+    });
+    expect(pinSession).not.toHaveBeenCalled();
+  });
+});
+
+describe('unpinSessionAction', () => {
+  it('unpins and confirms', async () => {
+    const result = await unpinSessionAction('s1');
+    expect(unpinSession).toHaveBeenCalledWith('user-1', 'tenant-1', 's1');
+    expect(result).toEqual({ ok: true, message: 'Session unpinned.' });
+  });
+
+  it('falls back to a generic message for an unrecognized failure', async () => {
+    unpinSession.mockRejectedValue(new Error('db down'));
+    const result = await unpinSessionAction('s1');
+    expect(result).toEqual({ ok: false, error: 'Could not unpin this session.' });
+  });
+});
+
+describe('deleteSessionAction', () => {
+  it('deletes and confirms', async () => {
+    const result = await deleteSessionAction('s1');
+    expect(deleteSession).toHaveBeenCalledWith('user-1', 'tenant-1', 's1');
+    expect(result).toEqual({ ok: true, message: 'Session deleted.' });
+  });
+
+  it('rejects when not signed in, without deleting anything', async () => {
+    requireSession.mockRejectedValue(new NotAuthenticatedError());
+    const result = await deleteSessionAction('s1');
+    expect(result).toEqual({
+      ok: false,
+      error: 'You must be signed in to manage Warden providers.',
+    });
+    expect(deleteSession).not.toHaveBeenCalled();
   });
 });

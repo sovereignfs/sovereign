@@ -1,6 +1,6 @@
 # Workstream 0021 — Warden: multi-session UI
 
-**Status:** ⏳ In progress — legs 1-2 of 4 done\
+**Status:** ⏳ In progress — legs 1-3 of 4 done\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -32,7 +32,7 @@ workstream 0019.
 - [x] `22.9` — `/warden/settings` (General/Providers/Models tabs) replaces
       the standalone `/warden/providers` and `/warden/models` routes, which
       are removed outright (no redirect).
-- [ ] `22.10` — a collapsible two-column layout ships: left sidebar with
+- [x] `22.10` — a collapsible two-column layout ships: left sidebar with
       pinned/recent session groups, "+ New," per-row rename/pin/delete,
       LLM-generated session titles, and a Settings entry point pinned to
       the sidebar's bottom.
@@ -85,7 +85,7 @@ same PR as whichever leg first uses it (`22.10`).
 | --- | ------------------------------ | ---------- | ----- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | Sessions data model and API ✅ | 22.8       | 22    | No    | `warden_sessions` replaces `warden_conversation`; create/list/pin/unpin/rename/delete all work; the chat API routes by session id                             |
 | 2   | Settings consolidation ✅      | 22.9       | 22    | No    | `/warden/settings` (General/Providers/Models) is live with `ProvidersView`/`ModelsView` behavior unchanged; `/warden/providers`/`/warden/models` are removed  |
-| 3   | Sidebar UI                     | 22.10      | 22    | No    | Collapsible two-column layout ships; sidebar lists pinned + recent sessions, supports "+ New," rename/pin/delete, LLM titles, and a Settings entry point      |
+| 3   | Sidebar UI ✅                  | 22.10      | 22    | No    | Collapsible two-column layout ships; sidebar lists pinned + recent sessions, supports "+ New," rename/pin/delete, LLM titles, and a Settings entry point      |
 | 4   | Composer redesign              | 22.11      | 22    | No    | Claude-style composer ships with a model-picker popover (linking into Settings), incognito as a toolbar icon, and the old header links/web-search toggle gone |
 
 No leg is marked a gate — there's no upstream unknown here that could
@@ -219,7 +219,7 @@ pre-existing, unrelated `SOVEREIGN_VAULT_KEY`-unset environment gap
 — not a regression from this leg. Full detail in the epic file's task 22.9
 completion note.
 
-### Leg 3 — Sidebar UI
+### Leg 3 — Sidebar UI ✅
 
 **Epic tasks:** 22.10
 
@@ -248,6 +248,49 @@ session can disagree about which session is "open" (a stale highlight, or
 sending a message to a session other than the one visually selected) — a
 correctness bug, not a polish issue, given users will be switching sessions
 frequently.
+
+**Leg outcome:** shipped as planned. `WardenLayoutShell` (new) bypasses
+`ThreeColumnLayout` entirely when collapsed rather than passing
+`sidebarWidth={0}` — that component's `.sidebar` slot always carries a
+`border-right`, which a zero-width flex item still renders as a visible
+1px hairline, not a real "collapsed" look; collapse state reads
+`localStorage` only inside `useEffect`, defaulting to expanded, per this
+repo's hydration-mismatch rule. `WardenSidebar` (new) is purely
+presentational — `app/page.tsx` does the pinned/recent split and sort, so
+the component never re-derives grouping itself. The active session
+resolves from `?session=` (falling back to the most recent session for a
+missing/foreign value); the one change to `ChatView.tsx` needed to close
+this leg's own "do not proceed if" condition was having it call
+`router.replace('/warden?session=' + id)` once a brand-new session's id
+comes back from the chat API, so the sidebar and the composer can never
+disagree about which session is open. Two new curated icons (`panel-left`,
+`pin`) added via `pnpm generate:icons` (93 total; fixed an unrelated stale
+"52 bundled icons" count in `DesignSystemOverview.stories.tsx` as a
+drive-by) — `Icon.stories.tsx`'s `AllIcons` story derives from `ICONS`
+directly, so no manual per-icon story edit was needed.
+
+Verified live end to end, but not against the first account tried:
+`owner@sovereign.local` turned out to carry a pre-existing, unrelated
+data-corruption gap from an earlier session (a `plugin_secrets` row
+encrypted under a `SOVEREIGN_VAULT_KEY` no longer configured, throwing on
+every Warden page load) — not something to fix as part of this leg, so
+verification moved to a second seeded account instead
+(`user@sovereign.local`, `pnpm sv seed` per direct developer authorization
+for this dev database). That account needed a real `SOVEREIGN_VAULT_KEY`
+set (leg 2's own outcome note already flagged this env gap) and a real
+provider to exercise session creation — added OpenRouter's actual
+`https://openrouter.ai/api/v1` with a deliberately-fake key, whose
+`/v1/models` endpoint is public and returned a real model catalog (only
+the chat-completion call itself needs a valid key), enough to create real
+sessions without needing a genuinely reachable model backend. Confirmed
+live: a session is created server-side on the very first send attempt
+regardless of whether the model call itself succeeds, and survives a
+reload even after a failed send; rename/pin/unpin/delete all round-trip
+correctly through the sidebar's overflow menu; pinning a 6th session is
+rejected with a clear toast while the sidebar stays correctly unchanged,
+not silently corrupted. All test data created for this verification was
+deleted again before finishing. Full detail in the epic file's task 22.10
+completion note.
 
 ### Leg 4 — Composer redesign
 
@@ -307,8 +350,9 @@ needs rework first.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                    |
-| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft, sequencing RFC 0063's third revision (multi-session UI, settings consolidation, composer redesign) into four legs                                                                                                                                                                                                          |
-| 0.2     | August 2026 | Leg 1 (task 22.8) done — `warden_sessions` shipped replacing `warden_conversation` (clean-slate migration, hand-authored since `drizzle-kit generate` needed an unavailable interactive prompt), full CRUD, chat API routed by session id, no-model-call title derivation. Leg 2 unblocked                                                |
-| 0.3     | August 2026 | Leg 2 (task 22.9) done — `/warden/settings` (General/Providers/Models tabs, `?tab=`-synced) replaces `/warden/providers`/`/warden/models`; default model (`warden_user_settings`), manual retention excluding pinned sessions, and export-via-account-deep-link all resolved. Verified live against a seeded dev account. Leg 3 unblocked |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft, sequencing RFC 0063's third revision (multi-session UI, settings consolidation, composer redesign) into four legs                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 0.2     | August 2026 | Leg 1 (task 22.8) done — `warden_sessions` shipped replacing `warden_conversation` (clean-slate migration, hand-authored since `drizzle-kit generate` needed an unavailable interactive prompt), full CRUD, chat API routed by session id, no-model-call title derivation. Leg 2 unblocked                                                                                                                                                                                                                                                                    |
+| 0.3     | August 2026 | Leg 2 (task 22.9) done — `/warden/settings` (General/Providers/Models tabs, `?tab=`-synced) replaces `/warden/providers`/`/warden/models`; default model (`warden_user_settings`), manual retention excluding pinned sessions, and export-via-account-deep-link all resolved. Verified live against a seeded dev account. Leg 3 unblocked                                                                                                                                                                                                                     |
+| 0.4     | August 2026 | Leg 3 (task 22.10) done — collapsible two-column layout (`WardenLayoutShell`) + sidebar (`WardenSidebar`) ship: pinned/recent session groups, "+ New," per-row rename/pin/delete, a bottom Settings entry point, and two new curated icons (`panel-left`, `pin`). `ChatView.tsx` now syncs the URL to a lazily-created session's id so the sidebar and composer can never disagree about which session is open. Verified live against a second seeded dev account after the first turned out to carry unrelated pre-existing data corruption. Leg 4 unblocked |

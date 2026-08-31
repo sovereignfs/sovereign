@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Badge,
   Button,
@@ -70,11 +71,10 @@ export function ChatView({
   defaultModelKey,
   allModelsHidden = false,
 }: {
-  /** Server-resolved most-recently-active session, or `null` for a
-   *  brand-new user with none yet (RFC 0063 §10, epic task 22.8). No
-   *  sidebar exists yet to switch sessions explicitly (task 22.10) — this
-   *  is always either "continue the one session that exists" or "the very
-   *  first send creates one," never a user-driven choice in this revision. */
+  /** Server-resolved active session — the sidebar's selected row
+   *  (`?session=`), the most recently active one if none is selected, or
+   *  `null` for a brand-new user with none yet (RFC 0063 §10, epic tasks
+   *  22.8/22.10). */
   initialSessionId: string | null;
   initialMessages: MessageView[];
   models: DiscoveredModel[];
@@ -84,6 +84,7 @@ export function ChatView({
    *  reachable at all," which needs a different message. */
   allModelsHidden?: boolean;
 }) {
+  const router = useRouter();
   // Persisted-mode only — incognito never references a session (RFC 0063
   // §6/§10). Updated from the response's `x-warden-session-id` header the
   // first time a brand-new session is lazily created on send.
@@ -198,7 +199,14 @@ export function ChatView({
 
     if (!incognito) {
       const resolvedSessionId = response.headers.get('x-warden-session-id');
-      if (resolvedSessionId) setSessionId(resolvedSessionId);
+      // Only a brand-new session's first send changes this — an existing
+      // session's id is already in the URL, so there is nothing to sync.
+      // `replace` (not `push`) so this doesn't stack a history entry for
+      // what the user experiences as "still the same conversation."
+      if (resolvedSessionId && resolvedSessionId !== sessionId) {
+        setSessionId(resolvedSessionId);
+        router.replace(`/warden?session=${resolvedSessionId}`);
+      }
     }
 
     const reader = response.body?.getReader();

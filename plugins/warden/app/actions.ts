@@ -4,7 +4,15 @@ import { NotAuthenticatedError, sdk } from '@sovereignfs/sdk';
 import { invalidateDiscoveryCacheForUser } from './_lib/model-discovery';
 import { createProvider, deleteProvider, updateProvider } from './_lib/providers';
 import { setModelVisibility } from './_lib/model-visibility';
-import { deleteInactiveSessions } from './_lib/sessions';
+import {
+  deleteInactiveSessions,
+  deleteSession,
+  pinSession,
+  renameSession,
+  SessionNotFoundError,
+  SessionPinLimitError,
+  unpinSession,
+} from './_lib/sessions';
 import { setDefaultModelKey } from './_lib/user-settings';
 import { UnsafeProviderUrlError } from './_lib/url-safety';
 
@@ -53,6 +61,8 @@ function messageFor(error: unknown, fallback: string, context: string): string {
   }
   if (error instanceof UnsafeProviderUrlError) return error.message;
   if (error instanceof Error && error.message === 'Provider not found.') return error.message;
+  if (error instanceof SessionNotFoundError) return error.message;
+  if (error instanceof SessionPinLimitError) return error.message;
   console.error(`[warden] ${context} failed unexpectedly:`, error);
   return fallback;
 }
@@ -228,6 +238,71 @@ export async function deleteInactiveSessionsAction(olderThanDays: number): Promi
         'Could not delete inactive sessions.',
         'deleteInactiveSessionsAction',
       ),
+    };
+  }
+}
+
+/**
+ * Sidebar session actions (RFC 0063 §10, epic task 22.10). All four are
+ * called directly from `WardenSidebar`'s per-row overflow menu — no form
+ * input to preserve on failure, just a row-level UI to revert/refresh.
+ */
+
+export async function renameSessionAction(sessionId: string, title: string): Promise<ActionResult> {
+  try {
+    const session = await sdk.auth.requireSession();
+    const renamed = await renameSession(session.user.id, session.user.tenantId, sessionId, title);
+    return {
+      ok: true,
+      message: renamed.title ? `Renamed to "${renamed.title}".` : 'Session title cleared.',
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: messageFor(error, 'Could not rename this session.', 'renameSessionAction'),
+    };
+  }
+}
+
+/** Surfaces `SessionPinLimitError`'s own message (via `messageFor`) when the
+ *  5-pin cap is already reached — never a silent no-op. */
+export async function pinSessionAction(sessionId: string): Promise<ActionResult> {
+  try {
+    const session = await sdk.auth.requireSession();
+    await pinSession(session.user.id, session.user.tenantId, sessionId);
+    return { ok: true, message: 'Session pinned.' };
+  } catch (error) {
+    return {
+      ok: false,
+      error: messageFor(error, 'Could not pin this session.', 'pinSessionAction'),
+    };
+  }
+}
+
+export async function unpinSessionAction(sessionId: string): Promise<ActionResult> {
+  try {
+    const session = await sdk.auth.requireSession();
+    await unpinSession(session.user.id, session.user.tenantId, sessionId);
+    return { ok: true, message: 'Session unpinned.' };
+  } catch (error) {
+    return {
+      ok: false,
+      error: messageFor(error, 'Could not unpin this session.', 'unpinSessionAction'),
+    };
+  }
+}
+
+/** No "recently deleted" recovery — matches incognito's own no-recovery
+ *  posture (RFC 0063 §10). */
+export async function deleteSessionAction(sessionId: string): Promise<ActionResult> {
+  try {
+    const session = await sdk.auth.requireSession();
+    await deleteSession(session.user.id, session.user.tenantId, sessionId);
+    return { ok: true, message: 'Session deleted.' };
+  } catch (error) {
+    return {
+      ok: false,
+      error: messageFor(error, 'Could not delete this session.', 'deleteSessionAction'),
     };
   }
 }

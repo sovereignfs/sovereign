@@ -27,6 +27,7 @@ export async function GET(request: Request): Promise<Response> {
     development: manifest.development ?? false,
     offline: manifest.offline,
     shell: manifest.shell ?? 'default',
+    permissions: manifest.permissions,
     enabled: !disabled.has(manifest.id),
     compatibilityError: getIncompatibilityReason(manifest.id),
     compatibilityWarnings: getCompatibilityWarnings(manifest.id),

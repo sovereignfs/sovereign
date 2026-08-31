@@ -25,6 +25,46 @@ import styles from '../console.module.css';
 const SEARCH_DEBOUNCE_MS = 250;
 const MIN_QUERY_LENGTH = 2;
 
+/**
+ * Plain-language descriptions for `packages/manifest/src/schema.ts`'s
+ * `permissionSchema` values — shown here so an admin can see what an app can
+ * actually do, not just who's allowed to open it. A permission with no
+ * matching label (a value added to the schema but not listed here) falls
+ * back to its raw string rather than being silently dropped.
+ */
+const PERMISSION_LABELS: Record<string, string> = {
+  'auth:session': "Read the signed-in user's session (who's logged in)",
+  'db:readWrite': "Read and write this app's own data",
+  'db:readOnly': "Read this app's own data (no changes)",
+  'mailer:send': "Send email to the signed-in user on the instance's behalf",
+  'mailer:sendExternal': 'Send email to any address, including outside this instance',
+  'storage:readWrite': 'Store and retrieve files',
+  'notifications:send': 'Send in-app notifications',
+  'jobs:write': 'Run background jobs',
+  'events:publish': 'Publish real-time events other apps can subscribe to',
+  'events:subscribe': 'Subscribe to real-time events from other apps',
+  'data:provide': "Expose its own data for other apps to read (with the user's consent)",
+  'data:consume': "Read another app's data (with the user's consent)",
+  'data:export': "Include its data in a user's account data export",
+  'data:import': "Restore its data from a user's account data import",
+  'activity:write': 'Record entries in the activity log',
+  'e2ee:use': 'Use end-to-end encrypted storage',
+  'crypto:use': 'Use cryptographic primitives (e.g. hashing, signing)',
+  'admin:*': 'Full administrative access to the instance',
+  'device:haptics': "Trigger haptic feedback on a user's device",
+  'device:notifications': "Send native push notifications to a user's device",
+  'device:biometrics': "Use Face ID/Touch ID or a user's device biometrics",
+  'device:secureStorage': "Store data in a user's device secure storage",
+  'handoffs:send': 'Hand off a task to another app',
+  'handoffs:receive': 'Receive a handed-off task from another app',
+  'tools:provide': 'Expose actions a trusted caller (e.g. an assistant) can invoke',
+  'tools:call': 'Invoke actions exposed by other apps',
+};
+
+function permissionLabel(permission: string): string {
+  return PERMISSION_LABELS[permission] ?? permission;
+}
+
 const POLICY_OPTIONS: { value: PluginAccessPolicyValue; label: string }[] = [
   { value: 'everyone', label: 'Everyone' },
   { value: 'admins', label: 'Admins and owners' },
@@ -280,11 +320,14 @@ function GroupGrantList({
 export function PluginAccessDialog({
   pluginId,
   pluginName,
+  permissions = [],
   open: controlledOpen,
   onOpenChange,
 }: {
   pluginId: string;
   pluginName: string;
+  /** The app's manifest-declared `permissions` array (GDPR-5) — shown read-only, not editable here. */
+  permissions?: string[];
   /**
    * External control (e.g. a kebab `Menu` item on mobile plugin cards) —
    * when provided, this component renders only the `Dialog`, not its own
@@ -374,6 +417,24 @@ export function PluginAccessDialog({
         title={`Access for "${pluginName}"`}
       >
         <div className={styles.settingsSections}>
+          <section className={styles.settingsSection}>
+            <h3 className={styles.sectionTitle}>Permissions</h3>
+            {permissions.length === 0 ? (
+              <p className={styles.textMuted}>This app declares no special permissions.</p>
+            ) : (
+              <ul
+                className={styles.cards}
+                style={{ gridTemplateColumns: '1fr', gap: 'var(--sv-space-1)' }}
+              >
+                {permissions.map((permission) => (
+                  <li key={permission} className={styles.help}>
+                    {permissionLabel(permission)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           <section className={styles.settingsSection}>
             <h3 className={styles.sectionTitle}>Policy</h3>
             <p className={styles.help}>

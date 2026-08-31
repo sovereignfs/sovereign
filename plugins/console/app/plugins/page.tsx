@@ -19,6 +19,7 @@ interface RawPluginRow {
   example: boolean;
   development: boolean;
   offline?: 'offline-first' | 'device-only';
+  permissions: string[];
   enabled: boolean;
   compatibilityError: string | null;
   compatibilityWarnings: string[];

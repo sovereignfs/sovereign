@@ -854,7 +854,7 @@ leg 2 (see that leg's Outcome note for exactly what shipped).
 
 ---
 
-#### 📋 13.19 — Console Groups page: selection-driven detail column
+#### ✅ 13.19 — Console Groups page: selection-driven detail column
 
 **Goal:** Add a 3rd `ThreeColumnLayout` column to `/console/groups`:
 selecting a group shows a detail pane, replacing `ManageGroupDialog`.
@@ -869,6 +869,29 @@ selecting a group shows a detail pane, replacing `ManageGroupDialog`.
 **Review checklist:** See workstream 0022 leg 3's technical notes; at
 minimum, `ManageGroupDialog.tsx`'s dialog is gone and
 `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` pass.
+
+**Outcome:** `ManageGroupDialog`'s body (details form, members list/picker,
+danger zone) was extracted into `GroupDetailFields.tsx`, reused by both a
+slimmed `ManageGroupDialog` (kept mobile-only) and a new `GroupDetailPane.tsx`
+(desktop 3rd column), mirroring task 13.18's `UserCapabilitiesFields` split
+exactly. `CreateGroupDialog` was confirmed live to need no change — it stays
+a plain dialog, same reasoning as `InviteDialog`. Leg 2's `.userDetail*` CSS
+classes were generalized to `.detail*` (dropping the `user` prefix) since
+this is the second of four legs reusing the identical shape;
+`UserDetailPane.tsx` was updated to the renamed classes in the same change.
+Groups has no separate mobile/desktop render fork (unlike Users) — one shared
+card grid handles both, with the selection `<Link>`/chevron indicator and the
+`ManageGroupDialog` trigger each CSS-gated to their own breakpoint
+(`.cardChevron`/`.cardManageMobile`, 769px, matching the existing
+768px mobile breakpoint used elsewhere in this file). Verified live end to
+end against the dev server: creating a group, selecting it to open the
+desktop detail pane, editing details, the empty members state, the delete
+confirmation flow (group and its detail pane both disappear on confirm), the
+900px detail-collapse breakpoint, and the mobile Manage dialog opening
+unaffected. `pnpm --filter runtime build` confirmed `/console/groups`
+compiles (composed plugin directories are excluded from `runtime`'s own
+`tsc --noEmit` scope). `plugins/console/manifest.json` bumped `0.7.0` →
+`0.8.0`.
 
 ---
 

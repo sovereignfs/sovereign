@@ -49,11 +49,11 @@ export function UserDetailPane({
   const userId = member.id;
 
   return (
-    <div className={styles.userDetailPane}>
-      <div className={styles.userDetailHeader}>
-        <div className={styles.userDetailHeading}>
-          <span className={styles.userDetailName}>{member.name ?? '—'}</span>
-          <span className={styles.userDetailEmail}>{member.email}</span>
+    <div className={styles.detailPane}>
+      <div className={styles.detailHeader}>
+        <div className={styles.detailHeading}>
+          <span className={styles.detailTitle}>{member.name ?? '—'}</span>
+          <span className={styles.detailSubtitle}>{member.email}</span>
         </div>
         <Link
           replace
@@ -72,7 +72,7 @@ export function UserDetailPane({
         </span>
       )}
 
-      <div className={styles.userDetailBadges}>
+      <div className={styles.detailBadges}>
         <Badge variant="status" status={member.status}>
           {member.status === 'active'
             ? 'Active'
@@ -83,8 +83,8 @@ export function UserDetailPane({
         {member.isTestUser && <Badge variant="mono">Test</Badge>}
       </div>
 
-      <div className={styles.userDetailSection}>
-        <h3 className={styles.userDetailSectionTitle}>Role</h3>
+      <div className={styles.detailSection}>
+        <h3 className={styles.detailSectionTitle}>Role</h3>
         {isOwner ? (
           <Badge variant="role">Owner</Badge>
         ) : canAssignRoles && userId ? (
@@ -106,8 +106,8 @@ export function UserDetailPane({
         userId &&
         canManageUsers && (
           <>
-            <div className={styles.userDetailSection}>
-              <h3 className={styles.userDetailSectionTitle}>Capabilities</h3>
+            <div className={styles.detailSection}>
+              <h3 className={styles.detailSectionTitle}>Capabilities</h3>
               <p className={styles.helpText}>
                 Grant one additional capability this user&apos;s role preset doesn&apos;t include.
                 This does not change their role.

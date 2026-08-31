@@ -224,6 +224,12 @@ the RFC 0060 adoption notes) — not something that broadens automatically.
       [Disk-level encryption § Backups](self-hosting.md#backups) for a
       concrete `age`/GPG recipe.
 - [ ] **Update regularly** and watch the repository's security advisories.
+- [ ] **Have a data breach response plan ready before you need one** — GDPR
+      Article 33 requires notifying the relevant supervisory authority within
+      72 hours of becoming aware of a breach where required. See
+      [`docs/legal/operator-template-breach-response.md`](legal/operator-template-breach-response.md)
+      for a starting-point runbook (not legal advice) — fill it in now, not
+      during an incident.
 
 ## Reporting a vulnerability
 

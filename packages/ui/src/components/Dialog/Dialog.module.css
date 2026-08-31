@@ -162,7 +162,9 @@
 }
 
 /* `lg`/`full`: a true fixed box, unaffected by the above — see the
- * file-level comment. */
+ * file-level comment. `full` is identical to `lg` deliberately, not by
+ * oversight — see Dialog.tsx's `DialogSize` doc comment for why it's kept
+ * as an alias rather than removed. */
 .lg,
 .full {
   width: 100%;

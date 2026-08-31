@@ -3,6 +3,7 @@
 import { type ReactNode, useRef } from 'react';
 import { useMountTransition, usePrefersReducedMotion } from '../../motion';
 import {
+  OVERLAY_MOTION_DURATION_MS,
   useOverlayFocusCapture,
   useOverlayKeyboardTrap,
   useOverlayScrollLock,
@@ -40,10 +41,6 @@ export interface SheetProps {
   children: ReactNode;
 }
 
-// Matches --sv-motion-duration-base (Sheet.module.css) — see Dialog.tsx's
-// identical constant for why this stays a plain JS number.
-const MOTION_DURATION_MS = 250;
-
 /**
  * Sheet — a full-page overlay that replaces a plugin's content area between
  * the shell's fixed header and footer (RFC 0013's mobile chrome stays visible
@@ -73,7 +70,10 @@ export function Sheet({
 }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
-  const { mounted, phase } = useMountTransition(open, reducedMotion ? 0 : MOTION_DURATION_MS);
+  const { mounted, phase } = useMountTransition(
+    open,
+    reducedMotion ? 0 : OVERLAY_MOTION_DURATION_MS,
+  );
 
   useOverlayScrollLock(mounted);
   useOverlayFocusCapture(panelRef, mounted);

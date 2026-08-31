@@ -3,6 +3,7 @@
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { useMountTransition, usePrefersReducedMotion } from '../../motion';
 import {
+  OVERLAY_MOTION_DURATION_MS,
   useOverlayFocusCapture,
   useOverlayKeyboardTrap,
   useOverlayScrollLock,
@@ -10,12 +11,6 @@ import {
 import { Icon } from '../Icon/Icon';
 import { OverlayHeader } from '../OverlayHeader/OverlayHeader';
 import styles from './Dialog.module.css';
-
-// Matches --sv-motion-duration-base (Dialog.module.css) — kept as a plain JS
-// constant rather than read from the CSS custom property so the unmount timer
-// and the CSS transition duration can't silently drift apart at build time;
-// change both together if this value ever changes.
-const MOTION_DURATION_MS = 250;
 
 // undefined (the default, outside any Provider) means "no Dialog ancestor" —
 // distinct from a real setter function, so useOverlaySecondRow can silently
@@ -59,6 +54,15 @@ export function useOverlaySecondRow(node: ReactNode | null): boolean {
   return setSecondRow !== undefined;
 }
 
+// `full` is CSS-identical to `lg` (both a true fixed 100%/100% box, see
+// Dialog.module.css's `.lg, .full` rule) — a deliberate alias, not dead code
+// left behind by oversight. Removing it outright would be a breaking type
+// change for zero runtime benefit: the sole call site in this repo,
+// CardDetailOverlay.tsx's `size={isMobile ? 'full' : 'xl'}`, lives in a
+// gitignored `.local` plugin clone outside this repo's ownership, whose own
+// separate build would start failing against a future bump with no local
+// way to catch it first. Kept for that consumer; every new consumer should
+// prefer `lg` directly.
 export type DialogSize = 'sm' | 'md' | 'xl' | 'lg' | 'full';
 
 export interface DialogProps {
@@ -143,7 +147,10 @@ export function Dialog({
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
-  const { mounted, phase } = useMountTransition(open, reducedMotion ? 0 : MOTION_DURATION_MS);
+  const { mounted, phase } = useMountTransition(
+    open,
+    reducedMotion ? 0 : OVERLAY_MOTION_DURATION_MS,
+  );
   const [secondRow, setSecondRow] = useState<ReactNode | null>(null);
 
   useOverlayScrollLock(mounted);

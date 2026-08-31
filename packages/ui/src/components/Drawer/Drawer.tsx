@@ -3,17 +3,13 @@
 import { type PointerEvent as ReactPointerEvent, type ReactNode, useRef } from 'react';
 import { useMountTransition, usePrefersReducedMotion } from '../../motion';
 import {
+  OVERLAY_MOTION_DURATION_MS,
   useOverlayFocusCapture,
   useOverlayKeyboardTrap,
   useOverlayScrollLock,
 } from '../../overlay-shell';
 import { OverlayHeader } from '../OverlayHeader/OverlayHeader';
 import styles from './Drawer.module.css';
-
-// Matches --sv-motion-duration-base (Drawer.module.css) — see Dialog.tsx's
-// identical constant for why this stays a plain JS number instead of being
-// read from the CSS custom property.
-const MOTION_DURATION_MS = 250;
 
 export interface DrawerProps {
   /** Whether the drawer is shown. When false, nothing renders. */
@@ -74,7 +70,10 @@ export function Drawer({
 }: DrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
-  const { mounted, phase } = useMountTransition(open, reducedMotion ? 0 : MOTION_DURATION_MS);
+  const { mounted, phase } = useMountTransition(
+    open,
+    reducedMotion ? 0 : OVERLAY_MOTION_DURATION_MS,
+  );
   // Tracks an in-progress handle drag. Kept in a ref (not state) so pointermove
   // updates the DOM directly at 60fps instead of re-rendering on every event —
   // same technique as the tasks plugin's swipe-to-reveal rows.

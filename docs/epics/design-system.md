@@ -1037,7 +1037,24 @@ deps beyond React/React-DOM peers.
 - No plugin migration in this task — `sovereign-tasks`/`sovereign-shopper`
   are unaffected.
 
-#### 📋 9.22 — `NavRail` vertical section nav + `md` overlay resize (RFC 0085)
+#### ❌ 9.22 — `NavRail` vertical section nav + `md` overlay resize (RFC 0085) — Rejected as scoped
+
+**Rejected as originally scoped** — written independently of, and in
+parallel with, [workstream 0022](../workstreams/0022-console-shell-and-three-column-layout.md),
+which resolves Console's own hand-rolled tab strip with a different,
+incompatible design (`shell: "overlay"` → `shell: "default"`,
+`ThreeColumnLayout`, a new `NavList` component, plus a mobile drill-down
+redesign this task had explicitly deferred). The two surfaced as a genuine
+merge conflict; workstream 0022 had already shipped code by the time this
+task's existence was discovered, and the developer chose to keep it for
+Console. This task bundled Console and Account into one combined deliverable,
+so it cannot be built as written now that Console has moved to an
+incompatible architecture. The `NavRail`-in-overlay pattern itself, and its
+application to Account (untouched by workstream 0022), are **not**
+rejected — a future task could re-scope `NavRail` for Account alone,
+starting from [RFC 0085](../rfcs/0085-vertical-section-nav-overlay-shell.md)'s
+own design, but it would be a new task, not a resumption of this one. Left
+here for the record rather than deleted.
 
 **Goal:** Console (11 sections) and Account (7 sections) each hand-roll a
 near-identical horizontal underline tab strip duplicating logic already

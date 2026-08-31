@@ -5,8 +5,12 @@ import styles from './OverlayHeader.module.css';
 export interface OverlayHeaderProps {
   /** Overlay title, shown between the optional back button and the trailing
    *  slots. Optional — some consumers (e.g. `Dialog`'s mobile bar) need the
-   *  row's close button present even when no title applies. */
-  title?: string;
+   *  row's close button present even when no title applies. Accepts any
+   *  `ReactNode`, not just a string — e.g. `Dialog`'s `header` prop passes
+   *  arbitrary content through here (an icon next to text, etc.); the
+   *  row's title slot still assumes single-line content sized like text
+   *  (see the component's own doc comment for the line this doesn't cross). */
+  title?: ReactNode;
   /** Always renders a close button; called on click. */
   onClose: () => void;
   /** When provided, renders a back-chevron button before the title (for

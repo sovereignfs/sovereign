@@ -48,7 +48,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Modal surface (scrim + panel). Router-agnostic — caller provides `onClose`. Supports Esc, scrim-click, focus trap and focus restoration. Sizes: `sm` / `md` / `xl` / `lg` / `full`. Mobile always renders as a full-screen sheet.',
+          'Modal surface (scrim + panel). Router-agnostic — caller provides `onClose`. Supports Esc, scrim-click, focus trap and focus restoration. Sizes: `sm` / `md` / `xl` / `lg` / `full`. Mobile always renders as a full-screen sheet. Three composition shapes via the optional `header`/`footer` props: Body only (both omitted, the default), Header + Body, Header + Body + Footer — see the stories below the size examples.',
       },
     },
   },
@@ -142,6 +142,127 @@ export const WithOverlaySecondRow: Story = {
           <Dialog open={open} onClose={() => setOpen(false)} title="Account" aria-label="Account">
             <div style={{ padding: 24, fontFamily: 'system-ui' }}>
               <NestedTabStrip />
+            </div>
+          </Dialog>
+        </>
+      );
+    }
+    return <Demo />;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Composition shapes (header/footer props) — Body only is every story above
+// this point (both props omitted); these three demonstrate the other two.
+
+/**
+ * "Body only" — the default shape (both `header` and `footer` omitted).
+ * Included explicitly alongside the size stories above as the baseline the
+ * other two composition shapes are compared against: no visible header on
+ * desktop, a floating close button instead, and any actions live inside the
+ * scrollable body.
+ */
+export const BodyOnly: Story = {
+  args: { open: false, onClose: () => {}, children: null },
+  render: (_args) => {
+    function Demo() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <Button onClick={() => setOpen(true)}>Open body-only dialog</Button>
+          <Dialog open={open} onClose={() => setOpen(false)} size="sm" aria-label="Body only">
+            <div style={{ padding: 24, fontFamily: 'system-ui' }}>
+              <p style={{ color: 'var(--sv-color-text-muted)' }}>
+                No `header` or `footer` prop — today's default. Desktop shows only the floating
+                close button; actions (if any) live in this scrolling body, same as before this
+                task.
+              </p>
+            </div>
+          </Dialog>
+        </>
+      );
+    }
+    return <Demo />;
+  },
+};
+
+/**
+ * "Header + Body" — the `header` prop renders a persistent title/close row
+ * on both desktop and mobile (unlike the plain `title` prop, which is
+ * mobile-only). Resize the viewport to confirm the header stays visible and
+ * identically styled at both widths.
+ */
+export const HeaderAndBody: Story = {
+  args: { open: false, onClose: () => {}, children: null },
+  render: (_args) => {
+    function Demo() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <Button onClick={() => setOpen(true)}>Open header + body dialog</Button>
+          <Dialog
+            open={open}
+            onClose={() => setOpen(false)}
+            size="sm"
+            header="Card detail"
+            aria-label="Card detail"
+          >
+            <div style={{ padding: 24, fontFamily: 'system-ui' }}>
+              <p style={{ color: 'var(--sv-color-text-muted)' }}>
+                The "Card detail" title above is the `header` prop, rendered via the same shared
+                header row on both desktop and mobile — resize the viewport to confirm it doesn't
+                disappear on desktop the way a plain `title` would.
+              </p>
+            </div>
+          </Dialog>
+        </>
+      );
+    }
+    return <Demo />;
+  },
+};
+
+/**
+ * "Header + Body + Footer" — both `header` and `footer` are pinned flex
+ * siblings around `.content`; only the body between them scrolls. The body
+ * here is long enough to actually scroll, so header/footer staying put is
+ * visible, not just theoretical — check this at both a desktop and a
+ * ≤768px viewport per this task's own review checklist.
+ */
+export const HeaderBodyFooter: Story = {
+  args: { open: false, onClose: () => {}, children: null },
+  render: (_args) => {
+    function Demo() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <Button onClick={() => setOpen(true)}>Open header + body + footer dialog</Button>
+          <Dialog
+            open={open}
+            onClose={() => setOpen(false)}
+            size="sm"
+            header="Edit card"
+            footer={
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <Button variant="secondary" onClick={() => setOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={() => setOpen(false)}>Save</Button>
+              </div>
+            }
+            aria-label="Edit card"
+          >
+            <div style={{ padding: 24, fontFamily: 'system-ui', display: 'grid', gap: 16 }}>
+              <p style={{ color: 'var(--sv-color-text-muted)' }}>
+                Scroll this body — the "Edit card" header above and the Cancel/Save footer below
+                both stay pinned; only this region between them moves.
+              </p>
+              {Array.from({ length: 12 }, (_, i) => (
+                <p key={i} style={{ color: 'var(--sv-color-text-muted)' }}>
+                  Field {i + 1} of 12 — filler content long enough to force `.content` to actually
+                  scroll, so the pinned header/footer behavior is visible rather than theoretical.
+                </p>
+              ))}
             </div>
           </Dialog>
         </>

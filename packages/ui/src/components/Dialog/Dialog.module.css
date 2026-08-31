@@ -211,9 +211,25 @@
 
 /* Hidden on desktop; shown only on mobile where it replaces the close button.
  * OverlayHeader owns its own background/border/padding — this wrapper class
- * only toggles visibility per breakpoint. */
+ * only toggles visibility per breakpoint. Not used at all when the `header`
+ * prop is active — that OverlayHeader instance renders with no wrapper
+ * class, so it shows unconditionally on both breakpoints (see Dialog.tsx). */
 .mobileHeader {
   display: none;
+}
+
+/* The optional `footer` prop's row — shown on both desktop and mobile (no
+ * breakpoint gating, unlike `.mobileHeader`), a flex sibling after `.content`
+ * so it never scrolls, mirroring OverlayHeader's own `.header`/`.row`
+ * treatment (border on the opposite edge, same padding scale) so header and
+ * footer read as a matched pair when both are present. Layout-agnostic
+ * beyond that — the footer's own content decides its internal arrangement
+ * (e.g. a flex row with `justify-content: flex-end` for action buttons). */
+.footer {
+  flex-shrink: 0;
+  background: var(--sv-color-surface);
+  border-top: var(--sv-border-width-hairline) solid var(--sv-color-border);
+  padding: var(--sv-space-3) var(--sv-space-4);
 }
 
 /* Mobile: full-screen sheet (RFC 0001 §3, breakpoint unified to 768px per

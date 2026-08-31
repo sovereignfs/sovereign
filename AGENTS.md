@@ -79,8 +79,11 @@ prefer moving future shared guidance into `docs/`.
   and `@sovereignfs/ui` follow their own compatibility constraints.
 - Version-bump commit subjects and release tags use the same version identifier:
   root `package.json` uses `vX.Y.Z`; packages use `<package-slug>-vX.Y.Z`
-  (for example `ui-vX.Y.Z`, `docs-vX.Y.Z`, `sdk-vX.Y.Z`). Apply the same
-  `<slug>-vX.Y.Z` pattern to other package tags.
+  (for example `ui-vX.Y.Z`, `sdk-vX.Y.Z`). Apply the same `<slug>-vX.Y.Z`
+  pattern to other package tags. (`docs-vX.Y.Z` no longer applies — the
+  `apps/docs` VitePress app that tag deployed was retired; the public docs
+  site is now built and deployed from the separate `sovereignfs/sovereignfs`
+  workbench repo. See `docs/repositories.md`.)
 
 ## Commit and PR conventions
 

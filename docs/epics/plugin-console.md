@@ -763,6 +763,134 @@ Subsequent tasks added Console sections as part of other epics:
 
 ---
 
+#### 📋 13.17 — Console shell: overlay → default + `ThreeColumnLayout` sidebar/main + mobile drilldown
+
+**Goal:** Console moves from `shell: "overlay"` to `shell: "default"` and its
+`layout.tsx` is rebuilt around `@sovereignfs/ui`'s `ThreeColumnLayout`: a
+persistent vertical section nav (desktop sidebar, column 1) replaces today's
+horizontal scrollable tab strip, routed page content is column 2. Mobile gets
+no persistent sidebar — the bare `/console` route (Overview) becomes a
+drill-down index (grouped icon+label+chevron rows, tap → push into a section)
+and every other section gets a `‹ Console` back link above its content. Both
+desktop's sidebar and mobile's index are built on a new `packages/ui`
+component, `NavList` (task 9.28), which must land first. Full technical
+detail, the exact section grouping, and the `ResponsiveSurface`/
+`data-plugin-fullbleed` structure are in
+[workstream 0022](../workstreams/0022-console-shell-and-three-column-layout.md)
+leg 1 — this entry tracks the task, not the design.
+
+**Deliverables:**
+
+- `plugins/console/manifest.json`: `"shell": "default"`; remove
+  `shellConfig.overlaySize`.
+- `plugins/console/app/layout.tsx`: `ResponsiveSurface` fork — desktop
+  renders `ThreeColumnLayout` (`NavList variant="static"` sidebar + main
+  column, `data-plugin-fullbleed` root); mobile renders `children` with a
+  conditional back link, no sidebar.
+- `plugins/console/app/page.tsx` (Overview): `ResponsiveSurface` fork —
+  desktop keeps a dashboard card grid (extended to all 11 sections, not
+  today's 5); mobile renders `NavList variant="drilldown"`.
+- `plugins/console/app/console.module.css`: remove the dead `.nav`/`.header`/
+  `.headerHiddenOnMobile` tab-strip rules and their mobile media queries; add
+  the new fullbleed/sidebar/mobile-frame rules.
+- `docs/architecture-rules.md`'s "(Account, Console)" overlay-size reference
+  narrows to "(Account)"; `docs/plugins/console.md` and this file's own
+  Overview section updated to describe `shell: "default"`.
+- `docs/epics/platform-shell.md` task 2.5/2.20 get a forward pointer to this
+  task/workstream (not a rewrite of their own completed-task history).
+- `plugins/console/manifest.json` version bump (manifest-only, per this
+  repo's plugin-versioning convention) + platform root `package.json` minor
+  bump.
+
+**Dependencies:** Task 9.28 (`NavList` component) must ship first.
+
+**SRS reference:** None — see workstream 0022's "Why no RFC."
+
+**Review checklist:** See workstream 0022 leg 1's full technical notes and
+"Do not proceed if" condition; at minimum, `pnpm format:check && pnpm lint &&
+pnpm typecheck && pnpm test` pass, `pnpm generate` no longer emits a
+`@modal/(.)console/*` tree, and `__tests__/e2e/console.spec.ts`/
+`console-auditor.spec.ts`/`console-settings.spec.ts` pass against the new DOM.
+
+---
+
+#### 📋 13.18 — Console Users page: selection-driven detail column
+
+**Goal:** Add a 3rd `ThreeColumnLayout` column to `/console/users`: selecting
+a row shows a detail pane with role assignment, capabilities, and status
+actions, replacing `CapabilitiesButton`'s dialog and the per-row action
+buttons. Full technical detail in
+[workstream 0022](../workstreams/0022-console-shell-and-three-column-layout.md)
+leg 2.
+
+**Dependencies:** Task 13.17.
+
+**SRS reference:** None — see workstream 0022's "Why no RFC."
+
+**Review checklist:** See workstream 0022 leg 2's technical notes; at minimum,
+`CapabilitiesButton.tsx`'s dialog is gone, selection state is linkable via a
+URL param that coexists with the page's existing `?page=` pagination, and
+`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` pass.
+
+---
+
+#### 📋 13.19 — Console Groups page: selection-driven detail column
+
+**Goal:** Add a 3rd `ThreeColumnLayout` column to `/console/groups`:
+selecting a group shows a detail pane, replacing `ManageGroupDialog`.
+`CreateGroupDialog` (create-new) is evaluated independently — see workstream
+0021 leg 3's technical notes for how leg 2 resolved the equivalent
+`InviteDialog` question before assuming the same answer applies unchanged.
+
+**Dependencies:** Task 13.18.
+
+**SRS reference:** None — see workstream 0022's "Why no RFC."
+
+**Review checklist:** See workstream 0022 leg 3's technical notes; at
+minimum, `ManageGroupDialog.tsx`'s dialog is gone and
+`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` pass.
+
+---
+
+#### 📋 13.20 — Console Plugins/Apps page: selection-driven detail column
+
+**Goal:** Add a 3rd `ThreeColumnLayout` column to `/console/plugins`:
+selecting a plugin row shows a detail pane, replacing `PluginAccessDialog`.
+Must coexist with `PluginsTable.tsx`'s existing filter-bar/examples-toggle
+state without either resetting the other unexpectedly. Full technical detail
+in workstream 0022 leg 4.
+
+**Dependencies:** Task 13.19.
+
+**SRS reference:** None — see workstream 0022's "Why no RFC."
+
+**Review checklist:** See workstream 0022 leg 4's technical notes; at
+minimum, `PluginAccessDialog.tsx`'s dialog is gone, changing a filter while a
+plugin is selected doesn't silently clear the selection unless the plugin
+drops out of the filtered set, and
+`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` pass.
+
+---
+
+#### 📋 13.21 — Console External clients page: selection-driven detail column
+
+**Goal:** Add a 3rd `ThreeColumnLayout` column to `/console/oauth-clients`:
+selecting a client shows a detail pane for secret rotation/revocation.
+`OAuthClientsClient.tsx`'s internal structure hasn't been read as part of
+this task's planning — read it first; if client secrets are only ever shown
+once at creation with no later "view" state to select into, escalate for a
+design call rather than forcing a detail pane where there's nothing to show.
+Full technical detail in workstream 0022 leg 5.
+
+**Dependencies:** Task 13.20.
+
+**SRS reference:** None — see workstream 0022's "Why no RFC."
+
+**Review checklist:** See workstream 0022 leg 5's technical notes; at
+minimum, `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` pass.
+
+---
+
 ## Related RFCs
 
 - [RFC 0065 — User groups and plugin access policy](../rfcs/0065-user-groups-plugin-access.md)

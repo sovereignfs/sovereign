@@ -282,6 +282,32 @@ export async function updatePushRelayAction(
   return patchSettings({ pushRelay: { url: url ? url : null, disabled } });
 }
 
+export async function updateRetentionAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parseField = (name: string): number | null | 'invalid' => {
+    const raw = (formData.get(name) as string | null)?.trim();
+    if (!raw) return null; // blank = disable pruning for this log, not "0 days"
+    const n = Number(raw);
+    return Number.isInteger(n) && n >= 1 ? n : 'invalid';
+  };
+
+  const deliveryLogsDays = parseField('retentionDeliveryLogsDays');
+  if (deliveryLogsDays === 'invalid') {
+    return {
+      ok: false,
+      error: 'Delivery & access log retention must be a positive whole number of days.',
+    };
+  }
+  const activityLogDays = parseField('retentionActivityLogDays');
+  if (activityLogDays === 'invalid') {
+    return { ok: false, error: 'Activity log retention must be a positive whole number of days.' };
+  }
+
+  return patchSettings({ retention: { deliveryLogsDays, activityLogDays } });
+}
+
 export async function testSmtpSettingsAction(
   _prev: ActionResult | null,
   _formData: FormData,

@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import {
   DEFAULT_ROOT_PLUGIN_ID,
+  DEFAULT_TENANT_ID,
   deletePlatformSetting,
   getDefaultTenant,
   getPlatformSetting,
   setPlatformSetting,
   setTenantName,
+  countE2eeProfiles,
   encryptClassesFromEnv,
   fieldKekFromEnv,
   listFieldTableRegistrations,
@@ -21,6 +23,11 @@ import {
 } from '@/src/plugin-status';
 import { getExamplePluginIds, getInstalledPlugins } from '@/src/registry';
 import { DEFAULT_RELAY_URL, RELAY_DISABLED_SETTING, RELAY_URL_SETTING } from '@/src/relay';
+import {
+  RETENTION_ACTIVITY_LOG_DAYS_SETTING,
+  RETENTION_DELIVERY_LOGS_DAYS_SETTING,
+  parseRetentionDays,
+} from '@/src/retention-worker';
 import { validateRootPlugin } from '@/src/root-plugin';
 import { readStoredSmtpSettings, writeStoredSmtpSettings } from '@/src/smtp-settings';
 
@@ -45,16 +52,29 @@ function smtpSource(stored: {
 
 async function readSettings() {
   const db = await getPlatformDb();
-  const [tenant, inviteOnly, rootPluginId, examplesEnabled, smtp, pushRelayUrl, pushRelayDisabled] =
-    await Promise.all([
-      getDefaultTenant(db),
-      getPlatformSetting(db, 'invite_only'),
-      getPlatformSetting(db, 'root_plugin_id'),
-      getExamplesEnabledFlag(db),
-      readStoredSmtpSettings(db),
-      getPlatformSetting(db, RELAY_URL_SETTING),
-      getPlatformSetting(db, RELAY_DISABLED_SETTING),
-    ]);
+  const [
+    tenant,
+    inviteOnly,
+    rootPluginId,
+    examplesEnabled,
+    smtp,
+    pushRelayUrl,
+    pushRelayDisabled,
+    retentionDeliveryLogsDays,
+    retentionActivityLogDays,
+    e2eeProfileCount,
+  ] = await Promise.all([
+    getDefaultTenant(db),
+    getPlatformSetting(db, 'invite_only'),
+    getPlatformSetting(db, 'root_plugin_id'),
+    getExamplesEnabledFlag(db),
+    readStoredSmtpSettings(db),
+    getPlatformSetting(db, RELAY_URL_SETTING),
+    getPlatformSetting(db, RELAY_DISABLED_SETTING),
+    getPlatformSetting(db, RETENTION_DELIVERY_LOGS_DAYS_SETTING),
+    getPlatformSetting(db, RETENTION_ACTIVITY_LOG_DAYS_SETTING),
+    countE2eeProfiles(db, DEFAULT_TENANT_ID),
+  ]);
   // App-level field encryption status (RFC 0092) — read-only diagnostics for
   // Console. Best-effort: a database from before migration 0022/0023 simply
   // reports the feature as off rather than failing the whole settings read.
@@ -113,6 +133,22 @@ async function readSettings() {
       defaultUrl: DEFAULT_RELAY_URL,
       disabled: pushRelayDisabled === 'true',
     },
+    // null = no window configured = never pruned (GDPR-7) — distinct from a
+    // window of e.g. 0, which parseRetentionDays never accepts as valid.
+    retention: {
+      deliveryLogsDays: parseRetentionDays(retentionDeliveryLogsDays),
+      activityLogDays: parseRetentionDays(retentionActivityLogDays),
+    },
+    // GDPR-9 (workstream 0021 leg 7) — the platform's own knowledge of
+    // at-rest encryption coverage, computed from real state, never a static
+    // claim. A real enrolled-profile count, not a manifest permission check:
+    // `e2ee:use` exists in `permissionSchema` but nothing enforces it and no
+    // installed plugin declares it, even though Account genuinely has E2EE
+    // features — the permission string isn't a trustworthy adoption signal,
+    // so this counts actual `e2ee_profiles` rows instead. Deliberately does
+    // NOT attempt to detect host-disk encryption — the app has no way to
+    // observe that from inside the container.
+    atRestEncryption: { e2eeProfileCount },
   };
 }
 
@@ -133,6 +169,7 @@ export async function PATCH(request: Request): Promise<Response> {
     examplesEnabled?: boolean;
     smtp?: { host?: string; port?: number; user?: string; pass?: string; from?: string };
     pushRelay?: { url?: string | null; disabled?: boolean };
+    retention?: { deliveryLogsDays?: number | null; activityLogDays?: number | null };
   };
   const db = await getPlatformDb();
   const actorId = request.headers.get('x-sovereign-user-id');
@@ -309,6 +346,51 @@ export async function PATCH(request: Request): Promise<Response> {
             ? 'Push relay enabled'
             : 'Push relay URL changed',
       metadata: { url: url ?? undefined, disabled },
+    });
+  }
+
+  if (body.retention !== undefined) {
+    const { deliveryLogsDays, activityLogDays } = body.retention;
+    const validate = (value: number | null | undefined, field: string): Response | null => {
+      if (value === undefined || value === null) return null;
+      if (!Number.isInteger(value) || value < 1) {
+        return NextResponse.json(
+          { error: `retention.${field} must be a positive integer, or null to disable pruning` },
+          { status: 400 },
+        );
+      }
+      return null;
+    };
+    const deliveryError = validate(deliveryLogsDays, 'deliveryLogsDays');
+    if (deliveryError) return deliveryError;
+    const activityError = validate(activityLogDays, 'activityLogDays');
+    if (activityError) return activityError;
+
+    if (deliveryLogsDays !== undefined) {
+      if (deliveryLogsDays === null) {
+        await deletePlatformSetting(db, RETENTION_DELIVERY_LOGS_DAYS_SETTING);
+      } else {
+        await setPlatformSetting(
+          db,
+          RETENTION_DELIVERY_LOGS_DAYS_SETTING,
+          String(deliveryLogsDays),
+        );
+      }
+    }
+    if (activityLogDays !== undefined) {
+      if (activityLogDays === null) {
+        await deletePlatformSetting(db, RETENTION_ACTIVITY_LOG_DAYS_SETTING);
+      } else {
+        await setPlatformSetting(db, RETENTION_ACTIVITY_LOG_DAYS_SETTING, String(activityLogDays));
+      }
+    }
+    void logActivity({
+      actorId,
+      actorType: 'user',
+      action: 'settings.retention_changed',
+      visibility: 'admin',
+      summary: 'Log retention settings changed',
+      metadata: { deliveryLogsDays, activityLogDays },
     });
   }
 

@@ -2,8 +2,10 @@ import Link from 'next/link';
 import { sdk } from '@sovereignfs/sdk';
 import styles from '../console.module.css';
 import { ProviderConfigsSection, type ProviderConfigRow } from './ProviderConfigForms';
+import { AtRestEncryptionOverview, type AtRestEncryptionView } from './AtRestEncryptionOverview';
 import { FieldEncryptionStatus, type FieldEncryptionView } from './FieldEncryptionStatus';
 import { PushRelaySettingsForm, type PushRelaySettingsView } from './PushRelaySettingsForm';
+import { RetentionSettingsForm, type RetentionSettingsView } from './RetentionSettingsForm';
 import { TenantForm, InviteOnlyForm, ExampleAppsForm, RootPluginForm } from './SettingsForms';
 import { SmtpSettingsForm, type SmtpSettingsView } from './SmtpSettingsForm';
 import { EmailTemplatesForm } from './EmailTemplatesForm';
@@ -18,7 +20,9 @@ interface Settings {
   rootPluginId: string;
   smtp: SmtpSettingsView;
   fieldEncryption: FieldEncryptionView;
+  atRestEncryption: AtRestEncryptionView;
   pushRelay: PushRelaySettingsView;
+  retention: RetentionSettingsView;
 }
 
 interface PluginRow {
@@ -65,7 +69,9 @@ const DEFAULT_SETTINGS: Settings = {
     openRotations: [],
     registrations: [],
   },
+  atRestEncryption: { e2eeProfileCount: 0 },
   pushRelay: { url: null, defaultUrl: 'https://relay.sovereign.openfs.io', disabled: false },
+  retention: { deliveryLogsDays: null, activityLogDays: null },
 };
 
 function settled<T>(result: PromiseSettledResult<T>, fallback: T): T {
@@ -125,7 +131,9 @@ export default async function SettingsPage() {
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Field encryption</h2>
+        <h2 className={styles.sectionTitle}>At-rest encryption</h2>
+        <AtRestEncryptionOverview view={settings.atRestEncryption} />
+        <h3 className={styles.sectionTitle}>Field encryption</h3>
         <FieldEncryptionStatus view={settings.fieldEncryption} />
       </section>
 
@@ -192,6 +200,11 @@ export default async function SettingsPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Native mobile push relay</h2>
         <PushRelaySettingsForm pushRelay={settings.pushRelay} />
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Data retention</h2>
+        <RetentionSettingsForm retention={settings.retention} />
       </section>
     </div>
   );

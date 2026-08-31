@@ -986,6 +986,46 @@ export async function logDataAccess(
   );
 }
 
+/**
+ * Delete delivery/access-log rows older than `cutoffSeconds` (GDPR-7,
+ * Art. 5(1)(e) storage limitation) — `email_delivery_log`, `push_delivery_log`,
+ * `data_access_log`. Operator-configured via Console; a caller only reaches
+ * this once an explicit retention window has been set (see
+ * `runtime/src/retention-worker.ts`) — there is no default-on pruning.
+ * Deliberately excludes `activity_log`: see `pruneActivityLog` for why that's
+ * a separate function, not folded into this one.
+ */
+export async function pruneDeliveryLogs(pdb: PlatformDb, cutoffSeconds: number): Promise<void> {
+  await dbRun(
+    pdb,
+    sql`DELETE FROM email_delivery_log WHERE tenant_id = ${DEFAULT_TENANT_ID} AND created_at < ${cutoffSeconds}`,
+  );
+  await dbRun(
+    pdb,
+    sql`DELETE FROM push_delivery_log WHERE tenant_id = ${DEFAULT_TENANT_ID} AND created_at < ${cutoffSeconds}`,
+  );
+  await dbRun(
+    pdb,
+    sql`DELETE FROM data_access_log WHERE tenant_id = ${DEFAULT_TENANT_ID} AND accessed_at < ${cutoffSeconds}`,
+  );
+}
+
+/**
+ * Delete `activity_log` rows older than `cutoffSeconds` (GDPR-7). Kept as its
+ * own explicit, separately-configured toggle from `pruneDeliveryLogs` —
+ * storage-limitation (Art. 5(1)(e)) argues for pruning the audit log too, but
+ * audit integrity/accountability (Art. 5(2), Art. 30) argues against it, and
+ * research 0007's own open question 1 leaves that tension for the operator to
+ * decide, not a shared default. No caller in this codebase enables this by
+ * default.
+ */
+export async function pruneActivityLog(pdb: PlatformDb, cutoffSeconds: number): Promise<void> {
+  await dbRun(
+    pdb,
+    sql`DELETE FROM activity_log WHERE tenant_id = ${DEFAULT_TENANT_ID} AND created_at < ${cutoffSeconds}`,
+  );
+}
+
 // ─── Plugin storage object helpers (RFC 0044) ───────────────────────────────
 
 export interface StorageAccessContext {
@@ -1350,6 +1390,25 @@ export async function getE2eeProfile(
         WHERE tenant_id = ${tenantId} AND user_id = ${userId}
         LIMIT 1`,
   );
+}
+
+/**
+ * How many users on this instance have enrolled a zero-knowledge
+ * client-side encryption profile (RFC 0060) — a real, live count, not a
+ * manifest-declared capability. GDPR-9 (workstream 0021 leg 7) surfaces this
+ * in Console instead of inferring adoption from a plugin's declared
+ * permissions: `e2ee:use` exists in `permissionSchema` but nothing in the
+ * codebase actually checks it, and no installed plugin declares it even
+ * though at least one (Account) genuinely has E2EE features — the
+ * permission string is not a reliable adoption signal, so this counts real
+ * enrolled profiles instead.
+ */
+export async function countE2eeProfiles(pdb: PlatformDb, tenantId: string): Promise<number> {
+  const row = await dbGet<{ c: number | string }>(
+    pdb,
+    sql`SELECT COUNT(*) AS c FROM e2ee_profiles WHERE tenant_id = ${tenantId}`,
+  );
+  return Number(row?.c ?? 0);
 }
 
 /**

@@ -1,6 +1,6 @@
 # Workstream 0022 — Console: default shell + ThreeColumnLayout
 
-**Status:** ⏳ In Progress — legs 1-4 shipped (PRs #580, #582, #585, #<!-- fill in on PR creation -->); leg 5 not yet started\
+**Status:** ⏳ In Progress — legs 1-4 shipped (PRs #580, #582, #585, #587); leg 5 not yet started\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\

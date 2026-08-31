@@ -182,6 +182,12 @@ The Platform Shell is the runtime that composes plugins into a coherent experien
 - An `overlay` plugin cannot be selected as the root plugin (CON-11)
 - The generate script composes both copies; navigating between an overlay plugin's sub-routes stays within the dialog
 
+> **Update:** Console was later moved back off `shell: "overlay"` to
+> `shell: "default"` — see [workstream 0022](../workstreams/0022-console-shell-and-three-column-layout.md)
+> (task 13.17). This task's own review checklist above describes Console's
+> behavior as it shipped at the time; it is not rewritten to match the later
+> change. Account is unaffected and still ships `shell: "overlay"`.
+
 ---
 
 #### ✅ 2.6 — Cross-plugin data sharing (consent-gated)
@@ -625,6 +631,13 @@ scaffold), Task 14.1 (Account plugin).
 - Mobile overlay behavior remains usable and does not introduce clipped content.
 - Overlay size is configured through plugin/runtime metadata rather than
   hardcoded per-route modal wrappers.
+
+> **Update:** Console was later moved off `shell: "overlay"` entirely to
+> `shell: "default"` — see [workstream 0022](../workstreams/0022-console-shell-and-three-column-layout.md)
+> (task 13.17). The "Console keeps the current large overlay behavior by
+> default" checklist item above describes Console's behavior as it shipped
+> at the time this task completed; it is not rewritten to match the later
+> change. Account is unaffected and still opens as a medium overlay.
 
 ---
 

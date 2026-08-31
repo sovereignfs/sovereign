@@ -1,0 +1,123 @@
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-5);
+  width: 100%;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.groupLabel {
+  padding: 0 var(--sv-space-3);
+  margin-bottom: var(--sv-space-1);
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sv-color-text-muted);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  min-height: var(--sv-touch-target-min);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border-radius: var(--sv-radius-md);
+  color: var(--sv-color-text-muted);
+  text-decoration: none;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  flex-shrink: 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-xs);
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--sv-color-text-muted);
+}
+
+/* ── static (desktop sidebar) ─────────────────────────────────────────── */
+
+.static .row {
+  transition:
+    background-color 0.1s ease,
+    color 0.1s ease;
+}
+
+@media (hover: hover) {
+  .static .row:hover {
+    background-color: var(--sv-color-surface-sunken);
+    color: var(--sv-color-text-primary);
+  }
+}
+
+.static .row:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.static .rowActive {
+  background-color: var(--sv-color-surface-sunken);
+  color: var(--sv-color-text-primary);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.static .rowActive .icon {
+  color: var(--sv-color-text-primary);
+}
+
+/* ── drilldown (mobile index) — grouped card, native-Settings-app rows ──── */
+
+.drilldown .group {
+  gap: 0;
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+  overflow: hidden;
+  background-color: var(--sv-color-surface-raised);
+}
+
+.drilldown .row {
+  border-radius: 0;
+  padding: var(--sv-space-3) var(--sv-space-4);
+  color: var(--sv-color-text-primary);
+}
+
+.drilldown .row:not(:last-child) {
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
+}
+
+@media (hover: hover) {
+  .drilldown .row:hover {
+    background-color: var(--sv-color-surface-sunken);
+  }
+}
+
+.drilldown .row:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.drilldown .icon {
+  color: var(--sv-color-text-muted);
+}

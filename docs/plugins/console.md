@@ -64,8 +64,7 @@ SDK. Its own `db/schema.ts` is empty.
 | `type`        | `platform`                                    |
 | `runtime`     | `native`                                      |
 | `routePrefix` | `/console`                                    |
-| `shell`       | `overlay`                                     |
-| `shellConfig` | `{ overlaySize: "lg" }`                       |
+| `shell`       | `default`                                     |
 | `adminOnly`   | `true`                                        |
 | `icon`        | `icon.svg`                                    |
 | `database`    | `shared` (omitted — `shared` is the default)  |
@@ -83,8 +82,7 @@ Proposed `manifest.json`:
   "type": "platform",
   "runtime": "native",
   "routePrefix": "/console",
-  "shell": "overlay",
-  "shellConfig": { "overlaySize": "lg" },
+  "shell": "default",
   "adminOnly": true,
   "icon": "icon.svg",
   "permissions": ["auth:session", "db:readWrite", "mailer:send"],
@@ -109,12 +107,14 @@ Notes:
   mobile footer launcher), visible to `platform:admin` only (PLT-11). Console is
   shell chrome — it never appears in the sidebar middle section or the Launcher
   grid (LCH-04).
-- `shell: overlay` (RFC 0001): clicking the ⚙ opens Console as a dialog over the
-  current page; a hard load of `/console` renders the full-page fallback. The
-  `adminOnly` 403 gate applies identically in both modes (it is enforced by URL
-  prefix in the middleware, before presentation). `shellConfig.overlaySize: "lg"`
-  sizes the dialog (fixed box, fills the viewport minus a margin); Console's
-  section tabs navigate with `replace` so a single dismiss closes the dialog.
+- `shell: default` — clicking the ⚙ navigates to `/console` as a full page
+  under the platform sidebar, not a dialog. Console previously shipped as
+  `shell: overlay` (RFC 0001, task 2.5) and was later moved back to `default`
+  (workstream 0022) so its own persistent section nav (a `ThreeColumnLayout`
+  sidebar on desktop, a drill-down index on mobile) reads as a real page
+  rather than a transient dialog. The `adminOnly` 403 gate is unaffected by
+  the shell mode either way (enforced by URL prefix in the middleware, before
+  presentation).
 
 ## Access control
 

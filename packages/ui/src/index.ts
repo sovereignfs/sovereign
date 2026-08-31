@@ -295,6 +295,13 @@ export { RootLayout } from './components/RootLayout/RootLayout';
 export type { RootLayoutProps, RootLayoutVariant } from './components/RootLayout/RootLayout';
 export { PageLayout } from './components/PageLayout/PageLayout';
 export type { PageLayoutProps, PageLayoutPadding } from './components/PageLayout/PageLayout';
+export { NavList } from './components/NavList/NavList';
+export type {
+  NavListProps,
+  NavListGroup,
+  NavListItem,
+  NavListLinkProps,
+} from './components/NavList/NavList';
 
 // Theme presets (RFC 0094) — the closed, built-in preset data. Consumed
 // directly by runtime/src/instance-style.ts (RFC 0095); Storybook and

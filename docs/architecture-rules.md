@@ -109,8 +109,12 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   `@modal/layout.tsx` resolves it from the selected interception segment
   (`overlaySizeForSegment` in `runtime/src/overlay.ts`). Only `lg`/`full` are
   a **fixed-size box** (width AND height set, content scrolls inside) — the
-  size overlay-shell plugins (Account, Console) render into, so the dialog
-  never resizes as the plugin switches between its own internal tabs/views.
+  size overlay-shell plugins (Account) render into, so the dialog never
+  resizes as the plugin switches between its own internal tabs/views. Console
+  rendered into this same `lg` box until workstream 0022 moved it to
+  `shell: "default"` — the `PluginAccessDialog`/`CapabilitiesButton` examples
+  below are ordinary in-page `Dialog` usages inside Console, unaffected by
+  that shell change.
   `sm`/`md` are fixed-width but content-driven height, capped at a per-size
   max-height (28rem/42rem) beyond which content scrolls internally rather
   than the panel growing further — changed from also-fixed-height because a

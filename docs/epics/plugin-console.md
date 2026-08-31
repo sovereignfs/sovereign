@@ -796,7 +796,7 @@ leg 1 — this entry tracks the task, not the design.
 - `docs/architecture-rules.md`'s "(Account, Console)" overlay-size reference
   narrows to "(Account)"; `docs/plugins/console.md` and this file's own
   Overview section updated to describe `shell: "default"`.
-- `docs/epics/platform-shell.md` task 2.5/2.20 get a forward pointer to this
+- `docs/epics/platform-shell.md` task 2.5/2.19 get a forward pointer to this
   task/workstream (not a rewrite of their own completed-task history).
 - `plugins/console/manifest.json` version bump (manifest-only, per this
   repo's plugin-versioning convention) + platform root `package.json` minor

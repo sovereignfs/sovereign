@@ -6,6 +6,15 @@
 **Scope:** Platform shell, manifest schema, generate script, `packages/ui`\
 **Incorporated into plan:** Yes — the design is recorded in SRS §3.8 (shell modes), §3.9 (dual composition), §5 (manifest `shell` enum), and CON-11 (root-plugin eligibility), with a decision-log row. The implementation is scheduled as Task 0.5.10 (overlay shell mode); the code changes in the "Impact when accepted" table land in that task.
 
+> **Update:** Console — one of the two motivating cases named below — was
+> later moved back off `shell: "overlay"` to `shell: "default"`, adopting a
+> persistent sidebar nav instead of a dialog (see
+> [workstream 0022](../workstreams/0022-console-shell-and-three-column-layout.md)).
+> The `overlay` mechanism itself is unchanged and remains `Implemented`;
+> Account still uses it. Read the "motivating cases" language below as
+> historical context for why the mode was added, not as a current statement
+> of which plugins use it.
+
 ---
 
 ## Summary

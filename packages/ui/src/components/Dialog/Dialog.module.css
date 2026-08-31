@@ -7,14 +7,18 @@
  * `.content`) once content actually exceeds it. Before this, height was
  * fixed too, which left short-content consumers (e.g. a two-field form in
  * console/plugins/PluginAccessDialog.tsx) looking like a near-empty
- * skeleton — see docs/architecture-rules.md. `lg`/`full` remain a true fixed
- * box (100%/100% of the scrim's available area): those sizes are what
- * overlay-shell plugins (Account, Console) render into, where the panel
- * must hold still while the plugin switches between its own internal views.
- * The close button stays pinned top-right regardless. The scrim's padding is
- * the fixed margin `lg` leaves around the viewport; `sm`/`md` are centered
- * and cap to that available space on short screens too. On mobile every
- * size becomes a full-screen sheet.
+ * skeleton — see docs/architecture-rules.md. `auto` goes further — content-
+ * driven on BOTH width and height, each independently capped rather than
+ * either being fixed — for content whose natural footprint varies enough
+ * (a card detail modal with an optional checklist/comments section) that a
+ * single fixed width doesn't fit it well either short or long. `lg` remains
+ * a true fixed box (100%/100% of the scrim's available area): that size is
+ * what overlay-shell plugins (Account, Console) render into, where the
+ * panel must hold still while the plugin switches between its own internal
+ * views. The close button stays pinned top-right regardless. The scrim's
+ * padding is the fixed margin `lg` leaves around the viewport; `sm`/`md`/
+ * `auto` are centered and cap to that available space on short screens too.
+ * On mobile every size becomes a full-screen sheet.
  *
  * `--sv-dialog-inset-left` lets a host inset the scrim past a fixed left nav
  * rail (e.g. the platform sidebar) so the overlay's left margin is measured
@@ -148,25 +152,26 @@
   max-height: min(42rem, 100%);
 }
 
-/* A step between `md` and `lg` — `lg` jumps straight to a true fixed
- * 100%/100% box (the overlay-shell plugin size, meant to hold still while
- * Account/Console switch internal views), which reads as a near-full-screen
- * takeover for a dialog that's really just "a form with a lot in it" (a
+/* Content-driven on both axes, unlike `sm`/`md` (width fixed, only height
+ * content-driven) — for a dialog whose natural footprint varies a lot (a
  * card detail modal with labels/due-date/assignees/description/checklist/
- * comments, the case that motivated adding this size). Same content-driven-
- * height behavior as `sm`/`md` — grows to fit, capped rather than fixed. */
-.xl {
-  width: 48rem;
-  max-width: 100%;
+ * comments, the case that originally motivated the now-removed `xl` size
+ * this replaces). `width: fit-content` shrink-wraps to the panel's own
+ * content (bounded by min/max-width below) the same way a flex item
+ * centered in `.scrim` naturally would with no explicit `width` at all —
+ * `min-width` just keeps sparse content (e.g. a short message) from reading
+ * as an oddly narrow sliver. Caps chosen to span roughly what `sm`/`xl`
+ * used to cover between them. */
+.auto {
+  width: fit-content;
+  min-width: min(24rem, 100%);
+  max-width: min(48rem, 100%);
   max-height: min(48rem, 100%);
 }
 
-/* `lg`/`full`: a true fixed box, unaffected by the above — see the
- * file-level comment. `full` is identical to `lg` deliberately, not by
- * oversight — see Dialog.tsx's `DialogSize` doc comment for why it's kept
- * as an alias rather than removed. */
-.lg,
-.full {
+/* `lg`: a true fixed box, unaffected by the above — see the file-level
+ * comment. */
+.lg {
   width: 100%;
   height: 100%;
 }
@@ -254,11 +259,11 @@
   .panel,
   .sm,
   .md,
-  .xl,
   .lg,
-  .full {
+  .auto {
     width: 100%;
     height: 100%;
+    min-width: 0;
     max-width: none;
     max-height: none;
     border: none;

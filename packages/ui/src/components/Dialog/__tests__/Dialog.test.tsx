@@ -88,11 +88,11 @@ describe('Dialog', () => {
 
   it('applies the size class', () => {
     render(
-      <Dialog open onClose={() => {}} size="full" aria-label="Big">
+      <Dialog open onClose={() => {}} size="lg" aria-label="Big">
         Body
       </Dialog>,
     );
-    expect(screen.getByRole('dialog').className).toContain('full');
+    expect(screen.getByRole('dialog').className).toContain('lg');
   });
 
   it('supports the sm size', () => {
@@ -104,13 +104,13 @@ describe('Dialog', () => {
     expect(screen.getByRole('dialog').className).toContain('sm');
   });
 
-  it('supports the xl size', () => {
+  it('supports the auto size', () => {
     render(
-      <Dialog open onClose={() => {}} size="xl" aria-label="Extra large">
+      <Dialog open onClose={() => {}} size="auto" aria-label="Auto-sized">
         Body
       </Dialog>,
     );
-    expect(screen.getByRole('dialog').className).toContain('xl');
+    expect(screen.getByRole('dialog').className).toContain('auto');
   });
 
   it('renders a descendant-supplied secondRow via useOverlaySecondRow', () => {

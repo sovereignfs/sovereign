@@ -13,33 +13,23 @@
   flex-direction: column;
 }
 
-.chatHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sv-space-3);
-  flex-wrap: wrap;
-  padding: var(--sv-space-3) var(--sv-space-4) 0;
-}
-
-.toggleLabel {
-  display: flex;
-  align-items: center;
-  gap: var(--sv-space-2);
-  font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-secondary);
-}
-
-.manageLinks {
-  display: flex;
-  align-items: center;
-  gap: var(--sv-space-3);
-}
-
-.manageLink {
-  font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-secondary);
-  white-space: nowrap;
+/**
+ * Applied to `.chat` alongside its base class (never alone) for a session
+ * with no messages yet — RFC 0063 §12, epic task 22.11. `.chat`'s children
+ * stay in the exact same DOM position/order either way (the `EmptyState`/
+ * `.scrollArea` branch and `.composer` are never re-parented) — only
+ * `justify-content` changes, centering the natural-height block of
+ * [EmptyState, composer] instead of letting `.scrollArea` grow to fill the
+ * column and pin the composer to the bottom. Keeping the composer's DOM
+ * position stable is deliberate, not incidental: re-parenting it between a
+ * "centered" and "docked" tree on every `isEmpty` flip would remount the
+ * incognito toggle button inside it on every send/receive transition and
+ * every incognito toggle that crosses an empty/non-empty boundary, losing
+ * focus and any in-flight interaction each time.
+ */
+.chatCentered {
+  justify-content: center;
+  gap: var(--sv-space-6);
 }
 
 .scrollArea {

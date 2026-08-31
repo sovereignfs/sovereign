@@ -5,15 +5,13 @@ import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Badge,
   Button,
   EmptyState,
   Icon,
   Message,
   MessageScroller,
-  Select,
   Textarea,
-  Toggle,
+  Tooltip,
 } from '@sovereignfs/ui';
 import type { DiscoveredModel } from '../_lib/model-discovery';
 import type { MessageView } from '../_lib/sessions';
@@ -23,6 +21,7 @@ import {
   describeImageForHistory,
   MAX_ATTACHMENT_BYTES,
 } from '../_lib/limits';
+import { ModelPickerPopover, type ModelProviderInfo } from './ModelPickerPopover';
 import styles from '../warden.module.css';
 
 interface ChatTurn {
@@ -43,11 +42,11 @@ function toChatTurn(message: MessageView): ChatTurn {
 }
 
 /**
- * Warden's chat surface (RFC 0063, epic tasks 22.3-22.5). Persisted by
- * default — `initialMessages` (loaded server-side) seeds `persistedTurns`,
- * which the server keeps in sync via `/warden/api/chat`'s persisted request
- * shape (`{modelKey, content}` — just the new message; the server already
- * has the rest of the history).
+ * Warden's chat surface (RFC 0063, epic tasks 22.3-22.5, 22.11). Persisted
+ * by default — `initialMessages` (loaded server-side) seeds
+ * `persistedTurns`, which the server keeps in sync via
+ * `/warden/api/chat`'s persisted request shape (`{modelKey, content}` —
+ * just the new message; the server already has the rest of the history).
  *
  * Incognito is a genuinely separate, always-empty-on-entry scratch context
  * (`incognitoTurns`), not a pause of the persisted thread — switching it on
@@ -57,17 +56,25 @@ function toChatTurn(message: MessageView): ChatTurn {
  * while incognito is on, rather than teaching the incognito wire shape
  * to carry a file too.
  *
+ * The composer is centered in the main column for a session with no
+ * messages yet, and docks to the bottom the instant the first message is
+ * sent (RFC 0063 §12) — keyed off the same `turns.length === 0` condition
+ * the empty state already used, not new position-tracking logic, since
+ * `send()` already appends the user's turn optimistically and
+ * synchronously before the network request starts.
+ *
  * Explicitly no tool call, task handoff, or voice input anywhere in this
  * component or its dependencies. File attachment is user-supplied message
  * content (an image or document the user is asking about), not agentic
- * tool execution, so it doesn't relax that boundary — same for the
- * web-search toggle below, which is a disabled placeholder with no
- * request-time effect at all.
+ * tool execution, so it doesn't relax that boundary — same reasoning that
+ * kept the (now-removed) web-search toggle a disabled placeholder with no
+ * request-time effect while it existed.
  */
 export function ChatView({
   initialSessionId,
   initialMessages,
   models,
+  providers,
   defaultModelKey,
   allModelsHidden = false,
 }: {
@@ -78,6 +85,11 @@ export function ChatView({
   initialSessionId: string | null;
   initialMessages: MessageView[];
   models: DiscoveredModel[];
+  /** Provider id/label pairs for the model picker's grouping (RFC 0063
+   *  §12, epic task 22.11) — a stripped-down view of `discoverModels()`'s
+   *  own `providers` list; the composer needs labels to group by, not the
+   *  full reachability/error detail `ProvidersView`/`ModelsView` show. */
+  providers: ModelProviderInfo[];
   defaultModelKey: string;
   /** True when at least one model was discovered but every one of them is
    *  hidden by this user's own visibility settings — distinct from "nothing
@@ -296,164 +308,141 @@ export function ChatView({
     );
   }
 
-  return (
-    <div className={styles.chat}>
-      <div className={styles.chatHeader}>
-        <span className={styles.toggleLabel}>
-          <Toggle
-            checked={incognito}
-            onChange={handleIncognitoToggle}
-            aria-label="Incognito — don't save this conversation"
+  const isEmpty = turns.length === 0;
+  const modelPlaceholder = allModelsHidden ? 'No models shown' : 'No model reachable';
+
+  const composer = (
+    <form className={styles.composer} onSubmit={handleSubmit}>
+      {attachment && (
+        <div className={styles.attachmentChip}>
+          <Icon name="file-text" size="sm" aria-hidden />
+          <span>{attachment.name}</span>
+          <button
+            type="button"
+            className={styles.attachmentChipRemove}
+            onClick={clearAttachment}
+            aria-label="Remove attachment"
+          >
+            <Icon name="x" size="xs" aria-hidden />
+          </button>
+        </div>
+      )}
+      {attachmentError && (
+        <p className={styles.attachmentError} role="alert">
+          {attachmentError}
+        </p>
+      )}
+      <Textarea
+        value={input}
+        onChange={(event) => setInput(event.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Message Warden…"
+        rows={2}
+        disabled={state.kind === 'streaming'}
+        aria-label="Message Warden"
+        className={styles.composerTextarea}
+      />
+      <div className={styles.composerToolbar}>
+        <div className={styles.composerToolbarStart}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            className={styles.hiddenFileInput}
+            accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,text/markdown,.md,.txt"
+            onChange={handleFileChange}
+            disabled={incognito}
           />
-          Incognito
-        </span>
-        <div className={styles.manageLinks}>
-          <Link href="/warden/settings?tab=providers" className={styles.manageLink}>
-            Manage providers
-          </Link>
-          <Link href="/warden/settings?tab=models" className={styles.manageLink}>
-            Manage models
-          </Link>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label="Attach a file"
+            disabled={incognito || state.kind === 'streaming'}
+            title={incognito ? 'Attachments are not available in incognito mode' : undefined}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Icon name="plus" size="sm" aria-hidden />
+          </Button>
+          <Tooltip content={incognito ? 'Turn off incognito' : 'Turn on incognito'}>
+            <Button
+              type="button"
+              variant={incognito ? 'secondary' : 'ghost'}
+              size="sm"
+              aria-pressed={incognito}
+              aria-label="Incognito — don't save this conversation"
+              onClick={() => handleIncognitoToggle(!incognito)}
+            >
+              <Icon name="eye-off" size="sm" aria-hidden />
+            </Button>
+          </Tooltip>
+        </div>
+        <div className={styles.composerToolbarEnd}>
+          <ModelPickerPopover
+            models={models}
+            providers={providers}
+            value={modelKey}
+            onChange={setModelKey}
+            placeholder={modelPlaceholder}
+            disabled={models.length === 0}
+          />
+          <Button
+            type="submit"
+            disabled={!input.trim() || !modelKey || state.kind === 'streaming'}
+            loading={state.kind === 'streaming'}
+          >
+            Send
+          </Button>
         </div>
       </div>
-      <div className={styles.scrollArea}>
-        <MessageScroller>
-          {turns.length === 0 && pendingText === null && (
-            <div className={styles.emptyState}>
-              <EmptyState
-                heading={
-                  incognito
-                    ? 'Incognito chat'
-                    : allModelsHidden
-                      ? 'Turn on a model to get started'
-                      : 'Ask Warden anything'
-                }
-                description={
-                  incognito
-                    ? 'Nothing in this conversation is saved. Turning incognito off (or leaving) discards it for good.'
-                    : allModelsHidden
-                      ? "Provider models stay off until you choose which ones to use — that's what keeps a big catalog from cluttering this list."
-                      : 'Chat with the model you selected below — saved to this conversation by default.'
-                }
-                action={
-                  allModelsHidden && !incognito ? (
-                    <Link href="/warden/settings?tab=models">Manage models</Link>
-                  ) : undefined
-                }
-              />
-            </div>
-          )}
-          {turns.map((turn, index) => (
-            <Message key={index} sender={turn.role}>
-              {turn.content}
-            </Message>
-          ))}
-          {pendingText !== null && (
-            <Message sender="assistant" pending={pendingText === ''}>
-              {pendingText || undefined}
-            </Message>
-          )}
-        </MessageScroller>
-      </div>
+    </form>
+  );
+
+  return (
+    <div className={isEmpty ? `${styles.chat} ${styles.chatCentered}` : styles.chat}>
+      {isEmpty ? (
+        <EmptyState
+          heading={
+            incognito
+              ? 'Incognito chat'
+              : allModelsHidden
+                ? 'Turn on a model to get started'
+                : 'Ask Warden anything'
+          }
+          description={
+            incognito
+              ? 'Nothing in this conversation is saved. Turning incognito off (or leaving) discards it for good.'
+              : allModelsHidden
+                ? "Provider models stay off until you choose which ones to use — that's what keeps a big catalog from cluttering this list."
+                : 'Chat with the model you selected below — saved to this conversation by default.'
+          }
+          action={
+            allModelsHidden && !incognito ? (
+              <Link href="/warden/settings?tab=models">Manage models</Link>
+            ) : undefined
+          }
+        />
+      ) : (
+        <div className={styles.scrollArea}>
+          <MessageScroller>
+            {turns.map((turn, index) => (
+              <Message key={index} sender={turn.role}>
+                {turn.content}
+              </Message>
+            ))}
+            {pendingText !== null && (
+              <Message sender="assistant" pending={pendingText === ''}>
+                {pendingText || undefined}
+              </Message>
+            )}
+          </MessageScroller>
+        </div>
+      )}
       {banner && (
         <p className={styles.banner} role="alert">
           {banner}
         </p>
       )}
-      <form className={styles.composer} onSubmit={handleSubmit}>
-        {attachment && (
-          <div className={styles.attachmentChip}>
-            <Icon name="file-text" size="sm" aria-hidden />
-            <span>{attachment.name}</span>
-            <button
-              type="button"
-              className={styles.attachmentChipRemove}
-              onClick={clearAttachment}
-              aria-label="Remove attachment"
-            >
-              <Icon name="x" size="xs" aria-hidden />
-            </button>
-          </div>
-        )}
-        {attachmentError && (
-          <p className={styles.attachmentError} role="alert">
-            {attachmentError}
-          </p>
-        )}
-        <Textarea
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Message Warden…"
-          rows={2}
-          disabled={state.kind === 'streaming'}
-          aria-label="Message Warden"
-          className={styles.composerTextarea}
-        />
-        <div className={styles.composerToolbar}>
-          <div className={styles.composerToolbarStart}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className={styles.hiddenFileInput}
-              accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,text/markdown,.md,.txt"
-              onChange={handleFileChange}
-              disabled={incognito}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              aria-label="Attach a file"
-              disabled={incognito || state.kind === 'streaming'}
-              title={incognito ? 'Attachments are not available in incognito mode' : undefined}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Icon name="plus" size="sm" aria-hidden />
-            </Button>
-            <span className={styles.toggleLabel} title="Web search isn’t available yet">
-              <Toggle
-                checked={false}
-                onChange={() => {}}
-                disabled
-                aria-label="Web search (coming soon)"
-              />
-              <Icon name="search" size="sm" aria-hidden />
-              Web search
-              <Badge variant="mono" uppercase={false} size="sm">
-                Soon
-              </Badge>
-            </span>
-          </div>
-          <div className={styles.composerToolbarEnd}>
-            <Select
-              value={modelKey}
-              onChange={(event) => setModelKey(event.target.value)}
-              aria-label="Model"
-              size="sm"
-              disabled={models.length === 0}
-            >
-              {models.length === 0 && (
-                <option value="">
-                  {allModelsHidden ? 'No models shown' : 'No model reachable'}
-                </option>
-              )}
-              {models.map((model) => (
-                <option key={model.key} value={model.key}>
-                  {model.label}
-                </option>
-              ))}
-            </Select>
-            <Button
-              type="submit"
-              disabled={!input.trim() || !modelKey || state.kind === 'streaming'}
-              loading={state.kind === 'streaming'}
-            >
-              Send
-            </Button>
-          </div>
-        </div>
-      </form>
+      {composer}
     </div>
   );
 }

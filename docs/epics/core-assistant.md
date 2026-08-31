@@ -855,7 +855,7 @@ typecheck`, `pnpm --filter @sovereignfs/ui typecheck`, `pnpm lint`, and
 
 ---
 
-#### 📋 22.11 — Warden composer redesign
+#### ✅ 22.11 — Warden composer redesign
 
 **Goal:** Restyle the composer around a Claude-style card and reorganize
 its controls — model picker as a popover, incognito relocated into the
@@ -897,6 +897,53 @@ inside).
 - `pnpm exec vitest run plugins/warden`, `pnpm --filter runtime typecheck`,
   `pnpm lint`, and `pnpm format:check` all pass.
 - `plugins/warden/manifest.json`'s `version` is bumped.
+
+**Result:** shipped as planned, closing out workstream 0021. `ModelPickerPopover`
+(new) replaces the inline `<select>` with a `Popover` grouped by provider —
+local model first, then each connected provider's own group, mirroring
+`ModelsView`'s existing `displayLabel`/grouping logic (duplicated rather than
+imported, since that component's version is entangled with search/badge
+concerns this popover doesn't need) — with a footer linking into Settings →
+Providers/Models. Incognito moved from the chat header's `Toggle` + label
+into the composer toolbar as an icon `Button` (`eye-off`, wrapped in
+`Tooltip`, `aria-pressed` reflecting state) — the chat header itself is now
+gone entirely, along with the "Manage providers"/"Manage models" links and
+the disabled "Web search — Soon" toggle, all removed outright per the task's
+own instruction, not hidden.
+
+The centered-vs-docked composer positioning (RFC 0063 §12) turned out to need
+more care than "swap between two JSX trees on `turns.length === 0`": an
+initial implementation nested the composer inside a wrapper only rendered in
+the empty-state branch, which meant React unmounted and remounted the entire
+composer subtree — including the incognito toggle button — every time
+`isEmpty` flipped (sending the first message, or toggling incognito while an
+existing conversation has messages, since incognito's own context starts
+empty). Caught by a unit test asserting the incognito toggle survives a
+send-triggered centered→docked transition as the _same_ DOM node, which
+failed against the first implementation and passed once fixed. The actual
+fix keeps the composer (and the `EmptyState`/message-list branch) as
+permanently-stable siblings of `.chat` in both states — only a `chatCentered`
+modifier class (`justify-content: center`) changes, never the tree shape —
+so nothing inside the composer ever remounts regardless of how often the
+empty/non-empty boundary is crossed.
+
+Verified live end to end against the same dev database used for leg 3,
+using a fresh session on the account leg 3's own verification had already
+returned to a clean state (re-adding the same OpenRouter test provider and
+re-enabling `openai/gpt-4o-mini`, both removed again before finishing):
+confirmed the centered "Ask Warden anything" composer, the model picker
+popover opening with the correct "OPENROUTER (TEST)" group heading and a
+working round trip through "Manage providers" and back via the breadcrumb's
+"Chat" link, the incognito toggle visibly switching to its pressed/filled
+state and showing the "Incognito chat" empty state, and the attach button
+correctly disabling while incognito is on — all with the old header links,
+toggle-based incognito switch, and disabled web-search toggle confirmed
+absent from the DOM. `plugins/warden`'s own test suite grew from 278 to 291
+tests (13 new, covering `ModelPickerPopover`'s grouping/selection/footer and
+the composer's no-remount guarantee); full existing suite, `pnpm --filter
+runtime typecheck`, `pnpm --filter @sovereignfs/ui typecheck`, `pnpm lint`,
+`pnpm format:check`, and `pnpm design:tokens:check` all green. `plugins/warden`
+manifest `0.8.0` → `0.9.0`.
 
 ---
 

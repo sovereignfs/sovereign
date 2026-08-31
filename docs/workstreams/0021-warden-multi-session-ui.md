@@ -1,11 +1,11 @@
 # Workstream 0021 — Warden: multi-session UI
 
-**Status:** ⏳ In progress — legs 1-3 of 4 done\
+**Status:** ✅ Done — all 4 legs shipped\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
-**RFCs:** [0063](../rfcs/0063-core-assistant-warden.md) (Partially
-implemented, third revision, August 2026)\
+**RFCs:** [0063](../rfcs/0063-core-assistant-warden.md) (Implemented, third
+revision, August 2026)\
 **Epics touched:** 22 (Warden / Core Assistant)
 
 ---
@@ -36,7 +36,7 @@ workstream 0019.
       pinned/recent session groups, "+ New," per-row rename/pin/delete,
       LLM-generated session titles, and a Settings entry point pinned to
       the sidebar's bottom.
-- [ ] `22.11` — the composer is redesigned: Claude-style card, model picker
+- [x] `22.11` — the composer is redesigned: Claude-style card, model picker
       as a popover linking into Settings, incognito relocated into the
       toolbar as an icon, and the chat header's "Manage providers"/"Manage
       models" links and the disabled web-search toggle removed.
@@ -86,7 +86,7 @@ same PR as whichever leg first uses it (`22.10`).
 | 1   | Sessions data model and API ✅ | 22.8       | 22    | No    | `warden_sessions` replaces `warden_conversation`; create/list/pin/unpin/rename/delete all work; the chat API routes by session id                             |
 | 2   | Settings consolidation ✅      | 22.9       | 22    | No    | `/warden/settings` (General/Providers/Models) is live with `ProvidersView`/`ModelsView` behavior unchanged; `/warden/providers`/`/warden/models` are removed  |
 | 3   | Sidebar UI ✅                  | 22.10      | 22    | No    | Collapsible two-column layout ships; sidebar lists pinned + recent sessions, supports "+ New," rename/pin/delete, LLM titles, and a Settings entry point      |
-| 4   | Composer redesign              | 22.11      | 22    | No    | Claude-style composer ships with a model-picker popover (linking into Settings), incognito as a toolbar icon, and the old header links/web-search toggle gone |
+| 4   | Composer redesign ✅           | 22.11      | 22    | No    | Claude-style composer ships with a model-picker popover (linking into Settings), incognito as a toolbar icon, and the old header links/web-search toggle gone |
 
 No leg is marked a gate — there's no upstream unknown here that could
 redirect a later leg's scope, unlike workstream 0014's engine benchmark.
@@ -292,7 +292,7 @@ not silently corrupted. All test data created for this verification was
 deleted again before finishing. Full detail in the epic file's task 22.10
 completion note.
 
-### Leg 4 — Composer redesign
+### Leg 4 — Composer redesign ✅
 
 **Epic tasks:** 22.11
 
@@ -316,6 +316,30 @@ and its model-picker popover links into leg 2's settings route.
 **Do not proceed if:** the model-picker popover's footer links leave
 Settings unable to return to the exact session that was open (a navigation
 dead-end) — verify the round trip live, not just that each page renders.
+
+**Leg outcome:** shipped as planned, with one implementation-time correction
+beyond what the technical notes anticipated. `ModelPickerPopover` (new)
+groups models by provider, local first, mirroring `ModelsView`'s own
+`displayLabel`/grouping logic (duplicated, not imported — that component's
+version is entangled with search/badge concerns this popover doesn't need),
+with a footer linking into Settings → Providers/Models; incognito became an
+icon `Button` (`eye-off`, `Tooltip`, `aria-pressed`) in the composer toolbar;
+the chat header, its "Manage providers"/"Manage models" links, and the
+disabled "Web search — Soon" toggle were all removed outright. The
+centered/docked composer positioning needed more than "swap between two JSX
+trees on `turns.length === 0`" — an initial implementation nested the
+composer inside a wrapper only rendered in the empty-state branch, which
+remounted the entire composer subtree (including the incognito button) on
+every empty/non-empty transition, caught by a unit test asserting the
+incognito toggle survives a send as the same DOM node. Fixed by keeping the
+composer and the `EmptyState`/message-list branch as permanently-stable
+siblings of `.chat` in both states, with only a `chatCentered` modifier
+class changing — never the tree shape. Verified live end to end against the
+same dev database leg 3 used (re-adding, then re-removing, the same test
+provider and model), confirming the popover's grouping/footer round trip,
+the incognito toggle's visual pressed state, and the old header/toggle
+elements' absence from the DOM. Full detail in the epic file's task 22.11
+completion note.
 
 ## Risks
 
@@ -350,9 +374,10 @@ needs rework first.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft, sequencing RFC 0063's third revision (multi-session UI, settings consolidation, composer redesign) into four legs                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| 0.2     | August 2026 | Leg 1 (task 22.8) done — `warden_sessions` shipped replacing `warden_conversation` (clean-slate migration, hand-authored since `drizzle-kit generate` needed an unavailable interactive prompt), full CRUD, chat API routed by session id, no-model-call title derivation. Leg 2 unblocked                                                                                                                                                                                                                                                                    |
-| 0.3     | August 2026 | Leg 2 (task 22.9) done — `/warden/settings` (General/Providers/Models tabs, `?tab=`-synced) replaces `/warden/providers`/`/warden/models`; default model (`warden_user_settings`), manual retention excluding pinned sessions, and export-via-account-deep-link all resolved. Verified live against a seeded dev account. Leg 3 unblocked                                                                                                                                                                                                                     |
-| 0.4     | August 2026 | Leg 3 (task 22.10) done — collapsible two-column layout (`WardenLayoutShell`) + sidebar (`WardenSidebar`) ship: pinned/recent session groups, "+ New," per-row rename/pin/delete, a bottom Settings entry point, and two new curated icons (`panel-left`, `pin`). `ChatView.tsx` now syncs the URL to a lazily-created session's id so the sidebar and composer can never disagree about which session is open. Verified live against a second seeded dev account after the first turned out to carry unrelated pre-existing data corruption. Leg 4 unblocked |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft, sequencing RFC 0063's third revision (multi-session UI, settings consolidation, composer redesign) into four legs                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 0.2     | August 2026 | Leg 1 (task 22.8) done — `warden_sessions` shipped replacing `warden_conversation` (clean-slate migration, hand-authored since `drizzle-kit generate` needed an unavailable interactive prompt), full CRUD, chat API routed by session id, no-model-call title derivation. Leg 2 unblocked                                                                                                                                                                                                                                                                                                     |
+| 0.3     | August 2026 | Leg 2 (task 22.9) done — `/warden/settings` (General/Providers/Models tabs, `?tab=`-synced) replaces `/warden/providers`/`/warden/models`; default model (`warden_user_settings`), manual retention excluding pinned sessions, and export-via-account-deep-link all resolved. Verified live against a seeded dev account. Leg 3 unblocked                                                                                                                                                                                                                                                      |
+| 0.4     | August 2026 | Leg 3 (task 22.10) done — collapsible two-column layout (`WardenLayoutShell`) + sidebar (`WardenSidebar`) ship: pinned/recent session groups, "+ New," per-row rename/pin/delete, a bottom Settings entry point, and two new curated icons (`panel-left`, `pin`). `ChatView.tsx` now syncs the URL to a lazily-created session's id so the sidebar and composer can never disagree about which session is open. Verified live against a second seeded dev account after the first turned out to carry unrelated pre-existing data corruption. Leg 4 unblocked                                  |
+| 0.5     | August 2026 | Leg 4 (task 22.11) done — workstream complete. `ModelPickerPopover` (new) replaces the inline `<select>` with a provider-grouped `Popover` and a footer linking into Settings; incognito moved into the composer toolbar as an icon toggle; the chat header, its "Manage providers"/"Manage models" links, and the disabled web-search toggle are all removed outright. Fixed a remount bug found via a unit test — the composer (and incognito button) now stays a stable DOM sibling of `.chat` across the centered/docked transition instead of being re-parented. Verified live end to end |

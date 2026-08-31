@@ -98,6 +98,10 @@ export default async function WardenPage({
           initialSessionId={activeSession?.id ?? null}
           initialMessages={initialMessages}
           models={visibleModels}
+          providers={discovery.providers.map((provider) => ({
+            id: provider.id,
+            label: provider.label,
+          }))}
           defaultModelKey={resolvedDefaultModelKey}
           allModelsHidden={allModelsHidden}
         />

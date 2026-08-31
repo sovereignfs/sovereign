@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ChatView } from '../ChatView';
 
 const replace = vi.fn();
@@ -36,10 +36,23 @@ function sendMessage(text: string) {
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 }
 
+/** Opens the model-picker popover — its trigger's accessible name is
+ *  whichever model (or placeholder) is currently selected. */
+function openModelPicker(currentTriggerLabel: string) {
+  fireEvent.click(screen.getByRole('button', { name: currentTriggerLabel }));
+}
+
+function selectModelFromPicker(displayName: string) {
+  const dialog = screen.getByRole('dialog', { name: 'Model' });
+  fireEvent.click(within(dialog).getByRole('button', { name: displayName }));
+}
+
 const models = [
   { key: 'local', label: 'Local model (this server)' },
   { key: 'conn-1:gpt-4o-mini', label: 'OpenRouter — gpt-4o-mini' },
 ];
+
+const providers = [{ id: 'conn-1', label: 'OpenRouter' }];
 
 function renderChatView(overrides: Partial<Parameters<typeof ChatView>[0]> = {}) {
   return render(
@@ -47,6 +60,7 @@ function renderChatView(overrides: Partial<Parameters<typeof ChatView>[0]> = {})
       initialSessionId={null}
       initialMessages={[]}
       models={models}
+      providers={providers}
       defaultModelKey="local"
       {...overrides}
     />,
@@ -221,7 +235,10 @@ describe('ChatView — persisted mode (default)', () => {
 describe('ChatView — no reachable model', () => {
   it('disables the model picker and Send when the models list is empty', () => {
     renderChatView({ models: [], defaultModelKey: '' });
-    expect(screen.getByRole('combobox', { name: 'Model' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'No model reachable' })).toHaveProperty(
+      'disabled',
+      true,
+    );
     fireEvent.change(screen.getByLabelText('Message Warden'), { target: { value: 'hi' } });
     expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', true);
   });
@@ -238,10 +255,10 @@ describe('ChatView — every model hidden by the user', () => {
     expect(screen.getByText('Turn on a model to get started')).toBeDefined();
     expect(screen.getAllByText('No models shown').length).toBeGreaterThan(0);
     expect(screen.queryByText('No model reachable')).toBeNull();
-    // Two "Manage models" links exist in this state: the always-present
-    // header nav link, and the empty-state's own action pointing at the
-    // same place.
-    expect(screen.getAllByRole('link', { name: 'Manage models' }).length).toBe(2);
+    // Only the empty-state's own action link — the old chat-header
+    // "Manage models" link is gone (task 22.11); the model picker's own
+    // footer link isn't in the DOM until its popover is opened.
+    expect(screen.getAllByRole('link', { name: 'Manage models' }).length).toBe(1);
   });
 });
 
@@ -262,7 +279,7 @@ describe('ChatView — incognito', () => {
     expect(screen.getByText('persisted message')).toBeDefined();
 
     fireEvent.click(
-      screen.getByRole('switch', { name: "Incognito — don't save this conversation" }),
+      screen.getByRole('button', { name: "Incognito — don't save this conversation" }),
     );
 
     expect(screen.queryByText('persisted message')).toBeNull();
@@ -275,7 +292,7 @@ describe('ChatView — incognito', () => {
 
     renderChatView();
     fireEvent.click(
-      screen.getByRole('switch', { name: "Incognito — don't save this conversation" }),
+      screen.getByRole('button', { name: "Incognito — don't save this conversation" }),
     );
     sendMessage('off the record');
 
@@ -301,7 +318,9 @@ describe('ChatView — incognito', () => {
         },
       ],
     });
-    const toggle = screen.getByRole('switch', { name: "Incognito — don't save this conversation" });
+    const toggle = screen.getByRole('button', {
+      name: "Incognito — don't save this conversation",
+    });
     fireEvent.click(toggle);
     fireEvent.click(toggle);
     expect(screen.getByText('persisted message')).toBeDefined();
@@ -310,7 +329,9 @@ describe('ChatView — incognito', () => {
   it('starts fresh again every time it is turned back on, never resuming a prior incognito turn', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(sseResponse([{ type: 'done' }])));
     renderChatView();
-    const toggle = screen.getByRole('switch', { name: "Incognito — don't save this conversation" });
+    const toggle = screen.getByRole('button', {
+      name: "Incognito — don't save this conversation",
+    });
 
     fireEvent.click(toggle); // on
     sendMessage('first incognito message');
@@ -319,6 +340,16 @@ describe('ChatView — incognito', () => {
     fireEvent.click(toggle); // off
     fireEvent.click(toggle); // on again
     expect(screen.queryByText('first incognito message')).toBeNull();
+  });
+
+  it('reflects its pressed state via aria-pressed', () => {
+    renderChatView();
+    const toggle = screen.getByRole('button', {
+      name: "Incognito — don't save this conversation",
+    });
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
   });
 });
 
@@ -339,7 +370,7 @@ describe('ChatView — attachments', () => {
     expect(attachButton).toHaveProperty('disabled', false);
 
     fireEvent.click(
-      screen.getByRole('switch', { name: "Incognito — don't save this conversation" }),
+      screen.getByRole('button', { name: "Incognito — don't save this conversation" }),
     );
 
     expect(attachButton).toHaveProperty('disabled', true);
@@ -434,16 +465,6 @@ describe('ChatView — attachments', () => {
 
     expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', true);
   });
-
-  it('renders the disabled "Soon" Web-search toggle as a no-op', () => {
-    renderChatView();
-    const toggle = screen.getByRole('switch', { name: 'Web search (coming soon)' });
-    expect(toggle).toHaveProperty('disabled', true);
-    expect(screen.getByText('Soon')).toBeDefined();
-
-    fireEvent.click(toggle);
-    expect(toggle.getAttribute('aria-checked')).toBe('false');
-  });
 });
 
 describe('ChatView — model selection', () => {
@@ -452,13 +473,62 @@ describe('ChatView — model selection', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     renderChatView();
-    fireEvent.change(screen.getByRole('combobox', { name: 'Model' }), {
-      target: { value: 'conn-1:gpt-4o-mini' },
-    });
+    openModelPicker('Local model (this server)');
+    selectModelFromPicker('gpt-4o-mini');
     sendMessage('hi');
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.modelKey).toBe('conn-1:gpt-4o-mini');
+  });
+
+  it('groups models by provider, with the local model under its own group', () => {
+    renderChatView();
+    openModelPicker('Local model (this server)');
+    const dialog = screen.getByRole('dialog', { name: 'Model' });
+    expect(within(dialog).getByText('Local model')).toBeDefined();
+    expect(within(dialog).getByText('OpenRouter')).toBeDefined();
+    expect(within(dialog).getByRole('button', { name: 'gpt-4o-mini' })).toBeDefined();
+  });
+});
+
+describe('ChatView — composer redesign (task 22.11)', () => {
+  it('does not render the old chat-header links or the web-search toggle anywhere in the DOM', () => {
+    renderChatView();
+    expect(screen.queryByRole('link', { name: 'Manage providers' })).toBeNull();
+    expect(screen.queryByRole('switch', { name: 'Web search (coming soon)' })).toBeNull();
+    expect(screen.queryByText('Web search')).toBeNull();
+  });
+
+  it("model picker popover's footer links into Settings → Providers and → Models", () => {
+    renderChatView();
+    openModelPicker('Local model (this server)');
+    const dialog = screen.getByRole('dialog', { name: 'Model' });
+    expect(
+      within(dialog).getByRole('link', { name: 'Manage providers' }).getAttribute('href'),
+    ).toBe('/warden/settings?tab=providers');
+    expect(within(dialog).getByRole('link', { name: 'Manage models' }).getAttribute('href')).toBe(
+      '/warden/settings?tab=models',
+    );
+  });
+
+  it('centers the composer for an empty session and docks it once the first message is sent', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(sseResponse([{ type: 'done' }])));
+    const { container } = renderChatView();
+
+    expect(container.querySelector('.chatCentered')).not.toBeNull();
+    const incognitoToggle = screen.getByRole('button', {
+      name: "Incognito — don't save this conversation",
+    });
+
+    sendMessage('hello');
+
+    await waitFor(() => expect(container.querySelector('.chatCentered')).toBeNull());
+    // The composer (and everything inside it, e.g. the incognito toggle)
+    // never remounts across the centered → docked transition — the same
+    // DOM node from before the send is still the one on screen.
+    expect(screen.getByRole('button', { name: "Incognito — don't save this conversation" })).toBe(
+      incognitoToggle,
+    );
   });
 });

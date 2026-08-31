@@ -946,7 +946,7 @@ the pane, the Close link clears `?plugin=`, and the mobile kebab menu's
 
 ---
 
-#### 📋 13.21 — Console External clients page: selection-driven detail column
+#### ✅ 13.21 — Console External clients page: selection-driven detail column
 
 **Goal:** Add a 3rd `ThreeColumnLayout` column to `/console/oauth-clients`:
 selecting a client shows a detail pane for secret rotation/revocation.
@@ -962,6 +962,46 @@ Full technical detail in workstream 0022 leg 5.
 
 **Review checklist:** See workstream 0022 leg 5's technical notes; at
 minimum, `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` pass.
+
+**Outcome:** Reading `OAuthClientsClient.tsx` confirmed the flagged risk:
+unlike the other three legs, there was no dialog to replace — every field
+(name, ID, redirect URIs, status) was already visible inline on each
+client's card, and the only "reveal" state (a freshly created/rotated
+secret) is a page-level, explicitly one-time-only banner unrelated to
+selection. Escalated per the task's own instruction; the developer chose to
+add the 3rd column anyway, for visual consistency across all four converted
+pages rather than because it reveals new information. Implemented via
+`useSearchParams()`/`<Link href="?client=<id>">` directly inside
+`OAuthClientsClient.tsx` (this page has no server-side `page.tsx` data
+fetch to thread a `searchParams` prop through, unlike the other three pages
+— everything here is client-driven against `/api/auth/oauth2/*`), with a
+new `OAuthClientDetailPane.tsx` relocating the Rotate secret/Revoke actions
+out of the card. The revealed-secret banner itself was deliberately left
+untouched at the page level rather than moved into the pane — it's a
+security-sensitive, well-tested "shown once" flow, and its position doesn't
+depend on which client triggered it. A mobile-only fallback
+(`.cardManageMobile`, same mechanism legs 3/4 use) keeps Rotate/Revoke
+reachable on mobile, which has no detail column to select into. **Found and
+fixed a real, pre-existing bug while verifying live on a mobile viewport**:
+`.cardChevron`'s `display: none` (legs 3/4's own selection-indicator class)
+relies on beating `Icon.module.css`'s `.root { display: inline-block }` at
+equal CSS specificity — which stylesheet wins is decided by Next.js's
+per-route CSS bundle order, not something either stylesheet controls. It
+happened to resolve correctly on Groups/Plugins but silently failed here
+(chevron visible on mobile too, though non-functional since selection
+itself is inert there), same markup pattern all three times. Fixed by
+qualifying the selector as `svg.cardChevron` (element+class specificity),
+which now reliably wins regardless of bundle order — verified live via
+computed-style inspection at 375px before and after. Verified live
+end-to-end on both desktop and mobile: registering a client, selecting it
+to open the pane, rotating its secret from within the pane (new secret
+shown via the unchanged page-level banner, pane stays open throughout),
+revoking it (card and pane both disappear, matching Groups' delete
+precedent), and the mobile card's own Rotate/Revoke buttons working
+identically to before. `plugins/console/manifest.json` bumped `0.9.0` →
+`0.10.0`. This completes the Console/`ThreeColumnLayout` conversion (legs
+1-5); leg 6 (unrelated stale docs-server reference cleanup) remains
+independent and not yet started.
 
 ---
 

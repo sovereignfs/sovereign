@@ -125,8 +125,17 @@
 
 /* Desktop-only selection indicator — the detail column replaces `Manage`
    there; mobile keeps the `Manage` dialog button instead (`.cardManageMobile`
-   below), since it has no detail column to select into. */
-.cardChevron {
+   below), since it has no detail column to select into. Qualified as
+   `svg.cardChevron` (not just `.cardChevron`) so its `display: none` reliably
+   beats `Icon.module.css`'s own `.root { display: inline-block }` — both are
+   single-class-selector specificity, so which one wins depends on stylesheet
+   source order, which Next.js doesn't guarantee is consistent across routes;
+   the extra element-type qualifier makes this selector strictly more
+   specific instead of relying on that order. Found live: worked by accident
+   on Groups/Plugins, silently failed (chevron visible on mobile too) on
+   External clients (workstream 0022 leg 5), same markup pattern all three
+   times. */
+svg.cardChevron {
   display: none;
   align-self: flex-start;
   margin-top: auto;
@@ -141,7 +150,7 @@
 }
 
 @media (min-width: 769px) {
-  .cardChevron {
+  svg.cardChevron {
     display: inline-flex;
   }
 

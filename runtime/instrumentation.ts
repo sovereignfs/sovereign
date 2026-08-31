@@ -149,6 +149,14 @@ export async function register(): Promise<void> {
     const { startBackupWorker, stopBackupWorker } = await import('./src/backup-worker');
     startBackupWorker();
 
+    // Operator-configured log retention (GDPR-7) — prunes delivery/access
+    // and (separately) activity logs once an admin sets a window in Console;
+    // always started, unlike the backup worker above, since its settings are
+    // reachable immediately and its 6h tick is negligible overhead even when
+    // both settings are unset. See retention-worker.ts's doc comment.
+    const { startRetentionWorker, stopRetentionWorker } = await import('./src/retention-worker');
+    startRetentionWorker();
+
     // Realtime event broker (RFC 0045) — independent of the notification
     // broker above (separate env var, separate keyspace); see
     // event-broker.ts's doc comment for why. Unlike the notification broker,
@@ -181,6 +189,7 @@ export async function register(): Promise<void> {
       stopScheduler();
       stopJobWorker();
       stopBackupWorker();
+      stopRetentionWorker();
       void closeBroker();
       void closeEventBroker();
     });

@@ -19,6 +19,7 @@ import {
   getPluginHandoff,
   createE2eeDeviceEnrollment,
   createE2eeProfile,
+  countE2eeProfiles,
   createPluginConnection,
   createPluginSecret,
   createPluginStatusRowIfAbsent,
@@ -80,6 +81,11 @@ import {
   markPluginProviderConfigChecked,
   markPluginSecretUsed,
   listAdminActivity,
+  logDataAccess,
+  pruneActivityLog,
+  pruneDeliveryLogs,
+  recordEmailDelivery,
+  recordPushDelivery,
   listDisabledPluginIds,
   listPluginAccessGroups,
   listPluginAccessPolicies,
@@ -413,6 +419,75 @@ describe.skipIf(!PG_URL)('account preferences helpers', () => {
       sidebarPlugins: null,
       textSize: 'default',
     });
+  });
+});
+
+describe.skipIf(!PG_URL)('log retention pruning (GDPR-7)', () => {
+  async function countRows(db: PlatformDb, table: string): Promise<number> {
+    const result = await (
+      db.db as unknown as { $client: { query: (q: string) => Promise<{ rows: { c: string }[] }> } }
+    ).$client.query(`SELECT COUNT(*) AS c FROM ${table}`);
+    return Number(result.rows[0]?.c ?? 0);
+  }
+
+  it('pruneDeliveryLogs deletes nothing when the cutoff is before every row, and everything when the cutoff is after', async () => {
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+    await recordEmailDelivery(db, {
+      id: 'email-1',
+      deliveryClass: 'authentication',
+      templateId: 'verify',
+      source: 'runtime',
+      status: 'sent',
+    });
+    await recordPushDelivery(db, { id: 'push-1', userId: 'u1', status: 'sent' });
+    await logDataAccess(db, 'access-1', 'u1', 'consumer', 'provider', 'contract', 1, 5);
+
+    // Cutoff well before the rows just inserted — nothing should be deleted.
+    await pruneDeliveryLogs(db, now - 3600);
+    expect(await countRows(db, 'email_delivery_log')).toBe(1);
+    expect(await countRows(db, 'push_delivery_log')).toBe(1);
+    expect(await countRows(db, 'data_access_log')).toBe(1);
+
+    // Cutoff well after — every row is older than it, so all three tables clear.
+    await pruneDeliveryLogs(db, now + 3600);
+    expect(await countRows(db, 'email_delivery_log')).toBe(0);
+    expect(await countRows(db, 'push_delivery_log')).toBe(0);
+    expect(await countRows(db, 'data_access_log')).toBe(0);
+  });
+
+  it('pruneDeliveryLogs never touches activity_log', async () => {
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+    await recordActivity(db, {
+      id: 'evt-untouched',
+      actorId: 'u1',
+      actorType: 'user',
+      action: 'plugin.enabled',
+      visibility: 'admin',
+    });
+
+    await pruneDeliveryLogs(db, now + 3600);
+
+    expect(await countRows(db, 'activity_log')).toBe(1);
+  });
+
+  it('pruneActivityLog deletes rows older than the cutoff and leaves the rest', async () => {
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+    await recordActivity(db, {
+      id: 'evt-1',
+      actorId: 'u1',
+      actorType: 'user',
+      action: 'plugin.enabled',
+      visibility: 'admin',
+    });
+
+    await pruneActivityLog(db, now - 3600);
+    expect(await countRows(db, 'activity_log')).toBe(1);
+
+    await pruneActivityLog(db, now + 3600);
+    expect(await countRows(db, 'activity_log')).toBe(0);
   });
 });
 
@@ -936,6 +1011,27 @@ describe.skipIf(!PG_URL)('client-side encryption profile helpers (RFC 0060)', ()
     });
     expect(await getE2eeProfile(db, DEFAULT_TENANT_ID, 'u1')).toMatchObject({ id: 'profile-1' });
     expect(await getE2eeProfile(db, DEFAULT_TENANT_ID, 'u2')).toBeUndefined();
+  });
+
+  it('countE2eeProfiles (GDPR-9) counts real enrolled profiles for the tenant, starting at zero', async () => {
+    const db = await freshDb();
+    expect(await countE2eeProfiles(db, DEFAULT_TENANT_ID)).toBe(0);
+
+    await createE2eeProfile(db, {
+      id: 'profile-count-1',
+      tenantId: DEFAULT_TENANT_ID,
+      userId: 'u1',
+      cmkAlgorithm: 'AES-GCM-256',
+    });
+    expect(await countE2eeProfiles(db, DEFAULT_TENANT_ID)).toBe(1);
+
+    await createE2eeProfile(db, {
+      id: 'profile-count-2',
+      tenantId: DEFAULT_TENANT_ID,
+      userId: 'u2',
+      cmkAlgorithm: 'AES-GCM-256',
+    });
+    expect(await countE2eeProfiles(db, DEFAULT_TENANT_ID)).toBe(2);
   });
 
   it('upserts the recovery wrapper — a second call replaces, not duplicates', async () => {

@@ -241,9 +241,10 @@ export {
   useCarouselRouteSync,
   useReorderSensors,
   shouldHandleDndEvent,
+  useSwipeStack,
 } from './hooks';
 export type { OfflineTileState } from './hooks';
-export { MOBILE_BREAKPOINT_PX } from './hooks';
+export { MOBILE_BREAKPOINT_PX, SWIPE_STACK_TRANSITION_MS } from './hooks';
 export type {
   UseLongPressOptions,
   LongPressHandlers,
@@ -258,6 +259,10 @@ export type {
   UseCarouselRouteSyncOptions,
   UseCarouselRouteSyncResult,
   UseReorderSensorsOptions,
+  SwipeDirection,
+  UseSwipeStackOptions,
+  UseSwipeStackHandlers,
+  UseSwipeStackResult,
 } from './hooks';
 export { ResponsiveSurface } from './components/ResponsiveSurface/ResponsiveSurface';
 export type { ResponsiveSurfaceProps } from './components/ResponsiveSurface/ResponsiveSurface';
@@ -276,6 +281,10 @@ export { SwipableMobileCarouselSlideBody } from './components/SwipableMobileCaro
 export type { SwipableMobileCarouselSlideBodyProps } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlideBody';
 export { SwipableMobileCarouselSlideFooter } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlideFooter';
 export type { SwipableMobileCarouselSlideFooterProps } from './components/SwipableMobileCarousel/SwipableMobileCarouselSlideFooter';
+export { SwipeStack } from './components/SwipeStack/SwipeStack';
+export type { SwipeStackProps, SwipeDirectionMeta } from './components/SwipeStack/SwipeStack';
+export { SwipeStackCard } from './components/SwipeStack/SwipeStackCard';
+export type { SwipeStackCardProps } from './components/SwipeStack/SwipeStackCard';
 export { ThreeColumnLayout } from './components/ThreeColumnLayout/ThreeColumnLayout';
 export type { ThreeColumnLayoutProps } from './components/ThreeColumnLayout/ThreeColumnLayout';
 export { HeaderFooterLayout } from './components/HeaderFooterLayout/HeaderFooterLayout';

@@ -47,6 +47,8 @@ import { SwipableMobileCarouselSlide } from '../components/SwipableMobileCarouse
 import { SwipableMobileCarouselSlideHeader } from '../components/SwipableMobileCarousel/SwipableMobileCarouselSlideHeader';
 import { SwipableMobileCarouselSlideBody } from '../components/SwipableMobileCarousel/SwipableMobileCarouselSlideBody';
 import { SwipableMobileCarouselDots } from '../components/SwipableMobileCarouselDots/SwipableMobileCarouselDots';
+import { SwipeStack } from '../components/SwipeStack/SwipeStack';
+import { SwipeStackCard } from '../components/SwipeStack/SwipeStackCard';
 import { SegmentedControl } from '../components/SegmentedControl/SegmentedControl';
 import { Select } from '../components/Select/Select';
 import { Spinner } from '../components/Spinner/Spinner';
@@ -1115,6 +1117,48 @@ function SwipableMobileCarouselDotsDemo() {
       labels={['Lists', 'Groceries', 'Errands']}
       aria-label="Task lists"
     />
+  );
+}
+
+const SWIPE_STACK_DEMO_CARDS = [
+  { id: 'water-plants', title: 'Water the plants' },
+  { id: 'standup', title: 'Team standup · 9:30am' },
+  { id: 'groceries', title: 'Buy groceries' },
+];
+
+function SwipeStackDemo() {
+  return (
+    <div style={{ height: 260, maxWidth: 320 }}>
+      <SwipeStack
+        aria-label="Today's agenda"
+        directions={{
+          up: { label: 'Done', icon: 'check' },
+          down: { label: 'Defer', icon: 'history' },
+        }}
+        onSwipe={() => {}}
+      >
+        {SWIPE_STACK_DEMO_CARDS.map((card) => (
+          <SwipeStackCard key={card.id} cardId={card.id}>
+            <div
+              style={{
+                height: '100%',
+                boxSizing: 'border-box',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 'var(--sv-space-4)',
+                fontFamily: ff,
+                fontWeight: 'var(--sv-font-weight-semibold)',
+                color: 'var(--sv-color-text-primary)',
+                textAlign: 'center',
+              }}
+            >
+              {card.title}
+            </div>
+          </SwipeStackCard>
+        ))}
+      </SwipeStack>
+    </div>
   );
 }
 
@@ -3456,6 +3500,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="A real, tappable, labeled slide indicator (role=tablist/tab) — standalone and reusable outside SwipableMobileCarousel too, and its default renderIndicator."
             >
               <SwipableMobileCarouselDotsDemo />
+            </ComponentCard>
+
+            {/* SwipeStack */}
+            <ComponentCard
+              name="SwipeStack"
+              importLine="import { SwipeStack, SwipeStackCard } from '@sovereignfs/ui';"
+              usage="Triage one card at a time by dragging left/right/up/down, plus an always-visible fallback button per configured direction wired to the identical commit path. Every direction is independently optional and has no baked-in meaning — the caller supplies label/icon and reacts to onSwipe; once triggered a direction removes the card for good, there is no reversible 'go back'."
+            >
+              <SwipeStackDemo />
             </ComponentCard>
           </div>
         </section>

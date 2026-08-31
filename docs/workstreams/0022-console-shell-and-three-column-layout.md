@@ -1,6 +1,6 @@
 # Workstream 0022 — Console: default shell + ThreeColumnLayout
 
-**Status:** ⏳ In Progress — legs 1-4 shipped (PRs #580, #582, #585, #587); leg 5 not yet started\
+**Status:** ⏳ In Progress — legs 1-5 shipped (PRs #580, #582, #585, #587, #<!-- fill in on PR creation -->); leg 6 not yet started\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -41,38 +41,39 @@ desktop's static sidebar and mobile's drill-down index.
 
 ## Definition of done
 
-- [ ] `plugins/console/manifest.json` declares `shell: "default"`; no
+- [x] `plugins/console/manifest.json` declares `shell: "default"`; no
       `shellConfig.overlaySize`. The generated `@modal/(.)console/*` route tree
       is gone after `pnpm generate`.
-- [ ] `NavList` exists in `packages/ui`, is presentational (no data fetching,
+- [x] `NavList` exists in `packages/ui`, is presentational (no data fetching,
       no SDK import), supports a `static` variant (active-item highlight, no
       navigation semantics beyond `<Link>`) and a `drilldown` variant
       (chevron-right, tap navigates), supports grouped and ungrouped items,
       and has Storybook coverage for both variants plus the grouped/ungrouped
       and active/inactive states.
-- [ ] Desktop Console renders `ThreeColumnLayout` with `NavList
+- [x] Desktop Console renders `ThreeColumnLayout` with `NavList
 variant="static"` as the sidebar column; the old horizontal `.nav` tab
       strip is gone.
-- [ ] Mobile Console has no persistent sidebar. The bare `/console` route
+- [x] Mobile Console has no persistent sidebar. The bare `/console` route
       renders `NavList variant="drilldown"` as a full index; every other
       `/console/*` route renders its existing content with a `‹ Console` back
       link above it.
-- [ ] Console's Overview page (`/console`) is a `ResponsiveSurface` fork:
+- [x] Console's Overview page (`/console`) is a `ResponsiveSurface` fork:
       desktop shows a dashboard (today's card grid, extended to cover all 11
       sections instead of 5); mobile shows the `NavList` drill-down index.
-- [ ] Users, Groups, Plugins/Apps, and External clients each render a 3rd
+- [x] Users, Groups, Plugins/Apps, and External clients each render a 3rd
       "detail" column on desktop when a row is selected, replacing the dialog
       each currently uses for that same information (`CapabilitiesButton`,
       `ManageGroupDialog`, `PluginAccessDialog`, and the OAuth client's own
       rotation UI respectively). Each page's "create new" dialog
       (`InviteDialog`, `CreateGroupDialog`) is evaluated independently per its
       own leg — not assumed to convert just because the page gained a detail
-      column.
-- [ ] `docs/architecture-rules.md`, `docs/plugins/console.md`,
+      column. (External clients had no dialog to replace — the pane was added
+      for consistency only, per leg 5's own escalation and Outcome note.)
+- [x] `docs/architecture-rules.md`, `docs/plugins/console.md`,
       `docs/epics/plugin-console.md`, and `docs/epics/platform-shell.md` no
       longer describe Console as an overlay-shell plugin (the last one gets a
       forward-pointer, not a rewrite of its historical task record).
-- [ ] `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` pass
+- [x] `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` pass
       after every leg; e2e specs under `__tests__/e2e/console*.spec.ts` and
       `oauth-clients.spec.ts` pass unmodified or are updated for the new DOM
       shape (not silently skipped).
@@ -112,7 +113,7 @@ workstream must land first.
 | 2   | Users → 3-column                            | 13.18       | 13    | No    | Selecting a user row shows a detail pane with role/capabilities/status actions; `CapabilitiesButton` dialog removed.                                                                                                                                                                                                                        |
 | 3   | Groups → 3-column                           | 13.19       | 13    | No    | ✅ Selecting a group shows a detail pane; `ManageGroupDialog` removed (kept mobile-only).                                                                                                                                                                                                                                                   |
 | 4   | Plugins/Apps → 3-column                     | 13.20       | 13    | No    | ✅ Selecting a plugin row shows a detail pane; `PluginAccessDialog` removed (kept mobile-only).                                                                                                                                                                                                                                             |
-| 5   | External clients → 3-column                 | 13.21       | 13    | No    | Selecting an OAuth client shows a detail pane for rotation/revocation.                                                                                                                                                                                                                                                                      |
+| 5   | External clients → 3-column                 | 13.21       | 13    | No    | ✅ Selecting an OAuth client shows a detail pane for rotation/revocation, kept for visual consistency though no dialog existed to replace (escalated per this leg's own note; see Outcome below).                                                                                                                                           |
 | 6   | Retire stale docs-server references         | 16.6        | 16    | No    | `CLAUDE.md`/`AGENTS.md`/`CONTRIBUTING.md`/`docs/epics/docs.md`/`docs/epics/README.md`/`docs/development-workflow.md`/`docs/docs-site-revamp-plan.md` no longer describe the retired `apps/docs` VitePress app or its `docs-v*`/`docs.yml` mechanism as live in this repo. Independent of legs 1-5 — can land in any order relative to them. |
 
 Each leg is one branch, one draft PR, one review gate. The agent runs
@@ -459,6 +460,35 @@ decided the same way those were, not assumed.
 once at creation time with no later "view" state to select into) — escalate
 for a design call rather than forcing a detail pane where there's nothing to
 show.
+
+**Outcome:** The escalation condition was real — reading
+`OAuthClientsClient.tsx` confirmed every field on a client card (name, ID,
+redirect URIs, status) was already visible inline, and the one "reveal"
+state (a freshly created/rotated secret) is a page-level, one-time-only
+banner unrelated to any selection concept. Escalated per plan; the developer
+chose to add the 3rd column anyway for consistency with legs 2-4, not
+because it surfaces new information — the pane's only real job is relocating
+Rotate secret/Revoke off the card. Implemented with `useSearchParams()`
+directly inside `OAuthClientsClient.tsx` rather than a `page.tsx`
+`searchParams` prop, since this page has no server-side data fetch to thread
+one through (everything here is client-driven against
+`/api/auth/oauth2/*`) — `<Link href="?client=<id>">` still keeps the
+selection linkable, matching legs 2-4's convention. The revealed-secret
+banner itself was deliberately left where it already was (page-level, not
+pane-scoped) — a security-sensitive, well-tested "shown once" flow not worth
+touching for this leg. A mobile fallback (`.cardManageMobile`, the same
+mechanism legs 3/4 use) keeps Rotate/Revoke reachable where there's no
+detail column. **Found and fixed a real, pre-existing bug live**: legs 3/4's
+`.cardChevron` selector relies on beating `Icon.module.css`'s own
+`display: inline-block` at equal CSS specificity, which is decided by
+per-route stylesheet bundle order rather than anything either side
+controls — it happened to resolve correctly on Groups/Plugins but silently
+failed here (chevron visible on mobile too). Fixed by qualifying it as
+`svg.cardChevron` everywhere it's used, verified via computed-style
+inspection at 375px before and after the fix. Verified live end-to-end on
+desktop and mobile: register, select, rotate (pane stays open, new secret
+shows in the unchanged banner), revoke (card and pane both disappear), and
+the mobile card's own buttons working unaffected.
 
 ### Leg 6 — Retire stale in-repo docs-server references
 

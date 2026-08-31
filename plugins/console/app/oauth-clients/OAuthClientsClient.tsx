@@ -1,7 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Button, FormField, Input, TagInput, StatusBadge, useToast } from '@sovereignfs/ui';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Button, FormField, Icon, Input, TagInput, StatusBadge, useToast } from '@sovereignfs/ui';
+import { OAuthClientDetailPane } from './OAuthClientDetailPane';
+import { ConsoleDetailSlot } from '../_components/ConsoleDetailSlot';
 import styles from '../console.module.css';
 
 interface OAuthClientRow {
@@ -47,12 +51,19 @@ async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function OAuthClientsClient() {
   const toast = useToast();
+  const searchParams = useSearchParams();
+  const selectedClientId = searchParams.get('client');
   const [clients, setClients] = useState<OAuthClientRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   const [redirectUris, setRedirectUris] = useState<string[]>([]);
   const [revealed, setRevealed] = useState<RevealedSecret | null>(null);
+
+  const selectedClient = selectedClientId
+    ? (clients.find((c) => c.client_id === selectedClientId) ?? null)
+    : null;
+  const closeHref = '?';
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -193,36 +204,71 @@ export function OAuthClientsClient() {
         ) : clients.length === 0 ? (
           <p className={styles.helpText}>No external clients registered yet.</p>
         ) : (
-          clients.map((client) => (
-            <div key={client.client_id} className={styles.providerConfigCard}>
-              <p className={styles.helpText}>
-                <strong>{client.client_name ?? '(unnamed)'}</strong>{' '}
-                <StatusBadge status={client.disabled ? 'error' : 'synced'}>
-                  {client.disabled ? 'revoked' : 'active'}
-                </StatusBadge>
-              </p>
-              <p className={styles.helpText}>Client ID: {client.client_id}</p>
-              <p className={styles.helpText}>Redirect URIs: {client.redirect_uris.join(', ')}</p>
-              <div className={styles.providerConfigActions}>
-                <Button
-                  variant="secondary"
+          clients.map((client) => {
+            const isSelected = client.client_id === selectedClientId;
+            return (
+              <div
+                key={client.client_id}
+                className={[styles.providerConfigCard, isSelected ? styles.cardSelected : '']
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                <Link href={`?client=${client.client_id}`} className={styles.cardLink}>
+                  <p className={styles.helpText}>
+                    <strong>{client.client_name ?? '(unnamed)'}</strong>{' '}
+                    <StatusBadge status={client.disabled ? 'error' : 'synced'}>
+                      {client.disabled ? 'revoked' : 'active'}
+                    </StatusBadge>
+                  </p>
+                  <p className={styles.helpText}>Client ID: {client.client_id}</p>
+                  <p className={styles.helpText}>
+                    Redirect URIs: {client.redirect_uris.join(', ')}
+                  </p>
+                </Link>
+                <Icon
+                  name="chevron-right"
                   size="sm"
-                  onClick={() => void handleRotate(client.client_id)}
-                >
-                  Rotate secret
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => void handleRevoke(client.client_id)}
-                >
-                  Revoke
-                </Button>
+                  aria-hidden
+                  className={[styles.textMuted, styles.cardChevron].join(' ')}
+                />
+                {/* Mobile-only fallback — `.cardManageMobile` is `display:
+                    contents` below the desktop breakpoint (see
+                    console.module.css) and `display: none` above it, since
+                    mobile has no detail column to select into. */}
+                <span className={styles.cardManageMobile}>
+                  <div className={styles.providerConfigActions}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void handleRotate(client.client_id)}
+                    >
+                      Rotate secret
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => void handleRevoke(client.client_id)}
+                    >
+                      Revoke
+                    </Button>
+                  </div>
+                </span>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
+
+      {selectedClient && (
+        <ConsoleDetailSlot>
+          <OAuthClientDetailPane
+            client={selectedClient}
+            closeHref={closeHref}
+            onRotate={() => void handleRotate(selectedClient.client_id)}
+            onRevoke={() => void handleRevoke(selectedClient.client_id)}
+          />
+        </ConsoleDetailSlot>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useActionState, useMemo, useState } from 'react';
 import { Badge, Button, FormField, Icon, Menu, Select, type MenuEntry } from '@sovereignfs/ui';
 import {
@@ -51,6 +52,16 @@ const POLICY_OPTIONS: { value: PluginAccessPolicyValue; label: string }[] = [
   { value: 'selected_groups', label: 'Selected groups' },
   { value: 'disabled', label: 'Disabled' },
 ];
+
+/**
+ * Whether a row can be selected to open the desktop detail pane — matches
+ * exactly the condition under which `PluginAccessDialog` used to render
+ * before workstream 0022 leg 4 (chrome plugins never have an access policy;
+ * an incompatible/inactive/just-activated row has nothing to manage yet).
+ */
+function isSelectable(row: PluginRow): boolean {
+  return !row.isChrome && (row.status === 'enabled' || row.status === 'disabled');
+}
 
 function StatusBadge({ status }: { status: PluginStatus }) {
   if (status === 'incompatible') {
@@ -141,6 +152,8 @@ interface RowProps {
   justActivated: boolean;
   onActivated: () => void;
   onDismissActivated: () => void;
+  /** Desktop only — whether this row is the currently `?plugin=<id>`-selected one. */
+  selected?: boolean;
 }
 
 function useActivate(row: PluginRow, onActivated: () => void) {
@@ -167,19 +180,28 @@ function useToggle() {
   return { action, pending, error };
 }
 
-function DesktopRow({ row, justActivated, onActivated, onDismissActivated }: RowProps) {
+function DesktopRow({ row, justActivated, onActivated, onDismissActivated, selected }: RowProps) {
   const isPlatformType = row.type === 'platform';
   const { activating, error, handleActivate } = useActivate(row, onActivated);
   const { action: toggleAction, pending: togglePending, error: toggleError } = useToggle();
+  const selectable = isSelectable(row);
 
   return (
-    <tr className={styles.tr}>
+    <tr className={[styles.tr, selected ? styles.trSelected : ''].filter(Boolean).join(' ')}>
       <td className={styles.td}>
-        <div className={styles.userCell}>
-          <span className={styles.userName}>{row.name}</span>
-          {row.description && <span className={styles.userEmail}>{row.description}</span>}
-          <span className={styles.userId}>{row.id}</span>
-        </div>
+        {selectable ? (
+          <Link href={`?plugin=${row.id}`} className={styles.userCellLink}>
+            <span className={styles.userName}>{row.name}</span>
+            {row.description && <span className={styles.userEmail}>{row.description}</span>}
+            <span className={styles.userId}>{row.id}</span>
+          </Link>
+        ) : (
+          <div className={styles.userCell}>
+            <span className={styles.userName}>{row.name}</span>
+            {row.description && <span className={styles.userEmail}>{row.description}</span>}
+            <span className={styles.userId}>{row.id}</span>
+          </div>
+        )}
       </td>
 
       <td className={styles.td}>
@@ -282,12 +304,8 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated }: Row
               </button>
             </form>
 
-            {!row.isChrome && (
-              <PluginAccessDialog
-                pluginId={row.id}
-                pluginName={row.name}
-                permissions={row.permissions}
-              />
+            {selectable && (
+              <Icon name="chevron-right" size="sm" aria-hidden className={styles.textMuted} />
             )}
 
             {row.openableByViewer ? (
@@ -522,6 +540,7 @@ function FilterBar({
 export function PluginsTable({
   rows,
   defaultShowExamples,
+  selectedPluginId,
 }: {
   rows: PluginRow[];
   /**
@@ -533,6 +552,14 @@ export function PluginsTable({
    * example (e.g. to enable it individually) while the bulk toggle is off.
    */
   defaultShowExamples: boolean;
+  /**
+   * The `?plugin=<id>`-selected row, computed server-side by `page.tsx`
+   * against the full (unfiltered) row list — highlighting here is purely
+   * cosmetic and never drives whether the detail pane itself renders, so a
+   * filter change in this component never resets the selection (workstream
+   * 0022 leg 4).
+   */
+  selectedPluginId: string | null;
 }) {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | PluginStatus>('all');
@@ -620,6 +647,7 @@ export function PluginsTable({
                       justActivated={justActivated.has(row.id)}
                       onActivated={() => markActivated(row.id)}
                       onDismissActivated={() => dismissActivated(row.id)}
+                      selected={row.id === selectedPluginId}
                     />
                   ))}
                 </tbody>

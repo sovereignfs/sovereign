@@ -5,6 +5,8 @@ import { canUserOpenPlugin } from '@/src/plugin-access-server';
 import { getExamplesEnabledFlag } from '@/src/plugin-status';
 import { getPluginCatalogAction } from './actions';
 import { PluginsTable, type PluginRow, type PluginStatus } from './PluginsTable';
+import { PluginDetailPane } from './PluginDetailPane';
+import { ConsoleDetailSlot } from '../_components/ConsoleDetailSlot';
 import styles from '../console.module.css';
 
 interface RawPluginRow {
@@ -98,13 +100,36 @@ async function withOpenability(rows: Omit<PluginRow, 'openableByViewer'>[]): Pro
   return rows.map((r, i) => ({ ...r, openableByViewer: results[i] ?? false }));
 }
 
-export default async function PluginsPage() {
+export default async function PluginsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plugin?: string }>;
+}) {
+  const { plugin: selectedPluginId } = await searchParams;
   const examplesEnabled = await getExamplesEnabledFlag(await getPlatformDb());
   const rows = await withOpenability(await buildPluginRows(examplesEnabled));
 
+  // Looked up against the full row list, independent of `PluginsTable`'s own
+  // client-side filter/search state — a filter change never clears this
+  // selection, even if the selected row happens to be filtered out of view
+  // (workstream 0022 leg 4's own coexistence requirement).
+  const selectedRow = selectedPluginId
+    ? (rows.find((r) => r.id === selectedPluginId) ?? null)
+    : null;
+  const closeHref = '?';
+
   return (
     <div className={styles.sections}>
-      <PluginsTable rows={rows} defaultShowExamples={examplesEnabled} />
+      <PluginsTable
+        rows={rows}
+        defaultShowExamples={examplesEnabled}
+        selectedPluginId={selectedRow?.id ?? null}
+      />
+      {selectedRow && (
+        <ConsoleDetailSlot>
+          <PluginDetailPane row={selectedRow} closeHref={closeHref} />
+        </ConsoleDetailSlot>
+      )}
     </div>
   );
 }

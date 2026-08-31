@@ -1,6 +1,6 @@
 # Workstream 0022 — Console: default shell + ThreeColumnLayout
 
-**Status:** ⏳ In Progress — legs 1-3 shipped (PRs #580, #582, #585); legs 4-5 not yet started\
+**Status:** ⏳ In Progress — legs 1-4 shipped (PRs #580, #582, #585, #<!-- fill in on PR creation -->); leg 5 not yet started\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -111,7 +111,7 @@ workstream must land first.
 | 1   | `NavList` + Console shell/nav/mobile rework | 9.28, 13.17 | 9, 13 | No    | Console is `shell: "default"`, desktop renders `ThreeColumnLayout` + `NavList` sidebar, mobile renders the drill-down index + per-section back link, Overview forks via `ResponsiveSurface`; all DoD items above except the 4 detail-column ones.                                                                                           |
 | 2   | Users → 3-column                            | 13.18       | 13    | No    | Selecting a user row shows a detail pane with role/capabilities/status actions; `CapabilitiesButton` dialog removed.                                                                                                                                                                                                                        |
 | 3   | Groups → 3-column                           | 13.19       | 13    | No    | ✅ Selecting a group shows a detail pane; `ManageGroupDialog` removed (kept mobile-only).                                                                                                                                                                                                                                                   |
-| 4   | Plugins/Apps → 3-column                     | 13.20       | 13    | No    | Selecting a plugin row shows a detail pane; `PluginAccessDialog` removed.                                                                                                                                                                                                                                                                   |
+| 4   | Plugins/Apps → 3-column                     | 13.20       | 13    | No    | ✅ Selecting a plugin row shows a detail pane; `PluginAccessDialog` removed (kept mobile-only).                                                                                                                                                                                                                                             |
 | 5   | External clients → 3-column                 | 13.21       | 13    | No    | Selecting an OAuth client shows a detail pane for rotation/revocation.                                                                                                                                                                                                                                                                      |
 | 6   | Retire stale docs-server references         | 16.6        | 16    | No    | `CLAUDE.md`/`AGENTS.md`/`CONTRIBUTING.md`/`docs/epics/docs.md`/`docs/epics/README.md`/`docs/development-workflow.md`/`docs/docs-site-revamp-plan.md` no longer describe the retired `apps/docs` VitePress app or its `docs-v*`/`docs.yml` mechanism as live in this repo. Independent of legs 1-5 — can land in any order relative to them. |
 
@@ -414,6 +414,27 @@ selected shouldn't silently clear the selection unless the selected plugin
 actually drops out of the filtered set).
 
 **Do not proceed if:** leg 3's PR hasn't merged yet.
+
+**Outcome:** `PluginAccessDialog`'s body split into `PluginAccessFields.tsx`
+(reused by a slimmed, mobile-only `PluginAccessDialog` and a new
+`PluginDetailPane.tsx`, the desktop 3rd column) — the same shape as legs
+2/3. Deliberately narrower scope than legs 2/3, though: Activate/Toggle
+enable-disable/Open/Remove stay row-level actions rather than moving into
+the pane too — "Open" especially is a frequent, low-risk action an admin
+shouldn't need a detail pane open to reach, and this leg's own technical
+note names only `PluginAccessDialog`'s content as moving. A row is
+selectable under exactly the condition `PluginAccessDialog` used to render
+(`!row.isChrome && status is enabled/disabled`) — chrome plugins and
+inactive/incompatible rows get no selection Link/chevron. Selection lives
+in `?plugin=<id>`, resolved server-side against the full row list;
+`PluginsTable`'s own filter/search/examples-toggle state is local,
+client-only React state, never URL-synced, so it's a separate concern that
+survives the parent's re-render untouched. Verified live exactly the
+coexistence risk this leg was written to guard against: selected a row,
+typed a search query that filtered it out of the visible table, and
+confirmed the detail pane (and its live-editable access-policy fields)
+stayed fully intact throughout — clearing the filter brought the row back
+with its selection highlight still applied.
 
 ### Leg 5 — External clients → 3-column
 

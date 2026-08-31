@@ -41,7 +41,20 @@ export default function ModalSlotLayout({ children }: { children: ReactNode }) {
   const title = plugin?.name;
 
   return (
-    <Dialog open onClose={() => router.back()} size={size} title={title}>
+    <Dialog
+      open
+      onClose={() => router.back()}
+      size={size}
+      title={title}
+      // Dialog's own aria-label fallback is `ariaLabel ?? title` — if the
+      // plugin lookup above misses (e.g. a routePrefix mismatch on a
+      // multi-segment interception segment), title is undefined too, and
+      // the panel would render with no accessible name at all. Falling back
+      // explicitly here keeps that guarantee even in the lookup-miss case;
+      // this is a generic label of last resort, not meant to be seen in
+      // normal operation (the lookup should always succeed there).
+      aria-label={title ?? 'Dialog'}
+    >
       {children}
     </Dialog>
   );

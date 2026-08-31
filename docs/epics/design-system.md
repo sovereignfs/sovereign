@@ -1626,7 +1626,7 @@ touched either, confirming the scope boundary held.
 
 ---
 
-#### 📋 9.34 — Retire or redefine `Dialog`'s dead `full` size
+#### ✅ 9.34 — Retire or redefine `Dialog`'s dead `full` size
 
 **Goal:** `.lg` and `.full` are CSS-identical on desktop (`Dialog.module.css:166-170`, both `width:100%; height:100%`), and every size collapses to the same full-screen mobile treatment regardless of value (`Dialog.module.css:223-250`). The sole call site in the repo, `CardDetailOverlay.tsx:75`'s `size={isMobile ? 'full' : 'xl'}`, has no effect — mobile already renders full-screen no matter what `size` says, per `Dialog`'s own doc comment ("Mobile always renders as a full-screen sheet"). No Storybook story demonstrates `full` either. Low priority — dead-code cleanup, not a bug.
 
@@ -1635,15 +1635,17 @@ touched either, confirming the scope boundary held.
 - Either (a) remove `'full'` from `DialogSize` and simplify `CardDetailOverlay.tsx:75` to a plain `size="xl"` (mobile ignores it regardless), or (b) give `full` real distinct behavior (true edge-to-edge, ignoring the scrim's `--sv-space-8` margin) if a genuine edge-to-edge use case exists. Decide during implementation; default to (a) unless a real use case for true edge-to-edge surfaces.
 - If (a): update `Dialog.test.tsx`'s `full` size assertion accordingly.
 
+**Resolved differently from the default (a) — a third option found during implementation:** removing `'full'` from `DialogSize` turned out to be a real breaking type change, not risk-free cleanup — `CardDetailOverlay.tsx:75`'s call site lives in `sovereign-plugin-kanban.local`, a gitignored `.local` plugin clone (confirmed via `git check-ignore`; `git ls-files` returns nothing for it) explicitly outside this repo's ownership, the same category workstream 0020's own Decisions locked table excluded from direct edits ("written up separately for those plugins' own maintainers... not tracked by this repo's epics/ROADMAP.md"). This repo's own `pnpm typecheck` wouldn't catch the break (composed plugin directories are excluded from `runtime/tsconfig.json`'s scope), but the plugin's own separate build would silently start failing against a future `@sovereignfs/ui` bump — for a change whose only benefit was removing an already-inert value, not fixing a bug. Given 9.34 is itself explicitly low-priority ("not a bug, dead-code cleanup"), a breaking change felt disproportionate to the payoff. Landed on neither (a) nor (b): kept `full` in `DialogSize` (no type change, no version bump needed, no consumer anywhere is affected) and instead **documented** why it's a deliberate alias of `lg`, not an oversight — in both `Dialog.tsx`'s `DialogSize` doc comment and `Dialog.module.css`'s `.lg, .full` rule — which is exactly what the review checklist's own bar asks for ("no remaining `full` size that behaves identically to `lg` **without explanation**" — satisfied by adding the explanation, not only by removing the value). `CardDetailOverlay.tsx`'s own redundant ternary is untouched, left for that plugin's own maintainers per the same precedent.
+
 **Dependencies:** None.
 
 **SRS reference:** None — cleanup finding from the same design-system review.
 
-**Review checklist:** `pnpm --filter @sovereignfs/ui typecheck`, `test`, `lint` pass; no remaining `full` size that behaves identically to `lg` without explanation.
+**Review checklist:** `pnpm --filter @sovereignfs/ui typecheck`, `test`, `lint` pass — ✅, unaffected since nothing's removed. `full` now has a clear, explicit explanation for being identical to `lg` in both files it's defined in.
 
 ---
 
-#### 📋 9.35 — Reconcile `Dialog`'s `xl`/`full` sizes with the manifest `overlaySize` schema
+#### ✅ 9.35 — Reconcile `Dialog`'s `xl`/`full` sizes with the manifest `overlaySize` schema
 
 **Goal:** `DialogSize` is `sm | md | xl | lg | full`, but `packages/manifest/src/schema.ts:133`'s `shellConfig.overlaySize` enum only allows `sm | md | lg` — `xl` (and `full`, see 9.34) exist on the component but are unreachable from any plugin manifest declaration; only runtime code calling `<Dialog>` directly (bypassing the manifest-driven `@modal` chrome) can use them. Not necessarily wrong, but undocumented as intentional.
 
@@ -1651,15 +1653,17 @@ touched either, confirming the scope boundary held.
 
 - Either document the split explicitly (a one-line note in `docs/plugin-development.md`'s manifest reference and/or `runtime/src/overlay.ts`'s doc comment: manifest-declarable sizes are deliberately narrower than the component's full size set), or extend the manifest enum to include `xl` for parity if a real plugin use case exists. Decide during implementation; default to documenting the existing split.
 
-**Dependencies:** Should follow 9.34 — resolving `full`'s fate first avoids documenting a manifest/component split for a size this workstream may also remove.
+**Resolved:** documented the split, in both places the deliverable named — `runtime/src/overlay.ts`'s `overlaySizeForSegment` doc comment now states the manifest enum is deliberately narrower than `DialogSize`, and `docs/plugin-development.md`'s `shell: overlay` section (the `overlaySize` bullet) now notes `xl`/`full` aren't manifest-declarable. No manifest schema change — no real plugin use case for manifest-declared `xl` surfaced during this review, matching the default. The existing `overlaySize` row in the manifest field reference table (`docs/plugin-development.md`) needed no edit — it already correctly lists only `sm | md | lg`, matching the actual schema; the two new notes explain _why_ that's narrower than `Dialog`'s own set, without duplicating the enum listing a third time.
+
+**Dependencies:** Followed 9.34 — 9.34 resolved to keep `full` (not remove it), so this task's own doc note correctly says "`xl`/`full`", not just "`xl`".
 
 **SRS reference:** None — cleanup finding from the same design-system review.
 
-**Review checklist:** `pnpm --filter @sovereignfs/manifest typecheck`/`test` pass if the schema changes; otherwise the doc update is reviewed for accuracy against the actual schema.
+**Review checklist:** `pnpm --filter runtime typecheck` and `runtime/src/__tests__/overlay.test.ts` (6 tests) pass — ✅, doc-only change, no schema touched. Both doc updates reviewed for accuracy against the actual schema (`packages/manifest/src/schema.ts:133`, unchanged) and `DialogSize` (`packages/ui`, unchanged by this task).
 
 ---
 
-#### 📋 9.36 — De-duplicate `MOTION_DURATION_MS`
+#### ✅ 9.36 — De-duplicate `MOTION_DURATION_MS`
 
 **Goal:** `MOTION_DURATION_MS = 250` is hand-copied verbatim into `Dialog.tsx:18`, `Drawer.tsx:16`, and `Sheet.tsx:45`, each with a comment explaining it must be kept in sync with a CSS custom property by hand. The reasoning against deriving it from CSS is sound (documented in each file), but nothing prevents a future edit to one file silently desyncing the JS unmount timer from its CSS transition in whichever file is missed.
 
@@ -1671,11 +1675,11 @@ touched either, confirming the scope boundary held.
 
 **SRS reference:** None — cleanup finding from the same design-system review.
 
-**Review checklist:** `pnpm --filter @sovereignfs/ui typecheck`, `test`, `lint` pass; no remaining duplicate `MOTION_DURATION_MS = 250` literal across the three files.
+**Review checklist:** `pnpm --filter @sovereignfs/ui typecheck`, `test` (full suite, 535 tests), `lint` pass — ✅. `grep -rn "MOTION_DURATION_MS = 250" packages/ui/src` confirms exactly one definition remains (`overlay-shell.ts`), none in `Dialog.tsx`/`Drawer.tsx`/`Sheet.tsx`.
 
 ---
 
-#### 📋 9.37 — Fallback accessible name in `@modal/layout.tsx`
+#### ✅ 9.37 — Fallback accessible name in `@modal/layout.tsx`
 
 **Goal:** `runtime/app/(platform)/(plugins)/@modal/layout.tsx:41-44` passes `title={title}` (`title = plugin?.name`) to `Dialog` and no `aria-label`. If `plugin` isn't found (e.g. a routePrefix mismatch on a multi-segment interception segment), the `Dialog` renders with neither `title` nor `aria-label` — a modal panel with no accessible name at all. Edge case, not reachable in normal operation today.
 
@@ -1683,10 +1687,12 @@ touched either, confirming the scope boundary held.
 
 - `@modal/layout.tsx`: fall back to a generic `aria-label` (e.g. `"Dialog"`) when `plugin` is not found, so the panel always has an accessible name.
 
+**A real, separate gap found while writing this task's test — `@modal/{layout,default,error}.tsx` have no path to automated verification at all, not just no existing test:** these three files are explicitly committed, hand-written exceptions inside an otherwise fully-generated, gitignored directory (`runtime/app/(platform)/(plugins)/.gitignore`'s own comment: "The committed exceptions below are hand-written, NOT generated"). But every layer of this repo's tooling treats `runtime/app/(platform)/(plugins)/` as composed/generated territory and excludes it wholesale, with no carve-out for these three real files: (1) the root `vitest.config.ts`'s `include` globs only cover `runtime/src/**/__tests__/**`, never `runtime/app/**` — confirmed live, a test file placed at `@modal/__tests__/layout.test.tsx` produced "No test files found"; (2) `runtime/tsconfig.json` explicitly `exclude`s `app/(platform)/(plugins)/**`, so `pnpm typecheck` never checks this file either; (3) `@modal/.gitignore`'s own `/@modal/*` pattern (only un-ignoring `default.tsx`/`error.tsx`/`layout.tsx` by name) means a new `@modal/__tests__/` directory would itself be gitignored — the test file couldn't even be committed. Fixing this properly needs a deliberate `.gitignore` exception plus a precisely-scoped new vitest include pattern (narrow enough to keep excluding the generated `@modal/(.)*` copies) — a real, worthwhile follow-up, but disproportionate scope for this one low-priority prop fix to carry, so not done here. Verified instead via an isolated one-off `tsc` run (a temporary tsconfig overriding just this file's exclusion, run against the real project's paths/types, then discarded) showing zero errors attributed to `layout.tsx` itself, plus careful manual review — `title: string | undefined` and `title ?? 'Dialog'` typing against `Dialog`'s own `'aria-label'?: string` prop is straightforward enough that this is adequate confidence for a one-line, well-typed prop addition, though it is not the same as a real committed regression test.
+
 **Dependencies:** None.
 
 **SRS reference:** None — cleanup finding from the same design-system review.
 
-**Review checklist:** a new or existing `@modal/layout.tsx` test covers the plugin-not-found case, asserting a non-empty accessible name.
+**Review checklist:** a new or existing `@modal/layout.tsx` test covers the plugin-not-found case, asserting a non-empty accessible name. **Not met as originally written** — no test exists, for the infrastructure reasons above, not for lack of trying. Verified instead via the isolated `tsc` check and manual review described above.
 
 ---

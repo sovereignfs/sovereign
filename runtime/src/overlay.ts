@@ -18,6 +18,14 @@ export function routeSegmentFromInterception(segment: string): string {
  * The dialog size an overlay plugin declares via its manifest `overlaySize`,
  * resolved from the `@modal` slot's selected layout segment. Defaults to `lg`
  * for the slot's empty/default state or any plugin that omits the field.
+ *
+ * The manifest's `overlaySize` enum (`packages/manifest/src/schema.ts`) only
+ * accepts `sm | md | lg` — deliberately narrower than `@sovereignfs/ui`'s
+ * full `DialogSize` (`sm | md | xl | lg | full`). `xl`/`full` exist for
+ * runtime code that renders `<Dialog>` directly (e.g. `CardDetailOverlay`)
+ * but are not reachable from any plugin manifest declaration. This is an
+ * intentional gap, not an oversight — extend the manifest enum if a real
+ * plugin use case for manifest-declared `xl`/`full` ever surfaces.
  */
 export function overlaySizeForSegment(
   segment: string | null,

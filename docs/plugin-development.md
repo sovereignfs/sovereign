@@ -1348,7 +1348,9 @@ You write ordinary pages; the platform handles the rest:
 - The runtime owns the dialog chrome (scrim, close button, Esc/scrim-click
   dismissal); your pages never implement a modal shell.
 - The dialog size is set by `shellConfig.overlaySize` (`sm` | `md` | `lg`,
-  default `lg`).
+  default `lg`) — deliberately narrower than the `Dialog` component's own
+  full size set (`sm` | `md` | `xl` | `lg` | `full`); `xl`/`full` are not
+  declarable from a plugin manifest.
 
 **Intra-overlay navigation must use `replace`.** The dialog is dismissed with
 `router.back()`, which unwinds exactly one history entry. If your in-dialog tab

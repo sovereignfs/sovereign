@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { NotAuthenticatedError, sdk } from '@sovereignfs/sdk';
 import { composeDocumentContent, processAttachment } from '../../_lib/attachments';
-import { appendMessage, getRecentMessagesForContext } from '../../_lib/conversations';
+import {
+  appendMessage,
+  createSession,
+  getRecentMessagesForContext,
+  SessionNotFoundError,
+} from '../../_lib/sessions';
 import {
   requestHarnessChat,
   type ChatMessage,
@@ -33,24 +38,31 @@ import type { HarnessChatResult } from '../../_lib/harness-client';
  * Three request shapes, all requiring `modelKey` (`'local'`, or
  * `<connectionId>:<modelId>` from `discoverModels()`):
  *
- * - **Persisted (default):** JSON `{ modelKey, content }` — the new user
- *   message only. The server is the source of truth for history: it loads
- *   the last `MAX_RECENT_TURNS` from `warden_messages`, appends the user's
- *   message, and persists the assistant's reply once streaming completes
- *   (via `teeAndCapture` — the client is never blocked on this).
+ * - **Persisted (default):** JSON `{ modelKey, sessionId?, content }` — the
+ *   new user message only. `sessionId` selects an existing session
+ *   (ownership-checked); omitting it creates a new one lazily (RFC 0063
+ *   §3/§10, epic task 22.8) — the response's `x-warden-session-id` header
+ *   carries the resolved id back so the client can reuse it on the next
+ *   send. The server is the source of truth for history: it loads the last
+ *   `MAX_RECENT_TURNS` from that session's own messages, appends the
+ *   user's message, and persists the assistant's reply once streaming
+ *   completes (via `teeAndCapture` — the client is never blocked on this).
  * - **Incognito:** JSON `{ modelKey, incognito: true, messages }` — the
  *   client's own scratch transcript so far, exactly like the original
- *   phase-1 ephemeral design. Never combined with an attachment — the
- *   client hides/disables the attach control while incognito is on, and
- *   this route rejects the combination defensively.
+ *   phase-1 ephemeral design. Carries no `sessionId` at all — incognito is
+ *   a single global scratch context orthogonal to session selection (RFC
+ *   0063 §6/§10), not a per-session mode. Never combined with an
+ *   attachment — the client hides/disables the attach control while
+ *   incognito is on, and this route rejects the combination defensively.
  * - **Persisted + attachment:** `multipart/form-data` with `modelKey`,
- *   `content`, and a `file` field (an image or a PDF/text document).
- *   Images are sent to the model as multimodal content for this one turn
- *   only and are never persisted — history shows a text placeholder
- *   instead (`describeImageForHistory`). Documents are extracted to plain
- *   text server-side and folded into the message as ordinary text, so they
- *   work identically to a persisted-mode text message from that point on
- *   (no gating, no special persistence handling).
+ *   `sessionId?`, `content`, and a `file` field (an image or a PDF/text
+ *   document). Images are sent to the model as multimodal content for this
+ *   one turn only and are never persisted — history shows a text
+ *   placeholder instead (`describeImageForHistory`). Documents are
+ *   extracted to plain text server-side and folded into the message as
+ *   ordinary text, so they work identically to a persisted-mode text
+ *   message from that point on (no gating, no special persistence
+ *   handling).
  *
  * On success this is a transparent proxy either way: both the local
  * (`apps/harness`) and external-provider paths already produce the same
@@ -60,6 +72,7 @@ import type { HarnessChatResult } from '../../_lib/harness-client';
 interface ChatRequestBody {
   modelKey?: unknown;
   incognito?: unknown;
+  sessionId?: unknown;
   content?: unknown;
   messages?: unknown;
 }
@@ -104,10 +117,11 @@ async function resolveModelSelection(modelKey: string): Promise<ModelSelection> 
 /** A discriminated union (not a flat interface) so the compiler proves
  *  `messages` and `userTypedText`/`file` can never be confused for one
  *  another — the incognito path never carries an attachment, by type, not
- *  just by convention. */
+ *  just by convention. `sessionId` only exists on the non-incognito branch
+ *  — incognito never references a session at all (RFC 0063 §10). */
 type ParsedRequest = { modelKey: string } & (
   | { incognito: true; messages: ChatMessage[] }
-  | { incognito: false; userTypedText: string; file: File | null }
+  | { incognito: false; sessionId: string | null; userTypedText: string; file: File | null }
 );
 
 type ParseResult = { ok: true; parsed: ParsedRequest } | { ok: false; response: Response };
@@ -137,11 +151,13 @@ async function parseRequest(request: Request): Promise<ParseResult> {
       return { ok: false, response: badRequest('An attachment is required for this request.') };
     }
     const modelKeyField = formData.get('modelKey');
+    const sessionIdField = formData.get('sessionId');
     return {
       ok: true,
       parsed: {
         modelKey: typeof modelKeyField === 'string' ? modelKeyField : '',
         incognito: false,
+        sessionId: typeof sessionIdField === 'string' && sessionIdField ? sessionIdField : null,
         userTypedText: String(formData.get('content') ?? '').trim(),
         file,
       },
@@ -168,7 +184,11 @@ async function parseRequest(request: Request): Promise<ParseResult> {
   }
 
   const content = typeof body.content === 'string' ? body.content.trim() : '';
-  return { ok: true, parsed: { modelKey, incognito: false, userTypedText: content, file: null } };
+  const sessionId = typeof body.sessionId === 'string' && body.sessionId ? body.sessionId : null;
+  return {
+    ok: true,
+    parsed: { modelKey, incognito: false, sessionId, userTypedText: content, file: null },
+  };
 }
 
 /** Shared dispatch + SSE/error-mapping tail for both request shapes.
@@ -180,6 +200,7 @@ async function dispatchAndRespond(
   persist: {
     userId: string;
     tenantId: string;
+    sessionId: string;
     providerId: string | null;
     model: string;
     contentForPersistence: string;
@@ -202,6 +223,9 @@ async function dispatchAndRespond(
         'content-type': 'text/event-stream',
         'cache-control': 'no-cache',
         connection: 'keep-alive',
+        // Carries a lazily-created session's id back to the client — the
+        // only way to hand back data alongside a streaming body's headers.
+        ...(persist ? { 'x-warden-session-id': persist.sessionId } : {}),
       },
     });
 
@@ -210,7 +234,7 @@ async function dispatchAndRespond(
       // to wait for the reply. The assistant's side is persisted once
       // `teeAndCapture` finishes accumulating it; the client is never
       // blocked on either write.
-      void appendMessage(persist.userId, persist.tenantId, {
+      void appendMessage(persist.userId, persist.tenantId, persist.sessionId, {
         role: 'user',
         content: persist.contentForPersistence,
         providerId: persist.providerId,
@@ -219,7 +243,7 @@ async function dispatchAndRespond(
 
       response = teeAndCapture(response, ({ text }) => {
         if (!text) return;
-        void appendMessage(persist.userId, persist.tenantId, {
+        void appendMessage(persist.userId, persist.tenantId, persist.sessionId, {
           role: 'assistant',
           content: text,
           providerId: persist.providerId,
@@ -319,11 +343,28 @@ export async function POST(request: Request): Promise<Response> {
     contentForPersistence = contentForModel;
   }
 
-  const recent = await getRecentMessagesForContext(
-    session.user.id,
-    session.user.tenantId,
-    MAX_RECENT_TURNS,
-  );
+  // A given `sessionId` is ownership-checked by `getRecentMessagesForContext`
+  // itself (it throws `SessionNotFoundError` for a foreign/unknown id, never
+  // silently substituting a different session); omitting it creates a new
+  // one lazily — not on "+ New" being clicked, only on an actual first send
+  // (RFC 0063 §3/§10).
+  const sessionId =
+    parsed.sessionId ?? (await createSession(session.user.id, session.user.tenantId)).id;
+
+  let recent;
+  try {
+    recent = await getRecentMessagesForContext(
+      session.user.id,
+      session.user.tenantId,
+      sessionId,
+      MAX_RECENT_TURNS,
+    );
+  } catch (error) {
+    if (error instanceof SessionNotFoundError) {
+      return badRequest('That session no longer exists.');
+    }
+    throw error;
+  }
   const messages: ChatMessage[] = [
     ...recent.map((m) => ({ role: m.role, content: m.content })),
     { role: 'user' as const, content: contentForModel },
@@ -332,6 +373,7 @@ export async function POST(request: Request): Promise<Response> {
   return dispatchAndRespond(selection, messages, {
     userId: session.user.id,
     tenantId: session.user.tenantId,
+    sessionId,
     providerId: selection.kind === 'provider' ? selection.providerId : null,
     model: selection.kind === 'provider' ? selection.model : 'local',
     contentForPersistence,

@@ -1,6 +1,6 @@
 # Workstream 0022 — Console: default shell + ThreeColumnLayout
 
-**Status:** ⏳ In Progress — legs 1-5 shipped (PRs #580, #582, #585, #587, #589); leg 6 not yet started\
+**Status:** ✅ Complete — all 6 legs shipped (PRs #574, #580, #582, #585, #587, #589)\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -77,7 +77,7 @@ variant="static"` as the sidebar column; the old horizontal `.nav` tab
       after every leg; e2e specs under `__tests__/e2e/console*.spec.ts` and
       `oauth-clients.spec.ts` pass unmodified or are updated for the new DOM
       shape (not silently skipped).
-- [ ] `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, and the `docs/epics/`/
+- [x] `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, and the `docs/epics/`/
       `docs/docs-site-revamp-plan.md` files no longer describe `apps/docs`
       (the retired in-repo VitePress app) or its `docs-v*`/`docs.yml` release
       mechanism as if still live in this repository (leg 6 — unrelated to the
@@ -107,14 +107,14 @@ workstream must land first.
 
 ## Legs
 
-| Leg | Name                                        | Epic tasks  | Epics | Gate? | Done when                                                                                                                                                                                                                                                                                                                                   |
-| --- | ------------------------------------------- | ----------- | ----- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `NavList` + Console shell/nav/mobile rework | 9.28, 13.17 | 9, 13 | No    | Console is `shell: "default"`, desktop renders `ThreeColumnLayout` + `NavList` sidebar, mobile renders the drill-down index + per-section back link, Overview forks via `ResponsiveSurface`; all DoD items above except the 4 detail-column ones.                                                                                           |
-| 2   | Users → 3-column                            | 13.18       | 13    | No    | Selecting a user row shows a detail pane with role/capabilities/status actions; `CapabilitiesButton` dialog removed.                                                                                                                                                                                                                        |
-| 3   | Groups → 3-column                           | 13.19       | 13    | No    | ✅ Selecting a group shows a detail pane; `ManageGroupDialog` removed (kept mobile-only).                                                                                                                                                                                                                                                   |
-| 4   | Plugins/Apps → 3-column                     | 13.20       | 13    | No    | ✅ Selecting a plugin row shows a detail pane; `PluginAccessDialog` removed (kept mobile-only).                                                                                                                                                                                                                                             |
-| 5   | External clients → 3-column                 | 13.21       | 13    | No    | ✅ Selecting an OAuth client shows a detail pane for rotation/revocation, kept for visual consistency though no dialog existed to replace (escalated per this leg's own note; see Outcome below).                                                                                                                                           |
-| 6   | Retire stale docs-server references         | 16.6        | 16    | No    | `CLAUDE.md`/`AGENTS.md`/`CONTRIBUTING.md`/`docs/epics/docs.md`/`docs/epics/README.md`/`docs/development-workflow.md`/`docs/docs-site-revamp-plan.md` no longer describe the retired `apps/docs` VitePress app or its `docs-v*`/`docs.yml` mechanism as live in this repo. Independent of legs 1-5 — can land in any order relative to them. |
+| Leg | Name                                        | Epic tasks  | Epics | Gate? | Done when                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --- | ------------------------------------------- | ----------- | ----- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `NavList` + Console shell/nav/mobile rework | 9.28, 13.17 | 9, 13 | No    | ✅ Console is `shell: "default"`, desktop renders `ThreeColumnLayout` + `NavList` sidebar, mobile renders the drill-down index + per-section back link, Overview forks via `ResponsiveSurface`; all DoD items above except the 4 detail-column ones.                                                                                                                                                        |
+| 2   | Users → 3-column                            | 13.18       | 13    | No    | ✅ Selecting a user row shows a detail pane with role/capabilities/status actions; `CapabilitiesButton` dialog removed.                                                                                                                                                                                                                                                                                     |
+| 3   | Groups → 3-column                           | 13.19       | 13    | No    | ✅ Selecting a group shows a detail pane; `ManageGroupDialog` removed (kept mobile-only).                                                                                                                                                                                                                                                                                                                   |
+| 4   | Plugins/Apps → 3-column                     | 13.20       | 13    | No    | ✅ Selecting a plugin row shows a detail pane; `PluginAccessDialog` removed (kept mobile-only).                                                                                                                                                                                                                                                                                                             |
+| 5   | External clients → 3-column                 | 13.21       | 13    | No    | ✅ Selecting an OAuth client shows a detail pane for rotation/revocation, kept for visual consistency though no dialog existed to replace (escalated per this leg's own note; see Outcome below).                                                                                                                                                                                                           |
+| 6   | Retire stale docs-server references         | 16.6        | 16    | No    | ✅ `CLAUDE.md`/`AGENTS.md`/`CONTRIBUTING.md`/`docs/epics/docs.md`/`docs/epics/README.md`/`docs/development-workflow.md`/`docs/docs-site-revamp-plan.md` no longer describe the retired `apps/docs` VitePress app or its `docs-v*`/`docs.yml` mechanism as live in this repo. Shipped in PR #574, bundled with this workstream doc's own authoring, before leg 1's implementation began — see Outcome below. |
 
 Each leg is one branch, one draft PR, one review gate. The agent runs
 uninterrupted within a leg and stops at its end. See
@@ -537,6 +537,26 @@ retroactively).
 **Do not proceed if:** N/A — this leg has no dependency on or from legs 1-5
 and no discovered blocker; the investigation above already found and fixed
 every instance.
+
+**Outcome:** Already shipped — this leg's own investigation (above) doubled
+as its implementation. The developer requested the workstream doc itself be
+written and committed before leg 1's implementation began ("commit, push and
+create PR"), and since the docs-cleanup investigation was already fully
+scoped in that same planning conversation, its fixes landed in the same
+commit as the workstream doc's own authoring (PR #574: "docs: Console
+shell/ThreeColumnLayout workstream + retire stale apps/docs references"),
+not as a separate leg 6 PR. Confirmed live by re-reading each target file
+directly rather than trusting this note alone: `CLAUDE.md`/`AGENTS.md` both
+carry the `docs-vX.Y.Z no longer applies` note, `CONTRIBUTING.md`'s deploy
+table has only the Storybook row left plus a pointer to
+`docs/repositories.md`, `docs/epics/docs.md` carries its "Update (July
+2026)" callout under `✅ Complete`, `docs/epics/README.md`'s epic 16 row
+matches that status, `docs/development-workflow.md`'s epic-index description
+is updated, and `docs/docs-site-revamp-plan.md` reads `Status: Implemented`.
+This tracking-only PR just marks legs 1, 2, and 6 done in this doc's own
+tables (legs 1-2 had shipped in PRs #580/#582 but were never marked ✅ here,
+an oversight caught while closing out leg 6) — no code or doc content
+changes beyond this file.
 
 ## Risks
 

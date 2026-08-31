@@ -23,8 +23,12 @@ test.describe('Console external OAuth clients — golden paths', () => {
 
     await expect(page.getByText(clientName)).toBeVisible();
 
-    const clientCard = page.locator('div', { has: page.getByText(clientName) }).last();
-    await clientCard.getByRole('button', { name: 'Revoke' }).click();
+    // Rotate/Revoke live in the selection-driven desktop detail pane
+    // (workstream 0022 leg 5), not inline on the card anymore — the card's
+    // own copy of these actions is `.cardManageMobile`, `display: none` at
+    // this viewport width.
+    await page.getByRole('link', { name: new RegExp(clientName) }).click();
+    await page.getByRole('button', { name: 'Revoke' }).click();
 
     await expect(page.getByText(clientName)).not.toBeVisible();
   });

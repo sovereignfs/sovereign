@@ -27,6 +27,11 @@ test.describe('Email verification — disabled (AUTH_REQUIRE_EMAIL_VERIFICATION=
     await page.fill('#register-name', 'No Verification Tester');
     await page.fill('#register-email', email);
     await page.fill('#register-password', 'initial-password-123');
+    await page.fill('#register-confirm-password', 'initial-password-123');
+    // Required since registration now records explicit ToS/privacy acceptance
+    // (GDPR-8) — the browser's own `required` validation blocks submission
+    // without it, leaving the page on /register with no server round trip.
+    await page.getByRole('checkbox').check();
     await page.click('button[type="submit"]');
 
     // Signed in immediately — no "check your email" interstitial. Can't assert
@@ -47,7 +52,10 @@ test.describe('Email verification — disabled (AUTH_REQUIRE_EMAIL_VERIFICATION=
     const signUpRes = await fetch(`${AUTH_SERVER}/api/auth/sign-up/email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Origin: AUTH_SERVER },
-      body: JSON.stringify({ email, password, name: 'Sign In Tester' }),
+      // agreedToTerms is required — registration now records explicit
+      // ToS/privacy acceptance (GDPR-8) and rejects sign-up outright
+      // without it.
+      body: JSON.stringify({ email, password, name: 'Sign In Tester', agreedToTerms: true }),
     });
     expect(signUpRes.status === 200 || signUpRes.status === 201).toBe(true);
 

@@ -1788,6 +1788,141 @@ with).
 
 ---
 
+#### 📋 8.37 — Age-based backup encryption: passphrase-mode migration + recipient-mode primitives (RFC 0064, workstream 0023 leg 1)
+
+**Goal:** Move task 8.16's passphrase-mode backup encryption helper onto the `age` format instead of raw Node `crypto`, and add a new recipient-mode encryption primitive — so both workstream 0004's existing passphrase flows and this workstream's new recipient-based flows share one encryption implementation instead of two.
+
+**Deliverables:**
+
+- Add `age-encryption.js` as a dependency — pure JS/WASM, runs identically server-side (Node) and client-side (browser), so no second library is needed for task 8.40's browser decrypt.
+- Migrate task 8.16's existing encryption helper (`encrypt`/`decrypt` by passphrase) to use `age`'s own passphrase (scrypt) mode internally, keeping its exact call signature — every existing caller and test in tasks 8.16–8.18 must pass unmodified.
+- Add `encryptToRecipients(bytes, recipients: string[]) → ciphertext`. No corresponding server-side decrypt-with-identity function ships anywhere in this task — decrypting recipient-mode ciphertext happens only in the operator's own `sv restore` process (task 8.42) or client-side in the browser (task 8.40), never in the running platform process.
+
+**Dependencies:** Task 8.16 (the encryption helper this task migrates).
+
+**SRS reference:** [RFC 0064](../rfcs/0064-git-backed-operator-backups.md) — resolves the per-user-shaped half of its Open Question #1 ("age recipients, passphrase AES-GCM, or both?"); see [workstream 0023](../workstreams/0023-age-encrypted-git-backup-destinations.md).
+
+**Review checklist:**
+
+- Every existing test for task 8.16's encryption helper passes unmodified after the internal swap to `age`.
+- `encryptToRecipients` round-trips against a real `age` identity file decrypted with the standalone `age` CLI (not just this codebase's own tooling) — proving the output is genuinely standard, portable age ciphertext.
+- No code path anywhere in `runtime/` calls an age decrypt function with a private identity.
+
+---
+
+#### 📋 8.38 — Per-user AGE identity generation & git connection storage (workstream 0023 leg 2)
+
+**Goal:** Let any user generate their own age identity entirely client-side and connect a personal git repository as a labeled destination, with the private key never transmitted to or stored by the server.
+
+**Deliverables:**
+
+- New Account UI: "Generate a backup key" — runs `age-encryption.js` in-browser, shows the identity once with strong "save this now" friction (download-as-file plus copy-to-clipboard), sends only the public recipient string to the server.
+- Connection storage mirrors `plugins/warden/app/_lib/providers.ts`'s existing shape exactly: `sdk.secrets.create({ scope: 'user', ... })` for the git credential (PAT or SSH private key), `sdk.connections.create({ scope: 'user', provider: 'git.custom', secretRef, metadata: { repoUrl, branch, ageRecipient } })` for the record — `ageRecipient` is plain metadata, not a vault secret, since a public recipient cannot decrypt anything.
+- Account surfaces the connection with the same `status`/`lastError`/`lastCheckedAt` health fields `sdk.connections` already provides; disconnect reuses its existing atomic secret-cleanup.
+- No push logic in this task — see task 8.39.
+
+**Dependencies:** Task 8.6 (plugin secret vault), the `sdk.connections`/`sdk.secrets` surfaces (already implemented, live precedent in `plugins/warden`).
+
+**SRS reference:** [RFC 0043](../rfcs/0043-plugin-secret-vault.md), [RFC 0049](../rfcs/0049-plugin-external-connections.md); see [workstream 0023](../workstreams/0023-age-encrypted-git-backup-destinations.md).
+
+**Review checklist:**
+
+- Network traffic during identity generation is inspected directly (not just code-reviewed) to confirm the private key never appears in any request.
+- A user cannot read or list another user's git connection.
+- Disconnecting a connection deletes its linked secret atomically, matching `sdk.connections.disconnect()`'s existing behavior.
+
+---
+
+#### 📋 8.39 — Per-user git-push backup destination (workstream 0023 leg 3)
+
+**Goal:** Let a user's existing async data backup (task 8.18) optionally push as an age-recipient-encrypted, tagged commit to their connected git repository.
+
+**Deliverables:**
+
+- Extends task 8.18's async backup job with an optional git-push step, using task 8.38's connection and task 8.37's `encryptToRecipients`. Runs in-process — no subprocess spawn, unaffected by task 8.16's Docker-spawn gap (see task 8.41's notes).
+- New shared module (e.g. `runtime/src/git-backup.ts`) wrapping `git` invocations via `execFileSync` with argv arrays only — never an interpolated shell string. One orphan commit per backup, tagged `sv-backup/<timestamp>/v<platform>`, matching RFC 0064's and task 8.17's existing shape.
+- Task 8.17's own operator git-push logic is refactored to share this module rather than duplicating shell-out code between scopes.
+- A failed push moves the connection to `needs_reauth`/`error` via `sdk.connections.markError()`; the backup job's own status distinguishes "archive generated" from "archive generated and pushed" so a push failure is never silently indistinguishable from full success.
+
+**Dependencies:** Tasks 8.18, 8.37, 8.38.
+
+**SRS reference:** [RFC 0064](../rfcs/0064-git-backed-operator-backups.md); see [workstream 0023](../workstreams/0023-age-encrypted-git-backup-destinations.md).
+
+**Review checklist:**
+
+- A real backup pushes a resolvable, correctly-tagged orphan commit to a real test git remote end to end.
+- A simulated push failure (auth rejection, unreachable remote) leaves the connection in `error`/`needs_reauth` and the job status clearly distinct from a fully-succeeded backup.
+- No user-supplied value (repo URL, branch, token) ever reaches a shell as an interpolated string — verified by reading `git-backup.ts` directly, not just by testing the happy path.
+
+---
+
+#### 📋 8.40 — Restore from a personal git backup destination (workstream 0023 leg 4)
+
+**Goal:** Let a user list, fetch, and decrypt their own git-backed backups entirely client-side, landing the result in the existing unmodified import flow — closing the loop task 8.39 opens.
+
+**Deliverables:**
+
+- Sync listing via `git ls-remote --tags` against `sv-backup/*` — no object fetch, no job needed.
+- New `backup_jobs` kind (`restore-fetch`) reusing task 8.16's worker/claim/signed-download machinery unchanged in mechanism — a shallow `git fetch --depth=1` of the chosen tag, delivered via the existing signed-download route shape, streamed not buffered.
+- Client-side decrypt via `age-encryption.js` in the browser (streaming, so a near-250MB archive doesn't need to fit in memory at once); identity supplied via a file picker (`FileReader`, matching `packages/sdk/src/device-client.ts`'s `pickViaFileInput` pattern), held in a local variable scoped to the decrypt call only — never React state, never `sessionStorage`.
+- Add `'wasm-unsafe-eval'` to `script-src` in `runtime/src/security.ts` (currently `'self' 'nonce-${nonce}' ${THEME_SCRIPT_CSP_HASH}` in production) — a narrower, WASM-specific token, not a reversal of that file's existing "never ship `'unsafe-eval'`" rule.
+- Decrypted bytes `fetch()` directly to the existing, unmodified `POST /api/account/import`. This inherits `MAX_IMPORT_BYTES` (50MB, `runtime/app/api/account/import/route.ts:8`) — the restore UI must surface this ceiling clearly rather than fail silently past it; fixing the ceiling itself is out of this task's scope.
+
+**Dependencies:** Tasks 8.16, 8.37, 8.38, 8.39.
+
+**SRS reference:** [RFC 0064](../rfcs/0064-git-backed-operator-backups.md), [RFC 0007](../rfcs/0007-user-data-portability.md) (restore target); see [workstream 0023](../workstreams/0023-age-encrypted-git-backup-destinations.md), whose leg 4 marks this a **gate** — see its Kill criteria for the fallback if browser decrypt proves unworkable on real devices.
+
+**Review checklist:**
+
+- A real personal backup is listed, fetched, decrypted, and imported end to end on a real device — including at least one low-power mobile device, not only desktop.
+- The signed-download token alone (without the user's identity) cannot yield decryptable data.
+- Restoring the identical archive by cloning the repo and using the standalone `age` CLI (entirely outside this app) succeeds — proving the underlying Sovereign-independent restore path is real, not just the in-app convenience layer.
+- A backup exceeding `MAX_IMPORT_BYTES` produces a clear, specific UI message, not a generic failure.
+
+---
+
+#### 📋 8.41 — Operator age-recipient backup destination (workstream 0023 leg 5)
+
+**Goal:** Give operators an age-recipient encryption option for instance-scope git-push backups, alongside (not instead of) task 8.17's existing passphrase option.
+
+**Deliverables:**
+
+- Extends task 8.17's Console git-push settings with an optional age-recipient field — plain config, not `sdk.secrets`, since a recipient string is not sensitive.
+- Push mechanics reuse task 8.39's shared `git-backup.ts` module rather than task 8.17's original bespoke implementation.
+
+**Dependencies:** Tasks 8.17, 8.37, 8.39. **Cannot be verified end-to-end until task 8.16's Docker-spawn gap is resolved** (the production `runner` image cannot spawn `sv backup`, per that task's own progress note and `docs/architecture-rules.md`) — this is a pre-existing blocker on task 8.17 itself, not introduced here; do not treat a clean local `pnpm dev` test as sufficient proof this task works in production.
+
+**SRS reference:** [RFC 0064](../rfcs/0064-git-backed-operator-backups.md); see [workstream 0023](../workstreams/0023-age-encrypted-git-backup-destinations.md).
+
+**Review checklist:**
+
+- A real instance backup, with an age recipient configured, pushes a resolvable, correctly-tagged orphan commit that decrypts only with the matching identity.
+- Verified against the actual production-shaped Docker topology, not only a native `pnpm dev` checkout.
+- The existing passphrase-only flow (task 8.17) is unaffected when no recipient is configured.
+
+---
+
+#### 📋 8.42 — `sv restore --age-identity` + docs (workstream 0023 leg 6)
+
+**Goal:** Let an operator restore an age-recipient-encrypted instance backup from the CLI, and document both new destination types.
+
+**Deliverables:**
+
+- `sv restore` gains `--age-identity <file>` — decrypts in the operator's own CLI process using a key file they supply from their own storage, then applies the existing restore logic unchanged, including SQLite's existing marker-reconciliation logic (`bin/sv.ts:696-746`, load-bearing per the 2026-07-24 RFC 0071 incident) untouched.
+- `docs/self-hosting.md` documents the new age-recipient config surface (alongside RFC 0064's existing `SV_BACKUP_GIT_*` naming); `docs/security.md` documents age-recipient mode as a backup encryption option and states plainly that losing a personal or operator identity is unrecoverable by design — no server-side escrow exists.
+
+**Dependencies:** Task 8.41.
+
+**SRS reference:** [RFC 0064](../rfcs/0064-git-backed-operator-backups.md); see [workstream 0023](../workstreams/0023-age-encrypted-git-backup-destinations.md).
+
+**Review checklist:**
+
+- `sv restore --age-identity` recovers a real recipient-mode instance backup end to end.
+- The existing passphrase-mode `sv restore` path is unaffected.
+- `docs/self-hosting.md` and `docs/security.md` accurately describe both new destination types and the no-escrow warning.
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)

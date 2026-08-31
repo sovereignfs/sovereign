@@ -46,6 +46,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/auth/.next/static ./apps/aut
 # OUTSIDE the volume: users/sessions would not persist across container recreates
 # and would be missing from backups.
 COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+# Root PRIVACY.md/TOS.md (RFC 0090) — the registration create hook
+# (apps/auth/src/auth.ts, via legal-content.ts) hashes these to stamp
+# policyAcceptedHash on signup (GDPR-8, workstream 0021 leg 6). Same
+# workspace-root resolution as the marker above, so these must land at the
+# same /app path the root Dockerfile copies them to for `runtime`.
+COPY --from=builder --chown=nextjs:nodejs /app/PRIVACY.md ./PRIVACY.md
+COPY --from=builder --chown=nextjs:nodejs /app/TOS.md ./TOS.md
 
 # Repairs a real gap in Next's standalone-output file tracer (@vercel/nft):
 # @neon-rs/load (libsql's native-binding loader) requires the

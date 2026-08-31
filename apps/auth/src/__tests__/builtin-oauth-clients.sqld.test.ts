@@ -91,13 +91,17 @@ describe.skipIf(!(SQLD_URL && SQLD_ADMIN_URL))('builtin OAuth clients (live sqld
       // full-suite rerun. The email isn't what's under test here.
       const email = `verify-oauth-${randomUUID()}@example.com`;
       const auth = getAuth();
-      await auth.api.signUpEmail({
-        body: {
-          email,
-          password: 'correct-horse-battery-staple',
-          name: 'Test User',
-        },
-      });
+      // signUpEmail's body type comes from ReturnType<typeof betterAuth>, which
+      // doesn't carry buildOptions()'s additionalFields at the type level — a
+      // named const (not an inline literal) sidesteps the resulting excess-
+      // property check while keeping the base fields fully type-checked.
+      const signUpBody = {
+        email,
+        password: 'correct-horse-battery-staple',
+        name: 'Test User',
+        agreedToTerms: true,
+      };
+      await auth.api.signUpEmail({ body: signUpBody });
       const signInRes = await auth.api.signInEmail({
         body: { email, password: 'correct-horse-battery-staple' },
         asResponse: true,

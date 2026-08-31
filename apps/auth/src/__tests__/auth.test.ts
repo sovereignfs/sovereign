@@ -130,3 +130,25 @@ describe('registration timezone field (Task 1.20)', () => {
     expect(isValidTimezone(undefined)).toBe(false);
   });
 });
+
+describe('registration terms acceptance (GDPR-8, workstream 0021 leg 6)', () => {
+  it('registers agreedToTerms as a client-input additionalField with a false default (not schema-required — see auth.ts for why)', async () => {
+    const { getAuthOptions } = await import('../auth');
+    const field = getAuthOptions().user?.additionalFields?.agreedToTerms;
+    expect(field?.type).toBe('boolean');
+    expect(field?.required).toBe(false);
+    expect(field?.defaultValue).toBe(false);
+    expect(field?.input).toBe(true);
+  });
+
+  it('registers policyAcceptedHash/policyAcceptedAt as server-only (non-input) additionalFields', async () => {
+    const { getAuthOptions } = await import('../auth');
+    const hash = getAuthOptions().user?.additionalFields?.policyAcceptedHash;
+    expect(hash?.type).toBe('string');
+    expect(hash?.input).toBe(false);
+
+    const at = getAuthOptions().user?.additionalFields?.policyAcceptedAt;
+    expect(at?.type).toBe('number');
+    expect(at?.input).toBe(false);
+  });
+});

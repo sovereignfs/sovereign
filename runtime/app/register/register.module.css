@@ -39,3 +39,21 @@
   border-radius: var(--sv-radius-sm);
   padding: 2px 7px;
 }
+
+.termsRow {
+  display: flex;
+  gap: var(--sv-space-2);
+  align-items: flex-start;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+}
+
+.termsRow input {
+  margin-top: 3px;
+}
+
+.termsLink {
+  color: var(--sv-color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
